@@ -12,9 +12,16 @@
 #include <string>
 using std::string;
 
+#define config_get_checksum        46310
+#define config_set_checksum        55538
+#define config_load_checksum       3143
+
 class Config : public Module {
     public:
         Config();
+
+        void on_module_loaded();
+        void on_console_line_received( void* argument );
         string get_string(uint16_t check_sum);
         double get(uint16_t check_sum);
         string get_config_file();

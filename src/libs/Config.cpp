@@ -17,6 +17,25 @@ Config::Config(){
     config_file_found = false; 
 }
 
+void Config::on_module_loaded(){
+    this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
+}
+
+// When a new line is received, check if it is a command, and if it is, act upon it
+void Config::on_console_line_received( void* argument ){
+    string possible_command = *static_cast<string*>(argument);
+
+    // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
+    unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
+    this->kernel->serial->printf("checksum>%u\r\n", check_sum);   
+
+    // Act depending on command
+    switch( check_sum ){
+        //case config-get_checksum: this->    ; break; 
+    }
+}
+
+
 // Get a value from the configuration as a string
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
@@ -45,12 +64,12 @@ string Config::get_string(uint16_t check_sum){
     printf("ERROR: configuration key not found\r\n");
 }
 
+// Get a value from the file as a number
 double Config::get(uint16_t check_sum){
     return atof(this->get_string( check_sum ).c_str());
 }
 
-
-
+// Get the filename for the config file
 string Config::get_config_file(){
     if( this->config_file_found ){ return this->config_file; }
     this->try_config_file("/local/config");
@@ -62,7 +81,8 @@ string Config::get_config_file(){
     }
 }
 
-void Config::try_config_file(string candidate){
+// Tool function for get_config_file
+inline void Config::try_config_file(string candidate){
     FILE *lp = fopen(candidate.c_str(), "r");
     if(lp){ this->config_file_found = true; this->config_file = candidate; }
     fclose(lp);

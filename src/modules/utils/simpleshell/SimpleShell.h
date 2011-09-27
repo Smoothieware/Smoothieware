@@ -18,7 +18,6 @@ class SimpleShell : public Module {
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
-        string get_arguments( string possible_command );
         string absolute_from_relative( string path );
         void ls_command( string parameters );
         void cd_command( string parameters );

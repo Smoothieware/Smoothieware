@@ -19,17 +19,10 @@ void SimpleShell::on_console_line_received( void* argument ){
     
     // Act depending on command
     switch( check_sum ){
-        case ls_command_checksum      : this->ls_command( this->get_arguments(possible_command)); break;
-        case cd_command_checksum      : this->cd_command( this->get_arguments(possible_command)); break;
-        case cat_command_checksum     : this->cat_command(this->get_arguments(possible_command)); break;
+        case ls_command_checksum      : this->ls_command( get_arguments(possible_command)); break;
+        case cd_command_checksum      : this->cd_command( get_arguments(possible_command)); break;
+        case cat_command_checksum     : this->cat_command(get_arguments(possible_command)); break;
     }
-}
-
-// Separate command from arguments
-string SimpleShell::get_arguments( string possible_command ){
-    size_t beginning = possible_command.find_first_of(" ");
-    if( beginning == string::npos ){ return ""; } 
-    return possible_command.substr( beginning+1, possible_command.size() - beginning);
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )

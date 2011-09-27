@@ -11,6 +11,8 @@ uint16_t get_checksum(string to_check);
 
 string shift_parameter( string &parameters );
 
+string get_arguments( string possible_command );
+
 
 
 
