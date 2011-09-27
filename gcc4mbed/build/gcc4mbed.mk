@@ -43,7 +43,7 @@
 
 # Default project source to be located in current directory.
 ifndef SRC
-SRC=./src/
+SRC=./src
 endif
 
 # List of sources to be compiled/assembled

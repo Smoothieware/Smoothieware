@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 PROJECT=main
-GCC4MBED_DIR=./gcc4mbed/
+GCC4MBED_DIR=./gcc4mbed
 INCDIRS=
 LIBS_PREFIX=
 LIBS_SUFFIX=

@@ -15,9 +15,8 @@ using std::string;
 class Config : public Module {
     public:
         Config();
-        string get_string(uint16_t checksum);
-        double get(uint16_t checksum);
-        uint16_t get_checksum(string to_check);
+        string get_string(uint16_t check_sum);
+        double get(uint16_t check_sum);
         string get_config_file();
         void try_config_file(string candidate);
 

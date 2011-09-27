@@ -20,7 +20,9 @@ along with Grbl. If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef nuts_bolts_h
 #define nuts_bolts_h
-#include <string.h>
+
+#include <string>
+using std::string;
 
 #define X_AXIS 0
 #define Y_AXIS 1
@@ -34,6 +36,7 @@ along with Grbl. If not, see <http://www.gnu.org/licenses/>.
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
 #define dd(...) LPC_GPIO2->FIOCLR = 0xffff; LPC_GPIO2->FIOSET = __VA_ARGS__ 
+
 
 #endif
 
