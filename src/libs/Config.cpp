@@ -27,7 +27,6 @@ void Config::on_console_line_received( void* argument ){
 
     // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
     unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
-    //this->kernel->serial->printf("checksum>%u\r\n", check_sum);   
 
     // Act depending on command
     switch( check_sum ){
@@ -66,7 +65,6 @@ void Config::set_string( uint16_t check_sum, string value ){
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             // If this line matches the checksum 
             if(get_checksum(buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key)) != check_sum){ buffer.clear(); continue; }
-            //this->kernel->serial->printf("avaliable length: %d, new value length: %d, complete line: %s\r\n", int(int(buffer.find_first_of("\r\n#", begin_value+1))-begin_value), value.length(), buffer.c_str()); 
             if( int(value.length()) >= int(int(buffer.find_first_of("\r\n#", begin_value+1))-begin_value) ){ this->kernel->serial->printf("ERROR: Not enough room for value\r\n"); fclose(lp); return; }
             // Update value
             fpos_t pos;
@@ -74,7 +72,6 @@ void Config::set_string( uint16_t check_sum, string value ){
             int start = pos - buffer.length() + begin_value - 1;
             fseek(lp, start, SEEK_SET); 
             fputs(value.c_str(), lp);
-            
             fclose(lp);
             return;
         }else{

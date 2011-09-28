@@ -16,12 +16,13 @@ void SimpleShell::on_console_line_received( void* argument ){
 
     // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
     unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
-    
+
     // Act depending on command
     switch( check_sum ){
-        case ls_command_checksum      : this->ls_command( get_arguments(possible_command)); break;
-        case cd_command_checksum      : this->cd_command( get_arguments(possible_command)); break;
-        case cat_command_checksum     : this->cat_command(get_arguments(possible_command)); break;
+        case ls_command_checksum      : this->ls_command(  get_arguments(possible_command)); break;
+        case cd_command_checksum      : this->cd_command(  get_arguments(possible_command)); break;
+        case cat_command_checksum     : this->cat_command( get_arguments(possible_command)); break;
+        case play_command_checksum    : this->play_command(get_arguments(possible_command)); break; 
     }
 }
 
@@ -85,5 +86,29 @@ void SimpleShell::cat_command( string parameters ){
 
 }
 
+// Play a gcode file by considering each line as if it was received on the serial console
+void SimpleShell::play_command( string parameters ){
+
+    // Get filename
+    string filename          = this->absolute_from_relative(shift_parameter( parameters ));
+ 
+    // Open file 
+    FILE *lp = fopen(filename.c_str(), "r");
+    string buffer;
+    int c;
+    
+    // Print each line of the file
+    while ((c = fgetc (lp)) != EOF){
+        if (c == '\n'){
+            this->kernel->serial->printf("%s\n", buffer.c_str());
+            this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &buffer); 
+            buffer.clear();
+        }else{
+            buffer += c;
+        }
+    }; 
+    fclose(lp);
 
 
+
+}
