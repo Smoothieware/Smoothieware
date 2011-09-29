@@ -24,7 +24,7 @@ void Extruder::on_module_loaded() {
     extruder_for_irq = this;
 
     // Settings
-    this->microseconds_per_step_pulse = this->kernel->config->get(microseconds_per_step_pulse_ckeckusm);
+    this->on_config_reload(this);
 
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
     this->register_for_event(ON_BLOCK_BEGIN);
@@ -44,6 +44,10 @@ void Extruder::on_module_loaded() {
     LPC_TIM1->MCR = 11;            // For MR0 and MR1, with no reset at MR1
     NVIC_EnableIRQ(TIMER1_IRQn);
     LPC_TIM1->TCR = 1;  
+}
+
+void Extruder::on_config_reload(void* argument){
+    this->microseconds_per_step_pulse = this->kernel->config->get(microseconds_per_step_pulse_ckeckusm);
 }
 
 void Extruder::on_block_begin(void* argument){

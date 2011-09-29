@@ -28,7 +28,8 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
         &Module::on_gcode_execute,
         &Module::on_speed_change,
         &Module::on_block_begin,
-        &Module::on_block_end
+        &Module::on_block_end,
+        &Module::on_config_reload
 };
 
 #define baud_rate_setting_ckeckusm 10922

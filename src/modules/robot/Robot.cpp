@@ -33,6 +33,10 @@ void Robot::on_module_loaded() {
     this->register_for_event(ON_GCODE_RECEIVED);
 
     // Configuration
+    this->on_config_reload(this);
+}
+
+void Robot::on_config_reload(void* argument){
     this->feed_rate =           this->kernel->config->get(default_feed_rate_checksum)/60; 
     this->seek_rate =           this->kernel->config->get(default_seek_rate_checksum)/60;
     this->mm_per_line_segment = this->kernel->config->get(mm_per_line_segment_checksum);

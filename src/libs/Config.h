@@ -24,6 +24,7 @@ class Config : public Module {
         void on_console_line_received( void* argument );
         void config_get_command( string parameters ); 
         void config_set_command( string parameters ); 
+        void config_load_command(string parameters );
         void set_string( uint16_t check_sum, string value);
         string get_string(uint16_t check_sum);
         double get(uint16_t check_sum);

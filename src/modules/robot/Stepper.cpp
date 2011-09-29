@@ -28,21 +28,7 @@ void Stepper::on_module_loaded(){
     this->register_for_event(ON_STEPPER_WAKE_UP);
 
     // Get onfiguration
-    LPC_GPIO_TypeDef *gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
-    this->microseconds_per_step_pulse   =  this->kernel->config->get(microseconds_per_step_pulse_ckeckusm  );
-    this->acceleration_ticks_per_second =  this->kernel->config->get(acceleration_ticks_per_second_checksum);
-    this->minimum_steps_per_minute      =  this->kernel->config->get(minimum_steps_per_minute_checksum     );
-    this->base_stepping_frequency       =  this->kernel->config->get(base_stepping_frequency_checksum      );
-    this->step_gpio_port      = gpios[(int)this->kernel->config->get(step_gpio_port_checksum               )];
-    this->dir_gpio_port       = gpios[(int)this->kernel->config->get(dir_gpio_port_checksum                )];
-    this->alpha_step_pin                =  this->kernel->config->get(alpha_step_pin_checksum               );
-    this->beta_step_pin                 =  this->kernel->config->get(beta_step_pin_checksum                );
-    this->gamma_step_pin                =  this->kernel->config->get(gamma_step_pin_checksum               );
-    this->alpha_dir_pin                 =  this->kernel->config->get(alpha_dir_pin_checksum                );
-    this->beta_dir_pin                  =  this->kernel->config->get(beta_dir_pin_checksum                 );
-    this->gamma_dir_pin                 =  this->kernel->config->get(gamma_dir_pin_checksum                );
-    this->step_mask = ( 1 << this->alpha_step_pin ) + ( 1 << this->beta_step_pin ) + ( 1 << this->gamma_step_pin );
-    this->dir_mask  = ( 1 << this->alpha_dir_pin  ) + ( 1 << this->beta_dir_pin  ) + ( 1 << this->gamma_dir_pin  );
+    this->on_config_reload(this); 
 
     // Acceleration timer
     this->acceleration_ticker.attach_us(this, &Stepper::trapezoid_generator_tick, 1000000/this->acceleration_ticks_per_second);
@@ -59,6 +45,25 @@ void Stepper::on_module_loaded(){
     this->dir_gpio_port->FIODIR  |= this->dir_mask;
 
 }
+
+void Stepper::on_config_reload(void* argument){
+    LPC_GPIO_TypeDef *gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
+    this->microseconds_per_step_pulse   =  this->kernel->config->get(microseconds_per_step_pulse_ckeckusm  );
+    this->acceleration_ticks_per_second =  this->kernel->config->get(acceleration_ticks_per_second_checksum);
+    this->minimum_steps_per_minute      =  this->kernel->config->get(minimum_steps_per_minute_checksum     );
+    this->base_stepping_frequency       =  this->kernel->config->get(base_stepping_frequency_checksum      );
+    this->step_gpio_port      = gpios[(int)this->kernel->config->get(step_gpio_port_checksum               )];
+    this->dir_gpio_port       = gpios[(int)this->kernel->config->get(dir_gpio_port_checksum                )];
+    this->alpha_step_pin                =  this->kernel->config->get(alpha_step_pin_checksum               );
+    this->beta_step_pin                 =  this->kernel->config->get(beta_step_pin_checksum                );
+    this->gamma_step_pin                =  this->kernel->config->get(gamma_step_pin_checksum               );
+    this->alpha_dir_pin                 =  this->kernel->config->get(alpha_dir_pin_checksum                );
+    this->beta_dir_pin                  =  this->kernel->config->get(beta_dir_pin_checksum                 );
+    this->gamma_dir_pin                 =  this->kernel->config->get(gamma_dir_pin_checksum                );
+    this->step_mask = ( 1 << this->alpha_step_pin ) + ( 1 << this->beta_step_pin ) + ( 1 << this->gamma_step_pin );
+    this->dir_mask  = ( 1 << this->alpha_dir_pin  ) + ( 1 << this->beta_dir_pin  ) + ( 1 << this->gamma_dir_pin  );
+}
+
 
 // Timer0 ISR
 // MR0 is used to call the main stepping interrupt, and MR1 to reset the stepping pins

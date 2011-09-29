@@ -49,6 +49,7 @@ class Robot : public Module {
     public:
         Robot();
         void on_module_loaded();
+        void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
         void execute_gcode(Gcode* gcode);
         void append_milestone( double target[], double feed_rate);

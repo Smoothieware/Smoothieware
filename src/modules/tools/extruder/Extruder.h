@@ -12,6 +12,7 @@ class Extruder : public Module{
     public:
         Extruder(PinName stppin);
         void on_module_loaded();
+        void on_config_reload(void* argument);
         void on_block_begin(void* argument);
         void on_block_end(void* argument);
         void acceleration_tick();

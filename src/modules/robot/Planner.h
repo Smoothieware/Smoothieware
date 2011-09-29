@@ -32,6 +32,7 @@ class Planner : public Module {
         void discard_current_block();
         void cleanup_queue();
         void on_module_loaded();
+        void on_config_reload(void* argument);
 
         int position[3];              // Current position, in steps
         RingBuffer<Block,128> queue;  // Queue of Blocks

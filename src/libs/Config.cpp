@@ -27,11 +27,13 @@ void Config::on_console_line_received( void* argument ){
 
     // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
     unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
+    //this->kernel->serial->printf("checksum: %u \r\n", check_sum);
 
     // Act depending on command
     switch( check_sum ){
-        case config_get_checksum: this->config_get_command(get_arguments(possible_command))    ; break; 
-        case config_set_checksum: this->config_set_command(get_arguments(possible_command))    ; break;
+        case config_get_checksum: this->config_get_command( get_arguments(possible_command))    ; break; 
+        case config_set_checksum: this->config_set_command( get_arguments(possible_command))    ; break;
+        case config_load_checksum:this->config_load_command(get_arguments(possible_command))    ; break; 
     }
 }
 
@@ -45,6 +47,11 @@ void Config::config_set_command( string parameters ){
     string setting = shift_parameter(parameters);
     string value   = shift_parameter(parameters);
     this->set_string( get_checksum(setting), value );
+}
+
+// Command to reload configuration in all modules ( usefull if you changed one )
+void Config::config_load_command( string parameters ){
+    this->kernel->call_event(ON_CONFIG_RELOAD);
 }
 
 // Set a value from the configuration as a string
@@ -65,8 +72,10 @@ void Config::set_string( uint16_t check_sum, string value ){
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             // If this line matches the checksum 
             if(get_checksum(buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key)) != check_sum){ buffer.clear(); continue; }
-            if( int(value.length()) >= int(int(buffer.find_first_of("\r\n#", begin_value+1))-begin_value) ){ this->kernel->serial->printf("ERROR: Not enough room for value\r\n"); fclose(lp); return; }
+            int free_space = int(int(buffer.find_first_of("\r\n#", begin_value+1))-begin_value); 
+            if( int(value.length()) >= free_space ){ this->kernel->serial->printf("ERROR: Not enough room for value\r\n"); fclose(lp); return; }
             // Update value
+            for( int i = value.length(); i < free_space; i++){ value += " "; }
             fpos_t pos;
             fgetpos( lp, &pos );
             int start = pos - buffer.length() + begin_value - 1;

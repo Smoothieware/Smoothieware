@@ -22,9 +22,14 @@ Planner::Planner(){
 }
 
 void Planner::on_module_loaded(){
+    this->on_config_reload(this);
+}
+
+void Planner::on_config_reload(void* argument){
     this->acceleration = this->kernel->config->get(acceleration_checksum);
     this->max_jerk     = this->kernel->config->get(max_jerk_checksum    );
 }
+
 
 // Append a block to the queue, compute it's speed factors
 void Planner::append_block( int target[], double feed_rate, double distance, double speeds[] ){
