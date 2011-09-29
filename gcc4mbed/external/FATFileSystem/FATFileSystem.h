@@ -40,9 +40,9 @@ public:
 	virtual FileHandle *open(const char* name, int flags);
 	virtual int remove(const char *filename);
 	virtual int format();
-    virtual DirHandle *opendir(const char *name);
+        virtual DirHandle *opendir(const char *name);
     virtual int mkdir(const char *name, int mode);
-
+	
     FATFS _fs;            					// Work area (file system object) for logical drive	
     static FATFileSystem *_ffs[_DRIVES];	// FATFileSystem objects, as parallel to FatFs drives array
 	int _fsid;

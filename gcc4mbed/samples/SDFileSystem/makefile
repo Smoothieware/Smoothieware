@@ -11,15 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-PROJECT=main
-GCC4MBED_DIR=../../
-INCDIRS=
-LIBS_PREFIX=
+PROJECT=SDFileSystem
+GCC4MBED_DIR=../..
+INCDIRS=../agutil
+LIBS_PREFIX=../agutil/agutil.ar
 LIBS_SUFFIX=
 
 include ../../build/gcc4mbed.mk
-
-flash: 
-	lpc21isp $(PROJECT).hex /dev/ttyUSB0 115200 14746
-
-
