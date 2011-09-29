@@ -40,14 +40,14 @@ INCDIRS = ../../external/mbed ../../external/mbed/LPC1768 ../../external/FATFile
 DEFINES = -DTARGET_LPC1768 
 
 # Maximum optimization level
-OPTIMIZATION = 3
+OPTIMIZATION = 2
 
 #  Compiler Options
-GCFLAGS = -O$(OPTIMIZATION) -gdwarf-2 -mcpu=cortex-m3 -mthumb -mthumb-interwork -mlong-calls -fshort-wchar -ffunction-sections -fdata-sections -fpromote-loop-indices -Wall -Wextra -Wimplicit -Wcast-align -Wpointer-arith -Wredundant-decls -Wshadow -Wcast-qual -Wcast-align -Wnested-externs --std=gnu99 
+GCFLAGS = -O$(OPTIMIZATION) -gdwarf-2 -mcpu=cortex-m3 -mthumb -mthumb-interwork -fshort-wchar -ffunction-sections -fdata-sections -fpromote-loop-indices -Wall -Wextra -Wimplicit -Wcast-align -Wpointer-arith -Wredundant-decls -Wshadow -Wcast-qual -Wcast-align -Wnested-externs --std=gnu99 
 GCFLAGS += $(patsubst %,-I%,$(INCDIRS)) -I.
 GCFLAGS += $(DEFINES)
 
-GPFLAGS = -O$(OPTIMIZATION) -gdwarf-2 -mcpu=cortex-m3 -mthumb -mthumb-interwork -mlong-calls -fshort-wchar -ffunction-sections -fdata-sections -fpromote-loop-indices -Wall -Wextra -Wimplicit -Wcast-align -Wpointer-arith -Wredundant-decls -Wshadow -Wcast-qual -Wcast-align -fno-rtti -fno-exceptions
+GPFLAGS = -O$(OPTIMIZATION) -gdwarf-2 -mcpu=cortex-m3 -mthumb -mthumb-interwork -fshort-wchar -ffunction-sections -fdata-sections -fpromote-loop-indices -Wall -Wextra -Wimplicit -Wcast-align -Wpointer-arith -Wredundant-decls -Wshadow -Wcast-qual -Wcast-align -fno-exceptions
 GPFLAGS += $(patsubst %,-I%,$(INCDIRS)) -I.
 GPFLAGS += $(DEFINES)
 
@@ -64,8 +64,13 @@ LD = arm-none-eabi-g++
 AR = arm-none-eabi-ar
 OBJCOPY = arm-none-eabi-objcopy
 OBJDUMP = arm-none-eabi-objdump
-REMOVE = cs-rm -f
 SIZE = arm-none-eabi-size
+REMOVE = rm
+
+# Switch to cs-rm on Windows.
+ifeq "$(MAKE)" "cs-make"
+REMOVE = cs-rm
+endif
 
 #########################################################################
 
@@ -75,8 +80,8 @@ $(PROJECT).ar: $(OBJECTS)
 	$(AR) -rc $(PROJECT).ar $(OBJECTS)
 
 clean:
-	$(REMOVE) $(OBJECTS)
-	$(REMOVE) $(PROJECT).ar
+	$(REMOVE) -f $(OBJECTS)
+	$(REMOVE) -f $(PROJECT).ar
 
 #########################################################################
 #  Default rules to compile .c and .cpp file to .o

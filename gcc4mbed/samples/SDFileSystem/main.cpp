@@ -14,8 +14,8 @@
 */
 /* LocalFileSystem test modified to use SD cards instead. */
 #include "mbed.h"
-#include "SDFileSystem/SDFileSystem.h"
-#include "../agutil/agutil.h"
+#include "SDFileSystem.h"
+#include "agutil.h"
 
 
 extern "C" void HardFault_Handler(void)

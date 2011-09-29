@@ -19,17 +19,13 @@
 
 DigitalOut myled(LED1);
 
-
 int main() 
 {
-
-    LPC_GPIO_TypeDef *gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
-    gpios[1]->FIODIR = 1 << 18;
-
-    while(1) {
-        gpios[1]->FIOSET = 1 << 18;
-        wait(0.5);
-        gpios[1]->FIOCLR = 1 << 18;
-        wait(0.5);
+    while(1) 
+    {
+        myled = 1;
+        wait(0.2);
+        myled = 0;
+        wait(0.2);
     }
 }

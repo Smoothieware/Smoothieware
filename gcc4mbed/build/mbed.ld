@@ -41,7 +41,7 @@ MEMORY
     /* local static RAM - 32k for LPC1768 */
     IRAM0 (rwx) : ORIGIN = 0x10000000, LENGTH = 32k
 
-    /* AHB SRAM - 16k for LPC1768 - often used for USB */
+    /* AHB SRAM - 16k + 16k for LPC1768 */
     IRAM1 (rwx) : ORIGIN = 0x2007C000, LENGTH = 16k
     IRAM2 (rwx) : ORIGIN = 0x20080000, LENGTH = 16k
 }
@@ -59,6 +59,11 @@ SECTIONS
     .text :
     {
         KEEP(*(RESET))
+        *(.mbed_init)
+        *(i.SystemInit)
+        . = 0x000002FC;
+        KEEP(*(.crp))
+        . = 0x00000300;
         *(.text .text.*)
         *(.gnu.linkonce.t.*)
         *(.glue_7)
@@ -115,31 +120,6 @@ SECTIONS
     } >IROM
     __exidx_end = .;
 
-    /**************************************************/
-    /* fastcode - copied at startup & executed in RAM */
-
-    .fastcode :
-    {
-      . = ALIGN (4);
-      _sfastcode = . ;
-
-      *(.glue_7t) *(.glue_7)
-      *(.fastcode)
-      
-      /* add other modules here ... */
-
-      . = ALIGN (4);
-      _efastcode = . ;
-      _sidata = .;
-    } >IRAM0 AT>IROM
-
-    /******************************************/
-    /* This used for USB RAM section */
-    .usb_ram (NOLOAD):
-    {
-        *.o (USB_RAM)
-    } > IRAM1
-
     /******************************************/
     /* data section */
     .data :
@@ -172,6 +152,24 @@ SECTIONS
         _ebss = . ;
     } >IRAM0
 
+    /**************************************************/
+    /* fastcode - copied at startup & executed in RAM */
+
+    .fastcode :
+    {
+      _sifastcode = LOADADDR (.fastcode);
+      . = ALIGN (4);
+      _sfastcode = . ;
+
+      *(.glue_7t) *(.glue_7)
+      *(.fastcode)
+      
+      /* add other modules here ... */
+
+      . = ALIGN (4);
+      _efastcode = . ;
+    } >IRAM0 AT>IROM
+
     /******************************************/
     /* For stack section */
     .stackarea (NOLOAD) :
@@ -189,6 +187,20 @@ SECTIONS
         PROVIDE (end = .);
     } > IRAM0
     _stack = ORIGIN(IRAM0) + LENGTH(IRAM0);
+
+    /******************************************/
+    /* Code can explicitly ask for data to be 
+       placed in these higher RAM banks where
+       they will be left uninitialized. */
+    .AHBSRAM0 (NOLOAD):
+    {
+        *(AHBSRAM0)
+    } > IRAM1
+
+    .AHBSRAM1 (NOLOAD):
+    {
+        *(AHBSRAM1)
+    } > IRAM2
 
 
     /******************************************/
@@ -225,14 +237,4 @@ SECTIONS
     .debug_funcnames 0 : { *(.debug_funcnames) }
     .debug_typenames 0 : { *(.debug_typenames) }
     .debug_varnames  0 : { *(.debug_varnames) }
-    
-    /* TODO: Figure out how to properly deal with these. It looks like RealView might expect this symbol to come from
-             the main program and not mbed.ar  These inline virtual methods provided by base classes end up having code
-             created for them by the class that use them (ie. LocalFileSystem instantiates code for 
-             FileSystemLike::rename but doesn't instantiate the debug_frame)
-    */
-    PROVIDE (__ARM_grp_.debug_frame$i._ZN4mbed14FileSystemLike6renameEPKcS2_ = 0xBAADF00D);
-    PROVIDE (__ARM_grp_.debug_frame$i._ZN4mbed10DigitalOut5writeEi = 0xBAADF00D);
-    PROVIDE (__ARM_grp_.debug_frame$$$i._ZN4mbed14FileSystemLike6renameEPKcS2_$i._ZN4mbed14FileSystemLike6renameEPKcS2_ = 0xBAADF00D);
-    PROVIDE (__ARM_grp_.debug_frame$i._ZN4mbed14FileSystemLike5mkdirEPKci = 0xBAADF00D);
 }

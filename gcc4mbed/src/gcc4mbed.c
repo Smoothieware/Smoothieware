@@ -49,7 +49,7 @@ extern "C" void exit(int ErrorCode);
 
 
 /* CRT initialization code called from Reset_Handler after it calls SystemInit() */
-extern "C" void __main(void)
+extern "C" __attribute__ ((section(".mbed_init"))) void __main(void)
 {
     unsigned long*  pulDest;
     unsigned long*  pulSrc;

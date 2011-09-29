@@ -43,13 +43,13 @@
 
 # Default project source to be located in current directory.
 ifndef SRC
-SRC=./src/
+SRC=.
 endif
 
 # List of sources to be compiled/assembled
-CSRCS = $(wildcard $(SRC)/*.c) $(wildcard $(SRC)/*/*.c) $(wildcard $(SRC)/*/*/*.c) $(wildcard $(SRC)/*/*/*/*.c)
-ASRCS =  $(wildcard $(SRC)/*.S) $(wildcard $(SRC)/*/*.S) $(wildcard $(SRC)/*/*/*.S) $(wildcard $(SRC)/*/*/*/*.S)
-CPPSRCS = $(wildcard $(SRC)/*.cpp) $(wildcard $(SRC)/*/*.cpp) $(wildcard $(SRC)/*/*/*.cpp) $(wildcard $(SRC)/*/*/*/*.cpp)
+CSRCS = $(wildcard $(SRC)/*.c $(SRC)/*/*.c $(SRC)/*/*/*.c $(SRC)/*/*/*/*.c $(SRC)/*/*/*/*/*.c)
+ASRCS =  $(wildcard $(SRC)/*.S $(SRC)/*/*.S $(SRC)/*/*/*.S $(SRC)/*/*/*/*.S $(SRC)/*/*/*/*/*.S)
+CPPSRCS = $(wildcard $(SRC)/*.cpp $(SRC)/*/*.cpp $(SRC)/*/*/*.cpp $(SRC)/*/*/*/*.cpp $(SRC)/*/*/*/*/*.cpp)
 
 # Add in the gcc4mbed shim sources that allow mbed code build under GCC
 CSRCS += $(GCC4MBED_DIR)/src/gcc4mbed.c $(GCC4MBED_DIR)/src/syscalls.c
@@ -61,8 +61,10 @@ LSCRIPT=$(GCC4MBED_DIR)/build/mbed.ld
 # Location of external library and header dependencies.
 EXTERNAL_DIR = $(GCC4MBED_DIR)/external
 
-# Include path
-INCDIRS += $(EXTERNAL_DIR)/mbed $(EXTERNAL_DIR)/mbed/LPC1768 $(EXTERNAL_DIR)/FATFileSystem $(SRC)
+# Include path which points to external library headers and to subdirectories of this project which contain headers.
+SUBDIRS = $(wildcard $(SRC)/* $(SRC)/*/* $(SRC)/*/*/* $(SRC)/*/*/*/* $(SRC)/*/*/*/*/*)
+PROJINCS = $(sort $(dir $(SUBDIRS)))
+INCDIRS += $(PROJINCS) $(EXTERNAL_DIR)/mbed $(EXTERNAL_DIR)/mbed/LPC1768 $(EXTERNAL_DIR)/FATFileSystem
 
 # DEFINEs to be used when building C/C++ code
 DEFINES = -DTARGET_LPC1768
@@ -89,8 +91,13 @@ AS = arm-none-eabi-gcc
 LD = arm-none-eabi-g++
 OBJCOPY = arm-none-eabi-objcopy
 OBJDUMP = arm-none-eabi-objdump
-REMOVE = rm -f
 SIZE = arm-none-eabi-size
+REMOVE = rm
+
+# Switch to cs-rm on Windows.
+ifeq "$(MAKE)" "cs-make"
+REMOVE = cs-rm
+endif
 
 #########################################################################
 
@@ -109,16 +116,19 @@ $(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
 	$(LD) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $(PROJECT).elf
 	$(SIZE) $(PROJECT).elf
 
-stats: $(PROJECT).elf
-	$(SIZE) $(PROJECT).elf
-
 clean:
-	$(REMOVE) $(OBJECTS)
-	$(REMOVE) $(PROJECT).hex
-	$(REMOVE) $(PROJECT).elf
-	$(REMOVE) $(PROJECT).map
-	$(REMOVE) $(PROJECT).bin
-	$(REMOVE) $(PROJECT).disasm
+	$(REMOVE) -f $(OBJECTS)
+	$(REMOVE) -f $(PROJECT).hex
+	$(REMOVE) -f $(PROJECT).elf
+	$(REMOVE) -f $(PROJECT).map
+	$(REMOVE) -f $(PROJECT).bin
+	$(REMOVE) -f $(PROJECT).disasm
+
+ifdef LPC_DEPLOY
+DEPLOY_COMMAND = $(subst PROJECT,$(PROJECT),$(LPC_DEPLOY))
+deploy:
+	$(DEPLOY_COMMAND)
+endif
 
 #########################################################################
 #  Default rules to compile .c and .cpp file to .o
