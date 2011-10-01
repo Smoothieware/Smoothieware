@@ -206,7 +206,6 @@ void Robot::compute_arc(double offset[], double target[]){
     // Trace the arc
     this->append_arc(theta_start, angular_travel, radius, depth, this->feed_rate);
     // Finish off with a line to make sure we arrive exactly where we think we are
-    //this->append_line(target, this->feed_rate);
     this->append_milestone( target, this->feed_rate );
 }
 
