@@ -54,7 +54,10 @@ class Robot : public Module {
         void execute_gcode(Gcode* gcode);
         void append_milestone( double target[], double feed_rate);
         void append_line( double target[], double feed_rate);
-        void append_arc(double theta_start, double angular_travel, double radius, double depth, double rate);
+        //void append_arc(double theta_start, double angular_travel, double radius, double depth, double rate);
+        void append_arc( double target[], double offset[], double radius, bool is_clockwise );
+
+
         void compute_arc(double offset[], double target[]);
         double to_millimeters(double value);
         double theta(double x, double y);

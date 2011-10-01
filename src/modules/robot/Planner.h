@@ -16,12 +16,19 @@
 #define acceleration_checksum 25326  
 #define max_jerk_checksum     61012 
 
+// TODO: Get from config
+#define MINIMUM_PLANNER_SPEED 0.0
 using namespace std;
+
+
+
+
 
 class Planner : public Module {
     public:
         Planner();
-        void append_block( int target[], double feed_rate, double distance, double speeds[] );
+        void append_block( int target[], double feed_rate, double distance, double deltas[] );
+        double max_allowable_speed( double acceleration, double target_velocity, double distance);
         void attach_gcode_to_queue(Gcode* gcode);
         void recalculate();
         void reverse_pass();
@@ -35,10 +42,12 @@ class Planner : public Module {
         void on_config_reload(void* argument);
 
         int position[3];              // Current position, in steps
-        RingBuffer<Block,128> queue;  // Queue of Blocks
+        double previous_unit_vec[3];
+        RingBuffer<Block,64> queue;  // Queue of Blocks
         bool computing;               // Whether or not we are currently computing the queue, TODO: Checks if this is necessary
         Block last_deleted_block;     // Item -1 in the queue, TODO: Grbl does not need this, but Smoothie won't work without it, we are probably doing something wrong
         bool has_deleted_block;       // Flag for above value
+        float previous_nominal_speed;
 
         double acceleration;          // Setting
         double max_jerk;              // Setting

@@ -20,11 +20,11 @@ using std::string;
 
 Block::Block(){
     clear_vector(this->steps);
-    clear_vector(this->speeds);
+    //clear_vector(this->speeds);
 }
 
 void Block::debug(Kernel* kernel){
-    kernel->serial->printf(" steps:%4d|%4d|%4d(max:%4d) speeds:%8.2f|%8.2f|%8.2f nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8d acc:%5d dec:%5d factor:%6.4f rates:%10d>%10d \r\n", this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->speeds[0], this->speeds[1], this->speeds[2], this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->entry_factor, this->initial_rate, this->final_rate );
+    kernel->serial->printf(" steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8d acc:%5d dec:%5d rates:%10d>%10d \r\n", this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate );
 }
 
 
@@ -44,8 +44,8 @@ double Block::compute_factor_for_safe_speed(){
 //                              +-------------+
 //                                  time -->
 void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
-    this->initial_rate = ceil(this->nominal_rate * entryfactor); 
-    this->final_rate   = ceil(this->nominal_rate * exitfactor);
+    this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min) 
+    this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
     double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; 
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
     int decelerate_steps = ceil( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
@@ -58,6 +58,8 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
    // in order to reach the final_rate exactly at the end of this block.
    if (plateau_steps < 0) {
        accelerate_steps = ceil(this->intersection_distance(this->initial_rate, this->final_rate, acceleration_per_minute, this->steps_event_count));
+       accelerate_steps = max( accelerate_steps, 0 ); // Check limits due to numerical round-off
+       accelerate_steps = min( accelerate_steps, int(this->steps_event_count) );
        plateau_steps = 0;
    }
    
@@ -90,6 +92,7 @@ double Block::intersection_distance(double initialrate, double finalrate, double
    return((2*acceleration*distance-initialrate*initialrate+finalrate*finalrate)/(4*acceleration));
 }
 
+/*
 // "Junction jerk" in this context is the immediate change in speed at the junction of two blocks.
 // This method will calculate the junction jerk as the euclidean distance between the nominal
 // velocities of the respective blocks.
@@ -101,7 +104,7 @@ inline double junction_jerk(Block* before, Block* after) {
                 pow(before->speeds[Z_AXIS]-after->speeds[Z_AXIS], 2))
           );
 }
-
+*/
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.
@@ -115,49 +118,49 @@ inline double max_allowable_speed(double acceleration, double target_velocity, d
 // Called by Planner::recalculate() when scanning the plan from last to first entry.
 void Block::reverse_pass(Block* next, Block* previous){
 
-    double entryfactor = 1.0;
-    double exitfactor;
-    if (next) { exitfactor = next->entry_factor; } else { exitfactor = this->compute_factor_for_safe_speed(); }
+    if (next) {
+        // If entry speed is already at the maximum entry speed, no need to recheck. Block is cruising.
+        // If not, block in state of acceleration or deceleration. Reset entry speed to maximum and
+        // check for maximum allowable speed reductions to ensure maximum possible planned speed.
+        if (this->entry_speed != this->max_entry_speed) {
 
-    // Calculate the entry_factor for the this block.
-    if (previous) {
-        // Reduce speed so that junction_jerk is within the maximum allowed
-        double jerk = junction_jerk(previous, this);
-        if (jerk > this->planner->max_jerk ) {    //TODO: Get from config settings.max_jerk
-            entryfactor = (this->planner->max_jerk/jerk);
-        }
-        // If the required deceleration across the block is too rapid, reduce the entry_factor accordingly.
-        if (entryfactor > exitfactor) {
-            double max_entry_speed = max_allowable_speed(-this->planner->acceleration,this->nominal_speed*exitfactor, this->millimeters); 
-            double max_entry_factor = max_entry_speed/this->nominal_speed;
-            if (max_entry_factor < entryfactor) {
-                entryfactor = max_entry_factor;
+            // If nominal length true, max junction speed is guaranteed to be reached. Only compute
+            // for max allowable speed if block is decelerating and nominal length is false.
+            if ((!this->nominal_length_flag) && (this->max_entry_speed > next->entry_speed)) {
+                this->entry_speed = min( this->max_entry_speed, max_allowable_speed(-this->planner->acceleration,next->entry_speed,this->millimeters));
+            } else {
+                this->entry_speed = this->max_entry_speed;
             }
+            this->recalculate_flag = true;
+
         }
-    } else {
-        entryfactor = this->compute_factor_for_safe_speed();
-    }
-    this->entry_factor = entryfactor;
+    } // Skip last block. Already initialized and set for recalculation.
+
 }
-
-
 
 
 // Called by Planner::recalculate() when scanning the plan from first to last entry.
 void Block::forward_pass(Block* previous, Block* next){
-  if(previous) {
-      // If the previous block is an acceleration block, but it is not long enough to
-      // complete the full speed change within the block, we need to adjust out entry
-      // speed accordingly. Remember this->entry_factor equals the exit factor of
-      // the previous block.
-      if(previous->entry_factor < this->entry_factor) {
-          double max_entry_speed = max_allowable_speed(-this->planner->acceleration, this->nominal_speed*previous->entry_factor, previous->millimeters); 
-          double max_entry_factor = max_entry_speed/this->nominal_speed;
-          if (max_entry_factor < this->entry_factor) {
-              this->entry_factor = max_entry_factor;
+
+    if(!previous) { return; } // Begin planning after buffer_tail
+
+    // If the previous block is an acceleration block, but it is not long enough to complete the
+    // full speed change within the block, we need to adjust the entry speed accordingly. Entry
+    // speeds have already been reset, maximized, and reverse planned by reverse planner.
+    // If nominal length is true, max junction speed is guaranteed to be reached. No need to recheck.
+    if (!previous->nominal_length_flag) {
+        if (previous->entry_speed < this->entry_speed) {
+          double entry_speed = min( this->entry_speed,
+            max_allowable_speed(-this->planner->acceleration,previous->entry_speed,previous->millimeters) );
+
+          // Check for junction speed change
+          if (this->entry_speed != entry_speed) {
+            this->entry_speed = entry_speed;
+            this->recalculate_flag = true;
           }
-      }
-  }
+        }
+    }
+      
 }
 
 

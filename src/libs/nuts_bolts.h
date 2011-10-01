@@ -33,9 +33,10 @@ using std::string;
 #define GAMMA_STEPPER 2
 
 #define clear_vector(a) memset(a, 0, sizeof(a))
+#define clear_vector_double(a) memset(a, 0.0, sizeof(a))
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
-#define dd(...) LPC_GPIO2->FIOCLR = 0xffff; LPC_GPIO2->FIOSET = __VA_ARGS__ 
+#define dd(...) LPC_GPIO2->FIODIR = 0xffff; LPC_GPIO2->FIOCLR = 0xffff; LPC_GPIO2->FIOSET = __VA_ARGS__ 
 
 
 #endif

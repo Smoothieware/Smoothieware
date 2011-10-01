@@ -16,6 +16,9 @@ using namespace std;
 #include "Planner.h"
 class Planner;
 
+
+double max_allowable_speed( double acceleration, double target_velocity, double distance);
+
 class Block {
     public:
         Block();
@@ -32,12 +35,12 @@ class Block {
         vector<std::string> commands;
 
         unsigned short steps[3];           // Number of steps for each axis for this block
-        float          speeds[3];          // Speeds for each axis, used in the planning process
+        //float          speeds[3];          // Speeds for each axis, used in the planning process
         unsigned short steps_event_count;  // Steps for the longest axis
         unsigned int   nominal_rate;       // Nominal rate in steps per minute
         float          nominal_speed;      // Nominal speed in mm per minute
         float          millimeters;        // Distance for this move
-        float          entry_factor;       // Starting speed for the block
+        double entry_speed;
         unsigned int rate_delta;           // Nomber of steps to add to the speed for each acceleration tick
         unsigned int   initial_rate;       // Initial speed in steps per minute
         unsigned int   final_rate;         // Final speed in steps per minute
@@ -45,6 +48,11 @@ class Block {
         unsigned short decelerate_after;   // Start decelerating after this number of steps
         unsigned int   direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
+
+        uint8_t recalculate_flag; // Planner flag to recalculate trapezoids on entry junction
+        uint8_t nominal_length_flag; // Planner flag for nominal speed always reached
+
+        double max_entry_speed;
         Planner* planner;
 };
 

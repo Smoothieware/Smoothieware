@@ -1,5 +1,5 @@
 /*  
-      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
+      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl) with additions from Sungeun K. Jeon (https://github.com/chamnit/grbl)
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
@@ -108,14 +108,14 @@ void Robot::append_milestone( double target[], double rate ){
     
     this->arm_solution->millimeters_to_steps( target, steps );
 
-    double millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->last_milestone[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->last_milestone[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->last_milestone[Z_AXIS], 2 ) );      
+    double deltas[3];
+    for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
+
+    double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );      
     if( millimeters_of_travel < 0.001 ){ return; } 
     double duration = millimeters_of_travel / rate;
 
-    double speeds[3];
-    for(int axis=X_AXIS;axis<=Z_AXIS;axis++){speeds[axis]=(target[axis]-this->last_milestone[axis])/duration;}
-
-    this->kernel->planner->append_block( steps, rate, millimeters_of_travel, speeds ); 
+    this->kernel->planner->append_block( steps, rate*60, millimeters_of_travel, deltas ); 
 
     memcpy(this->last_milestone, target, sizeof(double)*3); // this->position[] = target[]; 
 
@@ -142,9 +142,99 @@ void Robot::append_line(double target[], double rate ){
     this->append_milestone(target, rate);
 }
 
-void Robot::append_arc(double theta_start, double angular_travel, double radius, double depth, double rate){
 
-    // The arc is approximated by generating a huge number of tiny, linear segments. The length of each 
+void Robot::append_arc( double target[], double offset[], double radius, bool is_clockwise ){
+
+    double center_axis0 = this->current_position[this->plane_axis_0] + offset[this->plane_axis_0];
+    double center_axis1 = this->current_position[this->plane_axis_1] + offset[this->plane_axis_1];
+    double linear_travel = target[this->plane_axis_2] - this->current_position[this->plane_axis_2];
+    double r_axis0 = -offset[this->plane_axis_0]; // Radius vector from center to current location
+    double r_axis1 = -offset[this->plane_axis_1];
+    double rt_axis0 = target[this->plane_axis_0] - center_axis0;
+    double rt_axis1 = target[this->plane_axis_1] - center_axis1;
+
+    // CCW angle between position and target from circle center. Only one atan2() trig computation required.
+    double angular_travel = atan2(r_axis0*rt_axis1-r_axis1*rt_axis0, r_axis0*rt_axis0+r_axis1*rt_axis1);
+    if (angular_travel < 0) { angular_travel += 2*M_PI; }
+    if (is_clockwise) { angular_travel -= 2*M_PI; }
+
+    double millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
+    if (millimeters_of_travel == 0.0) { return; }
+    uint16_t segments = floor(millimeters_of_travel/this->mm_per_arc_segment);
+
+    double theta_per_segment = angular_travel/segments;
+    double linear_per_segment = linear_travel/segments;
+
+    /* Vector rotation by transformation matrix: r is the original vector, r_T is the rotated vector,
+    and phi is the angle of rotation. Based on the solution approach by Jens Geisler.
+    r_T = [cos(phi) -sin(phi);
+    sin(phi) cos(phi] * r ;
+    For arc generation, the center of the circle is the axis of rotation and the radius vector is
+    defined from the circle center to the initial position. Each line segment is formed by successive
+    vector rotations. This requires only two cos() and sin() computations to form the rotation
+    matrix for the duration of the entire arc. Error may accumulate from numerical round-off, since
+    all double numbers are single precision on the Arduino. (True double precision will not have
+    round off issues for CNC applications.) Single precision error can accumulate to be greater than
+    tool precision in some cases. Therefore, arc path correction is implemented.
+
+    Small angle approximation may be used to reduce computation overhead further. This approximation
+    holds for everything, but very small circles and large mm_per_arc_segment values. In other words,
+    theta_per_segment would need to be greater than 0.1 rad and N_ARC_CORRECTION would need to be large
+    to cause an appreciable drift error. N_ARC_CORRECTION~=25 is more than small enough to correct for
+    numerical drift error. N_ARC_CORRECTION may be on the order a hundred(s) before error becomes an
+    issue for CNC machines with the single precision Arduino calculations.
+    This approximation also allows mc_arc to immediately insert a line segment into the planner
+    without the initial overhead of computing cos() or sin(). By the time the arc needs to be applied
+    a correction, the planner should have caught up to the lag caused by the initial mc_arc overhead.
+    This is important when there are successive arc motions.
+    */
+    // Vector rotation matrix values
+    double cos_T = 1-0.5*theta_per_segment*theta_per_segment; // Small angle approximation
+    double sin_T = theta_per_segment;
+
+    double arc_target[3];
+    double sin_Ti;
+    double cos_Ti;
+    double r_axisi;
+    uint16_t i;
+    int8_t count = 0;
+
+    // Initialize the linear axis
+    arc_target[this->plane_axis_2] = this->current_position[this->plane_axis_2];
+
+    for (i = 1; i<segments; i++) { // Increment (segments-1)
+
+        if (count < 25 ) { // TODO: Get from config
+          // Apply vector rotation matrix
+          r_axisi = r_axis0*sin_T + r_axis1*cos_T;
+          r_axis0 = r_axis0*cos_T - r_axis1*sin_T;
+          r_axis1 = r_axisi;
+          count++;
+        } else {
+          // Arc correction to radius vector. Computed only every N_ARC_CORRECTION increments.
+          // Compute exact location by applying transformation matrix from initial radius vector(=-offset).
+          cos_Ti = cos(i*theta_per_segment);
+          sin_Ti = sin(i*theta_per_segment);
+          r_axis0 = -offset[this->plane_axis_0]*cos_Ti + offset[this->plane_axis_1]*sin_Ti;
+          r_axis1 = -offset[this->plane_axis_0]*sin_Ti - offset[this->plane_axis_1]*cos_Ti;
+          count = 0;
+        }
+
+        // Update arc_target location
+        arc_target[this->plane_axis_0] = center_axis0 + r_axis0;
+        arc_target[this->plane_axis_1] = center_axis1 + r_axis1;
+        arc_target[this->plane_axis_2] += linear_per_segment;
+        this->append_milestone(arc_target, this->feed_rate);
+
+    }
+    // Ensure last segment arrives at target location.
+    this->append_milestone(target, this->feed_rate);
+}
+
+/*
+void robot::append_arc_old(double theta_start, double angular_travel, double radius, double depth, double rate){
+
+    // the arc is approximated by generating a huge number of tiny, linear segments. the length of each 
     // segment is configured in settings.mm_per_arc_segment.  
     double millimeters_of_travel = hypot(angular_travel*radius, labs(depth));
     if (millimeters_of_travel == 0.0) { return; }
@@ -170,10 +260,25 @@ void Robot::append_arc(double theta_start, double angular_travel, double radius,
     }
 
 }
-
+*/
 
 void Robot::compute_arc(double offset[], double target[]){
-    /*
+
+    // Find the radius
+    double radius = hypot(offset[this->plane_axis_0], offset[this->plane_axis_1]);
+
+    // Set clockwise/counter-clockwise sign for mc_arc computations
+    bool is_clockwise = false;
+    if( this->motion_mode == MOTION_MODE_CW_ARC ){ is_clockwise = true; } 
+
+    // Append arc
+    this->append_arc( target, offset,  radius, is_clockwise );
+
+}
+
+
+/*
+void Robot::compute_arc_old(double offset[], double target[]){
      This segment sets up an clockwise or counterclockwise arc from the current position to the target position around 
      the center designated by the offset vector. All theta-values measured in radians of deviance from the positive 
      y-axis. 
@@ -186,7 +291,6 @@ void Robot::compute_arc(double offset[], double target[]){
                   *   /                                                     
                     C   <- theta_start (e.g. -145 degrees: theta_start == -PI*(3/4))
 
-    */
         
     // calculate the theta (angle) of the current point
     double theta_start = theta(-offset[this->plane_axis_0], -offset[this->plane_axis_1]);
@@ -208,7 +312,7 @@ void Robot::compute_arc(double offset[], double target[]){
     // Finish off with a line to make sure we arrive exactly where we think we are
     this->append_milestone( target, this->feed_rate );
 }
-
+*/
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed
 inline double Robot::to_millimeters( double value ){
