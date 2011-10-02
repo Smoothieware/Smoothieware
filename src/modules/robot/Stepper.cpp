@@ -71,12 +71,10 @@ void Stepper::on_config_reload(void* argument){
 extern "C" void TIMER0_IRQHandler (void){
     if((LPC_TIM0->IR >> 1) & 1){
         LPC_TIM0->IR |= 1 << 1;
-        dd(1);
         stepper->step_gpio_port->FIOCLR = stepper->step_mask; 
     }
     if((LPC_TIM0->IR >> 0) & 1){
         LPC_TIM0->IR |= 1 << 0;
-        dd(2);
         stepper->main_interrupt();
     }
 }
@@ -155,11 +153,7 @@ void Stepper::update_offsets(){
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
 void Stepper::trapezoid_generator_tick() {
-    //if( this->trapezoid_generator_busy || this->kernel->planner->computing ){ return; }
-    //this->trapezoid_generator_busy = true;
-
     if(this->current_block) {
-      //this->kernel->serial->printf("#%d %u %u\r\n", this->step_events_completed, this->current_block->accelerate_until, this->current_block->accelerate_until<<16); 
       if(this->step_events_completed < this->current_block->accelerate_until<<16) {
           this->trapezoid_adjusted_rate += this->current_block->rate_delta;
           if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
@@ -184,8 +178,6 @@ void Stepper::trapezoid_generator_tick() {
           }
       }
   }
-  //this->trapezoid_generator_busy = false;
- 
 }
 
 
@@ -199,7 +191,6 @@ void Stepper::trapezoid_generator_reset(){
 }
 
 void Stepper::set_step_events_per_minute( double steps_per_minute ){
-    //if( ! this->current_block || this->kernel->planner->computing ){ return; }
 
     // We do not step slower than this 
     if( steps_per_minute < this->minimum_steps_per_minute ){ steps_per_minute = this->minimum_steps_per_minute; } //TODO: Get from config
@@ -214,8 +205,6 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
     int i=0;
     while(1<<i+1 < speed_factor){ i++; } // Probably not optimal ... 
     this->divider = i; 
-
-    //this->kernel->serial->printf(">> %d %f %f\r\n", this->divider, speed_factor, steps_per_minute);
 
     // Set the Timer interval 
     LPC_TIM0->MR0 = floor( ( SystemCoreClock/4 ) / ( (steps_per_minute/60L) * (1<<this->divider) ) );

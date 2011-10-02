@@ -231,36 +231,6 @@ void Robot::append_arc( double target[], double offset[], double radius, bool is
     this->append_milestone(target, this->feed_rate);
 }
 
-/*
-void robot::append_arc_old(double theta_start, double angular_travel, double radius, double depth, double rate){
-
-    // the arc is approximated by generating a huge number of tiny, linear segments. the length of each 
-    // segment is configured in settings.mm_per_arc_segment.  
-    double millimeters_of_travel = hypot(angular_travel*radius, labs(depth));
-    if (millimeters_of_travel == 0.0) { return; }
-    uint16_t segments = ceil(millimeters_of_travel/ this->mm_per_arc_segment );
-    // The angular motion for each segment
-    double theta_per_segment = angular_travel/segments;
-    // The linear motion for each segment
-    double linear_per_segment = depth/segments;
-    // Compute the center of this circle
-    double center_x = this->current_position[this->plane_axis_0]-sin(theta_start)*radius;
-    double center_y = this->current_position[this->plane_axis_1]-cos(theta_start)*radius;
-    // a vector to track the end point of each segment
-    double target[3];
-
-    // Initialize the linear axis
-    target[this->plane_axis_2] = this->current_position[this->plane_axis_2];
-    for (int i=0; i<segments; i++) { //NOTE: Major grbl diff
-        target[this->plane_axis_2] += linear_per_segment;
-        theta_start += theta_per_segment;
-        target[this->plane_axis_0] = center_x+sin(theta_start)*radius;
-        target[this->plane_axis_1] = center_y+cos(theta_start)*radius;
-        this->append_milestone(target, rate);
-    }
-
-}
-*/
 
 void Robot::compute_arc(double offset[], double target[]){
 
@@ -276,43 +246,6 @@ void Robot::compute_arc(double offset[], double target[]){
 
 }
 
-
-/*
-void Robot::compute_arc_old(double offset[], double target[]){
-     This segment sets up an clockwise or counterclockwise arc from the current position to the target position around 
-     the center designated by the offset vector. All theta-values measured in radians of deviance from the positive 
-     y-axis. 
-
-                        | <- theta == 0
-                      * * *                
-                    *       *                                               
-                  *           *                                             
-                  *     O ----T   <- theta_end (e.g. 90 degrees: theta_end == PI/2)                                          
-                  *   /                                                     
-                    C   <- theta_start (e.g. -145 degrees: theta_start == -PI*(3/4))
-
-        
-    // calculate the theta (angle) of the current point
-    double theta_start = theta(-offset[this->plane_axis_0], -offset[this->plane_axis_1]);
-    // calculate the theta (angle) of the target point
-    double theta_end = theta(target[this->plane_axis_0] - offset[this->plane_axis_0] - this->current_position[this->plane_axis_0], target[this->plane_axis_1] - offset[this->plane_axis_1] - this->current_position[this->plane_axis_1]);
-    //printf(" theta_start: %3.3f, theta_end: %3.3f \r\n", theta_start, theta_end);
-
-    // ensure that the difference is positive so that we have clockwise travel
-    if (theta_end <= theta_start) { theta_end += 2*M_PI; }
-    double angular_travel = theta_end-theta_start;
-    // Invert angular motion if the g-code wanted a counterclockwise arc
-    if (this->motion_mode == MOTION_MODE_CCW_ARC) { angular_travel = angular_travel-2*M_PI; }
-    // Find the radius
-    double radius = hypot(offset[this->plane_axis_0], offset[this->plane_axis_1]);
-    // Calculate the motion along the depth axis of the helix
-    double depth = target[this->plane_axis_2]-this->current_position[this->plane_axis_2];
-    // Trace the arc
-    this->append_arc(theta_start, angular_travel, radius, depth, this->feed_rate);
-    // Finish off with a line to make sure we arrive exactly where we think we are
-    this->append_milestone( target, this->feed_rate );
-}
-*/
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed
 inline double Robot::to_millimeters( double value ){

@@ -36,8 +36,6 @@ void Planner::on_config_reload(void* argument){
 // Append a block to the queue, compute it's speed factors
 void Planner::append_block( int target[], double feed_rate, double distance, double deltas[] ){
    
-    // TODO : Check if this is necessary
-    
     // Do not append block with no movement
     if( target[ALPHA_STEPPER] == this->position[ALPHA_STEPPER] && target[BETA_STEPPER] == this->position[BETA_STEPPER] && target[GAMMA_STEPPER] == this->position[GAMMA_STEPPER] ){ this->computing = false; return; }
    
@@ -49,7 +47,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     Block* block = this->queue.get_ref( this->queue.size()-1 );
     block->planner = this;
 
-    this->computing = true;
+    this->computing = true; //TODO: Check if this is necessary
 
     // Direction bits
     block->direction_bits = 0; 

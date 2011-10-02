@@ -20,7 +20,6 @@ using std::string;
 
 Block::Block(){
     clear_vector(this->steps);
-    //clear_vector(this->speeds);
 }
 
 void Block::debug(Kernel* kernel){
@@ -91,20 +90,6 @@ double Block::estimate_acceleration_distance(double initialrate, double targetra
 double Block::intersection_distance(double initialrate, double finalrate, double acceleration, double distance) {
    return((2*acceleration*distance-initialrate*initialrate+finalrate*finalrate)/(4*acceleration));
 }
-
-/*
-// "Junction jerk" in this context is the immediate change in speed at the junction of two blocks.
-// This method will calculate the junction jerk as the euclidean distance between the nominal
-// velocities of the respective blocks.
-inline double junction_jerk(Block* before, Block* after) {
-    //printf("    compute jerk: before_speed_x: %f, after_speed_x: %f, difference: %f, pow: %f \r\n", before->speeds[X_AXIS], after->speeds[X_AXIS], before->speeds[X_AXIS]-after->speeds[X_AXIS], pow(before->speeds[X_AXIS]-after->speeds[X_AXIS], 2) );
-    return(sqrt(
-                pow(before->speeds[X_AXIS]-after->speeds[X_AXIS], 2)+
-                pow(before->speeds[Y_AXIS]-after->speeds[Y_AXIS], 2)+
-                pow(before->speeds[Z_AXIS]-after->speeds[Z_AXIS], 2))
-          );
-}
-*/
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.
