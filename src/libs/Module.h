@@ -25,6 +25,8 @@ class Module {
         virtual void on_block_begin(            void * argument);
         virtual void on_block_end(              void * argument);
         virtual void on_config_reload(          void * argument);
+        virtual void on_play(                   void * argument);
+        virtual void on_pause(                  void * argument);
         Kernel * kernel;
 };
 

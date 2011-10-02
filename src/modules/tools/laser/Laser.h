@@ -17,6 +17,8 @@ class Laser : public Module{
     public:
         Laser(PinName pin);
         void on_module_loaded();
+        void on_play(void* argument);
+        void on_pause(void* argument);
         void on_gcode_execute(void* argument);
         void on_speed_change(void* argument);
 

@@ -19,7 +19,20 @@ Laser::Laser(PinName pin) : laser_pin(pin){
 void Laser::on_module_loaded() {
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_SPEED_CHANGE);
+    this->register_for_event(ON_PLAY);
+    this->register_for_event(ON_PAUSE);
 }
+
+
+// When the play/pause button is set to pause, or a module calls the ON_PAUSE event
+void Laser::on_pause(void* argument){
+    this->laser_pin = 0;
+}
+
+// When the play/pause button is set to play, or a module calls the ON_PLAY event
+void Laser::on_play(void* argument){
+}
+
 
 // Turn laser on/off depending on received GCodes
 void Laser::on_gcode_execute(void* argument){

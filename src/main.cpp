@@ -10,6 +10,7 @@
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/Extruder.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
+#include "modules/utils/pauser/Pauser.h"
 #include "libs/SDFileSystem.h"
 #include "libs/Config.h"
 #include "libs/nuts_bolts.h"
@@ -17,8 +18,6 @@
 
 SDFileSystem sd(p5, p6, p7, p8, "sd");
 //LocalFileSystem local("local");
-
-//void checksum( Kernel* kernel, string key ){ kernel->serial->printf("%s: %u\r\n", key.c_str(), kernel->config->get_checksum(key)); }
 
 int main() {
 
@@ -29,6 +28,7 @@ int main() {
     kernel->add_module( new Laser(p21) );
     //kernel->add_module( new Extruder(p22) );
     kernel->add_module( new SimpleShell() );
+    kernel->add_module( new Pauser(p29,p30) );
 
     while(1){
         kernel->call_event(ON_MAIN_LOOP);

@@ -27,7 +27,9 @@ Stepper::Stepper(){
 void Stepper::on_module_loaded(){
     stepper = this;
     this->register_for_event(ON_STEPPER_WAKE_UP);
-
+    this->register_for_event(ON_PLAY);
+    this->register_for_event(ON_PAUSE);
+ 
     // Get onfiguration
     this->on_config_reload(this); 
 
@@ -40,7 +42,8 @@ void Stepper::on_module_loaded(){
     LPC_TIM0->MCR = 11; // for MR0 and MR1, with no reset at MR1
     NVIC_EnableIRQ(TIMER0_IRQn);
     NVIC_SetPriority(TIMER3_IRQn, 1); 
-
+    LPC_TIM0->TCR = 1; 
+    
     // Step and Dir pins as outputs
     this->step_gpio_port->FIODIR |= this->step_mask;
     this->dir_gpio_port->FIODIR  |= this->dir_mask;
@@ -65,6 +68,18 @@ void Stepper::on_config_reload(void* argument){
     this->dir_mask  = ( 1 << this->alpha_dir_pin  ) + ( 1 << this->beta_dir_pin  ) + ( 1 << this->gamma_dir_pin  );
 }
 
+// When the play/pause button is set to pause, or a module calls the ON_PAUSE event
+void Stepper::on_pause(void* argument){
+    LPC_TIM0->TCR = 0;
+    this->acceleration_ticker.detach();
+}
+
+// When the play/pause button is set to play, or a module calls the ON_PLAY event
+void Stepper::on_play(void* argument){
+    LPC_TIM0->TCR = 1;
+    this->acceleration_ticker.attach_us(this, &Stepper::trapezoid_generator_tick, 1000000/this->acceleration_ticks_per_second);
+}
+
 
 // Timer0 ISR
 // MR0 is used to call the main stepping interrupt, and MR1 to reset the stepping pins
@@ -82,7 +97,6 @@ extern "C" void TIMER0_IRQHandler (void){
 
 //Called ( apriori only by the planner ) when Stepper asked to wake up : means we have work to do. Argument is the queue so that we can use it. //TODO : Get rid of this
 void Stepper::on_stepper_wake_up(void* argument){
-    LPC_TIM0->TCR = 1; 
 }
 
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Smoothie. It is executed at the rate set with
@@ -106,9 +120,9 @@ void Stepper::main_interrupt(){
             //this->kernel->planner->dump_queue();
         }else{
             // Go to sleep
-            LPC_TIM0->MR0 = 10000;  
-            LPC_TIM0->MR1 = 500;
-            LPC_TIM0->TCR = 0;
+            //LPC_TIM0->MR0 = 10000;  
+            //LPC_TIM0->MR1 = 500;
+            //LPC_TIM0->TCR = 0;
         }
     }
     

@@ -31,6 +31,8 @@ class Stepper : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_stepper_wake_up(void* argument);
+        void on_play(void* argument);
+        void on_pause(void* argument);
         void main_interrupt();
         void trapezoid_generator_reset();
         void set_step_events_per_minute(double steps_per_minute);
