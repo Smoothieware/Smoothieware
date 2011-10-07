@@ -70,6 +70,8 @@ class Stepper : public Module {
         unsigned short gamma_dir_pin;
         unsigned int step_mask;
         unsigned int dir_mask;
+        unsigned short step_bits[3];
+        int counter_increment;
 };
 
 

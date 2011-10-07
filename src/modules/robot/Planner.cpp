@@ -41,10 +41,20 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
    
     // Stall here if the queue is ful
     while( this->queue.size() >= this->queue.capacity() ){ wait_us(100); }     
-    
+ 
+    // Clean up the vector of commands in the block we are about to replace
+    // It is quite strange to do this here, we really should do it inside Block->pop_and_execute_gcode
+    // but that function is called inside an interrupt and thus can break everything if the interrupt was trigerred during a memory access
+    Block* block = this->queue.get_ref( this->queue.size()-1 );
+    if( block->planner == this ){
+        for(short index=0; index<block->commands.size(); index++){
+            block->commands.pop_back();
+        }
+    }
+
     // Add/get a new block from the queue
     this->queue.push_back(Block());
-    Block* block = this->queue.get_ref( this->queue.size()-1 );
+    block = this->queue.get_ref( this->queue.size()-1 );
     block->planner = this;
 
     this->computing = true; //TODO: Check if this is necessary

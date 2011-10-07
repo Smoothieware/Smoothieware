@@ -156,12 +156,11 @@ void Block::append_gcode(Gcode* gcode){
 
 // The attached gcodes are then poped and the on_gcode_execute event is called with them as a parameter
 void Block::pop_and_execute_gcode(Kernel* &kernel){
-    while( this->commands.size() > 0 ){
-        string command = this->commands.back();
+    for(unsigned short index=0; index<this->commands.size(); index++){
+        string command = this->commands.at(index);
         Gcode gcode = Gcode();
         gcode.command = command;
         kernel->call_event(ON_GCODE_EXECUTE, &gcode ); 
-        this->commands.pop_back();
     }
 }
 

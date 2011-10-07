@@ -11,6 +11,7 @@
 #include "modules/communication/utils/Gcode.h"
 #include "modules/robot/Stepper.h"
 #include "Laser.h"
+#include "libs/nuts_bolts.h"
 
 Laser::Laser(PinName pin) : laser_pin(pin){
     this->laser_pin.period_us(10);
@@ -21,8 +22,20 @@ void Laser::on_module_loaded() {
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
+    this->register_for_event(ON_BLOCK_BEGIN);
+    this->register_for_event(ON_BLOCK_END);
 }
 
+// Turn laser off laser at the end of a move
+void  Laser::on_block_end(void* argument){
+    this->laser_pin = 0;
+    //this->laser_on = false;
+}
+
+// Set laser power at the beginning of a block
+void Laser::on_block_begin(void* argument){
+    this->set_proportional_power();
+}
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Laser::on_pause(void* argument){
@@ -31,26 +44,34 @@ void Laser::on_pause(void* argument){
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
 void Laser::on_play(void* argument){
+    this->set_proportional_power();
 }
 
 
 // Turn laser on/off depending on received GCodes
 void Laser::on_gcode_execute(void* argument){
+    dd(10);
     Gcode* gcode = static_cast<Gcode*>(argument);
+    dd(11); 
     if( gcode->has_letter('G' )){
+        dd(21);
         int code = gcode->get_value('G');
-        if( code == 0 ){                  // G0
+        if( code == 0 ){                    // G0
             this->laser_pin = 0;
             this->laser_on =  false;
-        }else if( code > 0 && code < 4 ){ // G1, G2, G3
+        }else if( code >= 1 && code <= 3 ){ // G1, G2, G3
             this->laser_on =  true;
         }
     }
+    dd(12);
 }
 
 void Laser::on_speed_change(void* argument){
-    Stepper* stepper = static_cast<Stepper*>(argument);
-    if( this->laser_on ){ 
-        this->laser_pin = double(stepper->trapezoid_adjusted_rate)/double(stepper->current_block->nominal_rate);
+    this->set_proportional_power();
+}
+
+void Laser::set_proportional_power(){
+    if( this->laser_on && this->kernel->stepper->current_block ){ 
+        this->laser_pin = double(this->kernel->stepper->trapezoid_adjusted_rate)/double(this->kernel->stepper->current_block->nominal_rate);
     }
 }

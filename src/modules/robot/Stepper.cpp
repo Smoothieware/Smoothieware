@@ -66,6 +66,9 @@ void Stepper::on_config_reload(void* argument){
     this->gamma_dir_pin                 =  this->kernel->config->get(gamma_dir_pin_checksum                );
     this->step_mask = ( 1 << this->alpha_step_pin ) + ( 1 << this->beta_step_pin ) + ( 1 << this->gamma_step_pin );
     this->dir_mask  = ( 1 << this->alpha_dir_pin  ) + ( 1 << this->beta_dir_pin  ) + ( 1 << this->gamma_dir_pin  );
+    this->step_bits[ALPHA_STEPPER ] = this->alpha_step_pin;
+    this->step_bits[BETA_STEPPER  ] = this->beta_step_pin;
+    this->step_bits[GAMMA_STEPPER ] = this->gamma_step_pin;
 }
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
@@ -117,7 +120,6 @@ void Stepper::main_interrupt(){
             for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
             this->step_events_completed = 0; 
             this->kernel->call_event(ON_BLOCK_BEGIN, this->current_block);
-            //this->kernel->planner->dump_queue();
         }else{
             // Go to sleep
             //LPC_TIM0->MR0 = 10000;  
@@ -125,22 +127,20 @@ void Stepper::main_interrupt(){
             //LPC_TIM0->TCR = 0;
         }
     }
-    
+   
     if( this->current_block != NULL ){
         // Set bits for direction and steps 
         this->out_bits = this->current_block->direction_bits;
-        unsigned short step_bits[3] = {this->alpha_step_pin, this->beta_step_pin, this->gamma_step_pin}; 
         for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ 
-            this->counters[stpr] += (1<<16)>>this->divider; // Basically += 1/divider if we were in floating point arythmetic, but here the counters precision is 1/(2^16). 
+            this->counters[stpr] += this->counter_increment; // (1<<16)>>this->divider; // Basically += 1/divider if we were in floating point arythmetic, but here the counters precision is 1/(2^16). 
             if( this->counters[stpr] > this->offsets[stpr] && this->stepped[stpr] < this->current_block->steps[stpr] ){
                 this->counters[stpr] -= this->offsets[stpr] ;
                 this->stepped[stpr]++;
-                this->out_bits |= (1 << step_bits[stpr]);
+                this->out_bits |= (1 << this->step_bits[stpr]);
             } 
         } 
-
         // If current block is finished, reset pointer
-        this->step_events_completed += (1<<16)>>this->divider; // /this->divider;
+        this->step_events_completed += this->counter_increment; // (1<<16)>>this->divider; // /this->divider;
         if( this->step_events_completed >= this->current_block->steps_event_count<<16 ){ 
             if( this->stepped[ALPHA_STEPPER] == this->current_block->steps[ALPHA_STEPPER] && this->stepped[BETA_STEPPER] == this->current_block->steps[BETA_STEPPER] && this->stepped[GAMMA_STEPPER] == this->current_block->steps[GAMMA_STEPPER] ){ 
                 this->kernel->call_event(ON_BLOCK_END, this->current_block);
@@ -153,7 +153,6 @@ void Stepper::main_interrupt(){
     }else{
         this->out_bits = 0;
     }
-
 }
 
 void Stepper::update_offsets(){
@@ -167,7 +166,7 @@ void Stepper::update_offsets(){
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
 void Stepper::trapezoid_generator_tick() {
-    if(this->current_block) {
+    if(this->current_block && !this->kernel->planner->computing ) {
       if(this->step_events_completed < this->current_block->accelerate_until<<16) {
           this->trapezoid_adjusted_rate += this->current_block->rate_delta;
           if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
@@ -180,7 +179,7 @@ void Stepper::trapezoid_generator_tick() {
           if (this->trapezoid_adjusted_rate > this->current_block->rate_delta) {
               this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
           }
-          if (this->trapezoid_adjusted_rate < this->current_block->final_rate) {
+          if (this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
               this->trapezoid_adjusted_rate = this->current_block->final_rate;
           }
           this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
@@ -212,17 +211,12 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
     // The speed factor is the factor by which we must multiply the minimal step frequency to reach the maximum step frequency
     // The higher, the smoother the movement will be, but the closer the maximum and minimum frequencies are, the smaller the factor is
     double speed_factor = this->base_stepping_frequency / (steps_per_minute/60L); //TODO: Get from config
-    if( speed_factor < 1 ){ speed_factor==1; }
- 
-    // Find bit corresponding to the biggest power of two that is smaller than the divider we want
-    // This is used instead of a floating point number for performance reasons
-    int i=0;
-    while(1<<i+1 < speed_factor){ i++; } // Probably not optimal ... 
-    this->divider = i; 
+    if( speed_factor < 1 ){ speed_factor=1; }
+    this->counter_increment = int(floor((1<<16)/speed_factor));
 
     // Set the Timer interval 
-    LPC_TIM0->MR0 = floor( ( SystemCoreClock/4 ) / ( (steps_per_minute/60L) * (1<<this->divider) ) );
-
+    LPC_TIM0->MR0 = floor( ( SystemCoreClock/4 ) / ( (steps_per_minute/60L) * speed_factor ) );
+    
     // In case we change the Match Register to a value the Timer Counter has past
     if( LPC_TIM0->TC >= LPC_TIM0->MR0 ){ LPC_TIM0->TCR = 3; LPC_TIM0->TCR = 1; }
 

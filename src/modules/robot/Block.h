@@ -44,8 +44,8 @@ class Block {
         unsigned int rate_delta;           // Nomber of steps to add to the speed for each acceleration tick
         unsigned int   initial_rate;       // Initial speed in steps per minute
         unsigned int   final_rate;         // Final speed in steps per minute
-        unsigned short accelerate_until;   // Stop accelerating after this number of steps
-        unsigned short decelerate_after;   // Start decelerating after this number of steps
+        unsigned int  accelerate_until;   // Stop accelerating after this number of steps
+        unsigned int  decelerate_after;   // Start decelerating after this number of steps
         unsigned int   direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
 

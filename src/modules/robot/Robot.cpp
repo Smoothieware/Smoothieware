@@ -46,8 +46,8 @@ void Robot::on_config_reload(void* argument){
 //A GCode has been received
 void Robot::on_gcode_received(void * argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    this->execute_gcode(gcode);
     this->kernel->planner->attach_gcode_to_queue(gcode);
+    this->execute_gcode(gcode);
 }
 
 //See if the current Gcode line has some orders for us
