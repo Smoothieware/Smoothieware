@@ -24,7 +24,7 @@ void GcodeDispatch::on_module_loaded() {
 void GcodeDispatch::on_console_line_received(void * line){
     string possible_command = *static_cast<string*>(line);
     char first_char = possible_command[0];
-    if( first_char == 'G' || first_char == 'M' || first_char == 'T' ){ 
+    if( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' ){ 
         Gcode gcode = Gcode();
         gcode.command = possible_command;
         this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 

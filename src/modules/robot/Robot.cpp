@@ -55,6 +55,7 @@ void Robot::execute_gcode(Gcode* gcode){
     
     //Temp variables, constant properties are stored in the object
     uint8_t next_action = NEXT_ACTION_DEFAULT;
+    this->motion_mode = -1;
 
    //G-letter Gcodes are mostly what the Robot module is interrested in, other modules also catch the gcode event and do stuff accordingly
    if( gcode->has_letter('G')){
@@ -71,7 +72,7 @@ void Robot::execute_gcode(Gcode* gcode){
            case 90:this->absolute_mode = true; break;
            case 91:this->absolute_mode = false; break;
        } 
-    }
+    }else{ return; }
     
    //Get parameters
     double target[3], offset[3];
