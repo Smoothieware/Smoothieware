@@ -20,6 +20,7 @@ using std::string;
 
 Block::Block(){
     clear_vector(this->steps);
+    this->computed = false;
 }
 
 void Block::debug(Kernel* kernel){
@@ -151,7 +152,7 @@ void Block::forward_pass(Block* previous, Block* next){
 
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
 void Block::append_gcode(Gcode* gcode){
-   this->commands.insert(this->commands.begin(),gcode->command);
+   this->commands.push_back(gcode->command);
 }
 
 // The attached gcodes are then poped and the on_gcode_execute event is called with them as a parameter

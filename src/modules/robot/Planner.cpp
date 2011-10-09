@@ -69,6 +69,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // Number of steps for each stepper
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); } 
     
+    
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
     if( block->steps_event_count == 0 ){ this->computing = false; return; }
@@ -154,6 +155,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     memcpy(this->position, target, sizeof(int)*3);
     this->recalculate();
     this->computing = false;
+    block->computed = true;
 
     this->kernel->call_event(ON_STEPPER_WAKE_UP, this);
 }
@@ -167,6 +169,7 @@ void Planner::attach_gcode_to_queue(Gcode* gcode){
         this->queue.get_ref( this->queue.size() - 1 )->append_gcode(gcode);
     } 
 }
+
 
 
 // Recalculates the motion plan according to the following algorithm:
@@ -242,8 +245,8 @@ Block* Planner::get_current_block(){
 
 // We are done with this block, discard it
 void Planner::discard_current_block(){
-    this->has_deleted_block = true;
-    this->queue.get(0,this->last_deleted_block );
+    //this->has_deleted_block = true;
+    //this->queue.get(0,this->last_deleted_block );
     this->queue.delete_first();
 }
 

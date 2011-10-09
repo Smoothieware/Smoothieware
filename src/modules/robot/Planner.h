@@ -43,7 +43,7 @@ class Planner : public Module {
 
         int position[3];              // Current position, in steps
         double previous_unit_vec[3];
-        RingBuffer<Block,32> queue;  // Queue of Blocks
+        RingBuffer<Block,64> queue;  // Queue of Blocks
         bool computing;               // Whether or not we are currently computing the queue, TODO: Checks if this is necessary
         Block last_deleted_block;     // Item -1 in the queue, TODO: Grbl does not need this, but Smoothie won't work without it, we are probably doing something wrong
         bool has_deleted_block;       // Flag for above value

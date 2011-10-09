@@ -50,11 +50,8 @@ void Laser::on_play(void* argument){
 
 // Turn laser on/off depending on received GCodes
 void Laser::on_gcode_execute(void* argument){
-    dd(10);
     Gcode* gcode = static_cast<Gcode*>(argument);
-    dd(11); 
     if( gcode->has_letter('G' )){
-        dd(21);
         int code = gcode->get_value('G');
         if( code == 0 ){                    // G0
             this->laser_pin = 0;
@@ -63,7 +60,6 @@ void Laser::on_gcode_execute(void* argument){
             this->laser_on =  true;
         }
     }
-    dd(12);
 }
 
 void Laser::on_speed_change(void* argument){

@@ -38,7 +38,6 @@ void Stepper::on_module_loaded(){
 
     // Initiate main_interrupt timer and step reset timer
     LPC_TIM0->MR0 = 10000;
-    LPC_TIM0->MR1 = 500;
     LPC_TIM0->MCR = 11; // for MR0 and MR1, with no reset at MR1
     NVIC_EnableIRQ(TIMER0_IRQn);
     NVIC_SetPriority(TIMER3_IRQn, 1); 
@@ -69,7 +68,11 @@ void Stepper::on_config_reload(void* argument){
     this->step_bits[ALPHA_STEPPER ] = this->alpha_step_pin;
     this->step_bits[BETA_STEPPER  ] = this->beta_step_pin;
     this->step_bits[GAMMA_STEPPER ] = this->gamma_step_pin;
+    
+    // Set the Timer interval for Match Register 1, 
+    LPC_TIM0->MR1 = (( SystemCoreClock/4 ) / 1000000 ) * this->microseconds_per_step_pulse; 
 }
+
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Stepper::on_pause(void* argument){
@@ -115,11 +118,16 @@ void Stepper::main_interrupt(){
     if( this->current_block == NULL ){
         this->current_block = this->kernel->planner->get_current_block();
         if( this->current_block != NULL ){
-            this->trapezoid_generator_reset();
-            this->update_offsets();
-            for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
-            this->step_events_completed = 0; 
-            this->kernel->call_event(ON_BLOCK_BEGIN, this->current_block);
+            if( this->current_block->computed == false ){
+               this->current_block = NULL;
+            }else{ 
+                this->trapezoid_generator_reset();
+                this->update_offsets();
+                for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
+                this->step_events_completed = 0; 
+                this->kernel->call_event(ON_BLOCK_BEGIN, this->current_block);
+                //this->kernel->planner->dump_queue();
+            } 
         }else{
             // Go to sleep
             //LPC_TIM0->MR0 = 10000;  
@@ -219,9 +227,6 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
     
     // In case we change the Match Register to a value the Timer Counter has past
     if( LPC_TIM0->TC >= LPC_TIM0->MR0 ){ LPC_TIM0->TCR = 3; LPC_TIM0->TCR = 1; }
-
-    // Set the Timer interval for Match Register 1, 
-    LPC_TIM0->MR1 = (( SystemCoreClock/4 ) / 1000000 ) * this->microseconds_per_step_pulse; 
 
     this->kernel->call_event(ON_SPEED_CHANGE, this);
  

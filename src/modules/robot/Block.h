@@ -41,11 +41,11 @@ class Block {
         float          nominal_speed;      // Nominal speed in mm per minute
         float          millimeters;        // Distance for this move
         double entry_speed;
-        unsigned int rate_delta;           // Nomber of steps to add to the speed for each acceleration tick
+        unsigned int   rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
         unsigned int   initial_rate;       // Initial speed in steps per minute
         unsigned int   final_rate;         // Final speed in steps per minute
-        unsigned int  accelerate_until;   // Stop accelerating after this number of steps
-        unsigned int  decelerate_after;   // Start decelerating after this number of steps
+        unsigned int   accelerate_until;   // Stop accelerating after this number of steps
+        unsigned int   decelerate_after;   // Start decelerating after this number of steps
         unsigned int   direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
 
@@ -54,6 +54,8 @@ class Block {
 
         double max_entry_speed;
         Planner* planner;
+
+        bool computed;
 };
 
 

@@ -19,8 +19,8 @@ using std::string;
 #include "arm_solutions/CartesianSolution.h"
 
 Robot::Robot(){
-    this->inch_mode = true;
-    this->absolute_mode = true;
+    this->inch_mode = false;
+    this->absolute_mode = false;
     this->motion_mode =  MOTION_MODE_SEEK; 
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
     clear_vector(this->current_position);
@@ -111,6 +111,7 @@ void Robot::append_milestone( double target[], double rate ){
     double deltas[3];
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
 
+    
     double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );      
     if( millimeters_of_travel < 0.001 ){ return; } 
     double duration = millimeters_of_travel / rate;
@@ -122,6 +123,7 @@ void Robot::append_milestone( double target[], double rate ){
 }
 
 void Robot::append_line(double target[], double rate ){
+
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes. 
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
