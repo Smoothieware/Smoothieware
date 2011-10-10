@@ -7,6 +7,8 @@ using std::string;
 
 string lc(string str);
 
+string remove_non_number( string str );
+
 uint16_t get_checksum(string to_check);
 
 string shift_parameter( string &parameters );

@@ -24,6 +24,18 @@ string lc(string str){
     return str;
 }
 
+// Remove non-number characters
+string remove_non_number( string str ){
+    string number_mask = "0123456789-.";
+    size_t found=str.find_first_not_of(number_mask);
+    while (found!=string::npos){
+        //str[found]='*';
+        str.replace(found,1,""); 
+        found=str.find_first_not_of(number_mask);
+    }
+    return str;
+}
+
 // Get the first parameter, and remove it from the original string
 string shift_parameter( string &parameters ){
     size_t beginning = parameters.find_first_of(" ");

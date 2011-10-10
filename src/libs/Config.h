@@ -28,6 +28,7 @@ class Config : public Module {
         void set_string( uint16_t check_sum, string value);
         string get_string(uint16_t check_sum);
         double get(uint16_t check_sum);
+        bool   has_characters(uint16_t check_sum, string str );
         string get_config_file();
         void try_config_file(string candidate);
 

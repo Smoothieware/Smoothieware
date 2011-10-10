@@ -121,8 +121,16 @@ string Config::get_string(uint16_t check_sum){
 
 // Get a value from the file as a number
 double Config::get(uint16_t check_sum){
-    return atof(this->get_string( check_sum ).c_str());
+    string value = this->get_string( check_sum );
+    return atof(remove_non_number(value).c_str());
 }
+
+// Returns true if the corresponding config value contains any of the characters 
+bool Config::has_characters(uint16_t check_sum, string mask ){
+    size_t found = this->get_string(check_sum).find_first_of(mask);
+    if( found != string::npos ){ return true; }else{ return false; } 
+}
+
 
 // Get the filename for the config file
 string Config::get_config_file(){

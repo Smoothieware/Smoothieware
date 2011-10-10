@@ -68,11 +68,16 @@ void Stepper::on_config_reload(void* argument){
     this->step_bits[ALPHA_STEPPER ] = this->alpha_step_pin;
     this->step_bits[BETA_STEPPER  ] = this->beta_step_pin;
     this->step_bits[GAMMA_STEPPER ] = this->gamma_step_pin;
-    
+    this->step_invert_mask = ( this->kernel->config->has_characters( alpha_step_pin_checksum,  string("!") ) << this->alpha_step_pin ) +
+                             ( this->kernel->config->has_characters( beta_step_pin_checksum,   string("!") ) << this->beta_step_pin  ) + 
+                             ( this->kernel->config->has_characters( gamma_step_pin_checksum,  string("!") ) << this->gamma_step_pin );
+    this->dir_invert_mask =  ( this->kernel->config->has_characters( alpha_dir_pin_checksum,   string("!") ) << this->alpha_dir_pin  ) +
+                             ( this->kernel->config->has_characters( beta_dir_pin_checksum,    string("!") ) << this->beta_dir_pin   ) + 
+                             ( this->kernel->config->has_characters( gamma_dir_pin_checksum,   string("!") ) << this->gamma_dir_pin  );
+
     // Set the Timer interval for Match Register 1, 
     LPC_TIM0->MR1 = (( SystemCoreClock/4 ) / 1000000 ) * this->microseconds_per_step_pulse; 
 }
-
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Stepper::on_pause(void* argument){
@@ -92,7 +97,9 @@ void Stepper::on_play(void* argument){
 extern "C" void TIMER0_IRQHandler (void){
     if((LPC_TIM0->IR >> 1) & 1){
         LPC_TIM0->IR |= 1 << 1;
-        stepper->step_gpio_port->FIOCLR = stepper->step_mask; 
+        // Clear step pins 
+        stepper->step_gpio_port->FIOSET =  stepper->step_invert_mask & stepper->step_mask;
+        stepper->step_gpio_port->FIOCLR = ~stepper->step_invert_mask & stepper->step_mask; 
     }
     if((LPC_TIM0->IR >> 0) & 1){
         LPC_TIM0->IR |= 1 << 0;
@@ -110,9 +117,15 @@ void Stepper::on_stepper_wake_up(void* argument){
 void Stepper::main_interrupt(){
     
     // Step dir pins first, then step pinse, stepper drivers like to know the direction before the step signal comes in
-    this->dir_gpio_port->FIOCLR  =                     this->dir_mask;
-    this->dir_gpio_port->FIOSET  =  this->out_bits &   this->dir_mask;
-    this->step_gpio_port->FIOSET =  this->out_bits &   this->step_mask;
+    // Clear dir   pins 
+    this->dir_gpio_port->FIOSET  =                          this->dir_invert_mask          & this->dir_mask; 
+    this->dir_gpio_port->FIOCLR  =     ~                    this->dir_invert_mask          & this->dir_mask;
+    // Set   dir   pins
+    this->dir_gpio_port->FIOSET  =   (     this->out_bits ^ this->dir_invert_mask    )     & this->dir_mask;
+    this->dir_gpio_port->FIOCLR  =   ( ~ ( this->out_bits ^ this->dir_invert_mask  ) )     & this->dir_mask; 
+    // Set   step  pins 
+    this->step_gpio_port->FIOSET =   (     this->out_bits ^ this->step_invert_mask   )     & this->step_mask;  
+    this->step_gpio_port->FIOCLR =   ( ~ ( this->out_bits ^ this->step_invert_mask ) )     & this->step_mask;
 
     // If there is no current block, attempt to pop one from the buffer, if there is none, go to sleep, if there is none, go to sleep
     if( this->current_block == NULL ){
