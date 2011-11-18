@@ -107,6 +107,7 @@ ConfigValue* Config::value(uint16_t check_sum){
         if (c == '\n'){
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
+            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key);
@@ -116,8 +117,9 @@ ConfigValue* Config::value(uint16_t check_sum){
             result->found = true;
             result->key = key;
             result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
-            buffer += c;
             break;            
+        }else{
+            buffer += c;
         }
     } while (c != EOF);  
     fclose(lp);

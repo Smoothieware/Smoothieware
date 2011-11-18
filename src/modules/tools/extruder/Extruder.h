@@ -7,6 +7,7 @@
 #include "modules/robot/Block.h"
 
 #define microseconds_per_step_pulse_ckeckusm 42333
+#define extruder_module_enable_checksum      31452
 
 class Extruder : public Module{
     public:

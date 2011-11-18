@@ -21,6 +21,9 @@ extern "C" void TIMER1_IRQHandler (void){
 Extruder::Extruder(PinName stppin) : step_pin(stppin){}
 
 void Extruder::on_module_loaded() {
+
+    if( this->kernel->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() ){ return; } 
+
     extruder_for_irq = this;
 
     // Settings

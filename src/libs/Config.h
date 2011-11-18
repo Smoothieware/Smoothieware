@@ -44,6 +44,19 @@ class ConfigValue{
             }
         }
 
+        bool as_bool(){
+            if( this->found == false && this->default_set == true ){
+                return this->default_double;
+            }else{
+                if( this->value.find_first_of("t1") != string::npos ){
+                    return true;
+                }else{
+                    return false;
+                } 
+            }
+
+        }
+
         ConfigValue* by_default(double value){
             this->default_set = true;
             this->default_double = value;
