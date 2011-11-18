@@ -29,7 +29,6 @@ void Laser::on_module_loaded() {
 // Turn laser off laser at the end of a move
 void  Laser::on_block_end(void* argument){
     this->laser_pin = 0;
-    //this->laser_on = false;
 }
 
 // Set laser power at the beginning of a block
@@ -51,6 +50,7 @@ void Laser::on_play(void* argument){
 // Turn laser on/off depending on received GCodes
 void Laser::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
+    this->laser_on = false;
     if( gcode->has_letter('G' )){
         int code = gcode->get_value('G');
         if( code == 0 ){                    // G0

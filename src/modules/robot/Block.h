@@ -34,13 +34,12 @@ class Block {
         double get_duration_left(unsigned int already_taken_steps);
         vector<std::string> commands;
 
-        unsigned short steps[3];           // Number of steps for each axis for this block
-        //float          speeds[3];          // Speeds for each axis, used in the planning process
-        unsigned short steps_event_count;  // Steps for the longest axis
+        unsigned int   steps[3];           // Number of steps for each axis for this block
+        unsigned int   steps_event_count;  // Steps for the longest axis
         unsigned int   nominal_rate;       // Nominal rate in steps per minute
         float          nominal_speed;      // Nominal speed in mm per minute
         float          millimeters;        // Distance for this move
-        double entry_speed;
+        double         entry_speed;
         unsigned int   rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
         unsigned int   initial_rate;       // Initial speed in steps per minute
         unsigned int   final_rate;         // Final speed in steps per minute

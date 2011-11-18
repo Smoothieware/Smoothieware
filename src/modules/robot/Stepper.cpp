@@ -51,29 +51,29 @@ void Stepper::on_module_loaded(){
 
 void Stepper::on_config_reload(void* argument){
     LPC_GPIO_TypeDef *gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
-    this->microseconds_per_step_pulse   =  this->kernel->config->get(microseconds_per_step_pulse_ckeckusm  );
-    this->acceleration_ticks_per_second =  this->kernel->config->get(acceleration_ticks_per_second_checksum);
-    this->minimum_steps_per_minute      =  this->kernel->config->get(minimum_steps_per_minute_checksum     );
-    this->base_stepping_frequency       =  this->kernel->config->get(base_stepping_frequency_checksum      );
-    this->step_gpio_port      = gpios[(int)this->kernel->config->get(step_gpio_port_checksum               )];
-    this->dir_gpio_port       = gpios[(int)this->kernel->config->get(dir_gpio_port_checksum                )];
-    this->alpha_step_pin                =  this->kernel->config->get(alpha_step_pin_checksum               );
-    this->beta_step_pin                 =  this->kernel->config->get(beta_step_pin_checksum                );
-    this->gamma_step_pin                =  this->kernel->config->get(gamma_step_pin_checksum               );
-    this->alpha_dir_pin                 =  this->kernel->config->get(alpha_dir_pin_checksum                );
-    this->beta_dir_pin                  =  this->kernel->config->get(beta_dir_pin_checksum                 );
-    this->gamma_dir_pin                 =  this->kernel->config->get(gamma_dir_pin_checksum                );
-    this->step_mask = ( 1 << this->alpha_step_pin ) + ( 1 << this->beta_step_pin ) + ( 1 << this->gamma_step_pin );
-    this->dir_mask  = ( 1 << this->alpha_dir_pin  ) + ( 1 << this->beta_dir_pin  ) + ( 1 << this->gamma_dir_pin  );
-    this->step_bits[ALPHA_STEPPER ] = this->alpha_step_pin;
-    this->step_bits[BETA_STEPPER  ] = this->beta_step_pin;
-    this->step_bits[GAMMA_STEPPER ] = this->gamma_step_pin;
-    this->step_invert_mask = ( this->kernel->config->has_characters( alpha_step_pin_checksum,  string("!") ) << this->alpha_step_pin ) +
-                             ( this->kernel->config->has_characters( beta_step_pin_checksum,   string("!") ) << this->beta_step_pin  ) + 
-                             ( this->kernel->config->has_characters( gamma_step_pin_checksum,  string("!") ) << this->gamma_step_pin );
-    this->dir_invert_mask =  ( this->kernel->config->has_characters( alpha_dir_pin_checksum,   string("!") ) << this->alpha_dir_pin  ) +
-                             ( this->kernel->config->has_characters( beta_dir_pin_checksum,    string("!") ) << this->beta_dir_pin   ) + 
-                             ( this->kernel->config->has_characters( gamma_dir_pin_checksum,   string("!") ) << this->gamma_dir_pin  );
+    this->microseconds_per_step_pulse   =  this->kernel->config->value(microseconds_per_step_pulse_ckeckusm  )->by_default(5     )->as_number();
+    this->acceleration_ticks_per_second =  this->kernel->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
+    this->minimum_steps_per_minute      =  this->kernel->config->value(minimum_steps_per_minute_checksum     )->by_default(1200  )->as_number();
+    this->base_stepping_frequency       =  this->kernel->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
+    this->step_gpio_port      = gpios[(int)this->kernel->config->value(step_gpio_port_checksum               )->by_default(0     )->as_number()];
+    this->dir_gpio_port       = gpios[(int)this->kernel->config->value(dir_gpio_port_checksum                )->by_default(0     )->as_number()];
+    this->alpha_step_pin                =  this->kernel->config->value(alpha_step_pin_checksum               )->required(        )->as_number();
+    this->beta_step_pin                 =  this->kernel->config->value(beta_step_pin_checksum                )->required(        )->as_number();
+    this->gamma_step_pin                =  this->kernel->config->value(gamma_step_pin_checksum               )->required(        )->as_number();
+    this->alpha_dir_pin                 =  this->kernel->config->value(alpha_dir_pin_checksum                )->required(        )->as_number();
+    this->beta_dir_pin                  =  this->kernel->config->value(beta_dir_pin_checksum                 )->required(        )->as_number();
+    this->gamma_dir_pin                 =  this->kernel->config->value(gamma_dir_pin_checksum                )->required(        )->as_number();
+    this->step_mask                     = ( 1 << this->alpha_step_pin ) + ( 1 << this->beta_step_pin ) + ( 1 << this->gamma_step_pin );
+    this->dir_mask                      = ( 1 << this->alpha_dir_pin  ) + ( 1 << this->beta_dir_pin  ) + ( 1 << this->gamma_dir_pin  );
+    this->step_bits[ALPHA_STEPPER ]     = this->alpha_step_pin;
+    this->step_bits[BETA_STEPPER  ]     = this->beta_step_pin;
+    this->step_bits[GAMMA_STEPPER ]     = this->gamma_step_pin;
+    this->step_invert_mask = ( this->kernel->config->value( alpha_step_pin_checksum )->is_inverted() << this->alpha_step_pin ) +
+                             ( this->kernel->config->value( beta_step_pin_checksum  )->is_inverted() << this->beta_step_pin  ) + 
+                             ( this->kernel->config->value( gamma_step_pin_checksum )->is_inverted() << this->gamma_step_pin );
+    this->dir_invert_mask =  ( this->kernel->config->value( alpha_dir_pin_checksum  )->is_inverted() << this->alpha_dir_pin  ) +
+                             ( this->kernel->config->value( beta_dir_pin_checksum   )->is_inverted() << this->beta_dir_pin   ) + 
+                             ( this->kernel->config->value( gamma_dir_pin_checksum  )->is_inverted() << this->gamma_dir_pin  );
 
     // Set the Timer interval for Match Register 1, 
     LPC_TIM0->MR1 = (( SystemCoreClock/4 ) / 1000000 ) * this->microseconds_per_step_pulse; 
@@ -227,13 +227,15 @@ void Stepper::trapezoid_generator_reset(){
 void Stepper::set_step_events_per_minute( double steps_per_minute ){
 
     // We do not step slower than this 
-    if( steps_per_minute < this->minimum_steps_per_minute ){ steps_per_minute = this->minimum_steps_per_minute; } //TODO: Get from config
+    if( steps_per_minute < this->minimum_steps_per_minute ){ steps_per_minute = this->minimum_steps_per_minute; }
 
     // The speed factor is the factor by which we must multiply the minimal step frequency to reach the maximum step frequency
     // The higher, the smoother the movement will be, but the closer the maximum and minimum frequencies are, the smaller the factor is
-    double speed_factor = this->base_stepping_frequency / (steps_per_minute/60L); //TODO: Get from config
+    double speed_factor = this->base_stepping_frequency / (steps_per_minute/60L);
     if( speed_factor < 1 ){ speed_factor=1; }
     this->counter_increment = int(floor((1<<16)/speed_factor));
+
+    // TODO : Test if we don't get a better signal with a floored speed_factor
 
     // Set the Timer interval 
     LPC_TIM0->MR0 = floor( ( SystemCoreClock/4 ) / ( (steps_per_minute/60L) * speed_factor ) );

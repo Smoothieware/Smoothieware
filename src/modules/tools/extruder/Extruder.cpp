@@ -47,7 +47,7 @@ void Extruder::on_module_loaded() {
 }
 
 void Extruder::on_config_reload(void* argument){
-    this->microseconds_per_step_pulse = this->kernel->config->get(microseconds_per_step_pulse_ckeckusm);
+    this->microseconds_per_step_pulse = this->kernel->config->value(microseconds_per_step_pulse_ckeckusm)->by_default(5)->as_number();
 }
 
 void Extruder::on_block_begin(void* argument){

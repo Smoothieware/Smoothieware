@@ -42,7 +42,7 @@ Kernel::Kernel(){
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();
     // Serial second, because the other modules might want to say something
-    this->serial         = new SerialConsole(USBTX, USBRX, this->config->get(baud_rate_setting_ckeckusm));
+    this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(baud_rate_setting_ckeckusm)->by_default(9600)->as_number());
 
     this->add_module( this->config );
     this->add_module( this->serial );
@@ -63,6 +63,7 @@ Kernel::Kernel(){
 void Kernel::add_module(Module* module){
     module->kernel = this;
     module->on_module_loaded();
+    module->register_for_event(ON_CONFIG_RELOAD);
 }
 
 void Kernel::register_for_event(unsigned int id_event, Module* module){

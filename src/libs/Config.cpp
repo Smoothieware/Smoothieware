@@ -39,7 +39,7 @@ void Config::on_console_line_received( void* argument ){
 
 // Command to retreive the value of a specific configuration setting
 void Config::config_get_command( string parameter ){
-    this->kernel->serial->printf("%s\r\n", this->get_string( get_checksum( parameter ) ).c_str() ); 
+    this->kernel->serial->printf("%s\r\n", this->value( get_checksum( parameter ) )->value.c_str() ); 
 }
 
 // Command to set the value of a specific configuration setting
@@ -94,7 +94,9 @@ void Config::set_string( uint16_t check_sum, string value ){
 // Get a value from the configuration as a string
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
-string Config::get_string(uint16_t check_sum){
+ConfigValue* Config::value(uint16_t check_sum){
+    ConfigValue* result = new ConfigValue;
+    result->check_sum = check_sum; 
     // Open the config file ( find it if we haven't already found it ) 
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
     string buffer;
@@ -107,30 +109,20 @@ string Config::get_string(uint16_t check_sum){
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
+            string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key);
+            
             // If this line matches the checksum 
-            if(get_checksum(buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key)) != check_sum){ buffer.clear(); continue; }
-            fclose(lp);
-            return buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
-        }else{
-            buffer += c;                    
+            if(get_checksum(key) != check_sum){ buffer.clear(); continue; }
+            result->found = true;
+            result->key = key;
+            result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
+            buffer += c;
+            break;            
         }
     } while (c != EOF);  
     fclose(lp);
-    this->kernel->serial->printf("ERROR: configuration key not found\r\n");
+    return result;
 }
-
-// Get a value from the file as a number
-double Config::get(uint16_t check_sum){
-    string value = this->get_string( check_sum );
-    return atof(remove_non_number(value).c_str());
-}
-
-// Returns true if the corresponding config value contains any of the characters 
-bool Config::has_characters(uint16_t check_sum, string mask ){
-    size_t found = this->get_string(check_sum).find_first_of(mask);
-    if( found != string::npos ){ return true; }else{ return false; } 
-}
-
 
 // Get the filename for the config file
 string Config::get_config_file(){

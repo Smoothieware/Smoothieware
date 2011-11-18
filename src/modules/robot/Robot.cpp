@@ -37,10 +37,11 @@ void Robot::on_module_loaded() {
 }
 
 void Robot::on_config_reload(void* argument){
-    this->feed_rate =           this->kernel->config->get(default_feed_rate_checksum)/60; 
-    this->seek_rate =           this->kernel->config->get(default_seek_rate_checksum)/60;
-    this->mm_per_line_segment = this->kernel->config->get(mm_per_line_segment_checksum);
-    this->mm_per_arc_segment  = this->kernel->config->get(mm_per_arc_segment_checksum); 
+    this->feed_rate =           this->kernel->config->value(default_feed_rate_checksum  )->by_default(100)->as_number()/60; 
+    this->seek_rate =           this->kernel->config->value(default_seek_rate_checksum  )->by_default(100)->as_number()/60;
+    this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum)->by_default(0.1)->as_number();
+    this->mm_per_arc_segment  = this->kernel->config->value(mm_per_arc_segment_checksum )->by_default(10 )->as_number();
+    this->arc_correction      = this->kernel->config->value(arc_correction_checksum     )->by_default(5  )->as_number(); 
 }
 
 //A GCode has been received
@@ -116,10 +117,11 @@ void Robot::append_milestone( double target[], double rate ){
     double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );      
     if( millimeters_of_travel < 0.001 ){ return; } 
     double duration = millimeters_of_travel / rate;
+    //this->kernel->serial->printf("dur: %f mm: %f rate: %f target_z: %f steps_z: %d deltas_z: %f \r\n", duration, millimeters_of_travel, rate, target[2], steps[2], deltas[2] );
 
     this->kernel->planner->append_block( steps, rate*60, millimeters_of_travel, deltas ); 
 
-    memcpy(this->last_milestone, target, sizeof(double)*3); // this->position[] = target[]; 
+    memcpy(this->last_milestone, target, sizeof(double)*3); // this->last_milestone[] = target[]; 
 
 }
 
@@ -207,7 +209,7 @@ void Robot::append_arc( double target[], double offset[], double radius, bool is
 
     for (i = 1; i<segments; i++) { // Increment (segments-1)
 
-        if (count < 25 ) { // TODO: Get from config
+        if (count < this->arc_correction ) {
           // Apply vector rotation matrix
           r_axisi = r_axis0*sin_T + r_axis1*cos_T;
           r_axis0 = r_axis0*cos_T - r_axis1*sin_T;

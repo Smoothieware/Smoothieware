@@ -15,6 +15,8 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "Block.h"
 #include "Planner.h"
+    
+
 
 Planner::Planner(){
     clear_vector(this->position);
@@ -28,8 +30,9 @@ void Planner::on_module_loaded(){
 }
 
 void Planner::on_config_reload(void* argument){
-    this->acceleration = this->kernel->config->get(acceleration_checksum);
-    this->max_jerk     = this->kernel->config->get(max_jerk_checksum    );
+    this->acceleration =       this->kernel->config->value(acceleration_checksum       )->required()->as_number();
+    this->max_jerk =           this->kernel->config->value(max_jerk_checksum           )->required(      )->as_number();
+    this->junction_deviation = this->kernel->config->value(junction_deviation_checksum )->by_default(0.05)->as_number(); 
 }
 
 
@@ -38,9 +41,9 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
    
     // Do not append block with no movement
     if( target[ALPHA_STEPPER] == this->position[ALPHA_STEPPER] && target[BETA_STEPPER] == this->position[BETA_STEPPER] && target[GAMMA_STEPPER] == this->position[GAMMA_STEPPER] ){ this->computing = false; return; }
-   
+
     // Stall here if the queue is ful
-    while( this->queue.size() >= this->queue.capacity() ){ wait_us(100); }     
+    while( this->queue.size() >= this->queue.capacity() ){ wait_us(100); }
  
     // Clean up the vector of commands in the block we are about to replace
     // It is quite strange to do this here, we really should do it inside Block->pop_and_execute_gcode
@@ -52,7 +55,6 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
         }
     }
 
-    // Add/get a new block from the queue
     this->queue.push_back(Block());
     block = this->queue.get_ref( this->queue.size()-1 );
     block->planner = this;
@@ -83,6 +85,8 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     block->nominal_speed = block->millimeters * inverse_minute;           // (mm/min) Always > 0
     block->nominal_rate = ceil(block->steps_event_count * inverse_minute); // (step/min) Always > 0
 
+    //this->kernel->serial->printf("nom_speed: %f nom_rate: %u step_event_count: %u block->steps_z: %u \r\n", block->nominal_speed, block->nominal_rate, block->steps_event_count, block->steps[2]  );
+    
     // Compute the acceleration rate for the trapezoid generator. Depending on the slope of the line
     // average travel per step event changes. For a line along one axis the travel per step event
     // is equal to the travel/step in the particular axis. For a 45 degree line the steppers of both
@@ -125,7 +129,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
           // Compute maximum junction velocity based on maximum acceleration and junction deviation
           double sin_theta_d2 = sqrt(0.5*(1.0-cos_theta)); // Trig half angle identity. Always positive.
           vmax_junction = min(vmax_junction,
-            sqrt(this->acceleration*60*60 * 0.05 * sin_theta_d2/(1.0-sin_theta_d2)) ); // TODO: Get from config
+            sqrt(this->acceleration*60*60 * this->junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) ); 
         }
       }
     }

@@ -21,6 +21,8 @@ using std::string;
 #define default_feed_rate_checksum             47357
 #define mm_per_line_segment_checksum           30176
 #define mm_per_arc_segment_checksum            15470
+#define arc_correction_checksum                5074
+
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
@@ -73,7 +75,15 @@ class Robot : public Module {
         uint8_t plane_axis_0, plane_axis_1, plane_axis_2;     // Current plane ( XY, XZ, YZ )
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         double mm_per_line_segment;                           // Setting : Used to split lines into segments
-        double mm_per_arc_segment;                            // Setting : Used to split arcs into segments
+        double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
+        
+        // Number of arc generation iterations by small angle approximation before exact arc trajectory
+        // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
+        // generations. In general, the default value is more than enough for the intended CNC applications
+        // of grbl, and should be on the order or greater than the size of the buffer to help with the
+        // computational efficiency of generating arcs.
+        int arc_correction;                                   // Setting : how often to rectify arc computation
+
 };
 
 #endif
