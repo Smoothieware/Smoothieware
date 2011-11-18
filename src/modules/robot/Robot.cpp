@@ -41,7 +41,10 @@ void Robot::on_config_reload(void* argument){
     this->seek_rate =           this->kernel->config->value(default_seek_rate_checksum  )->by_default(100)->as_number()/60;
     this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum)->by_default(0.1)->as_number();
     this->mm_per_arc_segment  = this->kernel->config->value(mm_per_arc_segment_checksum )->by_default(10 )->as_number();
-    this->arc_correction      = this->kernel->config->value(arc_correction_checksum     )->by_default(5  )->as_number(); 
+    this->arc_correction      = this->kernel->config->value(arc_correction_checksum     )->by_default(5  )->as_number();
+    this->max_speeds[X_AXIS]  = this->kernel->config->value(x_axis_max_speed_checksum   )->by_default(0  )->as_number();
+    this->max_speeds[Y_AXIS]  = this->kernel->config->value(y_axis_max_speed_checksum   )->by_default(0  )->as_number();
+    this->max_speeds[Z_AXIS]  = this->kernel->config->value(z_axis_max_speed_checksum   )->by_default(0  )->as_number();
 }
 
 //A GCode has been received
@@ -117,6 +120,14 @@ void Robot::append_milestone( double target[], double rate ){
     double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );      
     if( millimeters_of_travel < 0.001 ){ return; } 
     double duration = millimeters_of_travel / rate;
+
+    for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
+        if( this->max_speeds[axis] > 0 ){ 
+            double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * 60; 
+            rate = rate * ( this->max_speeds[axis] / axis_speed );
+        }
+    }
+
     //this->kernel->serial->printf("dur: %f mm: %f rate: %f target_z: %f steps_z: %d deltas_z: %f \r\n", duration, millimeters_of_travel, rate, target[2], steps[2], deltas[2] );
 
     this->kernel->planner->append_block( steps, rate*60, millimeters_of_travel, deltas ); 
