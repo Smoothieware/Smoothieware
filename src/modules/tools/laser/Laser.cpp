@@ -62,7 +62,7 @@ void Laser::on_gcode_execute(void* argument){
     }
 }
 
-
+// We follow the stepper module here, so speed must be proportional
 void Laser::on_speed_change(void* argument){
     this->set_proportional_power();
 }
