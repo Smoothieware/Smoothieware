@@ -52,6 +52,7 @@ void Extruder::on_module_loaded() {
     LPC_TIM1->TCR = 1;  
 }
 
+// Get config
 void Extruder::on_config_reload(void* argument){
     this->microseconds_per_step_pulse = 5; //this->kernel->config->value(microseconds_per_step_pulse_ckeckusm)->by_default(5)->as_number();
 }

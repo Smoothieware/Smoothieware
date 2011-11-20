@@ -146,28 +146,16 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
     this->previous_nominal_speed = block->nominal_speed;
     
+    // Update current position
     memcpy(this->position, target, sizeof(int)*3);
+
+    // Math-heavy re-computing of the whole queue to take the new 
     this->recalculate();
-   
-    this->computing = false;
     
+    // The block can now be used 
     block->ready();
 
-    this->kernel->call_event(ON_STEPPER_WAKE_UP, this);
 }
-
-
-//TODO : Make a part of Player
-// Gcodes are attached to their respective block in the queue so that the on_gcode_execute event can be called with the gcode when the block is executed
-void Planner::attach_gcode_to_queue(Gcode* gcode){
-    //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( this->kernel->player->queue.size() == 0 ){
-        this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
-    }else{
-        this->kernel->player->queue.get_ref( this->kernel->player->queue.size() - 1 )->append_gcode(gcode);
-    } 
-}
-
 
 
 // Recalculates the motion plan according to the following algorithm:
@@ -234,9 +222,6 @@ void Planner::recalculate_trapezoids() {
     }
 }
 
-// We are done with this block, discard it
-void Planner::discard_current_block(){
-}
 
 // Debug function
 void Planner::dump_queue(){
@@ -246,8 +231,6 @@ void Planner::dump_queue(){
        this->kernel->player->queue.get_ref(index)->debug(this->kernel); 
     }
 }
-
-
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.

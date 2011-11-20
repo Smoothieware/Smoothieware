@@ -61,7 +61,7 @@ class Block {
         Planner* planner;
         Player*  player;
 
-        short times_taken;
+        short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
 
 };
 

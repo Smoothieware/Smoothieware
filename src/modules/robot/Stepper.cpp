@@ -50,6 +50,7 @@ void Stepper::on_module_loaded(){
 
 }
 
+// Get configuration from the config file
 void Stepper::on_config_reload(void* argument){
     LPC_GPIO_TypeDef *gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
     this->microseconds_per_step_pulse   =  this->kernel->config->value(microseconds_per_step_pulse_ckeckusm  )->by_default(5     )->as_number();
@@ -100,7 +101,11 @@ void Stepper::on_block_begin(void* argument){
     if( block->millimeters == 0.0 ){ return; }
 
     this->current_block = block;
+
+    // Mark the new block as of interrest to us
     this->current_block->take();
+
+    // Setup
     this->trapezoid_generator_reset();
     this->update_offsets();
     for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
@@ -152,7 +157,7 @@ inline void Stepper::main_interrupt(){
         // Set bits for direction and steps 
         this->out_bits = this->current_block->direction_bits;
         for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ 
-            this->counters[stpr] += this->counter_increment; // (1<<16)>>this->divider; // Basically += 1/divider if we were in floating point arythmetic, but here the counters precision is 1/(2^16). 
+            this->counters[stpr] += this->counter_increment; 
             if( this->counters[stpr] > this->offsets[stpr] && this->stepped[stpr] < this->current_block->steps[stpr] ){
                 this->counters[stpr] -= this->offsets[stpr] ;
                 this->stepped[stpr]++;
@@ -160,7 +165,7 @@ inline void Stepper::main_interrupt(){
             } 
         } 
         // If current block is finished, reset pointer
-        this->step_events_completed += this->counter_increment; // (1<<16)>>this->divider; // /this->divider;
+        this->step_events_completed += this->counter_increment;
         if( this->step_events_completed >= this->current_block->steps_event_count<<16 ){ 
             if( this->stepped[ALPHA_STEPPER] == this->current_block->steps[ALPHA_STEPPER] && this->stepped[BETA_STEPPER] == this->current_block->steps[BETA_STEPPER] && this->stepped[GAMMA_STEPPER] == this->current_block->steps[GAMMA_STEPPER] ){ 
                 this->current_block->release(); 
@@ -172,6 +177,7 @@ inline void Stepper::main_interrupt(){
     }
 }
 
+// We compute this here instead of each time in the interrupt
 void Stepper::update_offsets(){
     for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ 
         this->offsets[stpr] = (int)floor((float)((float)(1<<16)*(float)((float)this->current_block->steps_event_count / (float)this->current_block->steps[stpr]))); 
@@ -183,7 +189,7 @@ void Stepper::update_offsets(){
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
 void Stepper::trapezoid_generator_tick() {
-    if(this->current_block && !this->kernel->planner->computing ) {
+    if(this->current_block ) {
       if(this->step_events_completed < this->current_block->accelerate_until<<16) {
           this->trapezoid_adjusted_rate += this->current_block->rate_delta;
           if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
@@ -229,9 +235,7 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
     // The higher, the smoother the movement will be, but the closer the maximum and minimum frequencies are, the smaller the factor is
     double speed_factor = this->base_stepping_frequency / (steps_per_minute/60L);
     if( speed_factor < 1 ){ speed_factor=1; }
-    this->counter_increment = int(floor((1<<16)/speed_factor));
-
-    // TODO : Test if we don't get a better signal with a floored speed_factor
+    this->counter_increment = int(floor((1<<16)/floor(speed_factor)));
 
     // Set the Timer interval 
     LPC_TIM0->MR0 = floor( ( SystemCoreClock/4 ) / ( (steps_per_minute/60L) * speed_factor ) );

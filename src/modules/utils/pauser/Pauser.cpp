@@ -15,6 +15,8 @@ void Pauser::on_module_loaded(){
     this->button_ticker.attach_us(this, &Pauser::button_tick, 1000000/100);
 }
 
+//TODO: Make this use InterruptIn
+//Check the state of the button and ask accordingly
 void Pauser::button_tick(){
     if(this->button_state != this->button){ 
         this->button_state = this->button; 

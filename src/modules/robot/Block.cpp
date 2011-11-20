@@ -20,7 +20,7 @@ using std::string;
 
 Block::Block(){
     clear_vector(this->steps);
-    this->times_taken = 0;
+    this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
 }
 
 void Block::debug(Kernel* kernel){
@@ -44,6 +44,7 @@ double Block::compute_factor_for_safe_speed(){
 //                              +-------------+
 //                                  time -->
 void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
+
     this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min) 
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
     double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; 
@@ -189,3 +190,6 @@ void Block::release(){
         player->pop_and_process_new_block(); 
     }
 }
+
+
+

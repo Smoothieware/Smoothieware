@@ -109,6 +109,7 @@ void SimpleShell::play_command( string parameters ){
     }; 
     fclose(lp);
 
-
-
 }
+
+
+

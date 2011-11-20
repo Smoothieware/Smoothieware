@@ -31,10 +31,13 @@ void GcodeDispatch::on_console_line_received(void * line){
         size_t comment = possible_command.find_first_of(";");
         if( comment != string::npos ){ possible_command = possible_command.substr(0, comment); }
 
+        // Dispatch
         Gcode gcode = Gcode();
         gcode.command = possible_command;
         this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
         this->kernel->serial->printf("ok\r\n");
+
+    // Ignore comments 
     }else if( first_char == ';' || first_char == '(' ){
         this->kernel->serial->printf("ok\r\n");
     }

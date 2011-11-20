@@ -24,7 +24,7 @@ int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->serial->printf("Smoothie ( grbl port ) version 0.2 \r\nstart\r\n");
+    kernel->serial->printf("Smoothie ( grbl port ) version 0.4 \r\nstart\r\n");
 
     kernel->add_module( new Laser(p21) );
     kernel->add_module( new Extruder(p26) );

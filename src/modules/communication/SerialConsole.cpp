@@ -20,7 +20,6 @@ SerialConsole::SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate )  :
     this->baud(baud_rate);
 }  
 
-
 // Called when the module has just been loaded
 void SerialConsole::on_module_loaded() {
     // We want to be called every time a new char is received
