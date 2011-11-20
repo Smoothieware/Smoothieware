@@ -30,7 +30,8 @@ class Stepper : public Module {
         Stepper();
         void on_module_loaded();
         void on_config_reload(void* argument);
-        void on_stepper_wake_up(void* argument);
+        void on_block_begin(void* argument);
+        void on_block_end(void* argument);
         void on_play(void* argument);
         void on_pause(void* argument);
         void main_interrupt();
@@ -40,6 +41,7 @@ class Stepper : public Module {
         void reset_step_pins();
         void update_offsets();
         int config_step_timer( int cycles );
+
         Block* current_block;
         Ticker acceleration_ticker;
         Timeout flipper;

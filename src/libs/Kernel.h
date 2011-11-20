@@ -38,6 +38,7 @@ typedef void (Module::*ModuleCallback)(void * argument);
 
 //Module manager
 class Module;
+class Player;
 class Kernel {
     public:
         Kernel();
@@ -53,6 +54,7 @@ class Kernel {
         Stepper*          stepper;
         Planner*          planner;
         Config*           config;
+        Player*           player;
 
     private:
         vector<Module*> hooks[NUMBER_OF_DEFINED_EVENTS]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

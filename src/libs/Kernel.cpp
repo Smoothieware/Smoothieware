@@ -18,6 +18,7 @@ using namespace std;
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
+#include "modules/robot/Player.h"
 
 // List of callback functions, ordered as their corresponding events
 const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = { 
@@ -52,11 +53,13 @@ Kernel::Kernel(){
     this->robot          = new Robot();
     this->stepper        = new Stepper();
     this->planner        = new Planner();
+    this->player         = new Player();
 
     this->add_module( this->gcode_dispatch );
     this->add_module( this->robot );
     this->add_module( this->stepper );
     this->add_module( this->planner );
+    this->add_module( this->player );
 
 }
 

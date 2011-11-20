@@ -12,6 +12,7 @@ using std::string;
 #include "mbed.h"
 #include <math.h>
 #include "Planner.h"
+#include "Player.h"
 #include "Robot.h"
 #include "libs/nuts_bolts.h"
 #include "../communication/utils/Gcode.h"
@@ -54,14 +55,14 @@ void Robot::on_gcode_received(void * argument){
     gcode->on_gcode_execute_event_called = false;
     
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( this->kernel->planner->queue.size() == 0 ){
+    if( this->kernel->player->queue.size() == 0 ){
         gcode->call_on_gcode_execute_event_immediatly = true;
         this->execute_gcode(gcode);
         if( gcode->on_gcode_execute_event_called == false ){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
         }
     }else{
-        Block* block = this->kernel->planner->queue.get_ref( this->kernel->planner->queue.size() - 1 );
+        Block* block = this->kernel->player->queue.get_ref( this->kernel->player->queue.size() - 1 );
         block->append_gcode(gcode);
         this->execute_gcode(gcode);
     }

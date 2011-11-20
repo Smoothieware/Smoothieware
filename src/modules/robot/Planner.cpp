@@ -15,7 +15,7 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "Block.h"
 #include "Planner.h"
-    
+#include "Player.h" 
 
 
 Planner::Planner(){
@@ -43,24 +43,10 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     //if( target[ALPHA_STEPPER] == this->position[ALPHA_STEPPER] && target[BETA_STEPPER] == this->position[BETA_STEPPER] && target[GAMMA_STEPPER] == this->position[GAMMA_STEPPER] ){ this->computing = false; return; }
 
     // Stall here if the queue is ful
-    while( this->queue.size() >= this->queue.capacity() ){ wait_us(100); }
- 
-    // Clean up the vector of commands in the block we are about to replace
-    // It is quite strange to do this here, we really should do it inside Block->pop_and_execute_gcode
-    // but that function is called inside an interrupt and thus can break everything if the interrupt was trigerred during a memory access
-    Block* block = this->queue.get_ref( this->queue.size()-1 );
-    if( block->planner == this ){
-        for(short index=0; index<block->commands.size(); index++){
-            block->commands.pop_back();
-            block->travel_distances.pop_back();
-        }
-    }
+    while( this->kernel->player->queue.size() >= this->kernel->player->queue.capacity() ){ wait_us(100); }
 
-    this->queue.push_back(Block());
-    block = this->queue.get_ref( this->queue.size()-1 );
-    block->planner = this;
-
-    this->computing = true; //TODO: Check if this is necessary
+    Block* block = this->kernel->player->new_block();
+    block->planner = this;   
 
     // Direction bits
     block->direction_bits = 0; 
@@ -71,7 +57,6 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     
     // Number of steps for each stepper
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); } 
-    
     
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
@@ -103,7 +88,6 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // Convert universal acceleration for direction-dependent stepper rate change parameter
     block->rate_delta = ceil( block->steps_event_count*inverse_millimeters * this->acceleration*60.0 / this->kernel->stepper->acceleration_ticks_per_second ); // (step/min/acceleration_tick)
 
-
     // Compute path unit vector
     double unit_vec[3];
     unit_vec[X_AXIS] = deltas[X_AXIS]*inverse_millimeters;
@@ -121,7 +105,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // nonlinearities of both the junction angle and junction velocity.
     double vmax_junction = MINIMUM_PLANNER_SPEED; // Set default max junction speed
 
-    if (this->queue.size() > 1 && (this->previous_nominal_speed > 0.0)) {
+    if (this->kernel->player->queue.size() > 1 && (this->previous_nominal_speed > 0.0)) {
       // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
       // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
       double cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
@@ -161,22 +145,26 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // Update previous path unit_vector and nominal speed
     memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
     this->previous_nominal_speed = block->nominal_speed;
-
+    
     memcpy(this->position, target, sizeof(int)*3);
     this->recalculate();
+   
     this->computing = false;
-    block->computed = true;
+    
+    block->ready();
 
     this->kernel->call_event(ON_STEPPER_WAKE_UP, this);
 }
 
+
+//TODO : Make a part of Player
 // Gcodes are attached to their respective block in the queue so that the on_gcode_execute event can be called with the gcode when the block is executed
 void Planner::attach_gcode_to_queue(Gcode* gcode){
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( this->queue.size() == 0 ){
+    if( this->kernel->player->queue.size() == 0 ){
         this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
     }else{
-        this->queue.get_ref( this->queue.size() - 1 )->append_gcode(gcode);
+        this->kernel->player->queue.get_ref( this->kernel->player->queue.size() - 1 )->append_gcode(gcode);
     } 
 }
 
@@ -209,8 +197,8 @@ void Planner::recalculate() {
 // implements the reverse pass.
 void Planner::reverse_pass(){
      // For each block
-    for( int index = this->queue.size()-1; index > 0; index-- ){  // Skip buffer tail/first block to prevent over-writing the initial entry speed.
-        this->queue.get_ref(index)->reverse_pass((index==this->queue.size()-1?NULL:this->queue.get_ref(index+1)), (index==0? (this->has_deleted_block?&(this->last_deleted_block):NULL) :this->queue.get_ref(index-1))); 
+    for( int index = this->kernel->player->queue.size()-1; index > 0; index-- ){  // Skip buffer tail/first block to prevent over-writing the initial entry speed.
+        this->kernel->player->queue.get_ref(index)->reverse_pass((index==this->kernel->player->queue.size()-1?NULL:this->kernel->player->queue.get_ref(index+1)), (index==0? (this->has_deleted_block?&(this->last_deleted_block):NULL) :this->kernel->player->queue.get_ref(index-1))); 
     }
 }
 
@@ -218,8 +206,8 @@ void Planner::reverse_pass(){
 // implements the forward pass.
 void Planner::forward_pass() {
     // For each block
-    for( int index = 0; index <= this->queue.size()-1; index++ ){
-        this->queue.get_ref(index)->forward_pass((index==0?NULL:this->queue.get_ref(index-1)),(index==this->queue.size()-1?NULL:this->queue.get_ref(index+1))); 
+    for( int index = 0; index <= this->kernel->player->queue.size()-1; index++ ){
+        this->kernel->player->queue.get_ref(index)->forward_pass((index==0?NULL:this->kernel->player->queue.get_ref(index-1)),(index==this->kernel->player->queue.size()-1?NULL:this->kernel->player->queue.get_ref(index+1))); 
     }
 }
 
@@ -230,14 +218,14 @@ void Planner::forward_pass() {
 // to exit speed and entry speed of one another.
 void Planner::recalculate_trapezoids() {
     // For each block
-    for( int index = 0; index <= this->queue.size()-1; index++ ){ // We skip the first one because we need a previous
+    for( int index = 0; index <= this->kernel->player->queue.size()-1; index++ ){ // We skip the first one because we need a previous
 
-        if( this->queue.size()-1 == index ){ //last block
-            Block* last = this->queue.get_ref(index);
+        if( this->kernel->player->queue.size()-1 == index ){ //last block
+            Block* last = this->kernel->player->queue.get_ref(index);
             last->calculate_trapezoid( last->entry_speed / last->nominal_speed, MINIMUM_PLANNER_SPEED / last->nominal_speed ); 
         }else{
-            Block* current = this->queue.get_ref(index);
-            Block* next =    this->queue.get_ref(index+1);
+            Block* current = this->kernel->player->queue.get_ref(index);
+            Block* next =    this->kernel->player->queue.get_ref(index+1);
             if( current->recalculate_flag || next->recalculate_flag ){
                 current->calculate_trapezoid( current->entry_speed/current->nominal_speed, next->entry_speed/current->nominal_speed );
                 current->recalculate_flag = false; // Reset current only to ensure next trapezoid is computed
@@ -246,26 +234,16 @@ void Planner::recalculate_trapezoids() {
     }
 }
 
-// Get the first block in the queue, or return NULL
-Block* Planner::get_current_block(){
-    if( this->queue.size() == 0 ){ return NULL; }
-    return this->queue.get_ref(0);
-}
-
-
 // We are done with this block, discard it
 void Planner::discard_current_block(){
-    //this->has_deleted_block = true;
-    //this->queue.get(0,this->last_deleted_block );
-    this->queue.delete_first();
 }
 
 // Debug function
 void Planner::dump_queue(){
-    for( int index = 0; index <= this->queue.size()-1; index++ ){
-       if( index > 10 && index < this->queue.size()-10 ){ continue; }
+    for( int index = 0; index <= this->kernel->player->queue.size()-1; index++ ){
+       if( index > 10 && index < this->kernel->player->queue.size()-10 ){ continue; }
        this->kernel->serial->printf("block %03d > ", index);
-       this->queue.get_ref(index)->debug(this->kernel); 
+       this->kernel->player->queue.get_ref(index)->debug(this->kernel); 
     }
 }
 
