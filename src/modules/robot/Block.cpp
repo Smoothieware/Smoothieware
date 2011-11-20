@@ -13,14 +13,14 @@
 #include <string>
 #include "Block.h"
 #include "Planner.h"
+#include "Player.h"
 using std::string;
 #include <vector>
 #include "../communication/utils/Gcode.h"
 
-
 Block::Block(){
     clear_vector(this->steps);
-    this->computed = false;
+    this->times_taken = 0;
 }
 
 void Block::debug(Kernel* kernel){
@@ -168,4 +168,24 @@ void Block::pop_and_execute_gcode(Kernel* &kernel){
     }
 }
 
+// Signal the player that this block is ready to be injected into the system
+void Block::ready(){
+    this->player->new_block_added();
+}
 
+// Mark the block as taken by one more module
+void Block::take(){
+    this->times_taken++;
+}
+
+// Mark the block as no longer taken by one module, go to next block if this free's it
+void Block::release(){
+    this->times_taken--;
+    if( this->times_taken < 1 ){
+        this->player->kernel->call_event(ON_BLOCK_END, this);
+        this->pop_and_execute_gcode(this->player->kernel);
+        Player* player = this->player; 
+        player->queue.delete_first();
+        player->pop_and_process_new_block(); 
+    }
+}

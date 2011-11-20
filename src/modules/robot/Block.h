@@ -12,10 +12,11 @@
 using namespace std;
 #include <string>
 #include <vector>
+
 #include "../communication/utils/Gcode.h"
 #include "Planner.h"
 class Planner;
-
+class Player;
 
 double max_allowable_speed( double acceleration, double target_velocity, double distance);
 
@@ -32,6 +33,9 @@ class Block {
         void append_gcode(Gcode* gcode);
         void pop_and_execute_gcode(Kernel* &kernel);
         double get_duration_left(unsigned int already_taken_steps);
+        void take();
+        void release();
+        void ready();
 
         vector<std::string> commands;
         vector<double> travel_distances;
@@ -55,8 +59,10 @@ class Block {
 
         double max_entry_speed;
         Planner* planner;
+        Player*  player;
 
-        bool computed;
+        short times_taken;
+
 };
 
 

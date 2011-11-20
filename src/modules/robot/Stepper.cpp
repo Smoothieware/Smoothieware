@@ -26,7 +26,8 @@ Stepper::Stepper(){
 //Called when the module has just been loaded
 void Stepper::on_module_loaded(){
     stepper = this;
-    this->register_for_event(ON_STEPPER_WAKE_UP);
+    this->register_for_event(ON_BLOCK_BEGIN);
+    this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
  
@@ -91,6 +92,29 @@ void Stepper::on_play(void* argument){
     this->acceleration_ticker.attach_us(this, &Stepper::trapezoid_generator_tick, 1000000/this->acceleration_ticks_per_second);
 }
 
+// A new block is popped from the queue
+void Stepper::on_block_begin(void* argument){
+    Block* block  = static_cast<Block*>(argument);
+
+    // The stepper does not care about 0-blocks
+    if( block->millimeters == 0.0 ){ return; }
+
+    this->current_block = block;
+    this->current_block->take();
+    this->trapezoid_generator_reset();
+    this->update_offsets();
+    for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
+    this->step_events_completed = 0; 
+
+}
+
+// Current block is discarded
+void Stepper::on_block_end(void* argument){
+    Block* block  = static_cast<Block*>(argument);
+    if( this->current_block != NULL ){
+        this->current_block == NULL; //stfu !
+    }
+}
 
 // Timer0 ISR
 // MR0 is used to call the main stepping interrupt, and MR1 to reset the stepping pins
@@ -108,13 +132,9 @@ extern "C" void TIMER0_IRQHandler (void){
 }
 
 
-//Called ( apriori only by the planner ) when Stepper asked to wake up : means we have work to do. Argument is the queue so that we can use it. //TODO : Get rid of this
-void Stepper::on_stepper_wake_up(void* argument){
-}
-
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Smoothie. It is executed at the rate set with
 // config_step_timer. It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
-void Stepper::main_interrupt(){
+inline void Stepper::main_interrupt(){
     
     // Step dir pins first, then step pinse, stepper drivers like to know the direction before the step signal comes in
     // Clear dir   pins 
@@ -127,29 +147,7 @@ void Stepper::main_interrupt(){
     this->step_gpio_port->FIOSET =   (     this->out_bits ^ this->step_invert_mask   )     & this->step_mask;  
     this->step_gpio_port->FIOCLR =   ( ~ ( this->out_bits ^ this->step_invert_mask ) )     & this->step_mask;
 
-
-    // If there is no current block, attempt to pop one from the buffer, if there is none, go to sleep, if there is none, go to sleep
-    if( this->current_block == NULL ){
-        this->current_block = this->kernel->planner->get_current_block();
-        if( this->current_block != NULL ){
-            if( this->current_block->computed == false ){
-               this->current_block = NULL;
-            }else{
-                this->trapezoid_generator_reset();
-                this->update_offsets();
-                for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
-                this->step_events_completed = 0; 
-                this->kernel->call_event(ON_BLOCK_BEGIN, this->current_block);
-                //this->kernel->planner->dump_queue();
-            } 
-        }else{
-            // Go to sleep
-            //LPC_TIM0->MR0 = 10000;  
-            //LPC_TIM0->MR1 = 500;
-            //LPC_TIM0->TCR = 0;
-        }
-    }
-   
+  
     if( this->current_block != NULL ){
         // Set bits for direction and steps 
         this->out_bits = this->current_block->direction_bits;
@@ -165,10 +163,7 @@ void Stepper::main_interrupt(){
         this->step_events_completed += this->counter_increment; // (1<<16)>>this->divider; // /this->divider;
         if( this->step_events_completed >= this->current_block->steps_event_count<<16 ){ 
             if( this->stepped[ALPHA_STEPPER] == this->current_block->steps[ALPHA_STEPPER] && this->stepped[BETA_STEPPER] == this->current_block->steps[BETA_STEPPER] && this->stepped[GAMMA_STEPPER] == this->current_block->steps[GAMMA_STEPPER] ){ 
-                this->kernel->call_event(ON_BLOCK_END, this->current_block);
-                this->current_block->pop_and_execute_gcode(this->kernel);
-                this->current_block = NULL;
-                this->kernel->planner->discard_current_block();
+                this->current_block->release(); 
             }
         }
 
