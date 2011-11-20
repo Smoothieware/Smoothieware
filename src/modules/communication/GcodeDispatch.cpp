@@ -11,6 +11,7 @@ using std::string;
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
+#include "libs/nuts_bolts.h"
 #include "GcodeDispatch.h"
 
 GcodeDispatch::GcodeDispatch(){}
@@ -25,9 +26,16 @@ void GcodeDispatch::on_console_line_received(void * line){
     string possible_command = *static_cast<string*>(line);
     char first_char = possible_command[0];
     if( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' ){ 
+   
+        //Remove comments
+        size_t comment = possible_command.find_first_of(";");
+        if( comment != string::npos ){ possible_command = possible_command.substr(0, comment); }
+
         Gcode gcode = Gcode();
         gcode.command = possible_command;
         this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
+        this->kernel->serial->printf("ok\r\n");
+    }else if( first_char == ';' || first_char == '(' ){
         this->kernel->serial->printf("ok\r\n");
     }
 }

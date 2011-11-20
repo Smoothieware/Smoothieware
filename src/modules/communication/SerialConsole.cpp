@@ -53,9 +53,8 @@ inline void SerialConsole::line_received(){
 
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){
-  if( this->received_lines.size() < 1 ){ return; }
-  this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &this->received_lines.back() ); 
-  this->received_lines.pop_back();
+    if( this->received_lines.size() < 1 ){ return; }
+    this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &this->received_lines.back() ); 
+    this->received_lines.pop_back();
 }
-
 

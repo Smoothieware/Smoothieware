@@ -50,9 +50,25 @@ void Robot::on_config_reload(void* argument){
 //A GCode has been received
 void Robot::on_gcode_received(void * argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    this->kernel->planner->attach_gcode_to_queue(gcode);
-    this->execute_gcode(gcode);
+    gcode->call_on_gcode_execute_event_immediatly = false; 
+    gcode->on_gcode_execute_event_called = false;
+    
+    //If the queue is empty, execute immediatly, otherwise attach to the last added block
+    if( this->kernel->planner->queue.size() == 0 ){
+        gcode->call_on_gcode_execute_event_immediatly = true;
+        this->execute_gcode(gcode);
+        if( gcode->on_gcode_execute_event_called == false ){
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
+        }
+    }else{
+        Block* block = this->kernel->planner->queue.get_ref( this->kernel->planner->queue.size() - 1 );
+        block->append_gcode(gcode);
+        this->execute_gcode(gcode);
+    }
+    
+
 }
+
 
 //See if the current Gcode line has some orders for us
 void Robot::execute_gcode(Gcode* gcode){
@@ -94,9 +110,9 @@ void Robot::execute_gcode(Gcode* gcode){
         case NEXT_ACTION_DEFAULT:
             switch(this->motion_mode){
                 case MOTION_MODE_CANCEL: break;
-                case MOTION_MODE_SEEK  : this->append_line(target, this->seek_rate ); break;
-                case MOTION_MODE_LINEAR: this->append_line(target, this->feed_rate ); break;
-                case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC: this->compute_arc(offset, target ); break; 
+                case MOTION_MODE_SEEK  : this->append_line(gcode, target, this->seek_rate ); break;
+                case MOTION_MODE_LINEAR: this->append_line(gcode, target, this->feed_rate ); break;
+                case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, target ); break; 
             }
             break;
     }
@@ -118,16 +134,19 @@ void Robot::append_milestone( double target[], double rate ){
 
     
     double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );      
-    if( millimeters_of_travel < 0.001 ){ return; } 
-    double duration = millimeters_of_travel / rate;
+    //if( millimeters_of_travel < 0.001 ){ return; } 
+    //double duration = millimeters_of_travel / rate;
+    double duration = 0;
+    if( rate > 0 ){ duration = millimeters_of_travel / rate; }
 
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
         if( this->max_speeds[axis] > 0 ){ 
             double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * 60; 
-            rate = rate * ( this->max_speeds[axis] / axis_speed );
+            if( axis_speed > this->max_speeds[axis] ){ 
+                rate = rate * ( this->max_speeds[axis] / axis_speed ); 
+            }
         }
     }
-
     //this->kernel->serial->printf("dur: %f mm: %f rate: %f target_z: %f steps_z: %d deltas_z: %f \r\n", duration, millimeters_of_travel, rate, target[2], steps[2], deltas[2] );
 
     this->kernel->planner->append_block( steps, rate*60, millimeters_of_travel, deltas ); 
@@ -136,15 +155,24 @@ void Robot::append_milestone( double target[], double rate ){
 
 }
 
-void Robot::append_line(double target[], double rate ){
+void Robot::append_line(Gcode* gcode, double target[], double rate ){
 
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes. 
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
-    double millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) ); 
-    if( millimeters_of_travel == 0.0 ){ return; }
+    gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) ); 
 
-    uint16_t segments = ceil( millimeters_of_travel/ this->mm_per_line_segment); 
+    if( gcode->call_on_gcode_execute_event_immediatly == true ){
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
+            gcode->on_gcode_execute_event_called = true;
+    }
+
+    if (gcode->millimeters_of_travel == 0.0) { 
+        this->append_milestone(this->current_position, 0.0);
+        return; 
+    }
+
+    uint16_t segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment); 
     // A vector to keep track of the endpoint of each segment
     double temp_target[3];
     //Initialize axes
@@ -159,7 +187,7 @@ void Robot::append_line(double target[], double rate ){
 }
 
 
-void Robot::append_arc( double target[], double offset[], double radius, bool is_clockwise ){
+void Robot::append_arc(Gcode* gcode, double target[], double offset[], double radius, bool is_clockwise ){
 
     double center_axis0 = this->current_position[this->plane_axis_0] + offset[this->plane_axis_0];
     double center_axis1 = this->current_position[this->plane_axis_1] + offset[this->plane_axis_1];
@@ -174,9 +202,19 @@ void Robot::append_arc( double target[], double offset[], double radius, bool is
     if (angular_travel < 0) { angular_travel += 2*M_PI; }
     if (is_clockwise) { angular_travel -= 2*M_PI; }
 
-    double millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
-    if (millimeters_of_travel == 0.0) { return; }
-    uint16_t segments = floor(millimeters_of_travel/this->mm_per_arc_segment);
+    gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
+
+    if( gcode->call_on_gcode_execute_event_immediatly == true ){
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
+            gcode->on_gcode_execute_event_called = true;
+    }
+
+    if (gcode->millimeters_of_travel == 0.0) { 
+        this->append_milestone(this->current_position, 0.0);
+        return; 
+    }
+ 
+    uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
 
     double theta_per_segment = angular_travel/segments;
     double linear_per_segment = linear_travel/segments;
@@ -248,7 +286,7 @@ void Robot::append_arc( double target[], double offset[], double radius, bool is
 }
 
 
-void Robot::compute_arc(double offset[], double target[]){
+void Robot::compute_arc(Gcode* gcode, double offset[], double target[]){
 
     // Find the radius
     double radius = hypot(offset[this->plane_axis_0], offset[this->plane_axis_1]);
@@ -258,7 +296,7 @@ void Robot::compute_arc(double offset[], double target[]){
     if( this->motion_mode == MOTION_MODE_CW_ARC ){ is_clockwise = true; } 
 
     // Append arc
-    this->append_arc( target, offset,  radius, is_clockwise );
+    this->append_arc(gcode, target, offset,  radius, is_clockwise );
 
 }
 

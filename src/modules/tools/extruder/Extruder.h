@@ -7,13 +7,14 @@
 #include "modules/robot/Block.h"
 
 #define microseconds_per_step_pulse_ckeckusm 42333
-#define extruder_module_enable_checksum      31452
+#define extruder_module_enable_checksum      6183
 
 class Extruder : public Module{
     public:
         Extruder(PinName stppin);
         void on_module_loaded();
         void on_config_reload(void* argument);
+        void on_gcode_execute(void* argument);
         void on_block_begin(void* argument);
         void on_block_end(void* argument);
         void acceleration_tick();
@@ -27,6 +28,10 @@ class Extruder : public Module{
         Block*          current_block;                // Current block we are stepping, same as Stepper's one
         int             microseconds_per_step_pulse;  // Pulse duration for step pulses
 
+        bool            solo_mode;
+        double          travel_ratio;
+        double          travel_distance;
+        bool            absolute_mode;
 };
 
 #endif

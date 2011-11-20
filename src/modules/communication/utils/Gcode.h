@@ -11,5 +11,8 @@ class Gcode {
         double get_value ( char letter );
 
         string command;
+        double millimeters_of_travel;
+        bool call_on_gcode_execute_event_immediatly;
+        bool on_gcode_execute_event_called;
 };
 #endif

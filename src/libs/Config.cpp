@@ -68,6 +68,7 @@ void Config::set_string( uint16_t check_sum, string value ){
         if (c == '\n'){
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
+            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             // If this line matches the checksum 

@@ -127,13 +127,14 @@ void Stepper::main_interrupt(){
     this->step_gpio_port->FIOSET =   (     this->out_bits ^ this->step_invert_mask   )     & this->step_mask;  
     this->step_gpio_port->FIOCLR =   ( ~ ( this->out_bits ^ this->step_invert_mask ) )     & this->step_mask;
 
+
     // If there is no current block, attempt to pop one from the buffer, if there is none, go to sleep, if there is none, go to sleep
     if( this->current_block == NULL ){
         this->current_block = this->kernel->planner->get_current_block();
         if( this->current_block != NULL ){
             if( this->current_block->computed == false ){
                this->current_block = NULL;
-            }else{ 
+            }else{
                 this->trapezoid_generator_reset();
                 this->update_offsets();
                 for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 

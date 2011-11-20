@@ -26,9 +26,9 @@ int main() {
     kernel->serial->printf("Smoothie ( grbl port ) version 0.2 \r\nstart\r\n");
 
     kernel->add_module( new Laser(p21) );
-    kernel->add_module( new Extruder(p22) );
+    kernel->add_module( new Extruder(p26) );
     kernel->add_module( new SimpleShell() );
-    kernel->add_module( new Pauser(p29,p30) );
+    //kernel->add_module( new Pauser(p29,p30) );
 
     while(1){
         kernel->call_event(ON_MAIN_LOOP);

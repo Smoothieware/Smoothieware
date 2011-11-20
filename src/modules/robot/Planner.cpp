@@ -40,7 +40,7 @@ void Planner::on_config_reload(void* argument){
 void Planner::append_block( int target[], double feed_rate, double distance, double deltas[] ){
    
     // Do not append block with no movement
-    if( target[ALPHA_STEPPER] == this->position[ALPHA_STEPPER] && target[BETA_STEPPER] == this->position[BETA_STEPPER] && target[GAMMA_STEPPER] == this->position[GAMMA_STEPPER] ){ this->computing = false; return; }
+    //if( target[ALPHA_STEPPER] == this->position[ALPHA_STEPPER] && target[BETA_STEPPER] == this->position[BETA_STEPPER] && target[GAMMA_STEPPER] == this->position[GAMMA_STEPPER] ){ this->computing = false; return; }
 
     // Stall here if the queue is ful
     while( this->queue.size() >= this->queue.capacity() ){ wait_us(100); }
@@ -52,6 +52,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     if( block->planner == this ){
         for(short index=0; index<block->commands.size(); index++){
             block->commands.pop_back();
+            block->travel_distances.pop_back();
         }
     }
 
@@ -74,16 +75,22 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
-    if( block->steps_event_count == 0 ){ this->computing = false; return; }
+    //if( block->steps_event_count == 0 ){ this->computing = false; return; }
 
     block->millimeters = distance;
-    double inverse_millimeters = 1.0/distance;
+    double inverse_millimeters = 0; 
+    if( distance > 0 ){ inverse_millimeters = 1.0/distance; }
 
     // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
     double inverse_minute = feed_rate * inverse_millimeters;
-    block->nominal_speed = block->millimeters * inverse_minute;           // (mm/min) Always > 0
-    block->nominal_rate = ceil(block->steps_event_count * inverse_minute); // (step/min) Always > 0
+    if( distance > 0 ){ 
+        block->nominal_speed = block->millimeters * inverse_minute;           // (mm/min) Always > 0
+        block->nominal_rate = ceil(block->steps_event_count * inverse_minute); // (step/min) Always > 0
+    }else{
+        block->nominal_speed = 0;
+        block->nominal_rate = 0;
+    }
 
     //this->kernel->serial->printf("nom_speed: %f nom_rate: %u step_event_count: %u block->steps_z: %u \r\n", block->nominal_speed, block->nominal_rate, block->steps_event_count, block->steps[2]  );
     
@@ -151,7 +158,6 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     else { block->nominal_length_flag = false; }
     block->recalculate_flag = true; // Always calculate trapezoid for new block
  
-
     // Update previous path unit_vector and nominal speed
     memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
     this->previous_nominal_speed = block->nominal_speed;

@@ -153,14 +153,17 @@ void Block::forward_pass(Block* previous, Block* next){
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
 void Block::append_gcode(Gcode* gcode){
    this->commands.push_back(gcode->command);
+   this->travel_distances.push_back(gcode->millimeters_of_travel);
 }
 
 // The attached gcodes are then poped and the on_gcode_execute event is called with them as a parameter
 void Block::pop_and_execute_gcode(Kernel* &kernel){
     for(unsigned short index=0; index<this->commands.size(); index++){
         string command = this->commands.at(index);
+        double distance = this->travel_distances.at(index);
         Gcode gcode = Gcode();
         gcode.command = command;
+        gcode.millimeters_of_travel = distance;
         kernel->call_event(ON_GCODE_EXECUTE, &gcode ); 
     }
 }

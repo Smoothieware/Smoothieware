@@ -32,8 +32,10 @@ class Block {
         void append_gcode(Gcode* gcode);
         void pop_and_execute_gcode(Kernel* &kernel);
         double get_duration_left(unsigned int already_taken_steps);
-        vector<std::string> commands;
 
+        vector<std::string> commands;
+        vector<double> travel_distances;
+        
         unsigned int   steps[3];           // Number of steps for each axis for this block
         unsigned int   steps_event_count;  // Steps for the longest axis
         unsigned int   nominal_rate;       // Nominal rate in steps per minute
