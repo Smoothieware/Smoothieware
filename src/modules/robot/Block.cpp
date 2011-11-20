@@ -185,9 +185,14 @@ void Block::release(){
     if( this->times_taken < 1 ){
         this->player->kernel->call_event(ON_BLOCK_END, this);
         this->pop_and_execute_gcode(this->player->kernel);
-        Player* player = this->player; 
-        player->queue.delete_first();
-        player->pop_and_process_new_block(); 
+        Player* player = this->player;
+        if( player->queue.size() > 0 ){ 
+            //player->kernel->serial->printf("before: %d\r\n", player->queue.size() );
+            player->queue.delete_first();
+        } 
+        //player->kernel->serial->printf("after: %d\r\n", player->queue.size() );
+        player->current_block = NULL; 
+        player->pop_and_process_new_block();
     }
 }
 

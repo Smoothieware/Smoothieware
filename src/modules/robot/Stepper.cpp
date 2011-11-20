@@ -99,26 +99,26 @@ void Stepper::on_block_begin(void* argument){
 
     // The stepper does not care about 0-blocks
     if( block->millimeters == 0.0 ){ return; }
-
+    
     this->current_block = block;
 
     // Mark the new block as of interrest to us
-    this->current_block->take();
+    block->take();
 
     // Setup
-    this->trapezoid_generator_reset();
-    this->update_offsets();
     for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
     this->step_events_completed = 0; 
 
+    this->current_block = block;
+
+    this->update_offsets();
+    this->trapezoid_generator_reset();
 }
 
 // Current block is discarded
 void Stepper::on_block_end(void* argument){
     Block* block  = static_cast<Block*>(argument);
-    if( this->current_block != NULL ){
-        this->current_block == NULL; //stfu !
-    }
+    this->current_block = NULL; //stfu !
 }
 
 // Timer0 ISR
@@ -168,7 +168,9 @@ inline void Stepper::main_interrupt(){
         this->step_events_completed += this->counter_increment;
         if( this->step_events_completed >= this->current_block->steps_event_count<<16 ){ 
             if( this->stepped[ALPHA_STEPPER] == this->current_block->steps[ALPHA_STEPPER] && this->stepped[BETA_STEPPER] == this->current_block->steps[BETA_STEPPER] && this->stepped[GAMMA_STEPPER] == this->current_block->steps[GAMMA_STEPPER] ){ 
-                this->current_block->release(); 
+                if( this->current_block != NULL ){
+                    this->current_block->release(); 
+                }
             }
         }
 
