@@ -60,7 +60,9 @@ void Extruder::on_config_reload(void* argument){
 // Computer extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    
+   
+    this->kernel->serial->printf("exec: %s \r\n", gcode->command.c_str() );
+
     // Absolute/relative mode
     if( gcode->has_letter('M')){
         int code = gcode->get_value('M');
@@ -73,7 +75,7 @@ void Extruder::on_gcode_execute(void* argument){
         if( gcode->get_value('G') == 92 ){
 
             if( gcode->has_letter('E') ){
-                this->current_position = gcode->get_value('E') * 1000;
+                this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;
                 this->start_position   = this->current_position; 
             }            
@@ -83,15 +85,14 @@ void Extruder::on_gcode_execute(void* argument){
             // Extrusion length 
             if( gcode->has_letter('E' )){
                 double extrusion_distance = gcode->get_value('E');
-                //this->kernel->serial->printf("extrusion_distance: %f, millimeters_of_travel: %f\r\n", extrusion_distance, gcode->millimeters_of_travel);
                 if( fabs(gcode->millimeters_of_travel) < 0.0001 ){
                     this->solo_mode = true;
                     this->travel_distance = extrusion_distance;
-                    //this->kernel->serial->printf("solo mode distance: %f, mm: %f \r\n", this->travel_distance, gcode->millimeters_of_travel );
+                    this->travel_ratio = 0.0;
                 }else{
                     this->solo_mode = false;
                     this->travel_ratio = extrusion_distance / gcode->millimeters_of_travel; 
-                    //this->kernel->serial->printf("follow mode ratio: %f, mm: %f \r\n", this->travel_ratio, gcode->millimeters_of_travel );
+                    this->travel_distance = 0.0;
                 } 
             // Else do not extrude
             }else{
@@ -111,25 +112,21 @@ void Extruder::on_block_begin(void* argument){
     Block* block = static_cast<Block*>(argument);
 
     if( fabs(this->travel_distance) > 0.001 ){
-
         block->take(); // In solo mode we take the block so we can move even if the stepper has nothing to do
         this->current_block = block; 
-        this->start_position = this->current_position;
-        this->target_position = ( !this->absolute_mode ? this->start_position : 0 ) + ( this->travel_distance * 1000 ); //TODO : Get from config ( extruder_steps_per_mm )
-        this->acceleration_tick();
-        //this->kernel->serial->printf("distance %f %f\r\n", this->travel_distance, this->travel_ratio);
+        this->start_position = this->target_position;
+        this->target_position = ( !this->absolute_mode ? this->start_position : 0 ) + this->travel_distance ;
+        //this->acceleration_tick();
     }   
     if( fabs(this->travel_ratio) > 0.001 ){
-        
         // In non-solo mode, we just follow the stepper module
         this->current_block = block; 
-        this->start_position = this->current_position;
-        this->target_position =  ( !this->absolute_mode ? this->start_position : 0 ) + ( this->current_block->millimeters * this->travel_ratio * 1000 ); //TODO : Get from config ( extruder_steps_per_mm )
-        this->acceleration_tick();
-        //this->kernel->serial->printf("ratio %f %f %d\r\n", this->travel_distance, this->travel_ratio, block->times_taken );
-
+        this->start_position = this->target_position;
+        this->target_position =  this->start_position + ( this->current_block->millimeters * this->travel_ratio );
+        //this->acceleration_tick();
     } 
-    //this->kernel->serial->printf("%d %d %d %f %f\r\n", this->start_position, this->current_position, this->target_position, this->travel_distance, this->travel_ratio); 
+
+
 }
 
 void Extruder::on_block_end(void* argument){
@@ -138,24 +135,39 @@ void Extruder::on_block_end(void* argument){
 }       
 
 void Extruder::acceleration_tick(){
-    
+   
     // If we are currently taking care of a block            
     if( this->current_block ){
+
+        this->kernel->serial->printf("tick start_position:%f current_position:%f target_position:%f travel_distance:%f travel_ratio:%f mm:%f \r\n", this->start_position, this->current_position, this->target_position, this->travel_distance, this->travel_ratio, this->current_block->millimeters); 
 
         if( fabs(this->travel_ratio) > 0.001 ){
             double steps_by_acceleration_tick = this->kernel->stepper->trapezoid_adjusted_rate / 60 / this->kernel->stepper->acceleration_ticks_per_second;                
             // Get position along the block at next tick
-            double current_position_ratio = double( (this->kernel->stepper->step_events_completed>>16) ) / double(this->kernel->stepper->current_block->steps_event_count);
-            double next_position_ratio = ( (this->kernel->stepper->step_events_completed>>16) + steps_by_acceleration_tick ) / this->kernel->stepper->current_block->steps_event_count;
-            // Get wanted next position
-            double next_absolute_position = ( this->target_position - this->start_position ) * next_position_ratio;
-            // Get desired  speed in steps per minute to get to the next position by the next acceleration tick
-            double desired_speed = ( ( next_absolute_position + this->start_position ) - this->current_position ) * double(this->kernel->stepper->acceleration_ticks_per_second); //TODO : Replace with the actual current_position
+            if( this->kernel->stepper->current_block != NULL ){ 
+                this->kernel->stepper->current_block->debug( this->kernel );  
+            }else{
+                this->kernel->serial->printf("NULL\r\n");
+                return;
+            }
+            double current_position_ratio = double( (this->kernel->stepper->step_events_completed>>16)                              ) / double(this->kernel->stepper->current_block->steps_event_count);
+            double next_position_ratio =    double( (this->kernel->stepper->step_events_completed>>16) + steps_by_acceleration_tick ) / double(this->kernel->stepper->current_block->steps_event_count);
+            // Ratio differenc
+            double ratio_difference = next_position_ratio - current_position_ratio;
+            // Get total move distance
+            double distance = this->target_position - this->start_position;           
+            // Get distance to run until next acceleration tick
+            double desired_distance = distance / ratio_difference;
+            // Get speed
+            double desired_speed = desired_distance * double(this->kernel->stepper->acceleration_ticks_per_second); //TODO : Replace with the actual current_position
+
+            this->kernel->serial->printf("cur_pos:%f tar_pos:%f start_pos:%f steps_by_acc_tick:%f cur_pos_ratio:%f next_pos_ratio:%f ratio_diff:%f dist:%f desired_dist:%f desired_spd:%f \r\n", this->current_position, this->target_position, this->start_position,  steps_by_acceleration_tick, current_position_ratio, next_position_ratio, ratio_difference, ratio_difference, distance, desired_distance, desired_speed );
+
 
             if( desired_speed <= 0 ){ return; }
 
             // Set timer
-            LPC_TIM1->MR0 = ((SystemCoreClock/4))/int(floor(desired_speed)); 
+            LPC_TIM1->MR0 = ((SystemCoreClock/4))/int(floor(desired_speed*201)); 
 
             // In case we are trying to set the timer to a limit it has already past by
             if( LPC_TIM1->TC >= LPC_TIM1->MR0 ){
@@ -171,7 +183,7 @@ void Extruder::acceleration_tick(){
         if( fabs(this->travel_distance) > 0.001 ){
 
             // Set timer
-            LPC_TIM1->MR0 = ((SystemCoreClock/4))/int(floor(300)); 
+            LPC_TIM1->MR0 = ((SystemCoreClock/4))/int(floor(200)); 
 
             // In case we are trying to set the timer to a limit it has already past by
             if( LPC_TIM1->TC >= LPC_TIM1->MR0 ){
@@ -189,7 +201,7 @@ void Extruder::acceleration_tick(){
 
 inline void Extruder::stepping_tick(){
     if( this->current_position < this->target_position ){
-        this->current_position++;
+        this->current_position += double(double(1)/double(201));
         this->step_pin = 1;
     }else{
         // Move finished

@@ -21,9 +21,9 @@ class Extruder : public Module{
         void stepping_tick();
 
         DigitalOut      step_pin;                     // Step pin for the stepper driver
-        unsigned int    start_position;               // Start point ( in steps ) for the current move
-        unsigned int    target_position;              // End point ( in steps ) for the current move
-        unsigned int    current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed
+        double          start_position;               // Start point ( in steps ) for the current move
+        double          target_position;              // End point ( in steps ) for the current move
+        double          current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed
         Ticker          acceleration_ticker;          // Ticker responsible with updating the speed ( acceleration management ). Uses Timer3
         Block*          current_block;                // Current block we are stepping, same as Stepper's one
         int             microseconds_per_step_pulse;  // Pulse duration for step pulses
