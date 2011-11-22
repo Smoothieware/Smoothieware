@@ -73,7 +73,7 @@ void Extruder::on_gcode_execute(void* argument){
         if( gcode->get_value('G') == 92 ){
 
             if( gcode->has_letter('E') ){
-                this->current_position = gcode->get_value('E') * 100;
+                this->current_position = gcode->get_value('E') * 1000;
                 this->target_position  = this->current_position;
                 this->start_position   = this->current_position; 
             }            
@@ -84,14 +84,14 @@ void Extruder::on_gcode_execute(void* argument){
             if( gcode->has_letter('E' )){
                 double extrusion_distance = gcode->get_value('E');
                 //this->kernel->serial->printf("extrusion_distance: %f, millimeters_of_travel: %f\r\n", extrusion_distance, gcode->millimeters_of_travel);
-                if( gcode->millimeters_of_travel == 0.0 ){
+                if( fabs(gcode->millimeters_of_travel) < 0.0001 ){
                     this->solo_mode = true;
                     this->travel_distance = extrusion_distance;
-                    //this->kernel->serial->printf("solo mode distance: %f\r\n", this->travel_distance );
+                    //this->kernel->serial->printf("solo mode distance: %f, mm: %f \r\n", this->travel_distance, gcode->millimeters_of_travel );
                 }else{
                     this->solo_mode = false;
                     this->travel_ratio = extrusion_distance / gcode->millimeters_of_travel; 
-                    //this->kernel->serial->printf("follow mode ratio: %f\r\n", this->travel_ratio);
+                    //this->kernel->serial->printf("follow mode ratio: %f, mm: %f \r\n", this->travel_ratio, gcode->millimeters_of_travel );
                 } 
             // Else do not extrude
             }else{
@@ -115,7 +115,7 @@ void Extruder::on_block_begin(void* argument){
         block->take(); // In solo mode we take the block so we can move even if the stepper has nothing to do
         this->current_block = block; 
         this->start_position = this->current_position;
-        this->target_position = ( !this->absolute_mode ? this->start_position : 0 ) + ( this->travel_distance * 100 ); //TODO : Get from config ( extruder_steps_per_mm )
+        this->target_position = ( !this->absolute_mode ? this->start_position : 0 ) + ( this->travel_distance * 1000 ); //TODO : Get from config ( extruder_steps_per_mm )
         this->acceleration_tick();
         //this->kernel->serial->printf("distance %f %f\r\n", this->travel_distance, this->travel_ratio);
     }   
@@ -124,12 +124,12 @@ void Extruder::on_block_begin(void* argument){
         // In non-solo mode, we just follow the stepper module
         this->current_block = block; 
         this->start_position = this->current_position;
-        this->target_position =  ( !this->absolute_mode ? this->start_position : 0 ) + ( this->current_block->millimeters * this->travel_ratio * 100 ); //TODO : Get from config ( extruder_steps_per_mm )
+        this->target_position =  ( !this->absolute_mode ? this->start_position : 0 ) + ( this->current_block->millimeters * this->travel_ratio * 1000 ); //TODO : Get from config ( extruder_steps_per_mm )
         this->acceleration_tick();
         //this->kernel->serial->printf("ratio %f %f %d\r\n", this->travel_distance, this->travel_ratio, block->times_taken );
 
     } 
-    
+    //this->kernel->serial->printf("%d %d %d %f %f\r\n", this->start_position, this->current_position, this->target_position, this->travel_distance, this->travel_ratio); 
 }
 
 void Extruder::on_block_end(void* argument){
