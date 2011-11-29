@@ -36,6 +36,9 @@ class Extruder : public Module{
         bool            absolute_mode;
 
         int             direction;
+
+        bool            debug;
+        int debug_count;
 };
 
 #endif

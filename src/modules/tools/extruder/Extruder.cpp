@@ -25,6 +25,8 @@ Extruder::Extruder(PinName stppin, PinName dirpin) : step_pin(stppin), dir_pin(d
 
 void Extruder::on_module_loaded() {
 
+    this->debug = false;
+
     if( this->kernel->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() == false ){ return; } 
 
     extruder_for_irq = this;
@@ -146,6 +148,9 @@ void Extruder::on_block_end(void* argument){
 
 void Extruder::on_speed_change(void* argument){
 
+
+    if( this->debug ){ this->kernel->serial->printf("back in event \r\n");wait(0.1);  }
+
     // Set direction
     if( this->target_position > this->current_position ){ 
         this->direction = 1;
@@ -155,26 +160,80 @@ void Extruder::on_speed_change(void* argument){
 
     if( fabs(this->travel_ratio) > 0.001 ){
 
-        // Do not change rate if stepper rate is null
-        if( this->kernel->stepper->current_block == NULL || fabs(this->kernel->stepper->trapezoid_adjusted_rate) < 0.0001 || this->kernel->stepper->current_block->nominal_rate == 0 ){
-            return;
+        if( this->debug ){ 
+            this->kernel->serial->printf("back in if \r\n");
+            this->kernel->stepper->current_block->debug(this->kernel); 
+            wait(0.1);  
         }
 
+        // Do not change rate if stepper rate is null
+        if( this->kernel->stepper->current_block == NULL || fabs(this->kernel->stepper->trapezoid_adjusted_rate) < 0.0001 || this->kernel->stepper->current_block->nominal_rate == 0 ){
+                return;
+            }
+
+
+        if( this->debug ){ this->kernel->serial->printf("back in if2 \r\n");wait(0.1);  }
+
         // Get a current/nominal rate ratio
+        if( fabs(this->kernel->stepper->current_block->nominal_rate) < 0.01 ){ 
+            wait(1);  
+        }
+
+
+        if( this->debug ){ this->kernel->serial->printf("back in if3 \r\n");wait(0.1);  }
+
         double stepper_rate_ratio = this->kernel->stepper->trapezoid_adjusted_rate / double( this->kernel->stepper->current_block->nominal_rate ) ;
         // Get a nominal duration for this block
+
+        
+        if( this->debug ){ this->kernel->serial->printf("back in if4 \r\n");wait(0.1);  }
+        
         double nominal_duration =  this->kernel->stepper->current_block->millimeters / ( this->kernel->stepper->current_block->nominal_speed / 60 )  ;
+       
+        bool testo = false; 
+        if( this->debug ){ 
+            this->kernel->serial->printf("back in if5 \r\n");wait(0.1); 
+            this->debug_count--;
+            if( this->debug_count == 0 ){ 
+                this->debug = false; 
+            } 
+            testo = true;  
+        }
+        if( testo ){ this->kernel->serial->printf("back in if7 \r\n");wait(0.1);  }
+        
         // Get extrusion nominal speed
+        if( fabs(nominal_duration) < 0.001 || this->debug ){ 
+            this->kernel->serial->printf("start debugging, nominal_duration: %f \r\n", double(nominal_duration));
+            this->kernel->stepper->current_block->debug(this->kernel); 
+            this->debug = true;
+            this->debug_count = 5; 
+            wait(0.1);
+        }
+
+        if( testo ){ this->kernel->serial->printf("back in if8 \r\n");wait(0.1);  }
         double nominal_extrusion_speed = fabs( this->target_position - this->start_position ) / nominal_duration;
+        
+        
+        if( testo ){ this->kernel->serial->printf("back in if9 \r\n");wait(0.1);  }
+        if( this->debug ){ this->kernel->serial->printf("nom_extr_speed: %f \r\n", double(nominal_extrusion_speed));wait(0.1);  }
         // Get adjusted speed
         double adjusted_speed = nominal_extrusion_speed * stepper_rate_ratio;
 
+
+        if( testo ){ this->kernel->serial->printf("back in if10 \r\n");wait(0.1);  }
+
+        if( this->debug ){ this->kernel->serial->printf("adj_speed a: %f \r\n", double(adjusted_speed));wait(0.1);  }
         //this->kernel->serial->printf("e:direction: %d start:%f current: %f target: %f add:%f close:%f \r\n", this->direction, this->start_position, this->current_position, this->target_position,  (double(double(1)/double(1001)))*double(this->direction),  fabs( this->current_position - this->target_position )  );
         //this->kernel->serial->printf("speed change rate:%f/%u=%f dur:%f=%f/%f nom_extr_spd:%f/%f=%f adj_speed:%f \r\n", this->kernel->stepper->trapezoid_adjusted_rate, this->kernel->stepper->current_block->nominal_rate, stepper_rate_ratio, nominal_duration, this->kernel->stepper->current_block->millimeters, this->kernel->stepper->current_block->nominal_speed / 60, ( this->target_position - this->start_position ), nominal_duration, nominal_extrusion_speed, adjusted_speed  ); 
 
+
+        if( testo ){ this->kernel->serial->printf("back in if11 \r\n");wait(0.1);  }
+        if( this->debug ){ this->kernel->serial->printf("adj_speed b: %f \r\n", double(adjusted_speed));wait(0.1);  }
         // Set timer
         LPC_TIM1->MR0 = ((SystemCoreClock/4))/int(floor(adjusted_speed*1000)); 
 
+        if( testo ){ this->kernel->serial->printf("back in if12 \r\n");wait(0.1);  }
+        if( this->debug ){ this->kernel->serial->printf("adj_speed c: %f \r\n", double(adjusted_speed));wait(0.1);  }
         // In case we are trying to set the timer to a limit it has already past by
         if( LPC_TIM1->TC >= LPC_TIM1->MR0 ){
             LPC_TIM1->TCR = 3; 
@@ -184,6 +243,8 @@ void Extruder::on_speed_change(void* argument){
         // Update Timer1    
         LPC_TIM1->MR1 = (( SystemCoreClock/4 ) / 1000000 ) * this->microseconds_per_step_pulse;
 
+        if( testo ){ this->kernel->serial->printf("back in if13 \r\n");wait(0.1);  }
+        if( this->debug ){ this->kernel->serial->printf("adj_speed d: %f \r\n", double(adjusted_speed));wait(1);  }
     }
 
     if( fabs(this->travel_distance) > 0.001 ){
@@ -201,8 +262,6 @@ void Extruder::on_speed_change(void* argument){
         LPC_TIM1->MR1 = (( SystemCoreClock/4 ) / 1000000 ) * this->microseconds_per_step_pulse;
 
     }
-
-
 
 }
 

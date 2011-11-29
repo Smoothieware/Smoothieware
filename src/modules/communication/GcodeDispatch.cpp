@@ -36,6 +36,9 @@ void GcodeDispatch::on_console_line_received(void * line){
         gcode.command = possible_command;
         this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
         this->kernel->serial->printf("ok\r\n");
+        //Gcode* test = new Gcode(); 
+        //this->kernel->serial->printf("ok %p\r\n", test);
+        //delete test;
 
     // Ignore comments 
     }else if( first_char == ';' || first_char == '(' ){
