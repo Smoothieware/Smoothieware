@@ -39,6 +39,7 @@ class Block {
 
         vector<std::string> commands;
         vector<double> travel_distances;
+        vector<Gcode> gcodes;
         
         unsigned int   steps[3];           // Number of steps for each axis for this block
         unsigned int   steps_event_count;  // Steps for the longest axis
@@ -60,6 +61,8 @@ class Block {
         double max_entry_speed;
         Planner* planner;
         Player*  player;
+        
+        bool is_ready;
 
         short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
 

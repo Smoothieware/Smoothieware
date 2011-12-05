@@ -56,6 +56,8 @@ class Kernel {
         Config*           config;
         Player*           player;
 
+        int debug;
+
     private:
         vector<Module*> hooks[NUMBER_OF_DEFINED_EVENTS]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
 

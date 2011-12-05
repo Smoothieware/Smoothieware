@@ -9,6 +9,7 @@
 #include "libs/Kernel.h"
 #include "Stepper.h"
 #include "Planner.h"
+#include "Player.h"
 #include "mbed.h"
 #include <vector>
 using namespace std;
@@ -41,7 +42,9 @@ void Stepper::on_module_loaded(){
     LPC_TIM0->MR0 = 10000;
     LPC_TIM0->MCR = 11; // for MR0 and MR1, with no reset at MR1
     NVIC_EnableIRQ(TIMER0_IRQn);
-    NVIC_SetPriority(TIMER3_IRQn, 1); 
+    NVIC_SetPriority(TIMER3_IRQn, 3); 
+    NVIC_SetPriority(TIMER0_IRQn, 2); 
+    NVIC_SetPriority(TIMER1_IRQn, 2); 
     LPC_TIM0->TCR = 1; 
     
     // Step and Dir pins as outputs
@@ -100,7 +103,7 @@ void Stepper::on_block_begin(void* argument){
     // The stepper does not care about 0-blocks
     if( block->millimeters == 0.0 ){ return; }
     
-    this->current_block = block;
+    //this->current_block = block;
 
     // Mark the new block as of interrest to us
     block->take();
@@ -177,6 +180,7 @@ inline void Stepper::main_interrupt(){
     }else{
         this->out_bits = 0;
     }
+
 }
 
 // We compute this here instead of each time in the interrupt
@@ -241,7 +245,19 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
 
     // Set the Timer interval 
     LPC_TIM0->MR0 = floor( ( SystemCoreClock/4 ) / ( (steps_per_minute/60L) * speed_factor ) );
-    
+    if( LPC_TIM0->MR0 < 150 ){
+        LPC_TIM0->MR0 = 150;
+
+        this->kernel->serial->printf("tim0mr0: %d, steps_per minute: %f \r\n", LPC_TIM0->MR0, steps_per_minute ); 
+        //Block* block = new Block();
+        //this->kernel->serial->printf(":l queue:%d debug:%d cb:%p cb=null:%d mem:%p tc:%u mr0:%u mr1:%u \r\n",  this->kernel->player->queue.size() , this->kernel->debug, this->current_block, this->current_block == NULL, block, LPC_TIM0->TC , LPC_TIM0->MR0, LPC_TIM0->MR1  ); 
+        //delete block;
+        //this->kernel->serial->printf("mr0:%u, st/m:%f, sf:%f, bsf:%f \r\n", LPC_TIM0->MR0, steps_per_minute, speed_factor, this->base_stepping_frequency );
+        //this->current_block->debug(this->kernel);
+        //wait(0.1);
+    }   
+
+
     // In case we change the Match Register to a value the Timer Counter has past
     if( LPC_TIM0->TC >= LPC_TIM0->MR0 ){ LPC_TIM0->TCR = 3; LPC_TIM0->TCR = 1; }
 

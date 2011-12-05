@@ -9,6 +9,7 @@
 #include "libs/Kernel.h"
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/Extruder.h"
+#include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/pauser/Pauser.h"
 #include "libs/SDFileSystem.h"
@@ -89,6 +90,8 @@ class TemperatureControl : public Module {
         }
 
         double get_temperature(){
+            double temp = this->new_thermistor_reading() ;
+            //this->kernel->serial->printf("adc reading: %f \r\n", temp); 
             return this->adc_value_to_temperature( this->new_thermistor_reading() );
         }
 
@@ -162,10 +165,14 @@ class TemperatureControl : public Module {
 
         double average_adc_reading(){
             double total;
+            int j=0;
             for( int i = 0; i <= this->queue.size()-1; i++ ){
+                j++; 
+                //this->kernel->serial->printf("value:%f\r\n", *(this->queue.get_ref(i)) ); 
                 total += *(this->queue.get_ref(i));
             }
-            return total / this->queue.size();
+            //this->kernel->serial->printf("total:%f, size:%d \r\n", total, this->queue.size() ); 
+            return total / j;
         }
 
         AnalogIn* thermistor_pin;
@@ -195,7 +202,6 @@ class TemperatureControl : public Module {
 };
 
 
-
 int main() {
 
     Kernel* kernel = new Kernel();
@@ -206,9 +212,11 @@ int main() {
     kernel->add_module( new Extruder(p26,p27) );
     kernel->add_module( new SimpleShell() );
     //kernel->add_module( new Pauser(p29,p30) );
-    //kernel->add_module( new TemperatureControl() );
+    kernel->add_module( new TemperatureControl() );
 
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
+
     }
 }
+

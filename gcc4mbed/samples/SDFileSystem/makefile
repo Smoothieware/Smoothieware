@@ -13,8 +13,8 @@
 # limitations under the License.
 PROJECT=SDFileSystem
 GCC4MBED_DIR=../..
-INCDIRS=../agutil
-LIBS_PREFIX=../agutil/agutil.ar
+INCDIRS=
+LIBS_PREFIX=
 LIBS_SUFFIX=
 
 include ../../build/gcc4mbed.mk

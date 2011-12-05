@@ -53,7 +53,6 @@ void Robot::on_gcode_received(void * argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     gcode->call_on_gcode_execute_event_immediatly = false; 
     gcode->on_gcode_execute_event_called = false;
-    
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
     if( this->kernel->player->queue.size() == 0 ){
         gcode->call_on_gcode_execute_event_immediatly = true;
@@ -67,7 +66,6 @@ void Robot::on_gcode_received(void * argument){
         block->append_gcode(gcode);
     }
     
-
 }
 
 
@@ -117,6 +115,8 @@ void Robot::execute_gcode(Gcode* gcode){
             }
             break;
     }
+
+
     // As far as the parser is concerned, the position is now == target. In reality the
     // motion control system might still be processing the action and the real tool position
     // in any intermediate location.

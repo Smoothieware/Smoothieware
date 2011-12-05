@@ -13,6 +13,7 @@ using std::string;
 #include "utils/Gcode.h"
 #include "libs/nuts_bolts.h"
 #include "GcodeDispatch.h"
+#include "modules/robot/Player.h" 
 
 GcodeDispatch::GcodeDispatch(){}
 
@@ -35,10 +36,11 @@ void GcodeDispatch::on_console_line_received(void * line){
         Gcode gcode = Gcode();
         gcode.command = possible_command;
         this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
-        this->kernel->serial->printf("ok\r\n");
+        //this->kernel->serial->printf("ok %d \r\n", this->kernel->player->queue.size());
         //Gcode* test = new Gcode(); 
-        //this->kernel->serial->printf("ok %p\r\n", test);
+        //this->kernel->serial->printf("ok %d %p\r\n", this->kernel->player->queue.size(), test);
         //delete test;
+        this->kernel->serial->printf("ok\r\n");
 
     // Ignore comments 
     }else if( first_char == ';' || first_char == '(' ){

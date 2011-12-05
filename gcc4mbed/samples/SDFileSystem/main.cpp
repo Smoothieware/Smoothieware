@@ -15,75 +15,13 @@
 /* LocalFileSystem test modified to use SD cards instead. */
 #include "mbed.h"
 #include "SDFileSystem.h"
-#include "agutil.h"
-
-
-extern "C" void HardFault_Handler(void)
-{
-    DebugDumpStack();
-    error("\r\nHardFault\r\n");
-}
-
-extern "C" void MemManage_Handler(void)
-{
-    DebugDumpStack();
-    error("\r\nMemManage\r\n");
-}
-
-extern "C" void BusFault_Handler(void)
-{
-    DebugDumpStack();
-    error("\r\nBusFault\r\n");
-}
-
-extern "C" void UsageFault_Handler(void)
-{
-    DebugDumpStack();
-    error("\r\nUsageFault\r\n");
-}
-
-extern "C" void SVC_Handler(void)
-{
-    DebugDumpStack();
-    error("\r\nSVC Call\r\n");
-}
-
-extern "C" void DebugMon_Handler(void)
-{
-    DebugDumpStack();
-    error("\r\nDebugMonitor\r\n");
-}
-
-extern "C" void PendSV_Handler(void)
-{
-    DebugDumpStack();
-    error("\r\nPendSV\r\n");
-}
-
-extern "C" void SysTick_Handler(void)
-{
-    DebugDumpStack();
-    error("\r\nSysTick");
-}
-
-
-void BreakHandler(void)
-{
-    DebugDumpStack();
-    error("\r\nManual Break\r\n");
-}
 
 
 SDFileSystem sd(p5, p6, p7, p8, "sd"); // the pinout on the mbed Cool Components workshop board
-InterruptIn BreakInterrupt(p9);
 
 
 int main() 
 {
-    // If you pull p9 low, then it should break into a running program and dump the stack.
-    BreakInterrupt.mode(PullUp);
-    BreakInterrupt.fall(BreakHandler);
-
     int  Result = -1;
     char Buffer[32];
     
@@ -163,7 +101,5 @@ int main()
     printf("Test 10: closedir\r\n");
     closedir(d);
   
-
-
     printf("\r\nTest completed\r\n");
 }   

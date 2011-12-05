@@ -43,7 +43,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     //if( target[ALPHA_STEPPER] == this->position[ALPHA_STEPPER] && target[BETA_STEPPER] == this->position[BETA_STEPPER] && target[GAMMA_STEPPER] == this->position[GAMMA_STEPPER] ){ this->computing = false; return; }
 
     // Stall here if the queue is ful
-    while( this->kernel->player->queue.size() >= this->kernel->player->queue.capacity() ){ wait_us(100); }
+    while( this->kernel->player->queue.size() >= this->kernel->player->queue.capacity()-2 ){ wait_us(100); }
 
     Block* block = this->kernel->player->new_block();
     block->planner = this;   
@@ -176,6 +176,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
+   //this->kernel->serial->printf("recalculate last: %p, queue size: %d \r\n", this->kernel->player->queue.get_ref( this->kernel->player->queue.size()-1  ), this->kernel->player->queue.size() );
    this->reverse_pass();
    this->forward_pass();
    this->recalculate_trapezoids();
@@ -204,24 +205,55 @@ void Planner::forward_pass() {
 // planner_recalculate() after updating the blocks. Any recalulate flagged junction will
 // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
 // to exit speed and entry speed of one another.
+/*
 void Planner::recalculate_trapezoids() {
     // For each block
-    for( int index = 0; index <= this->kernel->player->queue.size()-1; index++ ){ // We skip the first one because we need a previous
-
-        if( this->kernel->player->queue.size()-1 == index ){ //last block
+    int size = this->kernel->player->queue.size(); 
+    for( int index = 0; index <= size-1; index++ ){ // We skip the first one because we need a previous
+        if( size-1 == index ){ //last block
             Block* last = this->kernel->player->queue.get_ref(index);
             last->calculate_trapezoid( last->entry_speed / last->nominal_speed, MINIMUM_PLANNER_SPEED / last->nominal_speed ); 
+            this->kernel->serial->printf("%p: %d/%d last r:%d \r\n", last, index, size-1,  last->initial_rate); 
         }else{
             Block* current = this->kernel->player->queue.get_ref(index);
             Block* next =    this->kernel->player->queue.get_ref(index+1);
             if( current->recalculate_flag || next->recalculate_flag ){
                 current->calculate_trapezoid( current->entry_speed/current->nominal_speed, next->entry_speed/current->nominal_speed );
                 current->recalculate_flag = false; // Reset current only to ensure next trapezoid is computed
+                this->kernel->serial->printf("%p: %d/%d other r:%d \r\n", current, index, size-1, current->initial_rate); 
+            }else{
+                this->kernel->serial->printf("%p: %d/%d else r:%d \r\n", current, index, size-1, current->initial_rate); 
             } 
         }
     }
 }
+*/
+void Planner::recalculate_trapezoids() {
+    int block_index = this->kernel->player->queue.head;
+    Block* current;
+    Block* next = NULL;
 
+    //this->kernel->serial->printf("tail:%d head:%d size:%d\r\n", this->kernel->player->queue.tail, this->kernel->player->queue.head, this->kernel->player->queue.size());
+
+    while(block_index != this->kernel->player->queue.tail){
+        current = next;
+        next = &this->kernel->player->queue.buffer[block_index];
+        //this->kernel->serial->printf("index:%d current:%p next:%p \r\n", block_index, current, next );
+        if( current ){
+            // Recalculate if current block entry or exit junction speed has changed.
+            if( current->recalculate_flag || next->recalculate_flag ){
+                current->calculate_trapezoid( current->entry_speed/current->nominal_speed, next->entry_speed/current->nominal_speed );
+                current->recalculate_flag = false;
+            }
+        }
+        block_index = this->kernel->player->queue.next_block_index( block_index ); 
+    }
+
+    // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
+    next->calculate_trapezoid( next->entry_speed/next->nominal_speed, MINIMUM_PLANNER_SPEED/next->nominal_speed); //TODO: Make configuration option
+    next->recalculate_flag = false;
+
+}
 
 // Debug function
 void Planner::dump_queue(){

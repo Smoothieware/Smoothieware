@@ -16,6 +16,7 @@ template<class kind, int length> class RingBuffer {
         RingBuffer();
         int          size();
         int          capacity();
+        int          next_block_index(int index);
         void         push_back(kind object);
         void         pop_front(kind &object);
         void         get( int index, kind &object);
@@ -38,6 +39,12 @@ template<class kind, int length>  int RingBuffer<kind, length>::capacity(){
 
 template<class kind, int length>  int RingBuffer<kind, length>::size(){
 return((this->head>this->tail)?length:0)+this->tail-head;
+}
+
+template<class kind, int length> int RingBuffer<kind, length>::next_block_index(int index){
+    index++;
+    if (index == length) { index = 0; }
+    return(index);
 }
 
 template<class kind, int length> void RingBuffer<kind, length>::push_back(kind object){
@@ -80,8 +87,9 @@ template<class kind, int length> void RingBuffer<kind, length>::pop_front(kind &
 }
 
 template<class kind, int length> void RingBuffer<kind, length>::delete_first(){
-    kind dummy;
-    this->pop_front(dummy);
+    //kind dummy;
+    //this->pop_front(dummy);
+    this->head = (this->head+1)&(length-1);
 }
 
 

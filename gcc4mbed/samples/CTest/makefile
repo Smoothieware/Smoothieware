@@ -15,5 +15,6 @@ PROJECT=CTest
 GCC4MBED_DIR=../..
 LIBS_PREFIX=
 LIBS_SUFFIX=
+GCC4MBED_DELAYED_STDIO_INIT=1
 
 include ../../build/gcc4mbed.mk

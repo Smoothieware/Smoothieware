@@ -127,6 +127,7 @@ SECTIONS
         _sidata = LOADADDR (.data);
         . = ALIGN(4);
         _sdata = .;
+        Image$$RW_IRAM1$$Base = .;
 
         *(.ARM.__AT_0x10000000)
         *(vtable vtable.*)
@@ -150,6 +151,7 @@ SECTIONS
 
         . = ALIGN(4);
         _ebss = . ;
+        Image$$RW_IRAM1$$ZI$$Limit = . ;
     } >IRAM0
 
     /**************************************************/
@@ -194,12 +196,16 @@ SECTIONS
        they will be left uninitialized. */
     .AHBSRAM0 (NOLOAD):
     {
+        Image$$RW_IRAM2$$Base = . ;
         *(AHBSRAM0)
+        Image$$RW_IRAM2$$ZI$$Limit = .;
     } > IRAM1
 
     .AHBSRAM1 (NOLOAD):
     {
+        Image$$RW_IRAM3$$Base = . ;
         *(AHBSRAM1)
+        Image$$RW_IRAM3$$ZI$$Limit = .;
     } > IRAM2
 
 

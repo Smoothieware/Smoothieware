@@ -21,10 +21,13 @@ using std::string;
 Block::Block(){
     clear_vector(this->steps);
     this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
+    this->is_ready = false;
+    this->initial_rate = -1;
+    this->final_rate = -1;
 }
 
 void Block::debug(Kernel* kernel){
-    kernel->serial->printf(" steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8d acc:%5d dec:%5d rates:%10d>%10d \r\n", this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate );
+    kernel->serial->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8d acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
 }
 
 
@@ -47,6 +50,7 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
     this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min) 
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
+    //this->player->kernel->serial->printf("%p: r:%d \r\n", this, this->initial_rate); 
     double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; 
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
     int decelerate_steps = ceil( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
@@ -153,24 +157,33 @@ void Block::forward_pass(Block* previous, Block* next){
 
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
 void Block::append_gcode(Gcode* gcode){
-   this->commands.push_back(gcode->command);
-   this->travel_distances.push_back(gcode->millimeters_of_travel);
+   //this->commands.push_back(gcode->command);
+   //this->travel_distances.push_back(gcode->millimeters_of_travel);
+   __disable_irq();
+   this->gcodes.push_back(*gcode);
+   __enable_irq();
 }
 
 // The attached gcodes are then poped and the on_gcode_execute event is called with them as a parameter
 void Block::pop_and_execute_gcode(Kernel* &kernel){
-    for(unsigned short index=0; index<this->commands.size(); index++){
-        string command = this->commands.at(index);
-        double distance = this->travel_distances.at(index);
-        Gcode gcode = Gcode();
-        gcode.command = command;
-        gcode.millimeters_of_travel = distance;
-        kernel->call_event(ON_GCODE_EXECUTE, &gcode ); 
+    Block* block = const_cast<Block*>(this);
+    //for(unsigned short index=0; index<block->commands.size(); index++){
+    //    Gcode gcode = Gcode();
+    //    gcode.command = block->commands.at(index);
+    //    gcode.millimeters_of_travel = block->travel_distances.at(index);
+    //    kernel->call_event(ON_GCODE_EXECUTE, &gcode ); 
+    //}
+    for(unsigned short index=0; index<block->gcodes.size(); index++){
+        //this->player->kernel->serial->printf("exec: block:%p gcode:%p command:%p \r\n", block, &(block->gcodes[index]), &(block->gcodes[index].command) );
+        //this->player->kernel->serial->printf("                        str:%s \r\n", block->gcodes[index].command.c_str() );
+        //wait(0.1);
+        kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
     }
 }
 
 // Signal the player that this block is ready to be injected into the system
 void Block::ready(){
+    this->is_ready = true;
     this->player->new_block_added();
 }
 
@@ -184,14 +197,40 @@ void Block::release(){
     this->times_taken--;
     if( this->times_taken < 1 ){
         this->player->kernel->call_event(ON_BLOCK_END, this);
-        //player->kernel->serial->printf("gcodes: %d, dist: %f \r\n", this->commands.size(), this->millimeters );
         this->pop_and_execute_gcode(this->player->kernel);
         Player* player = this->player;
+
+        //this->player->kernel->serial->printf("a %d\r\n", this->player->queue.size() );
         if( player->queue.size() > 0 ){ 
             player->queue.delete_first();
         } 
-        player->current_block = NULL; 
-        player->pop_and_process_new_block();
+
+        //this->player->kernel->serial->printf("b %d %d\r\n", this->player->queue.size(), player->looking_for_new_block );
+        
+        if( player->looking_for_new_block == false ){
+            //player->pop_and_process_new_block(123);
+            if( player->queue.size() > 0 ){
+                Block* candidate =  player->queue.get_ref(0);
+                if( candidate->is_ready ){
+                    //candidate->debug(player->kernel);
+                    //this->player->kernel->serial->printf("c %d %d\r\n", this->player->queue.size(), player->looking_for_new_block );
+                    player->current_block = candidate;
+                    player->kernel->call_event(ON_BLOCK_BEGIN, player->current_block);
+                    if( player->current_block->times_taken < 1 ){
+                        player->current_block->release();
+                    }
+                }else{
+
+                    player->current_block = NULL;
+
+                } 
+            }else{
+                //player->current_block->debug(player->kernel);
+                //this->player->kernel->serial->printf("d %d %d\r\n", this->player->queue.size(), player->looking_for_new_block );
+                //wait(0.1);
+                player->current_block = NULL;
+            }
+        }
     }
 }
 

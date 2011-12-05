@@ -47,7 +47,7 @@ static int g_StandardHandlesOpened = 0;
 
 
 /* Open the stdin/stdout/stderr handles */
-static void _OpenStandardHandles(void)
+extern "C" void __GCC4MBEDOpenStandardHandles(void)
 {
     /* Open stdin/stdout/stderr */
     _sys_open("/stdin", OPENMODE_R);
@@ -238,7 +238,7 @@ extern "C" int _read(int file, char *ptr, int len)
     /* Open stdin/stdout/stderr if needed */
     if (!g_StandardHandlesOpened && file < 3)
     {
-        _OpenStandardHandles();
+        __GCC4MBEDOpenStandardHandles();
     }
 
     /* Call the function in mbed.ar and let it handle the read */
@@ -258,7 +258,7 @@ extern "C" int _write(int file, char *ptr, int len)
     /* Open stdin/stdout/stderr if needed */
     if (!g_StandardHandlesOpened && file < 3)
     {
-        _OpenStandardHandles();
+        __GCC4MBEDOpenStandardHandles();
     }
 
     /* Call the function in mbed.ar and let it handle the writes */

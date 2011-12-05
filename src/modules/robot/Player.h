@@ -5,34 +5,28 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef SERIALCONSOLE_H
-#define SERIALCONSOLE_H
-
-#include "mbed.h"
+#ifndef PLAYER_H
+#define PLAYER_H
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include <vector>
+using namespace std;
 #include <string>
-using std::string;
-#include "SerialConsole.h"
-#include "libs/RingBuffer.h"
+#include <vector>
 
-#define baud_rate_setting_ckeckusm 10922
-
-class SerialConsole : public Module, public Serial {
+class Player : public Module {
     public:
-        SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate );
-        
-        virtual void on_module_loaded();
-        void on_serial_char_received();
-        void line_received();
-        virtual void on_main_loop(void * argument);
-        bool has_char(char letter);
-        
-        //string receive_buffer;                 // Received chars are stored here until a newline character is received
-        //vector<std::string> received_lines;    // Received lines are stored here until they are requested
-        RingBuffer<char,256> buffer;             // Receive buffer
+        Player();
+
+        Block* new_block();
+        void new_block_added();
+        void pop_and_process_new_block(int debug);
+
+        RingBuffer<Block,32> queue;  // Queue of Blocks
+        Block* current_block;
+        bool looking_for_new_block;
 
 };
+
+
 
 #endif

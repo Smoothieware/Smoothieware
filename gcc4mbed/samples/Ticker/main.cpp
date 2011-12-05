@@ -13,7 +13,6 @@
    limitations under the License.
 */
 #include <mbed.h>
-#include <agutil.h>
 
 
 Ticker flipper;
@@ -30,15 +29,6 @@ int main()
     led2 = 1;
     flipper.attach(&flip, 5.0); // the address of the function to be attached (flip) and the interval (2 seconds)
 
-    // Dump the interrupt vector
-    printf("\r\n");
-    printf("Vector Table Offset Register\r\n");
-    DebugDumpMemory((void*)0xE000ED08, 4, 4);
-    
-    printf("Vector Table\r\n");
-    unsigned int VectorAddress = *((unsigned int*)0xE000ED08);
-    DebugDumpMemory((void*)VectorAddress, 4 * 32, 4);
-    
     // spin in a main loop. flipper will interrupt it to call flip
     while(1) {
         led1 = !led1;
