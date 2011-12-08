@@ -169,7 +169,7 @@ void Extruder::on_speed_change(void* argument){
         if((adjusted_speed*1400) < 1 ){ 
             return; 
         } 
-        LPC_TIM1->MR0 = ((SystemCoreClock/4))/(adjusted_speed*1700); 
+        LPC_TIM1->MR0 = ((SystemCoreClock/4))/(adjusted_speed*1400); 
         if( LPC_TIM1->MR0 < 300 ){ 
             this->kernel->serial->printf("tim1mr0 %d, adjusted_speed: %f\r\n", LPC_TIM1->MR0, adjusted_speed ); 
             LPC_TIM1->MR0 = 300; 
@@ -190,7 +190,7 @@ void Extruder::on_speed_change(void* argument){
     if( fabs(this->travel_distance) > 0.001 ){
 
         // Set timer
-        LPC_TIM1->MR0 = ((SystemCoreClock/4))/int(floor(1.2*1700)); 
+        LPC_TIM1->MR0 = ((SystemCoreClock/4))/int(floor(1.6*1400)); 
 
         // In case we are trying to set the timer to a limit it has already past by
         if( LPC_TIM1->TC >= LPC_TIM1->MR0 ){
@@ -210,8 +210,8 @@ inline void Extruder::stepping_tick(){
 
     //if( fabs( this->current_position - this->target_position ) >= 0.001 ){
     if( ( this->current_position < this->target_position && this->direction == 1 ) || ( this->current_position > this->target_position && this->direction == -1 ) ){    
-        this->current_position += (double(double(1)/double(1700)))*double(this->direction);
-        this->dir_pin = ((this->direction > 0) ? 1 : 0);
+        this->current_position += (double(double(1)/double(1400)))*double(this->direction);
+        this->dir_pin = ((this->direction > 0) ? 0 : 1);
         this->step_pin = 1;
     }else{
         // Move finished
