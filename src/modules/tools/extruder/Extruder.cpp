@@ -179,7 +179,7 @@ void Extruder::on_speed_change(void* argument){
         } 
         LPC_TIM1->MR0 = ((SystemCoreClock/4))/(adjusted_speed*this->steps_per_millimeter); 
         if( LPC_TIM1->MR0 < 300 ){ 
-            this->kernel->serial->printf("tim1mr0 %d, adjusted_speed: %f\r\n", LPC_TIM1->MR0, adjusted_speed ); 
+            //this->kernel->serial->printf("tim1mr0 %d, adjusted_speed: %f\r\n", LPC_TIM1->MR0, adjusted_speed ); 
             LPC_TIM1->MR0 = 300; 
         }
 
