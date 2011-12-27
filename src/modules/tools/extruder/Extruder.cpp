@@ -56,14 +56,17 @@ void Extruder::on_module_loaded() {
 
 // Get config
 void Extruder::on_config_reload(void* argument){
-    this->microseconds_per_step_pulse = 5; //this->kernel->config->value(microseconds_per_step_pulse_ckeckusm)->by_default(5)->as_number();
+    this->microseconds_per_step_pulse = this->kernel->config->value(microseconds_per_step_pulse_ckeckusm)->by_default(5)->as_number();
+    this->steps_per_millimeter        = this->kernel->config->value(steps_per_millimeter_checksum       )->by_default(1)->as_number();
+    this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1)->as_number();
+    this->acceleration                = this->kernel->config->value(acceleration_checksum               )->by_default(1)->as_number();
 }
 
 // Computer extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
    
-    //this->kernel->serial->printf("e: %s\r\n", gcode->command.c_str() );
+    this->kernel->serial->printf("e: %s\r\n", gcode->command.c_str() );
 
     // Absolute/relative mode
     if( gcode->has_letter('M')){
@@ -96,6 +99,9 @@ void Extruder::on_gcode_execute(void* argument){
                     this->solo_mode = true;
                     this->travel_distance = extrusion_distance;
                     this->travel_ratio = 0.0;
+                    if( gcode->has_letter('F') ){
+                        this->feed_rate = gcode->get_value('F');
+                    }
                 }else{
                     this->solo_mode = false;
                     this->travel_ratio = extrusion_distance / gcode->millimeters_of_travel; 
@@ -123,7 +129,7 @@ void Extruder::on_block_begin(void* argument){
         this->current_block = block; 
         this->start_position = this->target_position;
         this->target_position = this->start_position + this->travel_distance ;
-        //this->kernel->serial->printf("bb: target_position: %f, travel_distance:%f \r\n", this->target_position, this->travel_distance );
+        this->kernel->serial->printf("bb: target_position: %f, travel_distance:%f, current_position:%f \r\n", this->target_position, this->travel_distance, this->current_position );
         this->on_speed_change(this);
     }   
     if( fabs(this->travel_ratio) > 0.001 ){
@@ -131,6 +137,7 @@ void Extruder::on_block_begin(void* argument){
         this->current_block = block; 
         this->start_position = this->target_position;
         this->target_position =  this->start_position + ( this->current_block->millimeters * this->travel_ratio );
+        this->kernel->serial->printf("bb: target_position: %f, travel_ratio:%f, current_position:%f \r\n", this->target_position, this->travel_ratio, this->current_position );
         this->on_speed_change(this);
     } 
 
@@ -138,6 +145,7 @@ void Extruder::on_block_begin(void* argument){
 
 void Extruder::on_block_end(void* argument){
     Block* block = static_cast<Block*>(argument);
+    this->kernel->serial->printf("cc: target_position: %f, travel_ratio:%f, travel_distance:%f, current_position:%f \r\n", this->target_position, this->travel_ratio, this->travel_distance, this->current_position );
     this->current_block = NULL; 
 }       
 
@@ -166,10 +174,10 @@ void Extruder::on_speed_change(void* argument){
         double adjusted_speed = nominal_extrusion_speed * stepper_rate_ratio;
 
         // Set timer
-        if((adjusted_speed*1400) < 1 ){ 
+        if((adjusted_speed*this->steps_per_millimeter) < 1 ){ 
             return; 
         } 
-        LPC_TIM1->MR0 = ((SystemCoreClock/4))/(adjusted_speed*1400); 
+        LPC_TIM1->MR0 = ((SystemCoreClock/4))/(adjusted_speed*this->steps_per_millimeter); 
         if( LPC_TIM1->MR0 < 300 ){ 
             this->kernel->serial->printf("tim1mr0 %d, adjusted_speed: %f\r\n", LPC_TIM1->MR0, adjusted_speed ); 
             LPC_TIM1->MR0 = 300; 
@@ -190,7 +198,7 @@ void Extruder::on_speed_change(void* argument){
     if( fabs(this->travel_distance) > 0.001 ){
 
         // Set timer
-        LPC_TIM1->MR0 = ((SystemCoreClock/4))/int(floor(1.6*1400)); 
+        LPC_TIM1->MR0 = ((SystemCoreClock/4))/int(floor((this->feed_rate/60)*this->steps_per_millimeter)); 
 
         // In case we are trying to set the timer to a limit it has already past by
         if( LPC_TIM1->TC >= LPC_TIM1->MR0 ){
@@ -210,7 +218,7 @@ inline void Extruder::stepping_tick(){
 
     //if( fabs( this->current_position - this->target_position ) >= 0.001 ){
     if( ( this->current_position < this->target_position && this->direction == 1 ) || ( this->current_position > this->target_position && this->direction == -1 ) ){    
-        this->current_position += (double(double(1)/double(1400)))*double(this->direction);
+        this->current_position += (double(double(1)/double(1100)))*double(this->direction);
         this->dir_pin = ((this->direction > 0) ? 0 : 1);
         this->step_pin = 1;
     }else{

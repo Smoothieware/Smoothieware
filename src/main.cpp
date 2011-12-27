@@ -34,7 +34,7 @@ class TemperatureControl : public Module {
             this->desired_adc_value = UNDEFINED;
 
             // Settings
-            this->readings_per_second = 50;
+            this->readings_per_second = 5;
 
             this->r0 = 100000;               // Stated resistance eg. 100K
             this->t0 = 25 + 273.15;          // Temperature at stated resistance, eg. 25C
@@ -166,14 +166,32 @@ class TemperatureControl : public Module {
         double average_adc_reading(){
             double total;
             int j=0;
-            for( int i = 0; i <= this->queue.size()-1; i++ ){
+            int reading_index = this->queue.head;
+            //this->kernel->serial->printf("[");
+            //for( int i = 0; i <= this->queue.size()-1; i++ ){
+            while( reading_index != this->queue.tail ){
                 j++; 
                 //this->kernel->serial->printf("value:%f\r\n", *(this->queue.get_ref(i)) ); 
-                total += *(this->queue.get_ref(i));
+                total += this->queue.buffer[reading_index];
+                //this->kernel->serial->printf("%.4f,", this->queue.buffer[reading_index]);
+                reading_index = this->queue.next_block_index( reading_index );
             }
+            //this->kernel->serial->printf("]->[%4f=%4f]\r\n", total/j, this->adc_value_to_temperature(total/j));
             //this->kernel->serial->printf("total:%f, size:%d \r\n", total, this->queue.size() ); 
             return total / j;
         }
+
+//        double average_adc_reading(){
+//            double total;
+//            int j=0;
+//            for( int i = 0; i <= this->queue.size()-1; i++ ){
+//                j++; 
+//                //this->kernel->serial->printf("value:%f\r\n", *(this->queue.get_ref(i)) ); 
+//                total += *(this->queue.get_ref(i));
+//            }
+//            //this->kernel->serial->printf("total:%f, size:%d \r\n", total, this->queue.size() ); 
+//            return total / j;
+//        }
 
         AnalogIn* thermistor_pin;
         Ticker*   thermistor_read_ticker;

@@ -8,6 +8,10 @@
 
 #define microseconds_per_step_pulse_ckeckusm 42333
 #define extruder_module_enable_checksum      6183
+#define steps_per_millimeter_checksum        58088
+#define default_feed_rate_checksum           53183
+#define acceleration_checksum                60356 
+
 
 class Extruder : public Module{
     public:
@@ -29,6 +33,9 @@ class Extruder : public Module{
         Ticker          acceleration_ticker;          // Ticker responsible with updating the speed ( acceleration management ). Uses Timer3
         Block*          current_block;                // Current block we are stepping, same as Stepper's one
         int             microseconds_per_step_pulse;  // Pulse duration for step pulses
+        double          steps_per_millimeter;         // Steps to travel one millimeter
+        double          feed_rate;                    //  
+        double          acceleration;                 // 
 
         bool            solo_mode;
         double          travel_ratio;
