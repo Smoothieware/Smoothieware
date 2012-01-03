@@ -12,6 +12,9 @@
 #define default_feed_rate_checksum           53183
 #define acceleration_checksum                60356 
 
+#define OFF 0
+#define SOLO 1
+#define FOLLOW 2
 
 class Extruder : public Module{
     public:
@@ -21,7 +24,7 @@ class Extruder : public Module{
         void on_gcode_execute(void* argument);
         void on_block_begin(void* argument);
         void on_block_end(void* argument);
-        void on_speed_change(void* argument);
+        void set_speed(int steps_per_second);
         void acceleration_tick();
         void stepping_tick();
 
@@ -30,12 +33,12 @@ class Extruder : public Module{
         double          start_position;               // Start point ( in steps ) for the current move
         double          target_position;              // End point ( in steps ) for the current move
         double          current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed
-        Ticker          acceleration_ticker;          // Ticker responsible with updating the speed ( acceleration management ). Uses Timer3
         Block*          current_block;                // Current block we are stepping, same as Stepper's one
         int             microseconds_per_step_pulse;  // Pulse duration for step pulses
         double          steps_per_millimeter;         // Steps to travel one millimeter
         double          feed_rate;                    //  
         double          acceleration;                 // 
+
 
         bool            solo_mode;
         double          travel_ratio;
@@ -46,6 +49,9 @@ class Extruder : public Module{
 
         bool            debug;
         int debug_count;
+
+        char mode;
+        bool acceleration_lock;
 };
 
 #endif

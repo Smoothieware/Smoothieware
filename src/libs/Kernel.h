@@ -9,6 +9,7 @@
 #define KERNEL_H
 #include "libs/Module.h"
 #include "libs/Config.h"
+#include "libs/SlowTicker.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
 #include "modules/robot/Planner.h"
@@ -57,6 +58,7 @@ class Kernel {
         Player*           player;
 
         int debug;
+        SlowTicker* slow_ticker;
 
     private:
         vector<Module*> hooks[NUMBER_OF_DEFINED_EVENTS]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

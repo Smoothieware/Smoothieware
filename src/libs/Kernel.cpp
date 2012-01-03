@@ -12,6 +12,7 @@ using namespace std;
 #include "libs/Config.h"
 #include "mbed.h"
 #include "libs/nuts_bolts.h"
+#include "libs/SlowTicker.h"
 
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
@@ -19,6 +20,10 @@ using namespace std;
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Player.h"
+
+
+
+
 
 // List of callback functions, ordered as their corresponding events
 const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = { 
@@ -39,7 +44,7 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
-    
+
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();
     // Serial second, because the other modules might want to say something
@@ -48,6 +53,8 @@ Kernel::Kernel(){
     this->add_module( this->config );
     this->add_module( this->serial );
    
+    this->slow_ticker = new SlowTicker();
+    
     // Core modules 
     this->gcode_dispatch = new GcodeDispatch();
     this->robot          = new Robot();

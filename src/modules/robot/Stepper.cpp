@@ -15,7 +15,6 @@
 using namespace std;
 #include "libs/nuts_bolts.h"
 
-Timeout flipper;
 Stepper* stepper;
 
 Stepper::Stepper(){
@@ -35,18 +34,21 @@ void Stepper::on_module_loaded(){
     // Get onfiguration
     this->on_config_reload(this); 
 
-    // Acceleration timer
-    this->acceleration_ticker.attach_us(this, &Stepper::trapezoid_generator_tick, 1000000/this->acceleration_ticks_per_second);
+    // Acceleration ticker
+    this->kernel->slow_ticker->set_frequency(this->acceleration_ticks_per_second);
+    this->kernel->slow_ticker->attach( this, &Stepper::trapezoid_generator_tick );
 
     // Initiate main_interrupt timer and step reset timer
     LPC_TIM0->MR0 = 10000;
     LPC_TIM0->MCR = 11; // for MR0 and MR1, with no reset at MR1
     NVIC_EnableIRQ(TIMER0_IRQn);
-    NVIC_SetPriority(TIMER3_IRQn, 3); 
-    NVIC_SetPriority(TIMER0_IRQn, 2); 
-    NVIC_SetPriority(TIMER1_IRQn, 2); 
+    NVIC_SetPriority(TIMER3_IRQn, 4); 
+    NVIC_SetPriority(TIMER0_IRQn, 1); 
+    NVIC_SetPriority(TIMER2_IRQn, 2); 
+    NVIC_SetPriority(TIMER1_IRQn, 3); 
     LPC_TIM0->TCR = 1; 
-    
+
+
     // Step and Dir pins as outputs
     this->step_gpio_port->FIODIR |= this->step_mask;
     this->dir_gpio_port->FIODIR  |= this->dir_mask;
@@ -87,13 +89,13 @@ void Stepper::on_config_reload(void* argument){
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Stepper::on_pause(void* argument){
     LPC_TIM0->TCR = 0;
-    this->acceleration_ticker.detach();
+    LPC_TIM2->TCR = 0; 
 }
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
 void Stepper::on_play(void* argument){
     LPC_TIM0->TCR = 1;
-    this->acceleration_ticker.attach_us(this, &Stepper::trapezoid_generator_tick, 1000000/this->acceleration_ticks_per_second);
+    LPC_TIM2->TCR = 1; 
 }
 
 // A new block is popped from the queue
@@ -103,24 +105,27 @@ void Stepper::on_block_begin(void* argument){
     // The stepper does not care about 0-blocks
     if( block->millimeters == 0.0 ){ return; }
     
-    //this->current_block = block;
-
     // Mark the new block as of interrest to us
     block->take();
-
+    
     // Setup
     for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
     this->step_events_completed = 0; 
 
     this->current_block = block;
-
+    
+    // This is just to save computing power and not do it every step 
     this->update_offsets();
+    
+    // Setup acceleration for this block 
     this->trapezoid_generator_reset();
+
 }
 
 // Current block is discarded
 void Stepper::on_block_end(void* argument){
     Block* block  = static_cast<Block*>(argument);
+    LPC_TIM0->MR0 = 1000000;
     this->current_block = NULL; //stfu !
 }
 
@@ -139,7 +144,6 @@ extern "C" void TIMER0_IRQHandler (void){
     }
 }
 
-
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Smoothie. It is executed at the rate set with
 // config_step_timer. It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
 inline void Stepper::main_interrupt(){
@@ -155,7 +159,6 @@ inline void Stepper::main_interrupt(){
     this->step_gpio_port->FIOSET =   (     this->out_bits ^ this->step_invert_mask   )     & this->step_mask;  
     this->step_gpio_port->FIOCLR =   ( ~ ( this->out_bits ^ this->step_invert_mask ) )     & this->step_mask;
 
-  
     if( this->current_block != NULL ){
         // Set bits for direction and steps 
         this->out_bits = this->current_block->direction_bits;
@@ -176,7 +179,6 @@ inline void Stepper::main_interrupt(){
                 }
             }
         }
-
     }else{
         this->out_bits = 0;
     }
@@ -190,44 +192,46 @@ void Stepper::update_offsets(){
     }
 }
 
-
 // This is called ACCELERATION_TICKS_PER_SECOND times per second by the step_event
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
 void Stepper::trapezoid_generator_tick() {
-    if(this->current_block ) {
-      if(this->step_events_completed < this->current_block->accelerate_until<<16) {
-          this->trapezoid_adjusted_rate += this->current_block->rate_delta;
-          if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
-              this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
-          }
-          this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-      } else if (this->step_events_completed > this->current_block->decelerate_after<<16) {
-          // NOTE: We will only reduce speed if the result will be > 0. This catches small
-          // rounding errors that might leave steps hanging after the last trapezoid tick.
-          if (this->trapezoid_adjusted_rate > this->current_block->rate_delta) {
-              this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
-          }
-          if (this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
-              this->trapezoid_adjusted_rate = this->current_block->final_rate;
-          }
-          this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-      } else {
-          // Make sure we cruise at exactly nominal rate
-          if (this->trapezoid_adjusted_rate != this->current_block->nominal_rate) {
-              this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
+    if(this->current_block && !this->trapezoid_generator_busy ) {
+          if(this->step_events_completed < this->current_block->accelerate_until<<16) {
+              this->trapezoid_adjusted_rate += this->current_block->rate_delta;
+              if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
+                  this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
+              }
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+          } else if (this->step_events_completed >= this->current_block->decelerate_after<<16) {
+              // NOTE: We will only reduce speed if the result will be > 0. This catches small
+              // rounding errors that might leave steps hanging after the last trapezoid tick.
+              if (this->trapezoid_adjusted_rate > double(this->current_block->rate_delta) * 1.5) {
+                  this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
+              }else{
+                  this->trapezoid_adjusted_rate = floor(double(this->trapezoid_adjusted_rate / 2 ));
+              }
+              if (this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
+                  this->trapezoid_adjusted_rate = this->current_block->final_rate;
+              }
+              this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+          } else {
+              // Make sure we cruise at exactly nominal rate
+              if (this->trapezoid_adjusted_rate != this->current_block->nominal_rate) {
+                  this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
+                  this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+              }
           }
-      }
-  }
+    }
 }
-
 
 // Initializes the trapezoid generator from the current block. Called whenever a new
 // block begins.
 void Stepper::trapezoid_generator_reset(){
     this->trapezoid_adjusted_rate = this->current_block->initial_rate;
     this->trapezoid_tick_cycle_counter = 0;
+    // Because this can be called directly from the main loop, it could be interrupted by the acceleration ticker, and that would be bad, so we use a flag
+    this->trapezoid_generator_busy = true;
     this->set_step_events_per_minute(this->trapezoid_adjusted_rate); 
     this->trapezoid_generator_busy = false;
 }
@@ -245,23 +249,16 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
 
     // Set the Timer interval 
     LPC_TIM0->MR0 = floor( ( SystemCoreClock/4 ) / ( (steps_per_minute/60L) * speed_factor ) );
+    
     if( LPC_TIM0->MR0 < 150 ){
         LPC_TIM0->MR0 = 150;
-
         this->kernel->serial->printf("tim0mr0: %d, steps_per minute: %f \r\n", LPC_TIM0->MR0, steps_per_minute ); 
-        //Block* block = new Block();
-        //this->kernel->serial->printf(":l queue:%d debug:%d cb:%p cb=null:%d mem:%p tc:%u mr0:%u mr1:%u \r\n",  this->kernel->player->queue.size() , this->kernel->debug, this->current_block, this->current_block == NULL, block, LPC_TIM0->TC , LPC_TIM0->MR0, LPC_TIM0->MR1  ); 
-        //delete block;
-        //this->kernel->serial->printf("mr0:%u, st/m:%f, sf:%f, bsf:%f \r\n", LPC_TIM0->MR0, steps_per_minute, speed_factor, this->base_stepping_frequency );
-        //this->current_block->debug(this->kernel);
-        //wait(0.1);
     }   
-
 
     // In case we change the Match Register to a value the Timer Counter has past
     if( LPC_TIM0->TC >= LPC_TIM0->MR0 ){ LPC_TIM0->TCR = 3; LPC_TIM0->TCR = 1; }
 
     this->kernel->call_event(ON_SPEED_CHANGE, this);
- 
+
 }
 

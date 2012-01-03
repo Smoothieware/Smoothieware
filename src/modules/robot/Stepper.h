@@ -43,8 +43,6 @@ class Stepper : public Module {
         int config_step_timer( int cycles );
 
         Block* current_block;
-        Ticker acceleration_ticker;
-        Timeout flipper;
         int counters[3];
         int stepped[3]; 
         int offsets[3]; 

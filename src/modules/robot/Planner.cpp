@@ -42,8 +42,14 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // Do not append block with no movement
     //if( target[ALPHA_STEPPER] == this->position[ALPHA_STEPPER] && target[BETA_STEPPER] == this->position[BETA_STEPPER] && target[GAMMA_STEPPER] == this->position[GAMMA_STEPPER] ){ this->computing = false; return; }
 
+
+
     // Stall here if the queue is ful
-    while( this->kernel->player->queue.size() >= this->kernel->player->queue.capacity()-2 ){ wait_us(100); }
+    //this->kernel->serial->printf("aaa\r\n");
+    while( this->kernel->player->queue.size() >= this->kernel->player->queue.capacity()-2 ){ 
+        wait_us(500); 
+    }
+    //this->kernel->serial->printf("bbb\r\n");
 
     Block* block = this->kernel->player->new_block();
     block->planner = this;   
@@ -185,19 +191,47 @@ void Planner::recalculate() {
 // Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
 // implements the reverse pass.
 void Planner::reverse_pass(){
-     // For each block
-    for( int index = this->kernel->player->queue.size()-1; index > 0; index-- ){  // Skip buffer tail/first block to prevent over-writing the initial entry speed.
-        this->kernel->player->queue.get_ref(index)->reverse_pass((index==this->kernel->player->queue.size()-1?NULL:this->kernel->player->queue.get_ref(index+1)), (index==0? (this->has_deleted_block?&(this->last_deleted_block):NULL) :this->kernel->player->queue.get_ref(index-1))); 
+    // For each block
+    int block_index = this->kernel->player->queue.tail;
+    Block* blocks[3] = {NULL,NULL,NULL};
+
+    while(block_index!=this->kernel->player->queue.head){
+        block_index = this->kernel->player->queue.prev_block_index( block_index );
+        blocks[2] = blocks[1];
+        blocks[1] = blocks[0];
+        blocks[0] = &this->kernel->player->queue.buffer[block_index];
+        if( blocks[1] == NULL ){ continue; }
+        blocks[1]->reverse_pass(blocks[2], blocks[0]);
     }
+    
+    
+    
+    
+    //for( int index = this->kernel->player->queue.size()-1; index > 0; index-- ){  // Skip buffer tail/first block to prevent over-writing the initial entry speed.
+    //    this->kernel->player->queue.get_ref(index)->reverse_pass((index==this->kernel->player->queue.size()-1?NULL:this->kernel->player->queue.get_ref(index+1)), (index==0? (this->has_deleted_block?&(this->last_deleted_block):NULL) :this->kernel->player->queue.get_ref(index-1))); 
+    //}
 }
 
 // Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
 // implements the forward pass.
 void Planner::forward_pass() {
     // For each block
-    for( int index = 0; index <= this->kernel->player->queue.size()-1; index++ ){
-        this->kernel->player->queue.get_ref(index)->forward_pass((index==0?NULL:this->kernel->player->queue.get_ref(index-1)),(index==this->kernel->player->queue.size()-1?NULL:this->kernel->player->queue.get_ref(index+1))); 
-    }
+    int block_index = this->kernel->player->queue.head; 
+    Block* blocks[3] = {NULL,NULL,NULL};
+
+    while(block_index!=this->kernel->player->queue.tail){
+        blocks[0] = blocks[1];
+        blocks[1] = blocks[2];
+        blocks[2] = &this->kernel->player->queue.buffer[block_index];
+        if( blocks[0] == NULL ){ continue; }
+        blocks[1]->forward_pass(blocks[0],blocks[2]);
+        block_index = this->kernel->player->queue.next_block_index( block_index );
+    } 
+    blocks[2]->forward_pass(blocks[1],NULL);   
+
+    //for( int index = 0; index <= this->kernel->player->queue.size()-1; index++ ){
+    //    this->kernel->player->queue.get_ref(index)->forward_pass((index==0?NULL:this->kernel->player->queue.get_ref(index-1)),(index==this->kernel->player->queue.size()-1?NULL:this->kernel->player->queue.get_ref(index+1))); 
+    //}
 }
 
 // Recalculates the trapezoid speed profiles for flagged blocks in the plan according to the
@@ -205,29 +239,6 @@ void Planner::forward_pass() {
 // planner_recalculate() after updating the blocks. Any recalulate flagged junction will
 // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
 // to exit speed and entry speed of one another.
-/*
-void Planner::recalculate_trapezoids() {
-    // For each block
-    int size = this->kernel->player->queue.size(); 
-    for( int index = 0; index <= size-1; index++ ){ // We skip the first one because we need a previous
-        if( size-1 == index ){ //last block
-            Block* last = this->kernel->player->queue.get_ref(index);
-            last->calculate_trapezoid( last->entry_speed / last->nominal_speed, MINIMUM_PLANNER_SPEED / last->nominal_speed ); 
-            this->kernel->serial->printf("%p: %d/%d last r:%d \r\n", last, index, size-1,  last->initial_rate); 
-        }else{
-            Block* current = this->kernel->player->queue.get_ref(index);
-            Block* next =    this->kernel->player->queue.get_ref(index+1);
-            if( current->recalculate_flag || next->recalculate_flag ){
-                current->calculate_trapezoid( current->entry_speed/current->nominal_speed, next->entry_speed/current->nominal_speed );
-                current->recalculate_flag = false; // Reset current only to ensure next trapezoid is computed
-                this->kernel->serial->printf("%p: %d/%d other r:%d \r\n", current, index, size-1, current->initial_rate); 
-            }else{
-                this->kernel->serial->printf("%p: %d/%d else r:%d \r\n", current, index, size-1, current->initial_rate); 
-            } 
-        }
-    }
-}
-*/
 void Planner::recalculate_trapezoids() {
     int block_index = this->kernel->player->queue.head;
     Block* current;

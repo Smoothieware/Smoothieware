@@ -116,7 +116,6 @@ void Robot::execute_gcode(Gcode* gcode){
             break;
     }
 
-
     // As far as the parser is concerned, the position is now == target. In reality the
     // motion control system might still be processing the action and the real tool position
     // in any intermediate location.
