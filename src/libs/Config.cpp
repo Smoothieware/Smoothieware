@@ -98,6 +98,9 @@ void Config::set_string( uint16_t check_sum, string value ){
 ConfigValue* Config::value(uint16_t check_sum){
     ConfigValue* result = new ConfigValue;
     result->check_sum = check_sum; 
+    if( this->has_config_file() == false ){
+       return result;
+    } 
     // Open the config file ( find it if we haven't already found it ) 
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
     string buffer;
@@ -127,12 +130,22 @@ ConfigValue* Config::value(uint16_t check_sum){
     return result;
 }
 
-// Get the filename for the config file
-string Config::get_config_file(){
-    if( this->config_file_found ){ return this->config_file; }
+bool Config::has_config_file(){
+    if( this->config_file_found ){ return true; }
     this->try_config_file("/local/config");
     this->try_config_file("/sd/config");
     if( this->config_file_found ){
+        return true; 
+    }else{
+        return false; 
+    }
+
+}
+
+// Get the filename for the config file
+string Config::get_config_file(){
+    if( this->config_file_found ){ return this->config_file; }
+    if( this->has_config_file() ){
         return this->config_file;
     }else{
         printf("ERROR: no config file found\r\n"); 

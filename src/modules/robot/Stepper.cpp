@@ -64,12 +64,12 @@ void Stepper::on_config_reload(void* argument){
     this->base_stepping_frequency       =  this->kernel->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
     this->step_gpio_port      = gpios[(int)this->kernel->config->value(step_gpio_port_checksum               )->by_default(0     )->as_number()];
     this->dir_gpio_port       = gpios[(int)this->kernel->config->value(dir_gpio_port_checksum                )->by_default(0     )->as_number()];
-    this->alpha_step_pin                =  this->kernel->config->value(alpha_step_pin_checksum               )->required(        )->as_number();
-    this->beta_step_pin                 =  this->kernel->config->value(beta_step_pin_checksum                )->required(        )->as_number();
-    this->gamma_step_pin                =  this->kernel->config->value(gamma_step_pin_checksum               )->required(        )->as_number();
-    this->alpha_dir_pin                 =  this->kernel->config->value(alpha_dir_pin_checksum                )->required(        )->as_number();
-    this->beta_dir_pin                  =  this->kernel->config->value(beta_dir_pin_checksum                 )->required(        )->as_number();
-    this->gamma_dir_pin                 =  this->kernel->config->value(gamma_dir_pin_checksum                )->required(        )->as_number();
+    this->alpha_step_pin                =  this->kernel->config->value(alpha_step_pin_checksum               )->by_default(1     )->as_number();
+    this->beta_step_pin                 =  this->kernel->config->value(beta_step_pin_checksum                )->by_default(2     )->as_number();
+    this->gamma_step_pin                =  this->kernel->config->value(gamma_step_pin_checksum               )->by_default(3     )->as_number();
+    this->alpha_dir_pin                 =  this->kernel->config->value(alpha_dir_pin_checksum                )->by_default(4     )->as_number();
+    this->beta_dir_pin                  =  this->kernel->config->value(beta_dir_pin_checksum                 )->by_default(5     )->as_number();
+    this->gamma_dir_pin                 =  this->kernel->config->value(gamma_dir_pin_checksum                )->by_default(6     )->as_number();
     this->step_mask                     = ( 1 << this->alpha_step_pin ) + ( 1 << this->beta_step_pin ) + ( 1 << this->gamma_step_pin );
     this->dir_mask                      = ( 1 << this->alpha_dir_pin  ) + ( 1 << this->beta_dir_pin  ) + ( 1 << this->gamma_dir_pin  );
     this->step_bits[ALPHA_STEPPER ]     = this->alpha_step_pin;
@@ -147,7 +147,8 @@ extern "C" void TIMER0_IRQHandler (void){
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Smoothie. It is executed at the rate set with
 // config_step_timer. It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
 inline void Stepper::main_interrupt(){
-    
+   
+    // TODO: Explain this magic 
     // Step dir pins first, then step pinse, stepper drivers like to know the direction before the step signal comes in
     // Clear dir   pins 
     this->dir_gpio_port->FIOSET  =                          this->dir_invert_mask          & this->dir_mask; 

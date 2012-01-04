@@ -14,24 +14,7 @@ void TemperatureControl::on_module_loaded(){
     this->desired_adc_value = UNDEFINED;
 
     // Settings
-    this->readings_per_second = 5;
-
-    this->r0 = 100000;               // Stated resistance eg. 100K
-    this->t0 = 25 + 273.15;          // Temperature at stated resistance, eg. 25C
-    this->beta = 4066;               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
-    this->vadc = 3.3;                // ADC Reference
-    this->vcc  = 3.3;                // Supply voltage to potential divider
-    this->k = this->r0 * exp( -this->beta / this->t0 );
-    double r1 = 0;
-    double r2 = 4700;
-
-    if( r1 > 0 ){
-        this->vs = r1 * this->vcc / ( r1 + r2 );
-        this->rs = r1 * r2 / ( r1 + r2 );
-    }else{
-        this->vs = this->vcc;
-        this->rs = r2;
-    } 
+    this->on_config_reload(this);
 
     this->acceleration_factor = 10;
 
@@ -44,6 +27,34 @@ void TemperatureControl::on_module_loaded(){
 
     // Register for events
     this->register_for_event(ON_GCODE_EXECUTE); 
+
+}
+
+
+// Get configuration from the config file
+void TemperatureControl::on_config_reload(void* argument){
+
+    this->readings_per_second = this->kernel->config->value(readings_per_second_ckeckusm     )->by_default(5     )->as_number();
+
+    // Values are here : http://reprap.org/wiki/Thermistor
+    // TODO: WARNING : THIS WILL CHANGE and backward compatibility will be broken for config files that use this
+    this->r0 =                  this->kernel->config->value(temperature_control_r0_ckeckusm  )->by_default(100000)->as_number();               // Stated resistance eg. 100K
+    this->t0 =                  this->kernel->config->value(temperature_control_t0_ckeckusm  )->by_default(25    )->as_number() + 273.15;      // Temperature at stated resistance, eg. 25C
+    this->beta =                this->kernel->config->value(temperature_control_beta_ckeckusm)->by_default(4066  )->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
+    this->vadc =                this->kernel->config->value(temperature_control_vadc_ckeckusm)->by_default(3.3   )->as_number();               // ADC Reference
+    this->vcc  =                this->kernel->config->value(temperature_control_vcc_ckeckusm )->by_default(3.3   )->as_number();               // Supply voltage to potential divider
+    this->r1 =                  this->kernel->config->value(temperature_control_r1_ckeckusm  )->by_default(0     )->as_number();
+    this->r2 =                  this->kernel->config->value(temperature_control_r2_ckeckusm  )->by_default(4700  )->as_number();
+
+    this->k = this->r0 * exp( -this->beta / this->t0 );
+    
+    if( r1 > 0 ){
+        this->vs = r1 * this->vcc / ( r1 + r2 );
+        this->rs = r1 * r2 / ( r1 + r2 );
+    }else{
+        this->vs = this->vcc;
+        this->rs = r2;
+    } 
 
 }
 

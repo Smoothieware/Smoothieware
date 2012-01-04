@@ -30,8 +30,8 @@ void Planner::on_module_loaded(){
 }
 
 void Planner::on_config_reload(void* argument){
-    this->acceleration =       this->kernel->config->value(acceleration_checksum       )->required()->as_number();
-    this->max_jerk =           this->kernel->config->value(max_jerk_checksum           )->required(      )->as_number();
+    this->acceleration =       this->kernel->config->value(acceleration_checksum       )->by_default(100 )->as_number();
+    this->max_jerk =           this->kernel->config->value(max_jerk_checksum           )->by_default(100 )->as_number();
     this->junction_deviation = this->kernel->config->value(junction_deviation_checksum )->by_default(0.05)->as_number(); 
 }
 

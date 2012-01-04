@@ -93,6 +93,7 @@ class Config : public Module {
         ConfigValue* value(uint16_t check_sum);
         bool   has_characters(uint16_t check_sum, string str );
         string get_config_file();
+        bool has_config_file();
         void try_config_file(string candidate);
 
         string config_file;         // Path to the config file

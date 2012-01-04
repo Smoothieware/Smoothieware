@@ -8,12 +8,26 @@
 
 #define UNDEFINED -1
 
+
+#define temperature_control_r0_ckeckusm    8728
+#define readings_per_second_ckeckusm       18645 
+#define temperature_control_t0_ckeckusm    9754
+#define temperature_control_beta_ckeckusm  64275 
+#define temperature_control_vadc_ckeckusm  8725
+#define temperature_control_vcc_ckeckusm   4274
+#define temperature_control_r1_ckeckusm    8985
+#define temperature_control_r2_ckeckusm    9242
+
+
+
+
 class TemperatureControl : public Module {
     public:
         TemperatureControl();
         
         void on_module_loaded();
         void on_gcode_execute(void* argument);
+        void on_config_reload(void* argument);
         void set_desired_temperature(double desired_temperature);
         double get_temperature();
         double adc_value_to_temperature(double adc_value);
@@ -33,6 +47,8 @@ class TemperatureControl : public Module {
         // Thermistor computation settings
         double r0;
         double t0;
+        double r1;
+        double r2;
         double beta;
         double vadc;
         double vcc;
