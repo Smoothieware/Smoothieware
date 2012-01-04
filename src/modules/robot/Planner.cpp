@@ -39,26 +39,18 @@ void Planner::on_config_reload(void* argument){
 // Append a block to the queue, compute it's speed factors
 void Planner::append_block( int target[], double feed_rate, double distance, double deltas[] ){
    
-    // Do not append block with no movement
-    //if( target[ALPHA_STEPPER] == this->position[ALPHA_STEPPER] && target[BETA_STEPPER] == this->position[BETA_STEPPER] && target[GAMMA_STEPPER] == this->position[GAMMA_STEPPER] ){ this->computing = false; return; }
-
-
-
     // Stall here if the queue is ful
-    //this->kernel->serial->printf("aaa\r\n");
     while( this->kernel->player->queue.size() >= this->kernel->player->queue.capacity()-2 ){ 
         wait_us(500); 
     }
-    //this->kernel->serial->printf("bbb\r\n");
 
     Block* block = this->kernel->player->new_block();
     block->planner = this;   
 
     // Direction bits
     block->direction_bits = 0; 
-    char direction_bits[3] = {this->kernel->stepper->alpha_dir_pin, this->kernel->stepper->beta_dir_pin, this->kernel->stepper->gamma_dir_pin}; 
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ 
-        if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<direction_bits[stepper]); } 
+        if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<stepper); } 
     }
     
     // Number of steps for each stepper

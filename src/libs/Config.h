@@ -10,6 +10,7 @@
 #include "mbed.h"
 #include "libs/Kernel.h"
 #include "libs/utils.h"
+#include "libs/Pin.h"
 #include <string>
 using std::string;
 
@@ -36,11 +37,20 @@ class ConfigValue{
             if( this->found == false && this->default_set == true ){
                 return this->default_double;
             }else{
-                double result = atof(remove_non_number(value).c_str());
+                double result = atof(remove_non_number(this->value).c_str());
                 if( result == 0.0 && this->value.find_first_not_of("0.") != string::npos ){
                     error("config setting '%s' with value '%s' is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->key.c_str(), this->value.c_str() );
                 }
                 return result; 
+            }
+           
+        }
+
+        std::string as_string(){
+            if( this->found == false && this->default_set == true ){
+                return this->default_string;
+            }else{
+                return this->value; 
             }
         }
 
@@ -54,13 +64,24 @@ class ConfigValue{
                     return false;
                 } 
             }
+        }
 
+        Pin* as_pin(){
+            Pin* pin = new Pin();
+            pin->from_string(this->value);
+            return pin;
         }
 
         ConfigValue* by_default(double value){
             this->default_set = true;
             this->default_double = value;
             return this; 
+        }
+
+        ConfigValue* by_default(std::string value){
+            this->default_set = true;
+            this->default_string = value;
+            return this;
         }
 
         bool has_characters( string mask ){
@@ -77,6 +98,7 @@ class ConfigValue{
         bool found;
         bool default_set;
         double default_double; 
+        string default_string;
 };
 
 

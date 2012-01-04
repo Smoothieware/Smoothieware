@@ -48,39 +48,21 @@ void Stepper::on_module_loaded(){
     NVIC_SetPriority(TIMER1_IRQn, 3); 
     LPC_TIM0->TCR = 1; 
 
-
-    // Step and Dir pins as outputs
-    this->step_gpio_port->FIODIR |= this->step_mask;
-    this->dir_gpio_port->FIODIR  |= this->dir_mask;
-
 }
 
 // Get configuration from the config file
 void Stepper::on_config_reload(void* argument){
-    LPC_GPIO_TypeDef *gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
+    
     this->microseconds_per_step_pulse   =  this->kernel->config->value(microseconds_per_step_pulse_ckeckusm  )->by_default(5     )->as_number();
     this->acceleration_ticks_per_second =  this->kernel->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
     this->minimum_steps_per_minute      =  this->kernel->config->value(minimum_steps_per_minute_checksum     )->by_default(1200  )->as_number();
     this->base_stepping_frequency       =  this->kernel->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
-    this->step_gpio_port      = gpios[(int)this->kernel->config->value(step_gpio_port_checksum               )->by_default(0     )->as_number()];
-    this->dir_gpio_port       = gpios[(int)this->kernel->config->value(dir_gpio_port_checksum                )->by_default(0     )->as_number()];
-    this->alpha_step_pin                =  this->kernel->config->value(alpha_step_pin_checksum               )->by_default(1     )->as_number();
-    this->beta_step_pin                 =  this->kernel->config->value(beta_step_pin_checksum                )->by_default(2     )->as_number();
-    this->gamma_step_pin                =  this->kernel->config->value(gamma_step_pin_checksum               )->by_default(3     )->as_number();
-    this->alpha_dir_pin                 =  this->kernel->config->value(alpha_dir_pin_checksum                )->by_default(4     )->as_number();
-    this->beta_dir_pin                  =  this->kernel->config->value(beta_dir_pin_checksum                 )->by_default(5     )->as_number();
-    this->gamma_dir_pin                 =  this->kernel->config->value(gamma_dir_pin_checksum                )->by_default(6     )->as_number();
-    this->step_mask                     = ( 1 << this->alpha_step_pin ) + ( 1 << this->beta_step_pin ) + ( 1 << this->gamma_step_pin );
-    this->dir_mask                      = ( 1 << this->alpha_dir_pin  ) + ( 1 << this->beta_dir_pin  ) + ( 1 << this->gamma_dir_pin  );
-    this->step_bits[ALPHA_STEPPER ]     = this->alpha_step_pin;
-    this->step_bits[BETA_STEPPER  ]     = this->beta_step_pin;
-    this->step_bits[GAMMA_STEPPER ]     = this->gamma_step_pin;
-    this->step_invert_mask = ( this->kernel->config->value( alpha_step_pin_checksum )->is_inverted() << this->alpha_step_pin ) +
-                             ( this->kernel->config->value( beta_step_pin_checksum  )->is_inverted() << this->beta_step_pin  ) + 
-                             ( this->kernel->config->value( gamma_step_pin_checksum )->is_inverted() << this->gamma_step_pin );
-    this->dir_invert_mask =  ( this->kernel->config->value( alpha_dir_pin_checksum  )->is_inverted() << this->alpha_dir_pin  ) +
-                             ( this->kernel->config->value( beta_dir_pin_checksum   )->is_inverted() << this->beta_dir_pin   ) + 
-                             ( this->kernel->config->value( gamma_dir_pin_checksum  )->is_inverted() << this->gamma_dir_pin  );
+    this->alpha_step_pin                =  this->kernel->config->value(alpha_step_pin_checksum               )->by_default("1.21"     )->as_pin()->as_output();
+    this->beta_step_pin                 =  this->kernel->config->value(beta_step_pin_checksum                )->by_default("1.23"     )->as_pin()->as_output();
+    this->gamma_step_pin                =  this->kernel->config->value(gamma_step_pin_checksum               )->by_default("1.22!"    )->as_pin()->as_output();
+    this->alpha_dir_pin                 =  this->kernel->config->value(alpha_dir_pin_checksum                )->by_default("1.18"     )->as_pin()->as_output();
+    this->beta_dir_pin                  =  this->kernel->config->value(beta_dir_pin_checksum                 )->by_default("1.20"     )->as_pin()->as_output();
+    this->gamma_dir_pin                 =  this->kernel->config->value(gamma_dir_pin_checksum                )->by_default("1.19"     )->as_pin()->as_output();
 
     // Set the Timer interval for Match Register 1, 
     LPC_TIM0->MR1 = (( SystemCoreClock/4 ) / 1000000 ) * this->microseconds_per_step_pulse; 
@@ -135,8 +117,9 @@ extern "C" void TIMER0_IRQHandler (void){
     if((LPC_TIM0->IR >> 1) & 1){
         LPC_TIM0->IR |= 1 << 1;
         // Clear step pins 
-        stepper->step_gpio_port->FIOSET =  stepper->step_invert_mask & stepper->step_mask;
-        stepper->step_gpio_port->FIOCLR = ~stepper->step_invert_mask & stepper->step_mask; 
+        stepper->alpha_step_pin->set(0);
+        stepper->beta_step_pin->set(0); 
+        stepper->gamma_step_pin->set(0);
     }
     if((LPC_TIM0->IR >> 0) & 1){
         LPC_TIM0->IR |= 1 << 0;
@@ -148,17 +131,13 @@ extern "C" void TIMER0_IRQHandler (void){
 // config_step_timer. It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
 inline void Stepper::main_interrupt(){
    
-    // TODO: Explain this magic 
     // Step dir pins first, then step pinse, stepper drivers like to know the direction before the step signal comes in
-    // Clear dir   pins 
-    this->dir_gpio_port->FIOSET  =                          this->dir_invert_mask          & this->dir_mask; 
-    this->dir_gpio_port->FIOCLR  =     ~                    this->dir_invert_mask          & this->dir_mask;
-    // Set   dir   pins
-    this->dir_gpio_port->FIOSET  =   (     this->out_bits ^ this->dir_invert_mask    )     & this->dir_mask;
-    this->dir_gpio_port->FIOCLR  =   ( ~ ( this->out_bits ^ this->dir_invert_mask  ) )     & this->dir_mask; 
-    // Set   step  pins 
-    this->step_gpio_port->FIOSET =   (     this->out_bits ^ this->step_invert_mask   )     & this->step_mask;  
-    this->step_gpio_port->FIOCLR =   ( ~ ( this->out_bits ^ this->step_invert_mask ) )     & this->step_mask;
+    this->alpha_dir_pin->set(  ( this->out_bits >> 0  ) & 1 );
+    this->beta_dir_pin->set(   ( this->out_bits >> 1  ) & 1 );
+    this->gamma_dir_pin->set(  ( this->out_bits >> 2  ) & 1 );
+    this->alpha_step_pin->set( ( this->out_bits >> 3  ) & 1 );
+    this->beta_step_pin->set(  ( this->out_bits >> 4  ) & 1 );
+    this->gamma_step_pin->set( ( this->out_bits >> 5  ) & 1 );
 
     if( this->current_block != NULL ){
         // Set bits for direction and steps 
@@ -168,7 +147,7 @@ inline void Stepper::main_interrupt(){
             if( this->counters[stpr] > this->offsets[stpr] && this->stepped[stpr] < this->current_block->steps[stpr] ){
                 this->counters[stpr] -= this->offsets[stpr] ;
                 this->stepped[stpr]++;
-                this->out_bits |= (1 << this->step_bits[stpr]);
+                this->out_bits |= (1 << (stpr+3) );
             } 
         } 
         // If current block is finished, reset pointer
