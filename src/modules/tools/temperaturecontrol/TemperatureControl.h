@@ -8,7 +8,7 @@
 
 #define UNDEFINED -1
 
-
+#define temperature_control_thermistor_checksum 22986
 #define temperature_control_r0_ckeckusm    8728
 #define readings_per_second_ckeckusm       18645 
 #define temperature_control_t0_ckeckusm    9754

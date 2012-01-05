@@ -60,8 +60,6 @@ class Stepper : public Module {
         int divider;
         int minimum_steps_per_minute;
         int base_stepping_frequency;
-        LPC_GPIO_TypeDef* step_gpio_port;
-        LPC_GPIO_TypeDef* dir_gpio_port; 
         Pin* alpha_step_pin;
         Pin* beta_step_pin;
         Pin* gamma_step_pin;

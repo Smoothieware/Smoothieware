@@ -38,6 +38,31 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // Values are here : http://reprap.org/wiki/Thermistor
     // TODO: WARNING : THIS WILL CHANGE and backward compatibility will be broken for config files that use this
+    this->r0 = 100000;
+    this->t0 = 25;
+    this->beta = 4066;
+    this->vadc = 3.3;
+    this->vcc = 3.3;
+    this->r1 = 0;
+    this->r2 = 4700;
+
+    ConfigValue* thermistor = this->kernel->config->value(temperature_control_thermistor_checksum);    
+
+    if( thermistor->value.compare("EPCOS100K") == 0 ){
+        // Already the default
+    }else if( thermistor->value.compare("RRRF100K") == 0 ){
+        this->beta = 3960;
+    }else if( thermistor->value.compare("RRRF10K") == 0 ){
+        this->beta = 3964;
+        this->r0 = 10000;
+        this->r1 = 680;
+        this->r2 = 1600;
+    }else if( thermistor->value.compare("Honeywell100K") == 0 ){
+        this->beta = 3974;
+    }else if( thermistor->value.compare("Semitec") == 0 ){
+        this->beta = 4267;
+    }
+
     this->r0 =                  this->kernel->config->value(temperature_control_r0_ckeckusm  )->by_default(100000)->as_number();               // Stated resistance eg. 100K
     this->t0 =                  this->kernel->config->value(temperature_control_t0_ckeckusm  )->by_default(25    )->as_number() + 273.15;      // Temperature at stated resistance, eg. 25C
     this->beta =                this->kernel->config->value(temperature_control_beta_ckeckusm)->by_default(4066  )->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
