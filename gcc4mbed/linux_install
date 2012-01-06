@@ -1,0 +1,117 @@
+#! /usr/bin/env bash
+# Copyright 2011 Adam Green (http://mbed.org/users/AdamGreen/)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+# Logs the command to be run and then executes the command while logging the results.
+RunAndLog () {
+    echo `date` Executing $@>>$LOGFILE
+    $@ 1>>$LOGFILE 2>$ERRORFILE
+    if [ "$?" != "0" ] ; then
+        cat $ERRORFILE >>$LOGFILE
+        echo `date` Failure forced early exit>>$LOGFILE
+        cat $LOGFILE
+        rm -f $ERRORFILE
+        popd >/dev/null
+        read -n 1 -sp "Press any key to continue..." dummy ; echo
+        exit 1
+    fi
+}
+
+
+# Setup script variables.
+ROOTDIR=$0
+ROOTDIR=${ROOTDIR%/*}
+pushd $ROOTDIR
+ROOTDIR=$PWD
+LOGFILE=$ROOTDIR/linux_install.log
+ERRORFILE=$ROOTDIR/linux_install.err
+CODE_SOURCERY_VERSION=arm-2011.03
+CODE_SOURCERY_FILENAME=arm-2011.03-42-arm-none-eabi-i686-pc-linux-gnu.tar.bz2
+CODE_SOURCERY_URL=https://sourcery.mentor.com/sgpp/lite/arm/portal/package8734/public/arm-none-eabi/$CODE_SOURCERY_FILENAME
+CODE_SOURCERY_TAR=$ROOTDIR/$CODE_SOURCERY_FILENAME
+CODE_SOURCERY_MD5=b1bd1dcb1f922d815ba7fa8d0e6fcd37
+CODE_SOURCERY_DIR=$ROOTDIR/$CODE_SOURCERY_VERSION
+CODE_SOURCERY_BINDIR=$CODE_SOURCERY_DIR/bin
+CODE_SOURCERY_LIBEXEC=$CODE_SOURCERY_DIR/libexec/gcc/arm-none-eabi/4.5.2
+BUILDSHELL_CMD=$ROOTDIR/BuildShell
+
+
+# Initialize install log files.
+echo Logging install results to $LOGFILE
+echo `date` Starting $0 $*>$LOGFILE
+
+echo Downloading Code Sourcery G++ Lite...
+echo `date` Executing curl -L0 $CODE_SOURCERY_URL>>$LOGFILE
+curl -L0 $CODE_SOURCERY_URL >$CODE_SOURCERY_FILENAME
+
+echo Validating md5 signature of Code Sourcery G++ Lite...
+echo `date` Validating md5 signature of Code Sourcery G++ Lite>>$LOGFILE
+archive_match=`md5sum $CODE_SOURCERY_FILENAME | grep -c $CODE_SOURCERY_MD5`
+if [ "$archive_match" != "1" ] ; then
+    echo $CODE_SOURCERY_FILENAME failed MD5 signature check.>>$LOGFILE
+    echo `date` Failure forced early exit>>$LOGFILE
+    cat $LOGFILE
+    rm -f $ERRORFILE
+    popd >/dev/null
+    read -n 1 -sp "Press any key to continue..." dummy ; echo
+    exit 1
+fi
+
+echo Extracting Code Sourcery G++ Lite files...
+RunAndLog tar xf $CODE_SOURCERY_TAR
+
+echo Creating helper scripts...
+echo "#! /usr/bin/env bash">$BUILDSHELL_CMD
+echo "# Modify next line and set destination drive to match mbed device">>$BUILDSHELL_CMD
+echo "# export LPC_DEPLOY='cp PROJECT.bin /Volumes/MBED/'">>$BUILDSHELL_CMD
+echo>>$BUILDSHELL_CMD
+echo "SCRIPT_PATH=\$0">>$BUILDSHELL_CMD
+echo "SCRIPT_PATH=\${SCRIPT_PATH%/*}">>$BUILDSHELL_CMD
+echo "cd \$SCRIPT_PATH">>$BUILDSHELL_CMD
+echo "SCRIPT_PATH=\$PWD">>$BUILDSHELL_CMD
+echo "export PATH=\$SCRIPT_PATH/arm-2011.03/bin:\$PATH">>$BUILDSHELL_CMD
+echo "exec bash">>$BUILDSHELL_CMD
+chmod +x $BUILDSHELL_CMD
+
+# Place Code Sourcery G++ Lite tools in the path before building gcc4mbed code.
+PATH=$CODE_SOURCERY_BINDIR:$PATH
+
+echo Installing mbed libs and headers...
+RunAndLog make install_mbed
+
+echo Performing a clean build of the gcc4mbed samples...
+RunAndLog make clean
+RunAndLog make
+
+echo
+echo To build gcc4mbed samples, you will first need to run the following script
+echo so that your environment variables are set correctly:
+echo  $BUILDSHELL_CMD
+echo You will want to run this each time you start a new Terminal.  You
+echo can simply double-click on this script file from Finder to launch a
+echo bash Terminal that has been properly initialized for building gcc4mbed
+echo based code.  Feel free to customize it as you desire.
+echo
+echo You can also just edit your existing setup script such as \~/.profile
+echo to update the PATH environment variable to include:
+echo  $CODE_SOURCERY_BINDIR
+
+
+# Restore current directory and exit script on success.
+echo `date` Finished successfully>>$LOGFILE
+echo Finished successfully
+rm -f $ERRORFILE
+popd >/dev/null
+read -n 1 -sp "Press any key to continue..." dummy ; echo

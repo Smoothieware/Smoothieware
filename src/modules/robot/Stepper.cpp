@@ -39,14 +39,8 @@ void Stepper::on_module_loaded(){
     this->kernel->slow_ticker->attach( this, &Stepper::trapezoid_generator_tick );
 
     // Initiate main_interrupt timer and step reset timer
-    LPC_TIM0->MR0 = 10000;
-    LPC_TIM0->MCR = 11; // for MR0 and MR1, with no reset at MR1
-    NVIC_EnableIRQ(TIMER0_IRQn);
-    NVIC_SetPriority(TIMER3_IRQn, 4); 
-    NVIC_SetPriority(TIMER0_IRQn, 1); 
-    NVIC_SetPriority(TIMER2_IRQn, 2); 
-    NVIC_SetPriority(TIMER1_IRQn, 3); 
-    LPC_TIM0->TCR = 1; 
+    this->kernel->step_ticker->attach( this, &Stepper::main_interrupt );   
+    this->kernel->step_ticker->reset_attach( this, &Stepper::reset_step_pins );
 
 }
 
@@ -65,19 +59,18 @@ void Stepper::on_config_reload(void* argument){
     this->gamma_dir_pin                 =  this->kernel->config->value(gamma_dir_pin_checksum                )->by_default("1.19"     )->as_pin()->as_output();
 
     // Set the Timer interval for Match Register 1, 
-    LPC_TIM0->MR1 = (( SystemCoreClock/4 ) / 1000000 ) * this->microseconds_per_step_pulse; 
+    this->kernel->step_ticker->set_reset_delay( this->microseconds_per_step_pulse / 1000000 );
+    this->kernel->step_ticker->set_frequency( this->base_stepping_frequency );
 }
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Stepper::on_pause(void* argument){
-    LPC_TIM0->TCR = 0;
-    LPC_TIM2->TCR = 0; 
+    //TODO: Implement pause here
 }
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
 void Stepper::on_play(void* argument){
-    LPC_TIM0->TCR = 1;
-    LPC_TIM2->TCR = 1; 
+    //TODO: Implement pause here
 }
 
 // A new block is popped from the queue
@@ -107,24 +100,7 @@ void Stepper::on_block_begin(void* argument){
 // Current block is discarded
 void Stepper::on_block_end(void* argument){
     Block* block  = static_cast<Block*>(argument);
-    LPC_TIM0->MR0 = 1000000;
     this->current_block = NULL; //stfu !
-}
-
-// Timer0 ISR
-// MR0 is used to call the main stepping interrupt, and MR1 to reset the stepping pins
-extern "C" void TIMER0_IRQHandler (void){
-    if((LPC_TIM0->IR >> 1) & 1){
-        LPC_TIM0->IR |= 1 << 1;
-        // Clear step pins 
-        stepper->alpha_step_pin->set(0);
-        stepper->beta_step_pin->set(0); 
-        stepper->gamma_step_pin->set(0);
-    }
-    if((LPC_TIM0->IR >> 0) & 1){
-        LPC_TIM0->IR |= 1 << 0;
-        stepper->main_interrupt();
-    }
 }
 
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Smoothie. It is executed at the rate set with
@@ -219,26 +195,20 @@ void Stepper::trapezoid_generator_reset(){
 void Stepper::set_step_events_per_minute( double steps_per_minute ){
 
     // We do not step slower than this 
-    if( steps_per_minute < this->minimum_steps_per_minute ){ steps_per_minute = this->minimum_steps_per_minute; }
+    steps_per_minute = max(steps_per_minute, this->minimum_steps_per_minute);
 
     // The speed factor is the factor by which we must multiply the minimal step frequency to reach the maximum step frequency
     // The higher, the smoother the movement will be, but the closer the maximum and minimum frequencies are, the smaller the factor is
-    double speed_factor = this->base_stepping_frequency / (steps_per_minute/60L);
-    if( speed_factor < 1 ){ speed_factor=1; }
-    this->counter_increment = int(floor((1<<16)/floor(speed_factor)));
-
-    // Set the Timer interval 
-    LPC_TIM0->MR0 = floor( ( SystemCoreClock/4 ) / ( (steps_per_minute/60L) * speed_factor ) );
-    
-    if( LPC_TIM0->MR0 < 150 ){
-        LPC_TIM0->MR0 = 150;
-        this->kernel->serial->printf("tim0mr0: %d, steps_per minute: %f \r\n", LPC_TIM0->MR0, steps_per_minute ); 
-    }   
-
-    // In case we change the Match Register to a value the Timer Counter has past
-    if( LPC_TIM0->TC >= LPC_TIM0->MR0 ){ LPC_TIM0->TCR = 3; LPC_TIM0->TCR = 1; }
+    // speed_factor = base_stepping_frequency / steps_per_second
+    // counter_increment = 1 / speed_factor ( 1 is 1<<16 because we do fixed point )
+    this->counter_increment = int(floor(double(1<<16)/double(this->base_stepping_frequency / (steps_per_minute/60L))));
 
     this->kernel->call_event(ON_SPEED_CHANGE, this);
 
 }
 
+void Stepper::reset_step_pins(){
+    this->alpha_step_pin->set(0);
+    this->beta_step_pin->set(0); 
+    this->gamma_step_pin->set(0);
+}

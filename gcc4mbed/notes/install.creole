@@ -1,0 +1,91 @@
+==Installation
+===Code Sourcery 2011.03-42
+You need to first install the latest GCC based Code Sourcery Lite tool chain.  Earlier versions don't appear to support the mbed libraries.
+====Windows and Linux
+The installers for the Code Sourcery tools can be found at [[https://sourcery.mentor.com/sgpp/lite/arm/portal/release1802]].  Use the appropriate "IA32 GNU/Linux Installer" or "IA32 Windows Installer" from the Recommended Packages section of this page.  From within this GUI installer pick the Typical installation and allow it to update the PATH environment variable.
+====Mac OS X
+There is no automated installer to get the Code Sourcery tools onto a Mac computer.  You can check out this github project: [[https://github.com/hugovincent/arm-eabi-toolchain]] and this mbed forum thread: [[http://mbed.org/forum/mbed/topic/1091/?page=1#comment-5299]].  Both of these point to steps that Hugo Vincent has put together to get the Code Sourcery tool chain to build on the Mac.  Once you download the gcc4mbed project, you can also check out the external/gcc/prep.sh script to see the steps that the author used to build it on his Mac.  He used Snow Leopard with XCode 4.0 to run this script.  The size reduced C/C++ libraries for GCC included in the gcc4mbed project were actually built on his Mac using this script.
+===Other pre-requisites
+There are a few other things that you will need to make sure you have installed on your machine before you can build the gcc4mbed project on your machine.  In most cases you shouldn't need to do anything to get these tools on your machine but you should be aware of the dependencies incase something goes wrong:
+*Subversion, svn, is used to pull down the mbed libraries from mbed.org  
+**Windows: The gcc4mbed project includes the necessary svn binaries for Windows since they don't come standard with that OS.
+**OS X: Leopard or newer should come with svn pre-installed.
+**Linux: If you run Linux then you probably know much better than the author if you already have svn on your machine and if not how to install it :)
+**In general you can find links to Subversion binaries at [[http://subversion.apache.org/packages.html]]
+*patch is used to apply diff patches to the mbed headers to make them compile with the GCC tools.
+**Windows: The gcc4mbed project includes the necessary svn binaries for Windows since they don't come standard with that OS.
+**OS X: Pre-installed with OS.
+**Linux: See Linux subversion comment above.
+
+
+===Where is GCC4MBED?
+The gcc4mbed code is available on github at [[https://github.com/adamgreen/gcc4mbed]].  You can click the Downloads button (found near the top on the right hand side) on this page to popup a dialog allowing you to download a compressed archive of the gcc4mbed source code to your computer.
+
+Decompress this archive on your computer.  For the rest of the steps in this tutorial, we will assume that it was placed in /gcc4mbed on a *nix based system or c:\gcc4mbed on a Windows system.
+
+===Download and patch mbed code
+Before attempting to build the gcc4mbed samples, you first need to download the mbed headers and libraries from the mbed.org subversion repository and apply the necessary patches.  The commands to do this are:
+{{{
+*nix:
+    cd /gcc4mbed
+    make install_mbed
+Windows:
+    cd c:\gcc4mbed
+    cs-make install_mbed
+}}}
+Now you will have mbed headers in external/mbed and libraries (mbed.ar and capi.ar) in external/mbed/LPC1768.  You shouldn't need to do this again unless you delete the gcc4mbed project from your machine or gcc4mbed is updated to use a newer build of the mbed libraries.
+
+==Build and deploy
+You are now ready to try building and deploying GCC built mbed samples.
+===Build
+{{{
+*nix:
+    cd /gcc4mbed
+    make
+Windows:
+    cd c:\gcc4mbed
+    cs-make
+}}}
+This will have built various programs in the samples directory off of the root of the gcc4mbed project.
+{{{
+./gcc4mbed/samples/agutil
+./gcc4mbed/samples/CTest
+./gcc4mbed/samples/HelloWorld
+./gcc4mbed/samples/LocalFileSystem
+./gcc4mbed/samples/SDFileSystem
+./gcc4mbed/samples/StdIO
+./gcc4mbed/samples/Ticker
+}}}
+===Deploy
+While we could manually copy the binary up to the mbed device, it would be nice if it could be done for us at the end of the build process.  The only issue is that different environments will require different deployment steps.  To abstract away this environment dependency, the makefiles use an environment variable called LPC_DEPLOY for specifying how the deployment should take place.  The user should set this LPC_DEPLOY environment variable to something appropriate for their environment.  On *nix it could be exported from something like the {{{~/.profile}}} shell script and on Windows it could be set in a batch file used for development environment configuration or added to the System Properties.
+
+====LPC_DEPLOY Examples
+The author uses this in the {{{~/.profile}}} script on his Mac where the MBED device mounts as /Volumes/MBED:
+{{{
+export LPC_DEPLOY='cp PROJECT.bin /Volumes/MBED/'
+}}}
+The author uses this in a batch file on his Windows XP machine where the MBED device mounts as the F: drive:
+{{{
+set LPC_DEPLOY=copy PROJECT.bin f:\
+}}}
+The following example might be useful if you were deploying to a LPCXpresso using the lpc21isp tool:
+{{{
+export LPC_DEPLOY='lpc21isp PROJECT.hex /dev/ttyUSB0 115200 14746'
+}}}
+It should be noted that the PROJECT identifier in the above examples has a special meaning.  This identifier will be replaced by the makefile to match the name of the program currently being built.
+
+At this point, you want to set the LPC_DEPLOY variable to something appropriate for your environment.
+
+====Deploy HelloWorld
+After all of the that work, wouldn't it be great to see something actually run on the mbed device?  Let's start with the HelloWorld sample which is probably the same program you first tried with the cloud compiler.
+{{{
+*nix:
+    cd /gcc4mbed/samples/HelloWorld
+    make clean all deploy
+Windows:
+    cd c:\gcc4mbed\samples\HelloWorld
+    cs-make clean all deploy
+}}}
+Those build rules (clean all deploy) will force all of the output files to be deleted, then rebuilt from a clean start, and then copied up to your mbed device.  Pressing the reset button on the mbed device should result in the blinking LED.
+
+If you just want to deploy a binary that has already been built, you can just run "make deploy"

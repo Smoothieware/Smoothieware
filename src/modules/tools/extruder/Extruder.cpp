@@ -5,19 +5,6 @@
 #include "modules/robot/Block.h"
 #include "modules/tools/extruder/Extruder.h"
 
-
-Extruder* extruder_for_irq; // We need this global because ISRs can't be attached to an object
-extern "C" void TIMER1_IRQHandler (void){
-    if((LPC_TIM1->IR >> 1) & 1){
-        LPC_TIM1->IR |= 1 << 1;
-        extruder_for_irq->step_pin = 0;
-    }
-    if((LPC_TIM1->IR >> 0) & 1){
-        LPC_TIM1->IR |= 1 << 0;
-        extruder_for_irq->stepping_tick();
-    }
-}
-
 Extruder::Extruder(PinName stppin, PinName dirpin) : step_pin(stppin), dir_pin(dirpin) {
     this->absolute_mode = true;
     this->direction     = 1;
@@ -28,9 +15,6 @@ void Extruder::on_module_loaded() {
 
     // Do not do anything if not enabledd
     if( this->kernel->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() == false ){ return; } 
-
-    // Because we can't make an irq handler an method directly
-    extruder_for_irq = this;
 
     // Settings
     this->on_config_reload(this);
@@ -47,17 +31,13 @@ void Extruder::on_module_loaded() {
     this->current_block = NULL;
     this->mode = OFF;
     
-    // Start Timer1
-    // TODO: Use the same timer as the stepper
-    LPC_TIM1->MR0 = 1000000; 
-    LPC_TIM1->MR1 = 500;
-    LPC_TIM1->MCR = 11;            // For MR0 and MR1, with no reset at MR1
-    NVIC_EnableIRQ(TIMER1_IRQn);
-    LPC_TIM1->TCR = 1; 
-
     // Update speed every *acceleration_ticks_per_second*
     // TODO: Make this an independent setting
     this->kernel->slow_ticker->attach( this, &Extruder::acceleration_tick );
+
+    // Initiate main_interrupt timer and step reset timer
+    this->kernel->step_ticker->attach( this, &Extruder::stepping_tick );   
+    this->kernel->step_ticker->reset_attach( this, &Extruder::reset_step_pin );
 
 }
 
@@ -67,7 +47,6 @@ void Extruder::on_config_reload(void* argument){
     this->steps_per_millimeter        = this->kernel->config->value(steps_per_millimeter_checksum       )->by_default(1)->as_number();
     this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1)->as_number();
     this->acceleration                = this->kernel->config->value(acceleration_checksum               )->by_default(1)->as_number();
-    LPC_TIM1->MR1 = (( SystemCoreClock/4 ) / 1000000 ) * this->microseconds_per_step_pulse;
 }
 
 // Compute extrusion speed based on parameters and gcode distance of travel
@@ -144,8 +123,6 @@ void Extruder::on_block_begin(void* argument){
 // When a block ends, pause the stepping interrupt
 void Extruder::on_block_end(void* argument){
     Block* block = static_cast<Block*>(argument);
-    LPC_TIM1->MR0 = 1000000; 
-    LPC_TIM1->TCR = 0; 
     this->current_block = NULL; 
 }       
 
@@ -237,28 +214,32 @@ void Extruder::set_speed( int steps_per_second ){
         steps_per_second = (this->feed_rate*double(this->steps_per_millimeter))/60; 
     }
 
-    LPC_TIM1->MR0 = (SystemCoreClock/4)/steps_per_second; 
-    if( LPC_TIM1->TC >= LPC_TIM1->MR0 ){  // In case we are trying to set the timer to a limit it has already past by
-        LPC_TIM1->TCR = 3; 
-        LPC_TIM1->TCR = 1; 
-    }
+    this->counter_increment = int(floor(double(1<<16)/double(this->kernel->stepper->base_stepping_frequency / steps_per_second)));
+
 }
 
 inline void Extruder::stepping_tick(){
-    // If we still have steps to do 
-    // TODO: Step using the same timer as the robot, and count steps instead of absolute float position 
-    if( ( this->current_position < this->target_position && this->direction == 1 ) || ( this->current_position > this->target_position && this->direction == -1 ) ){    
-        this->current_position += (double(double(1)/double(this->steps_per_millimeter)))*double(this->direction);
-        this->dir_pin = ((this->direction > 0) ? 0 : 1);
-        this->step_pin = 1;
-    }else{
-        // Move finished
-        if( this->mode == SOLO && this->current_block != NULL ){
-            // In follow mode, the robot takes and releases the block, in solo mode we do
-            this->current_block->release();        
-        } 
+
+    this->step_counter += this->counter_increment;
+    if( this->step_counter > 1<<16 ){
+        this->step_counter -= 1<<16;
+
+        // If we still have steps to do 
+        // TODO: Step using the same timer as the robot, and count steps instead of absolute float position 
+        if( ( this->current_position < this->target_position && this->direction == 1 ) || ( this->current_position > this->target_position && this->direction == -1 ) ){    
+            this->current_position += (double(double(1)/double(this->steps_per_millimeter)))*double(this->direction);
+            this->dir_pin = ((this->direction > 0) ? 0 : 1);
+            this->step_pin = 1;
+        }else{
+            // Move finished
+            if( this->mode == SOLO && this->current_block != NULL ){
+                // In follow mode, the robot takes and releases the block, in solo mode we do
+                this->current_block->release();        
+            } 
+        }
     }
 }
 
-
-
+void Extruder::reset_step_pin(){
+    this->step_pin = 0;
+}

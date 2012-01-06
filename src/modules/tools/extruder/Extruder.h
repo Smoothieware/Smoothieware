@@ -27,6 +27,7 @@ class Extruder : public Module{
         void set_speed(int steps_per_second);
         void acceleration_tick();
         void stepping_tick();
+        void reset_step_pin();
 
         DigitalOut      step_pin;                     // Step pin for the stepper driver
         DigitalOut      dir_pin;                      // Dir pin for the stepper driver
@@ -39,6 +40,8 @@ class Extruder : public Module{
         double          feed_rate;                    //  
         double          acceleration;                 // 
 
+        int             counter_increment; 
+        int             step_counter;
 
         bool            solo_mode;
         double          travel_ratio;
