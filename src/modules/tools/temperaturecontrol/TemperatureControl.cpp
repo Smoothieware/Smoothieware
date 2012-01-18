@@ -27,9 +27,12 @@ void TemperatureControl::on_module_loaded(){
 
     // Register for events
     this->register_for_event(ON_GCODE_EXECUTE); 
+    this->register_for_event(ON_MAIN_LOOP); 
 
 }
 
+void TemperatureControl::on_main_loop(void* argument){
+}
 
 // Get configuration from the config file
 void TemperatureControl::on_config_reload(void* argument){
@@ -93,14 +96,12 @@ void TemperatureControl::on_gcode_execute(void* argument){
 
     // Get temperature
     if( gcode->has_letter('M') && gcode->get_value('M') == 105 ){
-        this->kernel->serial->printf("get temperature: %f \r\n", this->get_temperature() );
+        this->kernel->serial->printf("get temperature: %f current:%f target:%f \r\n", this->get_temperature(), this->new_thermistor_reading(), this->desired_adc_value );
     } 
 }
 
 void TemperatureControl::set_desired_temperature(double desired_temperature){
     this->desired_adc_value = this->temperature_to_adc_value(desired_temperature);
-    this->tail_adc_value =  this->temperature_to_adc_value(desired_temperature-20);
-    this->head_adc_value =  this->temperature_to_adc_value(desired_temperature+5);
 }
 
 double TemperatureControl::get_temperature(){
@@ -121,27 +122,13 @@ double TemperatureControl::temperature_to_adc_value(double temperature){
 }
 
 void TemperatureControl::thermistor_read_tick(){
-
-    double reading = this->new_thermistor_reading();
     if( this->desired_adc_value != UNDEFINED ){
-        double difference = fabs( reading - this->desired_adc_value ); 
-        double adjustment = difference / acceleration_factor / this->readings_per_second;
-        if( reading > this->tail_adc_value ){
-            this->heater_pwm->write( 1 );
-        }else if( reading < this->head_adc_value ){
-            this->pwm_value -= adjustment;
-            this->heater_pwm->write( 0 );
+        if( this->new_thermistor_reading() > this->desired_adc_value ){
+            this->heater_pwm->write( 1 ); 
         }else{
-           if( reading > this->desired_adc_value ){
-                this->pwm_value += adjustment;  // Heat up
-            }else{
-                this->pwm_value -= adjustment;  // Heat down
-            }
-            this->pwm_value = max( double(0), min( double(1), pwm_value ) );
-            this->heater_pwm->write( pwm_value ); 
+            this->heater_pwm->write( 0 ); 
         }
     }
-
 }
 
 double TemperatureControl::new_thermistor_reading(){

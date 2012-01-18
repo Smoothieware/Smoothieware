@@ -101,7 +101,6 @@ void Extruder::on_block_begin(void* argument){
     if( this->mode == SOLO ){
         // In solo mode we take the block so we can move even if the stepper has nothing to do
         block->take(); 
-        LPC_TIM1->TCR = 1; 
         this->current_block = block; 
         this->start_position = this->target_position;
         this->target_position = this->start_position + this->travel_distance ;
@@ -110,7 +109,6 @@ void Extruder::on_block_begin(void* argument){
         this->set_speed(int(floor((this->feed_rate/60)*this->steps_per_millimeter)));//Speed in steps per second
     }else if( this->mode == FOLLOW ){
         // In non-solo mode, we just follow the stepper module
-        LPC_TIM1->TCR = 1; 
         this->current_block = block; 
         this->start_position = this->target_position;
         this->target_position =  this->start_position + ( this->current_block->millimeters * this->travel_ratio );
@@ -149,7 +147,7 @@ void Extruder::acceleration_tick(){
         //   * Find what position this is for us
         //   * Find what speed we must go at to be at that position for the next acceleration tick
         // TODO : This works, but PLEASE PLEASE PLEASE if you know a better way to do it, do it better, I don't find this elegant at all, it's just the best I could think of
-        
+        // UPDATE: Yes, this sucks, I have ideas on how to do it better. If this is really bugging you, open a ticket and I'll make it a priority 
          
         int ticks_forward = 3; 
         // We need to take those values here, and then use those instead of the live values, because using the live values inside the loop can break things ( infinite loops etc ... ) 
@@ -168,7 +166,8 @@ void Extruder::acceleration_tick(){
             
             // Advance 
             // TODO: Proper advance configuration
-            double advance = double(next_stepper_rate) * 0.00001 * 0.15;
+            //double advance = double(next_stepper_rate) * 0.00001 * 0.15;
+            double advance = 0; 
             next_relative_position += ( advance ); 
             
             // TODO : all of those "if->return" is very hacky, we should do the math in a way where most of those don't happen, but that requires doing tons of drawing ...
@@ -228,7 +227,7 @@ inline void Extruder::stepping_tick(){
         // TODO: Step using the same timer as the robot, and count steps instead of absolute float position 
         if( ( this->current_position < this->target_position && this->direction == 1 ) || ( this->current_position > this->target_position && this->direction == -1 ) ){    
             this->current_position += (double(double(1)/double(this->steps_per_millimeter)))*double(this->direction);
-            this->dir_pin = ((this->direction > 0) ? 0 : 1);
+            this->dir_pin = ((this->direction > 0) ? 1 : 0);
             this->step_pin = 1;
         }else{
             // Move finished

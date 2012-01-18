@@ -13,29 +13,31 @@
 #include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/pauser/Pauser.h"
-#include "libs/SDFileSystem.h"
+#include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/Config.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 
+#include "libs/USBCDCMSC/USBCDCMSC.h"
+
 SDFileSystem sd(p5, p6, p7, p8, "sd");
-//LocalFileSystem local("local");
+USBCDCMSC cdcmsc(&sd);
 
 int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->serial->printf("Smoothie ( grbl port ) version 0.4 \r\nstart\r\n");
+    kernel->serial->printf("Smoothie ( grbl port ) version 0.4d \r\nstart\r\n");
 
     kernel->add_module( new Laser(p21) );
     kernel->add_module( new Extruder(p26,p27) );
     kernel->add_module( new SimpleShell() );
-    //kernel->add_module( new Pauser(p29,p30) );
     kernel->add_module( new TemperatureControl() );
-
+    
+    kernel->add_module( &cdcmsc );
+    
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
-
     }
 }
 

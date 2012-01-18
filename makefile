@@ -16,7 +16,7 @@ GCC4MBED_DIR=./gcc4mbed
 INCDIRS=
 LIBS_PREFIX=
 LIBS_SUFFIX=
-SRC=./src/
+SRC=./src
 
 include ./gcc4mbed/build/gcc4mbed.mk
 

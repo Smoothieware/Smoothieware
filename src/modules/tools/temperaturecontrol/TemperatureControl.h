@@ -26,6 +26,7 @@ class TemperatureControl : public Module {
         TemperatureControl();
         
         void on_module_loaded();
+        void on_main_loop(void* argument);
         void on_gcode_execute(void* argument);
         void on_config_reload(void* argument);
         void set_desired_temperature(double desired_temperature);

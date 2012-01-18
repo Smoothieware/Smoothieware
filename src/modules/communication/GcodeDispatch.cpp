@@ -24,7 +24,9 @@ void GcodeDispatch::on_module_loaded() {
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
 void GcodeDispatch::on_console_line_received(void * line){
-    string possible_command = *static_cast<string*>(line);
+    SerialMessage new_message = *static_cast<SerialMessage*>(line);
+    string possible_command = new_message.message;    
+
     char first_char = possible_command[0];
     if( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' ){ 
    
@@ -36,15 +38,12 @@ void GcodeDispatch::on_console_line_received(void * line){
         Gcode gcode = Gcode();
         gcode.command = possible_command;
         this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
-        //this->kernel->serial->printf("ok %d \r\n", this->kernel->player->queue.size());
-        //Gcode* test = new Gcode(); 
-        //this->kernel->serial->printf("ok %d %p\r\n", this->kernel->player->queue.size(), test);
-        //delete test;
-        this->kernel->serial->printf("ok\r\n");
+        
+        new_message.stream->printf("ok\r\n");
 
     // Ignore comments 
     }else if( first_char == ';' || first_char == '(' ){
-        this->kernel->serial->printf("ok\r\n");
+        new_message.stream->printf("ok\r\n");
     }
 }
 

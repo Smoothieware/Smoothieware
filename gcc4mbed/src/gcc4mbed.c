@@ -26,7 +26,7 @@
  *  Modified by Sagar G V on Mar 11 2011. added __libc_init_array()
  *  Modfied by Adam Green in 2011 to support mbed.
  ******************************************************************************/
-#include "mri.h"
+#include "mbedsys.h"
 
 
 /* Exported constants --------------------------------------------------------*/
@@ -47,7 +47,6 @@ extern "C" int  main(void);
 extern "C" void __libc_init_array(void);
 extern "C" void exit(int ErrorCode);
 extern "C" void __GCC4MBEDOpenStandardHandles(void);
-extern "C" void __MriTestRegisters(void);
 
 
 /* CRT initialization code called from Reset_Handler after it calls SystemInit() */
@@ -91,9 +90,6 @@ extern "C" __attribute__ ((section(".mbed_init"))) void __main(void)
     
     /* Initialize static constructors. */
      __libc_init_array();
-
-    MriInit();
-    //__debugbreak();
 
     /* Call the application's entry point. */
     ExitCode = main();

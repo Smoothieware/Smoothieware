@@ -36,29 +36,16 @@ void SerialConsole::on_serial_char_received(){
         char received = this->getc();
         //On newline, we have received a line, else concatenate in buffer
         if( received == '\r' ){ return; }
-        //if( received == '\n' ){
-        //    this->line_received();
-        //    receive_buffer = "";
-        //}else{
-        //    this->receive_buffer += received;                
-        //}
         this->buffer.push_back(received); 
     }
 }
         
 // Call event when newline received, for other modules to read the line
 inline void SerialConsole::line_received(){
-  //string new_string = this->receive_buffer;
-  //this->received_lines.insert(this->received_lines.begin(),new_string);
 }
 
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){
-    //if( this->received_lines.size() < 1 ){ 
-    //    return; 
-    //}
-    //this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &this->received_lines.back() ); 
-    //this->received_lines.pop_back();
     if( this->has_char('\n') ){
         int index = 0;
         string received;
@@ -66,8 +53,10 @@ void SerialConsole::on_main_loop(void * argument){
            char c;
            this->buffer.pop_front(c);
            if( c == '\n' ){
-                //this->printf("received: <%s> \r\n", received.c_str() );
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &received ); 
+                struct SerialMessage message; 
+                message.message = received;
+                message.stream = this;
+                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
                 return;
             }else{
                 received += c;

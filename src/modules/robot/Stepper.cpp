@@ -35,7 +35,7 @@ void Stepper::on_module_loaded(){
     this->on_config_reload(this); 
 
     // Acceleration ticker
-    this->kernel->slow_ticker->set_frequency(this->acceleration_ticks_per_second);
+    this->kernel->slow_ticker->set_frequency(this->acceleration_ticks_per_second/10);
     this->kernel->slow_ticker->attach( this, &Stepper::trapezoid_generator_tick );
 
     // Initiate main_interrupt timer and step reset timer

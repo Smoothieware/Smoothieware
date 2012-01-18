@@ -56,10 +56,10 @@ Kernel::Kernel(){
     this->slow_ticker = new SlowTicker();
     this->step_ticker = new StepTicker();
    
-    NVIC_SetPriority(TIMER3_IRQn, 4); 
+ 
     NVIC_SetPriority(TIMER0_IRQn, 1); 
     NVIC_SetPriority(TIMER2_IRQn, 2); 
-    NVIC_SetPriority(TIMER1_IRQn, 3); 
+
 
     // Core modules 
     this->gcode_dispatch = new GcodeDispatch();

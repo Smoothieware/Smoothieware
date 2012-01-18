@@ -19,10 +19,10 @@ class SimpleShell : public Module {
         void on_module_loaded();
         void on_console_line_received( void* argument );
         string absolute_from_relative( string path );
-        void ls_command(   string parameters );
-        void cd_command(   string parameters );
-        void cat_command(  string parameters );
-        void play_command( string parameters );       
+        void ls_command(   string parameters, Stream* stream );
+        void cd_command(   string parameters, Stream* stream );
+        void cat_command(  string parameters, Stream* stream );
+        void play_command( string parameters, Stream* stream );       
 
         string current_path;
 };
