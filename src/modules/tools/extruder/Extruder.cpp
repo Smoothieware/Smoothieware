@@ -9,6 +9,8 @@ Extruder::Extruder(PinName stppin, PinName dirpin) : step_pin(stppin), dir_pin(d
     this->absolute_mode = true;
     this->direction     = 1;
     this->acceleration_lock = false;
+    this->step_counter = 0;
+    this->counter_increment = 0;
 }
 
 void Extruder::on_module_loaded() {
@@ -33,7 +35,7 @@ void Extruder::on_module_loaded() {
     
     // Update speed every *acceleration_ticks_per_second*
     // TODO: Make this an independent setting
-    this->kernel->slow_ticker->attach( this, &Extruder::acceleration_tick );
+    this->kernel->slow_ticker->attach( this->kernel->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
 
     // Initiate main_interrupt timer and step reset timer
     this->kernel->step_ticker->attach( this, &Extruder::stepping_tick );   
@@ -97,7 +99,6 @@ void Extruder::on_gcode_execute(void* argument){
 // When a new block begins, either follow the robot, or step by ourselves ( or stay back and do nothing )
 void Extruder::on_block_begin(void* argument){
     Block* block = static_cast<Block*>(argument);
-
     if( this->mode == SOLO ){
         // In solo mode we take the block so we can move even if the stepper has nothing to do
         block->take(); 
@@ -166,8 +167,8 @@ void Extruder::acceleration_tick(){
             
             // Advance 
             // TODO: Proper advance configuration
-            //double advance = double(next_stepper_rate) * 0.00001 * 0.15;
-            double advance = 0; 
+            double advance = double(next_stepper_rate) * ( 0.00001 * 0.15 ) * 0.4 ;
+            //double advance = 0; 
             next_relative_position += ( advance ); 
             
             // TODO : all of those "if->return" is very hacky, we should do the math in a way where most of those don't happen, but that requires doing tons of drawing ...
@@ -207,6 +208,10 @@ void Extruder::acceleration_tick(){
 
 // Convenience function to set stepping speed
 void Extruder::set_speed( int steps_per_second ){
+  
+    if( steps_per_second < 10 ){
+        steps_per_second = 10;
+    }
     
     // TODO : Proper limit config value 
     if( steps_per_second > (this->feed_rate*double(this->steps_per_millimeter))/60 ){ 
@@ -214,7 +219,7 @@ void Extruder::set_speed( int steps_per_second ){
     }
 
     this->counter_increment = int(floor(double(1<<16)/double(this->kernel->stepper->base_stepping_frequency / steps_per_second)));
-
+    
 }
 
 inline void Extruder::stepping_tick(){

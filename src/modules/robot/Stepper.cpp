@@ -35,8 +35,8 @@ void Stepper::on_module_loaded(){
     this->on_config_reload(this); 
 
     // Acceleration ticker
-    this->kernel->slow_ticker->set_frequency(this->acceleration_ticks_per_second/10);
-    this->kernel->slow_ticker->attach( this, &Stepper::trapezoid_generator_tick );
+    //this->kernel->slow_ticker->set_frequency(this->acceleration_ticks_per_second/10);
+    this->kernel->slow_ticker->attach( this->acceleration_ticks_per_second, this, &Stepper::trapezoid_generator_tick );
 
     // Initiate main_interrupt timer and step reset timer
     this->kernel->step_ticker->attach( this, &Stepper::main_interrupt );   
@@ -65,12 +65,12 @@ void Stepper::on_config_reload(void* argument){
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Stepper::on_pause(void* argument){
-    //TODO: Implement pause here
+    //TODO: reImplement pause here
 }
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
 void Stepper::on_play(void* argument){
-    //TODO: Implement pause here
+    //TODO: reImplement pause here
 }
 
 // A new block is popped from the queue
@@ -82,7 +82,11 @@ void Stepper::on_block_begin(void* argument){
     
     // Mark the new block as of interrest to us
     block->take();
-    
+   
+    if( block->final_rate < 0.1 ){
+        //block->debug(this->kernel);
+    }
+
     // Setup
     for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
     this->step_events_completed = 0; 
@@ -165,7 +169,9 @@ void Stepper::trapezoid_generator_tick() {
               if (this->trapezoid_adjusted_rate > double(this->current_block->rate_delta) * 1.5) {
                   this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
               }else{
-                  this->trapezoid_adjusted_rate = floor(double(this->trapezoid_adjusted_rate / 2 ));
+                  this->trapezoid_adjusted_rate = double(this->current_block->rate_delta) * 1.5; 
+                  //this->trapezoid_adjusted_rate = floor(double(this->trapezoid_adjusted_rate / 2 ));
+                  //this->kernel->serial->printf("over!\r\n");
               }
               if (this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->final_rate;

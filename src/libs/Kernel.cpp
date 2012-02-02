@@ -54,6 +54,7 @@ Kernel::Kernel(){
     this->add_module( this->serial );
    
     this->slow_ticker = new SlowTicker();
+    this->slow_ticker->kernel = this; // DEBUG: To remove
     this->step_ticker = new StepTicker();
    
  

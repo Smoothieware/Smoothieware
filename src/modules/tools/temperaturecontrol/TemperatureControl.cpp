@@ -20,7 +20,7 @@ void TemperatureControl::on_module_loaded(){
 
     // Setup pins and timer 
     this->thermistor_pin = new AnalogIn(p20); 
-    this->kernel->slow_ticker->attach( this, &TemperatureControl::thermistor_read_tick );
+    this->kernel->slow_ticker->attach( 20, this, &TemperatureControl::thermistor_read_tick );
     this->heater_pwm = new PwmOut(p22);
     this->heater_pwm->write(0);
     this->pwm_value = 0;

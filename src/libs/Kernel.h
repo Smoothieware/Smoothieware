@@ -41,6 +41,7 @@ typedef void (Module::*ModuleCallback)(void * argument);
 //Module manager
 class Module;
 class Player;
+class SlowTicker;
 class Kernel {
     public:
         Kernel();
