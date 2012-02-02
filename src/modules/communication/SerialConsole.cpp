@@ -41,8 +41,7 @@ void SerialConsole::on_serial_char_received(){
 }
         
 // Call event when newline received, for other modules to read the line
-inline void SerialConsole::line_received(){
-}
+inline void SerialConsole::line_received(){}
 
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){

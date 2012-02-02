@@ -10,7 +10,4 @@ class Hook : public FunctionPointer {
         double           counter;
 };
 
-
-
-
 #endif

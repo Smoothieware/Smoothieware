@@ -22,9 +22,6 @@ using namespace std;
 #include "modules/robot/Player.h"
 
 
-
-
-
 // List of callback functions, ordered as their corresponding events
 const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = { 
         &Module::on_main_loop, 
@@ -57,7 +54,7 @@ Kernel::Kernel(){
     this->slow_ticker->kernel = this; // DEBUG: To remove
     this->step_ticker = new StepTicker();
    
- 
+    // LPC17xx-specific 
     NVIC_SetPriority(TIMER0_IRQn, 1); 
     NVIC_SetPriority(TIMER2_IRQn, 2); 
 

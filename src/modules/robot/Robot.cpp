@@ -134,8 +134,7 @@ void Robot::append_milestone( double target[], double rate ){
 
     
     double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );      
-    //if( millimeters_of_travel < 0.001 ){ return; } 
-    //double duration = millimeters_of_travel / rate;
+    
     double duration = 0;
     if( rate > 0 ){ duration = millimeters_of_travel / rate; }
 
@@ -147,7 +146,6 @@ void Robot::append_milestone( double target[], double rate ){
             }
         }
     }
-    //this->kernel->serial->printf("dur: %f mm: %f rate: %f target_z: %f steps_z: %d deltas_z: %f \r\n", duration, millimeters_of_travel, rate, target[2], steps[2], deltas[2] );
 
     this->kernel->planner->append_block( steps, rate*60, millimeters_of_travel, deltas ); 
 

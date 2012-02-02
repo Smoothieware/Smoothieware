@@ -1,3 +1,11 @@
+/*  
+      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
+      Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+      Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+*/
+
+
 #include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
@@ -209,9 +217,7 @@ void Extruder::acceleration_tick(){
 // Convenience function to set stepping speed
 void Extruder::set_speed( int steps_per_second ){
   
-    if( steps_per_second < 10 ){
-        steps_per_second = 10;
-    }
+    if( steps_per_second < 10 ){ steps_per_second = 10; }
     
     // TODO : Proper limit config value 
     if( steps_per_second > (this->feed_rate*double(this->steps_per_millimeter))/60 ){ 

@@ -50,7 +50,6 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
     this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min) 
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
-    //this->player->kernel->serial->printf("%p: r:%d \r\n", this, this->initial_rate); 
     double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; 
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
     int decelerate_steps = ceil( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
@@ -71,7 +70,7 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
    this->accelerate_until = accelerate_steps;
    this->decelerate_after = accelerate_steps+plateau_steps; 
 
-   // DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
+   // TODO: FIX THIS: DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
    if( this->final_rate < 0.01 ){
         this->decelerate_after += floor( this->nominal_rate / 60 / this->planner->kernel->stepper->acceleration_ticks_per_second ) * 3;
     }

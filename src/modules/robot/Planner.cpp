@@ -196,12 +196,6 @@ void Planner::reverse_pass(){
         blocks[1]->reverse_pass(blocks[2], blocks[0]);
     }
     
-    
-    
-    
-    //for( int index = this->kernel->player->queue.size()-1; index > 0; index-- ){  // Skip buffer tail/first block to prevent over-writing the initial entry speed.
-    //    this->kernel->player->queue.get_ref(index)->reverse_pass((index==this->kernel->player->queue.size()-1?NULL:this->kernel->player->queue.get_ref(index+1)), (index==0? (this->has_deleted_block?&(this->last_deleted_block):NULL) :this->kernel->player->queue.get_ref(index-1))); 
-    //}
 }
 
 // Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
@@ -221,9 +215,6 @@ void Planner::forward_pass() {
     } 
     blocks[2]->forward_pass(blocks[1],NULL);   
 
-    //for( int index = 0; index <= this->kernel->player->queue.size()-1; index++ ){
-    //    this->kernel->player->queue.get_ref(index)->forward_pass((index==0?NULL:this->kernel->player->queue.get_ref(index-1)),(index==this->kernel->player->queue.size()-1?NULL:this->kernel->player->queue.get_ref(index+1))); 
-    //}
 }
 
 // Recalculates the trapezoid speed profiles for flagged blocks in the plan according to the
@@ -235,8 +226,6 @@ void Planner::recalculate_trapezoids() {
     int block_index = this->kernel->player->queue.head;
     Block* current;
     Block* next = NULL;
-
-    //this->kernel->serial->printf("tail:%d head:%d size:%d\r\n", this->kernel->player->queue.tail, this->kernel->player->queue.head, this->kernel->player->queue.size());
 
     while(block_index != this->kernel->player->queue.tail){
         current = next;

@@ -34,10 +34,6 @@ Block* Player::new_block(){
         for(short index=0; index<block->gcodes.size(); index++){
             block->gcodes.pop_back(); 
         }     
-        //for(short index=0; index<block->commands.size(); index++){
-        //    block->commands.pop_back();
-        //    block->travel_distances.pop_back();
-        //}
     }
     
     // Create a new virgin Block in the queue 
@@ -53,13 +49,6 @@ Block* Player::new_block(){
 
 // Used by blocks to signal when they are ready to be used by the system
 void Player::new_block_added(){
-    //this->kernel->serial->printf("new block: %p\r\n", this->current_block);
-
-    //if( this->current_block == 0x00 || this->queue.size() == 0 ){
-        //this->kernel->serial->printf("f %p %d\r\n", this->current_block, this->queue.size() ); 
-    //}
-
-
     if( this->current_block == NULL ){
         this->pop_and_process_new_block(33);
     }
@@ -88,8 +77,6 @@ void Player::pop_and_process_new_block(int debug){
     
     // In case the module was not taken
     if( this->current_block->times_taken < 1 ){
-        //this->kernel->serial->printf("e %p %d %d %d\r\n", this->current_block, this->queue.size(), this->current_block == 0x00, debug ); 
-        //wait(0.1);
         this->looking_for_new_block = false;
         this->current_block->release();
     }

@@ -1,0 +1,8 @@
+.DS_Store
+*.disasm
+*.map
+*.o
+*.ar
+.svn/
+external/FATFileSystem/
+external/mbed/

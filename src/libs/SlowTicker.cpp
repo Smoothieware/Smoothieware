@@ -1,3 +1,10 @@
+/*  
+      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
+      Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+      Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+*/
+
 using namespace std;
 #include <vector>
 #include "mbed.h"
@@ -21,7 +28,6 @@ SlowTicker::SlowTicker(){
 }
 
 void SlowTicker::set_frequency( int frequency ){
-    //this->kernel->serial->printf("setting:%d size:%d \r\n", frequency, this->hooks.size() ); 
     LPC_TIM2->MR0 = int(floor((SystemCoreClock/4)/frequency));  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM2->TCR = 3;  // Reset
     LPC_TIM2->TCR = 1;  // Reset
@@ -34,10 +40,8 @@ void SlowTicker::tick(){
     for (int i=0; i<this->hooks.size(); i++){ 
         Hook* hook = this->hooks.at(i);
         hook->counter += ( hook->frequency / this->max_frequency );
-        //this->kernel->serial->printf("%p cand size:%d, hook->freq:%f this->max:%f hook->counter:%f added:%f \r\n", hook, this->hooks.size(), hook->frequency, this->max_frequency, hook->counter, ( hook->frequency / this->max_frequency ) ); 
         if( hook->counter > 0 ){
             hook->counter-=1;
-            //this->kernel->serial->printf("%p exec size:%d, hook->freq:%f this->max:%f hook->counter:%f added:%f \r\n", hook, this->hooks.size(), hook->frequency, this->max_frequency, hook->counter, ( hook->frequency / this->max_frequency ) ); 
             hook->call();
         } 
     }
