@@ -11,6 +11,7 @@
 #include "libs/Config.h"
 #include "libs/SlowTicker.h"
 #include "libs/StepTicker.h"
+#include "libs/Adc.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
 #include "modules/robot/Planner.h"
@@ -60,8 +61,9 @@ class Kernel {
         Player*           player;
 
         int debug;
-        SlowTicker* slow_ticker;
-        StepTicker* step_ticker;
+        SlowTicker*       slow_ticker;
+        StepTicker*       step_ticker;
+        Adc*              adc;
 
     private:
         vector<Module*> hooks[NUMBER_OF_DEFINED_EVENTS]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

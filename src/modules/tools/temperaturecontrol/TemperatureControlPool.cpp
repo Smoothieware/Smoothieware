@@ -5,25 +5,34 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-
-#ifndef GCODE_H
-#define GCODE_H
 #include "mbed.h"
-#include <string>
-using std::string;
-// Object to represent a Gcode comman
+#include "libs/Module.h"
+#include "libs/Kernel.h"
+#include <math.h>
+using namespace std;
+#include <vector>
+#include "TemperatureControlPool.h"
+#include "TemperatureControl.h"
 
-class Gcode {
-    public:
-        Gcode();
-        bool has_letter( char letter );
-        double get_value ( char letter );
+TemperatureControlPool::TemperatureControlPool(){}
 
-        string command;
-        double millimeters_of_travel;
-        bool call_on_gcode_execute_event_immediatly;
-        bool on_gcode_execute_event_called;
+void TemperatureControlPool::on_module_loaded(){
 
-        Stream* stream;
-};
-#endif
+    vector<uint16_t> modules;
+    this->kernel->config->get_module_list( &modules, 44054 );
+
+    for( int i = 0; i < modules.size(); i++ ){
+        // If module is enabled
+        if( this->kernel->config->value(44054, modules[i], 29545 )->as_bool() == true ){
+            TemperatureControl* controller = new TemperatureControl(modules[i]);
+            this->kernel->add_module(controller); 
+            this->controllers.push_back( controller );
+        }
+    }
+
+}
+
+
+
+
+

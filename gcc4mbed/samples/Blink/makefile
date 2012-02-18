@@ -11,20 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# Directories to be built
-DIRS=mri samples
+PROJECT=Blink
+GCC4MBED_DIR=../..
+LIBS_PREFIX=
+LIBS_SUFFIX=
+GCC4MBED_DELAYED_STDIO_INIT=1
 
-.PHONY: subdirs $(DIRS)
-
-subdirs:$(DIRS)
-
-clean: $(DIRS)
-
-# Recurse into each of the specified directories and perform a make
-$(DIRS):
-	$(MAKE) $(MAKECMDGOALS) -C $@
-
-# Run makefile which pulls mbed libraries down from mbed.org when necessary.
-install_mbed:
-	$(MAKE) -C external
+include ../../build/gcc4mbed.mk

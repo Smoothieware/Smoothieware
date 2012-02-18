@@ -16,8 +16,6 @@
 #define acceleration_ticks_per_second_checksum      25075
 #define minimum_steps_per_minute_checksum           9003
 #define base_stepping_frequency_checksum            21918
-#define step_gpio_port_checksum                     29939
-#define dir_gpio_port_checksum                      39286
 #define alpha_step_pin_checksum                     11468
 #define beta_step_pin_checksum                      22114
 #define gamma_step_pin_checksum                     1225

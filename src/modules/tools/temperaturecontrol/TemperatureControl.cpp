@@ -12,8 +12,12 @@
 #include "libs/Kernel.h"
 #include <math.h>
 #include "TemperatureControl.h"
+#include "libs/Pin.h"
 
-TemperatureControl::TemperatureControl(){
+TemperatureControl::TemperatureControl(){}
+
+TemperatureControl::TemperatureControl(uint16_t name){
+    this->name_checksum = name;
     this->error_count = 0; 
 }
 
@@ -27,12 +31,7 @@ void TemperatureControl::on_module_loaded(){
 
     this->acceleration_factor = 10;
 
-    // Setup pins and timer 
-    this->thermistor_pin = new AnalogIn(p20); 
     this->kernel->slow_ticker->attach( 20, this, &TemperatureControl::thermistor_read_tick );
-    this->heater_pwm = new PwmOut(p22);
-    this->heater_pwm->write(0);
-    this->pwm_value = 0;
 
     // Register for events
     this->register_for_event(ON_GCODE_EXECUTE); 
@@ -40,13 +39,12 @@ void TemperatureControl::on_module_loaded(){
 
 }
 
-void TemperatureControl::on_main_loop(void* argument){
-}
+void TemperatureControl::on_main_loop(void* argument){ }
 
 // Get configuration from the config file
 void TemperatureControl::on_config_reload(void* argument){
 
-    this->readings_per_second = this->kernel->config->value(readings_per_second_ckeckusm     )->by_default(5     )->as_number();
+    this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_ckeckusm)->by_default(5)->as_number();
 
     // Values are here : http://reprap.org/wiki/Thermistor
     // TODO: WARNING : THIS WILL CHANGE and backward compatibility will be broken for config files that use this
@@ -58,8 +56,8 @@ void TemperatureControl::on_config_reload(void* argument){
     this->r1 = 0;
     this->r2 = 4700;
 
-    ConfigValue* thermistor = this->kernel->config->value(temperature_control_thermistor_checksum);    
-
+    // Preset values for various common types of thermistors
+    ConfigValue* thermistor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_checksum);    
     if( thermistor->value.compare("EPCOS100K") == 0 ){
         // Already the default
     }else if( thermistor->value.compare("RRRF100K") == 0 ){
@@ -75,29 +73,32 @@ void TemperatureControl::on_config_reload(void* argument){
         this->beta = 4267;
     }
 
-    this->r0 =                  this->kernel->config->value(temperature_control_r0_ckeckusm  )->by_default(100000)->as_number();               // Stated resistance eg. 100K
-    this->t0 =                  this->kernel->config->value(temperature_control_t0_ckeckusm  )->by_default(25    )->as_number() + 273.15;      // Temperature at stated resistance, eg. 25C
-    this->beta =                this->kernel->config->value(temperature_control_beta_ckeckusm)->by_default(4066  )->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
-    this->vadc =                this->kernel->config->value(temperature_control_vadc_ckeckusm)->by_default(3.3   )->as_number();               // ADC Reference
-    this->vcc  =                this->kernel->config->value(temperature_control_vcc_ckeckusm )->by_default(3.3   )->as_number();               // Supply voltage to potential divider
-    this->r1 =                  this->kernel->config->value(temperature_control_r1_ckeckusm  )->by_default(0     )->as_number();
-    this->r2 =                  this->kernel->config->value(temperature_control_r2_ckeckusm  )->by_default(4700  )->as_number();
-
-    this->k = this->r0 * exp( -this->beta / this->t0 );
+    // Preset values are overriden by specified values
+    this->r0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r0_ckeckusm  )->by_default(100000)->as_number();               // Stated resistance eg. 100K
+    this->t0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, t0_ckeckusm  )->by_default(25    )->as_number() + 273.15;      // Temperature at stated resistance, eg. 25C
+    this->beta =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, beta_ckeckusm)->by_default(4066  )->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
+    this->vadc =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, vadc_ckeckusm)->by_default(3.3   )->as_number();               // ADC Reference
+    this->vcc  =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, vcc_ckeckusm )->by_default(3.3   )->as_number();               // Supply voltage to potential divider
+    this->r1 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r1_ckeckusm  )->by_default(0     )->as_number();
+    this->r2 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r2_ckeckusm  )->by_default(4700  )->as_number();
     
-    if( r1 > 0 ){
-        this->vs = r1 * this->vcc / ( r1 + r2 );
-        this->rs = r1 * r2 / ( r1 + r2 );
-    }else{
-        this->vs = this->vcc;
-        this->rs = r2;
-    } 
+    // Thermistor math 
+    this->k = this->r0 * exp( -this->beta / this->t0 );
+    if( r1 > 0 ){ this->vs = r1 * this->vcc / ( r1 + r2 ); this->rs = r1 * r2 / ( r1 + r2 ); }else{ this->vs = this->vcc; this->rs = r2; } 
+
+    // Thermistor pin for ADC readings
+    this->thermistor_pin = this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_pin();
+    this->kernel->adc->enable_pin(this->thermistor_pin);
+
+    // Heater pin
+    this->heater_pin     =  this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_pin()->as_output();
+    this->heater_pin->set(0);
 
 }
 
 void TemperatureControl::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    
+
     // Set temperature
     if( gcode->has_letter('M') && gcode->get_value('M') == 104 && gcode->has_letter('S') ){
         this->set_desired_temperature(gcode->get_value('S')); 
@@ -105,7 +106,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
 
     // Get temperature
     if( gcode->has_letter('M') && gcode->get_value('M') == 105 ){
-        this->kernel->serial->printf("get temperature: %f current:%f target:%f \r\n", this->get_temperature(), this->new_thermistor_reading(), this->desired_adc_value );
+        gcode->stream->printf("get temperature: %f current:%f target:%f \r\n", this->get_temperature(), this->new_thermistor_reading(), this->desired_adc_value );
     } 
 }
 
@@ -133,19 +134,19 @@ double TemperatureControl::temperature_to_adc_value(double temperature){
 void TemperatureControl::thermistor_read_tick(){
     if( this->desired_adc_value != UNDEFINED ){
         if( this->new_thermistor_reading() > this->desired_adc_value ){
-            this->heater_pwm->write( 1 ); 
+            this->heater_pin->set(1); 
         }else{
-            this->heater_pwm->write( 0 ); 
+            this->heater_pin->set(0); 
         }
     }
 }
 
 double TemperatureControl::new_thermistor_reading(){
-    double new_reading = this->thermistor_pin->read();
+   
+    double new_reading = double( double(this->kernel->adc->read(this->thermistor_pin) / double(1<<12) ) );
 
     if( this->queue.size() < 15 ){
         this->queue.push_back( new_reading );
-        //this->kernel->serial->printf("first\r\n");
         return new_reading;
     }else{
         double current_temp = this->average_adc_reading();

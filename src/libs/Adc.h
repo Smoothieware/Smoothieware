@@ -6,24 +6,29 @@
 */
 
 
-#ifndef GCODE_H
-#define GCODE_H
+
+#ifndef ADC_H
+#define ADC_H
+
+using namespace std;
+#include <vector>
 #include "mbed.h"
-#include <string>
-using std::string;
-// Object to represent a Gcode comman
+#include "libs/nuts_bolts.h"
+#include "libs/Module.h"
+#include "libs/Kernel.h"
+#include "libs/ADC/adc.h"
+#include "libs/Pin.h"
 
-class Gcode {
+class Adc : public Module{
     public:
-        Gcode();
-        bool has_letter( char letter );
-        double get_value ( char letter );
+        Adc();
+        void enable_pin(Pin* pin);
+        unsigned int read(Pin* pin);
+        PinName _pin_to_pinname(Pin* pin);
 
-        string command;
-        double millimeters_of_travel;
-        bool call_on_gcode_execute_event_immediatly;
-        bool on_gcode_execute_event_called;
-
-        Stream* stream;
+        ADC* adc;
 };
+
+
+
 #endif

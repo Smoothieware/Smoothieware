@@ -26,7 +26,7 @@
  *  Modified by Sagar G V on Mar 11 2011. added __libc_init_array()
  *  Modfied by Adam Green in 2011 to support mbed.
  ******************************************************************************/
-#include "mbedsys.h"
+#include "mri.h"
 
 
 /* Exported constants --------------------------------------------------------*/
@@ -90,6 +90,14 @@ extern "C" __attribute__ ((section(".mbed_init"))) void __main(void)
     
     /* Initialize static constructors. */
      __libc_init_array();
+
+    /* UNDONE: Would be better to do this before __libc_init_array() but
+               probably can do it after no longer using mbed serial object. */
+    if (MRI_ENABLE)
+    {
+        MriInit();
+        //__debugbreak();
+    }
 
     /* Call the application's entry point. */
     ExitCode = main();
