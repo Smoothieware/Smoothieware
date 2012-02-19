@@ -71,7 +71,7 @@ class ConfigValue{
 
         Pin* as_pin(){
             Pin* pin = new Pin();
-            pin->from_string(this->value);
+            pin->from_string(this->as_string());
             return pin;
         }
 

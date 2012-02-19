@@ -12,6 +12,7 @@
 #include "libs/SlowTicker.h"
 #include "libs/StepTicker.h"
 #include "libs/Adc.h"
+#include "libs/Pauser.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
 #include "modules/robot/Planner.h"
@@ -59,6 +60,7 @@ class Kernel {
         Planner*          planner;
         Config*           config;
         Player*           player;
+        Pauser*           pauser;
 
         int debug;
         SlowTicker*       slow_ticker;

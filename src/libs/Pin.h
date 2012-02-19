@@ -23,7 +23,21 @@ class Pin{
             return this;
         }  
 
+        inline Pin*  as_input(){
+            this->port->FIODIR &= ~(1<<this->pin);
+            return this;
+        }  
+
+        inline bool get(){
+            if( this->inverting ){
+               return ~(( this->port->FIOPIN >> this->pin ) & 1);
+            }else{
+               return  (( this->port->FIOPIN >> this->pin ) & 1);
+            }
+        }
+
         inline void set(bool value){
+            // TODO : This should be bitmath 
             if( this->inverting ){ value = !value; }
             if( value ){
                 this->port->FIOSET = 1 << this->pin;

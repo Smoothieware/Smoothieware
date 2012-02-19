@@ -12,7 +12,7 @@
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
-#include "modules/utils/pauser/Pauser.h"
+#include "modules/utils/pausebutton/PauseButton.h"
 #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/Config.h"
 #include "libs/nuts_bolts.h"
@@ -33,15 +33,10 @@ int main() {
     kernel->add_module( new Extruder(p26,p27) );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new TemperatureControlPool() );
-    
+    kernel->add_module( new PauseButton() );   
+
     kernel->add_module( &cdcmsc );
  
-    wait(0.1); 
-    Pin* pin = new Pin(); 
-    kernel->adc->enable_pin(pin->from_string("0.23"));
-    wait(0.1);
-    kernel->serial->printf("value: %u \r\n", kernel->adc->read(pin));
-
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
     }

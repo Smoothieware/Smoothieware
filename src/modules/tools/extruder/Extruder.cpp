@@ -19,6 +19,7 @@ Extruder::Extruder(PinName stppin, PinName dirpin) : step_pin(stppin), dir_pin(d
     this->acceleration_lock = false;
     this->step_counter = 0;
     this->counter_increment = 0;
+    this->paused = false;
 }
 
 void Extruder::on_module_loaded() {
@@ -33,7 +34,9 @@ void Extruder::on_module_loaded() {
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_EXECUTE);
-
+    this->register_for_event(ON_PLAY);
+    this->register_for_event(ON_PAUSE);
+ 
     // Start values
     this->start_position = 0;
     this->target_position = 0;
@@ -58,6 +61,19 @@ void Extruder::on_config_reload(void* argument){
     this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1)->as_number();
     this->acceleration                = this->kernel->config->value(acceleration_checksum               )->by_default(1)->as_number();
 }
+
+
+// When the play/pause button is set to pause, or a module calls the ON_PAUSE event
+void Extruder::on_pause(void* argument){
+    this->paused = true;
+}
+
+// When the play/pause button is set to play, or a module calls the ON_PLAY event
+void Extruder::on_play(void* argument){
+    this->paused = false;
+}
+
+
 
 // Compute extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void* argument){
@@ -137,7 +153,7 @@ void Extruder::on_block_end(void* argument){
 void Extruder::acceleration_tick(){
 
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry ) 
-    if( this->current_block == NULL || this->acceleration_lock ){ return; }
+    if( this->current_block == NULL || this->acceleration_lock || this->paused ){ return; }
     this->acceleration_lock = true;
    
     // In solo mode, we mode independently from the robot
@@ -229,6 +245,7 @@ void Extruder::set_speed( int steps_per_second ){
 }
 
 inline void Extruder::stepping_tick(){
+    if( this->paused ){ return; }
 
     this->step_counter += this->counter_increment;
     if( this->step_counter > 1<<16 ){

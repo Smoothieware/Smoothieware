@@ -33,6 +33,8 @@ class Extruder : public Module{
         void on_gcode_execute(void* argument);
         void on_block_begin(void* argument);
         void on_block_end(void* argument);
+        void on_play(void* argument);
+        void on_pause(void* argument); 
         void set_speed(int steps_per_second);
         void acceleration_tick();
         void stepping_tick();
@@ -64,6 +66,8 @@ class Extruder : public Module{
 
         char mode;
         bool acceleration_lock;
+
+        bool paused;
 };
 
 #endif

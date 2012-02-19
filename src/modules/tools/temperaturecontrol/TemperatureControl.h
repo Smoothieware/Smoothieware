@@ -70,6 +70,8 @@ class TemperatureControl : public Module {
 
         Pin* thermistor_pin;
         Pin* heater_pin;
+    
+        bool waiting;
 
 };
 

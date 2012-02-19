@@ -66,6 +66,7 @@ class Stepper : public Module {
         Pin* gamma_dir_pin;
         unsigned short step_bits[3];
         int counter_increment;
+        bool paused;
 };
 
 

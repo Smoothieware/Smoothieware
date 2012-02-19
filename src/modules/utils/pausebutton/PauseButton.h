@@ -1,24 +1,26 @@
-#ifndef pauser_h
-#define pauser_h
+#ifndef PAUSEBUTTON_H
+#define PAUSEBUTTON_H
 
 #include "mbed.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+#include "libs/Pin.h"
 
+#define pause_button_pin_checksum 32709
+#define pause_led_pin_checksum    48477
 
-class Pauser : public Module {
+class PauseButton : public Module {
     public:
-        Pauser(PinName ButtonPin, PinName LedPin);
+        PauseButton();
        
         void on_module_loaded();
         void button_tick();
         void on_play( void* argument );
         void on_pause( void* argument );
         
-        DigitalIn  button;
-        DigitalOut led; 
-        Ticker     button_ticker;
+        Pin*       button;
+        Pin*       led; 
         bool       button_state;
         bool       play_state;
 };

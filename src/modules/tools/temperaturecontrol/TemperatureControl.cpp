@@ -23,7 +23,7 @@ TemperatureControl::TemperatureControl(uint16_t name){
 
 void TemperatureControl::on_module_loaded(){
     
-    // We start now desiring any temp
+    // We start not desiring any temp
     this->desired_adc_value = UNDEFINED;
 
     // Settings
@@ -99,9 +99,19 @@ void TemperatureControl::on_config_reload(void* argument){
 void TemperatureControl::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
 
-    // Set temperature
+    // Set temperature without waiting
     if( gcode->has_letter('M') && gcode->get_value('M') == 104 && gcode->has_letter('S') ){
         this->set_desired_temperature(gcode->get_value('S')); 
+    } 
+
+    // Set temperature and wait
+    if( gcode->has_letter('M') && gcode->get_value('M') == 109 && gcode->has_letter('S') ){
+        this->set_desired_temperature(gcode->get_value('S'));
+        
+        // Pause 
+        this->kernel->pauser->take(); 
+        this->waiting = true; 
+    
     } 
 
     // Get temperature
@@ -137,6 +147,10 @@ void TemperatureControl::thermistor_read_tick(){
             this->heater_pin->set(1); 
         }else{
             this->heater_pin->set(0); 
+            if( this->waiting ){ 
+                this->kernel->pauser->release();
+                this->waiting = false; 
+            }
         }
     }
 }

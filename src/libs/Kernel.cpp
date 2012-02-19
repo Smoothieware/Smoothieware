@@ -14,6 +14,7 @@ using namespace std;
 #include "libs/nuts_bolts.h"
 #include "libs/SlowTicker.h"
 #include "libs/Adc.h"
+#include "libs/Pauser.h"
 
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
@@ -63,18 +64,12 @@ Kernel::Kernel(){
     NVIC_SetPriority(TIMER2_IRQn, 2); 
 
     // Core modules 
-    this->gcode_dispatch = new GcodeDispatch();
-    this->robot          = new Robot();
-    this->stepper        = new Stepper();
-    this->planner        = new Planner();
-    this->player         = new Player();
-
-    this->add_module( this->gcode_dispatch );
-    this->add_module( this->robot );
-    this->add_module( this->stepper );
-    this->add_module( this->planner );
-    this->add_module( this->player );
-
+    this->add_module( this->gcode_dispatch = new GcodeDispatch() );
+    this->add_module( this->robot          = new Robot()         );
+    this->add_module( this->stepper        = new Stepper()       );
+    this->add_module( this->planner        = new Planner()       );
+    this->add_module( this->player         = new Player()        );
+    this->add_module( this->pauser         = new Pauser()        );
 }
 
 void Kernel::add_module(Module* module){
