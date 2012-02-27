@@ -8,7 +8,7 @@
 
 #ifndef GCODE_H
 #define GCODE_H
-#include "mbed.h"
+#include "mbed.h"    // Included because we need the Stream object
 #include <string>
 using std::string;
 // Object to represent a Gcode comman

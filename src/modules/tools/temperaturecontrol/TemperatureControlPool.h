@@ -8,7 +8,6 @@
 #ifndef TEMPERATURECONTROLPOOL_H
 #define TEMPERATURECONTROLPOOL_H
 
-#include "mbed.h"
 #include "TemperatureControl.h"
 #include <math.h>
 using namespace std;

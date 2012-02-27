@@ -8,7 +8,6 @@
 #ifndef temperaturecontrol_h
 #define temperaturecontrol_h
 
-#include "mbed.h"
 #include "libs/Pin.h"
 #include <math.h>
 

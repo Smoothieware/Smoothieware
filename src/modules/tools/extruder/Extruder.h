@@ -10,7 +10,6 @@
 #ifndef EXTURDER_MODULE_H
 #define EXTRUDER_MODULE_H
 
-#include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/robot/Block.h"

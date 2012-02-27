@@ -8,7 +8,6 @@
 #ifndef SERIALCONSOLE_H
 #define SERIALCONSOLE_H
 
-#include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include <vector>

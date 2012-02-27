@@ -7,7 +7,6 @@
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "mbed.h"
 
 Module::Module(){ }
 

@@ -1,7 +1,6 @@
 #ifndef PAUSEBUTTON_H
 #define PAUSEBUTTON_H
 
-#include "mbed.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"

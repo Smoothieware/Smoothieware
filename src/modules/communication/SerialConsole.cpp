@@ -7,12 +7,12 @@
 
 #include <string>
 using std::string;
-#include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "SerialConsole.h"
 #include "libs/RingBuffer.h"
+#include "libs/SerialMessage.h"
 
 // Serial reading module
 // Treats every received line as a command and passes it ( via event call ) to the command dispatcher. 

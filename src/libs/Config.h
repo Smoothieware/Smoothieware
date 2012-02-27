@@ -7,7 +7,6 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
-#include "mbed.h"
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"

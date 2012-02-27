@@ -6,7 +6,6 @@
 */
 
 
-#include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/robot/Player.h"

@@ -1,4 +1,3 @@
-#include "mbed.h"
 #include "libs/Kernel.h"
 #include "PauseButton.h"
 #include "libs/nuts_bolts.h"

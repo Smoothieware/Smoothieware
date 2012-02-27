@@ -1,7 +1,8 @@
 #ifndef PIN_H
 #define PIN_H
 
-#include "mbed.h"
+#include "mbed.h" //Required for LPC_GPIO* . can probably be found in one othe the files mbed.h includes. TODO
+//#include "../gcc4mbed/external/mbed/LPC1768/LPC17xx.h"
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include <string>

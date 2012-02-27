@@ -7,7 +7,6 @@
 
 // TODO : THIS FILE IS LAME, MUST BE MADE MUCH BETTER
 
-#include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include <math.h>
@@ -47,31 +46,21 @@ void TemperatureControl::on_config_reload(void* argument){
     this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_ckeckusm)->by_default(5)->as_number();
 
     // Values are here : http://reprap.org/wiki/Thermistor
-    // TODO: WARNING : THIS WILL CHANGE and backward compatibility will be broken for config files that use this
-    this->r0 = 100000;
-    this->t0 = 25;
+    this->r0   = 100000;
+    this->t0   = 25;
     this->beta = 4066;
     this->vadc = 3.3;
-    this->vcc = 3.3;
-    this->r1 = 0;
-    this->r2 = 4700;
+    this->vcc  = 3.3;
+    this->r1   = 0;
+    this->r2   = 4700;
 
     // Preset values for various common types of thermistors
     ConfigValue* thermistor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_checksum);    
-    if( thermistor->value.compare("EPCOS100K") == 0 ){
-        // Already the default
-    }else if( thermistor->value.compare("RRRF100K") == 0 ){
-        this->beta = 3960;
-    }else if( thermistor->value.compare("RRRF10K") == 0 ){
-        this->beta = 3964;
-        this->r0 = 10000;
-        this->r1 = 680;
-        this->r2 = 1600;
-    }else if( thermistor->value.compare("Honeywell100K") == 0 ){
-        this->beta = 3974;
-    }else if( thermistor->value.compare("Semitec") == 0 ){
-        this->beta = 4267;
-    }
+    if(       thermistor->value.compare("EPCOS100K"    ) == 0 ){ // Default
+    }else if( thermistor->value.compare("RRRF100K"     ) == 0 ){ this->beta = 3960;
+    }else if( thermistor->value.compare("RRRF10K"      ) == 0 ){ this->beta = 3964; this->r0 = 10000; this->r1 = 680; this->r2 = 1600;
+    }else if( thermistor->value.compare("Honeywell100K") == 0 ){ this->beta = 3974;
+    }else if( thermistor->value.compare("Semitec"      ) == 0 ){ this->beta = 4267; }
 
     // Preset values are overriden by specified values
     this->r0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r0_ckeckusm  )->by_default(100000)->as_number();               // Stated resistance eg. 100K

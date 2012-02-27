@@ -10,12 +10,6 @@
 
 #include <string>
 using std::string;
-#include "mbed.h"
-
-struct SerialMessage {
-    Stream* stream;
-    std::string message;
-};
 
 // Module base class
 // All modules must extend this class, see http://smoothieware.org/moduleexample 

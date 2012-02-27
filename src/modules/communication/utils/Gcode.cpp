@@ -9,7 +9,6 @@
 #include <string>
 using std::string;
 #include "Gcode.h"
-#include "mbed.h"
 
 Gcode::Gcode(){}
 

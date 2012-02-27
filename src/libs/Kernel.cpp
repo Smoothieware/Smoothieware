@@ -10,7 +10,6 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "libs/Module.h"
 #include "libs/Config.h"
-#include "mbed.h"
 #include "libs/nuts_bolts.h"
 #include "libs/SlowTicker.h"
 #include "libs/Adc.h"
@@ -55,7 +54,6 @@ Kernel::Kernel(){
   
     // HAL stuff 
     this->slow_ticker          = new SlowTicker();
-    this->slow_ticker->kernel  = this; // TODO DEBUG: To remove
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
 

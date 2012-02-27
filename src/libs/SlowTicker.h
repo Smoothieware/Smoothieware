@@ -12,7 +12,6 @@
 
 using namespace std;
 #include <vector>
-#include "mbed.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"

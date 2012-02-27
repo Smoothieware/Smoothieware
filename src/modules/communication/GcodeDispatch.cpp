@@ -7,13 +7,13 @@
 
 #include <string>
 using std::string;
-#include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
 #include "libs/nuts_bolts.h"
 #include "GcodeDispatch.h"
 #include "modules/robot/Player.h" 
+#include "libs/SerialMessage.h"
 
 GcodeDispatch::GcodeDispatch(){}
 

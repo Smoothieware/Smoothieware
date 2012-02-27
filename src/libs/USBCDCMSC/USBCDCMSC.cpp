@@ -19,6 +19,7 @@
 #include "stdint.h"
 #include "USBCDCMSC.h"
 #include "USBBusInterface.h"
+#include "libs/SerialMessage.h"
 
 #include "libs/RingBuffer.h"
 

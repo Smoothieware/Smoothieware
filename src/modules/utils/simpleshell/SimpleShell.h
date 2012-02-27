@@ -9,7 +9,6 @@
 #ifndef simpleshell_h
 #define simpleshell_h
 
-#include "mbed.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
@@ -26,6 +25,7 @@ class SimpleShell : public Module {
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
+        void on_main_loop( void* argument ); 
         string absolute_from_relative( string path );
         void ls_command(   string parameters, Stream* stream );
         void cd_command(   string parameters, Stream* stream );
@@ -33,6 +33,9 @@ class SimpleShell : public Module {
         void play_command( string parameters, Stream* stream );       
 
         string current_path;
+        bool playing_file;
+        Stream* current_stream;
+        FILE* current_file_handler;
 };
 
 

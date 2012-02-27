@@ -6,16 +6,18 @@
 */
 
 
-#include "mbed.h"
 #include "libs/Kernel.h"
 #include "SimpleShell.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+#include "libs/SerialMessage.h"
 
 
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
+    this->playing_file = false;
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
+    this->register_for_event(ON_MAIN_LOOP);
 }
 
 // When a new line is received, check if it is a command, and if it is, act upon it
@@ -97,31 +99,32 @@ void SimpleShell::cat_command( string parameters, Stream* stream ){
 
 // Play a gcode file by considering each line as if it was received on the serial console
 void SimpleShell::play_command( string parameters, Stream* stream ){
-
     // Get filename
-    string filename          = this->absolute_from_relative(shift_parameter( parameters ));
- 
-    // Open file 
-    FILE *lp = fopen(filename.c_str(), "r");
-    string buffer;
-    int c;
-    
-    // Print each line of the file
-    while ((c = fgetc (lp)) != EOF){
-        if (c == '\n'){
-            stream->printf("%s\n", buffer.c_str());
-            struct SerialMessage message; 
-            message.message = buffer;
-            message.stream = stream;
-            this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message); 
-            buffer.clear();
-        }else{
-            buffer += c;
-        }
-    }; 
-    fclose(lp);
-
+    this->current_file_handler = fopen( this->absolute_from_relative(shift_parameter( parameters )).c_str(), "r");
+    this->playing_file = true;
+    this->current_stream = stream;
 }
+void SimpleShell::on_main_loop(void* argument){
 
+    if( this->playing_file ){ 
+        string buffer;
+        int c;
+        // Print each line of the file
+        while ((c = fgetc(this->current_file_handler)) != EOF){
+            if (c == '\n'){
+                this->current_stream->printf("%s\n", buffer.c_str());
+                struct SerialMessage message; 
+                message.message = buffer;
+                message.stream = this->current_stream;
+                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message); 
+                buffer.clear();
+                return;
+            }else{
+                buffer += c;
+            }
+        }; 
 
-
+        fclose(this->current_file_handler);
+        this->playing_file = false;
+    }
+}

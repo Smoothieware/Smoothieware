@@ -36,7 +36,7 @@ int main() {
     kernel->add_module( new PauseButton() );   
 
     kernel->add_module( &cdcmsc );
- 
+
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
     }
