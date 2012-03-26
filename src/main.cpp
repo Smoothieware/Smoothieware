@@ -5,7 +5,6 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "mbed.h"
 #include "libs/Kernel.h"
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/Extruder.h"
