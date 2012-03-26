@@ -21,6 +21,7 @@
 #include "USBBusInterface.h"
 #include "libs/SerialMessage.h"
 
+#include "libs/StreamOutput.h"
 #include "libs/RingBuffer.h"
 
 static uint8_t cdc_line_coding[7]= {0x80, 0x25, 0x00, 0x00, 0x00, 0x00, 0x08};
@@ -892,6 +893,11 @@ void USBCDCMSC::on_module_loaded(){
     this->register_for_event(ON_MAIN_LOOP);
 }
 
+
+
+
+
+
 void USBCDCMSC::on_main_loop(void* argument){
     //if( this->configured() ){
     //    this->kernel->serial->printf("a:%d\r\n", this->buffer.size());
@@ -921,7 +927,7 @@ void USBCDCMSC::on_main_loop(void* argument){
 
 void USBCDCMSC::on_serial_char_received(){
     if(this->available()){
-        char received = this->getc();
+        char received = this->_getc();
         //On newline, we have received a line, else concatenate in buffer
         if( received == '\r' ){ return; }
         //if( this->kernel != NULL ){ 

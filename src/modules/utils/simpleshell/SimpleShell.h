@@ -12,6 +12,7 @@
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+#include "libs/StreamOutput.h"
 
 
 #define ls_command_checksum      19679 
@@ -27,14 +28,14 @@ class SimpleShell : public Module {
         void on_console_line_received( void* argument );
         void on_main_loop( void* argument ); 
         string absolute_from_relative( string path );
-        void ls_command(   string parameters, Stream* stream );
-        void cd_command(   string parameters, Stream* stream );
-        void cat_command(  string parameters, Stream* stream );
-        void play_command( string parameters, Stream* stream );       
+        void ls_command(   string parameters, StreamOutput* stream );
+        void cd_command(   string parameters, StreamOutput* stream );
+        void cat_command(  string parameters, StreamOutput* stream );
+        void play_command( string parameters, StreamOutput* stream );       
 
         string current_path;
         bool playing_file;
-        Stream* current_stream;
+        StreamOutput* current_stream;
         FILE* current_file_handler;
 };
 

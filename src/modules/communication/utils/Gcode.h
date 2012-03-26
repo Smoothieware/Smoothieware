@@ -8,10 +8,11 @@
 
 #ifndef GCODE_H
 #define GCODE_H
-#include "mbed.h"    // Included because we need the Stream object
 #include <string>
 using std::string;
+#include "libs/StreamOutput.h"
 // Object to represent a Gcode comman
+#include <stdlib.h>
 
 class Gcode {
     public:
@@ -24,6 +25,6 @@ class Gcode {
         bool call_on_gcode_execute_event_immediatly;
         bool on_gcode_execute_event_called;
 
-        Stream* stream;
+        StreamOutput* stream;
 };
 #endif

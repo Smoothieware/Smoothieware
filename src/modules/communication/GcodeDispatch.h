@@ -14,6 +14,7 @@ using std::string;
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
 
+#include "libs/StreamOutput.h"
 
 class GcodeDispatch : public Module {
     public:

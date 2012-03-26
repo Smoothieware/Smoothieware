@@ -9,6 +9,10 @@
 #include <string>
 using std::string;
 #include "Gcode.h"
+#include "libs/StreamOutput.h"
+
+
+#include <stdlib.h>
 
 Gcode::Gcode(){}
 
@@ -26,7 +30,7 @@ bool Gcode::has_letter( char letter ){
 // Retrieve the value for a given letter
 // We don't use the high-level methods of std::string because they call malloc and it's very bad to do that inside of interrupts
 double Gcode::get_value( char letter ){
-    __disable_irq();
+    //__disable_irq();
     for (size_t i=0; i <= this->command.length()-1; i++){
          if( letter == this->command.at(i) ){
             size_t beginning = i+1;
@@ -36,7 +40,7 @@ double Gcode::get_value( char letter ){
                 if( j == this->command.length() ){ c = ';'; }else{ c = this->command.at(j); }
                 if( c != '.' && c != '-' && ( c < '0' || c > '9' ) ){
                     buffer[j-beginning] = '\0';
-                    __enable_irq();
+                    //__enable_irq();
                     return atof(buffer); 
                 }else{
                     buffer[j-beginning] = c;
@@ -44,6 +48,6 @@ double Gcode::get_value( char letter ){
             }
          }
     }
-    __enable_irq();
+    //__enable_irq();
     return 0; 
 }

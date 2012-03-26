@@ -14,6 +14,7 @@ using std::string;
 #include "GcodeDispatch.h"
 #include "modules/robot/Player.h" 
 #include "libs/SerialMessage.h"
+#include "libs/StreamOutput.h"
 
 GcodeDispatch::GcodeDispatch(){}
 
