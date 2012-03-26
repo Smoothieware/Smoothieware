@@ -137,7 +137,7 @@ void Extruder::on_block_begin(void* argument){
         this->start_position = this->target_position;
         this->target_position =  this->start_position + ( this->current_block->millimeters * this->travel_ratio );
         if( this->target_position > this->current_position ){ this->direction = 1; }else if( this->target_position < this->current_position ){ this->direction = -1; }
-        this->acceleration_tick();
+        this->acceleration_tick(0);
     } 
 
 }
@@ -149,10 +149,10 @@ void Extruder::on_block_end(void* argument){
 }       
 
 // Called periodically to change the speed to match acceleration or to match the speed of the robot
-void Extruder::acceleration_tick(){
+uint32_t Extruder::acceleration_tick(uint32_t dummy){
 
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry ) 
-    if( this->current_block == NULL || this->acceleration_lock || this->paused ){ return; }
+    if( this->current_block == NULL || this->acceleration_lock || this->paused ){ return 0; }
     this->acceleration_lock = true;
    
     // In solo mode, we mode independently from the robot
@@ -195,9 +195,9 @@ void Extruder::acceleration_tick(){
             next_relative_position += ( advance ); 
             
             // TODO : all of those "if->return" is very hacky, we should do the math in a way where most of those don't happen, but that requires doing tons of drawing ...
-            if( last_ratio == next_ratio ){ this->acceleration_lock = false; return; }else{ last_ratio = next_ratio; }           
-            if( next_ratio == 0 || next_ratio > 1 ){ this->acceleration_lock = false; return; }
-            if( ticks_forward > 1000 ){ this->acceleration_lock = false; return; } // This is very ugly
+            if( last_ratio == next_ratio ){ this->acceleration_lock = false; return 0; }else{ last_ratio = next_ratio; }           
+            if( next_ratio == 0 || next_ratio > 1 ){ this->acceleration_lock = false; return 0; }
+            if( ticks_forward > 1000 ){ this->acceleration_lock = false; return 0; } // This is very ugly
 
             // Hack : We have not looked far enough, we compute how far ahead we must look to get a relevant value
             if( position > next_relative_position ){ 
@@ -209,7 +209,7 @@ void Extruder::acceleration_tick(){
                 double ticks_to_equilibrium = ceil(far_back_ratio / ratio_per_tick) + 1;
                 ticks_forward += ticks_to_equilibrium;
                 // Because this is a loop, and we can be interrupted by the stepping interrupt, if that interrupt changes block, the new block may not be solo, and we may get trapped into an infinite loop
-                if( this->mode != FOLLOW ){ this->acceleration_lock = false; return; }
+                if( this->mode != FOLLOW ){ this->acceleration_lock = false; return 0; }
                 continue; 
             }
            
@@ -222,7 +222,7 @@ void Extruder::acceleration_tick(){
             this->set_speed( speed_to_next_tick );
 
             this->acceleration_lock = false;
-            return;
+            return 0;
         }
     }
 
@@ -243,8 +243,8 @@ void Extruder::set_speed( int steps_per_second ){
     
 }
 
-inline void Extruder::stepping_tick(){
-    if( this->paused ){ return; }
+inline uint32_t Extruder::stepping_tick(uint32_t dummy){
+    if( this->paused ){ return 0; }
 
     this->step_counter += this->counter_increment;
     if( this->step_counter > 1<<16 ){
@@ -266,6 +266,6 @@ inline void Extruder::stepping_tick(){
     }
 }
 
-void Extruder::reset_step_pin(){
+uint32_t Extruder::reset_step_pin(uint32_t dummy){
     this->step_pin = 0;
 }

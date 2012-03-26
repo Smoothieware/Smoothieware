@@ -130,7 +130,7 @@ double TemperatureControl::temperature_to_adc_value(double temperature){
     return v / this->vadc * 1.00000;                                               // The ADC reading
 }
 
-void TemperatureControl::thermistor_read_tick(){
+uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     if( this->desired_adc_value != UNDEFINED ){
         if( this->new_thermistor_reading() > this->desired_adc_value ){
             this->heater_pin->set(1); 

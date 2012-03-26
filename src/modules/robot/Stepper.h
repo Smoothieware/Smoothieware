@@ -32,11 +32,11 @@ class Stepper : public Module {
         void on_block_end(void* argument);
         void on_play(void* argument);
         void on_pause(void* argument);
-        void main_interrupt();
+        uint32_t main_interrupt(uint32_t dummy);
         void trapezoid_generator_reset();
         void set_step_events_per_minute(double steps_per_minute);
-        void trapezoid_generator_tick();
-        void reset_step_pins();
+        uint32_t trapezoid_generator_tick(uint32_t dummy);
+        uint32_t reset_step_pins(uint32_t dummy);
         void update_offsets();
         int config_step_timer( int cycles );
 

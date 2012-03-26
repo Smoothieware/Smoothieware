@@ -39,7 +39,7 @@ class TemperatureControl : public Module {
         double get_temperature();
         double adc_value_to_temperature(double adc_value);
         double temperature_to_adc_value(double temperature);
-        void thermistor_read_tick();
+        uint32_t thermistor_read_tick(uint32_t dummy);
         double new_thermistor_reading();
         double average_adc_reading();
         

@@ -35,9 +35,9 @@ class Extruder : public Module{
         void on_play(void* argument);
         void on_pause(void* argument); 
         void set_speed(int steps_per_second);
-        void acceleration_tick();
-        void stepping_tick();
-        void reset_step_pin();
+        uint32_t acceleration_tick(uint32_t dummy);
+        uint32_t stepping_tick(uint32_t dummy);
+        uint32_t reset_step_pin(uint32_t dummy);
 
         DigitalOut      step_pin;                     // Step pin for the stepper driver
         DigitalOut      dir_pin;                      // Dir pin for the stepper driver

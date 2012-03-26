@@ -14,7 +14,7 @@ class PauseButton : public Module {
         PauseButton();
        
         void on_module_loaded();
-        void button_tick();
+        uint32_t button_tick(uint32_t dummy);
         void on_play( void* argument );
         void on_pause( void* argument );
         

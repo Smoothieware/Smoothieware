@@ -21,7 +21,7 @@ void PauseButton::on_module_loaded(){
 
 //TODO: Make this use InterruptIn
 //Check the state of the button and act accordingly
-void PauseButton::button_tick(){
+uint32_t PauseButton::button_tick(uint32_t dummy){
     // If button changed 
     if(this->button_state != this->button->get()){ 
         this->button_state = this->button->get();
