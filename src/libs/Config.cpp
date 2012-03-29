@@ -5,9 +5,11 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "mbed.h"
+
+using namespace std;
+#include <vector>
 #include <string>
-using std::string;
+
 #include "libs/Kernel.h"
 #include "Config.h"
 #include "libs/nuts_bolts.h"
@@ -46,7 +48,7 @@ void Config::config_get_command( string parameter ){
 void Config::config_set_command( string parameters ){
     string setting = shift_parameter(parameters);
     string value   = shift_parameter(parameters);
-    this->set_string( get_checksum(setting), value );
+    this->set_string( setting, value );
 }
 
 // Command to reload configuration in all modules ( usefull if you changed one )
@@ -57,7 +59,7 @@ void Config::config_load_command( string parameters ){
 // Set a value from the configuration as a string
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
-void Config::set_string( uint16_t check_sum, string value ){
+void Config::set_string( string setting, string value ){
     // Open the config file ( find it if we haven't already found it ) 
     FILE *lp = fopen(this->get_config_file().c_str(), "r+");
     string buffer;
@@ -72,7 +74,8 @@ void Config::set_string( uint16_t check_sum, string value ){
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             // If this line matches the checksum 
-            if(get_checksum(buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key)) != check_sum){ buffer.clear(); continue; }
+            string candidate = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key);
+            if( candidate.compare(setting) != 0 ){ buffer.clear(); continue; }
             int free_space = int(int(buffer.find_first_of("\r\n#", begin_value+1))-begin_value); 
             if( int(value.length()) >= free_space ){ this->kernel->serial->printf("ERROR: Not enough room for value\r\n"); fclose(lp); return; }
             // Update value
@@ -92,12 +95,34 @@ void Config::set_string( uint16_t check_sum, string value ){
     this->kernel->serial->printf("ERROR: configuration key not found\r\n");
 }
 
+ConfigValue* Config::value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t check_sum_c ){
+    vector<uint16_t> check_sums;
+    check_sums.push_back(check_sum_a); 
+    check_sums.push_back(check_sum_b); 
+    check_sums.push_back(check_sum_c); 
+    return this->value(check_sums);
+}    
+
+ConfigValue* Config::value(uint16_t check_sum_a, uint16_t check_sum_b){
+    vector<uint16_t> check_sums;
+    check_sums.push_back(check_sum_a); 
+    check_sums.push_back(check_sum_b); 
+    return this->value(check_sums);
+}    
+
+ConfigValue* Config::value(uint16_t check_sum){
+    vector<uint16_t> check_sums;
+    check_sums.push_back(check_sum); 
+    return this->value(check_sums);
+}    
+    
 // Get a value from the configuration as a string
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
-ConfigValue* Config::value(uint16_t check_sum){
+ConfigValue* Config::value(vector<uint16_t> check_sums){
     ConfigValue* result = new ConfigValue;
-    result->check_sum = check_sum; 
+    //uint16_t check_sum = 0;
+    //result->check_sum = check_sum; 
     if( this->has_config_file() == false ){
        return result;
     } 
@@ -117,7 +142,27 @@ ConfigValue* Config::value(uint16_t check_sum){
             string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key);
             
             // If this line matches the checksum 
-            if(get_checksum(key) != check_sum){ buffer.clear(); continue; }
+            bool match = true;
+            for( unsigned int i = 0; i < check_sums.size(); i++ ){
+                uint16_t checksum_node = check_sums[i];
+                size_t end_key =  buffer.find_first_of(" .", begin_key);
+                string key_node = buffer.substr(begin_key, end_key - begin_key);
+               
+                //printf("%u(%s) against %u\r\n", get_checksum(key_node), key_node.c_str(), checksum_node);
+                if(get_checksum(key_node) != checksum_node ){ 
+                    buffer.clear(); 
+                    match = false;
+                    //printf("no match\r\n");
+                    break; 
+                }
+                //printf("test:<%s>\r\n",key_node.c_str());
+                begin_key = end_key + 1;
+            } 
+            if( match == false ){ 
+                //printf("continue\r\n");
+                continue; 
+            }           
+
             result->found = true;
             result->key = key;
             result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
@@ -156,6 +201,61 @@ string Config::get_config_file(){
 inline void Config::try_config_file(string candidate){
     FILE *lp = fopen(candidate.c_str(), "r");
     if(lp){ this->config_file_found = true; this->config_file = candidate; }
+    fclose(lp);
+}
+
+
+void Config::get_module_list(vector<uint16_t>* list, uint16_t family){
+    if( this->has_config_file() == false ){ return; } 
+    
+    // Open the config file ( find it if we haven't already found it ) 
+    FILE *lp = fopen(this->get_config_file().c_str(), "r");
+    string buffer;
+    int c; 
+    
+    // For each line 
+    do {
+        c = fgetc (lp);
+        if (c == '\n'){
+            
+            // We have a new line
+            if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
+            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
+            size_t begin_key = buffer.find_first_not_of(" ");
+            size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
+            string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key);
+            
+            // If this line matches the checksum 
+            bool match = true;
+            uint16_t match_checksum = 0;
+            for( unsigned int i = 0; i <= 2; i++ ){
+                size_t end_key =  buffer.find_first_of(" .", begin_key);
+                string key_node = buffer.substr(begin_key, end_key - begin_key);
+                if( i == 0 ){
+                    if( family != get_checksum(key_node) ){
+                        buffer.clear();
+                        match = false;
+                        continue;
+                    }
+                }else if( i == 1 ){
+                   match_checksum = get_checksum(key_node);
+                }else if( i == 2 ){
+                    if( get_checksum(key_node) != 29545 ){ // enable
+                        buffer.clear();
+                        match = false;
+                        continue;
+                    } 
+                }
+                begin_key = end_key + 1;
+            } 
+            if( match == false ){ continue; }           
+            list->push_back(match_checksum); 
+            buffer.clear();
+        }else{
+            buffer += c;
+        }
+
+    } while (c != EOF);  
     fclose(lp);
 }
 

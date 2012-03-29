@@ -10,7 +10,6 @@
 #include "Stepper.h"
 #include "Planner.h"
 #include "Player.h"
-#include "mbed.h"
 #include <vector>
 using namespace std;
 #include "libs/nuts_bolts.h"
@@ -21,6 +20,7 @@ Stepper::Stepper(){
     this->current_block = NULL;
     this->step_events_completed = 0; 
     this->divider = 0;
+    this->paused = false;
 }
 
 //Called when the module has just been loaded
@@ -65,12 +65,13 @@ void Stepper::on_config_reload(void* argument){
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Stepper::on_pause(void* argument){
-    //TODO: reImplement pause here
+    this->paused = true;
 }
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
 void Stepper::on_play(void* argument){
-    //TODO: reImplement pause here
+    // TODO: Re-compute the whole queue for a cold-start
+    this->paused = false;
 }
 
 // A new block is popped from the queue
@@ -83,10 +84,6 @@ void Stepper::on_block_begin(void* argument){
     // Mark the new block as of interrest to us
     block->take();
    
-    if( block->final_rate < 0.1 ){
-        //block->debug(this->kernel);
-    }
-
     // Setup
     for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
     this->step_events_completed = 0; 
@@ -109,8 +106,9 @@ void Stepper::on_block_end(void* argument){
 
 // "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Smoothie. It is executed at the rate set with
 // config_step_timer. It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
-inline void Stepper::main_interrupt(){
-   
+inline uint32_t Stepper::main_interrupt(uint32_t dummy){
+    if( this->paused ){ return 0; } 
+
     // Step dir pins first, then step pinse, stepper drivers like to know the direction before the step signal comes in
     this->alpha_dir_pin->set(  ( this->out_bits >> 0  ) & 1 );
     this->beta_dir_pin->set(   ( this->out_bits >> 1  ) & 1 );
@@ -155,8 +153,8 @@ void Stepper::update_offsets(){
 // This is called ACCELERATION_TICKS_PER_SECOND times per second by the step_event
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
-void Stepper::trapezoid_generator_tick() {
-    if(this->current_block && !this->trapezoid_generator_busy ) {
+uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
+    if(this->current_block && !this->trapezoid_generator_busy && !this->paused ) {
           if(this->step_events_completed < this->current_block->accelerate_until<<16) {
               this->trapezoid_adjusted_rate += this->current_block->rate_delta;
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
@@ -213,7 +211,7 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
 
 }
 
-void Stepper::reset_step_pins(){
+uint32_t Stepper::reset_step_pins(uint32_t dummy){
     this->alpha_step_pin->set(0);
     this->beta_step_pin->set(0); 
     this->gamma_step_pin->set(0);

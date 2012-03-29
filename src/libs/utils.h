@@ -1,9 +1,10 @@
 #ifndef utils_h
 #define utils_h
 
+#include <stdint.h>
+using namespace std;
 #include <string>
 using std::string;
-#include "mbed.h"
 
 string lc(string str);
 

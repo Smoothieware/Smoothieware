@@ -7,13 +7,14 @@
 
 #include <string>
 using std::string;
-#include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
 #include "libs/nuts_bolts.h"
 #include "GcodeDispatch.h"
 #include "modules/robot/Player.h" 
+#include "libs/SerialMessage.h"
+#include "libs/StreamOutput.h"
 
 GcodeDispatch::GcodeDispatch(){}
 
@@ -37,6 +38,7 @@ void GcodeDispatch::on_console_line_received(void * line){
         // Dispatch
         Gcode gcode = Gcode();
         gcode.command = possible_command;
+        gcode.stream = new_message.stream; 
         this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
         
         new_message.stream->printf("ok\r\n");

@@ -36,6 +36,7 @@
 #include "LPC17xx.h" /* for _get_*SP() from core_cm3.h*/
 #include "mbedsys.h" /* for _sys_*() functions implemented in mbed/capi.ar */
 #include "error.h"   /* for error() panic routine */
+#include "mripriv.h"
 
 
 #undef errno
@@ -236,7 +237,11 @@ extern "C" int _read(int file, char *ptr, int len)
     int BytesNotRead;
     
     /* Open stdin/stdout/stderr if needed */
-    if (!g_StandardHandlesOpened && file < 3)
+    if (MRI_ENABLE && file < 3)
+    {
+        return __MriSemihostRead(file, ptr, len);
+    }
+    else if (!g_StandardHandlesOpened && file < 3)
     {
         __GCC4MBEDOpenStandardHandles();
     }
@@ -256,7 +261,11 @@ extern "C" int _write(int file, char *ptr, int len)
     int BytesNotWritten;
     
     /* Open stdin/stdout/stderr if needed */
-    if (!g_StandardHandlesOpened && file < 3)
+    if (MRI_ENABLE && file < 3)
+    {
+        return __MriSemihostWrite(file, ptr, len);
+    }
+    else if (!g_StandardHandlesOpened && file < 3)
     {
         __GCC4MBEDOpenStandardHandles();
     }

@@ -10,7 +10,9 @@
 #define GCODE_H
 #include <string>
 using std::string;
+#include "libs/StreamOutput.h"
 // Object to represent a Gcode comman
+#include <stdlib.h>
 
 class Gcode {
     public:
@@ -23,5 +25,6 @@ class Gcode {
         bool call_on_gcode_execute_event_immediatly;
         bool on_gcode_execute_event_called;
 
+        StreamOutput* stream;
 };
 #endif

@@ -9,7 +9,6 @@
 #include "libs/Kernel.h"
 #include <string>
 using std::string;
-#include "mbed.h"
 #include <math.h>
 #include "Planner.h"
 #include "Player.h"

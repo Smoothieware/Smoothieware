@@ -1,9 +1,8 @@
 #ifndef HOOK_H
 #define HOOK_H
+#include "libs/FPointer.h"
 
-#include "mbed.h"
-
-class Hook : public FunctionPointer {
+class Hook : public FPointer {
     public:
         Hook();
         double           frequency;

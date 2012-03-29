@@ -10,11 +10,11 @@
 
 #include <string>
 using std::string;
-#include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
 
+#include "libs/StreamOutput.h"
 
 class GcodeDispatch : public Module {
     public:

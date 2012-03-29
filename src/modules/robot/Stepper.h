@@ -16,8 +16,6 @@
 #define acceleration_ticks_per_second_checksum      25075
 #define minimum_steps_per_minute_checksum           9003
 #define base_stepping_frequency_checksum            21918
-#define step_gpio_port_checksum                     29939
-#define dir_gpio_port_checksum                      39286
 #define alpha_step_pin_checksum                     11468
 #define beta_step_pin_checksum                      22114
 #define gamma_step_pin_checksum                     1225
@@ -34,11 +32,11 @@ class Stepper : public Module {
         void on_block_end(void* argument);
         void on_play(void* argument);
         void on_pause(void* argument);
-        void main_interrupt();
+        uint32_t main_interrupt(uint32_t dummy);
         void trapezoid_generator_reset();
         void set_step_events_per_minute(double steps_per_minute);
-        void trapezoid_generator_tick();
-        void reset_step_pins();
+        uint32_t trapezoid_generator_tick(uint32_t dummy);
+        uint32_t reset_step_pins(uint32_t dummy);
         void update_offsets();
         int config_step_timer( int cycles );
 
@@ -68,6 +66,7 @@ class Stepper : public Module {
         Pin* gamma_dir_pin;
         unsigned short step_bits[3];
         int counter_increment;
+        bool paused;
 };
 
 

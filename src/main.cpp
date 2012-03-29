@@ -5,14 +5,13 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "mbed.h"
 #include "libs/Kernel.h"
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/Extruder.h"
-#include "modules/tools/temperaturecontrol/TemperatureControl.h"
+#include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
-#include "modules/utils/pauser/Pauser.h"
+#include "modules/utils/pausebutton/PauseButton.h"
 #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/Config.h"
 #include "libs/nuts_bolts.h"
@@ -32,10 +31,11 @@ int main() {
     kernel->add_module( new Laser(p21) );
     kernel->add_module( new Extruder(p26,p27) );
     kernel->add_module( new SimpleShell() );
-    kernel->add_module( new TemperatureControl() );
-    
+    kernel->add_module( new TemperatureControlPool() );
+    kernel->add_module( new PauseButton() );   
+
     kernel->add_module( &cdcmsc );
-    
+
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
     }
