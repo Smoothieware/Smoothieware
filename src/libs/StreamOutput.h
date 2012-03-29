@@ -4,19 +4,8 @@
 class StreamOutput {
     public:
        StreamOutput(){}
-       int printf(const char* format, ...){}
-
-
-
-
+       virtual int printf(const char* format, ...){}
+       
 };
-
-
-
-
-
-
-
-
 
 #endif
