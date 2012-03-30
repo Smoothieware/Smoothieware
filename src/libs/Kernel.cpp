@@ -37,7 +37,7 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
         &Module::on_pause
 };
 
-#define baud_rate_setting_ckeckusm 10922
+#define baud_rate_setting_ckeckusm 33990
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
