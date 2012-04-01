@@ -29,7 +29,17 @@ void GcodeDispatch::on_console_line_received(void * line){
     string possible_command = new_message.message;    
 
     char first_char = possible_command[0];
-    if( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' ){ 
+    if( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' || first_char == 'N' || first_char == '*' ){ 
+
+        //Disable 'N' linenumber for now
+        if( first_char == 'N' ){ 
+            size_t reallinepos = possible_command.find_first_of(" ") + 1;
+            possible_command = possible_command.substr(reallinepos); 
+        }
+
+        //Disable '*' checksum for now
+        size_t chkpos = possible_command.find_first_of("*");
+        if( chkpos != string::npos ){ possible_command = possible_command.substr(0, chkpos); }
    
         //Remove comments
         size_t comment = possible_command.find_first_of(";");
@@ -43,8 +53,8 @@ void GcodeDispatch::on_console_line_received(void * line){
         
         new_message.stream->printf("ok\r\n");
 
-    // Ignore comments 
-    }else if( first_char == ';' || first_char == '(' ){
+    // Ignore comments and blank lines
+    }else if( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ){
         new_message.stream->printf("ok\r\n");
     }
 }
