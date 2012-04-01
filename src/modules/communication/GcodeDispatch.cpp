@@ -21,6 +21,7 @@ GcodeDispatch::GcodeDispatch(){}
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded() {
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
+    currentline = 0;
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -29,29 +30,54 @@ void GcodeDispatch::on_console_line_received(void * line){
     string possible_command = new_message.message;    
 
     char first_char = possible_command[0];
-    if( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' || first_char == 'N' || first_char == '*' ){ 
+    int ln = 0;
+    int cs = 0;
+    if( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' || first_char == 'N' ){ 
 
-        //Disable 'N' linenumber for now
+        //Get linenumber
         if( first_char == 'N' ){ 
-            size_t reallinepos = possible_command.find_first_of(" ") + 1;
-            possible_command = possible_command.substr(reallinepos); 
+            size_t lnsize = possible_command.find_first_of(" ") + 1;
+            ln = atoi(possible_command.substr(1, lnsize - 1).c_str());
+            possible_command = possible_command.substr(lnsize + 1); 
+
+            //Get checksum
+            size_t chkpos = possible_command.find_first_of("*");
+            if( chkpos != string::npos ){ 
+                for(int i = 0; possible_command[i] != '*' && possible_command[i] != NULL; i++)
+                    cs = cs ^ possible_command[i];
+                cs &= 0xff;  // Defensive programming...
+                possible_command = possible_command.substr(0, chkpos); 
+            }
         }
 
-        //Disable '*' checksum for now
-        size_t chkpos = possible_command.find_first_of("*");
-        if( chkpos != string::npos ){ possible_command = possible_command.substr(0, chkpos); }
-   
         //Remove comments
         size_t comment = possible_command.find_first_of(";");
         if( comment != string::npos ){ possible_command = possible_command.substr(0, comment); }
 
-        // Dispatch
+        //Prepare gcode for dispatch
         Gcode gcode = Gcode();
         gcode.command = possible_command;
         gcode.stream = new_message.stream; 
-        this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
-        
-        new_message.stream->printf("ok\r\n");
+
+        //If checksum passes then process message, else request resend
+        int nextline = currentline + 1;
+        if( cs == 0x00 && ln == nextline ){
+            currentline = nextline;
+            //Catch message if it is: M110 Set Current Line Number, else dispatch message
+            if( gcode.has_letter('M') ){
+                if( ((int) gcode.get_value('M')) == 110 ){
+                    currentline = ln;
+                }
+            }
+            else{
+                //Dispatch message!
+                this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
+            }
+            new_message.stream->printf("ok\r\n");
+	}else{
+            //Request resend
+            new_message.stream->printf("rs %d", nextline);
+        }
 
     // Ignore comments and blank lines
     }else if( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ){
