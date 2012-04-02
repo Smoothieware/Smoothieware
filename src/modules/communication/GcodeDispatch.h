@@ -22,6 +22,8 @@ class GcodeDispatch : public Module {
         
         virtual void on_module_loaded();
         virtual void on_console_line_received(void* line);
+    private:
+        int currentline;
 };
 
 #endif
