@@ -21,7 +21,7 @@ GcodeDispatch::GcodeDispatch(){}
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded() {
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    currentline = 0;
+    currentline = -1;
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -36,18 +36,29 @@ void GcodeDispatch::on_console_line_received(void * line){
 
         //Get linenumber
         if( first_char == 'N' ){ 
-            size_t lnsize = possible_command.find_first_of(" ") + 1;
-            ln = atoi(possible_command.substr(1, lnsize - 1).c_str());
-            possible_command = possible_command.substr(lnsize + 1); 
+            Gcode full_line = Gcode();
+            full_line.command = possible_command;
+            full_line.stream = new_message.stream;
+            ln = (int) full_line.get_value('N');
+            int chksum = (int) full_line.get_value('*');
 
-            //Get checksum
+            //Strip checksum value from possible_command
             size_t chkpos = possible_command.find_first_of("*");
+            possible_command = possible_command.substr(0, chkpos); 
+            //Calculate checksum
             if( chkpos != string::npos ){ 
                 for(int i = 0; possible_command[i] != '*' && possible_command[i] != NULL; i++)
                     cs = cs ^ possible_command[i];
                 cs &= 0xff;  // Defensive programming...
-                possible_command = possible_command.substr(0, chkpos); 
+                cs -= chksum;
             }
+            //Strip line number value from possible_command
+            size_t lnsize = possible_command.find_first_of(" ") + 1;
+            possible_command = possible_command.substr(lnsize); 
+        }else{
+            //Assume checks succeeded
+            cs = 0x00;
+            ln = currentline + 1;
         }
 
         //Remove comments
@@ -59,24 +70,26 @@ void GcodeDispatch::on_console_line_received(void * line){
         gcode.command = possible_command;
         gcode.stream = new_message.stream; 
 
+        //Catch message if it is M110: Set Current Line Number
+        if( gcode.has_letter('M') ){
+            if( ((int) gcode.get_value('M')) == 110 ){
+                currentline = ln;
+                new_message.stream->printf("ok\r\n");
+                return;
+            }
+        }
+
         //If checksum passes then process message, else request resend
         int nextline = currentline + 1;
         if( cs == 0x00 && ln == nextline ){
-            currentline = nextline;
-            //Catch message if it is: M110 Set Current Line Number, else dispatch message
-            if( gcode.has_letter('M') ){
-                if( ((int) gcode.get_value('M')) == 110 ){
-                    currentline = ln;
-                }
-            }
-            else{
-                //Dispatch message!
-                this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
-            }
+            if( first_char == 'N' )
+                currentline = nextline;
+            //Dispatch message!
+            this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
             new_message.stream->printf("ok\r\n");
 	}else{
             //Request resend
-            new_message.stream->printf("rs %d", nextline);
+            new_message.stream->printf("rs N%d\r\n", nextline, ((int) gcode.get_value('M')), possible_command.c_str());
         }
 
     // Ignore comments and blank lines
