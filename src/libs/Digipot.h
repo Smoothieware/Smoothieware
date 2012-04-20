@@ -12,7 +12,7 @@ class Digipot{
         Digipot(){ }
       
         char current_to_wiper( double current ){
-            return char(int(ceil(double(double(double(double(current/8.25)-double(50/83))*-83000)/double(196.07)))));
+            return char(ceil(double((113.33*current)))); 
         }
 
         void i2c_send( char first, char second, char third ){
