@@ -13,6 +13,7 @@ using namespace std;
 #include "libs/nuts_bolts.h"
 #include "libs/SlowTicker.h"
 #include "libs/Adc.h"
+#include "libs/Digipot.h"
 #include "libs/Pauser.h"
 
 #include "modules/communication/SerialConsole.h"
@@ -56,6 +57,7 @@ Kernel::Kernel(){
     this->slow_ticker          = new SlowTicker();
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
+    this->digipot              = new Digipot();
 
     // LPC17xx-specific 
     NVIC_SetPriority(TIMER0_IRQn, 1); 

@@ -12,6 +12,7 @@
 #include "libs/SlowTicker.h"
 #include "libs/StepTicker.h"
 #include "libs/Adc.h"
+#include "libs/Digipot.h"
 #include "libs/Pauser.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
@@ -65,6 +66,7 @@ class Kernel {
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
+        Digipot*          digipot;
 
     private:
         vector<Module*> hooks[NUMBER_OF_DEFINED_EVENTS]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

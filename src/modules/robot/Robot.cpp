@@ -20,7 +20,7 @@ using std::string;
 
 Robot::Robot(){
     this->inch_mode = false;
-    this->absolute_mode = false;
+    this->absolute_mode = true;
     this->motion_mode =  MOTION_MODE_SEEK; 
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
     clear_vector(this->current_position);
@@ -127,7 +127,7 @@ void Robot::append_milestone( double target[], double rate ){
     int steps[3]; //Holds the result of the conversion
     
     this->arm_solution->millimeters_to_steps( target, steps );
-
+    
     double deltas[3];
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
 
