@@ -85,7 +85,7 @@ void GcodeDispatch::on_console_line_received(void * line){
             while(possible_command.size() > 0) {
                 size_t nextcmd = possible_command.find_first_of("GMTS");
                 string single_command;
-		if(nextcmd == string::npos) {
+                if(nextcmd == string::npos) {
                     single_command = possible_command;
                     possible_command = "";
                 }
@@ -102,7 +102,7 @@ void GcodeDispatch::on_console_line_received(void * line){
                 this->kernel->call_event(ON_GCODE_RECEIVED, &gcode );
                 new_message.stream->printf("ok\r\n");
             }
-	}else{
+        }else{
             //Request resend
             new_message.stream->printf("rs N%d\r\n", nextline);
         }
