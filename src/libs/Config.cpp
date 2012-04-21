@@ -53,6 +53,15 @@ void Config::config_set_command( string parameters ){
 
 // Command to reload configuration in all modules ( usefull if you changed one )
 void Config::config_load_command( string parameters ){
+    if(parameters.size() > 12) {
+        string param = parameters.substr(12);
+	this->config_file_found = false;
+        //this->try_config_file("/local/" + param);
+        this->try_config_file("/sd/" + param);
+        if( !this->config_file_found ){
+            printf("ERROR: config file \'%s\' not found, loading default config\r\n", param.c_str());
+        }
+    }
     this->kernel->call_event(ON_CONFIG_RELOAD);
 }
 
