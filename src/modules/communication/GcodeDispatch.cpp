@@ -82,15 +82,26 @@ void GcodeDispatch::on_console_line_received(void * line){
                 currentline = nextline;
             }
 
-            //Prepare gcode for dispatch
-            Gcode gcode = Gcode();
-            gcode.command = possible_command;
-            gcode.stream = new_message.stream; 
+            while(possible_command.size() > 0) {
+                size_t nextcmd = possible_command.find_first_of("GMTS");
+                string single_command;
+		if(nextcmd == string::npos) {
+                    single_command = possible_command;
+                    possible_command = "";
+                }
+                else {
+                    single_command = possible_command.substr(0,nextcmd);
+                    possible_command = possible_command.substr(nextcmd,possible_command.size());
+                }
+                //Prepare gcode for dispatch
+                Gcode gcode = Gcode();
+                gcode.command = single_command;
+                gcode.stream = new_message.stream;
 
-            //Dispatch message!
-            this->kernel->call_event(ON_GCODE_RECEIVED, &gcode ); 
-            new_message.stream->printf("ok\r\n");
-
+                //Dispatch message!
+                this->kernel->call_event(ON_GCODE_RECEIVED, &gcode );
+                new_message.stream->printf("ok\r\n");
+            }
 	}else{
             //Request resend
             new_message.stream->printf("rs N%d\r\n", nextline);
