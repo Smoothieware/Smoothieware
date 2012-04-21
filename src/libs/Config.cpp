@@ -14,6 +14,7 @@ using namespace std;
 #include "Config.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+#include "libs/SerialMessage.h"
 
 Config::Config(){
     config_file_found = false; 
@@ -25,12 +26,11 @@ void Config::on_module_loaded(){
 
 // When a new line is received, check if it is a command, and if it is, act upon it
 void Config::on_console_line_received( void* argument ){
-    string possible_command = *static_cast<string*>(argument);
+    string possible_command = (*static_cast<SerialMessage*>(argument)).message;
 
     // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
     unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
     //this->kernel->serial->printf("checksum: %u \r\n", check_sum);
-
     // Act depending on command
     switch( check_sum ){
         case config_get_checksum: this->config_get_command( get_arguments(possible_command))    ; break; 
@@ -53,6 +53,14 @@ void Config::config_set_command( string parameters ){
 
 // Command to reload configuration in all modules ( usefull if you changed one )
 void Config::config_load_command( string parameters ){
+    if(parameters.size() > 0) {
+	this->config_file_found = false;
+        //this->try_config_file("/local/" + parameters;
+        this->try_config_file("/sd/" + parameters);
+        if( !this->config_file_found ){
+            this->kernel->serial->printf("ERROR: config file \'%s\' not found, loading default config\r\n", parameters.c_str());
+        }
+    }
     this->kernel->call_event(ON_CONFIG_RELOAD);
 }
 
