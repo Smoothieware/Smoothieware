@@ -13,8 +13,8 @@ void PauseButton::on_module_loaded(){
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
 
-    this->button     =  this->kernel->config->value( pause_button_pin_checksum )->by_default("0.0")->as_pin()->as_input();
-    this->led        =  this->kernel->config->value( pause_led_pin_checksum    )->by_default("0.1")->as_pin()->as_output();
+    this->button     =  this->kernel->config->value( pause_button_pin_checksum )->by_default("2.12")->as_pin()->as_input();
+    this->led        =  this->kernel->config->value( pause_led_pin_checksum    )->by_default("4.28")->as_pin()->as_output();
 
     this->kernel->slow_ticker->attach( 100, this, &PauseButton::button_tick );
 }

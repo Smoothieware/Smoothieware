@@ -57,6 +57,16 @@ void Stepper::on_config_reload(void* argument){
     this->alpha_dir_pin                 =  this->kernel->config->value(alpha_dir_pin_checksum                )->by_default("1.18"     )->as_pin()->as_output();
     this->beta_dir_pin                  =  this->kernel->config->value(beta_dir_pin_checksum                 )->by_default("1.20"     )->as_pin()->as_output();
     this->gamma_dir_pin                 =  this->kernel->config->value(gamma_dir_pin_checksum                )->by_default("1.19"     )->as_pin()->as_output();
+    this->alpha_en_pin                  =  this->kernel->config->value(alpha_en_pin_checksum                 )->by_default("0.4"      )->as_pin()->as_output()->as_open_drain();
+    this->beta_en_pin                   =  this->kernel->config->value(beta_en_pin_checksum                  )->by_default("0.10"     )->as_pin()->as_output()->as_open_drain();
+    this->gamma_en_pin                  =  this->kernel->config->value(gamma_en_pin_checksum                 )->by_default("0.19"     )->as_pin()->as_output()->as_open_drain();
+
+
+    // TODO : This is supposed to be done by gcodes
+    this->alpha_en_pin->set(0);
+    this->beta_en_pin->set(0);
+    this->gamma_en_pin->set(0);
+
 
     // Set the Timer interval for Match Register 1, 
     this->kernel->step_ticker->set_reset_delay( this->microseconds_per_step_pulse / 1000000 );
