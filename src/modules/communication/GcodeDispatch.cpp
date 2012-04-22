@@ -83,7 +83,7 @@ void GcodeDispatch::on_console_line_received(void * line){
             }
 
             while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GMTS");
+                size_t nextcmd = possible_command.find_first_of("GMTS", possible_command.find_first_of("GMTS")+1);
                 string single_command;
                 if(nextcmd == string::npos) {
                     single_command = possible_command;
@@ -91,7 +91,7 @@ void GcodeDispatch::on_console_line_received(void * line){
                 }
                 else {
                     single_command = possible_command.substr(0,nextcmd);
-                    possible_command = possible_command.substr(nextcmd,possible_command.size());
+                    possible_command = possible_command.substr(nextcmd);
                 }
                 //Prepare gcode for dispatch
                 Gcode gcode = Gcode();
