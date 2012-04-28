@@ -89,8 +89,9 @@ void Extruder::on_gcode_execute(void* argument){
     // Absolute/relative mode
     if( gcode->has_letter('M')){
         int code = (int) gcode->get_value('M');
-        if( code == 82 ){ this->absolute_mode == true; }
-        if( code == 83 ){ this->absolute_mode == false; }
+        if( code == 82 ){ this->absolute_mode = true; }
+        if( code == 83 ){ this->absolute_mode = false; }
+        if( code == 84 ){ this->en_pin->set(0); }
     }
 
     // The mode is OFF by default, and SOLO or FOLLOW only if we need to extrude
