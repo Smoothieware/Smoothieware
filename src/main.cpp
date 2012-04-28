@@ -30,7 +30,7 @@ int main() {
     kernel->serial->printf("Smoothie ( grbl port ) version 0.6 \r\nstart\r\n");
 
     kernel->add_module( new Laser(p21) );
-    kernel->add_module( new Extruder(p26,p27) );
+    kernel->add_module( new Extruder() );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new CurrentControl() );
     kernel->add_module( new TemperatureControlPool() );
