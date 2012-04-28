@@ -40,6 +40,7 @@ public:
     
     operator std::FILE*() { return _file; }
 
+    std::FILE *_file;
 #ifdef MBED_RPC
     virtual const struct rpc_method *get_rpc_methods();
 #endif
@@ -57,7 +58,6 @@ protected:
     virtual int _putc(int c) = 0;
     virtual int _getc() = 0;
     
-    std::FILE *_file;
     
 };
 

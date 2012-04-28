@@ -11,12 +11,14 @@
 #include "libs/Config.h"
 #include "libs/SlowTicker.h"
 #include "libs/StepTicker.h"
+#include "libs/Adc.h"
+#include "libs/Digipot.h"
+#include "libs/Pauser.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
-#include "mbed.h"
 
 // See : http://smoothieware.org/listofevents
 #define NUMBER_OF_DEFINED_EVENTS   11
@@ -58,10 +60,13 @@ class Kernel {
         Planner*          planner;
         Config*           config;
         Player*           player;
+        Pauser*           pauser;
 
         int debug;
-        SlowTicker* slow_ticker;
-        StepTicker* step_ticker;
+        SlowTicker*       slow_ticker;
+        StepTicker*       step_ticker;
+        Adc*              adc;
+        Digipot*          digipot;
 
     private:
         vector<Module*> hooks[NUMBER_OF_DEFINED_EVENTS]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

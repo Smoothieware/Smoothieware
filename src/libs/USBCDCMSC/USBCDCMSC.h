@@ -33,7 +33,7 @@ using std::string;
 
 #include "USBDevice.h"
 
-#include "Stream.h"
+//#include "Stream.h"
 #include "CircBuffer.h"
 
 #include "libs/RingBuffer.h"
@@ -52,11 +52,12 @@ using std::string;
     #define PACK_STRUCT_END
 #endif /* __GNUC__ */
 
+#include "libs/StreamOutput.h"
 
 
 
 
-class USBCDCMSC: public USBDevice, public Module, public Stream {
+class USBCDCMSC: public USBDevice, public Module, public StreamOutput {
 public:
 
     /*

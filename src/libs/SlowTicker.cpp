@@ -7,7 +7,6 @@
 
 using namespace std;
 #include <vector>
-#include "mbed.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
@@ -34,9 +33,6 @@ void SlowTicker::set_frequency( int frequency ){
 }
 
 void SlowTicker::tick(){
-    if( this->max_frequency < 0.1 ){
-        this->kernel->serial->printf("empty\r\n");
-    }
     for (int i=0; i<this->hooks.size(); i++){ 
         Hook* hook = this->hooks.at(i);
         hook->counter += ( hook->frequency / this->max_frequency );

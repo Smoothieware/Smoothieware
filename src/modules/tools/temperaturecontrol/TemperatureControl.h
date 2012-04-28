@@ -1,36 +1,35 @@
 /*  
-      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
-      Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-      Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      this file is part of smoothie (http://smoothieware.org/). the motion control part is heavily based on grbl (https://github.com/simen/grbl).
+      smoothie is free software: you can redistribute it and/or modify it under the terms of the gnu general public license as published by the free software foundation, either version 3 of the license, or (at your option) any later version.
+      smoothie is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose. see the gnu general public license for more details.
+      you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef TEMPERATURECONTROL_H
-#define TEMPERATURECONTROL_H
+#ifndef temperaturecontrol_h
+#define temperaturecontrol_h
 
-#include "mbed.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
+#include "libs/Pin.h"
 #include <math.h>
 
 #define UNDEFINED -1
 
-#define temperature_control_thermistor_checksum 22986
-#define temperature_control_r0_ckeckusm    8728
+#define thermistor_checksum                41045
+#define r0_ckeckusm                        5538
 #define readings_per_second_ckeckusm       18645 
-#define temperature_control_t0_ckeckusm    9754
-#define temperature_control_beta_ckeckusm  64275 
-#define temperature_control_vadc_ckeckusm  8725
-#define temperature_control_vcc_ckeckusm   4274
-#define temperature_control_r1_ckeckusm    8985
-#define temperature_control_r2_ckeckusm    9242
-
-
-
+#define t0_ckeckusm                        6564
+#define beta_ckeckusm                      1181
+#define vadc_ckeckusm                      10911
+#define vcc_ckeckusm                       36157
+#define r1_ckeckusm                        5795
+#define r2_ckeckusm                        6052
+#define temperature_control_checksum       44054
+#define thermistor_pin_checksum            1788 
+#define heater_pin_checksum                35619 
 
 class TemperatureControl : public Module {
     public:
         TemperatureControl();
+        TemperatureControl(uint16_t name);
         
         void on_module_loaded();
         void on_main_loop(void* argument);
@@ -40,14 +39,10 @@ class TemperatureControl : public Module {
         double get_temperature();
         double adc_value_to_temperature(double adc_value);
         double temperature_to_adc_value(double temperature);
-        void thermistor_read_tick();
+        uint32_t thermistor_read_tick(uint32_t dummy);
         double new_thermistor_reading();
         double average_adc_reading();
         
-    
-        AnalogIn* thermistor_pin;
-        PwmOut*   heater_pwm;
-        double    pwm_value; 
         double    desired_adc_value;
         double    tail_adc_value;
         double    head_adc_value;
@@ -69,6 +64,14 @@ class TemperatureControl : public Module {
 
         RingBuffer<double,16> queue;  // Queue of Blocks
         int error_count;
+
+        uint16_t name_checksum;
+
+        Pin* thermistor_pin;
+        Pin* heater_pin;
+    
+        bool waiting;
+
 };
 
 #endif

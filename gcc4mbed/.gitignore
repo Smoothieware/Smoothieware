@@ -1,8 +1,13 @@
 .DS_Store
+*.bin
 *.disasm
+*.elf
+*.hex
 *.map
 *.o
 *.ar
 .svn/
 external/FATFileSystem/
 external/mbed/
+BuildShell
+arm-2011.03/

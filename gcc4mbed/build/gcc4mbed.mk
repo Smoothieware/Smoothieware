@@ -73,19 +73,19 @@ EXTERNAL_DIR = $(GCC4MBED_DIR)/external
 # Include path which points to external library headers and to subdirectories of this project which contain headers.
 SUBDIRS = $(wildcard $(SRC)/* $(SRC)/*/* $(SRC)/*/*/* $(SRC)/*/*/*/* $(SRC)/*/*/*/*/*)
 PROJINCS = $(sort $(dir $(SUBDIRS)))
-INCDIRS += $(PROJINCS) $(EXTERNAL_DIR)/mbed $(EXTERNAL_DIR)/mbed/LPC1768 $(EXTERNAL_DIR)/FATFileSystem
+INCDIRS += $(PROJINCS) $(EXTERNAL_DIR)/mbed $(EXTERNAL_DIR)/mbed/LPC1768 $(EXTERNAL_DIR)/FATFileSystem $(GCC4MBED_DIR)/mri
 
 # DEFINEs to be used when building C/C++ code
-DEFINES = -DTARGET_LPC1768 -DGCC4MBED_DELAYED_STDIO_INIT=$(GCC4MBED_DELAYED_STDIO_INIT)
+DEFINES = -DTARGET_LPC1768 -DGCC4MBED_DELAYED_STDIO_INIT=$(GCC4MBED_DELAYED_STDIO_INIT) -DMRI_ENABLE=1
 
 # Libraries to be linked into final binary
-LIBS = $(LIBS_PREFIX) $(EXTERNAL_DIR)/mbed/LPC1768/mbed.ar $(EXTERNAL_DIR)/mbed/LPC1768/capi.ar $(EXTERNAL_DIR)/FATFileSystem/LPC1768/FATFileSystem.ar $(LIBS_SUFFIX)
+LIBS = $(LIBS_PREFIX) $(GCC4MBED_DIR)/mri/mri.ar $(EXTERNAL_DIR)/mbed/LPC1768/mbed.ar $(EXTERNAL_DIR)/mbed/LPC1768/capi.ar $(EXTERNAL_DIR)/FATFileSystem/LPC1768/FATFileSystem.ar $(LIBS_SUFFIX)
 
 # Optimization level
 OPTIMIZATION = 2
 
 #  Compiler Options
-GPFLAGS = -O$(OPTIMIZATION) -gdwarf-2 -mcpu=cortex-m3 -mthumb -mthumb-interwork -fshort-wchar -ffunction-sections -fdata-sections -fpromote-loop-indices -Wall -Wextra -Wimplicit -Wcast-align -Wpointer-arith -Wredundant-decls -Wshadow -Wcast-qual -Wcast-align -fno-exceptions
+GPFLAGS = -O$(OPTIMIZATION) -gstabs+3 -mcpu=cortex-m3 -mthumb -mthumb-interwork -fshort-wchar -ffunction-sections -fdata-sections -fpromote-loop-indices -Wall -Wextra -Wimplicit -Wcast-align -Wpointer-arith -Wredundant-decls -Wshadow -Wcast-qual -Wcast-align -fno-exceptions
 GPFLAGS += $(patsubst %,-I%,$(INCDIRS))
 GPFLAGS += $(DEFINES)
 
@@ -110,6 +110,7 @@ SHELL=cmd.exe
 endif
 
 #########################################################################
+.PHONY: all clean deploy
 
 all:: $(PROJECT).hex $(PROJECT).bin $(PROJECT).disasm
 
@@ -122,7 +123,7 @@ $(PROJECT).hex: $(PROJECT).elf
 $(PROJECT).disasm: $(PROJECT).elf
 	$(OBJDUMP) -d $(PROJECT).elf >$(PROJECT).disasm
 	
-$(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
+$(PROJECT).elf: $(LSCRIPT) $(OBJECTS) $(LIBS)
 	$(LD) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $(PROJECT).elf
 	$(SIZE) $(PROJECT).elf
 

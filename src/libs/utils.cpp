@@ -6,10 +6,10 @@
 */
 
 #include "libs/utils.h"
-#include "mbed.h"
+using namespace std;
 #include <string>
 using std::string;
-
+#include <cstring>
 
 
 uint16_t get_checksum(string to_check){

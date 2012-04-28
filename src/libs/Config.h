@@ -7,12 +7,14 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
-#include "mbed.h"
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"
+
+
+using namespace std;
+#include <vector>
 #include <string>
-using std::string;
 
 #define config_get_checksum        46310
 #define config_set_checksum        55538
@@ -68,7 +70,7 @@ class ConfigValue{
 
         Pin* as_pin(){
             Pin* pin = new Pin();
-            pin->from_string(this->value);
+            pin->from_string(this->as_string());
             return pin;
         }
 
@@ -111,8 +113,15 @@ class Config : public Module {
         void config_get_command( string parameters ); 
         void config_set_command( string parameters ); 
         void config_load_command(string parameters );
-        void set_string( uint16_t check_sum, string value);
+        void set_string( string setting , string value);
+        
         ConfigValue* value(uint16_t check_sum);
+        ConfigValue* value(uint16_t check_sum_a, uint16_t check_sum_b);
+        ConfigValue* value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t check_sum_c );
+        ConfigValue* value(vector<uint16_t> check_sums );
+
+        void get_module_list(vector<uint16_t>* list, uint16_t family);
+
         bool   has_characters(uint16_t check_sum, string str );
         string get_config_file();
         bool has_config_file();

@@ -13,7 +13,7 @@
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
 
-#define laser_module_enable_checksum 42111 
+#define laser_module_enable_checksum 35529 
 
 class Laser : public Module{
     public:
