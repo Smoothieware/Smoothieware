@@ -28,6 +28,7 @@ void Stepper::on_module_loaded(){
     stepper = this;
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
+    this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
  
@@ -82,6 +83,19 @@ void Stepper::on_pause(void* argument){
 void Stepper::on_play(void* argument){
     // TODO: Re-compute the whole queue for a cold-start
     this->paused = false;
+}
+
+void Stepper::on_gcode_execute(void* argument){
+    Gcode* gcode = static_cast<Gcode*>(argument);
+
+    if( gcode->has_letter('M')){
+        int code = (int) gcode->get_value('M');
+        if( code == 84 ){
+            this->alpha_en_pin->set(0);
+            this->beta_en_pin->set(0);
+            this->gamma_en_pin->set(0);
+        }
+    }
 }
 
 // A new block is popped from the queue
