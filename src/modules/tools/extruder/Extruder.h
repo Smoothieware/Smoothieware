@@ -16,7 +16,7 @@
 
 #define microseconds_per_step_pulse_ckeckusm 42333
 #define extruder_module_enable_checksum      6183
-#define steps_per_millimeter_checksum        58088
+#define extruder_steps_per_mm_checksum       58088
 #define default_feed_rate_checksum           53183
 #define acceleration_checksum                60356
 
