@@ -20,6 +20,7 @@ LocalFileSystem local("local");             // Create the local filesystem under
 int main() 
 {
     int  Result = -1;
+    long Offset = -1;
     char Buffer[32];
     
     printf("\r\n\r\nGCC4MBED Test Suite\r\n");
@@ -62,8 +63,24 @@ int main()
         error("%s(%d) fscanf() failed\r\n", __FILE__, __LINE__);
     }
     printf("Contents of /local/out.txt: %s\r\n", Buffer);
+    if (0 != strcmp(Buffer, "Hello"))
+    {
+        error("%s(%d) fscanf read out wrong string\r\n", __FILE__, __LINE__);
+    }
 
-    printf("Test 6: fclose() on read file\r\n");
+    printf("Test 6: Determine size of file through fseek and ftell calls\r\n");
+    Result = fseek(fp, 0, SEEK_END);
+    if (0 != Result)
+    {
+        error("%s(%d) fseek(..,0, SEEK_END) failed\r\n", __FILE__, __LINE__);
+    }
+    Offset = ftell(fp);
+    if (12 != Offset)
+    {
+        error("%s(%d) ftell didn't return the expected value of 12\r\n", __FILE__, __LINE__);
+    }
+    
+    printf("Test 7: fclose() on read file\r\n");
     Result = fclose(fp);
     if (0 != Result)
     {
@@ -72,7 +89,7 @@ int main()
     
 
 
-    printf("Test 7: remove()\r\n");
+    printf("Test 8: remove()\r\n");
     Result = remove("/local/out.txt");                 // Removes the file "out.txt" from the local file system
     if (0 != Result)
     {
@@ -81,22 +98,29 @@ int main()
     
 
 
-    printf("Test 8: opendir()\r\n");
-    DIR *d = opendir("/local");               // Opens the root directory of the local file system
-    if (NULL == d)
+    if (MRI_ENABLE)
     {
-        error("%s(%d) opendir() failed\r\n", __FILE__, __LINE__);
+        printf("Skipping dir tests when MRI is enabled as it doesn't support directory tests.\n");
     }
-    struct dirent *p;
+    else
+    {
+        printf("Test 9: opendir()\r\n");
+        DIR *d = opendir("/local");               // Opens the root directory of the local file system
+        if (NULL == d)
+        {
+            error("%s(%d) opendir() failed\r\n", __FILE__, __LINE__);
+        }
+        struct dirent *p;
 
-    printf("Test 9: readir() for all entries\r\n");
-    while((p = readdir(d)) != NULL) 
-    {                                         // Print the names of the files in the local file system
-      printf("%s\r\n", p->d_name);              // to stdout.
+        printf("Test 10: readir() for all entries\r\n");
+        while((p = readdir(d)) != NULL) 
+        {                                         // Print the names of the files in the local file system
+          printf("%s\r\n", p->d_name);              // to stdout.
+        }
+
+        printf("Test 11: closedir\r\n");
+        closedir(d);
     }
-
-    printf("Test 10: closedir\r\n");
-    closedir(d);
     
     printf("\r\nTest completed\r\n");
 }

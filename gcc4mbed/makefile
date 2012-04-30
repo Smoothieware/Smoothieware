@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 # Directories to be built
-DIRS=mri samples
+DIRS=samples
 
 .PHONY: subdirs $(DIRS)
 
