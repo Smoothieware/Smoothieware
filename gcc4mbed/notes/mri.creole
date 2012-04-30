@@ -5,6 +5,7 @@
 * **2/29/2012:**  Added notes about GCC4MBED_TYPE environment variable in Usage section.
 * **3/3/2012:**  Added support for LocalFileSystem I/O redirection to the current directory on the gdb host computer.
 * **3/12/2012:**  Added notes about imprecise nature of data watchpoints.
+* **4/29/12012:**  Updated stack and double fault notes since MRI has been updated to lessen these concerns.
 
 ==Installation
 There are a few things that you need to download and install for MRI:
@@ -12,7 +13,7 @@ There are a few things that you need to download and install for MRI:
 * Install the MRI repository version of gcc4mbed on your local machine.  There are two ways to do this:
 ** **Recommended:**  Clone the repository so that you can pull down updates easily.  {{{git clone git@github.com:adamgreen/mri.git}}}
 ** Go to [[https://github.com/adamgreen/mri/downloads]] and download an archive of the project and decompress it to your local machine.
-* Folllow the instructions at [[https://github.com/adamgreen/mri#readme]] to allow the MRI project to pull down and install its dependencies.
+* Follow the instructions at [[https://github.com/adamgreen/mri#readme]] to allow the MRI project to pull down and install its dependencies.
 
 ==Usage
 By default the gcc4mbed project builds binaries of a **Release** type which don't include any debugging support.  This will need to be changed to a **Debug** build type to enable the MRI debugger in the binaries.  The GCC4MBED_TYPE environment variable is used to set the build type.
@@ -96,11 +97,11 @@ You can find all of the supported MRI_UART_* selections in the public mri/mri.h 
 ==Known Issues
 Known issues that will be investigated for future fixes include:
 * On Mac OS X, I see a hang in gdb when issuing the {{{target remote}}} command.  The workaround is to disconnect the mbed device from the Mac by unplugging the USB cable and then reconnecting it to force reenumeration.
-** It may be possible to workaround this issue in the gdb source code as well and I am currently dogfooding such a build of arm-none-eabi-gdb on my Mac.
+** It may be possible to workaround this issue in the gdb source code as well and I am currently dogfooding such a build of arm-none-eabi-gdb on my Mac.  Please contact me if you would like to help test this fix on your Mac.
 * Can't dump objects from the mbed SDK.  This includes objects of class types such as DigitialIn, InterruptIn, AnalogOut, etc. and even user created classes which derive from these classes.
 * User must be careful when debugging hard faults.  Attempting to read/write from/to invalid memory locations could cause a double fault hang.
-* Stack pointer corruption bugs might leave the debug monitor in a state where it can't function.
-* While MRI has been shown to work on some other LPC17xx based development systems, this isn't currently a supported scenario.  However, as long as the device doesn't have a JTAG debugger attached and you can connect the PC to UART0 on the device, it should work.
+** MRI does tell gdb which address ranges are invalid but it is still possible to attempt a write to a read-only peripheral memory mapped register and this could lead to a double fault.
+* While MRI has been shown to work on some other LPC17xx based development systems, this isn't currently a supported scenario.  However, as long as the device doesn't have a JTAG debugger attached and you can connect the PC to one of the UARTs on the device, it should work.
 
 
 ==Hit a Problem!
