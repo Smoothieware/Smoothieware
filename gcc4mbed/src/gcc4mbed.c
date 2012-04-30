@@ -83,21 +83,22 @@ extern "C" __attribute__ ((section(".mbed_init"))) void __main(void)
     }
 
     /* Initialize stdin/stdout/stderr file handles. */
-    if (!GCC4MBED_DELAYED_STDIO_INIT)
+    if (!MRI_SEMIHOST_STDIO && !GCC4MBED_DELAYED_STDIO_INIT)
     {
         __GCC4MBEDOpenStandardHandles();
     }
     
-    /* Initialize static constructors. */
-     __libc_init_array();
-
-    /* UNDONE: Would be better to do this before __libc_init_array() but
-               probably can do it after no longer using mbed serial object. */
     if (MRI_ENABLE)
     {
-        MriInit();
-        //__debugbreak();
+        __mriInit(MRI_INIT_PARAMETERS);
+        if (MRI_BREAK_ON_INIT)
+        {
+            __debugbreak();
+        }
     }
+
+    /* Initialize static constructors. */
+     __libc_init_array();
 
     /* Call the application's entry point. */
     ExitCode = main();
