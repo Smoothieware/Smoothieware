@@ -32,7 +32,7 @@ void GcodeDispatch::on_console_line_received(void * line){
     char first_char = possible_command[0];
     int ln = 0;
     int cs = 0;
-    if( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' || first_char == 'N' ){ 
+    if( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'N' ){ 
 
         //Get linenumber
         if( first_char == 'N' ){ 
@@ -83,7 +83,7 @@ void GcodeDispatch::on_console_line_received(void * line){
             }
 
             while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GMTS", possible_command.find_first_of("GMTS")+1);
+                size_t nextcmd = possible_command.find_first_of("GMT", possible_command.find_first_of("GMT")+1);
                 string single_command;
                 if(nextcmd == string::npos) {
                     single_command = possible_command;
