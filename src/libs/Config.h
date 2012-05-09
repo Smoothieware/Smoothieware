@@ -10,6 +10,7 @@
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"
+#include "error.h" // mbed.h lib
 
 
 using namespace std;
