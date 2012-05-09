@@ -21,7 +21,7 @@
 #include "modules/robot/Stepper.h"
 
 // See : http://smoothieware.org/listofevents
-#define NUMBER_OF_DEFINED_EVENTS   11
+#define NUMBER_OF_DEFINED_EVENTS   12
 #define ON_MAIN_LOOP               0
 #define ON_CONSOLE_LINE_RECEIVED   1
 #define ON_GCODE_RECEIVED          2
@@ -33,6 +33,7 @@
 #define ON_CONFIG_RELOAD           8
 #define ON_PLAY                    9
 #define ON_PAUSE                   10
+#define ON_IDLE                    11
 
 
 using namespace std;
