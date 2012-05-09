@@ -85,8 +85,12 @@ void Player::pop_and_process_new_block(int debug){
 }
 
 void Player::wait_for_queue(int free_blocks){
-    while( this->queue.size() >= this->queue.capacity()-free_blocks ){ 
-        wait_us(500);
+    while( this->queue.size() >= this->queue.capacity()-free_blocks ){
+        Timer t;
+        t.start();
         this->kernel->call_event(ON_IDLE);
+        t.stop();
+        if(t.read_us() < 500)
+            wait_us(500 - t.read_us());
     }
 }
