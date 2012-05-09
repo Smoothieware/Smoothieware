@@ -17,7 +17,7 @@ using std::string;
 #include "libs/RingBuffer.h"
 #include "libs/StreamOutput.h"
 
-#define baud_rate_setting_ckeckusm 10922
+#define baud_rate_setting_checksum 10922
 
 class SerialConsole : public Module, public StreamOutput {
     public:

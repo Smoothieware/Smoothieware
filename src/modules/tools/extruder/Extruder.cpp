@@ -59,7 +59,7 @@ void Extruder::on_module_loaded() {
 
 // Get config
 void Extruder::on_config_reload(void* argument){
-	this->microseconds_per_step_pulse = this->kernel->config->value(microseconds_per_step_pulse_ckeckusm)->by_default(5)->as_number();
+	this->microseconds_per_step_pulse = this->kernel->config->value(microseconds_per_step_pulse_checksum)->by_default(5)->as_number();
 	this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum       )->by_default(1)->as_number();
 	this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1)->as_number();
 	this->acceleration                = this->kernel->config->value(acceleration_checksum               )->by_default(1)->as_number();

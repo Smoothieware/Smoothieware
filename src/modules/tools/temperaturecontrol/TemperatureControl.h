@@ -14,14 +14,14 @@
 #define UNDEFINED -1
 
 #define thermistor_checksum                41045
-#define r0_ckeckusm                        5538
-#define readings_per_second_ckeckusm       18645 
-#define t0_ckeckusm                        6564
-#define beta_ckeckusm                      1181
-#define vadc_ckeckusm                      10911
-#define vcc_ckeckusm                       36157
-#define r1_ckeckusm                        5795
-#define r2_ckeckusm                        6052
+#define r0_checksum                        5538
+#define readings_per_second_checksum       18645 
+#define t0_checksum                        6564
+#define beta_checksum                      1181
+#define vadc_checksum                      10911
+#define vcc_checksum                       36157
+#define r1_checksum                        5795
+#define r2_checksum                        6052
 #define temperature_control_checksum       44054
 #define thermistor_pin_checksum            1788 
 #define heater_pin_checksum                35619 
