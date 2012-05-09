@@ -12,6 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "modules/robot/Player.h"
 
 
 void SimpleShell::on_module_loaded(){
