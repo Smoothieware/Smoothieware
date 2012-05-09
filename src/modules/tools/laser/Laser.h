@@ -8,7 +8,8 @@
 #ifndef LASER_MODULE_H
 #define LASER_MODULE_H
 
-#include "mbed.h"
+#include "PinNames.h" // mbed.h lib
+#include "PwmOut.h" // mbed.h lib
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
