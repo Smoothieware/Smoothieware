@@ -13,6 +13,9 @@
 using namespace std;
 #include <vector>
 
+#define temperature_control_checksum 44054
+#define enable_checksum              29545
+
 class TemperatureControlPool : public Module {
     public:
         TemperatureControlPool();
