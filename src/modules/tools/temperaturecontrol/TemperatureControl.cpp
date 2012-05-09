@@ -43,7 +43,7 @@ void TemperatureControl::on_main_loop(void* argument){ }
 // Get configuration from the config file
 void TemperatureControl::on_config_reload(void* argument){
 
-    this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_ckeckusm)->by_default(5)->as_number();
+    this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(5)->as_number();
 
     // Values are here : http://reprap.org/wiki/Thermistor
     this->r0   = 100000;
@@ -63,13 +63,13 @@ void TemperatureControl::on_config_reload(void* argument){
     }else if( thermistor->value.compare("Semitec"      ) == 0 ){ this->beta = 4267; }
 
     // Preset values are overriden by specified values
-    this->r0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r0_ckeckusm  )->by_default(100000)->as_number();               // Stated resistance eg. 100K
-    this->t0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, t0_ckeckusm  )->by_default(25    )->as_number() + 273.15;      // Temperature at stated resistance, eg. 25C
-    this->beta =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, beta_ckeckusm)->by_default(4066  )->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
-    this->vadc =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, vadc_ckeckusm)->by_default(3.3   )->as_number();               // ADC Reference
-    this->vcc  =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, vcc_ckeckusm )->by_default(3.3   )->as_number();               // Supply voltage to potential divider
-    this->r1 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r1_ckeckusm  )->by_default(0     )->as_number();
-    this->r2 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r2_ckeckusm  )->by_default(4700  )->as_number();
+    this->r0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r0_checksum  )->by_default(100000)->as_number();               // Stated resistance eg. 100K
+    this->t0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, t0_checksum  )->by_default(25    )->as_number() + 273.15;      // Temperature at stated resistance, eg. 25C
+    this->beta =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, beta_checksum)->by_default(4066  )->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
+    this->vadc =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, vadc_checksum)->by_default(3.3   )->as_number();               // ADC Reference
+    this->vcc  =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, vcc_checksum )->by_default(3.3   )->as_number();               // Supply voltage to potential divider
+    this->r1 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r1_checksum  )->by_default(0     )->as_number();
+    this->r2 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r2_checksum  )->by_default(4700  )->as_number();
     
     // Thermistor math 
     this->k = this->r0 * exp( -this->beta / this->t0 );

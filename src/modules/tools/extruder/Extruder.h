@@ -14,7 +14,7 @@
 #include "libs/Kernel.h"
 #include "modules/robot/Block.h"
 
-#define microseconds_per_step_pulse_ckeckusm 42333
+#define microseconds_per_step_pulse_checksum 42333
 #define extruder_module_enable_checksum      6183
 #define extruder_steps_per_mm_checksum       58088
 #define default_feed_rate_checksum           53183
