@@ -28,3 +28,4 @@ void Module::on_block_end(             void * argument){}
 void Module::on_config_reload(         void * argument){}
 void Module::on_play(                  void * argument){}
 void Module::on_pause(                 void * argument){}
+void Module::on_idle(                  void * argument){}
