@@ -12,7 +12,7 @@
 #include "Planner.h"
 #include "Block.h"
 
-#define microseconds_per_step_pulse_ckeckusm        42333
+#define microseconds_per_step_pulse_checksum        42333
 #define acceleration_ticks_per_second_checksum      25075
 #define minimum_steps_per_minute_checksum           9003
 #define base_stepping_frequency_checksum            21918
