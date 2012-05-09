@@ -1,7 +1,7 @@
 #ifndef DIGIPOT_H
 #define DIGIPOT_H
 
-#include "mbed.h" //Required for I2C
+#include "I2C.h" // mbed.h lib
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include <string>

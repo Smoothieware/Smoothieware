@@ -40,7 +40,7 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
         &Module::on_idle
 };
 
-#define baud_rate_setting_ckeckusm 10922
+#define baud_rate_setting_checksum 10922
 #define uart0_checksum             16877
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
@@ -49,7 +49,7 @@ Kernel::Kernel(){
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();
     // Serial second, because the other modules might want to say something
-    this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_ckeckusm)->by_default(9600)->as_number());
+    this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
 
     this->add_module( this->config );
     this->add_module( this->serial );
