@@ -39,10 +39,7 @@ void Planner::on_config_reload(void* argument){
 void Planner::append_block( int target[], double feed_rate, double distance, double deltas[] ){
    
     // Stall here if the queue is ful
-    while( this->kernel->player->queue.size() >= this->kernel->player->queue.capacity()-2 ){ 
-        wait_us(500);
-        this->kernel->call_event(ON_IDLE);
-    }
+    this->kernel->player->wait_for_queue(2);
 
     Block* block = this->kernel->player->new_block();
     block->planner = this;   

@@ -119,7 +119,7 @@ void SimpleShell::on_main_loop(void* argument){
                 message.message = buffer;
                 message.stream = this->current_stream;
                 // wait for the queue to have enough room that a serial message could still be received before sending
-                while(this->kernel->player->queue.size() >= this->kernel->player->queue.capacity() - 2) { wait_us(500); }
+                this->kernel->player->wait_for_queue(2);
                 this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message); 
                 buffer.clear();
                 return;
