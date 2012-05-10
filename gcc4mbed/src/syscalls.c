@@ -36,7 +36,7 @@
 #include "LPC17xx.h" /* for _get_*SP() from core_cm3.h*/
 #include "mbedsys.h" /* for _sys_*() functions implemented in mbed/capi.ar */
 #include "error.h"   /* for error() panic routine */
-#include "semihost.h"
+#include "mri.h"
 
 
 #undef errno
