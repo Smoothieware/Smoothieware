@@ -10,12 +10,13 @@
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"
-#include "error.h" // mbed.h lib
 
+#define error(...) (fprintf(stderr, __VA_ARGS__), exit(1))
 
 using namespace std;
 #include <vector>
 #include <string>
+#include <stdio.h>
 
 #define config_get_checksum        46310
 #define config_set_checksum        55538
