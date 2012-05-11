@@ -8,11 +8,11 @@
 #ifndef LASER_MODULE_H
 #define LASER_MODULE_H
 
-#include "PinNames.h" // mbed.h lib
-#include "PwmOut.h" // mbed.h lib
 #include "libs/Module.h"
+#include "PwmOut.h" // mbed.h lib
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
+
 
 #define laser_module_enable_checksum 35529 
 
@@ -28,7 +28,7 @@ class Laser : public Module{
         void on_speed_change(void* argument);
         void set_proportional_power();
 
-        PwmOut laser_pin;    // PWM output to regulate the laser power
+        mbed::PwmOut laser_pin;    // PWM output to regulate the laser power
         bool   laser_on;     // Laser status
 };
 

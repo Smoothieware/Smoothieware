@@ -15,6 +15,7 @@ using namespace std;
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+#include "PinNames.h" // mbed.h lib
 #include "libs/ADC/adc.h"
 #include "libs/Pin.h"
 

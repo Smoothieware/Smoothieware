@@ -8,7 +8,7 @@ using namespace std;
 CurrentControl::CurrentControl(){}
 
 void CurrentControl::on_module_loaded(){
-    if( !this->kernel->config->value( currentcontrol_module_enable_checksum )->by_default(true)->as_bool() ){ return; } 
+    if( !this->kernel->config->value( currentcontrol_module_enable_checksum )->by_default(false)->as_bool() ){ return; } 
 
     // Get configuration
     this->alpha_current =           this->kernel->config->value(alpha_current_checksum  )->by_default(0.8)->as_number(); 

@@ -20,14 +20,14 @@ using std::string;
 // Treats every received line as a command and passes it ( via event call ) to the command dispatcher. 
 // The command dispatcher will then ask other modules if they can do something with it
 SerialConsole::SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate ){
-    this->serial = new  Serial( rx_pin, tx_pin );
+    this->serial = new mbed::Serial( rx_pin, tx_pin );
     this->serial->baud(baud_rate);
 }  
 
 // Called when the module has just been loaded
 void SerialConsole::on_module_loaded() {
     // We want to be called every time a new char is received
-    this->serial->attach(this, &SerialConsole::on_serial_char_received, Serial::RxIrq);
+    this->serial->attach(this, &SerialConsole::on_serial_char_received, mbed::Serial::RxIrq);
 
     // We only call the command dispatcher in the main loop, nowhere else
     this->register_for_event(ON_MAIN_LOOP);

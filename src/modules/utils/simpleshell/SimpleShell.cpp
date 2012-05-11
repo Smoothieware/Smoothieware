@@ -7,6 +7,7 @@
 
 
 #include "libs/Kernel.h"
+#include "wait_api.h" // mbed.h lib
 #include "SimpleShell.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
