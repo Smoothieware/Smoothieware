@@ -76,15 +76,15 @@ class ConfigValue{
             return pin;
         }
 
-        ConfigValue* by_default(double value){
+        ConfigValue* by_default(double val){
             this->default_set = true;
-            this->default_double = value;
+            this->default_double = val;
             return this; 
         }
 
-        ConfigValue* by_default(std::string value){
+        ConfigValue* by_default(std::string val){
             this->default_set = true;
-            this->default_string = value;
+            this->default_string = val;
             return this;
         }
 

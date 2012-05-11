@@ -13,6 +13,7 @@ using namespace std;
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "StepTicker.h"
+#include "system_LPC17xx.h" // mbed.h lib
 
 
 StepTicker* global_step_ticker;
