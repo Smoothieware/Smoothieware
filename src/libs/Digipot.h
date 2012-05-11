@@ -7,7 +7,6 @@
 #include <string>
 #include <math.h>
 
-
 class Digipot{
     public:
         Digipot(){ }
