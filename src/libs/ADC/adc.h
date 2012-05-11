@@ -6,7 +6,7 @@
 #ifndef MBED_ADC_H
 #define MBED_ADC_H
  
-#include "mbed.h"
+#include "PinNames.h" // mbed.h lib
 #define XTAL_FREQ       12000000
 #define MAX_ADC_CLOCK   13000000
 #define CLKS_PER_SAMPLE 64
