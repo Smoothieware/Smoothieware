@@ -12,6 +12,7 @@ using namespace std;
 #include "../communication/utils/Gcode.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+#include "wait_api.h" // mbed lib
 #include "Block.h"
 #include "Planner.h"
 #include "Player.h" 

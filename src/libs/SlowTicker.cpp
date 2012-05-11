@@ -12,6 +12,7 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "SlowTicker.h"
 #include "libs/Hook.h"
+#include "system_LPC17xx.h" // mbed.h lib
 
 
 SlowTicker* global_slow_ticker;

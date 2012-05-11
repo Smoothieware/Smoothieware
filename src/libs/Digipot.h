@@ -1,8 +1,8 @@
 #ifndef DIGIPOT_H
 #define DIGIPOT_H
 
-#include "I2C.h" // mbed.h lib
 #include "libs/Kernel.h"
+#include "I2C.h" // mbed.h lib
 #include "libs/utils.h"
 #include <string>
 #include <math.h>
@@ -28,7 +28,7 @@ class Digipot{
             current = min( max( current, 0.0L ), 2.0L );
 
             // I2C com 
-            this->i2c = new I2C(p9, p10); 
+            this->i2c = new mbed::I2C(p9, p10); 
            
             // Initial setup 
             this->i2c_send( 0x58, 0x40, 0xff );   
@@ -40,7 +40,7 @@ class Digipot{
 
         } 
 
-        I2C* i2c;
+        mbed::I2C* i2c;
 };
 
 
