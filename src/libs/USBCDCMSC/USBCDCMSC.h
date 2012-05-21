@@ -78,6 +78,11 @@ public:
     virtual int _putc(int c);
     
     /**
+     * Send a formatted string.
+     */
+    int printf(const char* format, ...);
+
+    /**
     * Read a character: blocking
     *
     * @returns character read

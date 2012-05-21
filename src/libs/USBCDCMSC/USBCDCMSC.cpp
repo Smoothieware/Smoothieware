@@ -17,6 +17,7 @@
 */
 
 #include "stdint.h"
+#include "stdarg.h"
 #include "USBCDCMSC.h"
 #include "USBBusInterface.h"
 #include "libs/SerialMessage.h"
@@ -374,6 +375,37 @@ int USBCDCMSC::_getc() {
     return c;
 }
 
+int USBCDCMSC::printf(const char* format, ...) {
+	va_list args;
+	int slen;
+	uint8_t *result, *current;
+
+	va_start (args, format);
+	slen = vasprintf ((char **)&result, format, args);
+	va_end (args);
+
+	current = result;
+
+	// Send full-size packets as many times as needed
+	while(slen > MAX_CDC_REPORT_SIZE) {
+		send(current, MAX_CDC_REPORT_SIZE);
+		current += MAX_CDC_REPORT_SIZE;
+		slen -= MAX_CDC_REPORT_SIZE;
+	}
+
+	// send a full packet followed by Zero Length Packet
+	if(slen == MAX_CDC_REPORT_SIZE) {
+		send(current, MAX_CDC_REPORT_SIZE);
+		send(current, 0);
+	}
+
+	// send a partial packet if needed to finish
+	if(slen < MAX_CDC_REPORT_SIZE) {
+		send(current, slen);
+	}
+	free(result);
+	return 0;
+}
 
 bool USBCDCMSC::writeBlock(uint8_t * buf, uint16_t size) {
     if(size > MAX_PACKET_SIZE_EPBULK) {
@@ -938,15 +970,13 @@ void USBCDCMSC::on_main_loop(void* argument){
 void USBCDCMSC::on_serial_char_received(){
     if(this->available()){
         char received = this->_getc();
-        //On newline, we have received a line, else concatenate in buffer
-        if( received == '\r' ){ return; }
+        // convert CR to NL (for host OSs that don't send NL)
+        if( received == '\r' ){ received = '\n'; }
         //if( this->kernel != NULL ){ 
         //    this->kernel->serial->printf("received:%c\r\n", received); 
         //} 
         this->buffer.push_back(received); 
     }
-
-
 
 }
 
