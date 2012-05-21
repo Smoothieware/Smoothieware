@@ -96,8 +96,12 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
     
     // Print each line of the file
     while ((c = fgetc (lp)) != EOF){
-        if( char(c) == '\n' ){  newlines++; }
-        stream->printf("%c",c); 
+    	buffer.append((char *)&c, 1);
+        if( char(c) == '\n' ){
+        	newlines++;
+        	stream->printf("%s", buffer.c_str());
+        	buffer.clear();
+        }
         if( newlines == limit ){ break; }
     }; 
     fclose(lp);
