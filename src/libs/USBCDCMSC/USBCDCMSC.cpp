@@ -17,6 +17,7 @@
 */
 
 #include "stdint.h"
+#include "stdarg.h"
 #include "USBCDCMSC.h"
 #include "USBBusInterface.h"
 #include "libs/SerialMessage.h"
@@ -70,6 +71,20 @@ static uint8_t cdc_line_coding[7]= {0x80, 0x25, 0x00, 0x00, 0x00, 0x00, 0x08};
 
 #define DEFAULT_CONFIGURATION (1)
 
+// Sense codes
+#define SENSE_NO_SENSE          0x00
+#define SENSE_RECOVERED_ERROR   0x01
+#define SENSE_NOT_READY         0x02
+#define SENSE_MEDIUM_ERROR      0x03
+#define SENSE_HARDWARE_ERROR    0x04
+#define SENSE_ILLEGAL_REQUEST   0x05
+#define SENSE_UNIT_ATTENTION    0x06
+#define SENSE_DATA_PROTECT      0x07
+#define SENSE_BLANK_CHECK       0x08
+#define SENSE_ABORTED_COMMAND   0x0B
+#define SENSE_VOLUME_OVERFLOW   0x0D
+#define SENSE_MISCOMPARE        0x0E
+
 // max packet size
 #define MAX_PACKET  MAX_PACKET_SIZE_EPBULK
 
@@ -86,6 +101,7 @@ USBCDCMSC::USBCDCMSC(SDFileSystem *sd, uint16_t vendor_id, uint16_t product_id, 
     _status = NO_INIT;
     connect();
 //    USBDevice::connect();
+	setSense(SENSE_NO_SENSE, 0x00, 0x00);
     USBHAL::connect();
 }
 
@@ -359,6 +375,37 @@ int USBCDCMSC::_getc() {
     return c;
 }
 
+int USBCDCMSC::printf(const char* format, ...) {
+	va_list args;
+	int slen;
+	uint8_t *result, *current;
+
+	va_start (args, format);
+	slen = vasprintf ((char **)&result, format, args);
+	va_end (args);
+
+	current = result;
+
+	// Send full-size packets as many times as needed
+	while(slen > MAX_CDC_REPORT_SIZE) {
+		send(current, MAX_CDC_REPORT_SIZE);
+		current += MAX_CDC_REPORT_SIZE;
+		slen -= MAX_CDC_REPORT_SIZE;
+	}
+
+	// send a full packet followed by Zero Length Packet
+	if(slen == MAX_CDC_REPORT_SIZE) {
+		send(current, MAX_CDC_REPORT_SIZE);
+		send(current, 0);
+	}
+
+	// send a partial packet if needed to finish
+	if(slen < MAX_CDC_REPORT_SIZE) {
+		send(current, slen);
+	}
+	free(result);
+	return 0;
+}
 
 bool USBCDCMSC::writeBlock(uint8_t * buf, uint16_t size) {
     if(size > MAX_PACKET_SIZE_EPBULK) {
@@ -646,33 +693,25 @@ void USBCDCMSC::sendCSW() {
     stage = WAIT_CSW;
 }
 
-bool USBCDCMSC::requestSense (void) {
-    uint8_t request_sense[] = {
-        0x70,
-        0x00,
-        0x05,   // Sense Key: illegal request
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x0A,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x30,
-        0x01,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-    };
+void USBCDCMSC::setSense (uint8_t sense_key, uint8_t asc, uint8_t ascq) {
+    sense.error = 0x70;
+    sense.sense_key = sense_key;
+    sense.additional_sense_length = 0x0a;
+    sense.asc = asc;
+    sense.ascq = ascq;    
+}
 
-    if (!msd_write(request_sense, sizeof(request_sense))) {
+bool USBCDCMSC::requestSense (void) {
+    if (!msd_write((uint8_t *)&sense, sizeof(sense))) {
         return false;
     }
-
+	
     return true;
+}
+
+void USBCDCMSC::mediaRemoval() {
+	 csw.Status = CSW_PASSED;
+	 sendCSW();
 }
 
 void USBCDCMSC::fail() {
@@ -706,6 +745,9 @@ void USBCDCMSC::CBWDecode(uint8_t * buf, uint16_t size) {
                     case READ_FORMAT_CAPACITIES:
                         readFormatCapacity();
                         break;
+	                case MEDIA_REMOVAL:
+	                    mediaRemoval();
+						break;
                     case READ_CAPACITY:
                         readCapacity();
                         break;
@@ -928,15 +970,13 @@ void USBCDCMSC::on_main_loop(void* argument){
 void USBCDCMSC::on_serial_char_received(){
     if(this->available()){
         char received = this->_getc();
-        //On newline, we have received a line, else concatenate in buffer
-        if( received == '\r' ){ return; }
+        // convert CR to NL (for host OSs that don't send NL)
+        if( received == '\r' ){ received = '\n'; }
         //if( this->kernel != NULL ){ 
         //    this->kernel->serial->printf("received:%c\r\n", received); 
         //} 
         this->buffer.push_back(received); 
     }
-
-
 
 }
 

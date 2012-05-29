@@ -78,6 +78,11 @@ public:
     virtual int _putc(int c);
     
     /**
+     * Send a formatted string.
+     */
+    int printf(const char* format, ...);
+
+    /**
     * Read a character: blocking
     *
     * @returns character read
@@ -253,7 +258,18 @@ private:
         uint8_t  Status;
     } PACK_STRUCT_STRUCT CSW;
 
-
+	// sense
+    typedef PACK_STRUCT_BEGIN struct {
+        uint8_t error;
+        uint8_t resvd;
+        uint8_t sense_key;
+        uint8_t information[4];
+        uint8_t additional_sense_length;
+        uint8_t resvd2[4];
+        uint8_t asc;
+        uint8_t ascq;
+        uint8_t resvd3[4];
+    } PACK_STRUCT_STRUCT SENSE;
 
     //state of the bulk-only state machine
     Stage stage;
@@ -263,6 +279,9 @@ private:
 
     // CSW which will be sent
     CSW csw;
+	
+	// Current sense
+	SENSE sense;
 
     // addr where will be read or written data
     uint32_t addr;
@@ -294,8 +313,10 @@ private:
     bool modeSense6 (void);
     void testUnitReady (void);
     bool requestSense (void);
+	void setSense (uint8_t sense_key, uint8_t asc, uint8_t ascq);
     void memoryVerify (uint8_t * buf, uint16_t size);
     void memoryWrite (uint8_t * buf, uint16_t size);
+    void mediaRemoval(void);
     void reset();
     void fail();
 
