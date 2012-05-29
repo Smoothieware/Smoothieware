@@ -85,14 +85,22 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
    
     // Open file 
     FILE *lp = fopen(filename.c_str(), "r");
+    if(lp == NULL) {
+    	stream->printf("File not found: %s\r\n", filename.c_str());
+    	return;
+    }
     string buffer;
     int c;
     int newlines = 0; 
     
     // Print each line of the file
     while ((c = fgetc (lp)) != EOF){
-        if( char(c) == '\n' ){  newlines++; }
-        stream->printf("%c",c); 
+    	buffer.append((char *)&c, 1);
+        if( char(c) == '\n' ){
+        	newlines++;
+        	stream->printf("%s", buffer.c_str());
+        	buffer.clear();
+        }
         if( newlines == limit ){ break; }
     }; 
     fclose(lp);
@@ -102,7 +110,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 // Play a gcode file by considering each line as if it was received on the serial console
 void SimpleShell::play_command( string parameters, StreamOutput* stream ){
     // Get filename
-    this->current_file_handler = fopen( this->absolute_from_relative(shift_parameter( parameters )).c_str(), "r");
+    string filename          = this->absolute_from_relative(shift_parameter( parameters ));
+    this->current_file_handler = fopen( filename.c_str(), "r");
+    if(this->current_file_handler == NULL)
+    {
+    	stream->printf("File not found: %s\r\n", filename.c_str());
+    	return;
+    }
     this->playing_file = true;
     this->current_stream = stream;
 }
