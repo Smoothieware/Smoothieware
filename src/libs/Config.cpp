@@ -75,7 +75,7 @@ void Config::set_string( string setting, string value ){
     // For each line 
     do {
         c = fgetc (lp);
-        if (c == '\n'){
+        if (c == '\n' || c == EOF){
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
             if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
@@ -141,7 +141,7 @@ ConfigValue* Config::value(vector<uint16_t> check_sums){
     // For each line 
     do {
         c = fgetc (lp);
-        if (c == '\n'){
+        if (c == '\n' || c == EOF){
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
             if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
@@ -224,7 +224,7 @@ void Config::get_module_list(vector<uint16_t>* list, uint16_t family){
     // For each line 
     do {
         c = fgetc (lp);
-        if (c == '\n'){
+        if (c == '\n' || c == EOF){
             
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
