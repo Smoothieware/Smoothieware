@@ -12,6 +12,8 @@ using namespace std;
 #include "../communication/utils/Gcode.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+#include "Timer.h" // mbed.h lib
+#include "wait_api.h" // mbed.h lib
 #include "Block.h"
 #include "Player.h"
 #include "Planner.h"
@@ -82,4 +84,16 @@ void Player::pop_and_process_new_block(int debug){
 
     this->looking_for_new_block = false;
 
+}
+
+void Player::wait_for_queue(int free_blocks){
+    mbed::Timer t;
+    while( this->queue.size() >= this->queue.capacity()-free_blocks ){
+        t.reset();
+        t.start();
+        this->kernel->call_event(ON_IDLE);
+        t.stop();
+        if(t.read_us() < 500)
+            wait_us(500 - t.read_us());
+    }
 }
