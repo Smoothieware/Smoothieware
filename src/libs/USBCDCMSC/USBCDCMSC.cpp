@@ -968,7 +968,7 @@ void USBCDCMSC::on_main_loop(void* argument){
 }
 
 void USBCDCMSC::on_serial_char_received(){
-    if(this->available()){
+    while(this->available()){
         char received = this->_getc();
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
