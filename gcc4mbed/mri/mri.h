@@ -67,11 +67,11 @@ int __mriNewlib_SemihostRead(int file, char *ptr, int len);
 
 #ifndef MRI_VERSION_STRING
 
-#define MRI_BRANCH "https://github.com/adamgreen/mri/tree/version_0.1"
+#define MRI_BRANCH "https://github.com/adamgreen/mri/tree/version_0.2"
 
 #define MRI_VERSION_MAJOR       0
-#define MRI_VERSION_MINOR       1
-#define MRI_VERSION_BUILD       20120510
+#define MRI_VERSION_MINOR       2
+#define MRI_VERSION_BUILD       20120601
 #define MRI_VERSION_SUBBUILD    1
 
 #define MRI_STR(X) MRI_STR2(X)
