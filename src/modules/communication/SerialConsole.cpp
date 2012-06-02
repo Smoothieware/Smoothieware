@@ -35,7 +35,7 @@ void SerialConsole::on_module_loaded() {
         
 // Called on Serial::RxIrq interrupt, meaning we have received a char
 void SerialConsole::on_serial_char_received(){
-    if(this->serial->readable()){
+    while(this->serial->readable()){
         char received = this->serial->getc();
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
