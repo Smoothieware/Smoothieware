@@ -13,6 +13,7 @@
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "modules/robot/Player.h"
+#include "system_LPC17xx.h"
 
 
 void SimpleShell::on_module_loaded(){
@@ -36,6 +37,7 @@ void SimpleShell::on_console_line_received( void* argument ){
         case cd_command_checksum      : this->cd_command(  get_arguments(possible_command), new_message.stream ); break;
         case cat_command_checksum     : this->cat_command( get_arguments(possible_command), new_message.stream ); break;
         case play_command_checksum    : this->play_command(get_arguments(possible_command), new_message.stream ); break; 
+        case reset_command_checksum   : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
     }
 }
 
@@ -120,6 +122,19 @@ void SimpleShell::play_command( string parameters, StreamOutput* stream ){
     this->playing_file = true;
     this->current_stream = stream;
 }
+
+// Reset the system
+void SimpleShell::reset_command( string parameters, StreamOutput* stream){
+    stream->printf("Smoothie out. Peace.\r\n");
+
+    LPC_WDT->WDCLKSEL = 0x1;                // Set CLK src to PCLK
+    uint32_t clk = SystemCoreClock / 16;    // WD has a fixed /4 prescaler, PCLK default is /4
+    LPC_WDT->WDTC = 1 * (float)clk;         // Reset in 1 second
+    LPC_WDT->WDMOD = 0x3;                   // Enabled and Reset
+    LPC_WDT->WDFEED = 0xAA;                 // Kick the dog!
+    LPC_WDT->WDFEED = 0x55;
+}
+
 void SimpleShell::on_main_loop(void* argument){
 
     if( this->playing_file ){ 
