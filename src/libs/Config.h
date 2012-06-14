@@ -43,7 +43,7 @@ class ConfigValue{
             }else{
                 double result = atof(remove_non_number(this->value).c_str());
                 if( result == 0.0 && this->value.find_first_not_of("0.") != string::npos ){
-                    error("config setting '%s' with value '%s' is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->key.c_str(), this->value.c_str() );
+                    error("config setting with value '%s' is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str() );
                 }
                 return result; 
             }
@@ -97,7 +97,7 @@ class ConfigValue{
         }
 
         string value;
-        string key;
+        vector<uint16_t> check_sums;
         uint16_t check_sum; 
         bool found;
         bool default_set;
@@ -115,8 +115,10 @@ class Config : public Module {
         void config_get_command( string parameters ); 
         void config_set_command( string parameters ); 
         void config_load_command(string parameters );
+        void config_cache_load();
+        void config_cache_clear();
         void set_string( string setting , string value);
-        
+
         ConfigValue* value(uint16_t check_sum);
         ConfigValue* value(uint16_t check_sum_a, uint16_t check_sum_b);
         ConfigValue* value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t check_sum_c );
@@ -129,6 +131,8 @@ class Config : public Module {
         bool has_config_file();
         void try_config_file(string candidate);
 
+        vector<ConfigValue*> config_cache; // A cache of the config file to save sd reads during init
+        bool   config_cache_loaded; // Whether or not the cache is currently popluated
         string config_file;         // Path to the config file
         bool   config_file_found;   // Wether or not the config file's location is known
 };
