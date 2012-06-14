@@ -118,6 +118,7 @@ class Config : public Module {
         void config_cache_load();
         void config_cache_clear();
         void set_string( string setting , string value);
+
         ConfigValue* value(uint16_t check_sum);
         ConfigValue* value(uint16_t check_sum_a, uint16_t check_sum_b);
         ConfigValue* value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t check_sum_c );

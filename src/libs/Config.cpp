@@ -19,6 +19,7 @@ using namespace std;
 Config::Config(){
     this->config_file_found = false;
     this->config_cache_loaded = false;
+
     this->config_cache_load();
 }
 
@@ -65,7 +66,6 @@ void Config::config_load_command( string parameters ){
     }
     this->config_cache_load();
     this->kernel->call_event(ON_CONFIG_RELOAD);
-    //this->config_cache_clear();
     printf("Config file \'%s\' loaded.\r\n", parameters.c_str());
 }
 
@@ -73,6 +73,7 @@ void Config::config_load_command( string parameters ){
 void Config::config_cache_load(){
     this->config_cache_clear();
     ConfigValue* result = new ConfigValue;
+    this->config_cache.push_back(result);
     if( this->has_config_file() == false ){
        return;
     } 
@@ -89,7 +90,7 @@ void Config::config_cache_load(){
             if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
-            string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key);
+            string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" ");
             vector<uint16_t> check_sums;
             begin_key = 0;
             int j = 0;
@@ -101,11 +102,11 @@ void Config::config_cache_load(){
                 j++;
             } 
             
+            result = new ConfigValue;
             result->found = true;
             result->check_sums = check_sums;
             result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
             this->config_cache.push_back(result);
-            result = new ConfigValue;
             buffer.clear();
         }else{
             buffer += c;
@@ -117,11 +118,10 @@ void Config::config_cache_load(){
 
 // Command to clear the config cache after init
 void Config::config_cache_clear(){
-    while( ! config_cache.empty() ){
+    while( ! this->config_cache.empty() ){
         delete this->config_cache.back();
         this->config_cache.pop_back();
     }
-    //this->config_cache.clear();
     this->config_cache_loaded = false;
 }
 
@@ -189,9 +189,7 @@ ConfigValue* Config::value(uint16_t check_sum){
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
 ConfigValue* Config::value(vector<uint16_t> check_sums){
-    ConfigValue* result = new ConfigValue;
-    //uint16_t check_sum = 0;
-    //result->check_sum = check_sum; 
+    ConfigValue* result = this->config_cache[0];
     if( this->has_config_file() == false ){
        return result;
     } 
@@ -199,30 +197,24 @@ ConfigValue* Config::value(vector<uint16_t> check_sums){
     bool cache_preloaded = this->config_cache_loaded;
     if( !cache_preloaded )
         this->config_cache_load();
-    for( int i=0; i<config_cache.size(); i++){
-        //string key = config_cache[i]->key.append(" ");
+    for( int i=1; i<this->config_cache.size(); i++){
         // If this line matches the checksum 
         bool match = true;
-        size_t begin_key = 0;
         for( unsigned int j = 0; j < check_sums.size(); j++ ){
             uint16_t checksum_node = check_sums[j];
-            //size_t end_key =  key.find_first_of(" .", begin_key);
-            //string key_node = key.substr(begin_key, end_key - begin_key);
            
             //printf("%u(%s) against %u\r\n", get_checksum(key_node), key_node.c_str(), checksum_node);
-            if(config_cache[i]->check_sums[j] != checksum_node ){ 
+            if(this->config_cache[i]->check_sums[j] != checksum_node ){
                 match = false;
                 //printf("no match\r\n");
                 break; 
             }
-            //printf("test:<%s>\r\n",key_node.c_str());
-            //begin_key = end_key + 1;
         } 
         if( match == false ){ 
             //printf("continue\r\n");
             continue; 
         }
-        result = config_cache[i];
+        result = this->config_cache[i];
         //printf("found value %s\r\n", result->as_string().c_str());
         break;
     }
