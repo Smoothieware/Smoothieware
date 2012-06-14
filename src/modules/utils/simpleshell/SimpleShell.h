@@ -19,6 +19,7 @@
 #define cd_command_checksum      11207
 #define cat_command_checksum     24889
 #define play_command_checksum    17335
+#define reset_command_checksum   27429
 
 class SimpleShell : public Module {
     public: 
@@ -31,7 +32,8 @@ class SimpleShell : public Module {
         void ls_command(   string parameters, StreamOutput* stream );
         void cd_command(   string parameters, StreamOutput* stream );
         void cat_command(  string parameters, StreamOutput* stream );
-        void play_command( string parameters, StreamOutput* stream );       
+        void play_command( string parameters, StreamOutput* stream );
+        void reset_command(string parameters, StreamOutput* stream );
 
         string current_path;
         bool playing_file;
