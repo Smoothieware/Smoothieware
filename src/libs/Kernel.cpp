@@ -48,8 +48,6 @@ Kernel::Kernel(){
 
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();
-    // Cache the config during init to save reads to the sdcard
-    this->config->config_cache_load();
     // Serial second, because the other modules might want to say something
     this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
 
@@ -73,9 +71,6 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->player         = new Player()        );
     this->add_module( this->pauser         = new Pauser()        );
-
-    // Clear the config cache when init is complete
-    this->config->config_cache_clear();
 }
 
 void Kernel::add_module(Module* module){

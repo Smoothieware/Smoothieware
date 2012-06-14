@@ -43,7 +43,7 @@ class ConfigValue{
             }else{
                 double result = atof(remove_non_number(this->value).c_str());
                 if( result == 0.0 && this->value.find_first_not_of("0.") != string::npos ){
-                    error("config setting '%s' with value '%s' is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->key.c_str(), this->value.c_str() );
+                    error("config setting with value '%s' is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str() );
                 }
                 return result; 
             }
@@ -97,7 +97,7 @@ class ConfigValue{
         }
 
         string value;
-        string key;
+        vector<uint16_t> check_sums;
         uint16_t check_sum; 
         bool found;
         bool default_set;
