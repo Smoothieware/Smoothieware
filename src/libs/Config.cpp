@@ -17,7 +17,10 @@ using namespace std;
 #include "libs/SerialMessage.h"
 
 Config::Config(){
-    config_file_found = false; 
+    this->config_file_found = false;
+    this->config_cache_loaded = false;
+
+    this->config_cache_load();
 }
 
 void Config::on_module_loaded(){
@@ -58,10 +61,68 @@ void Config::config_load_command( string parameters ){
         //this->try_config_file("/local/" + parameters;
         this->try_config_file("/sd/" + parameters);
         if( !this->config_file_found ){
-            this->kernel->serial->printf("ERROR: config file \'%s\' not found, loading default config\r\n", parameters.c_str());
+            printf("ERROR: config file \'%s\' not found, loading default config\r\n", parameters.c_str());
         }
     }
+    this->config_cache_load();
     this->kernel->call_event(ON_CONFIG_RELOAD);
+    printf("Config file \'%s\' loaded.\r\n", parameters.c_str());
+}
+
+// Command to load config cache into buffer for multiple reads during init
+void Config::config_cache_load(){
+    this->config_cache_clear();
+    ConfigValue* result = new ConfigValue;
+    this->config_cache.push_back(result);
+    if( this->has_config_file() == false ){
+       return;
+    } 
+    // Open the config file ( find it if we haven't already found it ) 
+    FILE *lp = fopen(this->get_config_file().c_str(), "r");
+    string buffer;
+    int c; 
+    // For each line 
+    do {
+        c = fgetc (lp);
+        if (c == '\n' || c == EOF){
+            // We have a new line
+            if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
+            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
+            size_t begin_key = buffer.find_first_not_of(" ");
+            size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
+            string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" ");
+            vector<uint16_t> check_sums;
+            begin_key = 0;
+            int j = 0;
+            while( begin_key < key.size() ){
+                size_t end_key =  key.find_first_of(" .", begin_key);
+                string key_node = key.substr(begin_key, end_key - begin_key);
+                check_sums.push_back(get_checksum(key_node));
+                begin_key = end_key + 1;
+                j++;
+            } 
+            
+            result = new ConfigValue;
+            result->found = true;
+            result->check_sums = check_sums;
+            result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
+            this->config_cache.push_back(result);
+            buffer.clear();
+        }else{
+            buffer += c;
+        }
+    } while (c != EOF);  
+    fclose(lp);
+    this->config_cache_loaded = true;
+}
+
+// Command to clear the config cache after init
+void Config::config_cache_clear(){
+    while( ! this->config_cache.empty() ){
+        delete this->config_cache.back();
+        this->config_cache.pop_back();
+    }
+    this->config_cache_loaded = false;
 }
 
 // Set a value from the configuration as a string
@@ -128,58 +189,38 @@ ConfigValue* Config::value(uint16_t check_sum){
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
 ConfigValue* Config::value(vector<uint16_t> check_sums){
-    ConfigValue* result = new ConfigValue;
-    //uint16_t check_sum = 0;
-    //result->check_sum = check_sum; 
+    ConfigValue* result = this->config_cache[0];
     if( this->has_config_file() == false ){
        return result;
     } 
-    // Open the config file ( find it if we haven't already found it ) 
-    FILE *lp = fopen(this->get_config_file().c_str(), "r");
-    string buffer;
-    int c; 
-    // For each line 
-    do {
-        c = fgetc (lp);
-        if (c == '\n' || c == EOF){
-            // We have a new line
-            if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
-            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
-            size_t begin_key = buffer.find_first_not_of(" ");
-            size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
-            string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key);
-            
-            // If this line matches the checksum 
-            bool match = true;
-            for( unsigned int i = 0; i < check_sums.size(); i++ ){
-                uint16_t checksum_node = check_sums[i];
-                size_t end_key =  buffer.find_first_of(" .", begin_key);
-                string key_node = buffer.substr(begin_key, end_key - begin_key);
-               
-                //printf("%u(%s) against %u\r\n", get_checksum(key_node), key_node.c_str(), checksum_node);
-                if(get_checksum(key_node) != checksum_node ){ 
-                    buffer.clear(); 
-                    match = false;
-                    //printf("no match\r\n");
-                    break; 
-                }
-                //printf("test:<%s>\r\n",key_node.c_str());
-                begin_key = end_key + 1;
-            } 
-            if( match == false ){ 
-                //printf("continue\r\n");
-                continue; 
-            }           
-
-            result->found = true;
-            result->key = key;
-            result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
-            break;            
-        }else{
-            buffer += c;
+    // Check if the config is cached, and load it temporarily if it isn't
+    bool cache_preloaded = this->config_cache_loaded;
+    if( !cache_preloaded )
+        this->config_cache_load();
+    for( int i=1; i<this->config_cache.size(); i++){
+        // If this line matches the checksum 
+        bool match = true;
+        for( unsigned int j = 0; j < check_sums.size(); j++ ){
+            uint16_t checksum_node = check_sums[j];
+           
+            //printf("%u(%s) against %u\r\n", get_checksum(key_node), key_node.c_str(), checksum_node);
+            if(this->config_cache[i]->check_sums[j] != checksum_node ){
+                match = false;
+                //printf("no match\r\n");
+                break; 
+            }
+        } 
+        if( match == false ){ 
+            //printf("continue\r\n");
+            continue; 
         }
-    } while (c != EOF);  
-    fclose(lp);
+        result = this->config_cache[i];
+        //printf("found value %s\r\n", result->as_string().c_str());
+        break;
+    }
+    if( !cache_preloaded ){
+        this->config_cache_clear();
+    }
     return result;
 }
 
