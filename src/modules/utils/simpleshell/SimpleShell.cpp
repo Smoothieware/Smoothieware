@@ -34,6 +34,7 @@ void SimpleShell::on_console_line_received( void* argument ){
     switch( check_sum ){
         case ls_command_checksum      : this->ls_command(  get_arguments(possible_command), new_message.stream ); break;
         case cd_command_checksum      : this->cd_command(  get_arguments(possible_command), new_message.stream ); break;
+        case pwd_command_checksum     : this->pwd_command( get_arguments(possible_command), new_message.stream ); break;
         case cat_command_checksum     : this->cat_command( get_arguments(possible_command), new_message.stream ); break;
         case play_command_checksum    : this->play_command(get_arguments(possible_command), new_message.stream ); break; 
         case reset_command_checksum   : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
@@ -73,6 +74,11 @@ void SimpleShell::cd_command( string parameters, StreamOutput* stream ){
     }else{
         this->current_path = folder;
     }
+}
+
+// Responds with the present working directory
+void SimpleShell::pwd_command( string parameters, StreamOutput* stream ){
+    stream->printf("%s\r\n", this->current_path.c_str());
 }
 
 // Output the contents of a file, first parameter is the filename, second is the limit ( in number of lines to output )
