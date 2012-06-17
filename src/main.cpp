@@ -11,6 +11,7 @@
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
+#include "modules/utils/configurator/Configurator.h"
 #include "modules/utils/currentcontrol/CurrentControl.h"
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "libs/ChaNFSSD/SDFileSystem.h"
