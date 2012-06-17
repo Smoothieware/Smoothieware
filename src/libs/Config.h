@@ -18,9 +18,9 @@ using namespace std;
 #include <string>
 #include <stdio.h>
 
-#define config_get_checksum        46310
-#define config_set_checksum        55538
-#define config_load_checksum       3143
+#define config_get_command_checksum        46310    // "config-get"
+#define config_set_command_checksum        55538    // "config-set"
+#define config_load_command_checksum       3143     // "config-load"
 
 class ConfigValue{
     public:
