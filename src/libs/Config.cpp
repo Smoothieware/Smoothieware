@@ -36,9 +36,9 @@ void Config::on_console_line_received( void* argument ){
     //this->kernel->serial->printf("checksum: %u \r\n", check_sum);
     // Act depending on command
     switch( check_sum ){
-        case config_get_checksum: this->config_get_command( get_arguments(possible_command))    ; break; 
-        case config_set_checksum: this->config_set_command( get_arguments(possible_command))    ; break;
-        case config_load_checksum:this->config_load_command(get_arguments(possible_command))    ; break; 
+        case config_get_command_checksum: this->config_get_command( get_arguments(possible_command))    ; break;
+        case config_set_command_checksum: this->config_set_command( get_arguments(possible_command))    ; break;
+        case config_load_command_checksum:this->config_load_command(get_arguments(possible_command))    ; break;
     }
 }
 
