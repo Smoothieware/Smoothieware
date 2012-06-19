@@ -1,4 +1,4 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
@@ -7,7 +7,7 @@
 
 
 #include "libs/Kernel.h"
-#include "SimpleShell.h"
+#include "Configurator.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
@@ -40,10 +40,10 @@ void Configurator::on_gcode_execute(void* argument){
     if( gcode->has_letter('M') ){
         int code = gcode->get_value('M');
         switch( code ){
-            case 500:   this->config_store( gcode, gcode.stream ); break;
-            case 501:   this->config_read( gcode, gcode.stream ); break;
-            case 502:   this->config_defaults( gcode, gcode.stream ); break;
-            case 503:   this->config_print( gcode, gcode.stream ); break;
+            case 500:   this->config_store( gcode, gcode->stream ); break;
+            case 501:   this->config_read( gcode, gcode->stream ); break;
+            case 502:   this->config_defaults( gcode, gcode->stream ); break;
+            case 503:   this->config_print( gcode, gcode->stream ); break;
         }
     }
 }
