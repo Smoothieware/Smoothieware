@@ -49,7 +49,7 @@ void Config::config_cache_load(){
     // First element is a special empty ConfigValue for values not found
     ConfigValue* result = new ConfigValue;
     this->config_cache.push_back(result);
-  
+ 
     // For each ConfigSource in our stack
     for( unsigned int i = 0; i < this->config_sources.size(); i++ ){
         ConfigSource* source = this->config_sources[i];
