@@ -22,7 +22,7 @@ class FileConfigSource : public ConfigSource {
         FileConfigSource();
         void transfer_values_to_cache( ConfigCache* cache );
         bool is_named( uint16_t check_sum );
-        void write( vector<uint16_t> check_sums, string value );
+        void write( string setting, string value );
         string read( vector<uint16_t> check_sums );
         bool has_config_file();
         void try_config_file(string candidate);
