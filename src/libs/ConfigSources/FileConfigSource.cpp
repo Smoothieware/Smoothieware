@@ -15,6 +15,7 @@ using namespace std;
 
 
 FileConfigSource::FileConfigSource(){
+    this->name_checksum = FILE_CONFIGSOURCE_CHECKSUM;
     this->config_file_found = false;
 }
 
@@ -39,16 +40,7 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" ");
-            vector<uint16_t> check_sums;
-            begin_key = 0;
-            int j = 0;
-            while( begin_key < key.size() ){
-                size_t end_key =  key.find_first_of(" .", begin_key);
-                string key_node = key.substr(begin_key, end_key - begin_key);
-                check_sums.push_back(get_checksum(key_node));
-                begin_key = end_key + 1;
-                j++;
-            } 
+            vector<uint16_t> check_sums = get_checksums(key);
             
             result = new ConfigValue;
             result->found = true;
@@ -66,6 +58,14 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
     fclose(lp);
 
 }
+
+bool FileConfigSource::is_named( uint16_t check_sum ){
+    return check_sum == this->name_checksum;
+}
+
+void FileConfigSource::write( vector<uint16_t> check_sums, string value ){}
+
+string FileConfigSource::read( vector<uint16_t> check_sums ){}
 
 // Return wether or not we have a readable config file
 bool FileConfigSource::has_config_file(){

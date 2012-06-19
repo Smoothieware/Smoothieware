@@ -10,6 +10,7 @@
 
 using namespace std;
 #include <vector>
+#include <string>
 #include "ConfigValue.h"
 #include "ConfigCache.h"
 
@@ -21,7 +22,11 @@ class ConfigSource {
 
         // Read each value, and append it as a ConfigValue to the config_cache we were passed
         virtual void transfer_values_to_cache( ConfigCache* ){}
+        virtual bool is_named( uint16_t check_sum ){}
+        virtual void write( vector<uint16_t> check_sums, string value ){}
+        virtual string read( vector<uint16_t> check_sums ){}
 
+        uint16_t name_checksum;
 };
 
 

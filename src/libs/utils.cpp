@@ -25,6 +25,18 @@ uint16_t get_checksum(string to_check){
    return (sum2 << 8) | sum1;
 }
 
+vector<uint16_t> get_checksums(string key){
+    vector<uint16_t> check_sums;
+    size_t begin_key = 0;
+    while( begin_key < key.size() ){
+        size_t end_key =  key.find_first_of(" .", begin_key);
+        string key_node = key.substr(begin_key, end_key - begin_key);
+        check_sums.push_back(get_checksum(key_node));
+        begin_key = end_key + 1;
+    }
+    return check_sums;
+}
+
 // Convert to lowercase
 string lc(string str){
     for (int i=0;i<strlen(str.c_str());i++)

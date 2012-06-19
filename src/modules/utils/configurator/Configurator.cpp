@@ -54,14 +54,22 @@ void Configurator::on_main_loop(void* argument){}
 
 // Output a ConfigValue from the specified ConfigSource to the stream
 void Configurator::config_get_command( string parameters, StreamOutput* stream ){
-    uint16_t source_checksum = get_checksum( shift_parameter(parameters) );
-    uint16_t setting_checksum = get_checksum( shift_parameter(parameters) );
-    if (setting_checksum == 0) { // output live setting
-        setting_checksum = source_checksum;
-        source_checksum = 0;
-        stream.printf( this->kernel->config->value(setting_checksum)->as_string().c_str() );
+    string source = shift_parameter(parameters);
+    string setting = shift_parameter(parameters);
+    if (setting == "") { // output live setting
+        setting = source;
+        source = "";
+        vector<uint16_t> setting_checksums = get_checksums( setting );
+        stream->printf( "%s is set to %s\r\n", setting.c_str(), this->kernel->config->value(setting_checksums)->as_string().c_str() );
     } else { // output setting from specified source
-        stream.printf( "WARNING: Reading from a specific source is unimplemented\r\n" );
+        uint16_t source_checksum = get_checksum( source );
+        vector<uint16_t> setting_checksums = get_checksums( setting );
+        for(int i=0; i < this->kernel->config->config_sources.size(); i++){
+            if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
+                stream->printf( "%s: %s is set to %s\r\n", source.c_str(), setting.c_str(), this->kernel->config->config_sources[i]->read(setting_checksums).c_str() );
+                break;
+            }
+        }
     }
 }
 
@@ -74,10 +82,11 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
         value = setting;
         setting = source;
         source = "";
-        stream.printf( "WARNING: Writing to live values is unimplemented\r\n" );
+        this->kernel->config->set_string(setting, value);
     } else {
         uint16_t source_checksum = get_checksum(source);
         uint16_t setting_checksum = get_checksum(setting);
+        stream->printf( "WARNING: Writing to values is unimplemented\r\n" );
     }
 }
 
