@@ -60,13 +60,17 @@ void Configurator::config_get_command( string parameters, StreamOutput* stream )
         setting = source;
         source = "";
         vector<uint16_t> setting_checksums = get_checksums( setting );
-        stream->printf( "%s is set to %s\r\n", setting.c_str(), this->kernel->config->value(setting_checksums)->as_string().c_str() );
+        ConfigValue* cv = this->kernel->config->value(setting_checksums);
+        string value = "";
+        if(cv->found){ value = cv->as_string(); }
+        stream->printf( "live: %s is set to %s\r\n", setting.c_str(), value.c_str() );
     } else { // output setting from specified source
         uint16_t source_checksum = get_checksum( source );
         vector<uint16_t> setting_checksums = get_checksums( setting );
         for(int i=0; i < this->kernel->config->config_sources.size(); i++){
             if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
-                stream->printf( "%s: %s is set to %s\r\n", source.c_str(), setting.c_str(), this->kernel->config->config_sources[i]->read(setting_checksums).c_str() );
+                string value = this->kernel->config->config_sources[i]->read(setting_checksums);
+                stream->printf( "%s: %s is set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
                 break;
             }
         }
@@ -83,10 +87,16 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
         setting = source;
         source = "";
         this->kernel->config->set_string(setting, value);
+        stream->printf( "live: %s has been set to %s\r\n", setting.c_str(), value.c_str() );
     } else {
         uint16_t source_checksum = get_checksum(source);
-        uint16_t setting_checksum = get_checksum(setting);
-        stream->printf( "WARNING: Writing to values is unimplemented\r\n" );
+        for(int i=0; i < this->kernel->config->config_sources.size(); i++){
+            if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
+                this->kernel->config->config_sources[i]->write(setting, value);
+                stream->printf( "%s: %s has been set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
+                break;
+            }
+        }
     }
 }
 

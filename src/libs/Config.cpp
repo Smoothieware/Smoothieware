@@ -34,7 +34,18 @@ Config::Config(){
 void Config::on_module_loaded(){}
 
 void Config::on_console_line_received( void* argument ){}
-void Config::set_string( string setting, string value ){ kernel->serial->printf( "WARNING: Writing to live values is unimplemented\r\n" ); }
+
+void Config::set_string( string setting, string value ){
+    ConfigValue* cv = new ConfigValue;
+    cv->found = true;
+    cv->check_sums = get_checksums(setting);
+    cv->value = value;
+
+    this->config_cache.replace_or_push_back(cv);
+
+    this->kernel->call_event(ON_CONFIG_RELOAD);
+}
+
 void Config::get_module_list(vector<uint16_t>* list, uint16_t family){ }
 
 
@@ -52,7 +63,6 @@ void Config::config_cache_load(){
         ConfigSource* source = this->config_sources[i];
         source->transfer_values_to_cache(&this->config_cache);
     }
-
     
     this->config_cache_loaded = true;
 }

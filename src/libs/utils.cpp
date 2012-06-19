@@ -26,9 +26,10 @@ uint16_t get_checksum(string to_check){
 }
 
 vector<uint16_t> get_checksums(string key){
+    key = key.append(" ");
     vector<uint16_t> check_sums;
     size_t begin_key = 0;
-    while( begin_key < key.size() ){
+    while( begin_key < key.size()-1 ){
         size_t end_key =  key.find_first_of(" .", begin_key);
         string key_node = key.substr(begin_key, end_key - begin_key);
         check_sums.push_back(get_checksum(key_node));
