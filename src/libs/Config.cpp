@@ -34,9 +34,6 @@ Config::Config(){
 void Config::on_module_loaded(){}
 
 void Config::on_console_line_received( void* argument ){}
-void Config::config_get_command( string parameter ){}
-void Config::config_set_command( string parameters ){}
-void Config::config_load_command( string parameters ){}
 void Config::set_string( string setting, string value ){}
 void Config::get_module_list(vector<uint16_t>* list, uint16_t family){ }
 

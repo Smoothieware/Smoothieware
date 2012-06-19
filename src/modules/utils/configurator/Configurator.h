@@ -20,7 +20,9 @@
 #define CONF_SD         2
 #define CONF_EEPROM     3
 
-#define ls_command_checksum      19679
+#define config_get_command_checksum        46310    // "config-get"
+#define config_set_command_checksum        55538    // "config-set"
+#define config_load_command_checksum       3143     // "config-load"
 
 class Configurator : public Module {
     public:
@@ -30,6 +32,10 @@ class Configurator : public Module {
         void on_console_line_received( void* argument );
         void on_gcode_execute( void* argument );
         void on_main_loop( void* argument );
+
+        void config_get_command( string parameters, StreamOutput* stream ); 
+        void config_set_command( string parameters, StreamOutput* stream ); 
+        void config_load_command(string parameters, StreamOutput* stream );
 
         void config_store(    Gcode* gcode, StreamOutput* stream );
         void config_read(     Gcode* gcode, StreamOutput* stream );

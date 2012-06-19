@@ -30,7 +30,9 @@ void Configurator::on_console_line_received( void* argument ){
 
     // Act depending on command
     switch( check_sum ){
-//        case ls_command_checksum      : this->ls_command(  get_arguments(possible_command), new_message.stream ); break;
+        case config_get_command_checksum: this->config_get_command(  get_arguments(possible_command), new_message.stream ); break;
+        case config_set_command_checksum: this->config_set_command(  get_arguments(possible_command), new_message.stream ); break;
+        case config_load_command_checksum: this->config_load_command(  get_arguments(possible_command), new_message.stream ); break;
     }
 }
 
@@ -50,6 +52,10 @@ void Configurator::on_gcode_execute(void* argument){
 
 void Configurator::on_main_loop(void* argument){
 }
+
+void Configurator::config_get_command( string parameters, StreamOutput* stream ){}
+void Configurator::config_set_command( string parameters, StreamOutput* stream ){}
+void Configurator::config_load_command( string parameters, StreamOutput* stream ){}
 
 // Write live settings to internal storage
 void Configurator::config_store( Gcode* gcode, StreamOutput* stream ){
