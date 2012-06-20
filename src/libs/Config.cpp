@@ -24,7 +24,8 @@ Config::Config(){
     this->config_cache_loaded = false;
 
     // Config source for */config files
-    this->config_sources.push_back(new FileConfigSource());
+    this->config_sources.push_back( new FileConfigSource("/local/config", LOCAL_CONFIGSOURCE_CHECKSUM) );
+    this->config_sources.push_back( new FileConfigSource("/sd/config", SD_CONFIGSOURCE_CHECKSUM) );
 
     // Pre-load the config cache
     this->config_cache_load();
@@ -34,10 +35,18 @@ Config::Config(){
 void Config::on_module_loaded(){}
 
 void Config::on_console_line_received( void* argument ){}
-void Config::config_get_command( string parameter ){}
-void Config::config_set_command( string parameters ){}
-void Config::config_load_command( string parameters ){}
-void Config::set_string( string setting, string value ){}
+
+void Config::set_string( string setting, string value ){
+    ConfigValue* cv = new ConfigValue;
+    cv->found = true;
+    cv->check_sums = get_checksums(setting);
+    cv->value = value;
+
+    this->config_cache.replace_or_push_back(cv);
+
+    this->kernel->call_event(ON_CONFIG_RELOAD);
+}
+
 void Config::get_module_list(vector<uint16_t>* list, uint16_t family){ }
 
 
@@ -55,7 +64,6 @@ void Config::config_cache_load(){
         ConfigSource* source = this->config_sources[i];
         source->transfer_values_to_cache(&this->config_cache);
     }
-
     
     this->config_cache_loaded = true;
 }

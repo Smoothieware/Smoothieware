@@ -15,10 +15,15 @@
 using namespace std;
 #include <string>
 
+#define FILE_CONFIGSOURCE_CHECKSUM    5281      // "file"
+
 class FileConfigSource : public ConfigSource {
     public:
-        FileConfigSource();
+        FileConfigSource(string config_file = "/sd/config", uint16_t name_checksum = FILE_CONFIGSOURCE_CHECKSUM);
         void transfer_values_to_cache( ConfigCache* cache );
+        bool is_named( uint16_t check_sum );
+        void write( string setting, string value );
+        string read( vector<uint16_t> check_sums );
         bool has_config_file();
         void try_config_file(string candidate);
         string get_config_file();

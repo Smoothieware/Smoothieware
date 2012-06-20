@@ -25,6 +25,19 @@ uint16_t get_checksum(string to_check){
    return (sum2 << 8) | sum1;
 }
 
+vector<uint16_t> get_checksums(string key){
+    key = key.append(" ");
+    vector<uint16_t> check_sums;
+    size_t begin_key = 0;
+    while( begin_key < key.size()-1 ){
+        size_t end_key =  key.find_first_of(" .", begin_key);
+        string key_node = key.substr(begin_key, end_key - begin_key);
+        check_sums.push_back(get_checksum(key_node));
+        begin_key = end_key + 1;
+    }
+    return check_sums;
+}
+
 // Convert to lowercase
 string lc(string str){
     for (int i=0;i<strlen(str.c_str());i++)
@@ -59,6 +72,15 @@ string get_arguments( string possible_command ){
     size_t beginning = possible_command.find_first_of(" ");
     if( beginning == string::npos ){ return ""; } 
     return possible_command.substr( beginning+1, possible_command.size() - beginning);
+}
+
+// Returns true if the file exists
+bool file_exists( string file_name ){
+    bool exists = false;
+    FILE *lp = fopen(file_name.c_str(), "r");
+    if(lp){ exists = true; }
+    fclose(lp);
+    return exists;
 }
 
 // Prepares and executes a watchdog reset
