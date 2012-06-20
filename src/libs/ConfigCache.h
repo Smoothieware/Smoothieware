@@ -35,6 +35,7 @@ class ConfigCache : public std::vector<ConfigValue*> {
                 if( match == false ){ continue; }
                 value_exists = true;
                 // Replace with the provided value 
+                delete this->at(i);
                 this->at(i) = new_value;
                 break;
             }

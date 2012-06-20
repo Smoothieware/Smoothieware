@@ -108,6 +108,11 @@ void Configurator::config_load_command( string parameters, StreamOutput* stream 
         this->kernel->config->config_cache_load();
         this->kernel->call_event(ON_CONFIG_RELOAD);
         stream->printf( "Reloaded settings\r\n" );
+    } else if(file_exists(source)){
+        FileConfigSource fcs(source);
+        fcs.transfer_values_to_cache(&this->kernel->config->config_cache);
+        this->kernel->call_event(ON_CONFIG_RELOAD);
+        stream->printf( "Loaded settings from %s\r\n", source.c_str() );
     } else {
         uint16_t source_checksum = get_checksum(source);
         for(int i=0; i < this->kernel->config->config_sources.size(); i++){

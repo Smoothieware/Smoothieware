@@ -19,6 +19,8 @@ string shift_parameter( string &parameters );
 
 string get_arguments( string possible_command );
 
+bool file_exists( string file_name );
+
 void system_reset( void );
 
 

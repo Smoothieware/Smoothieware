@@ -14,8 +14,9 @@ using namespace std;
 #include <string>
 
 
-FileConfigSource::FileConfigSource(){
+FileConfigSource::FileConfigSource(string config_file){
     this->name_checksum = FILE_CONFIGSOURCE_CHECKSUM;
+    this->config_file = config_file;
     this->config_file_found = false;
 }
 
@@ -145,8 +146,7 @@ string FileConfigSource::read( vector<uint16_t> check_sums ){
 // Return wether or not we have a readable config file
 bool FileConfigSource::has_config_file(){
     if( this->config_file_found ){ return true; }
-    this->try_config_file("/local/config");
-    this->try_config_file("/sd/config");
+    this->try_config_file(this->config_file);
     if( this->config_file_found ){
         return true;
     }else{
@@ -157,9 +157,7 @@ bool FileConfigSource::has_config_file(){
 
 // Tool function for get_config_file
 inline void FileConfigSource::try_config_file(string candidate){
-    FILE *lp = fopen(candidate.c_str(), "r");
-    if(lp){ this->config_file_found = true; this->config_file = candidate; }
-    fclose(lp);
+    if(file_exists(candidate)){ this->config_file_found = true; }
 }
 
 // Get the filename for the config file

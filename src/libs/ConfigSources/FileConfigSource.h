@@ -19,7 +19,7 @@ using namespace std;
 
 class FileConfigSource : public ConfigSource {
     public:
-        FileConfigSource();
+        FileConfigSource(string config_file = "/sd/config");
         void transfer_values_to_cache( ConfigCache* cache );
         bool is_named( uint16_t check_sum );
         void write( string setting, string value );

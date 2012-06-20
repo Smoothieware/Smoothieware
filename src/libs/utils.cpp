@@ -74,6 +74,15 @@ string get_arguments( string possible_command ){
     return possible_command.substr( beginning+1, possible_command.size() - beginning);
 }
 
+// Returns true if the file exists
+bool file_exists( string file_name ){
+    bool exists = false;
+    FILE *lp = fopen(file_name.c_str(), "r");
+    if(lp){ exists = true; }
+    fclose(lp);
+    return exists;
+}
+
 // Prepares and executes a watchdog reset
 void system_reset( void ){
     LPC_WDT->WDCLKSEL = 0x1;                // Set CLK src to PCLK
