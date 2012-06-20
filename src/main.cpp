@@ -11,6 +11,7 @@
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
+#include "modules/utils/configurator/Configurator.h"
 #include "modules/utils/currentcontrol/CurrentControl.h"
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "libs/ChaNFSSD/SDFileSystem.h"
@@ -32,6 +33,7 @@ int main() {
     kernel->add_module( new Laser(p21) );
     kernel->add_module( new Extruder() );
     kernel->add_module( new SimpleShell() );
+    kernel->add_module( new Configurator() );
     kernel->add_module( new CurrentControl() );
     kernel->add_module( new TemperatureControlPool() );
     kernel->add_module( new PauseButton() );   
