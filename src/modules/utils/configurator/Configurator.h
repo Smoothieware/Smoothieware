@@ -36,11 +36,6 @@ class Configurator : public Module {
         void config_get_command( string parameters, StreamOutput* stream ); 
         void config_set_command( string parameters, StreamOutput* stream ); 
         void config_load_command(string parameters, StreamOutput* stream );
-
-        void config_store(    Gcode* gcode, StreamOutput* stream );
-        void config_read(     Gcode* gcode, StreamOutput* stream );
-        void config_defaults( Gcode* gcode, StreamOutput* stream );
-        void config_print(    Gcode* gcode, StreamOutput* stream );
 };
 
 

@@ -39,13 +39,14 @@ void Configurator::on_console_line_received( void* argument ){
 // Process and respond to eeprom gcodes (M50x)
 void Configurator::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    if( gcode->has_letter('M') ){
+    if( gcode->has_letter('G') ){
+        int code = gcode->get_value('G');
+        switch( code ){
+        }
+    }
+    else if( gcode->has_letter('M') ){
         int code = gcode->get_value('M');
         switch( code ){
-            case 500:   this->config_store( gcode, gcode->stream ); break;
-            case 501:   this->config_read( gcode, gcode->stream ); break;
-            case 502:   this->config_defaults( gcode, gcode->stream ); break;
-            case 503:   this->config_print( gcode, gcode->stream ); break;
         }
     }
 }
@@ -103,14 +104,3 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
 // Reload config values from the specified ConfigSource
 void Configurator::config_load_command( string parameters, StreamOutput* stream ){}
 
-// Write live settings to internal storage
-void Configurator::config_store( Gcode* gcode, StreamOutput* stream ){}
-
-// Read settings from internal storage
-void Configurator::config_read( Gcode* gcode, StreamOutput* stream ){}
-
-// Reset live settings to defaults
-void Configurator::config_defaults( Gcode* gcode, StreamOutput* stream ){}
-
-// Output the current live settings to the stream
-void Configurator::config_print( Gcode* gcode, StreamOutput* stream ){}
