@@ -112,7 +112,7 @@ void Configurator::config_load_command( string parameters, StreamOutput* stream 
         uint16_t source_checksum = get_checksum(source);
         for(int i=0; i < this->kernel->config->config_sources.size(); i++){
             if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
-                this->kernel->config->config_sources[i]->transfer_values_to_cache(this->kernel->config->config_cache);
+                this->kernel->config->config_sources[i]->transfer_values_to_cache(&this->kernel->config->config_cache);
                 this->kernel->call_event(ON_CONFIG_RELOAD);
                 stream->printf( "Loaded settings from %s\r\n", source.c_str() );
                 break;
