@@ -14,8 +14,8 @@ using namespace std;
 #include <string>
 
 
-FileConfigSource::FileConfigSource(string config_file){
-    this->name_checksum = FILE_CONFIGSOURCE_CHECKSUM;
+FileConfigSource::FileConfigSource(string config_file, uint16_t name_checksum){
+    this->name_checksum = name_checksum;
     this->config_file = config_file;
     this->config_file_found = false;
 }

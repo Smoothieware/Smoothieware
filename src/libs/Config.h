@@ -22,6 +22,10 @@ using namespace std;
 #include <string>
 #include <stdio.h>
 
+#define LOCAL_CONFIGSOURCE_CHECKSUM     13581
+#define SD_CONFIGSOURCE_CHECKSUM        19415
+
+
 class Config : public Module {
     public:
         Config();
