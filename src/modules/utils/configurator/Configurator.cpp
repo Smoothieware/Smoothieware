@@ -102,5 +102,22 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
 }
 
 // Reload config values from the specified ConfigSource
-void Configurator::config_load_command( string parameters, StreamOutput* stream ){}
+void Configurator::config_load_command( string parameters, StreamOutput* stream ){
+    string source = shift_parameter(parameters);
+    if(source == ""){
+        this->kernel->config->config_cache_load();
+        this->kernel->call_event(ON_CONFIG_RELOAD);
+        stream->printf( "Reloaded settings\r\n" );
+    } else {
+        uint16_t source_checksum = get_checksum(source);
+        for(int i=0; i < this->kernel->config->config_sources.size(); i++){
+            if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
+                this->kernel->config->config_sources[i]->transfer_values_to_cache(this->kernel->config->config_cache);
+                this->kernel->call_event(ON_CONFIG_RELOAD);
+                stream->printf( "Loaded settings from %s\r\n", source.c_str() );
+                break;
+            }
+        }
+    }
+}
 
