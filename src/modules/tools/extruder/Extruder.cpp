@@ -5,7 +5,7 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
+/*
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/robot/Player.h"
@@ -283,3 +283,8 @@ uint32_t Extruder::reset_step_pin(uint32_t dummy){
     this->step_pin->set(0);
 	return 0;
 }
+
+*/
+
+
+

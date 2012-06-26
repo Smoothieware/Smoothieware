@@ -44,8 +44,7 @@ class Pin{
         }
 
         inline void set(bool value){
-            value = this->inverting ^ value;
-            if( value ){
+            if( this->inverting ^ value ){
                 this->port->FIOSET = 1 << this->pin;
             }else{
                 this->port->FIOCLR = 1 << this->pin;

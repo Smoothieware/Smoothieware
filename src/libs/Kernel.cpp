@@ -46,24 +46,35 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
 
+    printf("config\r\n");
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();
     // Serial second, because the other modules might want to say something
+    printf("serial\r\n");
     this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
 
     this->add_module( this->config );
     this->add_module( this->serial );
   
+    printf("hal\r\n");
     // HAL stuff 
     this->slow_ticker          = new SlowTicker();
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
     this->digipot              = new Digipot();
+    printf("hal conf\r\n");
+
+    // Configure the step ticker
+    int base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
+    double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
+    this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
+    this->step_ticker->set_frequency(   base_stepping_frequency );
 
     // LPC17xx-specific 
     NVIC_SetPriority(TIMER0_IRQn, 1); 
     NVIC_SetPriority(TIMER2_IRQn, 2); 
 
+    printf("modules\r\n");
     // Core modules 
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
     this->add_module( this->robot          = new Robot()         );
@@ -71,6 +82,9 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->player         = new Player()        );
     this->add_module( this->pauser         = new Pauser()        );
+
+
+    printf("after modules\r\n");
 }
 
 void Kernel::add_module(Module* module){

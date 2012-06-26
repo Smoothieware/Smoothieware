@@ -7,7 +7,7 @@
 
 #include "libs/Kernel.h"
 #include "modules/tools/laser/Laser.h"
-#include "modules/tools/extruder/Extruder.h"
+//#include "modules/tools/extruder/Extruder.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -18,25 +18,29 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 
-#include "libs/USBCDCMSC/USBCDCMSC.h"
-SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
-//LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
-USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
+//#include "libs/USBCDCMSC/USBCDCMSC.h"
+//SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
+LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
+//USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
 
 int main() {
+    
+    printf("test\r\n");
 
     Kernel* kernel = new Kernel();
 
+    printf("test\r\n");
+    
     kernel->serial->printf("Smoothie ( grbl port ) version 0.6 \r\nstart\r\n");
 
     kernel->add_module( new Laser(p21) );
-    kernel->add_module( new Extruder() );
+    //kernel->add_module( new Extruder() );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new CurrentControl() );
     kernel->add_module( new TemperatureControlPool() );
     kernel->add_module( new PauseButton() );   
 
-    kernel->add_module( &cdcmsc );
+    //kernel->add_module( &cdcmsc );
 
     while(1){
         kernel->call_event(ON_MAIN_LOOP);

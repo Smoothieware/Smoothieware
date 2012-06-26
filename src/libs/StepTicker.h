@@ -15,43 +15,24 @@ using namespace std;
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-
+#include "libs/StepperMotor.h"
 
 class StepTicker{
     public:
         StepTicker();
         void set_frequency( double frequency );
         void tick();
+        StepperMotor* add_stepper_motor(StepperMotor* stepper_motor);
         void set_reset_delay( double seconds );
         void reset_tick();
 
-        // For some reason this can't go in the .cpp, see :  http://mbed.org/forum/mbed/topic/2774/?page=1#comment-14221
-        template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
-            FPointer* hook = new FPointer(); 
-            hook->attach(optr, fptr);
-            this->hooks.push_back(hook);
-        }
-
-        template<typename T> void reset_attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
-            FPointer* reset_hook = new FPointer(); 
-            reset_hook->attach(optr, fptr);
-            this->reset_hooks.push_back(reset_hook);
-        }
-
-
-        vector<FPointer*> hooks; 
-        vector<FPointer*> reset_hooks; 
         double frequency;
-
+        vector<StepperMotor*> stepper_motors; 
+        uint32_t delay;
+        uint32_t period;
+        uint32_t debug;
+        uint32_t last_duration;
 };
-
-
-
-
-
-
-
-
 
 
 
