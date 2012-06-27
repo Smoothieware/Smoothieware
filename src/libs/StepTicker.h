@@ -32,6 +32,7 @@ class StepTicker{
         uint32_t period;
         uint32_t debug;
         uint32_t last_duration;
+        bool has_axes;
 };
 
 

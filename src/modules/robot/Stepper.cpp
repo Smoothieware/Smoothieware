@@ -19,6 +19,7 @@ Stepper* stepper;
 Stepper::Stepper(){
     this->current_block = NULL;
     this->paused = false;
+    this->trapezoid_generator_busy = false;
 }
 
 //Called when the module has just been loaded
@@ -92,11 +93,8 @@ void Stepper::on_gcode_execute(void* argument){
 void Stepper::on_block_begin(void* argument){
     Block* block  = static_cast<Block*>(argument);
 
-    this->trapezoid_generator_busy = true;
-    //printf("block begin %p\r\n", block);
-
     // The stepper does not care about 0-blocks
-    if( block->millimeters == 0.0 ){ this->trapezoid_generator_busy = false; return; }
+    if( block->millimeters == 0.0 ){ return; }
     
     // Mark the new block as of interrest to us
     block->take();
@@ -116,15 +114,11 @@ void Stepper::on_block_begin(void* argument){
     if( this->kernel->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->beta_stepper_motor; }
     if( this->kernel->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->gamma_stepper_motor; }
 
-    //printf("block begin ended\r\n");
-    this->trapezoid_generator_busy = false;
-
 }
 
 // Current block is discarded
 void Stepper::on_block_end(void* argument){
     Block* block  = static_cast<Block*>(argument);
-    //printf("block end %p\r\n", this->current_block);
     this->current_block = NULL; //stfu !
 }
 
@@ -153,28 +147,28 @@ inline uint32_t Stepper::step_events_completed(){
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
 uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
-    if(this->current_block && !this->trapezoid_generator_busy && !this->paused ) {
-        if(this->step_events_completed() < this->current_block->accelerate_until<<16) {
+    if(this->current_block && !this->paused ) {
+        if(this->step_events_completed() < this->current_block->accelerate_until) {
               this->trapezoid_adjusted_rate += this->current_block->rate_delta;
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
               }
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-          } else if (this->step_events_completed() >= this->current_block->decelerate_after<<16) {
+          }else if (this->step_events_completed() >= this->current_block->decelerate_after) {
               // NOTE: We will only reduce speed if the result will be > 0. This catches small
               // rounding errors that might leave steps hanging after the last trapezoid tick.
-              if (this->trapezoid_adjusted_rate > double(this->current_block->rate_delta) * 1.5) {
+              if(this->trapezoid_adjusted_rate > double(this->current_block->rate_delta) * 1.5) {
                   this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
               }else{
                   this->trapezoid_adjusted_rate = double(this->current_block->rate_delta) * 1.5; 
                   //this->trapezoid_adjusted_rate = floor(double(this->trapezoid_adjusted_rate / 2 ));
                   //this->kernel->serial->printf("over!\r\n");
               }
-              if (this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
+              if(this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->final_rate;
               }
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-          } else {
+          }else {
               // Make sure we cruise at exactly nominal rate
               if (this->trapezoid_adjusted_rate != this->current_block->nominal_rate) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
@@ -186,16 +180,9 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
 
 // Initializes the trapezoid generator from the current block. Called whenever a new
 // block begins.
-void Stepper::trapezoid_generator_reset(){
-    
+inline void Stepper::trapezoid_generator_reset(){
     this->trapezoid_adjusted_rate = this->current_block->initial_rate;
     this->trapezoid_tick_cycle_counter = 0;
-    
-    // Because this can be called directly from the main loop, it could be interrupted by the acceleration ticker, and that would be bad, so we use a flag
-    //this->trapezoid_generator_busy = true;
-    this->set_step_events_per_minute(this->trapezoid_adjusted_rate); 
-    //this->trapezoid_generator_busy = false; 
-
 }
 
 // Update the speed for all steppers

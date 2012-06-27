@@ -110,7 +110,8 @@ void StepperMotor::set_speed( double speed ){
     double double_fx_ticks_per_step = (double)(1<<16) * ( (double)(1<<16) * ticks_per_step );
     this->fx_ticks_per_step = (uint64_t)( floor(double_fx_ticks_per_step) );
 
-    // printf("speed: %f frequency: %f ticks_per_step: %f double_fx_ticks_per_step: %f floor: %f fx_ticks_per_step: %f \r\n", speed,  (double)this->step_ticker->frequency, ticks_per_step, double_fx_ticks_per_step, floor(double_fx_ticks_per_step), (double)this->fx_ticks_per_step );
+    //printf("speed: %f frequency: %f ticks_per_step: %f double_fx_ticks_per_step: %f floor: %f fx_ticks_per_step: %f \r\n", speed,  (double)this->step_ticker->frequency, ticks_per_step, double_fx_ticks_per_step, floor(double_fx_ticks_per_step), (double)this->fx_ticks_per_step );
+    //printf("s:%f f:%f tps:%f\r\n", speed,  (double)this->step_ticker->frequency, ticks_per_step );
 
 
 }

@@ -25,12 +25,8 @@ LocalFileSystem local("local");       // LPC17xx specific : comment if you are 
 
 int main() {
     
-    printf("test\r\n");
-
     Kernel* kernel = new Kernel();
 
-    printf("test\r\n");
-    
     kernel->serial->printf("Smoothie ( grbl port ) version 0.6 \r\nstart\r\n");
 
     kernel->add_module( new Laser(p21) );
