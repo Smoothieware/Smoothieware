@@ -25,7 +25,7 @@ Config::Config(){
 
     // Config source for */config files
     this->config_sources.push_back( new FileConfigSource("/local/config", LOCAL_CONFIGSOURCE_CHECKSUM) );
-    this->config_sources.push_back( new FileConfigSource("/sd/config", SD_CONFIGSOURCE_CHECKSUM) );
+    this->config_sources.push_back( new FileConfigSource("/sd/config",    SD_CONFIGSOURCE_CHECKSUM   ) );
 
     // Pre-load the config cache
     this->config_cache_load();
@@ -47,7 +47,15 @@ void Config::set_string( string setting, string value ){
     this->kernel->call_event(ON_CONFIG_RELOAD);
 }
 
-void Config::get_module_list(vector<uint16_t>* list, uint16_t family){ }
+void Config::get_module_list(vector<uint16_t>* list, uint16_t family){ 
+    for( int i=1; i<this->config_cache.size(); i++){
+        ConfigValue* value = this->config_cache.at(i); 
+        if( value->check_sums.size() == 3 && value->check_sums.at(2) == 29545 && value->check_sums.at(0) == family ){
+            // We found a module enable for this family, add it's number 
+            list->push_back(value->check_sums.at(1));
+        } 
+    }
+}
 
 
 // Command to load config cache into buffer for multiple reads during init

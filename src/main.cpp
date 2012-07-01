@@ -28,7 +28,7 @@ int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->serial->printf("Smoothie ( grbl port ) version 0.6 \r\nstart\r\n");
+    kernel->serial->printf("Smoothie ( grbl port ) version 0.6 \r\n");
 
     kernel->add_module( new Laser(p21) );
     kernel->add_module( new Extruder() );
@@ -39,6 +39,8 @@ int main() {
     kernel->add_module( new PauseButton() );   
 
     kernel->add_module( &cdcmsc );
+   
+    kernel->serial->printf("start\r\n");
 
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
