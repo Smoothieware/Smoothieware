@@ -26,7 +26,7 @@
  *  Modified by Sagar G V on Mar 11 2011. added __libc_init_array()
  *  Modfied by Adam Green in 2011 to support mbed.
  ******************************************************************************/
-#include "mbedsys.h"
+#include "mri.h"
 
 
 /* Exported constants --------------------------------------------------------*/
@@ -83,11 +83,20 @@ extern "C" __attribute__ ((section(".mbed_init"))) void __main(void)
     }
 
     /* Initialize stdin/stdout/stderr file handles. */
-    if (!GCC4MBED_DELAYED_STDIO_INIT)
+    if (!MRI_SEMIHOST_STDIO && !GCC4MBED_DELAYED_STDIO_INIT)
     {
         __GCC4MBEDOpenStandardHandles();
     }
     
+    if (MRI_ENABLE)
+    {
+        __mriInit(MRI_INIT_PARAMETERS);
+        if (MRI_BREAK_ON_INIT)
+        {
+            __debugbreak();
+        }
+    }
+
     /* Initialize static constructors. */
      __libc_init_array();
 

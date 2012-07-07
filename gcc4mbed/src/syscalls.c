@@ -1,4 +1,4 @@
-/* Copyright 2011 Adam Green (http://mbed.org/users/AdamGreen/)
+/* Copyright 2012 Adam Green (http://mbed.org/users/AdamGreen/)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@
 #include "LPC17xx.h" /* for _get_*SP() from core_cm3.h*/
 #include "mbedsys.h" /* for _sys_*() functions implemented in mbed/capi.ar */
 #include "error.h"   /* for error() panic routine */
+#include "mri.h"
 
 
 #undef errno
@@ -236,7 +237,11 @@ extern "C" int _read(int file, char *ptr, int len)
     int BytesNotRead;
     
     /* Open stdin/stdout/stderr if needed */
-    if (!g_StandardHandlesOpened && file < 3)
+    if (MRI_SEMIHOST_STDIO && file < 3)
+    {
+        return __mriNewlib_SemihostRead(file, ptr, len);
+    }
+    else if (!g_StandardHandlesOpened && file < 3)
     {
         __GCC4MBEDOpenStandardHandles();
     }
@@ -256,7 +261,11 @@ extern "C" int _write(int file, char *ptr, int len)
     int BytesNotWritten;
     
     /* Open stdin/stdout/stderr if needed */
-    if (!g_StandardHandlesOpened && file < 3)
+    if (MRI_SEMIHOST_STDIO && file < 3)
+    {
+        return __mriNewlib_SemihostWrite(file, ptr, len);
+    }
+    else if (!g_StandardHandlesOpened && file < 3)
     {
         __GCC4MBEDOpenStandardHandles();
     }
