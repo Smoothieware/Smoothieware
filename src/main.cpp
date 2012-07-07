@@ -19,10 +19,10 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 
-#include "libs/USBCDCMSC/USBCDCMSC.h"
-SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
-//LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
-USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
+//#include "libs/USBCDCMSC/USBCDCMSC.h"
+//SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
+LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
+//USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
 
 int main() {
 
@@ -38,7 +38,7 @@ int main() {
     kernel->add_module( new TemperatureControlPool() );
     kernel->add_module( new PauseButton() );   
 
-    kernel->add_module( &cdcmsc );
+    //kernel->add_module( &cdcmsc );
    
     kernel->serial->printf("start\r\n");
 
