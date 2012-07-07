@@ -1,6 +1,5 @@
 #ifndef CARTESIANSOLUTION_H
 #define CARTESIANSOLUTION_H
-#include "mbed.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "BaseSolution.h"

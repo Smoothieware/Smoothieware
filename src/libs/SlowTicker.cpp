@@ -7,12 +7,12 @@
 
 using namespace std;
 #include <vector>
-#include "mbed.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "SlowTicker.h"
 #include "libs/Hook.h"
+#include "system_LPC17xx.h" // mbed.h lib
 
 
 SlowTicker* global_slow_ticker;
@@ -34,9 +34,6 @@ void SlowTicker::set_frequency( int frequency ){
 }
 
 void SlowTicker::tick(){
-    if( this->max_frequency < 0.1 ){
-        this->kernel->serial->printf("empty\r\n");
-    }
     for (int i=0; i<this->hooks.size(); i++){ 
         Hook* hook = this->hooks.at(i);
         hook->counter += ( hook->frequency / this->max_frequency );
