@@ -9,6 +9,7 @@
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/Extruder.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
+#include "modules/tools/switch/SwitchPool.h"
 #include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/configurator/Configurator.h"
@@ -36,6 +37,7 @@ int main() {
     kernel->add_module( new Configurator() );
     kernel->add_module( new CurrentControl() );
     kernel->add_module( new TemperatureControlPool() );
+    kernel->add_module( new SwitchPool() );
     kernel->add_module( new PauseButton() );   
 
     kernel->add_module( &cdcmsc );
