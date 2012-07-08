@@ -15,6 +15,7 @@ using namespace std;
 #include "libs/Adc.h"
 #include "libs/Digipot.h"
 #include "libs/Pauser.h"
+#include "libs/StreamOutputPool.h"
 
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
@@ -49,11 +50,13 @@ Kernel::Kernel(){
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();
     // Serial second, because the other modules might want to say something
-    this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+    this->streams        = new StreamOutputPool();
 
+    this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+    
     this->add_module( this->config );
     this->add_module( this->serial );
-  
+
     // HAL stuff 
     this->slow_ticker          = new SlowTicker();
     this->step_ticker          = new StepTicker();

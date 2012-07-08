@@ -31,6 +31,9 @@ void SerialConsole::on_module_loaded() {
 
     // We only call the command dispatcher in the main loop, nowhere else
     this->register_for_event(ON_MAIN_LOOP);
+
+    // Add to the pack of streams kernel can call to, for example for broadcasting
+    this->kernel->streams->append_stream(this);
 }
         
 // Called on Serial::RxIrq interrupt, meaning we have received a char
