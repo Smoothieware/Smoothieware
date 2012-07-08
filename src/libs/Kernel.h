@@ -10,6 +10,7 @@
 #include "libs/Module.h"
 #include "libs/Config.h"
 #include "libs/SlowTicker.h"
+#include "libs/StreamOutputPool.h"
 #include "libs/StepTicker.h"
 #include "libs/Adc.h"
 #include "libs/Digipot.h"
@@ -55,6 +56,8 @@ class Kernel {
 
         // These modules are aviable to all other modules
         SerialConsole*    serial;
+        StreamOutputPool* streams; 
+
         GcodeDispatch*    gcode_dispatch;
         Robot*            robot;
         Stepper*          stepper;
