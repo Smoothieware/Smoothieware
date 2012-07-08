@@ -92,7 +92,7 @@ inline void StepperMotor::update_exit_tick(){
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps ){
    
-    //printf("stepper move %p moving %u steps\r\n", this, steps);
+    printf("stepper move %p moving %u steps\r\n", this, steps);
 
     // We do not set the direction directly, we will set the pin just before the step pin on the next tick 
     this->direction_bit = direction;
