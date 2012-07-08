@@ -12,6 +12,7 @@
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
 #include "libs/StepperMotor.h"
+#include "libs/Pin.h"
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1
@@ -20,13 +21,20 @@
 #define NOT_HOMING 0
 #define MOVING_TO_ORIGIN_FAST 1
 
+#define alpha_min_endstop_checksum       28684 
+#define beta_min_endstop_checksum        23457  
+#define gamma_min_endstop_checksum       16137 
+
 class Endstops : public Module{
     public:
         Endstops();
         void on_module_loaded();
         void on_gcode_received(void* argument);
+        void on_config_reload(void* argument);
 
         StepperMotor* steppers[3];
+        Pin*          pins[3];
+        char status;
 };
 
 

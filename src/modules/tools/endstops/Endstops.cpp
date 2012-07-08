@@ -11,6 +11,7 @@
 #include "modules/robot/Player.h"
 #include "Endstops.h"
 #include "libs/nuts_bolts.h"
+#include "libs/Pin.h"
 #include "libs/StepperMotor.h"
 #include "wait_api.h" // mbed.h lib
 
@@ -26,8 +27,17 @@ void Endstops::on_module_loaded() {
     this->steppers[1] = this->kernel->robot->beta_stepper_motor;
     this->steppers[2] = this->kernel->robot->gamma_stepper_motor;
 
+    // Settings
+    this->on_config_reload(this);
+    
 }
 
+// Get config
+void Endstops::on_config_reload(void* argument){
+    this->pins[0]                    = this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input();
+    this->pins[1]                    = this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_pin()->as_input();
+    this->pins[2]                    = this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input();
+}
 
 // Start homing sequences by response to GCode commands
 void Endstops::on_gcode_received(void* argument){
@@ -46,13 +56,30 @@ void Endstops::on_gcode_received(void* argument){
             // Start moving the axes to the origin
             this->status = MOVING_TO_ORIGIN_FAST; 
             for( char c = 'X'; c <= 'Z'; c++ ){
-                if( home_all_axes || gcode->has_letter(c) ){
+                if( ( home_all_axes || gcode->has_letter(c) ) && this->pins[c - 'X']->connected() ){
                     this->steppers[c - 'X']->move(0,10000000); 
-                    this->steppers[c - 'X']->set_speed(1); 
+                    this->steppers[c - 'X']->set_speed(10000); 
                 }
             }
 
             // Wait for all axes to have homed
+            bool running = true;
+            while(running){
+                running = false; 
+                for( char c = 'X'; c <= 'Z'; c++ ){
+                    if( ( home_all_axes || gcode->has_letter(c) ) && this->pins[c - 'X']->connected() ){
+                         if( this->pins[c - 'X']->get() ){
+                            // The endstop was hit, stop moving
+                            if( this->steppers[c - 'X']->moving ){ 
+                                this->steppers[c - 'X']->move(0,0); 
+                            }  
+                        }else{
+                            // The endstop was not hit yet
+                            running = true;
+                         }
+                    }
+                }
+            }
 
 
 

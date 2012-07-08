@@ -13,19 +13,31 @@ class Pin{
 
         Pin* from_string(std::string value){
             LPC_GPIO_TypeDef* gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
-            this->port_number =  atoi(value.substr(0,1).c_str());  
-            this->port = gpios[this->port_number]; 
-            this->inverting = ( value.find_first_of("!")!=string::npos ? true : false );
-            this->pin  = atoi( value.substr(2, value.size()-2-(this->inverting?1:0)).c_str() );
+            if( value.find_first_of("n")!=string::npos ? true : false ){
+                this->port_number = 0;  
+                this->port = gpios[this->port_number]; 
+                this->inverting = false;
+                this->pin = 255;;
+            }else{
+                this->port_number =  atoi(value.substr(0,1).c_str());  
+                this->port = gpios[this->port_number]; 
+                this->inverting = ( value.find_first_of("!")!=string::npos ? true : false );
+                this->pin  = atoi( value.substr(2, value.size()-2-(this->inverting?1:0)).c_str() );
+            } 
             return this;
         }
 
-        inline Pin*  as_output(){
+        inline bool connected(){
+            if( this->pin == 255 ){ return false; }
+            return true;
+        }
+
+        inline Pin* as_output(){
             this->port->FIODIR |= 1<<this->pin;
             return this;
         }  
 
-        inline Pin*  as_input(){
+        inline Pin* as_input(){
             this->port->FIODIR &= ~(1<<this->pin);
             return this;
         }  

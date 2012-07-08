@@ -42,7 +42,12 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" ");
             vector<uint16_t> check_sums = get_checksums(key);
-            
+           
+            //for( uint16_t i = 0; i < check_sums.size(); i++ ){
+            //    printf("%u ", check_sums.at(i));
+            //}
+            //printf("\r\n");
+
             result = new ConfigValue;
             result->found = true;
             result->check_sums = check_sums;
