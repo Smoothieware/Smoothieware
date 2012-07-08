@@ -20,6 +20,7 @@ class StepperMotor {
         bool tick();
         void move( bool direction, unsigned int steps );
         void set_speed( double speed );
+        void update_exit_tick();
 
         template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook(); 
@@ -46,6 +47,8 @@ class StepperMotor {
         uint32_t stepped;
         uint64_t fx_counter;
         uint64_t fx_ticks_per_step;
+        
+        bool exit_tick;
 };
 
 

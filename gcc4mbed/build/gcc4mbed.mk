@@ -137,7 +137,8 @@ DEFINES += -DMRI_SEMIHOST_STDIO=$(MRI_SEMIHOST_STDIO)
 LIBS = $(LIBS_PREFIX) $(GCC4MBED_DIR)/mri/mri.ar $(EXTERNAL_DIR)/mbed/LPC1768/mbed.ar $(EXTERNAL_DIR)/mbed/LPC1768/capi.ar $(EXTERNAL_DIR)/FATFileSystem/LPC1768/FATFileSystem.ar $(LIBS_SUFFIX)
 
 #  Compiler Options
-GPFLAGS = -O$(OPTIMIZATION) -gstabs+3 -mcpu=cortex-m3 -mthumb -mthumb-interwork -fshort-wchar -ffunction-sections -fdata-sections -fpromote-loop-indices -Wall -Wextra -Wimplicit -Wcast-align -Wpointer-arith -Wredundant-decls -Wshadow -Wcast-qual -Wcast-align -fno-exceptions
+#GPFLAGS = -O$(OPTIMIZATION) -gstabs+3 -mcpu=cortex-m3 -mthumb -mthumb-interwork -fshort-wchar -ffunction-sections -fdata-sections -fpromote-loop-indices -Wall -Wextra -Wimplicit -Wcast-align -Wpointer-arith -Wredundant-decls -Wshadow -Wcast-qual -Wcast-align -fno-exceptions
+GPFLAGS = -O$(OPTIMIZATION) -g -mcpu=cortex-m3 -mthumb -mthumb-interwork -fshort-wchar -ffunction-sections -fdata-sections -fpromote-loop-indices -Wall -Wextra -Wimplicit -Wcast-align -Wpointer-arith -Wredundant-decls -Wshadow -Wcast-qual -Wcast-align -fno-exceptions
 GPFLAGS += $(patsubst %,-I%,$(INCDIRS))
 GPFLAGS += $(DEFINES)
 
