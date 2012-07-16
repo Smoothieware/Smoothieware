@@ -50,13 +50,15 @@ void Endstops::on_gcode_received(void* argument){
             while(this->kernel->player->queue.size() > 0) { wait_us(500); }
 
             // Do we move select axes or all of them
-            bool home_all_axes = true;
-            if( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ){ home_all_axes = false; }
-           
+            char axes_to_move = ( ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ) ? 0x00 : 0xff );
+            for( char c = 'X'; c <= 'Z'; c++ ){
+                if( gcode->has_letter(c) && this->pins[c - 'X']->connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }
+            } 
+
             // Start moving the axes to the origin
             this->status = MOVING_TO_ORIGIN_FAST; 
             for( char c = 'X'; c <= 'Z'; c++ ){
-                if( ( home_all_axes || gcode->has_letter(c) ) && this->pins[c - 'X']->connected() ){
+                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                     this->steppers[c - 'X']->move(0,10000000); 
                     this->steppers[c - 'X']->set_speed(10000); 
                 }
@@ -67,7 +69,7 @@ void Endstops::on_gcode_received(void* argument){
             while(running){
                 running = false; 
                 for( char c = 'X'; c <= 'Z'; c++ ){
-                    if( ( home_all_axes || gcode->has_letter(c) ) && this->pins[c - 'X']->connected() ){
+                    if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                          if( this->pins[c - 'X']->get() ){
                             // The endstop was hit, stop moving
                             if( this->steppers[c - 'X']->moving ){ 
@@ -82,6 +84,26 @@ void Endstops::on_gcode_received(void* argument){
             }
 
 
+            printf("test a\r\n");
+            // Move back a small distance
+            this->status = MOVING_BACK; 
+            for( char c = 'X'; c <= 'Z'; c++ ){
+                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                    this->steppers[c - 'X']->move(1,1000); 
+                    this->steppers[c - 'X']->set_speed(1000); 
+                }
+            }
+
+            printf("test b\r\n");
+            // Wait for moves to be done
+            for( char c = 'X'; c <= 'Z'; c++ ){
+                if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){ 
+                    printf("axis %c \r\n", c );
+                    while( this->steppers[c - 'X']->moving ){ }
+                }
+            }
+
+            printf("test c\r\n");
 
             // Homing is done
             this->status = NOT_HOMING;
