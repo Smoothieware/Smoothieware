@@ -75,6 +75,7 @@ class Stepper : public Module {
         unsigned short step_bits[3];
         int counter_increment;
         bool paused;
+        bool force_speed_update;
 
         StepperMotor* main_stepper;
 

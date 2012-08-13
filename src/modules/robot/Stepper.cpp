@@ -20,6 +20,7 @@ Stepper::Stepper(){
     this->current_block = NULL;
     this->paused = false;
     this->trapezoid_generator_busy = false;
+    this->force_speed_update = false;
 }
 
 //Called when the module has just been loaded
@@ -113,14 +114,15 @@ void Stepper::on_block_begin(void* argument){
     // Setup acceleration for this block 
     this->trapezoid_generator_reset();
 
-    if( block->initial_rate == 0 ){
-        this->trapezoid_generator_tick(0);
-    }
-
     // Find the stepper with the more steps, it's the one the speed calculations will want to follow
     this->main_stepper = this->kernel->robot->alpha_stepper_motor;
     if( this->kernel->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->beta_stepper_motor; }
     if( this->kernel->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->gamma_stepper_motor; }
+
+
+    if( block->initial_rate == 0 ){
+        this->trapezoid_generator_tick(0);
+    }
 
 }
 
@@ -133,13 +135,9 @@ void Stepper::on_block_end(void* argument){
 // When a stepper motor has finished it's assigned movement
 inline uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
 
-    //printf("move finished in stepper %p:%d %p:%d %p:%d\r\n", this->kernel->robot->alpha_stepper_motor, this->kernel->robot->alpha_stepper_motor->moving, this->kernel->robot->beta_stepper_motor, this->kernel->robot->beta_stepper_motor->moving, this->kernel->robot->gamma_stepper_motor, this->kernel->robot->gamma_stepper_motor->moving    );
-    
     // We care only if none is still moving
     if( this->kernel->robot->alpha_stepper_motor->moving || this->kernel->robot->beta_stepper_motor->moving || this->kernel->robot->gamma_stepper_motor->moving ){ return 0; }
     
-    //printf("move finished in stepper, releasing\r\n");
-
     // This block is finished, release it
     if( this->current_block != NULL ){
         this->current_block->release(); 
@@ -155,6 +153,7 @@ inline uint32_t Stepper::step_events_completed(){
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
 uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
+
     if(this->current_block && !this->paused ) {
         if(this->step_events_completed() < this->current_block->accelerate_until) {
               this->trapezoid_adjusted_rate += this->current_block->rate_delta;
@@ -183,13 +182,19 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
                   this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
               }
           }
+          if( this->force_speed_update ){
+              this->force_speed_update = false;
+              this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+          }
     }
+
 }
 
 // Initializes the trapezoid generator from the current block. Called whenever a new
 // block begins.
 inline void Stepper::trapezoid_generator_reset(){
     this->trapezoid_adjusted_rate = this->current_block->initial_rate;
+    this->force_speed_update = true;
     this->trapezoid_tick_cycle_counter = 0;
 }
 
