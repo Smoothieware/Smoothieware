@@ -169,6 +169,7 @@ void Block::append_gcode(Gcode* gcode){
 void Block::pop_and_execute_gcode(Kernel* &kernel){
     Block* block = const_cast<Block*>(this);
     for(unsigned short index=0; index<block->gcodes.size(); index++){
+        //printf("GCODE Z: %s \r\n", block->gcodes[index].command.c_str() ); 
         kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
     }
 }

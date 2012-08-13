@@ -33,6 +33,7 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
 // Called a great many times per second, to step if we have to now
 bool StepperMotor::tick(){
 
+
     // output to pins 37t
     this->dir_pin->set(  this->direction_bit );
     this->step_pin->set( this->step_bit      );
@@ -42,13 +43,17 @@ bool StepperMotor::tick(){
         this->step_bit = 0; 
         return false; 
     }
-    
+   
+    //printf("tock\r\n");
+
     // increase the ( fixed point ) counter by one tick 11t
     this->fx_counter += (uint64_t)((uint64_t)1<<32);  
 
     // if we are to step now 10t
     if( this->fx_counter >= this->fx_ticks_per_step ){
     
+        //printf("tick!\r\n");
+        
         // move counter back 11t
         this->fx_counter -= this->fx_ticks_per_step;
 
@@ -60,6 +65,8 @@ bool StepperMotor::tick(){
 
         // is this move finished ? 11t
         if( this->stepped == this->steps_to_move ){
+
+            //printf("end\r\n");
 
             // work is done ! 8t
             this->moving = false;
@@ -81,8 +88,10 @@ bool StepperMotor::tick(){
 // This is just a way not to check for ( !this->moving || this->paused || this->fx_ticks_per_step == 0 ) at every tick()
 inline void StepperMotor::update_exit_tick(){
     if( !this->moving || this->paused || this->fx_ticks_per_step == 0 ){ 
+        //printf("%p exit to true, moving: %u, paused: %u, fx_ticks_per_step: %u \r\n", this, this->moving, this->paused, this->fx_ticks_per_step);
         this->exit_tick = true; 
     }else{
+        //printf("%p exit to false, moving: %u, paused: %u, fx_ticks_per_step: %u \r\n", this, this->moving, this->paused, this->fx_ticks_per_step);
         this->exit_tick = false;
     }
 }
@@ -92,7 +101,7 @@ inline void StepperMotor::update_exit_tick(){
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps ){
    
-    printf("stepper move %p moving %u steps\r\n", this, steps);
+    //printf("stepper move %p moving %u steps\r\n", this, steps);
 
     // We do not set the direction directly, we will set the pin just before the step pin on the next tick 
     this->direction_bit = direction;
@@ -113,7 +122,8 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( double speed ){
 
-    if( speed < 0.0001 ){ 
+    if( speed < 0.0001 ){
+        //printf("speed is zero\r\n"); 
         this->steps_per_second = 0;
         this->fx_ticks_per_step = 1>>63;
         return; 

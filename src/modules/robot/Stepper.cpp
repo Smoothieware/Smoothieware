@@ -51,9 +51,9 @@ void Stepper::on_config_reload(void* argument){
     this->minimum_steps_per_minute      =  this->kernel->config->value(minimum_steps_per_minute_checksum     )->by_default(1200  )->as_number();
 
     // TODO : This is supposed to be done by gcodes
-    this->kernel->robot->alpha_en_pin->set(1);
-    this->kernel->robot->beta_en_pin->set(1);
-    this->kernel->robot->gamma_en_pin->set(1);
+    this->kernel->robot->alpha_en_pin->set(0);
+    this->kernel->robot->beta_en_pin->set(0);
+    this->kernel->robot->gamma_en_pin->set(0);
 
 }
 
@@ -93,6 +93,10 @@ void Stepper::on_gcode_execute(void* argument){
 void Stepper::on_block_begin(void* argument){
     Block* block  = static_cast<Block*>(argument);
 
+    //printf("block begin\r\n");
+
+    //printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8d acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", block, block->steps[0], block->steps[1], block->steps[2], block->steps_event_count, block->nominal_rate, block->nominal_speed, block->millimeters, block->rate_delta, block->accelerate_until, block->decelerate_after, block->initial_rate, block->final_rate, block->times_taken, block->is_ready );
+    
     // The stepper does not care about 0-blocks
     if( block->millimeters == 0.0 ){ return; }
     
@@ -108,6 +112,10 @@ void Stepper::on_block_begin(void* argument){
 
     // Setup acceleration for this block 
     this->trapezoid_generator_reset();
+
+    if( block->initial_rate == 0 ){
+        this->trapezoid_generator_tick(0);
+    }
 
     // Find the stepper with the more steps, it's the one the speed calculations will want to follow
     this->main_stepper = this->kernel->robot->alpha_stepper_motor;
@@ -194,7 +202,7 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
     // Instruct the stepper motors
     if( this->kernel->robot->alpha_stepper_motor->moving ){ this->kernel->robot->alpha_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[ALPHA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
     if( this->kernel->robot->beta_stepper_motor->moving  ){ this->kernel->robot->beta_stepper_motor->set_speed(  (steps_per_minute/60L) * ( (double)this->current_block->steps[BETA_STEPPER ] / (double)this->current_block->steps_event_count ) ); }
-    if( this->kernel->robot->gamma_stepper_motor->moving ){ this->kernel->robot->alpha_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[GAMMA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
+    if( this->kernel->robot->gamma_stepper_motor->moving ){ this->kernel->robot->gamma_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[GAMMA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
 
     this->kernel->call_event(ON_SPEED_CHANGE, this);
 }

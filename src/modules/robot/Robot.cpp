@@ -75,6 +75,7 @@ void Robot::on_gcode_received(void * argument){
         gcode->call_on_gcode_execute_event_immediatly = true;
         this->execute_gcode(gcode);
         if( gcode->on_gcode_execute_event_called == false ){
+            //printf("GCODE A: %s \r\n", gcode->command.c_str() ); 
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
         }
     }else{
@@ -143,7 +144,7 @@ void Robot::execute_gcode(Gcode* gcode){
 // Convert target from millimeters to steps, and append this to the planner
 void Robot::append_milestone( double target[], double rate ){
     int steps[3]; //Holds the result of the conversion
-    
+   
     this->arm_solution->millimeters_to_steps( target, steps );
     
     double deltas[3];
@@ -178,6 +179,7 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
     gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) ); 
 
     if( gcode->call_on_gcode_execute_event_immediatly == true ){
+            //printf("GCODE B: %s \r\n", gcode->command.c_str() ); 
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
             gcode->on_gcode_execute_event_called = true;
     }
@@ -220,6 +222,7 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
     gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
 
     if( gcode->call_on_gcode_execute_event_immediatly == true ){
+            //printf("GCODE C: %s \r\n", gcode->command.c_str() ); 
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
             gcode->on_gcode_execute_event_called = true;
     }

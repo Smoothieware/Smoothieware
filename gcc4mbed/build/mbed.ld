@@ -36,8 +36,8 @@ MEMORY
     /* executable region (x) */
 
     /* Main ROM region - 512k for LPC1768 */
-    IROM (rx) : ORIGIN = 0x00000000, LENGTH = 512k
-    /* IROM (rx) : ORIGIN = 16K, LENGTH = (512k - 16K) */
+    /*IROM (rx) : ORIGIN = 0x00000000, LENGTH = 512k */
+    IROM (rx) : ORIGIN = 16K, LENGTH = (512k - 16K)
 
     /* local static RAM - 32k for LPC1768 */
     IRAM0 (rwx) : ORIGIN = 0x10000000, LENGTH = 32k

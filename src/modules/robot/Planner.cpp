@@ -37,7 +37,9 @@ void Planner::on_config_reload(void* argument){
 
 // Append a block to the queue, compute it's speed factors
 void Planner::append_block( int target[], double feed_rate, double distance, double deltas[] ){
-   
+
+    //printf("new block\r\n");
+
     // Stall here if the queue is ful
     this->kernel->player->wait_for_queue(2);
 
