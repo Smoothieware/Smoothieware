@@ -79,4 +79,6 @@ void Laser::set_proportional_power(){
     	// adjust power to maximum power and actual velocity
         this->laser_pin = double (this->laser_max_power) * double(this->kernel->stepper->trapezoid_adjusted_rate) / double(this->kernel->stepper->current_block->nominal_rate);
     }
+}
+
 
