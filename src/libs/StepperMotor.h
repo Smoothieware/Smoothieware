@@ -49,6 +49,7 @@ class StepperMotor {
         uint64_t fx_ticks_per_step;
         
         bool exit_tick;
+        bool dont_remove_from_active_list_yet;
 };
 
 

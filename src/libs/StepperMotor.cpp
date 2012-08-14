@@ -17,6 +17,7 @@ StepperMotor::StepperMotor(){
     this->direction_bit = 0;
     this->step_bit = 0;
     this->update_exit_tick();
+    this->dont_remove_from_active_list_yet = false;
 }
 
 StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
@@ -28,6 +29,7 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->direction_bit = 0;
     this->step_bit = 0;
     this->update_exit_tick();
+    this->dont_remove_from_active_list_yet = false;
 }
 
 // Called a great many times per second, to step if we have to now
@@ -44,16 +46,12 @@ bool StepperMotor::tick(){
         return false; 
     }
    
-    //printf("tock\r\n");
-
     // increase the ( fixed point ) counter by one tick 11t
     this->fx_counter += (uint64_t)((uint64_t)1<<32);  
 
     // if we are to step now 10t
     if( this->fx_counter >= this->fx_ticks_per_step ){
     
-        //printf("tick!\r\n");
-        
         // move counter back 11t
         this->fx_counter -= this->fx_ticks_per_step;
 
@@ -87,10 +85,20 @@ bool StepperMotor::tick(){
 
 // This is just a way not to check for ( !this->moving || this->paused || this->fx_ticks_per_step == 0 ) at every tick()
 inline void StepperMotor::update_exit_tick(){
-    if( !this->moving || this->paused || this->fx_ticks_per_step == 0 ){ 
-        this->exit_tick = true; 
+    if( !this->moving || this->paused || this->fx_ticks_per_step == 0 ){
+        // We must exit tick() after setting the pins, no bresenham is done 
+        if( this->exit_tick == false ){
+            //printf("set for removal %p \r\n", this);
+            this->exit_tick = true;
+            this->dont_remove_from_active_list_yet = true; 
+        }
     }else{
-        this->exit_tick = false;
+        // We must do the bresenham in tick()
+        if( this->exit_tick == true ){ 
+            this->exit_tick = false;
+            //printf("adding motor %p \r\n", this);
+            this->step_ticker->add_motor_to_active_list(this);
+        }
     }
 }
 

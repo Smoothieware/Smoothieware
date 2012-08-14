@@ -25,6 +25,8 @@ class StepTicker{
         StepperMotor* add_stepper_motor(StepperMotor* stepper_motor);
         void set_reset_delay( double seconds );
         void reset_tick();
+        void add_motor_to_active_list(StepperMotor* motor);
+        void remove_motor_from_active_list(StepperMotor* motor);
 
         double frequency;
         vector<StepperMotor*> stepper_motors; 
@@ -33,6 +35,8 @@ class StepTicker{
         uint32_t debug;
         uint32_t last_duration;
         bool has_axes;
+
+        StepperMotor* active_motors[12];
 };
 
 

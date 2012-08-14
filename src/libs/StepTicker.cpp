@@ -27,14 +27,15 @@ StepTicker::StepTicker(){
     LPC_TIM0->MR1 = 10000000;
     LPC_TIM0->MCR = 11;              // Match on MR0, reset on MR0, match on MR1
     LPC_TIM0->TCR = 1;               // Enable interrupt
-    
+
     // Default start values 
     this->debug = 0;
     this->has_axes = 0;
     this->set_frequency(0.001);
     this->set_reset_delay(100);
     this->last_duration = 0;
-    
+    this->active_motors[0] = NULL;   
+
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
 }
 
@@ -63,14 +64,47 @@ StepperMotor* StepTicker::add_stepper_motor(StepperMotor* stepper_motor){
 }
 
 inline void StepTicker::tick(){ 
-    for(unsigned int i=0; i < this->stepper_motors.size(); i++){ 
-        this->stepper_motors[i]->tick();
+    //for(unsigned int i=0; i < this->stepper_motors.size(); i++){ 
+    //    this->stepper_motors[i]->tick();
+    //}
+
+    uint8_t current_id = 0; 
+    StepperMotor* current = this->active_motors[0];
+    while(current != NULL ){
+        current->tick(); 
+        current_id++;
+        current = this->active_motors[current_id];
     }
 }
 
 inline void StepTicker::reset_tick(){
-    for(unsigned int i=0; i < this->stepper_motors.size(); i++){
-        this->stepper_motors[i]->step_pin->set(0);
+    
+    /*for(unsigned int i=0; i < this->stepper_motors.size(); i++){
+        StepperMotor* motor = this->stepper_motors[i];
+        motor->step_pin->set(0);
+        if( motor->exit_tick ){
+            if( motor->dont_remove_from_active_list_yet ){
+                motor->dont_remove_from_active_list_yet = false;
+            }else{
+                this->remove_motor_from_active_list(motor); 
+            }
+        }
+    }*/
+ 
+    uint8_t current_id = 0; 
+    StepperMotor* current = this->active_motors[0];
+    while(current != NULL ){
+        current->step_pin->set(0);
+        if( current->exit_tick ){
+            if( current->dont_remove_from_active_list_yet ){
+                current->dont_remove_from_active_list_yet = false;
+            }else{
+                this->remove_motor_from_active_list(current); 
+                current_id--;
+            }
+        }
+        current_id++;
+        current = this->active_motors[current_id];
     }
 }
 
@@ -92,13 +126,10 @@ extern "C" void TIMER0_IRQHandler (void){
         
         // Do not get out of here before everything is nice and tidy
         LPC_TIM0->MR0 = 2000000;
-   
         LPC_TIM0->IR |= 1 << 0;   // Reset it 
         
         // Step pins 
-        uint32_t aa = LPC_TIM0->TC; 
         global_step_ticker->tick(); 
-        uint32_t bb = LPC_TIM0->TC; 
     
         // Maybe we have spent enough time in this interrupt so that we have to reset the pins ourself
         if( LPC_TIM0->TC > global_step_ticker->delay ){
@@ -107,7 +138,6 @@ extern "C" void TIMER0_IRQHandler (void){
             // Else we have to trigger this a tad later, using MR1
             LPC_TIM0->MR1 = global_step_ticker->delay; 
         } 
-        uint32_t cc = LPC_TIM0->TC; 
 
         // If we went over the duration an interrupt is supposed to last, we have a problem 
         // That can happen tipically when we change blocks, where more than usual computation is done
@@ -158,6 +188,36 @@ extern "C" void TIMER0_IRQHandler (void){
     }
 
 
+}
+
+// We make a list of steppers that want to be called so that we don't call them for nothing
+void StepTicker::add_motor_to_active_list(StepperMotor* motor){
+    //printf("adding %p with exit: %u \r\n", motor, motor->exit_tick );
+    uint8_t current_id = 0; 
+    StepperMotor* current = this->active_motors[0];
+    while(current != NULL ){
+        if( current == motor ){ 
+            return;  // Motor already in list
+        }
+        current_id++;
+        current = this->active_motors[current_id];
+    }
+    this->active_motors[current_id  ] = motor;
+    this->active_motors[current_id+1] = NULL;
+}
+
+void StepTicker::remove_motor_from_active_list(StepperMotor* motor){
+    //printf("removing %p with exit: %u \r\n", motor, motor->exit_tick );
+    uint8_t current_id = 0;
+    uint8_t offset = 0; 
+    StepperMotor* current = this->active_motors[0];
+    while( current != NULL ){
+        if( current == motor ){ offset++; }
+        this->active_motors[current_id] = this->active_motors[current_id+offset];
+        current_id++;
+        current = this->active_motors[current_id+offset];
+    }
+    this->active_motors[current_id] = NULL;
 }
 
 
