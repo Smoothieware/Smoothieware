@@ -10,6 +10,7 @@
 //#include "modules/tools/extruder/Extruder.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
+#include "modules/tools/switch/SwitchPool.h"
 #include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/configurator/Configurator.h"
@@ -29,7 +30,7 @@ int main() {
     
     Kernel* kernel = new Kernel();
 
-    kernel->serial->printf("Smoothie ( grbl port ) version 0.6 \r\n");
+    kernel->streams->printf("Smoothie ( grbl port ) version 0.6.1 \r\n");
 
     kernel->add_module( new Laser(p21) );
     //kernel->add_module( new Extruder() );
@@ -37,12 +38,13 @@ int main() {
     kernel->add_module( new Configurator() );
     kernel->add_module( new CurrentControl() );
     kernel->add_module( new TemperatureControlPool() );
+    kernel->add_module( new SwitchPool() );
     kernel->add_module( new PauseButton() );   
     kernel->add_module( new Endstops() );
 
     kernel->add_module( &cdcmsc );
    
-    kernel->serial->printf("start\r\n");
+    kernel->streams->printf("start\r\n");
 
     while(1){
         kernel->call_event(ON_MAIN_LOOP);

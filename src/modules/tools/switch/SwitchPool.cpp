@@ -5,25 +5,33 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef STREAMOUTPUT_H
-#define STREAMOUTPUT_H
+#include "libs/Module.h"
+#include "libs/Kernel.h"
+#include <math.h>
+using namespace std;
+#include <vector>
+#include "SwitchPool.h"
+#include "Switch.h"
 
-class StreamOutput {
-    public:
-       StreamOutput(){}
-       virtual int printf(const char* format, ...){}
+SwitchPool::SwitchPool(){}
+
+void SwitchPool::on_module_loaded(){
+
+    vector<uint16_t> modules;
+    this->kernel->config->get_module_list( &modules, switch_checksum );
+
+    for( int i = 0; i < modules.size(); i++ ){
+        // If module is enabled
+        if( this->kernel->config->value(switch_checksum, modules[i], enable_checksum )->as_bool() == true ){
+            Switch* controller = new Switch(modules[i]);
+            this->kernel->add_module(controller); 
+            this->controllers.push_back( controller );
+        }
+    }
+
+}
 
 
 
 
-};
 
-
-
-
-
-
-
-
-
-#endif

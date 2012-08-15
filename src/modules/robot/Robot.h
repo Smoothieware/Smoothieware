@@ -19,8 +19,8 @@ using std::string;
 #include "libs/StepperMotor.h"
 
 
-#define default_seek_rate_checksum             6633
-#define default_feed_rate_checksum             47357
+#define default_seek_rate_checksum             47357
+#define default_feed_rate_checksum             6633
 #define mm_per_line_segment_checksum           30176
 #define mm_per_arc_segment_checksum            15470
 #define arc_correction_checksum                5074
