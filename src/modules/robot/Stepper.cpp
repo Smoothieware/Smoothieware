@@ -51,10 +51,8 @@ void Stepper::on_config_reload(void* argument){
     this->acceleration_ticks_per_second =  this->kernel->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
     this->minimum_steps_per_minute      =  this->kernel->config->value(minimum_steps_per_minute_checksum     )->by_default(1200  )->as_number();
 
-    // TODO : This is supposed to be done by gcodes
-    this->kernel->robot->alpha_en_pin->set(0);
-    this->kernel->robot->beta_en_pin->set(0);
-    this->kernel->robot->gamma_en_pin->set(0);
+    // Steppers start on by default
+    this->turn_enable_pins_on();
 
 }
 
@@ -82,12 +80,27 @@ void Stepper::on_gcode_execute(void* argument){
 
     if( gcode->has_letter('M')){
         int code = (int) gcode->get_value('M');
-        if( code == 84 ){
-            this->kernel->robot->alpha_en_pin->set(0);
-            this->kernel->robot->beta_en_pin->set(0);
-            this->kernel->robot->gamma_en_pin->set(0);
+        if( code == 17 ){
+            this->turn_enable_pins_on(); 
+        }
+        if( code == 84 || code == 18 ){
+            this->turn_enable_pins_off(); 
         }
     }
+}
+
+void Stepper::turn_enable_pins_on(){
+    this->kernel->robot->alpha_en_pin->set(0);
+    this->kernel->robot->beta_en_pin->set(0);
+    this->kernel->robot->gamma_en_pin->set(0);
+    this->enable_pins_status = true;
+}
+
+void Stepper::turn_enable_pins_off(){
+    this->kernel->robot->alpha_en_pin->set(1);
+    this->kernel->robot->beta_en_pin->set(1);
+    this->kernel->robot->gamma_en_pin->set(1);
+    this->enable_pins_status = false;
 }
 
 // A new block is popped from the queue
@@ -100,7 +113,12 @@ void Stepper::on_block_begin(void* argument){
     
     // The stepper does not care about 0-blocks
     if( block->millimeters == 0.0 ){ return; }
-    
+  
+    // We can't move with the enable pins off 
+    if( this->enable_pins_status == false ){
+        this->turn_enable_pins_on();
+    }
+
     // Mark the new block as of interrest to us
     block->take();
     
