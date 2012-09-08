@@ -116,8 +116,11 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 
 // Play a gcode file by considering each line as if it was received on the serial console
 void SimpleShell::play_command( string parameters, StreamOutput* stream ){
+    
     // Get filename
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
+    string options           = shift_parameter( parameters );
+    
     this->current_file_handler = fopen( filename.c_str(), "r");
     if(this->current_file_handler == NULL)
     {
@@ -125,7 +128,11 @@ void SimpleShell::play_command( string parameters, StreamOutput* stream ){
     	return;
     }
     this->playing_file = true;
-    this->current_stream = stream;
+    if( options.find_first_of("Qq") == string::npos ){
+        this->current_stream = stream;
+    }else{
+        this->current_stream = new StreamOutput();
+    }
 }
 
 // Reset the system
