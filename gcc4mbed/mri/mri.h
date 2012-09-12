@@ -79,7 +79,7 @@ int __mriNewlib_SemihostRead(int file, char *ptr, int len);
 
 #define MRI_VERSION_MAJOR       0
 #define MRI_VERSION_MINOR       3
-#define MRI_VERSION_BUILD       20120809
+#define MRI_VERSION_BUILD       20120911
 #define MRI_VERSION_SUBBUILD    1
 
 #define MRI_STR(X) MRI_STR2(X)
