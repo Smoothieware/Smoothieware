@@ -1,10 +1,13 @@
 /* mbed Microcontroller Library - I2CSlave
- * Copyright (c) 2007-2010 ARM Limited. All rights reserved.
- * jward 
+ * Copyright (c) 2007-2011 ARM Limited. All rights reserved.
  */ 
  
 #ifndef MBED_I2C_SLAVE_H
 #define MBED_I2C_SLAVE_H
+
+#include "device.h"
+
+#if DEVICE_I2CSLAVE
 
 #include "platform.h"
 #include "PinNames.h"
@@ -147,3 +150,6 @@ protected:
 } // namespace mbed
 
 #endif
+
+#endif
+

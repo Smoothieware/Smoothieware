@@ -1,9 +1,13 @@
 /* mbed Microcontroller Library - PortInOut
- * Copyright (c) 2006-2009 ARM Limited. All rights reserved.
+ * Copyright (c) 2006-2011 ARM Limited. All rights reserved.
  */ 
  
 #ifndef MBED_PORTIN_H
 #define MBED_PORTIN_H
+
+#include "device.h"
+
+#if DEVICE_PORTIN
 
 #include "PortNames.h"
 #include "PinNames.h"
@@ -50,9 +54,7 @@ public:
      * Variables:
      *  returns - An integer with each bit corresponding to associated port pin setting
      */
-    int read() {
-        return _gpio->FIOPIN & _mask;
-    }
+    int read();
 
     /* Function: mode
      *  Set the input pin mode
@@ -70,11 +72,15 @@ public:
     }
 
 private:
+#if defined(TARGET_LPC1768) || defined(TARGET_LPC2368)
     LPC_GPIO_TypeDef    *_gpio;
+#endif
     PortName            _port;
-    uint32_t            _mask;    
+    uint32_t            _mask;
 };
 
 } // namespace mbed
+
+#endif
 
 #endif
