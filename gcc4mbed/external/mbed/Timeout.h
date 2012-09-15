@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - Timeout
  * Copyright (c) 2007-2009 ARM Limited. All rights reserved.
- * sford
  */ 
  
 #ifndef MBED_TIMEOUT_H

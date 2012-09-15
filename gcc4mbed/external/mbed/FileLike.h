@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - FileLike
  * Copyright (c) 2008-2009 ARM Limited. All rights reserved.
- * sford
  */ 
  
 #ifndef MBED_FILELIKE_H
@@ -24,7 +23,7 @@ class FileLike : public Base, public FileHandle {
      * Variables
      *  name - The name to use to open the file.
      */
-    FileLike(const char *pName) : Base(pName) { }
+    FileLike(const char *name) : Base(name) { }
     virtual ~FileLike();
 
 };

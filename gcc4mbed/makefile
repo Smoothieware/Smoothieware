@@ -24,7 +24,3 @@ clean: $(DIRS)
 # Recurse into each of the specified directories and perform a make
 $(DIRS):
 	$(MAKE) $(MAKECMDGOALS) -C $@
-
-# Run makefile which pulls mbed libraries down from mbed.org when necessary.
-install_mbed:
-	$(MAKE) -C external

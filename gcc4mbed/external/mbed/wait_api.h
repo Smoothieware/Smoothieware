@@ -20,11 +20,8 @@
 
 /* mbed Microcontroller Library - wait_api
  * Copyright (c) 2009 ARM Limited. All rights reserved.
- * sford
  */ 
  
-// GENERIC
-
 #ifndef MBED_WAIT_API_H
 #define MBED_WAIT_API_H
 
@@ -56,6 +53,39 @@ void wait_ms(int ms);
  *  us - the whole number of microseconds to wait
  */
 void wait_us(int us);
+
+#ifdef TARGET_LPC11U24
+/* Function: sleep
+ *  Send the microcontroller to sleep
+ * 
+ * The processor is setup ready for sleep, and sent to sleep using __WFI(). In this mode, the
+ * system clock to the core is stopped until a reset or an interrupt occurs. This eliminates 
+ * dynamic power used by the processor, memory systems and buses. The processor, peripheral and 
+ * memory state are maintained, and the peripherals continue to work and can generate interrupts.
+ * 
+ * The processor can be woken up by any internal peripheral interrupt or external pin interrupt.
+ * 
+ * Note: The mbed interface semihosting is disconnected as part of going to sleep, and can not be restored. 
+ * Flash re-programming and the USB serial port will remain active, but the mbed program will no longer be
+ * able to access the LocalFileSystem
+ */
+void sleep(void);
+
+/* Function: deepsleep
+ *  Send the microcontroller to deep sleep
+ * 
+ * This processor is setup ready for deep sleep, and sent to sleep using __WFI(). This mode
+ * has the same sleep features as sleep plus it powers down peripherals and clocks. All state
+ * is still maintained. 
+ * 
+ * The processor can only be woken up by an external interrupt on a pin or a watchdog timer.
+ * 
+ * Note: The mbed interface semihosting is disconnected as part of going to sleep, and can not be restored. 
+ * Flash re-programming and the USB serial port will remain active, but the mbed program will no longer be
+ * able to access the LocalFileSystem
+ */
+void deepsleep(void);
+#endif
 
 #ifdef __cplusplus
 }
