@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - BusInOut
  * Copyright (c) 2009 ARM Limited. All rights reserved.
- * sford, rmeyer
  */
  
 #ifndef MBED_BUSINOUT_H

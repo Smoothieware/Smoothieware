@@ -1,4 +1,4 @@
-/* Copyright 2011 Adam Green (http://mbed.org/users/AdamGreen/)
+/* Copyright 2012 Adam Green (http://mbed.org/users/AdamGreen/)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
    limitations under the License.
 */
 /* Basic unit tests for LocalFileSystem functionality. */
-#include "mbed.h"
+#include <mbed.h>
 
 LocalFileSystem local("local");             // Create the local filesystem under the name "local"
 

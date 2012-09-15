@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - RPC
  * Copyright (c) 2008-2009 ARM Limited. All rights reserved.
- * sford
  */ 
  
 #ifndef MBED_RPC_H
@@ -211,7 +210,11 @@ inline PinName parse_pins(const char *str) {
         if(pin2 <= 9) {
             pin = pin * 10 + pin2;
         }
+#if defined(TARGET_LPC1768) || defined(TARGET_LPC2368)
         return (PinName)(LPC_GPIO0_BASE + port * 32 + pin);
+#elif defined(TARGET_LPC11U24)
+        return (PinName)(port * 32 + pin);
+#endif
     } else if(str[0] == 'p') {  // pn
         uint32_t pin = str[1] - '0'; // pn
         uint32_t pin2 = str[2] - '0'; // pnn

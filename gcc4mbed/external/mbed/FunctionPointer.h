@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - FunctionPointer
  * Copyright (c) 2007-2009 ARM Limited. All rights reserved.
- * sford
  */ 
  
 #ifndef MBED_FUNCTIONPOINTER_H

@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - can_helper
  * Copyright (c) 2009 ARM Limited. All rights reserved.
- * rmeyer
  */ 
 
 #ifndef MBED_CAN_HELPER_H

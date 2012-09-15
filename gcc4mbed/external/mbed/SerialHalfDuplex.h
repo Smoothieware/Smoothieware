@@ -1,10 +1,13 @@
 /* mbed Microcontroller Library - SerialHalfDuplex
- * Copyright (c) 2010 ARM Limited. All rights reserved.
- * jward
+ * Copyright (c) 2010-2011 ARM Limited. All rights reserved.
  */
 
 #ifndef MBED_SERIALHALFDUPLEX_H
 #define MBED_SERIALHALFDUPLEX_H
+
+#include "device.h"
+
+#if DEVICE_SERIAL
 
 #include "Serial.h"
 #include "PinNames.h"
@@ -13,24 +16,44 @@
 namespace mbed {
 
 /* Class: SerialHalfDuplex
- *  A serial port (UART) for communication with other devices, with a single
- *  shared transmit and receive line.
- *
- *  If the device both transmits and receives, then both (separate) pins need
- *  to be defined, and tied together externally.
+ * A serial port (UART) for communication with other devices using  
+ * Half-Duplex, allowing transmit and receive on a single
+ * shared transmit and receive line. Only one end should be transmitting 
+ * at a time.
+ * 
+ * Both the tx and rx pin should be defined, and wired together. 
+ * This is in addition to them being wired to the other serial 
+ * device to allow both read and write functions to operate.
  *
  *  Example:
- *  > // Send a byte as a master, and receive a byte as a slave
+ *  > // Send a byte to a second HalfDuplex device, and read the response
  *  >
  *  > #include "mbed.h"
  *  >
- *  > SerialHalfDuplex master(p9, p10);
+ *  > // p9 and p10 should be wired together to form "a"
+ *  > // p28 and p27 should be wired together to form "b"
+ *  > // p9/p10 should be wired to p28/p27 as the Half Duplex connection
  *  >
- *  > int main() {
- *  >     int outbyte = master.putc(0x55);
- *  >     int retbyte = master.getc();
- *  >     printf("Wrote: %02X  Read: %02X\n", outbyte, retbyte);
+ *  > SerialHalfDuplex a(p9, p10);
+ *  > SerialHalfDuplex b(p28, p27);
+ *  >
+ *  > void b_rx() { // second device response
+ *  >     b.putc(b.getc() + 4);
  *  > }
+ *  >   
+ *  > int main() {
+ *  >     b.attach(&b_rx);
+ *  >     for(int c = 'A'; c < 'Z'; c++) {
+ *  >         a.putc(c);
+ *  >         printf("sent [%c]\n", c);
+ *  >         wait(0.5);   // b should respond
+ *  >         if(a.readable()) {
+ *  >             printf("received [%c]\n", a.getc());
+ *  >         }
+ *  >     }
+ *  > }
+ * 
+ * For Simplex and Full-Duplex Serial communication, see <Serial>
  */
 class SerialHalfDuplex : public Serial {
 
@@ -39,13 +62,12 @@ public:
      * Create a half-duplex serial port, connected to the specified transmit
      * and receive pins.
      *
+     * These pins should be wired together, as well as to the target device
+     *
      * Variables:
      *  tx - Transmit pin
      *  rx - Receive pin
-     *
-     *  Note: Either tx or rx may be specified as NC if unused
      */
-
     SerialHalfDuplex(PinName tx, PinName rx, const char *name = NULL);
 
 #if 0       // Inherited from Serial class, for documentation
@@ -87,6 +109,10 @@ Serial::Even, Serial::Forced1, Serial::Forced0; default = Serial::None)
 
     /* Function: getc
      *  Read a character
+     *
+     * Read a character from the serial port. This call will block
+     * until a character is available. For testing if a character is
+     * available for reading, see <readable>.
      *
      * Variables:
      *  returns - The character read from the serial port
@@ -149,7 +175,6 @@ Serial::Even, Serial::Forced1, Serial::Forced0; default = Serial::None)
 
 protected:
     PinName     _txpin;
-    int         _pinfunc;
 
     virtual int _putc(int c);
     virtual int _getc(void);
@@ -157,5 +182,7 @@ protected:
 }; // End class SerialHalfDuplex
 
 } // End namespace
+
+#endif
 
 #endif

@@ -1,9 +1,7 @@
 /* mbed Microcontroller Library - PeripheralNames
- * Copyright (C) 2008-2009 ARM Limited. All rights reserved.
+ * Copyright (C) 2008-2011 ARM Limited. All rights reserved.
  *
  * Provides the mappings for peripherals
- * Implementation specific to the LPC1768/LPC2368
- * sford
  */
 
 #ifndef MBED_PERIPHERALNAMES_H
@@ -14,6 +12,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif 
+
+#if defined(TARGET_LPC1768) || defined(TARGET_LPC2368)
 
 enum UARTName {
     UART_0 = (int)LPC_UART0_BASE
@@ -77,11 +77,67 @@ enum CANName {
 }; 
 typedef enum CANName CANName;
 
+#define US_TICKER_TIMER TIMER_3
+#define US_TICKER_TIMER_IRQn TIMER3_IRQn
+
+#elif defined(TARGET_LPC11U24)
+
+enum UARTName {
+    UART_0 = (int)LPC_USART_BASE
+};
+typedef enum UARTName UARTName;
+
+enum I2CName {
+    I2C_0 = (int)LPC_I2C_BASE
+};
+typedef enum I2CName I2CName;
+
+enum TimerName {
+    TIMER_0 = (int)LPC_CT32B0_BASE
+    , TIMER_1 = (int)LPC_CT32B1_BASE
+};
+typedef enum TimerName TimerName;
+
+enum ADCName {
+    ADC0_0 = 0
+    , ADC0_1
+    , ADC0_2
+    , ADC0_3
+    , ADC0_4
+    , ADC0_5
+    , ADC0_6
+    , ADC0_7
+};
+typedef enum ADCName ADCName;
+
+enum SPIName {
+    SPI_0 = (int)LPC_SSP0_BASE
+    , SPI_1 = (int)LPC_SSP1_BASE
+};
+typedef enum SPIName SPIName;
+
+#define US_TICKER_TIMER TIMER_1
+#define US_TICKER_TIMER_IRQn     TIMER_32_1_IRQn 
+
+typedef enum PWMName {
+    PWM_1 = 0
+    , PWM_2
+    , PWM_3
+    , PWM_4
+    , PWM_5
+    , PWM_6
+    , PWM_7
+    , PWM_8
+    , PWM_9
+    , PWM_10
+    , PWM_11
+} PWMName;
+
+#endif
+
 #define STDIO_UART_TX     USBTX
 #define STDIO_UART_RX     USBRX
 #define STDIO_UART        UART_0
-#define US_TICKER_TIMER TIMER_3
-#define US_TICKER_TIMER_IRQn TIMER3_IRQn
 
 #ifdef __cplusplus
 }
