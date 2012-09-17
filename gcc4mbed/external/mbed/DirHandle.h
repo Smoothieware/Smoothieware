@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - DirHandler
  * Copyright (c) 2008-2009 ARM Limited. All rights reserved.
- * sford
  */ 
  
 #ifndef MBED_DIRHANDLE_H
@@ -76,7 +75,7 @@ class DirHandle {
      *  location - The location to seek to. Must be a value returned
      *   by telldir.
      */
-    virtual void seekdir(off_t location) { (void)location; }
+    virtual void seekdir(off_t location) { }
 
 };
 

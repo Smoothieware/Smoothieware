@@ -1,109 +1,114 @@
-/* Shim functions used to get mbed based programs to compile and run under GCC */
-/* Code originated from startup_LPC17xx.c which contained the following notice */
-/****************************************************************************//**
- * @file :    startup_LPC17xx.c
- * @brief : CMSIS Cortex-M3 Core Device Startup File
- * @version : V1.01
- * @date :    4. Feb. 2009
- *
- *----------------------------------------------------------------------------
- *
- * Copyright (C) 2009 ARM Limited. All rights reserved.
- *
- * ARM Limited (ARM) is supplying this software for use with Cortex-Mx
- * processor based microcontrollers.  This file can be freely distributed
- * within development tools that are supporting such ARM based processors.
- *
- * THIS SOFTWARE IS PROVIDED "AS IS".  NO WARRANTIES, WHETHER EXPRESS, IMPLIED
- * OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE.
- * ARM SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR
- * CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
- *
- * Updates:
- *  Mod by nio for the .fastcode part
- *  Mod by Sagar G V for &_stack part. Stack Pointer was not getting initialized to RAM0 top..was hanging in the middle
- *  Modified by Sagar G V on Mar 11 2011. added __libc_init_array()
- *  Modfied by Adam Green in 2011 to support mbed.
- ******************************************************************************/
-#include "mri.h"
+/* Copyright 2012 Adam Green (http://mbed.org/users/AdamGreen/)
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as published
+   by the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.   
+*/
+/* Provide routines which hook the MRI debug monitor into GCC4MBED projects. */
+#include <string.h>
+#include <mri.h>
 
 
-/* Exported constants --------------------------------------------------------*/
-extern unsigned long _sidata;       /* start address for the initialization values of the .data section. defined in linker script */
-extern unsigned long _sdata;        /* start address for the .data section. defined in linker script */
-extern unsigned long _edata;        /* end address for the .data section. defined in linker script */
-
-extern unsigned long _sifastcode;   /* start address for the initialization values of the .fastcode section. defined in linker script */
-extern unsigned long _sfastcode;    /* start address for the .fastcode section. defined in linker script */
-extern unsigned long _efastcode;    /* end address for the .fastcode section. defined in linker script */
-
-extern unsigned long _sbss;         /* start address for the .bss section. defined in linker script */
-extern unsigned long _ebss;         /* end address for the .bss section. defined in linker script */
-
-
-/* Function prototypes ------------------------------------------------------*/
+extern unsigned int __bss_start__;
+extern unsigned int __bss_end__;
 extern "C" int  main(void);
 extern "C" void __libc_init_array(void);
 extern "C" void exit(int ErrorCode);
-extern "C" void __GCC4MBEDOpenStandardHandles(void);
-
-
-/* CRT initialization code called from Reset_Handler after it calls SystemInit() */
-extern "C" __attribute__ ((section(".mbed_init"))) void __main(void)
+extern "C" void _start(void)
 {
-    unsigned long*  pulDest;
-    unsigned long*  pulSrc;
-    int             ExitCode;
-
-    /* Copy the data segment initializers from flash to SRAM in ROM mode if needed */
-    if (&_sidata != &_sdata)	// only if needed
-    {
-        pulSrc = &_sidata;
-        for(pulDest = &_sdata; pulDest < &_edata; ) 
-        {
-            *(pulDest++) = *(pulSrc++);
-        }
-    }
-
-    /* Copy the .fastcode code from ROM to SRAM if needed */
-    if (&_sifastcode != &_sfastcode) 
-    {
-        pulSrc = &_sifastcode;
-        for(pulDest = &_sfastcode; pulDest < &_efastcode; ) 
-        {
-            *(pulDest++) = *(pulSrc++);
-        }
-    }
-
-    /* Zero fill the bss segment. */
-    for(pulDest = &_sbss; pulDest < &_ebss; )
-    {
-        *(pulDest++) = 0;
-    }
-
-    /* Initialize stdin/stdout/stderr file handles. */
-    if (!MRI_SEMIHOST_STDIO && !GCC4MBED_DELAYED_STDIO_INIT)
-    {
-        __GCC4MBEDOpenStandardHandles();
-    }
+    int bssSize = (int)&__bss_end__ - (int)&__bss_start__;
+    int mainReturnValue;
+    
+    memset(&__bss_start__, 0, bssSize);
     
     if (MRI_ENABLE)
     {
         __mriInit(MRI_INIT_PARAMETERS);
         if (MRI_BREAK_ON_INIT)
-        {
             __debugbreak();
-        }
     }
-
-    /* Initialize static constructors. */
-     __libc_init_array();
-
-    /* Call the application's entry point. */
-    ExitCode = main();
     
-    /* Call exit */
-    exit(ExitCode);
+    __libc_init_array();
+    mainReturnValue = main();
+    exit(mainReturnValue);
 }
 
+
+extern "C" int __real__read(int file, char *ptr, int len);
+extern "C" int __wrap__read(int file, char *ptr, int len)
+{
+    if (MRI_SEMIHOST_STDIO && file < 3)
+        return __mriNewlib_SemihostRead(file, ptr, len);
+     return __real__read(file, ptr, len);
+}
+
+
+extern "C" int __real__write(int file, char *ptr, int len);
+extern "C" int __wrap__write(int file, char *ptr, int len)
+{
+    if (MRI_SEMIHOST_STDIO && file < 3)
+        return __mriNewlib_SemihostWrite(file, ptr, len);
+    return __real__write(file, ptr, len);
+}
+
+
+extern "C" int __real__isatty(int file);
+extern "C" int __wrap__isatty(int file)
+{
+    /* Hardcoding the stdin/stdout/stderr handles to be interactive tty devices, unlike mbed.ar */
+    if (file < 3)
+        return 1;
+    return __real__isatty(file);
+}
+
+
+extern "C" int __wrap_semihost_connected(void)
+{
+    /* MRI makes it look like there is no mbed interface attached since it disables the JTAG portion but MRI does
+       support some of the mbed semihost calls when it is running so force it to return -1, indicating that the
+       interface is attached. */
+    return -1;
+}
+
+
+
+extern "C" void abort(void)
+{
+    if (MRI_ENABLE)
+        __debugbreak();
+        
+    exit(1);
+}
+
+
+extern "C" void __cxa_pure_virtual(void)
+{
+    abort();
+}
+
+
+extern "C" int __aeabi_unwind_cpp_pr0(int state, void* controlBlock, void* context)
+{
+    abort();
+}
+
+
+extern "C" int __aeabi_unwind_cpp_pr1(int state, void* controlBlock, void* context)
+{
+    abort();
+}
+
+
+extern "C" int __aeabi_unwind_cpp_pr2(int state, void* controlBlock, void* context)
+{
+    abort();
+}

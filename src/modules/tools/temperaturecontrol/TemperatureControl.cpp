@@ -43,6 +43,10 @@ void TemperatureControl::on_main_loop(void* argument){ }
 // Get configuration from the config file
 void TemperatureControl::on_config_reload(void* argument){
 
+    // General config
+    this->set_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_m_code_checksum)->by_default(104)->as_number();
+    this->set_and_wait_m_code = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
+    this->get_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
     this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(5)->as_number();
 
     // Values are here : http://reprap.org/wiki/Thermistor
@@ -88,13 +92,17 @@ void TemperatureControl::on_config_reload(void* argument){
 void TemperatureControl::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
 
+
+    //gcode->stream->printf("%u %u %u \r\n",gcode->has_letter('M'), (gcode->get_value('M') == 104), gcode->has_letter('S') );
+
     // Set temperature without waiting
-    if( gcode->has_letter('M') && gcode->get_value('M') == 104 && gcode->has_letter('S') ){
+    if( gcode->has_letter('M') && gcode->get_value('M') == this->set_m_code && gcode->has_letter('S') ){
+        //gcode->stream->printf("setting to %f meaning %u  \r\n", gcode->get_value('S'), this->temperature_to_adc_value( gcode->get_value('S') ) );
         this->set_desired_temperature(gcode->get_value('S')); 
     } 
 
     // Set temperature and wait
-    if( gcode->has_letter('M') && gcode->get_value('M') == 109 && gcode->has_letter('S') ){
+    if( gcode->has_letter('M') && gcode->get_value('M') == this->set_and_wait_m_code && gcode->has_letter('S') ){
         this->set_desired_temperature(gcode->get_value('S'));
         
         // Pause 
@@ -104,8 +112,8 @@ void TemperatureControl::on_gcode_execute(void* argument){
     } 
 
     // Get temperature
-    if( gcode->has_letter('M') && gcode->get_value('M') == 105 ){
-        gcode->stream->printf("get temperature: %f current:%f target:%f \r\n", this->get_temperature(), this->new_thermistor_reading(), this->desired_adc_value );
+    if( gcode->has_letter('M') && gcode->get_value('M') == this->get_m_code ){
+        gcode->stream->printf("get temperature: %f current:%f target:%f bare_value:%u \r\n", this->get_temperature(), this->new_thermistor_reading(), this->desired_adc_value, this->kernel->adc->read(this->thermistor_pin)  );
     } 
 }
 

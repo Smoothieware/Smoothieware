@@ -1,10 +1,13 @@
 /* mbed Microcontroller Library - AnalogIn
- * Copyright (c) 2006-2009 ARM Limited. All rights reserved.
- * sford
+ * Copyright (c) 2006-2011 ARM Limited. All rights reserved.
  */ 
 
 #ifndef MBED_ANALOGIN_H
 #define MBED_ANALOGIN_H
+
+#include "device.h"
+
+#if DEVICE_ANALOGIN
 
 #include "platform.h"
 #include "PinNames.h"
@@ -90,5 +93,7 @@ protected:
 };
 
 } // namespace mbed
+
+#endif
 
 #endif

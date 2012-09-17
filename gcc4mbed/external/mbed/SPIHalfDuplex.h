@@ -1,10 +1,13 @@
-/* mbed Microcontroller Library - SPI
- * Copyright (c) 2010 ARM Limited. All rights reserved.
- * jward
+/* mbed Microcontroller Library - SPIHalfDuplex
+ * Copyright (c) 2010-2011 ARM Limited. All rights reserved.
  */
 
 #ifndef MBED_SPIHALFDUPLEX_H
 #define MBED_SPIHALFDUPLEX_H
+
+#include "device.h"
+
+#if DEVICE_SPI
 
 #include "SPI.h"
 
@@ -101,7 +104,6 @@ public:
     void slave_format(int sbits);
 
 protected:
-
     PinName _mosi;
     PinName _miso;
     int     _sbits;
@@ -109,5 +111,7 @@ protected:
 }; // End of class
 
 } // End of namespace mbed
+
+#endif
 
 #endif

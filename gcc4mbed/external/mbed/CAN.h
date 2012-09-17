@@ -1,10 +1,13 @@
 /* mbed Microcontroller Library - can
- * Copyright (c) 2009 ARM Limited. All rights reserved.
- * rmeyer
+ * Copyright (c) 2009-2011 ARM Limited. All rights reserved.
  */ 
 
 #ifndef MBED_CAN_H
 #define MBED_CAN_H
+
+#include "device.h"
+
+#if DEVICE_CAN
 
 #include "Base.h"
 #include "platform.h" 
@@ -224,7 +227,14 @@ public:
     *  mptr - pointer to the member function to be called
     */
    template<typename T>
-   void attach(T* tptr, void (T::*mptr)(void));
+   void attach(T* tptr, void (T::*mptr)(void)) {
+        if((mptr != NULL) && (tptr != NULL)) {
+            _rxirq.attach(tptr, mptr);
+            setup_interrupt();
+        } else {
+            remove_interrupt();
+        }
+    }
     
 private:
 
@@ -238,3 +248,5 @@ private:
 } // namespace mbed
 
 #endif    // MBED_CAN_H
+
+#endif
