@@ -7,7 +7,7 @@
 
 #include "libs/Kernel.h"
 #include "modules/tools/laser/Laser.h"
-//#include "modules/tools/extruder/Extruder.h"
+#include "modules/tools/extruder/Extruder.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
 #include "modules/tools/switch/SwitchPool.h"
@@ -33,7 +33,7 @@ int main() {
     kernel->streams->printf("Smoothie ( grbl port ) version 0.6.1 \r\n");
 
     //kernel->add_module( new Laser(p21) );
-    //kernel->add_module( new Extruder() );
+    kernel->add_module( new Extruder() );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
     kernel->add_module( new CurrentControl() );
