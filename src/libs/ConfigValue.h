@@ -95,13 +95,13 @@ class ConfigValue{
             return this->has_characters(string("!"));
         }
 
-        string value;
+        double default_double; 
         vector<uint16_t> check_sums;
+        string value;
+        string default_string;
         uint16_t check_sum; 
         bool found;
         bool default_set;
-        double default_double; 
-        string default_string;
 };
 
 

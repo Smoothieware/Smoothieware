@@ -26,9 +26,20 @@ SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are
 //LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
 USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
 
+
+#include <malloc.h>
+#include "mbed.h"
+
 int main() {
-    
+
+
     Kernel* kernel = new Kernel();
+
+    printf("After Kernel\n");
+    malloc_stats();
+
+
+    mallinfo();
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.6.1 \r\n");
 
@@ -42,8 +53,14 @@ int main() {
     kernel->add_module( new PauseButton() );   
     kernel->add_module( new Endstops() );
 
+    printf("After modules\n");
+    malloc_stats();
+
     kernel->add_module( &cdcmsc );
    
+    printf("After USB\n");
+    malloc_stats();
+
     kernel->streams->printf("start\r\n");
 
     while(1){

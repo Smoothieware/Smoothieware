@@ -9,6 +9,8 @@
 #include "ConfigValue.h"
 #include "FileConfigSource.h"
 #include "ConfigCache.h"
+#include <malloc.h>
+
 
 using namespace std;
 #include <string>
@@ -22,7 +24,13 @@ FileConfigSource::FileConfigSource(string config_file, uint16_t name_checksum){
 
 // Transfer all values found in the file to the passed cache
 void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
-    
+   
+
+    printf("Before file reading\n");
+    malloc_stats();
+
+
+
     // Default empty value
     ConfigValue* result = new ConfigValue;
     
@@ -31,37 +39,61 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
     string buffer;
     int c; 
+
+    int debug_total = 0;
+
     // For each line 
     do {
         c = fgetc (lp);
         if (c == '\n' || c == EOF){
+
+            printf("key:<%s> \r\n", buffer.c_str());
+            
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
             if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
-            string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" ");
-            vector<uint16_t> check_sums = get_checksums(key);
-           
-            //for( uint16_t i = 0; i < check_sums.size(); i++ ){
-            //    printf("%u ", check_sums.at(i));
-            //}
-            //printf("\r\n");
+            
+            vector<uint16_t> check_sums = get_checksums(buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" "));
 
+            printf("before trouble\r\n");
+            printf("sizeof(ConfigValue): %u\r\n", sizeof(ConfigValue)); 
+            malloc_stats();
+   
+            printf("trouble \r\n"); 
             result = new ConfigValue;
+
+            malloc_stats();
+            printf("after trouble\r\n");
+
+
             result->found = true;
             result->check_sums = check_sums;
+
             result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
+          
+            debug_total += result->value.size(); 
             
+            printf("value:<%s> %d \r\n", result->value.c_str(), debug_total);
+
             // Append the newly found value to the cache we were passed 
             cache->replace_or_push_back(result);
-            
+
             buffer.clear();
+
         }else{
             buffer += c;
         }
     } while (c != EOF);  
     fclose(lp);
+
+
+
+    printf("After file reading config\n");
+    malloc_stats();
+
+
 
 }
 
