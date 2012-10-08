@@ -25,6 +25,8 @@ using namespace std;
 #include "modules/robot/Player.h"
 #include <malloc.h>
 
+
+
 // List of callback functions, ordered as their corresponding events
 const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = { 
         &Module::on_main_loop, 
@@ -47,52 +49,23 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
 
-
-    printf("Before config\n");
-    malloc_stats();
-
-
-
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();
-
-
-    printf("After config\n");
-    malloc_stats();
-
-
 
     // Serial second, because the other modules might want to say something
     this->streams        = new StreamOutputPool();
 
-    this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-
-
-    printf("In Kernel\n");
-    malloc_stats();
-
-
-
+    //this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+    this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+    
     this->add_module( this->config );
     this->add_module( this->serial );
-
-    printf("After config\n");
-    malloc_stats();
-
-
-
 
     // HAL stuff 
     this->slow_ticker          = new SlowTicker();
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
     this->digipot              = new Digipot();
-
-
-    printf("After HAL\n");
-    malloc_stats();
-
-
 
     // LPC17xx-specific 
     NVIC_SetPriority(TIMER0_IRQn, 1); 
@@ -104,52 +77,12 @@ Kernel::Kernel(){
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
     this->step_ticker->set_frequency(   base_stepping_frequency );
 
-
-    printf("Before modules\n");
-    malloc_stats();
-
-
-
     // Core modules 
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
-
-
-    printf("Before robot\n");
-    malloc_stats();
-
-
-
     this->add_module( this->robot          = new Robot()         );
-
-    printf("Before stepper\n");
-    malloc_stats();
-
-
-
     this->add_module( this->stepper        = new Stepper()       );
-
-
-    printf("Before planner\n");
-    malloc_stats();
-
-
-
     this->add_module( this->planner        = new Planner()       );
-
-
-    printf("Before player\n");
-    malloc_stats();
-
-
-
     this->add_module( this->player         = new Player()        );
-
-
-    printf("Before pauser\n");
-    malloc_stats();
-
-
-
     this->add_module( this->pauser         = new Pauser()        );
 
 

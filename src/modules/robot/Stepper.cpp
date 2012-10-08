@@ -15,12 +15,17 @@ using namespace std;
 #include "libs/nuts_bolts.h"
 
 Stepper* stepper;
+double debug_max_reached;
+uint32_t debug_decelerations;
+uint32_t previous_step_count;
+uint32_t skipped_speed_updates;
 
 Stepper::Stepper(){
     this->current_block = NULL;
     this->paused = false;
     this->trapezoid_generator_busy = false;
     this->force_speed_update = false;
+    skipped_speed_updates = 0;
 }
 
 //Called when the module has just been loaded
@@ -69,9 +74,9 @@ void Stepper::on_pause(void* argument){
 void Stepper::on_play(void* argument){
     // TODO: Re-compute the whole queue for a cold-start
     this->paused = false;
-    this->kernel->robot->alpha_stepper_motor->paused = true;
-    this->kernel->robot->beta_stepper_motor->paused  = true;
-    this->kernel->robot->gamma_stepper_motor->paused = true;
+    this->kernel->robot->alpha_stepper_motor->paused = false;
+    this->kernel->robot->beta_stepper_motor->paused  = false;
+    this->kernel->robot->gamma_stepper_motor->paused = false;
 }
 
 
@@ -107,21 +112,30 @@ void Stepper::turn_enable_pins_off(){
 void Stepper::on_block_begin(void* argument){
     Block* block  = static_cast<Block*>(argument);
 
-    //printf("block begin\r\n");
+    //if( block->initial_rate < 0.1 ){ LPC_GPIO1->FIOCLR = 1<<18; }else{ LPC_GPIO1->FIOSET = 1<<18; }
+    //if( block->final_rate < 0.1   ){ LPC_GPIO1->FIOCLR = 1<<19; }else{ LPC_GPIO1->FIOSET = 1<<19; }
 
-    //printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8d acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", block, block->steps[0], block->steps[1], block->steps[2], block->steps_event_count, block->nominal_rate, block->nominal_speed, block->millimeters, block->rate_delta, block->accelerate_until, block->decelerate_after, block->initial_rate, block->final_rate, block->times_taken, block->is_ready );
+
+
     
     // The stepper does not care about 0-blocks
     if( block->millimeters == 0.0 ){ return; }
-  
+ 
+    //printf("stepper block begin taking block ( paused:%u ) \r\n", this->paused );
+    
+    // Mark the new block as of interrest to us
+    if( block->steps[ALPHA_STEPPER] > 0 || block->steps[BETA_STEPPER] > 0 || block->steps[GAMMA_STEPPER] > 0 ){
+        block->take();
+        //printf("taken for stepper: %u %u %u\r\n", block->steps[ALPHA_STEPPER], block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER]);
+    }else{
+        return;
+    }
+ 
     // We can't move with the enable pins off 
     if( this->enable_pins_status == false ){
         this->turn_enable_pins_on();
     }
 
-    // Mark the new block as of interrest to us
-    block->take();
-    
     // Setup : instruct stepper motors to move
     if( block->steps[ALPHA_STEPPER] > 0 ){ this->kernel->robot->alpha_stepper_motor->move( ( block->direction_bits >> 0  ) & 1 , block->steps[ALPHA_STEPPER] ); } 
     if( block->steps[BETA_STEPPER ] > 0 ){ this->kernel->robot->beta_stepper_motor->move(  ( block->direction_bits >> 1  ) & 1 , block->steps[BETA_STEPPER ] ); } 
@@ -148,6 +162,38 @@ void Stepper::on_block_begin(void* argument){
 void Stepper::on_block_end(void* argument){
     Block* block  = static_cast<Block*>(argument);
     this->current_block = NULL; //stfu !
+
+ /* 
+    bool error = false; 
+    for(unsigned int i=0; i < this->kernel->step_ticker->stepper_motors.size(); i++){
+        StepperMotor* stepper = this->kernel->step_ticker->stepper_motors[i];
+        if( stepper->stepped != stepper->steps_to_move ){
+            error = true; 
+        } 
+    }
+
+    if( error ){
+
+        this->kernel->streams->printf("be(%u):",this->kernel->step_ticker->stepper_motors.size());
+
+        for(unsigned int i=0; i < this->kernel->step_ticker->stepper_motors.size(); i++){
+            StepperMotor* stepper = this->kernel->step_ticker->stepper_motors[i];
+            this->kernel->streams->printf("[%1u:%5u/%5u]", stepper->moving, stepper->stepped, stepper->steps_to_move);  
+            if( stepper->stepped != stepper->steps_to_move ){
+               this->kernel->streams->printf("\r\nerror\r\n"); 
+                while(1){
+                    for(unsigned int j=0; j<0xffff;j++){
+                        j++;
+                    }
+                }
+            } 
+        }
+
+        printf("\r\n");
+
+    }
+    */
+
 }
 
 // When a stepper motor has finished it's assigned movement
@@ -171,26 +217,66 @@ inline uint32_t Stepper::step_events_completed(){
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
 uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
+    
+    uint32_t current_steps_completed = this->main_stepper->stepped;
+    
+    if( previous_step_count == current_steps_completed && previous_step_count != 0  ){
+        // We must skip this step update because no step has happened
+        skipped_speed_updates++;
+        return 0;
+    }else{
+        previous_step_count = current_steps_completed;
+    } 
+
+    double previous_rate = this->trapezoid_adjusted_rate;
+  
+    if( this->force_speed_update ){
+      this->force_speed_update = false;
+      this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+    }
 
     if(this->current_block && !this->paused ) {
-        if(this->step_events_completed() < this->current_block->accelerate_until) {
-              this->trapezoid_adjusted_rate += this->current_block->rate_delta;
+                if(current_steps_completed < this->current_block->accelerate_until) {
+              this->trapezoid_adjusted_rate += this->current_block->rate_delta + ( this->current_block->rate_delta * skipped_speed_updates );
+              skipped_speed_updates = 0;
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
               }
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-          }else if (this->step_events_completed() >= this->current_block->decelerate_after) {
+        }else if (current_steps_completed > this->current_block->decelerate_after + 1) {
+              uint32_t before = this->trapezoid_adjusted_rate;
               // NOTE: We will only reduce speed if the result will be > 0. This catches small
               // rounding errors that might leave steps hanging after the last trapezoid tick.
-              if(this->trapezoid_adjusted_rate > double(this->current_block->rate_delta) * 1.5) {
-                  this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
+              if(this->trapezoid_adjusted_rate > this->current_block->rate_delta * 1.5) {
+                  this->trapezoid_adjusted_rate -= this->current_block->rate_delta + ( this->current_block->rate_delta * skipped_speed_updates );
+                  debug_decelerations += 1 + skipped_speed_updates;
+                    skipped_speed_updates = 0; 
+                  if( this->current_block->final_rate == 0 && 0 ){ 
+                      __disable_irq();
+                       uint32_t start_tc0 = LPC_TIM0->TC;
+                      uint32_t start_tc2 = LPC_TIM2->TC;
+                     this->kernel->streams->printf("{%u>=%u} tar:%f im:%u sps:%f pos:%u/%u cnt:%u.%u/%u.%u before:%u  \r\n", current_steps_completed, this->current_block->decelerate_after, this->trapezoid_adjusted_rate, this->main_stepper->moving, this->main_stepper->steps_per_second, this->main_stepper->stepped, this->main_stepper->steps_to_move, (uint32_t)(this->main_stepper->fx_counter>>32), (uint32_t)((this->main_stepper->fx_counter<<32)>>32), (uint32_t)(this->main_stepper->fx_ticks_per_step>>32), (uint32_t)((this->main_stepper->fx_ticks_per_step<<32)>>32), before   );
+                       LPC_TIM0->TC = start_tc0;
+                      LPC_TIM2->TC = start_tc2;
+                     __enable_irq();
+                  }
+        
               }else{
-                  this->trapezoid_adjusted_rate = double(this->current_block->rate_delta) * 1.5; 
+                  this->trapezoid_adjusted_rate = this->current_block->rate_delta * 1.5; 
                   //this->trapezoid_adjusted_rate = floor(double(this->trapezoid_adjusted_rate / 2 ));
               }
               if(this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->final_rate;
               }
+              if( this->trapezoid_adjusted_rate < 1000 && 0 ){
+                 __disable_irq();
+                        uint32_t start_tc0 = LPC_TIM0->TC;
+                      uint32_t start_tc2 = LPC_TIM2->TC;
+              this->kernel->streams->printf("tar:%f (was:%f) c:%u{%u}/stm:%u [au:%u da:%u] [ir:%u nr:%u fr:%u] rd:%f mm:%f steps:%u|%u|%u debug: mr:%f decels:%u \r\n",this->trapezoid_adjusted_rate, previous_rate, this->main_stepper->stepped, current_steps_completed, this->main_stepper->steps_to_move , this->current_block->accelerate_until, this->current_block->decelerate_after, this->current_block->initial_rate, this->current_block->nominal_rate,  this->current_block->final_rate, this->current_block->rate_delta, this->current_block->millimeters, this->current_block->steps[ALPHA_STEPPER], this->current_block->steps[BETA_STEPPER], this->current_block->steps[GAMMA_STEPPER], debug_max_reached, debug_decelerations     );
+                        LPC_TIM0->TC = start_tc0;
+                      LPC_TIM2->TC = start_tc2;
+            __enable_irq();
+             } 
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
           }else {
               // Make sure we cruise at exactly nominal rate
@@ -198,12 +284,17 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
                   this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
               }
-          }
-          if( this->force_speed_update ){
-              this->force_speed_update = false;
-              this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+              skipped_speed_updates = 0;
           }
     }
+
+    /*
+    //LPC_GPIO1->FIOCLR = 1<<20;
+    if( this->trapezoid_adjusted_rate == this->current_block->initial_rate ){ LPC_GPIO1->FIOSET = 1<<18; }else{ LPC_GPIO1->FIOCLR = 1<<18; }
+    if( this->trapezoid_adjusted_rate == this->current_block->nominal_rate ){ LPC_GPIO1->FIOSET = 1<<19; }else{ LPC_GPIO1->FIOCLR = 1<<19; }
+    if( this->trapezoid_adjusted_rate == this->current_block->final_rate   ){ LPC_GPIO1->FIOSET = 1<<20; }else{ LPC_GPIO1->FIOCLR = 1<<20; }
+    //LPC_GPIO1->FIOSET = 1<<20;
+    */
 
 }
 
@@ -213,13 +304,21 @@ inline void Stepper::trapezoid_generator_reset(){
     this->trapezoid_adjusted_rate = this->current_block->initial_rate;
     this->force_speed_update = true;
     this->trapezoid_tick_cycle_counter = 0;
+    debug_decelerations = 0;
+    debug_max_reached = 0;
+    previous_step_count = 0;
+    skipped_speed_updates = 0;
 }
 
 // Update the speed for all steppers
 void Stepper::set_step_events_per_minute( double steps_per_minute ){
 
+    debug_max_reached = max(steps_per_minute,debug_max_reached);
+
     // We do not step slower than this 
     steps_per_minute = max(steps_per_minute, this->minimum_steps_per_minute);
+
+    if( steps_per_minute < this->minimum_steps_per_minute * 1.1 ){ LPC_GPIO1->FIOSET = 1<<21; }else{ LPC_GPIO1->FIOCLR = 1<<21; }
 
     // Instruct the stepper motors
     if( this->kernel->robot->alpha_stepper_motor->moving ){ this->kernel->robot->alpha_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[ALPHA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
@@ -227,5 +326,6 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
     if( this->kernel->robot->gamma_stepper_motor->moving ){ this->kernel->robot->gamma_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[GAMMA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
 
     this->kernel->call_event(ON_SPEED_CHANGE, this);
+
 }
 

@@ -18,6 +18,7 @@ TemperatureControl::TemperatureControl(){}
 TemperatureControl::TemperatureControl(uint16_t name){
     this->name_checksum = name;
     this->error_count = 0; 
+    this->waiting = false;
 }
 
 void TemperatureControl::on_module_loaded(){

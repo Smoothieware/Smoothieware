@@ -44,6 +44,7 @@ class Extruder : public Module{
 
         double          target_position;              // End point ( in steps ) for the current move
         double          current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed
+        int             current_steps;
         Block*          current_block;                // Current block we are stepping, same as Stepper's one
         int             microseconds_per_step_pulse;  // Pulse duration for step pulses
         double          steps_per_millimeter;         // Steps to travel one millimeter

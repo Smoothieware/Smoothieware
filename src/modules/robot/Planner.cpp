@@ -29,7 +29,7 @@ void Planner::on_module_loaded(){
 }
 
 void Planner::on_config_reload(void* argument){
-    this->acceleration =       this->kernel->config->value(acceleration_checksum       )->by_default(100 )->as_number();
+    this->acceleration =       this->kernel->config->value(acceleration_checksum       )->by_default(100 )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
     this->max_jerk =           this->kernel->config->value(max_jerk_checksum           )->by_default(100 )->as_number();
     this->junction_deviation = this->kernel->config->value(junction_deviation_checksum )->by_default(0.05)->as_number(); 
 }
@@ -83,7 +83,8 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
     // specifically for each line to compensate for this phenomenon:
     // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = ceil( block->steps_event_count*inverse_millimeters * this->acceleration*60.0 / this->kernel->stepper->acceleration_ticks_per_second ); // (step/min/acceleration_tick)
+    block->rate_delta = (float)( ( block->steps_event_count*inverse_millimeters * this->acceleration ) / ( this->kernel->stepper->acceleration_ticks_per_second * 60 ) ); // (step/min/acceleration_tick)
+
 
     // Compute path unit vector
     double unit_vec[3];
@@ -117,7 +118,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
           // Compute maximum junction velocity based on maximum acceleration and junction deviation
           double sin_theta_d2 = sqrt(0.5*(1.0-cos_theta)); // Trig half angle identity. Always positive.
           vmax_junction = min(vmax_junction,
-            sqrt(this->acceleration*60*60 * this->junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) ); 
+            sqrt(this->acceleration * this->junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) ); 
         }
       }
     }
@@ -259,7 +260,8 @@ void Planner::dump_queue(){
 // acceleration within the allotted distance.
 double Planner::max_allowable_speed(double acceleration, double target_velocity, double distance) {
   return(
-    sqrt(target_velocity*target_velocity-2L*acceleration*60*60*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    //sqrt(target_velocity*target_velocity-2L*acceleration*60*60*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    sqrt(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
   );
 }
 

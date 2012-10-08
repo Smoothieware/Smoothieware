@@ -21,25 +21,24 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 
-#include "libs/USBCDCMSC/USBCDCMSC.h"
+// Debug
+#include "libs/SerialMessage.h"
+
+//#include "libs/USBCDCMSC/USBCDCMSC.h"
 SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
 //LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
-USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
+//USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
 
-
-#include <malloc.h>
-#include "mbed.h"
 
 int main() {
 
 
+    LPC_GPIO1->FIODIR |= 1<<18;
+    LPC_GPIO1->FIODIR |= 1<<19;
+    LPC_GPIO1->FIODIR |= 1<<20;
+    LPC_GPIO1->FIODIR |= 1<<21;
+
     Kernel* kernel = new Kernel();
-
-    printf("After Kernel\n");
-    malloc_stats();
-
-
-    mallinfo();
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.6.1 \r\n");
 
@@ -53,15 +52,16 @@ int main() {
     kernel->add_module( new PauseButton() );   
     kernel->add_module( new Endstops() );
 
-    printf("After modules\n");
-    malloc_stats();
-
-    kernel->add_module( &cdcmsc );
+    //kernel->add_module( &cdcmsc );
    
-    printf("After USB\n");
-    malloc_stats();
-
     kernel->streams->printf("start\r\n");
+
+
+    // Debug : launch file on startup
+    struct SerialMessage message; 
+    message.message = "play /sd/laurana.g -q";
+    message.stream = kernel->serial;
+    kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
 
     while(1){
         kernel->call_event(ON_MAIN_LOOP);

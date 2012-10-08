@@ -25,12 +25,6 @@ FileConfigSource::FileConfigSource(string config_file, uint16_t name_checksum){
 // Transfer all values found in the file to the passed cache
 void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
    
-
-    printf("Before file reading\n");
-    malloc_stats();
-
-
-
     // Default empty value
     ConfigValue* result = new ConfigValue;
     
@@ -39,44 +33,28 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
     string buffer;
     int c; 
-
-    int debug_total = 0;
-
     // For each line 
     do {
         c = fgetc (lp);
         if (c == '\n' || c == EOF){
 
-            printf("key:<%s> \r\n", buffer.c_str());
-            
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
             if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             
-            vector<uint16_t> check_sums = get_checksums(buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" "));
+            uint16_t check_sums[3];
+            get_checksums(check_sums, buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" "));
 
-            printf("before trouble\r\n");
-            printf("sizeof(ConfigValue): %u\r\n", sizeof(ConfigValue)); 
-            malloc_stats();
-   
-            printf("trouble \r\n"); 
             result = new ConfigValue;
-
-            malloc_stats();
-            printf("after trouble\r\n");
-
-
+            
             result->found = true;
-            result->check_sums = check_sums;
+            result->check_sums[0] = check_sums[0];
+            result->check_sums[1] = check_sums[1];
+            result->check_sums[2] = check_sums[2];
 
             result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
-          
-            debug_total += result->value.size(); 
-            
-            printf("value:<%s> %d \r\n", result->value.c_str(), debug_total);
-
             // Append the newly found value to the cache we were passed 
             cache->replace_or_push_back(result);
 
@@ -87,14 +65,6 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
         }
     } while (c != EOF);  
     fclose(lp);
-
-
-
-    printf("After file reading config\n");
-    malloc_stats();
-
-
-
 }
 
 // Return true if the check_sums match
@@ -144,7 +114,7 @@ void FileConfigSource::write( string setting, string value ){
 }
 
 // Return the value for a specific checksum
-string FileConfigSource::read( vector<uint16_t> check_sums ){
+string FileConfigSource::read( uint16_t check_sums[3] ){
 
     string value = "";
 
@@ -163,9 +133,11 @@ string FileConfigSource::read( vector<uint16_t> check_sums ){
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" ");
-            vector<uint16_t> line_checksums = get_checksums(key);
 
-            if(check_sums == line_checksums){
+            uint16_t line_checksums[3];
+            get_checksums(line_checksums, key);
+
+            if(check_sums[0] == line_checksums[0] && check_sums[1] == line_checksums[1] && check_sums[2] == line_checksums[2] ){
                 value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
                 break;
             }

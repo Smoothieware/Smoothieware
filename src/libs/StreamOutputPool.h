@@ -32,14 +32,14 @@ class StreamOutputPool {
                 size *= 2;
                 buffer = new char[size];
             }
-            string message = std::string(buffer); 
             va_end(args);
             
             // Dispatch to all
             for(unsigned int i=0; i < this->streams.size(); i++){
-                this->streams.at(i)->printf(message.c_str());
+                this->streams.at(i)->printf(buffer);
             }
-       
+            delete[] buffer;      
+
        }
 
        void append_stream(StreamOutput* stream){

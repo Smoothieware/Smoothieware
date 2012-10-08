@@ -79,18 +79,6 @@ inline void StepTicker::tick(){
 
 inline void StepTicker::reset_tick(){
     
-    /*for(unsigned int i=0; i < this->stepper_motors.size(); i++){
-        StepperMotor* motor = this->stepper_motors[i];
-        motor->step_pin->set(0);
-        if( motor->exit_tick ){
-            if( motor->dont_remove_from_active_list_yet ){
-                motor->dont_remove_from_active_list_yet = false;
-            }else{
-                this->remove_motor_from_active_list(motor); 
-            }
-        }
-    }*/
- 
     uint8_t current_id = 0; 
     StepperMotor* current = this->active_motors[0];
     while(current != NULL ){
@@ -112,7 +100,8 @@ inline void StepTicker::reset_tick(){
 extern "C" void TIMER0_IRQHandler (void){
     uint32_t start_time = LPC_TIM0->TC;
     global_step_ticker->debug++;
-   
+
+
     // If no axes enabled, just ignore for now 
     if( !global_step_ticker->has_axes ){ 
         if((LPC_TIM0->IR >> 0) & 1){ LPC_TIM0->IR |= 1 << 0; }
@@ -123,7 +112,8 @@ extern "C" void TIMER0_IRQHandler (void){
     LPC_TIM0->MR1 = 2000000;
 
     if((LPC_TIM0->IR >> 0) & 1){  // If interrupt register set for MR0
-        
+
+
         // Do not get out of here before everything is nice and tidy
         LPC_TIM0->MR0 = 2000000;
         LPC_TIM0->IR |= 1 << 0;   // Reset it 
@@ -204,6 +194,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor){
     }
     this->active_motors[current_id  ] = motor;
     this->active_motors[current_id+1] = NULL;
+
 }
 
 void StepTicker::remove_motor_from_active_list(StepperMotor* motor){
@@ -218,6 +209,8 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor){
         current = this->active_motors[current_id+offset];
     }
     this->active_motors[current_id] = NULL;
+
+
 }
 
 

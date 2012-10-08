@@ -25,14 +25,17 @@ class ConfigValue{
     public:
         ConfigValue(){
             this->found = false;
-            this->default_set = false; 
+            this->default_set = false;
+            this->check_sums[0] = 0x0000; 
+            this->check_sums[1] = 0x0000; 
+            this->check_sums[2] = 0x0000; 
         };
 
         ConfigValue* required(){
             if( this->found == true ){
                 return this;
             }else{
-                error("could not find config setting with checksum %u, please see http://smoothieware.org/configuring-smoothie\r\n", this->check_sum );
+                error("could not find config setting, please see http://smoothieware.org/configuring-smoothie\r\n");
             }
         }
 
@@ -42,7 +45,7 @@ class ConfigValue{
             }else{
                 double result = atof(remove_non_number(this->value).c_str());
                 if( result == 0.0 && this->value.find_first_not_of("0.") != string::npos ){
-                    error("config setting with value '%s' is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str() );
+                    error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
                 }
                 return result; 
             }
@@ -50,11 +53,11 @@ class ConfigValue{
         }
 
         std::string as_string(){
-            if( this->found == false && this->default_set == true ){
-                return this->default_string;
-            }else{
+            //if( this->found == false && this->default_set == true ){
+            //    return this->default_string;
+            //}else{
                 return this->value; 
-            }
+            //}
         }
 
         bool as_bool(){
@@ -82,8 +85,9 @@ class ConfigValue{
         }
 
         ConfigValue* by_default(std::string val){
+            if( this->found ){ return this; }
             this->default_set = true;
-            this->default_string = val;
+            this->value = val;
             return this;
         }
 
@@ -96,10 +100,8 @@ class ConfigValue{
         }
 
         double default_double; 
-        vector<uint16_t> check_sums;
+        uint16_t check_sums[3]; 
         string value;
-        string default_string;
-        uint16_t check_sum; 
         bool found;
         bool default_set;
 };

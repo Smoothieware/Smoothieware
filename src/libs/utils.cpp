@@ -25,17 +25,20 @@ uint16_t get_checksum(string to_check){
    return (sum2 << 8) | sum1;
 }
 
-vector<uint16_t> get_checksums(string key){
+void get_checksums(uint16_t check_sums[],string key){
     key = key.append(" ");
-    vector<uint16_t> check_sums;
+    check_sums[0] = 0x0000;
+    check_sums[1] = 0x0000;
+    check_sums[2] = 0x0000;
     size_t begin_key = 0;
+    char counter = 0; 
     while( begin_key < key.size()-1 ){
         size_t end_key =  key.find_first_of(" .", begin_key);
         string key_node = key.substr(begin_key, end_key - begin_key);
-        check_sums.push_back(get_checksum(key_node));
+        check_sums[counter] = get_checksum(key_node);
         begin_key = end_key + 1;
+        counter++;
     }
-    return check_sums;
 }
 
 // Convert to lowercase

@@ -24,7 +24,7 @@ class ConfigSource {
         virtual void transfer_values_to_cache( ConfigCache* ){}
         virtual bool is_named( uint16_t check_sum ){}
         virtual void write( string setting, string value ){}
-        virtual string read( vector<uint16_t> check_sums ){}
+        virtual string read( uint16_t check_sums[3] ){}
 
         uint16_t name_checksum;
 };

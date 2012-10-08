@@ -26,7 +26,7 @@ Block::Block(){
 }
 
 void Block::debug(Kernel* kernel){
-    kernel->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8d acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
+    kernel->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
 }
 
 
@@ -49,7 +49,7 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
     this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min) 
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
-    double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; 
+    double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
     int decelerate_steps = ceil( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
 
@@ -69,11 +69,12 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
    this->accelerate_until = accelerate_steps;
    this->decelerate_after = accelerate_steps+plateau_steps; 
 
+   /*
    // TODO: FIX THIS: DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
    if( this->final_rate < 0.01 ){
         this->decelerate_after += floor( this->nominal_rate / 60 / this->planner->kernel->stepper->acceleration_ticks_per_second ) * 3;
     }
-
+    */
 }
 
 // Calculates the distance (not time) it takes to accelerate from initial_rate to target_rate using the
@@ -104,7 +105,7 @@ double Block::intersection_distance(double initialrate, double finalrate, double
 // acceleration within the allotted distance.
 inline double max_allowable_speed(double acceleration, double target_velocity, double distance) {
   return(
-    sqrt(target_velocity*target_velocity-2L*acceleration*60*60*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    sqrt(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
   );
 }
 
@@ -183,11 +184,14 @@ void Block::ready(){
 // Mark the block as taken by one more module
 void Block::take(){
     this->times_taken++;
+    //printf("taking %p times now:%d\r\n", this, int(this->times_taken) );
 }
 
 // Mark the block as no longer taken by one module, go to next block if this free's it
 void Block::release(){
+    //printf("release %p \r\n", this );
     this->times_taken--;
+    //printf("releasing %p times now:%d\r\n", this, int(this->times_taken) );
     if( this->times_taken < 1 ){
         this->player->kernel->call_event(ON_BLOCK_END, this);
         this->pop_and_execute_gcode(this->player->kernel);
@@ -204,6 +208,7 @@ void Block::release(){
                     player->current_block = candidate;
                     player->kernel->call_event(ON_BLOCK_BEGIN, player->current_block);
                     if( player->current_block->times_taken < 1 ){
+                        player->current_block->times_taken = 1;
                         player->current_block->release();
                     }
                 }else{
