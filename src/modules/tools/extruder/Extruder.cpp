@@ -242,6 +242,8 @@ void Extruder::on_speed_change( void* argument ){
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
     if( this->current_block == NULL ||  this->paused || this->mode != FOLLOW || this->stepper_motor->moving != true ){ return; }
 
+    uint32_t adjusted_rate = max( this->kernel->stepper->trapezoid_adjusted_rate, this->kernel->stepper->minimum_steps_per_minute );
+
     /*
      * nominal block duration = current block's steps / ( current block's nominal rate / 60 )
      * nominal extruder rate = extruder steps / nominal block duration
@@ -251,7 +253,7 @@ void Extruder::on_speed_change( void* argument ){
      * or even : ( stepper steps per minute / 60 ) * ( extruder steps / current block's steps )
     */
    // printf("update extruder speed in speed change \r\n");
-    this->stepper_motor->set_speed( (this->kernel->stepper->trapezoid_adjusted_rate/60L) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ) ); 
+    this->stepper_motor->set_speed( (adjusted_rate/60L) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ) ); 
 
 }
 

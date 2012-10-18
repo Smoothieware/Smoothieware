@@ -47,14 +47,22 @@ double Block::compute_factor_for_safe_speed(){
 //                                  time -->
 void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
+    //this->player->kernel->streams->printf("%p calculating trapezoid\r\n", this);
+
     this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min) 
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
+
+    //this->player->kernel->streams->printf("initrate:%f finalrate:%f\r\n", this->initial_rate, this->final_rate);
+
     double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
-    int decelerate_steps = ceil( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
+    int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
 
+    
     // Calculate the size of Plateau of Nominal Rate.
     int plateau_steps = this->steps_event_count-accelerate_steps-decelerate_steps;
+    
+    //this->player->kernel->streams->printf("accelperminute:%f accelerate_steps:%d decelerate_steps:%d plateau:%d \r\n", acceleration_per_minute, accelerate_steps, decelerate_steps, plateau_steps );
 
    // Is the Plateau of Nominal Rate smaller than nothing? That means no cruising, and we will
    // have to use intersection_distance() to calculate when to abort acceleration and start braking
@@ -69,6 +77,8 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
    this->accelerate_until = accelerate_steps;
    this->decelerate_after = accelerate_steps+plateau_steps; 
 
+   //this->debug(this->player->kernel);
+
    /*
    // TODO: FIX THIS: DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
    if( this->final_rate < 0.01 ){
@@ -80,7 +90,7 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 // Calculates the distance (not time) it takes to accelerate from initial_rate to target_rate using the
 // given acceleration:
 double Block::estimate_acceleration_distance(double initialrate, double targetrate, double acceleration) {
-      return( (targetrate*targetrate-initialrate*initialrate)/(2L*acceleration));
+      return( ((targetrate*targetrate)-(initialrate*initialrate))/(2L*acceleration));
 }
 
 // This function gives you the point at which you must start braking (at the rate of -acceleration) if

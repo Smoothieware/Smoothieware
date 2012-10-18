@@ -27,7 +27,7 @@ class SlowTicker : public Module{
             Hook* hook = new Hook(); 
             hook->frequency = frequency;
             hook->attach(optr, fptr);
-            hook->counter = -2;
+            hook->counter = -1.5;
             if( frequency > this->max_frequency ){ 
                 this->max_frequency = frequency; 
             } 
