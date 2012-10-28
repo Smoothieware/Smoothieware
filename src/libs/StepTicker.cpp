@@ -86,8 +86,8 @@ inline void StepTicker::reset_tick(){
     while(current != NULL ){
         current->step_pin->set(0);
         if( current->exit_tick ){
-            if( current->dont_remove_from_active_list_yet ){
-                current->dont_remove_from_active_list_yet = false;
+            if( current->remove_from_active_list_next_tick ){
+                current->remove_from_active_list_next_tick = false;
             }else{
                 this->remove_motor_from_active_list(current); 
                 current_id--;
@@ -105,7 +105,9 @@ extern "C" void TIMER1_IRQHandler (void){
 
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
-    
+
+    LPC_GPIO1->FIOSET = 1<<18;
+
     uint32_t start_time = LPC_TIM0->TC;
    
     LPC_TIM0->IR |= 1 << 0;
@@ -114,7 +116,10 @@ extern "C" void TIMER0_IRQHandler (void){
 
     // If no axes enabled, just ignore for now 
     if( !global_step_ticker->has_axes ){ 
+   
+        LPC_GPIO1->FIOCLR = 1<<18;
         return; 
+    
     } 
 
     // Do not get out of here before everything is nice and tidy
@@ -173,6 +178,7 @@ extern "C" void TIMER0_IRQHandler (void){
     }
 
 
+    LPC_GPIO1->FIOCLR = 1<<18;
 
 }
 

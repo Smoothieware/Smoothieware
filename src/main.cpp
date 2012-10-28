@@ -61,7 +61,7 @@ int main() {
     message.stream = kernel->serial;
     kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
    
-
+    /*
     int i = 0;
     while( i <= 60 ){
         // Debug : launch file on startup
@@ -86,15 +86,41 @@ int main() {
     
         i++;
     }
+    */
+    
+   /* 
+    int i = 0;
+    while( i <= 60 ){
+        // Debug : launch file on startup
+        
+        message.message = "G1 X40 Y0 F9000";
+        message.stream = kernel->serial;
+        kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
+     
+        message.message = "G1 X40 Y1 F9000";
+        message.stream = kernel->serial;
+        kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
+   
 
-    /*
+        message.message = "G1 X0 Y1 F9000";
+        message.stream = kernel->serial;
+        kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
+   
+
+        message.message = "G1 X0 Y0 F9000";
+        message.stream = kernel->serial;
+        kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    
+        i++;
+    }
+    */
+
     // Debug : launch file on startup
-    struct SerialMessage message; 
+    //struct SerialMessage message; 
     //message.message = "G1 X1000 F2000";
-    message.message = "play /sd/victor.g -q";
+    message.message = "play /sd/laurana.g -q";
     message.stream = kernel->serial;
     kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
-    */
 
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
