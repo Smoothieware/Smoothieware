@@ -22,6 +22,7 @@ class StepTicker{
         StepTicker();
         void set_frequency( double frequency );
         void tick();
+        void signal_moves_finished();
         StepperMotor* add_stepper_motor(StepperMotor* stepper_motor);
         void set_reset_delay( double seconds );
         void reset_tick();
@@ -35,6 +36,9 @@ class StepTicker{
         uint32_t debug;
         uint32_t last_duration;
         bool has_axes;
+
+        bool moves_finished;
+        bool reset_step_pins;
 
         StepperMotor* active_motors[12];
 };

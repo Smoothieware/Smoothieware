@@ -15,6 +15,8 @@ using namespace std;
 #include "StepTicker.h"
 #include "system_LPC17xx.h" // mbed.h lib
 
+#include <mri.h>
+
 // StepTicker handles the base frequency ticking for the Stepper Motors / Actuators
 // It has a list of those, and calls their tick() functions at regular intervals
 // They then do Bresenham stuff themselves
@@ -33,6 +35,8 @@ StepTicker::StepTicker(){
     LPC_TIM1->TCR = 1;               // Enable interrupt
 
     // Default start values 
+    this->moves_finished = false;
+    this->reset_step_pins = false;
     this->debug = 0;
     this->has_axes = 0;
     this->set_frequency(0.001);
@@ -79,20 +83,31 @@ inline void StepTicker::tick(){
     }
 }
 
+void StepTicker::signal_moves_finished(){
+    uint8_t current_id = 0; 
+    StepperMotor* current = this->active_motors[0];
+    while(current != NULL ){
+        if( current->is_move_finished ){ 
+            current->signal_move_finished();
+            if( current->moving == false ){ current_id--; } 
+        }
+        current_id++;
+        current = this->active_motors[current_id];
+    }
+    this->moves_finished = false;
+}
+
 inline void StepTicker::reset_tick(){
     
     uint8_t current_id = 0; 
     StepperMotor* current = this->active_motors[0];
     while(current != NULL ){
         current->step_pin->set(0);
-        if( current->exit_tick ){
-            if( current->remove_from_active_list_next_tick ){
-                current->remove_from_active_list_next_tick = false;
-            }else{
+        /*if( current->remove_from_active_list_next_reset ){
+                current->remove_from_active_list_next_reset = false;
                 this->remove_motor_from_active_list(current); 
                 current_id--;
-            }
-        }
+        }*/
         current_id++;
         current = this->active_motors[current_id];
     }
@@ -103,33 +118,46 @@ extern "C" void TIMER1_IRQHandler (void){
     global_step_ticker->reset_tick();
 }
 
+
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+
+
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
 
-    LPC_GPIO1->FIOSET = 1<<18;
-
-    uint32_t start_time = LPC_TIM0->TC;
-   
-    LPC_TIM0->IR |= 1 << 0;
-   
-    global_step_ticker->debug++;
-
-    // If no axes enabled, just ignore for now 
-    if( !global_step_ticker->has_axes ){ 
-   
-        LPC_GPIO1->FIOCLR = 1<<18;
-        return; 
-    
-    } 
+    uint32_t initial_tc = LPC_TIM0->TC;
 
     // Do not get out of here before everything is nice and tidy
-    LPC_TIM0->MR0 = 2000000;
 
+    LPC_GPIO1->FIOSET = 1<<18;
+
+    LPC_TIM0->IR |= 1 << 0;
+
+    // If no axes enabled, just ignore for now 
+    if( global_step_ticker->active_motors[0] == NULL ){ 
+        LPC_GPIO1->FIOCLR = 1<<18;
+        return; 
+    } 
+
+    LPC_TIM0->MR0 = 2000000;
+    
     // Step pins 
     global_step_ticker->tick(); 
 
-    LPC_TIM1->TCR = 3;
-    LPC_TIM1->TCR = 1;
+    uint32_t after_tick = LPC_TIM0->TC;
+
+    // We may have set a pin on in this tick, now we start the timer to set it off
+    if( global_step_ticker->reset_step_pins ){
+        LPC_TIM1->TCR = 3;
+        LPC_TIM1->TCR = 1;
+        global_step_ticker->reset_step_pins = false;
+    }
+
+    // If a move finished in this tick, we have to tell the actuator to act accordingly
+    if( global_step_ticker->moves_finished ){ global_step_ticker->signal_moves_finished(); }
+
+    uint32_t after_signal = LPC_TIM0->TC;
 
     // If we went over the duration an interrupt is supposed to last, we have a problem 
     // That can happen tipically when we change blocks, where more than usual computation is done
@@ -142,50 +170,49 @@ extern "C" void TIMER0_IRQHandler (void){
         uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + global_step_ticker->last_duration ) / global_step_ticker->period );
 
         // Next step is now to reduce this to how many steps we can *actually* skip
-        uint32_t ticks_we_actually_can_skip = ticks_to_skip;
-        for(unsigned int i=0; i < global_step_ticker->stepper_motors.size(); i++){
-            StepperMotor* stepper = global_step_ticker->stepper_motors[i];
-            if( stepper->moving ){ ticks_we_actually_can_skip = min( ticks_we_actually_can_skip, (uint32_t)((uint64_t)( (uint64_t)stepper->fx_ticks_per_step - (uint64_t)stepper->fx_counter ) >> 32) ); }
+        uint32_t ticks_we_actually_can_skip = 0;
+        uint8_t current_id = 0; StepperMotor* current = global_step_ticker->active_motors[0];
+        while(current != NULL ){   // For each active stepper
+            ticks_we_actually_can_skip = min( ticks_we_actually_can_skip, (uint32_t)((uint64_t)( (uint64_t)current->fx_ticks_per_step - (uint64_t)current->fx_counter ) >> 32) );
+            current_id++;
+            current = global_step_ticker->active_motors[current_id];
         }
-
-        // If the number of ticks we can actually skip is smaller than the number we wanted to skip, there is something wrong in the settings
-        //if( ticks_we_actually_can_skip < ticks_to_skip ){ }
 
         // Adding to MR0 for this time is not enough, we must also increment the counters ourself artificially
-        for(unsigned int i=0; i < global_step_ticker->stepper_motors.size(); i++){
-            StepperMotor* stepper = global_step_ticker->stepper_motors[i];
-            if( stepper->moving ){ stepper->fx_counter += (uint64_t)((uint64_t)(ticks_we_actually_can_skip)<<32); }
+        current_id = 0; current = global_step_ticker->active_motors[0];
+        while(current != NULL ){   // For each active stepper
+            current->fx_counter += (uint64_t)((uint64_t)(ticks_we_actually_can_skip)<<32); 
+            current_id++;
+            current = global_step_ticker->active_motors[current_id];
         }
 
-        // When must we have our next MR0 ? ( +1 is here to account that we are actually a legit MR0 too, not only overtime )
-        LPC_TIM0->MR0 = ( ticks_we_actually_can_skip + 1 ) * global_step_ticker->period;
-        //LPC_TIM0->MR0 = ( ticks_to_skip + 1 ) * global_step_ticker->period;
+        // When must we have our next MR0 ? ( +1 is here to account that we are actually doing a legit MR0 match here too, not only overtime )
+        // LPC_TIM0->MR0 = ( ticks_we_actually_can_skip + 1 ) * global_step_ticker->period;
+        LPC_TIM0->MR0 = ( ticks_to_skip + 1 ) * global_step_ticker->period;
 
         // This is so that we know how long this computation takes, and we can take it into account next time
-        global_step_ticker->last_duration = LPC_TIM0->TC - start_tc;
+        int difference = (int)(LPC_TIM0->TC) - (int)(start_tc);
+        if( difference > 0 ){ global_step_ticker->last_duration = (uint32_t)difference; }
 
+        if( global_step_ticker->last_duration > 10000 || LPC_TIM0->MR0 > 10000 || LPC_TIM0->TC > 10000 || initial_tc > 10000 || after_tick > 10000 || after_signal > 10000 ){ __debugbreak(); }
 
     }else{
         LPC_TIM0->MR0 = global_step_ticker->period;
     }
 
-
-
-    if( LPC_TIM0->TC > LPC_TIM0->MR0 ){
-    //    LPC_TIM0->TCR = 3;  // Reset
-    //    LPC_TIM0->TCR = 1;  // Reset
-        LPC_TIM0->TC = LPC_TIM0->MR0 - 2;
+    LPC_GPIO1->FIOCLR = 1<<18;
+ 
+    while( LPC_TIM0->TC > LPC_TIM0->MR0 ){
+        LPC_TIM0->MR0 += global_step_ticker->period;
     }
 
-
-    LPC_GPIO1->FIOCLR = 1<<18;
-
 }
+
+#pragma GCC pop_options
 
 
 // We make a list of steppers that want to be called so that we don't call them for nothing
 void StepTicker::add_motor_to_active_list(StepperMotor* motor){
-    //printf("adding %p with exit: %u \r\n", motor, motor->exit_tick );
     uint8_t current_id = 0; 
     StepperMotor* current = this->active_motors[0];
     while(current != NULL ){
@@ -201,7 +228,6 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor){
 }
 
 void StepTicker::remove_motor_from_active_list(StepperMotor* motor){
-    //printf("removing %p with exit: %u \r\n", motor, motor->exit_tick );
     uint8_t current_id = 0;
     uint8_t offset = 0; 
     StepperMotor* current = this->active_motors[0];

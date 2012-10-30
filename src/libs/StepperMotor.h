@@ -18,11 +18,14 @@ class StepperMotor {
         StepperMotor();
         StepperMotor(Pin* step, Pin* dir, Pin* en);
         bool tick();
+        void move_finished();
         void move( bool direction, unsigned int steps );
+        void signal_move_finished();
         void set_speed( double speed );
         void update_exit_tick();
         void pause();
         void unpause();
+
 
         template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook(); 
@@ -43,16 +46,17 @@ class StepperMotor {
         bool paused;
 
         bool direction_bit;
-        bool step_bit;
+        //bool step_bit;
 
         uint32_t steps_to_move;
         uint32_t stepped;
         uint64_t fx_counter;
         uint64_t fx_ticks_per_step;
         
-        bool exit_tick;
-        bool remove_from_active_list_next_tick;
+        //bool exit_tick;
+        bool remove_from_active_list_next_reset;
 
+        bool is_move_finished; // Whether the move just finished
 };
 
 

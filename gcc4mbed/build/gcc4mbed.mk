@@ -157,7 +157,7 @@ LIBS += $(LIBS_SUFFIX)
 DEPFLAGS = -MMD -MP
 
 # Compiler Options
-GPFLAGS = -O$(OPTIMIZATION) -g -mcpu=cortex-m3 -mthumb -mthumb-interwork 
+GPFLAGS = -O$(OPTIMIZATION) -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork 
 GPFLAGS += -ffunction-sections -fdata-sections  -fno-exceptions 
 GPFLAGS += $(patsubst %,-I%,$(INCDIRS))
 GPFLAGS += $(DEFINES)

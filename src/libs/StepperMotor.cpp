@@ -16,10 +16,9 @@ StepperMotor::StepperMotor(){
     this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
     this->direction_bit = 0;
-    this->step_bit = 0;
-    this->update_exit_tick();
-    this->remove_from_active_list_next_tick = false;
-    this->exit_tick = true;
+    //this->update_exit_tick();
+    this->remove_from_active_list_next_reset = false;
+    this->is_move_finished = false;
 }
 
 StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
@@ -30,66 +29,56 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
     this->direction_bit = 0;
-    this->step_bit = 0;
-    this->update_exit_tick();
-    this->remove_from_active_list_next_tick = false;
-    this->exit_tick = true;
+    //this->update_exit_tick();
+    this->remove_from_active_list_next_reset = false;
+    this->is_move_finished = false;
 }
 
 // Called a great many times per second, to step if we have to now
 bool StepperMotor::tick(){
 
-
-    // output to pins 37t
-    this->dir_pin->set(  this->direction_bit );
-    this->step_pin->set( this->step_bit      );
-
-    // ignore inactive steppers 13t
-    if( this->exit_tick ){ 
-        this->step_bit = 0; 
-        return false; 
-    }
-   
     // increase the ( fixed point ) counter by one tick 11t
     this->fx_counter += (uint64_t)((uint64_t)1<<32);  
 
     // if we are to step now 10t
     if( this->fx_counter >= this->fx_ticks_per_step ){
    
+        // output to pins 37t
+        this->dir_pin->set(  this->direction_bit );
+        this->step_pin->set( 1                   );
+        this->step_ticker->reset_step_pins = true;
 
         // move counter back 11t
         this->fx_counter -= this->fx_ticks_per_step;
 
-        // we must step, actual output is done at the beginning of this function 8t
-        this->step_bit = 1;
-
         // we have moved a step 9t
         this->stepped++;
 
-        //printf("%u %u %u %u %u %u \r\n", this->moving, this->paused, this->fx_ticks_per_step == 0, this->steps_to_move == 0, this->stepped, this->steps_to_move );
-
-
         // is this move finished ? 11t
-        if( this->stepped == this->steps_to_move ){
+        if( this->stepped == this->steps_to_move ){ 
+            this->is_move_finished = true; 
+            this->step_ticker->moves_finished = true; 
+        }
 
-            //printf("end\r\n");
+    }
+
+}
+
+void StepperMotor::signal_move_finished(){
 
             // work is done ! 8t
             this->moving = false;
             this->steps_to_move = 0;
-            this->update_exit_tick(); 
             
             // signal it to whatever cares 41t 411t
             this->end_hook->call();
 
+            // We only need to do this if we were not instructed to move
+            if( this->moving == false ){
+                this->update_exit_tick(); 
+            }
 
-        }
-
-    }else{
-        
-        // we must not step
-        this->step_bit = 0;
-    }
+            this->is_move_finished = false;
 
 }
 
@@ -98,19 +87,13 @@ inline void StepperMotor::update_exit_tick(){
     //printf("try update list %u %u %u\r\n", this->moving, this->paused, this->fx_ticks_per_step == 0 );
     if( !this->moving || this->paused || this->steps_to_move == 0 ){
         // We must exit tick() after setting the pins, no bresenham is done 
-        if( this->exit_tick == false ){
-            this->exit_tick = true;
-            this->remove_from_active_list_next_tick = true; 
-        }
+        //this->remove_from_active_list_next_reset = true; 
+        this->step_ticker->remove_motor_from_active_list(this); 
     }else{
         // We must do the bresenham in tick()
-        if( this->exit_tick == true ){ 
-            // We have to do this or there could be a bug where the removal still happens when it doesn't need to
-            this->remove_from_active_list_next_tick = false;
-
-            this->exit_tick = false;
-            this->step_ticker->add_motor_to_active_list(this);
-        }
+        // We have to do this or there could be a bug where the removal still happens when it doesn't need to
+        //this->remove_from_active_list_next_reset = false;
+        this->step_ticker->add_motor_to_active_list(this);
     }
 }
 
