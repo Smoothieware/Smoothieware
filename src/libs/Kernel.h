@@ -37,9 +37,6 @@
 #define ON_IDLE                    11
 
 
-using namespace std;
-#include <vector>
-
 typedef void (Module::*ModuleCallback)(void * argument);
 
 //Module manager
@@ -73,7 +70,7 @@ class Kernel {
         Digipot*          digipot;
 
     private:
-        vector<Module*> hooks[NUMBER_OF_DEFINED_EVENTS]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
+        Module* hooks[NUMBER_OF_DEFINED_EVENTS][16]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
 
 };
 

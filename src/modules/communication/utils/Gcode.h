@@ -11,7 +11,7 @@
 #include <string>
 using std::string;
 #include "libs/StreamOutput.h"
-// Object to represent a Gcode comman
+// Object to represent a Gcode command
 #include <stdlib.h>
 
 class Gcode {
@@ -19,11 +19,17 @@ class Gcode {
         Gcode();
         bool has_letter( char letter );
         double get_value ( char letter );
+        void prepare_cached_values();
 
         string command;
         double millimeters_of_travel;
         bool call_on_gcode_execute_event_immediatly;
         bool on_gcode_execute_event_called;
+
+        bool has_m;
+        bool has_g;
+        unsigned int m;
+        unsigned int g;
 
         StreamOutput* stream;
 };

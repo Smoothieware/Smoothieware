@@ -97,6 +97,7 @@ void GcodeDispatch::on_console_line_received(void * line){
                 Gcode gcode = Gcode();
                 gcode.command = single_command;
                 gcode.stream = new_message.stream;
+                gcode.prepare_cached_values();
 
                 //Dispatch message!
                 this->kernel->call_event(ON_GCODE_RECEIVED, &gcode );

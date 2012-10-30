@@ -16,7 +16,7 @@
 
 void Configurator::on_module_loaded(){
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-//    this->register_for_event(ON_GCODE_EXECUTE);
+//    this->register_for_event(ON_GCODE_RECEIVED);
 //    this->register_for_event(ON_MAIN_LOOP);
 }
 
@@ -37,7 +37,7 @@ void Configurator::on_console_line_received( void* argument ){
 }
 
 // Process and respond to eeprom gcodes (M50x)
-void Configurator::on_gcode_execute(void* argument){
+void Configurator::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if( gcode->has_letter('G') ){
         int code = gcode->get_value('G');

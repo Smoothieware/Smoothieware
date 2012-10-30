@@ -82,12 +82,11 @@ void Stepper::on_play(void* argument){
 void Stepper::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
 
-    if( gcode->has_letter('M')){
-        int code = (int) gcode->get_value('M');
-        if( code == 17 ){
+    if( gcode->has_m){
+        if( gcode->m == 17 ){
             this->turn_enable_pins_on(); 
         }
-        if( code == 84 || code == 18 ){
+        if( gcode->m == 84 || gcode->m == 18 ){
             this->turn_enable_pins_off(); 
         }
     }

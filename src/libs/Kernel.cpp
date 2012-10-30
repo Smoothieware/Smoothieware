@@ -5,8 +5,6 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-using namespace std;
-#include <vector>
 #include "libs/Kernel.h"
 #include "libs/Module.h"
 #include "libs/Config.h"
@@ -48,6 +46,9 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
+
+    // Value init for the arrays
+    for( uint8_t i = 0; i < NUMBER_OF_DEFINED_EVENTS; i++ ){ this->hooks[i][0] = NULL; }
 
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();
@@ -97,17 +98,31 @@ void Kernel::add_module(Module* module){
 }
 
 void Kernel::register_for_event(unsigned int id_event, Module* module){
-    this->hooks[id_event].push_back(module);
+    uint8_t current_id = 0; 
+    Module* current = this->hooks[id_event][0];
+    while(current != NULL ){
+        if( current == module ){ return; }
+        current_id++;
+        current = this->hooks[id_event][current_id];
+    }
+    this->hooks[id_event][current_id] = module;
+    this->hooks[id_event][current_id+1] = NULL;
 }
 
 void Kernel::call_event(unsigned int id_event){
-    for(unsigned int i=0; i < this->hooks[id_event].size(); i++){
-        (this->hooks[id_event][i]->*kernel_callback_functions[id_event])(this);
+    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
+    while(current != NULL ){   // For each active stepper
+        (current->*kernel_callback_functions[id_event])(this);
+        current_id++;
+        current = this->hooks[id_event][current_id];
     }
 }
 
 void Kernel::call_event(unsigned int id_event, void * argument){
-    for(unsigned int i=0; i < this->hooks[id_event].size(); i++){
-        (this->hooks[id_event][i]->*kernel_callback_functions[id_event])(argument);
+    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
+    while(current != NULL ){   // For each active stepper
+        (current->*kernel_callback_functions[id_event])(argument);
+        current_id++;
+        current = this->hooks[id_event][current_id];
     }
 }

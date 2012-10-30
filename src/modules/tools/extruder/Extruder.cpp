@@ -95,19 +95,18 @@ void Extruder::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
 
     // Absolute/relative mode
-    if( gcode->has_letter('M')){
-        int code = (int) gcode->get_value('M');
-        if( code == 82 ){ this->absolute_mode = true; }
-        if( code == 83 ){ this->absolute_mode = false; }
-        if( code == 84 ){ this->en_pin->set(1); }
+    if( gcode->has_m ){
+        if( gcode->m == 82 ){ this->absolute_mode = true; }
+        if( gcode->m == 83 ){ this->absolute_mode = false; }
+        if( gcode->m == 84 ){ this->en_pin->set(1); }
     }
 
     // The mode is OFF by default, and SOLO or FOLLOW only if we need to extrude
     this->mode = OFF;
 
-    if( gcode->has_letter('G') ){
+    if( gcode->has_g ){
         // G92: Reset extruder position
-        if( gcode->get_value('G') == 92 ){
+        if( gcode->g == 92 ){
             if( gcode->has_letter('E') ){
                 this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;
@@ -135,7 +134,6 @@ void Extruder::on_gcode_execute(void* argument){
             }
         }
     }
-
 }
 
 // When a new block begins, either follow the robot, or step by ourselves ( or stay back and do nothing )
