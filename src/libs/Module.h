@@ -18,8 +18,8 @@ class Module {
     public:
         Module();
         virtual void on_module_loaded();
-        virtual void register_for_event(int event_id);
-        virtual void on_main_loop(void * argument);
+        virtual void register_for_event(        int    event_id);
+        virtual void on_main_loop(              void * argument);
         virtual void on_console_line_received(  void * argument);
         virtual void on_gcode_received(         void * argument);
         virtual void on_gcode_execute(          void * argument);
