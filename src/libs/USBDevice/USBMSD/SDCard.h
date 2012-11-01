@@ -18,14 +18,20 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
+ *
+ *
+ * This version significantly altered by Michael Moon and is (c) 2012
  */
 
-#ifndef MBED_SDFILESYSTEM_H
-#define MBED_SDFILESYSTEM_H
+#ifndef SDCARD_H
+#define SDCARD_H
 
-#include "mbed.h"
 #include "spi.h"
-#include "FATFileSystem.h"
+#include "gpio.h"
+
+#include "disk.h"
+
+// #include "DMA.h"
 
 /** Access the filesystem on an SD Card using SPI
  *
@@ -41,7 +47,7 @@
  *     fclose(fp);
  * }
  */
-class SDFileSystem : public FATFileSystem {
+class SDCard : public MSD_Disk {
 public:
 
     /** Create the File System for accessing an SD Card using SPI
@@ -52,33 +58,51 @@ public:
      * @param cs   DigitalOut pin used as SD Card chip select
      * @param name The name used to access the virtual filesystem
      */
-    SDFileSystem(PinName mosi, PinName miso, PinName sclk, PinName cs, const char* name);
+    SDCard(PinName, PinName, PinName, PinName);
+
+    typedef enum {
+        SDCARD_FAIL,
+        SDCARD_V1,
+        SDCARD_V2,
+        SDCARD_V2HC
+    } CARD_TYPE;
+
     virtual int disk_initialize();
-    virtual int disk_write(const char *buffer, int block_number);
-    virtual int disk_read(char *buffer, int block_number);
+    virtual int disk_write(const char *buffer, uint32_t block_number);
+    virtual int disk_read(char *buffer, uint32_t block_number);
     virtual int disk_status();
     virtual int disk_sync();
-    virtual int disk_sectors();
+    virtual uint32_t disk_sectors();
+    virtual uint64_t disk_size();
+    virtual uint32_t disk_blocksize();
+    virtual bool disk_canDMA(void);
+
+    CARD_TYPE card_type(void);
+
+    void on_main_loop(void);
+
+    int busy();
 
 protected:
 
-    int _cmd(int cmd, int arg);
-    int _cmdx(int cmd, int arg);
+    int _cmd(int cmd, uint32_t arg);
+    int _cmdx(int cmd, uint32_t arg);
     int _cmd8();
-    int _cmd58(uint32_t *);
-    int initialise_card();
-    int initialise_card_v1();
-    int initialise_card_v2();
+    int _cmd58();
+    CARD_TYPE initialise_card();
+    CARD_TYPE initialise_card_v1();
+    CARD_TYPE initialise_card_v2();
 
     int _read(char *buffer, int length);
     int _write(const char *buffer, int length);
-    int _sd_sectors();
-    int _sectors;
+
+    uint32_t _sd_sectors();
+    uint32_t _sectors;
 
     SPI _spi;
-    DigitalOut _cs;
+    GPIO _cs;
 
-    int cardtype;
+    CARD_TYPE cardtype;
 };
 
 #endif
