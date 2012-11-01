@@ -25,15 +25,17 @@ class StreamOutputPool {
             // Make the message
             va_list args;
             va_start(args, format);
-            int size = format.size() * 2;
+            int size = vsnprintf(NULL, 0, format.c_str(), args) + 1;
             char* buffer = new char[size];
-            int len = vsnprintf(buffer, size, format.c_str(), args);
-            if (len >= size) {
-                delete[] buffer;
-                size = len+1;
-                buffer = new char[size];
-                len = vsnprintf(buffer, size, format.c_str(), args);
-            }
+            vsnprintf(buffer, size, format.c_str(), args);
+//             int size = format.size() * 2;
+//             char* buffer = new char[size];
+//             while (vsnprintf(buffer, size, format.c_str(), args) < 0){
+//                 delete[] buffer;
+//                 size *= 2;
+//                 buffer = new char[size];
+//             }
+            string message = std::string(buffer);
             va_end(args);
 
             // Dispatch to all
@@ -42,7 +44,6 @@ class StreamOutputPool {
             }
             delete[] buffer;
             return len;
-
        }
 
        void append_stream(StreamOutput* stream){
