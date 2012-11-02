@@ -175,8 +175,8 @@ double TemperatureControl::new_thermistor_reading(){
 
 
 double TemperatureControl::average_adc_reading(){
-    double total;
-    int j=0;
+    double total = 0;
+    int j = 0;
     int reading_index = this->queue.head;
     while( reading_index != this->queue.tail ){
         j++;
