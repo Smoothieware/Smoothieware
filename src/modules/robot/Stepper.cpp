@@ -245,7 +245,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
     }
 
     skipped_speed_updates = 0; 
-
+    return 0;
 
 }
 
