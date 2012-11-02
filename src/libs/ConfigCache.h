@@ -26,7 +26,7 @@ class ConfigCache : public std::vector<ConfigValue*> {
                 // If this configvalue matches the checksum 
                 bool match = true;
                 unsigned int counter = 0;
-                while( new_value->check_sums[counter] != 0x0000 && counter < 3 ){
+                while( counter < 3 && new_value->check_sums[counter] != 0x0000 ){
                     if(this->at(i)->check_sums[counter] != new_value->check_sums[counter]  ){
                         match = false;
                         break; 
