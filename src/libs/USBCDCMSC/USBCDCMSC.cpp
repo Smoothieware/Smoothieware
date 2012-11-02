@@ -946,7 +946,6 @@ void USBCDCMSC::on_module_loaded(){
 
 void USBCDCMSC::on_main_loop(void* argument){
     if( this->has_char('\n') ){
-        int index = 0;
         string received;
         while(1){
            char c;
@@ -962,7 +961,6 @@ void USBCDCMSC::on_main_loop(void* argument){
             }
         }
     }
-
 
 }
 
