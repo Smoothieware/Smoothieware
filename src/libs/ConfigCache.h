@@ -22,7 +22,7 @@ class ConfigCache : public std::vector<ConfigValue*> {
        
            bool value_exists = false; 
             // For each already existing element 
-            for( int i=1; i<this->size(); i++){
+            for( unsigned int i=1; i<this->size(); i++){
                 // If this configvalue matches the checksum 
                 bool match = true;
                 char counter = 0;
