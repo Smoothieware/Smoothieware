@@ -17,7 +17,7 @@ class StepperMotor {
     public:
         StepperMotor();
         StepperMotor(Pin* step, Pin* dir, Pin* en);
-        bool tick();
+        void tick();
         void move_finished();
         void move( bool direction, unsigned int steps );
         void signal_move_finished();
