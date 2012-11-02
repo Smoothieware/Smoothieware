@@ -41,9 +41,11 @@ class Stepper : public Module {
         void trapezoid_generator_reset();
         void set_step_events_per_minute(double steps_per_minute);
         uint32_t trapezoid_generator_tick(uint32_t dummy);
-        uint32_t reset_step_pins(uint32_t dummy);
-        void update_offsets();
+        uint32_t stepper_motor_finished_move(uint32_t dummy);
         int config_step_timer( int cycles );
+        uint32_t step_events_completed();
+        void turn_enable_pins_on();
+        void turn_enable_pins_off();
 
         Block* current_block;
         int counters[3];
@@ -52,7 +54,7 @@ class Stepper : public Module {
         float counter_alpha;
         float counter_beta;
         float counter_gamma;
-        int step_events_completed; 
+        //int step_events_completed; 
         unsigned int out_bits; 
         double trapezoid_adjusted_rate;
         int trapezoid_tick_cycle_counter;
@@ -60,7 +62,6 @@ class Stepper : public Module {
         bool trapezoid_generator_busy;
         int microseconds_per_step_pulse; 
         int acceleration_ticks_per_second;
-        int divider;
         int minimum_steps_per_minute;
         int base_stepping_frequency;
         Pin* alpha_step_pin;
@@ -75,6 +76,11 @@ class Stepper : public Module {
         unsigned short step_bits[3];
         int counter_increment;
         bool paused;
+        bool force_speed_update;
+        bool enable_pins_status;
+
+        StepperMotor* main_stepper;
+
 };
 
 

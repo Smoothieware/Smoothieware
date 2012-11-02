@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 # Directories to be built
-DIRS=agutil HelloWorld StdIO Ticker LocalFileSystem SDFileSystem CTest
+DIRS=HelloWorld Blink Ticker StdIO LocalFileSystem FileTest
 
 .PHONY: subdirs $(DIRS)
 

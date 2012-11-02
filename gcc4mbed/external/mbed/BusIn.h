@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - DigitalIn
  * Copyright (c) 2007-2009 ARM Limited. All rights reserved.
- * sford, rmeyer
  */
  
 #ifndef MBED_BUSIN_H

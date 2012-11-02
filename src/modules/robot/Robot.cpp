@@ -14,6 +14,8 @@ using std::string;
 #include "Player.h"
 #include "Robot.h"
 #include "libs/nuts_bolts.h"
+#include "libs/Pin.h"
+#include "libs/StepperMotor.h"
 #include "../communication/utils/Gcode.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
@@ -34,6 +36,12 @@ void Robot::on_module_loaded() {
 
     // Configuration
     this->on_config_reload(this);
+
+    // Make our 3 StepperMotors
+    this->alpha_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->alpha_step_pin,this->alpha_dir_pin,this->alpha_en_pin) );   
+    this->beta_stepper_motor   = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->beta_step_pin, this->beta_dir_pin, this->beta_en_pin ) );   
+    this->gamma_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->gamma_step_pin,this->gamma_dir_pin,this->gamma_en_pin) );   
+
 }
 
 void Robot::on_config_reload(void* argument){
@@ -45,6 +53,16 @@ void Robot::on_config_reload(void* argument){
     this->max_speeds[X_AXIS]  = this->kernel->config->value(x_axis_max_speed_checksum   )->by_default(0  )->as_number();
     this->max_speeds[Y_AXIS]  = this->kernel->config->value(y_axis_max_speed_checksum   )->by_default(0  )->as_number();
     this->max_speeds[Z_AXIS]  = this->kernel->config->value(z_axis_max_speed_checksum   )->by_default(0  )->as_number();
+    this->alpha_step_pin      =  this->kernel->config->value(alpha_step_pin_checksum               )->by_default("1.21"     )->as_pin()->as_output();
+    this->beta_step_pin       =  this->kernel->config->value(beta_step_pin_checksum                )->by_default("1.23"     )->as_pin()->as_output();
+    this->gamma_step_pin      =  this->kernel->config->value(gamma_step_pin_checksum               )->by_default("1.22!"    )->as_pin()->as_output();
+    this->alpha_dir_pin       =  this->kernel->config->value(alpha_dir_pin_checksum                )->by_default("1.18"     )->as_pin()->as_output();
+    this->beta_dir_pin        =  this->kernel->config->value(beta_dir_pin_checksum                 )->by_default("1.20"     )->as_pin()->as_output();
+    this->gamma_dir_pin       =  this->kernel->config->value(gamma_dir_pin_checksum                )->by_default("1.19"     )->as_pin()->as_output();
+    this->alpha_en_pin        =  this->kernel->config->value(alpha_en_pin_checksum                 )->by_default("0.4"      )->as_pin()->as_output()->as_open_drain();
+    this->beta_en_pin         =  this->kernel->config->value(beta_en_pin_checksum                  )->by_default("0.10"     )->as_pin()->as_output()->as_open_drain();
+    this->gamma_en_pin        =  this->kernel->config->value(gamma_en_pin_checksum                 )->by_default("0.19"     )->as_pin()->as_output()->as_open_drain();
+
 }
 
 //A GCode has been received
@@ -57,6 +75,7 @@ void Robot::on_gcode_received(void * argument){
         gcode->call_on_gcode_execute_event_immediatly = true;
         this->execute_gcode(gcode);
         if( gcode->on_gcode_execute_event_called == false ){
+            //printf("GCODE A: %s \r\n", gcode->command.c_str() ); 
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
         }
     }else{
@@ -125,7 +144,7 @@ void Robot::execute_gcode(Gcode* gcode){
 // Convert target from millimeters to steps, and append this to the planner
 void Robot::append_milestone( double target[], double rate ){
     int steps[3]; //Holds the result of the conversion
-    
+   
     this->arm_solution->millimeters_to_steps( target, steps );
     
     double deltas[3];
@@ -160,6 +179,7 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
     gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) ); 
 
     if( gcode->call_on_gcode_execute_event_immediatly == true ){
+            //printf("GCODE B: %s \r\n", gcode->command.c_str() ); 
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
             gcode->on_gcode_execute_event_called = true;
     }
@@ -202,6 +222,7 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
     gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
 
     if( gcode->call_on_gcode_execute_event_immediatly == true ){
+            //printf("GCODE C: %s \r\n", gcode->command.c_str() ); 
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
             gcode->on_gcode_execute_event_called = true;
     }

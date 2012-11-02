@@ -15,9 +15,12 @@ using std::string;
 #include "../communication/utils/Gcode.h"
 #include "arm_solutions/BaseSolution.h"
 #include "Planner.h"
+#include "libs/Pin.h"
+#include "libs/StepperMotor.h"
 
-#define default_seek_rate_checksum             6633
-#define default_feed_rate_checksum             47357
+
+#define default_seek_rate_checksum             47357
+#define default_feed_rate_checksum             6633
 #define mm_per_line_segment_checksum           30176
 #define mm_per_arc_segment_checksum            15470
 #define arc_correction_checksum                5074
@@ -85,6 +88,21 @@ class Robot : public Module {
         // computational efficiency of generating arcs.
         int arc_correction;                                   // Setting : how often to rectify arc computation
         double max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
+
+        Pin* alpha_step_pin;
+        Pin* beta_step_pin;
+        Pin* gamma_step_pin;
+        Pin* alpha_dir_pin;
+        Pin* beta_dir_pin;
+        Pin* gamma_dir_pin;
+        Pin* alpha_en_pin;
+        Pin* beta_en_pin;
+        Pin* gamma_en_pin;
+ 
+        StepperMotor* alpha_stepper_motor;
+        StepperMotor* beta_stepper_motor;
+        StepperMotor* gamma_stepper_motor;
+
 
 };
 

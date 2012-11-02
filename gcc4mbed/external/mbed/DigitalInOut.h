@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - DigitalInOut
- * Copyright (c) 2006-2009 ARM Limited. All rights reserved.
- * sford
+ * Copyright (c) 2006-2011 ARM Limited. All rights reserved.
  */ 
  
 #ifndef MBED_DIGITALINOUT_H
@@ -36,11 +35,22 @@ public:
      *      0 for logical 0 and 1 (or any other non-zero value) for logical 1 
      */
     void write(int value) {
+#if defined(TARGET_LPC1768) || defined(TARGET_LPC2368)
+
         if(value) {
             _gpio->FIOSET = _mask;
         } else {
             _gpio->FIOCLR = _mask;
         }
+
+#elif defined(TARGET_LPC11U24)
+
+        if(value) {
+            LPC_GPIO->SET[_index] = _mask;
+        } else {
+            LPC_GPIO->CLR[_index] = _mask;
+        }
+#endif
     }
 
     /* Function: read
@@ -51,7 +61,12 @@ public:
      *      or read the input if set as an input
      */
     int read() {
+#if defined(TARGET_LPC1768) || defined(TARGET_LPC2368)
+
         return ((_gpio->FIOPIN & _mask) ? 1 : 0);
+#elif defined(TARGET_LPC11U24)
+        return ((LPC_GPIO->PIN[_index] & _mask) ? 1 : 0);
+#endif
     }
 
 
@@ -103,7 +118,13 @@ public:
 protected:
 
     PinName             _pin;
+
+#if defined(TARGET_LPC1768) || defined(TARGET_LPC2368)
     LPC_GPIO_TypeDef    *_gpio;
+#elif defined(TARGET_LPC11U24)
+    int _index;
+#endif
+
     uint32_t            _mask;
 
 };

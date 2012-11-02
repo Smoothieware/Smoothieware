@@ -1,10 +1,13 @@
 /* mbed Microcontroller Library - I2C
- * Copyright (c) 2007-2009 ARM Limited. All rights reserved.
- * sford
+ * Copyright (c) 2007-2011 ARM Limited. All rights reserved.
  */ 
  
 #ifndef MBED_I2C_H
 #define MBED_I2C_H
+
+#include "device.h"
+
+#if DEVICE_I2C
 
 #include "platform.h"
 #include "PinNames.h"
@@ -134,3 +137,6 @@ protected:
 } // namespace mbed
 
 #endif
+
+#endif
+
