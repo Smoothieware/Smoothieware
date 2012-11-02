@@ -17,8 +17,8 @@
 #define microseconds_per_step_pulse_checksum 42333
 #define extruder_module_enable_checksum      6183
 #define extruder_steps_per_mm_checksum       58088
-#define default_feed_rate_checksum           53183
 #define extruder_acceleration_checksum       60356
+// default_feed_rate_checksum defined by Robot.h
 
 #define OFF 0
 #define SOLO 1

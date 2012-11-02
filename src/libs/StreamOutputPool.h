@@ -27,10 +27,12 @@ class StreamOutputPool {
             va_start(args, format);
             int size = format.size() * 2;
             char* buffer = new char[size];
-            while (vsprintf(buffer, format.c_str(), args) < 0){
+            int len = vsnprintf(buffer, size, format.c_str(), args);
+            if (len >= size) {
                 delete[] buffer;
-                size *= 2;
+                size = len+1;
                 buffer = new char[size];
+                len = vsnprintf(buffer, size, format.c_str(), args);
             }
             va_end(args);
             
@@ -39,6 +41,7 @@ class StreamOutputPool {
                 this->streams.at(i)->printf(buffer);
             }
             delete[] buffer;      
+            return len;
 
        }
 

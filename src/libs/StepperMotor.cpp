@@ -35,7 +35,7 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
 }
 
 // Called a great many times per second, to step if we have to now
-bool StepperMotor::tick(){
+void StepperMotor::tick(){
 
     // increase the ( fixed point ) counter by one tick 11t
     this->fx_counter += (uint64_t)((uint64_t)1<<32);  

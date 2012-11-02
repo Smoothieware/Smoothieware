@@ -369,7 +369,7 @@ int USBCDCMSC::_putc(int c) {
 }
 
 int USBCDCMSC::_getc() {
-    uint8_t c;
+    uint8_t c = 0;
     while (cdcbuf.isEmpty());
     cdcbuf.dequeue(&c);
     return c;
@@ -946,7 +946,6 @@ void USBCDCMSC::on_module_loaded(){
 
 void USBCDCMSC::on_main_loop(void* argument){
     if( this->has_char('\n') ){
-        int index = 0;
         string received;
         while(1){
            char c;
@@ -962,7 +961,6 @@ void USBCDCMSC::on_main_loop(void* argument){
             }
         }
     }
-
 
 }
 

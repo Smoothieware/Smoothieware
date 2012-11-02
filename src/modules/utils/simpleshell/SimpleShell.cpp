@@ -69,7 +69,6 @@ void SimpleShell::cd_command( string parameters, StreamOutput* stream ){
     string folder = this->absolute_from_relative( parameters );
     if( folder[folder.length()-1] != '/' ){ folder += "/"; }
     DIR *d;
-    struct dirent *p;
     d = opendir(folder.c_str());
     if(d == NULL) { 
         stream->printf("Could not open directory %s \r\n", folder.c_str() ); 
