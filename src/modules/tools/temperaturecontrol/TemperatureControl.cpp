@@ -144,6 +144,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
             }
         }
     }
+    return 0;
 }
 
 double TemperatureControl::new_thermistor_reading(){
