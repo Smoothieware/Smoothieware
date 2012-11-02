@@ -14,6 +14,9 @@
 using namespace std;
 #include "libs/nuts_bolts.h"
 
+#include <mri.h>
+
+
 Stepper* stepper;
 uint32_t previous_step_count;
 uint32_t skipped_speed_updates;
@@ -227,6 +230,9 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
               }
               if(this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
                  // this->kernel->streams->printf("final reached after %u when it should be %u\r\n", current_steps_completed, this->main_stepper->steps_to_move);
+                  //if( this->current_block->final_rate == 0 ){
+                  //  __debugbreak();
+                  //}
                   this->trapezoid_adjusted_rate = this->current_block->final_rate;
               } 
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);

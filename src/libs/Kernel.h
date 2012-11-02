@@ -70,7 +70,7 @@ class Kernel {
         Digipot*          digipot;
 
     private:
-        Module* hooks[NUMBER_OF_DEFINED_EVENTS][16]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
+        Module* hooks[NUMBER_OF_DEFINED_EVENTS][32]; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
 
 };
 

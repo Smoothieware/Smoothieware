@@ -48,7 +48,11 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 Kernel::Kernel(){
 
     // Value init for the arrays
-    for( uint8_t i = 0; i < NUMBER_OF_DEFINED_EVENTS; i++ ){ this->hooks[i][0] = NULL; }
+    for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){ 
+        for( uint8_t index=0; index<32; index++ ){
+            this->hooks[i][index] = NULL; 
+        } 
+    }
 
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();

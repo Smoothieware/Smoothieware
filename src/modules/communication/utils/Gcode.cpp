@@ -61,7 +61,7 @@ void Gcode::prepare_cached_values(){
     }
     if( this->has_letter('M') ){
         this->has_m = true;
-        this->m = this->get_value('m');
+        this->m = this->get_value('M');
     }else{
         this->has_m = false;
     }

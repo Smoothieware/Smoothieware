@@ -206,6 +206,8 @@ extern "C" void TIMER0_IRQHandler (void){
         LPC_TIM0->MR0 += global_step_ticker->period;
     }
 
+    if( LPC_TIM0->MR0 > 10000 ){ __debugbreak(); }
+
 }
 
 #pragma GCC pop_options

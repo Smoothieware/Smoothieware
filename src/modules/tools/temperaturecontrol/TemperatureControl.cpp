@@ -90,6 +90,10 @@ void TemperatureControl::on_config_reload(void* argument){
 
 }
 
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+
+
 void TemperatureControl::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if( gcode->has_m){
@@ -111,6 +115,9 @@ void TemperatureControl::on_gcode_execute(void* argument){
         }
     } 
 }
+
+#pragma GCC pop_options
+
 
 void TemperatureControl::set_desired_temperature(double desired_temperature){
     this->desired_adc_value = this->temperature_to_adc_value(desired_temperature);
