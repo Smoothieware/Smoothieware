@@ -20,7 +20,7 @@ void SwitchPool::on_module_loaded(){
     vector<uint16_t> modules;
     this->kernel->config->get_module_list( &modules, switch_checksum );
 
-    for( int i = 0; i < modules.size(); i++ ){
+    for( unsigned int i = 0; i < modules.size(); i++ ){
         // If module is enabled
         if( this->kernel->config->value(switch_checksum, modules[i], enable_checksum )->as_bool() == true ){
             Switch* controller = new Switch(modules[i]);

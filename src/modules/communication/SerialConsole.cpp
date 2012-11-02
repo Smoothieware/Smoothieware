@@ -49,7 +49,6 @@ void SerialConsole::on_serial_char_received(){
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){
     if( this->has_char('\n') ){
-        int index = 0;
         string received;
         while(1){
            char c;
