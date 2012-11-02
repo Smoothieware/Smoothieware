@@ -48,7 +48,7 @@ void Config::set_string( string setting, string value ){
 }
 
 void Config::get_module_list(vector<uint16_t>* list, uint16_t family){ 
-    for( int i=1; i<this->config_cache.size(); i++){
+    for( unsigned int i=1; i<this->config_cache.size(); i++){
         ConfigValue* value = this->config_cache.at(i); 
         //if( value->check_sums.size() == 3 && value->check_sums.at(2) == 29545 && value->check_sums.at(0) == family ){
         if( value->check_sums[2] == 29545 && value->check_sums[0] == family ){
@@ -119,7 +119,7 @@ ConfigValue* Config::value(uint16_t check_sums[]){
     bool cache_preloaded = this->config_cache_loaded;
     if( !cache_preloaded ){ this->config_cache_load(); }
      
-    for( int i=1; i<this->config_cache.size(); i++){
+    for( unsigned int i=1; i<this->config_cache.size(); i++){
         // If this line matches the checksum 
         bool match = true;
         unsigned int counter = 0;
