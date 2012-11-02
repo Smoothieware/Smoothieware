@@ -93,7 +93,7 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
         stream->printf( "live: %s has been set to %s\r\n", setting.c_str(), value.c_str() );
     } else {
         uint16_t source_checksum = get_checksum(source);
-        for(int i=0; i < this->kernel->config->config_sources.size(); i++){
+        for(unsigned int i=0; i < this->kernel->config->config_sources.size(); i++){
             if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
                 this->kernel->config->config_sources[i]->write(setting, value);
                 stream->printf( "%s: %s has been set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
