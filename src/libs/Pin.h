@@ -15,12 +15,12 @@ class Pin{
             LPC_GPIO_TypeDef* gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
             if( value.find_first_of("n")!=string::npos ? true : false ){
                 this->port_number = 0;  
-                this->port = gpios[this->port_number]; 
+                this->port = gpios[(unsigned int) this->port_number]; 
                 this->inverting = false;
                 this->pin = 255;;
             }else{
                 this->port_number =  atoi(value.substr(0,1).c_str());  
-                this->port = gpios[this->port_number]; 
+                this->port = gpios[(unsigned int) this->port_number]; 
                 this->inverting = ( value.find_first_of("!")!=string::npos ? true : false );
                 this->pin  = atoi( value.substr(2, value.size()-2-(this->inverting?1:0)).c_str() );
             } 

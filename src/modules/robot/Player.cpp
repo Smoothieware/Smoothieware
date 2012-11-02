@@ -34,7 +34,7 @@ Block* Player::new_block(){
     Block* block = this->queue.get_ref( this->queue.size() );
     // Then clean it up 
     if( block->player == this ){
-        for(short index=0; index<block->gcodes.size(); index++){
+        for(unsigned int index=0; index<block->gcodes.size(); index++){
             block->gcodes.pop_back(); 
         }     
     }

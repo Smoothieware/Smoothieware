@@ -124,7 +124,6 @@ void TemperatureControl::set_desired_temperature(double desired_temperature){
 }
 
 double TemperatureControl::get_temperature(){
-    double temp = this->new_thermistor_reading() ;
     return this->adc_value_to_temperature( this->new_thermistor_reading() );
 }
 
@@ -152,6 +151,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
             }
         }
     }
+    return 0;
 }
 
 double TemperatureControl::new_thermistor_reading(){
@@ -182,8 +182,8 @@ double TemperatureControl::new_thermistor_reading(){
 
 
 double TemperatureControl::average_adc_reading(){
-    double total;
-    int j=0;
+    double total = 0;
+    int j = 0;
     int reading_index = this->queue.head;
     while( reading_index != this->queue.tail ){
         j++;

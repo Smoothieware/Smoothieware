@@ -176,6 +176,7 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
     if( this->current_block != NULL ){
         this->current_block->release(); 
     }
+    return 0;
 
 }
 
@@ -251,7 +252,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
     }
 
     skipped_speed_updates = 0; 
-
+    return 0;
 
 }
 

@@ -36,6 +36,7 @@ uint32_t PauseButton::button_tick(uint32_t dummy){
             } 
         } 
     }
+    return 0;
 }
 
 void PauseButton::on_play( void* argument ){
