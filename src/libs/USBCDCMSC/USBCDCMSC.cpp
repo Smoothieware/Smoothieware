@@ -369,7 +369,7 @@ int USBCDCMSC::_putc(int c) {
 }
 
 int USBCDCMSC::_getc() {
-    uint8_t c;
+    uint8_t c = 0;
     while (cdcbuf.isEmpty());
     cdcbuf.dequeue(&c);
     return c;
