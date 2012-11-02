@@ -122,7 +122,7 @@ ConfigValue* Config::value(uint16_t check_sums[]){
     for( int i=1; i<this->config_cache.size(); i++){
         // If this line matches the checksum 
         bool match = true;
-        char counter = 0;
+        unsigned int counter = 0;
         while(check_sums[counter] != 0x0000 && counter <= 2 ){
              if(this->config_cache[i]->check_sums[counter] != check_sums[counter] ){
                 match = false;
