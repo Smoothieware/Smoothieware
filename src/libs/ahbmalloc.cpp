@@ -13,24 +13,29 @@ typedef struct {
 
 uint8_t* bank_address[AHB_NUM_BANKS] = { Image$$RW_IRAM2$$Base, Image$$RW_IRAM3$$Base };
 
-FREEBLOCK free_map[AHB_NUM_BANKS][BANK_SIZE / AVERAGE_BLOCK_SIZE] __attribute__ ((section (".bss")));
+FREEBLOCK free_block_map[AHB_NUM_BANKS][BANK_SIZE / AVERAGE_BLOCK_SIZE] __attribute__ ((section (".bss")));
+
+#define freeblock free_block_map[bank]
 
 void* ahbmalloc(size_t size, BANK bank)
 {
     // initialise size of first free block
-    if (free_map[bank][0].size == 0)
-        free_map[bank][0].size = BANK_SIZE;
+    if (freeblock[0].size == 0)
+        freeblock[0].size = BANK_SIZE;
 
-    for (int i = 0; free_map[bank][i].size > 0; i++) {
-        if (free_map[bank][i].size >= size) {
-            uint16_t rem = free_map[bank][i].size - size;
-            free_map[bank][i].offset += size;
-            free_map[bank][i].size = rem;
+    for (int i = 0; freeblock[i].size > 0; i++) {
+        if (freeblock[i].size >= size) {
+            uint16_t offset = freeblock[i].offset;
+            uint16_t rem = freeblock[i].size - size;
+            freeblock[i].offset += size;
+            freeblock[i].size = rem;
             if (rem == 0) {
-                // TODO: move free block ranges down if we end up with a hole
+                // TODO: move free block ranges down if we end up with a hole eg by completely using a free fragment
             }
+            return &bank_address[bank][offset];
         }
     }
+    return NULL;
 }
 
 void ahbfree(void* ptr, size_t size)
@@ -48,48 +53,48 @@ void ahbfree(void* ptr, size_t size)
         return;
 
     int before = 0, after = 0;
-    int last;
+    int last = 0;
     uint16_t offset = (p - bank_address[i]);
 
-    for (i = 0; free_map[bank][i].size > 0; i++)
+    for (i = 0; freeblock[i].size > 0; i++)
     {
         last = i;
         // this block is before our address
-        if (offset >= free_map[bank][i].offset)
+        if (offset >= freeblock[i].offset)
         {
             // if our block is before our 'before' block
-            if (offset < free_map[bank][before].offset)
+            if (offset < freeblock[before].offset)
                 before = i;
             // if this block is closer than our previously selected 'before' block
-            else if ((offset - free_map[bank][i].offset) < (offset - free_map[bank][before].offset))
+            else if ((offset - freeblock[i].offset) < (offset - freeblock[before].offset))
                 before = i;
         }
         else // this block is after our address
         {
             // if our block is after our 'after' block
-            if (offset > free_map[bank][after].offset)
+            if (offset > freeblock[after].offset)
                 after = i;
             // if our block is closer than our previously selected 'after' block
-            else if ((free_map[bank][i].offset - offset) < (free_map[bank][after].offset - offset))
+            else if ((freeblock[i].offset - offset) < (freeblock[after].offset - offset))
                 after = i;
         }
     }
-    if ((free_map[bank][before].offset + free_map[bank][before].size) == offset) {
+    if ((freeblock[before].offset + freeblock[before].size) == offset) {
         // we have a free block just before us, simply extend it
-        free_map[bank][before].size += size;
+        freeblock[before].size += size;
         return;
     }
-    if ((free_map[bank][after].offset - size) == offset) {
+    if ((freeblock[after].offset - size) == offset) {
         // we have a free block just after us, move it backwards
-        free_map[bank][after].offset -= size;
-        free_map[bank][after].size += size;
+        freeblock[after].offset -= size;
+        freeblock[after].size += size;
         return;
     }
     // no free blocks before or after us, create new free block on the stack
     last++;
     if (last < (BANK_SIZE / AVERAGE_BLOCK_SIZE)) {
-        free_map[bank][last].offset = offset;
-        free_map[bank][last].size = size;
+        freeblock[last].offset = offset;
+        freeblock[last].size = size;
         return;
     }
     // we can't extend any free blocks and have no room for more free blocks
