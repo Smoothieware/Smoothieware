@@ -173,6 +173,7 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
     if( this->current_block != NULL ){
         this->current_block->release(); 
     }
+    return 0;
 
 }
 
