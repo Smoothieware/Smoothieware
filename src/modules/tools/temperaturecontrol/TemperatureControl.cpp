@@ -117,7 +117,6 @@ void TemperatureControl::set_desired_temperature(double desired_temperature){
 }
 
 double TemperatureControl::get_temperature(){
-    double temp = this->new_thermistor_reading() ;
     return this->adc_value_to_temperature( this->new_thermistor_reading() );
 }
 
