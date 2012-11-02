@@ -27,7 +27,7 @@ int USBSerial::_putc(int c) {
 }
 
 int USBSerial::_getc() {
-    uint8_t c;
+    uint8_t c = 0;
     while (buf.isEmpty());
     buf.dequeue(&c);
     return c;
