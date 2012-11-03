@@ -11,6 +11,6 @@ typedef enum {
 } BANK;
 
 void* ahbmalloc(size_t size, BANK bank);
-void ahbfree(void* ptr);
+void ahbfree(void* ptr, size_t size);
 
 #endif /* _AHBMALLOC_H */
