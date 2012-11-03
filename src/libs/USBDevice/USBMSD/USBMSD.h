@@ -62,27 +62,6 @@
  * such as the number of blocks and the memory size.
  */
 
-// Bulk-only CBW
-typedef struct __attribute__ ((packed)) {
-    uint32_t Signature;
-    uint32_t Tag;
-    uint32_t DataLength;
-    uint8_t  Flags;
-    uint8_t  LUN;
-    uint8_t  CBLength;
-    uint8_t  CB[16];
-} CBW;
-
-// Bulk-only CSW
-typedef struct __attribute__ ((packed)) {
-    uint32_t Signature;
-    uint32_t Tag;
-    uint32_t DataResidue;
-    uint8_t  Status;
-} CSW;
-
-
-
 class USBMSD: public USB_Endpoint_Receiver, public Module {
 public:
 
@@ -115,6 +94,25 @@ public:
     usbdesc_endpoint  MSC_BulkIn;
 
     usbdesc_string_l(12) MSC_Description;
+
+    // Bulk-only CBW
+    typedef struct __attribute__ ((packed)) {
+        uint32_t Signature;
+        uint32_t Tag;
+        uint32_t DataLength;
+        uint8_t  Flags;
+        uint8_t  LUN;
+        uint8_t  CBLength;
+        uint8_t  CB[16];
+    } CBW;
+
+    // Bulk-only CSW
+    typedef struct __attribute__ ((packed)) {
+        uint32_t Signature;
+        uint32_t Tag;
+        uint32_t DataResidue;
+        uint8_t  Status;
+    } CSW;
 
 private:
     // parent USB composite device manager
