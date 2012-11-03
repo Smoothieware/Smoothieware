@@ -178,12 +178,11 @@ bool USBMSD::connect()
 //     MemorySize = disk->disk_size();
     BlockSize = disk->disk_blocksize();
 
-    if (BlockCount > 0) {
-        if (BlockSize != 0) {
-            page = (uint8_t *) ahbmalloc(BlockSize, AHB_BANK_0);
-            if (page == NULL)
-                return false;
-        }
+    if ((BlockCount > 0) && (BlockSize != 0)) {
+        page = (uint8_t *) ahbmalloc(BlockSize, AHB_BANK_0);
+        if (page == NULL)
+            return false;
+        printf("MSD:buffer is at %p\n", page);
     } else {
         return false;
     }

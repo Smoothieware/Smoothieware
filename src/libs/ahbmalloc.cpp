@@ -10,8 +10,8 @@
 #define AVERAGE_BLOCK_SIZE 256
 #define BLOCKS  (BANK_SIZE / AVERAGE_BLOCK_SIZE)
 
-extern uint8_t * const Image$$RW_IRAM2$$Base;
-extern uint8_t * const Image$$RW_IRAM3$$Base;
+extern uint8_t Image$$RW_IRAM2$$Base;
+extern uint8_t Image$$RW_IRAM3$$Base;
 // #define Image$$RW_IRAM2$$Base ((uint8_t *) 0x2007C000)
 // #define Image$$RW_IRAM3$$Base ((uint8_t *) 0x20080000)
 
@@ -20,7 +20,7 @@ typedef struct {
     uint16_t offset;
 } FREEBLOCK;
 
-uint8_t* bank_address[AHB_NUM_BANKS] = { Image$$RW_IRAM2$$Base, Image$$RW_IRAM3$$Base };
+uint8_t* bank_address[AHB_NUM_BANKS] = { &Image$$RW_IRAM2$$Base, &Image$$RW_IRAM3$$Base };
 
 FREEBLOCK free_block_map[AHB_NUM_BANKS][BLOCKS] __attribute__ ((section (".bss")));
 
