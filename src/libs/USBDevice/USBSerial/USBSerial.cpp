@@ -201,7 +201,3 @@ bool USBSerial::EpCallback(uint8_t bEP, uint8_t bEPStatus) {
 uint8_t USBSerial::available() {
     return rxbuf.available();
 }
-
-void USBSerial::on_module_load()
-{
-}
