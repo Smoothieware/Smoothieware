@@ -133,11 +133,7 @@ INCDIRS += $(PROJINCS) $(GCC4MBED_DIR)/mri $(EXTERNAL_DIR)/mbed $(EXTERNAL_DIR)/
 
 # DEFINEs to be used when building C/C++ code
 DEFINES = -DTARGET_LPC1768 -D__LPC17XX__
-<<<<<<< HEAD
 DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"'
-=======
-DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"'
->>>>>>> use -std=gnu++0x, rearrange makefile so we can have extra flags for C++ vs C instead of other way around
 DEFINES += -DMRI_BREAK_ON_INIT=$(MRI_BREAK_ON_INIT) -DMRI_SEMIHOST_STDIO=$(MRI_SEMIHOST_STDIO)
 
 # Libraries to be linked into final binary
