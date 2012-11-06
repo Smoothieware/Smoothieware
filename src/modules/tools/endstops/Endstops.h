@@ -21,6 +21,7 @@
 #define NOT_HOMING 0
 #define MOVING_TO_ORIGIN_FAST 1
 #define MOVING_BACK 2
+#define MOVING_TO_ORIGIN_SLOW 3
 
 #define alpha_min_endstop_checksum       28684 
 #define beta_min_endstop_checksum        23457  

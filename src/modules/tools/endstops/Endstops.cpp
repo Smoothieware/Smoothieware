@@ -109,6 +109,31 @@ void Endstops::on_gcode_received(void* argument){
                 }
             }
 
+            this->status = MOVING_TO_ORIGIN_SLOW; 
+            for( char c = 'X'; c <= 'Z'; c++ ){
+                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                    this->steppers[c - 'X']->move(0,10000000); 
+                }
+            }
+
+            // Wait for all axes to have homed
+            running = true;
+            while(running){
+                running = false; 
+                for( char c = 'X'; c <= 'Z'; c++ ){
+                    if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                         if( this->pins[c - 'X']->get() ){
+                            // The endstop was hit, stop moving
+                            if( this->steppers[c - 'X']->moving ){ 
+                                this->steppers[c - 'X']->move(0,0); 
+                            }  
+                        }else{
+                            // The endstop was not hit yet
+                            running = true;
+                         }
+                    }
+                }
+            }
             printf("test c\r\n");
 
             // Homing is done
