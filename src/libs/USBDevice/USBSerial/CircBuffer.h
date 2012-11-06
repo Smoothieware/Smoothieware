@@ -68,6 +68,10 @@ public:
         return(!empty);
     };
 
+    void flush() {
+        read = write;
+    }
+
 private:
     volatile uint16_t write;
     volatile uint16_t read;
