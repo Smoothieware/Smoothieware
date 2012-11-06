@@ -45,15 +45,9 @@ void SlowTicker::tick(){
 }
 
 extern "C" void TIMER2_IRQHandler (void){
-
-    LPC_GPIO1->FIOSET = 1<<21;
-
     if((LPC_TIM2->IR >> 0) & 1){  // If interrupt register set for MR0
         LPC_TIM2->IR |= 1 << 0;   // Reset it 
         global_slow_ticker->tick(); 
     }
-
-    LPC_GPIO1->FIOCLR = 1<<21;
-
 }
 

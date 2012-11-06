@@ -16,7 +16,6 @@ StepperMotor::StepperMotor(){
     this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
     this->direction_bit = 0;
-    //this->update_exit_tick();
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
 }
@@ -29,7 +28,6 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
     this->direction_bit = 0;
-    //this->update_exit_tick();
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
 }
@@ -64,6 +62,7 @@ void StepperMotor::tick(){
 
 }
 
+// If the move is finished, the StepTicker will call this ( because we asked it to in tick() )
 void StepperMotor::signal_move_finished(){
 
             // work is done ! 8t
@@ -79,20 +78,16 @@ void StepperMotor::signal_move_finished(){
             }
 
             this->is_move_finished = false;
-
 }
 
 // This is just a way not to check for ( !this->moving || this->paused || this->fx_ticks_per_step == 0 ) at every tick()
 inline void StepperMotor::update_exit_tick(){
-    //printf("try update list %u %u %u\r\n", this->moving, this->paused, this->fx_ticks_per_step == 0 );
     if( !this->moving || this->paused || this->steps_to_move == 0 ){
         // We must exit tick() after setting the pins, no bresenham is done 
-        //this->remove_from_active_list_next_reset = true; 
         this->step_ticker->remove_motor_from_active_list(this); 
     }else{
         // We must do the bresenham in tick()
         // We have to do this or there could be a bug where the removal still happens when it doesn't need to
-        //this->remove_from_active_list_next_reset = false;
         this->step_ticker->add_motor_to_active_list(this);
     }
 }
@@ -101,8 +96,6 @@ inline void StepperMotor::update_exit_tick(){
 
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps ){
-
-   //printf("stepper %p moving %u \r\n", this, steps ); 
     // We do not set the direction directly, we will set the pin just before the step pin on the next tick 
     this->direction_bit = direction;
 
@@ -123,19 +116,16 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 
 }
 
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
+
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( double speed ){
-    //printf(" steppermotor %p set speed : %f \r\n", this, speed);
     if( speed < 0.0001 ){
-        this->steps_per_second = 0;
-        this->fx_ticks_per_step = 1>>63;
+        //__debugbreak();
         return; 
     }
    
-    //if( speed < this->steps_per_second ){
-        LPC_GPIO1->FIOSET = 1<<19;
-    //}
-
     // How many steps we must output per second
     this->steps_per_second = speed;
 
@@ -144,9 +134,9 @@ void StepperMotor::set_speed( double speed ){
     double double_fx_ticks_per_step = (double)(1<<16) * ( (double)(1<<16) * ticks_per_step );
     this->fx_ticks_per_step = (uint64_t)( floor(double_fx_ticks_per_step) );
 
-    LPC_GPIO1->FIOCLR = 1<<19;
-
 }
+
+//#pragma GCC pop_options
 
 void StepperMotor::pause(){
     this->paused = true;

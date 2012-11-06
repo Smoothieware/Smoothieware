@@ -43,7 +43,6 @@ class Stepper : public Module {
         uint32_t trapezoid_generator_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
         int config_step_timer( int cycles );
-        uint32_t step_events_completed();
         void turn_enable_pins_on();
         void turn_enable_pins_off();
 

@@ -73,6 +73,7 @@ StepperMotor* StepTicker::add_stepper_motor(StepperMotor* stepper_motor){
     return stepper_motor;
 }
 
+// Call tick() on each active motor
 inline void StepTicker::tick(){ 
     uint8_t current_id = 0; 
     StepperMotor* current = this->active_motors[0];
@@ -83,6 +84,8 @@ inline void StepTicker::tick(){
     }
 }
 
+// Call signal_mode_finished() on each active motor that asked to be signaled. We do this instead of inside of tick() so that 
+// all tick()s are called before we do the move finishing
 void StepTicker::signal_moves_finished(){
     uint8_t current_id = 0; 
     StepperMotor* current = this->active_motors[0];
@@ -97,17 +100,12 @@ void StepTicker::signal_moves_finished(){
     this->moves_finished = false;
 }
 
+// Reset step pins on all active motors
 inline void StepTicker::reset_tick(){
-    
     uint8_t current_id = 0; 
     StepperMotor* current = this->active_motors[0];
     while(current != NULL ){
         current->step_pin->set(0);
-        /*if( current->remove_from_active_list_next_reset ){
-                current->remove_from_active_list_next_reset = false;
-                this->remove_motor_from_active_list(current); 
-                current_id--;
-        }*/
         current_id++;
         current = this->active_motors[current_id];
     }
@@ -119,33 +117,26 @@ extern "C" void TIMER1_IRQHandler (void){
 }
 
 
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
 
 
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
-
     uint32_t initial_tc = LPC_TIM0->TC;
-
-    // Do not get out of here before everything is nice and tidy
-
-    LPC_GPIO1->FIOSET = 1<<18;
 
     LPC_TIM0->IR |= 1 << 0;
 
     // If no axes enabled, just ignore for now 
     if( global_step_ticker->active_motors[0] == NULL ){ 
-        LPC_GPIO1->FIOCLR = 1<<18;
         return; 
     } 
 
+    // Do not get out of here before everything is nice and tidy
     LPC_TIM0->MR0 = 2000000;
     
     // Step pins 
     global_step_ticker->tick(); 
-
-    uint32_t after_tick = LPC_TIM0->TC;
 
     // We may have set a pin on in this tick, now we start the timer to set it off
     if( global_step_ticker->reset_step_pins ){
@@ -156,8 +147,6 @@ extern "C" void TIMER0_IRQHandler (void){
 
     // If a move finished in this tick, we have to tell the actuator to act accordingly
     if( global_step_ticker->moves_finished ){ global_step_ticker->signal_moves_finished(); }
-
-    uint32_t after_signal = LPC_TIM0->TC;
 
     // If we went over the duration an interrupt is supposed to last, we have a problem 
     // That can happen tipically when we change blocks, where more than usual computation is done
@@ -194,24 +183,20 @@ extern "C" void TIMER0_IRQHandler (void){
         int difference = (int)(LPC_TIM0->TC) - (int)(start_tc);
         if( difference > 0 ){ global_step_ticker->last_duration = (uint32_t)difference; }
 
-        if( global_step_ticker->last_duration > 10000 || LPC_TIM0->MR0 > 10000 || LPC_TIM0->TC > 10000 || initial_tc > 10000 || after_tick > 10000 || after_signal > 10000 ){ __debugbreak(); }
+        //if( global_step_ticker->last_duration > 5000 || LPC_TIM0->MR0 > 5000 || LPC_TIM0->TC > 5000 || initial_tc > 5000 || after_tick > 5000 || after_signal > 5000 ){ __debugbreak(); }
 
     }else{
         LPC_TIM0->MR0 = global_step_ticker->period;
     }
 
-    LPC_GPIO1->FIOCLR = 1<<18;
- 
     while( LPC_TIM0->TC > LPC_TIM0->MR0 ){
         LPC_TIM0->MR0 += global_step_ticker->period;
     }
 
-    if( LPC_TIM0->MR0 > 10000 ){ __debugbreak(); }
-
 }
 
-#pragma GCC pop_options
 
+//#pragma GCC pop_options
 
 // We make a list of steppers that want to be called so that we don't call them for nothing
 void StepTicker::add_motor_to_active_list(StepperMotor* motor){
@@ -229,6 +214,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor){
 
 }
 
+// Remove a stepper from the list of active motors
 void StepTicker::remove_motor_from_active_list(StepperMotor* motor){
     uint8_t current_id = 0;
     uint8_t offset = 0; 
@@ -240,8 +226,6 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor){
         current = this->active_motors[current_id+offset];
     }
     this->active_motors[current_id] = NULL;
-
-
 }
 
 

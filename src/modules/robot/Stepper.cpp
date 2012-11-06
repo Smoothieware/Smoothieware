@@ -116,17 +116,12 @@ void Stepper::on_block_begin(void* argument){
     // The stepper does not care about 0-blocks
     if( block->millimeters == 0.0 ){ return; }
  
-    //printf("stepper block begin taking block ( paused:%u ) \r\n", this->paused );
-    
     // Mark the new block as of interrest to us
     if( block->steps[ALPHA_STEPPER] > 0 || block->steps[BETA_STEPPER] > 0 || block->steps[GAMMA_STEPPER] > 0 ){
         block->take();
     }else{
         return;
     }
-
-    //block->debug(this->kernel);
-
 
     // We can't move with the enable pins off 
     if( this->enable_pins_status == false ){
@@ -148,19 +143,14 @@ void Stepper::on_block_begin(void* argument){
     if( this->kernel->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->beta_stepper_motor; }
     if( this->kernel->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->gamma_stepper_motor; }
 
-
     if( block->initial_rate == 0 ){
         this->trapezoid_generator_tick(0);
     }
-
 }
 
 // Current block is discarded
 void Stepper::on_block_end(void* argument){
-    Block* block  = static_cast<Block*>(argument);
-
     this->current_block = NULL; //stfu !
-
 }
 
 //#pragma GCC push_options
@@ -176,12 +166,8 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
     if( this->current_block != NULL ){
         this->current_block->release(); 
     }
+ 
     return 0;
-
-}
-
-inline uint32_t Stepper::step_events_completed(){
-    return this->main_stepper->stepped;
 }
 
 
@@ -190,9 +176,7 @@ inline uint32_t Stepper::step_events_completed(){
 // current_block stays untouched by outside handlers for the duration of this function call.
 uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
 
-
     if(this->current_block && !this->paused && this->main_stepper->moving ) {
-
         uint32_t current_steps_completed = this->main_stepper->stepped;
       
         if( previous_step_count == current_steps_completed && previous_step_count != 0 ){
@@ -208,37 +192,25 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
           this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
           return 0;
         }
-        
+
         if(current_steps_completed <= this->current_block->accelerate_until + 1) {
               this->trapezoid_adjusted_rate += ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
-              
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
               }
-
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
         }else if (current_steps_completed > this->current_block->decelerate_after + 1) {
-              LPC_GPIO1->FIOSET = 1<<20;
-
               // NOTE: We will only reduce speed if the result will be > 0. This catches small
               // rounding errors that might leave steps hanging after the last trapezoid tick.
               if(this->trapezoid_adjusted_rate > this->current_block->rate_delta * 1.5) {
                   this->trapezoid_adjusted_rate -= ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
               }else{
-                  //this->kernel->streams->printf("delta reached after %u when it should be %u\r\n", current_steps_completed, this->main_stepper->steps_to_move);
                   this->trapezoid_adjusted_rate = this->current_block->rate_delta * 1.5;
-                  //this->trapezoid_adjusted_rate = floor(double(this->trapezoid_adjusted_rate / 2 ));
               }
               if(this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
-                 // this->kernel->streams->printf("final reached after %u when it should be %u\r\n", current_steps_completed, this->main_stepper->steps_to_move);
-                  //if( this->current_block->final_rate == 0 ){
-                  //  __debugbreak();
-                  //}
                   this->trapezoid_adjusted_rate = this->current_block->final_rate;
               } 
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-
-              LPC_GPIO1->FIOCLR = 1<<20;
         }else {
               // Make sure we cruise at exactly nominal rate
               if (this->trapezoid_adjusted_rate != this->current_block->nominal_rate) {
@@ -246,9 +218,6 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
                   this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
               }
           }
-
-
-
     }
 
     skipped_speed_updates = 0; 
@@ -256,7 +225,6 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
 
 }
 
-//#pragma GCC pop_options
 
 
 // Initializes the trapezoid generator from the current block. Called whenever a new
@@ -289,3 +257,4 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
 
 }
 
+//#pragma GCC pop_options
