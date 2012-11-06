@@ -28,7 +28,5 @@ MRI_SEMIHOST_STDIO=0
 
 include ./gcc4mbed/build/gcc4mbed.mk
 
-flash: 
+flash:
 	lpc21isp $(PROJECT).hex /dev/ttyACM0 115200 14746
-
-

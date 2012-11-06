@@ -693,3 +693,15 @@ void USBMSD::on_module_loaded()
 {
     connect();
 }
+
+bool USBEvent_busReset(void)
+{
+}
+
+bool USBEvent_connectStateChanged(bool connected)
+{
+}
+
+bool USBEvent_suspendStateChanged(bool suspended)
+{
+}

@@ -62,7 +62,7 @@
  * such as the number of blocks and the memory size.
  */
 
-class USBMSD: public USB_Endpoint_Receiver, public Module {
+class USBMSD: public USB_State_Receiver, public USB_Endpoint_Receiver, public Module {
 public:
 
     /**
@@ -85,6 +85,9 @@ public:
     bool USBEvent_RequestComplete(CONTROL_TRANSFER&, uint8_t *, uint32_t);
     bool USBEvent_EPIn(uint8_t, uint8_t);
     bool USBEvent_EPOut(uint8_t, uint8_t);
+    bool USBEvent_busReset(void);
+    bool USBEvent_connectStateChanged(bool connected);
+    bool USBEvent_suspendStateChanged(bool suspended);
 
     virtual void on_module_loaded(void);
 
