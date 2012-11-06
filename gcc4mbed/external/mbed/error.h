@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - error
  * Copyright (c) 2006-2009 ARM Limited. All rights reserved.
- * sford
  */ 
  
 #ifndef MBED_ERROR_H

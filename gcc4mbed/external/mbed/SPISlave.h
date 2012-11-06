@@ -1,10 +1,13 @@
-/* mbed Microcontroller Library - SPI
- * Copyright (c) 2010 ARM Limited. All rights reserved. 
- * sford
+/* mbed Microcontroller Library - SPISlave
+ * Copyright (c) 2010-2011 ARM Limited. All rights reserved. 
  */
 
 #ifndef MBED_SPISLAVE_H
 #define MBED_SPISLAVE_H
+
+#include "device.h"
+
+#if DEVICE_SPISLAVE
 
 #include "platform.h"
 #include "PinNames.h"
@@ -118,5 +121,7 @@ protected:
 };
 
 } // namespace mbed
+
+#endif
 
 #endif

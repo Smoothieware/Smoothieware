@@ -9,6 +9,8 @@
 #include "ConfigValue.h"
 #include "FileConfigSource.h"
 #include "ConfigCache.h"
+#include <malloc.h>
+
 
 using namespace std;
 #include <string>
@@ -22,7 +24,7 @@ FileConfigSource::FileConfigSource(string config_file, uint16_t name_checksum){
 
 // Transfer all values found in the file to the passed cache
 void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
-    
+   
     // Default empty value
     ConfigValue* result = new ConfigValue;
     
@@ -35,29 +37,34 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
     do {
         c = fgetc (lp);
         if (c == '\n' || c == EOF){
+
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
             if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
-            string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" ");
-            vector<uint16_t> check_sums = get_checksums(key);
             
+            uint16_t check_sums[3];
+            get_checksums(check_sums, buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" "));
+
             result = new ConfigValue;
-            result->found = true;
-            result->check_sums = check_sums;
-            result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
             
+            result->found = true;
+            result->check_sums[0] = check_sums[0];
+            result->check_sums[1] = check_sums[1];
+            result->check_sums[2] = check_sums[2];
+
+            result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
             // Append the newly found value to the cache we were passed 
             cache->replace_or_push_back(result);
-            
+
             buffer.clear();
+
         }else{
             buffer += c;
         }
     } while (c != EOF);  
     fclose(lp);
-
 }
 
 // Return true if the check_sums match
@@ -85,7 +92,7 @@ void FileConfigSource::write( string setting, string value ){
             if( candidate.compare(setting) != 0 ){ buffer.clear(); continue; }
             int free_space = int(int(buffer.find_first_of("\r\n#", begin_value+1))-begin_value);
             if( int(value.length()) >= free_space ){
-                //this->kernel->serial->printf("ERROR: Not enough room for value\r\n");
+                //this->kernel->streams->printf("ERROR: Not enough room for value\r\n");
                 fclose(lp);
                 return;
             }
@@ -103,11 +110,11 @@ void FileConfigSource::write( string setting, string value ){
         }
     } while (c != EOF);
     fclose(lp);
-    //this->kernel->serial->printf("ERROR: configuration key not found\r\n");
+    //this->kernel->streams->printf("ERROR: configuration key not found\r\n");
 }
 
 // Return the value for a specific checksum
-string FileConfigSource::read( vector<uint16_t> check_sums ){
+string FileConfigSource::read( uint16_t check_sums[3] ){
 
     string value = "";
 
@@ -126,9 +133,11 @@ string FileConfigSource::read( vector<uint16_t> check_sums ){
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
             string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" ");
-            vector<uint16_t> line_checksums = get_checksums(key);
 
-            if(check_sums == line_checksums){
+            uint16_t line_checksums[3];
+            get_checksums(line_checksums, key);
+
+            if(check_sums[0] == line_checksums[0] && check_sums[1] == line_checksums[1] && check_sums[2] == line_checksums[2] ){
                 value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
                 break;
             }

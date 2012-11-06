@@ -1,16 +1,25 @@
 /* mbed Microcontroller Library - InterruptIn
- * Copyright (c) 2006-2009 ARM Limited. All rights reserved.
- * sford
+ * Copyright (c) 2006-2011 ARM Limited. All rights reserved.
  */ 
  
 #ifndef MBED_INTERRUPTIN_H
 #define MBED_INTERRUPTIN_H
+
+#include "device.h"
+
+#if DEVICE_INTERRUPTIN
 
 #include "platform.h"
 #include "PinNames.h"
 #include "PeripheralNames.h"
 #include "Base.h"
 #include "FunctionPointer.h"
+
+#if defined(TARGET_LPC1768) || defined(TARGET_LPC2368)
+#define CHANNEL_NUM   48
+#elif defined(TARGET_LPC11U24)
+#define CHANNEL_NUM    8
+#endif
 
 namespace mbed {
 
@@ -49,6 +58,9 @@ public:
      *  name - (optional) A string to identify the object
      */
     InterruptIn(PinName pin, const char *name = NULL);
+#if defined(TARGET_LPC11U24)
+    virtual ~InterruptIn();
+#endif
  
      int read();
 #ifdef MBED_OPERATORS
@@ -106,13 +118,23 @@ public:
      */
     void mode(PinMode pull);
     
-
- 	static void _irq(); 
-	static InterruptIn *_irq_objects[48];
+    static InterruptIn *_irq_objects[CHANNEL_NUM];
+    
+#if defined(TARGET_LPC1768) || defined(TARGET_LPC2368)
+    static void _irq();
+#elif defined(TARGET_LPC11U24)
+    static void handle_interrupt_in(unsigned int channel);
+    static void _irq0(); static void _irq1();
+    static void _irq2(); static void _irq3();
+    static void _irq4(); static void _irq5();
+    static void _irq6(); static void _irq7();
+#endif
 
 protected:
-	
     PinName _pin;
+#if defined(TARGET_LPC11U24)
+    Channel _channel;
+#endif
     FunctionPointer _rise;
     FunctionPointer _fall;
 
@@ -121,5 +143,7 @@ protected:
 };
 
 } // namespace mbed
+
+#endif
 
 #endif

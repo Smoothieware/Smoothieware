@@ -29,7 +29,6 @@
  
 /* mbed Microcontroller Library - rtc_time
  * Copyright (c) 2009 ARM Limited. All rights reserved.
- * sford
  */
 
 #include <time.h>

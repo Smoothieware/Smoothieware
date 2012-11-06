@@ -1,10 +1,13 @@
 /* mbed Microcontroller Library - Ethernet
- * Copyright (c) 2009 ARM Limited. All rights reserved.
- * sford, rmeyer
+ * Copyright (c) 2009-2011 ARM Limited. All rights reserved.
  */ 
  
 #ifndef MBED_ETHERNET_H
 #define MBED_ETHERNET_H
+
+#include "device.h"
+
+#if DEVICE_ETHERNET
 
 #include "Base.h"
 
@@ -164,5 +167,7 @@ public:
 };
 
 } // namespace mbed
+
+#endif
 
 #endif

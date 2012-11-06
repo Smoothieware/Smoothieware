@@ -1,5 +1,5 @@
 #! /usr/bin/env bash
-# Copyright 2011 Adam Green (http://mbed.org/users/AdamGreen/)
+# Copyright 2012 Adam Green (http://mbed.org/users/AdamGreen/)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,30 +37,38 @@ pushd $ROOTDIR
 ROOTDIR=$PWD
 LOGFILE=$ROOTDIR/linux_install.log
 ERRORFILE=$ROOTDIR/linux_install.err
-CODE_SOURCERY_VERSION=arm-2011.03
-CODE_SOURCERY_FILENAME=arm-2011.03-42-arm-none-eabi-i686-pc-linux-gnu.tar.bz2
-CODE_SOURCERY_URL=https://sourcery.mentor.com/sgpp/lite/arm/portal/package8734/public/arm-none-eabi/$CODE_SOURCERY_FILENAME
-CODE_SOURCERY_TAR=$ROOTDIR/$CODE_SOURCERY_FILENAME
-CODE_SOURCERY_MD5=b1bd1dcb1f922d815ba7fa8d0e6fcd37
-CODE_SOURCERY_DIR=$ROOTDIR/$CODE_SOURCERY_VERSION
-CODE_SOURCERY_BINDIR=$CODE_SOURCERY_DIR/bin
-CODE_SOURCERY_LIBEXEC=$CODE_SOURCERY_DIR/libexec/gcc/arm-none-eabi/4.5.2
+GCC4ARM_VERSION=gcc-arm-none-eabi-4_6-2012q1
+GCC4ARM_FILENAME=gcc-arm-none-eabi-4_6-2012q1-20120316.tar.bz2
+GCC4ARM_URL=https://launchpad.net/gcc-arm-embedded/4.6/4.6-2012-q1-update/+download/$GCC4ARM_FILENAME
+GCC4ARM_TAR=$ROOTDIR/$GCC4ARM_FILENAME
+GCC4ARM_MD5=3999e0ce25ecd97b3138f3b0dc13c76f
+GCC4ARM_EXTRACT=$ROOTDIR/$GCC4ARM_VERSION
+GCC4ARM_DIR=$ROOTDIR/gcc-arm-none-eabi
+GCC4ARM_BINDIR=$GCC4ARM_DIR/bin
+GCC4ARM_LIBEXEC=$GCC4ARM_DIR/libexec/gcc/arm-none-eabi/4.6.2
+NEWBIN_URL=https://github.com/adamgreen/GCC-ARM-Embedded-20120316/tarball/master
+NEWBIN_TAR=$ROOTDIR/GCC-ARM-Embedded-20120316.tar.gz
+NEWBIN_MD5=ab3e32a3418a38121eceb267e4366848
+NEWBIN_BASEDIR=$ROOTDIR/GCC-ARM-Embedded
+NEWBIN_DIR=$NEWBIN_BASEDIR/lin32
+OUR_MAKE=make
 BUILDSHELL_CMD=$ROOTDIR/BuildShell
+BUILDSHELL_DEBUG_CMD=$ROOTDIR/BuildShellDebug
 
 
-# Initialize install log files.
 echo Logging install results to $LOGFILE
 echo `date` Starting $0 $*>$LOGFILE
 
-echo Downloading Code Sourcery G++ Lite...
-echo `date` Executing curl -L0 $CODE_SOURCERY_URL>>$LOGFILE
-curl -L0 $CODE_SOURCERY_URL >$CODE_SOURCERY_FILENAME
+echo Downloading GNU Tools for ARM Embedded Processors...
+rm $GCC4ARM_FILENAME >/dev/null 2>/dev/null
+echo `date` Executing wget $GCC4ARM_URL>>$LOGFILE
+wget $GCC4ARM_URL
 
-echo Validating md5 signature of Code Sourcery G++ Lite...
-echo `date` Validating md5 signature of Code Sourcery G++ Lite>>$LOGFILE
-archive_match=`md5sum $CODE_SOURCERY_FILENAME | grep -c $CODE_SOURCERY_MD5`
+echo Validating md5 signature of GNU Tools for ARM Embedded Processors...
+echo `date` Validating md5 signature of GNU Tools for ARM Embedded Processors>>$LOGFILE
+archive_match=`md5sum $GCC4ARM_FILENAME | grep -c $GCC4ARM_MD5`
 if [ "$archive_match" != "1" ] ; then
-    echo $CODE_SOURCERY_FILENAME failed MD5 signature check.>>$LOGFILE
+    echo $GCC4ARM_FILENAME failed MD5 signature check.>>$LOGFILE
     echo `date` Failure forced early exit>>$LOGFILE
     cat $LOGFILE
     rm -f $ERRORFILE
@@ -69,31 +77,72 @@ if [ "$archive_match" != "1" ] ; then
     exit 1
 fi
 
-echo Extracting Code Sourcery G++ Lite files...
-RunAndLog tar xf $CODE_SOURCERY_TAR
+echo Downloading updated GCC binaries from github...
+rm $NEWBIN_TAR >/dev/null 2>/dev/null
+echo `date` Executing wget -O $NEWBIN_TAR $NEWBIN_URL>>$LOGFILE
+wget -O $NEWBIN_TAR $NEWBIN_URL
+
+echo Validating md5 signature of updated GCC binaries...
+echo `date` Validating md5 signature of csgcc4mac project>>$LOGFILE
+archive_match=`md5sum  $NEWBIN_TAR | grep -c $NEWBIN_MD5`
+if [ "$archive_match" != "1" ] ; then
+    echo $NEWBIN_TAR failed MD5 signature check.>>$LOGFILE
+    echo `date` Failure forced early exit>>$LOGFILE
+    cat $LOGFILE
+    rm -f $ERRORFILE
+    popd >/dev/null
+    read -n 1 -sp "Press any key to continue..." dummy ; echo
+    exit 1
+fi
+
+echo Extracting GNU Tools for ARM Embedded Processors...
+rm -r $GCC4ARM_DIR >/dev/null 2>/dev/null
+RunAndLog tar xf $GCC4ARM_TAR
+RunAndLog mv $GCC4ARM_EXTRACT $GCC4ARM_DIR
+
+echo Extracting updated GCC binaries...
+RunAndLog tar -x --xform s/adamgreen-GCC-ARM-Embedded-[0-9]*-[a-f0-9]*/GCC-ARM-Embedded/ -f $NEWBIN_TAR
+
+echo Installing updated GCC binaries...
+RunAndLog cp $NEWBIN_DIR/arm-none-eabi-gdb $GCC4ARM_BINDIR/
 
 echo Creating helper scripts...
 echo "#! /usr/bin/env bash">$BUILDSHELL_CMD
 echo "# Modify next line and set destination drive to match mbed device">>$BUILDSHELL_CMD
-echo "# export LPC_DEPLOY='cp PROJECT.bin /Volumes/MBED/'">>$BUILDSHELL_CMD
+echo "export LPC_DEPLOY='cp PROJECT.bin /media/MBED/ ; sync'">>$BUILDSHELL_CMD
 echo>>$BUILDSHELL_CMD
 echo "SCRIPT_PATH=\$0">>$BUILDSHELL_CMD
 echo "SCRIPT_PATH=\${SCRIPT_PATH%/*}">>$BUILDSHELL_CMD
 echo "cd \$SCRIPT_PATH">>$BUILDSHELL_CMD
 echo "SCRIPT_PATH=\$PWD">>$BUILDSHELL_CMD
-echo "export PATH=\$SCRIPT_PATH/arm-2011.03/bin:\$PATH">>$BUILDSHELL_CMD
+echo "export PATH=\$SCRIPT_PATH/gcc-arm-none-eabi/bin:\$PATH">>$BUILDSHELL_CMD
 echo "exec bash">>$BUILDSHELL_CMD
 chmod +x $BUILDSHELL_CMD
 
-# Place Code Sourcery G++ Lite tools in the path before building gcc4mbed code.
-PATH=$CODE_SOURCERY_BINDIR:$PATH
+echo "#! /usr/bin/env bash">$BUILDSHELL_DEBUG_CMD
+echo "# Modify next line and set destination drive to match mbed device">>$BUILDSHELL_DEBUG_CMD
+echo "export LPC_DEPLOY='cp PROJECT.bin /media/MBED/ ; sync'">>$BUILDSHELL_DEBUG_CMD
+echo>>$BUILDSHELL_DEBUG_CMD
+echo "SCRIPT_PATH=\$0">>$BUILDSHELL_DEBUG_CMD
+echo "SCRIPT_PATH=\${SCRIPT_PATH%/*}">>$BUILDSHELL_DEBUG_CMD
+echo "cd \$SCRIPT_PATH">>$BUILDSHELL_DEBUG_CMD
+echo "SCRIPT_PATH=\$PWD">>$BUILDSHELL_DEBUG_CMD
+echo "export PATH=\$SCRIPT_PATH/gcc-arm-none-eabi/bin:\$PATH">>$BUILDSHELL_DEBUG_CMD
+echo "export GCC4MBED_TYPE=Debug">>$BUILDSHELL_DEBUG_CMD
+echo "exec bash">>$BUILDSHELL_DEBUG_CMD
+chmod +x $BUILDSHELL_DEBUG_CMD
 
-echo Installing mbed libs and headers...
-RunAndLog make install_mbed
+# Place arm-none-eabi-* tools in the path before building gcc4mbed code.
+PATH=$GCC4ARM_BINDIR:$PATH
 
 echo Performing a clean build of the gcc4mbed samples...
-RunAndLog make clean
-RunAndLog make
+RunAndLog $OUR_MAKE clean
+RunAndLog $OUR_MAKE
+
+echo Cleaning up intermediate files...
+RunAndLog rm -r $NEWBIN_BASEDIR
+RunAndLog rm $NEWBIN_TAR
+RunAndLog rm $GCC4ARM_TAR
 
 echo
 echo To build gcc4mbed samples, you will first need to run the following script
@@ -106,7 +155,7 @@ echo based code.  Feel free to customize it as you desire.
 echo
 echo You can also just edit your existing setup script such as \~/.profile
 echo to update the PATH environment variable to include:
-echo  $CODE_SOURCERY_BINDIR
+echo  $GCC4ARM_BINDIR
 
 
 # Restore current directory and exit script on success.

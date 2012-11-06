@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - Base
  * Copyright (c) 2006-2008 ARM Limited. All rights reserved.
- * sford, jbrawn
  */
  
 #ifndef MBED_BASE_H

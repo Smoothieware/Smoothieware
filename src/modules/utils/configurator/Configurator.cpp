@@ -16,7 +16,7 @@
 
 void Configurator::on_module_loaded(){
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-//    this->register_for_event(ON_GCODE_EXECUTE);
+//    this->register_for_event(ON_GCODE_RECEIVED);
 //    this->register_for_event(ON_MAIN_LOOP);
 }
 
@@ -37,7 +37,7 @@ void Configurator::on_console_line_received( void* argument ){
 }
 
 // Process and respond to eeprom gcodes (M50x)
-void Configurator::on_gcode_execute(void* argument){
+void Configurator::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if( gcode->has_letter('G') ){
         int code = gcode->get_value('G');
@@ -60,15 +60,17 @@ void Configurator::config_get_command( string parameters, StreamOutput* stream )
     if (setting == "") { // output live setting
         setting = source;
         source = "";
-        vector<uint16_t> setting_checksums = get_checksums( setting );
+        uint16_t setting_checksums[3];
+        get_checksums(setting_checksums, setting );
         ConfigValue* cv = this->kernel->config->value(setting_checksums);
         string value = "";
         if(cv->found){ value = cv->as_string(); }
         stream->printf( "live: %s is set to %s\r\n", setting.c_str(), value.c_str() );
     } else { // output setting from specified source
         uint16_t source_checksum = get_checksum( source );
-        vector<uint16_t> setting_checksums = get_checksums( setting );
-        for(int i=0; i < this->kernel->config->config_sources.size(); i++){
+        uint16_t setting_checksums[3];
+        get_checksums(setting_checksums, setting );
+        for(unsigned int i=0; i < this->kernel->config->config_sources.size(); i++){
             if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
                 string value = this->kernel->config->config_sources[i]->read(setting_checksums);
                 stream->printf( "%s: %s is set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
@@ -91,7 +93,7 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
         stream->printf( "live: %s has been set to %s\r\n", setting.c_str(), value.c_str() );
     } else {
         uint16_t source_checksum = get_checksum(source);
-        for(int i=0; i < this->kernel->config->config_sources.size(); i++){
+        for(unsigned int i=0; i < this->kernel->config->config_sources.size(); i++){
             if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
                 this->kernel->config->config_sources[i]->write(setting, value);
                 stream->printf( "%s: %s has been set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
@@ -115,7 +117,7 @@ void Configurator::config_load_command( string parameters, StreamOutput* stream 
         stream->printf( "Loaded settings from %s\r\n", source.c_str() );
     } else {
         uint16_t source_checksum = get_checksum(source);
-        for(int i=0; i < this->kernel->config->config_sources.size(); i++){
+        for(unsigned int i=0; i < this->kernel->config->config_sources.size(); i++){
             if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
                 this->kernel->config->config_sources[i]->transfer_values_to_cache(&this->kernel->config->config_cache);
                 this->kernel->call_event(ON_CONFIG_RELOAD);

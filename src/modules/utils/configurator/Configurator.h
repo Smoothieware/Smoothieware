@@ -30,7 +30,7 @@ class Configurator : public Module {
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
-        void on_gcode_execute( void* argument );
+        void on_gcode_received( void* argument );
         void on_main_loop( void* argument );
 
         void config_get_command( string parameters, StreamOutput* stream ); 
