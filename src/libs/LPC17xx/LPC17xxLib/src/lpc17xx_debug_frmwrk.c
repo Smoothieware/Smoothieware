@@ -86,7 +86,7 @@ uint8_t UARTGetChar (LPC_UART_TypeDef *UARTx)
  **********************************************************************/
 void UARTPuts(LPC_UART_TypeDef *UARTx, const void *str)
 {
-	uint8_t *s = (uint8_t *) str;
+	const uint8_t *s = (const uint8_t *) str;
 
 	while (*s)
 	{
@@ -296,10 +296,10 @@ void debug_frmwrk_init(void)
 	UARTConfigStruct.Baud_rate = 115200;
 
 	// Initialize DEBUG_UART_PORT peripheral with given to corresponding parameter
-	UART_Init(DEBUG_UART_PORT, &UARTConfigStruct);
+	UART_Init((LPC_UART_TypeDef *) DEBUG_UART_PORT, &UARTConfigStruct);
 
 	// Enable UART Transmit
-	UART_TxCmd(DEBUG_UART_PORT, ENABLE);
+	UART_TxCmd((LPC_UART_TypeDef *) DEBUG_UART_PORT, ENABLE);
 
 	_db_msg	= UARTPuts;
 	_db_msg_ = UARTPuts_;

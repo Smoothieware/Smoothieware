@@ -92,7 +92,7 @@ void MCPWM_Init(LPC_MCPWM_TypeDef *MCPWMx)
 void MCPWM_ConfigChannel(LPC_MCPWM_TypeDef *MCPWMx, uint32_t channelNum,
 						MCPWM_CHANNEL_CFG_Type * channelSetup)
 {
-	if ((channelNum >= 0) && (channelNum <= 2)) {
+	if (channelNum <= 2) {
 		if (channelNum == 0) {
 			MCPWMx->MCTIM0 = channelSetup->channelTimercounterValue;
 			MCPWMx->MCPER0 = channelSetup->channelPeriodValue;
@@ -180,7 +180,7 @@ void MCPWM_WriteToShadow(LPC_MCPWM_TypeDef *MCPWMx, uint32_t channelNum,
 void MCPWM_ConfigCapture(LPC_MCPWM_TypeDef *MCPWMx, uint32_t channelNum,
 						MCPWM_CAPTURE_CFG_Type *captureConfig)
 {
-	if ((channelNum >= 0) && (channelNum <= 2)) {
+	if (channelNum <= 2) {
 
 		if (captureConfig->captureFalling /* == ENABLE */) {
 			MCPWMx->MCCAPCON_SET = MCPWM_CAPCON_CAPMCI_FE(captureConfig->captureChannel, channelNum);
@@ -257,7 +257,7 @@ uint32_t MCPWM_GetCapture(LPC_MCPWM_TypeDef *MCPWMx, uint32_t captureChannel)
 void MCPWM_CountConfig(LPC_MCPWM_TypeDef *MCPWMx, uint32_t channelNum,
 					uint32_t countMode, MCPWM_COUNT_CFG_Type *countConfig)
 {
-	if ((channelNum >= 0) && (channelNum <= 2)) {
+	if (channelNum <= 2) {
 		if (countMode /* == ENABLE */){
 			MCPWMx->MCCNTCON_SET = MCPWM_CNTCON_CNTR(channelNum);
 			if (countConfig->countFalling /* == ENABLE */) {

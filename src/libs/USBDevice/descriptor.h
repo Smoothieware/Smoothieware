@@ -69,14 +69,14 @@
 
 #include "USBEndpoints.h"
 
-typedef struct
+typedef struct __attribute__ ((packed))
 {
     uint8_t         bLength;                // descriptor length
     uint8_t         bDescType;              // descriptor type: see DT_* defines
 }
     usbdesc_base;
 
-typedef struct
+typedef struct __attribute__ ((packed))
 {
     uint8_t         bLength;                // Device descriptor length (0x12)
     uint8_t         bDescType;              // DT_DEVICE (0x01)

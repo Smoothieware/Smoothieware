@@ -118,7 +118,7 @@ uint32_t ADC_GetData(uint32_t channel)
 
 	CHECK_PARAM(PARAM_ADC_CHANNEL_SELECTION(channel));
 
-	adc_value = *(uint32_t *)((&LPC_ADC->ADDR0) + channel);
+	adc_value = *(const volatile uint32_t *)((&LPC_ADC->ADDR0) + channel);
 	return ADC_GDR_RESULT(adc_value);
 }
 
@@ -260,7 +260,7 @@ uint16_t ADC_ChannelGetData(LPC_ADC_TypeDef *ADCx, uint8_t channel)
 	CHECK_PARAM(PARAM_ADCx(ADCx));
 	CHECK_PARAM(PARAM_ADC_CHANNEL_SELECTION(channel));
 
-	adc_value = *(uint32_t *) ((&ADCx->ADDR0) + channel);
+	adc_value = *(const volatile uint32_t *) ((&ADCx->ADDR0) + channel);
 	return ADC_DR_RESULT(adc_value);
 }
 
@@ -281,7 +281,7 @@ FlagStatus ADC_ChannelGetStatus(LPC_ADC_TypeDef *ADCx, uint8_t channel, uint32_t
 	CHECK_PARAM(PARAM_ADC_CHANNEL_SELECTION(channel));
 	CHECK_PARAM(PARAM_ADC_DATA_STATUS(StatusType));
 
-	temp =  *(uint32_t *) ((&ADCx->ADDR0) + channel);
+	temp =  *(const volatile uint32_t *) ((&ADCx->ADDR0) + channel);
 	if (StatusType) {
 		temp &= ADC_DR_DONE_FLAG;
 	}else{

@@ -223,11 +223,11 @@ uint16_t SPI_ReceiveData(LPC_SPI_TypeDef* SPIx)
 int32_t SPI_ReadWrite (LPC_SPI_TypeDef *SPIx, SPI_DATA_SETUP_Type *dataCfg, \
 						SPI_TRANSFER_Type xfType)
 {
-	uint8_t *rdata8;
-    uint8_t *wdata8;
-	uint16_t *rdata16;
-    uint16_t *wdata16;
-    uint32_t stat;
+	uint8_t *rdata8 = NULL;
+    uint8_t *wdata8 = NULL;
+	uint16_t *rdata16 = NULL;
+    uint16_t *wdata16 = NULL;
+    uint32_t stat = 0;
     uint32_t temp;
     uint8_t dataword;
 

@@ -347,10 +347,10 @@ uint16_t SSP_ReceiveData(LPC_SSP_TypeDef* SSPx)
 int32_t SSP_ReadWrite (LPC_SSP_TypeDef *SSPx, SSP_DATA_SETUP_Type *dataCfg, \
 						SSP_TRANSFER_Type xfType)
 {
-	uint8_t *rdata8;
-    uint8_t *wdata8;
-	uint16_t *rdata16;
-    uint16_t *wdata16;
+	uint8_t *rdata8 = NULL;
+    uint8_t *wdata8 = NULL;
+	uint16_t *rdata16 = NULL;
+    uint16_t *wdata16 = NULL;
     uint32_t stat;
     uint32_t tmp;
     int32_t dataword;
