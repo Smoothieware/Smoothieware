@@ -21,6 +21,9 @@
 
 #include "USBSerial.h"
 
+#include "libs/Kernel.h"
+#include "libs/SerialMessage.h"
+
 // extern void setled(int, bool);
 #define setled(a, b) do {} while (0)
 
@@ -29,6 +32,7 @@
 USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(128), txbuf(128)
 {
     usb = u;
+    nl_in_rx = 0;
 }
 
 int USBSerial::_putc(int c)
@@ -44,7 +48,7 @@ int USBSerial::_putc(int c)
 
 int USBSerial::_getc()
 {
-    uint8_t c;
+    uint8_t c = 0;
     setled(4, 1); while (rxbuf.isEmpty()); setled(4, 0);
     rxbuf.dequeue(&c);
     if (rxbuf.free() == MAX_PACKET_SIZE_EPBULK)
@@ -53,6 +57,10 @@ int USBSerial::_getc()
         iprintf("rxbuf has room for another packet, interrupt enabled\n");
 //         usb->endpointTriggerInterrupt(CDC_BulkOut.bEndpointAddress);
     }
+    if (c == '\n')
+        nl_in_rx--;
+    if (nl_in_rx < 0) nl_in_rx = 0;
+
     return c;
 }
 
@@ -158,10 +166,15 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
     for (uint8_t i = 0; i < size; i++) {
         rxbuf.queue(c[i]);
         if (c[i] >= 32 && c[i] < 128)
+        {
             iprintf("%c", c[i]);
-        else {
+        }
+        else
+        {
             iprintf("\\x%02X", c[i]);
         }
+        if (c[i] == '\n')
+            nl_in_rx++;
     }
     iprintf("\nQueued, %d empty\n", rxbuf.free());
 
@@ -198,6 +211,51 @@ bool USBSerial::EpCallback(uint8_t bEP, uint8_t bEPStatus) {
     return false;
 }*/
 
-uint8_t USBSerial::available() {
+uint8_t USBSerial::available()
+{
     return rxbuf.available();
+}
+
+void USBSerial::on_module_loaded()
+{
+    this->register_for_event(ON_MAIN_LOOP);
+//     this->kernel->streams->append_stream(this);
+}
+
+void USBSerial::on_main_loop()
+{
+    if (nl_in_rx)
+    {
+        string received;
+        while (available())
+        {
+            char c = _getc();
+            if( c == '\n' )
+            {
+                struct SerialMessage message;
+                message.message = received;
+                message.stream = this;
+                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+                return;
+            }
+            else
+            {
+                received += c;
+            }
+        }
+    }
+}
+
+void USBSerial::on_attach()
+{
+    this->kernel->streams->append_stream(this);
+    writeBlock((uint8_t *) "Smoothie\nok\n", 12);
+}
+
+void USBSerial::on_detach()
+{
+    this->kernel->streams->remove_stream(this);
+    txbuf.flush();
+    rxbuf.flush();
+    nl_in_rx = 0;
 }

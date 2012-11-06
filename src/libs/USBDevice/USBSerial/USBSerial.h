@@ -45,6 +45,9 @@ public:
     CircBuffer<uint8_t> rxbuf;
     CircBuffer<uint8_t> txbuf;
 
+    void on_module_loaded(void);
+    void on_main_loop(void);
+
 protected:
 //     virtual bool EpCallback(uint8_t, uint8_t);
     virtual bool USBEvent_EPIn(uint8_t, uint8_t);
@@ -52,7 +55,10 @@ protected:
 
     virtual bool SerialEvent_RX(void){return false;};
 
+    virtual void on_attach(void);
+    virtual void on_detach(void);
 
+    volatile int nl_in_rx;
 private:
     USB *usb;
 //     mbed::FunctionPointer rx;

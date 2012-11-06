@@ -182,7 +182,6 @@ bool USBMSD::connect()
         page = (uint8_t *) ahbmalloc(BlockSize, AHB_BANK_0);
         if (page == NULL)
             return false;
-        printf("MSD:buffer is at %p\n", page);
     } else {
         return false;
     }
