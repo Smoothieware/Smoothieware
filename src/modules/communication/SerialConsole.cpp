@@ -35,7 +35,7 @@ void SerialConsole::on_module_loaded() {
     // Add to the pack of streams kernel can call to, for example for broadcasting
     this->kernel->streams->append_stream(this);
 }
-        
+
 // Called on Serial::RxIrq interrupt, meaning we have received a char
 void SerialConsole::on_serial_char_received(){
     while(this->serial->readable()){
@@ -45,7 +45,7 @@ void SerialConsole::on_serial_char_received(){
         this->buffer.push_back(received);
     }
 }
-        
+
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){
     if( this->has_char('\n') ){

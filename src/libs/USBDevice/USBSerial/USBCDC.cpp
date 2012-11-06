@@ -216,3 +216,7 @@ bool USBCDC::readEP_NB(uint8_t * buffer, uint32_t * size) {
         return false;
     return true;
 }
+
+void USBCDC::on_attach(void) {}
+
+void USBCDC::on_detach(void) {}
