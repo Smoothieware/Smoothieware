@@ -47,20 +47,17 @@ public:
 
 class USB_Frame_Receiver {
 public:
-//     virtual bool USB_Frame_Callback(uint16_t) = 0;
     virtual bool USBEvent_Frame(uint16_t) = 0;
 };
 
 class USB_Class_Receiver {
 public:
-//     virtual bool USBCallback_request(CONTROL_TRANSFER *) = 0;
     virtual bool USBEvent_Request(CONTROL_TRANSFER&) = 0;
     virtual bool USBEvent_RequestComplete(CONTROL_TRANSFER&, uint8_t *buf, uint32_t length) = 0;
 };
 
 class USB_Endpoint_Receiver : public USB_Class_Receiver {
 public:
-    //     virtual bool EpCallback(uint8_t bEP, uint8_t bEPStatus) = 0;
     virtual bool USBEvent_EPIn(uint8_t, uint8_t) = 0;
     virtual bool USBEvent_EPOut(uint8_t, uint8_t) = 0;
 };
