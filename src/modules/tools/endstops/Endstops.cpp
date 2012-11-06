@@ -37,6 +37,12 @@ void Endstops::on_config_reload(void* argument){
     this->pins[0]                    = this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input();
     this->pins[1]                    = this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_pin()->as_input();
     this->pins[2]                    = this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input();
+    this->speeds[0]                  = this->kernel->config->value(alpha_home_speed_checksum           )->by_default("10000" )->as_number();
+    this->speeds[1]                  = this->kernel->config->value(beta_home_speed_checksum            )->by_default("10000" )->as_number();
+    this->speeds[2]                  = this->kernel->config->value(gamma_home_speed_checksum           )->by_default("10000" )->as_number();
+    this->slow_speeds[0]             = this->kernel->config->value(alpha_slow_home_speed_checksum      )->by_default("1000" )->as_number();
+    this->slow_speeds[1]             = this->kernel->config->value(beta_slow_home_speed_checksum       )->by_default("1000" )->as_number();
+    this->slow_speeds[2]             = this->kernel->config->value(gamma_slow_home_speed_checksum      )->by_default("1000" )->as_number();
 }
 
 // Start homing sequences by response to GCode commands
@@ -60,7 +66,7 @@ void Endstops::on_gcode_received(void* argument){
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                     this->steppers[c - 'X']->move(0,10000000); 
-                    this->steppers[c - 'X']->set_speed(10000); 
+                    this->steppers[c - 'X']->set_speed(this->speeds[c - 'X']); 
                 }
             }
 
@@ -90,7 +96,7 @@ void Endstops::on_gcode_received(void* argument){
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                     this->steppers[c - 'X']->move(1,1000); 
-                    this->steppers[c - 'X']->set_speed(1000); 
+                    this->steppers[c - 'X']->set_speed(this->slow_speeds[c - 'X']); 
                 }
             }
 
@@ -103,6 +109,31 @@ void Endstops::on_gcode_received(void* argument){
                 }
             }
 
+            this->status = MOVING_TO_ORIGIN_SLOW; 
+            for( char c = 'X'; c <= 'Z'; c++ ){
+                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                    this->steppers[c - 'X']->move(0,10000000); 
+                }
+            }
+
+            // Wait for all axes to have homed
+            running = true;
+            while(running){
+                running = false; 
+                for( char c = 'X'; c <= 'Z'; c++ ){
+                    if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                         if( this->pins[c - 'X']->get() ){
+                            // The endstop was hit, stop moving
+                            if( this->steppers[c - 'X']->moving ){ 
+                                this->steppers[c - 'X']->move(0,0); 
+                            }  
+                        }else{
+                            // The endstop was not hit yet
+                            running = true;
+                         }
+                    }
+                }
+            }
             printf("test c\r\n");
 
             // Homing is done

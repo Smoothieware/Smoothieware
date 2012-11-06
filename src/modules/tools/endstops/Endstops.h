@@ -21,10 +21,17 @@
 #define NOT_HOMING 0
 #define MOVING_TO_ORIGIN_FAST 1
 #define MOVING_BACK 2
+#define MOVING_TO_ORIGIN_SLOW 3
 
 #define alpha_min_endstop_checksum       28684 
 #define beta_min_endstop_checksum        23457  
 #define gamma_min_endstop_checksum       16137 
+#define alpha_home_speed_checksum        23684
+#define beta_home_speed_checksum         45338 
+#define gamma_home_speed_checksum        11905
+#define alpha_slow_home_speed_checksum   28330
+#define beta_slow_home_speed_checksum    37686  
+#define gamma_slow_home_speed_checksum   12711
 
 class Endstops : public Module{
     public:
@@ -35,6 +42,8 @@ class Endstops : public Module{
 
         StepperMotor* steppers[3];
         Pin*          pins[3];
+        unsigned int  speeds[3];
+        unsigned int  slow_speeds[3];
         char status;
 };
 
