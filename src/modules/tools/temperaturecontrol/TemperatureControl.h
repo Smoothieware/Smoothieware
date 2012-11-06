@@ -26,6 +26,11 @@
 #define thermistor_pin_checksum            1788 
 #define heater_pin_checksum                35619 
 
+#define get_m_code_checksum                20746 
+#define set_m_code_checksum                51478 
+#define set_and_wait_m_code_checksum       4287 
+
+
 class TemperatureControl : public Module {
     public:
         TemperatureControl();
@@ -71,6 +76,10 @@ class TemperatureControl : public Module {
         Pin* heater_pin;
     
         bool waiting;
+
+        uint16_t set_m_code;
+        uint16_t set_and_wait_m_code;
+        uint16_t get_m_code;
 
 };
 

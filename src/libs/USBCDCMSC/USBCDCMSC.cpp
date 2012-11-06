@@ -933,6 +933,10 @@ void USBCDCMSC::on_module_loaded(){
 
     // We only call the command dispatcher in the main loop, nowhere else
     this->register_for_event(ON_MAIN_LOOP);
+
+    // Add to the pack of streams kernel can call to, for example for broadcasting
+    this->kernel->streams->append_stream(this);
+
 }
 
 
@@ -941,9 +945,6 @@ void USBCDCMSC::on_module_loaded(){
 
 
 void USBCDCMSC::on_main_loop(void* argument){
-    //if( this->configured() ){
-    //    this->kernel->serial->printf("a:%d\r\n", this->buffer.size());
-    //}
     if( this->has_char('\n') ){
         int index = 0;
         string received;
@@ -955,8 +956,6 @@ void USBCDCMSC::on_main_loop(void* argument){
                 message.message = received;
                 message.stream = this;
                 this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
-               //this->kernel->serial->printf("received: %s \r\n", received.c_str() ); 
-               //this->printf("received: %s\r\n", received.c_str() ); 
                return;
             }else{
                 received += c;
@@ -972,9 +971,6 @@ void USBCDCMSC::on_serial_char_received(){
         char received = this->_getc();
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
-        //if( this->kernel != NULL ){ 
-        //    this->kernel->serial->printf("received:%c\r\n", received); 
-        //} 
         this->buffer.push_back(received); 
     }
 

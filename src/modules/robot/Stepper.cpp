@@ -193,7 +193,6 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
               }else{
                   this->trapezoid_adjusted_rate = double(this->current_block->rate_delta) * 1.5; 
                   //this->trapezoid_adjusted_rate = floor(double(this->trapezoid_adjusted_rate / 2 ));
-                  //this->kernel->serial->printf("over!\r\n");
               }
               if (this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->final_rate;

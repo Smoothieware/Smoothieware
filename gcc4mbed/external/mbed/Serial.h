@@ -1,10 +1,13 @@
 /* mbed Microcontroller Library - Serial
- * Copyright (c) 2007-2009 ARM Limited. All rights reserved.
- * sford
+ * Copyright (c) 2007-2011 ARM Limited. All rights reserved.
  */ 
  
 #ifndef MBED_SERIAL_H
 #define MBED_SERIAL_H
+
+#include "device.h"
+
+#if DEVICE_SERIAL
 
 #include "platform.h"
 #include "PinNames.h"
@@ -16,6 +19,9 @@ namespace mbed {
 
 /* Class: Serial
  *  A serial port (UART) for communication with other serial devices
+ *
+ * Can be used for Full Duplex communication, or Simplex by specifying 
+ * one pin as NC (Not Connected)
  *
  * Example:
  * > // Print "Hello World" to the PC
@@ -86,6 +92,10 @@ public:
 
     /* Function: getc
      *  Read a character
+     *
+     * Reads a character from the serial port. This will block until 
+     * a character is available. To see if a character is available, 
+     * see <readable>
      *
      * Variables:
      *  returns - The character read from the serial port
@@ -176,3 +186,4 @@ protected:
 
 #endif
 
+#endif
