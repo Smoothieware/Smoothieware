@@ -1,6 +1,5 @@
 /* mbed Microcontroller Library - Ticker
  * Copyright (c) 2007-2009 ARM Limited. All rights reserved.
- * sford
  */ 
  
 #ifndef MBED_TICKER_H

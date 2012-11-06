@@ -1,10 +1,13 @@
 /* mbed Microcontroller Library - PwmOut
- * Copyright (c) 2007-2009 ARM Limited. All rights reserved.
- * sford
+ * Copyright (c) 2007-2011 ARM Limited. All rights reserved.
  */ 
  
 #ifndef MBED_PWMOUT_H
 #define MBED_PWMOUT_H
+
+#include "device.h"
+
+#if DEVICE_PWMOUT
 
 #include "platform.h"
 #include "PinNames.h"
@@ -139,5 +142,7 @@ protected:
 };
 
 } // namespace mbed
+
+#endif
 
 #endif

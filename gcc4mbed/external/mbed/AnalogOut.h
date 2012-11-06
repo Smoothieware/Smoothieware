@@ -1,10 +1,13 @@
 /* mbed Microcontroller Library - AnalogOut
- * Copyright (c) 2006-2009 ARM Limited. All rights reserved.
- * sford
+ * Copyright (c) 2006-2011 ARM Limited. All rights reserved.
  */ 
  
 #ifndef MBED_ANALOGOUT_H
 #define MBED_ANALOGOUT_H
+
+#include "device.h"
+
+#if DEVICE_ANALOGOUT
 
 #include "platform.h"
 #include "PinNames.h"
@@ -106,3 +109,4 @@ protected:
 
 #endif
 
+#endif

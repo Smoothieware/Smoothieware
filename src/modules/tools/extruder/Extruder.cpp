@@ -33,6 +33,8 @@ void Extruder::on_module_loaded() {
     // Settings
     this->on_config_reload(this);
 
+    this->en_pin->set(0);
+
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
@@ -64,9 +66,9 @@ void Extruder::on_config_reload(void* argument){
 	this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1)->as_number();
 	this->acceleration                = this->kernel->config->value(acceleration_checksum               )->by_default(1)->as_number();
 
-	this->step_pin                    = this->kernel->config->value(extruder_step_pin_checksum          )->by_default("1.22" )->as_pin()->as_output();
-	this->dir_pin                     = this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("1.19" )->as_pin()->as_output();
-	this->en_pin                      = this->kernel->config->value(extruder_en_pin_checksum            )->by_default("0.19" )->as_pin()->as_output();
+	this->step_pin                    = this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_pin()->as_output();
+	this->dir_pin                     = this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_pin()->as_output();
+	this->en_pin                      = this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_pin()->as_output()->as_open_drain();
 }
 
 
@@ -91,7 +93,7 @@ void Extruder::on_gcode_execute(void* argument){
         int code = (int) gcode->get_value('M');
         if( code == 82 ){ this->absolute_mode = true; }
         if( code == 83 ){ this->absolute_mode = false; }
-        if( code == 84 ){ this->en_pin->set(0); }
+        if( code == 84 ){ this->en_pin->set(1); }
     }
 
     // The mode is OFF by default, and SOLO or FOLLOW only if we need to extrude
@@ -123,7 +125,7 @@ void Extruder::on_gcode_execute(void* argument){
                     this->travel_ratio = relative_extrusion_distance / gcode->millimeters_of_travel;
                 }
 
-                this->en_pin->set(1);
+                this->en_pin->set(0);
             }
         }
     }

@@ -1,17 +1,20 @@
-/******************************************************************************
- * @file:    LPC17xx.h
- * @purpose: CMSIS Cortex-M3 Core Peripheral Access Layer Header File for 
- *           NXP LPC17xx Device Series 
- * @version: V1.04
- * @date:    2. July 2009
- *----------------------------------------------------------------------------
+/**************************************************************************//**
+ * @file     LPC17xx.h
+ * @brief    CMSIS Cortex-M3 Core Peripheral Access Layer Header File for 
+ *           NXP LPC17xx Device Series
+ * @version: V1.09
+ * @date:    17. March 2010
+
  *
- * Copyright (C) 2008 ARM Limited. All rights reserved.
+ * @note
+ * Copyright (C) 2009 ARM Limited. All rights reserved.
  *
- * ARM Limited (ARM) is supplying this software for use with Cortex-M3 
+ * @par
+ * ARM Limited (ARM) is supplying this software for use with Cortex-M 
  * processor based microcontrollers.  This file can be freely distributed 
  * within development tools that are supporting such ARM based processors. 
  *
+ * @par
  * THIS SOFTWARE IS PROVIDED "AS IS".  NO WARRANTIES, WHETHER EXPRESS, IMPLIED
  * OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE.
@@ -76,6 +79,8 @@ typedef enum IRQn
   MCPWM_IRQn                    = 30,       /*!< Motor Control PWM Interrupt                      */
   QEI_IRQn                      = 31,       /*!< Quadrature Encoder Interface Interrupt           */
   PLL1_IRQn                     = 32,       /*!< PLL1 Lock (USB PLL) Interrupt                    */
+  USBActivity_IRQn              = 33,       /* USB Activity interrupt                             */
+  CANActivity_IRQn              = 34,       /* CAN Activity interrupt                             */
 } IRQn_Type;
 
 
@@ -91,7 +96,7 @@ typedef enum IRQn
 #define __Vendor_SysTickConfig    0         /*!< Set to 1 if different SysTick Config is used     */
 
 
-#include <core_cm3.h>                       /* Cortex-M3 processor and core peripherals           */
+#include "core_cm3.h"                       /* Cortex-M3 processor and core peripherals           */
 #include "system_LPC17xx.h"                 /* System Header                                      */
 
 
@@ -124,7 +129,9 @@ typedef struct
   __IO uint32_t CCLKCFG;
   __IO uint32_t USBCLKCFG;
   __IO uint32_t CLKSRCSEL;
-       uint32_t RESERVED4[12];
+  __IO uint32_t	CANSLEEPCLR;
+  __IO uint32_t	CANWAKEFLAGS;
+       uint32_t RESERVED4[10];
   __IO uint32_t EXTINT;                 /* External Interrupts                */
        uint32_t RESERVED5;
   __IO uint32_t EXTMODE;
@@ -138,7 +145,7 @@ typedef struct
   __IO uint32_t PCLKSEL1;
        uint32_t RESERVED8[4];
   __IO uint32_t USBIntSt;               /* USB Device/OTG Interrupt Register  */
-       uint32_t RESERVED9;
+  __IO uint32_t DMAREQSEL;
   __IO uint32_t CLKOUTCFG;              /* Clock Output Configuration         */
  } LPC_SC_TypeDef;
 
@@ -178,12 +185,72 @@ typedef struct
 /*------------- General Purpose Input/Output (GPIO) --------------------------*/
 typedef struct
 {
-  __IO uint32_t FIODIR;
-       uint32_t RESERVED0[3];
-  __IO uint32_t FIOMASK;
-  __IO uint32_t FIOPIN;
-  __IO uint32_t FIOSET;
-  __O  uint32_t FIOCLR;
+  union {
+    __IO uint32_t FIODIR;
+    struct {
+      __IO uint16_t FIODIRL;
+      __IO uint16_t FIODIRH;
+    };
+    struct {
+      __IO uint8_t  FIODIR0;
+      __IO uint8_t  FIODIR1;
+      __IO uint8_t  FIODIR2;
+      __IO uint8_t  FIODIR3;
+    };
+  };
+  uint32_t RESERVED0[3];
+  union {
+    __IO uint32_t FIOMASK;
+    struct {
+      __IO uint16_t FIOMASKL;
+      __IO uint16_t FIOMASKH;
+    };
+    struct {
+      __IO uint8_t  FIOMASK0;
+      __IO uint8_t  FIOMASK1;
+      __IO uint8_t  FIOMASK2;
+      __IO uint8_t  FIOMASK3;
+    };
+  };
+  union {
+    __IO uint32_t FIOPIN;
+    struct {
+      __IO uint16_t FIOPINL;
+      __IO uint16_t FIOPINH;
+    };
+    struct {
+      __IO uint8_t  FIOPIN0;
+      __IO uint8_t  FIOPIN1;
+      __IO uint8_t  FIOPIN2;
+      __IO uint8_t  FIOPIN3;
+    };
+  };
+  union {
+    __IO uint32_t FIOSET;
+    struct {
+      __IO uint16_t FIOSETL;
+      __IO uint16_t FIOSETH;
+    };
+    struct {
+      __IO uint8_t  FIOSET0;
+      __IO uint8_t  FIOSET1;
+      __IO uint8_t  FIOSET2;
+      __IO uint8_t  FIOSET3;
+    };
+  };
+  union {
+    __O  uint32_t FIOCLR;
+    struct {
+      __O  uint16_t FIOCLRL;
+      __O  uint16_t FIOCLRH;
+    };
+    struct {
+      __O  uint8_t  FIOCLR0;
+      __O  uint8_t  FIOCLR1;
+      __O  uint8_t  FIOCLR2;
+      __O  uint8_t  FIOCLR3;
+    };
+  };
 } LPC_GPIO_TypeDef;
 
 typedef struct
@@ -282,7 +349,7 @@ typedef struct
        uint8_t  RESERVED5[7];
   __IO uint8_t  TER;
        uint8_t  RESERVED6[39];
-  __I  uint8_t  FIFOLVL;
+  __IO uint32_t FIFOLVL;
 } LPC_UART_TypeDef;
 
 typedef struct
@@ -314,9 +381,7 @@ typedef struct
        uint8_t  RESERVED5[7];
   __IO uint8_t  TER;
        uint8_t  RESERVED6[39];
-  __I  uint8_t  FIFOLVL;
-       uint8_t  RESERVED7[363];
-  __IO uint32_t DMAREQSEL;
+  __IO uint32_t FIFOLVL;
 } LPC_UART0_TypeDef;
 
 typedef struct
@@ -357,7 +422,7 @@ typedef struct
        uint8_t  RESERVED10[3];
   __IO uint8_t  RS485DLY;
        uint8_t  RESERVED11[3];
-  __I  uint8_t  FIFOLVL;
+  __IO uint32_t FIFOLVL;
 } LPC_UART1_TypeDef;
 
 /*------------- Serial Peripheral Interface (SPI) ----------------------------*/
@@ -764,13 +829,15 @@ typedef struct
   __O  uint32_t USBSysErrIntSet;
        uint32_t RESERVED4[15];
 
+  union {
   __I  uint32_t I2C_RX;                 /* USB OTG I2C Registers              */
-  __O  uint32_t I2C_WO;
+  __O  uint32_t I2C_TX;
+  };
   __I  uint32_t I2C_STS;
   __IO uint32_t I2C_CTL;
   __IO uint32_t I2C_CLKHI;
   __O  uint32_t I2C_CLKLO;
-       uint32_t RESERVED5[823];
+       uint32_t RESERVED5[824];
 
   union {
   __IO uint32_t USBClkCtrl;             /* USB Clock Control Registers        */
@@ -842,7 +909,7 @@ typedef struct
 } LPC_EMAC_TypeDef;
 
 #if defined ( __CC_ARM   )
-#pragma anon_unions
+#pragma no_anon_unions
 #endif
 
 
