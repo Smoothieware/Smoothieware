@@ -176,6 +176,7 @@ string FileConfigSource::get_config_file(){
         return this->config_file;
     }else{
         printf("ERROR: no config file found\r\n");
+		return "";
     }
 }
 

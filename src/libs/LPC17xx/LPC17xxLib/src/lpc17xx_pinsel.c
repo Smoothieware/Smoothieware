@@ -97,14 +97,14 @@ static void set_PinFunc ( uint8_t portnum, uint8_t pinnum, uint8_t funcnum)
 {
 	uint32_t pinnum_t = pinnum;
 	uint32_t pinselreg_idx = 2 * portnum;
-	uint32_t *pPinCon = (uint32_t *)&LPC_PINCON->PINSEL0;
+	volatile uint32_t *pPinCon = (volatile uint32_t *)&LPC_PINCON->PINSEL0;
 
 	if (pinnum_t >= 16) {
 		pinnum_t -= 16;
 		pinselreg_idx++;
 	}
-	*(uint32_t *)(pPinCon + pinselreg_idx) &= ~(0x03UL << (pinnum_t * 2));
-	*(uint32_t *)(pPinCon + pinselreg_idx) |= ((uint32_t)funcnum) << (pinnum_t * 2);
+	*(volatile uint32_t *)(pPinCon + pinselreg_idx) &= ~(0x03UL << (pinnum_t * 2));
+	*(volatile uint32_t *)(pPinCon + pinselreg_idx) |= ((uint32_t)funcnum) << (pinnum_t * 2);
 }
 
 /*********************************************************************//**
@@ -162,15 +162,15 @@ void set_ResistorMode ( uint8_t portnum, uint8_t pinnum, uint8_t modenum)
 {
 	uint32_t pinnum_t = pinnum;
 	uint32_t pinmodereg_idx = 2 * portnum;
-	uint32_t *pPinCon = (uint32_t *)&LPC_PINCON->PINMODE0;
+	volatile uint32_t *pPinCon = (volatile uint32_t *)&LPC_PINCON->PINMODE0;
 
 	if (pinnum_t >= 16) {
 		pinnum_t -= 16;
 		pinmodereg_idx++ ;
 	}
 
-	*(uint32_t *)(pPinCon + pinmodereg_idx) &= ~(0x03UL << (pinnum_t * 2));
-	*(uint32_t *)(pPinCon + pinmodereg_idx) |= ((uint32_t)modenum) << (pinnum_t * 2);
+	*(volatile uint32_t *)(pPinCon + pinmodereg_idx) &= ~(0x03UL << (pinnum_t * 2));
+	*(volatile uint32_t *)(pPinCon + pinmodereg_idx) |= ((uint32_t)modenum) << (pinnum_t * 2);
 }
 
 /*********************************************************************//**
@@ -226,12 +226,12 @@ void set_ResistorMode ( uint8_t portnum, uint8_t pinnum, uint8_t modenum)
  **********************************************************************/
 void set_OpenDrainMode( uint8_t portnum, uint8_t pinnum, uint8_t modenum)
 {
-	uint32_t *pPinCon = (uint32_t *)&LPC_PINCON->PINMODE_OD0;
+	volatile uint32_t *pPinCon = (volatile uint32_t *)&LPC_PINCON->PINMODE_OD0;
 
 	if (modenum == PINSEL_PINMODE_OPENDRAIN){
-		*(uint32_t *)(pPinCon + portnum) |= (0x01UL << pinnum);
+		*(volatile uint32_t *)(pPinCon + portnum) |= (0x01UL << pinnum);
 	} else {
-		*(uint32_t *)(pPinCon + portnum) &= ~(0x01UL << pinnum);
+		*(volatile uint32_t *)(pPinCon + portnum) &= ~(0x01UL << pinnum);
 	}
 }
 

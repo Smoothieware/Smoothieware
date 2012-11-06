@@ -69,14 +69,14 @@ static Status uart_set_divisors(LPC_UART_TypeDef *UARTx, uint32_t baudrate)
 {
 	Status errorStatus = ERROR;
 
-	uint32_t uClk;
+	uint32_t uClk = 0;
 	uint32_t d, m, bestd, bestm, tmp;
 	uint64_t best_divisor, divisor;
 	uint32_t current_error, best_error;
 	uint32_t recalcbaud;
 
 	/* get UART block clock */
-	if (UARTx == LPC_UART0)
+	if (UARTx == (LPC_UART_TypeDef *) LPC_UART0)
 	{
 		uClk = CLKPWR_GetPCLK (CLKPWR_PCLKSEL_UART0);
 	}
@@ -206,7 +206,7 @@ void UART_Init(LPC_UART_TypeDef *UARTx, UART_CFG_Type *UART_ConfigStruct)
 	CHECK_PARAM(PARAM_UART_PARITY(UART_ConfigStruct->Parity));
 
 #ifdef _UART0
-	if(UARTx == LPC_UART0)
+	if(UARTx == (LPC_UART_TypeDef *) LPC_UART0)
 	{
 		/* Set up clock and power for UART module */
 		CLKPWR_ConfigPPWR (CLKPWR_PCONP_PCUART0, ENABLE);
@@ -409,7 +409,7 @@ void UART_DeInit(LPC_UART_TypeDef* UARTx)
 	UART_TxCmd(UARTx, DISABLE);
 
 #ifdef _UART0
-	if (UARTx == LPC_UART0)
+	if (UARTx == (LPC_UART_TypeDef *) LPC_UART0)
 	{
 		/* Set up clock and power for UART module */
 		CLKPWR_ConfigPPWR (CLKPWR_PCONP_PCUART0, DISABLE);
@@ -680,7 +680,7 @@ void UART_ForceBreak(LPC_UART_TypeDef* UARTx)
  *********************************************************************/
 void UART_IntConfig(LPC_UART_TypeDef *UARTx, UART_INT_Type UARTIntCfg, FunctionalState NewState)
 {
-	uint32_t tmp;
+	uint32_t tmp = 0;
 
 	CHECK_PARAM(PARAM_UARTx(UARTx));
 	CHECK_PARAM(PARAM_FUNCTIONALSTATE(NewState));
@@ -1170,7 +1170,7 @@ void UART_FullModemForcePinState(LPC_UART1_TypeDef *UARTx, UART_MODEM_PIN_Type P
 void UART_FullModemConfigMode(LPC_UART1_TypeDef *UARTx, UART_MODEM_MODE_Type Mode, \
 							FunctionalState NewState)
 {
-	uint8_t tmp;
+	uint8_t tmp = 0;
 
 	CHECK_PARAM(PARAM_UART1_MODEM(UARTx));
 	CHECK_PARAM(PARAM_UART1_MODEM_MODE(Mode));

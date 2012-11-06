@@ -368,7 +368,7 @@ void GPDMA_ChannelCmd(uint8_t channelNum, FunctionalState NewState)
 	LPC_GPDMACH_TypeDef *pDMAch;
 
 	// Get Channel pointer
-	pDMAch = (LPC_GPDMACH_TypeDef *) pGPDMACh[channelNum];
+	pDMAch = (const LPC_GPDMACH_TypeDef *) pGPDMACh[channelNum];
 
 	if (NewState == ENABLE) {
 		pDMAch->DMACCConfig |= GPDMA_DMACCxConfig_E;

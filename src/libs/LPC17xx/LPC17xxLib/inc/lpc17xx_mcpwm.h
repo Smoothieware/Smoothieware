@@ -169,11 +169,11 @@ extern "C"
  * - MCPWM Count Control clear address
  */
 /** Counter(tc) advances on a rising edge on MCI(mci) pin */
-#define MCPWM_CNTCON_TCMCI_RE(tc,mci)	(((tc>=0)&&(tc<=2)&&(mci>=0)&&(mci<=2)) ? ((uint32_t)(1<<((6*tc)+(2*mci)+0))) : (0))
+#define MCPWM_CNTCON_TCMCI_RE(tc,mci)	(((tc<=2)&&(mci<=2)) ? ((uint32_t)(1<<((6*tc)+(2*mci)+0))) : (0))
 /** Counter(cnt) advances on a falling edge on MCI(mci) pin */
-#define MCPWM_CNTCON_TCMCI_FE(tc,mci)	(((tc>=0)&&(tc<=2)&&(mci>=0)&&(mci<=2)) ? ((uint32_t)(1<<((6*tc)+(2*mci)+1))) : (0))
+#define MCPWM_CNTCON_TCMCI_FE(tc,mci)	(((tc<=2)&&(mci<=2)) ? ((uint32_t)(1<<((6*tc)+(2*mci)+1))) : (0))
 /** Channel (n) is in counter mode */
-#define MCPWM_CNTCON_CNTR(n)			(((n>=0)&&(n<=2)) ? ((uint32_t)(1<<(29+n))) : (0))
+#define MCPWM_CNTCON_CNTR(n)			((n<=2) ? ((uint32_t)(1<<(29+n))) : (0))
 
 /*********************************************************************//**
  * Macro defines for MCPWM Dead-time register

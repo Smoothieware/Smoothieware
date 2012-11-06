@@ -220,7 +220,7 @@ static uint32_t I2C_GetByte (LPC_I2C_TypeDef *I2Cx, uint8_t *retdat, Bool ack)
  ***********************************************************************/
 static void I2C_SetClock (LPC_I2C_TypeDef *I2Cx, uint32_t target_clock)
 {
-	uint32_t temp;
+	uint32_t temp = 0;
 
 	CHECK_PARAM(PARAM_I2Cx(I2Cx));
 
@@ -994,7 +994,7 @@ Status I2C_SlaveTransferData(LPC_I2C_TypeDef *I2Cx, I2C_S_SETUP_Type *TransferCf
 {
 	uint8_t *txdat;
 	uint8_t *rxdat;
-	uint32_t CodeStatus;
+	uint32_t CodeStatus = 0;
 	uint32_t timeout;
 	int32_t time_en;
 	int32_t tmp;

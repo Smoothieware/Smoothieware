@@ -193,8 +193,9 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
           return 0;
         }
 
-        if(current_steps_completed <= this->current_block->accelerate_until) {
+        if(current_steps_completed <= this->current_block->accelerate_until + 1) {
               this->trapezoid_adjusted_rate += ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
+
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
               }

@@ -316,7 +316,7 @@ Status EMAC_Init(EMAC_CFG_Type *EMAC_ConfigStruct)
 	 * Find the clock that close to desired target clock
 	 */
 	tmp = SystemCoreClock / EMAC_MCFG_MII_MAXCLK;
-	for (tout = 0; tout < sizeof (EMAC_clkdiv); tout++){
+	for (tout = 0; tout < (int32_t) sizeof (EMAC_clkdiv); tout++){
 		if (EMAC_clkdiv[tout] >= tmp) break;
 	}
 	tout++;
@@ -643,7 +643,7 @@ int32_t EMAC_UpdatePHYStatus(void)
  **********************************************************************/
 void EMAC_SetHashFilter(uint8_t dstMAC_addr[], FunctionalState NewState)
 {
-	uint32_t *pReg;
+	volatile uint32_t *pReg;
 	uint32_t tmp;
 	int32_t crc;
 
@@ -652,8 +652,8 @@ void EMAC_SetHashFilter(uint8_t dstMAC_addr[], FunctionalState NewState)
 	// Extract the value from CRC to get index value for hash filter table
 	crc = (crc >> 23) & 0x3F;
 
-	pReg = (crc > 31) ? ((uint32_t *)&LPC_EMAC->HashFilterH) \
-								: ((uint32_t *)&LPC_EMAC->HashFilterL);
+	pReg = (crc > 31) ? ((volatile uint32_t *)&LPC_EMAC->HashFilterH) \
+								: ((volatile uint32_t *)&LPC_EMAC->HashFilterL);
 	tmp = (crc > 31) ? (crc - 32) : crc;
 	if (NewState == ENABLE) {
 		(*pReg) |= (1UL << tmp);

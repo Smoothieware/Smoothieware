@@ -730,12 +730,12 @@ void RTC_CalibConfig(LPC_RTC_TypeDef *RTCx, uint32_t CalibValue, uint8_t CalibDi
  **********************************************************************/
 void RTC_WriteGPREG (LPC_RTC_TypeDef *RTCx, uint8_t Channel, uint32_t Value)
 {
-	uint32_t *preg;
+	volatile uint32_t *preg;
 
 	CHECK_PARAM(PARAM_RTCx(RTCx));
 	CHECK_PARAM(PARAM_RTC_GPREG_CH(Channel));
 
-	preg = (uint32_t *)&RTCx->GPREG0;
+	preg = (volatile uint32_t *)&RTCx->GPREG0;
 	preg += Channel;
 	*preg = Value;
 }
@@ -753,13 +753,13 @@ void RTC_WriteGPREG (LPC_RTC_TypeDef *RTCx, uint8_t Channel, uint32_t Value)
  **********************************************************************/
 uint32_t RTC_ReadGPREG (LPC_RTC_TypeDef *RTCx, uint8_t Channel)
 {
-	uint32_t *preg;
+	volatile uint32_t *preg;
 	uint32_t value;
 
 	CHECK_PARAM(PARAM_RTCx(RTCx));
 	CHECK_PARAM(PARAM_RTC_GPREG_CH(Channel));
 
-	preg = (uint32_t *)&RTCx->GPREG0;
+	preg = (volatile uint32_t *)&RTCx->GPREG0;
 	preg += Channel;
 	value = *preg;
 	return (value);

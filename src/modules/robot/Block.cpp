@@ -37,7 +37,7 @@ double Block::compute_factor_for_safe_speed(){
 }
 
 
-// Calculates trapezoid parameters so that the entry- and exit-speed is compensated by the provided factors.
+/* Calculates trapezoid parameters so that the entry- and exit-speed is compensated by the provided factors.
 // The factors represent a factor of braking and must be in the range 0.0-1.0.
 //                                +--------+ <- nominal_rate
 //                               /          \
@@ -45,6 +45,7 @@ double Block::compute_factor_for_safe_speed(){
 //                              |             + <- nominal_rate*exit_factor
 //                              +-------------+
 //                                  time -->
+//*/
 void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
     //this->player->kernel->streams->printf("%p calculating trapezoid\r\n", this);
