@@ -22,18 +22,20 @@ class ConfigCache : public std::vector<ConfigValue*> {
        
            bool value_exists = false; 
             // For each already existing element 
-            for( int i=1; i<this->size(); i++){
+            for( unsigned int i=1; i<this->size(); i++){
                 // If this configvalue matches the checksum 
                 bool match = true;
-                for( unsigned int j = 0; j < new_value->check_sums.size(); j++ ){
-                    uint16_t checksum_node = new_value->check_sums[j];
-                    if(this->at(i)->check_sums[j] != checksum_node ){
+                unsigned int counter = 0;
+                while( counter < 3 && new_value->check_sums[counter] != 0x0000 ){
+                    if(this->at(i)->check_sums[counter] != new_value->check_sums[counter]  ){
                         match = false;
                         break; 
                     }
-                } 
+                    counter++;
+                }
                 if( match == false ){ continue; }
                 value_exists = true;
+                
                 // Replace with the provided value 
                 delete this->at(i);
                 this->at(i) = new_value;

@@ -34,7 +34,7 @@ void SlowTicker::set_frequency( int frequency ){
 }
 
 void SlowTicker::tick(){
-    for (int i=0; i<this->hooks.size(); i++){ 
+    for (unsigned int i=0; i<this->hooks.size(); i++){ 
         Hook* hook = this->hooks.at(i);
         hook->counter += ( hook->frequency / this->max_frequency );
         if( hook->counter > 0 ){

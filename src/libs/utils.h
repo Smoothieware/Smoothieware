@@ -13,7 +13,7 @@ string remove_non_number( string str );
 
 uint16_t get_checksum(string to_check);
 
-vector<uint16_t> get_checksums(string key);
+void get_checksums(uint16_t check_sums[], string key);
 
 string shift_parameter( string &parameters );
 

@@ -5,32 +5,53 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
+#ifndef ENDSTOPS_MODULE_H
+#define ENDSTOPS_MODULE_H
 
-#ifndef GCODE_H
-#define GCODE_H
-#include <string>
-using std::string;
-#include "libs/StreamOutput.h"
-// Object to represent a Gcode command
-#include <stdlib.h>
+#include "libs/Module.h"
+#include "libs/Kernel.h"
+#include "modules/communication/utils/Gcode.h"
+#include "libs/StepperMotor.h"
+#include "libs/Pin.h"
 
-class Gcode {
+#define ALPHA_AXIS 0
+#define BETA_AXIS  1
+#define GAMMA_AXIS 2
+
+#define NOT_HOMING 0
+#define MOVING_TO_ORIGIN_FAST 1
+#define MOVING_BACK 2
+
+#define alpha_min_endstop_checksum       28684 
+#define beta_min_endstop_checksum        23457  
+#define gamma_min_endstop_checksum       16137 
+
+class Endstops : public Module{
     public:
-        Gcode();
-        bool has_letter( char letter );
-        double get_value ( char letter );
-        void prepare_cached_values();
+        Endstops();
+        void on_module_loaded();
+        void on_gcode_received(void* argument);
+        void on_config_reload(void* argument);
 
-        string command;
-        double millimeters_of_travel;
-        bool call_on_gcode_execute_event_immediatly;
-        bool on_gcode_execute_event_called;
-
-        bool has_m;
-        bool has_g;
-        unsigned int m;
-        unsigned int g;
-
-        StreamOutput* stream;
+        StepperMotor* steppers[3];
+        Pin*          pins[3];
+        char status;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #endif

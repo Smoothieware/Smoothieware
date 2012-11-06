@@ -5,8 +5,6 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-using namespace std;
-#include <vector>
 #include "libs/Kernel.h"
 #include "libs/Module.h"
 #include "libs/Config.h"
@@ -23,6 +21,8 @@ using namespace std;
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Player.h"
+#include <malloc.h>
+
 
 
 // List of callback functions, ordered as their corresponding events
@@ -47,13 +47,22 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
 
+    // Value init for the arrays
+    for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){ 
+        for( uint8_t index=0; index<32; index++ ){
+            this->hooks[i][index] = NULL; 
+        } 
+    }
+
     // Config first, because we need the baud_rate setting before we start serial 
     this->config         = new Config();
+
     // Serial second, because the other modules might want to say something
     this->streams        = new StreamOutputPool();
 
     this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-   
+    //this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+    
     this->add_module( this->config );
     this->add_module( this->serial );
 
@@ -64,8 +73,16 @@ Kernel::Kernel(){
     this->digipot              = new Digipot();
 
     // LPC17xx-specific 
-    NVIC_SetPriority(TIMER0_IRQn, 1); 
-    NVIC_SetPriority(TIMER2_IRQn, 2); 
+    NVIC_SetPriorityGrouping(0);
+    NVIC_SetPriority(TIMER0_IRQn, 2); 
+    NVIC_SetPriority(TIMER1_IRQn, 1); 
+    NVIC_SetPriority(TIMER2_IRQn, 3); 
+
+    // Configure the step ticker
+    int base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
+    double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
+    this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
+    this->step_ticker->set_frequency(   base_stepping_frequency );
 
     // Core modules 
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
@@ -74,6 +91,8 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->player         = new Player()        );
     this->add_module( this->pauser         = new Pauser()        );
+
+
 }
 
 void Kernel::add_module(Module* module){
@@ -83,17 +102,31 @@ void Kernel::add_module(Module* module){
 }
 
 void Kernel::register_for_event(unsigned int id_event, Module* module){
-    this->hooks[id_event].push_back(module);
+    uint8_t current_id = 0; 
+    Module* current = this->hooks[id_event][0];
+    while(current != NULL ){
+        if( current == module ){ return; }
+        current_id++;
+        current = this->hooks[id_event][current_id];
+    }
+    this->hooks[id_event][current_id] = module;
+    this->hooks[id_event][current_id+1] = NULL;
 }
 
 void Kernel::call_event(unsigned int id_event){
-    for(unsigned int i=0; i < this->hooks[id_event].size(); i++){
-        (this->hooks[id_event][i]->*kernel_callback_functions[id_event])(this);
+    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
+    while(current != NULL ){   // For each active stepper
+        (current->*kernel_callback_functions[id_event])(this);
+        current_id++;
+        current = this->hooks[id_event][current_id];
     }
 }
 
 void Kernel::call_event(unsigned int id_event, void * argument){
-    for(unsigned int i=0; i < this->hooks[id_event].size(); i++){
-        (this->hooks[id_event][i]->*kernel_callback_functions[id_event])(argument);
+    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
+    while(current != NULL ){   // For each active stepper
+        (current->*kernel_callback_functions[id_event])(argument);
+        current_id++;
+        current = this->hooks[id_event][current_id];
     }
 }

@@ -9,6 +9,7 @@
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/Extruder.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
+#include "modules/tools/endstops/Endstops.h"
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/robot/Player.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -25,11 +26,12 @@ SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are
 //LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
 USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
 
+
 int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->streams->printf("Smoothie ( grbl port ) version 0.6.1 \r\n");
+    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.0 \r\n");
 
     //kernel->add_module( new Laser(p21) );
     kernel->add_module( new Extruder() );
@@ -39,6 +41,7 @@ int main() {
     kernel->add_module( new TemperatureControlPool() );
     kernel->add_module( new SwitchPool() );
     kernel->add_module( new PauseButton() );   
+    kernel->add_module( new Endstops() );
 
     kernel->add_module( &cdcmsc );
    
