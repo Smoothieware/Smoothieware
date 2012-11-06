@@ -67,9 +67,10 @@ template<class kind, int length> void RingBuffer<kind, length>::get(int index, k
         j++;
         k= (k + 1) & (length - 1);
     }
-    if (k == this->tail){
-        //return NULL; 
-    }
+    // TODO : this checks wether we are asked a value out of range 
+    //if (k == this->tail){
+    //    return NULL; 
+    //}
     object = this->buffer[k];
 }
 
@@ -82,6 +83,7 @@ template<class kind, int length> kind* RingBuffer<kind, length>::get_ref(int ind
         j++;
         k= (k + 1) & (length - 1);
     }
+    // TODO : this checks wether we are asked a value out of range 
     if (k == this->tail){
         return NULL;
     }

@@ -29,10 +29,12 @@ Block* Player::new_block(){
     // Clean up the vector of commands in the block we are about to replace
     // It is quite strange to do this here, we really should do it inside Block->pop_and_execute_gcode
     // but that function is called inside an interrupt and thus can break everything if the interrupt was trigerred during a memory access
-    //Block* block = this->queue.get_ref( this->queue.size()-1 );
+    
+    // Take the next untaken block on the queue ( the one after the last one )
     Block* block = this->queue.get_ref( this->queue.size() );
+    // Then clean it up 
     if( block->player == this ){
-        for(short index=0; index<block->gcodes.size(); index++){
+        for(unsigned int index=0; index<block->gcodes.size(); index++){
             block->gcodes.pop_back(); 
         }     
     }
@@ -40,6 +42,9 @@ Block* Player::new_block(){
     // Create a new virgin Block in the queue 
     this->queue.push_back(Block());
     block = this->queue.get_ref( this->queue.size()-1 );
+    while( block == NULL ){
+        block = this->queue.get_ref( this->queue.size()-1 );
+    }
     block->is_ready = false;
     block->initial_rate = -2;
     block->final_rate = -2;

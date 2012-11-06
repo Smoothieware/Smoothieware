@@ -181,7 +181,6 @@ int SDFileSystem::initialise_card_v1() {
 }
 
 int SDFileSystem::initialise_card_v2() {
-    
     for(int i=0; i<SD_COMMAND_TIMEOUT; i++) {
         _cmd(55, 0); 
         if(_cmd(41, 0) == 0) { 
@@ -195,11 +194,7 @@ int SDFileSystem::initialise_card_v2() {
 }
 
 int SDFileSystem::disk_initialize() {
-
-    int i = initialise_card();
-//    printf("init card = %d\n", i);
-//    printf("OK\n");
-
+    initialise_card();
     _sectors = _sd_sectors();
 
     // Set block length to 512 (CMD16)

@@ -14,13 +14,21 @@
 using namespace std;
 #include "libs/nuts_bolts.h"
 
+#include <mri.h>
+
+
 Stepper* stepper;
+uint32_t previous_step_count;
+uint32_t skipped_speed_updates;
+uint32_t speed_ticks_counter;
+
 
 Stepper::Stepper(){
     this->current_block = NULL;
-    this->step_events_completed = 0; 
-    this->divider = 0;
     this->paused = false;
+    this->trapezoid_generator_busy = false;
+    this->force_speed_update = false;
+    skipped_speed_updates = 0;
 }
 
 //Called when the module has just been loaded
@@ -36,66 +44,69 @@ void Stepper::on_module_loaded(){
     this->on_config_reload(this); 
 
     // Acceleration ticker
-    //this->kernel->slow_ticker->set_frequency(this->acceleration_ticks_per_second/10);
     this->kernel->slow_ticker->attach( this->acceleration_ticks_per_second, this, &Stepper::trapezoid_generator_tick );
 
-    // Initiate main_interrupt timer and step reset timer
-    this->kernel->step_ticker->attach( this, &Stepper::main_interrupt );   
-    this->kernel->step_ticker->reset_attach( this, &Stepper::reset_step_pins );
+    // Attach to the end_of_move stepper event
+    this->kernel->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move ); 
+    this->kernel->robot->beta_stepper_motor->attach( this, &Stepper::stepper_motor_finished_move ); 
+    this->kernel->robot->gamma_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move ); 
 
 }
 
 // Get configuration from the config file
 void Stepper::on_config_reload(void* argument){
     
-    this->microseconds_per_step_pulse   =  this->kernel->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
     this->acceleration_ticks_per_second =  this->kernel->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
-    this->minimum_steps_per_minute      =  this->kernel->config->value(minimum_steps_per_minute_checksum     )->by_default(1200  )->as_number();
-    this->base_stepping_frequency       =  this->kernel->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
-    this->alpha_step_pin                =  this->kernel->config->value(alpha_step_pin_checksum               )->by_default("1.21"     )->as_pin()->as_output();
-    this->beta_step_pin                 =  this->kernel->config->value(beta_step_pin_checksum                )->by_default("1.23"     )->as_pin()->as_output();
-    this->gamma_step_pin                =  this->kernel->config->value(gamma_step_pin_checksum               )->by_default("1.22!"    )->as_pin()->as_output();
-    this->alpha_dir_pin                 =  this->kernel->config->value(alpha_dir_pin_checksum                )->by_default("1.18"     )->as_pin()->as_output();
-    this->beta_dir_pin                  =  this->kernel->config->value(beta_dir_pin_checksum                 )->by_default("1.20"     )->as_pin()->as_output();
-    this->gamma_dir_pin                 =  this->kernel->config->value(gamma_dir_pin_checksum                )->by_default("1.19"     )->as_pin()->as_output();
-    this->alpha_en_pin                  =  this->kernel->config->value(alpha_en_pin_checksum                 )->by_default("0.4"      )->as_pin()->as_output()->as_open_drain();
-    this->beta_en_pin                   =  this->kernel->config->value(beta_en_pin_checksum                  )->by_default("0.10"     )->as_pin()->as_output()->as_open_drain();
-    this->gamma_en_pin                  =  this->kernel->config->value(gamma_en_pin_checksum                 )->by_default("0.19"     )->as_pin()->as_output()->as_open_drain();
+    this->minimum_steps_per_minute      =  this->kernel->config->value(minimum_steps_per_minute_checksum     )->by_default(3000  )->as_number();
 
+    // Steppers start on by default
+    this->turn_enable_pins_on();
 
-    // TODO : This is supposed to be done by gcodes
-    this->alpha_en_pin->set(0);
-    this->beta_en_pin->set(0);
-    this->gamma_en_pin->set(0);
-
-
-    // Set the Timer interval for Match Register 1, 
-    this->kernel->step_ticker->set_reset_delay( this->microseconds_per_step_pulse / 1000000 );
-    this->kernel->step_ticker->set_frequency( this->base_stepping_frequency );
 }
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Stepper::on_pause(void* argument){
     this->paused = true;
+    this->kernel->robot->alpha_stepper_motor->pause();
+    this->kernel->robot->beta_stepper_motor->pause();
+    this->kernel->robot->gamma_stepper_motor->pause();
 }
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
 void Stepper::on_play(void* argument){
     // TODO: Re-compute the whole queue for a cold-start
     this->paused = false;
+    this->kernel->robot->alpha_stepper_motor->unpause();
+    this->kernel->robot->beta_stepper_motor->unpause();
+    this->kernel->robot->gamma_stepper_motor->unpause();
 }
+
 
 void Stepper::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
 
-    if( gcode->has_letter('M')){
-        int code = (int) gcode->get_value('M');
-        if( code == 84 ){
-            this->alpha_en_pin->set(0);
-            this->beta_en_pin->set(0);
-            this->gamma_en_pin->set(0);
+    if( gcode->has_m){
+        if( gcode->m == 17 ){
+            this->turn_enable_pins_on(); 
+        }
+        if( gcode->m == 84 || gcode->m == 18 ){
+            this->turn_enable_pins_off(); 
         }
     }
+}
+
+void Stepper::turn_enable_pins_on(){
+    this->kernel->robot->alpha_en_pin->set(0);
+    this->kernel->robot->beta_en_pin->set(0);
+    this->kernel->robot->gamma_en_pin->set(0);
+    this->enable_pins_status = true;
+}
+
+void Stepper::turn_enable_pins_off(){
+    this->kernel->robot->alpha_en_pin->set(1);
+    this->kernel->robot->beta_en_pin->set(1);
+    this->kernel->robot->gamma_en_pin->set(1);
+    this->enable_pins_status = false;
 }
 
 // A new block is popped from the queue
@@ -104,101 +115,103 @@ void Stepper::on_block_begin(void* argument){
 
     // The stepper does not care about 0-blocks
     if( block->millimeters == 0.0 ){ return; }
-    
+ 
     // Mark the new block as of interrest to us
-    block->take();
-   
-    // Setup
-    for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ this->counters[stpr] = 0; this->stepped[stpr] = 0; } 
-    this->step_events_completed = 0; 
+    if( block->steps[ALPHA_STEPPER] > 0 || block->steps[BETA_STEPPER] > 0 || block->steps[GAMMA_STEPPER] > 0 ){
+        block->take();
+    }else{
+        return;
+    }
+
+    // We can't move with the enable pins off 
+    if( this->enable_pins_status == false ){
+        this->turn_enable_pins_on();
+    }
+
+    // Setup : instruct stepper motors to move
+    if( block->steps[ALPHA_STEPPER] > 0 ){ this->kernel->robot->alpha_stepper_motor->move( ( block->direction_bits >> 0  ) & 1 , block->steps[ALPHA_STEPPER] ); } 
+    if( block->steps[BETA_STEPPER ] > 0 ){ this->kernel->robot->beta_stepper_motor->move(  ( block->direction_bits >> 1  ) & 1 , block->steps[BETA_STEPPER ] ); } 
+    if( block->steps[GAMMA_STEPPER] > 0 ){ this->kernel->robot->gamma_stepper_motor->move( ( block->direction_bits >> 2  ) & 1 , block->steps[GAMMA_STEPPER] ); } 
 
     this->current_block = block;
-    
-    // This is just to save computing power and not do it every step 
-    this->update_offsets();
-    
+
     // Setup acceleration for this block 
     this->trapezoid_generator_reset();
 
+    // Find the stepper with the more steps, it's the one the speed calculations will want to follow
+    this->main_stepper = this->kernel->robot->alpha_stepper_motor;
+    if( this->kernel->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->beta_stepper_motor; }
+    if( this->kernel->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->gamma_stepper_motor; }
+
+    if( block->initial_rate == 0 ){
+        this->trapezoid_generator_tick(0);
+    }
 }
 
 // Current block is discarded
 void Stepper::on_block_end(void* argument){
-    Block* block  = static_cast<Block*>(argument);
     this->current_block = NULL; //stfu !
 }
 
-// "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Smoothie. It is executed at the rate set with
-// config_step_timer. It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
-inline uint32_t Stepper::main_interrupt(uint32_t dummy){
-    if( this->paused ){ return 0; } 
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
 
-    // Step dir pins first, then step pinse, stepper drivers like to know the direction before the step signal comes in
-    this->alpha_dir_pin->set(  ( this->out_bits >> 0  ) & 1 );
-    this->beta_dir_pin->set(   ( this->out_bits >> 1  ) & 1 );
-    this->gamma_dir_pin->set(  ( this->out_bits >> 2  ) & 1 );
-    this->alpha_step_pin->set( ( this->out_bits >> 3  ) & 1 );
-    this->beta_step_pin->set(  ( this->out_bits >> 4  ) & 1 );
-    this->gamma_step_pin->set( ( this->out_bits >> 5  ) & 1 );
+// When a stepper motor has finished it's assigned movement
+uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
 
+    // We care only if none is still moving
+    if( this->kernel->robot->alpha_stepper_motor->moving || this->kernel->robot->beta_stepper_motor->moving || this->kernel->robot->gamma_stepper_motor->moving ){ return 0; }
+    
+    // This block is finished, release it
     if( this->current_block != NULL ){
-        // Set bits for direction and steps 
-        this->out_bits = this->current_block->direction_bits;
-        for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ 
-            this->counters[stpr] += this->counter_increment; 
-            if( this->counters[stpr] > this->offsets[stpr] && this->stepped[stpr] < this->current_block->steps[stpr] ){
-                this->counters[stpr] -= this->offsets[stpr] ;
-                this->stepped[stpr]++;
-                this->out_bits |= (1 << (stpr+3) );
-            } 
-        } 
-        // If current block is finished, reset pointer
-        this->step_events_completed += this->counter_increment;
-        if( this->step_events_completed >= this->current_block->steps_event_count<<16 ){ 
-            if( this->stepped[ALPHA_STEPPER] == this->current_block->steps[ALPHA_STEPPER] && this->stepped[BETA_STEPPER] == this->current_block->steps[BETA_STEPPER] && this->stepped[GAMMA_STEPPER] == this->current_block->steps[GAMMA_STEPPER] ){ 
-                if( this->current_block != NULL ){
-                    this->current_block->release(); 
-                }
-            }
-        }
-    }else{
-        this->out_bits = 0;
+        this->current_block->release(); 
     }
-
+ 
+    return 0;
 }
 
-// We compute this here instead of each time in the interrupt
-void Stepper::update_offsets(){
-    for( int stpr=ALPHA_STEPPER; stpr<=GAMMA_STEPPER; stpr++){ 
-        this->offsets[stpr] = (int)floor((float)((float)(1<<16)*(float)((float)this->current_block->steps_event_count / (float)this->current_block->steps[stpr]))); 
-    }
-}
 
 // This is called ACCELERATION_TICKS_PER_SECOND times per second by the step_event
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
 uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
-    if(this->current_block && !this->trapezoid_generator_busy && !this->paused ) {
-          if(this->step_events_completed < this->current_block->accelerate_until<<16) {
-              this->trapezoid_adjusted_rate += this->current_block->rate_delta;
+
+    if(this->current_block && !this->paused && this->main_stepper->moving ) {
+        uint32_t current_steps_completed = this->main_stepper->stepped;
+      
+        if( previous_step_count == current_steps_completed && previous_step_count != 0 ){
+            // We must skip this step update because no step has happened
+            skipped_speed_updates++;
+            return 0;
+        }else{
+            previous_step_count = current_steps_completed;
+        } 
+
+        if( this->force_speed_update ){
+          this->force_speed_update = false;
+          this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+          return 0;
+        }
+
+        if(current_steps_completed <= this->current_block->accelerate_until + 1) {
+              this->trapezoid_adjusted_rate += ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
               }
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-          } else if (this->step_events_completed >= this->current_block->decelerate_after<<16) {
+        }else if (current_steps_completed > this->current_block->decelerate_after + 1) {
               // NOTE: We will only reduce speed if the result will be > 0. This catches small
               // rounding errors that might leave steps hanging after the last trapezoid tick.
-              if (this->trapezoid_adjusted_rate > double(this->current_block->rate_delta) * 1.5) {
-                  this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
+              if(this->trapezoid_adjusted_rate > this->current_block->rate_delta * 1.5) {
+                  this->trapezoid_adjusted_rate -= ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
               }else{
-                  this->trapezoid_adjusted_rate = double(this->current_block->rate_delta) * 1.5; 
-                  //this->trapezoid_adjusted_rate = floor(double(this->trapezoid_adjusted_rate / 2 ));
+                  this->trapezoid_adjusted_rate = this->current_block->rate_delta * 1.5;
               }
-              if (this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
+              if(this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->final_rate;
-              }
+              } 
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-          } else {
+        }else {
               // Make sure we cruise at exactly nominal rate
               if (this->trapezoid_adjusted_rate != this->current_block->nominal_rate) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
@@ -206,37 +219,42 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
               }
           }
     }
+
+    skipped_speed_updates = 0; 
+    return 0;
+
 }
+
+
 
 // Initializes the trapezoid generator from the current block. Called whenever a new
 // block begins.
-void Stepper::trapezoid_generator_reset(){
+inline void Stepper::trapezoid_generator_reset(){
     this->trapezoid_adjusted_rate = this->current_block->initial_rate;
+    this->force_speed_update = true;
     this->trapezoid_tick_cycle_counter = 0;
-    // Because this can be called directly from the main loop, it could be interrupted by the acceleration ticker, and that would be bad, so we use a flag
-    this->trapezoid_generator_busy = true;
-    this->set_step_events_per_minute(this->trapezoid_adjusted_rate); 
-    this->trapezoid_generator_busy = false;
+    previous_step_count = 0;
+    skipped_speed_updates = 0;
+    speed_ticks_counter = 0;
 }
 
+// Update the speed for all steppers
 void Stepper::set_step_events_per_minute( double steps_per_minute ){
 
     // We do not step slower than this 
-    steps_per_minute = max(steps_per_minute, this->minimum_steps_per_minute);
+    //steps_per_minute = max(steps_per_minute, this->minimum_steps_per_minute);
+    if( steps_per_minute < this->minimum_steps_per_minute ){
+        steps_per_minute = this->minimum_steps_per_minute; 
+    }
 
-    // The speed factor is the factor by which we must multiply the minimal step frequency to reach the maximum step frequency
-    // The higher, the smoother the movement will be, but the closer the maximum and minimum frequencies are, the smaller the factor is
-    // speed_factor = base_stepping_frequency / steps_per_second
-    // counter_increment = 1 / speed_factor ( 1 is 1<<16 because we do fixed point )
-    this->counter_increment = int(floor(double(1<<16)/double(this->base_stepping_frequency / (steps_per_minute/60L))));
+
+    // Instruct the stepper motors
+    if( this->kernel->robot->alpha_stepper_motor->moving ){ this->kernel->robot->alpha_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[ALPHA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
+    if( this->kernel->robot->beta_stepper_motor->moving  ){ this->kernel->robot->beta_stepper_motor->set_speed(  (steps_per_minute/60L) * ( (double)this->current_block->steps[BETA_STEPPER ] / (double)this->current_block->steps_event_count ) ); }
+    if( this->kernel->robot->gamma_stepper_motor->moving ){ this->kernel->robot->gamma_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[GAMMA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
 
     this->kernel->call_event(ON_SPEED_CHANGE, this);
 
 }
 
-uint32_t Stepper::reset_step_pins(uint32_t dummy){
-    this->alpha_step_pin->set(0);
-    this->beta_step_pin->set(0); 
-    this->gamma_step_pin->set(0);
-
-}
+//#pragma GCC pop_options
