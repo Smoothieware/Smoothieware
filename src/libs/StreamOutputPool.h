@@ -9,7 +9,7 @@
 #define STREAMOUTPUTPOOL_H
 
 using namespace std;
-#include <vector>
+#include <set>
 #include <string>
 #include <cstdio>
 #include <cstdarg>
@@ -42,8 +42,9 @@ public:
         va_end(args);
 
         // Dispatch to all
-        for(unsigned int i=0; i < this->streams.size(); i++){
-            this->streams.at(i)->printf(buffer);
+        for(set<StreamOutput*>::iterator i = this->streams.begin(); i != this->streams.end(); i++)
+        {
+            (*i)->printf(buffer);
         }
 
         if (buffer != printf_default_buffer)
@@ -52,11 +53,17 @@ public:
         return size - 1;
     }
 
-    void append_stream(StreamOutput* stream){
-        this->streams.push_back(stream);
+    void append_stream(StreamOutput* stream)
+    {
+        this->streams.insert(stream);
     }
 
-    vector<StreamOutput*> streams;
+    void remove_stream(StreamOutput* stream)
+    {
+        this->streams.erase(stream);
+    }
+
+    set<StreamOutput*> streams;
 };
 
 #endif
