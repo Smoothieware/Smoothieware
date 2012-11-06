@@ -694,14 +694,17 @@ void USBMSD::on_module_loaded()
     connect();
 }
 
-bool USBEvent_busReset(void)
+bool USBMSD::USBEvent_busReset(void)
 {
+	return true;
 }
 
-bool USBEvent_connectStateChanged(bool connected)
+bool USBMSD::USBEvent_connectStateChanged(bool connected)
 {
+	return true;
 }
 
-bool USBEvent_suspendStateChanged(bool suspended)
+bool USBMSD::USBEvent_suspendStateChanged(bool suspended)
 {
+	return true;
 }
