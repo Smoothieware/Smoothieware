@@ -60,9 +60,18 @@ Kernel::Kernel(){
     // Serial second, because the other modules might want to say something
     this->streams        = new StreamOutputPool();
 
-    this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-    //this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-    
+    // Configure UART depending on MRI config
+    NVIC_SetPriorityGrouping(0);
+    if (strstr(MRI_UART, "MRI_UART_MBED_USB")){
+        if (strstr(MRI_UART, "MRI_UART_SHARED")){
+            this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+        }else{
+            this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+        }
+    }else{
+        this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+    }
+
     this->add_module( this->config );
     this->add_module( this->serial );
 
@@ -77,6 +86,23 @@ Kernel::Kernel(){
     NVIC_SetPriority(TIMER0_IRQn, 2); 
     NVIC_SetPriority(TIMER1_IRQn, 1); 
     NVIC_SetPriority(TIMER2_IRQn, 3); 
+
+    // Set other priorities lower than the timers
+    NVIC_SetPriority(ADC_IRQn, 4); 
+    NVIC_SetPriority(USB_IRQn, 4); 
+ 
+    // If MRI is enabled 
+    if( MRI_ENABLE ){
+        if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 4); } 
+        if( NVIC_GetPriority(UART1_IRQn) > 0 ){ NVIC_SetPriority(UART1_IRQn, 4); } 
+        if( NVIC_GetPriority(UART2_IRQn) > 0 ){ NVIC_SetPriority(UART2_IRQn, 4); } 
+        if( NVIC_GetPriority(UART3_IRQn) > 0 ){ NVIC_SetPriority(UART3_IRQn, 4); } 
+    }else{
+        NVIC_SetPriority(UART0_IRQn, 4); 
+        NVIC_SetPriority(UART1_IRQn, 4); 
+        NVIC_SetPriority(UART2_IRQn, 4); 
+        NVIC_SetPriority(UART3_IRQn, 4); 
+    }
 
     // Configure the step ticker
     int base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();

@@ -123,14 +123,22 @@ extern "C" void TIMER1_IRQHandler (void){
 
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
+
+    LPC_GPIO1->FIODIR |= 1<<18;
+    LPC_GPIO1->FIOSET = 1<<18;
+
     uint32_t initial_tc = LPC_TIM0->TC;
 
     LPC_TIM0->IR |= 1 << 0;
 
     // If no axes enabled, just ignore for now 
     if( global_step_ticker->active_motors[0] == NULL ){ 
+        LPC_GPIO1->FIOCLR = 1<<18;
         return; 
     } 
+
+    LPC_GPIO1->FIODIR |= 1<<19;
+    LPC_GPIO1->FIOSET = 1<<19;
 
     // Do not get out of here before everything is nice and tidy
     LPC_TIM0->MR0 = 2000000;
@@ -193,6 +201,8 @@ extern "C" void TIMER0_IRQHandler (void){
         LPC_TIM0->MR0 += global_step_ticker->period;
     }
 
+    LPC_GPIO1->FIOCLR = 1<<18;
+    LPC_GPIO1->FIOCLR = 1<<19;
 }
 
 
@@ -227,5 +237,4 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor){
     }
     this->active_motors[current_id] = NULL;
 }
-
 
