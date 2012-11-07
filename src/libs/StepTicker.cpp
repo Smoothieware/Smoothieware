@@ -137,9 +137,6 @@ extern "C" void TIMER0_IRQHandler (void){
         return; 
     } 
 
-    LPC_GPIO1->FIODIR |= 1<<19;
-    LPC_GPIO1->FIOSET = 1<<19;
-
     // Do not get out of here before everything is nice and tidy
     LPC_TIM0->MR0 = 2000000;
     
@@ -161,13 +158,16 @@ extern "C" void TIMER0_IRQHandler (void){
     // This can be OK, if we take notice of it, which we do now
     if( LPC_TIM0->TC > global_step_ticker->period ){ // TODO : remove the size condition
 
+        LPC_GPIO1->FIODIR |= 1<<19;
+        LPC_GPIO1->FIOSET = 1<<19;
+
         uint32_t start_tc = LPC_TIM0->TC;
 
         // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
         uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + global_step_ticker->last_duration ) / global_step_ticker->period );
 
         // Next step is now to reduce this to how many steps we can *actually* skip
-        uint32_t ticks_we_actually_can_skip = 0;
+        uint32_t ticks_we_actually_can_skip = ticks_to_skip;
         uint8_t current_id = 0; StepperMotor* current = global_step_ticker->active_motors[0];
         while(current != NULL ){   // For each active stepper
             ticks_we_actually_can_skip = min( ticks_we_actually_can_skip, (uint32_t)((uint64_t)( (uint64_t)current->fx_ticks_per_step - (uint64_t)current->fx_counter ) >> 32) );
@@ -191,8 +191,10 @@ extern "C" void TIMER0_IRQHandler (void){
         int difference = (int)(LPC_TIM0->TC) - (int)(start_tc);
         if( difference > 0 ){ global_step_ticker->last_duration = (uint32_t)difference; }
 
-        //if( global_step_ticker->last_duration > 5000 || LPC_TIM0->MR0 > 5000 || LPC_TIM0->TC > 5000 || initial_tc > 5000 || after_tick > 5000 || after_signal > 5000 ){ __debugbreak(); }
+        //if( global_step_ticker->last_duration > 2000 || LPC_TIM0->MR0 > 2000 || LPC_TIM0->TC > 2000 || initial_tc > 2000 ){ __debugbreak(); }
 
+        LPC_GPIO1->FIOCLR = 1<<19;
+    
     }else{
         LPC_TIM0->MR0 = global_step_ticker->period;
     }
@@ -202,7 +204,6 @@ extern "C" void TIMER0_IRQHandler (void){
     }
 
     LPC_GPIO1->FIOCLR = 1<<18;
-    LPC_GPIO1->FIOCLR = 1<<19;
 }
 
 

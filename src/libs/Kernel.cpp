@@ -14,6 +14,7 @@
 #include "libs/Digipot.h"
 #include "libs/Pauser.h"
 #include "libs/StreamOutputPool.h"
+#include <mri.h>
 
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
@@ -62,6 +63,7 @@ Kernel::Kernel(){
 
     // Configure UART depending on MRI config
     NVIC_SetPriorityGrouping(0);
+    /*
     if (strstr(MRI_UART, "MRI_UART_MBED_USB")){
         if (strstr(MRI_UART, "MRI_UART_SHARED")){
             this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
@@ -71,6 +73,13 @@ Kernel::Kernel(){
     }else{
         this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
     }
+    */
+    if( NVIC_GetPriority(UART0_IRQn) > 0 ){
+        this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+    }else{
+        this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+    }
+
 
     this->add_module( this->config );
     this->add_module( this->serial );
