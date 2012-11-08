@@ -13,7 +13,7 @@
 #include <vector>
 using namespace std;
 #include "libs/nuts_bolts.h"
-
+#include "libs/Hook.h"
 #include <mri.h>
 
 
@@ -44,7 +44,7 @@ void Stepper::on_module_loaded(){
     this->on_config_reload(this); 
 
     // Acceleration ticker
-    this->kernel->slow_ticker->attach( this->acceleration_ticks_per_second, this, &Stepper::trapezoid_generator_tick );
+    this->acceleration_tick_hook = this->kernel->slow_ticker->attach( this->acceleration_ticks_per_second, this, &Stepper::trapezoid_generator_tick );
 
     // Attach to the end_of_move stepper event
     this->kernel->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move ); 
@@ -143,9 +143,10 @@ void Stepper::on_block_begin(void* argument){
     if( this->kernel->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->beta_stepper_motor; }
     if( this->kernel->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->gamma_stepper_motor; }
 
-    if( block->initial_rate == 0 ){
-        this->trapezoid_generator_tick(0);
-    }
+    // Synchronise the acceleration curve with the stepping
+    this->synchronize_acceleration(NULL);
+
+
 }
 
 // Current block is discarded
@@ -193,13 +194,13 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
           return 0;
         }
 
-        if(current_steps_completed <= this->current_block->accelerate_until + 1) {
+        if(current_steps_completed <= this->current_block->accelerate_until) {
               this->trapezoid_adjusted_rate += ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
               }
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-        }else if (current_steps_completed > this->current_block->decelerate_after + 1) {
+        }else if (current_steps_completed > this->current_block->decelerate_after) {
               // NOTE: We will only reduce speed if the result will be > 0. This catches small
               // rounding errors that might leave steps hanging after the last trapezoid tick.
               if(this->trapezoid_adjusted_rate > this->current_block->rate_delta * 1.5) {
@@ -256,5 +257,46 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
     this->kernel->call_event(ON_SPEED_CHANGE, this);
 
 }
+
+// This function has the role of making sure acceleration and deceleration curves have their 
+// rythm synchronized. The accel/decel must start at the same moment as the speed update routine
+// This is caller in "step just occured" or "block just began" ( step Timer ) context, so we need to be fast.
+// All we do is reset the other timer so that it does what we want
+uint32_t Stepper::synchronize_acceleration(uint32_t dummy){
+
+    LPC_GPIO1->FIODIR |= 1<<21;
+    LPC_GPIO1->FIOSET = 1<<21;
+
+
+    // No move was done, this is called from on_block_begin
+    // This means we setup the accel timer in a way where it gets called right after
+    // we exit this step interrupt, and so that it is then in synch with 
+    if( this->main_stepper->stepped == 0 ){
+        // Whatever happens, we must call the accel interrupt asap
+        // Because it will set the initial rate
+        // We also want to synchronize in case we start accelerating or decelerating now
+       
+        // Accel interrupt must happen asap 
+        NVIC_SetPendingIRQ(TIMER2_IRQn);
+        // Synchronize both counters
+        LPC_TIM2->TC = LPC_TIM0->TC;
+        
+        // If we start decelerating after this, we must ask the actuator to warn us 
+        // so we can do what we do in the "else" bellow
+        if( this->current_block->decelerate_after > 0 && this->current_block->decelerate_after < this->main_stepper->steps_to_move ){
+            this->main_stepper->attach_signal_step(this->current_block->decelerate_after, this, &Stepper::synchronize_acceleration);
+        } 
+    }else{
+        // If we are called not at the first steps, this means we are beginning deceleration
+        NVIC_SetPendingIRQ(TIMER2_IRQn); 
+        // Synchronize both counters
+        LPC_TIM2->TC = LPC_TIM0->TC; 
+    }
+
+    LPC_GPIO1->FIOCLR = 1<<21;
+
+
+}
+
 
 //#pragma GCC pop_options

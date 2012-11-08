@@ -34,6 +34,10 @@ void SlowTicker::set_frequency( int frequency ){
 }
 
 void SlowTicker::tick(){
+
+    LPC_GPIO1->FIODIR |= 1<<20;
+    LPC_GPIO1->FIOSET = 1<<20;
+
     for (unsigned int i=0; i<this->hooks.size(); i++){ 
         Hook* hook = this->hooks.at(i);
         hook->counter += ( hook->frequency / this->max_frequency );
@@ -42,12 +46,15 @@ void SlowTicker::tick(){
             hook->call();
         } 
     }
+
+    LPC_GPIO1->FIOCLR = 1<<20;
+
 }
 
 extern "C" void TIMER2_IRQHandler (void){
     if((LPC_TIM2->IR >> 0) & 1){  // If interrupt register set for MR0
         LPC_TIM2->IR |= 1 << 0;   // Reset it 
-        global_slow_ticker->tick(); 
     }
+    global_slow_ticker->tick(); 
 }
 

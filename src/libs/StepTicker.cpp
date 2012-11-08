@@ -157,11 +157,11 @@ extern "C" void TIMER0_IRQHandler (void){
     // That can happen tipically when we change blocks, where more than usual computation is done
     // This can be OK, if we take notice of it, which we do now
     if( LPC_TIM0->TC > global_step_ticker->period ){ // TODO : remove the size condition
-
+ 
         LPC_GPIO1->FIODIR |= 1<<19;
         LPC_GPIO1->FIOSET = 1<<19;
 
-        uint32_t start_tc = LPC_TIM0->TC;
+       uint32_t start_tc = LPC_TIM0->TC;
 
         // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
         uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + global_step_ticker->last_duration ) / global_step_ticker->period );

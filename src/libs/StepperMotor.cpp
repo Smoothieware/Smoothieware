@@ -18,6 +18,8 @@ StepperMotor::StepperMotor(){
     this->direction_bit = 0;
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
+    this->signal_step = false;
+    this->step_signal_hook = new Hook(); 
 }
 
 StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
@@ -30,6 +32,8 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->direction_bit = 0;
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
+    this->signal_step = false;
+    this->step_signal_hook = new Hook(); 
 }
 
 // Called a great many times per second, to step if we have to now
@@ -51,6 +55,11 @@ void StepperMotor::tick(){
 
         // we have moved a step 9t
         this->stepped++;
+
+        // Do we need to signal this step
+        if( this->stepped == this->signal_step_number && this->signal_step ){
+            this->step_signal_hook->call();
+        }
 
         // is this move finished ? 11t
         if( this->stepped == this->steps_to_move ){ 
@@ -105,6 +114,9 @@ void StepperMotor::move( bool direction, unsigned int steps ){
     // Zero our tool counters
     this->fx_counter = 0;      // Bresenheim counter
     this->stepped = 0;
+
+    // Do not signal steps until we get instructed to
+    this->signal_step = false;
 
     // Starting now we are moving
     if( steps > 0 ){ 

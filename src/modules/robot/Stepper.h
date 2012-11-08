@@ -45,6 +45,7 @@ class Stepper : public Module {
         int config_step_timer( int cycles );
         void turn_enable_pins_on();
         void turn_enable_pins_off();
+        uint32_t synchronize_acceleration(uint32_t dummy);
 
         Block* current_block;
         int counters[3];
@@ -77,6 +78,7 @@ class Stepper : public Module {
         bool paused;
         bool force_speed_update;
         bool enable_pins_status;
+        Hook* acceleration_tick_hook;
 
         StepperMotor* main_stepper;
 

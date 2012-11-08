@@ -26,14 +26,25 @@ class StepperMotor {
         void pause();
         void unpause();
 
-
         template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook(); 
             hook->attach(optr, fptr);
             this->end_hook = hook;
         }
 
+
+        template<typename T> void attach_signal_step(uint32_t step, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
+            this->step_signal_hook->attach(optr, fptr);
+            this->signal_step_number = step;
+            this->signal_step = true; 
+        }
+
+
         Hook* end_hook;
+        Hook* step_signal_hook;
+
+        bool signal_step;
+        uint32_t signal_step_number;
 
         StepTicker* step_ticker;
         Pin* step_pin;

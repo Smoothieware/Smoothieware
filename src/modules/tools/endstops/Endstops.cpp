@@ -42,8 +42,8 @@ void Endstops::on_config_reload(void* argument){
 // Start homing sequences by response to GCode commands
 void Endstops::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    if( gcode->has_letter('G' )){
-        if( gcode->get_value('G') == 28 ){
+    if( gcode->has_g){
+        if( gcode->g == 28 ){
             // G28 is received, we have homing to do  
 
             // First wait for the queue to be empty
