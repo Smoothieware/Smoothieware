@@ -37,6 +37,15 @@ void Endstops::on_config_reload(void* argument){
     this->pins[0]                    = this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input();
     this->pins[1]                    = this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_pin()->as_input();
     this->pins[2]                    = this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input();
+    this->fast_rates[0]              = this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default("100" )->as_number();
+    this->fast_rates[1]              = this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default("100" )->as_number();
+    this->fast_rates[2]              = this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default("100" )->as_number();
+    this->slow_rates[0]              = this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default("10" )->as_number();
+    this->slow_rates[1]              = this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default("10" )->as_number();
+    this->slow_rates[2]              = this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default("10" )->as_number();
+    this->retract_steps[0]           = this->kernel->config->value(alpha_homing_retract_checksum       )->by_default("10" )->as_number();
+    this->retract_steps[1]           = this->kernel->config->value(beta_homing_retract_checksum        )->by_default("10" )->as_number();
+    this->retract_steps[2]           = this->kernel->config->value(gamma_homing_retract_checksum       )->by_default("10" )->as_number();
 }
 
 // Start homing sequences by response to GCode commands
@@ -60,7 +69,7 @@ void Endstops::on_gcode_received(void* argument){
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                     this->steppers[c - 'X']->move(0,10000000); 
-                    this->steppers[c - 'X']->set_speed(10000); 
+                    this->steppers[c - 'X']->set_speed(this->fast_rates[c -'X']); 
                 }
             }
 
@@ -89,8 +98,8 @@ void Endstops::on_gcode_received(void* argument){
             this->status = MOVING_BACK; 
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->steppers[c - 'X']->move(1,1000); 
-                    this->steppers[c - 'X']->set_speed(1000); 
+                    this->steppers[c - 'X']->move(1,this->retract_steps[c - 'X']); 
+                    this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']); 
                 }
             }
 
@@ -104,6 +113,35 @@ void Endstops::on_gcode_received(void* argument){
             }
 
             printf("test c\r\n");
+
+            // Start moving the axes to the origin slowly
+            this->status = MOVING_TO_ORIGIN_SLOW; 
+            for( char c = 'X'; c <= 'Z'; c++ ){
+                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                    this->steppers[c - 'X']->move(0,10000000); 
+                    this->steppers[c - 'X']->set_speed(this->slow_rates[c -'X']); 
+                }
+            }
+
+            // Wait for all axes to have homed
+            running = true;
+            while(running){
+                running = false; 
+                for( char c = 'X'; c <= 'Z'; c++ ){
+                    if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                         if( this->pins[c - 'X']->get() ){
+                            // The endstop was hit, stop moving
+                            if( this->steppers[c - 'X']->moving ){ 
+                                this->steppers[c - 'X']->move(0,0); 
+                            }  
+                        }else{
+                            // The endstop was not hit yet
+                            running = true;
+                         }
+                    }
+                }
+            }
+
 
             // Homing is done
             this->status = NOT_HOMING;
