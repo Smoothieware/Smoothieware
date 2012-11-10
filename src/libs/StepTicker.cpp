@@ -153,6 +153,8 @@ extern "C" void TIMER0_IRQHandler (void){
     // If a move finished in this tick, we have to tell the actuator to act accordingly
     if( global_step_ticker->moves_finished ){ global_step_ticker->signal_moves_finished(); }
 
+    uint32_t after_signal = LPC_TIM0->TC;
+
     // If we went over the duration an interrupt is supposed to last, we have a problem
     // That can happen tipically when we change blocks, where more than usual computation is done
     // This can be OK, if we take notice of it, which we do now
@@ -198,6 +200,8 @@ extern "C" void TIMER0_IRQHandler (void){
     }else{
         LPC_TIM0->MR0 = global_step_ticker->period;
     }
+
+    LPC_GPIO1->FIOCLR = 1<<18;
 
     while( LPC_TIM0->TC > LPC_TIM0->MR0 ){
         LPC_TIM0->MR0 += global_step_ticker->period;
