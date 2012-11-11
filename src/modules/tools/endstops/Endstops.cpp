@@ -68,7 +68,7 @@ void Endstops::on_gcode_received(void* argument){
             this->status = MOVING_TO_ORIGIN_FAST;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->steppers[c - 'X']->move(0,10000000);
+                    this->steppers[c - 'X']->move(1,10000000);
                     this->steppers[c - 'X']->set_speed(this->fast_rates[c -'X']);
                 }
             }
@@ -98,7 +98,7 @@ void Endstops::on_gcode_received(void* argument){
             this->status = MOVING_BACK;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->steppers[c - 'X']->move(1,this->retract_steps[c - 'X']);
+                    this->steppers[c - 'X']->move(0,this->retract_steps[c - 'X']);
                     this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
                 }
             }
@@ -118,7 +118,7 @@ void Endstops::on_gcode_received(void* argument){
             this->status = MOVING_TO_ORIGIN_SLOW;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->steppers[c - 'X']->move(0,10000000);
+                    this->steppers[c - 'X']->move(1,10000000);
                     this->steppers[c - 'X']->set_speed(this->slow_rates[c -'X']);
                 }
             }
