@@ -28,7 +28,7 @@
 #include "Stream.h"
 #include "USBHID.h"
 
-/** 
+/**
  * USBMouseKeyboard example
  * @code
  *
@@ -81,7 +81,7 @@ class USBMouseKeyboard: public USBHID, public Stream
         * @param product_release Your preoduct_release (default: 0x0001)
         *
         */
-        USBMouseKeyboard(MOUSE_TYPE mouse_type = REL_MOUSE, uint16_t vendor_id = 0x0021, uint16_t product_id = 0x0011, uint16_t product_release = 0x0001): 
+        USBMouseKeyboard(MOUSE_TYPE mouse_type = REL_MOUSE, uint16_t vendor_id = 0x0021, uint16_t product_id = 0x0011, uint16_t product_release = 0x0001):
             USBHID(0, 0, vendor_id, product_id, product_release, false)
             {
                 lock_status = 0;
@@ -140,7 +140,7 @@ class USBMouseKeyboard: public USBHID, public Stream
         * @param button state of the buttons ( ex: clic(MOUSE_LEFT))
         * @returns true if there is no error, false otherwise
         */
-        bool click(uint8_t button); 
+        bool click(uint8_t button);
         
         /**
         * Scrolling
@@ -151,7 +151,7 @@ class USBMouseKeyboard: public USBHID, public Stream
         bool scroll(int8_t z);
 
         /**
-        * To send a character defined by a modifier(CTRL, SHIFT, ALT) and the key 
+        * To send a character defined by a modifier(CTRL, SHIFT, ALT) and the key
         *
         * @code
         * //To send CTRL + s (save)

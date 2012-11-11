@@ -22,20 +22,20 @@ namespace mbed {
 
 #if FFSDEBUG_ENABLED
 static const char *FR_ERRORS[] = {
-    "FR_OK = 0", 
-    "FR_NOT_READY",          
-    "FR_NO_FILE",              
-    "FR_NO_PATH",             
-    "FR_INVALID_NAME",     
-    "FR_INVALID_DRIVE",      
-    "FR_DENIED",              
-    "FR_EXIST",              
-    "FR_RW_ERROR",          
-    "FR_WRITE_PROTECTED", 
-    "FR_NOT_ENABLED",    
-    "FR_NO_FILESYSTEM",    
-    "FR_INVALID_OBJECT",    
-    "FR_MKFS_ABORTED"    
+    "FR_OK = 0",
+    "FR_NOT_READY",
+    "FR_NO_FILE",
+    "FR_NO_PATH",
+    "FR_INVALID_NAME",
+    "FR_INVALID_DRIVE",
+    "FR_DENIED",
+    "FR_EXIST",
+    "FR_RW_ERROR",
+    "FR_WRITE_PROTECTED",
+    "FR_NOT_ENABLED",
+    "FR_NO_FILESYSTEM",
+    "FR_INVALID_OBJECT",
+    "FR_MKFS_ABORTED"
 };
 #endif
 
@@ -88,7 +88,7 @@ FileHandle *FATFileSystem::open(const char* name, int flags) {
 
     FIL_t fh;
     FRESULT res = f_open(&fh, n, openmode);
-    if(res) { 
+    if(res) {
         FFSDEBUG("f_open('w') failed (%d, %s)\n", res, FR_ERRORS[res]);
         return NULL;
     }
@@ -100,7 +100,7 @@ FileHandle *FATFileSystem::open(const char* name, int flags) {
     
 int FATFileSystem::remove(const char *filename) {
     FRESULT res = f_unlink(filename);
-    if(res) { 
+    if(res) {
         FFSDEBUG("f_unlink() failed (%d, %s)\n", res, FR_ERRORS[res]);
         return -1;
     }

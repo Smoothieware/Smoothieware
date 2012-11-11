@@ -6,7 +6,7 @@ class BaseSolution {
     public:
         BaseSolution();
         virtual void millimeters_to_steps( double millimeters[], int steps[] );
-        virtual void steps_to_millimeters( int steps[], double millimeters[] ); 
+        virtual void steps_to_millimeters( int steps[], double millimeters[] );
 };
 
 #endif

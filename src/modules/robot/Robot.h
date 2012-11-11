@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef ROBOT_H
@@ -78,8 +78,8 @@ class Robot : public Module {
         double feed_rate;                                     // Current rate for feeding moves ( mm/s )
         uint8_t plane_axis_0, plane_axis_1, plane_axis_2;     // Current plane ( XY, XZ, YZ )
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
-        double mm_per_line_segment;                           // Setting : Used to split lines into segments
-        double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
+        double mm_per_line_segment;                           // Setting : Used to split lines into segments
+        double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
         
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc

@@ -78,31 +78,31 @@ bool USBDevice::requestGetDescriptor(void)
                                 transfer.ptr = stringImanufacturerDesc();
                                 transfer.direction = DEVICE_TO_HOST;
                                 success = true;
-                                break;       
+                                break;
                             case STRING_OFFSET_IPRODUCT:
                                 transfer.remaining = stringIproductDesc()[0];
                                 transfer.ptr = stringIproductDesc();
                                 transfer.direction = DEVICE_TO_HOST;
                                 success = true;
-                                break;            
+                                break;
                             case STRING_OFFSET_ISERIAL:
                                 transfer.remaining = stringIserialDesc()[0];
                                 transfer.ptr = stringIserialDesc();
                                 transfer.direction = DEVICE_TO_HOST;
                                 success = true;
-                                break;        
+                                break;
                             case STRING_OFFSET_ICONFIGURATION:
                                 transfer.remaining = stringIConfigurationDesc()[0];
                                 transfer.ptr = stringIConfigurationDesc();
                                 transfer.direction = DEVICE_TO_HOST;
                                 success = true;
-                                break; 
+                                break;
                             case STRING_OFFSET_IINTERFACE:
                                 transfer.remaining = stringIinterfaceDesc()[0];
                                 transfer.ptr = stringIinterfaceDesc();
                                 transfer.direction = DEVICE_TO_HOST;
                                 success = true;
-                                break; 
+                                break;
             }
             break;
         case INTERFACE_DESCRIPTOR:
@@ -307,7 +307,7 @@ bool USBDevice::requestSetInterface(void)
     {
         success = true;
         currentInterface = transfer.setup.wIndex;
-        currentAlternate = transfer.setup.wValue;       
+        currentAlternate = transfer.setup.wValue;
     }
     return success;
 }
@@ -423,7 +423,7 @@ bool USBDevice::requestGetStatus(void)
 
     if (success)
     {
-        /* Send the status */ 
+        /* Send the status */
         transfer.ptr = (uint8_t *)&status; /* Assumes little endian */
         transfer.remaining = sizeof(status);
         transfer.direction = DEVICE_TO_HOST;
@@ -724,8 +724,8 @@ void USBDevice::suspendStateChanged(unsigned int suspended)
 
 
 USBDevice::USBDevice(uint16_t vendor_id, uint16_t product_id, uint16_t product_release){
-    VENDOR_ID = vendor_id; 
-    PRODUCT_ID = product_id; 
+    VENDOR_ID = vendor_id;
+    PRODUCT_ID = product_id;
     PRODUCT_RELEASE = product_release;
 
     /* Set initial device state */

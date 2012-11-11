@@ -30,24 +30,8 @@ class Laser : public Module{
         void set_proportional_power();
 
         mbed::PwmOut laser_pin;    // PWM output to regulate the laser power
-        bool	laser_on;     // Laser status
-        float	laser_max_power; // maximum allowed laser power to be output on the pwm pin
+        bool    laser_on;     // Laser status
+        float   laser_max_power; // maximum allowed laser power to be output on the pwm pin
 };
 
-
-
-
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Kernel.h"
@@ -24,16 +24,16 @@ FileConfigSource::FileConfigSource(string config_file, uint16_t name_checksum){
 
 // Transfer all values found in the file to the passed cache
 void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
-   
+
     // Default empty value
     ConfigValue* result = new ConfigValue;
-    
+
     if( this->has_config_file() == false ){return;}
-    // Open the config file ( find it if we haven't already found it ) 
+    // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
     string buffer;
-    int c; 
-    // For each line 
+    int c;
+    // For each line
     do {
         c = fgetc (lp);
         if (c == '\n' || c == EOF){
@@ -43,19 +43,19 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
             if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
             size_t begin_key = buffer.find_first_not_of(" ");
             size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
-            
+
             uint16_t check_sums[3];
             get_checksums(check_sums, buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" "));
 
             result = new ConfigValue;
-            
+
             result->found = true;
             result->check_sums[0] = check_sums[0];
             result->check_sums[1] = check_sums[1];
             result->check_sums[2] = check_sums[2];
 
             result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
-            // Append the newly found value to the cache we were passed 
+            // Append the newly found value to the cache we were passed
             cache->replace_or_push_back(result);
 
             buffer.clear();
@@ -63,7 +63,7 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
         }else{
             buffer += c;
         }
-    } while (c != EOF);  
+    } while (c != EOF);
     fclose(lp);
 }
 
@@ -119,11 +119,11 @@ string FileConfigSource::read( uint16_t check_sums[3] ){
     string value = "";
 
     if( this->has_config_file() == false ){return value;}
-    // Open the config file ( find it if we haven't already found it ) 
+    // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
     string buffer;
-    int c; 
-    // For each line 
+    int c;
+    // For each line
     do {
         c = fgetc (lp);
         if (c == '\n' || c == EOF){
@@ -141,12 +141,12 @@ string FileConfigSource::read( uint16_t check_sums[3] ){
                 value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
                 break;
             }
-            
+
             buffer.clear();
         }else{
             buffer += c;
         }
-    } while (c != EOF);  
+    } while (c != EOF);
     fclose(lp);
 
     return value;
