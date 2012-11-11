@@ -203,10 +203,6 @@ void Extruder::on_block_begin(void* argument){
 
 // When a block ends, pause the stepping interrupt
 void Extruder::on_block_end(void* argument){
-
-    //printf("Block end\r\n");
-
-    Block* block = static_cast<Block*>(argument);
     this->current_block = NULL;
 }
 
