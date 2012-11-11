@@ -14,16 +14,16 @@ class Pin{
         Pin* from_string(std::string value){
             LPC_GPIO_TypeDef* gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
             if( value.find_first_of("n")!=string::npos ? true : false ){
-                this->port_number = 0;  
-                this->port = gpios[(unsigned int) this->port_number]; 
+                this->port_number = 0;
+                this->port = gpios[(unsigned int) this->port_number];
                 this->inverting = false;
                 this->pin = 255;;
             }else{
-                this->port_number =  atoi(value.substr(0,1).c_str());  
-                this->port = gpios[(unsigned int) this->port_number]; 
+                this->port_number =  atoi(value.substr(0,1).c_str());
+                this->port = gpios[(unsigned int) this->port_number];
                 this->inverting = ( value.find_first_of("!")!=string::npos ? true : false );
                 this->pin  = atoi( value.substr(2, value.size()-2-(this->inverting?1:0)).c_str() );
-            } 
+            }
             return this;
         }
 
@@ -35,12 +35,12 @@ class Pin{
         inline Pin* as_output(){
             this->port->FIODIR |= 1<<this->pin;
             return this;
-        }  
+        }
 
         inline Pin* as_input(){
             this->port->FIODIR &= ~(1<<this->pin);
             return this;
-        }  
+        }
 
         inline Pin* as_open_drain(){
             if( this->port_number == 0 ){ LPC_PINCON->PINMODE_OD0 |= (1<<this->pin); }
@@ -60,13 +60,13 @@ class Pin{
                 this->port->FIOSET = 1 << this->pin;
             }else{
                 this->port->FIOCLR = 1 << this->pin;
-            }        
+            }
         }
 
-        bool inverting; 
+        bool inverting;
         LPC_GPIO_TypeDef* port;
         char port_number;
-        char pin; 
+        char pin;
 };
 
 

@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Kernel.h"
@@ -27,10 +27,10 @@
 
 
 // List of callback functions, ordered as their corresponding events
-const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = { 
-        &Module::on_main_loop, 
+const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
+        &Module::on_main_loop,
         &Module::on_console_line_received,
-        &Module::on_gcode_received, 
+        &Module::on_gcode_received,
         &Module::on_stepper_wake_up,
         &Module::on_gcode_execute,
         &Module::on_speed_change,
@@ -45,17 +45,17 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 #define baud_rate_setting_checksum 10922
 #define uart0_checksum             16877
 
-// The kernel is the central point in Smoothie : it stores modules, and handles event calls
+// The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
 
     // Value init for the arrays
-    for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){ 
+    for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){
         for( uint8_t index=0; index<32; index++ ){
-            this->hooks[i][index] = NULL; 
-        } 
+            this->hooks[i][index] = NULL;
+        }
     }
 
-    // Config first, because we need the baud_rate setting before we start serial 
+    // Config first, because we need the baud_rate setting before we start serial
     this->config         = new Config();
 
     // Serial second, because the other modules might want to say something
@@ -84,33 +84,33 @@ Kernel::Kernel(){
     this->add_module( this->config );
     this->add_module( this->serial );
 
-    // HAL stuff 
+    // HAL stuff
     this->slow_ticker          = new SlowTicker();
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
     this->digipot              = new Digipot();
 
-    // LPC17xx-specific 
+    // LPC17xx-specific
     NVIC_SetPriorityGrouping(0);
-    NVIC_SetPriority(TIMER0_IRQn, 2); 
-    NVIC_SetPriority(TIMER1_IRQn, 1); 
-    NVIC_SetPriority(TIMER2_IRQn, 3); 
+    NVIC_SetPriority(TIMER0_IRQn, 2);
+    NVIC_SetPriority(TIMER1_IRQn, 1);
+    NVIC_SetPriority(TIMER2_IRQn, 3);
 
     // Set other priorities lower than the timers
-    NVIC_SetPriority(ADC_IRQn, 4); 
-    NVIC_SetPriority(USB_IRQn, 4); 
+    NVIC_SetPriority(ADC_IRQn, 4);
+    NVIC_SetPriority(USB_IRQn, 4);
  
-    // If MRI is enabled 
+    // If MRI is enabled
     if( MRI_ENABLE ){
-        if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 4); } 
-        if( NVIC_GetPriority(UART1_IRQn) > 0 ){ NVIC_SetPriority(UART1_IRQn, 4); } 
-        if( NVIC_GetPriority(UART2_IRQn) > 0 ){ NVIC_SetPriority(UART2_IRQn, 4); } 
-        if( NVIC_GetPriority(UART3_IRQn) > 0 ){ NVIC_SetPriority(UART3_IRQn, 4); } 
+        if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 4); }
+        if( NVIC_GetPriority(UART1_IRQn) > 0 ){ NVIC_SetPriority(UART1_IRQn, 4); }
+        if( NVIC_GetPriority(UART2_IRQn) > 0 ){ NVIC_SetPriority(UART2_IRQn, 4); }
+        if( NVIC_GetPriority(UART3_IRQn) > 0 ){ NVIC_SetPriority(UART3_IRQn, 4); }
     }else{
-        NVIC_SetPriority(UART0_IRQn, 4); 
-        NVIC_SetPriority(UART1_IRQn, 4); 
-        NVIC_SetPriority(UART2_IRQn, 4); 
-        NVIC_SetPriority(UART3_IRQn, 4); 
+        NVIC_SetPriority(UART0_IRQn, 4);
+        NVIC_SetPriority(UART1_IRQn, 4);
+        NVIC_SetPriority(UART2_IRQn, 4);
+        NVIC_SetPriority(UART3_IRQn, 4);
     }
 
     // Configure the step ticker
@@ -119,7 +119,7 @@ Kernel::Kernel(){
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
     this->step_ticker->set_frequency(   base_stepping_frequency );
 
-    // Core modules 
+    // Core modules
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
     this->add_module( this->robot          = new Robot()         );
     this->add_module( this->stepper        = new Stepper()       );
@@ -137,7 +137,7 @@ void Kernel::add_module(Module* module){
 }
 
 void Kernel::register_for_event(unsigned int id_event, Module* module){
-    uint8_t current_id = 0; 
+    uint8_t current_id = 0;
     Module* current = this->hooks[id_event][0];
     while(current != NULL ){
         if( current == module ){ return; }

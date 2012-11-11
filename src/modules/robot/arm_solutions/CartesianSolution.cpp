@@ -13,4 +13,4 @@ void CartesianSolution::millimeters_to_steps( double millimeters[], int steps[] 
     steps[GAMMA_STEPPER] = lround( millimeters[Z_AXIS] * this->gamma_steps_per_mm );
 }
 
-void CartesianSolution::steps_to_millimeters( int steps[], double millimeters[] ){} 
+void CartesianSolution::steps_to_millimeters( int steps[], double millimeters[] ){}

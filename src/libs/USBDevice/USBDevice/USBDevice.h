@@ -72,7 +72,7 @@ public:
     * Warning: non blocking
     *
     * @param endpoint endpoint which will be read
-    * @param buffer buffer will be filled with the data received (if data are available) 
+    * @param buffer buffer will be filled with the data received (if data are available)
     * @param size the number of bytes read will be stored in *size
     * @param maxSize the maximum length that can be read
     * @returns true if successful
@@ -119,7 +119,7 @@ public:
     *
     * @returns true if class handles this request
     */
-    virtual bool USBCallback_request() { return false; };   
+    virtual bool USBCallback_request() { return false; };
     
     /*
     * Called by USBDevice on Endpoint0 request completion

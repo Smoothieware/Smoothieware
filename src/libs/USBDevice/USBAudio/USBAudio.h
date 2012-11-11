@@ -49,7 +49,7 @@
 *
 * int main() {
 *    int16_t buf[AUDIO_LENGTH_PACKET/2];
-*    
+*
 *    while (1) {
 *        // read an audio packet
 *        audio.read((uint8_t *)buf);

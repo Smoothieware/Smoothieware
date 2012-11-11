@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Module.h"
@@ -19,7 +19,7 @@ using std::string;
 
 Block::Block(){
     clear_vector(this->steps);
-    this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
+    this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
     this->is_ready = false;
     this->initial_rate = -1;
     this->final_rate = -1;
@@ -33,7 +33,7 @@ void Block::debug(Kernel* kernel){
 // Calculate a braking factor to reach baseline speed which is max_jerk/2, e.g. the
 // speed under which you cannot exceed max_jerk no matter what you do.
 double Block::compute_factor_for_safe_speed(){
-    return( this->planner->max_jerk / this->nominal_speed ); 
+    return( this->planner->max_jerk / this->nominal_speed );
 }
 
 
@@ -49,7 +49,7 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
     //this->player->kernel->streams->printf("%p calculating trapezoid\r\n", this);
 
-    this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min) 
+    this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min)
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
 
     //this->player->kernel->streams->printf("initrate:%f finalrate:%f\r\n", this->initial_rate, this->final_rate);
@@ -58,10 +58,10 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
     int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
 
-    
+
     // Calculate the size of Plateau of Nominal Rate.
     int plateau_steps = this->steps_event_count-accelerate_steps-decelerate_steps;
-    
+
     //this->player->kernel->streams->printf("accelperminute:%f accelerate_steps:%d decelerate_steps:%d plateau:%d \r\n", acceleration_per_minute, accelerate_steps, decelerate_steps, plateau_steps );
 
    // Is the Plateau of Nominal Rate smaller than nothing? That means no cruising, and we will
@@ -73,14 +73,14 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
        accelerate_steps = min( accelerate_steps, int(this->steps_event_count) );
        plateau_steps = 0;
    }
-   
+
    this->accelerate_until = accelerate_steps;
-   this->decelerate_after = accelerate_steps+plateau_steps; 
+   this->decelerate_after = accelerate_steps+plateau_steps;
 
    //this->debug(this->player->kernel);
 
    /*
-   // TODO: FIX THIS: DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
+   // TODO: FIX THIS: DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
    if( this->final_rate < 0.01 ){
         this->decelerate_after += floor( this->nominal_rate / 60 / this->planner->kernel->stepper->acceleration_ticks_per_second ) * 3;
     }
@@ -165,7 +165,7 @@ void Block::forward_pass(Block* previous, Block* next){
           }
         }
     }
-      
+
 }
 
 
@@ -180,7 +180,7 @@ void Block::append_gcode(Gcode* gcode){
 void Block::pop_and_execute_gcode(Kernel* &kernel){
     Block* block = const_cast<Block*>(this);
     for(unsigned short index=0; index<block->gcodes.size(); index++){
-        //printf("GCODE Z: %s \r\n", block->gcodes[index].command.c_str() ); 
+        //printf("GCODE Z: %s \r\n", block->gcodes[index].command.c_str() );
         kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
     }
 }
@@ -207,9 +207,9 @@ void Block::release(){
         this->pop_and_execute_gcode(this->player->kernel);
         Player* player = this->player;
 
-        if( player->queue.size() > 0 ){ 
+        if( player->queue.size() > 0 ){
             player->queue.delete_first();
-        } 
+        }
 
         if( player->looking_for_new_block == false ){
             if( player->queue.size() > 0 ){
@@ -225,7 +225,7 @@ void Block::release(){
 
                     player->current_block = NULL;
 
-                } 
+                }
             }else{
                 player->current_block = NULL;
             }

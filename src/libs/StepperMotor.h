@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef STEPPERMOTOR_H
@@ -27,7 +27,7 @@ class StepperMotor {
         void unpause();
 
         template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
-            Hook* hook = new Hook(); 
+            Hook* hook = new Hook();
             hook->attach(optr, fptr);
             this->end_hook = hook;
         }
@@ -36,7 +36,7 @@ class StepperMotor {
         template<typename T> void attach_signal_step(uint32_t step, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             this->step_signal_hook->attach(optr, fptr);
             this->signal_step_number = step;
-            this->signal_step = true; 
+            this->signal_step = true;
         }
 
 
@@ -63,7 +63,7 @@ class StepperMotor {
         uint32_t stepped;
         uint64_t fx_counter;
         uint64_t fx_ticks_per_step;
-        
+
         //bool exit_tick;
         bool remove_from_active_list_next_reset;
 

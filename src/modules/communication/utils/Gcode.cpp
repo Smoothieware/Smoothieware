@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 
@@ -41,7 +41,7 @@ double Gcode::get_value( char letter ){
                 if( c != '.' && c != '-' && ( c < '0' || c > '9' ) ){
                     buffer[j-beginning] = '\0';
                     //__enable_irq();
-                    return atof(buffer); 
+                    return atof(buffer);
                 }else{
                     buffer[j-beginning] = c;
                 }
@@ -49,7 +49,7 @@ double Gcode::get_value( char letter ){
          }
     }
     //__enable_irq();
-    return 0; 
+    return 0;
 }
 
 void Gcode::prepare_cached_values(){

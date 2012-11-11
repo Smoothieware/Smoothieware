@@ -14,7 +14,7 @@
 
 DSTATUS disk_initialize (
 	BYTE drv				/* Physical drive nmuber (0..) */
-) 
+)
 {
 	FFSDEBUG("disk_initialize on drv [%d]\n", drv);
 	return (DSTATUS)FATFileSystem::_ffs[drv]->disk_initialize();
@@ -22,7 +22,7 @@ DSTATUS disk_initialize (
 
 DSTATUS disk_status (
 	BYTE drv		/* Physical drive nmuber (0..) */
-) 
+)
 {
 	FFSDEBUG("disk_status on drv [%d]\n", drv);
 	return (DSTATUS)FATFileSystem::_ffs[drv]->disk_status();
@@ -81,7 +81,7 @@ DRESULT disk_ioctl (
 				return RES_NOTRDY;
 			} else if(FATFileSystem::_ffs[drv]->disk_sync()) {
 				return RES_ERROR;
-			} 
+			}
 			return RES_OK;
 		case GET_SECTOR_COUNT:
 			if(FATFileSystem::_ffs[drv] == NULL) {

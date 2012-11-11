@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Module.h"
@@ -53,7 +53,7 @@ void Endstops::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if( gcode->has_g){
         if( gcode->g == 28 ){
-            // G28 is received, we have homing to do  
+            // G28 is received, we have homing to do
 
             // First wait for the queue to be empty
             while(this->kernel->player->queue.size() > 0) { wait_us(500); }
@@ -62,28 +62,28 @@ void Endstops::on_gcode_received(void* argument){
             char axes_to_move = ( ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ) ? 0x00 : 0xff );
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( gcode->has_letter(c) && this->pins[c - 'X']->connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }
-            } 
+            }
 
             // Start moving the axes to the origin
-            this->status = MOVING_TO_ORIGIN_FAST; 
+            this->status = MOVING_TO_ORIGIN_FAST;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->steppers[c - 'X']->move(0,10000000); 
-                    this->steppers[c - 'X']->set_speed(this->fast_rates[c -'X']); 
+                    this->steppers[c - 'X']->move(0,10000000);
+                    this->steppers[c - 'X']->set_speed(this->fast_rates[c -'X']);
                 }
             }
 
             // Wait for all axes to have homed
             bool running = true;
             while(running){
-                running = false; 
+                running = false;
                 for( char c = 'X'; c <= 'Z'; c++ ){
                     if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                          if( this->pins[c - 'X']->get() ){
                             // The endstop was hit, stop moving
-                            if( this->steppers[c - 'X']->moving ){ 
-                                this->steppers[c - 'X']->move(0,0); 
-                            }  
+                            if( this->steppers[c - 'X']->moving ){
+                                this->steppers[c - 'X']->move(0,0);
+                            }
                         }else{
                             // The endstop was not hit yet
                             running = true;
@@ -95,18 +95,18 @@ void Endstops::on_gcode_received(void* argument){
 
             printf("test a\r\n");
             // Move back a small distance
-            this->status = MOVING_BACK; 
+            this->status = MOVING_BACK;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->steppers[c - 'X']->move(1,this->retract_steps[c - 'X']); 
-                    this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']); 
+                    this->steppers[c - 'X']->move(1,this->retract_steps[c - 'X']);
+                    this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
                 }
             }
 
             printf("test b\r\n");
             // Wait for moves to be done
             for( char c = 'X'; c <= 'Z'; c++ ){
-                if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){ 
+                if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                     printf("axis %c \r\n", c );
                     while( this->steppers[c - 'X']->moving ){ }
                 }
@@ -115,25 +115,25 @@ void Endstops::on_gcode_received(void* argument){
             printf("test c\r\n");
 
             // Start moving the axes to the origin slowly
-            this->status = MOVING_TO_ORIGIN_SLOW; 
+            this->status = MOVING_TO_ORIGIN_SLOW;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->steppers[c - 'X']->move(0,10000000); 
-                    this->steppers[c - 'X']->set_speed(this->slow_rates[c -'X']); 
+                    this->steppers[c - 'X']->move(0,10000000);
+                    this->steppers[c - 'X']->set_speed(this->slow_rates[c -'X']);
                 }
             }
 
             // Wait for all axes to have homed
             running = true;
             while(running){
-                running = false; 
+                running = false;
                 for( char c = 'X'; c <= 'Z'; c++ ){
                     if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                          if( this->pins[c - 'X']->get() ){
                             // The endstop was hit, stop moving
-                            if( this->steppers[c - 'X']->moving ){ 
-                                this->steppers[c - 'X']->move(0,0); 
-                            }  
+                            if( this->steppers[c - 'X']->moving ){
+                                this->steppers[c - 'X']->move(0,0);
+                            }
                         }else{
                             // The endstop was not hit yet
                             running = true;

@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl) with additions from Sungeun K. Jeon (https://github.com/chamnit/grbl)
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Module.h"
@@ -23,10 +23,10 @@ using std::string;
 Robot::Robot(){
     this->inch_mode = false;
     this->absolute_mode = true;
-    this->motion_mode =  MOTION_MODE_SEEK; 
+    this->motion_mode =  MOTION_MODE_SEEK;
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
     clear_vector(this->current_position);
-    clear_vector(this->last_milestone); 
+    clear_vector(this->last_milestone);
 }
 
 //Called when the module has just been loaded
@@ -38,14 +38,14 @@ void Robot::on_module_loaded() {
     this->on_config_reload(this);
 
     // Make our 3 StepperMotors
-    this->alpha_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->alpha_step_pin,this->alpha_dir_pin,this->alpha_en_pin) );   
-    this->beta_stepper_motor   = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->beta_step_pin, this->beta_dir_pin, this->beta_en_pin ) );   
-    this->gamma_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->gamma_step_pin,this->gamma_dir_pin,this->gamma_en_pin) );   
+    this->alpha_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->alpha_step_pin,this->alpha_dir_pin,this->alpha_en_pin) );
+    this->beta_stepper_motor   = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->beta_step_pin, this->beta_dir_pin, this->beta_en_pin ) );
+    this->gamma_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->gamma_step_pin,this->gamma_dir_pin,this->gamma_en_pin) );
 
 }
 
 void Robot::on_config_reload(void* argument){
-    this->feed_rate =           this->kernel->config->value(default_feed_rate_checksum  )->by_default(100)->as_number()/60; 
+    this->feed_rate =           this->kernel->config->value(default_feed_rate_checksum  )->by_default(100)->as_number()/60;
     this->seek_rate =           this->kernel->config->value(default_seek_rate_checksum  )->by_default(100)->as_number()/60;
     this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum)->by_default(0.1)->as_number();
     this->mm_per_arc_segment  = this->kernel->config->value(mm_per_arc_segment_checksum )->by_default(10 )->as_number();
@@ -68,15 +68,15 @@ void Robot::on_config_reload(void* argument){
 //A GCode has been received
 void Robot::on_gcode_received(void * argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    gcode->call_on_gcode_execute_event_immediatly = false; 
+    gcode->call_on_gcode_execute_event_immediatly = false;
     gcode->on_gcode_execute_event_called = false;
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
     if( this->kernel->player->queue.size() == 0 ){
         gcode->call_on_gcode_execute_event_immediatly = true;
         this->execute_gcode(gcode);
         if( gcode->on_gcode_execute_event_called == false ){
-            //printf("GCODE A: %s \r\n", gcode->command.c_str() ); 
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
+            //printf("GCODE A: %s \r\n", gcode->command.c_str() );
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
         }
     }else{
         Block* block = this->kernel->player->queue.get_ref( this->kernel->player->queue.size() - 1 );
@@ -108,17 +108,17 @@ void Robot::execute_gcode(Gcode* gcode){
            case 21:this->inch_mode = false; break;
            case 90:this->absolute_mode = true; break;
            case 91:this->absolute_mode = false; break;
-       } 
+       }
     }else{ return; }
     
    //Get parameters
     double target[3], offset[3];
-    clear_vector(target); clear_vector(offset); 
+    clear_vector(target); clear_vector(offset);
     
     memcpy(target, this->current_position, sizeof(target));    //default to last target
     
-    for(char letter = 'I'; letter <= 'K'; letter++){ if( gcode->has_letter(letter) ){ offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));                                                    } }     
-    for(char letter = 'X'; letter <= 'Z'; letter++){ if( gcode->has_letter(letter) ){ target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);  } }     
+    for(char letter = 'I'; letter <= 'K'; letter++){ if( gcode->has_letter(letter) ){ offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));                                                    } }
+    for(char letter = 'X'; letter <= 'Z'; letter++){ if( gcode->has_letter(letter) ){ target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);  } }
     
     if( gcode->has_letter('F') ){ if( this->motion_mode == MOTION_MODE_SEEK ){ this->seek_rate = this->to_millimeters( gcode->get_value('F') ) / 60; }else{ this->feed_rate = this->to_millimeters( gcode->get_value('F') ) / 60; } }
    
@@ -129,7 +129,7 @@ void Robot::execute_gcode(Gcode* gcode){
                 case MOTION_MODE_CANCEL: break;
                 case MOTION_MODE_SEEK  : this->append_line(gcode, target, this->seek_rate ); break;
                 case MOTION_MODE_LINEAR: this->append_line(gcode, target, this->feed_rate ); break;
-                case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, target ); break; 
+                case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, target ); break;
             }
             break;
     }
@@ -137,7 +137,7 @@ void Robot::execute_gcode(Gcode* gcode){
     // As far as the parser is concerned, the position is now == target. In reality the
     // motion control system might still be processing the action and the real tool position
     // in any intermediate location.
-    memcpy(this->current_position, target, sizeof(double)*3); // this->position[] = target[]; 
+    memcpy(this->current_position, target, sizeof(double)*3); // this->position[] = target[];
 
 }
 
@@ -151,54 +151,54 @@ void Robot::append_milestone( double target[], double rate ){
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
 
     
-    double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );      
+    double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
     
     double duration = 0;
     if( rate > 0 ){ duration = millimeters_of_travel / rate; }
 
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
-        if( this->max_speeds[axis] > 0 ){ 
-            double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * 60; 
-            if( axis_speed > this->max_speeds[axis] ){ 
-                rate = rate * ( this->max_speeds[axis] / axis_speed ); 
+        if( this->max_speeds[axis] > 0 ){
+            double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * 60;
+            if( axis_speed > this->max_speeds[axis] ){
+                rate = rate * ( this->max_speeds[axis] / axis_speed );
             }
         }
     }
 
-    this->kernel->planner->append_block( steps, rate*60, millimeters_of_travel, deltas ); 
+    this->kernel->planner->append_block( steps, rate*60, millimeters_of_travel, deltas );
 
-    memcpy(this->last_milestone, target, sizeof(double)*3); // this->last_milestone[] = target[]; 
+    memcpy(this->last_milestone, target, sizeof(double)*3); // this->last_milestone[] = target[];
 
 }
 
 void Robot::append_line(Gcode* gcode, double target[], double rate ){
 
 
-    // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes. 
+    // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
-    gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) ); 
+    gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
 
     if( gcode->call_on_gcode_execute_event_immediatly == true ){
-            //printf("GCODE B: %s \r\n", gcode->command.c_str() ); 
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
+            //printf("GCODE B: %s \r\n", gcode->command.c_str() );
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
             gcode->on_gcode_execute_event_called = true;
     }
 
-    if (gcode->millimeters_of_travel == 0.0) { 
+    if (gcode->millimeters_of_travel == 0.0) {
         this->append_milestone(this->current_position, 0.0);
-        return; 
+        return;
     }
 
-    uint16_t segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment); 
+    uint16_t segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment);
     // A vector to keep track of the endpoint of each segment
     double temp_target[3];
     //Initialize axes
-    memcpy( temp_target, this->current_position, sizeof(double)*3); // temp_target[] = this->current_position[];  
+    memcpy( temp_target, this->current_position, sizeof(double)*3); // temp_target[] = this->current_position[];
 
     //For each segment
     for( int i=0; i<segments-1; i++ ){
-        for(int axis=X_AXIS; axis <= Z_AXIS; axis++ ){ temp_target[axis] += ( target[axis]-this->current_position[axis] )/segments; }        
-        this->append_milestone(temp_target, rate); 
+        for(int axis=X_AXIS; axis <= Z_AXIS; axis++ ){ temp_target[axis] += ( target[axis]-this->current_position[axis] )/segments; }
+        this->append_milestone(temp_target, rate);
     }
     this->append_milestone(target, rate);
 }
@@ -222,14 +222,14 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
     gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
 
     if( gcode->call_on_gcode_execute_event_immediatly == true ){
-            //printf("GCODE C: %s \r\n", gcode->command.c_str() ); 
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode ); 
+            //printf("GCODE C: %s \r\n", gcode->command.c_str() );
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
             gcode->on_gcode_execute_event_called = true;
     }
 
-    if (gcode->millimeters_of_travel == 0.0) { 
+    if (gcode->millimeters_of_travel == 0.0) {
         this->append_milestone(this->current_position, 0.0);
-        return; 
+        return;
     }
  
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
@@ -311,7 +311,7 @@ void Robot::compute_arc(Gcode* gcode, double offset[], double target[]){
 
     // Set clockwise/counter-clockwise sign for mc_arc computations
     bool is_clockwise = false;
-    if( this->motion_mode == MOTION_MODE_CW_ARC ){ is_clockwise = true; } 
+    if( this->motion_mode == MOTION_MODE_CW_ARC ){ is_clockwise = true; }
 
     // Append arc
     this->append_arc(gcode, target, offset,  radius, is_clockwise );
@@ -321,7 +321,7 @@ void Robot::compute_arc(Gcode* gcode, double offset[], double target[]){
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed
 inline double Robot::to_millimeters( double value ){
-        return this->inch_mode ? value/25.4 : value; 
+        return this->inch_mode ? value/25.4 : value;
 }
 
 double Robot::theta(double x, double y){
