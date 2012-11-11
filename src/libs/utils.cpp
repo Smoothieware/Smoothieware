@@ -15,7 +15,7 @@ using std::string;
 
 
 uint16_t get_checksum(string to_check){
-   // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum 
+   // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum 
    uint16_t sum1 = 0;
    uint16_t sum2 = 0;
    for( unsigned int index = 0; index < to_check.length(); ++index ){

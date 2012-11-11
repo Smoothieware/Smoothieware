@@ -5,7 +5,7 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-// TODO : THIS FILE IS LAME, MUST BE MADE MUCH BETTER
+// TODO : THIS FILE IS LAME, MUST BE MADE MUCH BETTER
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"

@@ -125,7 +125,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     block->max_entry_speed = vmax_junction;
    
     // Initialize block entry speed. Compute based on deceleration to user-defined MINIMUM_PLANNER_SPEED.
-    double v_allowable = this->max_allowable_speed(-this->acceleration,0.0,block->millimeters); //TODO: Get from config
+    double v_allowable = this->max_allowable_speed(-this->acceleration,0.0,block->millimeters); //TODO: Get from config
     block->entry_speed = min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags

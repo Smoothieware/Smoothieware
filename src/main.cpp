@@ -22,9 +22,9 @@
 #include "libs/utils.h"
 
 #include "libs/USBCDCMSC/USBCDCMSC.h"
-SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
-//LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
-USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
+SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
+//LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
+USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
 
 
 int main() {

@@ -17,7 +17,7 @@
 #define max_jerk_checksum           61012 
 #define junction_deviation_checksum 6035 
 
-// TODO: Get from config
+// TODO: Get from config
 #define MINIMUM_PLANNER_SPEED 0.0
 using namespace std;
 
@@ -39,7 +39,7 @@ class Planner : public Module {
 
         int position[3];              // Current position, in steps
         double previous_unit_vec[3];
-        Block last_deleted_block;     // Item -1 in the queue, TODO: Grbl does not need this, but Smoothie won't work without it, we are probably doing something wrong
+        Block last_deleted_block;     // Item -1 in the queue, TODO: Grbl does not need this, but Smoothie won't work without it, we are probably doing something wrong
         bool has_deleted_block;       // Flag for above value
         float previous_nominal_speed;
 

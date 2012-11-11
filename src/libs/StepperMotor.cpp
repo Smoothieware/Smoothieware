@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "mri.h"
 #include "libs/Kernel.h"
@@ -19,7 +19,7 @@ StepperMotor::StepperMotor(){
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
     this->signal_step = false;
-    this->step_signal_hook = new Hook(); 
+    this->step_signal_hook = new Hook();
 }
 
 StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
@@ -33,18 +33,18 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
     this->signal_step = false;
-    this->step_signal_hook = new Hook(); 
+    this->step_signal_hook = new Hook();
 }
 
 // Called a great many times per second, to step if we have to now
 void StepperMotor::tick(){
 
     // increase the ( fixed point ) counter by one tick 11t
-    this->fx_counter += (uint64_t)((uint64_t)1<<32);  
+    this->fx_counter += (uint64_t)((uint64_t)1<<32);
 
     // if we are to step now 10t
     if( this->fx_counter >= this->fx_ticks_per_step ){
-   
+
         // output to pins 37t
         this->dir_pin->set(  this->direction_bit );
         this->step_pin->set( 1                   );
@@ -62,9 +62,9 @@ void StepperMotor::tick(){
         }
 
         // is this move finished ? 11t
-        if( this->stepped == this->steps_to_move ){ 
-            this->is_move_finished = true; 
-            this->step_ticker->moves_finished = true; 
+        if( this->stepped == this->steps_to_move ){
+            this->is_move_finished = true;
+            this->step_ticker->moves_finished = true;
         }
 
     }
@@ -77,13 +77,13 @@ void StepperMotor::signal_move_finished(){
             // work is done ! 8t
             this->moving = false;
             this->steps_to_move = 0;
-            
+
             // signal it to whatever cares 41t 411t
             this->end_hook->call();
 
             // We only need to do this if we were not instructed to move
             if( this->moving == false ){
-                this->update_exit_tick(); 
+                this->update_exit_tick();
             }
 
             this->is_move_finished = false;
@@ -92,8 +92,8 @@ void StepperMotor::signal_move_finished(){
 // This is just a way not to check for ( !this->moving || this->paused || this->fx_ticks_per_step == 0 ) at every tick()
 inline void StepperMotor::update_exit_tick(){
     if( !this->moving || this->paused || this->steps_to_move == 0 ){
-        // We must exit tick() after setting the pins, no bresenham is done 
-        this->step_ticker->remove_motor_from_active_list(this); 
+        // We must exit tick() after setting the pins, no bresenham is done
+        this->step_ticker->remove_motor_from_active_list(this);
     }else{
         // We must do the bresenham in tick()
         // We have to do this or there could be a bug where the removal still happens when it doesn't need to
@@ -105,7 +105,7 @@ inline void StepperMotor::update_exit_tick(){
 
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps ){
-    // We do not set the direction directly, we will set the pin just before the step pin on the next tick 
+    // We do not set the direction directly, we will set the pin just before the step pin on the next tick
     this->direction_bit = direction;
 
     // How many steps we have to move until the move is done
@@ -119,12 +119,12 @@ void StepperMotor::move( bool direction, unsigned int steps ){
     this->signal_step = false;
 
     // Starting now we are moving
-    if( steps > 0 ){ 
-        this->moving = true; 
-    }else{ 
-        this->moving = false; 
+    if( steps > 0 ){
+        this->moving = true;
+    }else{
+        this->moving = false;
     }
-    this->update_exit_tick(); 
+    this->update_exit_tick();
 
 }
 
@@ -135,9 +135,9 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 void StepperMotor::set_speed( double speed ){
     if( speed < 0.0001 ){
         //__debugbreak();
-        return; 
+        return;
     }
-   
+
     // How many steps we must output per second
     this->steps_per_second = speed;
 

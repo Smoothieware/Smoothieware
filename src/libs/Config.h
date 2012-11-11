@@ -45,7 +45,7 @@ class Config : public Module {
 
         bool   has_characters(uint16_t check_sum, string str );
 
-        ConfigCache config_cache;             // A cache in which ConfigValues are kept
+        ConfigCache config_cache;             // A cache in which ConfigValues are kept
         vector<ConfigSource*> config_sources; // A list of all possible coniguration sources
         bool   config_cache_loaded;           // Whether or not the cache is currently popluated
 };

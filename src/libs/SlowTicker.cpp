@@ -28,7 +28,7 @@ SlowTicker::SlowTicker(){
 }
 
 void SlowTicker::set_frequency( int frequency ){
-    LPC_TIM2->MR0 = int(floor((SystemCoreClock/4)/frequency));  // SystemCoreClock/4 = Timer increments in a second
+    LPC_TIM2->MR0 = int(floor((SystemCoreClock/4)/frequency));  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM2->TCR = 3;  // Reset
     LPC_TIM2->TCR = 1;  // Reset
 }

@@ -54,7 +54,7 @@ void Extruder::on_module_loaded() {
     this->mode = OFF;
 
     // Update speed every *acceleration_ticks_per_second*
-    // TODO: Make this an independent setting
+    // TODO: Make this an independent setting
     this->kernel->slow_ticker->attach( this->kernel->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
 
     // Stepper motor object for the extruder
@@ -105,7 +105,7 @@ void Extruder::on_gcode_execute(void* argument){
     this->mode = OFF;
 
     if( gcode->has_g ){
-        // G92: Reset extruder position
+        // G92: Reset extruder position
         if( gcode->g == 92 ){
             if( gcode->has_letter('E') ){
                 this->current_position = gcode->get_value('E');
@@ -120,7 +120,7 @@ void Extruder::on_gcode_execute(void* argument){
                 if( this->absolute_mode == true ){ relative_extrusion_distance = relative_extrusion_distance - this->target_position; }
 
                 // If the robot is moving, we follow it's movement, otherwise, we move alone
-                if( fabs(gcode->millimeters_of_travel) < 0.0001 ){  // With floating numbers, we can have 0 != 0 ... beeeh. For more info see : http://upload.wikimedia.org/wikipedia/commons/0/0a/Cain_Henri_Vidal_Tuileries.jpg
+                if( fabs(gcode->millimeters_of_travel) < 0.0001 ){  // With floating numbers, we can have 0 != 0 ... beeeh. For more info see : http://upload.wikimedia.org/wikipedia/commons/0/0a/Cain_Henri_Vidal_Tuileries.jpg
                     this->mode = SOLO;
                     this->travel_distance = relative_extrusion_distance;
                     if( gcode->has_letter('F') ){ this->feed_rate = gcode->get_value('F'); }

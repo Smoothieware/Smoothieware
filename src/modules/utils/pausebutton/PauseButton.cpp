@@ -19,7 +19,7 @@ void PauseButton::on_module_loaded(){
     this->kernel->slow_ticker->attach( 100, this, &PauseButton::button_tick );
 }
 
-//TODO: Make this use InterruptIn
+//TODO: Make this use InterruptIn
 //Check the state of the button and act accordingly
 uint32_t PauseButton::button_tick(uint32_t dummy){
     // If button changed 

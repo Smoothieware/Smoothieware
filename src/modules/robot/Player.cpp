@@ -70,7 +70,7 @@ void Player::pop_and_process_new_block(int debug){
     // Return if queue is empty 
     if( this->queue.size() == 0 ){
         this->current_block = NULL; 
-        // TODO : ON_QUEUE_EMPTY event 
+        // TODO : ON_QUEUE_EMPTY event 
         this->looking_for_new_block = false;
         return; 
     }

@@ -78,8 +78,8 @@ class Robot : public Module {
         double feed_rate;                                     // Current rate for feeding moves ( mm/s )
         uint8_t plane_axis_0, plane_axis_1, plane_axis_2;     // Current plane ( XY, XZ, YZ )
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
-        double mm_per_line_segment;                           // Setting : Used to split lines into segments
-        double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
+        double mm_per_line_segment;                           // Setting : Used to split lines into segments
+        double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
         
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc

@@ -26,7 +26,7 @@
 #define ON_MAIN_LOOP               0
 #define ON_CONSOLE_LINE_RECEIVED   1
 #define ON_GCODE_RECEIVED          2
-#define ON_STEPPER_WAKE_UP         3    //TODO : Remove the need for this event, then this event itself eg: have planner call stepper directly
+#define ON_STEPPER_WAKE_UP         3    //TODO : Remove the need for this event, then this event itself eg: have planner call stepper directly
 #define ON_GCODE_EXECUTE           4
 #define ON_SPEED_CHANGE            5
 #define ON_BLOCK_BEGIN             6

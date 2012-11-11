@@ -26,7 +26,7 @@ void Configurator::on_console_line_received( void* argument ){
     string possible_command = new_message.message;
 
     // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
-    uint16_t check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
+    uint16_t check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
 
     // Act depending on command
     switch( check_sum ){

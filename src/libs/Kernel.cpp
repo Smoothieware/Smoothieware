@@ -45,7 +45,7 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 #define baud_rate_setting_checksum 10922
 #define uart0_checksum             16877
 
-// The kernel is the central point in Smoothie : it stores modules, and handles event calls
+// The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
 
     // Value init for the arrays

@@ -53,7 +53,7 @@ void Endstops::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if( gcode->has_g){
         if( gcode->g == 28 ){
-            // G28 is received, we have homing to do  
+            // G28 is received, we have homing to do  
 
             // First wait for the queue to be empty
             while(this->kernel->player->queue.size() > 0) { wait_us(500); }
