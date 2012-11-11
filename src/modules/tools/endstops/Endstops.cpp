@@ -37,15 +37,15 @@ void Endstops::on_config_reload(void* argument){
     this->pins[0]                    = this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input();
     this->pins[1]                    = this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_pin()->as_input();
     this->pins[2]                    = this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input();
-    this->fast_rates[0]              = this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default("100" )->as_number();
-    this->fast_rates[1]              = this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default("100" )->as_number();
-    this->fast_rates[2]              = this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default("100" )->as_number();
-    this->slow_rates[0]              = this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default("10" )->as_number();
-    this->slow_rates[1]              = this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default("10" )->as_number();
-    this->slow_rates[2]              = this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default("10" )->as_number();
-    this->retract_steps[0]           = this->kernel->config->value(alpha_homing_retract_checksum       )->by_default("10" )->as_number();
-    this->retract_steps[1]           = this->kernel->config->value(beta_homing_retract_checksum        )->by_default("10" )->as_number();
-    this->retract_steps[2]           = this->kernel->config->value(gamma_homing_retract_checksum       )->by_default("10" )->as_number();
+    this->fast_rates[0]              = this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default("500" )->as_number();
+    this->fast_rates[1]              = this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default("500" )->as_number();
+    this->fast_rates[2]              = this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default("500" )->as_number();
+    this->slow_rates[0]              = this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default("100" )->as_number();
+    this->slow_rates[1]              = this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default("100" )->as_number();
+    this->slow_rates[2]              = this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default("100" )->as_number();
+    this->retract_steps[0]           = this->kernel->config->value(alpha_homing_retract_checksum       )->by_default("30" )->as_number();
+    this->retract_steps[1]           = this->kernel->config->value(beta_homing_retract_checksum        )->by_default("30" )->as_number();
+    this->retract_steps[2]           = this->kernel->config->value(gamma_homing_retract_checksum       )->by_default("30" )->as_number();
 }
 
 // Start homing sequences by response to GCode commands
