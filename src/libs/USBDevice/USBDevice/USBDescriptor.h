@@ -18,7 +18,7 @@
 
 
 /*string offset*/
-#define STRING_OFFSET_LANGID            (0) 
+#define STRING_OFFSET_LANGID            (0)
 #define STRING_OFFSET_IMANUFACTURER     (1)
 #define STRING_OFFSET_IPRODUCT          (2)
 #define STRING_OFFSET_ISERIAL           (3)
@@ -29,8 +29,8 @@
 #define USB_VERSION_2_0 (0x0200)
 
 /* Least/Most significant byte of short integer */
-#define LSB(n)  ((n)&0xff)
-#define MSB(n)  (((n)&0xff00)>>8)
+#define LSB(n)  ((uint8_t)((n)&0xff))
+#define MSB(n)  ((uint8_t)(((n)&0xff00)>>8))
 
 /* Convert physical endpoint number to descriptor endpoint number */
 #define PHY_TO_DESC(endpoint) (((endpoint)>>1) | (((endpoint) & 1) ? 0x80:0))

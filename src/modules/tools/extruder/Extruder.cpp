@@ -1,8 +1,8 @@
 /*
-      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
-      Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-      Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
+    This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
+    Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+    Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Module.h"
@@ -15,9 +15,9 @@
 #define extruder_dir_pin_checksum     57277
 #define extruder_en_pin_checksum      8017
 
-/* The extruder module controls a filament extruder for 3D printing : http://en.wikipedia.org/wiki/Fused_deposition_modeling
- * It can work in two modes : either the head does not move, and the extruder moves the filament at a specified speed ( SOLO mode here )
- * or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
+/* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
+* It can work in two modes : either the head does not move, and the extruder moves the filament at a specified speed ( SOLO mode here )
+* or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
 */
 
 Extruder::Extruder() {
@@ -58,21 +58,21 @@ void Extruder::on_module_loaded() {
     this->kernel->slow_ticker->attach( this->kernel->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
 
     // Stepper motor object for the extruder
-    this->stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->step_pin,this->dir_pin,this->en_pin) );   
-    this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move ); 
+    this->stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->step_pin,this->dir_pin,this->en_pin) );
+    this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
 
 }
 
 // Get config
 void Extruder::on_config_reload(void* argument){
-	this->microseconds_per_step_pulse = this->kernel->config->value(microseconds_per_step_pulse_checksum)->by_default(5)->as_number();
-	this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
-	this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
-	this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
+    this->microseconds_per_step_pulse = this->kernel->config->value(microseconds_per_step_pulse_checksum)->by_default(5)->as_number();
+    this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
+    this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
+    this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
 
-	this->step_pin                    = this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_pin()->as_output();
-	this->dir_pin                     = this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_pin()->as_output();
-	this->en_pin                      = this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_pin()->as_output()->as_open_drain();
+    this->step_pin                    = this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_pin()->as_output();
+    this->dir_pin                     = this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_pin()->as_output();
+    this->en_pin                      = this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_pin()->as_output()->as_open_drain();
 }
 
 
@@ -143,9 +143,9 @@ void Extruder::on_block_begin(void* argument){
 
     if( this->mode == SOLO ){
         // In solo mode we take the block so we can move even if the stepper has nothing to do
-        
+
         this->target_position = this->current_position + this->travel_distance ;
-      
+
         //int32_t steps_to_step = abs( int( floor(this->steps_per_millimeter*this->target_position) - floor(this->steps_per_millimeter*this->current_position) ) );
 
         int old_steps = this->current_steps;
@@ -154,19 +154,19 @@ void Extruder::on_block_begin(void* argument){
         this->current_steps = target_steps;
 
         if( steps_to_step != 0 ){
-            
+
             // We take the block, we have to release it or everything gets stuck
             block->take();
             this->current_block = block;
-        
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step); 
+
+            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
 
         }
 
 
     }else if( this->mode == FOLLOW ){
         // In non-solo mode, we just follow the stepper module
-        
+
         this->current_block = block;
         this->target_position =  this->current_position + ( this->current_block->millimeters * this->travel_ratio );
 
@@ -176,17 +176,17 @@ void Extruder::on_block_begin(void* argument){
         int target_steps = int( floor(this->steps_per_millimeter*this->target_position) );
         int steps_to_step = target_steps - old_steps ;
         this->current_steps = target_steps;
-        
-        
-        if( steps_to_step != 0 ){ 
+
+
+        if( steps_to_step != 0 ){
 
             //printf("taken for extruder: %u \r\n", steps_to_step);
-            
+
             block->take();
-            
+
             //printf("spm:%f td:%f steps:%d ( %f - %f ) \r\n", this->steps_per_millimeter, this->travel_distance,  steps_to_step, this->target_position, this->current_position  );
 
-            this->stepper_motor->move( ( steps_to_step > 0 ), abs(steps_to_step) ); 
+            this->stepper_motor->move( ( steps_to_step > 0 ), abs(steps_to_step) );
 
 
 
@@ -194,9 +194,9 @@ void Extruder::on_block_begin(void* argument){
 
     }else if( this->mode == OFF ){
         // No movement means we must reset our speed
-        
+
         //this->stepper_motor->set_speed(0);
-    
+
     }
 
 }
@@ -218,15 +218,15 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy){
 
     uint32_t current_rate = this->stepper_motor->steps_per_second;
     uint32_t target_rate = int(floor((this->feed_rate/60)*this->steps_per_millimeter));
-  
+
     if( current_rate < target_rate ){
         uint32_t rate_increase = int(floor((this->acceleration/this->kernel->stepper->acceleration_ticks_per_second)*this->steps_per_millimeter));
         current_rate = min( target_rate, current_rate + rate_increase );
     }
     if( current_rate > target_rate ){ current_rate = target_rate; }
 
-    this->stepper_motor->set_speed(max(current_rate, this->kernel->stepper->minimum_steps_per_minute/60)); 
-       
+    this->stepper_motor->set_speed(max(current_rate, this->kernel->stepper->minimum_steps_per_minute/60));
+
     return 0;
 }
 
@@ -237,15 +237,15 @@ void Extruder::on_speed_change( void* argument ){
     if( this->current_block == NULL ||  this->paused || this->mode != FOLLOW || this->stepper_motor->moving != true ){ return; }
 
     /*
-     * nominal block duration = current block's steps / ( current block's nominal rate / 60 )
-     * nominal extruder rate = extruder steps / nominal block duration
-     * actual extruder rate = nominal extruder rate * ( ( stepper's steps per minute / 60 ) / ( current block's nominal rate / 60 ) )
-     * or : actual extruder rate = ( ( extruder steps * ( current block's nominal_rate / 60 ) ) / current block's steps ) * ( ( stepper's steps per minute / 60 ) / ( current block's nominal rate / 60 ) )
-     * or simplified : ( extruder steps * ( stepper's steps per minute / 60 ) ) / current block's steps
-     * or even : ( stepper steps per minute / 60 ) * ( extruder steps / current block's steps )
+    * nominal block duration = current block's steps / ( current block's nominal rate / 60 )
+    * nominal extruder rate = extruder steps / nominal block duration
+    * actual extruder rate = nominal extruder rate * ( ( stepper's steps per minute / 60 ) / ( current block's nominal rate / 60 ) )
+    * or actual extruder rate = ( ( extruder steps * ( current block's nominal_rate / 60 ) ) / current block's steps ) * ( ( stepper's steps per minute / 60 ) / ( current block's nominal rate / 60 ) )
+    * or simplified : extruder steps * ( stepper's steps per minute / 60 ) ) / current block's steps
+    * or even : ( stepper steps per minute / 60 ) * ( extruder steps / current block's steps )
     */
-    
-    this->stepper_motor->set_speed( max( ( this->kernel->stepper->trapezoid_adjusted_rate /60L) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ), this->kernel->stepper->minimum_steps_per_minute/60 ) ); 
+
+    this->stepper_motor->set_speed( max( ( this->kernel->stepper->trapezoid_adjusted_rate /60L) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ), this->kernel->stepper->minimum_steps_per_minute/60 ) );
 
 }
 
