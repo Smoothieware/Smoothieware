@@ -144,8 +144,7 @@ void Stepper::on_block_begin(void* argument){
     if( this->kernel->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->gamma_stepper_motor; }
 
     // Synchronise the acceleration curve with the stepping
-    this->synchronize_acceleration(NULL);
-
+    this->synchronize_acceleration(0);
 
 }
 
@@ -295,7 +294,7 @@ uint32_t Stepper::synchronize_acceleration(uint32_t dummy){
 
     LPC_GPIO1->FIOCLR = 1<<21;
 
-
+    return 0;
 }
 
 
