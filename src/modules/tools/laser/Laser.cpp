@@ -1,8 +1,8 @@
 /*
-      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
-      Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-      Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
+    This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
+    Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+    Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Module.h"
@@ -19,8 +19,8 @@ Laser::Laser(PinName pin) : laser_pin(pin){
 void Laser::on_module_loaded() {
     if( !this->kernel->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){ return; }
     //read maximum allowable power
-  	laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.3)->as_number() ;
-  	//register for events
+    laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.3)->as_number() ;
+    //register for events
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_PLAY);
@@ -63,8 +63,8 @@ void Laser::on_gcode_execute(void* argument){
         }
     }
     if ( gcode->has_letter('S' )){
-     	this->laser_max_power = gcode->get_value('S');
-//     	this->kernel->streams->printf("Adjusted laser power to %d/100\r\n",(int)(this->laser_max_power*100.0+0.5));
+        this->laser_max_power = gcode->get_value('S');
+//         this->kernel->streams->printf("Adjusted laser power to %d/100\r\n",(int)(this->laser_max_power*100.0+0.5));
     }
 
 }
@@ -76,9 +76,7 @@ void Laser::on_speed_change(void* argument){
 
 void Laser::set_proportional_power(){
     if( this->laser_on && this->kernel->stepper->current_block ){
-    	// adjust power to maximum power and actual velocity
+        // adjust power to maximum power and actual velocity
         this->laser_pin = double (this->laser_max_power) * double(this->kernel->stepper->trapezoid_adjusted_rate) / double(this->kernel->stepper->current_block->nominal_rate);
     }
 }
-
-

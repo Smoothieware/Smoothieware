@@ -7,9 +7,9 @@
  *
  * Copyright (C) 2009 ARM Limited. All rights reserved.
  *
- * ARM Limited (ARM) is supplying this software for use with Cortex-Mx 
- * processor based microcontrollers.  This file can be freely distributed 
- * within development tools that are supporting such ARM based processors. 
+ * ARM Limited (ARM) is supplying this software for use with Cortex-Mx
+ * processor based microcontrollers.  This file can be freely distributed
+ * within development tools that are supporting such ARM based processors.
  *
  * THIS SOFTWARE IS PROVIDED "AS IS".  NO WARRANTIES, WHETHER EXPRESS, IMPLIED
  * OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF
@@ -24,7 +24,7 @@
 
 #ifdef __cplusplus
  extern "C" {
-#endif 
+#endif
 
 #define __CM3_CMSIS_VERSION_MAIN  (0x01)                                                       /*!< [31:16] CMSIS HAL main version */
 #define __CM3_CMSIS_VERSION_SUB   (0x30)                                                       /*!< [15:0]  CMSIS HAL sub version  */
@@ -187,7 +187,7 @@ typedef struct
 /* memory mapping structur for ITM */
 typedef struct
 {
-  __O  union  
+  __O  union
   {
     __O  uint8_t    u8;                       /*!< ITM Stimulus Port 8-bit               */
     __O  uint16_t   u16;                      /*!< ITM Stimulus Port 16-bit              */
@@ -442,7 +442,7 @@ static __INLINE void __set_FAULTMASK(uint32_t faultMask)
 
 /**
  * @brief  Return the Control Register value
- * 
+ *
  * @param  none
  * @return uint32_t Control value
  *
@@ -468,7 +468,7 @@ static __INLINE void __set_CONTROL(uint32_t control)
   __regControl = control;
 }
 
-#endif /* __ARMCC_VERSION  */ 
+#endif /* __ARMCC_VERSION  */
 
 
 
@@ -481,7 +481,7 @@ static __INLINE void __set_CONTROL(uint32_t control)
 static __INLINE void __enable_fault_irq()         { __ASM ("cpsie f"); }
 static __INLINE void __disable_fault_irq()        { __ASM ("cpsid f"); }
 
-#define __NOP                                     __no_operation()          /*!< no operation intrinsic in IAR Compiler */ 
+#define __NOP                                     __no_operation()          /*!< no operation intrinsic in IAR Compiler */
 static __INLINE  void __WFI()                     { __ASM ("wfi"); }
 static __INLINE  void __WFE()                     { __ASM ("wfe"); }
 static __INLINE  void __SEV()                     { __ASM ("sev"); }
@@ -539,10 +539,10 @@ static __INLINE void __CLREX()                    { __ASM volatile ("clrex"); }
  * @brief  Set the Priority Grouping in NVIC Interrupt Controller
  *
  * @param  uint32_t priority_grouping is priority grouping field
- * @return none 
+ * @return none
  *
  * Set the priority grouping field using the required unlock sequence.
- * The parameter priority_grouping is assigned to the field 
+ * The parameter priority_grouping is assigned to the field
  * SCB->AIRCR [10:8] PRIGROUP field. Only values from 0..7 are used.
  * In case of a conflict between priority grouping and available
  * priority bits (__NVIC_PRIO_BITS) the smallest possible priority group is set.
@@ -562,7 +562,7 @@ static __INLINE void NVIC_SetPriorityGrouping(uint32_t PriorityGroup)
  * @brief  Get the Priority Grouping from NVIC Interrupt Controller
  *
  * @param  none
- * @return uint32_t   priority grouping field 
+ * @return uint32_t   priority grouping field
  *
  * Get the priority grouping from NVIC Interrupt Controller.
  * priority grouping is SCB->AIRCR [10:8] PRIGROUP field.
@@ -576,7 +576,7 @@ static __INLINE uint32_t NVIC_GetPriorityGrouping(void)
  * @brief  Enable Interrupt in NVIC Interrupt Controller
  *
  * @param  IRQn_Type IRQn specifies the interrupt number
- * @return none 
+ * @return none
  *
  * Enable a device specific interupt in the NVIC interrupt controller.
  * The interrupt number cannot be a negative value.
@@ -588,10 +588,10 @@ static __INLINE void NVIC_EnableIRQ(IRQn_Type IRQn)
 
 /**
  * @brief  Disable the interrupt line for external interrupt specified
- * 
+ *
  * @param  IRQn_Type IRQn is the positive number of the external interrupt
  * @return none
- * 
+ *
  * Disable a device specific interupt in the NVIC interrupt controller.
  * The interrupt number cannot be a negative value.
  */
@@ -602,11 +602,11 @@ static __INLINE void NVIC_DisableIRQ(IRQn_Type IRQn)
 
 /**
  * @brief  Read the interrupt pending bit for a device specific interrupt source
- * 
+ *
  * @param  IRQn_Type IRQn is the number of the device specifc interrupt
  * @return uint32_t 1 if pending interrupt else 0
  *
- * Read the pending register in NVIC and return 1 if its status is pending, 
+ * Read the pending register in NVIC and return 1 if its status is pending,
  * otherwise it returns 0
  */
 static __INLINE uint32_t NVIC_GetPendingIRQ(IRQn_Type IRQn)
@@ -616,7 +616,7 @@ static __INLINE uint32_t NVIC_GetPendingIRQ(IRQn_Type IRQn)
 
 /**
  * @brief  Set the pending bit for an external interrupt
- * 
+ *
  * @param  IRQn_Type IRQn is the Number of the interrupt
  * @return none
  *
@@ -634,7 +634,7 @@ static __INLINE void NVIC_SetPendingIRQ(IRQn_Type IRQn)
  * @param  IRQn_Type IRQn is the Number of the interrupt
  * @return none
  *
- * Clear the pending bit for the specified interrupt. 
+ * Clear the pending bit for the specified interrupt.
  * The interrupt number cannot be a negative value.
  */
 static __INLINE void NVIC_ClearPendingIRQ(IRQn_Type IRQn)
@@ -648,7 +648,7 @@ static __INLINE void NVIC_ClearPendingIRQ(IRQn_Type IRQn)
  * @param  IRQn_Type  IRQn is the Number of the interrupt
  * @return uint32_t   1 if active else 0
  *
- * Read the active register in NVIC and returns 1 if its status is active, 
+ * Read the active register in NVIC and returns 1 if its status is active,
  * otherwise it returns 0.
  */
 static __INLINE uint32_t NVIC_GetActive(IRQn_Type IRQn)
@@ -663,8 +663,8 @@ static __INLINE uint32_t NVIC_GetActive(IRQn_Type IRQn)
  * @param  priority is the priority for the interrupt
  * @return none
  *
- * Set the priority for the specified interrupt. The interrupt 
- * number can be positive to specify an external (device specific) 
+ * Set the priority for the specified interrupt. The interrupt
+ * number can be positive to specify an external (device specific)
  * interrupt, or negative to specify an internal (core) interrupt. \n
  *
  * Note: The priority cannot be set for every core interrupt.
@@ -683,8 +683,8 @@ static __INLINE void NVIC_SetPriority(IRQn_Type IRQn, uint32_t priority)
  * @param  IRQn_Type IRQn is the Number of the interrupt
  * @return uint32_t  priority is the priority for the interrupt
  *
- * Read the priority for the specified interrupt. The interrupt 
- * number can be positive to specify an external (device specific) 
+ * Read the priority for the specified interrupt. The interrupt
+ * number can be positive to specify an external (device specific)
  * interrupt, or negative to specify an internal (core) interrupt.
  *
  * The returned priority value is automatically aligned to the implemented
@@ -742,7 +742,7 @@ static __INLINE uint32_t NVIC_EncodePriority (uint32_t PriorityGroup, uint32_t P
  * @param  uint32_t* pSubPrio     is the sub priority value (starting from 0)
  * @return none
  *
- * Decode an interrupt priority value with the given priority group to 
+ * Decode an interrupt priority value with the given priority group to
  * preemptive priority value and sub priority value.
  * In case of a conflict between priority grouping and available
  * priority bits (__NVIC_PRIO_BITS) the samllest possible priority group is set.
@@ -781,11 +781,11 @@ static __INLINE void NVIC_DecodePriority (uint32_t Priority, uint32_t PriorityGr
  * @return  none
  *
  * Initialise the system tick timer and its interrupt and start the
- * system tick timer / counter in free running mode to generate 
+ * system tick timer / counter in free running mode to generate
  * periodical interrupts.
  */
 static __INLINE uint32_t SysTick_Config(uint32_t ticks)
-{ 
+{
   if (ticks > SYSTICK_MAXCOUNT)  return (1);                                             /* Reload value impossible */
 
   SysTick->LOAD  =  (ticks & SYSTICK_MAXCOUNT) - 1;                                      /* set reload register */
@@ -814,7 +814,7 @@ static __INLINE uint32_t SysTick_Config(uint32_t ticks)
 static __INLINE void NVIC_SystemReset(void)
 {
   SCB->AIRCR  = (NVIC_AIRCR_VECTKEY | (SCB->AIRCR & (0x700)) | (1<<NVIC_SYSRESETREQ)); /* Keep priority group unchanged */
-  __DSB();                                                                             /* Ensure completion of memory access */              
+  __DSB();                                                                             /* Ensure completion of memory access */
   while(1);                                                                            /* wait until reset */
 }
 
@@ -831,19 +831,19 @@ extern volatile int ITM_RxBuffer;                    /* variable to receive char
  * @param   uint32_t character to output
  * @return  uint32_t input character
  *
- * The function outputs a character via the ITM channel 0. 
- * The function returns when no debugger is connected that has booked the output.  
- * It is blocking when a debugger is connected, but the previous character send is not transmitted. 
+ * The function outputs a character via the ITM channel 0.
+ * The function returns when no debugger is connected that has booked the output.
+ * It is blocking when a debugger is connected, but the previous character send is not transmitted.
  */
 static __INLINE uint32_t ITM_SendChar (uint32_t ch)
 {
   if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA)  &&
       (ITM->TCR & ITM_TCR_ITMENA)                  &&
-      (ITM->TER & (1UL << 0))  ) 
+      (ITM->TER & (1UL << 0))  )
   {
     while (ITM->PORT[0].u32 == 0);
     ITM->PORT[0].u8 = (uint8_t) ch;
-  }  
+  }
   return (ch);
 }
 
@@ -854,9 +854,9 @@ static __INLINE uint32_t ITM_SendChar (uint32_t ch)
  * @param   none
  * @return  uint32_t input character
  *
- * The function inputs a character via variable ITM_RxBuffer. 
- * The function returns when no debugger is connected that has booked the output.  
- * It is blocking when a debugger is connected, but the previous character send is not transmitted. 
+ * The function inputs a character via variable ITM_RxBuffer.
+ * The function returns when no debugger is connected that has booked the output.
+ * It is blocking when a debugger is connected, but the previous character send is not transmitted.
  */
 static __INLINE int ITM_ReceiveChar (void) {
   int ch = -1;                               /* no character available */
@@ -866,7 +866,7 @@ static __INLINE int ITM_ReceiveChar (void) {
     ITM_RxBuffer = ITM_RXBUFFER_EMPTY;       /* ready for next character */
   }
   
-  return (ch); 
+  return (ch);
 }
 
 
@@ -876,8 +876,8 @@ static __INLINE int ITM_ReceiveChar (void) {
  * @param   none
  * @return  int  1 = character available, 0 = no character available
  *
- * The function checks  variable ITM_RxBuffer whether a character is available or not. 
- * The function returns '1' if a character is available and '0' if no character is available. 
+ * The function checks  variable ITM_RxBuffer whether a character is available or not.
+ * The function returns '1' if a character is available and '0' if no character is available.
  */
 static __INLINE int ITM_CheckChar (void) {
 

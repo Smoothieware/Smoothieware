@@ -19,7 +19,7 @@ class PauseButton : public Module {
         void on_pause( void* argument );
         
         Pin*       button;
-        Pin*       led; 
+        Pin*       led;
         bool       button_state;
         bool       play_state;
 };

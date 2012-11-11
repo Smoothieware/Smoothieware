@@ -18,7 +18,7 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #THE SOFTWARE.
 #
-# Updates: 
+# Updates:
 #    Arthur Wolf & Adam Green in 2011 - Updated to work with mbed.
 ###############################################################################
 # USAGE:
@@ -32,7 +32,7 @@
 #   LIBS_SUFFIX: List of library/object files to append to mbed.ar capi.ar libs.
 #   GCC4MBED_TYPE: Type of build to produce.  Allowed values are:
 #                  Debug - Build for debugging.  Disables optimizations and
-#                          links in debug MRI runtime.  Best debugging 
+#                          links in debug MRI runtime.  Best debugging
 #                          experience.
 #                  Release - Build for release with no debug support.
 #                  Checked - Release build with debug support.  Due to
@@ -59,7 +59,7 @@
 #       LIBS_SUFFIX=
 #
 #       include ../../build/gcc4mbed.mk
-#      
+#
 ###############################################################################
 
 # Check for undefined variables.
@@ -132,14 +132,14 @@ PROJINCS = $(sort $(dir $(SUBDIRS)))
 INCDIRS += $(PROJINCS) $(GCC4MBED_DIR)/mri $(EXTERNAL_DIR)/mbed $(EXTERNAL_DIR)/mbed/LPC1768
 
 # DEFINEs to be used when building C/C++ code
-DEFINES = -DTARGET_LPC1768
-DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"' 
+DEFINES = -DTARGET_LPC1768 -D__LPC17XX__
+DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"'
 DEFINES += -DMRI_BREAK_ON_INIT=$(MRI_BREAK_ON_INIT) -DMRI_SEMIHOST_STDIO=$(MRI_SEMIHOST_STDIO)
 
 # Libraries to be linked into final binary
 MBED_LIBS = $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/libmbed.a $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/libcapi.a
 SYS_LIBS = -lstdc++ -lsupc++ -lm -lgcc -lc -lgcc -lc -lnosys
-LIBS = $(LIBS_PREFIX) 
+LIBS = $(LIBS_PREFIX)
 
 ifeq "$(MRI_ENABLE)" "1"
 LIBS += $(GCC4MBED_DIR)/mri/mri.ar
@@ -157,15 +157,22 @@ LIBS += $(LIBS_SUFFIX)
 DEPFLAGS = -MMD -MP
 
 # Compiler Options
-GPFLAGS = -O$(OPTIMIZATION) -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork 
-GPFLAGS += -ffunction-sections -fdata-sections  -fno-exceptions 
-GPFLAGS += $(patsubst %,-I%,$(INCDIRS))
-GPFLAGS += $(DEFINES)
-GPFLAGS += $(DEPFLAGS)
-GPFLAGS += -Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wredundant-decls -Wcast-qual -Wcast-align
-GCFLAGS = $(GPFLAGS)
 
-# Setup wraps for newlib read/writes to redirect to MRI debugger. 
+# C/C++ flags
+GCFLAGS = -O$(OPTIMIZATION) -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork
+GCFLAGS += -ffunction-sections -fdata-sections  -fno-exceptions
+GCFLAGS += $(patsubst %,-I%,$(INCDIRS))
+GCFLAGS += $(DEFINES)
+GCFLAGS += $(DEPFLAGS)
+GCFLAGS += -Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wredundant-decls -Wcast-qual -Wcast-align
+
+# C++ only flags
+GPFLAGS = $(GCFLAGS)
+# uncomment the next line for extra fun ;)
+GPFLAGS += -std=gnu++0x
+# GPFLAGS += ...
+
+# Setup wraps for newlib read/writes to redirect to MRI debugger.
 ifeq "$(MRI_ENABLE)" "1"
 MRI_WRAPS=,--wrap=_read,--wrap=_write,--wrap=semihost_connected
 else
@@ -213,32 +220,50 @@ endef
 endif
 
 #########################################################################
-.PHONY: all clean deploy
+.PHONY: all clean deploy size
 
-all:: $(PROJECT).hex $(PROJECT).bin $(OUTDIR)/$(PROJECT).disasm
+all:: $(PROJECT).hex $(PROJECT).bin $(OUTDIR)/$(PROJECT).disasm size
 
 $(PROJECT).bin: $(PROJECT).elf
-	$(OBJCOPY) -O binary $(PROJECT).elf $(PROJECT).bin
+	@echo "  OBJCOPY " $@
+	@$(OBJCOPY) -O binary $(PROJECT).elf $(PROJECT).bin
 
 $(PROJECT).hex: $(PROJECT).elf
-	$(OBJCOPY) -R .stack -O ihex $(PROJECT).elf $(PROJECT).hex
-	
+	@echo "  OBJCOPY " $@
+	@$(OBJCOPY) -R .stack -O ihex $(PROJECT).elf $(PROJECT).hex
+
 $(OUTDIR)/$(PROJECT).disasm: $(PROJECT).elf
-	$(OBJDUMP) -d -f -M reg-names-std $(PROJECT).elf >$(OUTDIR)/$(PROJECT).disasm
-	
+	@echo "  DISASM  " $@
+	@$(OBJDUMP) -d -f -M reg-names-std $(PROJECT).elf >$(OUTDIR)/$(PROJECT).disasm
+
 $(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
-	$(LD) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $(PROJECT).elf
-	$(SIZE) $(PROJECT).elf
+	@echo "  LD      " $@
+	@$(LD) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $(PROJECT).elf
+	@$(SIZE) $(PROJECT).elf
 
 clean:
-	$(REMOVE) -f $(call convert-slash,$(OBJECTS)) $(QUIET)
-	$(REMOVE) -f $(call convert-slash,$(DEPFILES)) $(QUIET)
-	$(REMOVE_DIR) $(OUTDIR) $(QUIET)
-	$(REMOVE) -f $(call convert-slash,$(OUTDIR)/$(PROJECT).map) $(QUIET)
-	$(REMOVE) -f $(call convert-slash,$(OUTDIR)/$(PROJECT).disasm) $(QUIET)
-	$(REMOVE) -f $(PROJECT).bin $(QUIET)
-	$(REMOVE) -f $(PROJECT).hex $(QUIET)
-	$(REMOVE) -f $(PROJECT).elf $(QUIET)
+	@echo "  RM      " "*.o"
+	@$(REMOVE) -f $(call convert-slash,$(OBJECTS)) $(QUIET)
+	@echo "  RM      " "*.dep"
+	@$(REMOVE) -f $(call convert-slash,$(DEPFILES)) $(QUIET)
+	@echo "  RM      " $(OUTDIR)/
+	@$(REMOVE_DIR) $(OUTDIR) $(QUIET)
+	@echo "  RM      " "$(PROJECT).map"
+	@$(REMOVE) -f $(call convert-slash,$(OUTDIR)/$(PROJECT).map) $(QUIET)
+	@echo "  RM      " "$(PROJECT).disasm"
+	@$(REMOVE) -f $(call convert-slash,$(OUTDIR)/$(PROJECT).disasm) $(QUIET)
+	@echo "  RM      " "$(PROJECT).bin"
+	@$(REMOVE) -f $(PROJECT).bin $(QUIET)
+	@echo "  RM      " "$(PROJECT).hex"
+	@$(REMOVE) -f $(PROJECT).hex $(QUIET)
+	@echo "  RM      " "$(PROJECT).elf"
+	@$(REMOVE) -f $(PROJECT).elf $(QUIET)
+
+size: $(PROJECT).elf
+	@echo
+	@echo $$'           \033[1;4m  SIZE        LPC1769 \033[0m'
+	@$(OBJDUMP) -h $^ | perl -MPOSIX -ne '/.(text|rodata)\s+([0-9a-f]+)/ && do { $$a += eval "0x$$2" }; END { printf "  FLASH    %6d bytes  %2d%% of %3dkb\n", $$a, ceil($$a * 100 / (512 * 1024)), 512 }'
+	@$(OBJDUMP) -h $^ | perl -MPOSIX -ne '/.(data|bss)\s+([0-9a-f]+)/    && do { $$a += eval "0x$$2" }; END { printf "  RAM      %6d bytes  %2d%% of %3dkb\n", $$a, ceil($$a * 100 / ( 16 * 1024)),  16 }'
 
 -include $(DEPFILES)
 
@@ -253,19 +278,24 @@ endif
 #  and assemble .s files to .o
 
 $(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.c
-	$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	$(GPP) $(GPFLAGS) -c $< -o $@
+	@echo "  CC      " $<
+	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	@$(GPP) $(GPFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.cpp
-	$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	$(GPP) $(GPFLAGS) -c $< -o $@
+	@echo "  CC      " $<
+	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+# 	if you want to see the whole compile command, remove the @ preceding the line below
+	@$(GPP) $(GPFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.c
-	$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	$(GCC) $(GCFLAGS) -c $< -o $@
+	@echo "  CC      " $<
+	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	@$(GCC) $(GCFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.S
-	$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	$(AS) $(ASFLAGS) -c $< -o $@
+	@echo "  AS      " $<
+	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	@$(AS) $(ASFLAGS) -c $< -o $@
 
 #########################################################################

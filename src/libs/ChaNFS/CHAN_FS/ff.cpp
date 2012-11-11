@@ -949,7 +949,7 @@ FRESULT remove_chain (
 #if _USE_ERASE
             if (ecl + 1 == nxt) {    /* Next cluster is contiguous */
                 ecl = nxt;
-            } else {                /* End of contiguous clusters */ 
+            } else {                /* End of contiguous clusters */
                 resion[0] = clust2sect(fs, scl);                    /* Start sector */
                 resion[1] = clust2sect(fs, ecl) + fs->csize - 1;    /* End sector */
                 disk_ioctl(fs->drv, CTRL_ERASE_SECTOR, resion);        /* Erase the block */
@@ -2653,7 +2653,7 @@ FRESULT f_close (
 #if _FS_REENTRANT
     res = validate(fp->fs, fp->id);
         if (res == FR_OK) {
-            res = dec_lock(fp->lockid);    
+            res = dec_lock(fp->lockid);
             unlock_fs(fp->fs, FR_OK);
         }
 #else
@@ -2752,7 +2752,7 @@ FRESULT f_getcwd (
                 res = dir_read(&dj);
                 if (res != FR_OK) break;
                 if (ccl == LD_CLUST(dj.dir)) break;    /* Found the entry */
-                res = dir_next(&dj, 0);    
+                res = dir_next(&dj, 0);
             } while (res == FR_OK);
             if (res == FR_NO_FILE) res = FR_INT_ERR;/* It cannot be 'not found'. */
             if (res != FR_OK) break;

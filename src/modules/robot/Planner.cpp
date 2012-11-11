@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl) with additions from Sungeun K. Jeon (https://github.com/chamnit/grbl)
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 using namespace std;
@@ -14,7 +14,7 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "Block.h"
 #include "Planner.h"
-#include "Player.h" 
+#include "Player.h"
 
 
 Planner::Planner(){
@@ -31,7 +31,7 @@ void Planner::on_module_loaded(){
 void Planner::on_config_reload(void* argument){
     this->acceleration =       this->kernel->config->value(acceleration_checksum       )->by_default(100 )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
     this->max_jerk =           this->kernel->config->value(max_jerk_checksum           )->by_default(100 )->as_number();
-    this->junction_deviation = this->kernel->config->value(junction_deviation_checksum )->by_default(0.05)->as_number(); 
+    this->junction_deviation = this->kernel->config->value(junction_deviation_checksum )->by_default(0.05)->as_number();
 }
 
 
@@ -44,29 +44,29 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     this->kernel->player->wait_for_queue(2);
 
     Block* block = this->kernel->player->new_block();
-    block->planner = this;   
+    block->planner = this;
 
     // Direction bits
-    block->direction_bits = 0; 
-    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ 
-        if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<stepper); } 
+    block->direction_bits = 0;
+    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){
+        if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<stepper); }
     }
     
     // Number of steps for each stepper
-    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); } 
+    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); }
     
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
     //if( block->steps_event_count == 0 ){ this->computing = false; return; }
 
     block->millimeters = distance;
-    double inverse_millimeters = 0; 
+    double inverse_millimeters = 0;
     if( distance > 0 ){ inverse_millimeters = 1.0/distance; }
 
     // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
     double inverse_minute = feed_rate * inverse_millimeters;
-    if( distance > 0 ){ 
+    if( distance > 0 ){
         block->nominal_speed = block->millimeters * inverse_minute;           // (mm/min) Always > 0
         block->nominal_rate = ceil(block->steps_event_count * inverse_minute); // (step/min) Always > 0
     }else{
@@ -118,14 +118,14 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
           // Compute maximum junction velocity based on maximum acceleration and junction deviation
           double sin_theta_d2 = sqrt(0.5*(1.0-cos_theta)); // Trig half angle identity. Always positive.
           vmax_junction = min(vmax_junction,
-            sqrt(this->acceleration * this->junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) ); 
+            sqrt(this->acceleration * this->junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) );
         }
       }
     }
     block->max_entry_speed = vmax_junction;
    
     // Initialize block entry speed. Compute based on deceleration to user-defined MINIMUM_PLANNER_SPEED.
-    double v_allowable = this->max_allowable_speed(-this->acceleration,0.0,block->millimeters); //TODO: Get from config
+    double v_allowable = this->max_allowable_speed(-this->acceleration,0.0,block->millimeters); //TODO: Get from config
     block->entry_speed = min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags
@@ -147,10 +147,10 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // Update current position
     memcpy(this->position, target, sizeof(int)*3);
 
-    // Math-heavy re-computing of the whole queue to take the new 
+    // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();
     
-    // The block can now be used 
+    // The block can now be used
     block->ready();
 
 }
@@ -202,7 +202,7 @@ void Planner::reverse_pass(){
 // implements the forward pass.
 void Planner::forward_pass() {
     // For each block
-    int block_index = this->kernel->player->queue.head; 
+    int block_index = this->kernel->player->queue.head;
     Block* blocks[3] = {NULL,NULL,NULL};
 
     while(block_index!=this->kernel->player->queue.tail){
@@ -212,8 +212,8 @@ void Planner::forward_pass() {
         if( blocks[0] == NULL ){ continue; }
         blocks[1]->forward_pass(blocks[0],blocks[2]);
         block_index = this->kernel->player->queue.next_block_index( block_index );
-    } 
-    blocks[2]->forward_pass(blocks[1],NULL);   
+    }
+    blocks[2]->forward_pass(blocks[1],NULL);
 
 }
 
@@ -238,7 +238,7 @@ void Planner::recalculate_trapezoids() {
                 current->recalculate_flag = false;
             }
         }
-        block_index = this->kernel->player->queue.next_block_index( block_index ); 
+        block_index = this->kernel->player->queue.next_block_index( block_index );
     }
 
     // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
@@ -252,7 +252,7 @@ void Planner::dump_queue(){
     for( int index = 0; index <= this->kernel->player->queue.size()-1; index++ ){
        if( index > 10 && index < this->kernel->player->queue.size()-10 ){ continue; }
        this->kernel->streams->printf("block %03d > ", index);
-       this->kernel->player->queue.get_ref(index)->debug(this->kernel); 
+       this->kernel->player->queue.get_ref(index)->debug(this->kernel);
     }
 }
 
