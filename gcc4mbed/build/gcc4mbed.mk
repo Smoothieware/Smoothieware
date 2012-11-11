@@ -159,7 +159,7 @@ DEPFLAGS = -MMD -MP
 # Compiler Options
 
 # C/C++ flags
-GCFLAGS = -O$(OPTIMIZATION) -g -mcpu=cortex-m3 -mthumb -mthumb-interwork
+GCFLAGS = -O$(OPTIMIZATION) -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork
 GCFLAGS += -ffunction-sections -fdata-sections  -fno-exceptions
 GCFLAGS += $(patsubst %,-I%,$(INCDIRS))
 GCFLAGS += $(DEFINES)
