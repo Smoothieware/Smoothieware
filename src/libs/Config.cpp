@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 
@@ -39,7 +39,7 @@ void Config::on_console_line_received( void* argument ){}
 void Config::set_string( string setting, string value ){
     ConfigValue* cv = new ConfigValue;
     cv->found = true;
-    cv->check_sums = get_checksums(setting);
+    get_checksums(cv->check_sums, setting);
     cv->value = value;
 
     this->config_cache.replace_or_push_back(cv);
@@ -47,13 +47,14 @@ void Config::set_string( string setting, string value ){
     this->kernel->call_event(ON_CONFIG_RELOAD);
 }
 
-void Config::get_module_list(vector<uint16_t>* list, uint16_t family){ 
-    for( int i=1; i<this->config_cache.size(); i++){
-        ConfigValue* value = this->config_cache.at(i); 
-        if( value->check_sums.size() == 3 && value->check_sums.at(2) == 29545 && value->check_sums.at(0) == family ){
-            // We found a module enable for this family, add it's number 
-            list->push_back(value->check_sums.at(1));
-        } 
+void Config::get_module_list(vector<uint16_t>* list, uint16_t family){
+    for( unsigned int i=1; i<this->config_cache.size(); i++){
+        ConfigValue* value = this->config_cache.at(i);
+        //if( value->check_sums.size() == 3 && value->check_sums.at(2) == 29545 && value->check_sums.at(0) == family ){
+        if( value->check_sums[2] == 29545 && value->check_sums[0] == family ){
+            // We found a module enable for this family, add it's number
+            list->push_back(value->check_sums[1]);
+        }
     }
 }
 
@@ -87,53 +88,50 @@ void Config::config_cache_clear(){
 
 
 ConfigValue* Config::value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t check_sum_c ){
-    vector<uint16_t> check_sums;
-    check_sums.push_back(check_sum_a); 
-    check_sums.push_back(check_sum_b); 
-    check_sums.push_back(check_sum_c); 
+    uint16_t check_sums[3];
+    check_sums[0] = check_sum_a;
+    check_sums[1] = check_sum_b;
+    check_sums[2] = check_sum_c;
     return this->value(check_sums);
-}    
+}
 
 ConfigValue* Config::value(uint16_t check_sum_a, uint16_t check_sum_b){
-    vector<uint16_t> check_sums;
-    check_sums.push_back(check_sum_a); 
-    check_sums.push_back(check_sum_b); 
+    uint16_t check_sums[3];
+    check_sums[0] = check_sum_a;
+    check_sums[1] = check_sum_b;
+    check_sums[2] = 0x0000;
     return this->value(check_sums);
-}    
+}
 
 ConfigValue* Config::value(uint16_t check_sum){
-    vector<uint16_t> check_sums;
-    check_sums.push_back(check_sum); 
+    uint16_t check_sums[3];
+    check_sums[0] = check_sum;
+    check_sums[1] = 0x0000;
+    check_sums[2] = 0x0000;
     return this->value(check_sums);
-}    
+}
     
 // Get a value from the configuration as a string
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
-ConfigValue* Config::value(vector<uint16_t> check_sums){
+ConfigValue* Config::value(uint16_t check_sums[]){
     ConfigValue* result = this->config_cache[0];
-    //if( this->has_config_file() == false ){
-    //   return result;
-    //} 
-    // Check if the config is cached, and load it temporarily if it isn't
     bool cache_preloaded = this->config_cache_loaded;
     if( !cache_preloaded ){ this->config_cache_load(); }
      
-    for( int i=1; i<this->config_cache.size(); i++){
-        // If this line matches the checksum 
+    for( unsigned int i=1; i<this->config_cache.size(); i++){
+        // If this line matches the checksum
         bool match = true;
-        for( unsigned int j = 0; j < check_sums.size(); j++ ){
-            uint16_t checksum_node = check_sums[j];
-           
-            //printf("%u(%s) against %u\r\n", get_checksum(key_node), key_node.c_str(), checksum_node);
-            if(this->config_cache[i]->check_sums[j] != checksum_node ){
+        unsigned int counter = 0;
+        while(check_sums[counter] != 0x0000 && counter <= 2 ){
+             if(this->config_cache[i]->check_sums[counter] != check_sums[counter] ){
                 match = false;
-                break; 
+                break;
             }
-        } 
-        if( match == false ){ 
-            //printf("continue\r\n");
-            continue; 
+            counter++;
+        }
+        if( match == false ){
+            continue;
         }
         result = this->config_cache[i];
         break;

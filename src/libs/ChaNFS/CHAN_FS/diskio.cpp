@@ -14,7 +14,7 @@
 
 DSTATUS disk_initialize (
 	BYTE drv				/* Physical drive nmuber (0..) */
-) 
+)
 {
 	FFSDEBUG("disk_initialize on drv [%d]\n", drv);
 	return (DSTATUS)FATFileSystem::_ffs[drv]->disk_initialize();
@@ -22,7 +22,7 @@ DSTATUS disk_initialize (
 
 DSTATUS disk_status (
 	BYTE drv		/* Physical drive nmuber (0..) */
-) 
+)
 {
 	FFSDEBUG("disk_status on drv [%d]\n", drv);
 	return (DSTATUS)FATFileSystem::_ffs[drv]->disk_status();
@@ -36,7 +36,7 @@ DRESULT disk_read (
 )
 {
 	FFSDEBUG("disk_read(sector %d, count %d) on drv [%d]\n", sector, count, drv);
-	for(int s=sector; s<sector+count; s++) {
+	for(unsigned int s=sector; s<sector+count; s++) {
 		FFSDEBUG(" disk_read(sector %d)\n", s);
 		int res = FATFileSystem::_ffs[drv]->disk_read((char*)buff, s);
 		if(res) {
@@ -56,7 +56,7 @@ DRESULT disk_write (
 )
 {
 	FFSDEBUG("disk_write(sector %d, count %d) on drv [%d]\n", sector, count, drv);
-	for(int s=sector; s<sector+count; s++) {
+	for(unsigned int s=sector; s<sector+count; s++) {
 		FFSDEBUG(" disk_write(sector %d)\n", s);
 		int res = FATFileSystem::_ffs[drv]->disk_write((char*)buff, sector);
 		if(res) {
@@ -81,7 +81,7 @@ DRESULT disk_ioctl (
 				return RES_NOTRDY;
 			} else if(FATFileSystem::_ffs[drv]->disk_sync()) {
 				return RES_ERROR;
-			} 
+			}
 			return RES_OK;
 		case GET_SECTOR_COUNT:
 			if(FATFileSystem::_ffs[drv] == NULL) {

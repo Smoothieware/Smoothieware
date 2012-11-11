@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Module.h"
@@ -19,21 +19,21 @@ using std::string;
 
 Block::Block(){
     clear_vector(this->steps);
-    this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
+    this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
     this->is_ready = false;
     this->initial_rate = -1;
     this->final_rate = -1;
 }
 
 void Block::debug(Kernel* kernel){
-    kernel->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8d acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
+    kernel->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
 }
 
 
 // Calculate a braking factor to reach baseline speed which is max_jerk/2, e.g. the
 // speed under which you cannot exceed max_jerk no matter what you do.
 double Block::compute_factor_for_safe_speed(){
-    return( this->planner->max_jerk / this->nominal_speed ); 
+    return( this->planner->max_jerk / this->nominal_speed );
 }
 
 
@@ -47,14 +47,22 @@ double Block::compute_factor_for_safe_speed(){
 //                                  time -->
 void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
-    this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min) 
+    //this->player->kernel->streams->printf("%p calculating trapezoid\r\n", this);
+
+    this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min)
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
-    double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; 
+
+    //this->player->kernel->streams->printf("initrate:%f finalrate:%f\r\n", this->initial_rate, this->final_rate);
+
+    double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
-    int decelerate_steps = ceil( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
+    int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
+
 
     // Calculate the size of Plateau of Nominal Rate.
     int plateau_steps = this->steps_event_count-accelerate_steps-decelerate_steps;
+
+    //this->player->kernel->streams->printf("accelperminute:%f accelerate_steps:%d decelerate_steps:%d plateau:%d \r\n", acceleration_per_minute, accelerate_steps, decelerate_steps, plateau_steps );
 
    // Is the Plateau of Nominal Rate smaller than nothing? That means no cruising, and we will
    // have to use intersection_distance() to calculate when to abort acceleration and start braking
@@ -65,21 +73,24 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
        accelerate_steps = min( accelerate_steps, int(this->steps_event_count) );
        plateau_steps = 0;
    }
-   
-   this->accelerate_until = accelerate_steps;
-   this->decelerate_after = accelerate_steps+plateau_steps; 
 
-   // TODO: FIX THIS: DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
+   this->accelerate_until = accelerate_steps;
+   this->decelerate_after = accelerate_steps+plateau_steps;
+
+   //this->debug(this->player->kernel);
+
+   /*
+   // TODO: FIX THIS: DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
    if( this->final_rate < 0.01 ){
         this->decelerate_after += floor( this->nominal_rate / 60 / this->planner->kernel->stepper->acceleration_ticks_per_second ) * 3;
     }
-
+    */
 }
 
 // Calculates the distance (not time) it takes to accelerate from initial_rate to target_rate using the
 // given acceleration:
 double Block::estimate_acceleration_distance(double initialrate, double targetrate, double acceleration) {
-      return( (targetrate*targetrate-initialrate*initialrate)/(2L*acceleration));
+      return( ((targetrate*targetrate)-(initialrate*initialrate))/(2L*acceleration));
 }
 
 // This function gives you the point at which you must start braking (at the rate of -acceleration) if
@@ -104,7 +115,7 @@ double Block::intersection_distance(double initialrate, double finalrate, double
 // acceleration within the allotted distance.
 inline double max_allowable_speed(double acceleration, double target_velocity, double distance) {
   return(
-    sqrt(target_velocity*target_velocity-2L*acceleration*60*60*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    sqrt(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
   );
 }
 
@@ -154,7 +165,7 @@ void Block::forward_pass(Block* previous, Block* next){
           }
         }
     }
-      
+
 }
 
 
@@ -169,6 +180,7 @@ void Block::append_gcode(Gcode* gcode){
 void Block::pop_and_execute_gcode(Kernel* &kernel){
     Block* block = const_cast<Block*>(this);
     for(unsigned short index=0; index<block->gcodes.size(); index++){
+        //printf("GCODE Z: %s \r\n", block->gcodes[index].command.c_str() );
         kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
     }
 }
@@ -182,19 +194,22 @@ void Block::ready(){
 // Mark the block as taken by one more module
 void Block::take(){
     this->times_taken++;
+    //printf("taking %p times now:%d\r\n", this, int(this->times_taken) );
 }
 
 // Mark the block as no longer taken by one module, go to next block if this free's it
 void Block::release(){
+    //printf("release %p \r\n", this );
     this->times_taken--;
+    //printf("releasing %p times now:%d\r\n", this, int(this->times_taken) );
     if( this->times_taken < 1 ){
         this->player->kernel->call_event(ON_BLOCK_END, this);
         this->pop_and_execute_gcode(this->player->kernel);
         Player* player = this->player;
 
-        if( player->queue.size() > 0 ){ 
+        if( player->queue.size() > 0 ){
             player->queue.delete_first();
-        } 
+        }
 
         if( player->looking_for_new_block == false ){
             if( player->queue.size() > 0 ){
@@ -203,13 +218,14 @@ void Block::release(){
                     player->current_block = candidate;
                     player->kernel->call_event(ON_BLOCK_BEGIN, player->current_block);
                     if( player->current_block->times_taken < 1 ){
+                        player->current_block->times_taken = 1;
                         player->current_block->release();
                     }
                 }else{
 
                     player->current_block = NULL;
 
-                } 
+                }
             }else{
                 player->current_block = NULL;
             }

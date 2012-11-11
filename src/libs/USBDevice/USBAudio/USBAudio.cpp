@@ -42,7 +42,7 @@ USBAudio::USBAudio(uint32_t frequency, uint8_t channel_nb, uint16_t vendor_id, u
     channel_config = (channel_nb == 1) ? CHANNEL_M : CHANNEL_L + CHANNEL_R;
 
     SOF_handler = false;
-    
+
     buf_stream = NULL;
 
     // connect the device
@@ -388,8 +388,8 @@ uint8_t * USBAudio::configurationDesc() {
         16,                                     // bBitResolution
         0x01,                                   // bSamFreqType
         LSB(FREQ),                              // tSamFreq
-        (FREQ >> 8) & 0xff,                     // tSamFreq
-        (FREQ >> 16) & 0xff,                    // tSamFreq
+        ((uint8_t) ((FREQ >> 8) & 0xff)),       // tSamFreq
+        ((uint8_t) ((FREQ >> 16) & 0xff)),      // tSamFreq
 
         // Endpoint - Standard Descriptor
         ENDPOINT_DESCRIPTOR_LENGTH + 2,         // bLength

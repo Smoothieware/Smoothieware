@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <string>
@@ -17,12 +17,12 @@ using std::string;
 #include "libs/StreamOutput.h"
 
 // Serial reading module
-// Treats every received line as a command and passes it ( via event call ) to the command dispatcher. 
+// Treats every received line as a command and passes it ( via event call ) to the command dispatcher.
 // The command dispatcher will then ask other modules if they can do something with it
 SerialConsole::SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate ){
     this->serial = new mbed::Serial( rx_pin, tx_pin );
     this->serial->baud(baud_rate);
-}  
+}
 
 // Called when the module has just been loaded
 void SerialConsole::on_module_loaded() {
@@ -42,23 +42,22 @@ void SerialConsole::on_serial_char_received(){
         char received = this->serial->getc();
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
-        this->buffer.push_back(received); 
+        this->buffer.push_back(received);
     }
 }
         
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){
     if( this->has_char('\n') ){
-        int index = 0;
         string received;
         while(1){
            char c;
            this->buffer.pop_front(c);
            if( c == '\n' ){
-                struct SerialMessage message; 
+                struct SerialMessage message;
                 message.message = received;
                 message.stream = this;
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
+                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
                 return;
             }else{
                 received += c;
@@ -70,7 +69,7 @@ void SerialConsole::on_main_loop(void * argument){
 
 int SerialConsole::printf(const char* format, ...){
     va_list args;
-    int result; 
+    int result;
     va_start (args, format);
     result = vfprintf( this->serial->_file, format, args);
     va_end (args);

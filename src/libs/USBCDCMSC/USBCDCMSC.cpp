@@ -101,7 +101,7 @@ USBCDCMSC::USBCDCMSC(SDFileSystem *sd, uint16_t vendor_id, uint16_t product_id, 
     _status = NO_INIT;
     connect();
 //    USBDevice::connect();
-	setSense(SENSE_NO_SENSE, 0x00, 0x00);
+    setSense(SENSE_NO_SENSE, 0x00, 0x00);
     USBHAL::connect();
 }
 
@@ -369,42 +369,42 @@ int USBCDCMSC::_putc(int c) {
 }
 
 int USBCDCMSC::_getc() {
-    uint8_t c;
+    uint8_t c = 0;
     while (cdcbuf.isEmpty());
     cdcbuf.dequeue(&c);
     return c;
 }
 
 int USBCDCMSC::printf(const char* format, ...) {
-	va_list args;
-	int slen;
-	uint8_t *result, *current;
+    va_list args;
+    int slen;
+    uint8_t *result, *current;
 
-	va_start (args, format);
-	slen = vasprintf ((char **)&result, format, args);
-	va_end (args);
+    va_start (args, format);
+    slen = vasprintf ((char **)&result, format, args);
+    va_end (args);
 
-	current = result;
+    current = result;
 
-	// Send full-size packets as many times as needed
-	while(slen > MAX_CDC_REPORT_SIZE) {
-		send(current, MAX_CDC_REPORT_SIZE);
-		current += MAX_CDC_REPORT_SIZE;
-		slen -= MAX_CDC_REPORT_SIZE;
-	}
+    // Send full-size packets as many times as needed
+    while(slen > MAX_CDC_REPORT_SIZE) {
+        send(current, MAX_CDC_REPORT_SIZE);
+        current += MAX_CDC_REPORT_SIZE;
+        slen -= MAX_CDC_REPORT_SIZE;
+    }
 
-	// send a full packet followed by Zero Length Packet
-	if(slen == MAX_CDC_REPORT_SIZE) {
-		send(current, MAX_CDC_REPORT_SIZE);
-		send(current, 0);
-	}
+    // send a full packet followed by Zero Length Packet
+    if(slen == MAX_CDC_REPORT_SIZE) {
+        send(current, MAX_CDC_REPORT_SIZE);
+        send(current, 0);
+    }
 
-	// send a partial packet if needed to finish
-	if(slen < MAX_CDC_REPORT_SIZE) {
-		send(current, slen);
-	}
-	free(result);
-	return 0;
+    // send a partial packet if needed to finish
+    if(slen < MAX_CDC_REPORT_SIZE) {
+        send(current, slen);
+    }
+    free(result);
+    return 0;
 }
 
 bool USBCDCMSC::writeBlock(uint8_t * buf, uint16_t size) {
@@ -627,16 +627,16 @@ bool USBCDCMSC::inquiryRequest (void) {
 
 bool USBCDCMSC::readFormatCapacity() {
     uint8_t capacity[] = { 0x00, 0x00, 0x00, 0x08,
-                           (BlockCount >> 24) & 0xff,
-                           (BlockCount >> 16) & 0xff,
-                           (BlockCount >> 8) & 0xff,
-                           (BlockCount >> 0) & 0xff,
+                        ((uint8_t) ((BlockCount >> 24) & 0xff)),
+                        ((uint8_t) ((BlockCount >> 16) & 0xff)),
+                        ((uint8_t) ((BlockCount >> 8) & 0xff)),
+                        ((uint8_t) ((BlockCount >> 0) & 0xff)),
 
-                           0x02,
-                           (BlockSize >> 16) & 0xff,
-                           (BlockSize >> 8) & 0xff,
-                           (BlockSize >> 0) & 0xff,
-                         };
+                        0x02,
+                        ((uint8_t) ((BlockSize >> 16) & 0xff)),
+                        ((uint8_t) ((BlockSize >> 8) & 0xff)),
+                        ((uint8_t) ((BlockSize >> 0) & 0xff)),
+                        };
     if (!msd_write(capacity, sizeof(capacity))) {
         return false;
     }
@@ -646,15 +646,15 @@ bool USBCDCMSC::readFormatCapacity() {
 
 bool USBCDCMSC::readCapacity (void) {
     uint8_t capacity[] = {
-        ((BlockCount - 1) >> 24) & 0xff,
-        ((BlockCount - 1) >> 16) & 0xff,
-        ((BlockCount - 1) >> 8) & 0xff,
-        ((BlockCount - 1) >> 0) & 0xff,
+        ((uint8_t) (((BlockCount - 1) >> 24) & 0xff)),
+        ((uint8_t) (((BlockCount - 1) >> 16) & 0xff)),
+        ((uint8_t) (((BlockCount - 1) >>  8) & 0xff)),
+        ((uint8_t) (((BlockCount - 1) >>  0) & 0xff)),
 
-        (BlockSize >> 24) & 0xff,
-        (BlockSize >> 16) & 0xff,
-        (BlockSize >> 8) & 0xff,
-        (BlockSize >> 0) & 0xff,
+        ((uint8_t) ((BlockSize >> 24) & 0xff)),
+        ((uint8_t) ((BlockSize >> 16) & 0xff)),
+        ((uint8_t) ((BlockSize >>  8) & 0xff)),
+        ((uint8_t) ((BlockSize >>  0) & 0xff)),
     };
     if (!msd_write(capacity, sizeof(capacity))) {
         return false;
@@ -698,20 +698,20 @@ void USBCDCMSC::setSense (uint8_t sense_key, uint8_t asc, uint8_t ascq) {
     sense.sense_key = sense_key;
     sense.additional_sense_length = 0x0a;
     sense.asc = asc;
-    sense.ascq = ascq;    
+    sense.ascq = ascq;
 }
 
 bool USBCDCMSC::requestSense (void) {
     if (!msd_write((uint8_t *)&sense, sizeof(sense))) {
         return false;
     }
-	
+
     return true;
 }
 
 void USBCDCMSC::mediaRemoval() {
-	 csw.Status = CSW_PASSED;
-	 sendCSW();
+    csw.Status = CSW_PASSED;
+    sendCSW();
 }
 
 void USBCDCMSC::fail() {
@@ -745,9 +745,9 @@ void USBCDCMSC::CBWDecode(uint8_t * buf, uint16_t size) {
                     case READ_FORMAT_CAPACITIES:
                         readFormatCapacity();
                         break;
-	                case MEDIA_REMOVAL:
-	                    mediaRemoval();
-						break;
+                    case MEDIA_REMOVAL:
+                        mediaRemoval();
+                        break;
                     case READ_CAPACITY:
                         readCapacity();
                         break;
@@ -908,11 +908,11 @@ int USBCDCMSC::disk_initialize() {
 }
 
 int USBCDCMSC::disk_write(const char *buffer, int block_number) {
-    return _sd->disk_write(buffer, block_number);    
+    return _sd->disk_write(buffer, block_number);
 }
 
-int USBCDCMSC::disk_read(char *buffer, int block_number) {        
-    return _sd->disk_read(buffer, block_number);    
+int USBCDCMSC::disk_read(char *buffer, int block_number) {
+    return _sd->disk_read(buffer, block_number);
 }
 
 int USBCDCMSC::disk_status() {
@@ -920,7 +920,7 @@ int USBCDCMSC::disk_status() {
 }
 
 int USBCDCMSC::disk_sectors() {
-     return _sd->disk_sectors(); 
+    return _sd->disk_sectors();
 }
 int USBCDCMSC::disk_size() {
     return _sd->disk_sectors() * 512;
@@ -946,24 +946,21 @@ void USBCDCMSC::on_module_loaded(){
 
 void USBCDCMSC::on_main_loop(void* argument){
     if( this->has_char('\n') ){
-        int index = 0;
         string received;
         while(1){
-           char c;
-           this->buffer.pop_front(c);
-           if( c == '\n' ){
-                struct SerialMessage message; 
+            char c;
+            this->buffer.pop_front(c);
+            if( c == '\n' ){
+                struct SerialMessage message;
                 message.message = received;
                 message.stream = this;
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); 
-               return;
+                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+                return;
             }else{
                 received += c;
             }
         }
     }
-
-
 }
 
 void USBCDCMSC::on_serial_char_received(){
@@ -971,7 +968,7 @@ void USBCDCMSC::on_serial_char_received(){
         char received = this->_getc();
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
-        this->buffer.push_back(received); 
+        this->buffer.push_back(received);
     }
 
 }

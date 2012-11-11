@@ -24,20 +24,20 @@
  * ------------
  * SD and MMC cards support a number of interfaces, but common to them all
  * is one based on SPI. This is the one I'm implmenting because it means
- * it is much more portable even though not so performant, and we already 
+ * it is much more portable even though not so performant, and we already
  * have the mbed SPI Interface!
  *
- * The main reference I'm using is Chapter 7, "SPI Mode" of: 
+ * The main reference I'm using is Chapter 7, "SPI Mode" of:
  *  http://www.sdcard.org/developers/tech/sdcard/pls/Simplified_Physical_Layer_Spec.pdf
  *
  * SPI Startup
  * -----------
  * The SD card powers up in SD mode. The SPI interface mode is selected by
- * asserting CS low and sending the reset command (CMD0). The card will 
+ * asserting CS low and sending the reset command (CMD0). The card will
  * respond with a (R1) response.
  *
- * CMD8 is optionally sent to determine the voltage range supported, and 
- * indirectly determine whether it is a version 1.x SD/non-SD card or 
+ * CMD8 is optionally sent to determine the voltage range supported, and
+ * indirectly determine whether it is a version 1.x SD/non-SD card or
  * version 2.x. I'll just ignore this for now.
  *
  * ACMD41 is repeatedly issued to initialise the card, until "in idle"
@@ -51,21 +51,21 @@
  * The SD SPI protocol is based on transactions made up of 8-bit words, with
  * the host starting every bus transaction by asserting the CS signal low. The
  * card always responds to commands, data blocks and errors.
- * 
- * The protocol supports a CRC, but by default it is off (except for the 
+ *
+ * The protocol supports a CRC, but by default it is off (except for the
  * first reset CMD0, where the CRC can just be pre-calculated, and CMD8)
- * I'll leave the CRC off I think! 
- * 
- * Standard capacity cards have variable data block sizes, whereas High 
+ * I'll leave the CRC off I think!
+ *
+ * Standard capacity cards have variable data block sizes, whereas High
  * Capacity cards fix the size of data block to 512 bytes. I'll therefore
  * just always use the Standard Capacity cards with a block size of 512 bytes.
  * This is set with CMD16.
  *
- * You can read and write single blocks (CMD17, CMD25) or multiple blocks 
+ * You can read and write single blocks (CMD17, CMD25) or multiple blocks
  * (CMD18, CMD25). For simplicity, I'll just use single block accesses. When
- * the card gets a read command, it responds with a response token, and then 
+ * the card gets a read command, it responds with a response token, and then
  * a data token or an error.
- * 
+ *
  * SPI Command Format
  * ------------------
  * Commands are 6-bytes long, containing the command, 32-bit argument, and CRC.
@@ -81,7 +81,7 @@
  * SPI Response Format
  * -------------------
  * The main response format (R1) is a status byte (normally zero). Key flags:
- *  idle - 1 if the card is in an idle state/initialising 
+ *  idle - 1 if the card is in an idle state/initialising
  *  cmd  - 1 if an illegal command code was detected
  *
  *    +-------------------------------------------------+
@@ -93,7 +93,7 @@
  *
  * Data Response Token
  * -------------------
- * Every data block written to the card is acknowledged by a byte 
+ * Every data block written to the card is acknowledged by a byte
  * response token
  *
  * +----------------------+
@@ -108,9 +108,9 @@
  *
  * Block transfers have a byte header, followed by the data, followed
  * by a 16-bit CRC. In our case, the data will always be 512 bytes.
- *  
+ *
  * +------+---------+---------+- -  - -+---------+-----------+----------+
- * | 0xFE | data[0] | data[1] |        | data[n] | crc[15:8] | crc[7:0] | 
+ * | 0xFE | data[0] | data[1] |        | data[n] | crc[15:8] | crc[7:0] |
  * +------+---------+---------+- -  - -+---------+-----------+----------+
  */
  
@@ -120,7 +120,7 @@
 
 SDFileSystem::SDFileSystem(PinName mosi, PinName miso, PinName sclk, PinName cs, const char* name) :
   FATFileSystem(name), _spi(mosi, miso, sclk), _cs(cs) {
-      _cs = 1; 
+      _cs = 1;
 }
 
 #define R1_IDLE_STATE           (1 << 0)
@@ -144,14 +144,14 @@ SDFileSystem::SDFileSystem(PinName mosi, PinName miso, PinName sclk, PinName cs,
 
 int SDFileSystem::initialise_card() {
     // Set to 100kHz for initialisation, and clock card with cs = 1
-    _spi.frequency(100000); 
+    _spi.frequency(100000);
     _cs = 1;
-    for(int i=0; i<16; i++) {   
+    for(int i=0; i<16; i++) {
         _spi.write(0xFF);
     }
 
     // send CMD0, should return with all zeros except IDLE STATE set (bit 0)
-    if(_cmd(0, 0) != R1_IDLE_STATE) { 
+    if(_cmd(0, 0) != R1_IDLE_STATE) {
         fprintf(stderr, "No disk, or could not put SD card in to SPI idle state\n");
         return SDCARD_FAIL;
     }
@@ -170,8 +170,8 @@ int SDFileSystem::initialise_card() {
 
 int SDFileSystem::initialise_card_v1() {
     for(int i=0; i<SD_COMMAND_TIMEOUT; i++) {
-        _cmd(55, 0); 
-        if(_cmd(41, 0) == 0) { 
+        _cmd(55, 0);
+        if(_cmd(41, 0) == 0) {
             return SDCARD_V1;
         }
     }
@@ -181,10 +181,9 @@ int SDFileSystem::initialise_card_v1() {
 }
 
 int SDFileSystem::initialise_card_v2() {
-    
     for(int i=0; i<SD_COMMAND_TIMEOUT; i++) {
-        _cmd(55, 0); 
-        if(_cmd(41, 0) == 0) { 
+        _cmd(55, 0);
+        if(_cmd(41, 0) == 0) {
             _cmd58();
             return SDCARD_V2;
         }
@@ -195,11 +194,7 @@ int SDFileSystem::initialise_card_v2() {
 }
 
 int SDFileSystem::disk_initialize() {
-
-    int i = initialise_card();
-//    printf("init card = %d\n", i);
-//    printf("OK\n");
-
+    initialise_card();
     _sectors = _sd_sectors();
 
     // Set block length to 512 (CMD16)
@@ -219,11 +214,11 @@ int SDFileSystem::disk_write(const char *buffer, int block_number) {
     }
 
     // send the data block
-    _write(buffer, 512);    
-    return 0;    
+    _write(buffer, 512);
+    return 0;
 }
 
-int SDFileSystem::disk_read(char *buffer, int block_number) {        
+int SDFileSystem::disk_read(char *buffer, int block_number) {
     // set read address for single block (CMD17)
     if(_cmd(17, block_number * 512) != 0) {
         return 1;
@@ -241,7 +236,7 @@ int SDFileSystem::disk_sectors() { return _sectors; }
 // PRIVATE FUNCTIONS
 
 int SDFileSystem::_cmd(int cmd, int arg) {
-    _cs = 0; 
+    _cs = 0;
 
     // send a command
     _spi.write(0x40 | cmd);
@@ -265,7 +260,7 @@ int SDFileSystem::_cmd(int cmd, int arg) {
     return -1; // timeout
 }
 int SDFileSystem::_cmdx(int cmd, int arg) {
-    _cs = 0; 
+    _cs = 0;
 
     // send a command
     _spi.write(0x40 | cmd);
@@ -289,7 +284,7 @@ int SDFileSystem::_cmdx(int cmd, int arg) {
 
 
 int SDFileSystem::_cmd58() {
-    _cs = 0; 
+    _cs = 0;
     int arg = 0;
     
     // send a command
@@ -320,7 +315,7 @@ int SDFileSystem::_cmd58() {
 }
 
 int SDFileSystem::_cmd8() {
-    _cs = 0; 
+    _cs = 0;
     
     // send a command
     _spi.write(0x40 | 8); // CMD8
@@ -361,7 +356,7 @@ int SDFileSystem::_read(char *buffer, int length) {
     _spi.write(0xFF); // checksum
     _spi.write(0xFF);
 
-    _cs = 1;    
+    _cs = 1;
     _spi.write(0xFF);
     return 0;
 }
@@ -378,27 +373,27 @@ int SDFileSystem::_write(const char *buffer, int length) {
     }
     
     // write the checksum
-    _spi.write(0xFF); 
+    _spi.write(0xFF);
     _spi.write(0xFF);
 
     // check the repsonse token
     if((_spi.write(0xFF) & 0x1F) != 0x05) {
         _cs = 1;
-        _spi.write(0xFF);        
+        _spi.write(0xFF);
         return 1;
     }
 
     // wait for write to finish
     while(_spi.write(0xFF) == 0);
 
-    _cs = 1; 
+    _cs = 1;
     _spi.write(0xFF);
     return 0;
 }
 
 static int ext_bits(char *data, int msb, int lsb) {
     int bits = 0;
-    int size = 1 + msb - lsb; 
+    int size = 1 + msb - lsb;
     for(int i=0; i<size; i++) {
         int position = lsb + i;
         int byte = 15 - (position >> 3);
@@ -417,7 +412,7 @@ int SDFileSystem::_sd_sectors() {
         return 0;
     }
     
-    char csd[16];    
+    char csd[16];
     if(_read(csd, 16) != 0) {
         fprintf(stderr, "Couldn't read csd response from disk\n");
         return 0;
@@ -444,7 +439,7 @@ int SDFileSystem::_sd_sectors() {
     // where
     //  BLOCKNR = (C_SIZE+1) * MULT
     //  MULT = 2^(C_SIZE_MULT+2) (C_SIZE_MULT < 8)
-    //  BLOCK_LEN = 2^READ_BL_LEN, (READ_BL_LEN < 12)         
+    //  BLOCK_LEN = 2^READ_BL_LEN, (READ_BL_LEN < 12)
                             
     int block_len = 1 << read_bl_len;
     int mult = 1 << (c_size_mult + 2);
