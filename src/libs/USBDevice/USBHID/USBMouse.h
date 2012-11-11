@@ -21,7 +21,7 @@ enum MOUSE_BUTTON
 /* X and Y limits */
 /* These values do not directly map to screen pixels */
 /* Zero may be interpreted as meaning 'no movement' */
-#define X_MIN_ABS    (1)        /*!< Minimum value on x-axis */  
+#define X_MIN_ABS    (1)        /*!< Minimum value on x-axis */
 #define Y_MIN_ABS    (1)        /*!< Minimum value on y-axis */
 #define X_MAX_ABS    (0x7fff)   /*!< Maximum value on x-axis */
 #define Y_MAX_ABS    (0x7fff)   /*!< Maximum value on y-axis */
@@ -71,7 +71,7 @@ enum MOUSE_TYPE
  *   uint16_t y_center = (Y_MAX_ABS - Y_MIN_ABS)/2;
  *   uint16_t x_screen = 0;
  *   uint16_t y_screen = 0;
- *   
+ *
  *   uint32_t x_origin = x_center;
  *   uint32_t y_origin = y_center;
  *   uint32_t radius = 5000;
@@ -81,7 +81,7 @@ enum MOUSE_TYPE
  *   {
  *       x_screen = x_origin + cos((double)angle*3.14/180.0)*radius;
  *       y_screen = y_origin + sin((double)angle*3.14/180.0)*radius;
- *       
+ *
  *       mouse.move(x_screen, y_screen);
  *       angle += 3;
  *       wait(0.01);
@@ -103,9 +103,9 @@ class USBMouse: public USBHID
         * @param product_release Your preoduct_release (default: 0x0001)
         *
         */
-        USBMouse(MOUSE_TYPE mouse_type = REL_MOUSE, uint16_t vendor_id = 0x1234, uint16_t product_id = 0x0001, uint16_t product_release = 0x0001): 
+        USBMouse(MOUSE_TYPE mouse_type = REL_MOUSE, uint16_t vendor_id = 0x1234, uint16_t product_id = 0x0001, uint16_t product_release = 0x0001):
             USBHID(0, 0, vendor_id, product_id, product_release, false)
-            { 
+            {
                 button = 0;
                 this->mouse_type = mouse_type;
                 connect();
@@ -161,7 +161,7 @@ class USBMouse: public USBHID
         * @param button state of the buttons ( ex: clic(MOUSE_LEFT))
         * @returns true if there is no error, false otherwise
         */
-        bool click(uint8_t button); 
+        bool click(uint8_t button);
         
         /**
         * Scrolling

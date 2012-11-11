@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 using namespace std;
@@ -38,13 +38,13 @@ void SlowTicker::tick(){
     LPC_GPIO1->FIODIR |= 1<<20;
     LPC_GPIO1->FIOSET = 1<<20;
 
-    for (unsigned int i=0; i<this->hooks.size(); i++){ 
+    for (unsigned int i=0; i<this->hooks.size(); i++){
         Hook* hook = this->hooks.at(i);
         hook->counter += ( hook->frequency / this->max_frequency );
         if( hook->counter > 0 ){
             hook->counter-=1;
             hook->call();
-        } 
+        }
     }
 
     LPC_GPIO1->FIOCLR = 1<<20;
@@ -53,8 +53,8 @@ void SlowTicker::tick(){
 
 extern "C" void TIMER2_IRQHandler (void){
     if((LPC_TIM2->IR >> 0) & 1){  // If interrupt register set for MR0
-        LPC_TIM2->IR |= 1 << 0;   // Reset it 
+        LPC_TIM2->IR |= 1 << 0;   // Reset it
     }
-    global_slow_ticker->tick(); 
+    global_slow_ticker->tick();
 }
 
