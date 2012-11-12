@@ -57,6 +57,8 @@ class Robot : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
+
+    private:
         void execute_gcode(Gcode* gcode);
         void append_milestone( double target[], double feed_rate);
         void append_line( Gcode* gcode, double target[], double feed_rate);
@@ -89,6 +91,8 @@ class Robot : public Module {
         int arc_correction;                                   // Setting : how often to rectify arc computation
         double max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
 
+    // Used by Stepper
+    public:
         Pin* alpha_step_pin;
         Pin* beta_step_pin;
         Pin* gamma_step_pin;

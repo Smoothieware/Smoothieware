@@ -114,9 +114,18 @@ void Robot::execute_gcode(Gcode* gcode){
                           this->last_milestone[letter-'X'] = this->to_millimeters(gcode->get_value(letter));
                     }
                     memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
+                    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
                     return; // TODO: Wait until queue empty
        }
-    }else{ return; }
+   }else if( gcode->has_letter('M')){
+     switch( (int) gcode->get_value('M') ){
+         case 114: this->kernel->streams->printf("C: X:%1.3f Y:%1.3f Z:%1.3f\n",
+                                                 this->current_position[0],
+                                                 this->current_position[1],
+                                                 this->current_position[2]);
+                   return;
+       }
+   }else{ return; }
     
    //Get parameters
     double target[3], offset[3];
