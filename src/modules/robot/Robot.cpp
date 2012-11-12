@@ -114,6 +114,7 @@ void Robot::execute_gcode(Gcode* gcode){
                           this->last_milestone[letter-'X'] = this->to_millimeters(gcode->get_value(letter));
                     }
                     memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
+                    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
                     return; // TODO: Wait until queue empty
        }
    }else if( gcode->has_letter('M')){
