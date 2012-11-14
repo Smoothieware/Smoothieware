@@ -185,15 +185,14 @@ int SDFileSystem::initialise_card_v1() {
 int SDFileSystem::initialise_card_v2() {
     for(int i=0; i<SD_COMMAND_TIMEOUT; i++) {
         _cmd(55, 0);
-        if(_cmd(41, 0) == 0) {
-            _cmd58();
-            return (cardtype = SDCARD_V2);
-        }
-        _cmd(55, 0);
         if (_cmd(41, 1UL<<30) == 0)
         {
-		    _cmd58();
+            uint32_t ocr;
+            _cmd58(&ocr);
+            if (ocr & (1UL << 30))
 			return (cardtype = SDCARD_V2HC);
+            else
+                return (cardtype = SDCARD_V2);
         }
     }
 
@@ -291,7 +290,7 @@ int SDFileSystem::_cmdx(int cmd, int arg) {
 }
 
 
-int SDFileSystem::_cmd58() {
+int SDFileSystem::_cmd58(uint32_t *ocr) {
     _cs = 0;
     int arg = 0;
     
@@ -307,11 +306,11 @@ int SDFileSystem::_cmd58() {
     for(int i=0; i<SD_COMMAND_TIMEOUT; i++) {
         int response = _spi.write(0xFF);
         if(!(response & 0x80)) {
-            int ocr = _spi.write(0xFF) << 24;
-            ocr |= _spi.write(0xFF) << 16;
-            ocr |= _spi.write(0xFF) << 8;
-            ocr |= _spi.write(0xFF) << 0;
-//            printf("OCR = 0x%08X\n", ocr);
+            *ocr = _spi.write(0xFF) << 24;
+            *ocr |= _spi.write(0xFF) << 16;
+            *ocr |= _spi.write(0xFF) << 8;
+            *ocr |= _spi.write(0xFF) << 0;
+//            printf("SDRSP: OCR = 0x%x\n", *ocr);
             _cs = 1;
             _spi.write(0xFF);
             return response;
@@ -339,7 +338,7 @@ int SDFileSystem::_cmd8() {
         response[0] = _spi.write(0xFF);
         if(!(response[0] & 0x80)) {
                 for(int j=1; j<5; j++) {
-                    response[i] = _spi.write(0xFF);
+                    response[j] = _spi.write(0xFF);
                 }
                 _cs = 1;
                 _spi.write(0xFF);
