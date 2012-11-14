@@ -142,6 +142,8 @@ SDFileSystem::SDFileSystem(PinName mosi, PinName miso, PinName sclk, PinName cs,
 #define SDCARD_V2   2
 #define SDCARD_V2HC 3
 
+#define BLOCK2ADDR(block)   (((cardtype == SDCARD_V1) || (cardtype == SDCARD_V2))?(block << 9):((cardtype == SDCARD_V2HC)?(block):0))
+
 int SDFileSystem::initialise_card() {
     // Set to 100kHz for initialisation, and clock card with cs = 1
     _spi.frequency(100000);
@@ -172,7 +174,7 @@ int SDFileSystem::initialise_card_v1() {
     for(int i=0; i<SD_COMMAND_TIMEOUT; i++) {
         _cmd(55, 0);
         if(_cmd(41, 0) == 0) {
-            return SDCARD_V1;
+            return (cardtype = SDCARD_V1);
         }
     }
 
@@ -185,7 +187,13 @@ int SDFileSystem::initialise_card_v2() {
         _cmd(55, 0);
         if(_cmd(41, 0) == 0) {
             _cmd58();
-            return SDCARD_V2;
+            return (cardtype = SDCARD_V2);
+        }
+        _cmd(55, 0);
+        if (_cmd(41, 1UL<<30) == 0)
+        {
+		    _cmd58();
+			return (cardtype = SDCARD_V2HC);
         }
     }
 
@@ -209,7 +217,7 @@ int SDFileSystem::disk_initialize() {
 
 int SDFileSystem::disk_write(const char *buffer, int block_number) {
     // set write address for single block (CMD24)
-    if(_cmd(24, block_number * 512) != 0) {
+    if(_cmd(24, BLOCK2ADDR(block_number)) != 0) {
         return 1;
     }
 
@@ -220,7 +228,7 @@ int SDFileSystem::disk_write(const char *buffer, int block_number) {
 
 int SDFileSystem::disk_read(char *buffer, int block_number) {
     // set read address for single block (CMD17)
-    if(_cmd(17, block_number * 512) != 0) {
+    if(_cmd(17, BLOCK2ADDR(block_number)) != 0) {
         return 1;
     }
     
@@ -424,29 +432,41 @@ int SDFileSystem::_sd_sectors() {
     // read_bl_len   : csd[83:80] - the *maximum* read block length
 
     int csd_structure = ext_bits(csd, 127, 126);
-    int c_size = ext_bits(csd, 73, 62);
-    int c_size_mult = ext_bits(csd, 49, 47);
-    int read_bl_len = ext_bits(csd, 83, 80);
 
 //    printf("CSD_STRUCT = %d\n", csd_structure);
     
-    if(csd_structure != 0) {
-        fprintf(stderr, "This disk tastes funny! I only know about type 0 CSD structures\n");
+    if (csd_structure == 0)
+    {
+        if (cardtype == SDCARD_V2HC)
+        {
+            fprintf(stderr, "SDHC card with regular SD descriptor!\n");
         return 0;
     }
+        uint32_t c_size = ext_bits(csd, 73, 62);
+        uint32_t c_size_mult = ext_bits(csd, 49, 47);
+        uint32_t read_bl_len = ext_bits(csd, 83, 80);
              
-    // memory capacity = BLOCKNR * BLOCK_LEN
-    // where
-    //  BLOCKNR = (C_SIZE+1) * MULT
-    //  MULT = 2^(C_SIZE_MULT+2) (C_SIZE_MULT < 8)
-    //  BLOCK_LEN = 2^READ_BL_LEN, (READ_BL_LEN < 12)
-                            
-    int block_len = 1 << read_bl_len;
-    int mult = 1 << (c_size_mult + 2);
-    int blocknr = (c_size + 1) * mult;
-    int capacity = blocknr * block_len;
+        uint32_t block_len = 1 << read_bl_len;
+        uint32_t mult = 1 << (c_size_mult + 2);
+        uint32_t blocknr = (c_size + 1) * mult;
         
-    int blocks = capacity / 512;
+        if (block_len >= 512)
+            return blocknr * (block_len >> 9);
+        else
+            return (blocknr * block_len) >> 9;
+    }
+    else if (csd_structure == 1)
+    {
+        if (cardtype != SDCARD_V2HC)
+        {
+            fprintf(stderr, "SD V1 or V2 card with SDHC descriptor!\n");
+            return 0;
+        }
+        uint32_t c_size = ext_bits(csd, 69, 48);
+        uint32_t blocknr = (c_size + 1) * 1024;
         
-    return blocks;
+        return blocknr;
+    }
+    fprintf(stderr, "This disk tastes funny! (%d) I only know about type 0 or 1 CSD structures\n", csd_structure);
+    return 0;
 }

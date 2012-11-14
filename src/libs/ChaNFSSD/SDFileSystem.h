@@ -76,6 +76,8 @@ protected:
     
     SPI _spi;
     DigitalOut _cs;
+
+    int cardtype;
 };
 
 #endif
