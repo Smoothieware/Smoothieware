@@ -18,9 +18,9 @@ Laser::Laser(PinName pin) : laser_pin(pin){
 
 void Laser::on_module_loaded() {
     if( !this->kernel->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){ return; }
-    //read maximum allowable power
-    laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.3)->as_number() ;
-    //register for events
+  	this->laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.3)->as_number() ;
+  	this->laser_tickle_power = this->kernel->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
+  	//register for events
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_PLAY);
@@ -56,7 +56,7 @@ void Laser::on_gcode_execute(void* argument){
     if( gcode->has_letter('G' )){
         int code = gcode->get_value('G');
         if( code == 0 ){                    // G0
-            this->laser_pin = 0;
+            this->laser_pin = this->laser_tickle_power;
             this->laser_on =  false;
         }else if( code >= 1 && code <= 3 ){ // G1, G2, G3
             this->laser_on =  true;
@@ -71,7 +71,9 @@ void Laser::on_gcode_execute(void* argument){
 
 // We follow the stepper module here, so speed must be proportional
 void Laser::on_speed_change(void* argument){
-    this->set_proportional_power();
+    if( this->laser_on ){
+        this->set_proportional_power();
+    }
 }
 
 void Laser::set_proportional_power(){

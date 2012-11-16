@@ -16,6 +16,7 @@
 
 #define laser_module_enable_checksum 35529
 #define laser_module_max_power_checksum 14134
+#define laser_module_tickle_power_checksum 63341
 
 class Laser : public Module{
     public:
@@ -30,8 +31,9 @@ class Laser : public Module{
         void set_proportional_power();
 
         mbed::PwmOut laser_pin;    // PWM output to regulate the laser power
-        bool    laser_on;     // Laser status
-        float   laser_max_power; // maximum allowed laser power to be output on the pwm pin
+        bool   laser_on;     // Laser status
+        float  laser_max_power; // maximum allowed laser power to be output on the pwm pin
+        float  laser_tickle_power; // value used to tickle the laser on moves
 };
 
 #endif
