@@ -64,7 +64,7 @@ protected:
     int _cmd(int cmd, int arg);
     int _cmdx(int cmd, int arg);
     int _cmd8();
-    int _cmd58();
+    int _cmd58(uint32_t *);
     int initialise_card();
     int initialise_card_v1();
     int initialise_card_v2();
@@ -76,6 +76,8 @@ protected:
     
     SPI _spi;
     DigitalOut _cs;
+
+    int cardtype;
 };
 
 #endif
