@@ -15,7 +15,7 @@ StepperMotor::StepperMotor(){
     this->stepped = 0;
     this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
-    this->direction_bit = 0;
+    //this->direction_bit = 0;
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
     this->signal_step = false;
@@ -29,7 +29,7 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->stepped = 0;
     this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
-    this->direction_bit = 0;
+    //this->direction_bit = 0;
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
     this->signal_step = false;
@@ -46,7 +46,6 @@ void StepperMotor::tick(){
     if( this->fx_counter >= this->fx_ticks_per_step ){
 
         // output to pins 37t
-        this->dir_pin->set(  this->direction_bit );
         this->step_pin->set( 1                   );
         this->step_ticker->reset_step_pins = true;
 
@@ -106,7 +105,7 @@ inline void StepperMotor::update_exit_tick(){
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps ){
     // We do not set the direction directly, we will set the pin just before the step pin on the next tick
-    this->direction_bit = direction;
+    this->dir_pin->set(direction);
 
     // How many steps we have to move until the move is done
     this->steps_to_move = steps;

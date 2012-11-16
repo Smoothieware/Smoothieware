@@ -64,7 +64,7 @@ class Pin{
         }
 
         inline Pin* pull_down(){
-            // Set the two bits for this pin as 00
+            // Set the two bits for this pin as 11
             if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 |= (3<<( this->pin    *2)); }
             if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 |= (3<<((this->pin-16)*2)); }
             if( this->port_number == 1 && this->pin < 16  ){ LPC_PINCON->PINMODE2 |= (3<<( this->pin    *2)); }
