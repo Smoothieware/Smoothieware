@@ -87,7 +87,6 @@ int main() {
     kernel->add_module( new PauseButton() );
     kernel->add_module( new Endstops() );
 
-    kernel->add_module( &cdcmsc );
     u.init();
 
     kernel->add_module( &msc );
@@ -115,7 +114,7 @@ int main() {
         kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
     kernel->streams->printf("start\r\n");
-
+    */
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
         kernel->call_event(ON_IDLE);
