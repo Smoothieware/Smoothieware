@@ -116,14 +116,6 @@ USBMSD::USBMSD(USB *u, MSD_Disk *d) {
     MSC_Description.bLength =   26;
     MSC_Description.bDescType = DT_STRING;
     MSC_Description.str =       { 'S','m','o','o','t','h','i','e',' ','M','S','D' };
-
-    usb->addInterface(&MSC_Interface);
-
-    usb->addEndpoint(&MSC_BulkIn);
-    usb->addEndpoint(&MSC_BulkOut);
-
-    MSC_Interface.iInterface =
-        usb->addString(&MSC_Description);
 }
 
 // Called in ISR context to process a class specific request
@@ -186,8 +178,14 @@ bool USBMSD::connect()
         return false;
     }
 
-    //connect the device
-//     usb->connect();
+    usb->addInterface(&MSC_Interface);
+
+    usb->addEndpoint(&MSC_BulkIn);
+    usb->addEndpoint(&MSC_BulkOut);
+
+    MSC_Interface.iInterface =
+    usb->addString(&MSC_Description);
+
     return true;
 }
 
