@@ -88,7 +88,7 @@ protected:
     int _cmd(int cmd, uint32_t arg);
     int _cmdx(int cmd, uint32_t arg);
     int _cmd8();
-    int _cmd58();
+    int _cmd58(uint32_t*);
     CARD_TYPE initialise_card();
     CARD_TYPE initialise_card_v1();
     CARD_TYPE initialise_card_v2();
