@@ -38,6 +38,7 @@ uint32_t Button::button_tick(uint32_t dummy){
         this->button_state = this->button->get();
         // If button pressed
         if( this->button_state ){
+            // if switch is a toggle switch
             if( this->toggle ){
                 this->switch_state = !this->switch_state;
                 if( this->switch_state ){
@@ -45,10 +46,13 @@ uint32_t Button::button_tick(uint32_t dummy){
                 }else{
                     this->send_gcode( this->off_m_code, dummy_stream );
                 }
+            // else if switch is momentary
             }else{
                 this->send_gcode( this->on_m_code, dummy_stream );
             }
+        // else if button released
         }else{
+            // if switch is momentary
             if( !this->toggle ){
                 this->send_gcode( this->off_m_code, dummy_stream );
             }
