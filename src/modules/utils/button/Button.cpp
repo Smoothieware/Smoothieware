@@ -26,14 +26,13 @@ void Button::on_module_loaded(){
 void Button::on_config_reload(void* argument){
     this->toggle                      = this->kernel->config->value( button_checksum, this->name_checksum, toggle_checksum )->by_default(false)->as_bool();
     this->button                      = this->kernel->config->value( button_checksum, this->name_checksum, input_pin_checksum )->by_default("2.12")->as_pin()->as_input();
-    this->on_m_code                   = this->kernel->config->value( button_checksum, this->name_checksum, on_m_code_checksum          )->required()->as_number();
-    this->off_m_code                  = this->kernel->config->value( button_checksum, this->name_checksum, off_m_code_checksum         )->required()->as_number();
+    this->on_m_code                   = this->kernel->config->value( button_checksum, this->name_checksum, on_m_code_checksum          )->required()->as_string();
+    this->off_m_code                  = this->kernel->config->value( button_checksum, this->name_checksum, off_m_code_checksum         )->required()->as_string();
 }
 
 //TODO: Make this use InterruptIn
 //Check the state of the button and act accordingly
 uint32_t Button::button_tick(uint32_t dummy){
-//    if(!this->enable) return 0;
     // If button changed
     if(this->button_state != this->button->get()){
         this->button_state = this->button->get();
@@ -42,16 +41,16 @@ uint32_t Button::button_tick(uint32_t dummy){
             if( this->toggle ){
                 this->switch_state = !this->switch_state;
                 if( this->switch_state ){
-//                    this->send_gcode( "M" + itoa( this->on_m_code ), dummy_stream );
+                    this->send_gcode( "M" + this->on_m_code, dummy_stream );
                 }else{
- //                   this->send_gcode( "M" + itoa( this->off_m_code ), dummy_stream );
+                    this->send_gcode( "M" + this->off_m_code, dummy_stream );
                 }
             }else{
-//                this->send_gcode( "M" + itoa( this->on_m_code ), dummy_stream );
+                this->send_gcode( "M" + this->on_m_code, dummy_stream );
             }
         }else{
             if( !this->toggle ){
-//                this->send_gcode( "M" + itoa( this->off_m_code ), dummy_stream );
+                this->send_gcode( "M" + this->off_m_code, dummy_stream );
             }
         }
     }
@@ -64,3 +63,4 @@ void Button::send_gcode(std::string msg, StreamOutput* stream) {
     message.stream = stream;
     this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
+

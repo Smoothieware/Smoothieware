@@ -28,6 +28,5 @@ void ButtonPool::on_module_loaded(){
             this->controllers.push_back( controller );
         }
     }
-
 }
 

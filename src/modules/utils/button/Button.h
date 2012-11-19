@@ -27,8 +27,8 @@ class Button : public Module {
         bool       button_state;
         bool       switch_state;
         uint16_t   name_checksum;
-        uint16_t   on_m_code;
-        uint16_t   off_m_code;
+        std::string   on_m_code;
+        std::string   off_m_code;
         Pin*       button;
 
         StreamOutput* dummy_stream;
