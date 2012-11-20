@@ -46,8 +46,8 @@ class Endstops : public Module{
 
         StepperMotor* steppers[3];
         Pin*          pins[3];
-        unsigned int  slow_rates[3];
-        unsigned int  fast_rates[3];
+        double  slow_rates[3];
+        double  fast_rates[3];
         unsigned int  retract_steps[3];
         char status;
 };
