@@ -19,6 +19,7 @@ class Gcode {
         Gcode();
         bool has_letter( char letter );
         double get_value ( char letter );
+        int get_num_args();
         void prepare_cached_values();
 
         string command;
