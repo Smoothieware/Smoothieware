@@ -146,7 +146,6 @@ void Stepper::on_block_begin(void* argument){
     // Synchronise the acceleration curve with the stepping
     this->synchronize_acceleration(0);
 
-
 }
 
 // Current block is discarded

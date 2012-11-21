@@ -56,7 +56,7 @@ class StepperMotor {
         bool moving;
         bool paused;
 
-        bool direction_bit;
+        //bool direction_bit;
         //bool step_bit;
 
         uint32_t steps_to_move;
