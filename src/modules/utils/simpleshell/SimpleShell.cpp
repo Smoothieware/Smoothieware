@@ -12,7 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
-#include "modules/robot/Player.h"
+#include "modules/robot/Conveyor.h"
 
 
 void SimpleShell::on_module_loaded(){
@@ -156,7 +156,7 @@ void SimpleShell::on_main_loop(void* argument){
                 message.message = buffer;
                 message.stream = this->current_stream;
                 // wait for the queue to have enough room that a serial message could still be received before sending
-                this->kernel->player->wait_for_queue(2);
+                this->kernel->conveyor->wait_for_queue(2);
                 this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 buffer.clear();
                 return;

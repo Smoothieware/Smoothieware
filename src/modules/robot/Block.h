@@ -16,7 +16,7 @@ using namespace std;
 #include "../communication/utils/Gcode.h"
 #include "Planner.h"
 class Planner;
-class Player;
+class Conveyor;
 
 double max_allowable_speed( double acceleration, double target_velocity, double distance);
 
@@ -60,7 +60,7 @@ class Block {
 
         double max_entry_speed;
         Planner* planner;
-        Player*  player;
+        Conveyor*  conveyor;
         
         bool is_ready;
 
