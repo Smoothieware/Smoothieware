@@ -20,6 +20,7 @@
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
+#include "modules/utils/simpleshell/SimpleShell.h"
 
 // See : http://smoothieware.org/listofevents
 #define NUMBER_OF_DEFINED_EVENTS   12
@@ -60,8 +61,9 @@ class Kernel {
         Stepper*          stepper;
         Planner*          planner;
         Config*           config;
-        Conveyor*           conveyor;
+        Conveyor*         conveyor;
         Pauser*           pauser;
+        SimpleShell*      simpleshell;
 
         int debug;
         SlowTicker*       slow_ticker;

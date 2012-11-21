@@ -124,9 +124,9 @@ Kernel::Kernel(){
     this->add_module( this->robot          = new Robot()         );
     this->add_module( this->stepper        = new Stepper()       );
     this->add_module( this->planner        = new Planner()       );
-    this->add_module( this->conveyor         = new Conveyor()        );
+    this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
-
+    this->add_module( this->simpleshell    = new SimpleShell()   );
 
 }
 
