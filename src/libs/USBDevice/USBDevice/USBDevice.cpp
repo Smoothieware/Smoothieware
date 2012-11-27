@@ -875,6 +875,7 @@ USBDevice::USBDevice()
 
 bool USBDevice::readStart(uint8_t endpoint, uint32_t maxSize)
 {
+    endpointSetInterrupt(endpoint, true);
     return endpointRead(endpoint, maxSize) == EP_PENDING;
 }
 
