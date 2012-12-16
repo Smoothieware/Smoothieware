@@ -42,10 +42,32 @@ USBMSD msc(&u, &sd);
 
 char buf[512];
 
+GPIO leds[5] = {
+    GPIO(P1_18),
+    GPIO(P1_19),
+    GPIO(P1_20),
+    GPIO(P1_21),
+    GPIO(P4_28)
+};
+
+SerialConsole uart(USBTX, USBRX, 2000000);
+
 int main() {
+    for (int i = 0; i < 5; i++)
+    {
+        leds[i].output();
+        leds[i] = (i & 1) ^ 1;
+    }
+
+    uart.printf("Smoothie Start\n");
+
     sd.disk_initialize();
 
+    uart.printf("SD ok: %uMB\n", sd.disk_sectors() / 2048);
+
     Kernel* kernel = new Kernel();
+
+    uart.printf("Kernel ok\n");
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.0 \r\n");
 
