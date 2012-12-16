@@ -47,6 +47,9 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
+    extern SerialConsole uart;
+
+    uart.printf("Kernel: ");
 
     // Value init for the arrays
     for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){
@@ -55,8 +58,12 @@ Kernel::Kernel(){
         }
     }
 
+    uart.printf("\t[new Config]\n");
+
     // Config first, because we need the baud_rate setting before we start serial
     this->config         = new Config();
+
+    uart.printf("\t[new StreamOutputPool]\n");
 
     // Serial second, because the other modules might want to say something
     this->streams        = new StreamOutputPool();
@@ -74,20 +81,30 @@ Kernel::Kernel(){
         this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
     }
     */
-    if( NVIC_GetPriority(UART0_IRQn) > 0 ){
-        this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-    }else{
-        this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-    }
+//     if( NVIC_GetPriority(UART0_IRQn) > 0 ){
+//         this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(2000000)->as_number());
+//     }else{
+//         this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(2000000)->as_number());
+//     }
+//     this->serial = &uart;
 
+    uart.printf("\tADD config\n");
 
     this->add_module( this->config );
+
+    __debugbreak();
+
+    uart.printf("\tADD serial\n");
     this->add_module( this->serial );
 
     // HAL stuff
+    uart.printf("\tADD SlowTicker\n");
     this->slow_ticker          = new SlowTicker();
+    uart.printf("\tADD StepTicker\n");
     this->step_ticker          = new StepTicker();
+    uart.printf("\tADD Adc\n");
     this->adc                  = new Adc();
+    uart.printf("\tADD Digipot\n");
     this->digipot              = new Digipot();
 
     // LPC17xx-specific
@@ -99,7 +116,7 @@ Kernel::Kernel(){
     // Set other priorities lower than the timers
     NVIC_SetPriority(ADC_IRQn, 4);
     NVIC_SetPriority(USB_IRQn, 4);
- 
+
     // If MRI is enabled
     if( MRI_ENABLE ){
         if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 4); }
@@ -113,21 +130,32 @@ Kernel::Kernel(){
         NVIC_SetPriority(UART3_IRQn, 4);
     }
 
+//     uart.printf("Configure:\n\tStepTicker:\n");
     // Configure the step ticker
     int base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
     double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
-    this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
-    this->step_ticker->set_frequency(   base_stepping_frequency );
+
+//     uart.printf("\t\tset_reset_delay: %u\n", microseconds_per_step_pulse / 1000000L);
+//     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
+
+//     uart.printf("\t\tset_frequency: %u\n", base_stepping_frequency);
+//     this->step_ticker->set_frequency(   base_stepping_frequency );
 
     // Core modules
+    uart.printf("\tADD GcodeDispatch\n");
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
-    this->add_module( this->robot          = new Robot()         );
+//     uart.printf("\tADD Robot\n");
+//     this->add_module( this->robot          = new Robot()         );
+    uart.printf("\tADD Stepper\n");
     this->add_module( this->stepper        = new Stepper()       );
+    uart.printf("\tADD Planner\n");
     this->add_module( this->planner        = new Planner()       );
+    uart.printf("\tADD Player\n");
     this->add_module( this->player         = new Player()        );
+    uart.printf("\tADD Pauser\n");
     this->add_module( this->pauser         = new Pauser()        );
 
-
+    uart.printf("Kernel Complete!\n");
 }
 
 void Kernel::add_module(Module* module){
