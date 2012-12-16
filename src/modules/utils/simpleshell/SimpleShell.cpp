@@ -41,6 +41,7 @@ void SimpleShell::on_console_line_received( void* argument ){
         case cat_command_checksum     : this->cat_command( get_arguments(possible_command), new_message.stream ); break;
         case play_command_checksum    : this->play_command(get_arguments(possible_command), new_message.stream ); break;
         case reset_command_checksum   : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
+        case dfu_command_checksum     : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
         case break_command_checksum   : this->break_command(get_arguments(possible_command),new_message.stream ); break;
     }
 }
