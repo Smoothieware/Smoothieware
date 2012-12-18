@@ -50,7 +50,6 @@ void Stepper::on_module_loaded(){
     this->kernel->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
     this->kernel->robot->beta_stepper_motor->attach( this, &Stepper::stepper_motor_finished_move );
     this->kernel->robot->gamma_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
-
 }
 
 // Get configuration from the config file
@@ -59,9 +58,8 @@ void Stepper::on_config_reload(void* argument){
     this->acceleration_ticks_per_second =  this->kernel->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
     this->minimum_steps_per_minute      =  this->kernel->config->value(minimum_steps_per_minute_checksum     )->by_default(3000  )->as_number();
 
-    // Steppers start on by default
-    this->turn_enable_pins_on();
-
+    // Steppers start off by default
+    this->turn_enable_pins_off();
 }
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
