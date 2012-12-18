@@ -126,7 +126,9 @@ void Robot::execute_gcode(Gcode* gcode){
                                                  this->current_position[2]);
                    return;
        }
-   }else{ return; }
+   }
+    if( this->motion_mode < 0)
+        return;
     
    //Get parameters
     double target[3], offset[3];
