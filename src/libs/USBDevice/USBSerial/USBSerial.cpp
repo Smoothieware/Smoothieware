@@ -64,6 +64,18 @@ int USBSerial::_getc()
     return c;
 }
 
+int USBSerial::puts(const char *str)
+{
+    int i = 0;
+    while (*str)
+    {
+        _putc(*str);
+        i++;
+        str++;
+    }
+    return i;
+}
+
 uint16_t USBSerial::writeBlock(uint8_t * buf, uint16_t size)
 {
     if (size > txbuf.free())
@@ -236,6 +248,7 @@ void USBSerial::on_main_loop(void *argument)
                 struct SerialMessage message;
                 message.message = received;
                 message.stream = this;
+                iprintf("USBSerial Received: %s\n", message.message.c_str());
                 this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
                 return;
             }
