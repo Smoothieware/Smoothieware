@@ -45,8 +45,8 @@ public:
     CircBuffer<uint8_t> rxbuf;
     CircBuffer<uint8_t> txbuf;
 
-    void on_module_loaded(void);
-    void on_main_loop(void);
+    virtual void on_module_loaded(void);
+    virtual void on_main_loop(void *);
 
 protected:
 //     virtual bool EpCallback(uint8_t, uint8_t);
