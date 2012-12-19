@@ -37,6 +37,7 @@ public:
 
     virtual int _putc(int c);
     virtual int _getc();
+    virtual int puts(const char *);
 
     uint8_t available();
 

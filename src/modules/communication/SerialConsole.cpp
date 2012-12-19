@@ -76,6 +76,15 @@ int SerialConsole::printf(const char* format, ...){
     return result;
 }
 
+int SerialConsole::_putc(int c)
+{
+    return this->serial->putc(c);
+}
+
+int SerialConsole::_getc()
+{
+    return this->serial->getc();
+}
 
 bool SerialConsole::has_char(char letter){
     int index = this->buffer.head;

@@ -44,7 +44,7 @@ public:
         // Dispatch to all
         for(set<StreamOutput*>::iterator i = this->streams.begin(); i != this->streams.end(); i++)
         {
-            (*i)->printf(buffer);
+            (*i)->puts(buffer);
         }
 
         if (buffer != printf_default_buffer)
