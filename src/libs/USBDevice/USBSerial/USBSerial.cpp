@@ -224,7 +224,7 @@ void USBSerial::on_module_loaded()
 
 void USBSerial::on_main_loop(void *argument)
 {
-    this->kernel->streams->printf("!");
+//     this->kernel->streams->printf("!");
     if (nl_in_rx)
     {
         string received;
