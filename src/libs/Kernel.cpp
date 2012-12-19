@@ -86,13 +86,13 @@ Kernel::Kernel(){
 //     }else{
 //         this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(2000000)->as_number());
 //     }
-//     this->serial = &uart;
+    this->serial = &uart;
 
     uart.printf("\tADD config\n");
 
     this->add_module( this->config );
 
-    __debugbreak();
+//     __debugbreak();
 
     uart.printf("\tADD serial\n");
     this->add_module( this->serial );
@@ -144,8 +144,8 @@ Kernel::Kernel(){
     // Core modules
     uart.printf("\tADD GcodeDispatch\n");
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
-//     uart.printf("\tADD Robot\n");
-//     this->add_module( this->robot          = new Robot()         );
+    uart.printf("\tADD Robot\n");
+    this->add_module( this->robot          = new Robot()         );
     uart.printf("\tADD Stepper\n");
     this->add_module( this->stepper        = new Stepper()       );
     uart.printf("\tADD Planner\n");
