@@ -28,8 +28,15 @@ MRI_SEMIHOST_STDIO=0
 
 include ./gcc4mbed/build/gcc4mbed.mk
 
-flash:
-	lpc21isp $(PROJECT).hex /dev/ttyACM0 115200 14746
+flash: $(PROJECT).hex
+	lpc21isp $< /dev/ttyACM0 115200 14746
 
-upload:
-	dfu-util -d 1d50:6015 -D main.bin
+upload: $(PROJECT).bin
+	dfu-util -d 1d50:6015 -D $<
+
+debug: $(PROJECT).elf
+	arm-none-eabi-gdb $< -ex  "set target-charset ASCII" -ex "set remotelogfile mri.log" -ex "target remote /dev/arduino_A900K10V"
+
+console:
+	stty raw ignbrk -echo 2000000 < /dev/arduino_A900K10V
+	( cat <&3 & cat >&3 ; kill %% ) 3<>/dev/arduino_A900K10V
