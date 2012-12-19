@@ -152,6 +152,10 @@ bool USBCDC::USBEvent_Request(CONTROL_TRANSFER &transfer) {
                 return true;
             case CDC_SET_CONTROL_LINE_STATE:
                 iprintf("[CDC]:SET_CONTROL_LINE_STATE 0x%02X\n", transfer.setup.wValue);
+                if (transfer.setup.wValue & CDC_CLS_DTR)
+                    on_attach();
+                else
+                    on_detach();
                 return true;
             default:
                 break;

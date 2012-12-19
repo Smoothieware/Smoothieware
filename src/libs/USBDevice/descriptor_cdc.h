@@ -62,6 +62,10 @@
 #define CDC_SET_CONTROL_LINE_STATE          0x22
 #define CDC_SEND_BREAK                      0x23
 
+// control line states
+#define CDC_CLS_DTR                         0x01
+#define CDC_CLS_RTS                         0x02
+
 typedef struct __attribute__ ((packed)) {
 	uint8_t	bLength;      // 5
 	uint8_t	bDescType;    // DT_CDC_DESCRIPTOR      (0x24)
