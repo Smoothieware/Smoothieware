@@ -905,7 +905,7 @@ void USBHAL::usbisr(void)
 
             for (i = 2, bitmask = 4; i < 32; i++, bitmask <<= 1)
             {
-                uint8_t bEPStat = 0;
+                uint8_t bEPStat = 255;
                 uint8_t ep = IDX2EP(i);
                 if (LPC_USB->USBEpIntSt & bitmask)
                 {
@@ -916,7 +916,7 @@ void USBHAL::usbisr(void)
 
                 if ((USBEpIntEn & bitmask) && (can_transfer[i]))
                 {
-                    if (bEPStat == 0)
+                    if (bEPStat == 255)
                         bEPStat = SIEselectEndpoint(ep);
 
                     iprintf("!02X", ep);
@@ -927,17 +927,19 @@ void USBHAL::usbisr(void)
                                     ((bEPStat & EPSTAT_EPN) ? EP_STATUS_NACKED  : 0) |
                                     ((bEPStat & EPSTAT_PO ) ? EP_STATUS_ERROR   : 0);
 
-                    bool r;
+                    bool r = true;
 
                     if (IN_EP(i))
                     {
 //                         iprintf("IN[%02X]:", IDX2EP(i));
-                        r = USBEvent_EPIn(ep, bStat);
+                        if ((bEPStat & EPSTAT_FE) == 0) // IN endpoint, FE = 0 - empty space in buffer
+                            r = USBEvent_EPIn(ep, bStat);
                     }
                     else
                     {
 //                         iprintf("OUT[%02X]:", IDX2EP(i));
-                        r = USBEvent_EPOut(ep, bStat);
+                        if (bEPStat & EPSTAT_FE) // OUT endpoint, FE = 1 - data in buffer
+                            r = USBEvent_EPOut(ep, bStat);
                     }
 
                     if (!r)

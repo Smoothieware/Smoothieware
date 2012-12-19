@@ -28,6 +28,7 @@
 #include "libs/USBDevice/USBMSD/USBMSD.h"
 #include "libs/USBDevice/USBMSD/SDCard.h"
 #include "libs/USBDevice/USBSerial/USBSerial.h"
+#include "libs/USBDevice/DFU.h"
 
 // #include "libs/USBCDCMSC/USBCDCMSC.h"
 // SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
@@ -39,6 +40,7 @@ USB u;
 
 USBSerial usbserial(&u);
 USBMSD msc(&u, &sd);
+DFU dfu(&u);
 
 char buf[512];
 
