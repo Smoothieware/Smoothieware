@@ -120,13 +120,15 @@ void Robot::execute_gcode(Gcode* gcode){
         }
    }else if( gcode->has_letter('M')){
      switch( (int) gcode->get_value('M') ){
-         case 114: this->kernel->streams->printf("C: X:%1.3f Y:%1.3f Z:%1.3f\n",
+         case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f\n",
                                                  this->current_position[0],
                                                  this->current_position[1],
                                                  this->current_position[2]);
                    return;
        }
-   }else{ return; }
+   }
+    if( this->motion_mode < 0)
+        return;
     
    //Get parameters
     double target[3], offset[3];

@@ -30,3 +30,6 @@ include ./gcc4mbed/build/gcc4mbed.mk
 
 flash:
 	lpc21isp $(PROJECT).hex /dev/ttyACM0 115200 14746
+
+upload:
+	dfu-util -d 1d50:6015 -D main.bin

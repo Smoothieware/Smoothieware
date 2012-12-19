@@ -75,7 +75,7 @@ class Robot : public Module {
         double last_milestone[3];                             // Last position, in millimeters
         bool inch_mode;                                       // true for inch mode, false for millimeter mode ( default )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
-        uint8_t motion_mode;                                  // Motion mode for the current received Gcode
+        int8_t motion_mode;                                   // Motion mode for the current received Gcode
         double seek_rate;                                     // Current rate for seeking moves ( mm/s )
         double feed_rate;                                     // Current rate for feeding moves ( mm/s )
         uint8_t plane_axis_0, plane_axis_1, plane_axis_2;     // Current plane ( XY, XZ, YZ )

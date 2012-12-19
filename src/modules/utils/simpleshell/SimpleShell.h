@@ -21,6 +21,7 @@
 #define cat_command_checksum     24889
 #define play_command_checksum    17335
 #define reset_command_checksum   27429
+#define dfu_command_checksum     28480
 
 class SimpleShell : public Module {
     public:
