@@ -27,7 +27,7 @@
 // extern void setled(int, bool);
 #define setled(a, b) do {} while (0)
 
-#define iprintf(...)
+// #define iprintf(...)
 
 USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(128), txbuf(128)
 {
@@ -57,9 +57,9 @@ int USBSerial::_getc()
         iprintf("rxbuf has room for another packet, interrupt enabled\n");
 //         usb->endpointTriggerInterrupt(CDC_BulkOut.bEndpointAddress);
     }
-    if (c == '\n')
-        nl_in_rx--;
-    if (nl_in_rx < 0) nl_in_rx = 0;
+    if (nl_in_rx > 0)
+        if (c == '\n')
+            nl_in_rx--;
 
     return c;
 }
@@ -224,6 +224,7 @@ void USBSerial::on_module_loaded()
 
 void USBSerial::on_main_loop()
 {
+    printf("!");
     if (nl_in_rx)
     {
         string received;
