@@ -23,6 +23,7 @@ class Pin{
                 this->port = gpios[(unsigned int) this->port_number];
                 this->inverting = ( value.find_first_of("!")!=string::npos ? true : false );
                 this->pin  = atoi( value.substr(2, value.size()-2-(this->inverting?1:0)).c_str() );
+                this->port->FIOMASK &= ~(1 << this->pin);
             }
             return this;
         }
@@ -33,16 +34,19 @@ class Pin{
         }
 
         inline Pin* as_output(){
+            if (this->pin == 255) return this;
             this->port->FIODIR |= 1<<this->pin;
             return this;
         }
 
         inline Pin* as_input(){
+            if (this->pin == 255) return this;
             this->port->FIODIR &= ~(1<<this->pin);
             return this;
         }
 
         inline Pin* as_open_drain(){
+            if (this->pin == 255) return this;
             if( this->port_number == 0 ){ LPC_PINCON->PINMODE_OD0 |= (1<<this->pin); }
             if( this->port_number == 1 ){ LPC_PINCON->PINMODE_OD1 |= (1<<this->pin); }
             if( this->port_number == 2 ){ LPC_PINCON->PINMODE_OD2 |= (1<<this->pin); }
@@ -52,6 +56,7 @@ class Pin{
         }
 
         inline Pin* pull_up(){
+            if (this->pin == 255) return this;
             // Set the two bits for this pin as 00
             if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 &= ~(3<<( this->pin    *2)); }
             if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 &= ~(3<<((this->pin-16)*2)); }
@@ -64,6 +69,7 @@ class Pin{
         }
 
         inline Pin* pull_down(){
+            if (this->pin == 255) return this;
             // Set the two bits for this pin as 11
             if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 |= (3<<( this->pin    *2)); }
             if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 |= (3<<((this->pin-16)*2)); }
@@ -76,10 +82,12 @@ class Pin{
         }
 
         inline bool get(){
+            if (this->pin == 255) return false;
             return this->inverting ^ (( this->port->FIOPIN >> this->pin ) & 1);
         }
 
         inline void set(bool value){
+            if (this->pin == 255) return;
             if( this->inverting ^ value ){
                 this->port->FIOSET = 1 << this->pin;
             }else{
