@@ -99,7 +99,7 @@ int main() {
 //         kernel->streams->printf("Card has %lu blocks; %llu bytes; %d.%d%cB\n", sd.disk_sectors(), sd.disk_size(), s1, s2, suffix);
 //     }
 
-    kernel->add_module( new Laser(p21) );
+//     kernel->add_module( new Laser(p21) );
     kernel->add_module( new Extruder() );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
