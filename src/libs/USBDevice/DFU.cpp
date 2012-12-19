@@ -13,9 +13,9 @@ DFU::DFU(USB *u)
         DL_DFU_FUNCTIONAL_DESCRIPTOR,
         DT_DFU_FUNCTIONAL_DESCRIPTOR,
         DFU_BMATTRIBUTES_WILLDETACH | DFU_BMATTRIBUTES_CANDOWNLOAD | DFU_BMATTRIBUTES_CANUPLOAD,
-        500,
-        512,
-        DFU_VERSION_1_1,
+        2000,               // wDetachTimeout
+        512,                // wTransferSize
+        DFU_VERSION_1_1,    // bcdDFUVersion
     };
     dfu_interface = {
         DL_INTERFACE,
