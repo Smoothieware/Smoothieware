@@ -35,6 +35,7 @@ void TemperatureControl::on_module_loaded(){
 
     // Register for events
     this->register_for_event(ON_GCODE_EXECUTE);
+    this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_MAIN_LOOP);
 
 }
@@ -49,6 +50,8 @@ void TemperatureControl::on_config_reload(void* argument){
     this->set_and_wait_m_code = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
     this->get_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
     this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(5)->as_number();
+
+    this->designator          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
     // Values are here : http://reprap.org/wiki/Thermistor
     this->r0   = 100000;
@@ -93,6 +96,18 @@ void TemperatureControl::on_config_reload(void* argument){
 //#pragma GCC push_options
 //#pragma GCC optimize ("O0")
 
+void TemperatureControl::on_gcode_received(void* argument)
+{
+    Gcode* gcode = static_cast<Gcode*>(argument);
+    if (gcode->has_m)
+    {
+        // Get temperature
+        if( gcode->m == this->get_m_code ){
+//             gcode->stream->printf("get temperature: %f current:%f target:%f bare_value:%u \r\n", this->get_temperature(), this->new_thermistor_reading(), this->desired_adc_value, this->kernel->adc->read(this->thermistor_pin)  );
+            gcode->stream->printf("%s:%3.1f /%3.1f ", this->designator.c_str(), this->get_temperature(), ((this->desired_adc_value == UNDEFINED)?0.0:this->adc_value_to_temperature(this->desired_adc_value)));
+        }
+    }
+}
 
 void TemperatureControl::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
@@ -124,10 +139,6 @@ void TemperatureControl::on_gcode_execute(void* argument){
             this->kernel->pauser->take();
             this->waiting = true;
         }
-        }
-        // Get temperature
-        if( gcode->m == this->get_m_code ){
-            gcode->stream->printf("get temperature: %f current:%f target:%f bare_value:%u \r\n", this->get_temperature(), this->new_thermistor_reading(), this->desired_adc_value, this->kernel->adc->read(this->thermistor_pin)  );
         }
     }
 }

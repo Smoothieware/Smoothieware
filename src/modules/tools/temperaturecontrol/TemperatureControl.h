@@ -30,6 +30,8 @@
 #define set_m_code_checksum                51478
 #define set_and_wait_m_code_checksum       4287
 
+#define designator_checksum                49716
+
 
 class TemperatureControl : public Module {
     public:
@@ -39,6 +41,7 @@ class TemperatureControl : public Module {
         void on_module_loaded();
         void on_main_loop(void* argument);
         void on_gcode_execute(void* argument);
+        void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
         void set_desired_temperature(double desired_temperature);
         double get_temperature();
@@ -80,7 +83,7 @@ class TemperatureControl : public Module {
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;
         uint16_t get_m_code;
-
+        string designator;
 };
 
 #endif
