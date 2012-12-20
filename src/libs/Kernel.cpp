@@ -49,7 +49,7 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 Kernel::Kernel(){
     extern SerialConsole uart;
 
-    uart.printf("Kernel: ");
+//     uart.printf("Kernel: ");
 
     // Value init for the arrays
     for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){
@@ -58,12 +58,12 @@ Kernel::Kernel(){
         }
     }
 
-    uart.printf("\t[new Config]\n");
+//     uart.printf("\t[new Config]\n");
 
     // Config first, because we need the baud_rate setting before we start serial
     this->config         = new Config();
 
-    uart.printf("\t[new StreamOutputPool]\n");
+//     uart.printf("\t[new StreamOutputPool]\n");
 
     // Serial second, because the other modules might want to say something
     this->streams        = new StreamOutputPool();
@@ -88,23 +88,23 @@ Kernel::Kernel(){
 //     }
     this->serial = &uart;
 
-    uart.printf("\tADD config\n");
+//     uart.printf("\tADD config\n");
 
     this->add_module( this->config );
 
 //     __debugbreak();
 
-    uart.printf("\tADD serial\n");
+//     uart.printf("\tADD serial\n");
     this->add_module( this->serial );
 
     // HAL stuff
-    uart.printf("\tADD SlowTicker\n");
+//     uart.printf("\tADD SlowTicker\n");
     this->slow_ticker          = new SlowTicker();
-    uart.printf("\tADD StepTicker\n");
+//     uart.printf("\tADD StepTicker\n");
     this->step_ticker          = new StepTicker();
-    uart.printf("\tADD Adc\n");
+//     uart.printf("\tADD Adc\n");
     this->adc                  = new Adc();
-    uart.printf("\tADD Digipot\n");
+//     uart.printf("\tADD Digipot\n");
     this->digipot              = new Digipot();
 
     // LPC17xx-specific
@@ -142,20 +142,20 @@ Kernel::Kernel(){
 //     this->step_ticker->set_frequency(   base_stepping_frequency );
 
     // Core modules
-    uart.printf("\tADD GcodeDispatch\n");
+//     uart.printf("\tADD GcodeDispatch\n");
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
-    uart.printf("\tADD Robot\n");
+//     uart.printf("\tADD Robot\n");
     this->add_module( this->robot          = new Robot()         );
-    uart.printf("\tADD Stepper\n");
+//     uart.printf("\tADD Stepper\n");
     this->add_module( this->stepper        = new Stepper()       );
-    uart.printf("\tADD Planner\n");
+//     uart.printf("\tADD Planner\n");
     this->add_module( this->planner        = new Planner()       );
-    uart.printf("\tADD Player\n");
+//     uart.printf("\tADD Player\n");
     this->add_module( this->player         = new Player()        );
-    uart.printf("\tADD Pauser\n");
+//     uart.printf("\tADD Pauser\n");
     this->add_module( this->pauser         = new Pauser()        );
 
-    uart.printf("Kernel Complete!\n");
+//     uart.printf("Kernel Complete!\n");
 }
 
 void Kernel::add_module(Module* module){

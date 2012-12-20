@@ -23,6 +23,8 @@
 
 static uint8_t cdc_line_coding[7]= {0x80, 0x25, 0x00, 0x00, 0x00, 0x00, 0x08};
 
+#define iprintf(...) do { } while (0)
+
 // #define DEFAULT_CONFIGURATION (1)
 
 // #define CDC_SET_LINE_CODING        0x20

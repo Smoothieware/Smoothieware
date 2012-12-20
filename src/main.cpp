@@ -65,15 +65,15 @@ int main() {
         leds[i] = (i & 1) ^ 1;
     }
 
-    uart.printf("Smoothie Start\n");
+//     uart.printf("Smoothie Start\n");
 
     sd.disk_initialize();
 
-    uart.printf("SD ok: %uMB\n", sd.disk_sectors() / 2048);
+//     uart.printf("SD ok: %uMB\n", sd.disk_sectors() / 2048);
 
     Kernel* kernel = new Kernel();
 
-    uart.printf("Kernel ok\n");
+//     uart.printf("Kernel ok\n");
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.0 \r\n");
 
@@ -121,7 +121,7 @@ int main() {
     kernel->add_module( &usbserial );
     kernel->add_module( &u );
 
-    kernel->streams->printf("start\r\n");
+//     kernel->streams->printf("start\r\n");
 
     struct SerialMessage message;
     message.message = "G90";

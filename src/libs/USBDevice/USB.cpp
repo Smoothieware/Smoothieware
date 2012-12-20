@@ -5,6 +5,8 @@
 #include "descriptor_cdc.h"
 #include "descriptor_msc.h"
 
+#define iprintf(...) do { } while (0)
+
 usbdesc_base *USB::descriptors[N_DESCRIPTORS];
 
 usbdesc_device USB::device = {
