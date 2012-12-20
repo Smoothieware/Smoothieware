@@ -157,11 +157,23 @@ double TemperatureControl::temperature_to_adc_value(double temperature){
 
 uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     if( this->desired_adc_value != UNDEFINED ){
-        if( this->new_thermistor_reading() > this->desired_adc_value ){
+        double r = this->new_thermistor_reading();
+        if ((r > 0.01) &&
+            (r < 0.99) &&
+            (r > this->desired_adc_value))
+        {
             this->heater_pin->set(1);
-        }else{
+        }
+        else
+        {
+            if (((r <= 0.01) || (r >= 0.99)) && (this->desired_adc_value != UNDEFINED))
+            {
+                this->kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin->port_number, this->thermistor_pin->pin);
+                this->desired_adc_value = UNDEFINED;
+            }
             this->heater_pin->set(0);
-            if( this->waiting ){
+            if (this->waiting)
+            {
                 this->kernel->pauser->release();
                 this->waiting = false;
             }
