@@ -100,14 +100,30 @@ void TemperatureControl::on_gcode_execute(void* argument){
         // Set temperature without waiting
         if( gcode->m == this->set_m_code && gcode->has_letter('S') ){
             //gcode->stream->printf("setting to %f meaning %u  \r\n", gcode->get_value('S'), this->temperature_to_adc_value( gcode->get_value('S') ) );
+            if (gcode->get_value('S') == 0)
+            {
+                this->desired_adc_value = UNDEFINED;
+                this->heater_pin->set(0);
+            }
+            else
+            {
             this->set_desired_temperature(gcode->get_value('S'));
+        }
         }
         // Set temperature and wait
         if( gcode->m == this->set_and_wait_m_code && gcode->has_letter('S') ){
+            if (gcode->get_value('S') == 0)
+            {
+                this->desired_adc_value = UNDEFINED;
+                this->heater_pin->set(0);
+            }
+            else
+            {
             this->set_desired_temperature(gcode->get_value('S'));
             // Pause
             this->kernel->pauser->take();
             this->waiting = true;
+        }
         }
         // Get temperature
         if( gcode->m == this->get_m_code ){
