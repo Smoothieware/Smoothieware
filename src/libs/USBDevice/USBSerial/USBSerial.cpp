@@ -38,6 +38,8 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(128), txbuf(128)
 int USBSerial::_putc(int c)
 {
 //     send((uint8_t *)&c, 1);
+    if (c == '\r')
+        return 1;
     if (txbuf.free())
         txbuf.queue(c);
 
