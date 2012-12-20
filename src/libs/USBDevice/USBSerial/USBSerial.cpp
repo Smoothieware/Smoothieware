@@ -27,7 +27,7 @@
 // extern void setled(int, bool);
 #define setled(a, b) do {} while (0)
 
-// #define iprintf(...)
+#define iprintf(...) do { } while (0)
 
 USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(128), txbuf(128)
 {
