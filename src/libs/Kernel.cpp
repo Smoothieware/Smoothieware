@@ -136,10 +136,10 @@ Kernel::Kernel(){
     double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
 
 //     uart.printf("\t\tset_reset_delay: %u\n", microseconds_per_step_pulse / 1000000L);
-//     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
+    this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
 
 //     uart.printf("\t\tset_frequency: %u\n", base_stepping_frequency);
-//     this->step_ticker->set_frequency(   base_stepping_frequency );
+    this->step_ticker->set_frequency(   base_stepping_frequency );
 
     // Core modules
 //     uart.printf("\tADD GcodeDispatch\n");
