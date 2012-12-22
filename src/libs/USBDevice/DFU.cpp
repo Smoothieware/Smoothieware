@@ -45,7 +45,7 @@ bool DFU::USBEvent_Request(CONTROL_TRANSFER &control)
         {
             usb->disconnect();
             WDT_Init(WDT_CLKSRC_IRC, WDT_MODE_RESET);
-            WDT_Start(256);
+            WDT_Start(1000000); // 1 second?
 //             for (;;);
             return true;
         }
