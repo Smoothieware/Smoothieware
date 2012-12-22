@@ -17,6 +17,8 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "libs/Hook.h"
 
+#include "libs/Pin.h"
+
 class SlowTicker : public Module{
     public:
         SlowTicker();
@@ -38,6 +40,8 @@ class SlowTicker : public Module{
 
         vector<Hook*> hooks;
         double max_frequency;
+
+        Pin ispbtn;
 };
 
 
