@@ -133,15 +133,18 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( double speed ){
-    if( speed < 0.0001 ){
-        this->steps_per_second = 0;
-        this->fx_ticks_per_step = 1ULL<<63;
-        return;
-    }
+//     if( speed <= 1.0 ){
+//         this->steps_per_second = 0;
+//         this->fx_ticks_per_step = 1ULL<<63;
+//         return;
+//     }
 
     //if( speed < this->steps_per_second ){
         LPC_GPIO1->FIOSET = 1<<19;
     //}
+
+    if (speed < 1.0)
+        speed = 1.0;
 
     // How many steps we must output per second
     this->steps_per_second = speed;
