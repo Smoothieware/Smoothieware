@@ -56,8 +56,6 @@ GPIO leds[5] = {
     GPIO(P4_28)
 };
 
-SerialConsole uart(USBTX, USBRX, 2000000);
-
 int main() {
     for (int i = 0; i < 5; i++)
     {
@@ -65,15 +63,9 @@ int main() {
         leds[i] = (i & 1) ^ 1;
     }
 
-//     uart.printf("Smoothie Start\n");
-
     sd.disk_initialize();
 
-//     uart.printf("SD ok: %uMB\n", sd.disk_sectors() / 2048);
-
     Kernel* kernel = new Kernel();
-
-//     uart.printf("Kernel ok\n");
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.0 \r\n");
 
@@ -121,31 +113,13 @@ int main() {
     kernel->add_module( &usbserial );
     kernel->add_module( &u );
 
-//     kernel->streams->printf("start\r\n");
-
     struct SerialMessage message;
     message.message = "G90";
     message.stream = kernel->serial;
     kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
-   /*
-    int i = 0;
-    while( i <= 60 ){
-        // Debug : launch file on startup
-
-        message.message = "G1 X20 Y20 F9000";
-        message.stream = kernel->serial;
-        kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-
-        message.message = "G1 X20 Y20.5 F9000";
-        message.stream = kernel->serial;
-        kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-
-    kernel->streams->printf("start\r\n");
-    */
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
         kernel->call_event(ON_IDLE);
     }
 }
-
