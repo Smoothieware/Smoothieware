@@ -160,6 +160,12 @@ typedef struct __attribute__ ((packed))
 }
     usbdesc_string;
 
-#define usbdesc_string_l(l) struct __attribute__ ((packed)) { uint8_t bLength; uint8_t bDescType; uint16_t str[l]; }
+#define usbdesc_string_l(l) struct __attribute__ ((packed)) { uint8_t bLength; uint8_t bDescType; char16_t str[l]; }
+
+#define usbstring(string) { sizeof(u ## string), DT_STRING, { u ## string } }
+
+#define usbstring_init(name, string) struct __attribute__ ((packed)) { const uint8_t bLength; const uint8_t bDescType; char16_t str[sizeof(string)]; } name = { sizeof(u ## string), DT_STRING, { u ## string } }
+
+#define usbstring_const_init(name, string) const struct __attribute__ ((packed)) { const uint8_t bLength; const uint8_t bDescType; const char16_t str[sizeof(string)]; } name = { sizeof(u ## string), DT_STRING, { u ## string } }
 
 #endif /* _DESCRIPTOR_H */

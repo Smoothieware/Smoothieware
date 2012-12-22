@@ -114,9 +114,9 @@ USBMSD::USBMSD(USB *u, MSD_Disk *d) {
         this,                   // endpoint callback
     };
 
-    MSC_Description.bLength =   26;
-    MSC_Description.bDescType = DT_STRING;
-    MSC_Description.str =       { 'S','m','o','o','t','h','i','e',' ','M','S','D' };
+    // because gcc-4.6 won't let us simply do MSC_Description = usbstring("Smoothie MSD")
+    usbdesc_string_l(13) us = usbstring("Smoothie MSD");
+    memcpy(&MSC_Description, &us, sizeof(MSC_Description));
 }
 
 // Called in ISR context to process a class specific request

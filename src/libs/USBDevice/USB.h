@@ -42,7 +42,7 @@ public:
 //     int findDescriptor(uint8_t start, uint8_t type, uint8_t index, uint8_t alternate);
     int addInterface(usbdesc_interface *);
     int addEndpoint(usbdesc_endpoint *);
-    int addString(void *);
+    int addString(const void *);
     int getFreeEndpoint();
     int findStringIndex(uint8_t strid);
 

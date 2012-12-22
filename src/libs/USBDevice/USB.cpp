@@ -38,27 +38,12 @@ static usbdesc_string_l(10) manufacturer = {
 	{ 'U', 'S', 'B', ' ', 'M', 'a', 'g', 'i', 'c', '!' }
 };
 
-static usbdesc_string_l(23) product = {
-	48,					// .bLength: 2 + 2 * nchars
-	DT_STRING,			// .bDescType
-	{ 'S','m','o','o','t','h','i','e',' ','v','0','.','1',' ','p','r','o','t','o','t','y','p','e' }
-};
+static usbstring_const_init(product, "Smoothie v0.1 prototype");
 
-static usbdesc_string_l(32) serial = {
-	66,					// .bLength: 2 + 2 * nchars
-	DT_STRING,			// .bDescType
-	{	'0', '1', '2', '3', '4', '5', '6', '7',
-		'0', '1', '2', '3', '4', '5', '6', '7',
-		'0', '1', '2', '3', '4', '5', '6', '7',
-		'0', '1', '2', '3', '4', '5', '6', '7',
-	}
-};
+static usbstring_init(serial, "01234567abcdefgh01234567abcdefgh");
 
-static usbdesc_string_l(7) str_default = {
-	16,					// .bLength: 2 + 2 * nchars
-	DT_STRING,			// .bDescType
-	{ 'D','e','f','a','u','l','t' }
-};
+static usbstring_const_init(str_default, "Default");
+
 
 usbdesc_configuration USB::conf = {
 	DL_CONFIGURATION,
@@ -445,7 +430,7 @@ int USB::addEndpoint(usbdesc_endpoint *epp) {
 	return n;
 }
 
-int USB::addString(void *ss) {
+int USB::addString(const void *ss) {
 	usbdesc_base *s = (usbdesc_base *) ss;
 // 	iprintf("[AST %p ", s);
 	if (s->bDescType == DT_STRING) {
@@ -561,7 +546,7 @@ void USB::dumpInterface(usbdesc_interface *i) {
 	iprintf("\t\tInterface:     "); dumpString(i->iInterface);
 }
 void USB::dumpEndpoint(usbdesc_endpoint *e) {
-	static const char* const attr[4] = { "", "Isochronous", "Bulk", "Interrupt" };
+	static const char* const attr[4] __attribute__ ((used)) = { "", "Isochronous", "Bulk", "Interrupt" };
 	iprintf("\t\t*Endpoint\n");
 	iprintf("\t\t\tAddress:    0x%02X (%s)\n", e->bEndpointAddress, ((e->bEndpointAddress & EP_DIR_IN)?"IN":"OUT"));
 	iprintf("\t\t\tAttributes: 0x%02X (%s)\n", e->bmAttributes, attr[e->bmAttributes]);
