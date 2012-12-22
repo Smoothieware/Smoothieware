@@ -105,6 +105,7 @@ void TemperatureControl::on_gcode_received(void* argument)
         if( gcode->m == this->get_m_code ){
 //             gcode->stream->printf("get temperature: %f current:%f target:%f bare_value:%u \r\n", this->get_temperature(), this->new_thermistor_reading(), this->desired_adc_value, this->kernel->adc->read(this->thermistor_pin)  );
             gcode->stream->printf("%s:%3.1f /%3.1f ", this->designator.c_str(), this->get_temperature(), ((this->desired_adc_value == UNDEFINED)?0.0:this->adc_value_to_temperature(this->desired_adc_value)));
+            gcode->add_nl = true;
         }
     }
 }
