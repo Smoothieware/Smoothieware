@@ -14,6 +14,7 @@ using namespace std;
 #include "libs/Hook.h"
 #include "system_LPC17xx.h" // mbed.h lib
 
+#include <mri.h>
 
 SlowTicker* global_slow_ticker;
 
@@ -25,6 +26,8 @@ SlowTicker::SlowTicker(){
     LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
     LPC_TIM2->TCR = 1;              // Enable interrupt
     NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
+
+    ispbtn.from_string("2.10")->as_input()->pull_up();
 }
 
 void SlowTicker::set_frequency( int frequency ){
@@ -49,6 +52,8 @@ void SlowTicker::tick(){
 
     LPC_GPIO1->FIOCLR = 1<<20;
 
+    if (ispbtn.get() == 0)
+        __debugbreak();
 }
 
 extern "C" void TIMER2_IRQHandler (void){
