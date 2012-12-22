@@ -100,7 +100,10 @@ void GcodeDispatch::on_console_line_received(void * line){
                 gcode.prepare_cached_values();
 
                 //Dispatch message!
+                gcode.add_nl = false;
                 this->kernel->call_event(ON_GCODE_RECEIVED, &gcode );
+                if (gcode.add_nl)
+                    new_message.stream->printf("\r\n");
                 new_message.stream->printf("ok\r\n");
             }
         }else{
