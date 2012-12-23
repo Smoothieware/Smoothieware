@@ -29,7 +29,7 @@
 
 #define DEFAULT_CONFIGURATION (1)
 
-/** 
+/**
 * USBMIDI example
 *
 * @code
@@ -38,8 +38,8 @@
 *
 * USBMIDI midi;
 *
-* int main() {            
-*    while (1) {    
+* int main() {
+*    while (1) {
 *        for(int i=48; i<83; i++) {     // send some messages!
 *            midi.write(MIDIMessage::NoteOn(i));
 *            wait(0.25);
@@ -66,7 +66,7 @@ public:
      * Send a MIDIMessage
      *
      * @param m The MIDIMessage to send
-     */    
+     */
     void write(MIDIMessage m);
 
     /**

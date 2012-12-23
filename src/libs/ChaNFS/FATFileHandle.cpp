@@ -13,24 +13,24 @@ namespace mbed {
 
 #if FFSDEBUG_ENABLED
 static const char *FR_ERRORS[] = {
-    "FR_OK = 0", 
-    "FR_NOT_READY",          
-    "FR_NO_FILE",              
-    "FR_NO_PATH",             
-    "FR_INVALID_NAME",     
-    "FR_INVALID_DRIVE",      
-    "FR_DENIED",              
-    "FR_EXIST",              
-    "FR_RW_ERROR",          
-    "FR_WRITE_PROTECTED", 
-    "FR_NOT_ENABLED",    
-    "FR_NO_FILESYSTEM",    
-    "FR_INVALID_OBJECT",    
-    "FR_MKFS_ABORTED"    
+    "FR_OK = 0",
+    "FR_NOT_READY",
+    "FR_NO_FILE",
+    "FR_NO_PATH",
+    "FR_INVALID_NAME",
+    "FR_INVALID_DRIVE",
+    "FR_DENIED",
+    "FR_EXIST",
+    "FR_RW_ERROR",
+    "FR_WRITE_PROTECTED",
+    "FR_NOT_ENABLED",
+    "FR_NO_FILESYSTEM",
+    "FR_INVALID_OBJECT",
+    "FR_MKFS_ABORTED"
 };
 #endif
 
-FATFileHandle::FATFileHandle(FIL_t fh) { 
+FATFileHandle::FATFileHandle(FIL_t fh) {
     _fh = fh;
 }
     
@@ -45,7 +45,7 @@ ssize_t FATFileHandle::write(const void* buffer, size_t length) {
     FFSDEBUG("write(%d)\n", length);
     UINT n;
     FRESULT res = f_write(&_fh, buffer, length, &n);
-    if(res) { 
+    if(res) {
         FFSDEBUG("f_write() failed (%d, %s)", res, FR_ERRORS[res]);
         return -1;
     }
