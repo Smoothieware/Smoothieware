@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <mri.h>
+#include <cstring>
 
 DFU::DFU(USB *u)
 {
@@ -32,8 +33,12 @@ DFU::DFU(USB *u)
         this,                       // callback
     };
 
+    usbdesc_string_l(13) s = usbstring("Smoothie DFU");
+    memcpy(&dfu_string, &s, sizeof(dfu_string));
+
     usb->addInterface(&dfu_interface);
     usb->addDescriptor(&dfu_descriptor);
+    dfu_interface.iInterface = usb->addString(&dfu_string);
 }
 
 bool DFU::USBEvent_Request(CONTROL_TRANSFER &control)

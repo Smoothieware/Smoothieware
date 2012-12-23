@@ -58,6 +58,8 @@ protected:
     usbdesc_endpoint    CDC_intep;
     usbdesc_endpoint    CDC_BulkIn;
     usbdesc_endpoint    CDC_BulkOut;
+
+    usbdesc_string_l(15) CDC_string;
 };
 
 #endif
