@@ -46,6 +46,33 @@ void Endstops::on_config_reload(void* argument){
     this->retract_steps[0]           = this->kernel->config->value(alpha_homing_retract_checksum       )->by_default("30" )->as_number();
     this->retract_steps[1]           = this->kernel->config->value(beta_homing_retract_checksum        )->by_default("30" )->as_number();
     this->retract_steps[2]           = this->kernel->config->value(gamma_homing_retract_checksum       )->by_default("10" )->as_number();
+    this->debounce_count             = this->kernel->config->value(endstop_debounce_count_checksum     )->by_default("100" )->as_number();
+}
+
+void Endstops::wait_for_homed(char axes_to_move)
+{
+    bool running = true;
+    unsigned int debounce[3] = {0,0,0};
+    while(running){
+        running = false;
+        for( char c = 'X'; c <= 'Z'; c++ ){
+            if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                 if( this->pins[c - 'X']->get() ){
+                    if( debounce[c - 'X'] < debounce_count ) {
+                        debounce[c - 'X'] ++;
+                        running = true;
+                    } else if ( this->steppers[c - 'X']->moving ){
+                        this->steppers[c - 'X']->move(0,0);
+                        printf("move done %c\r\n", c);
+                    }
+                }else{
+                    // The endstop was not hit yet
+                    running = true;
+                    debounce[c - 'X'] = 0;
+                 }
+            }
+        }
+    }
 }
 
 // Start homing sequences by response to GCode commands
@@ -77,24 +104,7 @@ void Endstops::on_gcode_received(void* argument){
             }
 
             // Wait for all axes to have homed
-            bool running = true;
-            while(running){
-                running = false;
-                for( char c = 'X'; c <= 'Z'; c++ ){
-                    if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                         if( this->pins[c - 'X']->get() ){
-                            // The endstop was hit, stop moving
-                            if( this->steppers[c - 'X']->moving ){
-                                this->steppers[c - 'X']->move(0,0);
-                            }
-                        }else{
-                            // The endstop was not hit yet
-                            running = true;
-                         }
-                    }
-                }
-            }
-
+            this->wait_for_homed(axes_to_move);
 
             printf("test a\r\n");
             // Move back a small distance
@@ -127,24 +137,7 @@ void Endstops::on_gcode_received(void* argument){
             }
 
             // Wait for all axes to have homed
-            running = true;
-            while(running){
-                running = false;
-                for( char c = 'X'; c <= 'Z'; c++ ){
-                    if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                         if( this->pins[c - 'X']->get() ){
-                            // The endstop was hit, stop moving
-                            if( this->steppers[c - 'X']->moving ){
-                                this->steppers[c - 'X']->move(0,0);
-                            }
-                        }else{
-                            // The endstop was not hit yet
-                            running = true;
-                         }
-                    }
-                }
-            }
-
+            this->wait_for_homed(axes_to_move);
 
             // Homing is done
             this->status = NOT_HOMING;
