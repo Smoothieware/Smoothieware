@@ -882,20 +882,22 @@ void USBHAL::usbisr(void)
         // Process each endpoint interrupt
         if (LPC_USB->USBEpIntSt & EP(EP0OUT))
         {
-            if (selectEndpointClearInterrupt(IDX2EP(EP0OUT)) & SIE_SE_STP)
+            uint8_t bEPStat = selectEndpointClearInterrupt(IDX2EP(EP0OUT));
+            if (bEPStat & SIE_SE_STP)
             {
                 // this is a setup packet
                 EP0setupCallback();
             }
-            else
+            else if (bEPStat & EPSTAT_FE) // OUT endpoint, FE = 1 - data in buffer
             {
                 EP0out();
             }
         }
         if (LPC_USB->USBEpIntSt & EP(EP0IN))
         {
-            selectEndpointClearInterrupt(IDX2EP(EP0IN));
-            EP0in();
+            uint8_t bEPStat = selectEndpointClearInterrupt(IDX2EP(EP0IN));
+            if ((bEPStat & EPSTAT_FE) == 0) // IN endpoint, FE = 0 - empty space in buffer
+                EP0in();
         }
 
         if (USBEpIntEn & ~(3UL))
