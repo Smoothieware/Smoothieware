@@ -35,9 +35,13 @@
 #define alpha_homing_retract_checksum    4419
 #define beta_homing_retract_checksum     48344
 #define gamma_homing_retract_checksum    54848
+#define endstop_debounce_count_checksum  25394
 
 
 class Endstops : public Module{
+    private:
+        void wait_for_homed(char axes_to_move);
+
     public:
         Endstops();
         void on_module_loaded();
@@ -49,6 +53,7 @@ class Endstops : public Module{
         double  slow_rates[3];
         double  fast_rates[3];
         unsigned int  retract_steps[3];
+        unsigned int  debounce_count;
         char status;
 };
 
