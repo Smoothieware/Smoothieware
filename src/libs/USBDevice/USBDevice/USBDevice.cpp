@@ -152,8 +152,12 @@ bool USBDevice::assembleConfigDescriptor()
         if (descriptors[confIndex]->bLength <= confSubIndex)
         {
             iprintf("CONFIG:next\n");
-            confIndex += 1;
+            do {
+                confIndex += 1;
+            } while ((descriptors[confIndex] != NULL) && (descriptors[confIndex]->bDescType == DT_STRING));
             confSubIndex = 0;
+            if (descriptors[confIndex] == 0)
+                return false;
         }
     }
     if (remaining < transfer.remaining)
@@ -314,7 +318,6 @@ bool USBDevice::controlIn(void)
         (transfer.setup.bmRequestType.Type == STANDARD_TYPE)         &&
         (DESCRIPTOR_TYPE(transfer.setup.wValue) == DT_CONFIGURATION)    )
     {
-
         assembleConfigDescriptor();
     }
     else
