@@ -450,7 +450,7 @@ int USB::addString(const void *ss) {
 
 		descriptors[i] = s;
 
-		conf.wTotalLength += descriptors[i]->bLength;
+// 		conf.wTotalLength += descriptors[i]->bLength;
 
 // 		iprintf("%p STROK]", descriptors[i]);
 
