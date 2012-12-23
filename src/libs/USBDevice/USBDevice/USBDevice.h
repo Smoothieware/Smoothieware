@@ -96,6 +96,8 @@ private:
     CONTROL_TRANSFER transfer;
     USB_DEVICE device;
 
+    uint8_t control_buffer[64];
+
     uint16_t currentInterface;
     uint8_t currentAlternate;
 };

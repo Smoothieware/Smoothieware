@@ -212,7 +212,7 @@ bool USBDevice::controlOut(void)
 {
     iprintf("{ControlOUT}");
     /* Control transfer data OUT stage */
-    uint8_t buffer[MAX_PACKET_SIZE_EP0];
+//     uint8_t buffer[MAX_PACKET_SIZE_EP0];
     int32_t packetSize;
 
     /* Check we should be transferring data OUT */
@@ -222,7 +222,7 @@ bool USBDevice::controlOut(void)
     }
 
     /* Read from endpoint */
-    packetSize = EP0getReadResult(buffer);
+    packetSize = EP0getReadResult(transfer.ptr);
 
     /* Check if transfer size is valid */
     if (packetSize > transfer.remaining)
@@ -243,7 +243,7 @@ bool USBDevice::controlOut(void)
         {
             /* Notify class layer. */
 //             USBCallback_requestCompleted(buffer, packetSize);
-            USBEvent_RequestComplete(transfer, buffer, packetSize);
+            USBEvent_RequestComplete(transfer, transfer.ptr, packetSize);
             transfer.notify = false;
         }
         /* Status stage */
@@ -579,13 +579,12 @@ bool USBDevice::controlSetup(void)
 {
     iprintf("{ControlSETUP}");
     /* Control transfer setup stage */
-    uint8_t buffer[MAX_PACKET_SIZE_EP0];
 
-    EP0setup(buffer);
+    EP0setup(control_buffer);
 
     /* Initialise control transfer state */
-    decodeSetupPacket(buffer, &transfer.setup);
-    transfer.ptr = NULL;
+    decodeSetupPacket(control_buffer, &transfer.setup);
+    transfer.ptr = control_buffer;
     transfer.remaining = 0;
     transfer.direction = 0;
     transfer.zlp = false;
