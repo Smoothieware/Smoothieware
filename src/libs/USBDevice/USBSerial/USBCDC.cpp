@@ -18,10 +18,11 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 
 #include "USBCDC.h"
 
-static uint8_t cdc_line_coding[7]= {0x80, 0x25, 0x00, 0x00, 0x00, 0x00, 0x08};
+// static uint8_t cdc_line_coding[7]= {0x80, 0x25, 0x00, 0x00, 0x00, 0x00, 0x08};
 
 #define iprintf(...) do { } while (0)
 
@@ -137,6 +138,11 @@ USBCDC::USBCDC(USB *u) {
 
     CDC_union.bMasterInterface = IfAddr;
     CDC_union.bSlaveInterface0 = slaveIfAddr;
+
+    cdc_line_coding.dwDTERate = 9600;
+    cdc_line_coding.bCharFormat = 0;
+    cdc_line_coding.bParityType = 0;
+    cdc_line_coding.bDataBits   = 8;
 }
 
 /* Called in ISR context */
@@ -149,13 +155,15 @@ bool USBCDC::USBEvent_Request(CONTROL_TRANSFER &transfer) {
             case CDC_GET_LINE_CODING:
 //                 iprintf("[CDC]:GET_LINE_ENCODING\n");
                 transfer.remaining = 7;
-                transfer.ptr = cdc_line_coding;
+                transfer.ptr = (uint8_t *) &cdc_line_coding;
                 transfer.direction = DEVICE_TO_HOST;
                 return true;
             case CDC_SET_LINE_CODING:
 //                 iprintf("[CDC]:SET_LINE_ENCODING\n");
                 transfer.remaining = 7;
-                transfer.ptr = cdc_line_coding;
+                transfer.ptr = (uint8_t *) &cdc_line_coding;
+                transfer.notify = true;
+                transfer.direction = HOST_TO_DEVICE;
                 return true;
             case CDC_SET_CONTROL_LINE_STATE:
                 iprintf("[CDC]:SET_CONTROL_LINE_STATE 0x%02X\n", transfer.setup.wValue);
@@ -181,18 +189,17 @@ bool USBCDC::USBEvent_RequestComplete(CONTROL_TRANSFER &transfer, uint8_t* buffe
             case CDC_SET_LINE_CODING:
             {
                 iprintf("Got Line Coding:");
-                uint32_t baud = cdc_line_coding[0] << 0 | cdc_line_coding[1] << 8 | cdc_line_coding[2] << 16 | cdc_line_coding[3] << 24;
-                iprintf(" BAUD: %lu (0x%02X%02X%02X%02X", baud, cdc_line_coding[0], cdc_line_coding[1], cdc_line_coding[2], cdc_line_coding[3]);
+                iprintf(" BAUD: %lu ", cdc_line_coding.dwDTERate);
                 iprintf(" STOP: ");
-                    if (cdc_line_coding[4] == 0) iprintf("1");
-                    else if (cdc_line_coding[4] == 1) iprintf("1.5");
-                    else if (cdc_line_coding[4] == 2) iprintf("2");
+                    if (cdc_line_coding.bCharFormat == 0) iprintf("1");
+                    else if (cdc_line_coding.bCharFormat == 1) iprintf("1.5");
+                    else if (cdc_line_coding.bCharFormat == 2) iprintf("2");
                     else iprintf("?");
-                iprintf(" PARITY: %d", cdc_line_coding[5]);
-                iprintf(" DATABITS: %d", cdc_line_coding[6]);
+                iprintf(" PARITY: %d", cdc_line_coding.bParityType);
+                iprintf(" DATABITS: %d", cdc_line_coding.bDataBits);
 
                 iprintf("\n");
-                break;
+                return true;
             }
         }
     }
