@@ -123,4 +123,11 @@ typedef struct __attribute__ ((packed)) {
 } usbcdc_ether;
 #define USB_CDC_LENGTH_ETHER sizeof(usbcdc_ether)
 
+typedef struct __attribute__ ((packed)) {
+    uint32_t    dwDTERate;              // data terminal rate, bits per second
+    uint8_t     bCharFormat;            // 0: 1 stop bit, 1: 1.5 stop bits, 2: 2 stop bits
+    uint8_t     bParityType;            // 0: none, 1: odd, 2: even, 3: mark, 4: space
+    uint8_t     bDataBits;              // number of data bits (5, 6, 7, 8, 16)
+} usbcdc_line_coding;
+
 #endif /* _DESCRIPTOR_CDC_H */

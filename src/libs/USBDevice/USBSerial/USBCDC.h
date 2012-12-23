@@ -60,6 +60,8 @@ protected:
     usbdesc_endpoint    CDC_BulkOut;
 
     usbdesc_string_l(15) CDC_string;
+
+    usbcdc_line_coding  cdc_line_coding;
 };
 
 #endif
