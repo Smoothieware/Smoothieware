@@ -119,6 +119,9 @@ USBCDC::USBCDC(USB *u) {
         this,                   // endpoint callback
     };
 
+    usbdesc_string_l(16) s = usbstring("Smoothie Serial");
+    memcpy(&CDC_string, &s, sizeof(CDC_string));
+
     uint8_t IfAddr =
         usb->addInterface(&CDC_if);
     usb->addEndpoint(&CDC_intep);
@@ -129,6 +132,8 @@ USBCDC::USBCDC(USB *u) {
         usb->addInterface(&CDC_slaveif);
     usb->addEndpoint(&CDC_BulkIn);
     usb->addEndpoint(&CDC_BulkOut);
+
+    CDC_if.iInterface = usb->addString(&CDC_string);
 
     CDC_union.bMasterInterface = IfAddr;
     CDC_union.bSlaveInterface0 = slaveIfAddr;

@@ -74,6 +74,8 @@ protected:
     DFU_functional_descriptor   dfu_descriptor;
     usbdesc_interface           dfu_interface;
 
+    usbdesc_string_l(12)        dfu_string;
+
     DFU_Status_Response         dfu_status;
 };
 
