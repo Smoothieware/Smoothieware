@@ -19,7 +19,7 @@ using namespace std;
 
 class FileConfigSource : public ConfigSource {
     public:
-        FileConfigSource(string config_file = "/sd/config.txt", uint16_t name_checksum = FILE_CONFIGSOURCE_CHECKSUM);
+        FileConfigSource(string config_file = "/sd/config", uint16_t name_checksum = FILE_CONFIGSOURCE_CHECKSUM);
         void transfer_values_to_cache( ConfigCache* cache );
         bool is_named( uint16_t check_sum );
         void write( string setting, string value );
