@@ -47,6 +47,7 @@ protected:
     USB *usb;
 
     // USB Descriptors
+    usbdesc_iad         CDC_iad;
     usbdesc_interface   CDC_if;
     usbcdc_header       CDC_header;
     usbcdc_callmgmt     CDC_callmgmt;

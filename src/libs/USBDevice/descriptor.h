@@ -8,15 +8,22 @@
 #define DL_INTERFACE                0x09
 #define DL_ENDPOINT                 0x07
 #define DL_LANGUAGE                 0x04
+#define DL_INTERFACE_ASSOCIATION    0x08
 
 #define mA                          /2
 
-#define DT_DEVICE                   1
-#define DT_CONFIGURATION            2
-#define DT_STRING                   3
-#define DT_LANGUAGE                 3
-#define DT_INTERFACE                4
-#define DT_ENDPOINT                 5
+#define DT_DEVICE                   0x01
+#define DT_CONFIGURATION            0x02
+#define DT_STRING                   0x03
+#define DT_LANGUAGE                 0x03
+#define DT_INTERFACE                0x04
+#define DT_ENDPOINT                 0x05
+#define DT_DEVICE_QUALIFIER         0x06
+#define DT_OTHER_SPEED              0x07
+#define DT_INTERFACE_POWER          0x08
+#define DT_OTG                      0x09
+#define DT_DEBUG                    0x0A
+#define DT_INTERFACE_ASSOCIATION    0x0B
 
 #define USB_VERSION_1_0             0x0100
 #define USB_VERSION_1_1             0x0110
@@ -167,5 +174,18 @@ typedef struct __attribute__ ((packed))
 #define usbstring_init(name, string) struct __attribute__ ((packed)) { const uint8_t bLength; const uint8_t bDescType; char16_t str[sizeof(string)]; } name = { sizeof(u ## string), DT_STRING, { u ## string } }
 
 #define usbstring_const_init(name, string) const struct __attribute__ ((packed)) { const uint8_t bLength; const uint8_t bDescType; const char16_t str[sizeof(string)]; } name = { sizeof(u ## string), DT_STRING, { u ## string } }
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t         bLength;
+    uint8_t         bDescType;
+    uint8_t         bFirstInterface;        // interface index of the first interface for this function
+    uint8_t         bInterfaceCount;        // number of contiguous interfaces used with this function
+    uint8_t         bFunctionClass;         // Class code - see Device descriptor
+    uint8_t         bFunctionSubClass;      // Subclass code
+    uint8_t         bFunctionProtocol;      // Protocol code
+    uint8_t         iFunction;              // function name string
+}
+    usbdesc_iad;
 
 #endif /* _DESCRIPTOR_H */
