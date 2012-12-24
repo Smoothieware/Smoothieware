@@ -37,6 +37,16 @@
 USBCDC::USBCDC(USB *u) {
     usb = u;
 
+    CDC_iad = {
+        DL_INTERFACE_ASSOCIATION,
+        DT_INTERFACE_ASSOCIATION,
+        0,                          // bFirstInterface - filled out later
+        2,                          // bInterfaceCount - contiguous interfaces associated with this function
+        UC_COMM,                    // bFunctionClass
+        USB_CDC_SUBCLASS_ACM,       // bFunctionSubClass
+        USB_CDC_PROTOCOL_ITU_V250,  // bFunctionProtocol
+        0,                          // iFunction
+    };
     CDC_if = {
         DL_INTERFACE,               // bLength
         DT_INTERFACE,               // bDescType
@@ -123,6 +133,7 @@ USBCDC::USBCDC(USB *u) {
     usbdesc_string_l(16) s = usbstring("Smoothie Serial");
     memcpy(&CDC_string, &s, sizeof(CDC_string));
 
+    usb->addDescriptor(&CDC_iad);
     uint8_t IfAddr =
         usb->addInterface(&CDC_if);
     usb->addEndpoint(&CDC_intep);
@@ -136,8 +147,11 @@ USBCDC::USBCDC(USB *u) {
 
     CDC_if.iInterface = usb->addString(&CDC_string);
 
-    CDC_union.bMasterInterface = IfAddr;
-    CDC_union.bSlaveInterface0 = slaveIfAddr;
+    CDC_iad.bFirstInterface     = IfAddr;
+    CDC_iad.iFunction           = CDC_if.iInterface;
+    CDC_union.bMasterInterface  = IfAddr;
+    CDC_union.bSlaveInterface0  = slaveIfAddr;
+    CDC_callmgmt.bDataInterface = slaveIfAddr;
 
     cdc_line_coding.dwDTERate = 9600;
     cdc_line_coding.bCharFormat = 0;
