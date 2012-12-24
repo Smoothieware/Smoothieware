@@ -13,9 +13,9 @@ usbdesc_device USB::device = {
 	DL_DEVICE,
 	DT_DEVICE,
 	USB_VERSION_2_0,	// .bcdUSB
-	UC_PER_INTERFACE,	// .bDeviceClass
-	0,					// .bDeviceSubClass
-	0,					// .bDeviceProtocol
+	UC_MISC,        	// .bDeviceClass
+	SUBCLASS_IAD,	    // .bDeviceSubClass
+	PROTOCOL_IAD,		// .bDeviceProtocol
 	64,					// .bMaxPacketSize0
 	0x1d50,				// .idVendor
 	0x6015,				// .idProduct

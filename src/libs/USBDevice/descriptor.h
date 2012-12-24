@@ -48,6 +48,9 @@
 #define UC_APP_SPEC                 0xFE
 #define UC_VENDOR_SPEC              0xFF
 
+#define SUBCLASS_IAD                0x02
+#define PROTOCOL_IAD                0x01
+
 #define CA_BUSPOWERED               0x80
 #define CA_SELFPOWERED              0x40
 #define CA_REMOTEWAKEUP             0x20
