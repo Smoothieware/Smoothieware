@@ -136,10 +136,11 @@ USBCDC::USBCDC(USB *u) {
     usb->addDescriptor(&CDC_iad);
     uint8_t IfAddr =
         usb->addInterface(&CDC_if);
-    usb->addEndpoint(&CDC_intep);
+    usb->addDescriptor(&CDC_header);
     usb->addDescriptor(&CDC_callmgmt);
     usb->addDescriptor(&CDC_acm);
     usb->addDescriptor(&CDC_union);
+    usb->addEndpoint(&CDC_intep);
     uint8_t slaveIfAddr =
         usb->addInterface(&CDC_slaveif);
     usb->addEndpoint(&CDC_BulkIn);
