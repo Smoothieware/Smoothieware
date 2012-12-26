@@ -30,13 +30,18 @@ CONSOLE=/dev/arduino_A900K10V
 
 include ./gcc4mbed/build/gcc4mbed.mk
 
-flash: $(PROJECT).hex
+.PHONY: debug-store flash upload debug console
+
+debug-store: $(PROJECT).elf
+	cp $(PROJECT).elf $(PROJECT)_lastupload.elf
+
+flash: $(PROJECT).hex debug-store
 	lpc21isp $< /dev/ttyACM0 115200 14746
 
-upload: $(PROJECT).bin
+upload: $(PROJECT).bin debug-store
 	dfu-util -d 1d50:6015 -D $<
 
-debug: $(PROJECT).elf
+debug: $(PROJECT)_lastupload.elf
 	arm-none-eabi-gdb $< -ex  "set target-charset ASCII" -ex "set remotelogfile mri.log" -ex "target remote $(CONSOLE)"
 
 console:
