@@ -7,9 +7,11 @@
 #include "libs/utils.h"
 #include <string>
 
-class Pin{
+class Pin {
     public:
-        Pin(){ }
+        Pin(){
+            _pwm = -1;
+        }
 
         Pin* from_string(std::string value){
             LPC_GPIO_TypeDef* gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
@@ -25,6 +27,7 @@ class Pin{
                 this->pin  = atoi( value.substr(2, value.size()-2-(this->inverting?1:0)).c_str() );
                 this->port->FIOMASK &= ~(1 << this->pin);
             }
+            _pwm = -1;
             return this;
         }
 
@@ -86,19 +89,61 @@ class Pin{
             return this->inverting ^ (( this->port->FIOPIN >> this->pin ) & 1);
         }
 
-        inline void set(bool value){
+        inline void set(bool value)
+        {
             if (this->pin == 255) return;
-            if( this->inverting ^ value ){
+            _pwm = -1;
+            _set(value);
+        }
+
+        inline void _set(bool value)
+        {
+            if ( this->inverting ^ value )
                 this->port->FIOSET = 1 << this->pin;
-            }else{
+            else
                 this->port->FIOCLR = 1 << this->pin;
+        }
+
+        inline void pwm(int value)
+        {
+            if ((value >= 0) && (value < 1024))
+            {
+                _pwm = value;
+                _set(value >= 512);
             }
+        }
+
+        // SIGMA-DELTA modulator
+        uint32_t tick(uint32_t dummy)
+        {
+            if ((_pwm < 0) || (_pwm > 1023))
+                return dummy;
+            if (_sd_direction == false)
+            {
+                _sd_accumulator += _pwm;
+                if (_sd_accumulator >= (1024 >> 1))
+                    _sd_direction = true;
+            }
+            else
+            {
+                _sd_accumulator -= (1024 - _pwm);
+                if (_sd_accumulator <= 0)
+                    _sd_direction = false;
+            }
+            _set(_sd_direction);
+
+            return dummy;
         }
 
         bool inverting;
         LPC_GPIO_TypeDef* port;
         char port_number;
         char pin;
+        int _pwm;
+
+        // SIGMA-DELTA pwm counters
+        int _sd_accumulator;
+        bool _sd_direction;
 };
 
 
