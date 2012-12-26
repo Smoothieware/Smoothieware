@@ -2,6 +2,7 @@
 #define PIN_H
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "libs/LPC17xx/sLPC17xx.h" // smoothed mbed.h lib
 #include "libs/Kernel.h"
 #include "libs/utils.h"
@@ -11,6 +12,7 @@ class Pin {
     public:
         Pin(){
             _pwm = -1;
+            _sd_accumulator = 0;
         }
 
         Pin* from_string(std::string value){
@@ -28,6 +30,7 @@ class Pin {
                 this->port->FIOMASK &= ~(1 << this->pin);
             }
             _pwm = -1;
+            _sd_accumulator = 0;
             return this;
         }
 
@@ -106,11 +109,11 @@ class Pin {
 
         inline void pwm(int value)
         {
-            if ((value >= 0) && (value < 1024))
-            {
-                _pwm = value;
-                _set(value >= 512);
-            }
+            if (value > 1023)
+                value = 1023;
+            if (value < 0)
+                value = 0;
+            _pwm = value;
         }
 
         // SIGMA-DELTA modulator
@@ -118,6 +121,11 @@ class Pin {
         {
             if ((_pwm < 0) || (_pwm > 1023))
                 return dummy;
+            if (_sd_accumulator < -1024)
+                _sd_accumulator = -1024;
+            if (_sd_accumulator > 2048)
+                _sd_accumulator = 2048;
+//             printf("[%d %d]", _pwm, _sd_accumulator);
             if (_sd_direction == false)
             {
                 _sd_accumulator += _pwm;
