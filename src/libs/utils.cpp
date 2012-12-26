@@ -74,7 +74,7 @@ string shift_parameter( string &parameters ){
 string get_arguments( string possible_command ){
     size_t beginning = possible_command.find_first_of(" ");
     if( beginning == string::npos ){ return ""; }
-    return possible_command.substr( beginning+1, possible_command.size() - beginning);
+    return possible_command.substr( beginning + 1, possible_command.size() - beginning + 1);
 }
 
 // Returns true if the file exists
