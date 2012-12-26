@@ -83,13 +83,13 @@ void Robot::on_gcode_received(void * argument){
         this->execute_gcode(gcode);
         block->append_gcode(gcode);
     }
-    
+
 }
 
 
 //See if the current Gcode line has some orders for us
 void Robot::execute_gcode(Gcode* gcode){
-    
+
     //Temp variables, constant properties are stored in the object
     uint8_t next_action = NEXT_ACTION_DEFAULT;
     this->motion_mode = -1;
@@ -108,22 +108,23 @@ void Robot::execute_gcode(Gcode* gcode){
            case 21:this->inch_mode = false; break;
            case 90:this->absolute_mode = true; break;
            case 91:this->absolute_mode = false; break;
-           case 92: clear_vector(this->last_milestone);
-                    if(gcode->get_num_args() == 0){
-                        for (char letter = 'X'; letter <= 'Z'; letter++){
-                            if ( gcode->has_letter(letter) )
-                              this->last_milestone[letter-'X'] = this->to_millimeters(0.0);
-                        }
-                    }else{
-                        for (char letter = 'X'; letter <= 'Z'; letter++){
-                            if ( gcode->has_letter(letter) )
-                              this->last_milestone[letter-'X'] = this->to_millimeters(gcode->get_value(letter));
-                        }
+           case 92: {
+                if(gcode->get_num_args() == 0){
+                    for (char letter = 'X'; letter <= 'Z'; letter++){
+                        if ( gcode->has_letter(letter) )
+                            this->last_milestone[letter-'X'] = this->to_millimeters(0.0);
                     }
-                    memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
-                    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
-                    return; // TODO: Wait until queue empty
-        }
+                }else{
+                    for (char letter = 'X'; letter <= 'Z'; letter++){
+                        if ( gcode->has_letter(letter) )
+                            this->last_milestone[letter-'X'] = this->to_millimeters(gcode->get_value(letter));
+                    }
+                }
+                memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
+                this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+                return; // TODO: Wait until queue empty
+           }
+       }
    }else if( gcode->has_letter('M')){
      switch( (int) gcode->get_value('M') ){
          case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f\n",
@@ -135,18 +136,18 @@ void Robot::execute_gcode(Gcode* gcode){
    }
     if( this->motion_mode < 0)
         return;
-    
+
    //Get parameters
     double target[3], offset[3];
     clear_vector(target); clear_vector(offset);
-    
+
     memcpy(target, this->current_position, sizeof(target));    //default to last target
-    
+
     for(char letter = 'I'; letter <= 'K'; letter++){ if( gcode->has_letter(letter) ){ offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));                                                    } }
     for(char letter = 'X'; letter <= 'Z'; letter++){ if( gcode->has_letter(letter) ){ target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);  } }
-    
+
     if( gcode->has_letter('F') ){ if( this->motion_mode == MOTION_MODE_SEEK ){ this->seek_rate = this->to_millimeters( gcode->get_value('F') ) / 60; }else{ this->feed_rate = this->to_millimeters( gcode->get_value('F') ) / 60; } }
-   
+
     //Perform any physical actions
     switch( next_action ){
         case NEXT_ACTION_DEFAULT:
@@ -169,15 +170,15 @@ void Robot::execute_gcode(Gcode* gcode){
 // Convert target from millimeters to steps, and append this to the planner
 void Robot::append_milestone( double target[], double rate ){
     int steps[3]; //Holds the result of the conversion
-   
+
     this->arm_solution->millimeters_to_steps( target, steps );
-    
+
     double deltas[3];
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
 
-    
+
     double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
-    
+
     double duration = 0;
     if( rate > 0 ){ duration = millimeters_of_travel / rate; }
 
@@ -256,7 +257,7 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
         this->append_milestone(this->current_position, 0.0);
         return;
     }
- 
+
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
 
     double theta_per_segment = angular_travel/segments;
