@@ -73,6 +73,8 @@ int USBSerial::puts(const char *str)
     {
         if ((*str != '\r') && txbuf.free())
             txbuf.queue(*str);
+        if ((txbuf.available() % 64) == 0)
+            usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
         i++;
         str++;
     }
