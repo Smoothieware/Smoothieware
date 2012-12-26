@@ -71,10 +71,12 @@ int USBSerial::puts(const char *str)
     int i = 0;
     while (*str)
     {
-        _putc(*str);
+        if ((*str != '\r') && txbuf.free())
+            txbuf.queue(*str);
         i++;
         str++;
     }
+    usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
     return i;
 }
 
