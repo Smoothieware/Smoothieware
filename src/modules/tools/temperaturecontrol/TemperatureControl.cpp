@@ -17,14 +17,15 @@ TemperatureControl::TemperatureControl(){}
 
 TemperatureControl::TemperatureControl(uint16_t name){
     this->name_checksum = name;
-    this->error_count = 0;
+//     this->error_count = 0;
     this->waiting = false;
 }
 
 void TemperatureControl::on_module_loaded(){
-    
+
     // We start not desiring any temp
-    this->desired_adc_value = UNDEFINED;
+//     this->desired_adc_value = UNDEFINED;
+    this->target_temperature = UNDEFINED;
 
     // Settings
     this->on_config_reload(this);
@@ -57,8 +58,6 @@ void TemperatureControl::on_config_reload(void* argument){
     this->r0   = 100000;
     this->t0   = 25;
     this->beta = 4066;
-    this->vadc = 3.3;
-    this->vcc  = 3.3;
     this->r1   = 0;
     this->r2   = 4700;
 
@@ -71,17 +70,19 @@ void TemperatureControl::on_config_reload(void* argument){
     }else if( thermistor->value.compare("Semitec"      ) == 0 ){ this->beta = 4267; }
 
     // Preset values are overriden by specified values
-    this->r0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r0_checksum  )->by_default(100000)->as_number();               // Stated resistance eg. 100K
-    this->t0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, t0_checksum  )->by_default(25    )->as_number() + 273.15;      // Temperature at stated resistance, eg. 25C
-    this->beta =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, beta_checksum)->by_default(4066  )->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
-    this->vadc =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, vadc_checksum)->by_default(3.3   )->as_number();               // ADC Reference
-    this->vcc  =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, vcc_checksum )->by_default(3.3   )->as_number();               // Supply voltage to potential divider
-    this->r1 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r1_checksum  )->by_default(0     )->as_number();
-    this->r2 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r2_checksum  )->by_default(4700  )->as_number();
-    
+    this->r0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r0_checksum  )->by_default(this->r0  )->as_number();               // Stated resistance eg. 100K
+    this->t0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, t0_checksum  )->by_default(this->t0  )->as_number();               // Temperature at stated resistance, eg. 25C
+    this->beta =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, beta_checksum)->by_default(this->beta)->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
+    this->r1 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
+    this->r2 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
+
+
     // Thermistor math
-    this->k = this->r0 * exp( -this->beta / this->t0 );
-    if( r1 > 0 ){ this->vs = r1 * this->vcc / ( r1 + r2 ); this->rs = r1 * r2 / ( r1 + r2 ); }else{ this->vs = this->vcc; this->rs = r2; }
+    j = (1.0 / beta);
+    k = (1.0 / (t0 + 273.15));
+
+    // ADC smoothing
+    running_total = 0;
 
     // Thermistor pin for ADC readings
     this->thermistor_pin = this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_pin();
@@ -91,6 +92,16 @@ void TemperatureControl::on_config_reload(void* argument){
     this->heater_pin     =  this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_pin()->as_output();
     this->heater_pin->set(0);
 
+    // activate SD-DAC timer
+    this->kernel->slow_ticker->attach(100, this->heater_pin, &Pin::tick);
+
+    // PID
+    this->p_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number();
+    this->i_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.1)->as_number();
+    this->d_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(20 )->as_number();
+    this->i_max    = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(10)->as_number();
+    this->i_accumulator  = 0.0;
+    this->last_reading = 0.0;
 }
 
 //#pragma GCC push_options
@@ -103,8 +114,7 @@ void TemperatureControl::on_gcode_received(void* argument)
     {
         // Get temperature
         if( gcode->m == this->get_m_code ){
-//             gcode->stream->printf("get temperature: %f current:%f target:%f bare_value:%u \r\n", this->get_temperature(), this->new_thermistor_reading(), this->desired_adc_value, this->kernel->adc->read(this->thermistor_pin)  );
-            gcode->stream->printf("%s:%3.1f /%3.1f ", this->designator.c_str(), this->get_temperature(), ((this->desired_adc_value == UNDEFINED)?0.0:this->adc_value_to_temperature(this->desired_adc_value)));
+            gcode->stream->printf("%s:%3.1f /%3.1f (%d) @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->kernel->adc->read(this->thermistor_pin), this->o);
             gcode->add_nl = true;
         }
     }
@@ -114,32 +124,46 @@ void TemperatureControl::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if( gcode->has_m){
         // Set temperature without waiting
-        if( gcode->m == this->set_m_code && gcode->has_letter('S') ){
+        if( gcode->m == this->set_m_code && gcode->has_letter('S') )
+        {
             //gcode->stream->printf("setting to %f meaning %u  \r\n", gcode->get_value('S'), this->temperature_to_adc_value( gcode->get_value('S') ) );
             if (gcode->get_value('S') == 0)
             {
-                this->desired_adc_value = UNDEFINED;
+                this->target_temperature = UNDEFINED;
                 this->heater_pin->set(0);
             }
             else
             {
-            this->set_desired_temperature(gcode->get_value('S'));
-        }
+                this->set_desired_temperature(gcode->get_value('S'));
+            }
         }
         // Set temperature and wait
-        if( gcode->m == this->set_and_wait_m_code && gcode->has_letter('S') ){
+        if( gcode->m == this->set_and_wait_m_code && gcode->has_letter('S') )
+        {
             if (gcode->get_value('S') == 0)
             {
-                this->desired_adc_value = UNDEFINED;
+                this->target_temperature = UNDEFINED;
                 this->heater_pin->set(0);
             }
             else
             {
-            this->set_desired_temperature(gcode->get_value('S'));
-            // Pause
-            this->kernel->pauser->take();
-            this->waiting = true;
+                this->set_desired_temperature(gcode->get_value('S'));
+                // Pause
+                this->kernel->pauser->take();
+                this->waiting = true;
+            }
         }
+        if (gcode->m == 301)
+        {
+            if (gcode->has_letter('P'))
+                this->p_factor = gcode->get_value('P');
+            if (gcode->has_letter('I'))
+                this->i_factor = gcode->get_value('I');
+            if (gcode->has_letter('D'))
+                this->d_factor = gcode->get_value('D');
+            if (gcode->has_letter('X'))
+                this->i_max    = gcode->get_value('X');
+            gcode->stream->printf("%s: P:%g I:%g D:%g X(I_max):%g I_accum:%g P:%g I:%g D:%g O:%d\n", this->designator.c_str(), this->p_factor, this->i_factor, this->d_factor, this->i_max, this->i_accumulator, this->p, this->i, this->d, o);
         }
     }
 }
@@ -148,90 +172,85 @@ void TemperatureControl::on_gcode_execute(void* argument){
 
 
 void TemperatureControl::set_desired_temperature(double desired_temperature){
-    this->desired_adc_value = this->temperature_to_adc_value(desired_temperature);
+//     this->desired_adc_value = this->temperature_to_adc_value(desired_temperature);
+    target_temperature = desired_temperature;
 }
 
 double TemperatureControl::get_temperature(){
-    return this->adc_value_to_temperature( this->new_thermistor_reading() );
+    return last_reading;
 }
 
-double TemperatureControl::adc_value_to_temperature(double adc_value){
-    double v = adc_value * this->vadc;            // Convert from 0-1 adc value to voltage
-    double r = this->rs * v / ( this->vs - v );   // Resistance of thermistor
-    return ( this->beta / log( r / this->k )) - 273.15;
-}
-
-double TemperatureControl::temperature_to_adc_value(double temperature){
-    double r = this->r0 * exp( this->beta * ( 1 / (temperature + 273.15) -1 / this->t0 ) ); // Resistance of the thermistor
-    double v = this->vs * r / ( this->rs + r );                                             // Voltage at the potential divider
-    return v / this->vadc * 1.00000;                                               // The ADC reading
+double TemperatureControl::adc_value_to_temperature(int adc_value)
+{
+    if ((adc_value == 4095) || (adc_value == 0))
+        return INFINITY;
+    double r = r2 / ((4095.0 / adc_value) - 1.0);
+    if (r1 > 0)
+        r = (r1 * r) / (r1 - r);
+    return (1.0 / (k + (j * log(r / r0)))) - 273.15;
 }
 
 uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
-    if( this->desired_adc_value != UNDEFINED ){
-        double r = this->new_thermistor_reading();
-        if ((r > 0.01) &&
-            (r < 0.99) &&
-            (r > this->desired_adc_value))
+    int r = new_thermistor_reading();
+
+    double temperature = adc_value_to_temperature(r);
+
+    if (target_temperature > 0)
+    {
+        if ((r <= 1) || (r >= 4094))
         {
-            this->heater_pin->set(1);
+            kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin->port_number, this->thermistor_pin->pin);
+            target_temperature = UNDEFINED;
+            heater_pin->set(0);
         }
         else
         {
-            if (((r <= 0.01) || (r >= 0.99)) && (this->desired_adc_value != UNDEFINED))
+            pid_process(temperature);
+            if ((temperature > target_temperature) && waiting)
             {
-                this->kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin->port_number, this->thermistor_pin->pin);
-                this->desired_adc_value = UNDEFINED;
-            }
-            this->heater_pin->set(0);
-            if (this->waiting)
-            {
-                this->kernel->pauser->release();
-                this->waiting = false;
+                kernel->pauser->release();
+                waiting = false;
             }
         }
     }
+    last_reading = temperature;
     return 0;
 }
 
-double TemperatureControl::new_thermistor_reading(){
-   
-    double new_reading = double( double(this->kernel->adc->read(this->thermistor_pin) / double(1<<12) ) );
+void TemperatureControl::pid_process(double temperature)
+{
+    double error = target_temperature - temperature;
 
-    if( this->queue.size() < 15 ){
-        this->queue.push_back( new_reading );
-        return new_reading;
-    }else{
-        double current_temp = this->average_adc_reading();
-        double error = fabs(new_reading - current_temp);
-        if( error < 0.1 ){
-            this->error_count = 0;
-            double test;
-            this->queue.pop_front(test);
-            this->queue.push_back( new_reading );
-        }else{
-            this->error_count++;
-            if( this->error_count > 4 ){
-                double test;
-                this->queue.pop_front(test);
-            }
-        }
-        return current_temp;
-    }
+    p = error * p_factor;
+    i = this->i_accumulator + (error * this->i_factor);
+    d = (temperature - last_reading) * this->d_factor;
+
+    if (i > this->i_max)
+        i = this->i_max;
+    if (i < -this->i_max)
+        i = -this->i_max;
+
+    this->i_accumulator = i;
+
+    this->o = (p + i - d) * 1024;
+    if (this->o > 1023)
+        this->o = 1023;
+    if (this->o < 0)
+        this->o = 0;
+
+    this->heater_pin->pwm(o);
 }
 
-
-double TemperatureControl::average_adc_reading(){
-    double total = 0;
-    int j = 0;
-    int reading_index = this->queue.head;
-    while( reading_index != this->queue.tail ){
-        j++;
-        total += this->queue.buffer[reading_index];
-        reading_index = this->queue.next_block_index( reading_index );
+int TemperatureControl::new_thermistor_reading()
+{
+    int r = this->kernel->adc->read(this->thermistor_pin);
+    if (queue.size() >= queue.capacity())
+    {
+        uint16_t l;
+        queue.pop_front(l);
+        running_total -= l;
     }
-    return total / j;
+    queue.push_back((uint16_t) r);
+    running_total += r;
+    return running_total / queue.size();
 }
-
-
-
