@@ -83,6 +83,8 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // ADC smoothing
     running_total = 0;
+    // sigma-delta output modulation
+    o = 0;
 
     // Thermistor pin for ADC readings
     this->thermistor_pin = this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_pin();
@@ -114,7 +116,7 @@ void TemperatureControl::on_gcode_received(void* argument)
     {
         // Get temperature
         if( gcode->m == this->get_m_code ){
-            gcode->stream->printf("%s:%3.1f /%3.1f (%d) @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->kernel->adc->read(this->thermistor_pin), this->o);
+            gcode->stream->printf("%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
             gcode->add_nl = true;
         }
     }
@@ -243,14 +245,15 @@ void TemperatureControl::pid_process(double temperature)
 
 int TemperatureControl::new_thermistor_reading()
 {
-    int r = this->kernel->adc->read(this->thermistor_pin);
+    int last_raw = this->kernel->adc->read(this->thermistor_pin);
     if (queue.size() >= queue.capacity())
     {
         uint16_t l;
         queue.pop_front(l);
         running_total -= l;
     }
-    queue.push_back((uint16_t) r);
-    running_total += r;
+    uint16_t r = last_raw;
+    queue.push_back(r);
+    running_total += last_raw;
     return running_total / queue.size();
 }
