@@ -232,7 +232,7 @@ void TemperatureControl::pid_process(double temperature)
 
     this->i_accumulator = i;
 
-    this->o = (p + i - d) * 1024;
+    this->o = (p + i - d) * 4;
     if (this->o > 1023)
         this->o = 1023;
     if (this->o < 0)
