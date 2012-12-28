@@ -73,6 +73,9 @@ void Extruder::on_config_reload(void* argument){
     this->step_pin                    = this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_pin()->as_output();
     this->dir_pin                     = this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_pin()->as_output();
     this->en_pin                      = this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_pin()->as_output()->as_open_drain();
+
+	// disable by default
+	this->en_pin->set(1);
 }
 
 

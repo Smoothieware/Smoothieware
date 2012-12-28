@@ -33,7 +33,7 @@ int main() {
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.0 \r\n");
 
-    kernel->add_module( new Laser(p21) );
+//     kernel->add_module( new Laser(p21) );
     kernel->add_module( new Extruder() );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
