@@ -11,14 +11,12 @@
 #include "modules/robot/Block.h"
 #include "modules/tools/extruder/Extruder.h"
 
-#define extruder_step_pin_checksum    40763
-#define extruder_dir_pin_checksum     57277
-#define extruder_en_pin_checksum      8017
-
 /* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
 * It can work in two modes : either the head does not move, and the extruder moves the filament at a specified speed ( SOLO mode here )
 * or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
 */
+
+// extruder_acceleration_checksum
 
 Extruder::Extruder() {
     this->absolute_mode = true;
@@ -69,6 +67,7 @@ void Extruder::on_config_reload(void* argument){
     this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
     this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
     this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
+    this->max_speed                   = this->kernel->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
 
     this->step_pin                    = this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_pin()->as_output();
     this->dir_pin                     = this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_pin()->as_output();
@@ -119,7 +118,7 @@ void Extruder::on_gcode_execute(void* argument){
                 this->target_position = this->current_position;
                 this->current_steps = 0;
             }
-        }else{
+        }else if ((gcode->g == 0) || (gcode->g == 1)){
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )){
                 // Get relative extrusion distance depending on mode ( in absolute mode we must substract target_position )
@@ -131,10 +130,13 @@ void Extruder::on_gcode_execute(void* argument){
                     this->mode = SOLO;
                     this->travel_distance = relative_extrusion_distance;
                     if( gcode->has_letter('F') ){ this->feed_rate = gcode->get_value('F'); }
+                    if (this->feed_rate > (this->max_speed * 60))
+                        this->feed_rate = this->max_speed * 60;
                 }else{
                     // We move proportionally to the robot's movement
                     this->mode = FOLLOW;
                     this->travel_ratio = relative_extrusion_distance / gcode->millimeters_of_travel;
+                    // TODO: check resulting flowrate, limit robot speed if it exceeds max_speed
                 }
 
                 this->en_pin->set(0);
