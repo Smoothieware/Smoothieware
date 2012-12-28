@@ -99,10 +99,10 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // PID
     this->p_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number();
-    this->i_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.1)->as_number();
-    this->d_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(20 )->as_number();
-    this->i_max    = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(10)->as_number();
-    this->i_accumulator  = 0.0;
+    this->i_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number();
+    this->d_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number();
+    this->i_max    = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(50 )->as_number();
+    this->i = 0.0;
     this->last_reading = 0.0;
 }
 
@@ -165,7 +165,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
                 this->d_factor = gcode->get_value('D');
             if (gcode->has_letter('X'))
                 this->i_max    = gcode->get_value('X');
-            gcode->stream->printf("%s: P:%g I:%g D:%g X(I_max):%g I_accum:%g P:%g I:%g D:%g O:%d\n", this->designator.c_str(), this->p_factor, this->i_factor, this->d_factor, this->i_max, this->i_accumulator, this->p, this->i, this->d, o);
+            gcode->stream->printf("%s: Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->p_factor, this->i_factor, this->d_factor, this->i_max, this->p, this->i, this->d, o);
         }
     }
 }
@@ -224,7 +224,7 @@ void TemperatureControl::pid_process(double temperature)
     double error = target_temperature - temperature;
 
     p = error * p_factor;
-    i = this->i_accumulator + (error * this->i_factor);
+    i += (error * this->i_factor);
     d = (temperature - last_reading) * this->d_factor;
 
     if (i > this->i_max)
@@ -232,11 +232,9 @@ void TemperatureControl::pid_process(double temperature)
     if (i < -this->i_max)
         i = -this->i_max;
 
-    this->i_accumulator = i;
-
-    this->o = (p + i - d) * 4;
-    if (this->o > 1023)
-        this->o = 1023;
+    this->o = (p + i - d) * PIN_PWM_MAX / 256;
+    if (this->o >= PIN_PWM_MAX)
+        this->o = PIN_PWM_MAX - 1;
     if (this->o < 0)
         this->o = 0;
 
