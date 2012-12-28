@@ -121,7 +121,7 @@ void Robot::execute_gcode(Gcode* gcode){
                         }
                     }
                     memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
-                    //this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+                    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
                     return; // TODO: Wait until queue empty
         }
    }else if( gcode->has_letter('M')){
