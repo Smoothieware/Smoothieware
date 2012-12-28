@@ -25,7 +25,7 @@ class SlowTicker : public Module{
         void set_frequency( int frequency );
         void tick();
         // For some reason this can't go in the .cpp, see :  http://mbed.org/forum/mbed/topic/2774/?page=1#comment-14221
-        template<typename T> Hook* attach( double frequency, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
+        template<typename T> Hook* attach( int frequency, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook();
             hook->frequency = frequency;
             hook->attach(optr, fptr);
@@ -39,7 +39,7 @@ class SlowTicker : public Module{
         }
 
         vector<Hook*> hooks;
-        double max_frequency;
+        int max_frequency;
 
         Pin ispbtn;
 };
