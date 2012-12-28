@@ -29,14 +29,17 @@ void Endstops::on_module_loaded() {
 
     // Settings
     this->on_config_reload(this);
-    
+
 }
 
 // Get config
 void Endstops::on_config_reload(void* argument){
-    this->pins[0]                    = this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_down();
-    this->pins[1]                    = this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_pin()->as_input()->pull_down();
-    this->pins[2]                    = this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_down();
+    this->pins[0]                    = this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();
+    this->pins[1]                    = this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_pin()->as_input()->pull_up();
+    this->pins[2]                    = this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();
+    this->pins[3]                    = this->kernel->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();
+    this->pins[4]                    = this->kernel->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_pin()->as_input()->pull_up();
+    this->pins[5]                    = this->kernel->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();
     this->fast_rates[0]              = this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default("500" )->as_number();
     this->fast_rates[1]              = this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default("500" )->as_number();
     this->fast_rates[2]              = this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default("5" )->as_number();
@@ -49,10 +52,13 @@ void Endstops::on_config_reload(void* argument){
 }
 
 // Start homing sequences by response to GCode commands
-void Endstops::on_gcode_received(void* argument){
+void Endstops::on_gcode_received(void* argument)
+{
     Gcode* gcode = static_cast<Gcode*>(argument);
-    if( gcode->has_g){
-        if( gcode->g == 28 ){
+    if( gcode->has_g)
+    {
+        if( gcode->g == 28 )
+        {
             // G28 is received, we have homing to do
 
             // First wait for the queue to be empty
@@ -148,7 +154,22 @@ void Endstops::on_gcode_received(void* argument){
 
             // Homing is done
             this->status = NOT_HOMING;
-        
+        }
+    }
+    else if (gcode->has_m)
+    {
+        switch(gcode->m)
+        {
+            case 119:
+                gcode->stream->printf("X min:%d max:%d Y min:%d max:%d Z min:%d max:%d\n",
+                                                this->pins[0]->get(),
+                                                        this->pins[3]->get(),
+                                                                this->pins[1]->get(),
+                                                                        this->pins[4]->get(),
+                                                                                this->pins[2]->get(),
+                                                                                    this->pins[5]->get()
+                                        );
+                break;
         }
     }
 }

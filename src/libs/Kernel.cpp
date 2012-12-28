@@ -47,7 +47,6 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
-
     // Value init for the arrays
     for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){
         for( uint8_t index=0; index<32; index++ ){
@@ -79,9 +78,8 @@ Kernel::Kernel(){
     }else{
         this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
     }
-
-
     this->add_module( this->config );
+
     this->add_module( this->serial );
 
     // HAL stuff
@@ -99,7 +97,7 @@ Kernel::Kernel(){
     // Set other priorities lower than the timers
     NVIC_SetPriority(ADC_IRQn, 4);
     NVIC_SetPriority(USB_IRQn, 4);
- 
+
     // If MRI is enabled
     if( MRI_ENABLE ){
         if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 4); }
@@ -116,7 +114,9 @@ Kernel::Kernel(){
     // Configure the step ticker
     int base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
     double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
+
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
+
     this->step_ticker->set_frequency(   base_stepping_frequency );
 
     // Core modules
@@ -126,8 +126,6 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->player         = new Player()        );
     this->add_module( this->pauser         = new Pauser()        );
-
-
 }
 
 void Kernel::add_module(Module* module){

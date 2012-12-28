@@ -168,7 +168,6 @@ GCFLAGS += -Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wre
 
 # C++ only flags
 GPFLAGS = $(GCFLAGS)
-# uncomment the next line for extra fun ;)
 GPFLAGS += -std=gnu++0x
 # GPFLAGS += ...
 
@@ -277,23 +276,23 @@ endif
 #  Default rules to compile .c and .cpp file to .o
 #  and assemble .s files to .o
 
-$(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.c
+$(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.c makefile
 	@echo "  CC      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	@$(GPP) $(GPFLAGS) -c $< -o $@
 
-$(OUTDIR)/%.o : %.cpp
+$(OUTDIR)/%.o : %.cpp makefile
 	@echo "  CC      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 # 	if you want to see the whole compile command, remove the @ preceding the line below
 	@$(GPP) $(GPFLAGS) -c $< -o $@
 
-$(OUTDIR)/%.o : %.c
+$(OUTDIR)/%.o : %.c makefile
 	@echo "  CC      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	@$(GCC) $(GCFLAGS) -c $< -o $@
 
-$(OUTDIR)/%.o : %.S
+$(OUTDIR)/%.o : %.S makefile
 	@echo "  AS      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	@$(AS) $(ASFLAGS) -c $< -o $@

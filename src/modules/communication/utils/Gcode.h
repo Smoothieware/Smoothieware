@@ -31,6 +31,8 @@ class Gcode {
         unsigned int m;
         unsigned int g;
 
+        bool add_nl;
+
         StreamOutput* stream;
 };
 #endif

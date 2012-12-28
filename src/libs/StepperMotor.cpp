@@ -92,6 +92,7 @@ void StepperMotor::signal_move_finished(){
 inline void StepperMotor::update_exit_tick(){
     if( !this->moving || this->paused || this->steps_to_move == 0 ){
         // We must exit tick() after setting the pins, no bresenham is done
+        //this->remove_from_active_list_next_reset = true;
         this->step_ticker->remove_motor_from_active_list(this);
     }else{
         // We must do the bresenham in tick()
@@ -132,10 +133,18 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( double speed ){
-    if( speed < 0.0001 ){
-        //__debugbreak();
-        return;
-    }
+//     if( speed <= 1.0 ){
+//         this->steps_per_second = 0;
+//         this->fx_ticks_per_step = 1ULL<<63;
+//         return;
+//     }
+
+    //if( speed < this->steps_per_second ){
+        LPC_GPIO1->FIOSET = 1<<19;
+    //}
+
+    if (speed < 1.0)
+        speed = 1.0;
 
     // How many steps we must output per second
     this->steps_per_second = speed;

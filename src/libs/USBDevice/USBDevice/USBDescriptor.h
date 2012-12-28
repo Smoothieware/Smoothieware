@@ -1,6 +1,20 @@
-/* USBDescriptor.h */
-/* Definitions and macros for constructing USB descriptors */
-/* Copyright (c) 2011 ARM Limited. All rights reserved. */
+/* Copyright (c) 2010-2011 mbed.org, MIT License
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+* and associated documentation files (the "Software"), to deal in the Software without
+* restriction, including without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+* Software is furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all copies or
+* substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+* BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+* NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+* DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 /* Standard descriptor types */
 #define DEVICE_DESCRIPTOR        (1)
@@ -26,11 +40,11 @@
 #define STRING_OFFSET_IINTERFACE        (5)
 
 /* USB Specification Release Number */
-#define USB_VERSION_2_0 (0x0200)
+// #define USB_VERSION_2_0 (0x0200)
 
 /* Least/Most significant byte of short integer */
-#define LSB(n)  ((uint8_t)((n)&0xff))
-#define MSB(n)  ((uint8_t)(((n)&0xff00)>>8))
+#define LSB(n)  ((n)&0xff)
+#define MSB(n)  (((n)&0xff00)>>8)
 
 /* Convert physical endpoint number to descriptor endpoint number */
 #define PHY_TO_DESC(endpoint) (((endpoint)>>1) | (((endpoint) & 1) ? 0x80:0))

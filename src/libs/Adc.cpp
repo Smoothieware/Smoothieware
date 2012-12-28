@@ -44,6 +44,7 @@ PinName Adc::_pin_to_pinname(Pin* pin){
         return p20;
     }else{
         //TODO: Error
+        return NC;
     }
 }
 

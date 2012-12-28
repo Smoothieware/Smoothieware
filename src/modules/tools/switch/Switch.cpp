@@ -19,10 +19,12 @@ Switch::Switch(uint16_t name){
 
 void Switch::on_module_loaded(){
     this->register_for_event(ON_GCODE_EXECUTE);
-    
+
     // Settings
     this->on_config_reload(this);
 
+    // PWM
+    this->kernel->slow_ticker->attach(100, this->output_pin, &Pin::tick);
 }
 
 
@@ -40,8 +42,19 @@ void Switch::on_gcode_execute(void* argument){
     if( gcode->has_letter('M' )){
         int code = gcode->get_value('M');
         if( code == this->on_m_code ){
-            // Turn pin on
-            this->output_pin->set(1);
+            if (gcode->has_letter('S'))
+            {
+                int v = gcode->get_value('S') * PIN_PWM_MAX / 256;
+                if (v)
+                    this->output_pin->pwm(v);
+                else
+                    this->output_pin->set(0);
+            }
+            else
+            {
+                // Turn pin on
+                this->output_pin->set(1);
+            }
         }
         if( code == this->off_m_code ){
             // Turn pin off

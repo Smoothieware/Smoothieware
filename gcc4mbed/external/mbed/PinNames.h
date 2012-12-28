@@ -11,7 +11,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
 #if defined(TARGET_LPC1768) || defined(TARGET_LPC2368)
 
@@ -40,7 +40,7 @@ enum PinName {
       , P4_24, P4_25, P4_26, P4_27, P4_28, P4_29, P4_30, P4_31
 
     // mbed DIP Pin Names
-      , p5 = P0_9 
+      , p5 = P0_9
       , p6 = P0_8
       , p7 = P0_7
       , p8 = P0_6
@@ -73,7 +73,7 @@ enum PinName {
       , LED2 = P1_29
       , LED3 = P1_31
       , LED4 = P2_2
-#else 
+#else
       , LED1 = P1_18
       , LED2 = P1_20
       , LED3 = P1_21
@@ -249,6 +249,6 @@ typedef enum PinMode PinMode;
 
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
-#endif 
+#endif
