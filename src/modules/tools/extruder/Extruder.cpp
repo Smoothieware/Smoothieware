@@ -111,6 +111,10 @@ void Extruder::on_gcode_execute(void* argument){
                 this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;
                 this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
+            }else if( gcode->get_num_args() == 0){
+                this->current_position = 0.0;
+                this->target_position = this->current_position;
+                this->current_steps = 0;
             }
         }else{
             // Extrusion length from 'G' Gcode

@@ -108,15 +108,21 @@ void Robot::execute_gcode(Gcode* gcode){
            case 21:this->inch_mode = false; break;
            case 90:this->absolute_mode = true; break;
            case 91:this->absolute_mode = false; break;
-           /*case 92: clear_vector(this->last_milestone);
-                    for (char letter = 'X'; letter <= 'Z'; letter++){
-                        if ( gcode->has_letter(letter) )
-                          this->last_milestone[letter-'X'] = this->to_millimeters(gcode->get_value(letter));
+           case 92: clear_vector(this->last_milestone);
+                    if(gcode->get_num_args() == 0){
+                        for (char letter = 'X'; letter <= 'Z'; letter++){
+                            if ( gcode->has_letter(letter) )
+                              this->last_milestone[letter-'X'] = this->to_millimeters(0.0);
+                        }
+                    }else{
+                        for (char letter = 'X'; letter <= 'Z'; letter++){
+                            if ( gcode->has_letter(letter) )
+                              this->last_milestone[letter-'X'] = this->to_millimeters(gcode->get_value(letter));
+                        }
                     }
                     memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
                     this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
                     return; // TODO: Wait until queue empty
-            */ 
         }
    }else if( gcode->has_letter('M')){
      switch( (int) gcode->get_value('M') ){

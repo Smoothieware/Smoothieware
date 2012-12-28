@@ -52,6 +52,16 @@ double Gcode::get_value( char letter ){
     return 0;
 }
 
+int Gcode::get_num_args(){
+    int count = 0;
+    for(size_t i=1; i<this->command.length(); i++){
+        if( this->command.at(i) >= 'A' && this->command.at(i) <= 'Z' ){
+            count++;
+        }
+    }
+    return count;
+}
+
 void Gcode::prepare_cached_values(){
     if( this->has_letter('G') ){
         this->has_g = true;
