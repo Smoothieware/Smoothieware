@@ -19,7 +19,7 @@ max_jerk                                     200              # Max instant corn
 # Stepper module configuration
 microseconds_per_step_pulse                  1                # Duration of step pulses to stepper drivers, in microseconds
 minimum_steps_per_minute                     1200             # Never step slower than this
-base_stepping_frequency                      70000            # Base frequency for stepping, higher gives smoother movement
+base_stepping_frequency                      100000           # Base frequency for stepping, higher gives smoother movement
 
 # Stepper module pins ( ports, and pin numbers, appending "!" to the number will invert a pin )
 alpha_step_pin                               2.0              # Pin for alpha stepper step signal
