@@ -44,7 +44,7 @@ void Switch::on_gcode_execute(void* argument){
         if( code == this->on_m_code ){
             if (gcode->has_letter('S'))
             {
-                int v = gcode->get_value('S') * 4;
+                int v = gcode->get_value('S') * PIN_PWM_MAX / 256;
                 if (v)
                     this->output_pin->pwm(v);
                 else
