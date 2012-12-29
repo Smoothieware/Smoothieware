@@ -15,9 +15,10 @@
 class CurrentControl : public Module {
     public:
         CurrentControl();
-       
+
         void on_module_loaded();
-       
+        void on_gcode_received(void *);
+
         double alpha_current;
         double beta_current;
         double gamma_current;
