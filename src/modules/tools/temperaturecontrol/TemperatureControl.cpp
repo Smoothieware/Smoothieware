@@ -179,6 +179,8 @@ void TemperatureControl::on_gcode_execute(void* argument){
 void TemperatureControl::set_desired_temperature(double desired_temperature){
 //     this->desired_adc_value = this->temperature_to_adc_value(desired_temperature);
     target_temperature = desired_temperature;
+    if (desired_temperature == 0.0)
+        heater_pin->set(0);
 }
 
 double TemperatureControl::get_temperature(){
@@ -217,6 +219,10 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
                 waiting = false;
             }
         }
+    }
+    else
+    {
+        heater_pin->set(0);
     }
     last_reading = temperature;
     return 0;
