@@ -95,7 +95,7 @@ void TemperatureControl::on_config_reload(void* argument){
     this->heater_pin->set(0);
 
     // activate SD-DAC timer
-    this->kernel->slow_ticker->attach(100, this->heater_pin, &Pin::tick);
+    this->kernel->slow_ticker->attach(1000, this->heater_pin, &Pin::tick);
 
     // PID
     this->p_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number();

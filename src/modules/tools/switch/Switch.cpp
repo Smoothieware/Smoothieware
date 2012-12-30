@@ -24,7 +24,7 @@ void Switch::on_module_loaded(){
     this->on_config_reload(this);
 
     // PWM
-    this->kernel->slow_ticker->attach(100, this->output_pin, &Pin::tick);
+    this->kernel->slow_ticker->attach(1000, this->output_pin, &Pin::tick);
 }
 
 
