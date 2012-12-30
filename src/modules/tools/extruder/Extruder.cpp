@@ -16,8 +16,6 @@
 * or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
 */
 
-// extruder_acceleration_checksum
-
 Extruder::Extruder() {
     this->absolute_mode = true;
     this->step_counter = 0;
@@ -39,6 +37,7 @@ void Extruder::on_module_loaded() {
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
+    this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
@@ -90,7 +89,18 @@ void Extruder::on_play(void* argument){
     this->stepper_motor->unpause();
 }
 
-
+void Extruder::on_gcode_received(void *argument)
+{
+    Gcode *gcode = static_cast<Gcode*>(argument);
+    if (gcode->has_m)
+    {
+        if (gcode->m == 114)
+        {
+            gcode->stream->printf("E:%4.1f ", this->current_position);
+            gcode->add_nl = true;
+        }
+    }
+}
 
 // Compute extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void* argument){

@@ -142,12 +142,13 @@ void Robot::execute_gcode(Gcode* gcode){
                 gcode->stream->printf("X:%g Y:%g Z:%g ", steps[0], steps[1], steps[2]);
                 gcode->add_nl = true;
                 return;
-            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f\n",
+            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
                                                  this->current_position[0],
                                                  this->current_position[1],
                                                  this->current_position[2]);
-                   return;
-       }
+                gcode->add_nl = true;
+                return;
+        }
    }
     if( this->motion_mode < 0)
         return;
