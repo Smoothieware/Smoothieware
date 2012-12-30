@@ -101,6 +101,16 @@ void Extruder::on_gcode_execute(void* argument){
         if( gcode->m == 82 ){ this->absolute_mode = true; }
         if( gcode->m == 83 ){ this->absolute_mode = false; }
         if( gcode->m == 84 ){ this->en_pin->set(1); }
+        if (gcode->m == 92 )
+        {
+            if (gcode->has_letter('E'))
+            {
+                this->steps_per_millimeter = gcode->get_value('E');
+                this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
+            }
+            gcode->stream->printf("E:%g ", this->steps_per_millimeter);
+            gcode->add_nl = true;
+        }
     }
 
     // The mode is OFF by default, and SOLO or FOLLOW only if we need to extrude

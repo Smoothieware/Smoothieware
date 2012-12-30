@@ -17,6 +17,9 @@ class CartesianSolution : public BaseSolution {
         void millimeters_to_steps( double millimeters[], int steps[] );
         void steps_to_millimeters( int steps[], double millimeters[] );
 
+        void set_steps_per_millimeter( double steps[] );
+        void get_steps_per_millimeter( double steps[] );
+
         Config* config;
         double alpha_steps_per_mm;
         double beta_steps_per_mm;
