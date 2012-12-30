@@ -40,25 +40,11 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 
     //printf("new block\r\n");
 
-    int steps[3], steps_event_count;
-    // Number of steps for each stepper
-    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ steps[stepper] = labs(target[stepper] - this->position[stepper]); }
-
-    // Max number of steps, for all axes
-    steps_event_count = max( steps[ALPHA_STEPPER], max( steps[BETA_STEPPER], steps[GAMMA_STEPPER] ) );
-
-    if (steps_event_count <= 5)
-        return;
-
     // Stall here if the queue is ful
     this->kernel->player->wait_for_queue(2);
 
     Block* block = this->kernel->player->new_block();
     block->planner = this;
-
-    // move precalculated values into block
-    memcpy(block->steps, steps, sizeof(steps));
-    block->steps_event_count = steps_event_count;
 
     // Direction bits
     block->direction_bits = 0;
@@ -66,6 +52,13 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
         if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<stepper); }
     }
     
+    // Number of steps for each stepper
+    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); }
+    
+    // Max number of steps, for all axes
+    block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
+    //if( block->steps_event_count == 0 ){ this->computing = false; return; }
+
     block->millimeters = distance;
     double inverse_millimeters = 0;
     if( distance > 0 ){ inverse_millimeters = 1.0/distance; }
