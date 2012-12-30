@@ -3,7 +3,6 @@ default_feed_rate                            4000             # Default rate ( m
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
 mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
-z_axis_max_speed                             200              # Max allowable speed for this axis
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 alpha_steps_per_mm                           80               # Steps per mm for alpha stepper
@@ -25,19 +24,19 @@ base_stepping_frequency                      100000           # Base frequency f
 alpha_step_pin                               2.0              # Pin for alpha stepper step signal
 alpha_dir_pin                                0.5              # Pin for alpha stepper direction
 alpha_en_pin                                 0.4              # Pin for alpha enable pin
-alpha_current                                1.8              # X stepper motor current
+alpha_current                                1.5              # X stepper motor current
 x_axis_max_speed                             30000            # mm/min
 
 beta_step_pin                                2.1              # Pin for beta stepper step signal
 beta_dir_pin                                 0.11             # Pin for beta stepper direction
 beta_en_pin                                  0.10             # Pin for beta enable
-beta_current                                 1.8              # Y stepper motor current
+beta_current                                 1.5              # Y stepper motor current
 y_axis_max_speed                             30000            # mm/min
 
 gamma_step_pin                               2.2              # Pin for gamma stepper step signal
 gamma_dir_pin                                0.20             # Pin for gamma stepper direction
 gamma_en_pin                                 0.19             # Pin for gamma enable
-gamma_current                                1.8              # Z stepper motor current
+gamma_current                                1.5              # Z stepper motor current
 z_axis_max_speed                             300              # mm/min
 
 # Serial communications configuration ( baud rate default to 9600 if undefined )
@@ -53,7 +52,7 @@ extruder_max_speed                           1000             # mm^3/s
 extruder_step_pin                            2.3              # Pin for extruder step signal
 extruder_dir_pin                             0.22             # Pin for extruder dir signal
 extruder_en_pin                              0.21             # Pin for extruder enable signal
-delta_current                                1.8              # Extruder stepper motor current
+delta_current                                1.5              # Extruder stepper motor current
 
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is ignored if false.
