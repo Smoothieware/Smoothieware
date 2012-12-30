@@ -24,6 +24,7 @@ void TemperatureControlPool::on_module_loaded(){
         // If module is enabled
         if( this->kernel->config->value(temperature_control_checksum, modules[i], enable_checksum )->as_bool() == true ){
             TemperatureControl* controller = new TemperatureControl(modules[i]);
+            controller->pool_index = i;
             this->kernel->add_module(controller);
             this->controllers.push_back( controller );
         }

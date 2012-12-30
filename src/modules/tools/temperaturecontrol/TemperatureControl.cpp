@@ -157,15 +157,18 @@ void TemperatureControl::on_gcode_execute(void* argument){
         }
         if (gcode->m == 301)
         {
-            if (gcode->has_letter('P'))
-                this->p_factor = gcode->get_value('P');
-            if (gcode->has_letter('I'))
-                this->i_factor = gcode->get_value('I');
-            if (gcode->has_letter('D'))
-                this->d_factor = gcode->get_value('D');
-            if (gcode->has_letter('X'))
-                this->i_max    = gcode->get_value('X');
-            gcode->stream->printf("%s: Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->p_factor, this->i_factor, this->d_factor, this->i_max, this->p, this->i, this->d, o);
+            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
+            {
+                if (gcode->has_letter('P'))
+                    this->p_factor = gcode->get_value('P');
+                if (gcode->has_letter('I'))
+                    this->i_factor = gcode->get_value('I');
+                if (gcode->has_letter('D'))
+                    this->d_factor = gcode->get_value('D');
+                if (gcode->has_letter('X'))
+                    this->i_max    = gcode->get_value('X');
+            }
+            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor, this->d_factor, this->i_max, this->p, this->i, this->d, o);
         }
     }
 }
