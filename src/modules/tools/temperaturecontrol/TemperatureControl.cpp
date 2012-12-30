@@ -226,20 +226,28 @@ void TemperatureControl::pid_process(double temperature)
 {
     double error = target_temperature - temperature;
 
-    p = error * p_factor;
+    p  = error * p_factor;
     i += (error * this->i_factor);
-    d = (temperature - last_reading) * this->d_factor;
+    d  = (last_reading - temperature) * this->d_factor;
 
     if (i > this->i_max)
         i = this->i_max;
     if (i < -this->i_max)
         i = -this->i_max;
 
-    this->o = (p + i - d) * PIN_PWM_MAX / 256;
+    this->o = (p + i + d) * PIN_PWM_MAX / 256;
+
     if (this->o >= PIN_PWM_MAX)
+    {
+        i -= (this->o - (PIN_PWM_MAX - 1)) * 256 / PIN_PWM_MAX;
         this->o = PIN_PWM_MAX - 1;
+    }
     if (this->o < 0)
+    {
+        if (this->o < -(PIN_PWM_MAX))
+            i += (-(PIN_PWM_MAX) - this->o) * 256 / PIN_PWM_MAX;
         this->o = 0;
+    }
 
     this->heater_pin->pwm(o);
 }
