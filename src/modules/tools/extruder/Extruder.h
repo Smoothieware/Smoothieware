@@ -34,6 +34,7 @@ class Extruder : public Module{
         Extruder();
         void on_module_loaded();
         void on_config_reload(void* argument);
+        void on_gcode_received(void*);
         void on_gcode_execute(void* argument);
         void on_block_begin(void* argument);
         void on_block_end(void* argument);
