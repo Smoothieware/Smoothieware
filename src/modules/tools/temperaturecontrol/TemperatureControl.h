@@ -11,6 +11,8 @@
 #include "libs/Pin.h"
 #include <math.h>
 
+#include "RingBuffer.h"
+
 #define UNDEFINED -1
 
 #define thermistor_checksum                41045
@@ -38,6 +40,7 @@
 
 #define i_max_checksum                      4112
 
+class TemperatureControlPool;
 
 class TemperatureControl : public Module {
     public:
@@ -75,7 +78,6 @@ class TemperatureControl : public Module {
 
         // PID runtime
         double i_max;
-        double i_accumulator;
 
         double p, i, d;
         int o;
@@ -100,6 +102,8 @@ class TemperatureControl : public Module {
         uint16_t get_m_code;
 
         string designator;
+
+        TemperatureControlPool *pool;
         int pool_index;
 };
 

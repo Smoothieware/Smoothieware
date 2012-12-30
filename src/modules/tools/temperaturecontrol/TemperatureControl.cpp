@@ -11,6 +11,7 @@
 #include "libs/Kernel.h"
 #include <math.h>
 #include "TemperatureControl.h"
+#include "TemperatureControlPool.h"
 #include "libs/Pin.h"
 
 TemperatureControl::TemperatureControl(){}
@@ -83,6 +84,7 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // ADC smoothing
     running_total = 0;
+
     // sigma-delta output modulation
     o = 0;
 
@@ -169,6 +171,16 @@ void TemperatureControl::on_gcode_execute(void* argument){
                     this->i_max    = gcode->get_value('X');
             }
             gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor, this->d_factor, this->i_max, this->p, this->i, this->d, o);
+        }
+        if (gcode->m == 303)
+        {
+            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
+            {
+                double target = 150.0;
+                if (gcode->has_letter('T'))
+                    target = gcode->get_value('T');
+                this->pool->PIDtuner->begin(this, target, gcode->stream);
+            }
         }
     }
 }
