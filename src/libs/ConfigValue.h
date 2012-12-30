@@ -49,7 +49,19 @@ class ConfigValue{
                 }
                 return result;
             }
-           
+        }
+
+        int as_int()
+        {
+            if( this->found == false && this->default_set == true ){
+                return this->default_int;
+            }else{
+                int result = atoi(remove_non_number(this->value).c_str());
+                if( result == 0 && this->value.find_first_not_of("0") != string::npos ){
+                    error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
+                }
+                return result;
+            }
         }
 
         std::string as_string(){
@@ -78,6 +90,14 @@ class ConfigValue{
             return pin;
         }
 
+        ConfigValue* by_default(int val)
+        {
+            this->default_set = true;
+            this->default_int = val;
+            this->default_double = val;
+            return this;
+        }
+
         ConfigValue* by_default(double val){
             this->default_set = true;
             this->default_double = val;
@@ -99,6 +119,7 @@ class ConfigValue{
             return this->has_characters(string("!"));
         }
 
+        int default_int;
         double default_double;
         uint16_t check_sums[3];
         string value;
