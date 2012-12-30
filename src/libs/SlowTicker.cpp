@@ -12,14 +12,13 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "SlowTicker.h"
 #include "libs/Hook.h"
-#include "system_LPC17xx.h" // mbed.h lib
 
 #include <mri.h>
 
 SlowTicker* global_slow_ticker;
 
 SlowTicker::SlowTicker(){
-    this->max_frequency = 1;
+    this->max_frequency = 0;
     global_slow_ticker = this;
     LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
     LPC_TIM2->MR0 = 10000;        // Initial dummy value for Match Register
@@ -31,7 +30,8 @@ SlowTicker::SlowTicker(){
 }
 
 void SlowTicker::set_frequency( int frequency ){
-    LPC_TIM2->MR0 = int(floor((SystemCoreClock/4)/frequency));  // SystemCoreClock/4 = Timer increments in a second
+    this->interval = int(floor((SystemCoreClock/4)/frequency));   // SystemCoreClock/4 = Timer increments in a second
+    LPC_TIM2->MR0 = this->interval;
     LPC_TIM2->TCR = 3;  // Reset
     LPC_TIM2->TCR = 1;  // Reset
 }
@@ -43,9 +43,10 @@ void SlowTicker::tick(){
 
     for (unsigned int i=0; i<this->hooks.size(); i++){
         Hook* hook = this->hooks.at(i);
-        hook->counter += ( hook->frequency / this->max_frequency );
-        if( hook->counter > 0 ){
-            hook->counter-=1;
+        hook->countdown -= this->interval;
+        if (hook->countdown < 0)
+        {
+            hook->countdown += hook->interval;
             hook->call();
         }
     }
