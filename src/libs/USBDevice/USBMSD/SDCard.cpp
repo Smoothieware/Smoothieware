@@ -276,6 +276,8 @@ int SDCard::disk_initialize()
 
 int SDCard::disk_write(const char *buffer, uint32_t block_number)
 {
+    if (cardtype == SDCARD_FAIL)
+        return -1;
     // set write address for single block (CMD24)
     if(_cmd(SDCMD_WRITE_BLOCK, BLOCK2ADDR(block_number)) != 0) {
         return 1;
@@ -288,6 +290,8 @@ int SDCard::disk_write(const char *buffer, uint32_t block_number)
 
 int SDCard::disk_read(char *buffer, uint32_t block_number)
 {
+    if (cardtype == SDCARD_FAIL)
+        return -1;
     // set read address for single block (CMD17)
     if(_cmd(SDCMD_READ_SINGLE_BLOCK, BLOCK2ADDR(block_number)) != 0) {
         return 1;
