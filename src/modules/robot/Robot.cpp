@@ -119,9 +119,24 @@ void Robot::execute_gcode(Gcode* gcode){
                     return; // TODO: Wait until queue empty
             }
         }
-   }else if( gcode->has_letter('M')){
-     switch( (int) gcode->get_value('M') ){
-         case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f\n",
+    }else if( gcode->has_letter('M')){
+        switch( (int) gcode->get_value('M') ){
+            case 92: // M92 - set steps per mm
+                double steps[3];
+                this->arm_solution->get_steps_per_millimeter(steps);
+                if (gcode->has_letter('X'))
+                    steps[0] = this->to_millimeters(gcode->get_value('X'));
+                if (gcode->has_letter('Y'))
+                    steps[1] = this->to_millimeters(gcode->get_value('Y'));
+                if (gcode->has_letter('Z'))
+                    steps[2] = this->to_millimeters(gcode->get_value('Z'));
+                this->arm_solution->set_steps_per_millimeter(steps);
+                // update current position in steps
+                this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+                gcode->stream->printf("X:%g Y:%g Z:%g ", steps[0], steps[1], steps[2]);
+                gcode->add_nl = true;
+                return;
+            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f\n",
                                                  this->current_position[0],
                                                  this->current_position[1],
                                                  this->current_position[2]);
