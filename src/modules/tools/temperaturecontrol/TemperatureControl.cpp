@@ -255,8 +255,8 @@ void TemperatureControl::pid_process(double temperature)
 
     if (this->o >= heater_pin->max_pwm())
     {
-        i -= (this->o - (heater_pin->max_pwm() - 1)) * 256 / heater_pin->max_pwm();
-        this->o = heater_pin->max_pwm() - 1;
+        i -= (this->o - (heater_pin->max_pwm())) * 256 / heater_pin->max_pwm();
+        this->o = heater_pin->max_pwm();
     }
     if (this->o < 0)
     {
