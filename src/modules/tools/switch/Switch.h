@@ -21,7 +21,7 @@ class Switch : public Module {
     public:
         Switch();
         Switch(uint16_t name);
-        
+
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_execute(void* argument);
@@ -29,7 +29,7 @@ class Switch : public Module {
         uint16_t name_checksum;
         uint16_t on_m_code;
         uint16_t off_m_code;
-        Pin*     output_pin;
+        Pwm*     output_pin;
 };
 
 #endif

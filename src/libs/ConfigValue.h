@@ -11,6 +11,7 @@
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"
+#include "Pwm.h"
 
 
 #define error(...) (fprintf(stderr, __VA_ARGS__), exit(1))
@@ -88,6 +89,12 @@ class ConfigValue{
             Pin* pin = new Pin();
             pin->from_string(this->as_string());
             return pin;
+        }
+
+        Pwm* as_pwm(){
+            Pwm* pwm = new Pwm();
+            pwm->from_string(this->as_string());
+            return pwm;
         }
 
         ConfigValue* by_default(int val)

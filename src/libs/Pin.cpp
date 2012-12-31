@@ -1,10 +1,6 @@
 #include "Pin.h"
 
-Pin::Pin()
-{
-    _pwm = -1;
-    _sd_accumulator = 0;
-}
+Pin::Pin(){}
 
 Pin* Pin::from_string(std::string value)
 {
@@ -24,8 +20,6 @@ Pin* Pin::from_string(std::string value)
         this->pin  = atoi( value.substr(2, value.size()-2-(this->inverting?1:0)).c_str() );
         this->port->FIOMASK &= ~(1 << this->pin);
     }
-    _pwm = -1;
-    _sd_accumulator = 0;
     return this;
 }
 
@@ -66,30 +60,4 @@ Pin* Pin::pull_down()
     if( this->port_number == 3 && this->pin >= 16 ){ LPC_PINCON->PINMODE7 |= (3<<((this->pin-16)*2)); }
     if( this->port_number == 4 && this->pin >= 16 ){ LPC_PINCON->PINMODE9 |= (3<<((this->pin-16)*2)); }
     return this;
-}
-
-uint32_t Pin::tick(uint32_t dummy)
-{
-    if ((_pwm < 0) || (_pwm >= PIN_PWM_MAX))
-        return dummy;
-    if (_sd_accumulator < -PIN_PWM_MAX)
-        _sd_accumulator = -PIN_PWM_MAX;
-    if (_sd_accumulator > (2*PIN_PWM_MAX))
-        _sd_accumulator = (2*PIN_PWM_MAX);
-    //             printf("[%d %d]", _pwm, _sd_accumulator);
-        if (_sd_direction == false)
-        {
-            _sd_accumulator += _pwm;
-            if (_sd_accumulator >= (PIN_PWM_MAX >> 1))
-                _sd_direction = true;
-        }
-        else
-        {
-            _sd_accumulator -= (PIN_PWM_MAX - _pwm);
-            if (_sd_accumulator <= 0)
-                _sd_direction = false;
-        }
-        _set(_sd_direction);
-
-        return dummy;
 }
