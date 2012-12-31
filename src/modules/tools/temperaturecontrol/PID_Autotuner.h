@@ -20,15 +20,21 @@ public:
 
     TemperatureControl *t;
 
+    double target_temperature;
+
     int cycle;
+    bool output;
     bool last_output;
     StreamOutput *s;
 
     struct {
         double t_max;
         double t_min;
-        int ticks;
+        int ticks_low;
+        int ticks_high;
     } cycles[PID_AUTOTUNER_CYCLES];
+
+    int bias, d;
 };
 
 #endif /* _PID_AUTOTUNE_H */

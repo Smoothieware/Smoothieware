@@ -16,24 +16,20 @@ void PID_Autotuner::on_module_loaded()
 void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput *stream)
 {
     if (t)
-    {
-        t->target_temperature = 0.0;
-    }
+        t->heater_pin->set(0);
 
     t = temp;
 
-    t->p_factor = 1000000000.0;
-    t->i_factor = 0.0;
-    t->d_factor = 0.0;
-    t->i_max    = 0.0;
+    t->target_temperature = 0.0;
 
-    t->target_temperature = target;
+    target_temperature = target;
 
     for (cycle = 0; cycle < 8; cycle++)
     {
-        cycles[cycle].ticks = 0;
-        cycles[cycle].t_max = 0.0;
-        cycles[cycle].t_min = 1000.0;
+        cycles[cycle].ticks_high = 0;
+        cycles[cycle].ticks_low  = 0;
+        cycles[cycle].t_max      = 0.0;
+        cycles[cycle].t_min      = 1000.0;
     }
     cycle = 0;
 
@@ -41,6 +37,9 @@ void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput 
 
     s->printf("%s: Starting PID Autotune\n", t->designator.c_str());
 
+    bias = d = t->heater_pin->max_pwm() >> 1;
+
+    output = true;
     last_output = true;
 }
 
@@ -51,58 +50,89 @@ uint32_t PID_Autotuner::on_tick(uint32_t dummy)
     if (t == NULL)
         return 0;
 
-    if (last_output == false && (t->o > 128))
+    if (t->last_reading > (target_temperature + 0.25))
+        output = false;
+    else if (t->last_reading < (target_temperature - 0.25))
+        output = true;;
+
+    if (last_output == false && output)
     {
-        s->printf("Cycle %d:\n\tMax: %5.1f  Min: %5.1f  time: %3.1fs\n", cycle, cycles[cycle].t_max, cycles[cycle].t_min, cycles[cycle].ticks / 20.0);
+        s->printf("Cycle %d:\n\tMax: %5.1f  Min: %5.1f  high time: %3.1fs  low time: %3.1fs\n", cycle, cycles[cycle].t_max, cycles[cycle].t_min, cycles[cycle].ticks_high / 20.0, cycles[cycle].ticks_low / 20.0);
+
+        // this code taken from http://github.com/ErikZalm/Marlin/blob/Marlin_v1/Marlin/temperature.cpp
+        bias += (d * (cycles[cycle].ticks_high - cycles[cycle].ticks_low) * (1000.0 / 20.0)) / ((cycles[cycle].ticks_high + cycles[cycle].ticks_low) * (1000.0 / 20.0));
+        bias = confine(bias, 20, t->heater_pin->max_pwm() - 20);
+        if (bias > (t->heater_pin->max_pwm() / 2))
+            d = t->heater_pin->max_pwm() - 1 - bias;
+        else
+            d = bias;
+        // end code from Marlin firmware
+
         cycle++;
         if (cycle == PID_AUTOTUNER_CYCLES)
         {
+            t->heater_pin->set(0);
             t->set_desired_temperature(0.0);
             // TODO: finish
             double tmax_avg   = 0.0,
                    tmin_avg   = 0.0,
-                   tcycle_avg = 0.0;
-            for (cycle = 1; cycle < PID_AUTOTUNER_CYCLES; cycle++)
+                   t_high_avg = 0.0,
+                   t_low_avg  = 0.0;
+            for (cycle = PID_AUTOTUNER_CYCLES - 3; cycle < PID_AUTOTUNER_CYCLES; cycle++)
             {
-                tmax_avg += cycles[cycle].t_max;
-                tmin_avg += cycles[cycle].t_min;
-                tcycle_avg += cycles[cycle].ticks;
+                tmax_avg   += cycles[cycle].t_max;
+                tmin_avg   += cycles[cycle].t_min;
+                t_high_avg += cycles[cycle].ticks_high;
+                t_low_avg  += cycles[cycle].ticks_low;
             }
-            tmax_avg /= 7.0;
-            tmin_avg /= 7.0;
-            tcycle_avg /= 7.0;
-            s->printf("Averages over last %d cycles: Max: %5.1fc  Min: %5.1fc  samples: %3.0f\n", PID_AUTOTUNER_CYCLES - 2, tmax_avg, tmin_avg, tcycle_avg);
+            tmax_avg   /= (PID_AUTOTUNER_CYCLES - 1.0);
+            tmin_avg   /= (PID_AUTOTUNER_CYCLES - 1.0);
+            t_high_avg /= (PID_AUTOTUNER_CYCLES - 1.0);
+            t_low_avg  /= (PID_AUTOTUNER_CYCLES - 1.0);
 
-            // from http://brettbeauregard.com/blog/2012/01/arduino-pid-autotune-library/
-            // TODO: work out why the results of this algorithm are dreadfully poor
-            double ku = 4 * 128 / ((tmax_avg - tmin_avg) * 3.141592653589);
-            double pu = tcycle_avg;
+            s->printf("Averages over last %d cycles: Max: %5.1fc  Min: %5.1fc  high samples: %3.0f  low samples: %3.0f\n", 3, tmax_avg, tmin_avg, t_high_avg, t_low_avg);
+
+            // this code taken from http://github.com/ErikZalm/Marlin/blob/Marlin_v1/Marlin/temperature.cpp
+            double ku = (4.0 * d) / (3.141592653589 * (tmax_avg - tmin_avg) / 2.0);
+            double tu = (t_low_avg + t_high_avg) * (1000.0 / 20.0) / 1000.0;
+
+            s->printf("\tku: %g\n\ttu: %g\n", ku, tu);
 
             double kp = 0.6 * ku;
-            double ki = 1.2 * ku / pu;
-            double kd = 0.075 * ku * pu;
+            double ki = 2 * kp / tu / 20.0;
+            double kd = kp * tu / 8.0;
 
-            s->printf("PID Autotune complete. Try M301 S%d P%4g I%4g D%4g\n", t->pool_index, kp, ki, kd);
+            s->printf("\tTrying:\n\tKp: %5.1f\n\tKi: %5.3f\n\tKd: %5.0f\n", kp, ki, kd);
+            // end code from Marlin Firmware
 
             t->p_factor = kp;
             t->i_factor = ki;
             t->d_factor = kd;
-            t->i_max = 128;
 
             t = NULL;
             s = NULL;
 
             return 0;
         }
+        s->printf("Cycle %d:\n\tbias: %4d d: %4d\n", cycle, bias, d);
     }
 
-    last_output = (t->o > 128);
+    int ticks;
 
-    cycles[cycle].ticks++;
-
-    if ((cycles[cycle].ticks % 16) == 0)
+    if (output)
     {
-        s->printf("%s: %5.1f/%5.1f @%d %d %d/8\n", t->designator.c_str(), t->last_reading, t->target_temperature, t->o, (last_output?1:0), cycle);
+        ticks = ++cycles[cycle].ticks_high;
+        t->heater_pin->pwm((t->o = ((bias + d) >> 1)));
+    }
+    else
+    {
+        ticks = ++cycles[cycle].ticks_low;
+        t->heater_pin->set((t->o = 0));
+    }
+
+    if ((ticks % 16) == 0)
+    {
+        s->printf("%s: %5.1f/%5.1f @%d %d %d/8\n", t->designator.c_str(), t->last_reading, target_temperature, t->o, (output?1:0), cycle);
     }
 
     if (t->last_reading > cycles[cycle].t_max)
@@ -110,6 +140,8 @@ uint32_t PID_Autotuner::on_tick(uint32_t dummy)
 
     if (t->last_reading < cycles[cycle].t_min)
         cycles[cycle].t_min = t->last_reading;
+
+    last_output = output;
 
     return 0;
 }
