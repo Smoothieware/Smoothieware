@@ -88,7 +88,7 @@ class TemperatureControl : public Module {
         double acceleration_factor;
         double readings_per_second;
 
-        RingBuffer<uint16_t,4> queue;  // Queue of readings
+        RingBuffer<uint16_t,8> queue;  // Queue of readings
         int running_total;
 
         uint16_t name_checksum;
