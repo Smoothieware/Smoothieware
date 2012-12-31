@@ -39,7 +39,9 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
         &Module::on_config_reload,
         &Module::on_play,
         &Module::on_pause,
-        &Module::on_idle
+        &Module::on_idle,
+        &Module::on_config_value,
+        &Module::on_config_complete,
 };
 
 #define baud_rate_setting_checksum 10922
@@ -112,7 +114,7 @@ Kernel::Kernel(){
     }
 
     // Configure the step ticker
-    int base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
+    int base_stepping_frequency          =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
     double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
 
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
@@ -134,7 +136,7 @@ void Kernel::add_module(Module* module){
     module->register_for_event(ON_CONFIG_RELOAD);
 }
 
-void Kernel::register_for_event(unsigned int id_event, Module* module){
+void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
     uint8_t current_id = 0;
     Module* current = this->hooks[id_event][0];
     while(current != NULL ){
@@ -146,7 +148,7 @@ void Kernel::register_for_event(unsigned int id_event, Module* module){
     this->hooks[id_event][current_id+1] = NULL;
 }
 
-void Kernel::call_event(unsigned int id_event){
+void Kernel::call_event(_EVENT_ENUM id_event){
     uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
     while(current != NULL ){   // For each active stepper
         (current->*kernel_callback_functions[id_event])(this);
@@ -155,7 +157,7 @@ void Kernel::call_event(unsigned int id_event){
     }
 }
 
-void Kernel::call_event(unsigned int id_event, void * argument){
+void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
     uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
     while(current != NULL ){   // For each active stepper
         (current->*kernel_callback_functions[id_event])(argument);
