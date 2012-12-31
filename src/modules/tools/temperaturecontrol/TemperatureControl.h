@@ -9,6 +9,7 @@
 #define temperaturecontrol_h
 
 #include "libs/Pin.h"
+#include "Pwm.h"
 #include <math.h>
 
 #include "RingBuffer.h"
@@ -93,7 +94,7 @@ class TemperatureControl : public Module {
         uint16_t name_checksum;
 
         Pin* thermistor_pin;
-        Pin* heater_pin;
+        Pwm* heater_pin;
 
         bool waiting;
 

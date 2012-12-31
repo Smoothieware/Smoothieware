@@ -25,7 +25,6 @@ TemperatureControl::TemperatureControl(uint16_t name){
 void TemperatureControl::on_module_loaded(){
 
     // We start not desiring any temp
-//     this->desired_adc_value = UNDEFINED;
     this->target_temperature = UNDEFINED;
 
     // Settings
@@ -93,11 +92,11 @@ void TemperatureControl::on_config_reload(void* argument){
     this->kernel->adc->enable_pin(this->thermistor_pin);
 
     // Heater pin
-    this->heater_pin     =  this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_pin()->as_output();
+    this->heater_pin     =  this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_pwm()->as_output();
     this->heater_pin->set(0);
 
     // activate SD-DAC timer
-    this->kernel->slow_ticker->attach(1000, this->heater_pin, &Pin::tick);
+    this->kernel->slow_ticker->attach(1000, this->heater_pin, &Pwm::on_tick);
 
     // PID
     this->p_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number();
@@ -107,9 +106,6 @@ void TemperatureControl::on_config_reload(void* argument){
     this->i = 0.0;
     this->last_reading = 0.0;
 }
-
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
 
 void TemperatureControl::on_gcode_received(void* argument)
 {
@@ -121,6 +117,35 @@ void TemperatureControl::on_gcode_received(void* argument)
             gcode->stream->printf("%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
             gcode->add_nl = true;
         }
+        if (gcode->m == 301)
+        {
+            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
+            {
+                if (gcode->has_letter('P'))
+                    this->p_factor = gcode->get_value('P');
+                if (gcode->has_letter('I'))
+                    this->i_factor = gcode->get_value('I');
+                if (gcode->has_letter('D'))
+                    this->d_factor = gcode->get_value('D');
+                if (gcode->has_letter('X'))
+                    this->i_max    = gcode->get_value('X');
+            }
+            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor, this->d_factor, this->i_max, this->p, this->i, this->d, o);
+        }
+        if (gcode->m == 303)
+        {
+            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
+            {
+                double target = 150.0;
+                if (gcode->has_letter('P'))
+                {
+                    target = gcode->get_value('P');
+                    gcode->stream->printf("Target: %5.1f\n", target);
+                }
+                gcode->stream->printf("Start PID tune, command is %s\n", gcode->command.c_str());
+                this->pool->PIDtuner->begin(this, target, gcode->stream);
+            }
+        }
     }
 }
 
@@ -130,7 +155,6 @@ void TemperatureControl::on_gcode_execute(void* argument){
         // Set temperature without waiting
         if( gcode->m == this->set_m_code && gcode->has_letter('S') )
         {
-            //gcode->stream->printf("setting to %f meaning %u  \r\n", gcode->get_value('S'), this->temperature_to_adc_value( gcode->get_value('S') ) );
             if (gcode->get_value('S') == 0)
             {
                 this->target_temperature = UNDEFINED;
@@ -157,42 +181,14 @@ void TemperatureControl::on_gcode_execute(void* argument){
                 this->waiting = true;
             }
         }
-        if (gcode->m == 301)
-        {
-            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
-            {
-                if (gcode->has_letter('P'))
-                    this->p_factor = gcode->get_value('P');
-                if (gcode->has_letter('I'))
-                    this->i_factor = gcode->get_value('I');
-                if (gcode->has_letter('D'))
-                    this->d_factor = gcode->get_value('D');
-                if (gcode->has_letter('X'))
-                    this->i_max    = gcode->get_value('X');
-            }
-            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor, this->d_factor, this->i_max, this->p, this->i, this->d, o);
-        }
-        if (gcode->m == 303)
-        {
-            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
-            {
-                double target = 150.0;
-                if (gcode->has_letter('T'))
-                    target = gcode->get_value('T');
-                this->pool->PIDtuner->begin(this, target, gcode->stream);
-            }
-        }
     }
 }
 
-//#pragma GCC pop_options
-
 
 void TemperatureControl::set_desired_temperature(double desired_temperature){
-//     this->desired_adc_value = this->temperature_to_adc_value(desired_temperature);
     target_temperature = desired_temperature;
     if (desired_temperature == 0.0)
-        heater_pin->set(0);
+        heater_pin->set((o = 0));
 }
 
 double TemperatureControl::get_temperature(){
@@ -246,24 +242,26 @@ void TemperatureControl::pid_process(double temperature)
 
     p  = error * p_factor;
     i += (error * this->i_factor);
-    d  = (last_reading - temperature) * this->d_factor;
+    // d was imbued with oldest_raw earlier in new_thermistor_reading
+    d = adc_value_to_temperature(d);
+    d = (d - temperature) * this->d_factor;
 
     if (i > this->i_max)
         i = this->i_max;
     if (i < -this->i_max)
         i = -this->i_max;
 
-    this->o = (p + i + d) * PIN_PWM_MAX / 256;
+    this->o = (p + i + d) * heater_pin->max_pwm() / 256;
 
-    if (this->o >= PIN_PWM_MAX)
+    if (this->o >= heater_pin->max_pwm())
     {
-        i -= (this->o - (PIN_PWM_MAX - 1)) * 256 / PIN_PWM_MAX;
-        this->o = PIN_PWM_MAX - 1;
+        i -= (this->o - (heater_pin->max_pwm() - 1)) * 256 / heater_pin->max_pwm();
+        this->o = heater_pin->max_pwm() - 1;
     }
     if (this->o < 0)
     {
-        if (this->o < -(PIN_PWM_MAX))
-            i += (-(PIN_PWM_MAX) - this->o) * 256 / PIN_PWM_MAX;
+        if (this->o < -(heater_pin->max_pwm()))
+            i += (-(heater_pin->max_pwm()) - this->o) * 256 / heater_pin->max_pwm();
         this->o = 0;
     }
 
@@ -278,6 +276,7 @@ int TemperatureControl::new_thermistor_reading()
         uint16_t l;
         queue.pop_front(l);
         running_total -= l;
+        d = l;
     }
     uint16_t r = last_raw;
     queue.push_back(r);
