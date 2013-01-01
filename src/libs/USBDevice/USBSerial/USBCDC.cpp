@@ -143,8 +143,8 @@ USBCDC::USBCDC(USB *u) {
     usb->addEndpoint(&CDC_intep);
     uint8_t slaveIfAddr =
         usb->addInterface(&CDC_slaveif);
-    usb->addEndpoint(&CDC_BulkIn);
     usb->addEndpoint(&CDC_BulkOut);
+    usb->addEndpoint(&CDC_BulkIn);
 
     CDC_if.iInterface = usb->addString(&CDC_string);
 
