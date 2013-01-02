@@ -32,6 +32,10 @@
 
 #include "libs/SDFAT.h"
 
+#include "libs/Watchdog.h"
+
+// Watchdog wd(5000000, WDT_MRI);
+
 // #include "libs/USBCDCMSC/USBCDCMSC.h"
 // SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
 SDCard sd(P0_9, P0_8, P0_7, P0_6);
@@ -121,5 +125,6 @@ int main() {
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
         kernel->call_event(ON_IDLE);
+//         wd.feed();
     }
 }
