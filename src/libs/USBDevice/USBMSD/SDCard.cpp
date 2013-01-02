@@ -196,11 +196,11 @@ SDCard::SDCard(PinName mosi, PinName miso, PinName sclk, PinName cs) :
 #define BLOCK2ADDR(block)   (((cardtype == SDCARD_V1) || (cardtype == SDCARD_V2))?(block << 9):((cardtype == SDCARD_V2HC)?(block):0))
 
 SDCard::CARD_TYPE SDCard::initialise_card() {
-    // Set to 100kHz for initialisation, and clock card with cs = 1
-    _spi.frequency(100000);
+    // Set to 25kHz for initialisation, and clock card with cs = 1
+    _spi.frequency(25000);
     _cs = 1;
 
-    for(int i=0; i<16; i++) {
+    for(int i=0; i<24; i++) {
         _spi.write(0xFF);
     }
 
