@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef ROBOT_H
@@ -15,6 +15,9 @@ using std::string;
 #include "../communication/utils/Gcode.h"
 #include "arm_solutions/BaseSolution.h"
 #include "Planner.h"
+#include "libs/Pin.h"
+#include "libs/StepperMotor.h"
+
 
 #define default_seek_rate_checksum             47357
 #define default_feed_rate_checksum             6633
@@ -54,6 +57,8 @@ class Robot : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
+
+    private:
         void execute_gcode(Gcode* gcode);
         void append_milestone( double target[], double feed_rate);
         void append_line( Gcode* gcode, double target[], double feed_rate);
@@ -75,8 +80,8 @@ class Robot : public Module {
         double feed_rate;                                     // Current rate for feeding moves ( mm/s )
         uint8_t plane_axis_0, plane_axis_1, plane_axis_2;     // Current plane ( XY, XZ, YZ )
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
-        double mm_per_line_segment;                           // Setting : Used to split lines into segments
-        double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
+        double mm_per_line_segment;                           // Setting : Used to split lines into segments
+        double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
         
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
@@ -85,6 +90,23 @@ class Robot : public Module {
         // computational efficiency of generating arcs.
         int arc_correction;                                   // Setting : how often to rectify arc computation
         double max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
+
+    // Used by Stepper
+    public:
+        Pin* alpha_step_pin;
+        Pin* beta_step_pin;
+        Pin* gamma_step_pin;
+        Pin* alpha_dir_pin;
+        Pin* beta_dir_pin;
+        Pin* gamma_dir_pin;
+        Pin* alpha_en_pin;
+        Pin* beta_en_pin;
+        Pin* gamma_en_pin;
+ 
+        StepperMotor* alpha_stepper_motor;
+        StepperMotor* beta_stepper_motor;
+        StepperMotor* gamma_stepper_motor;
+
 
 };
 

@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef BLOCK_H
@@ -26,7 +26,7 @@ class Block {
         double compute_factor_for_safe_speed();
         void calculate_trapezoid( double entry_factor, double exit_factor );
         double estimate_acceleration_distance( double initial_rate, double target_rate, double acceleration );
-        double intersection_distance(double initial_rate, double final_rate, double acceleration, double distance); 
+        double intersection_distance(double initial_rate, double final_rate, double acceleration, double distance);
         void reverse_pass(Block* previous, Block* next);
         void forward_pass(Block* previous, Block* next);
         void debug(Kernel* kernel);
@@ -47,7 +47,7 @@ class Block {
         float          nominal_speed;      // Nominal speed in mm per minute
         float          millimeters;        // Distance for this move
         double         entry_speed;
-        unsigned int   rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
+        float          rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
         unsigned int   initial_rate;       // Initial speed in steps per minute
         unsigned int   final_rate;         // Final speed in steps per minute
         unsigned int   accelerate_until;   // Stop accelerating after this number of steps
@@ -64,7 +64,7 @@ class Block {
         
         bool is_ready;
 
-        short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
+        short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
 
 };
 

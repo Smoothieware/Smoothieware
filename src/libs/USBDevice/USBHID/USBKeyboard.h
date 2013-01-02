@@ -66,7 +66,7 @@ enum FUNCTION_KEY
     KEY_PAGE_DOWN,      /* Page Down key */
 };
 
-/** 
+/**
  * USBKeyboard example
  * @code
  *
@@ -74,7 +74,7 @@ enum FUNCTION_KEY
  * #include "USBKeyboard.h"
  *
  * USBKeyboard key;
- * 
+ *
  * int main(void)
  * {
  *   while (1)
@@ -100,14 +100,14 @@ class USBKeyboard: public USBHID, public Stream
         * @param product_release Your preoduct_release (default: 0x0001)
         *
         */
-        USBKeyboard(uint16_t vendor_id = 0x1235, uint16_t product_id = 0x0050, uint16_t product_release = 0x0001): 
+        USBKeyboard(uint16_t vendor_id = 0x1235, uint16_t product_id = 0x0050, uint16_t product_release = 0x0001):
             USBHID(0, 0, vendor_id, product_id, product_release, false){
                 lock_status = 0;
                 connect();
             };
         
         /**
-        * To send a character defined by a modifier(CTRL, SHIFT, ALT) and the key 
+        * To send a character defined by a modifier(CTRL, SHIFT, ALT) and the key
         *
         * @code
         * //To send CTRL + s (save)

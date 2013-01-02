@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
       
       With chucks taken from http://en.wikipedia.org/wiki/Circular_buffer, see licence there also
 */
@@ -67,9 +67,10 @@ template<class kind, int length> void RingBuffer<kind, length>::get(int index, k
         j++;
         k= (k + 1) & (length - 1);
     }
-    if (k == this->tail){
-        //return NULL; 
-    }
+    // TODO : this checks wether we are asked a value out of range
+    //if (k == this->tail){
+    //    return NULL;
+    //}
     object = this->buffer[k];
 }
 
@@ -82,6 +83,7 @@ template<class kind, int length> kind* RingBuffer<kind, length>::get_ref(int ind
         j++;
         k= (k + 1) & (length - 1);
     }
+    // TODO : this checks wether we are asked a value out of range
     if (k == this->tail){
         return NULL;
     }
@@ -89,7 +91,7 @@ template<class kind, int length> kind* RingBuffer<kind, length>::get_ref(int ind
 }
 
 template<class kind, int length> void RingBuffer<kind, length>::pop_front(kind &object){
-    object = this->buffer[this->head]; 
+    object = this->buffer[this->head];
     this->head = (this->head+1)&(length-1);
 }
 

@@ -21,10 +21,10 @@ ADC::ADC(int sample_rate, int cclk_div)
     int Fcco = (2 * m * XTAL_FREQ) / n;
     int cclk = Fcco / cclkdiv;
 
-    //Power up the ADC        
+    //Power up the ADC
     LPC_SC->PCONP |= (1 << 12);
     //Set clock at cclk / 1.
-    LPC_SC->PCLKSEL0 &= ~(0x3 << 24);    
+    LPC_SC->PCLKSEL0 &= ~(0x3 << 24);
     switch (cclk_div) {
         case 1:
             LPC_SC->PCLKSEL0 |= 0x1 << 24;
@@ -96,7 +96,7 @@ void ADC::_adcisr(void)
 }
 
 
-void ADC::adcisr(void)  
+void ADC::adcisr(void)
 {
     uint32_t stat;
     int chan;
@@ -119,7 +119,7 @@ void ADC::adcisr(void)
     if (_adc_isr[chan] != NULL)
         _adc_isr[chan](_adc_data[chan]);
     if (_adc_g_isr != NULL)
-        _adc_g_isr(chan, _adc_data[chan]); 
+        _adc_g_isr(chan, _adc_data[chan]);
     return;
 }
 
@@ -155,7 +155,7 @@ PinName ADC::channel_to_pin(int chan) {
     if ((chan < 0) || (chan > 5))
         fprintf(stderr, "ADC channel %u is outside range available to MBED pins.\n", chan);
     return(pin[chan & 0x07]);
-} 
+}
 
 
 int ADC::channel_to_pin_number(int chan) {
@@ -164,7 +164,7 @@ int ADC::channel_to_pin_number(int chan) {
     if ((chan < 0) || (chan > 5))
         fprintf(stderr, "ADC channel %u is outside range available to MBED pins.\n", chan);
     return(pin[chan & 0x07]);
-} 
+}
 
 
 uint32_t ADC::_data_of_pin(PinName pin) {
@@ -194,7 +194,7 @@ uint32_t ADC::_data_of_pin(PinName pin) {
 
 //Enable or disable an ADC pin
 void ADC::setup(PinName pin, int state) {
-    int chan;    
+    int chan;
     chan=_pin_to_channel(pin);
     if ((state & 1) == 1) {
         switch(pin) {
@@ -298,7 +298,7 @@ void ADC::burst(int state) {
             fprintf(stderr, "Warning. startmode is %u. Must be 0 for burst mode.\n", startmode(0));
         LPC_ADC->ADCR |= (1 << 16);
     }
-    else 
+    else
         LPC_ADC->ADCR &= ~(1 << 16);
 }
 //Return burst mode state
@@ -310,7 +310,7 @@ int  ADC::burst(void) {
 void ADC::startmode(int mode, int edge) {
     int lpc_adc_temp;
     
-    //Reset start mode and edge bit, 
+    //Reset start mode and edge bit,
     lpc_adc_temp = LPC_ADC->ADCR & ~(0x0F << 24);
     //Write with new values
     lpc_adc_temp |= ((mode & 7) << 24) | ((edge & 1) << 27);
