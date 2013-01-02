@@ -21,22 +21,6 @@
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 
-// See : http://smoothieware.org/listofevents
-#define NUMBER_OF_DEFINED_EVENTS   12
-#define ON_MAIN_LOOP               0
-#define ON_CONSOLE_LINE_RECEIVED   1
-#define ON_GCODE_RECEIVED          2
-#define ON_STEPPER_WAKE_UP         3    //TODO : Remove the need for this event, then this event itself eg: have planner call stepper directly
-#define ON_GCODE_EXECUTE           4
-#define ON_SPEED_CHANGE            5
-#define ON_BLOCK_BEGIN             6
-#define ON_BLOCK_END               7
-#define ON_CONFIG_RELOAD           8
-#define ON_PLAY                    9
-#define ON_PAUSE                   10
-#define ON_IDLE                    11
-
-
 typedef void (Module::*ModuleCallback)(void * argument);
 
 //Module manager
@@ -47,9 +31,9 @@ class Kernel {
     public:
         Kernel();
         void add_module(Module* module);
-        void register_for_event(unsigned int id_event, Module* module);
-        void call_event(unsigned int id_event);
-        void call_event(unsigned int id_event, void * argument);
+        void register_for_event(_EVENT_ENUM id_event, Module* module);
+        void call_event(_EVENT_ENUM id_event);
+        void call_event(_EVENT_ENUM id_event, void * argument);
 
         // These modules are aviable to all other modules
         SerialConsole*    serial;

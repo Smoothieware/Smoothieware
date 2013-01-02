@@ -15,9 +15,14 @@
 #include "modules/robot/Block.h"
 
 #define microseconds_per_step_pulse_checksum 42333
-#define extruder_module_enable_checksum      6183
+#define extruder_module_enable_checksum       6183
 #define extruder_steps_per_mm_checksum       58088
 #define extruder_acceleration_checksum       60356
+#define extruder_step_pin_checksum           40763
+#define extruder_dir_pin_checksum            57277
+#define extruder_en_pin_checksum              8017
+#define extruder_max_speed_checksum          54671
+
 // default_feed_rate_checksum defined by Robot.h
 
 #define OFF 0
@@ -29,6 +34,7 @@ class Extruder : public Module{
         Extruder();
         void on_module_loaded();
         void on_config_reload(void* argument);
+        void on_gcode_received(void*);
         void on_gcode_execute(void* argument);
         void on_block_begin(void* argument);
         void on_block_end(void* argument);
@@ -50,6 +56,7 @@ class Extruder : public Module{
         double          steps_per_millimeter;         // Steps to travel one millimeter
         double          feed_rate;                    //
         double          acceleration;                 //
+        double          max_speed;
 
         int             counter_increment;
         int             step_counter;

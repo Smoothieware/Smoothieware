@@ -1,0 +1,108 @@
+# Robot module configurations : general handling of movement G-codes and slicing into moves
+default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
+default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
+mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
+mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
+
+# Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
+alpha_steps_per_mm                           80               # Steps per mm for alpha stepper
+beta_steps_per_mm                            80               # Steps per mm for beta stepper
+gamma_steps_per_mm                           1600             # Steps per mm for gamma stepper
+
+# Planner module configuration : Look-ahead and acceleration configuration
+planner_queue_size                           64               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
+acceleration                                 3000             # Acceleration in mm/second/second.
+acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
+max_jerk                                     200              # Max instant cornering speed change. Higher means jerkier/faster, lower means smoother/slower.
+
+# Stepper module configuration
+microseconds_per_step_pulse                  1                # Duration of step pulses to stepper drivers, in microseconds
+minimum_steps_per_minute                     1200             # Never step slower than this
+base_stepping_frequency                      100000           # Base frequency for stepping, higher gives smoother movement
+
+# Stepper module pins ( ports, and pin numbers, appending "!" to the number will invert a pin )
+alpha_step_pin                               2.0              # Pin for alpha stepper step signal
+alpha_dir_pin                                0.5              # Pin for alpha stepper direction
+alpha_en_pin                                 0.4              # Pin for alpha enable pin
+alpha_current                                1.5              # X stepper motor current
+x_axis_max_speed                             30000            # mm/min
+
+beta_step_pin                                2.1              # Pin for beta stepper step signal
+beta_dir_pin                                 0.11             # Pin for beta stepper direction
+beta_en_pin                                  0.10             # Pin for beta enable
+beta_current                                 1.5              # Y stepper motor current
+y_axis_max_speed                             30000            # mm/min
+
+gamma_step_pin                               2.2              # Pin for gamma stepper step signal
+gamma_dir_pin                                0.20             # Pin for gamma stepper direction
+gamma_en_pin                                 0.19             # Pin for gamma enable
+gamma_current                                1.5              # Z stepper motor current
+z_axis_max_speed                             300              # mm/min
+
+# Serial communications configuration ( baud rate default to 9600 if undefined )
+uart0.baud_rate                              115200           # Baud rate for the default serial port
+
+# Extruder module configuration
+extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
+extruder_steps_per_mm                        140              # Steps per mm for extruder stepper
+extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
+extruder_acceleration                        50               # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+extruder_max_speed                           1000             # mm^3/s
+
+extruder_step_pin                            2.3              # Pin for extruder step signal
+extruder_dir_pin                             0.22             # Pin for extruder dir signal
+extruder_en_pin                              0.21             # Pin for extruder enable signal
+delta_current                                1.5              # Extruder stepper motor current
+
+# Laser module configuration
+laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is ignored if false.
+
+# Hotend temperature control configuration
+temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all. All configuration is ignored if false.
+temperature_control.hotend.thermistor_pin    0.23             # Pin for the thermistor to read
+temperature_control.hotend.heater_pin        2.7              # Pin that controls the heater
+temperature_control.hotend.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64 for a list of valid thermistor names
+temperature_control.hotend.set_m_code        104              #
+temperature_control.hotend.set_and_wait_m_code 109            #
+temperature_control.hotend.designator        T                #
+
+temperature_control.bed.enable               true             #
+temperature_control.bed.thermistor_pin       0.24             #
+temperature_control.bed.heater_pin           2.5              #
+temperature_control.bed.thermistor           Honeywell100K    # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64 for a list of valid thermistor names
+temperature_control.bed.set_m_code           140              #
+temperature_control.bed.set_and_wait_m_code  190              #
+temperature_control.bed.designator           B                #
+
+# Switch module for fan control
+switch.fan.enable                            true             #
+switch.fan.on_m_code                         106              #
+switch.fan.off_m_code                        107              #
+switch.fan.output_pin                        2.6              #
+
+switch.misc.enable                           true             #
+switch.misc.on_m_code                        42               #
+switch.misc.off_m_code                       43               #
+switch.misc.output_pin                       2.4              #
+
+# Switch module for spindle control
+switch.spindle.enable                        false            #
+
+# Endstops
+alpha_min_endstop                            1.24             #
+alpha_max_endstop                            1.25             #
+beta_min_endstop                             1.26             #
+beta_max_endstop                             1.27             #
+gamma_min_endstop                            1.28             #
+gamma_max_endstop                            1.29             #
+
+# Panel
+panel.enable                                 false            #
+panel.up_button_pin                          0.1!             #
+panel.down_button_pin                        0.0!             #
+panel.click_button_pin                       0.18!            #
+panel.encoder_a_pin                          0.15!            #
+panel.encoder_b_pin                          0.17!            #
+
+# Only needed on a smoothieboard
+currentcontrol_module_enable                 true             #

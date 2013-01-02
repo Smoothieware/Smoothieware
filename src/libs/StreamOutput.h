@@ -8,10 +8,38 @@
 #ifndef STREAMOUTPUT_H
 #define STREAMOUTPUT_H
 
-class StreamOutput {
+#include <Stream.h>
+#include <cstdarg>
+
+class StreamOutput : public mbed::Stream {
     public:
-       StreamOutput(){}
-       virtual int printf(const char* format, ...) { return 0; }
+        StreamOutput(){}
+//         virtual int puts(const char *str) = 0;
+        virtual int printf(const char* format, ...) {
+            char *buffer; // = printf_default_buffer;
+            // Make the message
+            va_list args;
+            va_start(args, format);
+
+            int size = vsnprintf(NULL, 0, format, args)
+                + 1; // we add one to take into account space for the terminating \0
+
+//             if (size > PRINTF_DEFAULT_BUFFER_SIZE) {
+                buffer = new char[size];
+                vsnprintf(buffer, size, format, args);
+//             }
+
+            va_end(args);
+
+            puts(buffer);
+
+//             if (buffer != printf_default_buffer)
+                delete buffer;
+
+            return size - 1;
+        }
+        virtual int _putc(int c) { return 0; }
+        virtual int _getc(void) { return 0; }
 };
 
 #endif

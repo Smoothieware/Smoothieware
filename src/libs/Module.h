@@ -11,6 +11,25 @@
 #include <string>
 using std::string;
 
+// See : http://smoothieware.org/listofevents
+enum _EVENT_ENUM {
+    ON_MAIN_LOOP,
+    ON_CONSOLE_LINE_RECEIVED,
+    ON_GCODE_RECEIVED,
+    ON_STEPPER_WAKE_UP,
+    ON_GCODE_EXECUTE,
+    ON_SPEED_CHANGE,
+    ON_BLOCK_BEGIN,
+    ON_BLOCK_END,
+    ON_CONFIG_RELOAD,
+    ON_PLAY,
+    ON_PAUSE,
+    ON_IDLE,
+    ON_CONFIG_VALUE,
+    ON_CONFIG_COMPLETE,
+    NUMBER_OF_DEFINED_EVENTS
+};
+
 // Module base class
 // All modules must extend this class, see http://smoothieware.org/moduleexample
 class Kernel;
@@ -18,12 +37,12 @@ class Module {
     public:
         Module();
         virtual void on_module_loaded();
-        virtual void register_for_event(int event_id);
-        virtual void on_main_loop(void * argument);
+        virtual void register_for_event(        _EVENT_ENUM event_id);
+        virtual void on_main_loop(              void * argument);
         virtual void on_console_line_received(  void * argument);
         virtual void on_gcode_received(         void * argument);
-        virtual void on_gcode_execute(          void * argument);
         virtual void on_stepper_wake_up(        void * argument);
+        virtual void on_gcode_execute(          void * argument);
         virtual void on_speed_change(           void * argument);
         virtual void on_block_begin(            void * argument);
         virtual void on_block_end(              void * argument);
@@ -31,6 +50,8 @@ class Module {
         virtual void on_play(                   void * argument);
         virtual void on_pause(                  void * argument);
         virtual void on_idle(                   void * argument);
+        virtual void on_config_value(           void * argument);
+        virtual void on_config_complete(        void * argument);
         Kernel * kernel;
 };
 

@@ -9,6 +9,7 @@
 #define TEMPERATURECONTROLPOOL_H
 
 #include "TemperatureControl.h"
+#include "PID_Autotuner.h"
 #include <math.h>
 using namespace std;
 #include <vector>
@@ -23,6 +24,7 @@ class TemperatureControlPool : public Module {
         void on_module_loaded();
 
         vector<TemperatureControl*> controllers;
+        PID_Autotuner* PIDtuner;
 };
 
 

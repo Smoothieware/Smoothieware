@@ -39,7 +39,9 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
         &Module::on_config_reload,
         &Module::on_play,
         &Module::on_pause,
-        &Module::on_idle
+        &Module::on_idle,
+        &Module::on_config_value,
+        &Module::on_config_complete,
 };
 
 #define baud_rate_setting_checksum 10922
@@ -47,7 +49,6 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
-
     // Value init for the arrays
     for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){
         for( uint8_t index=0; index<32; index++ ){
@@ -79,9 +80,8 @@ Kernel::Kernel(){
     }else{
         this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
     }
-
-
     this->add_module( this->config );
+
     this->add_module( this->serial );
 
     // HAL stuff
@@ -99,7 +99,7 @@ Kernel::Kernel(){
     // Set other priorities lower than the timers
     NVIC_SetPriority(ADC_IRQn, 4);
     NVIC_SetPriority(USB_IRQn, 4);
- 
+
     // If MRI is enabled
     if( MRI_ENABLE ){
         if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 4); }
@@ -114,9 +114,11 @@ Kernel::Kernel(){
     }
 
     // Configure the step ticker
-    int base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
+    int base_stepping_frequency          =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
     double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
+
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
+
     this->step_ticker->set_frequency(   base_stepping_frequency );
 
     // Core modules
@@ -126,8 +128,6 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->player         = new Player()        );
     this->add_module( this->pauser         = new Pauser()        );
-
-
 }
 
 void Kernel::add_module(Module* module){
@@ -136,7 +136,7 @@ void Kernel::add_module(Module* module){
     module->register_for_event(ON_CONFIG_RELOAD);
 }
 
-void Kernel::register_for_event(unsigned int id_event, Module* module){
+void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
     uint8_t current_id = 0;
     Module* current = this->hooks[id_event][0];
     while(current != NULL ){
@@ -148,7 +148,7 @@ void Kernel::register_for_event(unsigned int id_event, Module* module){
     this->hooks[id_event][current_id+1] = NULL;
 }
 
-void Kernel::call_event(unsigned int id_event){
+void Kernel::call_event(_EVENT_ENUM id_event){
     uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
     while(current != NULL ){   // For each active stepper
         (current->*kernel_callback_functions[id_event])(this);
@@ -157,7 +157,7 @@ void Kernel::call_event(unsigned int id_event){
     }
 }
 
-void Kernel::call_event(unsigned int id_event, void * argument){
+void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
     uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
     while(current != NULL ){   // For each active stepper
         (current->*kernel_callback_functions[id_event])(argument);

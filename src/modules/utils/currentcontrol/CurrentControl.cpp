@@ -2,6 +2,9 @@
 #include "CurrentControl.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+
+#include "Gcode.h"
+
 #include <string>
 using namespace std;
 
@@ -21,6 +24,25 @@ void CurrentControl::on_module_loaded(){
     this->kernel->digipot->set_current(2, this->gamma_current);
     this->kernel->digipot->set_current(3, this->delta_current);
 
+    this->register_for_event(ON_GCODE_RECEIVED);
 }
 
 
+void CurrentControl::on_gcode_received(void *argument)
+{
+    Gcode *gcode = static_cast<Gcode*>(argument);
+    char alpha[4] = { 'X', 'Y', 'Z', 'E' };
+    if (gcode->has_m)
+    {
+        if (gcode->m == 907)
+        {
+            int i;
+            for (i = 0; i < 4; i++)
+            {
+                if (gcode->has_letter(alpha[i]))
+                    this->kernel->digipot->set_current(i, gcode->get_value(alpha[i]));
+                gcode->stream->printf("%c:%3.1fA%c", alpha[i], this->kernel->digipot->get_current(i), (i == 3)?'\n':' ');
+            }
+        }
+    }
+}
