@@ -117,6 +117,14 @@ USBMSD::USBMSD(USB *u, MSD_Disk *d) {
     // because gcc-4.6 won't let us simply do MSC_Description = usbstring("Smoothie MSD")
     usbdesc_string_l(13) us = usbstring("Smoothie MSD");
     memcpy(&MSC_Description, &us, sizeof(MSC_Description));
+
+    usb->addInterface(&MSC_Interface);
+
+    usb->addEndpoint(&MSC_BulkIn);
+    usb->addEndpoint(&MSC_BulkOut);
+
+    MSC_Interface.iInterface =
+    	usb->addString(&MSC_Description);
 }
 
 // Called in ISR context to process a class specific request
@@ -178,14 +186,6 @@ bool USBMSD::connect()
     } else {
         return false;
     }
-
-    usb->addInterface(&MSC_Interface);
-
-    usb->addEndpoint(&MSC_BulkIn);
-    usb->addEndpoint(&MSC_BulkOut);
-
-    MSC_Interface.iInterface =
-    usb->addString(&MSC_Description);
 
     return true;
 }
