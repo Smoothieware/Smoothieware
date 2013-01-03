@@ -4,7 +4,7 @@
 #include "descriptor.h"
 
 #ifndef N_DESCRIPTORS
-#define N_DESCRIPTORS 32
+#define N_DESCRIPTORS 48
 #endif
 
 #include "USBDevice.h"
