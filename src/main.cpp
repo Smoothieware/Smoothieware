@@ -47,6 +47,7 @@ USB u;
 USBSerial usbserial(&u);
 USBMSD msc(&u, &sd);
 DFU dfu(&u);
+USBSerial usbserial2(&u);
 
 SDFAT mounter("sd", &sd);
 
@@ -115,6 +116,7 @@ int main() {
 
     kernel->add_module( &msc );
     kernel->add_module( &usbserial );
+    kernel->add_module( &usbserial2 );
     kernel->add_module( &u );
 
     struct SerialMessage message;
