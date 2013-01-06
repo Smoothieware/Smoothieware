@@ -112,10 +112,7 @@ void Robot::execute_gcode(Gcode* gcode){
             case 91: this->absolute_mode = false; break;
             case 92: {
                 if(gcode->get_num_args() == 0){
-                    for (char letter = 'X'; letter <= 'Z'; letter++){
-                        if ( gcode->has_letter(letter) )
-                            this->last_milestone[letter-'X'] = this->to_millimeters(0.0);
-                    }
+                    clear_vector_double(this->last_milestone);
                 }else{
                     for (char letter = 'X'; letter <= 'Z'; letter++){
                         if ( gcode->has_letter(letter) )
