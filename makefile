@@ -36,7 +36,7 @@ debug-store: $(PROJECT).elf
 	cp $(PROJECT).elf $(PROJECT)_lastupload.elf
 
 flash: $(PROJECT).hex debug-store
-	lpc21isp $< /dev/ttyACM0 115200 14746
+	lpc21isp $< $(CONSOLE) 115200 12000
 
 upload: $(PROJECT).bin debug-store
 	dfu-util -d 1d50:6015 -D $<
