@@ -179,7 +179,7 @@ uint8_t* USBEthernet::buf_push(int length)
     int* r = packetbuffer[pb_head];
     pb_head = (pb_head + 1) % N_BUFFERS;
     pb_count++;
-//     ((uint8_t*) r)[BUFSIZE - sizeof(int)] = length;
+    ((int*) r)[BUFSIZE - sizeof(int)] = length;
     __enable_irq();
     return (uint8_t*) r;
 }
@@ -195,8 +195,8 @@ uint8_t* USBEthernet::buf_pop(int* length)
     int* r = packetbuffer[pb_tail];
     pb_tail = (pb_tail + 1) % N_BUFFERS;
     pb_count--;
-//     if (length)
-//         *length = ((uint8_t*) r)[BUFSIZE - sizeof(int)];
+    if (length)
+        *length = ((int*) r)[BUFSIZE - sizeof(int)];
     __enable_irq();
     return (uint8_t*) r;
 }
