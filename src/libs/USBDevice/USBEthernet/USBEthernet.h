@@ -9,7 +9,7 @@
 
 typedef usbdesc_string_l(12) macstr_t;
 
-#define N_BUFFERS 4
+#define N_BUFFERS 5
 
 class USBEthernet : public USB_Endpoint_Receiver, public Module, public network_interface {
 public:
