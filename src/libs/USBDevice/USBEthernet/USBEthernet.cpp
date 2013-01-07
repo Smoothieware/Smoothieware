@@ -10,6 +10,8 @@
 
 #include "netcore.h"
 
+#define BUFSIZE 1536
+
 int USBEthernet::interface_count = 0;
 
 USBEthernet::USBEthernet(USB* u)
@@ -148,7 +150,7 @@ USBEthernet::USBEthernet(USB* u)
 
     pb_head = pb_tail = pb_count = pr_index = 0;
     for (pb_count = 0; pb_count < N_BUFFERS; pb_count++)
-        packetbuffer[pb_count] = (int *) ahbmalloc(2048, AHB_BANK_1);
+        packetbuffer[pb_count] = (int *) ahbmalloc(BUFSIZE, AHB_BANK_1);
     pb_count = 0;
     txpacket = NULL;
 
@@ -177,7 +179,7 @@ uint8_t* USBEthernet::buf_push(int length)
     int* r = packetbuffer[pb_head];
     pb_head = (pb_head + 1) % N_BUFFERS;
     pb_count++;
-    ((uint8_t*) r)[2048 - sizeof(int)] = length;
+//     ((uint8_t*) r)[BUFSIZE - sizeof(int)] = length;
     __enable_irq();
     return (uint8_t*) r;
 }
@@ -193,8 +195,8 @@ uint8_t* USBEthernet::buf_pop(int* length)
     int* r = packetbuffer[pb_tail];
     pb_tail = (pb_tail + 1) % N_BUFFERS;
     pb_count--;
-    if (length)
-        *length = ((uint8_t*) r)[2048 - sizeof(int)];
+//     if (length)
+//         *length = ((uint8_t*) r)[BUFSIZE - sizeof(int)];
     __enable_irq();
     return (uint8_t*) r;
 }
@@ -321,12 +323,16 @@ void USBEthernet::on_main_loop(void* argument)
 uint32_t USBEthernet::on_slow_ticker(uint32_t argument)
 {
     int txlength = 0;
-    uint8_t* buf = buf_push(1526);
+    uint8_t* buf = buf_push(BUFSIZE);
 
-    txlength = net->periodical(this, buf, 1526);
+    txlength = net->periodical(100, this, buf, BUFSIZE);
 
-    if (txlength)
+    while (txlength && can_write_packet())
+    {
         write_packet(buf, txlength);
+        if (can_write_packet())
+            txlength = net->periodical(0, this, buf, BUFSIZE);
+    }
 
     buf_pop(NULL);
 
