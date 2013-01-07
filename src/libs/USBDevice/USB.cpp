@@ -135,21 +135,26 @@ bool USB::USBCallback_setConfiguration(uint8_t configuration)
 }
 
 bool USB::USBCallback_setInterface(uint16_t interface, uint8_t alternate) {
-    int i = findDescriptorIndex(0, DT_INTERFACE, interface, alternate);
-    if (i > 0)
-    {
-        int j = findDescriptorIndex(0, DT_INTERFACE, interface, 0);
-        if (j > 0) {
-            ((usbdesc_interface *) descriptors[j])->selectedAlternate = alternate;
-            for (; (descriptors[i]->bDescType != DT_INTERFACE) && (descriptors[i]->bDescType != DT_CONFIGURATION); i++) {
-                if (descriptors[i]->bDescType == DT_ENDPOINT) {
-                    usbdesc_endpoint *ep = (usbdesc_endpoint *) descriptors[i];
-                    realiseEndpoint(ep->bEndpointAddress, ep->wMaxPacketSize, ((ep->bmAttributes & 3) == EA_ISOCHRONOUS)?ISOCHRONOUS:0);
-                }
-            }
+    int j = findDescriptorIndex(0, DT_INTERFACE, interface, 0);
+
+    if (j <= 0)
+        return false;
+
+    int i = findDescriptorIndex(j, DT_INTERFACE, interface, alternate);
+
+    if (i <= 0)
+        return false;
+
+    ((usbdesc_interface *) descriptors[j])->selectedAlternate = alternate;
+
+    for (i++; descriptors[i] && (descriptors[i]->bDescType != DT_INTERFACE) && (descriptors[i]->bDescType != DT_CONFIGURATION); i++) {
+        if (descriptors[i]->bDescType == DT_ENDPOINT) {
+            usbdesc_endpoint *ep = (usbdesc_endpoint *) descriptors[i];
+            realiseEndpoint(ep->bEndpointAddress, ep->wMaxPacketSize, ((ep->bmAttributes & 3) == EA_ISOCHRONOUS)?ISOCHRONOUS:0);
         }
     }
-    return false;
+
+    return true;
 }
 
 bool USB::USBEvent_busReset(void)
