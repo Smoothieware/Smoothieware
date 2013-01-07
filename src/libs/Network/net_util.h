@@ -48,6 +48,11 @@ class Encapsulator : public Encapsulated
     virtual void  set_payload_length(void*, int) = 0;
 };
 
+class Period_receiver
+{
+    virtual int periodical(int, network_interface*, void*, int) = 0;
+};
+
 extern const uint8_t broadcast[6];
 
 bool compare_mac(const uint8_t*, const uint8_t*, const uint8_t*);

@@ -23,13 +23,14 @@ typedef struct __attribute__ ((packed)) {
     uint8_t  payload[];
 } eth_frame;
 
-class netcore {
+class netcore : Period_receiver
+{
 public:
     netcore();
 
     bool add_interface( network_interface* );
     int receive_packet( network_interface*, uint8_t*, int);
-    int periodical( network_interface*, uint8_t*, int);
+    int periodical( int, network_interface*, void*, int);
 
 protected:
     IP ip;

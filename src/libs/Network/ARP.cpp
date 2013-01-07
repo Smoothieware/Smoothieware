@@ -146,3 +146,8 @@ int   ARP::construct(network_interface* interface, void* packet, int length)
 
     return sizeof(arp_frame);
 }
+
+int   ARP::periodical(int milliseconds, network_interface* interface, void* buffer, int bufferlen)
+{
+    return 0;
+}

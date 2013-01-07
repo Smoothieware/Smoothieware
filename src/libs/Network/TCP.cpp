@@ -18,8 +18,6 @@ int TCP::construct( network_interface* interface, void* packet, int length)
 {
     tcp_frame* tcf = (tcp_frame*) packet;
 
-    tcf->length = 0;
-
     return sizeof(tcp_frame);
 }
 
@@ -34,7 +32,12 @@ void TCP::set_payload_length(void* packet, int length)
 {
     tcp_frame* tcf = (tcp_frame*) packet;
 
-    tcf->length = sizeof(tcp_frame) + length;
+    // TODO: recalculate checksum
+}
+
+int TCP::periodical(int milliseconds, network_interface* interface, void* buffer, int bufferlen)
+{
+    return 0;
 }
 
 // bool TCP::add_interface(network_interface* interface)

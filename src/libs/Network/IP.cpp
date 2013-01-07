@@ -144,3 +144,17 @@ int IP::get_length(void* packet)
 
     return ntohs(ipf->total_length);
 }
+
+int IP::periodical(int milliseconds, network_interface* interface, void* buffer, int buflen)
+{
+    int txlength = icmp.periodical(milliseconds, interface, buffer, buflen);
+    if (txlength == 0)
+        txlength = tcp.periodical(milliseconds, interface, buffer, buflen);
+    if (txlength == 0)
+        txlength = udp.periodical(milliseconds, interface, buffer, buflen);
+    if (txlength == 0)
+    {
+        // TODO: IP periodicals
+    }
+    return txlength;
+}

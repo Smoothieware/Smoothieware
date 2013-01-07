@@ -45,7 +45,7 @@ typedef struct __attribute__ ((packed)) {
     uint8_t payload[];
 } ip_frame;
 
-class IP : public Encapsulator
+class IP : public Encapsulator, public Period_receiver
 {
 public:
     IP();
@@ -61,6 +61,8 @@ public:
     void  set_payload_length(void*, int);
 
     int   get_length(void*);
+
+    int   periodical(int, network_interface*, void*, int);
 
 protected:
     ICMP icmp;

@@ -69,9 +69,14 @@ int netcore::receive_packet(network_interface* interface, uint8_t* payload, int 
     return txlength;
 }
 
-int netcore::periodical(network_interface* interface, uint8_t* buffer, int bufsize)
+int netcore::periodical( int milliseconds, network_interface* interface, void* buffer, int bufsize )
 {
     int txlength = 0;
+
+    txlength = ip.periodical(milliseconds, interface, buffer, bufsize);
+
+    if (txlength == 0)
+        txlength = arp.periodical(milliseconds, interface, buffer, bufsize);
 
     return txlength;
 }

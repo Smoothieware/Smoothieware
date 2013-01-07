@@ -36,7 +36,7 @@ typedef struct {
     void* next;
 } arp_cache_entry;
 
-class ARP : public Encapsulated
+class ARP : public Encapsulated, public Period_receiver
 {
 public:
     ARP();
@@ -52,6 +52,8 @@ public:
 
     bool  get_ip(uint32_t, network_interface**, uint8_t**);
     bool  get_mac(uint8_t*, network_interface**, uint32_t*);
+
+    int   periodical(int, network_interface*, void*, int);
 
 protected:
     arp_cache_entry* arp_cache;

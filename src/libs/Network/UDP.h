@@ -17,6 +17,8 @@ public:
 
     void* get_payload_buffer(void*);
     void  set_payload_length(void*, int);
+
+    int   periodical( int, network_interface*, void*, int );
 };
 
 #endif /* _UDP_H */

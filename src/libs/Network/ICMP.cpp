@@ -65,3 +65,8 @@ void ICMP::set_payload_length(void* packet, int length)
     icf->checksum = 0;
     icf->checksum = checksum16((uint8_t*) packet, sizeof(icmp_frame) + length, 0);
 }
+
+int ICMP::periodical(int milliseconds, network_interface* interface, void* buffer, int bufferlen)
+{
+    return 0;
+}

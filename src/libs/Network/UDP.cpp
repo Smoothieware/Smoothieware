@@ -33,3 +33,8 @@ void  UDP::set_payload_length(void* packet, int length)
 
     udf->length = sizeof(udp_frame) + length;
 }
+
+int UDP::periodical(int milliseconds, network_interface* interface, void* buffer, int bufferlen)
+{
+    return 0;
+}
