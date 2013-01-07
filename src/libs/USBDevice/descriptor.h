@@ -170,7 +170,7 @@ typedef struct __attribute__ ((packed))
 }
     usbdesc_string;
 
-#define usbdesc_string_l(l) struct __attribute__ ((packed)) { uint8_t bLength; uint8_t bDescType; char16_t str[l]; }
+#define usbdesc_string_l(l) struct __attribute__ ((packed)) { uint8_t bLength; uint8_t bDescType; char16_t str[l + 1]; }
 
 #define usbstring(string) { sizeof(u ## string), DT_STRING, { u ## string } }
 
