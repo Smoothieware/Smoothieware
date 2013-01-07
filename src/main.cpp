@@ -28,9 +28,15 @@
 #include "libs/USBDevice/USBMSD/USBMSD.h"
 #include "libs/USBDevice/USBMSD/SDCard.h"
 #include "libs/USBDevice/USBSerial/USBSerial.h"
+#include "libs/USBDevice/USBEthernet/USBEthernet.h"
+
+#include "netcore.h"
+
 #include "libs/USBDevice/DFU.h"
 
 #include "libs/SDFAT.h"
+
+#include <mri.h>
 
 #include "libs/Watchdog.h"
 
@@ -48,6 +54,10 @@ USBSerial usbserial(&u);
 USBMSD msc(&u, &sd);
 DFU dfu(&u);
 USBSerial usbserial2(&u);
+
+USBEthernet usbethernet(&u);
+
+netcore network;
 
 SDFAT mounter("sd", &sd);
 
@@ -73,6 +83,8 @@ int main() {
     Kernel* kernel = new Kernel();
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.0 \r\n");
+
+//     __debugbreak();
 
 //     kernel->streams->printf("Disk Status: %d, Type: %d\n", sd.disk_status(), sd.card_type());
 //     if (sd.disk_status() == 0) {
@@ -117,7 +129,10 @@ int main() {
     kernel->add_module( &msc );
     kernel->add_module( &usbserial );
     kernel->add_module( &usbserial2 );
+    kernel->add_module( &usbethernet );
     kernel->add_module( &u );
+
+    network.add_interface(&usbethernet);
 
     struct SerialMessage message;
     message.message = "G90";
