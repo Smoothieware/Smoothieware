@@ -68,6 +68,11 @@ public:
         return(!empty);
     };
 
+    void peek(T * c, int offset) {
+        int h = (read + offset) % size;
+        *c = buf[h];
+    };
+
     void flush() {
         read = write;
     }
