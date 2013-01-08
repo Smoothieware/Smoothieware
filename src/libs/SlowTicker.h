@@ -41,11 +41,16 @@ class SlowTicker : public Module{
             return hook;
         }
 
+        bool flag_1s();
+
         vector<Hook*> hooks;
         int max_frequency;
         int interval;
 
         Pin ispbtn;
+protected:
+    int flag_1s_count;
+    volatile int flag_1s_flag;
 };
 
 

@@ -127,6 +127,7 @@ int main() {
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
         kernel->call_event(ON_IDLE);
-//         wd.feed();
+        if (kernel->slow_ticker->flag_1s())
+            kernel->call_event(ON_SECOND_TICK);
     }
 }

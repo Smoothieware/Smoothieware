@@ -8,6 +8,24 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 
+const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
+    &Module::on_main_loop,
+    &Module::on_console_line_received,
+    &Module::on_gcode_received,
+    &Module::on_stepper_wake_up,
+    &Module::on_gcode_execute,
+    &Module::on_speed_change,
+    &Module::on_block_begin,
+    &Module::on_block_end,
+    &Module::on_config_reload,
+    &Module::on_play,
+    &Module::on_pause,
+    &Module::on_idle,
+    &Module::on_config_value,
+    &Module::on_config_complete,
+    &Module::on_second_tick,
+};
+
 Module::Module(){ }
 
 void Module::on_module_loaded(){
@@ -31,3 +49,4 @@ void Module::on_pause(                 void * argument){}
 void Module::on_idle(                  void * argument){}
 void Module::on_config_value(          void * argument){}
 void Module::on_config_complete(       void * argument){}
+void Module::on_second_tick(           void * argument){}
