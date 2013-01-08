@@ -46,18 +46,19 @@ public:
     CircBuffer<uint8_t> rxbuf;
     CircBuffer<uint8_t> txbuf;
 
-    virtual void on_module_loaded(void);
-    virtual void on_main_loop(void *);
+    void on_module_loaded(void);
+    void on_main_loop(void *);
+    void on_second_tick(void*);
 
 protected:
 //     virtual bool EpCallback(uint8_t, uint8_t);
-    virtual bool USBEvent_EPIn(uint8_t, uint8_t);
-    virtual bool USBEvent_EPOut(uint8_t, uint8_t);
+    bool USBEvent_EPIn(uint8_t, uint8_t);
+    bool USBEvent_EPOut(uint8_t, uint8_t);
 
-    virtual bool SerialEvent_RX(void){return false;};
+    bool SerialEvent_RX(void){return false;};
 
-    virtual void on_attach(void);
-    virtual void on_detach(void);
+    void on_attach(void);
+    void on_detach(void);
 
     volatile int nl_in_rx;
 private:

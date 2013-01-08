@@ -5,8 +5,11 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <string>
-using std::string;
+// #include <string>
+// using std::string;
+
+#include <cstring>
+
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
@@ -15,6 +18,8 @@ using std::string;
 #include "modules/robot/Player.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+
+#include "utils.h"
 
 GcodeDispatch::GcodeDispatch(){}
 
@@ -27,7 +32,7 @@ void GcodeDispatch::on_module_loaded() {
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
 void GcodeDispatch::on_console_line_received(void * line){
     SerialMessage new_message = *static_cast<SerialMessage*>(line);
-    string possible_command = new_message.message;
+    char* possible_command = strdup(new_message.message);
 
     char first_char = possible_command[0];
     int ln = 0;
@@ -52,18 +57,28 @@ void GcodeDispatch::on_console_line_received(void * line){
             }
 
             //Strip checksum value from possible_command
-            size_t chkpos = possible_command.find_first_of("*");
-            possible_command = possible_command.substr(0, chkpos);
+            int chkpos = find_first_of(possible_command, '*');
+//             possible_command = possible_command.substr(0, chkpos);
             //Calculate checksum
-            if( chkpos != string::npos ){
+            if( chkpos >= 0 ){
+                possible_command[chkpos] = 0;
                 for(int i = 0; possible_command[i] != '*' && possible_command[i] != 0; i++)
                     cs = cs ^ possible_command[i];
                 cs &= 0xff;  // Defensive programming...
                 cs -= chksum;
             }
             //Strip line number value from possible_command
-            size_t lnsize = possible_command.find_first_of(" ") + 1;
-            possible_command = possible_command.substr(lnsize);
+//             size_t lnsize = possible_command.find_first_of(" ") + 1;
+//             possible_command = possible_command.substr(lnsize);
+            int lnsize = find_first_of(possible_command, 'N');
+            if (lnsize >= 0)
+            {
+                char* n = strdup(possible_command + lnsize + find_first_of(possible_command, ' '));
+//                 possible_command += lnsize;
+//                 possible_command += find_first_of(possible_command, ' ');
+                free(possible_command);
+                possible_command = n;
+            }
 
         }else{
             //Assume checks succeeded
@@ -72,8 +87,15 @@ void GcodeDispatch::on_console_line_received(void * line){
         }
 
         //Remove comments
-        size_t comment = possible_command.find_first_of(";");
-        if( comment != string::npos ){ possible_command = possible_command.substr(0, comment); }
+//         size_t comment = possible_command.find_first_of(";");
+//         if( comment != string::npos ){ possible_command = possible_command.substr(0, comment); }
+        int comment;
+        comment = find_first_of(possible_command, ';');
+        if (comment >= 0)
+            possible_command[comment] = 0;
+        comment = find_first_of(possible_command, '(');
+        if (comment >= 0)
+            possible_command[comment] = 0;
 
         //If checksum passes then process message, else request resend
         int nextline = currentline + 1;
@@ -82,16 +104,20 @@ void GcodeDispatch::on_console_line_received(void * line){
                 currentline = nextline;
             }
 
-            while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GMT", possible_command.find_first_of("GMT")+1);
-                string single_command;
+            while(strlen((char*) possible_command) > 0) {
+                size_t nextcmd = find_first_of(possible_command + find_first_of(possible_command, "GMT")+1, "GMT");
+                char* single_command;
                 if(nextcmd == string::npos) {
-                    single_command = possible_command;
-                    possible_command = "";
+                    single_command = strdup(possible_command);
+                    possible_command[0] = 0;
                 }
                 else {
-                    single_command = possible_command.substr(0,nextcmd);
-                    possible_command = possible_command.substr(nextcmd);
+//                     single_command = possible_command.substr(0,nextcmd);
+                    single_command = strndup(possible_command, nextcmd);
+//                     possible_command = possible_command.substr(nextcmd);
+                    char* n = strdup(possible_command + nextcmd);
+                    free(possible_command);
+                    possible_command = n;
                 }
                 //Prepare gcode for dispatch
                 Gcode gcode = Gcode();
@@ -105,6 +131,7 @@ void GcodeDispatch::on_console_line_received(void * line){
                 if (gcode.add_nl)
                     new_message.stream->printf("\r\n");
                 new_message.stream->printf("ok\r\n");
+                free(single_command);
             }
         }else{
             //Request resend
@@ -115,5 +142,7 @@ void GcodeDispatch::on_console_line_received(void * line){
     }else if( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ){
         new_message.stream->printf("ok\r\n");
     }
+
+    free(possible_command);
 }
 

@@ -55,7 +55,7 @@ void SerialConsole::on_main_loop(void * argument){
            this->buffer.pop_front(c);
            if( c == '\n' ){
                 struct SerialMessage message;
-                message.message = received;
+                message.message = (char*) received.c_str();
                 message.stream = this;
                 this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
                 return;

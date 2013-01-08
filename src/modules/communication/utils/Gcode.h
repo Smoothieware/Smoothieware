@@ -18,11 +18,14 @@ class Gcode {
     public:
         Gcode();
         bool has_letter( char letter );
+
         double get_value ( char letter );
+//         int    get_value ( char letter );
+
         int get_num_args();
         void prepare_cached_values();
 
-        string command;
+        char* command;
         double millimeters_of_travel;
         bool call_on_gcode_execute_event_immediatly;
         bool on_gcode_execute_event_called;

@@ -8,56 +8,66 @@
 
 #include <string>
 using std::string;
+
+#include <cstring>
+
 #include "Gcode.h"
 #include "libs/StreamOutput.h"
 
 #include <stdlib.h>
 
+#include "utils.h"
 
 Gcode::Gcode(){}
 
 // Whether or not a Gcode has a letter
 bool Gcode::has_letter( char letter ){
     //return ( this->command->find( letter ) != string::npos );
-    for (size_t i=0; i < this->command.length(); i++){
-        if( this->command.at(i) == letter ){
-            return true;
-        }
-    }
-    return false;
+    return (find_first_of(command, letter) >= 0);
 }
 
 // Retrieve the value for a given letter
 // We don't use the high-level methods of std::string because they call malloc and it's very bad to do that inside of interrupts
 double Gcode::get_value( char letter ){
     //__disable_irq();
-    for (size_t i=0; i <= this->command.length()-1; i++){
-         if( letter == this->command.at(i) ){
-            size_t beginning = i+1;
-            char buffer[20];
-            for(size_t j=beginning; j <= this->command.length(); j++){
-                char c;
-                if( j == this->command.length() ){ c = ';'; }else{ c = this->command.at(j); }
-                if( c != '.' && c != '-' && ( c < '0' || c > '9' ) ){
-                    buffer[j-beginning] = '\0';
-                    //__enable_irq();
-                    return atof(buffer);
-                }else{
-                    buffer[j-beginning] = c;
-                }
-            }
-         }
+    int j = find_first_of(command, letter);
+    if (j >= 0)
+    {
+        do {
+            j++;
+        } while ((command[j] == ' ') || (command[j] == '\t'));
+        if (((command[j] >= '0') && (command[j] <= '9')) || (command[j] == '-'))
+        {
+            char* end = command + j;
+            double r = strtod(command + j, &end);
+            if (end > (command + j))
+                return r;
+        }
     }
     //__enable_irq();
-    return 0;
+    return 0.0;
 }
+
+// int Gcode::get_value( char letter )
+// {
+//     int j = find_first_of(command, letter);
+//     if (j >= 0)
+//     {
+//         do {
+//             j++;
+//         } while ((command[j] == ' ') || (command[j] == '\t'));
+//         if (((command[j] >= '0') && (command[j] <= '9')) || (command[j] == '-'))
+//             return atoi(command[j]);
+//     }
+//     return 0;
+// }
 
 int Gcode::get_num_args(){
     int count = 0;
-    for(size_t i=1; i<this->command.length(); i++){
-        if( this->command.at(i) >= 'A' && this->command.at(i) <= 'Z' ){
+    for (int i = strlen(command); i; i--)
+    {
+        if ((command[i] >= 'A') && (command[i] <= 'Z'))
             count++;
-        }
     }
     return count;
 }

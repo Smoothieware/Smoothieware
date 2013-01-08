@@ -3,6 +3,6 @@
 #include "libs/StreamOutput.h"
 struct SerialMessage {
         StreamOutput* stream;
-        std::string message;
+        char* message;
 };
 #endif

@@ -147,22 +147,45 @@ void SimpleShell::reset_command( string parameters, StreamOutput* stream){
 void SimpleShell::on_main_loop(void* argument){
 
     if( this->playing_file ){
-        string buffer;
+        char buf[64];
+        char* buffer = buf;
+        int s = 64;
+        int l = 0;
         int c;
         // Print each line of the file
         while ((c = fgetc(this->current_file_handler)) != EOF){
             if (c == '\n'){
-                this->current_stream->printf("%s\n", buffer.c_str());
+                this->current_stream->printf("%s\n", buffer);
                 struct SerialMessage message;
                 message.message = buffer;
                 message.stream = this->current_stream;
                 // wait for the queue to have enough room that a serial message could still be received before sending
                 this->kernel->player->wait_for_queue(2);
                 this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-                buffer.clear();
+                if (buffer != buf)
+                {
+                    free(buffer);
+                    buffer = buf;
+                }
+                s = 64;
+                l = 0;
                 return;
             }else{
-                buffer += c;
+                buffer[l++] = c;
+                if (l >= (s - 1))
+                {
+                    if (buffer == buf)
+                    {
+                        buffer = (char*) malloc(s + 16);
+                        memcpy(buffer, buf, s);
+                        s += 16;
+                    }
+                    else
+                    {
+                        s += 16;
+                        buffer = (char*) realloc(buffer, s);
+                    }
+                }
             }
         };
 

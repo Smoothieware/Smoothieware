@@ -142,7 +142,7 @@ void TemperatureControl::on_gcode_received(void* argument)
                     target = gcode->get_value('P');
                     gcode->stream->printf("Target: %5.1f\n", target);
                 }
-                gcode->stream->printf("Start PID tune, command is %s\n", gcode->command.c_str());
+                gcode->stream->printf("Start PID tune, command is %s\n", gcode->command);
                 this->pool->PIDtuner->begin(this, target, gcode->stream);
             }
         }

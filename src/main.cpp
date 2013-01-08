@@ -34,6 +34,12 @@
 
 #include "libs/Watchdog.h"
 
+#include <mri.h>
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
 // Watchdog wd(5000000, WDT_MRI);
 
 // #include "libs/USBCDCMSC/USBCDCMSC.h"
@@ -74,6 +80,8 @@ int main() {
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.0 \r\n");
 
+//     __debugbreak();
+
 //     kernel->streams->printf("Disk Status: %d, Type: %d\n", sd.disk_status(), sd.card_type());
 //     if (sd.disk_status() == 0) {
 //         uint16_t s1;
@@ -102,27 +110,44 @@ int main() {
 //         kernel->streams->printf("Card has %lu blocks; %llu bytes; %d.%d%cB\n", sd.disk_sectors(), sd.disk_size(), s1, s2, suffix);
 //     }
 
+    if (DEBUG) printf("Laser\n");
 //     kernel->add_module( new Laser(p21) );
+    if (DEBUG) printf("Extruder\n");
     kernel->add_module( new Extruder() );
+    if (DEBUG) printf("SimpleShell\n");
     kernel->add_module( new SimpleShell() );
+    if (DEBUG) printf("Configurator\n");
     kernel->add_module( new Configurator() );
+    if (DEBUG) printf("CurrentControl\n");
     kernel->add_module( new CurrentControl() );
+    if (DEBUG) printf("TemperatureControlPool\n");
     kernel->add_module( new TemperatureControlPool() );
+    if (DEBUG) printf("SwitchPool\n");
     kernel->add_module( new SwitchPool() );
+    if (DEBUG) printf("PauseButton\n");
     kernel->add_module( new PauseButton() );
+    if (DEBUG) printf("Endstops\n");
     kernel->add_module( new Endstops() );
 
+    if (DEBUG) printf("USB init\n");
     u.init();
 
+    if (DEBUG) printf("\tMSC\n");
     kernel->add_module( &msc );
+    if (DEBUG) printf("\tSerial\n");
     kernel->add_module( &usbserial );
+    if (DEBUG) printf("\tSerial2\n");
     kernel->add_module( &usbserial2 );
+    if (DEBUG) printf("USB add\n");
     kernel->add_module( &u );
 
+    if (DEBUG) printf("G90\n");
     struct SerialMessage message;
     message.message = "G90";
     message.stream = kernel->serial;
     kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+
+    if (DEBUG) printf("enter main loop\n");
 
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
