@@ -7,9 +7,6 @@ using namespace std;
 #include <vector>
 using std::string;
 
-// because apparently MAX_INT doesn't come with arm-none-eabi-gcc
-#define MAX_INT 0x7FFFFFFF
-
 string lc(string str);
 
 string remove_non_number( string str );

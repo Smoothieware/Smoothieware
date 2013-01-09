@@ -13,6 +13,7 @@ using namespace std;
 using std::string;
 #include <cstring>
 
+#include <limits.h>
 
 uint16_t get_checksum(string to_check){
    // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum
@@ -106,7 +107,7 @@ int find_first_of(const char* str, const int c)
 
 int find_first_of(const char* str, const char* c)
 {
-    int r = MAX_INT;
+    int r = INT_MAX;
     while (*c)
     {
         char* j = strchr(str, *c);
@@ -114,7 +115,7 @@ int find_first_of(const char* str, const char* c)
             r = j - str;
         c++;
     }
-    if ((r < MAX_INT) && (r >= 0))
+    if ((r < INT_MAX) && (r >= 0))
         return r;
     return -1;
 }
