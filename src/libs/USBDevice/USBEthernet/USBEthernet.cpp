@@ -162,7 +162,10 @@ USBEthernet::USBEthernet(USB* u)
 
     bAlternate = 0;
 
-    mac_address = { 0xAE, 0xF0, 0x28, 0x5D, 0x66, 0x22 };
+//     mac_address = { 0xAE, 0xF0, 0x28, 0x5D, 0x66, 0x22 };
+    uint8_t mac[6] = { 0xAE, 0xF0, 0x28, 0x5D, 0x66, 0x22 };
+    memcpy(mac_address, mac, 6);
+
     // fixed address of 192.168.2.27;
     ip_address = (192 << 24) | (168 << 16) | (2 << 8) | (27 << 0);
     ip_mask = 0xFFFFFF00;
