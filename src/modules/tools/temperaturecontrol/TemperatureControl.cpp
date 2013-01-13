@@ -13,6 +13,7 @@
 #include "TemperatureControl.h"
 #include "TemperatureControlPool.h"
 #include "libs/Pin.h"
+#include "libs/Median.h"
 
 TemperatureControl::TemperatureControl(){}
 
@@ -79,9 +80,6 @@ void TemperatureControl::on_config_reload(void* argument){
     // Thermistor math
     j = (1.0 / beta);
     k = (1.0 / (t0 + 273.15));
-
-    // ADC smoothing
-    running_total = 0;
 
     // sigma-delta output modulation
     o = 0;
@@ -277,13 +275,14 @@ int TemperatureControl::new_thermistor_reading()
     {
         uint16_t l;
         queue.pop_front(l);
-        running_total -= l;
         d = l;
     }
     uint16_t r = last_raw;
     queue.push_back(r);
-    running_total += last_raw;
-    return running_total / queue.size();
+    for (int i=0; i<queue.size(); i++)
+      median_buffer[i] = *queue.get_ref(i);
+    uint16_t m = median_buffer[quick_median(median_buffer, queue.size())];
+    return m;
 }
 
 void TemperatureControl::on_second_tick(void* argument)
