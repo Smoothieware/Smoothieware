@@ -68,6 +68,8 @@ GPIO leds[5] = {
 };
 
 int main() {
+    delete(new SerialConsole(USBTX, USBRX, 2000000));
+
     for (int i = 0; i < 5; i++)
     {
         leds[i].output();
