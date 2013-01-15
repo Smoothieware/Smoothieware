@@ -77,6 +77,8 @@ StepperMotor* StepTicker::add_stepper_motor(StepperMotor* stepper_motor){
 
 // Call tick() on each active motor
 inline void StepTicker::tick(){
+    _isr_context = true;
+
     int i;
     uint32_t bm;
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
@@ -86,11 +88,15 @@ inline void StepTicker::tick(){
             this->active_motors[i]->tick();
         }
     }
+
+    _isr_context = false;
 }
 
 // Call signal_mode_finished() on each active motor that asked to be signaled. We do this instead of inside of tick() so that
 // all tick()s are called before we do the move finishing
 void StepTicker::signal_moves_finished(){
+    _isr_context = true;
+
     int i;
     uint32_t bm;
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
@@ -112,10 +118,14 @@ void StepTicker::signal_moves_finished(){
         }
     }
     this->moves_finished = false;
+
+    _isr_context = false;
 }
 
 // Reset step pins on all active motors
 inline void StepTicker::reset_tick(){
+    _isr_context = true;
+
     int i;
     uint32_t bm;
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
@@ -123,6 +133,8 @@ inline void StepTicker::reset_tick(){
         if (this->active_motor_bm & bm)
             this->active_motors[i]->step_pin->set(0);
     }
+
+    _isr_context = false;
 }
 
 extern "C" void TIMER1_IRQHandler (void){

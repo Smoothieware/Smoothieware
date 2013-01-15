@@ -27,8 +27,15 @@ enum _EVENT_ENUM {
     ON_IDLE,
     ON_CONFIG_VALUE,
     ON_CONFIG_COMPLETE,
+    ON_SECOND_TICK,
     NUMBER_OF_DEFINED_EVENTS
 };
+
+class Module;
+
+typedef void (Module::*ModuleCallback)(void * argument);
+
+extern const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS];
 
 // Module base class
 // All modules must extend this class, see http://smoothieware.org/moduleexample
@@ -52,6 +59,7 @@ class Module {
         virtual void on_idle(                   void * argument);
         virtual void on_config_value(           void * argument);
         virtual void on_config_complete(        void * argument);
+        virtual void on_second_tick(            void * argument);
         Kernel * kernel;
 };
 

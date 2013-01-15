@@ -27,23 +27,6 @@
 
 
 // List of callback functions, ordered as their corresponding events
-const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
-        &Module::on_main_loop,
-        &Module::on_console_line_received,
-        &Module::on_gcode_received,
-        &Module::on_stepper_wake_up,
-        &Module::on_gcode_execute,
-        &Module::on_speed_change,
-        &Module::on_block_begin,
-        &Module::on_block_end,
-        &Module::on_config_reload,
-        &Module::on_play,
-        &Module::on_pause,
-        &Module::on_idle,
-        &Module::on_config_value,
-        &Module::on_config_complete,
-};
-
 #define baud_rate_setting_checksum 10922
 #define uart0_checksum             16877
 
@@ -85,7 +68,7 @@ Kernel::Kernel(){
     this->add_module( this->serial );
 
     // HAL stuff
-    this->slow_ticker          = new SlowTicker();
+    add_module( this->slow_ticker          = new SlowTicker());
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
     this->digipot              = new Digipot();

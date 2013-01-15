@@ -53,6 +53,8 @@ class TemperatureControl : public Module {
         void on_gcode_execute(void* argument);
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
+        void on_second_tick(void* argument);
+
         void set_desired_temperature(double desired_temperature);
         double get_temperature();
         double adc_value_to_temperature(int adc_value);

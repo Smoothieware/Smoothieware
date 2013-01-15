@@ -21,8 +21,6 @@
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 
-typedef void (Module::*ModuleCallback)(void * argument);
-
 //Module manager
 class Module;
 class Player;

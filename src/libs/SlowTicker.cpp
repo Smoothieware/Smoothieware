@@ -27,16 +27,26 @@ SlowTicker::SlowTicker(){
     NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
 
     ispbtn.from_string("2.10")->as_input()->pull_up();
+
+    flag_1s_flag = 0;
+    flag_1s_count = SystemCoreClock;
+}
+
+void SlowTicker::on_module_loaded()
+{
+    register_for_event(ON_IDLE);
 }
 
 void SlowTicker::set_frequency( int frequency ){
-    this->interval = int(floor((SystemCoreClock/4)/frequency));   // SystemCoreClock/4 = Timer increments in a second
+    this->interval = int(floor((SystemCoreClock >> 2)/frequency));   // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM2->MR0 = this->interval;
     LPC_TIM2->TCR = 3;  // Reset
     LPC_TIM2->TCR = 1;  // Reset
 }
 
-void SlowTicker::tick(){
+void SlowTicker::tick()
+{
+    _isr_context = true;
 
     LPC_GPIO1->FIODIR |= 1<<20;
     LPC_GPIO1->FIOSET = 1<<20;
@@ -51,10 +61,37 @@ void SlowTicker::tick(){
         }
     }
 
+    flag_1s_count -= this->interval;
+    if (flag_1s_count < 0)
+    {
+        flag_1s_count += SystemCoreClock >> 2;
+        flag_1s_flag++;
+    }
+
     LPC_GPIO1->FIOCLR = 1<<20;
 
     if (ispbtn.get() == 0)
         __debugbreak();
+
+    _isr_context = false;
+}
+
+bool SlowTicker::flag_1s(){
+    __disable_irq();
+    if (flag_1s_flag)
+    {
+        flag_1s_flag--;
+        __enable_irq();
+        return true;
+    }
+    __enable_irq();
+    return false;
+}
+
+void SlowTicker::on_idle(void*)
+{
+    if (flag_1s())
+        kernel->call_event(ON_SECOND_TICK);
 }
 
 extern "C" void TIMER2_IRQHandler (void){
