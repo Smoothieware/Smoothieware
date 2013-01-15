@@ -104,7 +104,7 @@ void TemperatureControl::on_config_reload(void* argument){
     this->p_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number();
     this->i_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number();
     this->d_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number();
-    this->i_max    = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(50 )->as_number();
+    this->i_max    = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(255)->as_number();
     this->i = 0.0;
     this->last_reading = 0.0;
 }
