@@ -14,7 +14,22 @@ using std::string;
 #include <stdlib.h>
 
 
-Gcode::Gcode(){}
+Gcode::Gcode()
+{
+    queued = g = m = 0;
+    add_nl = false;
+}
+
+Gcode::Gcode(string& command, StreamOutput* stream)
+{
+    queued = g = m = 0;
+    add_nl = false;
+
+    this->command = command;
+    this->stream = stream;
+
+    prepare_cached_values();
+}
 
 // Whether or not a Gcode has a letter
 bool Gcode::has_letter( char letter ){

@@ -36,9 +36,7 @@ void GcodeDispatch::on_console_line_received(void * line){
 
         //Get linenumber
         if( first_char == 'N' ){
-            Gcode full_line = Gcode();
-            full_line.command = possible_command;
-            full_line.stream = new_message.stream;
+            Gcode full_line = Gcode(possible_command, new_message.stream);
             ln = (int) full_line.get_value('N');
             int chksum = (int) full_line.get_value('*');
 
@@ -94,17 +92,18 @@ void GcodeDispatch::on_console_line_received(void * line){
                     possible_command = possible_command.substr(nextcmd);
                 }
                 //Prepare gcode for dispatch
-                Gcode gcode = Gcode();
-                gcode.command = single_command;
-                gcode.stream = new_message.stream;
-                gcode.prepare_cached_values();
+                Gcode* gcode = new Gcode(single_command, new_message.stream);
+                gcode->prepare_cached_values();
 
+//                 printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
                 //Dispatch message!
-                gcode.add_nl = false;
-                this->kernel->call_event(ON_GCODE_RECEIVED, &gcode );
-                if (gcode.add_nl)
+                this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                if (gcode->add_nl)
                     new_message.stream->printf("\r\n");
                 new_message.stream->printf("ok\r\n");
+
+                if (gcode->queued == 0)
+                    delete gcode;
             }
         }else{
             //Request resend
