@@ -50,6 +50,7 @@ void SerialConsole::on_serial_char_received(){
 void SerialConsole::on_main_loop(void * argument){
     if( this->has_char('\n') ){
         string received;
+        received.reserve(20);
         while(1){
            char c;
            this->buffer.pop_front(c);
