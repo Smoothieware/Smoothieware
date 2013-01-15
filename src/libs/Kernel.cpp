@@ -68,7 +68,7 @@ Kernel::Kernel(){
     this->add_module( this->serial );
 
     // HAL stuff
-    this->slow_ticker          = new SlowTicker();
+    add_module( this->slow_ticker          = new SlowTicker());
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
     this->digipot              = new Digipot();

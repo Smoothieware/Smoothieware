@@ -13,6 +13,7 @@ using namespace std;
 using std::string;
 #include <cstring>
 
+volatile bool _isr_context = false;
 
 uint16_t get_checksum(string to_check){
    // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum
