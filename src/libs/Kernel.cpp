@@ -33,11 +33,7 @@
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
     // Value init for the arrays
-    for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){
-        for( uint8_t index=0; index<32; index++ ){
-            this->hooks[i][index] = NULL;
-        }
-    }
+    bzero(hooks, sizeof(hooks));
 
     // Config first, because we need the baud_rate setting before we start serial
     this->config         = new Config();

@@ -60,7 +60,7 @@ void Endstops::wait_for_homed(char axes_to_move)
         running = false;
         for( char c = 'X'; c <= 'Z'; c++ ){
             if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                 if( this->pins[c - 'X']->get() ){
+                if( this->pins[c - 'X']->get() ){
                     if( debounce[c - 'X'] < debounce_count ) {
                         debounce[c - 'X'] ++;
                         running = true;
@@ -72,7 +72,7 @@ void Endstops::wait_for_homed(char axes_to_move)
                     // The endstop was not hit yet
                     running = true;
                     debounce[c - 'X'] = 0;
-                 }
+                }
             }
         }
     }
