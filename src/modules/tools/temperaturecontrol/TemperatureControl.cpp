@@ -32,8 +32,6 @@ void TemperatureControl::on_module_loaded(){
 
     this->acceleration_factor = 10;
 
-    this->kernel->slow_ticker->attach( 20, this, &TemperatureControl::thermistor_read_tick );
-
     // Register for events
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_GCODE_RECEIVED);
@@ -51,7 +49,7 @@ void TemperatureControl::on_config_reload(void* argument){
     this->set_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_m_code_checksum)->by_default(104)->as_number();
     this->set_and_wait_m_code = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
     this->get_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
-    this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(5)->as_number();
+    this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
 
     this->designator          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
@@ -98,6 +96,9 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // activate SD-DAC timer
     this->kernel->slow_ticker->attach(1000, this->heater_pin, &Pwm::on_tick);
+
+    // reading tick
+    this->kernel->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
 
     // PID
     this->p_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number();
