@@ -510,6 +510,8 @@ uint32_t USBHAL::getSerialNumber(int length, uint32_t *buf) {
     typedef void (*IAP)(uint32_t*, uint32_t*);
     IAP iap = (IAP) IAP_LOCATION;
 
+    __disable_irq();
+
     command[0] = 58;
 //     iprintf("Getting Serial...\n");
     iap(command, result);
@@ -520,6 +522,9 @@ uint32_t USBHAL::getSerialNumber(int length, uint32_t *buf) {
             buf[i] = result[i + 1];
         }
     }
+
+    __enable_irq();
+
     return i;
 }
 
