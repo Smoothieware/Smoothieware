@@ -99,6 +99,14 @@ void Extruder::on_gcode_received(void *argument)
             gcode->stream->printf("E:%4.1f ", this->current_position);
             gcode->add_nl = true;
         }
+        if (gcode->m == 92 )
+        {
+            double spm = this->steps_per_millimeter;
+            if (gcode->has_letter('E'))
+                spm = gcode->get_value('E');
+            gcode->stream->printf("E:%g ", spm);
+            gcode->add_nl = true;
+        }
     }
 }
 
@@ -118,8 +126,6 @@ void Extruder::on_gcode_execute(void* argument){
                 this->steps_per_millimeter = gcode->get_value('E');
                 this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
             }
-            gcode->stream->printf("E:%g ", this->steps_per_millimeter);
-            gcode->add_nl = true;
         }
     }
 

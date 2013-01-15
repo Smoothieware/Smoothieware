@@ -82,7 +82,7 @@ class Robot : public Module {
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         double mm_per_line_segment;                           // Setting : Used to split lines into segments
         double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
-        
+
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
         // generations. In general, the default value is more than enough for the intended CNC applications
@@ -102,12 +102,12 @@ class Robot : public Module {
         Pin* alpha_en_pin;
         Pin* beta_en_pin;
         Pin* gamma_en_pin;
- 
+
         StepperMotor* alpha_stepper_motor;
         StepperMotor* beta_stepper_motor;
         StepperMotor* gamma_stepper_motor;
 
-
+        double seconds_per_minute;                            // for realtime speed change
 };
 
 #endif

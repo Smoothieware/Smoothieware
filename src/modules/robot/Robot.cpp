@@ -28,6 +28,7 @@ Robot::Robot(){
     clear_vector(this->current_position);
     clear_vector(this->last_milestone);
     this->arm_solution = NULL;
+    seconds_per_minute = 60.0;
 }
 
 //Called when the module has just been loaded
@@ -136,10 +137,12 @@ void Robot::execute_gcode(Gcode* gcode){
                     steps[1] = this->to_millimeters(gcode->get_value('Y'));
                 if (gcode->has_letter('Z'))
                     steps[2] = this->to_millimeters(gcode->get_value('Z'));
+                if (gcode->has_letter('F'))
+                    seconds_per_minute = gcode->get_value('F');
                 this->arm_solution->set_steps_per_millimeter(steps);
                 // update current position in steps
                 this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
-                gcode->stream->printf("X:%g Y:%g Z:%g ", steps[0], steps[1], steps[2]);
+                gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", steps[0], steps[1], steps[2], seconds_per_minute);
                 gcode->add_nl = true;
                 return;
             case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
@@ -148,6 +151,15 @@ void Robot::execute_gcode(Gcode* gcode){
                                                  this->current_position[2]);
                 gcode->add_nl = true;
                 return;
+            case 220: // M220 - speed override percentage
+                if (gcode->has_letter('S'))
+                {
+                    double factor = gcode->get_value('S');
+                    // enforce minimum 1% speed
+                    if (factor < 1.0)
+                        factor = 1.0;
+                    seconds_per_minute = factor * 0.6;
+                }
         }
    }
     if( this->motion_mode < 0)
@@ -162,7 +174,13 @@ void Robot::execute_gcode(Gcode* gcode){
     for(char letter = 'I'; letter <= 'K'; letter++){ if( gcode->has_letter(letter) ){ offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));                                                    } }
     for(char letter = 'X'; letter <= 'Z'; letter++){ if( gcode->has_letter(letter) ){ target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);  } }
 
-    if( gcode->has_letter('F') ){ if( this->motion_mode == MOTION_MODE_SEEK ){ this->seek_rate = this->to_millimeters( gcode->get_value('F') ) / 60; }else{ this->feed_rate = this->to_millimeters( gcode->get_value('F') ) / 60; } }
+    if( gcode->has_letter('F') )
+    {
+        if( this->motion_mode == MOTION_MODE_SEEK )
+            this->seek_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0;
+        else
+            this->feed_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0;
+    }
 
     //Perform any physical actions
     switch( next_action ){
@@ -200,14 +218,14 @@ void Robot::append_milestone( double target[], double rate ){
 
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
         if( this->max_speeds[axis] > 0 ){
-            double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * 60;
+            double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * seconds_per_minute;
             if( axis_speed > this->max_speeds[axis] ){
                 rate = rate * ( this->max_speeds[axis] / axis_speed );
             }
         }
     }
 
-    this->kernel->planner->append_block( steps, rate*60, millimeters_of_travel, deltas );
+    this->kernel->planner->append_block( steps, rate * seconds_per_minute, millimeters_of_travel, deltas );
 
     memcpy(this->last_milestone, target, sizeof(double)*3); // this->last_milestone[] = target[];
 
