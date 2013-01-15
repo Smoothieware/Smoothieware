@@ -38,6 +38,7 @@ void TemperatureControl::on_module_loaded(){
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_MAIN_LOOP);
+    this->register_for_event(ON_SECOND_TICK);
 
 }
 
@@ -282,4 +283,10 @@ int TemperatureControl::new_thermistor_reading()
     queue.push_back(r);
     running_total += last_raw;
     return running_total / queue.size();
+}
+
+void TemperatureControl::on_second_tick(void* argument)
+{
+    if (waiting)
+        kernel->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o, waiting);
 }
