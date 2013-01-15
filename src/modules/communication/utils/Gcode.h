@@ -17,6 +17,8 @@ using std::string;
 class Gcode {
     public:
         Gcode();
+        Gcode(string&, StreamOutput*);
+
         bool has_letter( char letter );
         double get_value ( char letter );
         int get_num_args();
@@ -33,6 +35,8 @@ class Gcode {
         unsigned int g;
 
         bool add_nl;
+
+        int queued;
 
         StreamOutput* stream;
 };
