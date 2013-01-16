@@ -117,6 +117,7 @@ int main() {
     kernel->add_module( &msc );
     kernel->add_module( &usbserial );
     kernel->add_module( &usbserial2 );
+    kernel->add_module( &dfu );
     kernel->add_module( &u );
 
     struct SerialMessage message;
