@@ -289,7 +289,8 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy){
 
     this->current_position = this->target_position;
 
-    this->current_block->release();
+    if (this->current_block) // this should always be true, but sometimes it isn't. TODO: find out why
+        this->current_block->release();
     return 0;
 
 }
