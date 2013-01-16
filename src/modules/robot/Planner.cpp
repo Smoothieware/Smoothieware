@@ -55,10 +55,10 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){
         if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<stepper); }
     }
-    
+
     // Number of steps for each stepper
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); }
-    
+
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
     //if( block->steps_event_count == 0 ){ this->computing = false; return; }
@@ -79,7 +79,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     }
 
     //this->kernel->streams->printf("nom_speed: %f nom_rate: %u step_event_count: %u block->steps_z: %u \r\n", block->nominal_speed, block->nominal_rate, block->steps_event_count, block->steps[2]  );
-    
+
     // Compute the acceleration rate for the trapezoid generator. Depending on the slope of the line
     // average travel per step event changes. For a line along one axis the travel per step event
     // is equal to the travel/step in the particular axis. For a 45 degree line the steppers of both
@@ -95,7 +95,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     unit_vec[X_AXIS] = deltas[X_AXIS]*inverse_millimeters;
     unit_vec[Y_AXIS] = deltas[Y_AXIS]*inverse_millimeters;
     unit_vec[Z_AXIS] = deltas[Z_AXIS]*inverse_millimeters;
-  
+
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction
     // deviation is defined as the distance from the junction to the closest edge of the circle,
@@ -113,7 +113,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
       double cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
                          - this->previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
                          - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
-                           
+
       // Skip and use default max junction speed for 0 degree acute junction.
       if (cos_theta < 0.95) {
         vmax_junction = min(this->previous_nominal_speed,block->nominal_speed);
@@ -127,7 +127,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
       }
     }
     block->max_entry_speed = vmax_junction;
-   
+
     // Initialize block entry speed. Compute based on deceleration to user-defined MINIMUM_PLANNER_SPEED.
     double v_allowable = this->max_allowable_speed(-this->acceleration,0.0,block->millimeters); //TODO: Get from config
     block->entry_speed = min(vmax_junction, v_allowable);
@@ -143,17 +143,17 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     if (block->nominal_speed <= v_allowable) { block->nominal_length_flag = true; }
     else { block->nominal_length_flag = false; }
     block->recalculate_flag = true; // Always calculate trapezoid for new block
- 
+
     // Update previous path unit_vector and nominal speed
     memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
     this->previous_nominal_speed = block->nominal_speed;
-    
+
     // Update current position
     memcpy(this->position, target, sizeof(int)*3);
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();
-    
+
     // The block can now be used
     block->ready();
 
@@ -188,10 +188,10 @@ void Planner::recalculate() {
 // implements the reverse pass.
 void Planner::reverse_pass(){
     // For each block
-    int block_index = this->kernel->conveyor->queue.tail;
+    int block_index = this->kernel->conveyor->queue.head;
     Block* blocks[3] = {NULL,NULL,NULL};
 
-    while(block_index!=this->kernel->conveyor->queue.head){
+    while(block_index!=this->kernel->conveyor->queue.tail){
         block_index = this->kernel->conveyor->queue.prev_block_index( block_index );
         blocks[2] = blocks[1];
         blocks[1] = blocks[0];
@@ -199,17 +199,17 @@ void Planner::reverse_pass(){
         if( blocks[1] == NULL ){ continue; }
         blocks[1]->reverse_pass(blocks[2], blocks[0]);
     }
-    
+
 }
 
 // Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
 // implements the forward pass.
 void Planner::forward_pass() {
     // For each block
-    int block_index = this->kernel->conveyor->queue.head;
+    int block_index = this->kernel->conveyor->queue.tail;
     Block* blocks[3] = {NULL,NULL,NULL};
 
-    while(block_index!=this->kernel->conveyor->queue.tail){
+    while(block_index!=this->kernel->conveyor->queue.head){
         blocks[0] = blocks[1];
         blocks[1] = blocks[2];
         blocks[2] = &this->kernel->conveyor->queue.buffer[block_index];
@@ -227,11 +227,11 @@ void Planner::forward_pass() {
 // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
 // to exit speed and entry speed of one another.
 void Planner::recalculate_trapezoids() {
-    int block_index = this->kernel->conveyor->queue.head;
+    int block_index = this->kernel->conveyor->queue.tail;
     Block* current;
     Block* next = NULL;
 
-    while(block_index != this->kernel->conveyor->queue.tail){
+    while(block_index != this->kernel->conveyor->queue.head){
         current = next;
         next = &this->kernel->conveyor->queue.buffer[block_index];
         //this->kernel->streams->printf("index:%d current:%p next:%p \r\n", block_index, current, next );
