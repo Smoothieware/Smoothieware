@@ -39,6 +39,8 @@ DFU::DFU(USB *u)
     usb->addInterface(&dfu_interface);
     usb->addDescriptor(&dfu_descriptor);
     dfu_interface.iInterface = usb->addString(&dfu_string);
+
+    prep_for_detach = 0;
 }
 
 bool DFU::USBEvent_Request(CONTROL_TRANSFER &control)
@@ -48,10 +50,11 @@ bool DFU::USBEvent_Request(CONTROL_TRANSFER &control)
     {
         case  DFU_DETACH:
         {
-            usb->disconnect();
+//             usb->disconnect();
+            prep_for_detach = 128;
             WDT_Init(WDT_CLKSRC_IRC, WDT_MODE_RESET);
-            WDT_Start(1000000); // 1 second?
-//             for (;;);
+            WDT_Start(250000); // 0.25 seconds
+            //             for (;;);
             return true;
         }
         case DFU_GETSTATUS:
@@ -91,4 +94,22 @@ bool DFU::USBEvent_Request(CONTROL_TRANSFER &control)
 bool DFU::USBEvent_RequestComplete(CONTROL_TRANSFER &control, uint8_t *buf, uint32_t length)
 {
     return false;
+}
+
+void DFU::on_module_loaded()
+{
+    register_for_event(ON_IDLE);
+}
+
+void DFU::on_idle(void* argument)
+{
+    if (prep_for_detach)
+    {
+        prep_for_detach--;
+        if (prep_for_detach == 0)
+        {
+            usb->disconnect();
+            for (;;);
+        }
+    }
 }

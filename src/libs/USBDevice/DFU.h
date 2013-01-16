@@ -7,6 +7,8 @@
 #include "USBDescriptor.h"
 #include "USBDevice_Types.h"
 
+#include "Module.h"
+
 #include <stdint.h>
 
 #define REQ_DFU_DETACH      0x0
@@ -61,12 +63,15 @@ typedef struct __attribute__ ((packed))
 } DFU_Status_Response;
 
 
-class DFU : public USB_Class_Receiver {
+class DFU : public USB_Class_Receiver, public Module {
 public:
     DFU(USB *);
 
     virtual bool USBEvent_Request(CONTROL_TRANSFER&);
     virtual bool USBEvent_RequestComplete(CONTROL_TRANSFER&, uint8_t *buf, uint32_t length);
+
+    void on_module_loaded(void);
+    void on_idle(void*);
 
 protected:
     USB *usb;
@@ -77,6 +82,8 @@ protected:
     usbdesc_string_l(12)        dfu_string;
 
     DFU_Status_Response         dfu_status;
+
+    int prep_for_detach;
 };
 
 #endif /* _DFU_H */
