@@ -33,15 +33,15 @@ void Player::on_idle(void* argument)
 {
     if (flush_blocks)
     {
-        Block* block = queue.get_ref(0);
-//         printf("Block: clean %p\n", block);
+        Block* block = queue.delete_first();
         while (block->gcodes.size())
         {
-            Gcode* g = block->gcodes.back();
+            Gcode* gcode = block->gcodes.back();
             block->gcodes.pop_back();
-            delete g;
+            gcode->queued--;
+            if (gcode->queued == 0)
+                delete gcode;
         }
-        queue.delete_first();
 
         __disable_irq();
         flush_blocks--;
@@ -57,29 +57,14 @@ Block* Player::new_block(){
     // but that function is called inside an interrupt and thus can break everything if the interrupt was trigerred during a memory access
 
     // Take the next untaken block on the queue ( the one after the last one )
-    Block* block = this->queue.get_ref( this->queue.size() );
-//     printf("cleanup %p\n", block);
-    // Then clean it up
-    if( block->player == this ){
-        for(; block->gcodes.size(); ){
-            Gcode* g = block->gcodes.back();
-//             printf("Block:pop %p (%d refs)\n", g, g->queued);
-            if (--g->queued == 0)
-                delete g;
-            block->gcodes.pop_back();
-        }
-    }
+    Block* block = queue.next_head();
+    block->clean();
 
-    // Create a new virgin Block in the queue
-    this->queue.push_back(Block());
-    block = this->queue.get_ref( this->queue.size()-1 );
-    while( block == NULL ){
-        block = this->queue.get_ref( this->queue.size()-1 );
-    }
-    block->is_ready = false;
     block->initial_rate = -2;
     block->final_rate = -2;
     block->player = this;
+
+    queue.consume_head();
 
     return block;
 }
@@ -99,7 +84,7 @@ void Player::pop_and_process_new_block(int debug){
     if( this->current_block != NULL ){ this->looking_for_new_block = false; return; }
 
     // Return if queue is empty
-    if( this->queue.size() == 0 ){
+    if( this->queue.size() <= flush_blocks ){
         this->current_block = NULL;
         // TODO : ON_QUEUE_EMPTY event
         this->looking_for_new_block = false;
@@ -107,7 +92,9 @@ void Player::pop_and_process_new_block(int debug){
     }
 
     // Get a new block
-    this->current_block = this->queue.get_ref(0);
+    this->current_block = this->queue.get_ref(flush_blocks);
+
+    this->current_block->state = 1;
 
     // Tell all modules about it
     this->kernel->call_event(ON_BLOCK_BEGIN, this->current_block);

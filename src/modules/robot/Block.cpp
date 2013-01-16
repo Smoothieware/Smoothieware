@@ -18,11 +18,18 @@ using std::string;
 #include "../communication/utils/Gcode.h"
 
 Block::Block(){
-    clear_vector(this->steps);
-    this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
-    this->is_ready = false;
-    this->initial_rate = -1;
-    this->final_rate = -1;
+    clean();
+}
+
+void Block::clean()
+{
+    clear_vector(steps);
+    times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
+    is_ready = false;
+    initial_rate = -1;
+    final_rate = -1;
+
+    state = 0;
 }
 
 void Block::debug(Kernel* kernel){
@@ -172,9 +179,8 @@ void Block::forward_pass(Block* previous, Block* next){
 
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
 void Block::append_gcode(Gcode* gcode){
-   __disable_irq();
    this->gcodes.push_back(gcode);
-   __enable_irq();
+   gcode->queued++;
 }
 
 // The attached gcodes are then poped and the on_gcode_execute event is called with them as a parameter
@@ -199,18 +205,22 @@ void Block::take(){
 }
 
 // Mark the block as no longer taken by one module, go to next block if this free's it
-void Block::release(){
+void Block::release()
+{
     //printf("release %p \r\n", this );
     this->times_taken--;
     //printf("releasing %p times now:%d\r\n", this, int(this->times_taken) );
-    if( this->times_taken < 1 ){
+    if( this->times_taken < 1 )
+    {
+        state = 2;
+
         this->player->kernel->call_event(ON_BLOCK_END, this);
         this->pop_and_execute_gcode(this->player->kernel);
+
         Player* player = this->player;
 
-        if( player->queue.size() > player->flush_blocks ){
-            player->flush_blocks++;
-        }
+        player->flush_blocks++;
+        is_ready = false;
 
         if( player->looking_for_new_block == false ){
             if( player->queue.size() > player->flush_blocks ){

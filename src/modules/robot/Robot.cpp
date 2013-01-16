@@ -86,7 +86,6 @@ void Robot::on_gcode_received(void * argument){
         Block* block = this->kernel->player->queue.get_ref( this->kernel->player->queue.size() - 1 );
         this->execute_gcode(gcode);
         block->append_gcode(gcode);
-        gcode->queued++;
     }
 }
 
