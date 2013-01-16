@@ -213,9 +213,6 @@ void Robot::append_milestone( double target[], double rate ){
 
     double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
 
-    double duration = 0;
-    if( rate > 0 ){ duration = millimeters_of_travel / rate; }
-
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
         if( this->max_speeds[axis] > 0 ){
             double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * seconds_per_minute;
