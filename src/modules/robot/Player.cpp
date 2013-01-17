@@ -31,7 +31,7 @@ void Player::on_module_loaded()
 
 void Player::on_idle(void* argument)
 {
-    if (flush_blocks)
+    if (flush_blocks && queue.size())
     {
         Block* block = queue.get_ref(0);
         while (block->gcodes.size())
