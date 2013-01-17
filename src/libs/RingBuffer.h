@@ -10,7 +10,6 @@
 #ifndef RINGBUFFER_H
 #define RINGBUFFER_H
 
-
 template<class kind, int length> class RingBuffer
 {
     public:
@@ -33,6 +32,7 @@ template<class kind, int length> class RingBuffer
         int          tail;
 };
 
+#include "sLPC17xx.h"
 
 template<class kind, int length> RingBuffer<kind, length>::RingBuffer()
 {
@@ -46,7 +46,10 @@ template<class kind, int length>  int RingBuffer<kind, length>::capacity()
 
 template<class kind, int length>  int RingBuffer<kind, length>::size()
 {
-    return head - tail + ((tail > head)?length:0);
+    __disable_irq();
+    int i = head - tail + ((tail > head)?length:0);
+    __enable_irq();
+    return i;
 }
 
 template<class kind, int length> int RingBuffer<kind, length>::next_block_index(int index)
