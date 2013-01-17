@@ -33,7 +33,7 @@ void Player::on_idle(void* argument)
 {
     if (flush_blocks)
     {
-        Block* block = queue.delete_first();
+        Block* block = queue.get_ref(0);
         while (block->gcodes.size())
         {
             Gcode* gcode = block->gcodes.back();
@@ -42,6 +42,7 @@ void Player::on_idle(void* argument)
             if (gcode->queued == 0)
                 delete gcode;
         }
+        queue.delete_first();
 
         __disable_irq();
         flush_blocks--;
