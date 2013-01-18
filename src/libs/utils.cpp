@@ -42,6 +42,39 @@ void get_checksums(uint16_t check_sums[], const string key){
     }
 }
 
+bool is_alpha(int c)
+{
+    if ((c >= 'a') && (c <= 'z')) return true;
+    if ((c >= 'A') && (c <= 'Z')) return true;
+    if ((c == '_')) return true;
+    return false;
+}
+
+bool is_digit(int c)
+{
+    if ((c >= '0') && (c <= '9')) return true;
+    return false;
+}
+
+bool is_numeric(int c)
+{
+    if (is_digit(c)) return true;
+    if ((c == '.') || (c == '-')) return true;
+    if ((c == 'e')) return true;
+    return false;
+}
+
+bool is_alphanum(int c)
+{
+    return is_alpha(c) || is_numeric(c);
+}
+
+bool is_whitespace(int c)
+{
+    if ((c == ' ') || (c == '\t')) return true;
+    return false;
+}
+
 // Convert to lowercase
 string lc(string str){
     for (unsigned int i=0; i<strlen(str.c_str()); i++)
