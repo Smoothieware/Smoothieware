@@ -10,6 +10,7 @@
 using std::string;
 #include "Gcode.h"
 #include "libs/StreamOutput.h"
+#include "utils.h"
 
 #include <stdlib.h>
 
@@ -64,6 +65,31 @@ double Gcode::get_value( char letter ){
          }
     }
     //__enable_irq();
+    return 0;
+}
+
+int Gcode::get_int( char letter )
+{
+    const char* buffer = command.c_str();
+    for (int i = 0; buffer[i]; i++)
+    {
+        if( letter == buffer[i] )
+        {
+            for(int j = i + 1; buffer[j]; j++)
+            {
+                if( is_numeric(buffer[j]) )
+                {
+                    const char* endptr = &buffer[j];
+                    int r = strtol(&buffer[j], (char**) &endptr, 10);
+                    if (endptr > command.c_str())
+                        return r;
+                    return 0;
+                }
+                else if ( is_whitespace(buffer[j]) == false )
+                    return 0;
+            }
+        }
+    }
     return 0;
 }
 
