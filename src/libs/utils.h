@@ -11,6 +11,12 @@ extern volatile bool _isr_context;
 
 string lc(string str);
 
+bool is_alpha( int );
+bool is_digit( int );
+bool is_numeric( int );
+bool is_alphanum( int );
+bool is_whitespace( int );
+
 string remove_non_number( string str );
 
 uint16_t get_checksum(string to_check);
