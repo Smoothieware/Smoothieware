@@ -28,11 +28,12 @@ class SlowTicker : public Module{
 
         void on_module_loaded(void);
         void on_idle(void*);
+        void on_gcode_execute(void*);
 
         void set_frequency( int frequency );
         void tick();
         // For some reason this can't go in the .cpp, see :  http://mbed.org/forum/mbed/topic/2774/?page=1#comment-14221
-        template<typename T> Hook* attach( int frequency, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
+        template<typename T> Hook* attach( uint32_t frequency, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook();
             hook->interval = int(floor((SystemCoreClock/4)/frequency));
             hook->attach(optr, fptr);
@@ -48,8 +49,11 @@ class SlowTicker : public Module{
         bool flag_1s();
 
         vector<Hook*> hooks;
-        int max_frequency;
-        int interval;
+        uint32_t max_frequency;
+        uint32_t interval;
+
+        uint32_t g4_ticks;
+        bool     g4_pause;
 
         Pin ispbtn;
 protected:
