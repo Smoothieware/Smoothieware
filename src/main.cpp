@@ -72,7 +72,7 @@ int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.0 \r\n");
+    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 \r\n");
 
 //     kernel->streams->printf("Disk Status: %d, Type: %d\n", sd.disk_status(), sd.card_type());
 //     if (sd.disk_status() == 0) {

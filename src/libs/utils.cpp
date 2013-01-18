@@ -15,7 +15,7 @@ using std::string;
 
 volatile bool _isr_context = false;
 
-uint16_t get_checksum(string to_check){
+uint16_t get_checksum(const string to_check){
    // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum
    uint16_t sum1 = 0;
    uint16_t sum2 = 0;
@@ -26,16 +26,16 @@ uint16_t get_checksum(string to_check){
    return (sum2 << 8) | sum1;
 }
 
-void get_checksums(uint16_t check_sums[],string key){
-    key = key.append(" ");
+void get_checksums(uint16_t check_sums[], const string key){
+    const string k = key+" ";
     check_sums[0] = 0x0000;
     check_sums[1] = 0x0000;
     check_sums[2] = 0x0000;
     size_t begin_key = 0;
     unsigned int counter = 0;
     while( begin_key < key.size()-1 ){
-        size_t end_key =  key.find_first_of(" .", begin_key);
-        string key_node = key.substr(begin_key, end_key - begin_key);
+        const size_t end_key =  k.find_first_of(" .", begin_key);
+        const string key_node = k.substr(begin_key, end_key - begin_key);
         check_sums[counter] = get_checksum(key_node);
         begin_key = end_key + 1;
         counter++;
@@ -112,7 +112,7 @@ string get_arguments( string possible_command ){
 }
 
 // Returns true if the file exists
-bool file_exists( string file_name ){
+bool file_exists( const string file_name ){
     bool exists = false;
     FILE *lp = fopen(file_name.c_str(), "r");
     if(lp){ exists = true; }
