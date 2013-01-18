@@ -193,13 +193,15 @@ void Block::pop_and_execute_gcode(Kernel* &kernel){
 }
 
 // Signal the player that this block is ready to be injected into the system
-void Block::ready(){
+void Block::ready()
+{
     this->is_ready = true;
     this->player->new_block_added();
 }
 
 // Mark the block as taken by one more module
-void Block::take(){
+void Block::take()
+{
     this->times_taken++;
     //printf("taking %p times now:%d\r\n", this, int(this->times_taken) );
 }
@@ -222,22 +224,28 @@ void Block::release()
         player->flush_blocks++;
         is_ready = false;
 
-        if( player->looking_for_new_block == false ){
-            if( player->queue.size() > player->flush_blocks ){
+        if( player->looking_for_new_block == false )
+        {
+            if( player->queue.size() > player->flush_blocks )
+            {
                 Block* candidate =  player->queue.get_ref(player->flush_blocks);
-                if( candidate->is_ready ){
+                if( candidate->is_ready )
+                {
                     player->current_block = candidate;
                     player->kernel->call_event(ON_BLOCK_BEGIN, player->current_block);
-                    if( player->current_block->times_taken < 1 ){
+                    if( player->current_block->times_taken < 1 )
+                    {
                         player->current_block->times_taken = 1;
                         player->current_block->release();
                     }
-                }else{
-
-                    player->current_block = NULL;
-
                 }
-            }else{
+                else
+                {
+                    player->current_block = NULL;
+                }
+            }
+            else
+            {
                 player->current_block = NULL;
             }
         }
