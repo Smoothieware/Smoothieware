@@ -18,16 +18,6 @@ using namespace std;
 SlowTicker* global_slow_ticker;
 
 SlowTicker::SlowTicker(){
-    max_frequency = 0;
-    global_slow_ticker = this;
-    LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
-    LPC_TIM2->MR0 = 10000;        // Initial dummy value for Match Register
-    LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
-    LPC_TIM2->TCR = 1;              // Enable interrupt
-    NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
-
-    ispbtn.from_string("2.10")->as_input()->pull_up();
-
     flag_1s_flag = 0;
     flag_1s_count = SystemCoreClock;
 
@@ -37,6 +27,22 @@ SlowTicker::SlowTicker(){
 
 void SlowTicker::on_module_loaded()
 {
+    ispbtn.from_string("2.10")->as_input()->pull_up();
+
+    max_frequency = 0;
+    global_slow_ticker = this;
+    LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
+    LPC_TIM2->MR0 = 10000;        // Initial dummy value for Match Register
+    LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
+    LPC_TIM2->TCR = 1;              // Enable interrupt
+    NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
+
+    flag_1s_count = SystemCoreClock;
+    flag_1s_flag = 0;
+
+    g4_ticks = 0;
+    g4_pause = false;
+
     register_for_event(ON_IDLE);
     register_for_event(ON_GCODE_EXECUTE);
 }

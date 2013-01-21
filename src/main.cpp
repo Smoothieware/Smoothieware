@@ -32,6 +32,8 @@
 
 #include "libs/SDFAT.h"
 
+#include "LPC17XX_Ethernet.h"
+
 #include "libs/Watchdog.h"
 
 // Watchdog wd(5000000, WDT_MRI);
@@ -50,6 +52,10 @@ DFU dfu(&u);
 USBSerial usbserial2(&u);
 
 SDFAT mounter("sd", &sd);
+
+LPC17XX_Ethernet eth;
+
+Kernel kernel;
 
 char buf[512];
 
@@ -70,9 +76,9 @@ int main() {
 
     sd.disk_initialize();
 
-    Kernel* kernel = new Kernel();
+//     Kernel* kernel = new Kernel();
 
-    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 \r\n");
+    kernel.streams->printf("Smoothie ( grbl port ) version 0.7.2 @%dMHz\r\n", SystemCoreClock / 1000000);
 
 //     kernel->streams->printf("Disk Status: %d, Type: %d\n", sd.disk_status(), sd.card_type());
 //     if (sd.disk_status() == 0) {
@@ -103,30 +109,32 @@ int main() {
 //     }
 
 //     kernel->add_module( new Laser(p21) );
-    kernel->add_module( new Extruder() );
-    kernel->add_module( new SimpleShell() );
-    kernel->add_module( new Configurator() );
-    kernel->add_module( new CurrentControl() );
-    kernel->add_module( new TemperatureControlPool() );
-    kernel->add_module( new SwitchPool() );
-    kernel->add_module( new PauseButton() );
-    kernel->add_module( new Endstops() );
+    kernel.add_module( new Extruder() );
+    kernel.add_module( new SimpleShell() );
+    kernel.add_module( new Configurator() );
+    kernel.add_module( new CurrentControl() );
+    kernel.add_module( new TemperatureControlPool() );
+    kernel.add_module( new SwitchPool() );
+    kernel.add_module( new PauseButton() );
+    kernel.add_module( new Endstops() );
 
     u.init();
 
-    kernel->add_module( &msc );
-    kernel->add_module( &usbserial );
-    kernel->add_module( &usbserial2 );
-    kernel->add_module( &dfu );
-    kernel->add_module( &u );
+    kernel.add_module( &msc );
+    kernel.add_module( &usbserial );
+    kernel.add_module( &usbserial2 );
+    kernel.add_module( &dfu );
+    kernel.add_module( &u );
+
+    kernel.add_module( &eth );
 
     struct SerialMessage message;
     message.message = "G90";
-    message.stream = kernel->serial;
-    kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    message.stream = kernel.serial;
+    kernel.call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
     while(1){
-        kernel->call_event(ON_MAIN_LOOP);
-        kernel->call_event(ON_IDLE);
+        kernel.call_event(ON_MAIN_LOOP);
+        kernel.call_event(ON_IDLE);
     }
 }
