@@ -117,13 +117,13 @@ void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
 }
 
 void Kernel::call_event(_EVENT_ENUM id_event){
-    for (Module* current : hooks[id_event]) {
+    for (Module* current : hooks.at(id_event)) {
         (current->*kernel_callback_functions[id_event])(this);
     }
 }
 
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
-    for (Module* current : hooks[id_event]) {
+    for (Module* current : hooks.at(id_event)) {
         (current->*kernel_callback_functions[id_event])(argument);
     }
 }
