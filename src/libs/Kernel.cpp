@@ -113,7 +113,7 @@ void Kernel::add_module(Module* module){
 }
 
 void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
-    this->hooks[id_event].push_back(module);
+    this->hooks.at(id_event).push_back(module);
 }
 
 void Kernel::call_event(_EVENT_ENUM id_event){
