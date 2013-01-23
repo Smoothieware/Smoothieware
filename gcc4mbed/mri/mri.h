@@ -43,6 +43,10 @@ extern "C"
         MRI_UART_MBED_P9_P10
         MRI_UART_MBED_P13_P14
         MRI_UART_MBED_P28_P27
+        MRI_UART_0
+        MRI_UART_1
+        MRI_UART_2
+        MRI_UART_3
         
     By default the debug monitor expects to take full control of the UART to configure baud rate, etc.  However 
     including the following option will tell the monitor to assume that the user's firmware will configure and use the
@@ -60,10 +64,22 @@ extern "C"
 void __mriInit(const char* pDebuggerParameters);
 
 
-/* Simple assembly language stubs that can be called from user's newlib _write and _read routines which will cause the 
-   reads and writes to be redirected to the gdb host via mri. */
-int __mriNewlib_SemihostWrite(int file, char *ptr, int len);
+/* Simple assembly language stubs that can be called from user's newlib stubs routines which will cause the operations
+   to be redirected to the GDB host via MRI. */
+int __mriNewLib_SemihostOpen(const char *pFilename, int flags, int mode);
+int __mriNewLib_SemihostRename(const char *pOldFilename, const char *pNewFilename);
+int __mriNewLib_SemihostUnlink(const char *pFilename);
+int __mriNewLib_SemihostStat(const char *pFilename, void *pStat);
+int __mriNewlib_SemihostWrite(int file, const char *ptr, int len);
 int __mriNewlib_SemihostRead(int file, char *ptr, int len);
+int __mriNewlib_SemihostLSeek(int file, int offset, int whence);
+int __mriNewlib_SemihostClose(int file);
+int __mriNewlib_SemihostFStat(int file, void *pStat);
+
+
+
+/* Can be used by semihosting hooks to determine the index of the UART being used by MRI. */
+int __mriPlatform_CommUartIndex(void);
 
 
 #ifdef __cplusplus
@@ -75,11 +91,11 @@ int __mriNewlib_SemihostRead(int file, char *ptr, int len);
 
 #ifndef MRI_VERSION_STRING
 
-#define MRI_BRANCH "https://github.com/adamgreen/mri/tree/version_0.3"
+#define MRI_BRANCH "https://github.com/adamgreen/mri/tree/version_0.5"
 
 #define MRI_VERSION_MAJOR       0
-#define MRI_VERSION_MINOR       3
-#define MRI_VERSION_BUILD       20120911
+#define MRI_VERSION_MINOR       5
+#define MRI_VERSION_BUILD       20130120
 #define MRI_VERSION_SUBBUILD    1
 
 #define MRI_STR(X) MRI_STR2(X)

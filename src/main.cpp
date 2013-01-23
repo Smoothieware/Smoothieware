@@ -103,6 +103,7 @@ int main() {
 //     }
 
 //     kernel->add_module( new Laser(p21) );
+//     kernel->add_module( &wd );
     kernel->add_module( new Extruder() );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );

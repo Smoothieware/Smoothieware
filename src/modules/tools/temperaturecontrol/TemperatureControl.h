@@ -41,6 +41,8 @@
 
 #define i_max_checksum                      4112
 
+#define QUEUE_LEN 8
+
 class TemperatureControlPool;
 
 class TemperatureControl : public Module {
@@ -90,7 +92,8 @@ class TemperatureControl : public Module {
         double acceleration_factor;
         double readings_per_second;
 
-        RingBuffer<uint16_t,8> queue;  // Queue of readings
+        RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
+        uint16_t median_buffer[QUEUE_LEN];
         int running_total;
 
         uint16_t name_checksum;

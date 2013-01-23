@@ -38,6 +38,9 @@ debug-store: $(PROJECT).elf
 flash: $(PROJECT).hex debug-store
 	lpc21isp $< $(CONSOLE) 115200 12000
 
+dfu: 
+	dfu-util -D main.bin -R
+
 upload: $(PROJECT).bin debug-store
 	dfu-util -d 1d50:6015 -D $<
 
