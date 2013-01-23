@@ -34,6 +34,7 @@ Stepper::Stepper(){
 //Called when the module has just been loaded
 void Stepper::on_module_loaded(){
     stepper = this;
+    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_EXECUTE);

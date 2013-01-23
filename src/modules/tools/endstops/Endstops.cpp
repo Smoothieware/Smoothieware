@@ -20,6 +20,7 @@ Endstops::Endstops(){
 }
 
 void Endstops::on_module_loaded() {
+    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
 
     // Take StepperMotor objects from Robot and keep them here
