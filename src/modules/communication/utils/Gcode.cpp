@@ -36,7 +36,7 @@ Gcode::Gcode(string& command, StreamOutput* stream)
 bool Gcode::has_letter( char letter ){
     //return ( this->command->find( letter ) != string::npos );
     for (size_t i=0; i < this->command.length(); i++){
-        if( this->command.at(i) == letter ){
+        if( this->command[i] == letter ){
             return true;
         }
     }
