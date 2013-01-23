@@ -80,7 +80,7 @@ int Gcode::get_int( char letter )
                 if( is_numeric(buffer[j]) )
                 {
                     const char* endptr = &buffer[j];
-                    int r = strtol(&buffer[j], (char**) &endptr, 10);
+                    int r = strtol(&buffer[j], const_cast<char**>(&endptr), 10);
                     if (endptr > command.c_str())
                         return r;
                     return 0;
