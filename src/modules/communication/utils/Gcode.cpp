@@ -36,7 +36,7 @@ Gcode::Gcode(string& command, StreamOutput* stream)
 bool Gcode::has_letter( char letter ){
     //return ( this->command->find( letter ) != string::npos );
     for (size_t i=0; i < this->command.length(); i++){
-        if( this->command.at(i) == letter ){
+        if( this->command[i] == letter ){
             return true;
         }
     }
@@ -80,7 +80,7 @@ int Gcode::get_int( char letter )
                 if( is_numeric(buffer[j]) )
                 {
                     const char* endptr = &buffer[j];
-                    int r = strtol(&buffer[j], (char**) &endptr, 10);
+                    int r = strtol(&buffer[j], const_cast<char**>(&endptr), 10);
                     if (endptr > command.c_str())
                         return r;
                     return 0;

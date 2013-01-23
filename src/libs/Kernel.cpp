@@ -32,9 +32,6 @@
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
-    // Value init for the arrays
-    bzero(hooks, sizeof(hooks));
-
     // Config first, because we need the baud_rate setting before we start serial
     this->config         = new Config();
 
@@ -116,31 +113,17 @@ void Kernel::add_module(Module* module){
 }
 
 void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
-    uint8_t current_id = 0;
-    Module* current = this->hooks[id_event][0];
-    while(current != NULL ){
-        if( current == module ){ return; }
-        current_id++;
-        current = this->hooks[id_event][current_id];
-    }
-    this->hooks[id_event][current_id] = module;
-    this->hooks[id_event][current_id+1] = NULL;
+    this->hooks[id_event].push_back(module);
 }
 
 void Kernel::call_event(_EVENT_ENUM id_event){
-    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
-    while(current != NULL ){   // For each active stepper
+    for (Module* current : hooks[id_event]) {
         (current->*kernel_callback_functions[id_event])(this);
-        current_id++;
-        current = this->hooks[id_event][current_id];
     }
 }
 
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
-    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
-    while(current != NULL ){   // For each active stepper
+    for (Module* current : hooks[id_event]) {
         (current->*kernel_callback_functions[id_event])(argument);
-        current_id++;
-        current = this->hooks[id_event][current_id];
     }
 }
