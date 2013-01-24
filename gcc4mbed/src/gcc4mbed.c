@@ -16,7 +16,7 @@
 /* Provide routines which hook the MRI debug monitor into GCC4MBED projects. */
 #include <string.h>
 #include <mri.h>
-
+#include <cmsis.h>
 
 extern unsigned int __bss_start__;
 extern unsigned int __bss_end__;
@@ -111,4 +111,15 @@ extern "C" int __aeabi_unwind_cpp_pr1(int state, void* controlBlock, void* conte
 extern "C" int __aeabi_unwind_cpp_pr2(int state, void* controlBlock, void* context)
 {
     abort();
+}
+
+/* Trap calls to malloc/free/realloc in ISR. */
+extern "C" void __malloc_lock(void)
+{
+    if (__get_IPSR() != 0)
+        __debugbreak();
+}
+
+extern "C" void __malloc_unlock(void)
+{
 }
