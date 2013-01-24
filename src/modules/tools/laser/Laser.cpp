@@ -53,8 +53,8 @@ void Laser::on_play(void* argument){
 void Laser::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     this->laser_on = false;
-    if( gcode->has_letter('G' )){
-        int code = gcode->get_value('G');
+    if( gcode->has_g){
+        int code = gcode->g;
         if( code == 0 ){                    // G0
             this->laser_pin = this->laser_tickle_power;
             this->laser_on =  false;
