@@ -18,39 +18,24 @@ using namespace std;
 
 #define PRINTF_DEFAULT_BUFFER_SIZE 32
 
-class StreamOutputPool {
+class StreamOutputPool : public StreamOutput {
 private:
     char *printf_default_buffer;
 public:
     StreamOutputPool(){
         printf_default_buffer = new char[PRINTF_DEFAULT_BUFFER_SIZE];
     }
-    int printf(const std::string format, ...){
-        char *buffer = printf_default_buffer;
-        // Make the message
-        va_list args;
-        va_start(args, format);
 
-        int size = vsnprintf(buffer, PRINTF_DEFAULT_BUFFER_SIZE, format.c_str(), args)
-            + 1; // we add one to take into account space for the terminating \0
-
-        if (size > PRINTF_DEFAULT_BUFFER_SIZE) {
-            buffer = new char[size];
-            vsnprintf(buffer, size, format.c_str(), args);
-        }
-
-        va_end(args);
-
-        // Dispatch to all
+    int puts(const char* s)
+    {
+        int r = 0;
         for(set<StreamOutput*>::iterator i = this->streams.begin(); i != this->streams.end(); i++)
         {
-            (*i)->puts(buffer);
+            int k = (*i)->puts(s);
+            if (k > r)
+                r = k;
         }
-
-        if (buffer != printf_default_buffer)
-            delete buffer;
-
-        return size - 1;
+        return r;
     }
 
     void append_stream(StreamOutput* stream)

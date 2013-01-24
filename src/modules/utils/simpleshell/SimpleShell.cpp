@@ -134,7 +134,7 @@ void SimpleShell::play_command( string parameters, StreamOutput* stream ){
     if( options.find_first_of("Qq") == string::npos ){
         this->current_stream = stream;
     }else{
-        this->current_stream = new StreamOutput();
+        this->current_stream = kernel->streams;
     }
 }
 

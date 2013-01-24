@@ -68,13 +68,9 @@ void SerialConsole::on_main_loop(void * argument){
 }
 
 
-int SerialConsole::printf(const char* format, ...){
-    va_list args;
-    int result;
-    va_start (args, format);
-    result = vfprintf( this->serial->_file, format, args);
-    va_end (args);
-    return result;
+int SerialConsole::puts(const char* s)
+{
+    return fwrite(s, strlen(s), 1, this->serial->_file);
 }
 
 int SerialConsole::_putc(int c)
