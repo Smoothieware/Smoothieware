@@ -39,8 +39,8 @@ void Switch::on_config_reload(void* argument){
 // Turn pin on and off
 void Switch::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    if( gcode->has_letter('M' )){
-        int code = gcode->get_value('M');
+    if( gcode->has_m){
+        int code = gcode->m;
         if( code == this->on_m_code ){
             if (gcode->has_letter('S'))
             {

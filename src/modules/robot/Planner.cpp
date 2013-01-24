@@ -46,6 +46,10 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     Block* block = this->kernel->player->new_block();
     block->planner = this;
 
+    //Block* test = new Block();
+    //this->kernel->streams->printf("%p queue:%u\r\n", test, this->kernel->player->queue.size());
+    //delete test;
+    //
     // Direction bits
     block->direction_bits = 0;
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){
