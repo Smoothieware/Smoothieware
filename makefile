@@ -26,7 +26,7 @@ MRI_UART=MRI_UART_MBED_USB MRI_UART_SHARE
 MRI_BREAK_ON_INIT=0
 MRI_SEMIHOST_STDIO=0
 
-CONSOLE=/dev/arduino_A900K10V
+CONSOLE=/dev/ttyUSB0
 
 include ./gcc4mbed/build/gcc4mbed.mk
 
@@ -38,11 +38,8 @@ debug-store: $(PROJECT).elf
 flash: $(PROJECT).hex debug-store
 	lpc21isp $< $(CONSOLE) 115200 12000
 
-dfu: 
-	dfu-util -D main.bin -R
-
 upload: $(PROJECT).bin debug-store
-	dfu-util -d 1d50:6015 -D $<
+	dfu-util -d 1d50:6015 -R -D $<
 
 debug: $(PROJECT)_lastupload.elf
 	arm-none-eabi-gdb $< -ex  "set target-charset ASCII" -ex "set remotelogfile mri.log" -ex "target remote $(CONSOLE)"
