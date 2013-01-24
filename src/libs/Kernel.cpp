@@ -122,24 +122,31 @@ void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
         current_id++;
         current = this->hooks[id_event][current_id];
     }
-    this->hooks[id_event][current_id] = module;
-    this->hooks[id_event][current_id+1] = NULL;
-}
-
-void Kernel::call_event(_EVENT_ENUM id_event){
-    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
-    while(current != NULL ){   // For each active stepper
-        (current->*kernel_callback_functions[id_event])(this);
-        current_id++;
-        current = this->hooks[id_event][current_id];
+    if (current_id >= 32)
+    {
+        printf("register_for_event: Overflow on event %d!\n", id_event);
+    }
+    else
+    {
+        this->hooks[id_event][current_id] = module;
+        if (current_id < 31)
+            this->hooks[id_event][current_id+1] = NULL;
     }
 }
 
+void Kernel::call_event(_EVENT_ENUM id_event){
+    call_event(id_event, this);
+}
+
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
-    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
-    while(current != NULL ){   // For each active stepper
-        (current->*kernel_callback_functions[id_event])(argument);
-        current_id++;
-        current = this->hooks[id_event][current_id];
+    uint8_t current_id = 0;
+    Module* current;
+    while (current_id <= 31)
+    {
+        current = this->hooks[id_event][current_id++];
+        if (current)
+            (current->*kernel_callback_functions[id_event])(argument);
+        else
+            return;
     }
 }
