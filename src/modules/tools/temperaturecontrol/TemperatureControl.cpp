@@ -289,5 +289,5 @@ int TemperatureControl::new_thermistor_reading()
 void TemperatureControl::on_second_tick(void* argument)
 {
     if (waiting)
-        kernel->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o, waiting);
+        kernel->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o);
 }
