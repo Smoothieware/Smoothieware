@@ -33,11 +33,13 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(128), txbuf(128)
 {
     usb = u;
     nl_in_rx = 0;
+    attach = attached = false;
 }
 
 int USBSerial::_putc(int c)
 {
-//     send((uint8_t *)&c, 1);
+    if (!attached)
+        return 1;
     if (c == '\r')
         return 1;
     if (txbuf.free())
@@ -50,6 +52,8 @@ int USBSerial::_putc(int c)
 
 int USBSerial::_getc()
 {
+    if (!attached)
+        return 0;
     uint8_t c = 0;
     setled(4, 1); while (rxbuf.isEmpty()); setled(4, 0);
     rxbuf.dequeue(&c);
@@ -68,6 +72,8 @@ int USBSerial::_getc()
 
 int USBSerial::puts(const char *str)
 {
+    if (!attached)
+        return strlen(str);
     int i = 0;
     while (*str)
     {
@@ -84,6 +90,8 @@ int USBSerial::puts(const char *str)
 
 uint16_t USBSerial::writeBlock(uint8_t * buf, uint16_t size)
 {
+    if (!attached)
+        return size;
     if (size > txbuf.free())
     {
         size = txbuf.free();
@@ -236,13 +244,28 @@ uint8_t USBSerial::available()
 
 void USBSerial::on_module_loaded()
 {
-    this->register_for_event(ON_MAIN_LOOP);
-//     this->kernel->streams->append_stream(this);
+    this->register_for_event(ON_IDLE);
 }
 
-void USBSerial::on_main_loop(void *argument)
+void USBSerial::on_idle(void *argument)
 {
-//     this->kernel->streams->printf("!");
+    if (attach != attached)
+    {
+        if (attach)
+        {
+            attached = true;
+            kernel->streams->append_stream(this);
+            writeBlock((uint8_t *) "Smoothie\nok\n", 12);
+        }
+        else
+        {
+            attached = false;
+            kernel->streams->remove_stream(this);
+            txbuf.flush();
+            rxbuf.flush();
+            nl_in_rx = 0;
+        }
+    }
     if (nl_in_rx)
     {
         string received;
@@ -268,14 +291,10 @@ void USBSerial::on_main_loop(void *argument)
 
 void USBSerial::on_attach()
 {
-    this->kernel->streams->append_stream(this);
-    writeBlock((uint8_t *) "Smoothie\nok\n", 12);
+    attach = true;
 }
 
 void USBSerial::on_detach()
 {
-    this->kernel->streams->remove_stream(this);
-    txbuf.flush();
-    rxbuf.flush();
-    nl_in_rx = 0;
+    attach = false;
 }
