@@ -107,8 +107,15 @@ string shift_parameter( string &parameters ){
 // Separate command from arguments
 string get_arguments( string possible_command ){
     size_t beginning = possible_command.find_first_of(" ");
-    if( beginning == string::npos ){ return ""; }
-    return possible_command.substr( beginning + 1, possible_command.size() - beginning + 1);
+    size_t newline = possible_command.find_first_of("\r\n");
+
+    if( beginning == string::npos ){ 
+        return ""; 
+    } else if( newline == string::npos ){ 
+        return possible_command.substr(beginning + 1, possible_command.size() - beginning + 1);
+    } else {
+        return possible_command.substr(beginning + 1, newline - (beginning + 1)); 
+    }
 }
 
 // Returns true if the file exists

@@ -41,28 +41,32 @@ void SerialConsole::on_serial_char_received(){
     while(this->serial->readable()){
         char received = this->serial->getc();
         // convert CR to NL (for host OSs that don't send NL)
-        if( received == '\r' ){ received = '\n'; }
-        this->buffer.push_back(received);
+        /*if( received == '\r' ){ received = '\n'; }
+        this->buffer.push_back(received);*/
+        this->buffer.push_back(received);            
     }
 }
 
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){
-    if( this->has_char('\n') ){
+    if( this->has_char('\n') || this->has_char('\r') ){
         string received;
         received.reserve(20);
-        while(1){
-           char c;
-           this->buffer.pop_front(c);
-           if( c == '\n' ){
-                struct SerialMessage message;
-                message.message = received;
-                message.stream = this;
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-                return;
-            }else{
+        int index = this->buffer.head;
+        while( index != this->buffer.tail ){
+            char c;
+            this->buffer.pop_front(c);
+            if( c != '\n' && c != '\r' ){
                 received += c;
             }
+            index = this->buffer.head;
+        }
+        if(received != "") {
+            struct SerialMessage message;
+            message.message = received;
+            message.stream = this;
+            this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            return;
         }
     }
 }

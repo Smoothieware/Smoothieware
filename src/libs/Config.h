@@ -47,7 +47,7 @@ class Config : public Module {
 
         ConfigCache config_cache;             // A cache in which ConfigValues are kept
         vector<ConfigSource*> config_sources; // A list of all possible coniguration sources
-        bool   config_cache_loaded;           // Whether or not the cache is currently popluated
+        bool   config_cache_loaded;           // Whether or not the cache is currently populated
 };
 
 #endif
