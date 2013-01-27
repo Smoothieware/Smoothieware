@@ -61,7 +61,7 @@ void Configurator::config_get_command( string parameters, StreamOutput* stream )
         setting = source;
         source = "";
         uint16_t setting_checksums[3];
-        get_checksums(setting_checksums, setting );
+        get_checksums(setting_checksums, setting);
         ConfigValue* cv = this->kernel->config->value(setting_checksums);
         string value = "";
         if(cv->found){ value = cv->as_string(); }

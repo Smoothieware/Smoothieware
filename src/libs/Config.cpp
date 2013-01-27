@@ -134,6 +134,7 @@ ConfigValue* Config::value(uint16_t check_sums[]){
             continue;
         }
         result = this->config_cache[i];
+        result->found = true;
         break;
     }
     
