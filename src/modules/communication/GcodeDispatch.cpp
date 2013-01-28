@@ -70,7 +70,7 @@ void GcodeDispatch::on_console_line_received(void * line){
         }
 
         //Remove comments
-        size_t comment = possible_command.find_first_of(";");
+        size_t comment = possible_command.find_first_of(";(");
         if( comment != string::npos ){ possible_command = possible_command.substr(0, comment); }
 
         //If checksum passes then process message, else request resend
