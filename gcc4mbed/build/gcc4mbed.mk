@@ -233,7 +233,7 @@ $(PROJECT).hex: $(PROJECT).elf
 
 $(OUTDIR)/$(PROJECT).disasm: $(PROJECT).elf
 	@echo "  DISASM  " $@
-	@$(OBJDUMP) -d -f -M reg-names-std $(PROJECT).elf >$(OUTDIR)/$(PROJECT).disasm
+	@$(OBJDUMP) -d -f -M reg-names-std --demangle $(PROJECT).elf >$(OUTDIR)/$(PROJECT).disasm
 
 $(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
 	@echo "  LD      " $@
