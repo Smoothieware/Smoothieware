@@ -20,7 +20,7 @@
 
 class Laser : public Module{
     public:
-        Laser(PinName pin);
+        Laser();
         void on_module_loaded();
         void on_block_end(void* argument);
         void on_block_begin(void* argument);
@@ -30,7 +30,7 @@ class Laser : public Module{
         void on_speed_change(void* argument);
         void set_proportional_power();
 
-        mbed::PwmOut laser_pin;    // PWM output to regulate the laser power
+        mbed::PwmOut* laser_pin;    // PWM output to regulate the laser power
         bool   laser_on;     // Laser status
         float  laser_max_power; // maximum allowed laser power to be output on the pwm pin
         float  laser_tickle_power; // value used to tickle the laser on moves
