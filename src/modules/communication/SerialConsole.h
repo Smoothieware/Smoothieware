@@ -37,6 +37,7 @@ class SerialConsole : public Module, public StreamOutput {
         //vector<std::string> received_lines;    // Received lines are stored here until they are requested
         RingBuffer<char,256> buffer;             // Receive buffer
         mbed::Serial* serial;
+        int newlines;                            // Number of newlines detected in the stream
 };
 
 #endif

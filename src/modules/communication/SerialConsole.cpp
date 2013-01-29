@@ -22,6 +22,7 @@ using std::string;
 SerialConsole::SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate ){
     this->serial = new mbed::Serial( rx_pin, tx_pin );
     this->serial->baud(baud_rate);
+    this->newlines = 0;
 }
 
 // Called when the module has just been loaded
@@ -40,21 +41,22 @@ void SerialConsole::on_module_loaded() {
 void SerialConsole::on_serial_char_received(){
     while(this->serial->readable()){
         char received = this->serial->getc();
-        // convert CR to NL (for host OSs that don't send NL)
-        if( received == '\r' ){ received = '\n'; }
+        if(received == '\n' || received == '\r')
+            this->newlines++;
         this->buffer.push_back(received);
     }
 }
 
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){
-    if( this->has_char('\n') ){
+    if( this->newlines != 0 ){
         string received;
         received.reserve(20);
         while(1){
            char c;
            this->buffer.pop_front(c);
-           if( c == '\n' ){
+           if( c == '\n' || c == '\r'){
+                this->newlines--;
                 struct SerialMessage message;
                 message.message = received;
                 message.stream = this;
