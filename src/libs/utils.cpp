@@ -106,8 +106,9 @@ string shift_parameter( string &parameters ){
 
 // Separate command from arguments
 string get_arguments( string possible_command ){
-    if(possible_command.find_first_of("\r") != string::npos){
-        possible_command = possible_command.substr(0,(possible_command.size()-1));
+    size_t cr = possible_command.find_first_of("\r");
+    if(cr != string::npos){
+        possible_command = possible_command.substr(0,cr);
     }
     size_t beginning = possible_command.find_first_of(" ");
     if( beginning == string::npos ){ return ""; }
