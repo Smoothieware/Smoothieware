@@ -52,8 +52,8 @@ void SerialConsole::on_main_loop(void * argument){
     if( this->newlines != 0 ){
         string received;
         received.reserve(20);
+        char c;
         while(1){
-           char c;
            this->buffer.pop_front(c);
            if( c == '\n' || c == '\r'){
                 this->newlines--;
