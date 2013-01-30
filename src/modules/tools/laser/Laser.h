@@ -14,9 +14,9 @@
 #include "modules/communication/utils/Gcode.h"
 
 
-#define laser_module_enable_checksum 35529
-#define laser_module_max_power_checksum 14134
-#define laser_module_tickle_power_checksum 63341
+#define laser_module_enable_checksum        CHECKSUM("laser_module_enable")
+#define laser_module_max_power_checksum     CHECKSUM("laser_module_max_power")
+#define laser_module_tickle_power_checksum  CHECKSUM("laser_module_tickle_power")
 
 class Laser : public Module{
     public:

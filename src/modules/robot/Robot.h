@@ -19,14 +19,14 @@ using std::string;
 #include "libs/StepperMotor.h"
 
 
-#define default_seek_rate_checksum             47357
-#define default_feed_rate_checksum             6633
-#define mm_per_line_segment_checksum           30176
-#define mm_per_arc_segment_checksum            15470
-#define arc_correction_checksum                5074
-#define x_axis_max_speed_checksum              64935
-#define y_axis_max_speed_checksum              3752
-#define z_axis_max_speed_checksum              7849
+#define default_seek_rate_checksum             CHECKSUM("default_seek_rate")
+#define default_feed_rate_checksum             CHECKSUM("default_feed_rate")
+#define mm_per_line_segment_checksum           CHECKSUM("mm_per_line_segment")
+#define mm_per_arc_segment_checksum            CHECKSUM("mm_per_arc_segment")
+#define arc_correction_checksum                CHECKSUM("arc_correction")
+#define x_axis_max_speed_checksum              CHECKSUM("x_axis_max_speed")
+#define y_axis_max_speed_checksum              CHECKSUM("y_axis_max_speed")
+#define z_axis_max_speed_checksum              CHECKSUM("z_axis_max_speed")
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1

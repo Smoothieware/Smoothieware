@@ -18,7 +18,7 @@ using std::string;
 #include "libs/StreamOutput.h"
 
 
-#define baud_rate_setting_checksum 10922
+#define baud_rate_setting_checksum CHECKSUM("baud_rate")
 
 class SerialConsole : public Module, public StreamOutput {
     public:

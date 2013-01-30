@@ -23,26 +23,26 @@
 #define MOVING_BACK 2
 #define MOVING_TO_ORIGIN_SLOW 3
 
-#define alpha_min_endstop_checksum       28684
-#define beta_min_endstop_checksum        23457
-#define gamma_min_endstop_checksum       16137
+#define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
+#define beta_min_endstop_checksum        CHECKSUM("beta_min_endstop")
+#define gamma_min_endstop_checksum       CHECKSUM("gamma_min_endstop")
 
-#define alpha_max_endstop_checksum       31246
-#define beta_max_endstop_checksum        26019
-#define gamma_max_endstop_checksum       18699
+#define alpha_max_endstop_checksum       CHECKSUM("alpha_max_endstop")
+#define beta_max_endstop_checksum        CHECKSUM("beta_max_endstop")
+#define gamma_max_endstop_checksum       CHECKSUM("gamma_max_endstop")
 
-#define alpha_fast_homing_rate_checksum  19720
-#define beta_fast_homing_rate_checksum   9373
-#define gamma_fast_homing_rate_checksum  3333
+#define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
+#define beta_fast_homing_rate_checksum   CHECKSUM("beta_fast_homing_rate")
+#define gamma_fast_homing_rate_checksum  CHECKSUM("gamma_fast_homing_rate")
 
-#define alpha_slow_homing_rate_checksum  45599
-#define beta_slow_homing_rate_checksum   35252
-#define gamma_slow_homing_rate_checksum  29212
+#define alpha_slow_homing_rate_checksum  CHECKSUM("alpha_slow_homing_rate")
+#define beta_slow_homing_rate_checksum   CHECKSUM("beta_slow_homing_rate")
+#define gamma_slow_homing_rate_checksum  CHECKSUM("gamma_slow_homing_rate")
 
-#define alpha_homing_retract_checksum    4419
-#define beta_homing_retract_checksum     48344
-#define gamma_homing_retract_checksum    54848
-#define endstop_debounce_count_checksum  25394
+#define alpha_homing_retract_checksum    CHECKSUM("alpha_homing_retract")
+#define beta_homing_retract_checksum     CHECKSUM("beta_homing_retract")
+#define gamma_homing_retract_checksum    CHECKSUM("gamma_homing_retract")
+#define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
 
 
 class Endstops : public Module{
