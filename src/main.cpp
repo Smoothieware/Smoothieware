@@ -29,6 +29,9 @@
 #include "libs/USBDevice/USBMSD/SDCard.h"
 #include "libs/USBDevice/USBSerial/USBSerial.h"
 #include "libs/USBDevice/DFU.h"
+#include "libs/USBDevice/USBEthernet/USBEthernet.h"
+
+#include "netcore.h"
 
 #include "libs/SDFAT.h"
 
@@ -51,9 +54,13 @@ USBMSD msc(&u, &sd);
 DFU dfu(&u);
 USBSerial usbserial2(&u);
 
+USBEthernet usbeth(&u);
+
 SDFAT mounter("sd", &sd);
 
 LPC17XX_Ethernet eth;
+
+netcore net;
 
 Kernel kernel;
 
@@ -126,7 +133,11 @@ int main() {
     kernel.add_module( &dfu );
     kernel.add_module( &u );
 
+    net.add_interface( &eth );
+    net.add_interface( &usbeth );
+
     kernel.add_module( &eth );
+    kernel.add_module( &usbeth );
 
     struct SerialMessage message;
     message.message = "G90";

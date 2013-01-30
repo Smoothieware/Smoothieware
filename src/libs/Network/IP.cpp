@@ -78,7 +78,7 @@ int IP::receive(NetworkInterface* interface, NET_PACKET packet, int length)
 
     if (txlength)
     {
-        printf("IP: adding %d to frame, %d -> %d\n", sizeof(ip_frame), txlength, txlength + sizeof(ip_frame));
+//         printf("IP: adding %d to frame, %d -> %d\n", sizeof(ip_frame), txlength, txlength + sizeof(ip_frame));
         txlength += sizeof(ip_frame);
         ipf->dstip = ipf->srcip;
         ipf->srcip = htonl(interface->ip_address);
@@ -171,4 +171,10 @@ void IP::set_dest_ip(NET_PACKET packet, IP_ADDR ip)
 {
     ip_frame* p = (ip_frame*) parent->get_payload_buffer(packet);
     p->dstip = ip;
+//     uint8_t mac[6];
+//     int r = parent->arp->resolve_address(ip, mac, NULL, packet, 1536);
+//     if (r == 0)
+//         parent->set_dest_mac(packet, mac);
+//     else if (r > 0)
+//
 }

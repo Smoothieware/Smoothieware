@@ -52,9 +52,11 @@ public:
     void _receive_frame(void);
 
     // NetworkInterface methods
+    void provide_net(netcore* n);
     bool can_read_packet(void);
     int read_packet(uint8_t**);
     void release_read_packet(uint8_t*);
+    void periodical(int);
 
     bool can_write_packet(void);
     int write_packet(uint8_t *, int);

@@ -18,8 +18,8 @@ bool netcore::add_interface(NetworkInterface* interface)
         return false;
 
     interfaces[n_interfaces] = interface;
-    interface->provide_net(this);
     n_interfaces++;
+    interface->provide_net(this);
     return true;
 }
 
@@ -34,7 +34,7 @@ int netcore::receive_packet(NetworkInterface* interface, NET_PACKET packet, int 
     format_mac(e->dest_mac, dmac);
     format_mac(e->src_mac, smac);
 
-    printf("ETH: %d bytes To %s From %s Type 0x%04X: ", length, dmac, smac, ntohs(e->e_type));
+    printf("%s: %d bytes To %s From %s Type 0x%04X: ", interface->get_name(), length, dmac, smac, ntohs(e->e_type));
     for (int i = 12; i < length; i++)
     {
         int c = e->payload[i];
@@ -67,7 +67,7 @@ int netcore::receive_packet(NetworkInterface* interface, NET_PACKET packet, int 
         txlength += sizeof(eth_frame);
     }
 
-    printf("return %d\n", txlength);
+//     printf("return %d\n", txlength);
 
     return txlength;
 }
@@ -114,4 +114,31 @@ void netcore::set_type(NET_PACKET packet, int type)
 {
     eth_frame* f = (eth_frame*) packet;
     f->e_type = type;
+}
+
+int netcore::set_interface_status(NetworkInterface* ni, bool up)
+{
+    printf("%s: %s\n", ni->get_name(), up?"up":"down");
+    return 0;
+}
+
+NET_PAYLOAD netcore::get_payload_buffer(NET_PACKET packet)
+{
+    eth_frame* e = (eth_frame*) packet;
+    return e->payload;
+}
+
+void netcore::set_payload_length(NET_PACKET packet, int length)
+{
+    // TODO
+}
+
+int netcore::receive(NetworkInterface*, NET_PACKET, int)
+{
+    return 0;
+}
+
+int netcore::construct(NetworkInterface* ni, NET_PACKET packet, int length)
+{
+    return 0;
 }

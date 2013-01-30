@@ -221,6 +221,7 @@ void LPC17XX_Ethernet::on_second_tick(void*)
     {
         // TODO: link up event
         up = true;
+        net->set_interface_status(this, up);
         uint32_t scsr = read_PHY(EMAC_PHY_REG_SCSR);
         printf("%s: link up: ", interface_name);
         switch ((scsr >> 2) & 0x7)
@@ -246,6 +247,7 @@ void LPC17XX_Ethernet::on_second_tick(void*)
     {
         // TODO: link down event
         up = false;
+        net->set_interface_status(this, up);
         printf("%s: link down\n", interface_name);
     }
 
@@ -469,7 +471,7 @@ NET_PAYLOAD LPC17XX_Ethernet::get_payload_buffer(NET_PACKET packet)
     return (NET_PAYLOAD) packet;
 }
 
-void        LPC17XX_Ethernet::set_payload_length(NET_PACKET packet, int length)
+void LPC17XX_Ethernet::set_payload_length(NET_PACKET packet, int length)
 {
     uint32_t offset = ((uint8_t*) packet) - txbuf.buf[0];
     int i = (offset / LPC17XX_MAX_PACKET);
@@ -496,4 +498,11 @@ extern "C" {
     {
         LPC17XX_Ethernet::instance->irq();
     }
+}
+
+void LPC17XX_Ethernet::provide_net(netcore* n)
+{
+    NetworkInterface::provide_net(n);
+    up = false;
+    n->set_interface_status(this, up);
 }

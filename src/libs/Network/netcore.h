@@ -34,9 +34,14 @@ public:
     int receive_packet( NetworkInterface*, NET_PACKET, int);
     int periodical( int, NetworkInterface*, NET_PACKET, int);
 
+    int set_interface_status(NetworkInterface*, bool);
+
     NET_PACKET get_new_packet_buffer(NetworkInterface*);
+    NET_PAYLOAD get_payload_buffer(NET_PACKET);
+    void        set_payload_length(NET_PACKET, int);
 
-
+    int   receive(NetworkInterface*, NET_PACKET, int);
+    int   construct(NetworkInterface*, NET_PACKET, int);
 
     void  set_dest_mac(NET_PACKET, uint8_t*);
     void  set_type(NET_PACKET, int);

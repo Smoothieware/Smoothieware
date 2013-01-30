@@ -88,7 +88,7 @@ int ARP::receive(NetworkInterface* interface, NET_PACKET packet, int length)
     return 0;
 }
 
-int   ARP::construct(NetworkInterface* interface, NET_PACKET packet, int length)
+int ARP::construct(NetworkInterface* interface, NET_PACKET packet, int length)
 {
     arp_frame* arf = (arp_frame*) parent->get_payload_buffer(packet);
 
@@ -134,7 +134,8 @@ int   ARP::resolve_address(IP_ADDR ip, uint8_t* mac, NetworkInterface** interfac
     {
         if (entry->ip == ip)
         {
-            memcpy(mac, entry->mac, SIZEOF_MAC);
+            if (mac)
+                memcpy(mac, entry->mac, SIZEOF_MAC);
             if (interface)
                 *interface = entry->interface;
             return 0;
@@ -148,6 +149,9 @@ int   ARP::resolve_address(IP_ADDR ip, uint8_t* mac, NetworkInterface** interfac
         arp_frame* arf = (arp_frame*) parent->get_payload_buffer(buffer);
 
         construct(ni, buffer, bufferlen);
+
+        if (interface)
+            *interface = ni;
 
         arf->tpa = ip;
         memset(arf->tha, 0xFF, SIZEOF_MAC);
@@ -198,3 +202,14 @@ void ARP::dump_arp_table(StreamOutput* out)
     out->printf("ARP table: %i entries\n");
 }
 
+NetworkInterface* ARP::get_interface(IP_ADDR ip)
+{
+    arp_cache_entry* entry = arp_cache;
+
+    while (entry)
+    {
+        if (entry->ip == ip)
+            return entry->interface;
+        entry = entry->next;
+    }
+}

@@ -51,6 +51,8 @@ public:
     int   resolve_address(IP_ADDR, uint8_t*, NetworkInterface**, NET_PACKET, int);
     IP_ADDR rarp(uint8_t*, NetworkInterface**);
 
+    NetworkInterface* get_interface(IP_ADDR);
+
     bool  store_mac_ip(NetworkInterface*, uint8_t*, uint32_t);
 
     int   periodical(int, NetworkInterface*, NET_PACKET, int);
