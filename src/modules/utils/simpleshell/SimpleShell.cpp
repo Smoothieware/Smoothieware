@@ -33,15 +33,20 @@ void SimpleShell::on_console_line_received( void* argument ){
     unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
 
     // Act depending on command
-    switch( check_sum ){
-        case ls_command_checksum      : this->ls_command(  get_arguments(possible_command), new_message.stream ); break;
-        case cd_command_checksum      : this->cd_command(  get_arguments(possible_command), new_message.stream ); break;
-        case pwd_command_checksum     : this->pwd_command( get_arguments(possible_command), new_message.stream ); break;
-        case cat_command_checksum     : this->cat_command( get_arguments(possible_command), new_message.stream ); break;
-        case play_command_checksum    : this->play_command(get_arguments(possible_command), new_message.stream ); break;
-        case reset_command_checksum   : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
-        case dfu_command_checksum     : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
-    }
+    if (check_sum == ls_command_checksum)
+        this->ls_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == cd_command_checksum)
+        this->cd_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == pwd_command_checksum)
+        this->pwd_command( get_arguments(possible_command), new_message.stream );
+    else if (check_sum == cat_command_checksum)
+        this->cat_command( get_arguments(possible_command), new_message.stream );
+    else if (check_sum == play_command_checksum)
+        this->play_command(get_arguments(possible_command), new_message.stream );
+    else if (check_sum == reset_command_checksum)
+        this->reset_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == dfu_command_checksum)
+        this->reset_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
