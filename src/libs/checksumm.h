@@ -1,6 +1,4 @@
 /*
-    Copyright 2013 Adam Green (https://github.com/adamgreen)
-
     This file is part of Smoothie (http://smoothieware.org/)
     The motion control part is heavily based on Grbl (https://github.com/simen/grbl)
 
@@ -21,6 +19,34 @@
 #ifndef _CHECKSUM_MACRO_H_
 #define _CHECKSUM_MACRO_H_
 
+/* There are two compile time checksumming approaches in this file.  One uses
+   the C preprocessor and the other uses new C++11 features.  They should both
+   do the same thing but my current compiler, GCC 4.7, doesn't always do the
+   constant folding for the C++ approach and this causes code bloat.  The C 
+   preprocessor approach can currently generate the exact same code in 
+   Checked/Release builds as the old method of pre-calculating checksums by 
+   hand and pasting them into the code.
+   
+   Keeping both versions here: the active C version and the C++ version
+   that we should switch to later if newer compilers do the required constant
+   folding (maybe there are optimization flags to help here.)
+*/
+#ifdef CHECKSUM_USE_CPP
+
+/* Cool C++11 approach contributed by bgamari on smoothieware IRC channel. */
+constexpr uint16_t checksum(const char* s, size_t n, size_t i, uint16_t sum1, uint16_t sum2) {
+  return (i <= n) ? checksum(s, n, i+1, (sum1 + s[i]) % 255, (sum2 + sum1) % 255) : ((sum2 << 8) | sum1);
+}
+
+constexpr uint16_t operator "" _checksum(const char* s, size_t n) {
+  return checksum(s, n, 0, 0, 0);
+}
+
+#define CHECKSUM(X) X##_checksum
+
+#else
+
+/* Adam Green's old and crusty C approach. */
 /* Recursively define SUM1, the basic checksum % 255 */
 #define SUM1_1(X) ((X)[0] % 255)
 #define SUM1_2(X) ((SUM1_1(X) + (X)[1]) % 255)
@@ -159,5 +185,6 @@
                      sizeof(X) == 32 ? CHECKSUM_31(X) : \
                      sizeof(X) == 33 ? CHECKSUM_32(X) : \
                      0xFFFF)
+#endif
 
 #endif /* _CHECKSUM_MACRO_H_ */
