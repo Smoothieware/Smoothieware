@@ -33,7 +33,11 @@
 */
 #ifdef CHECKSUM_USE_CPP
 
-/* Cool C++11 approach contributed by bgamari on smoothieware IRC channel. */
+#include <type_traits>
+
+/* Cool C++11 approach contributed by bgamari on #smoothieware IRC channel.
+ * Unfortunately this will have to wait until after we switch to GCC 4.7.
+ */
 constexpr uint16_t checksum(const char* s, size_t n, size_t i, uint16_t sum1, uint16_t sum2) {
   return (i <= n) ? checksum(s, n, i+1, (sum1 + s[i]) % 255, (sum2 + sum1) % 255) : ((sum2 << 8) | sum1);
 }
@@ -42,7 +46,7 @@ constexpr uint16_t operator "" _checksum(const char* s, size_t n) {
   return checksum(s, n, 0, 0, 0);
 }
 
-#define CHECKSUM(X) X##_checksum
+#define CHECKSUM(X) std::integral_constant<uint16_t, X##_checksum>::value
 
 #else /* !CHECKSUM_USE_CPP */
 
