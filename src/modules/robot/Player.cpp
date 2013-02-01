@@ -115,6 +115,7 @@ void Player::pop_and_process_new_block(int debug){
     // In case the module was not taken
     if( this->current_block->times_taken < 1 ){
         this->current_block->release();
+        this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect 
     }
 
     this->looking_for_new_block = false;
