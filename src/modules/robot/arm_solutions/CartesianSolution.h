@@ -7,9 +7,9 @@
 
 #include "libs/Config.h"
 
-#define alpha_steps_per_mm_checksum 46458
-#define beta_steps_per_mm_checksum  13840
-#define gamma_steps_per_mm_checksum 33143
+#define alpha_steps_per_mm_checksum CHECKSUM("alpha_steps_per_mm")
+#define beta_steps_per_mm_checksum  CHECKSUM("beta_steps_per_mm")
+#define gamma_steps_per_mm_checksum CHECKSUM("gamma_steps_per_mm")
 
 class CartesianSolution : public BaseSolution {
     public:

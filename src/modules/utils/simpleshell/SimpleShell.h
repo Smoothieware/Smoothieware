@@ -15,13 +15,13 @@
 #include "libs/StreamOutput.h"
 
 
-#define ls_command_checksum      19679
-#define cd_command_checksum      11207
-#define pwd_command_checksum     42060
-#define cat_command_checksum     24889
-#define play_command_checksum    17335
-#define reset_command_checksum   27429
-#define dfu_command_checksum     28480
+#define ls_command_checksum      CHECKSUM("ls")
+#define cd_command_checksum      CHECKSUM("cd")
+#define pwd_command_checksum     CHECKSUM("pwd")
+#define cat_command_checksum     CHECKSUM("cat")
+#define play_command_checksum    CHECKSUM("play")
+#define reset_command_checksum   CHECKSUM("reset")
+#define dfu_command_checksum     CHECKSUM("dfu")
 
 class SimpleShell : public Module {
     public:

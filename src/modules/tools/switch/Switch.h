@@ -11,11 +11,11 @@
 #include "libs/Pin.h"
 #include <math.h>
 
-#define    switch_checksum            15508
-#define    on_m_code_checksum         29094
-#define    off_m_code_checksum        14853
-#define    output_pin_checksum        18779
-#define    startup_state_checksum     37528
+#define    switch_checksum            CHECKSUM("switch")
+#define    on_m_code_checksum         CHECKSUM("on_m_code")
+#define    off_m_code_checksum        CHECKSUM("off_m_code")
+#define    output_pin_checksum        CHECKSUM("output_pin")
+#define    startup_state_checksum     CHECKSUM("startup_state")
 
 class Switch : public Module {
     public:

@@ -6,11 +6,11 @@
 #include "libs/utils.h"
 #include "libs/Pin.h"
 
-#define alpha_current_checksum   22381
-#define beta_current_checksum    60163
-#define gamma_current_checksum   12906
-#define delta_current_checksum   30321
-#define currentcontrol_module_enable_checksum 38842
+#define alpha_current_checksum                  CHECKSUM("alpha_current")
+#define beta_current_checksum                   CHECKSUM("beta_current")
+#define gamma_current_checksum                  CHECKSUM("gamma_current")
+#define delta_current_checksum                  CHECKSUM("delta_current")
+#define currentcontrol_module_enable_checksum   CHECKSUM("currentcontrol_module_enable")
 
 class CurrentControl : public Module {
     public:

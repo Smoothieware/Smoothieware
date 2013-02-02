@@ -17,14 +17,28 @@ INCDIRS=
 LIBS_PREFIX=
 LIBS_SUFFIX=
 SRC=./src
+
+#GCC4MBED_TYPE=Debug
 #GCC4MBED_TYPE=Release
 GCC4MBED_TYPE=Checked
-#GCC4MBED_TYPE=Debug
-#MRI_UART=MRI_UART_MBED_P13_P14 MRI_UART_BAUD=115200
-MRI_UART=MRI_UART_MBED_USB MRI_UART_SHARE
-#MRI_UART=MRI_UART_MBED_USB
+
+# Set to 1 to allow MRI debug monitor to take full control of UART0 and use it
+# as a dedicated debug channel.  If you are using the USB based serial port for
+# the console then this should cause you no problems.  Set MRI_BREAK_ON_INIT to
+# 0 if you don't want to break into GDB at startup.
+ENABLE_DEBUG_MONITOR=0
+
+ifeq "$(ENABLE_DEBUG_MONITOR)" "1"
+# Can add MRI_UART_BAUD=115200 to next line if GDB fails to connect to MRI.
+# Tends to happen on some Linux distros but not Windows and OS X.
+MRI_UART=MRI_UART_0
+MRI_BREAK_ON_INIT=1
+MRI_SEMIHOST_STDIO=1
+else
+MRI_UART=MRI_UART_0 MRI_UART_SHARE
 MRI_BREAK_ON_INIT=0
 MRI_SEMIHOST_STDIO=0
+endif
 
 CONSOLE=/dev/ttyUSB0
 

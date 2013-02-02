@@ -14,8 +14,8 @@
 using namespace std;
 #include <vector>
 
-#define temperature_control_checksum 44054
-#define enable_checksum              29545
+#define temperature_control_checksum CHECKSUM("temperature_control")
+#define enable_checksum              CHECKSUM("enable")
 
 class TemperatureControlPool : public Module {
     public:

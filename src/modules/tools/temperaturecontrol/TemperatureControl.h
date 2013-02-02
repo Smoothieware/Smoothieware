@@ -16,30 +16,30 @@
 
 #define UNDEFINED -1
 
-#define thermistor_checksum                41045
-#define r0_checksum                        5538
-#define readings_per_second_checksum       18645
-#define t0_checksum                        6564
-#define beta_checksum                      1181
-#define vadc_checksum                      10911
-#define vcc_checksum                       36157
-#define r1_checksum                        5795
-#define r2_checksum                        6052
-#define temperature_control_checksum       44054
-#define thermistor_pin_checksum            1788
-#define heater_pin_checksum                35619
+#define thermistor_checksum                CHECKSUM("thermistor")
+#define r0_checksum                        CHECKSUM("r0")
+#define readings_per_second_checksum       CHECKSUM("readings_per_second")
+#define t0_checksum                        CHECKSUM("t0")
+#define beta_checksum                      CHECKSUM("beta")
+#define vadc_checksum                      CHECKSUM("vadc")
+#define vcc_checksum                       CHECKSUM("vcc")
+#define r1_checksum                        CHECKSUM("r1")
+#define r2_checksum                        CHECKSUM("r2")
+#define temperature_control_checksum       CHECKSUM("temperature_control")
+#define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
+#define heater_pin_checksum                CHECKSUM("heater_pin")
 
-#define get_m_code_checksum                20746
-#define set_m_code_checksum                51478
-#define set_and_wait_m_code_checksum       4287
+#define get_m_code_checksum                CHECKSUM("get_m_code")
+#define set_m_code_checksum                CHECKSUM("set_m_code")
+#define set_and_wait_m_code_checksum       CHECKSUM("set_and_wait_m_code")
 
-#define designator_checksum                49716
+#define designator_checksum                CHECKSUM("designator")
 
-#define p_factor_checksum                   43089
-#define i_factor_checksum                   28746
-#define d_factor_checksum                   18501
+#define p_factor_checksum                  CHECKSUM("p_factor")
+#define i_factor_checksum                  CHECKSUM("i_factor")
+#define d_factor_checksum                  CHECKSUM("d_factor")
 
-#define i_max_checksum                      4112
+#define i_max_checksum                     CHECKSUM("i_max")
 
 #define QUEUE_LEN 8
 
