@@ -195,7 +195,8 @@ void Extruder::on_block_begin(void* argument){
             // We take the block, we have to release it or everything gets stuck
             block->take();
             this->current_block = block;
-
+            
+            this->stepper_motor->steps_per_second = 0;
             this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
 
         }
