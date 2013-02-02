@@ -167,6 +167,8 @@ void Extruder::on_gcode_execute(void* argument){
 
                 this->en_pin->set(0);
             }
+        }else if( gcode->g == 90 ){ this->absolute_mode = true;
+        }else if( gcode->g == 91 ){ this->absolute_mode = false;
         }
     }
 }
