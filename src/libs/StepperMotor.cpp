@@ -7,6 +7,7 @@
 #include "mri.h"
 #include "libs/Kernel.h"
 #include "StepperMotor.h"
+#include "MRI_Hooks.h"
 
 StepperMotor::StepperMotor(){
     this->moving = false;
@@ -34,6 +35,8 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->is_move_finished = false;
     this->signal_step = false;
     this->step_signal_hook = new Hook();
+
+    set_high_on_debug(en->port_number, en->pin);
 }
 
 // Called a great many times per second, to step if we have to now

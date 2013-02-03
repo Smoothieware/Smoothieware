@@ -11,11 +11,6 @@ typedef enum
     WDT_RESET,
 } WDT_ACTION;
 
-extern "C" {
-    void __mriPlatform_EnteringDebuggerHook();
-    void __mriPlatform_LeavingDebuggerHook();
-}
-
 class Watchdog : public Module
 {
 public:
