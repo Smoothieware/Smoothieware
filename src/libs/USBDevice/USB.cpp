@@ -32,11 +32,7 @@ static usbdesc_language lang = {
 	{ SL_USENGLISH, },
 };
 
-static usbdesc_string_l(10) manufacturer = {
-	22,					// .bLength: 2 + 2 * nchars
-	DT_STRING,			// .bDescType
-	{ 'U', 'S', 'B', ' ', 'M', 'a', 'g', 'i', 'c', '!' }
-};
+static usbstring_const_init(manufacturer, "Trinity Labs");
 
 static usbstring_const_init(product, "Smoothie v0.1 prototype");
 
