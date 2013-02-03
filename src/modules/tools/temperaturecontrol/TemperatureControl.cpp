@@ -15,6 +15,8 @@
 #include "libs/Pin.h"
 #include "libs/Median.h"
 
+#include "MRI_Hooks.h"
+
 TemperatureControl::TemperatureControl(){}
 
 TemperatureControl::TemperatureControl(uint16_t name){
@@ -91,6 +93,8 @@ void TemperatureControl::on_config_reload(void* argument){
     // Heater pin
     this->heater_pin     =  this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_pwm()->as_output();
     this->heater_pin->set(0);
+
+    set_low_on_debug(heater_pin->pin->port_number, heater_pin->pin->pin);
 
     // activate SD-DAC timer
     this->kernel->slow_ticker->attach(1000, this->heater_pin, &Pwm::on_tick);
@@ -288,5 +292,5 @@ int TemperatureControl::new_thermistor_reading()
 void TemperatureControl::on_second_tick(void* argument)
 {
     if (waiting)
-        kernel->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o, waiting);
+        kernel->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o);
 }

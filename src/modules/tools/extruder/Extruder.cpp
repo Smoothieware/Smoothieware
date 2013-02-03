@@ -167,6 +167,8 @@ void Extruder::on_gcode_execute(void* argument){
 
                 this->en_pin->set(0);
             }
+        }else if( gcode->g == 90 ){ this->absolute_mode = true;
+        }else if( gcode->g == 91 ){ this->absolute_mode = false;
         }
     }
 }
@@ -193,7 +195,8 @@ void Extruder::on_block_begin(void* argument){
             // We take the block, we have to release it or everything gets stuck
             block->take();
             this->current_block = block;
-
+            
+            this->stepper_motor->steps_per_second = 0;
             this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
 
         }

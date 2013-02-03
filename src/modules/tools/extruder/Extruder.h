@@ -14,14 +14,14 @@
 #include "libs/Kernel.h"
 #include "modules/robot/Block.h"
 
-#define microseconds_per_step_pulse_checksum 42333
-#define extruder_module_enable_checksum       6183
-#define extruder_steps_per_mm_checksum       58088
-#define extruder_acceleration_checksum       60356
-#define extruder_step_pin_checksum           40763
-#define extruder_dir_pin_checksum            57277
-#define extruder_en_pin_checksum              8017
-#define extruder_max_speed_checksum          54671
+#define microseconds_per_step_pulse_checksum CHECKSUM("microseconds_per_step_pulse")
+#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
+#define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
+#define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
+#define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
+#define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
+#define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
+#define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
 
 // default_feed_rate_checksum defined by Robot.h
 

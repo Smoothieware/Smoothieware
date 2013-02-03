@@ -26,9 +26,8 @@
 
 
 
-// List of callback functions, ordered as their corresponding events
-#define baud_rate_setting_checksum 10922
-#define uart0_checksum             16877
+#define baud_rate_setting_checksum CHECKSUM("baud_rate")
+#define uart0_checksum             CHECKSUM("uart0")
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){

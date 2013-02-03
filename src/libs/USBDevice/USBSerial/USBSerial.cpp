@@ -244,10 +244,10 @@ uint8_t USBSerial::available()
 
 void USBSerial::on_module_loaded()
 {
-    this->register_for_event(ON_IDLE);
+    this->register_for_event(ON_MAIN_LOOP);
 }
 
-void USBSerial::on_idle(void *argument)
+void USBSerial::on_main_loop(void *argument)
 {
     if (attach != attached)
     {

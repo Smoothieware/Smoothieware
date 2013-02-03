@@ -128,7 +128,8 @@ static const uint8_t OXFF = 0xFF;
 
 SDCard::SDCard(PinName mosi, PinName miso, PinName sclk, PinName cs) :
   _spi(mosi, miso, sclk), _cs(cs) {
-      _cs = 0;
+    _cs.output();
+    _cs = 1;
 }
 
 #define R1_IDLE_STATE           (1 << 0)
