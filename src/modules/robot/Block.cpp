@@ -30,13 +30,6 @@ void Block::debug(Kernel* kernel){
 }
 
 
-// Calculate a braking factor to reach baseline speed which is max_jerk/2, e.g. the
-// speed under which you cannot exceed max_jerk no matter what you do.
-double Block::compute_factor_for_safe_speed(){
-    return( this->planner->max_jerk / this->nominal_speed );
-}
-
-
 /* Calculates trapezoid parameters so that the entry- and exit-speed is compensated by the provided factors.
 // The factors represent a factor of braking and must be in the range 0.0-1.0.
 //                                +--------+ <- nominal_rate

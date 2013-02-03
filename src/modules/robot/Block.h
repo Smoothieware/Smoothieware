@@ -23,7 +23,6 @@ double max_allowable_speed( double acceleration, double target_velocity, double 
 class Block {
     public:
         Block();
-        double compute_factor_for_safe_speed();
         void calculate_trapezoid( double entry_factor, double exit_factor );
         double estimate_acceleration_distance( double initial_rate, double target_rate, double acceleration );
         double intersection_distance(double initial_rate, double final_rate, double acceleration, double distance);
