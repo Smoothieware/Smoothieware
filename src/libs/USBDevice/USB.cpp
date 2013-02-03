@@ -577,15 +577,21 @@ void USB::dumpCDC(uint8_t *d) {
 	switch(d[2]) {
 		case USB_CDC_SUBTYPE_HEADER: {
 			usbcdc_header *h = (usbcdc_header *) d;
-			iprintf("\t\t*CDC header\n");
-			iprintf("\t\t\tbcdCDC:  0x%04X\n", h->bcdCDC);
+            if (h)
+            {
+                iprintf("\t\t*CDC header\n");
+                iprintf("\t\t\tbcdCDC:  0x%04X\n", h->bcdCDC);
+            }
 			break;
 		}
 		case USB_CDC_SUBTYPE_UNION: {
 			usbcdc_union *u = (usbcdc_union *) d;
-			iprintf("\t\t*CDC union\n");
-			iprintf("\t\t\tMaster:  %d\n", u->bMasterInterface);
-			iprintf("\t\t\tSlave:   %d\n", u->bSlaveInterface0);
+            if (u)
+            {
+                iprintf("\t\t*CDC union\n");
+                iprintf("\t\t\tMaster:  %d\n", u->bMasterInterface);
+                iprintf("\t\t\tSlave:   %d\n", u->bSlaveInterface0);
+            }
 			break;
 		}
 		case USB_CDC_SUBTYPE_CALL_MANAGEMENT: {
