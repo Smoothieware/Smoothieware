@@ -11,6 +11,8 @@
 #include "Switch.h"
 #include "libs/Pin.h"
 
+#include "MRI_Hooks.h"
+
 Switch::Switch(){}
 
 Switch::Switch(uint16_t name){
@@ -34,6 +36,8 @@ void Switch::on_config_reload(void* argument){
     this->off_m_code    = this->kernel->config->value(switch_checksum, this->name_checksum, off_m_code_checksum    )->required()->as_number();
     this->output_pin    = this->kernel->config->value(switch_checksum, this->name_checksum, output_pin_checksum    )->required()->as_pwm()->as_output();
     this->output_pin->set(this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(0)->as_number() );
+
+    set_low_on_debug(output_pin->pin->port_number, output_pin->pin->pin);
 }
 
 // Turn pin on and off
