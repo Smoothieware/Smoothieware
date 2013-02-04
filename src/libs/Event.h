@@ -3,7 +3,6 @@
 EVENT(ON_MAIN_LOOP, on_main_loop)
 EVENT(ON_CONSOLE_LINE_RECEIVED, on_console_line_received)
 EVENT(ON_GCODE_RECEIVED, on_gcode_received)
-EVENT(ON_STEPPER_WAKE_UP, on_stepper_wake_up)
 EVENT(ON_GCODE_EXECUTE, on_gcode_execute)
 EVENT(ON_SPEED_CHANGE, on_speed_change)
 EVENT(ON_BLOCK_BEGIN, on_block_begin)
