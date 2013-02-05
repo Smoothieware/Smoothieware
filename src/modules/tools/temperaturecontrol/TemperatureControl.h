@@ -19,6 +19,7 @@
 #define thermistor_checksum                CHECKSUM("thermistor")
 #define r0_checksum                        CHECKSUM("r0")
 #define readings_per_second_checksum       CHECKSUM("readings_per_second")
+#define max_pwm_checksum                   CHECKSUM("max_pwm")
 #define t0_checksum                        CHECKSUM("t0")
 #define beta_checksum                      CHECKSUM("beta")
 #define vadc_checksum                      CHECKSUM("vadc")
@@ -75,6 +76,8 @@ class TemperatureControl : public Module {
         double beta;
         double j;
         double k;
+
+        int max_pwm;
 
         // PID settings
         double p_factor;
