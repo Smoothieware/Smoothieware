@@ -131,7 +131,7 @@ void SPI::frequency(uint32_t f)
         }
 //         iprintf(" CPSR=%lu, CR0=%lu", sspr->CPSR, sspr->CR0);
     }
-    iprintf("\n");
+//    iprintf("\n");
 }
 
 void _delay(uint32_t ticks) {
