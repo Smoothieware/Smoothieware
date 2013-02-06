@@ -20,6 +20,7 @@ Switch::Switch(uint16_t name){
 }
 
 void Switch::on_module_loaded(){
+    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_EXECUTE);
 
     // Settings

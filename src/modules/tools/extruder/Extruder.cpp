@@ -35,6 +35,7 @@ void Extruder::on_module_loaded() {
     this->en_pin->set(1);
 
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
+    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_RECEIVED);

@@ -108,7 +108,6 @@ Kernel::Kernel(){
 void Kernel::add_module(Module* module){
     module->kernel = this;
     module->on_module_loaded();
-    module->register_for_event(ON_CONFIG_RELOAD);
 }
 
 void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
