@@ -468,15 +468,15 @@ void USBHAL::init() {
     LPC_PINCON->PINSEL1 &= 0xc3ffffff;
     LPC_PINCON->PINSEL1 |= 0x14000000;
 
+    // Configure pin P2.9 to be Connect
+    LPC_PINCON->PINSEL4 &= 0xfffcffff;
+    LPC_PINCON->PINSEL4 |= 0x00040000;
+
     // Disconnect USB device
     SIEdisconnect();
 
     // work around OSX behaviour where if the device disconnects and quickly reconnects, it assumes it's the same device instead of checking
     wait_ms(1000);
-
-    // Configure pin P2.9 to be Connect
-    LPC_PINCON->PINSEL4 &= 0xfffcffff;
-    LPC_PINCON->PINSEL4 |= 0x00040000;
 
     // Connect must be low for at least 2.5uS
     //     wait(0.3);
