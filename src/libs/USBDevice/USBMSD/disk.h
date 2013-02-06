@@ -57,6 +57,8 @@ public:
     virtual bool disk_canDMA() { return 0; };
 
     virtual int disk_sync() { return 0; };
+
+    virtual bool busy() = 0;
 };
 
 #endif /* _DISK_H */
