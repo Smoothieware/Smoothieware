@@ -531,7 +531,7 @@ uint32_t USBHAL::getSerialNumber(int length, uint32_t *buf) {
 void USBHAL::connect(void) {
     // Connect USB device
 //     iprintf("USBHAL::connect\n");
-    NVIC_EnableIRQ(USB_IRQn);
+//     NVIC_EnableIRQ(USB_IRQn);
     SIEconnect();
 //     iprintf("USBHAL::connect OK\n");
 }

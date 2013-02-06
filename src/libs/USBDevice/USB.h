@@ -22,20 +22,21 @@ public:
 
     void init(void);
 
-    virtual bool USBEvent_busReset(void);
-    virtual bool USBEvent_connectStateChanged(bool connected);
-    virtual bool USBEvent_suspendStateChanged(bool suspended);
+    bool USBEvent_busReset(void);
+    bool USBEvent_connectStateChanged(bool connected);
+    bool USBEvent_suspendStateChanged(bool suspended);
 
-    virtual bool USBEvent_Request(CONTROL_TRANSFER&);
-    virtual bool USBEvent_RequestComplete(CONTROL_TRANSFER&, uint8_t *, uint32_t);
+    bool USBEvent_Request(CONTROL_TRANSFER&);
+    bool USBEvent_RequestComplete(CONTROL_TRANSFER&, uint8_t *, uint32_t);
 
-    virtual bool USBEvent_EPIn(uint8_t, uint8_t);
-    virtual bool USBEvent_EPOut(uint8_t, uint8_t);
+    bool USBEvent_EPIn(uint8_t, uint8_t);
+    bool USBEvent_EPOut(uint8_t, uint8_t);
 
-    virtual bool USBCallback_setConfiguration(uint8_t configuration);
-    virtual bool USBCallback_setInterface(uint16_t interface, uint8_t alternate);
+    bool USBCallback_setConfiguration(uint8_t configuration);
+    bool USBCallback_setInterface(uint16_t interface, uint8_t alternate);
 
-    virtual void on_module_loaded(void);
+    void on_module_loaded(void);
+    void on_idle(void*);
 
     int addDescriptor(usbdesc_base *descriptor);
     int addDescriptor(void *descriptor);
