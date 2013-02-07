@@ -15,6 +15,8 @@
 */
 /* Provide routines which hook the MRI debug monitor into GCC4MBED projects. */
 #include <string.h>
+#include <sys/types.h>
+#include <errno.h>
 #include <mri.h>
 #include <cmsis.h>
 
@@ -122,4 +124,28 @@ extern "C" void __malloc_lock(void)
 
 extern "C" void __malloc_unlock(void)
 {
+}
+
+
+/* Linker defined symbol to be used by sbrk for where dynamically heap should start. */
+extern "C" int __HeapLimit;
+
+/* Turn off the errno macro and use actual external global variable instead. */
+#undef errno
+extern int errno;
+
+/* Dynamic memory allocation related syscalls. */
+extern "C" caddr_t _sbrk(int incr) 
+{
+    static unsigned char* heap = (unsigned char*)&__HeapLimit;
+    unsigned char*        prev_heap = heap;
+    unsigned char*        new_heap = heap + incr;
+
+    if (new_heap >= (unsigned char*)__get_MSP()) {
+        errno = ENOMEM;
+        return (caddr_t)-1;
+    }
+    
+    heap = new_heap;
+    return (caddr_t) prev_heap;
 }
