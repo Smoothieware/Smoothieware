@@ -35,8 +35,8 @@ Gcode::Gcode(string& command, StreamOutput* stream)
 // Whether or not a Gcode has a letter
 bool Gcode::has_letter( char letter ){
     //return ( this->command->find( letter ) != string::npos );
-    for (size_t i=0; i < this->command.length(); i++){
-        if( this->command[i] == letter ){
+    for (std::string::const_iterator c = this->command.cbegin(); c != this->command.cend(); c++) {
+        if( *c == letter ){
             return true;
         }
     }
@@ -48,7 +48,8 @@ bool Gcode::has_letter( char letter ){
 double Gcode::get_value( char letter ){
     //__disable_irq();
     for (size_t i=0; i <= this->command.length()-1; i++){
-         if( letter == this->command.at(i) ){
+         const char c = this->command[i];
+         if( letter == c ){
             size_t beginning = i+1;
             char buffer[20];
             for(size_t j=beginning; j <= this->command.length(); j++){
