@@ -64,7 +64,8 @@ void SimpleShell::ls_command( string parameters, StreamOutput* stream ){
     struct dirent* p;
     d = opendir(folder.c_str());
     if(d != NULL) {
-        while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
+		while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
+		closedir(d);
     } else {
         stream->printf("Could not open directory %s \r\n", folder.c_str());
     }
@@ -79,7 +80,8 @@ void SimpleShell::cd_command( string parameters, StreamOutput* stream ){
     if(d == NULL) {
         stream->printf("Could not open directory %s \r\n", folder.c_str() );
     }else{
-        this->current_path = folder;
+		this->current_path = folder;
+		closedir(d);
     }
 }
 
