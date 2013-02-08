@@ -49,8 +49,8 @@ class Pin {
                 this->port->FIOCLR = 1 << this->pin;
         }
 
-        bool inverting;
         LPC_GPIO_TypeDef* port;
+        bool inverting;
         char port_number;
         unsigned char pin;
 };
