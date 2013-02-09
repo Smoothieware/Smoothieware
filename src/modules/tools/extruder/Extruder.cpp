@@ -16,7 +16,7 @@
 * or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
 */
 
-Extruder::Extruder() {
+Extruder::Extruder() : step_pin(NULL), dir_pin(NULL), en_pin(NULL) {
     this->absolute_mode = true;
     this->step_counter = 0;
     this->counter_increment = 0;
@@ -69,8 +69,11 @@ void Extruder::on_config_reload(void* argument){
     this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
     this->max_speed                   = this->kernel->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
 
+    delete this->step_pin;
     this->step_pin                    = this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_pin()->as_output();
+    delete this->dir_pin;
     this->dir_pin                     = this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_pin()->as_output();
+    delete this->en_pin;
     this->en_pin                      = this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_pin()->as_output()->as_open_drain();
 
 	// disable by default

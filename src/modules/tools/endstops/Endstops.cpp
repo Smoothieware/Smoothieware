@@ -15,7 +15,7 @@
 #include "libs/StepperMotor.h"
 #include "wait_api.h" // mbed.h lib
 
-Endstops::Endstops(){
+Endstops::Endstops() : pins{NULL} {
     this->status = NOT_HOMING;
 }
 
@@ -35,6 +35,8 @@ void Endstops::on_module_loaded() {
 
 // Get config
 void Endstops::on_config_reload(void* argument){
+    for (unsigned int i=0; i<5; i++)
+        delete this->pins[i];
     this->pins[0]                    = this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();
     this->pins[1]                    = this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_pin()->as_input()->pull_up();
     this->pins[2]                    = this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();

@@ -20,7 +20,11 @@ using std::string;
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
 
-Robot::Robot(){
+Robot::Robot() :
+  alpha_step_pin(NULL), beta_step_pin(NULL), gamma_step_pin(NULL),
+  alpha_dir_pin(NULL), beta_dir_pin(NULL), gamma_dir_pin(NULL),
+  alpha_en_pin(NULL), beta_en_pin(NULL), gamma_en_pin(NULL)
+{
     this->inch_mode = false;
     this->absolute_mode = true;
     this->motion_mode =  MOTION_MODE_SEEK;
@@ -58,14 +62,23 @@ void Robot::on_config_reload(void* argument){
     this->max_speeds[X_AXIS]  = this->kernel->config->value(x_axis_max_speed_checksum    )->by_default(60000  )->as_number();
     this->max_speeds[Y_AXIS]  = this->kernel->config->value(y_axis_max_speed_checksum    )->by_default(60000  )->as_number();
     this->max_speeds[Z_AXIS]  = this->kernel->config->value(z_axis_max_speed_checksum    )->by_default(300    )->as_number();
+    delete this->alpha_step_pin;
     this->alpha_step_pin      = this->kernel->config->value(alpha_step_pin_checksum      )->by_default("2.0"  )->as_pin()->as_output();
+    delete this->beta_step_pin;
     this->beta_step_pin       = this->kernel->config->value(beta_step_pin_checksum       )->by_default("2.1"  )->as_pin()->as_output();
+    delete this->gamma_step_pin;
     this->gamma_step_pin      = this->kernel->config->value(gamma_step_pin_checksum      )->by_default("2.2"  )->as_pin()->as_output();
+    delete this->alpha_dir_pin;
     this->alpha_dir_pin       = this->kernel->config->value(alpha_dir_pin_checksum       )->by_default("0.5"  )->as_pin()->as_output();
+    delete this->beta_dir_pin;
     this->beta_dir_pin        = this->kernel->config->value(beta_dir_pin_checksum        )->by_default("0.11" )->as_pin()->as_output();
+    delete this->gamma_dir_pin;
     this->gamma_dir_pin       = this->kernel->config->value(gamma_dir_pin_checksum       )->by_default("0.20" )->as_pin()->as_output();
+    delete this->alpha_en_pin;
     this->alpha_en_pin        = this->kernel->config->value(alpha_en_pin_checksum        )->by_default("0.4"  )->as_pin()->as_output()->as_open_drain();
+    delete this->beta_en_pin;
     this->beta_en_pin         = this->kernel->config->value(beta_en_pin_checksum         )->by_default("0.10" )->as_pin()->as_output()->as_open_drain();
+    delete this->gamma_en_pin;
     this->gamma_en_pin        = this->kernel->config->value(gamma_en_pin_checksum        )->by_default("0.19" )->as_pin()->as_output()->as_open_drain();
 
 }

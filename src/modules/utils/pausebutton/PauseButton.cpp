@@ -5,7 +5,7 @@
 #include <string>
 using namespace std;
 
-PauseButton::PauseButton(){}
+PauseButton::PauseButton() : button(NULL), led(NULL) {}
 
 void PauseButton::on_module_loaded(){
     this->button_state = true;
@@ -14,7 +14,9 @@ void PauseButton::on_module_loaded(){
     this->register_for_event(ON_PAUSE);
 
     this->enable     =  this->kernel->config->value( pause_button_enable_checksum )->by_default(false)->as_bool();
+    delete button;
     this->button     =  this->kernel->config->value( pause_button_pin_checksum )->by_default("2.12")->as_pin()->as_input();
+    delete led;
     this->led        =  this->kernel->config->value( pause_led_pin_checksum    )->by_default("4.28")->as_pin()->as_output();
 
     this->kernel->slow_ticker->attach( 100, this, &PauseButton::button_tick );
