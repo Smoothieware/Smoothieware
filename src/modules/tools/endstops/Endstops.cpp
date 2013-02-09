@@ -35,12 +35,12 @@ void Endstops::on_module_loaded() {
 
 // Get config
 void Endstops::on_config_reload(void* argument){
-    this->pins[0]                    = this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();
-    this->pins[1]                    = this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_pin()->as_input()->pull_up();
-    this->pins[2]                    = this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();
-    this->pins[3]                    = this->kernel->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();
-    this->pins[4]                    = this->kernel->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_pin()->as_input()->pull_up();
-    this->pins[5]                    = this->kernel->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_pin()->as_input()->pull_up();
+    this->pins[0].from_string(         this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input()->pull_up();
+    this->pins[1].from_string(         this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input()->pull_up();
+    this->pins[2].from_string(         this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input()->pull_up();
+    this->pins[3].from_string(         this->kernel->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input()->pull_up();
+    this->pins[4].from_string(         this->kernel->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input()->pull_up();
+    this->pins[5].from_string(         this->kernel->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input()->pull_up();
     this->fast_rates[0]              = this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default("500" )->as_number();
     this->fast_rates[1]              = this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default("500" )->as_number();
     this->fast_rates[2]              = this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default("5" )->as_number();
@@ -61,7 +61,7 @@ void Endstops::wait_for_homed(char axes_to_move)
         running = false;
         for( char c = 'X'; c <= 'Z'; c++ ){
             if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                if( this->pins[c - 'X']->get() ){
+                if( this->pins[c - 'X'].get() ){
                     if( debounce[c - 'X'] < debounce_count ) {
                         debounce[c - 'X'] ++;
                         running = true;
@@ -95,7 +95,7 @@ void Endstops::on_gcode_received(void* argument)
             // Do we move select axes or all of them
             char axes_to_move = ( ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ) ? 0x00 : 0xff );
             for( char c = 'X'; c <= 'Z'; c++ ){
-                if( gcode->has_letter(c) && this->pins[c - 'X']->connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }
+                if( gcode->has_letter(c) && this->pins[c - 'X'].connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }
             }
 
             // Enable the motors
@@ -156,12 +156,12 @@ void Endstops::on_gcode_received(void* argument)
         {
             case 119:
                 gcode->stream->printf("X min:%d max:%d Y min:%d max:%d Z min:%d max:%d\n",
-                                                this->pins[0]->get(),
-                                                        this->pins[3]->get(),
-                                                                this->pins[1]->get(),
-                                                                        this->pins[4]->get(),
-                                                                                this->pins[2]->get(),
-                                                                                    this->pins[5]->get()
+                                                this->pins[0].get(),
+                                                        this->pins[3].get(),
+                                                                this->pins[1].get(),
+                                                                        this->pins[4].get(),
+                                                                                this->pins[2].get(),
+                                                                                    this->pins[5].get()
                                         );
                 break;
         }
