@@ -48,7 +48,7 @@ bool Gcode::has_letter( char letter ){
 double Gcode::get_value( char letter ){
     //__disable_irq();
     for (size_t i=0; i <= this->command.length()-1; i++){
-         const char c = this->command[i];
+         const char& c = this->command.at(i);
          if( letter == c ){
             size_t beginning = i+1;
             char buffer[20];
