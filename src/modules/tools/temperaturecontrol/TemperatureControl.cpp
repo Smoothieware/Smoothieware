@@ -17,9 +17,13 @@
 
 #include "MRI_Hooks.h"
 
-TemperatureControl::TemperatureControl(){}
+TemperatureControl::TemperatureControl() :
+  thermistor_pin(NULL), heater_pin(NULL)
+{}
 
-TemperatureControl::TemperatureControl(uint16_t name){
+TemperatureControl::TemperatureControl(uint16_t name) :
+  thermistor_pin(NULL), heater_pin(NULL)
+{
     this->name_checksum = name;
 //     this->error_count = 0;
     this->waiting = false;
@@ -90,10 +94,12 @@ void TemperatureControl::on_config_reload(void* argument){
     o = 0;
 
     // Thermistor pin for ADC readings
+    delete thermistor_pin;
     this->thermistor_pin = this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_pin();
     this->kernel->adc->enable_pin(this->thermistor_pin);
 
     // Heater pin
+    delete heater_pin;
     this->heater_pin     =  this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_pwm()->as_output();
     this->heater_pin->set(0);
 
