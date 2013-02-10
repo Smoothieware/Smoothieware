@@ -280,7 +280,7 @@ endif
 #  Default rules to compile .c and .cpp file to .o
 #  and assemble .s files to .o
 
-$(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.c makefile
+$(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.cpp makefile
 	@echo "  CC      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	@$(GPP) $(GPFLAGS) -c $< -o $@
