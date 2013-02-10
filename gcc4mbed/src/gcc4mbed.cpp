@@ -128,7 +128,7 @@ extern "C" void __malloc_unlock(void)
 
 
 /* Linker defined symbol to be used by sbrk for where dynamically heap should start. */
-extern "C" int __HeapLimit;
+extern "C" unsigned int __HeapBase;
 
 /* Turn off the errno macro and use actual external global variable instead. */
 #undef errno
@@ -137,7 +137,7 @@ extern int errno;
 /* Dynamic memory allocation related syscalls. */
 extern "C" caddr_t _sbrk(int incr) 
 {
-    static unsigned char* heap = (unsigned char*)&__HeapLimit;
+    static unsigned char* heap = (unsigned char*)&__HeapBase;
     unsigned char*        prev_heap = heap;
     unsigned char*        new_heap = heap + incr;
 
@@ -149,3 +149,98 @@ extern "C" caddr_t _sbrk(int incr)
     heap = new_heap;
     return (caddr_t) prev_heap;
 }
+
+
+/* Optional functionality which will tag each heap allocation with the caller's return address. */
+#if HEAP_TAGS
+
+const unsigned int* __smoothieHeapBase = &__HeapBase;
+
+extern "C" void* __real_malloc(size_t size);
+extern "C" void* __real_realloc(void* ptr, size_t size);
+
+static void setTag(void* pv, unsigned int tag);
+static unsigned int* footerForChunk(void* pv);
+static unsigned int* headerForChunk(void* pv);
+static unsigned int sizeOfChunk(unsigned int* pHeader);
+
+extern "C" __attribute__((naked)) void __wrap_malloc(size_t size)
+{
+    __asm (
+        ".syntax unified\n"
+        ".thumb\n"
+        "mov r1,lr\n"
+        "b mallocWithTag\n"
+    );
+}
+
+extern "C" void* mallocWithTag(size_t size, unsigned int tag)
+{
+    void* p = __real_malloc(size + sizeof(tag));
+    if (!p && __smoothieHeapBase)
+        return p;
+    setTag(p, tag);
+    return p;
+}
+
+static void setTag(void* pv, unsigned int tag)
+{
+    unsigned int* pFooter = footerForChunk(pv);
+    *pFooter = tag;
+}
+
+static unsigned int* footerForChunk(void* pv)
+{
+    unsigned int* pHeader = headerForChunk(pv);
+    unsigned int  size = sizeOfChunk(pHeader);
+    return (unsigned int*)(void*)((char*)pHeader + size);
+}
+
+static unsigned int* headerForChunk(void* pv)
+{
+    // Header is allocated two words (8 bytes) before the publicly returned allocation chunk address.
+    unsigned int* p = (unsigned int*)pv;
+    return &p[-2];
+}
+
+static unsigned int sizeOfChunk(unsigned int* pHeader)
+{
+    /* Remove previous chunk in use flag. */
+    return pHeader[1] & ~1;
+}
+
+extern "C" __attribute__((naked)) void __wrap_realloc(void* ptr, size_t size)
+{
+    __asm (
+        ".syntax unified\n"
+        ".thumb\n"
+        "mov r2,lr\n"
+        "b reallocWithTag\n"
+    );
+}
+
+extern "C" void* reallocWithTag(void* ptr, size_t size, unsigned int tag)
+{
+    void* p = __real_realloc(ptr, size + sizeof(tag));
+    if (!p)
+        return p;
+    setTag(p, tag);
+    return p;
+}
+
+__attribute__((naked)) void* operator new(size_t size)
+{
+    __asm (
+        ".syntax unified\n"
+        ".thumb\n"
+        "push {r4,lr}\n"
+        "mov r1,lr\n"
+        "bl mallocWithTag\n"
+        "cbnz r0, 1$\n"
+        "bl abort\n"
+        "1$:\n"
+        "pop {r4,pc}\n"
+    );
+}
+
+#endif // HEAP_TAGS

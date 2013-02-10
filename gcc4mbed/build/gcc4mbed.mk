@@ -160,6 +160,20 @@ LIBS += $(LIBS_SUFFIX)
 # Compiler flags used to enable creation of header dependencies.
 DEPFLAGS = -MMD -MP
 
+# Setup wraps for newlib read/writes to redirect to MRI debugger.
+ifeq "$(MRI_ENABLE)" "1"
+MRI_WRAPS=,--wrap=_read,--wrap=_write,--wrap=semihost_connected
+else
+MRI_WRAPS=
+endif
+
+# Setup wraps to memory allocations routines if we want to tag heap allocations.
+HEAP_WRAPS=
+ifeq "$(HEAP_TAGS)" "1"
+HEAP_WRAPS=,--wrap=malloc,--wrap=realloc
+DEFINES += -DHEAP_TAGS
+endif
+
 # Compiler Options
 
 # C/C++ flags
@@ -173,17 +187,11 @@ GCFLAGS += -Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wre
 # C++ only flags
 GPFLAGS = $(GCFLAGS)
 GPFLAGS += -std=gnu++0x
-# GPFLAGS += ...
-
-# Setup wraps for newlib read/writes to redirect to MRI debugger.
-ifeq "$(MRI_ENABLE)" "1"
-MRI_WRAPS=,--wrap=_read,--wrap=_write,--wrap=semihost_connected
-else
-MRI_WRAP=
-endif
 
 # Linker Options.
-LDFLAGS = -mcpu=cortex-m3 -mthumb -O$(OPTIMIZATION) -specs=$(GCC4MBED_DIR)/build/startfile.spec -Wl,-Map=$(OUTDIR)/$(PROJECT).map,--cref,--gc-sections,--wrap=_isatty$(MRI_WRAPS) -T$(LSCRIPT)  -L $(EXTERNAL_DIR)/gcc/LPC1768
+LDFLAGS = -mcpu=cortex-m3 -mthumb -O$(OPTIMIZATION) -specs=$(GCC4MBED_DIR)/build/startfile.spec 
+LDFLAGS += -Wl,-Map=$(OUTDIR)/$(PROJECT).map,--cref,--gc-sections,--wrap=_isatty$(MRI_WRAPS)$(HEAP_WRAPS)
+LDFLAGS += -T$(LSCRIPT)  -L $(EXTERNAL_DIR)/gcc/LPC1768
 
 ASFLAGS = $(LISTING) -mcpu=cortex-m3 -mthumb -x assembler-with-cpp
 ASFLAGS += $(patsubst %,-I%,$(INCDIRS))
