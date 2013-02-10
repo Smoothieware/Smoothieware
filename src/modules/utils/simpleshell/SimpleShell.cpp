@@ -95,7 +95,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
     string limit_paramater   = shift_parameter( parameters );
     int limit = -1;
-    if( limit_paramater != "" ){ limit = int(atof(limit_paramater.c_str())); }
+    if( limit_paramater != "" )
+    {
+        char* e = NULL;
+        limit = strtol(limit_paramater.c_str(), &e, 10);
+        if (e <= limit_paramater.c_str())
+            limit = -1;
+    }
 
     // Open file
     FILE *lp = fopen(filename.c_str(), "r");
