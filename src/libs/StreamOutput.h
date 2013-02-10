@@ -34,7 +34,7 @@ class StreamOutput : public mbed::Stream {
             puts(buffer);
 
 //             if (buffer != printf_default_buffer)
-                delete buffer;
+                delete[] buffer;
 
             return size - 1;
         }
