@@ -44,9 +44,9 @@ class Extruder : public Module{
         uint32_t acceleration_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
 
-        Pin*            step_pin;                     // Step pin for the stepper driver
-        Pin*            dir_pin;                      // Dir pin for the stepper driver
-        Pin*            en_pin;
+        Pin             step_pin;                     // Step pin for the stepper driver
+        Pin             dir_pin;                      // Dir pin for the stepper driver
+        Pin             en_pin;
 
         double          target_position;              // End point ( in steps ) for the current move
         double          current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed

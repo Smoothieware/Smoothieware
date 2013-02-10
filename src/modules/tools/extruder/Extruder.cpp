@@ -32,7 +32,7 @@ void Extruder::on_module_loaded() {
     this->on_config_reload(this);
 
     // We start with the enable pin off
-    this->en_pin->set(1);
+    this->en_pin.set(1);
 
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
     register_for_event(ON_CONFIG_RELOAD);
@@ -56,7 +56,7 @@ void Extruder::on_module_loaded() {
     this->kernel->slow_ticker->attach( this->kernel->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
 
     // Stepper motor object for the extruder
-    this->stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->step_pin,this->dir_pin,this->en_pin) );
+    this->stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&step_pin, &dir_pin, &en_pin) );
     this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
 
 }
@@ -69,12 +69,12 @@ void Extruder::on_config_reload(void* argument){
     this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
     this->max_speed                   = this->kernel->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
 
-    this->step_pin                    = this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_pin()->as_output();
-    this->dir_pin                     = this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_pin()->as_output();
-    this->en_pin                      = this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_pin()->as_output()->as_open_drain();
+    this->step_pin.from_string(         this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
+    this->dir_pin.from_string(          this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
+    this->en_pin.from_string(           this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output()->as_open_drain();
 
 	// disable by default
-	this->en_pin->set(1);
+	this->en_pin.set(1);
 }
 
 
@@ -119,7 +119,7 @@ void Extruder::on_gcode_execute(void* argument){
     if( gcode->has_m ){
         if( gcode->m == 82 ){ this->absolute_mode = true; }
         if( gcode->m == 83 ){ this->absolute_mode = false; }
-        if( gcode->m == 84 ){ this->en_pin->set(1); }
+        if( gcode->m == 84 ){ this->en_pin.set(1); }
         if (gcode->m == 92 )
         {
             if (gcode->has_letter('E'))
@@ -166,7 +166,7 @@ void Extruder::on_gcode_execute(void* argument){
                     // TODO: check resulting flowrate, limit robot speed if it exceeds max_speed
                 }
 
-                this->en_pin->set(0);
+                this->en_pin.set(0);
             }
         }else if( gcode->g == 90 ){ this->absolute_mode = true;
         }else if( gcode->g == 91 ){ this->absolute_mode = false;
@@ -196,7 +196,7 @@ void Extruder::on_block_begin(void* argument){
             // We take the block, we have to release it or everything gets stuck
             block->take();
             this->current_block = block;
-            
+
             this->stepper_motor->steps_per_second = 0;
             this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
 

@@ -101,8 +101,8 @@ class TemperatureControl : public Module {
 
         uint16_t name_checksum;
 
-        Pin* thermistor_pin;
-        Pwm* heater_pin;
+        Pin  thermistor_pin;
+        Pwm  heater_pin;
 
         bool waiting;
 

@@ -93,15 +93,15 @@ class Robot : public Module {
 
     // Used by Stepper
     public:
-        Pin* alpha_step_pin;
-        Pin* beta_step_pin;
-        Pin* gamma_step_pin;
-        Pin* alpha_dir_pin;
-        Pin* beta_dir_pin;
-        Pin* gamma_dir_pin;
-        Pin* alpha_en_pin;
-        Pin* beta_en_pin;
-        Pin* gamma_en_pin;
+        Pin alpha_step_pin;
+        Pin alpha_dir_pin;
+        Pin alpha_en_pin;
+        Pin beta_step_pin;
+        Pin beta_dir_pin;
+        Pin beta_en_pin;
+        Pin gamma_step_pin;
+        Pin gamma_dir_pin;
+        Pin gamma_en_pin;
 
         StepperMotor* alpha_stepper_motor;
         StepperMotor* beta_stepper_motor;
