@@ -85,18 +85,6 @@ class ConfigValue{
             }
         }
 
-        Pin* as_pin(){
-            Pin* pin = new Pin();
-            pin->from_string(this->as_string());
-            return pin;
-        }
-
-        Pwm* as_pwm(){
-            Pwm* pwm = new Pwm();
-            pwm->from_string(this->as_string());
-            return pwm;
-        }
-
         ConfigValue* by_default(int val)
         {
             this->default_set = true;
