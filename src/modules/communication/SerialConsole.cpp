@@ -22,16 +22,13 @@ using std::string;
 SerialConsole::SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate ){
     this->serial = new mbed::Serial( rx_pin, tx_pin );
     this->serial->baud(baud_rate);
-    this->newlines = 0;
+    //this->newlines = 0;
 }
 
 // Called when the module has just been loaded
 void SerialConsole::on_module_loaded() {
     // We want to be called every time a new char is received
     this->serial->attach(this, &SerialConsole::on_serial_char_received, mbed::Serial::RxIrq);
-
-    // We only call the command dispatcher in the main loop, nowhere else
-    this->register_for_event(ON_MAIN_LOOP);
 
     // Add to the pack of streams kernel can call to, for example for broadcasting
     this->kernel->streams->append_stream(this);
@@ -40,15 +37,13 @@ void SerialConsole::on_module_loaded() {
 // Called on Serial::RxIrq interrupt, meaning we have received a char
 void SerialConsole::on_serial_char_received(){
     while(this->serial->readable()){
-        char received = this->serial->getc();
-        if(received == '\n' || received == '\r')
-            this->newlines++;
-        this->buffer.push_back(received);
+        //char received = this->serial->getc();
+        //this->buffer.push_back(received);
     }
 }
 
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
-void SerialConsole::on_main_loop(void * argument){
+/*void SerialConsole::on_main_loop(void * argument){
     if( this->newlines != 0 ){
         string received;
         received.reserve(20);
@@ -60,15 +55,14 @@ void SerialConsole::on_main_loop(void * argument){
                 struct SerialMessage message;
                 message.message = received;
                 message.stream = this;
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 return;
             }else{
                 received += c;
             }
         }
     }
-}
-
+}*/
 
 int SerialConsole::puts(const char* s)
 {
@@ -83,15 +77,4 @@ int SerialConsole::_putc(int c)
 int SerialConsole::_getc()
 {
     return this->serial->getc();
-}
-
-bool SerialConsole::has_char(char letter){
-    int index = this->buffer.head;
-    while( index != this->buffer.tail ){
-        if( this->buffer.buffer[index] == letter ){
-            return true;
-        }
-        index = this->buffer.next_block_index(index);
-    }
-    return false;
 }

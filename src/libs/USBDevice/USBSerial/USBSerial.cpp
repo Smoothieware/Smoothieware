@@ -278,7 +278,7 @@ void USBSerial::on_main_loop(void *argument)
                 message.message = received;
                 message.stream = this;
                 iprintf("USBSerial Received: %s\n", message.message.c_str());
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 return;
             }
             else

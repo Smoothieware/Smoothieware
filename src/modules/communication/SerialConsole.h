@@ -26,7 +26,7 @@ class SerialConsole : public Module, public StreamOutput {
 
         void on_module_loaded();
         void on_serial_char_received();
-        void on_main_loop(void * argument);
+        //void on_main_loop(void * argument);
         bool has_char(char letter);
 
         int _putc(int c);
@@ -35,9 +35,9 @@ class SerialConsole : public Module, public StreamOutput {
 
         //string receive_buffer;                 // Received chars are stored here until a newline character is received
         //vector<std::string> received_lines;    // Received lines are stored here until they are requested
-        RingBuffer<char,256> buffer;             // Receive buffer
+        //RingBuffer<char,256> buffer;             // Receive buffer
         mbed::Serial* serial;
-        int newlines;                            // Number of newlines detected in the stream
+        //int newlines;                            // Number of newlines detected in the stream
 };
 
 #endif
