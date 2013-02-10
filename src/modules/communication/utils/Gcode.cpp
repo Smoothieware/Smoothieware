@@ -15,20 +15,9 @@ using std::string;
 #include <stdlib.h>
 
 
-Gcode::Gcode()
+Gcode::Gcode(const string& command, StreamOutput* stream) :
+  command(command), m(0), g(0), add_nl(false), stream(stream)
 {
-    queued = g = m = 0;
-    add_nl = false;
-}
-
-Gcode::Gcode(string& command, StreamOutput* stream)
-{
-    queued = g = m = 0;
-    add_nl = false;
-
-    this->command = command;
-    this->stream = stream;
-
     prepare_cached_values();
 }
 
@@ -48,13 +37,12 @@ bool Gcode::has_letter( char letter ){
 double Gcode::get_value( char letter ){
     //__disable_irq();
     for (size_t i=0; i <= this->command.length()-1; i++){
-         const char& c = this->command.at(i);
-         if( letter == c ){
+         if( letter == this->command[i] ){
             size_t beginning = i+1;
             char buffer[20];
             for(size_t j=beginning; j <= this->command.length(); j++){
                 char c;
-                if( j == this->command.length() ){ c = ';'; }else{ c = this->command.at(j); }
+                if( j == this->command.length() ){ c = ';'; }else{ c = this->command[j]; }
                 if( c != '.' && c != '-' && ( c < '0' || c > '9' ) ){
                     buffer[j-beginning] = '\0';
                     //__enable_irq();
