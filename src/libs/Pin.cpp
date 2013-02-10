@@ -1,25 +1,42 @@
 #include "Pin.h"
 
+#include "utils.h"
+
 Pin::Pin(){}
 
 Pin* Pin::from_string(std::string value)
 {
     LPC_GPIO_TypeDef* gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
-    if ( value.find_first_of("n")!=std::string::npos ? true : false )
+
+    // cs is the current position in the string
+    const char* cs = value.c_str();
+    // cn is the position of the next char after the number we just read
+    char* cn = NULL;
+
+    this->port_number = strtol(cs, &cn, 10);
+    if ((cn > cs) && (port_number <= 4))
     {
-        this->port_number = 0;
         this->port = gpios[(unsigned int) this->port_number];
-        this->inverting = false;
-        this->pin = 255;
+        if (*cn == '.')
+        {
+            cs = ++cn;
+            this->pin = strtol(cs, &cn, 10);
+            if ((cn > cs) & (pin < 32))
+            {
+                while (is_whitespace(*cn)) cn++;
+                this->inverting = (*cn == '!');
+
+                this->port->FIOMASK &= ~(1 << this->pin);
+
+                return this;
+            }
+        }
     }
-    else
-    {
-        this->port_number =  atoi(value.substr(0,1).c_str());
-        this->port = gpios[(unsigned int) this->port_number];
-        this->inverting = ( value.find_first_of("!")!=std::string::npos ? true : false );
-        this->pin  = atoi( value.substr(2, value.size()-2-(this->inverting?1:0)).c_str() );
-        this->port->FIOMASK &= ~(1 << this->pin);
-    }
+
+    port_number = 0;
+    port = gpios[0];
+    pin = 255;
+    inverting = false;
     return this;
 }
 
