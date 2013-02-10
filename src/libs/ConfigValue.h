@@ -68,18 +68,14 @@ class ConfigValue{
         }
 
         std::string as_string(){
-            //if( this->found == false && this->default_set == true ){
-            //    return this->default_string;
-            //}else{
-                return this->value;
-            //}
+            return this->value;
         }
 
         bool as_bool(){
             if( this->found == false && this->default_set == true ){
                 return this->default_double;
             }else{
-                if( this->value.find_first_of("t1") != string::npos ){
+                if( this->value.find_first_of("ty1") != string::npos ){
                     return true;
                 }else{
                     return false;
