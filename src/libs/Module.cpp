@@ -9,44 +9,19 @@
 #include "libs/Kernel.h"
 
 const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
-    &Module::on_main_loop,
-    &Module::on_console_line_received,
-    &Module::on_gcode_received,
-    &Module::on_stepper_wake_up,
-    &Module::on_gcode_execute,
-    &Module::on_speed_change,
-    &Module::on_block_begin,
-    &Module::on_block_end,
-    &Module::on_config_reload,
-    &Module::on_play,
-    &Module::on_pause,
-    &Module::on_idle,
-    &Module::on_config_value,
-    &Module::on_config_complete,
-    &Module::on_second_tick,
+    #define EVENT(name, func) &Module::func ,
+    #include "Event.h"
+    #undef EVENT
 };
 
-Module::Module(){ }
+Module::Module(){}
 
-void Module::on_module_loaded(){
-}
+void Module::on_module_loaded(){}
 
 void Module::register_for_event(_EVENT_ENUM event_id){
     this->kernel->register_for_event(event_id, this);
 }
 
-void Module::on_main_loop(             void * argument){}
-void Module::on_console_line_received( void * argument){}
-void Module::on_gcode_received(        void * argument){}
-void Module::on_stepper_wake_up(       void * argument){}
-void Module::on_gcode_execute(         void * argument){}
-void Module::on_speed_change(          void * argument){}
-void Module::on_block_begin(           void * argument){}
-void Module::on_block_end(             void * argument){}
-void Module::on_config_reload(         void * argument){}
-void Module::on_play(                  void * argument){}
-void Module::on_pause(                 void * argument){}
-void Module::on_idle(                  void * argument){}
-void Module::on_config_value(          void * argument){}
-void Module::on_config_complete(       void * argument){}
-void Module::on_second_tick(           void * argument){}
+#define EVENT(name, func) void Module::func (void*) {}
+#include "Event.h"
+#undef EVENT

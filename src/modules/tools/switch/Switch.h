@@ -29,7 +29,7 @@ class Switch : public Module {
         uint16_t name_checksum;
         uint16_t on_m_code;
         uint16_t off_m_code;
-        Pwm*     output_pin;
+        Pwm      output_pin;
 };
 
 #endif

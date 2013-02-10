@@ -673,5 +673,11 @@ void USB::dumpDescriptors() {
 
 void USB::on_module_loaded()
 {
+    register_for_event(ON_IDLE);
     connect();
+}
+
+void USB::on_idle(void*)
+{
+    USBHAL::usbisr();
 }

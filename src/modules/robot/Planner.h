@@ -44,7 +44,6 @@ class Planner : public Module {
         float previous_nominal_speed;
 
         double acceleration;          // Setting
-        double max_jerk;              // Setting
         double junction_deviation;    // Setting
 
 };

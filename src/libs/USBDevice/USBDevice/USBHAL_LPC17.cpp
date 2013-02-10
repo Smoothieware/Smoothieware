@@ -24,7 +24,6 @@
 #include "USBHAL.h"
 
 #include <cstdio>
-
 #include <LPC17xx.h>
 
 #ifdef MBED
@@ -32,6 +31,8 @@
 #else
     #include <lpc17xx_nvic.h>
 #endif
+
+#include "wait_api.h"
 
 #include "debug.h"
 
@@ -467,12 +468,15 @@ void USBHAL::init() {
     LPC_PINCON->PINSEL1 &= 0xc3ffffff;
     LPC_PINCON->PINSEL1 |= 0x14000000;
 
-    // Disconnect USB device
-    SIEdisconnect();
-
     // Configure pin P2.9 to be Connect
     LPC_PINCON->PINSEL4 &= 0xfffcffff;
     LPC_PINCON->PINSEL4 |= 0x00040000;
+
+    // Disconnect USB device
+    SIEdisconnect();
+
+    // work around OSX behaviour where if the device disconnects and quickly reconnects, it assumes it's the same device instead of checking
+    wait_ms(1000);
 
     // Connect must be low for at least 2.5uS
     //     wait(0.3);
@@ -531,7 +535,7 @@ uint32_t USBHAL::getSerialNumber(int length, uint32_t *buf) {
 void USBHAL::connect(void) {
     // Connect USB device
 //     iprintf("USBHAL::connect\n");
-    NVIC_EnableIRQ(USB_IRQn);
+//     NVIC_EnableIRQ(USB_IRQn);
     SIEconnect();
 //     iprintf("USBHAL::connect OK\n");
 }

@@ -44,8 +44,9 @@ class ConfigValue{
             if( this->found == false && this->default_set == true ){
                 return this->default_double;
             }else{
-                double result = atof(remove_non_number(this->value).c_str());
-                if( result == 0.0 && this->value.find_first_not_of("0.") != string::npos ){
+                char* endptr = NULL;
+                double result = strtod(remove_non_number(this->value).c_str(), &endptr);
+                if( endptr <= remove_non_number(this->value).c_str() ){
                     error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
                 }
                 return result;
@@ -57,8 +58,9 @@ class ConfigValue{
             if( this->found == false && this->default_set == true ){
                 return this->default_int;
             }else{
-                int result = atoi(remove_non_number(this->value).c_str());
-                if( result == 0 && this->value.find_first_not_of("0") != string::npos ){
+                char* endptr = NULL;
+                int result = strtol(remove_non_number(this->value).c_str(), &endptr, 10);
+                if( endptr <= remove_non_number(this->value).c_str() ){
                     error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
                 }
                 return result;
@@ -66,35 +68,19 @@ class ConfigValue{
         }
 
         std::string as_string(){
-            //if( this->found == false && this->default_set == true ){
-            //    return this->default_string;
-            //}else{
-                return this->value;
-            //}
+            return this->value;
         }
 
         bool as_bool(){
             if( this->found == false && this->default_set == true ){
                 return this->default_double;
             }else{
-                if( this->value.find_first_of("t1") != string::npos ){
+                if( this->value.find_first_of("ty1") != string::npos ){
                     return true;
                 }else{
                     return false;
                 }
             }
-        }
-
-        Pin* as_pin(){
-            Pin* pin = new Pin();
-            pin->from_string(this->as_string());
-            return pin;
-        }
-
-        Pwm* as_pwm(){
-            Pwm* pwm = new Pwm();
-            pwm->from_string(this->as_string());
-            return pwm;
         }
 
         ConfigValue* by_default(int val)

@@ -130,6 +130,7 @@ SDCard::SDCard(PinName mosi, PinName miso, PinName sclk, PinName cs) :
   _spi(mosi, miso, sclk), _cs(cs) {
     _cs.output();
     _cs = 1;
+    busyflag = false;
 }
 
 #define R1_IDLE_STATE           (1 << 0)
@@ -255,11 +256,14 @@ SDCard::CARD_TYPE SDCard::initialise_card_v2() {
 
 int SDCard::disk_initialize()
 {
+    busyflag = true;
+
     _sectors = 0;
 
     CARD_TYPE i = initialise_card();
 
     if (i == SDCARD_FAIL) {
+        busyflag = false;
         return 1;
     }
 
@@ -268,15 +272,24 @@ int SDCard::disk_initialize()
     // Set block length to 512 (CMD16)
     if(_cmd(SDCMD_SET_BLOCKLEN, 512) != 0) {
         fprintf(stderr, "Set 512-byte block timed out\n");
+        busyflag = false;
         return 1;
     }
 
     _spi.frequency(2500000); // Set to 2.5MHz for data transfer
+
+    busyflag = false;
+
     return 0;
 }
 
 int SDCard::disk_write(const char *buffer, uint32_t block_number)
 {
+    if (busyflag)
+        return 0;
+
+    busyflag = true;
+
     if (cardtype == SDCARD_FAIL)
         return -1;
     // set write address for single block (CMD24)
@@ -286,11 +299,19 @@ int SDCard::disk_write(const char *buffer, uint32_t block_number)
 
     // send the data block
     _write(buffer, 512);
+
+    busyflag = false;
+
     return 0;
 }
 
 int SDCard::disk_read(char *buffer, uint32_t block_number)
 {
+    if (busyflag)
+        return 0;
+
+    busyflag = true;
+
     if (cardtype == SDCARD_FAIL)
         return -1;
     // set read address for single block (CMD17)
@@ -300,6 +321,8 @@ int SDCard::disk_read(char *buffer, uint32_t block_number)
 
     // receive the data
     _read(buffer, 512);
+
+    busyflag = false;
 
     return 0;
 }
@@ -553,4 +576,9 @@ uint32_t SDCard::_sd_sectors() {
     }
     fprintf(stderr, "This disk tastes funny! (%d) I only know about type 0 or 1 CSD structures\n", csd_structure);
     return 0;
+}
+
+bool SDCard::busy()
+{
+    return busyflag;
 }
