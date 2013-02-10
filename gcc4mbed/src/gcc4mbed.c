@@ -128,7 +128,7 @@ extern "C" void __malloc_unlock(void)
 
 
 /* Linker defined symbol to be used by sbrk for where dynamically heap should start. */
-extern "C" int __HeapLimit;
+extern "C" int __HeapBase;
 
 /* Turn off the errno macro and use actual external global variable instead. */
 #undef errno
@@ -137,7 +137,7 @@ extern int errno;
 /* Dynamic memory allocation related syscalls. */
 extern "C" caddr_t _sbrk(int incr) 
 {
-    static unsigned char* heap = (unsigned char*)&__HeapLimit;
+    static unsigned char* heap = (unsigned char*)&__HeapBase;
     unsigned char*        prev_heap = heap;
     unsigned char*        new_heap = heap + incr;
 
