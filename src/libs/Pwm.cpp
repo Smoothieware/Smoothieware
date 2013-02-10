@@ -8,13 +8,6 @@ Pwm::Pwm()
 {
     _max = PID_PWM_MAX - 1;
     _pwm = -1;
-    pin = this;
-}
-
-Pwm* Pwm::attach(Pin* new_pin)
-{
-    pin = new_pin;
-    return this;
 }
 
 void Pwm::pwm(int new_pwm)
@@ -36,7 +29,7 @@ int Pwm::max_pwm()
 void Pwm::set(bool value)
 {
     _pwm = -1;
-    pin->Pin::set(value);
+    Pin::set(value);
 }
 
 uint32_t Pwm::on_tick(uint32_t dummy)
@@ -58,7 +51,7 @@ uint32_t Pwm::on_tick(uint32_t dummy)
         if (_sd_accumulator <= 0)
             _sd_direction = false;
     }
-    pin->Pin::set(_sd_direction);
+    Pin::set(_sd_direction);
 
     return dummy;
 }

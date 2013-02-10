@@ -40,9 +40,9 @@ void Robot::on_module_loaded() {
     this->on_config_reload(this);
 
     // Make our 3 StepperMotors
-    this->alpha_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->alpha_step_pin,this->alpha_dir_pin,this->alpha_en_pin) );
-    this->beta_stepper_motor   = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->beta_step_pin, this->beta_dir_pin, this->beta_en_pin ) );
-    this->gamma_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->gamma_step_pin,this->gamma_dir_pin,this->gamma_en_pin) );
+    this->alpha_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&alpha_step_pin,&alpha_dir_pin,&alpha_en_pin) );
+    this->beta_stepper_motor   = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&beta_step_pin, &beta_dir_pin, &beta_en_pin ) );
+    this->gamma_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&gamma_step_pin,&gamma_dir_pin,&gamma_en_pin) );
 
 }
 
@@ -58,15 +58,15 @@ void Robot::on_config_reload(void* argument){
     this->max_speeds[X_AXIS]  = this->kernel->config->value(x_axis_max_speed_checksum    )->by_default(60000  )->as_number();
     this->max_speeds[Y_AXIS]  = this->kernel->config->value(y_axis_max_speed_checksum    )->by_default(60000  )->as_number();
     this->max_speeds[Z_AXIS]  = this->kernel->config->value(z_axis_max_speed_checksum    )->by_default(300    )->as_number();
-    this->alpha_step_pin      = this->kernel->config->value(alpha_step_pin_checksum      )->by_default("2.0"  )->as_pin()->as_output();
-    this->beta_step_pin       = this->kernel->config->value(beta_step_pin_checksum       )->by_default("2.1"  )->as_pin()->as_output();
-    this->gamma_step_pin      = this->kernel->config->value(gamma_step_pin_checksum      )->by_default("2.2"  )->as_pin()->as_output();
-    this->alpha_dir_pin       = this->kernel->config->value(alpha_dir_pin_checksum       )->by_default("0.5"  )->as_pin()->as_output();
-    this->beta_dir_pin        = this->kernel->config->value(beta_dir_pin_checksum        )->by_default("0.11" )->as_pin()->as_output();
-    this->gamma_dir_pin       = this->kernel->config->value(gamma_dir_pin_checksum       )->by_default("0.20" )->as_pin()->as_output();
-    this->alpha_en_pin        = this->kernel->config->value(alpha_en_pin_checksum        )->by_default("0.4"  )->as_pin()->as_output()->as_open_drain();
-    this->beta_en_pin         = this->kernel->config->value(beta_en_pin_checksum         )->by_default("0.10" )->as_pin()->as_output()->as_open_drain();
-    this->gamma_en_pin        = this->kernel->config->value(gamma_en_pin_checksum        )->by_default("0.19" )->as_pin()->as_output()->as_open_drain();
+    this->alpha_step_pin.from_string( this->kernel->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
+    this->alpha_dir_pin.from_string(  this->kernel->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
+    this->alpha_en_pin.from_string(   this->kernel->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output()->as_open_drain();
+    this->beta_step_pin.from_string(  this->kernel->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
+    this->gamma_step_pin.from_string( this->kernel->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
+    this->gamma_dir_pin.from_string(  this->kernel->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
+    this->gamma_en_pin.from_string(   this->kernel->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output()->as_open_drain();
+    this->beta_dir_pin.from_string(   this->kernel->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
+    this->beta_en_pin.from_string(    this->kernel->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output()->as_open_drain();
 
 }
 
