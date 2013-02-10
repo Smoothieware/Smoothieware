@@ -56,7 +56,7 @@ class Endstops : public Module{
         void on_config_reload(void* argument);
 
         StepperMotor* steppers[3];
-        Pin*          pins[6];
+        Pin           pins[6];
         double  slow_rates[3];
         double  fast_rates[3];
         unsigned int  retract_steps[3];

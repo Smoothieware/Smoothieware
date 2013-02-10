@@ -64,15 +64,6 @@ class Stepper : public Module {
         int acceleration_ticks_per_second;
         int minimum_steps_per_minute;
         int base_stepping_frequency;
-        Pin* alpha_step_pin;
-        Pin* beta_step_pin;
-        Pin* gamma_step_pin;
-        Pin* alpha_dir_pin;
-        Pin* beta_dir_pin;
-        Pin* gamma_dir_pin;
-        Pin* alpha_en_pin;
-        Pin* beta_en_pin;
-        Pin* gamma_en_pin;
         unsigned short step_bits[3];
         int counter_increment;
         bool paused;

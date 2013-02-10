@@ -54,7 +54,7 @@ void TemperatureControl::on_config_reload(void* argument){
     this->set_and_wait_m_code = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
     this->get_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
     this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
-    
+
     this->max_pwm             = this->kernel->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number();
 
     this->designator          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
@@ -90,17 +90,17 @@ void TemperatureControl::on_config_reload(void* argument){
     o = 0;
 
     // Thermistor pin for ADC readings
-    this->thermistor_pin = this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_pin();
-    this->kernel->adc->enable_pin(this->thermistor_pin);
+    this->thermistor_pin.from_string(this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_string());
+    this->kernel->adc->enable_pin(&thermistor_pin);
 
     // Heater pin
-    this->heater_pin     =  this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_pwm()->as_output();
-    this->heater_pin->set(0);
+    this->heater_pin.from_string(    this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_string())->as_output();
+    this->heater_pin.set(0);
 
-    set_low_on_debug(heater_pin->pin->port_number, heater_pin->pin->pin);
+    set_low_on_debug(heater_pin.port_number, heater_pin.pin);
 
     // activate SD-DAC timer
-    this->kernel->slow_ticker->attach(1000, this->heater_pin, &Pwm::on_tick);
+    this->kernel->slow_ticker->attach(1000, &heater_pin, &Pwm::on_tick);
 
     // reading tick
     this->kernel->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
@@ -165,7 +165,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
             if (gcode->get_value('S') == 0)
             {
                 this->target_temperature = UNDEFINED;
-                this->heater_pin->set(0);
+                this->heater_pin.set(0);
             }
             else
             {
@@ -178,7 +178,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
             if (gcode->get_value('S') == 0)
             {
                 this->target_temperature = UNDEFINED;
-                this->heater_pin->set(0);
+                this->heater_pin.set(0);
             }
             else
             {
@@ -195,7 +195,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
 void TemperatureControl::set_desired_temperature(double desired_temperature){
     target_temperature = desired_temperature;
     if (desired_temperature == 0.0)
-        heater_pin->set((o = 0));
+        heater_pin.set((o = 0));
 }
 
 double TemperatureControl::get_temperature(){
@@ -221,9 +221,9 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     {
         if ((r <= 1) || (r >= 4094))
         {
-            kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin->port_number, this->thermistor_pin->pin);
+            kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
             target_temperature = UNDEFINED;
-            heater_pin->set(0);
+            heater_pin.set(0);
         }
         else
         {
@@ -237,7 +237,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     }
     else
     {
-        heater_pin->set((o = 0));
+        heater_pin.set((o = 0));
     }
     last_reading = temperature;
     return 0;
@@ -258,28 +258,28 @@ void TemperatureControl::pid_process(double temperature)
     if (i < -this->i_max)
         i = -this->i_max;
 
-    this->o = (p + i + d) * heater_pin->max_pwm() / 256;
+    this->o = (p + i + d) * heater_pin.max_pwm() / 256;
 
-    if (this->o >= heater_pin->max_pwm())
+    if (this->o >= heater_pin.max_pwm())
     {
         i = 0;
-        this->o = heater_pin->max_pwm();
+        this->o = heater_pin.max_pwm();
     }
     if (this->o < 0)
     {
-        if (this->o < -(heater_pin->max_pwm()))
+        if (this->o < -(heater_pin.max_pwm()))
             i = 0;
         this->o = 0;
     }
 
     if( this->o > this->max_pwm ){ this->o = max_pwm; }
 
-    this->heater_pin->pwm(o);
+    this->heater_pin.pwm(o);
 }
 
 int TemperatureControl::new_thermistor_reading()
 {
-    int last_raw = this->kernel->adc->read(this->thermistor_pin);
+    int last_raw = this->kernel->adc->read(&thermistor_pin);
     if (queue.size() >= queue.capacity())
     {
         uint16_t l;

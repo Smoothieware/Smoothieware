@@ -95,16 +95,16 @@ void Stepper::on_gcode_execute(void* argument){
 }
 
 void Stepper::turn_enable_pins_on(){
-    this->kernel->robot->alpha_en_pin->set(0);
-    this->kernel->robot->beta_en_pin->set(0);
-    this->kernel->robot->gamma_en_pin->set(0);
+    this->kernel->robot->alpha_en_pin.set(0);
+    this->kernel->robot->beta_en_pin.set(0);
+    this->kernel->robot->gamma_en_pin.set(0);
     this->enable_pins_status = true;
 }
 
 void Stepper::turn_enable_pins_off(){
-    this->kernel->robot->alpha_en_pin->set(1);
-    this->kernel->robot->beta_en_pin->set(1);
-    this->kernel->robot->gamma_en_pin->set(1);
+    this->kernel->robot->alpha_en_pin.set(1);
+    this->kernel->robot->beta_en_pin.set(1);
+    this->kernel->robot->gamma_en_pin.set(1);
     this->enable_pins_status = false;
 }
 
