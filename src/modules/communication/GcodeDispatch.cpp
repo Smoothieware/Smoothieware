@@ -54,8 +54,8 @@ void GcodeDispatch::on_console_line_received(void * line){
             possible_command = possible_command.substr(0, chkpos);
             //Calculate checksum
             if( chkpos != string::npos ){
-                for(int i = 0; possible_command[i] != '*' && possible_command[i] != 0; i++)
-                    cs = cs ^ possible_command[i];
+                for(auto c = possible_command.cbegin(); *c != '*' && c != possible_command.cend(); c++)
+                    cs = cs ^ *c;
                 cs &= 0xff;  // Defensive programming...
                 cs -= chksum;
             }

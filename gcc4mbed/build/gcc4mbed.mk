@@ -250,7 +250,6 @@ $(OUTDIR)/$(PROJECT).disasm: $(PROJECT).elf
 $(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
 	@echo "  LD      " $@
 	@$(LD) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $(PROJECT).elf
-	@$(SIZE) $(PROJECT).elf
 
 clean:
 	@echo "  RM      " "*.o"
