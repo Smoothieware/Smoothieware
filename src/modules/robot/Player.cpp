@@ -64,9 +64,9 @@ Block* Player::new_block(){
         for(; block->gcodes.size(); ){
             Gcode* g = block->gcodes.back();
 //             printf("Block:pop %p (%d refs)\n", g, g->queued);
+            block->gcodes.pop_back();
             if (--g->queued == 0)
                 delete g;
-            block->gcodes.pop_back();
         }
     }
 

@@ -154,6 +154,7 @@ void SimpleShell::on_main_loop(void* argument){
     if( this->playing_file ){
         string buffer;
         int c;
+        buffer.reserve(20);
         // Print each line of the file
         while ((c = fgetc(this->current_file_handler)) != EOF){
             if (c == '\n'){

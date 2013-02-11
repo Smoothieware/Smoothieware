@@ -16,8 +16,7 @@ using std::string;
 
 class Gcode {
     public:
-        Gcode();
-        Gcode(string&, StreamOutput*);
+        Gcode(const string&, StreamOutput*);
 
         bool   has_letter ( char letter );
 
@@ -29,7 +28,7 @@ class Gcode {
         int    get_num_args();
         void   prepare_cached_values();
 
-        string command;
+        const string command;
         double millimeters_of_travel;
         bool call_on_gcode_execute_event_immediatly;
         bool on_gcode_execute_event_called;
