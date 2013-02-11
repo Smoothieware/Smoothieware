@@ -25,6 +25,9 @@ GCC4MBED_TYPE=Checked
 # Set to 1 to tag each heap allocation with the caller's return address.
 HEAP_TAGS=1
 
+# Set to 1 configure MPU to disable write buffering and eliminate imprecise bus faults.
+WRITE_BUFFER_DISABLE=1
+
 # Set to 1 to allow MRI debug monitor to take full control of UART0 and use it
 # as a dedicated debug channel.  If you are using the USB based serial port for
 # the console then this should cause you no problems.  Set MRI_BREAK_ON_INIT to

@@ -19,6 +19,9 @@
 #include <errno.h>
 #include <mri.h>
 #include <cmsis.h>
+#include "mpu.h"
+
+static void configureHighestMpuRegionToAccessAllMemoryWithNoCaching(void);
 
 extern unsigned int __bss_start__;
 extern unsigned int __bss_end__;
@@ -32,6 +35,12 @@ extern "C" void _start(void)
     
     memset(&__bss_start__, 0, bssSize);
     
+    if (WRITE_BUFFER_DISABLE)
+    {
+        disableMPU();
+        configureHighestMpuRegionToAccessAllMemoryWithNoCaching();    
+        enableMPU();
+    }
     if (MRI_ENABLE)
     {
         __mriInit(MRI_INIT_PARAMETERS);
@@ -43,6 +52,20 @@ extern "C" void _start(void)
     mainReturnValue = main();
     exit(mainReturnValue);
 }
+
+static void configureHighestMpuRegionToAccessAllMemoryWithNoCaching(void)
+{
+    static const uint32_t regionToStartAtAddress0 = 0U;
+    static const uint32_t regionReadWrite = 1  << MPU_RASR_AP_SHIFT;
+    static const uint32_t regionSizeAt4GB = 31 << MPU_RASR_SIZE_SHIFT; /* 4GB = 2^(31+1) */
+    static const uint32_t regionEnable    = MPU_RASR_ENABLE;
+    static const uint32_t regionSizeAndAttributes = regionReadWrite | regionSizeAt4GB | regionEnable;
+    
+    prepareToAccessMPURegion(getHighestMPUDataRegionIndex());
+    setMPURegionAddress(regionToStartAtAddress0);
+    setMPURegionAttributeAndSize(regionSizeAndAttributes);
+}
+
 
 
 extern "C" int __real__read(int file, char *ptr, int len);
