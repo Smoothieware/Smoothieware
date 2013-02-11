@@ -36,21 +36,14 @@ bool Gcode::has_letter( char letter ){
 // We don't use the high-level methods of std::string because they call malloc and it's very bad to do that inside of interrupts
 double Gcode::get_value( char letter ){
     //__disable_irq();
-    for (size_t i=0; i <= this->command.length()-1; i++){
-         if( letter == this->command[i] ){
-            size_t beginning = i+1;
-            char buffer[20];
-            for(size_t j=beginning; j <= this->command.length(); j++){
-                char c;
-                if( j == this->command.length() ){ c = ';'; }else{ c = this->command[j]; }
-                if( c != '.' && c != '-' && ( c < '0' || c > '9' ) ){
-                    buffer[j-beginning] = '\0';
-                    //__enable_irq();
-                    return atof(buffer);
-                }else{
-                    buffer[j-beginning] = c;
-                }
-            }
+    const char* cs = command.c_str();
+    char* cn = NULL;
+    for (; *cs; cs++){
+         if( letter == *cs ){
+             cs++;
+             double r = strtod(cs, &cn);
+             if (cn > cs)
+                 return r;
          }
     }
     //__enable_irq();
