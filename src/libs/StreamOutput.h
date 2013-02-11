@@ -16,7 +16,7 @@ class StreamOutput : public mbed::Stream {
         StreamOutput(){}
 //         virtual int puts(const char *str) = 0;
         virtual int printf(const char* format, ...) __attribute__ ((format(printf, 2, 3))) {
-            char *buffer; // = printf_default_buffer;
+            char *buffer;
             // Make the message
             va_list args;
             va_start(args, format);
@@ -24,18 +24,13 @@ class StreamOutput : public mbed::Stream {
             int size = vsnprintf(NULL, 0, format, args)
                 + 1; // we add one to take into account space for the terminating \0
 
-//             if (size > PRINTF_DEFAULT_BUFFER_SIZE) {
-                buffer = new char[size];
-                vsnprintf(buffer, size, format, args);
-//             }
-
+            buffer = new char[size];
+            vsnprintf(buffer, size, format, args);
             va_end(args);
 
             puts(buffer);
 
-//             if (buffer != printf_default_buffer)
-                delete buffer;
-
+            delete[] buffer;
             return size - 1;
         }
         virtual int _putc(int c) { return 0; }
