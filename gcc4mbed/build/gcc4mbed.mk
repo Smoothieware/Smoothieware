@@ -173,7 +173,7 @@ endif
 # Setup wraps to memory allocations routines if we want to tag heap allocations.
 HEAP_WRAPS=
 ifeq "$(HEAP_TAGS)" "1"
-HEAP_WRAPS=,--wrap=malloc,--wrap=realloc
+HEAP_WRAPS=,--wrap=malloc,--wrap=realloc,--wrap=free
 DEFINES += -DHEAP_TAGS
 endif
 

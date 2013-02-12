@@ -174,17 +174,19 @@ extern "C" caddr_t _sbrk(int incr)
 
 
 /* Optional functionality which will tag each heap allocation with the caller's return address. */
-#if HEAP_TAGS
+#ifdef HEAP_TAGS
 
 const unsigned int* __smoothieHeapBase = &__HeapBase;
 
 extern "C" void* __real_malloc(size_t size);
 extern "C" void* __real_realloc(void* ptr, size_t size);
+extern "C" void  __real_free(void* ptr);
 
 static void setTag(void* pv, unsigned int tag);
 static unsigned int* footerForChunk(void* pv);
 static unsigned int* headerForChunk(void* pv);
 static unsigned int sizeOfChunk(unsigned int* pHeader);
+static int isChunkInUse(void* pv);
 
 extern "C" __attribute__((naked)) void __wrap_malloc(size_t size)
 {
@@ -250,6 +252,19 @@ extern "C" void* reallocWithTag(void* ptr, size_t size, unsigned int tag)
     return p;
 }
 
+extern "C" void __wrap_free(void* ptr)
+{
+    if (!isChunkInUse(ptr))
+        __debugbreak();
+    __real_free(ptr);
+}
+
+static int isChunkInUse(void* pv)
+{
+    unsigned int* pFooter = footerForChunk(pv);
+    return pFooter[1] & 1;
+}
+
 __attribute__((naked)) void* operator new(size_t size)
 {
     __asm (
@@ -263,6 +278,8 @@ __attribute__((naked)) void* operator new(size_t size)
         "1$:\n"
         "pop {r4,pc}\n"
     );
+    // This line never executes but silences no return value warning from compiler.
+    return (void*)1;
 }
 
 #endif // HEAP_TAGS
