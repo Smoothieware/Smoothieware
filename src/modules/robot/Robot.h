@@ -27,6 +27,10 @@ using std::string;
 #define x_axis_max_speed_checksum              CHECKSUM("x_axis_max_speed")
 #define y_axis_max_speed_checksum              CHECKSUM("y_axis_max_speed")
 #define z_axis_max_speed_checksum              CHECKSUM("z_axis_max_speed")
+#define arm_solution_checksum                  CHECKSUM("arm_solution")
+#define cartesian_checksum                     CHECKSUM("cartesian")
+#define rostock_checksum                       CHECKSUM("rostock")
+#define delta_checksum                         CHECKSUM("delta")
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1

@@ -19,6 +19,7 @@ using std::string;
 #include "../communication/utils/Gcode.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
+#include "arm_solutions/RostockSolution.h"
 
 Robot::Robot(){
     this->inch_mode = false;
@@ -48,7 +49,14 @@ void Robot::on_module_loaded() {
 
 void Robot::on_config_reload(void* argument){
     if (this->arm_solution) delete this->arm_solution;
-    this->arm_solution = new CartesianSolution(this->kernel->config);
+    int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
+    switch(solution_checksum) {
+    case rostock_checksum:
+        this->arm_solution = new RostockSolution(this->kernel->config); break;
+    case cartesian_checksum:
+    default:
+        this->arm_solution = new CartesianSolution(this->kernel->config); break;
+    }
 
     this->feed_rate           = this->kernel->config->value(default_feed_rate_checksum   )->by_default(100    )->as_number() / 60;
     this->seek_rate           = this->kernel->config->value(default_seek_rate_checksum   )->by_default(100    )->as_number() / 60;
