@@ -28,7 +28,7 @@ public:
     CircBuffer(int length) {
         write = 0;
         read = 0;
-        size = length + 1;
+        size = length;
         buf = (T *)ahbmalloc(size * sizeof(T), AHB_BANK_0);
     };
 
@@ -53,7 +53,7 @@ public:
         return (write >= read) ? write - read : (size - read) + write;
     };
     uint16_t free() {
-        return size - available();
+        return size - available() - 1;
     };
 
     void dump() {
