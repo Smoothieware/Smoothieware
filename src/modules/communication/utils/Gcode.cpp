@@ -16,7 +16,8 @@ using std::string;
 
 
 Gcode::Gcode(const string& command, StreamOutput* stream) :
-  command(command), m(0), g(0), add_nl(false), stream(stream)
+  command(command), m(0), g(0), add_nl(false),
+  queued(0), stream(stream)
 {
     prepare_cached_values();
 }
