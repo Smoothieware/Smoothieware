@@ -55,7 +55,6 @@ int USBSerial::_putc(int c)
     txbuf.queue(c);
 
     usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
-//     usb->endpointTriggerInterrupt(CDC_BulkIn.bEndpointAddress);
     return 1;
 }
 
@@ -70,7 +69,6 @@ int USBSerial::_getc()
     {
         usb->endpointSetInterrupt(CDC_BulkOut.bEndpointAddress, true);
         iprintf("rxbuf has room for another packet, interrupt enabled\n");
-//         usb->endpointTriggerInterrupt(CDC_BulkOut.bEndpointAddress);
     }
     if (nl_in_rx > 0)
         if (c == '\n')
@@ -153,23 +151,12 @@ bool USBSerial::USBEvent_EPIn(uint8_t bEP, uint8_t bEPStatus)
         iprintf("\nSending...\n");
         send(b, l);
         iprintf("Sent\n");
-//         if (l == 64 && txbuf.available() == 0)
-//             needToSendNull = true;
         if (txbuf.available() == 0)
             r = false;
     }
     else
     {
-//         if (needToSendNull)
-//         {
-//             send(NULL, 0);
-//             needToSendNull = false;
-//         }
-//         else
-//         {
-            r = false;
-//         }
-//         usb->endpointSetInterrupt(bEP, false);
+        r = false;
     }
     iprintf("USBSerial:EpIn Complete\n");
     return r;
@@ -216,7 +203,6 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
 
     if (rxbuf.free() < MAX_PACKET_SIZE_EPBULK)
     {
-//         usb->endpointSetInterrupt(bEP, false);
         r = false;
     }
 
@@ -224,28 +210,6 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
     iprintf("USBSerial:EpOut Complete\n");
     return r;
 }
-
-/*
-bool USBSerial::EpCallback(uint8_t bEP, uint8_t bEPStatus) {
-    if (bEP == CDC_BulkOut.bEndpointAddress) {
-        uint8_t c[65];
-        uint32_t size = 0;
-
-        //we read the packet received and put it on the circular buffer
-        readEP(c, &size);
-        for (uint8_t i = 0; i < size; i++) {
-            buf.queue(c[i]);
-        }
-
-        //call a potential handler
-        rx.call();
-
-        // We reactivate the endpoint to receive next characters
-        usb->readStart(CDC_BulkOut.bEndpointAddress, MAX_PACKET_SIZE_EPBULK);
-        return true;
-    }
-    return false;
-}*/
 
 uint8_t USBSerial::available()
 {
