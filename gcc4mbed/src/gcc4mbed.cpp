@@ -21,12 +21,19 @@
 #include "mpu.h"
 
 
+static unsigned int g_maximumHeapAddress;
+
 static void fillUnusedRAM(void);
-static void configureHighestMpuRegionToAccessAllMemoryWithNoCaching(void);
+static void configureStackSizeLimit(unsigned int stackSizeLimit);
+static unsigned int alignTo32Bytes(unsigned int value);
+static void configureMpuToCatchStackOverflowIntoHeap(unsigned int maximumHeapAddress);
+static void configureMpuRegionToAccessAllMemoryWithNoCaching(void);
 
 
+/* Symbols exposed from the linker script. */
 extern unsigned int     __bss_start__;
 extern unsigned int     __bss_end__;
+extern unsigned int     __StackTop;
 extern "C" unsigned int __HeapBase;
 
 
@@ -40,11 +47,15 @@ extern "C" void _start(void)
     
     memset(&__bss_start__, 0, bssSize);
     fillUnusedRAM();
-
+    
+    if (STACK_SIZE)
+    {
+        configureStackSizeLimit(STACK_SIZE);
+    }
     if (WRITE_BUFFER_DISABLE)
     {
         disableMPU();
-        configureHighestMpuRegionToAccessAllMemoryWithNoCaching();    
+        configureMpuRegionToAccessAllMemoryWithNoCaching();    
         enableMPU();
     }
     if (MRI_ENABLE)
@@ -80,20 +91,41 @@ static __attribute__((naked)) void fillUnusedRAM(void)
     );
 }
 
+static void configureStackSizeLimit(unsigned int stackSizeLimit)
+{
+    // Note: 32 bytes are reserved to fall between top of heap and top of stack for minimum MPU guard region.
+    g_maximumHeapAddress = alignTo32Bytes((unsigned int)&__StackTop - stackSizeLimit - 32);
+    configureMpuToCatchStackOverflowIntoHeap(g_maximumHeapAddress);
+}
 
-static void configureHighestMpuRegionToAccessAllMemoryWithNoCaching(void)
+static unsigned int alignTo32Bytes(unsigned int value)
+{
+    return (value + 31) & ~31;
+}
+
+static void configureMpuToCatchStackOverflowIntoHeap(unsigned int maximumHeapAddress)
+{
+    #define MPU_REGION_SIZE_OF_32_BYTES ((5-1) << MPU_RASR_SIZE_SHIFT)  // 2^5 = 32 bytes.
+    
+    prepareToAccessMPURegion(getHighestMPUDataRegionIndex());
+    setMPURegionAddress(maximumHeapAddress);
+    setMPURegionAttributeAndSize(MPU_REGION_SIZE_OF_32_BYTES | MPU_RASR_ENABLE);
+    enableMPUWithDefaultMemoryMap();
+}
+
+static void configureMpuRegionToAccessAllMemoryWithNoCaching(void)
 {
     static const uint32_t regionToStartAtAddress0 = 0U;
     static const uint32_t regionReadWrite = 1  << MPU_RASR_AP_SHIFT;
     static const uint32_t regionSizeAt4GB = 31 << MPU_RASR_SIZE_SHIFT; /* 4GB = 2^(31+1) */
     static const uint32_t regionEnable    = MPU_RASR_ENABLE;
     static const uint32_t regionSizeAndAttributes = regionReadWrite | regionSizeAt4GB | regionEnable;
+    uint32_t regionIndex = STACK_SIZE ? getHighestMPUDataRegionIndex() - 1 : getHighestMPUDataRegionIndex();
     
-    prepareToAccessMPURegion(getHighestMPUDataRegionIndex());
+    prepareToAccessMPURegion(regionIndex);
     setMPURegionAddress(regionToStartAtAddress0);
     setMPURegionAttributeAndSize(regionSizeAndAttributes);
 }
-
 
 
 extern "C" int __real__read(int file, char *ptr, int len);
@@ -182,6 +214,8 @@ extern "C" void __malloc_unlock(void)
 #undef errno
 extern int errno;
 
+static int doesHeapCollideWithStack(unsigned int newHeap);
+
 /* Dynamic memory allocation related syscalls. */
 extern "C" caddr_t _sbrk(int incr) 
 {
@@ -189,13 +223,20 @@ extern "C" caddr_t _sbrk(int incr)
     unsigned char*        prev_heap = heap;
     unsigned char*        new_heap = heap + incr;
 
-    if (new_heap >= (unsigned char*)__get_MSP()) {
+    if (doesHeapCollideWithStack((unsigned int)new_heap)) 
+    {
         errno = ENOMEM;
         return (caddr_t)-1;
     }
     
     heap = new_heap;
     return (caddr_t) prev_heap;
+}
+
+static int doesHeapCollideWithStack(unsigned int newHeap)
+{
+    return ((newHeap >= __get_MSP()) ||
+            (STACK_SIZE && newHeap >= g_maximumHeapAddress));
 }
 
 

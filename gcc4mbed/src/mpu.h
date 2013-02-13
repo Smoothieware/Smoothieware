@@ -124,7 +124,7 @@ static __INLINE void enableMPU(void)
     if (isMPUNotPresent())
         return;
     
-    MPU->CTRL |= MPU_CTRL_ENABLE;
+    MPU->CTRL = MPU_CTRL_ENABLE;
     __DSB();
     __ISB();
 }
@@ -134,7 +134,17 @@ static __INLINE void enableMPUWithHardAndNMIFaults(void)
     if (isMPUNotPresent())
         return;
     
-    MPU->CTRL |= MPU_CTRL_ENABLE | MPU_CTRL_HFNMIENA;
+    MPU->CTRL = MPU_CTRL_ENABLE | MPU_CTRL_HFNMIENA;
+    __DSB();
+    __ISB();
+}
+
+static __INLINE void enableMPUWithDefaultMemoryMap(void)
+{
+    if (isMPUNotPresent())
+        return;
+    
+    MPU->CTRL = MPU_CTRL_ENABLE | MPU_CTRL_PRIVDEFENA;
     __DSB();
     __ISB();
 }
@@ -158,7 +168,7 @@ static __INLINE void setMPURegionAddress(uint32_t address)
     if (isMPUNotPresent())
         return;
 
-    MPU->RBAR = address << MPU_RBAR_ADDR_SHIFT;
+    MPU->RBAR = address & MPU_RBAR_ADDR_MASK;
 }
 
 static __INLINE uint32_t getMPURegionAddress(void)
@@ -166,7 +176,7 @@ static __INLINE uint32_t getMPURegionAddress(void)
     if (isMPUNotPresent())
         return 0;
 
-    return MPU->RBAR >> MPU_RBAR_ADDR_SHIFT;
+    return MPU->RBAR & MPU_RBAR_ADDR_MASK;
 }
 
 static __INLINE void setMPURegionAttributeAndSize(uint32_t attributeAndSize)

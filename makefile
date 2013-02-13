@@ -34,6 +34,12 @@ WRITE_BUFFER_DISABLE=1
 # 0 if you don't want to break into GDB at startup.
 ENABLE_DEBUG_MONITOR?=0
 
+# Set to non zero value if you want checks to be enabled which reserve a
+# specific amount of space for the stack.  The heap's growth will be
+# constrained to reserve this much space for the stack and the stack won't be
+# able to grow larger than this amount.
+STACK_SIZE=3072
+
 ifeq "$(ENABLE_DEBUG_MONITOR)" "1"
 # Can add MRI_UART_BAUD=115200 to next line if GDB fails to connect to MRI.
 # Tends to happen on some Linux distros but not Windows and OS X.
