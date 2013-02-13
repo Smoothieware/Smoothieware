@@ -17,6 +17,68 @@ define heapwalk
     end
 end
 
+document heapwalk
+Walks the heap and dumps each chunk encountered.
+It will also lists the line and source filename from where the chunk was
+allocated if not a freed chunk. Requires that HEAP_WALK be set to a value of 1
+in the Smoothie makefile.
+end
+
+
+
+
+define heapsize
+    if ($argc > 0)
+        set var $heap_base=(unsigned int)$arg0
+    else
+        set var $heap_base=(unsigned int)__smoothieHeapBase
+    end
+    printf "heap size: %d bytes\n", ('_sbrk::heap' - $heap_base)
+end
+
+document heapsize
+Displays the current heap size.
+Can provide an optional argument specifying the location of the base address
+for the heap. This isn't required if you have HEAP_WALK enabled in the makefile
+but if that features isn't enabled, you will want to run 
+"maintenance info section .heap" to determine this base address and then
+pass it as an argument to this comand.
+end
+
+
+
+define stacksize
+    printf "stack size: %d bytes\n", 0x10008000 - (unsigned int)$sp 
+end
+
+document stacksize
+Displays the current stack size.
+end
+
+
+
+define maxstacksize
+    set var $fill_curr=(unsigned int*)'_sbrk::heap'
+    while ($fill_curr < $sp && *$fill_curr == 0xdeadbeef)
+        set var $fill_curr = $fill_curr + 1
+    end
+
+    if ($fill_curr == '_sbrk::heap')
+        printf "No free space between heap and stack detected!\n"
+    else
+        printf "maximum stack size: %d bytes\n", 0x10008000 - (unsigned int)$fill_curr
+    end
+end
+
+document maxstacksize
+Displays the maximum stack amount of stack used.
+This can take awhile to run as it walks the area between the top of heap and
+the current top of stack to look for where initial fill values have been
+overwritten by stack writes.
+end
+
+
+
 define crashdump
     set pagination off
     set logging on
@@ -31,4 +93,8 @@ define crashdump
     info registers
     set logging off
     set pagination on
+end
+
+document crashdump
+Dumps a full crash dump to gdb.txt
 end

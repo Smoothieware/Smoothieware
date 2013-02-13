@@ -20,10 +20,16 @@
 #include <cmsis.h>
 #include "mpu.h"
 
+
+static void fillUnusedRAM(void);
 static void configureHighestMpuRegionToAccessAllMemoryWithNoCaching(void);
 
-extern unsigned int __bss_start__;
-extern unsigned int __bss_end__;
+
+extern unsigned int     __bss_start__;
+extern unsigned int     __bss_end__;
+extern "C" unsigned int __HeapBase;
+
+
 extern "C" int  main(void);
 extern "C" void __libc_init_array(void);
 extern "C" void exit(int ErrorCode);
@@ -33,7 +39,8 @@ extern "C" void _start(void)
     int mainReturnValue;
     
     memset(&__bss_start__, 0, bssSize);
-    
+    fillUnusedRAM();
+
     if (WRITE_BUFFER_DISABLE)
     {
         disableMPU();
@@ -46,11 +53,33 @@ extern "C" void _start(void)
         if (MRI_BREAK_ON_INIT)
             __debugbreak();
     }
-    
+
     __libc_init_array();
     mainReturnValue = main();
     exit(mainReturnValue);
 }
+
+static __attribute__((naked)) void fillUnusedRAM(void)
+{
+    __asm (
+        ".syntax unified\n"
+        ".thumb\n"
+        // Fill 2 words (8 bytes) at a time with 0xdeadbeef.
+        " ldr   r2, =__FillStart\n"
+        " movw  r0, #0xbeef\n"
+        " movt  r0, #0xdead\n"
+        " mov   r1, r0\n"
+        // Don't fill past current stack pointer value.
+        " mov   r3, sp\n"
+        " bics  r3, r3, #7\n"
+        "1$:\n"
+        " strd  r0, r1, [r2], #8\n"
+        " cmp   r2, r3\n"
+        " blo   1$\n"
+        " bx    lr\n"
+    );
+}
+
 
 static void configureHighestMpuRegionToAccessAllMemoryWithNoCaching(void)
 {
@@ -148,9 +177,6 @@ extern "C" void __malloc_unlock(void)
 {
 }
 
-
-/* Linker defined symbol to be used by sbrk for where dynamically heap should start. */
-extern "C" unsigned int __HeapBase;
 
 /* Turn off the errno macro and use actual external global variable instead. */
 #undef errno
