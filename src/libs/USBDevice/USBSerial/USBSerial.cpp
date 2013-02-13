@@ -36,14 +36,23 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(128 + 8), txbuf(128 + 8)
     attach = attached = false;
 }
 
+void USBSerial::ensure_tx_space(int space)
+{
+    while (txbuf.free() < space)
+    {
+        usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
+        usb->usbisr();
+    }
+}
+
 int USBSerial::_putc(int c)
 {
     if (!attached)
         return 1;
     if (c == '\r')
         return 1;
-    if (txbuf.free())
-        txbuf.queue(c);
+    ensure_tx_space(1);
+    txbuf.queue(c);
 
     usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
 //     usb->endpointTriggerInterrupt(CDC_BulkIn.bEndpointAddress);
@@ -77,7 +86,8 @@ int USBSerial::puts(const char *str)
     int i = 0;
     while (*str)
     {
-        if ((*str != '\r') && txbuf.free())
+        ensure_tx_space(1);
+        if ((*str != '\r'))
             txbuf.queue(*str);
         if ((txbuf.available() % 64) == 0)
             usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
