@@ -20,6 +20,7 @@
 #define CIRCBUFFER_H
 
 #include <stdlib.h>
+#include <ahbmalloc.h>
 
 template <class T>
 class CircBuffer {
@@ -28,7 +29,7 @@ public:
         write = 0;
         read = 0;
         size = length + 1;
-        buf = (T *)malloc(size * sizeof(T));
+        buf = (T *)ahbmalloc(size * sizeof(T), AHB_BANK_0);
     };
 
     bool isFull() {
