@@ -5,6 +5,7 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"
+#include "libs/Digipot.h"
 
 #define alpha_current_checksum                  CHECKSUM("alpha_current")
 #define beta_current_checksum                   CHECKSUM("beta_current")
@@ -22,7 +23,9 @@ class CurrentControl : public Module {
         double alpha_current;
         double beta_current;
         double gamma_current;
-        double delta_current;
+		double delta_current;
+
+		Digipot* digipot;
 };
 
 

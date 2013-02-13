@@ -11,7 +11,6 @@
 #include "libs/nuts_bolts.h"
 #include "libs/SlowTicker.h"
 #include "libs/Adc.h"
-#include "libs/Digipot.h"
 #include "libs/Pauser.h"
 #include "libs/StreamOutputPool.h"
 #include <mri.h>
@@ -63,7 +62,6 @@ Kernel::Kernel(){
     add_module( this->slow_ticker          = new SlowTicker());
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
-    this->digipot              = new Digipot();
 
     // LPC17xx-specific
     NVIC_SetPriorityGrouping(0);

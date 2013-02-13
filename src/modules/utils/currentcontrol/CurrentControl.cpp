@@ -8,10 +8,20 @@
 #include <string>
 using namespace std;
 
-CurrentControl::CurrentControl(){}
+CurrentControl::CurrentControl(){
+	digipot= NULL;
+}
 
 void CurrentControl::on_module_loaded(){
-    if( !this->kernel->config->value( currentcontrol_module_enable_checksum )->by_default(false)->as_bool() ){ return; }
+	if( !this->kernel->config->value( currentcontrol_module_enable_checksum )->by_default(false)->as_bool() ){
+		// as this module is not needed free up the resource
+		delete this;
+		return;
+	}
+
+	// allocate digipot, if already allocated delete it first
+	delete digipot;
+	digipot = new Digipot();
 
     // Get configuration
     this->alpha_current =           this->kernel->config->value(alpha_current_checksum  )->by_default(0.8)->as_number();
@@ -19,10 +29,10 @@ void CurrentControl::on_module_loaded(){
     this->gamma_current =           this->kernel->config->value(gamma_current_checksum  )->by_default(0.8)->as_number();
     this->delta_current =           this->kernel->config->value(delta_current_checksum  )->by_default(0.8)->as_number();
 
-    this->kernel->digipot->set_current(0, this->alpha_current);
-    this->kernel->digipot->set_current(1, this->beta_current );
-    this->kernel->digipot->set_current(2, this->gamma_current);
-    this->kernel->digipot->set_current(3, this->delta_current);
+    this->digipot->set_current(0, this->alpha_current);
+    this->digipot->set_current(1, this->beta_current );
+    this->digipot->set_current(2, this->gamma_current);
+    this->digipot->set_current(3, this->delta_current);
 
     this->register_for_event(ON_GCODE_RECEIVED);
 }
@@ -40,8 +50,8 @@ void CurrentControl::on_gcode_received(void *argument)
             for (i = 0; i < 4; i++)
             {
                 if (gcode->has_letter(alpha[i]))
-                    this->kernel->digipot->set_current(i, gcode->get_value(alpha[i]));
-                gcode->stream->printf("%c:%3.1fA%c", alpha[i], this->kernel->digipot->get_current(i), (i == 3)?'\n':' ');
+                    this->digipot->set_current(i, gcode->get_value(alpha[i]));
+                gcode->stream->printf("%c:%3.1fA%c", alpha[i], this->digipot->get_current(i), (i == 3)?'\n':' ');
             }
         }
     }
