@@ -59,6 +59,8 @@ protected:
     virtual void on_attach(void);
     virtual void on_detach(void);
 
+    void ensure_tx_space(int);
+
     volatile bool attach;
     bool attached;
 

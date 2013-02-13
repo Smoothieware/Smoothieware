@@ -120,7 +120,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
         buffer.append((char *)&c, 1);
         if( char(c) == '\n' ){
             newlines++;
-            stream->printf("%s", buffer.c_str());
+            stream->puts(buffer.c_str());
             buffer.clear();
         }
         if( newlines == limit ){ break; }
