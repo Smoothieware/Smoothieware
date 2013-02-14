@@ -11,6 +11,7 @@ alpha_steps_per_mm                           80               # Steps per mm for
 beta_steps_per_mm                            80               # Steps per mm for beta stepper
 gamma_steps_per_mm                           80               # Steps per mm for gamma stepper
 
+alpha_angle                                  0.0              # this provides an optional offset from the alpha tower to the x/y system
 beta_angle                                   120.0            # this is the angle in degrees from the alpha tower to the beta tower
 gamma_angle                                  240.0            # this is the angle in degrees from the alpha tower to the gamma tower
 

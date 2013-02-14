@@ -8,6 +8,9 @@ RostockSolution::RostockSolution(Config* passed_config) : config(passed_config){
     this->beta_steps_per_mm  = this->config->value( beta_steps_per_mm_checksum)->as_number();
     this->gamma_steps_per_mm = this->config->value(gamma_steps_per_mm_checksum)->as_number();
 
+    double alpha_angle  = PIOVER180 * this->config->value(alpha_angle_checksum)->by_default(0.0)->as_number();
+    this->sin_alpha     = sin(alpha_angle);
+    this->cos_alpha     = cos(alpha_angle);
     double beta_angle   = PIOVER180 * this->config->value( beta_angle_checksum)->by_default(120.0)->as_number();
     this->sin_beta      = sin(beta_angle);
     this->cos_beta      = cos(beta_angle);
@@ -24,13 +27,20 @@ RostockSolution::RostockSolution(Config* passed_config) : config(passed_config){
 }
 
 void RostockSolution::millimeters_to_steps( double millimeters[], int steps[] ){
-    double rotated[3];
-    steps[ALPHA_STEPPER] = lround( solve_arm( millimeters ) * this->alpha_steps_per_mm );
+    double alpha_rotated[3], rotated[3];
+    if( this->sin_alpha == 0 && this->cos_alpha == 1){
+        alpha_rotated[0] = millimeters[0];
+        alpha_rotated[1] = millimeters[1];
+        alpha_rotated[2] = millimeters[2];
+    }else{
+        rotate( millimeters, alpha_rotated, sin_alpha, cos_alpha );
+    }
+    steps[ALPHA_STEPPER] = lround( solve_arm( alpha_rotated ) * this->alpha_steps_per_mm );
 
-    rotate_beta(millimeters, rotated);
+    rotate( alpha_rotated, rotated, sin_beta, cos_beta );
     steps[BETA_STEPPER ] = lround( solve_arm( rotated ) * this->beta_steps_per_mm );
 
-    rotate_gamma(millimeters, rotated);
+    rotate( alpha_rotated, rotated, sin_gamma, cos_gamma );
     steps[GAMMA_STEPPER] = lround( solve_arm( rotated ) * this->gamma_steps_per_mm );
 }
 
@@ -42,24 +52,9 @@ double RostockSolution::solve_arm( double millimeters[]) {
     return arm_xlift - arm_ylift + millimeters[Z_AXIS];
 }
 
-#define SIN60 0.8660254037844386
-#define COS60 0.5
-
-#define SIN120 SIN60
-#define COS120 -COS60
- 
-#define SIN240 -SIN60
-#define COS240 -COS60
- 
-void RostockSolution::rotate_beta( double in[], double out[] ){
-    out[X_AXIS] = this->cos_beta * in[X_AXIS] - this->sin_beta * in[Y_AXIS];
-    out[Y_AXIS] = this->sin_beta * in[X_AXIS] + this->cos_beta * in[Y_AXIS];
-    out[Z_AXIS] = in[Z_AXIS];
-}
-
-void RostockSolution::rotate_gamma( double in[], double out[] ){
-    out[X_AXIS] = this->cos_gamma * in[X_AXIS] - this->sin_gamma * in[Y_AXIS];
-    out[Y_AXIS] = this->sin_gamma * in[X_AXIS] + this->cos_gamma * in[Y_AXIS];
+void RostockSolution::rotate(double in[], double out[], double sin, double cos ){
+    out[X_AXIS] = cos * in[X_AXIS] - sin * in[Y_AXIS];
+    out[Y_AXIS] = sin * in[X_AXIS] + cos * in[Y_AXIS];
     out[Z_AXIS] = in[Z_AXIS];
 }
 
