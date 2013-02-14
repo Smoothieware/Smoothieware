@@ -92,6 +92,12 @@ void Robot::on_gcode_received(void * argument){
 }
 
 
+void Robot::reset_axis_position(double position, int axis) {
+    this->last_milestone[axis] = this->current_position[axis] = 0.0;
+    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+}
+
+
 //See if the current Gcode line has some orders for us
 void Robot::execute_gcode(Gcode* gcode){
 
