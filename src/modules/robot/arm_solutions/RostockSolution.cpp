@@ -1,15 +1,24 @@
 #include "RostockSolution.h"
 #include <math.h>
 
+#define PIOVER180       0.01745329251994329576923690768489
+
 RostockSolution::RostockSolution(Config* passed_config) : config(passed_config){
     this->alpha_steps_per_mm = this->config->value(alpha_steps_per_mm_checksum)->as_number();
     this->beta_steps_per_mm  = this->config->value( beta_steps_per_mm_checksum)->as_number();
     this->gamma_steps_per_mm = this->config->value(gamma_steps_per_mm_checksum)->as_number();
 
+    double beta_angle   = PIOVER180 * this->config->value( beta_angle_checksum)->by_default(120.0)->as_number();
+    this->sin_beta      = sin(beta_angle);
+    this->cos_beta      = cos(beta_angle);
+    double gamma_angle  = PIOVER180 * this->config->value(gamma_angle_checksum)->by_default(240.0)->as_number();
+    this->sin_gamma     = sin(gamma_angle);
+    this->cos_gamma     = cos(gamma_angle);
+
     // arm_length is the length of the arm from hinge to hinge
-    this->arm_length         = this->config->value(rostock_arm_length_checksum)->by_default(430.0)->as_number();
+    this->arm_length         = this->config->value(arm_length_checksum)->by_default(430.0)->as_number();
     // arm_radius is the horizontal distance from hinge to hinge when the effector is centered
-    this->arm_radius         = this->config->value(rostock_arm_radius_checksum)->by_default(220.675)->as_number();
+    this->arm_radius         = this->config->value(arm_radius_checksum)->by_default(220.675)->as_number();
 
     this->arm_length_squared = pow(this->arm_length, 2);
 }
@@ -18,10 +27,10 @@ void RostockSolution::millimeters_to_steps( double millimeters[], int steps[] ){
     double rotated[3];
     steps[ALPHA_STEPPER] = lround( solve_arm( millimeters ) * this->alpha_steps_per_mm );
 
-    rotate_120(millimeters, rotated);
+    rotate_beta(millimeters, rotated);
     steps[BETA_STEPPER ] = lround( solve_arm( rotated ) * this->beta_steps_per_mm );
 
-    rotate_240(millimeters, rotated);
+    rotate_gamma(millimeters, rotated);
     steps[GAMMA_STEPPER] = lround( solve_arm( rotated ) * this->gamma_steps_per_mm );
 }
 
@@ -42,15 +51,15 @@ double RostockSolution::solve_arm( double millimeters[]) {
 #define SIN240 -SIN60
 #define COS240 -COS60
  
-void RostockSolution::rotate_120( double in[], double out[] ){
-    out[X_AXIS] = COS120 * in[X_AXIS] - SIN120 * in[Y_AXIS];
-    out[Y_AXIS] = SIN120 * in[X_AXIS] + COS120 * in[Y_AXIS];
+void RostockSolution::rotate_beta( double in[], double out[] ){
+    out[X_AXIS] = this->cos_beta * in[X_AXIS] - this->sin_beta * in[Y_AXIS];
+    out[Y_AXIS] = this->sin_beta * in[X_AXIS] + this->cos_beta * in[Y_AXIS];
     out[Z_AXIS] = in[Z_AXIS];
 }
 
-void RostockSolution::rotate_240( double in[], double out[] ){
-    out[X_AXIS] = COS240 * in[X_AXIS] - SIN240 * in[Y_AXIS];
-    out[Y_AXIS] = SIN240 * in[X_AXIS] + COS240 * in[Y_AXIS];
+void RostockSolution::rotate_gamma( double in[], double out[] ){
+    out[X_AXIS] = this->cos_gamma * in[X_AXIS] - this->sin_gamma * in[Y_AXIS];
+    out[Y_AXIS] = this->sin_gamma * in[X_AXIS] + this->cos_gamma * in[Y_AXIS];
     out[Z_AXIS] = in[Z_AXIS];
 }
 

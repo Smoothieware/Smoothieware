@@ -11,6 +11,9 @@ alpha_steps_per_mm                           80               # Steps per mm for
 beta_steps_per_mm                            80               # Steps per mm for beta stepper
 gamma_steps_per_mm                           80               # Steps per mm for gamma stepper
 
+beta_angle                                   120.0            # this is the angle in degrees from the alpha tower to the beta tower
+gamma_angle                                  240.0            # this is the angle in degrees from the alpha tower to the gamma tower
+
 arm_length                                   430.0            # this is the length of an arm from hinge to hinge
 arm_radius                                   220.675          # this is the horiontal distance from hinge to hinge when the effector is centered
 

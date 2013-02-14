@@ -11,8 +11,11 @@
 #define beta_steps_per_mm_checksum  CHECKSUM("beta_steps_per_mm")
 #define gamma_steps_per_mm_checksum CHECKSUM("gamma_steps_per_mm")
 
-#define rostock_arm_length_checksum         CHECKSUM("arm_length")
-#define rostock_arm_radius_checksum         CHECKSUM("arm_radius")
+#define arm_length_checksum         CHECKSUM("arm_length")
+#define arm_radius_checksum         CHECKSUM("arm_radius")
+
+#define beta_angle_checksum         CHECKSUM("beta_angle")
+#define gamma_angle_checksum        CHECKSUM("gamma_angle")
 
 class RostockSolution : public BaseSolution {
     public:
@@ -24,8 +27,8 @@ class RostockSolution : public BaseSolution {
         void get_steps_per_millimeter( double steps[] );
 
         double solve_arm( double millimeters[] );
-        void rotate_120( double coords[], double out[] );
-        void rotate_240( double coords[], double out[] );
+        void rotate_beta( double coords[], double out[] );
+        void rotate_gamma( double coords[], double out[] );
 
         Config* config;
         double alpha_steps_per_mm;
@@ -35,6 +38,11 @@ class RostockSolution : public BaseSolution {
         double arm_length;
         double arm_radius;
         double arm_length_squared;
+
+        double sin_beta;
+        double cos_beta;
+        double sin_gamma;
+        double cos_gamma;
 };
 
 
