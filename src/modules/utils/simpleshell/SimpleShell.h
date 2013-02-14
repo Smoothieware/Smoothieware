@@ -15,13 +15,16 @@
 #include "libs/StreamOutput.h"
 
 
-#define ls_command_checksum      CHECKSUM("ls")
-#define cd_command_checksum      CHECKSUM("cd")
-#define pwd_command_checksum     CHECKSUM("pwd")
-#define cat_command_checksum     CHECKSUM("cat")
-#define play_command_checksum    CHECKSUM("play")
-#define reset_command_checksum   CHECKSUM("reset")
-#define dfu_command_checksum     CHECKSUM("dfu")
+#define ls_command_checksum       CHECKSUM("ls")
+#define cd_command_checksum       CHECKSUM("cd")
+#define pwd_command_checksum      CHECKSUM("pwd")
+#define cat_command_checksum      CHECKSUM("cat")
+#define play_command_checksum     CHECKSUM("play")
+#define progress_command_checksum CHECKSUM("progress")
+#define abort_command_checksum    CHECKSUM("abort")
+#define reset_command_checksum    CHECKSUM("reset")
+#define dfu_command_checksum      CHECKSUM("dfu")
+#define help_command_checksum     CHECKSUM("help")
 
 class SimpleShell : public Module {
     public:
@@ -36,12 +39,18 @@ class SimpleShell : public Module {
         void pwd_command(  string parameters, StreamOutput* stream );
         void cat_command(  string parameters, StreamOutput* stream );
         void play_command( string parameters, StreamOutput* stream );
-        void reset_command(string parameters, StreamOutput* stream );
-
+        void progress_command( string parameters, StreamOutput* stream );
+        void abort_command( string parameters, StreamOutput* stream );
+		void reset_command(string parameters, StreamOutput* stream );
+		void help_command(string parameters, StreamOutput* stream );
+		
+	private:
         string current_path;
-        bool playing_file;
+		bool playing_file;
+		
         StreamOutput* current_stream;
-        FILE* current_file_handler;
+		FILE* current_file_handler;
+		long file_size, played_cnt;
 };
 
 

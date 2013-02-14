@@ -16,7 +16,11 @@ Laser::Laser(){
 }
 
 void Laser::on_module_loaded() {
-    if( !this->kernel->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){ return; }
+	if( !this->kernel->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){
+		// as not needed free up resource
+		delete this;
+		return;
+	}
 
     this->laser_pin = new mbed::PwmOut(p21);
     this->laser_pin->period_us(20);
