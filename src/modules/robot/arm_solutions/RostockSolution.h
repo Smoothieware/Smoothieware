@@ -14,9 +14,9 @@
 #define arm_length_checksum         CHECKSUM("arm_length")
 #define arm_radius_checksum         CHECKSUM("arm_radius")
 
-#define alpha_angle_checksum        CHECKSUM("alpha_angle")
-#define beta_angle_checksum         CHECKSUM("beta_angle")
-#define gamma_angle_checksum        CHECKSUM("gamma_angle")
+#define alpha_angle_checksum                CHECKSUM("alpha_angle")
+#define beta_relative_angle_checksum         CHECKSUM("beta_relative_angle")
+#define gamma_relative_angle_checksum        CHECKSUM("gamma_relative_angle")
 
 class RostockSolution : public BaseSolution {
     public:

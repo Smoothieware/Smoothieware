@@ -11,10 +11,10 @@ RostockSolution::RostockSolution(Config* passed_config) : config(passed_config){
     double alpha_angle  = PIOVER180 * this->config->value(alpha_angle_checksum)->by_default(0.0)->as_number();
     this->sin_alpha     = sin(alpha_angle);
     this->cos_alpha     = cos(alpha_angle);
-    double beta_angle   = PIOVER180 * this->config->value( beta_angle_checksum)->by_default(120.0)->as_number();
+    double beta_angle   = PIOVER180 * this->config->value( beta_relative_angle_checksum)->by_default(120.0)->as_number();
     this->sin_beta      = sin(beta_angle);
     this->cos_beta      = cos(beta_angle);
-    double gamma_angle  = PIOVER180 * this->config->value(gamma_angle_checksum)->by_default(240.0)->as_number();
+    double gamma_angle  = PIOVER180 * this->config->value(gamma_relative_angle_checksum)->by_default(240.0)->as_number();
     this->sin_gamma     = sin(gamma_angle);
     this->cos_gamma     = cos(gamma_angle);
 
