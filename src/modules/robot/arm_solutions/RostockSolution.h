@@ -13,7 +13,6 @@
 
 #define rostock_arm_length_checksum         CHECKSUM("arm_length")
 #define rostock_arm_radius_checksum         CHECKSUM("arm_radius")
-#define rostock_carriage_radius_checksum    CHECKSUM("carriage_radius")
 
 class RostockSolution : public BaseSolution {
     public:
@@ -32,9 +31,10 @@ class RostockSolution : public BaseSolution {
         double alpha_steps_per_mm;
         double beta_steps_per_mm;
         double gamma_steps_per_mm;
+
         double arm_length;
         double arm_radius;
-        double carriage_radius;
+        double arm_length_squared;
 };
 
 

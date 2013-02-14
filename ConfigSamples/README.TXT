@@ -8,6 +8,8 @@ The samples include:
 * Smoothieboard - This directory contains a sample configuration for the
   most recent Smoothieboard.
   
+* Smoothieboard.Rostock - This directory contains a sample config for a
+  Rostock or Kossel style bot using the most recent Smoothieboard.
 
 You can find even more information about Smoothie configuration at this URL:
 http://smoothieware.org/configuring-smoothie
