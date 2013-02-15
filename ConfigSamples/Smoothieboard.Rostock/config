@@ -15,8 +15,8 @@ alpha_angle                                  0.0              # this provides an
 beta_relative_angle                          120.0            # this is the angle in degrees from the alpha tower to the beta tower
 gamma_relative_angle                         240.0            # this is the angle in degrees from the alpha tower to the gamma tower
 
-arm_length                                   430.0            # this is the length of an arm from hinge to hinge
-arm_radius                                   220.675          # this is the horiontal distance from hinge to hinge when the effector is centered
+arm_length                                   240.0            # this is the length of an arm from hinge to hinge
+arm_radius                                   114.0            # this is the horiontal distance from hinge to hinge when the effector is centered
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           64               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
@@ -101,10 +101,33 @@ switch.spindle.enable                        false            #
 # Endstops
 alpha_min_endstop                            1.24             #
 alpha_max_endstop                            1.25             #
+alpha_homing_direction                       1                #
+alpha_min                                    0                #
+alpha_max                                    0                #
 beta_min_endstop                             1.26             #
 beta_max_endstop                             1.27             #
+beta_homing_direction                        1                #
+beta_min                                     0                #
+beta_max                                     0                #
 gamma_min_endstop                            1.28             #
 gamma_max_endstop                            1.29             #
+gamma_homing_direction                       1                #
+gamma_min                                    0                #
+gamma_max                                    300              #
+
+alpha_fast_homing_rate                       3000              # rates in steps/second 
+beta_fast_homing_rate                        3000              #
+gamma_fast_homing_rate                       3000              #
+alpha_slow_homing_rate                       1000              # 
+beta_slow_homing_rate                        1000              #
+gamma_slow_homing_rate                       1000              
+
+alpha_homing_retract                         500               #
+beta_homing_retract                          500               #
+gamma_homing_retract                         500               #
+
+# Pause button
+pause_button_enable                          true             #
 
 # Panel
 panel.enable                                 false            #
