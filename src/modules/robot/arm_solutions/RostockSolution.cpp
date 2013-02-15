@@ -47,9 +47,7 @@ void RostockSolution::millimeters_to_steps( double millimeters[], int steps[] ){
 void RostockSolution::steps_to_millimeters( int steps[], double millimeters[] ){} 
 
 double RostockSolution::solve_arm( double millimeters[]) {
-    double arm_xlift = sqrt( arm_length_squared - pow( this->arm_radius - millimeters[X_AXIS], 2 ) );
-    double arm_ylift = sqrt( pow( arm_xlift, 2) - pow( - millimeters[Y_AXIS], 2 ) ) + arm_xlift;
-    return arm_xlift - arm_ylift + millimeters[Z_AXIS];
+    return sqrt(arm_length_squared - pow(millimeters[X_AXIS] - this->arm_radius, 2) - pow(millimeters[Y_AXIS], 2)) + millimeters[Z_AXIS];
 }
 
 void RostockSolution::rotate(double in[], double out[], double sin, double cos ){
