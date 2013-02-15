@@ -93,10 +93,19 @@ switch.spindle.enable                        false            #
 # Endstops
 alpha_min_endstop                            1.24             #
 alpha_max_endstop                            1.25             #
+alpha_homing_direction                       -1               #
+alpha_min                                    0                #
+alpha_max                                    200              #
 beta_min_endstop                             1.26             #
 beta_max_endstop                             1.27             #
+beta_homing_direction                        -1               #
+beta_min                                     0                #
+beta_max                                     200              #
 gamma_min_endstop                            1.28             #
 gamma_max_endstop                            1.29             #
+gamma_homing_direction                       1                #
+gamma_min                                    0                #
+gamma_max                                    200              #
 
 # Panel
 panel.enable                                 false            #
