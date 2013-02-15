@@ -60,6 +60,11 @@
 #define MSC_REQUEST_RESET          0xFF
 #define MSC_REQUEST_GET_MAX_LUN    0xFE
 
+#define STARTSTOP_STOPMOTOR        0x0
+#define STARTSTOP_STARTMOTOR       0x1
+#define STARTSTOP_EJECT            0x2
+#define STARTSTOP_LOAD             0x3
+
 #define DEFAULT_CONFIGURATION (1)
 
 // max packet size
@@ -563,7 +568,25 @@ void USBMSD::CBWDecode(uint8_t * buf, uint16_t size) {
                             }
                         }
                         break;
+                    case START_STOP_UNIT:
+                    {
+                        switch (cbw.CB[4] & 0x03)
+                        {
+                            case STARTSTOP_STOPMOTOR:
+                                break;
+                            case STARTSTOP_STARTMOTOR:
+                                break;
+                            case STARTSTOP_EJECT:
+                                break;
+                            case STARTSTOP_LOAD:
+                                break;
+                        }
+                        csw.Status = CSW_PASSED;
+                        sendCSW();
+                        break;
+                    }
                     default:
+                        iprintf("MSD: Unhandled SCSI CBW 0x%02X\n", cbw.CB[0]);
                         fail();
                         break;
                 }
