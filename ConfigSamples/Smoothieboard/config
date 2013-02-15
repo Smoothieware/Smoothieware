@@ -107,6 +107,20 @@ gamma_homing_direction                       1                #
 gamma_min                                    0                #
 gamma_max                                    200              #
 
+alpha_fast_homing_rate                       3000              # rates in steps/second 
+beta_fast_homing_rate                        3000              # depends on steps/mm setting above
+gamma_fast_homing_rate                       30000             # "
+alpha_slow_homing_rate                       1000              # "
+beta_slow_homing_rate                        1000              # "
+gamma_slow_homing_rate                       10000              
+
+alpha_homing_retract                         500               # "
+beta_homing_retract                          500               # "
+gamma_homing_retract                         5000              # "
+
+# Pause button
+pause_button_enable                          true             #
+
 # Panel
 panel.enable                                 false            #
 panel.up_button_pin                          0.1!             #
