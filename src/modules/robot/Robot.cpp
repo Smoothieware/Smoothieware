@@ -19,6 +19,7 @@ using std::string;
 #include "../communication/utils/Gcode.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
+#include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/RostockSolution.h"
 
 Robot::Robot(){
