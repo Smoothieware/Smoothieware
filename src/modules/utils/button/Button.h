@@ -16,13 +16,13 @@
 class Button : public Module {
     public:
         Button(uint16_t name);
-       
+
         void on_module_loaded();
         void on_config_reload(void* argument);
         uint32_t button_tick(uint32_t dummy);
 
-		void send_gcode(string msg, StreamOutput* stream);
-        
+        void send_gcode(string msg, StreamOutput* stream);
+
         bool       toggle;
         bool       button_state;
         bool       switch_state;
