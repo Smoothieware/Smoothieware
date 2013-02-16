@@ -19,6 +19,8 @@ using std::string;
 #include "../communication/utils/Gcode.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
+#include "arm_solutions/RotatableCartesianSolution.h"
+#include "arm_solutions/RostockSolution.h"
 
 Robot::Robot(){
     this->inch_mode = false;
@@ -27,41 +29,65 @@ Robot::Robot(){
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
     clear_vector(this->current_position);
     clear_vector(this->last_milestone);
+    this->arm_solution = NULL;
+    seconds_per_minute = 60.0;
 }
 
 //Called when the module has just been loaded
 void Robot::on_module_loaded() {
-    this->arm_solution = new CartesianSolution(this->kernel->config);
+    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
 
     // Configuration
     this->on_config_reload(this);
 
     // Make our 3 StepperMotors
-    this->alpha_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->alpha_step_pin,this->alpha_dir_pin,this->alpha_en_pin) );
-    this->beta_stepper_motor   = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->beta_step_pin, this->beta_dir_pin, this->beta_en_pin ) );
-    this->gamma_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->gamma_step_pin,this->gamma_dir_pin,this->gamma_en_pin) );
+    this->alpha_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&alpha_step_pin,&alpha_dir_pin,&alpha_en_pin) );
+    this->beta_stepper_motor   = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&beta_step_pin, &beta_dir_pin, &beta_en_pin ) );
+    this->gamma_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&gamma_step_pin,&gamma_dir_pin,&gamma_en_pin) );
 
 }
 
 void Robot::on_config_reload(void* argument){
-    this->feed_rate =           this->kernel->config->value(default_feed_rate_checksum  )->by_default(100)->as_number()/60;
-    this->seek_rate =           this->kernel->config->value(default_seek_rate_checksum  )->by_default(100)->as_number()/60;
-    this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum)->by_default(0.1)->as_number();
-    this->mm_per_arc_segment  = this->kernel->config->value(mm_per_arc_segment_checksum )->by_default(10 )->as_number();
-    this->arc_correction      = this->kernel->config->value(arc_correction_checksum     )->by_default(5  )->as_number();
-    this->max_speeds[X_AXIS]  = this->kernel->config->value(x_axis_max_speed_checksum   )->by_default(0  )->as_number();
-    this->max_speeds[Y_AXIS]  = this->kernel->config->value(y_axis_max_speed_checksum   )->by_default(0  )->as_number();
-    this->max_speeds[Z_AXIS]  = this->kernel->config->value(z_axis_max_speed_checksum   )->by_default(0  )->as_number();
-    this->alpha_step_pin      =  this->kernel->config->value(alpha_step_pin_checksum               )->by_default("1.21"     )->as_pin()->as_output();
-    this->beta_step_pin       =  this->kernel->config->value(beta_step_pin_checksum                )->by_default("1.23"     )->as_pin()->as_output();
-    this->gamma_step_pin      =  this->kernel->config->value(gamma_step_pin_checksum               )->by_default("1.22!"    )->as_pin()->as_output();
-    this->alpha_dir_pin       =  this->kernel->config->value(alpha_dir_pin_checksum                )->by_default("1.18"     )->as_pin()->as_output();
-    this->beta_dir_pin        =  this->kernel->config->value(beta_dir_pin_checksum                 )->by_default("1.20"     )->as_pin()->as_output();
-    this->gamma_dir_pin       =  this->kernel->config->value(gamma_dir_pin_checksum                )->by_default("1.19"     )->as_pin()->as_output();
-    this->alpha_en_pin        =  this->kernel->config->value(alpha_en_pin_checksum                 )->by_default("0.4"      )->as_pin()->as_output()->as_open_drain();
-    this->beta_en_pin         =  this->kernel->config->value(beta_en_pin_checksum                  )->by_default("0.10"     )->as_pin()->as_output()->as_open_drain();
-    this->gamma_en_pin        =  this->kernel->config->value(gamma_en_pin_checksum                 )->by_default("0.19"     )->as_pin()->as_output()->as_open_drain();
+    if (this->arm_solution) delete this->arm_solution;
+    int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
+
+	// Note checksums are not const expressions when in debug mode, so don't use switch
+	if(solution_checksum == rostock_checksum) {
+		this->arm_solution = new RostockSolution(this->kernel->config);
+
+	}else if(solution_checksum ==  delta_checksum) {
+		// place holder for now
+		this->arm_solution = new RostockSolution(this->kernel->config);
+
+    }else if(solution_checksum == rotatable_cartesian_checksum) {
+        this->arm_solution = new RotatableCartesianSolution(this->kernel->config);
+
+	}else if(solution_checksum == cartesian_checksum) {
+		this->arm_solution = new CartesianSolution(this->kernel->config);
+
+	}else{
+		this->arm_solution = new CartesianSolution(this->kernel->config);
+	}
+
+
+    this->feed_rate           = this->kernel->config->value(default_feed_rate_checksum   )->by_default(100    )->as_number() / 60;
+    this->seek_rate           = this->kernel->config->value(default_seek_rate_checksum   )->by_default(100    )->as_number() / 60;
+    this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum )->by_default(5.0    )->as_number();
+    this->mm_per_arc_segment  = this->kernel->config->value(mm_per_arc_segment_checksum  )->by_default(0.5    )->as_number();
+    this->arc_correction      = this->kernel->config->value(arc_correction_checksum      )->by_default(5      )->as_number();
+    this->max_speeds[X_AXIS]  = this->kernel->config->value(x_axis_max_speed_checksum    )->by_default(60000  )->as_number();
+    this->max_speeds[Y_AXIS]  = this->kernel->config->value(y_axis_max_speed_checksum    )->by_default(60000  )->as_number();
+    this->max_speeds[Z_AXIS]  = this->kernel->config->value(z_axis_max_speed_checksum    )->by_default(300    )->as_number();
+    this->alpha_step_pin.from_string( this->kernel->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
+    this->alpha_dir_pin.from_string(  this->kernel->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
+    this->alpha_en_pin.from_string(   this->kernel->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output()->as_open_drain();
+    this->beta_step_pin.from_string(  this->kernel->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
+    this->gamma_step_pin.from_string( this->kernel->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
+    this->gamma_dir_pin.from_string(  this->kernel->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
+    this->gamma_en_pin.from_string(   this->kernel->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output()->as_open_drain();
+    this->beta_dir_pin.from_string(   this->kernel->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
+    this->beta_en_pin.from_string(    this->kernel->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output()->as_open_drain();
 
 }
 
@@ -82,63 +108,108 @@ void Robot::on_gcode_received(void * argument){
         Block* block = this->kernel->player->queue.get_ref( this->kernel->player->queue.size() - 1 );
         this->execute_gcode(gcode);
         block->append_gcode(gcode);
+        gcode->queued++;
     }
-    
+}
+
+
+void Robot::reset_axis_position(double position, int axis) {
+    this->last_milestone[axis] = this->current_position[axis] = position;
+    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
 }
 
 
 //See if the current Gcode line has some orders for us
 void Robot::execute_gcode(Gcode* gcode){
-    
+
     //Temp variables, constant properties are stored in the object
     uint8_t next_action = NEXT_ACTION_DEFAULT;
     this->motion_mode = -1;
 
    //G-letter Gcodes are mostly what the Robot module is interrested in, other modules also catch the gcode event and do stuff accordingly
-   if( gcode->has_letter('G')){
-       switch( (int) gcode->get_value('G') ){
-           case 0: this->motion_mode = MOTION_MODE_SEEK; break;
-           case 1: this->motion_mode = MOTION_MODE_LINEAR; break;
-           case 2: this->motion_mode = MOTION_MODE_CW_ARC; break;
-           case 3: this->motion_mode = MOTION_MODE_CCW_ARC; break;
-           case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); break;
-           case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); break;
-           case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); break;
-           case 20:this->inch_mode = true; break;
-           case 21:this->inch_mode = false; break;
-           case 90:this->absolute_mode = true; break;
-           case 91:this->absolute_mode = false; break;
-           /*case 92: clear_vector(this->last_milestone);
+    if( gcode->has_letter('G')){
+        switch( (int) gcode->get_value('G') ){
+            case 0:  this->motion_mode = MOTION_MODE_SEEK; break;
+            case 1:  this->motion_mode = MOTION_MODE_LINEAR; break;
+            case 2:  this->motion_mode = MOTION_MODE_CW_ARC; break;
+            case 3:  this->motion_mode = MOTION_MODE_CCW_ARC; break;
+            case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); break;
+            case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); break;
+            case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); break;
+            case 20: this->inch_mode = true; break;
+            case 21: this->inch_mode = false; break;
+            case 90: this->absolute_mode = true; break;
+            case 91: this->absolute_mode = false; break;
+            case 92: {
+                if(gcode->get_num_args() == 0){
+                    clear_vector(this->last_milestone);
+                }else{
                     for (char letter = 'X'; letter <= 'Z'; letter++){
                         if ( gcode->has_letter(letter) )
-                          this->last_milestone[letter-'X'] = this->to_millimeters(gcode->get_value(letter));
+                            this->last_milestone[letter-'X'] = this->to_millimeters(gcode->get_value(letter));
                     }
-                    memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
-                    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
-                    return; // TODO: Wait until queue empty
-            */ 
-        }
+                }
+                memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
+                this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+                return; // TODO: Wait until queue empty
+           }
+       }
    }else if( gcode->has_letter('M')){
      switch( (int) gcode->get_value('M') ){
-         case 114: this->kernel->streams->printf("C: X:%1.3f Y:%1.3f Z:%1.3f\n",
+            case 92: // M92 - set steps per mm
+                double steps[3];
+                this->arm_solution->get_steps_per_millimeter(steps);
+                if (gcode->has_letter('X'))
+                    steps[0] = this->to_millimeters(gcode->get_value('X'));
+                if (gcode->has_letter('Y'))
+                    steps[1] = this->to_millimeters(gcode->get_value('Y'));
+                if (gcode->has_letter('Z'))
+                    steps[2] = this->to_millimeters(gcode->get_value('Z'));
+                if (gcode->has_letter('F'))
+                    seconds_per_minute = gcode->get_value('F');
+                this->arm_solution->set_steps_per_millimeter(steps);
+                // update current position in steps
+                this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+                gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", steps[0], steps[1], steps[2], seconds_per_minute);
+                gcode->add_nl = true;
+                return;
+            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
                                                  this->current_position[0],
                                                  this->current_position[1],
                                                  this->current_position[2]);
-                   return;
-       }
-   }else{ return; }
-    
+                gcode->add_nl = true;
+                return;
+            case 220: // M220 - speed override percentage
+                if (gcode->has_letter('S'))
+                {
+                    double factor = gcode->get_value('S');
+                    // enforce minimum 1% speed
+                    if (factor < 1.0)
+                        factor = 1.0;
+                    seconds_per_minute = factor * 0.6;
+                }
+        }
+   }
+    if( this->motion_mode < 0)
+        return;
+
    //Get parameters
     double target[3], offset[3];
     clear_vector(target); clear_vector(offset);
-    
+
     memcpy(target, this->current_position, sizeof(target));    //default to last target
-    
+
     for(char letter = 'I'; letter <= 'K'; letter++){ if( gcode->has_letter(letter) ){ offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));                                                    } }
     for(char letter = 'X'; letter <= 'Z'; letter++){ if( gcode->has_letter(letter) ){ target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);  } }
-    
-    if( gcode->has_letter('F') ){ if( this->motion_mode == MOTION_MODE_SEEK ){ this->seek_rate = this->to_millimeters( gcode->get_value('F') ) / 60; }else{ this->feed_rate = this->to_millimeters( gcode->get_value('F') ) / 60; } }
-   
+
+    if( gcode->has_letter('F') )
+    {
+        if( this->motion_mode == MOTION_MODE_SEEK )
+            this->seek_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0;
+        else
+            this->feed_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0;
+    }
+
     //Perform any physical actions
     switch( next_action ){
         case NEXT_ACTION_DEFAULT:
@@ -161,28 +232,25 @@ void Robot::execute_gcode(Gcode* gcode){
 // Convert target from millimeters to steps, and append this to the planner
 void Robot::append_milestone( double target[], double rate ){
     int steps[3]; //Holds the result of the conversion
-   
+
     this->arm_solution->millimeters_to_steps( target, steps );
-    
+
     double deltas[3];
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
 
-    
+
     double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
-    
-    double duration = 0;
-    if( rate > 0 ){ duration = millimeters_of_travel / rate; }
 
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
         if( this->max_speeds[axis] > 0 ){
-            double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * 60;
+            double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * seconds_per_minute;
             if( axis_speed > this->max_speeds[axis] ){
                 rate = rate * ( this->max_speeds[axis] / axis_speed );
             }
         }
     }
 
-    this->kernel->planner->append_block( steps, rate*60, millimeters_of_travel, deltas );
+    this->kernel->planner->append_block( steps, rate * seconds_per_minute, millimeters_of_travel, deltas );
 
     memcpy(this->last_milestone, target, sizeof(double)*3); // this->last_milestone[] = target[];
 
@@ -248,7 +316,7 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
         this->append_milestone(this->current_position, 0.0);
         return;
     }
- 
+
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
 
     double theta_per_segment = angular_travel/segments;

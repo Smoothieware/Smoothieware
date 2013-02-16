@@ -20,9 +20,9 @@
 #define CONF_SD         2
 #define CONF_EEPROM     3
 
-#define config_get_command_checksum        46310    // "config-get"
-#define config_set_command_checksum        55538    // "config-set"
-#define config_load_command_checksum       3143     // "config-load"
+#define config_get_command_checksum        CHECKSUM("config-get")
+#define config_set_command_checksum        CHECKSUM("config-set")
+#define config_load_command_checksum       CHECKSUM("config-load")
 
 class Configurator : public Module {
     public:

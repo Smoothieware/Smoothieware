@@ -35,7 +35,7 @@ void SerialConsole::on_module_loaded() {
     // Add to the pack of streams kernel can call to, for example for broadcasting
     this->kernel->streams->append_stream(this);
 }
-        
+
 // Called on Serial::RxIrq interrupt, meaning we have received a char
 void SerialConsole::on_serial_char_received(){
     while(this->serial->readable()){
@@ -45,11 +45,12 @@ void SerialConsole::on_serial_char_received(){
         this->buffer.push_back(received);
     }
 }
-        
+
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){
     if( this->has_char('\n') ){
         string received;
+        received.reserve(20);
         while(1){
            char c;
            this->buffer.pop_front(c);
@@ -67,15 +68,20 @@ void SerialConsole::on_main_loop(void * argument){
 }
 
 
-int SerialConsole::printf(const char* format, ...){
-    va_list args;
-    int result;
-    va_start (args, format);
-    result = vfprintf( this->serial->_file, format, args);
-    va_end (args);
-    return result;
+int SerialConsole::puts(const char* s)
+{
+    return fwrite(s, strlen(s), 1, this->serial->_file);
 }
 
+int SerialConsole::_putc(int c)
+{
+    return this->serial->putc(c);
+}
+
+int SerialConsole::_getc()
+{
+    return this->serial->getc();
+}
 
 bool SerialConsole::has_char(char letter){
     int index = this->buffer.head;

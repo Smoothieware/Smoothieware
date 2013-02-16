@@ -18,18 +18,21 @@ using std::string;
 #include "libs/StreamOutput.h"
 
 
-#define baud_rate_setting_checksum 10922
+#define baud_rate_setting_checksum CHECKSUM("baud_rate")
 
 class SerialConsole : public Module, public StreamOutput {
     public:
         SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate );
-        
-        virtual void on_module_loaded();
+
+        void on_module_loaded();
         void on_serial_char_received();
-        virtual void on_main_loop(void * argument);
+        void on_main_loop(void * argument);
         bool has_char(char letter);
-        int printf(const char* format, ...);
-        
+
+        int _putc(int c);
+        int _getc(void);
+        int puts(const char*);
+
         //string receive_buffer;                 // Received chars are stored here until a newline character is received
         //vector<std::string> received_lines;    // Received lines are stored here until they are requested
         RingBuffer<char,256> buffer;             // Receive buffer

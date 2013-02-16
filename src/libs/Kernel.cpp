@@ -11,7 +11,6 @@
 #include "libs/nuts_bolts.h"
 #include "libs/SlowTicker.h"
 #include "libs/Adc.h"
-#include "libs/Digipot.h"
 #include "libs/Pauser.h"
 #include "libs/StreamOutputPool.h"
 #include <mri.h>
@@ -26,35 +25,16 @@
 
 
 
-// List of callback functions, ordered as their corresponding events
-const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
-        &Module::on_main_loop,
-        &Module::on_console_line_received,
-        &Module::on_gcode_received,
-        &Module::on_stepper_wake_up,
-        &Module::on_gcode_execute,
-        &Module::on_speed_change,
-        &Module::on_block_begin,
-        &Module::on_block_end,
-        &Module::on_config_reload,
-        &Module::on_play,
-        &Module::on_pause,
-        &Module::on_idle
-};
+#define baud_rate_setting_checksum CHECKSUM("baud_rate")
+#define uart0_checksum             CHECKSUM("uart0")
 
-#define baud_rate_setting_checksum 10922
-#define uart0_checksum             16877
+static int isDebugMonitorUsingUart0()
+{
+    return NVIC_GetPriority(UART0_IRQn) == 0;
+}
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
-
-    // Value init for the arrays
-    for( uint8_t i=0; i<NUMBER_OF_DEFINED_EVENTS; i++ ){
-        for( uint8_t index=0; index<32; index++ ){
-            this->hooks[i][index] = NULL;
-        }
-    }
-
     // Config first, because we need the baud_rate setting before we start serial
     this->config         = new Config();
 
@@ -63,32 +43,19 @@ Kernel::Kernel(){
 
     // Configure UART depending on MRI config
     NVIC_SetPriorityGrouping(0);
-    /*
-    if (strstr(MRI_UART, "MRI_UART_MBED_USB")){
-        if (strstr(MRI_UART, "MRI_UART_SHARED")){
-            this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-        }else{
-            this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-        }
-    }else{
-        this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-    }
-    */
-    if( NVIC_GetPriority(UART0_IRQn) > 0 ){
+    if( !isDebugMonitorUsingUart0() ){
         this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
     }else{
         this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
     }
-
-
     this->add_module( this->config );
+
     this->add_module( this->serial );
 
     // HAL stuff
-    this->slow_ticker          = new SlowTicker();
+    add_module( this->slow_ticker          = new SlowTicker());
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
-    this->digipot              = new Digipot();
 
     // LPC17xx-specific
     NVIC_SetPriorityGrouping(0);
@@ -99,7 +66,7 @@ Kernel::Kernel(){
     // Set other priorities lower than the timers
     NVIC_SetPriority(ADC_IRQn, 4);
     NVIC_SetPriority(USB_IRQn, 4);
- 
+
     // If MRI is enabled
     if( MRI_ENABLE ){
         if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 4); }
@@ -114,9 +81,11 @@ Kernel::Kernel(){
     }
 
     // Configure the step ticker
-    int base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
+    int base_stepping_frequency          =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
     double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
+
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
+
     this->step_ticker->set_frequency(   base_stepping_frequency );
 
     // Core modules
@@ -126,42 +95,25 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->player         = new Player()        );
     this->add_module( this->pauser         = new Pauser()        );
-
-
 }
 
 void Kernel::add_module(Module* module){
     module->kernel = this;
     module->on_module_loaded();
-    module->register_for_event(ON_CONFIG_RELOAD);
 }
 
-void Kernel::register_for_event(unsigned int id_event, Module* module){
-    uint8_t current_id = 0;
-    Module* current = this->hooks[id_event][0];
-    while(current != NULL ){
-        if( current == module ){ return; }
-        current_id++;
-        current = this->hooks[id_event][current_id];
-    }
-    this->hooks[id_event][current_id] = module;
-    this->hooks[id_event][current_id+1] = NULL;
+void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
+    this->hooks[id_event].push_back(module);
 }
 
-void Kernel::call_event(unsigned int id_event){
-    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
-    while(current != NULL ){   // For each active stepper
+void Kernel::call_event(_EVENT_ENUM id_event){
+    for (Module* current : hooks[id_event]) {
         (current->*kernel_callback_functions[id_event])(this);
-        current_id++;
-        current = this->hooks[id_event][current_id];
     }
 }
 
-void Kernel::call_event(unsigned int id_event, void * argument){
-    uint8_t current_id = 0; Module* current = this->hooks[id_event][0];
-    while(current != NULL ){   // For each active stepper
+void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
+    for (Module* current : hooks[id_event]) {
         (current->*kernel_callback_functions[id_event])(argument);
-        current_id++;
-        current = this->hooks[id_event][current_id];
     }
 }

@@ -11,10 +11,6 @@
 #include "modules/robot/Block.h"
 #include "modules/tools/extruder/Extruder.h"
 
-#define extruder_step_pin_checksum    40763
-#define extruder_dir_pin_checksum     57277
-#define extruder_en_pin_checksum      8017
-
 /* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
 * It can work in two modes : either the head does not move, and the extruder moves the filament at a specified speed ( SOLO mode here )
 * or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
@@ -36,11 +32,13 @@ void Extruder::on_module_loaded() {
     this->on_config_reload(this);
 
     // We start with the enable pin off
-    this->en_pin->set(1);
+    this->en_pin.set(1);
 
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
+    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
+    this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
@@ -58,7 +56,7 @@ void Extruder::on_module_loaded() {
     this->kernel->slow_ticker->attach( this->kernel->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
 
     // Stepper motor object for the extruder
-    this->stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(this->step_pin,this->dir_pin,this->en_pin) );
+    this->stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&step_pin, &dir_pin, &en_pin) );
     this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
 
 }
@@ -69,10 +67,14 @@ void Extruder::on_config_reload(void* argument){
     this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
     this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
     this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
+    this->max_speed                   = this->kernel->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
 
-    this->step_pin                    = this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_pin()->as_output();
-    this->dir_pin                     = this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_pin()->as_output();
-    this->en_pin                      = this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_pin()->as_output()->as_open_drain();
+    this->step_pin.from_string(         this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
+    this->dir_pin.from_string(          this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
+    this->en_pin.from_string(           this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output()->as_open_drain();
+
+	// disable by default
+	this->en_pin.set(1);
 }
 
 
@@ -88,7 +90,26 @@ void Extruder::on_play(void* argument){
     this->stepper_motor->unpause();
 }
 
-
+void Extruder::on_gcode_received(void *argument)
+{
+    Gcode *gcode = static_cast<Gcode*>(argument);
+    if (gcode->has_m)
+    {
+        if (gcode->m == 114)
+        {
+            gcode->stream->printf("E:%4.1f ", this->current_position);
+            gcode->add_nl = true;
+        }
+        if (gcode->m == 92 )
+        {
+            double spm = this->steps_per_millimeter;
+            if (gcode->has_letter('E'))
+                spm = gcode->get_value('E');
+            gcode->stream->printf("E:%g ", spm);
+            gcode->add_nl = true;
+        }
+    }
+}
 
 // Compute extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void* argument){
@@ -98,7 +119,15 @@ void Extruder::on_gcode_execute(void* argument){
     if( gcode->has_m ){
         if( gcode->m == 82 ){ this->absolute_mode = true; }
         if( gcode->m == 83 ){ this->absolute_mode = false; }
-        if( gcode->m == 84 ){ this->en_pin->set(1); }
+        if( gcode->m == 84 ){ this->en_pin.set(1); }
+        if (gcode->m == 92 )
+        {
+            if (gcode->has_letter('E'))
+            {
+                this->steps_per_millimeter = gcode->get_value('E');
+                this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
+            }
+        }
     }
 
     // The mode is OFF by default, and SOLO or FOLLOW only if we need to extrude
@@ -111,8 +140,12 @@ void Extruder::on_gcode_execute(void* argument){
                 this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;
                 this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
+            }else if( gcode->get_num_args() == 0){
+                this->current_position = 0.0;
+                this->target_position = this->current_position;
+                this->current_steps = 0;
             }
-        }else{
+        }else if ((gcode->g == 0) || (gcode->g == 1)){
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )){
                 // Get relative extrusion distance depending on mode ( in absolute mode we must substract target_position )
@@ -124,14 +157,19 @@ void Extruder::on_gcode_execute(void* argument){
                     this->mode = SOLO;
                     this->travel_distance = relative_extrusion_distance;
                     if( gcode->has_letter('F') ){ this->feed_rate = gcode->get_value('F'); }
+                    if (this->feed_rate > (this->max_speed * 60))
+                        this->feed_rate = this->max_speed * 60;
                 }else{
                     // We move proportionally to the robot's movement
                     this->mode = FOLLOW;
                     this->travel_ratio = relative_extrusion_distance / gcode->millimeters_of_travel;
+                    // TODO: check resulting flowrate, limit robot speed if it exceeds max_speed
                 }
 
-                this->en_pin->set(0);
+                this->en_pin.set(0);
             }
+        }else if( gcode->g == 90 ){ this->absolute_mode = true;
+        }else if( gcode->g == 91 ){ this->absolute_mode = false;
         }
     }
 }
@@ -159,6 +197,7 @@ void Extruder::on_block_begin(void* argument){
             block->take();
             this->current_block = block;
 
+            this->stepper_motor->steps_per_second = 0;
             this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
 
         }
@@ -254,7 +293,8 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy){
 
     this->current_position = this->target_position;
 
-    this->current_block->release();
+    if (this->current_block) // this should always be true, but sometimes it isn't. TODO: find out why
+        this->current_block->release();
     return 0;
 
 }

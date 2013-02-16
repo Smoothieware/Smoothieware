@@ -53,7 +53,7 @@ class StepperMotor {
 
         double steps_per_second;
 
-        bool moving;
+        volatile bool moving;
         bool paused;
 
         //bool direction_bit;
