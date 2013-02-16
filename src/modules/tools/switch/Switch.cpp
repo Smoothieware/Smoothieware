@@ -11,6 +11,8 @@
 #include "Switch.h"
 #include "libs/Pin.h"
 
+#include "MRI_Hooks.h"
+
 Switch::Switch(){}
 
 Switch::Switch(uint16_t name){
@@ -18,38 +20,50 @@ Switch::Switch(uint16_t name){
 }
 
 void Switch::on_module_loaded(){
+    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_EXECUTE);
-    
+
     // Settings
     this->on_config_reload(this);
 
+    // PWM
+    this->kernel->slow_ticker->attach(1000, &output_pin, &Pwm::on_tick);
 }
 
 
 // Get config
 void Switch::on_config_reload(void* argument){
-    this->on_m_code                   = this->kernel->config->value(switch_checksum, this->name_checksum, on_m_code_checksum          )->required()->as_number();
-    this->off_m_code                  = this->kernel->config->value(switch_checksum, this->name_checksum, off_m_code_checksum         )->required()->as_number();
-    this->output_pin                  = this->kernel->config->value(switch_checksum, this->name_checksum, output_pin_checksum         )->required()->as_pin()->as_output();
-    this->output_pin->set(              this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum      )->by_default(0)->as_number() );
+    this->on_m_code     = this->kernel->config->value(switch_checksum, this->name_checksum, on_m_code_checksum     )->required()->as_number();
+    this->off_m_code    = this->kernel->config->value(switch_checksum, this->name_checksum, off_m_code_checksum    )->required()->as_number();
+    this->output_pin.from_string(this->kernel->config->value(switch_checksum, this->name_checksum, output_pin_checksum    )->required()->as_string())->as_output();
+    this->output_pin.set(this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(0)->as_number() );
+
+    set_low_on_debug(output_pin.port_number, output_pin.pin);
 }
 
 // Turn pin on and off
 void Switch::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    if( gcode->has_letter('M' )){
-        int code = gcode->get_value('M');
+    if( gcode->has_m){
+        int code = gcode->m;
         if( code == this->on_m_code ){
-            // Turn pin on
-            this->output_pin->set(1);
+            if (gcode->has_letter('S'))
+            {
+                int v = gcode->get_value('S') * output_pin.max_pwm() / 256.0;
+                if (v)
+                    this->output_pin.pwm(v);
+                else
+                    this->output_pin.set(0);
+            }
+            else
+            {
+                // Turn pin on
+                this->output_pin.set(1);
+            }
         }
         if( code == this->off_m_code ){
             // Turn pin off
-            this->output_pin->set(0);
+            this->output_pin.set(0);
         }
     }
 }
-
-
-
-

@@ -41,6 +41,7 @@ SECTIONS
 {
     .text :
     {
+		__cs3_region_start_rom = .;
         KEEP(*(.isr_vector))
         *(.text*)
 
@@ -82,6 +83,7 @@ SECTIONS
         
     .data : AT (__etext)
     {
+		__cs3_region_start_ram = .;
         __data_start__ = .;
         Image$$RW_IRAM1$$Base = .;
         *(vtable)

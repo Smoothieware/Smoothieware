@@ -34,16 +34,28 @@ void SimpleShell::on_console_line_received( void* argument ){
     unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
 
     // Act depending on command
-    switch( check_sum ){
-        case ls_command_checksum      : this->ls_command(  get_arguments(possible_command), new_message.stream ); break;
-        case cd_command_checksum      : this->cd_command(  get_arguments(possible_command), new_message.stream ); break;
-        case pwd_command_checksum     : this->pwd_command( get_arguments(possible_command), new_message.stream ); break;
-        case cat_command_checksum     : this->cat_command( get_arguments(possible_command), new_message.stream ); break;
-        case play_command_checksum    : this->play_command(get_arguments(possible_command), new_message.stream ); break;
-        case reset_command_checksum   : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
-        case dfu_command_checksum     : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
-        case break_command_checksum   : this->break_command(get_arguments(possible_command),new_message.stream ); break;
-    }
+    if (check_sum == ls_command_checksum)
+        this->ls_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == cd_command_checksum)
+        this->cd_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == pwd_command_checksum)
+        this->pwd_command( get_arguments(possible_command), new_message.stream );
+    else if (check_sum == cat_command_checksum)
+        this->cat_command( get_arguments(possible_command), new_message.stream );
+    else if (check_sum == play_command_checksum)
+        this->play_command(get_arguments(possible_command), new_message.stream );
+    else if (check_sum == break_command_checksum)
+        this->break_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == reset_command_checksum)
+        this->reset_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == dfu_command_checksum)
+        this->reset_command(get_arguments(possible_command),new_message.stream );
+	else if (check_sum == help_command_checksum)
+		this->help_command(get_arguments(possible_command),new_message.stream );
+	else if (check_sum == progress_command_checksum)
+		this->progress_command(get_arguments(possible_command),new_message.stream );
+	else if (check_sum == abort_command_checksum)
+		this->abort_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -61,7 +73,8 @@ void SimpleShell::ls_command( string parameters, StreamOutput* stream ){
     struct dirent* p;
     d = opendir(folder.c_str());
     if(d != NULL) {
-        while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
+		while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
+		closedir(d);
     } else {
         stream->printf("Could not open directory %s \r\n", folder.c_str());
     }
@@ -76,7 +89,8 @@ void SimpleShell::cd_command( string parameters, StreamOutput* stream ){
     if(d == NULL) {
         stream->printf("Could not open directory %s \r\n", folder.c_str() );
     }else{
-        this->current_path = folder;
+		this->current_path = folder;
+		closedir(d);
     }
 }
 
@@ -92,7 +106,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
     string limit_paramater   = shift_parameter( parameters );
     int limit = -1;
-    if( limit_paramater != "" ){ limit = int(atof(limit_paramater.c_str())); }
+    if( limit_paramater != "" )
+    {
+        char* e = NULL;
+        limit = strtol(limit_paramater.c_str(), &e, 10);
+        if (e <= limit_paramater.c_str())
+            limit = -1;
+    }
 
     // Open file
     FILE *lp = fopen(filename.c_str(), "r");
@@ -109,7 +129,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
         buffer.append((char *)&c, 1);
         if( char(c) == '\n' ){
             newlines++;
-            stream->printf("%s", buffer.c_str());
+            stream->puts(buffer.c_str());
             buffer.clear();
         }
         if( newlines == limit ){ break; }
@@ -136,8 +156,46 @@ void SimpleShell::play_command( string parameters, StreamOutput* stream ){
     if( options.find_first_of("Qq") == string::npos ){
         this->current_stream = stream;
     }else{
-        this->current_stream = new StreamOutput();
-    }
+        this->current_stream = kernel->streams;
+	}
+
+	// get size of file
+	int result = fseek(this->current_file_handler, 0, SEEK_END);
+	if (0 != result){
+		stream->printf("WARNING - Could not get file size\r\n");
+		file_size= -1;
+	}else{
+		file_size= ftell(this->current_file_handler);
+		fseek(this->current_file_handler, 0, SEEK_SET);
+		stream->printf("  File size %ld\r\n", file_size);
+	}
+	played_cnt= 0;
+}
+
+void SimpleShell::progress_command( string parameters, StreamOutput* stream ){
+	if(!playing_file) {
+		stream->printf("Not currently playing\r\n");
+		return;
+	}
+
+	if(file_size > 0) {
+		int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
+		stream->printf("%d %% complete\r\n", pcnt);
+	}else{
+		stream->printf("File size is unknown\r\n");
+	}		
+}
+
+void SimpleShell::abort_command( string parameters, StreamOutput* stream ){
+	if(!playing_file) {
+		stream->printf("Not currently playing\r\n");
+		return;
+	}
+	playing_file = false;
+	played_cnt= 0;
+	file_size= 0;
+	fclose(current_file_handler);
+	stream->printf("Aborted playing file\r\n");
 }
 
 // Reset the system
@@ -152,11 +210,27 @@ void SimpleShell::break_command( string parameters, StreamOutput* stream){
     __debugbreak();
 }
 
+void SimpleShell::help_command( string parameters, StreamOutput* stream ){
+	stream->printf("Commands:\r\n");
+	stream->printf("ls [folder]\r\n");
+	stream->printf("cd folder\r\n");
+	stream->printf("pwd\r\n");	
+	stream->printf("cat file [limit]\r\n");
+	stream->printf("play file [-q]\r\n");
+	stream->printf("progress\r\n");
+	stream->printf("abort\r\n");
+	stream->printf("reset\r\n");			
+	stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
+	stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
+	stream->printf("config-load [<file_name>]\r\n");
+}
+
 void SimpleShell::on_main_loop(void* argument){
 
     if( this->playing_file ){
         string buffer;
         int c;
+        buffer.reserve(20);
         // Print each line of the file
         while ((c = fgetc(this->current_file_handler)) != EOF){
             if (c == '\n'){
@@ -166,15 +240,17 @@ void SimpleShell::on_main_loop(void* argument){
                 message.stream = this->current_stream;
                 // wait for the queue to have enough room that a serial message could still be received before sending
                 this->kernel->player->wait_for_queue(2);
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+				this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+				played_cnt += buffer.size();
                 buffer.clear();
                 return;
             }else{
                 buffer += c;
             }
         };
-
+		this->playing_file = false;
+		played_cnt= 0;
+		file_size= 0;
         fclose(this->current_file_handler);
-        this->playing_file = false;
     }
 }

@@ -13,9 +13,9 @@
 #include "../communication/utils/Gcode.h"
 #include "Block.h"
 
-#define acceleration_checksum       25326
-#define max_jerk_checksum           61012
-#define junction_deviation_checksum 6035
+#define acceleration_checksum       CHECKSUM("acceleration")
+#define max_jerk_checksum           CHECKSUM("max_jerk")
+#define junction_deviation_checksum CHECKSUM("junction_deviation")
 
 // TODO: Get from config
 #define MINIMUM_PLANNER_SPEED 0.0
@@ -44,7 +44,6 @@ class Planner : public Module {
         float previous_nominal_speed;
 
         double acceleration;          // Setting
-        double max_jerk;              // Setting
         double junction_deviation;    // Setting
 
 };

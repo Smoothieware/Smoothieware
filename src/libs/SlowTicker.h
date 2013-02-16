@@ -17,27 +17,48 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "libs/Hook.h"
 
+#include "libs/Pin.h"
+
+#include "system_LPC17xx.h" // for SystemCoreClock
+#include <math.h>
+
 class SlowTicker : public Module{
     public:
         SlowTicker();
+
+        void on_module_loaded(void);
+        void on_idle(void*);
+        void on_gcode_execute(void*);
+
         void set_frequency( int frequency );
         void tick();
         // For some reason this can't go in the .cpp, see :  http://mbed.org/forum/mbed/topic/2774/?page=1#comment-14221
-        template<typename T> Hook* attach( double frequency, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
+        template<typename T> Hook* attach( uint32_t frequency, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook();
-            hook->frequency = frequency;
+            hook->interval = int(floor((SystemCoreClock/4)/frequency));
             hook->attach(optr, fptr);
-            hook->counter = -1.5;
+            hook->countdown = hook->interval;
             if( frequency > this->max_frequency ){
                 this->max_frequency = frequency;
+                this->set_frequency(frequency);
             }
-            this->set_frequency(this->max_frequency);
             this->hooks.push_back(hook);
             return hook;
         }
 
+        bool flag_1s();
+
         vector<Hook*> hooks;
-        double max_frequency;
+        uint32_t max_frequency;
+        uint32_t interval;
+
+        uint32_t g4_ticks;
+        bool     g4_pause;
+
+        Pin ispbtn;
+protected:
+    int flag_1s_count;
+    volatile int flag_1s_flag;
 };
 
 

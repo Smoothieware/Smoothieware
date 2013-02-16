@@ -1,7 +1,7 @@
 /* mbed Microcontroller Library - DirHandler
  * Copyright (c) 2008-2009 ARM Limited. All rights reserved.
- */ 
- 
+ */
+
 #ifndef MBED_DIRHANDLE_H
 #define MBED_DIRHANDLE_H
 
@@ -25,8 +25,8 @@ namespace mbed {
  *  at least closedir, readdir and rewinddir.
  *
  *  If a FileSystemLike class defines the opendir method, then the
- *  directories of an object of that type can be accessed by 
- *  DIR *d = opendir("/example/directory") (or opendir("/example") 
+ *  directories of an object of that type can be accessed by
+ *  DIR *d = opendir("/example/directory") (or opendir("/example")
  *  to open the root of the filesystem), and then using readdir(d) etc.
  *
  *  The root directory is considered to contain all FileLike and
@@ -90,7 +90,7 @@ extern "C" {
     void rewinddir(DIR*);
     long telldir(DIR*);
     void seekdir(DIR*, long);
-    int mkdir(const char *name, mode_t n);
+//     int mkdir(const char *name, mode_t n);
 };
 
 #endif /* MBED_DIRHANDLE_H */

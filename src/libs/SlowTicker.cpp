@@ -12,43 +12,132 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "SlowTicker.h"
 #include "libs/Hook.h"
-#include "system_LPC17xx.h" // mbed.h lib
 
+#include <mri.h>
 
 SlowTicker* global_slow_ticker;
 
 SlowTicker::SlowTicker(){
-    this->max_frequency = 1;
+    max_frequency = 0;
     global_slow_ticker = this;
     LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
     LPC_TIM2->MR0 = 10000;        // Initial dummy value for Match Register
     LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
     LPC_TIM2->TCR = 1;              // Enable interrupt
     NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
+
+    ispbtn.from_string("2.10")->as_input()->pull_up();
+
+    flag_1s_flag = 0;
+    flag_1s_count = SystemCoreClock;
+
+    g4_ticks = 0;
+    g4_pause = false;
+}
+
+void SlowTicker::on_module_loaded()
+{
+    register_for_event(ON_IDLE);
+    register_for_event(ON_GCODE_EXECUTE);
 }
 
 void SlowTicker::set_frequency( int frequency ){
-    LPC_TIM2->MR0 = int(floor((SystemCoreClock/4)/frequency));  // SystemCoreClock/4 = Timer increments in a second
+    this->interval = (SystemCoreClock >> 2) / frequency;   // SystemCoreClock/4 = Timer increments in a second
+    LPC_TIM2->MR0 = this->interval;
     LPC_TIM2->TCR = 3;  // Reset
     LPC_TIM2->TCR = 1;  // Reset
 }
 
-void SlowTicker::tick(){
+void SlowTicker::tick()
+{
+    _isr_context = true;
 
     LPC_GPIO1->FIODIR |= 1<<20;
     LPC_GPIO1->FIOSET = 1<<20;
 
-    for (unsigned int i=0; i<this->hooks.size(); i++){
+    for (uint32_t i=0; i<this->hooks.size(); i++){
         Hook* hook = this->hooks.at(i);
-        hook->counter += ( hook->frequency / this->max_frequency );
-        if( hook->counter > 0 ){
-            hook->counter-=1;
+        hook->countdown -= this->interval;
+        if (hook->countdown < 0)
+        {
+            hook->countdown += hook->interval;
             hook->call();
         }
     }
 
+    flag_1s_count -= this->interval;
+    if (flag_1s_count < 0)
+    {
+        flag_1s_count += SystemCoreClock >> 2;
+        flag_1s_flag++;
+    }
+
+    if (g4_ticks > 0)
+    {
+        if (g4_ticks > interval)
+            g4_ticks -= interval;
+        else
+            g4_ticks = 0;
+    }
+
     LPC_GPIO1->FIOCLR = 1<<20;
 
+    if (ispbtn.get() == 0)
+        __debugbreak();
+
+    _isr_context = false;
+}
+
+bool SlowTicker::flag_1s(){
+    __disable_irq();
+    if (flag_1s_flag)
+    {
+        flag_1s_flag--;
+        __enable_irq();
+        return true;
+    }
+    __enable_irq();
+    return false;
+}
+
+void SlowTicker::on_idle(void*)
+{
+    if (flag_1s())
+        kernel->call_event(ON_SECOND_TICK);
+
+    // if G4 has finished, release our pause
+    if (g4_pause && (g4_ticks == 0))
+    {
+        g4_pause = false;
+        kernel->pauser->release();
+    }
+}
+
+void SlowTicker::on_gcode_execute(void* argument)
+{
+    Gcode* gcode = static_cast<Gcode*>(argument);
+
+    if (gcode->has_g)
+    {
+        if (gcode->g == 4)
+        {
+            if (gcode->has_letter('P'))
+            {
+                // G4 Pnn should pause for nn milliseconds
+                // at 120MHz core clock, the longest possible delay is (2^32 / (120MHz / 4)) = 143 seconds
+                if (g4_pause)
+                {
+                    g4_ticks += gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
+                }
+                else
+                {
+                    g4_ticks = gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
+                    g4_pause = true;
+                    kernel->pauser->take();
+                }
+            }
+        }
+    }
 }
 
 extern "C" void TIMER2_IRQHandler (void){

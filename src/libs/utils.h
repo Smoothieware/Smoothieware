@@ -7,19 +7,27 @@ using namespace std;
 #include <vector>
 using std::string;
 
+extern volatile bool _isr_context;
+
 string lc(string str);
+
+bool is_alpha( int );
+bool is_digit( int );
+bool is_numeric( int );
+bool is_alphanum( int );
+bool is_whitespace( int );
 
 string remove_non_number( string str );
 
-uint16_t get_checksum(string to_check);
+uint16_t get_checksum(const string to_check);
 
-void get_checksums(uint16_t check_sums[], string key);
+void get_checksums(uint16_t check_sums[], const string key);
 
 string shift_parameter( string &parameters );
 
 string get_arguments( string possible_command );
 
-bool file_exists( string file_name );
+bool file_exists( const string file_name );
 
 void system_reset( void );
 

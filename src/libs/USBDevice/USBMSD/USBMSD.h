@@ -20,6 +20,8 @@
 #ifndef USBMSD_H
 #define USBMSD_H
 
+#include "USB.h"
+
 /* These headers are included for child class. */
 #include "USBEndpoints.h"
 #include "USBDescriptor.h"
@@ -27,22 +29,9 @@
 
 #include "USBDevice.h"
 
+#include "disk.h"
 
-
-#ifdef __GNUC__
-    /* Packing for structs in GCC. */
-    #define PACK_STRUCT_STRUCT __attribute__((packed))
-    #define PACK_STRUCT_BEGIN
-    #define PACK_STRUCT_END
-#else /* !__GNUC__ */
-    /* Packing for structs in ARM compiler. */
-    #define PACK_STRUCT_STRUCT
-    #define PACK_STRUCT_BEGIN __packed
-    #define PACK_STRUCT_END
-#endif /* __GNUC__ */
-
-
-
+#include "Module.h"
 
 /**
  * USBMSD class: generic class in order to use all kinds of blocks storage chip
@@ -72,7 +61,8 @@
  * If disk_status() returns 1 (disk not initialized), then disk_initialize() is called. After this step, connect() will collect information
  * such as the number of blocks and the memory size.
  */
-class USBMSD: public USBDevice {
+
+class USBMSD: public USB_State_Receiver, public USB_Endpoint_Receiver, public Module {
 public:
 
     /**
@@ -82,7 +72,7 @@ public:
     * @param product_id Your product_id
     * @param product_release Your preoduct_release
     */
-    USBMSD(uint16_t vendor_id = 0x0703, uint16_t product_id = 0x0104, uint16_t product_release = 0x0001);
+    USBMSD(USB *, MSD_Disk *);
 
     /**
     * Connect the USB MSD device. Establish disk initialization before really connect the device.
@@ -91,97 +81,48 @@ public:
     */
     bool connect();
 
+    bool USBEvent_Request(CONTROL_TRANSFER&);
+    bool USBEvent_RequestComplete(CONTROL_TRANSFER&, uint8_t *, uint32_t);
+    bool USBEvent_EPIn(uint8_t, uint8_t);
+    bool USBEvent_EPOut(uint8_t, uint8_t);
+    bool USBEvent_busReset(void);
+    bool USBEvent_connectStateChanged(bool connected);
+    bool USBEvent_suspendStateChanged(bool suspended);
 
-protected:
+    virtual void on_module_loaded(void);
 
-    /*
-    * read a block on a storage chip
-    *
-    * @param data pointer where will be stored read data
-    * @param block block number
-    * @returns 0 if successful
-    */
-    virtual int disk_read(char * data, int block) = 0;
+    // USB descriptors
+    usbdesc_interface MSC_Interface;
+    usbdesc_endpoint  MSC_BulkOut;
+    usbdesc_endpoint  MSC_BulkIn;
 
-    /*
-    * write a block on a storage chip
-    *
-    * @param data data to write
-    * @param block block number
-    * @returns 0 if successful
-    */
-    virtual int disk_write(const char * data, int block) = 0;
+    usbdesc_string_l(12) MSC_Description;
 
-    /*
-    * Disk initilization
-    */
-    virtual int disk_initialize() = 0;
+    // Bulk-only CBW
+    typedef struct __attribute__ ((packed)) {
+        uint32_t Signature;
+        uint32_t Tag;
+        uint32_t DataLength;
+        uint8_t  Flags;
+        uint8_t  LUN;
+        uint8_t  CBLength;
+        uint8_t  CB[16];
+    } CBW;
 
-    /*
-    * Return the number of blocks
-    *
-    * @returns number of blocks
-    */
-    virtual int disk_sectors() = 0;
-
-    /*
-    * Return memory size
-    *
-    * @returns memory size
-    */
-    virtual int disk_size() = 0;
-
-
-    /*
-    * To check the status of the storage chip
-    *
-    * @returns status: 0: OK, 1: disk not initialized, 2: no medium in the drive, 4: write protected
-    */
-    virtual int disk_status() = 0;
-
-    /*
-    * Get string product descriptor
-    *
-    * @returns pointer to the string product descriptor
-    */
-    virtual uint8_t * stringIproductDesc();
-
-    /*
-    * Get string interface descriptor
-    *
-    * @returns pointer to the string interface descriptor
-    */
-    virtual uint8_t * stringIinterfaceDesc();
-
-    /*
-    * Get configuration descriptor
-    *
-    * @returns pointer to the configuration descriptor
-    */
-    virtual uint8_t * configurationDesc();
-
-    /*
-    * Callback called when a packet is received
-    */
-    virtual bool EP2_OUT_callback();
-
-    /*
-    * Callback called when a packet has been sent
-    */
-    virtual bool EP2_IN_callback();
-
-    /*
-    * Set configuration of device. Add endpoints
-    */
-    virtual bool USBCallback_setConfiguration(uint8_t configuration);
-
-    /*
-    * Callback called to process class specific requests
-    */
-    virtual bool USBCallback_request();
-
+    // Bulk-only CSW
+    typedef struct __attribute__ ((packed)) {
+        uint32_t Signature;
+        uint32_t Tag;
+        uint32_t DataResidue;
+        uint8_t  Status;
+    } CSW;
 
 private:
+    // parent USB composite device manager
+    USB *usb;
+
+    // disk
+    MSD_Disk *disk;
 
     // MSC Bulk-only Stage
     enum Stage {
@@ -191,26 +132,6 @@ private:
         SEND_CSW,     // send a CSW
         WAIT_CSW,     // wait that a CSW has been effectively sent
     };
-
-    // Bulk-only CBW
-    typedef PACK_STRUCT_BEGIN struct {
-        uint32_t Signature;
-        uint32_t Tag;
-        uint32_t DataLength;
-        uint8_t  Flags;
-        uint8_t  LUN;
-        uint8_t  CBLength;
-        uint8_t  CB[16];
-    } PACK_STRUCT_STRUCT CBW;
-
-    // Bulk-only CSW
-    typedef PACK_STRUCT_BEGIN struct {
-        uint32_t Signature;
-        uint32_t Tag;
-        uint32_t DataResidue;
-        uint8_t  Status;
-    } PACK_STRUCT_STRUCT CSW;
-
 
     //state of the bulk-only state machine
     Stage stage;
@@ -222,10 +143,17 @@ private:
     CSW csw;
 
     // addr where will be read or written data
-    uint32_t addr;
+//     uint32_t addr;
+
+    // transitioning to block-based logic
+    uint32_t lba;
+    uint16_t addr_in_block;
 
     // length of a reading or writing
     uint32_t length;
+
+    // number of blocks to transfer
+    uint32_t blocks;
 
     // memory OK (after a memoryVerify)
     bool memOK;
@@ -233,9 +161,12 @@ private:
     // cache in RAM before writing in memory. Useful also to read a block.
     uint8_t * page;
 
-    int BlockSize;
-    int MemorySize;
-    int BlockCount;
+    // USB packet buffer
+    uint8_t buffer[MAX_PACKET_SIZE_EPBULK];
+
+    uint32_t BlockSize;
+//     uint32_t MemorySize;
+    uint32_t BlockCount;
 
     void CBWDecode(uint8_t * buf, uint16_t size);
     void sendCSW (void);
