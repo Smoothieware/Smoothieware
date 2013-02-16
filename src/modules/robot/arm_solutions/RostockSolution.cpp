@@ -8,7 +8,7 @@ RostockSolution::RostockSolution(Config* passed_config) : config(passed_config){
     this->beta_steps_per_mm  = this->config->value( beta_steps_per_mm_checksum)->as_number();
     this->gamma_steps_per_mm = this->config->value(gamma_steps_per_mm_checksum)->as_number();
 
-    double alpha_angle  = PIOVER180 * this->config->value(alpha_angle_checksum)->by_default(0.0)->as_number();
+    double alpha_angle  = PIOVER180 * this->config->value(alpha_angle_checksum)->by_default(30.0)->as_number();
     this->sin_alpha     = sin(alpha_angle);
     this->cos_alpha     = cos(alpha_angle);
     double beta_angle   = PIOVER180 * this->config->value( beta_relative_angle_checksum)->by_default(120.0)->as_number();
@@ -19,9 +19,9 @@ RostockSolution::RostockSolution(Config* passed_config) : config(passed_config){
     this->cos_gamma     = cos(gamma_angle);
 
     // arm_length is the length of the arm from hinge to hinge
-    this->arm_length         = this->config->value(arm_length_checksum)->by_default(430.0)->as_number();
+    this->arm_length         = this->config->value(arm_length_checksum)->by_default(250.0)->as_number();
     // arm_radius is the horizontal distance from hinge to hinge when the effector is centered
-    this->arm_radius         = this->config->value(arm_radius_checksum)->by_default(220.675)->as_number();
+    this->arm_radius         = this->config->value(arm_radius_checksum)->by_default(124.0)->as_number();
 
     this->arm_length_squared = pow(this->arm_length, 2);
 }
