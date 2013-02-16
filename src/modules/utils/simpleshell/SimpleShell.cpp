@@ -13,6 +13,7 @@
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "modules/robot/Player.h"
+#include "mri.h"
 
 
 void SimpleShell::on_module_loaded(){
@@ -43,6 +44,8 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->cat_command( get_arguments(possible_command), new_message.stream );
     else if (check_sum == play_command_checksum)
         this->play_command(get_arguments(possible_command), new_message.stream );
+    else if (check_sum == break_command_checksum)
+        this->break_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == reset_command_checksum)
         this->reset_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == dfu_command_checksum)
@@ -199,6 +202,12 @@ void SimpleShell::abort_command( string parameters, StreamOutput* stream ){
 void SimpleShell::reset_command( string parameters, StreamOutput* stream){
     stream->printf("Smoothie out. Peace.\r\n");
     system_reset();
+}
+
+// Break out into the MRI debugging system
+void SimpleShell::break_command( string parameters, StreamOutput* stream){
+    stream->printf("Entering MRI debug mode...\r\n");
+    __debugbreak();
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){
