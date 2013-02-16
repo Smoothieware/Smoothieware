@@ -12,9 +12,6 @@
 #include "Serial.h" // mbed.h lib
 #include "libs/Kernel.h"
 #include <vector>
-#include <string>
-using std::string;
-#include "libs/RingBuffer.h"
 #include "libs/StreamOutput.h"
 
 
@@ -26,16 +23,12 @@ class SerialConsole : public Module, public StreamOutput {
 
         void on_module_loaded();
         void on_serial_char_received();
-        void on_main_loop(void * argument);
         bool has_char(char letter);
 
         int _putc(int c);
         int _getc(void);
         int puts(const char*);
 
-        //string receive_buffer;                 // Received chars are stored here until a newline character is received
-        //vector<std::string> received_lines;    // Received lines are stored here until they are requested
-        RingBuffer<char,256> buffer;             // Receive buffer
         mbed::Serial* serial;
 };
 
