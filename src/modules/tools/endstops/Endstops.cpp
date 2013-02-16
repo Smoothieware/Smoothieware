@@ -54,7 +54,7 @@ void Endstops::on_config_reload(void* argument){
     this->direction[0]              =  this->kernel->config->value(alpha_homing_direction_checksum     )->by_default(-1   )->as_number();
     this->direction[1]              =  this->kernel->config->value(beta_homing_direction_checksum      )->by_default(-1   )->as_number();
     this->direction[2]              =  this->kernel->config->value(gamma_homing_direction_checksum     )->by_default(1   )->as_number();
-    for (int i=0; i<3; i++) direction[i] = direction[i] > 0 ? +1 : -1;
+    for (int i=0; i<3; i++) direction[i] = direction[i] > 0;
     this->homing_position[0]        =  this->direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default("0")->as_number():this->kernel->config->value(alpha_max_checksum)->by_default("200")->as_number();
     this->homing_position[1]        =  this->direction[1]?this->kernel->config->value(beta_min_checksum)->by_default("0")->as_number():this->kernel->config->value(beta_max_checksum)->by_default("200")->as_number();;
     this->homing_position[2]        =  this->direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default("0")->as_number():this->kernel->config->value(gamma_max_checksum)->by_default("200")->as_number();;
