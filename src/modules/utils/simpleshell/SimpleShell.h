@@ -24,6 +24,7 @@
 #define abort_command_checksum    CHECKSUM("abort")
 #define reset_command_checksum    CHECKSUM("reset")
 #define dfu_command_checksum      CHECKSUM("dfu")
+#define break_command_checksum    CHECKSUM("break")
 #define help_command_checksum     CHECKSUM("help")
 
 class SimpleShell : public Module {
@@ -41,6 +42,7 @@ class SimpleShell : public Module {
         void play_command( string parameters, StreamOutput* stream );
         void progress_command( string parameters, StreamOutput* stream );
         void abort_command( string parameters, StreamOutput* stream );
+        void break_command(string parameters, StreamOutput* stream );
 		void reset_command(string parameters, StreamOutput* stream );
 		void help_command(string parameters, StreamOutput* stream );
 		
