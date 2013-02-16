@@ -11,12 +11,12 @@ alpha_steps_per_mm                           80               # Steps per mm for
 beta_steps_per_mm                            80               # Steps per mm for beta stepper
 gamma_steps_per_mm                           80               # Steps per mm for gamma stepper
 
-alpha_angle                                  0.0              # this provides an optional offset from the alpha tower to the x/y system
+alpha_angle                                  30.0             # this provides an optional offset from the alpha tower to the x/y system
 beta_relative_angle                          120.0            # this is the angle in degrees from the alpha tower to the beta tower
 gamma_relative_angle                         240.0            # this is the angle in degrees from the alpha tower to the gamma tower
 
-arm_length                                   240.0            # this is the length of an arm from hinge to hinge
-arm_radius                                   114.0            # this is the horiontal distance from hinge to hinge when the effector is centered
+arm_length                                   250.0            # this is the length of an arm from hinge to hinge
+arm_radius                                   124.0            # this is the horiontal distance from hinge to hinge when the effector is centered
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           64               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
