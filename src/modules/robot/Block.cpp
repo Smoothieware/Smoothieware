@@ -12,7 +12,7 @@
 #include <string>
 #include "Block.h"
 #include "Planner.h"
-#include "Player.h"
+#include "Conveyor.h"
 using std::string;
 #include <vector>
 #include "../communication/utils/Gcode.h"
@@ -41,12 +41,12 @@ void Block::debug(Kernel* kernel){
 //*/
 void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
-    //this->player->kernel->streams->printf("%p calculating trapezoid\r\n", this);
+    //this->conveyor->kernel->streams->printf("%p calculating trapezoid\r\n", this);
 
     this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min)
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
 
-    //this->player->kernel->streams->printf("initrate:%f finalrate:%f\r\n", this->initial_rate, this->final_rate);
+    //this->conveyor->kernel->streams->printf("initrate:%f finalrate:%f\r\n", this->initial_rate, this->final_rate);
 
     double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
@@ -56,7 +56,7 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
     // Calculate the size of Plateau of Nominal Rate.
     int plateau_steps = this->steps_event_count-accelerate_steps-decelerate_steps;
 
-    //this->player->kernel->streams->printf("accelperminute:%f accelerate_steps:%d decelerate_steps:%d plateau:%d \r\n", acceleration_per_minute, accelerate_steps, decelerate_steps, plateau_steps );
+    //this->conveyor->kernel->streams->printf("accelperminute:%f accelerate_steps:%d decelerate_steps:%d plateau:%d \r\n", acceleration_per_minute, accelerate_steps, decelerate_steps, plateau_steps );
 
    // Is the Plateau of Nominal Rate smaller than nothing? That means no cruising, and we will
    // have to use intersection_distance() to calculate when to abort acceleration and start braking
@@ -71,7 +71,7 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
    this->accelerate_until = accelerate_steps;
    this->decelerate_after = accelerate_steps+plateau_steps;
 
-   //this->debug(this->player->kernel);
+   //this->debug(this->conveyor->kernel);
 
    /*
    // TODO: FIX THIS: DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
@@ -179,10 +179,10 @@ void Block::pop_and_execute_gcode(Kernel* &kernel){
     }
 }
 
-// Signal the player that this block is ready to be injected into the system
+// Signal the conveyor that this block is ready to be injected into the system
 void Block::ready(){
     this->is_ready = true;
-    this->player->new_block_added();
+    this->conveyor->new_block_added();
 }
 
 // Mark the block as taken by one more module
@@ -197,31 +197,31 @@ void Block::release(){
     this->times_taken--;
     //printf("releasing %p times now:%d\r\n", this, int(this->times_taken) );
     if( this->times_taken < 1 ){
-        this->player->kernel->call_event(ON_BLOCK_END, this);
-        this->pop_and_execute_gcode(this->player->kernel);
-        Player* player = this->player;
+        this->conveyor->kernel->call_event(ON_BLOCK_END, this);
+        this->pop_and_execute_gcode(this->conveyor->kernel);
+        Conveyor* conveyor = this->conveyor;
 
-        if( player->queue.size() > player->flush_blocks ){
-            player->flush_blocks++;
+        if( conveyor->queue.size() > conveyor->flush_blocks ){
+            conveyor->flush_blocks++;
         }
 
-        if( player->looking_for_new_block == false ){
-            if( player->queue.size() > player->flush_blocks ){
-                Block* candidate =  player->queue.get_ref(player->flush_blocks);
+        if( conveyor->looking_for_new_block == false ){
+            if( conveyor->queue.size() > 0 ){
+                Block* candidate =  conveyor->queue.get_ref(conveyor->flush_blocks);
                 if( candidate->is_ready ){
-                    player->current_block = candidate;
-                    player->kernel->call_event(ON_BLOCK_BEGIN, player->current_block);
-                    if( player->current_block->times_taken < 1 ){
-                        player->current_block->times_taken = 1;
-                        player->current_block->release();
+                    conveyor->current_block = candidate;
+                    conveyor->kernel->call_event(ON_BLOCK_BEGIN, conveyor->current_block);
+                    if( conveyor->current_block->times_taken < 1 ){
+                        conveyor->current_block->times_taken = 1;
+                        conveyor->current_block->release();
                     }
                 }else{
 
-                    player->current_block = NULL;
+                    conveyor->current_block = NULL;
 
                 }
             }else{
-                player->current_block = NULL;
+                conveyor->current_block = NULL;
             }
         }
     }

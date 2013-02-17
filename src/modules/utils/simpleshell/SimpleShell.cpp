@@ -12,15 +12,13 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
-#include "modules/robot/Player.h"
+#include "modules/robot/Conveyor.h"
 #include "mri.h"
 
 
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
-    this->playing_file = false;
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    this->register_for_event(ON_MAIN_LOOP);
 }
 
 // When a new line is received, check if it is a command, and if it is, act upon it
@@ -42,8 +40,6 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->pwd_command( get_arguments(possible_command), new_message.stream );
     else if (check_sum == cat_command_checksum)
         this->cat_command( get_arguments(possible_command), new_message.stream );
-    else if (check_sum == play_command_checksum)
-        this->play_command(get_arguments(possible_command), new_message.stream );
     else if (check_sum == break_command_checksum)
         this->break_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == reset_command_checksum)
@@ -52,10 +48,6 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->reset_command(get_arguments(possible_command),new_message.stream );
 	else if (check_sum == help_command_checksum)
 		this->help_command(get_arguments(possible_command),new_message.stream );
-	else if (check_sum == progress_command_checksum)
-		this->progress_command(get_arguments(possible_command),new_message.stream );
-	else if (check_sum == abort_command_checksum)
-		this->abort_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -138,66 +130,6 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 
 }
 
-// Play a gcode file by considering each line as if it was received on the serial console
-void SimpleShell::play_command( string parameters, StreamOutput* stream ){
-
-    // Get filename
-    string filename          = this->absolute_from_relative(shift_parameter( parameters ));
-    stream->printf("Playing %s\r\n", filename.c_str());
-    string options           = shift_parameter( parameters );
-
-    this->current_file_handler = fopen( filename.c_str(), "r");
-    if(this->current_file_handler == NULL)
-    {
-        stream->printf("File not found: %s\r\n", filename.c_str());
-        return;
-    }
-    this->playing_file = true;
-    if( options.find_first_of("Qq") == string::npos ){
-        this->current_stream = stream;
-    }else{
-        this->current_stream = kernel->streams;
-	}
-
-	// get size of file
-	int result = fseek(this->current_file_handler, 0, SEEK_END);
-	if (0 != result){
-		stream->printf("WARNING - Could not get file size\r\n");
-		file_size= -1;
-	}else{
-		file_size= ftell(this->current_file_handler);
-		fseek(this->current_file_handler, 0, SEEK_SET);
-		stream->printf("  File size %ld\r\n", file_size);
-	}
-	played_cnt= 0;
-}
-
-void SimpleShell::progress_command( string parameters, StreamOutput* stream ){
-	if(!playing_file) {
-		stream->printf("Not currently playing\r\n");
-		return;
-	}
-
-	if(file_size > 0) {
-		int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
-		stream->printf("%d %% complete\r\n", pcnt);
-	}else{
-		stream->printf("File size is unknown\r\n");
-	}		
-}
-
-void SimpleShell::abort_command( string parameters, StreamOutput* stream ){
-	if(!playing_file) {
-		stream->printf("Not currently playing\r\n");
-		return;
-	}
-	playing_file = false;
-	played_cnt= 0;
-	file_size= 0;
-	fclose(current_file_handler);
-	stream->printf("Aborted playing file\r\n");
-}
-
 // Reset the system
 void SimpleShell::reset_command( string parameters, StreamOutput* stream){
     stream->printf("Smoothie out. Peace.\r\n");
@@ -225,32 +157,3 @@ void SimpleShell::help_command( string parameters, StreamOutput* stream ){
 	stream->printf("config-load [<file_name>]\r\n");
 }
 
-void SimpleShell::on_main_loop(void* argument){
-
-    if( this->playing_file ){
-        string buffer;
-        int c;
-        buffer.reserve(20);
-        // Print each line of the file
-        while ((c = fgetc(this->current_file_handler)) != EOF){
-            if (c == '\n'){
-                this->current_stream->printf("%s\n", buffer.c_str());
-                struct SerialMessage message;
-                message.message = buffer;
-                message.stream = this->current_stream;
-                // wait for the queue to have enough room that a serial message could still be received before sending
-                this->kernel->player->wait_for_queue(2);
-				this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-				played_cnt += buffer.size();
-                buffer.clear();
-                return;
-            }else{
-                buffer += c;
-            }
-        };
-		this->playing_file = false;
-		played_cnt= 0;
-		file_size= 0;
-        fclose(this->current_file_handler);
-    }
-}

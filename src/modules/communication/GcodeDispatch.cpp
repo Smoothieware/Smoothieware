@@ -12,7 +12,7 @@ using std::string;
 #include "utils/Gcode.h"
 #include "libs/nuts_bolts.h"
 #include "GcodeDispatch.h"
-#include "modules/robot/Player.h"
+#include "modules/robot/Conveyor.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 

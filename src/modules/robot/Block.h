@@ -16,7 +16,7 @@ using namespace std;
 #include "../communication/utils/Gcode.h"
 #include "Planner.h"
 class Planner;
-class Player;
+class Conveyor;
 
 double max_allowable_speed( double acceleration, double target_velocity, double distance);
 
@@ -59,8 +59,8 @@ class Block {
 
         double max_entry_speed;
         Planner* planner;
-        Player*  player;
-
+        Conveyor*  conveyor;
+        
         bool is_ready;
 
         short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
