@@ -25,7 +25,7 @@ void Button::on_module_loaded(){
 
 void Button::on_config_reload(void* argument){
     this->toggle                      = this->kernel->config->value( button_checksum, this->name_checksum, toggle_checksum )->by_default(false)->as_bool();
-    this->button                      = this->kernel->config->value( button_checksum, this->name_checksum, input_pin_checksum )->by_default("2.12")->as_pin()->as_input();
+    this->button.from_string          ( this->kernel->config->value( button_checksum, this->name_checksum, input_pin_checksum )->by_default("2.12")->as_string() )->as_input();
     this->on_m_code                   = "M" + this->kernel->config->value( button_checksum, this->name_checksum, on_m_code_checksum          )->required()->as_string() + "\r\n";
     this->off_m_code                  = "M" + this->kernel->config->value( button_checksum, this->name_checksum, off_m_code_checksum         )->required()->as_string() + "\r\n";
 }

@@ -35,7 +35,7 @@ class StreamOutput : public mbed::Stream {
         }
         virtual int _putc(int c) { return 0; }
         virtual int _getc(void) { return 0; }
-        virtual int puts(const char*) = 0;
+        virtual int puts(const char*) { return 0; };
 };
 
 #endif
