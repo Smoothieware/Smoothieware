@@ -7,11 +7,12 @@
 #include "libs/Pin.h"
 #include <string>
 
-#define button_checksum        5709
-#define on_m_code_checksum     29094
-#define off_m_code_checksum    14853
-#define input_pin_checksum     21209
-#define toggle_checksum        63876
+#define button_checksum             CHECKSUM("button")
+#define on_m_code_checksum          CHECKSUM("on_m_code")
+#define off_m_code_checksum         CHECKSUM("off_m_code")
+#define input_pin_checksum          CHECKSUM("input_pin")
+#define toggle_checksum             CHECKSUM("toggle")
+#define normal_state_checksum       CHECKSUM("normal_state")
 
 class Button : public Module {
     public:
