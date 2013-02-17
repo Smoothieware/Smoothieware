@@ -13,6 +13,7 @@
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "modules/robot/Conveyor.h"
+#include "mri.h"
 
 
 void SimpleShell::on_module_loaded(){
@@ -31,13 +32,22 @@ void SimpleShell::on_console_line_received( void* argument ){
     unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
 
     // Act depending on command
-    switch( check_sum ){
-        case ls_command_checksum      : this->ls_command(  get_arguments(possible_command), new_message.stream ); break;
-        case cd_command_checksum      : this->cd_command(  get_arguments(possible_command), new_message.stream ); break;
-        case pwd_command_checksum     : this->pwd_command( get_arguments(possible_command), new_message.stream ); break;
-        case cat_command_checksum     : this->cat_command( get_arguments(possible_command), new_message.stream ); break;
-        case reset_command_checksum   : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
-    }
+    if (check_sum == ls_command_checksum)
+        this->ls_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == cd_command_checksum)
+        this->cd_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == pwd_command_checksum)
+        this->pwd_command( get_arguments(possible_command), new_message.stream );
+    else if (check_sum == cat_command_checksum)
+        this->cat_command( get_arguments(possible_command), new_message.stream );
+    else if (check_sum == break_command_checksum)
+        this->break_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == reset_command_checksum)
+        this->reset_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == dfu_command_checksum)
+        this->reset_command(get_arguments(possible_command),new_message.stream );
+	else if (check_sum == help_command_checksum)
+		this->help_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -55,7 +65,8 @@ void SimpleShell::ls_command( string parameters, StreamOutput* stream ){
     struct dirent* p;
     d = opendir(folder.c_str());
     if(d != NULL) {
-        while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
+		while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
+		closedir(d);
     } else {
         stream->printf("Could not open directory %s \r\n", folder.c_str());
     }
@@ -70,7 +81,8 @@ void SimpleShell::cd_command( string parameters, StreamOutput* stream ){
     if(d == NULL) {
         stream->printf("Could not open directory %s \r\n", folder.c_str() );
     }else{
-        this->current_path = folder;
+		this->current_path = folder;
+		closedir(d);
     }
 }
 
@@ -86,7 +98,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
     string limit_paramater   = shift_parameter( parameters );
     int limit = -1;
-    if( limit_paramater != "" ){ limit = int(atof(limit_paramater.c_str())); }
+    if( limit_paramater != "" )
+    {
+        char* e = NULL;
+        limit = strtol(limit_paramater.c_str(), &e, 10);
+        if (e <= limit_paramater.c_str())
+            limit = -1;
+    }
 
     // Open file
     FILE *lp = fopen(filename.c_str(), "r");
@@ -103,7 +121,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
         buffer.append((char *)&c, 1);
         if( char(c) == '\n' ){
             newlines++;
-            stream->printf("%s", buffer.c_str());
+            stream->puts(buffer.c_str());
             buffer.clear();
         }
         if( newlines == limit ){ break; }
@@ -116,5 +134,26 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 void SimpleShell::reset_command( string parameters, StreamOutput* stream){
     stream->printf("Smoothie out. Peace.\r\n");
     system_reset();
+}
+
+// Break out into the MRI debugging system
+void SimpleShell::break_command( string parameters, StreamOutput* stream){
+    stream->printf("Entering MRI debug mode...\r\n");
+    __debugbreak();
+}
+
+void SimpleShell::help_command( string parameters, StreamOutput* stream ){
+	stream->printf("Commands:\r\n");
+	stream->printf("ls [folder]\r\n");
+	stream->printf("cd folder\r\n");
+	stream->printf("pwd\r\n");	
+	stream->printf("cat file [limit]\r\n");
+	stream->printf("play file [-q]\r\n");
+	stream->printf("progress\r\n");
+	stream->printf("abort\r\n");
+	stream->printf("reset\r\n");			
+	stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
+	stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
+	stream->printf("config-load [<file_name>]\r\n");
 }
 

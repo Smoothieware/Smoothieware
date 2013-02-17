@@ -9,56 +9,46 @@
 #define STREAMOUTPUTPOOL_H
 
 using namespace std;
-#include <vector>
+#include <set>
 #include <string>
 #include <cstdio>
 #include <cstdarg>
 
 #include "libs/StreamOutput.h"
 
+#define PRINTF_DEFAULT_BUFFER_SIZE 32
 
+class StreamOutputPool : public StreamOutput {
+private:
+    char *printf_default_buffer;
+public:
+    StreamOutputPool(){
+        printf_default_buffer = new char[PRINTF_DEFAULT_BUFFER_SIZE];
+    }
 
-class StreamOutputPool {
-    public:
-       StreamOutputPool(){}
-       int printf(const std::string format, ...){
-            // Make the message
-            va_list args;
-            va_start(args, format);
-            int size = format.size() * 2;
-            char* buffer = new char[size];
-            int len = vsnprintf(buffer, size, format.c_str(), args);
-            if (len >= size) {
-                delete[] buffer;
-                size = len+1;
-                buffer = new char[size];
-                len = vsnprintf(buffer, size, format.c_str(), args);
-            }
-            va_end(args);
+    int puts(const char* s)
+    {
+        int r = 0;
+        for(set<StreamOutput*>::iterator i = this->streams.begin(); i != this->streams.end(); i++)
+        {
+            int k = (*i)->puts(s);
+            if (k > r)
+                r = k;
+        }
+        return r;
+    }
 
-            // Dispatch to all
-            for(unsigned int i=0; i < this->streams.size(); i++){
-                this->streams.at(i)->printf(buffer);
-            }
-            delete[] buffer;
-            return len;
+    void append_stream(StreamOutput* stream)
+    {
+        this->streams.insert(stream);
+    }
 
-       }
+    void remove_stream(StreamOutput* stream)
+    {
+        this->streams.erase(stream);
+    }
 
-       void append_stream(StreamOutput* stream){
-           this->streams.push_back(stream);
-       }
-
-
-       vector<StreamOutput*> streams;
+    set<StreamOutput*> streams;
 };
-
-
-
-
-
-
-
-
 
 #endif

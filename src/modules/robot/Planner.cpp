@@ -25,12 +25,12 @@ Planner::Planner(){
 }
 
 void Planner::on_module_loaded(){
+    register_for_event(ON_CONFIG_RELOAD);
     this->on_config_reload(this);
 }
 
 void Planner::on_config_reload(void* argument){
     this->acceleration =       this->kernel->config->value(acceleration_checksum       )->by_default(100 )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
-    this->max_jerk =           this->kernel->config->value(max_jerk_checksum           )->by_default(100 )->as_number();
     this->junction_deviation = this->kernel->config->value(junction_deviation_checksum )->by_default(0.05)->as_number();
 }
 
@@ -46,6 +46,10 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     Block* block = this->kernel->conveyor->new_block();
     block->planner = this;
 
+    //Block* test = new Block();
+    //this->kernel->streams->printf("%p queue:%u\r\n", test, this->kernel->player->queue.size());
+    //delete test;
+    //
     // Direction bits
     block->direction_bits = 0;
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){

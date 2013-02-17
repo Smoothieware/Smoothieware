@@ -16,5 +16,19 @@ void CartesianSolution::millimeters_to_steps( double millimeters[], int steps[] 
 void CartesianSolution::steps_to_millimeters( int steps[], double millimeters[] ){
     millimeters[ALPHA_STEPPER] = steps[X_AXIS] / this->alpha_steps_per_mm;
     millimeters[BETA_STEPPER ] = steps[Y_AXIS] / this->beta_steps_per_mm;
-    millimeters[GAMMA_STEPPER] = steps[X_AXIS] / this->gamma_steps_per_mm;
+    millimeters[GAMMA_STEPPER] = steps[Z_AXIS] / this->gamma_steps_per_mm;
+}
+
+void CartesianSolution::set_steps_per_millimeter( double steps[] )
+{
+    this->alpha_steps_per_mm = steps[0];
+    this->beta_steps_per_mm  = steps[1];
+    this->gamma_steps_per_mm = steps[2];
+}
+
+void CartesianSolution::get_steps_per_millimeter( double steps[] )
+{
+    steps[0] = this->alpha_steps_per_mm;
+    steps[1] = this->beta_steps_per_mm;
+    steps[2] = this->gamma_steps_per_mm;
 }

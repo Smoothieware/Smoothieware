@@ -9,78 +9,111 @@
 #define temperaturecontrol_h
 
 #include "libs/Pin.h"
+#include "Pwm.h"
 #include <math.h>
+
+#include "RingBuffer.h"
 
 #define UNDEFINED -1
 
-#define thermistor_checksum                41045
-#define r0_checksum                        5538
-#define readings_per_second_checksum       18645
-#define t0_checksum                        6564
-#define beta_checksum                      1181
-#define vadc_checksum                      10911
-#define vcc_checksum                       36157
-#define r1_checksum                        5795
-#define r2_checksum                        6052
-#define temperature_control_checksum       44054
-#define thermistor_pin_checksum            1788
-#define heater_pin_checksum                35619
+#define thermistor_checksum                CHECKSUM("thermistor")
+#define r0_checksum                        CHECKSUM("r0")
+#define readings_per_second_checksum       CHECKSUM("readings_per_second")
+#define max_pwm_checksum                   CHECKSUM("max_pwm")
+#define t0_checksum                        CHECKSUM("t0")
+#define beta_checksum                      CHECKSUM("beta")
+#define vadc_checksum                      CHECKSUM("vadc")
+#define vcc_checksum                       CHECKSUM("vcc")
+#define r1_checksum                        CHECKSUM("r1")
+#define r2_checksum                        CHECKSUM("r2")
+#define temperature_control_checksum       CHECKSUM("temperature_control")
+#define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
+#define heater_pin_checksum                CHECKSUM("heater_pin")
 
-#define get_m_code_checksum                20746
-#define set_m_code_checksum                51478
-#define set_and_wait_m_code_checksum       4287
+#define get_m_code_checksum                CHECKSUM("get_m_code")
+#define set_m_code_checksum                CHECKSUM("set_m_code")
+#define set_and_wait_m_code_checksum       CHECKSUM("set_and_wait_m_code")
 
+#define designator_checksum                CHECKSUM("designator")
+
+#define p_factor_checksum                  CHECKSUM("p_factor")
+#define i_factor_checksum                  CHECKSUM("i_factor")
+#define d_factor_checksum                  CHECKSUM("d_factor")
+
+#define i_max_checksum                     CHECKSUM("i_max")
+
+#define QUEUE_LEN 8
+
+class TemperatureControlPool;
 
 class TemperatureControl : public Module {
     public:
         TemperatureControl();
         TemperatureControl(uint16_t name);
-        
+
         void on_module_loaded();
         void on_main_loop(void* argument);
         void on_gcode_execute(void* argument);
+        void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
+        void on_second_tick(void* argument);
+
         void set_desired_temperature(double desired_temperature);
         double get_temperature();
-        double adc_value_to_temperature(double adc_value);
-        double temperature_to_adc_value(double temperature);
+        double adc_value_to_temperature(int adc_value);
         uint32_t thermistor_read_tick(uint32_t dummy);
-        double new_thermistor_reading();
-        double average_adc_reading();
-        
-        double    desired_adc_value;
-        double    tail_adc_value;
-        double    head_adc_value;
+        int new_thermistor_reading();
+
+        void pid_process(double);
+
+        double target_temperature;
 
         // Thermistor computation settings
         double r0;
         double t0;
-        double r1;
-        double r2;
+        int r1;
+        int r2;
         double beta;
-        double vadc;
-        double vcc;
+        double j;
         double k;
-        double vs;
-        double rs;
-        
+
+        int max_pwm;
+
+        // PID settings
+        double p_factor;
+        double i_factor;
+        double d_factor;
+
+        // PID runtime
+        double i_max;
+
+        double p, i, d;
+        int o;
+
+        double last_reading;
+
         double acceleration_factor;
         double readings_per_second;
 
-        RingBuffer<double,16> queue;  // Queue of Blocks
-        int error_count;
+        RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
+        uint16_t median_buffer[QUEUE_LEN];
+        int running_total;
 
         uint16_t name_checksum;
 
-        Pin* thermistor_pin;
-        Pin* heater_pin;
-    
+        Pin  thermistor_pin;
+        Pwm  heater_pin;
+
         bool waiting;
 
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;
         uint16_t get_m_code;
 
+        string designator;
+
+        TemperatureControlPool *pool;
+        int pool_index;
 };
 
 #endif

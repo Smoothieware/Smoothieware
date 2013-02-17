@@ -30,14 +30,7 @@ void Block::debug(Kernel* kernel){
 }
 
 
-// Calculate a braking factor to reach baseline speed which is max_jerk/2, e.g. the
-// speed under which you cannot exceed max_jerk no matter what you do.
-double Block::compute_factor_for_safe_speed(){
-    return( this->planner->max_jerk / this->nominal_speed );
-}
-
-
-// Calculates trapezoid parameters so that the entry- and exit-speed is compensated by the provided factors.
+/* Calculates trapezoid parameters so that the entry- and exit-speed is compensated by the provided factors.
 // The factors represent a factor of braking and must be in the range 0.0-1.0.
 //                                +--------+ <- nominal_rate
 //                               /          \
@@ -45,6 +38,7 @@ double Block::compute_factor_for_safe_speed(){
 //                              |             + <- nominal_rate*exit_factor
 //                              +-------------+
 //                                  time -->
+//*/
 void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
     //this->conveyor->kernel->streams->printf("%p calculating trapezoid\r\n", this);
@@ -172,7 +166,7 @@ void Block::forward_pass(Block* previous, Block* next){
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
 void Block::append_gcode(Gcode* gcode){
    __disable_irq();
-   this->gcodes.push_back(*gcode);
+   this->gcodes.push_back(gcode);
    __enable_irq();
 }
 
@@ -181,7 +175,7 @@ void Block::pop_and_execute_gcode(Kernel* &kernel){
     Block* block = const_cast<Block*>(this);
     for(unsigned short index=0; index<block->gcodes.size(); index++){
         //printf("GCODE Z: %s \r\n", block->gcodes[index].command.c_str() );
-        kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
+        kernel->call_event(ON_GCODE_EXECUTE, block->gcodes[index]);
     }
 }
 
@@ -207,13 +201,13 @@ void Block::release(){
         this->pop_and_execute_gcode(this->conveyor->kernel);
         Conveyor* conveyor = this->conveyor;
 
-        if( conveyor->queue.size() > 0 ){
-            conveyor->queue.delete_first();
+        if( conveyor->queue.size() > conveyor->flush_blocks ){
+            conveyor->flush_blocks++;
         }
 
         if( conveyor->looking_for_new_block == false ){
             if( conveyor->queue.size() > 0 ){
-                Block* candidate =  conveyor->queue.get_ref(0);
+                Block* candidate =  conveyor->queue.get_ref(conveyor->flush_blocks);
                 if( candidate->is_ready ){
                     conveyor->current_block = candidate;
                     conveyor->kernel->call_event(ON_BLOCK_BEGIN, conveyor->current_block);

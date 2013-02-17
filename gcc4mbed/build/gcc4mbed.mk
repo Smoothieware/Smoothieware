@@ -132,9 +132,13 @@ PROJINCS = $(sort $(dir $(SUBDIRS)))
 INCDIRS += $(PROJINCS) $(GCC4MBED_DIR)/mri $(EXTERNAL_DIR)/mbed $(EXTERNAL_DIR)/mbed/LPC1768
 
 # DEFINEs to be used when building C/C++ code
-DEFINES = -DTARGET_LPC1768 -D__LPC17XX__
+DEFINES += -DTARGET_LPC1768 -D__LPC17XX__
 DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"'
 DEFINES += -DMRI_BREAK_ON_INIT=$(MRI_BREAK_ON_INIT) -DMRI_SEMIHOST_STDIO=$(MRI_SEMIHOST_STDIO)
+
+ifeq "$(OPTIMIZATION)" "0"
+DEFINES += -DDEBUG
+endif
 
 # Libraries to be linked into final binary
 MBED_LIBS = $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/libmbed.a $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/libcapi.a
@@ -168,7 +172,6 @@ GCFLAGS += -Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wre
 
 # C++ only flags
 GPFLAGS = $(GCFLAGS)
-# uncomment the next line for extra fun ;)
 GPFLAGS += -std=gnu++0x
 # GPFLAGS += ...
 
@@ -234,12 +237,11 @@ $(PROJECT).hex: $(PROJECT).elf
 
 $(OUTDIR)/$(PROJECT).disasm: $(PROJECT).elf
 	@echo "  DISASM  " $@
-	@$(OBJDUMP) -d -f -M reg-names-std $(PROJECT).elf >$(OUTDIR)/$(PROJECT).disasm
+	@$(OBJDUMP) -d -f -M reg-names-std --demangle $(PROJECT).elf >$(OUTDIR)/$(PROJECT).disasm
 
 $(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
 	@echo "  LD      " $@
 	@$(LD) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $(PROJECT).elf
-	@$(SIZE) $(PROJECT).elf
 
 clean:
 	@echo "  RM      " "*.o"
@@ -260,10 +262,7 @@ clean:
 	@$(REMOVE) -f $(PROJECT).elf $(QUIET)
 
 size: $(PROJECT).elf
-	@echo
-	@echo $$'           \033[1;4m  SIZE        LPC1769 \033[0m'
-	@$(OBJDUMP) -h $^ | perl -MPOSIX -ne '/.(text|rodata)\s+([0-9a-f]+)/ && do { $$a += eval "0x$$2" }; END { printf "  FLASH    %6d bytes  %2d%% of %3dkb\n", $$a, ceil($$a * 100 / (512 * 1024)), 512 }'
-	@$(OBJDUMP) -h $^ | perl -MPOSIX -ne '/.(data|bss)\s+([0-9a-f]+)/    && do { $$a += eval "0x$$2" }; END { printf "  RAM      %6d bytes  %2d%% of %3dkb\n", $$a, ceil($$a * 100 / ( 16 * 1024)),  16 }'
+	@$(SIZE) $(PROJECT).elf
 
 -include $(DEPFILES)
 
@@ -277,23 +276,23 @@ endif
 #  Default rules to compile .c and .cpp file to .o
 #  and assemble .s files to .o
 
-$(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.c
+$(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.c makefile
 	@echo "  CC      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	@$(GPP) $(GPFLAGS) -c $< -o $@
 
-$(OUTDIR)/%.o : %.cpp
+$(OUTDIR)/%.o : %.cpp makefile
 	@echo "  CC      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 # 	if you want to see the whole compile command, remove the @ preceding the line below
 	@$(GPP) $(GPFLAGS) -c $< -o $@
 
-$(OUTDIR)/%.o : %.c
+$(OUTDIR)/%.o : %.c makefile
 	@echo "  CC      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	@$(GCC) $(GCFLAGS) -c $< -o $@
 
-$(OUTDIR)/%.o : %.S
+$(OUTDIR)/%.o : %.S makefile
 	@echo "  AS      " $<
 	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	@$(AS) $(ASFLAGS) -c $< -o $@

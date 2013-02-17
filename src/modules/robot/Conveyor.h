@@ -18,15 +18,19 @@ class Conveyor : public Module {
     public:
         Conveyor();
 
+        void on_module_loaded(void);
+        void on_idle(void*);
+
         Block* new_block();
         void new_block_added();
         void pop_and_process_new_block(int debug);
         void wait_for_queue(int free_blocks);
 
-        RingBuffer<Block,32> queue;  // Queue of Blocks
+        RingBuffer<Block,16> queue;  // Queue of Blocks
         Block* current_block;
         bool looking_for_new_block;
 
+        volatile int flush_blocks;
 };
 
 #endif // CONVEYOR_H

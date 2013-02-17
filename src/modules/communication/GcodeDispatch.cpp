@@ -36,9 +36,7 @@ void GcodeDispatch::on_console_line_received(void * line){
 
         //Get linenumber
         if( first_char == 'N' ){
-            Gcode full_line = Gcode();
-            full_line.command = possible_command;
-            full_line.stream = new_message.stream;
+            Gcode full_line = Gcode(possible_command, new_message.stream);
             ln = (int) full_line.get_value('N');
             int chksum = (int) full_line.get_value('*');
 
@@ -56,8 +54,8 @@ void GcodeDispatch::on_console_line_received(void * line){
             possible_command = possible_command.substr(0, chkpos);
             //Calculate checksum
             if( chkpos != string::npos ){
-                for(int i = 0; possible_command[i] != '*' && possible_command[i] != 0; i++)
-                    cs = cs ^ possible_command[i];
+                for(auto c = possible_command.cbegin(); *c != '*' && c != possible_command.cend(); c++)
+                    cs = cs ^ *c;
                 cs &= 0xff;  // Defensive programming...
                 cs -= chksum;
             }
@@ -72,7 +70,7 @@ void GcodeDispatch::on_console_line_received(void * line){
         }
 
         //Remove comments
-        size_t comment = possible_command.find_first_of(";");
+        size_t comment = possible_command.find_first_of(";(");
         if( comment != string::npos ){ possible_command = possible_command.substr(0, comment); }
 
         //If checksum passes then process message, else request resend
@@ -94,14 +92,18 @@ void GcodeDispatch::on_console_line_received(void * line){
                     possible_command = possible_command.substr(nextcmd);
                 }
                 //Prepare gcode for dispatch
-                Gcode gcode = Gcode();
-                gcode.command = single_command;
-                gcode.stream = new_message.stream;
-                gcode.prepare_cached_values();
+                Gcode* gcode = new Gcode(single_command, new_message.stream);
+                gcode->prepare_cached_values();
 
+//                 printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
                 //Dispatch message!
-                this->kernel->call_event(ON_GCODE_RECEIVED, &gcode );
+                this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                if (gcode->add_nl)
+                    new_message.stream->printf("\r\n");
                 new_message.stream->printf("ok\r\n");
+
+                if (gcode->queued == 0)
+                    delete gcode;
             }
         }else{
             //Request resend
