@@ -16,6 +16,7 @@
 
 
 void Player::on_module_loaded(){
+    this->empty_stream = new StreamOutput();
     this->playing_file = false;
     this->booted = false;
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
@@ -54,29 +55,32 @@ void Player::play_command( string parameters, StreamOutput* stream ){
     string options           = shift_parameter( parameters );
 
     this->current_file_handler = fopen( filename.c_str(), "r");
-    if(this->current_file_handler == NULL)
-    {
+    if(this->current_file_handler == NULL){
         stream->printf("File not found: %s\r\n", filename.c_str());
         return;
     }
+
     this->playing_file = true;
+
+    // Do not output to any stream if we were passed the -q ( quiet ) option    
     if( options.find_first_of("Qq") == string::npos ){
         this->current_stream = stream;
     }else{
-        this->current_stream = kernel->streams;
-	}
+        this->current_stream = this->empty_stream;
+    }
 
-	// get size of file
-	int result = fseek(this->current_file_handler, 0, SEEK_END);
-	if (0 != result){
-		stream->printf("WARNING - Could not get file size\r\n");
-		file_size= -1;
-	}else{
-		file_size= ftell(this->current_file_handler);
-		fseek(this->current_file_handler, 0, SEEK_SET);
-		stream->printf("  File size %ld\r\n", file_size);
-	}
-	played_cnt= 0;
+    // get size of file
+    int result = fseek(this->current_file_handler, 0, SEEK_END);
+    if (0 != result){
+            stream->printf("WARNING - Could not get file size\r\n");
+            file_size= -1;
+    }else{
+            file_size= ftell(this->current_file_handler);
+            fseek(this->current_file_handler, 0, SEEK_SET);
+            stream->printf("  File size %ld\r\n", file_size);
+    }
+    played_cnt= 0;
+
 }
 
 void Player::progress_command( string parameters, StreamOutput* stream ){
