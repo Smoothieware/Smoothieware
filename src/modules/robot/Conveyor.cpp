@@ -15,21 +15,21 @@ using namespace std;
 #include "Timer.h" // mbed.h lib
 #include "wait_api.h" // mbed.h lib
 #include "Block.h"
-#include "Player.h"
+#include "Conveyor.h"
 #include "Planner.h"
 
-Player::Player(){
+Conveyor::Conveyor(){
     this->current_block = NULL;
     this->looking_for_new_block = false;
     flush_blocks = 0;
 }
 
-void Player::on_module_loaded()
+void Conveyor::on_module_loaded()
 {
     register_for_event(ON_IDLE);
 }
 
-void Player::on_idle(void* argument)
+void Conveyor::on_idle(void* argument)
 {
     if (flush_blocks)
     {
@@ -50,7 +50,7 @@ void Player::on_idle(void* argument)
 }
 
 // Append a block to the list
-Block* Player::new_block(){
+Block* Conveyor::new_block(){
 
     // Clean up the vector of commands in the block we are about to replace
     // It is quite strange to do this here, we really should do it inside Block->pop_and_execute_gcode
@@ -60,7 +60,7 @@ Block* Player::new_block(){
     Block* block = this->queue.get_ref( this->queue.size() );
 //     printf("cleanup %p\n", block);
     // Then clean it up
-    if( block->player == this ){
+    if( block->conveyor == this ){
         for(; block->gcodes.size(); ){
             Gcode* g = block->gcodes.back();
 //             printf("Block:pop %p (%d refs)\n", g, g->queued);
@@ -79,20 +79,20 @@ Block* Player::new_block(){
     block->is_ready = false;
     block->initial_rate = -2;
     block->final_rate = -2;
-    block->player = this;
-
+    block->conveyor = this;
+    
     return block;
 }
 
 // Used by blocks to signal when they are ready to be used by the system
-void Player::new_block_added(){
+void Conveyor::new_block_added(){
     if( this->current_block == NULL ){
         this->pop_and_process_new_block(33);
     }
 }
 
 // Process a new block in the queue
-void Player::pop_and_process_new_block(int debug){
+void Conveyor::pop_and_process_new_block(int debug){
     if( this->looking_for_new_block ){ return; }
     this->looking_for_new_block = true;
 
@@ -122,7 +122,7 @@ void Player::pop_and_process_new_block(int debug){
 
 }
 
-void Player::wait_for_queue(int free_blocks)
+void Conveyor::wait_for_queue(int free_blocks)
 {
     while( this->queue.size() >= this->queue.capacity()-free_blocks ){
         this->kernel->call_event(ON_IDLE);

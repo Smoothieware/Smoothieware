@@ -5,17 +5,18 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef PLAYER_H
-#define PLAYER_H
+#ifndef CONVEYOR_H
+#define CONVEYOR_H
+
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 using namespace std;
 #include <string>
 #include <vector>
 
-class Player : public Module {
+class Conveyor : public Module {
     public:
-        Player();
+        Conveyor();
 
         void on_module_loaded(void);
         void on_idle(void*);
@@ -32,6 +33,4 @@ class Player : public Module {
         volatile int flush_blocks;
 };
 
-
-
-#endif
+#endif // CONVEYOR_H

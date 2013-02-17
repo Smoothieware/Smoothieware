@@ -8,7 +8,7 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
-#include "modules/robot/Player.h"
+#include "modules/robot/Conveyor.h"
 #include "Endstops.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Pin.h"
@@ -97,7 +97,7 @@ void Endstops::on_gcode_received(void* argument)
             // G28 is received, we have homing to do
 
             // First wait for the queue to be empty
-            while(this->kernel->player->queue.size() > 0) { wait_us(500); }
+            while(this->kernel->conveyor->queue.size() > 0) { wait_us(500); }
 
             // Do we move select axes or all of them
             char axes_to_move = ( ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ) ? 0x00 : 0xff );

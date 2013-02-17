@@ -11,7 +11,7 @@
 using std::string;
 #include <math.h>
 #include "Planner.h"
-#include "Player.h"
+#include "Conveyor.h"
 #include "Robot.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Pin.h"
@@ -97,7 +97,7 @@ void Robot::on_gcode_received(void * argument){
     gcode->call_on_gcode_execute_event_immediatly = false;
     gcode->on_gcode_execute_event_called = false;
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( this->kernel->player->queue.size() == 0 ){
+    if( this->kernel->conveyor->queue.size() == 0 ){
         gcode->call_on_gcode_execute_event_immediatly = true;
         this->execute_gcode(gcode);
         if( gcode->on_gcode_execute_event_called == false ){
@@ -105,7 +105,7 @@ void Robot::on_gcode_received(void * argument){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
         }
     }else{
-        Block* block = this->kernel->player->queue.get_ref( this->kernel->player->queue.size() - 1 );
+        Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
         this->execute_gcode(gcode);
         block->append_gcode(gcode);
         gcode->queued++;

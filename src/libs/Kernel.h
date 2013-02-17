@@ -23,7 +23,7 @@
 
 //Module manager
 class Module;
-class Player;
+class Conveyor;
 class SlowTicker;
 class Kernel {
     public:
@@ -42,7 +42,7 @@ class Kernel {
         Stepper*          stepper;
         Planner*          planner;
         Config*           config;
-        Player*           player;
+        Conveyor*         conveyor;
         Pauser*           pauser;
 
         int debug;
