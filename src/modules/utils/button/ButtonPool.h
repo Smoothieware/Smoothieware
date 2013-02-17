@@ -13,8 +13,9 @@
 using namespace std;
 #include <vector>
 
-#define button_checksum              5709
-#define enable_checksum              29545
+// defined in Button.h
+// #define button_checksum              CHECKSUM("button")
+#define enable_checksum              CHECKSUM("enable")
 
 class ButtonPool : public Module {
     public:
