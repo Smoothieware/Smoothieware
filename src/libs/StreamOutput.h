@@ -10,6 +10,9 @@
 
 #include <Stream.h>
 #include <cstdarg>
+#include <cstring>
+
+class NullStreamOutput;
 
 class StreamOutput : public mbed::Stream {
     public:
@@ -33,9 +36,16 @@ class StreamOutput : public mbed::Stream {
             delete[] buffer;
             return size - 1;
         }
-        virtual int _putc(int c) { return 0; }
+        virtual int _putc(int c) { return 1; }
         virtual int _getc(void) { return 0; }
-        virtual int puts(const char*) { return 0; };
+        virtual int puts(const char* str) = 0;
+
+        static NullStreamOutput NullStream;
+};
+
+class NullStreamOutput : public StreamOutput {
+    public:
+        int puts(const char* str) { return strlen(str); }
 };
 
 #endif
