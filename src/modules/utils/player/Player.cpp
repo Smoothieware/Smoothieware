@@ -128,7 +128,7 @@ void Player::cd_command( string parameters, StreamOutput* stream ){
 
 void Player::on_main_loop(void* argument){
     if( !this->booted && this->on_boot_enable ){
-        this->play_command(this->on_boot_file_name, NULL);
+        this->play_command(this->on_boot_file_name, this->kernel->serial);
         this->booted = true;
     }
 
