@@ -246,6 +246,7 @@ void USBSerial::on_main_loop(void *argument)
         while (available())
         {
             char c = _getc();
+            if( c == '\r' ){ c = '\n'; } 
             if( c == '\n' )
             {
                 struct SerialMessage message;
