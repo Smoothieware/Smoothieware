@@ -53,24 +53,14 @@ double Gcode::get_value( char letter ){
 
 int Gcode::get_int( char letter )
 {
-    const char* buffer = command.c_str();
-    for (int i = 0; buffer[i]; i++)
-    {
-        if( letter == buffer[i] )
-        {
-            for(int j = i + 1; buffer[j]; j++)
-            {
-                if( is_numeric(buffer[j]) )
-                {
-                    const char* endptr = &buffer[j];
-                    int r = strtol(&buffer[j], const_cast<char**>(&endptr), 10);
-                    if (endptr > command.c_str())
-                        return r;
-                    return 0;
-                }
-                else if ( is_whitespace(buffer[j]) == false )
-                    return 0;
-            }
+    const char* cs = command.c_str();
+    char* cn = NULL;
+    for (; *cs; cs++){
+        if( letter == *cs ){
+            cs++;
+            int r = strtol(cs, &cn, 10);
+            if (cn > cs)
+                return r;
         }
     }
     return 0;
@@ -89,13 +79,13 @@ int Gcode::get_num_args(){
 void Gcode::prepare_cached_values(){
     if( this->has_letter('G') ){
         this->has_g = true;
-        this->g = this->get_value('G');
+        this->g = this->get_int('G');
     }else{
         this->has_g = false;
     }
     if( this->has_letter('M') ){
         this->has_m = true;
-        this->m = this->get_value('M');
+        this->m = this->get_int('M');
     }else{
         this->has_m = false;
     }

@@ -42,7 +42,6 @@ class Player : public Module {
         string on_boot_file_name;
         bool playing_file;
         StreamOutput* current_stream;
-        StreamOutput* empty_stream;
         FILE* current_file_handler;
 		long file_size, played_cnt;
 };
