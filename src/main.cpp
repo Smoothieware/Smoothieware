@@ -101,12 +101,6 @@ int main() {
     kernel->add_module( &dfu );
     kernel->add_module( &u );
 
-    // Why do we do this ?
-    struct SerialMessage message;
-    message.message = "G90";
-    message.stream = kernel->serial;
-    kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-
     // Main loop
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
