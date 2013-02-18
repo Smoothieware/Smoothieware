@@ -10,7 +10,7 @@ using namespace std;
 
 Button::Button(uint16_t name){
     this->name_checksum = name;
-    this->dummy_stream = new StreamOutput();
+    this->dummy_stream = &(StreamOutput::NullStream);
 }
 
 void Button::on_module_loaded(){

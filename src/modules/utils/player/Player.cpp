@@ -16,7 +16,6 @@
 
 
 void Player::on_module_loaded(){
-    this->empty_stream = new StreamOutput();
     this->playing_file = false;
     this->booted = false;
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
@@ -62,11 +61,11 @@ void Player::play_command( string parameters, StreamOutput* stream ){
 
     this->playing_file = true;
 
-    // Do not output to any stream if we were passed the -q ( quiet ) option    
+    // Do not output to any stream if we were passed the -q ( quiet ) option
     if( options.find_first_of("Qq") == string::npos ){
         this->current_stream = stream;
     }else{
-        this->current_stream = this->empty_stream;
+        this->current_stream = &(StreamOutput::NullStream);
     }
 
     // get size of file
@@ -94,7 +93,7 @@ void Player::progress_command( string parameters, StreamOutput* stream ){
 		stream->printf("%d %% complete\r\n", pcnt);
 	}else{
 		stream->printf("File size is unknown\r\n");
-	}		
+	}
 }
 
 void Player::abort_command( string parameters, StreamOutput* stream ){
