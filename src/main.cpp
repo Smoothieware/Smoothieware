@@ -64,8 +64,9 @@ GPIO leds[5] = {
 };
 
 int main() {
-    for (int i = 0; i < 5; i++)
-    {
+
+    // Default pins to low status
+    for (int i = 0; i < 5; i++){
         leds[i].output();
         leds[i] = (i & 1) ^ 1;
     }
@@ -76,36 +77,8 @@ int main() {
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 \r\n");
 
-//     kernel->streams->printf("Disk Status: %d, Type: %d\n", sd.disk_status(), sd.card_type());
-//     if (sd.disk_status() == 0) {
-//         uint16_t s1;
-//         uint8_t s2;
-//         char suffix;
-//         if (sd.disk_sectors() >= (1<<21)) {
-//             s1 = sd.disk_sectors() >> 21;
-//             s2 = ((sd.disk_sectors() * 10) >> 21) - (s1 * 10);
-//             suffix = 'G';
-//         }
-//         else if (sd.disk_sectors() >= (1<<11)) {
-//             s1 = sd.disk_sectors() >> 11;
-//             s2 = ((sd.disk_sectors() * 10) >> 11) - (s1 * 10);
-//             suffix = 'M';
-//         }
-//         else if (sd.disk_sectors() >= (1<< 1)) {
-//             s1 = sd.disk_sectors() >> 1;
-//             s2 = ((sd.disk_sectors() * 10) >> 1) - (s1 * 10);
-//             suffix = 'K';
-//         }
-//         else {
-//             s1 = sd.disk_sectors() << 9;
-//             s2 = 0;
-//             suffix = ' ';
-//         }
-//         kernel->streams->printf("Card has %lu blocks; %llu bytes; %d.%d%cB\n", sd.disk_sectors(), sd.disk_size(), s1, s2, suffix);
-//     }
-
-     kernel->add_module( new Laser() );
-//     kernel->add_module( &wd );
+    // Create and add main modules
+    kernel->add_module( new Laser() );
     kernel->add_module( new Extruder() );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
@@ -116,8 +89,8 @@ int main() {
     kernel->add_module( new PauseButton() );
     kernel->add_module( new Endstops() );
 
+    // Create and initialize USB stuff
     u.init();
-
     kernel->add_module( &msc );
     kernel->add_module( &usbserial );
     if( kernel->config->value( second_usb_serial_enable_checksum )->by_default(false)->as_bool() ){
@@ -126,11 +99,13 @@ int main() {
     kernel->add_module( &dfu );
     kernel->add_module( &u );
 
+    // Why do we do this ?
     struct SerialMessage message;
     message.message = "G90";
     message.stream = kernel->serial;
     kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
+    // Main loop
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
         kernel->call_event(ON_IDLE);
