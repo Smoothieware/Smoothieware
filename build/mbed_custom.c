@@ -21,10 +21,13 @@
 
 extern unsigned int __bss_start__;
 extern unsigned int __bss_end__;
-extern "C" int  main(void);
-extern "C" void __libc_init_array(void);
-extern "C" void exit(int ErrorCode);
-extern "C" void _start(void)
+extern unsigned int __end__;
+
+int  main(void);
+void __libc_init_array(void);
+void software_init_hook(void) __attribute((weak));
+void exit(int ErrorCode);
+void _start(void)
 {
     int bssSize = (int)&__bss_end__ - (int)&__bss_start__;
     int mainReturnValue;
@@ -38,14 +41,15 @@ extern "C" void _start(void)
             __debugbreak();
     }
     
+    software_init_hook();
     __libc_init_array();
     mainReturnValue = main();
     exit(mainReturnValue);
 }
 
 
-extern "C" int __real__read(int file, char *ptr, int len);
-extern "C" int __wrap__read(int file, char *ptr, int len)
+int __real__read(int file, char *ptr, int len);
+int __wrap__read(int file, char *ptr, int len)
 {
     if (MRI_SEMIHOST_STDIO && file < 3)
         return __mriNewlib_SemihostRead(file, ptr, len);
@@ -53,8 +57,8 @@ extern "C" int __wrap__read(int file, char *ptr, int len)
 }
 
 
-extern "C" int __real__write(int file, char *ptr, int len);
-extern "C" int __wrap__write(int file, char *ptr, int len)
+int __real__write(int file, char *ptr, int len);
+int __wrap__write(int file, char *ptr, int len)
 {
     if (MRI_SEMIHOST_STDIO && file < 3)
         return __mriNewlib_SemihostWrite(file, ptr, len);
@@ -62,8 +66,8 @@ extern "C" int __wrap__write(int file, char *ptr, int len)
 }
 
 
-extern "C" int __real__isatty(int file);
-extern "C" int __wrap__isatty(int file)
+int __real__isatty(int file);
+int __wrap__isatty(int file)
 {
     /* Hardcoding the stdin/stdout/stderr handles to be interactive tty devices, unlike mbed.ar */
     if (file < 3)
@@ -72,7 +76,7 @@ extern "C" int __wrap__isatty(int file)
 }
 
 
-extern "C" int __wrap_semihost_connected(void)
+int __wrap_semihost_connected(void)
 {
     /* MRI makes it look like there is no mbed interface attached since it disables the JTAG portion but MRI does
        support some of the mbed semihost calls when it is running so force it to return -1, indicating that the
@@ -82,7 +86,7 @@ extern "C" int __wrap_semihost_connected(void)
 
 
 
-extern "C" void abort(void)
+void abort(void)
 {
     if (MRI_ENABLE)
         __debugbreak();
@@ -91,52 +95,31 @@ extern "C" void abort(void)
 }
 
 
-extern "C" void __cxa_pure_virtual(void)
-{
-    abort();
-}
-
-
-extern "C" int __aeabi_unwind_cpp_pr0(int state, void* controlBlock, void* context)
-{
-    abort();
-}
-
-
-extern "C" int __aeabi_unwind_cpp_pr1(int state, void* controlBlock, void* context)
-{
-    abort();
-}
-
-
-extern "C" int __aeabi_unwind_cpp_pr2(int state, void* controlBlock, void* context)
+void __cxa_pure_virtual(void)
 {
     abort();
 }
 
 /* Trap calls to malloc/free/realloc in ISR. */
-extern "C" void __malloc_lock(void)
+void __malloc_lock(void)
 {
     if (__get_IPSR() != 0)
         __debugbreak();
 }
 
-extern "C" void __malloc_unlock(void)
+void __malloc_unlock(void)
 {
 }
 
-
-/* Linker defined symbol to be used by sbrk for where dynamically heap should start. */
-extern "C" int __HeapBase;
 
 /* Turn off the errno macro and use actual external global variable instead. */
 #undef errno
 extern int errno;
 
 /* Dynamic memory allocation related syscalls. */
-extern "C" caddr_t _sbrk(int incr) 
+caddr_t _sbrk(int incr) 
 {
-    static unsigned char* heap = (unsigned char*)&__HeapBase;
+    static unsigned char* heap = (unsigned char*)&__end__;
     unsigned char*        prev_heap = heap;
     unsigned char*        new_heap = heap + incr;
 

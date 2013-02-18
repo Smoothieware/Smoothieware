@@ -1,26 +1,12 @@
-# Copyright 2011 Adam Green (http://mbed.org/users/AdamGreen/)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 PROJECT=main
-GCC4MBED_DIR=./gcc4mbed
-INCDIRS=
-LIBS_PREFIX=
-LIBS_SUFFIX=
-SRC=./src
+BUILD_DIR=../build
+DEVICES=lpc1768
 
-#GCC4MBED_TYPE=Debug
-#GCC4MBED_TYPE=Release
-GCC4MBED_TYPE=Checked
+# BUILD_TYPE can be set to the following values:
+#  Checked - Optimizations enabled with MRI debug monitor support. (Recommended Type)
+#  Release - Optimizations enabled.
+#  Debug - Optimization disabled with MRI debug monitor support.
+BUILD_TYPE=Checked
 
 # Set to 1 to allow MRI debug monitor to take full control of UART0 and use it
 # as a dedicated debug channel.  If you are using the USB based serial port for
@@ -40,22 +26,25 @@ MRI_BREAK_ON_INIT=0
 MRI_SEMIHOST_STDIO=0
 endif
 
-CONSOLE=/dev/ttyUSB0
+include $(BUILD_DIR)/build.mk
 
-include ./gcc4mbed/build/gcc4mbed.mk
+CONSOLE?=/dev/arduino_A900K10V
 
-.PHONY: debug-store flash upload debug console
+.PHONY: debug-store flash upload debug console dfu
 
-debug-store: $(PROJECT).elf
-	cp $(PROJECT).elf $(PROJECT)_lastupload.elf
+debug-store: LPC1768/$(PROJECT).elf
+	cp LPC1768/$(PROJECT).elf LPC1768/$(PROJECT)_lastupload.elf
 
-flash: $(PROJECT).hex debug-store
+flash: LPC1768/$(PROJECT).hex debug-store
 	lpc21isp $< $(CONSOLE) 115200 12000
 
-upload: $(PROJECT).bin debug-store
-	dfu-util -d 1d50:6015 -R -D $<
+dfu: LPC1768/$(PROJECT).bin
+	dfu-util -D $< -R
 
-debug: $(PROJECT)_lastupload.elf
+upload: LPC1768/$(PROJECT).bin debug-store
+	dfu-util -d 1d50:6015 -D $<
+
+debug: LPC1768/$(PROJECT)_lastupload.elf
 	arm-none-eabi-gdb $< -ex  "set target-charset ASCII" -ex "set remotelogfile mri.log" -ex "target remote $(CONSOLE)"
 
 console:

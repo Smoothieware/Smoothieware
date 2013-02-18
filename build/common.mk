@@ -18,83 +18,50 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #THE SOFTWARE.
 #
-# Updates:
-#    Arthur Wolf & Adam Green in 2011 - Updated to work with mbed.
+# Updates: 
+#    Arthur Wolf & Adam Green in 2011 - 2012 - Updated to work with mbed.
 ###############################################################################
-# USAGE:
-# Variables that must be defined in including makefile.
-#   PROJECT: Name to be given to the output binary for this project.
-#   SRC: The root directory for the sources of your project.
-#   GCC4MED_DIR: The root directory for where the gcc4mbed sources are located
-#                in your project.  This should point to the parent directory
-#                of the build directory which contains this gcc4mbed.mk file.
-#   LIBS_PREFIX: List of library/object files to prepend to mbed.ar capi.ar libs.
-#   LIBS_SUFFIX: List of library/object files to append to mbed.ar capi.ar libs.
-#   GCC4MBED_TYPE: Type of build to produce.  Allowed values are:
-#                  Debug - Build for debugging.  Disables optimizations and
-#                          links in debug MRI runtime.  Best debugging
-#                          experience.
-#                  Release - Build for release with no debug support.
-#                  Checked - Release build with debug support.  Due to
-#                            optimizations, debug experience won't be as good
-#                            as Debug but might be needed when bugs don't
-#                            reproduce in Debug builds.
-#                  default: Release
-#   MRI_BREAK_ON_INIT: Should the program halt before calling into main(),
-#                      allowing the developer time to set breakpoints in main()
-#                      or in code run from within global constructors.
-#                      default: 1 - break on init.
-#   MRI_SEMIHOST_STDIO: Set to non-zero value to allow debug monitor to use
-#                       semi-host calls to redirect stdin/stdout/stderr to the
-#                       gdb console.
-#                       default: 1 for Debug/Checked builds and 0 for Release.
-#   MRI_UART: Select the UART to be used by the debugger.  See mri.h for
-#             allowed values.
-#             default: MRI_UART_MBED_USB - Use USB based UART on the mbed.
-# Example makefile:
-#       PROJECT=HelloWorld
-#       SRC=.
-#       GCC4MBED_DIR=../..
-#       LIBS_PREFIX=../agutil/agutil.ar
-#       LIBS_SUFFIX=
-#
-#       include ../../build/gcc4mbed.mk
-#
-###############################################################################
-
 # Check for undefined variables.
 ifndef PROJECT
 $(error makefile must set PROJECT variable.)
 endif
 
-ifndef GCC4MBED_DIR
-$(error makefile must set GCC4MBED_DIR.)
+ifndef BUILD_DIR
+$(error makefile must set BUILD_DIR.)
+endif
+
+# Set VERBOSE make variable to 1 to output all tool commands.
+VERBOSE?=0
+ifeq "$(VERBOSE)" "0"
+Q=@
+else
+Q=
 endif
 
 
 # Default variables.
 SRC ?= .
-GCC4MBED_TYPE ?= Release
+BUILD_TYPE ?= Release
 MRI_BREAK_ON_INIT ?= 1
 MRI_UART ?= MRI_UART_MBED_USB
 
 
-# Configure MRI variables based on GCC4MBED_TYPE build type variable.
-ifeq "$(GCC4MBED_TYPE)" "Release"
+# Configure MRI variables based on BUILD_TYPE build type variable.
+ifeq "$(BUILD_TYPE)" "Release"
 OPTIMIZATION ?= 2
 MRI_ENABLE = 0
 MRI_SEMIHOST_STDIO ?= 0
 endif
 
 
-ifeq "$(GCC4MBED_TYPE)" "Debug"
+ifeq "$(BUILD_TYPE)" "Debug"
 OPTIMIZATION = 0
-MRI_ENABLE = 1
+MRI_ENABLE ?= 1
 MRI_SEMIHOST_STDIO ?= 1
 endif
 
 
-ifeq "$(GCC4MBED_TYPE)" "Checked"
+ifeq "$(BUILD_TYPE)" "Checked"
 OPTIMIZATION ?= 2
 MRI_ENABLE = 1
 MRI_SEMIHOST_STDIO ?= 1
@@ -102,38 +69,41 @@ endif
 
 MRI_INIT_PARAMETERS=$(MRI_UART)
 
-
 # Output Object Directory
-OUTDIR=LPC176x
+OUTDIR=$(DEVICE)
 
 # List of sources to be compiled/assembled
 CSRCS = $(wildcard $(SRC)/*.c $(SRC)/*/*.c $(SRC)/*/*/*.c $(SRC)/*/*/*/*.c $(SRC)/*/*/*/*/*.c)
 ASRCS =  $(wildcard $(SRC)/*.S $(SRC)/*/*.S $(SRC)/*/*/*.S $(SRC)/*/*/*/*.S $(SRC)/*/*/*/*/*.S)
+ifneq "$(OS)" "Windows_NT"
+ASRCS +=  $(wildcard $(SRC)/*.s $(SRC)/*/*.s $(SRC)/*/*/*.s $(SRC)/*/*/*/*.s $(SRC)/*/*/*/*/*.s)
+endif
 CPPSRCS = $(wildcard $(SRC)/*.cpp $(SRC)/*/*.cpp $(SRC)/*/*/*.cpp $(SRC)/*/*/*/*.cpp $(SRC)/*/*/*/*/*.cpp)
 
 # List of the objects files to be compiled/assembled
-OBJECTS = $(patsubst %.c,$(OUTDIR)/%.o,$(CSRCS)) $(patsubst %.S,$(OUTDIR)/%.o,$(ASRCS)) $(patsubst %.cpp,$(OUTDIR)/%.o,$(CPPSRCS))
+OBJECTS = $(patsubst %.c,$(OUTDIR)/%.o,$(CSRCS)) $(patsubst %.s,$(OUTDIR)/%.o,$(patsubst %.S,$(OUTDIR)/%.o,$(ASRCS))) $(patsubst %.cpp,$(OUTDIR)/%.o,$(CPPSRCS))
 
-# Add in the GCC4MBED stubs which allow hooking in the MRI debug monitor.
-OBJECTS += $(OUTDIR)/gcc4mbed.o
+# Add in the MBED customization stubs which allow hooking in the MRI debug monitor.
+OBJECTS += $(OUTDIR)/mbed_custom.o
 
 # List of the header dependency files, one per object file.
 DEPFILES = $(patsubst %.o,%.d,$(OBJECTS))
 
 # Linker script to be used.  Indicates what code should be placed where in memory.
-LSCRIPT=$(GCC4MBED_DIR)/build/mbed.ld
+LSCRIPT=$(MBED_DIR)/$(DEVICE)/GCC_ARM/$(DEVICE).ld
 
 # Location of external library and header dependencies.
-EXTERNAL_DIR = $(GCC4MBED_DIR)/external
+MBED_DIR = $(BUILD_DIR)/../mbed/drop
+MRI_DIR  = $(BUILD_DIR)/../mri
 
 # Include path which points to external library headers and to subdirectories of this project which contain headers.
 SUBDIRS = $(wildcard $(SRC)/* $(SRC)/*/* $(SRC)/*/*/* $(SRC)/*/*/*/* $(SRC)/*/*/*/*/*)
 PROJINCS = $(sort $(dir $(SUBDIRS)))
-INCDIRS += $(PROJINCS) $(GCC4MBED_DIR)/mri $(EXTERNAL_DIR)/mbed $(EXTERNAL_DIR)/mbed/LPC1768
+INCDIRS += $(SRC) $(PROJINCS) $(MRI_DIR) $(MBED_DIR) $(MBED_DIR)/$(DEVICE)
 
 # DEFINEs to be used when building C/C++ code
-DEFINES += -DTARGET_LPC1768 -D__LPC17XX__
-DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"'
+DEFINES += -DTARGET_$(DEVICE)
+DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"' 
 DEFINES += -DMRI_BREAK_ON_INIT=$(MRI_BREAK_ON_INIT) -DMRI_SEMIHOST_STDIO=$(MRI_SEMIHOST_STDIO)
 
 ifeq "$(OPTIMIZATION)" "0"
@@ -141,18 +111,14 @@ DEFINES += -DDEBUG
 endif
 
 # Libraries to be linked into final binary
-MBED_LIBS = $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/libmbed.a $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/libcapi.a
-SYS_LIBS = -lstdc++ -lsupc++ -lm -lgcc -lc -lgcc -lc -lnosys
-LIBS = $(LIBS_PREFIX)
+MBED_LIBS = $(MBED_DIR)/$(DEVICE)/GCC_ARM/libmbed.a
+SYS_LIBS = -lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys
+LIBS = $(LIBS_PREFIX) 
 
 ifeq "$(MRI_ENABLE)" "1"
-LIBS += $(GCC4MBED_DIR)/mri/mri.ar
+LIBS += $(MRI_DIR)/mri.ar
 endif
 
-LIBS += $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/startup_LPC17xx.o
-LIBS += $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/cmsis_nvic.o
-LIBS += $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/core_cm3.o
-LIBS += $(EXTERNAL_DIR)/mbed/LPC1768/GCC_ARM/system_LPC17xx.o
 LIBS += $(MBED_LIBS)
 LIBS += $(SYS_LIBS)
 LIBS += $(LIBS_SUFFIX)
@@ -161,37 +127,41 @@ LIBS += $(LIBS_SUFFIX)
 DEPFLAGS = -MMD -MP
 
 # Compiler Options
-
-# C/C++ flags
-GCFLAGS = -O$(OPTIMIZATION) -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork
-GCFLAGS += -ffunction-sections -fdata-sections  -fno-exceptions
+GCFLAGS += -O$(OPTIMIZATION) -g3 $(DEVICE_CFLAGS)
+GCFLAGS += -ffunction-sections -fdata-sections  -fno-exceptions -fno-delete-null-pointer-checks
 GCFLAGS += $(patsubst %,-I%,$(INCDIRS))
 GCFLAGS += $(DEFINES)
 GCFLAGS += $(DEPFLAGS)
 GCFLAGS += -Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wredundant-decls -Wcast-qual -Wcast-align
 
-# C++ only flags
-GPFLAGS = $(GCFLAGS)
-GPFLAGS += -std=gnu++0x
-# GPFLAGS += ...
+GPFLAGS += $(GCFLAGS) -fno-rtti -std=gnu++11
 
-# Setup wraps for newlib read/writes to redirect to MRI debugger.
+AS_GCFLAGS += -g3 $(DEVICE_FLAGS) -x assembler-with-cpp
+AS_GCFLAGS += $(patsubst %,-I%,$(INCDIRS))
+AS_FLAGS += -g3 $(DEVICE_FLAGS)
+
+
+# Setup wraps for newlib read/writes to redirect to MRI debugger. 
 ifeq "$(MRI_ENABLE)" "1"
 MRI_WRAPS=,--wrap=_read,--wrap=_write,--wrap=semihost_connected
 else
-MRI_WRAP=
+MRI_WRAPS=
 endif
 
 # Linker Options.
-LDFLAGS = -mcpu=cortex-m3 -mthumb -O$(OPTIMIZATION) -specs=$(GCC4MBED_DIR)/build/startfile.spec -Wl,-Map=$(OUTDIR)/$(PROJECT).map,--cref,--gc-sections,--wrap=_isatty$(MRI_WRAPS) -T$(LSCRIPT)  -L $(EXTERNAL_DIR)/gcc/LPC1768
+LDFLAGS = $(DEVICE_FLAGS) -specs=$(BUILD_DIR)/startfile.spec -Wl,-Map=$(OUTDIR)/$(PROJECT).map,--cref,--gc-sections,--wrap=_isatty$(MRI_WRAPS) -T$(LSCRIPT)
+ifneq "$(NO_FLOAT_SCANF)" "1"
+LDFLAGS += -u _scanf_float
+endif
+ifneq "$(NO_FLOAT_PRINTF)" "1"
+LDFLAGS += -u _printf_float
+endif
 
-ASFLAGS = $(LISTING) -mcpu=cortex-m3 -mthumb -x assembler-with-cpp
-ASFLAGS += $(patsubst %,-I%,$(INCDIRS))
 
 #  Compiler/Assembler/Linker Paths
 GCC = arm-none-eabi-gcc
 GPP = arm-none-eabi-g++
-AS = arm-none-eabi-gcc
+AS = arm-none-eabi-as
 LD = arm-none-eabi-g++
 OBJCOPY = arm-none-eabi-objcopy
 OBJDUMP = arm-none-eabi-objdump
@@ -204,11 +174,13 @@ SHELL=cmd.exe
 REMOVE_DIR = rd /s /q
 MKDIR = mkdir
 QUIET=>nul 2>nul & exit 0
+BLANK_LINE=echo -
 else
 REMOVE = rm
 REMOVE_DIR = rm -r -f
 MKDIR = mkdir -p
 QUIET=> /dev/null 2>&1 ; exit 0
+BLANK_LINE=echo
 endif
 
 # Create macro which will convert / to \ on Windows.
@@ -223,78 +195,67 @@ endef
 endif
 
 #########################################################################
-.PHONY: all clean deploy size
+.PHONY: all clean size
 
-all:: $(PROJECT).hex $(PROJECT).bin $(OUTDIR)/$(PROJECT).disasm size
+all:: $(OUTDIR)/$(PROJECT).hex $(OUTDIR)/$(PROJECT).bin $(OUTDIR)/$(PROJECT).disasm size
 
-$(PROJECT).bin: $(PROJECT).elf
-	@echo "  OBJCOPY " $@
-	@$(OBJCOPY) -O binary $(PROJECT).elf $(PROJECT).bin
+$(OUTDIR)/$(PROJECT).bin: $(OUTDIR)/$(PROJECT).elf
+	@echo Extracting $@
+	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	$(Q) $(OBJCOPY) -O binary $< $@
 
-$(PROJECT).hex: $(PROJECT).elf
-	@echo "  OBJCOPY " $@
-	@$(OBJCOPY) -R .stack -O ihex $(PROJECT).elf $(PROJECT).hex
+$(OUTDIR)/$(PROJECT).hex: $(OUTDIR)/$(PROJECT).elf
+	@echo Extracting $@
+	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	$(Q) $(OBJCOPY) -R .stack -O ihex $< $@
+	
+$(OUTDIR)/$(PROJECT).disasm: $(OUTDIR)/$(PROJECT).elf
+	@echo Extracting disassembly to $@
+	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	$(Q) $(OBJDUMP) -d -f -M reg-names-std --demangle $< >$@
+	
+$(OUTDIR)/$(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
+	@echo Linking $@
+	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	$(Q) $(LD) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $@
 
-$(OUTDIR)/$(PROJECT).disasm: $(PROJECT).elf
-	@echo "  DISASM  " $@
-	@$(OBJDUMP) -d -f -M reg-names-std --demangle $(PROJECT).elf >$(OUTDIR)/$(PROJECT).disasm
-
-$(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
-	@echo "  LD      " $@
-	@$(LD) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $(PROJECT).elf
+size: $(OUTDIR)/$(PROJECT).elf
+	$(Q) $(SIZE) $<
+	@$(BLANK_LINE)
 
 clean:
-	@echo "  RM      " "*.o"
-	@$(REMOVE) -f $(call convert-slash,$(OBJECTS)) $(QUIET)
-	@echo "  RM      " "*.dep"
-	@$(REMOVE) -f $(call convert-slash,$(DEPFILES)) $(QUIET)
-	@echo "  RM      " $(OUTDIR)/
-	@$(REMOVE_DIR) $(OUTDIR) $(QUIET)
-	@echo "  RM      " "$(PROJECT).map"
-	@$(REMOVE) -f $(call convert-slash,$(OUTDIR)/$(PROJECT).map) $(QUIET)
-	@echo "  RM      " "$(PROJECT).disasm"
-	@$(REMOVE) -f $(call convert-slash,$(OUTDIR)/$(PROJECT).disasm) $(QUIET)
-	@echo "  RM      " "$(PROJECT).bin"
-	@$(REMOVE) -f $(PROJECT).bin $(QUIET)
-	@echo "  RM      " "$(PROJECT).hex"
-	@$(REMOVE) -f $(PROJECT).hex $(QUIET)
-	@echo "  RM      " "$(PROJECT).elf"
-	@$(REMOVE) -f $(PROJECT).elf $(QUIET)
-
-size: $(PROJECT).elf
-	@$(SIZE) $(PROJECT).elf
+	@echo Cleaning up all build generated files
+	$(Q) $(REMOVE_DIR) $(OUTDIR) $(QUIET)
 
 -include $(DEPFILES)
-
-ifdef LPC_DEPLOY
-DEPLOY_COMMAND = $(subst PROJECT,$(PROJECT),$(LPC_DEPLOY))
-deploy:
-	$(DEPLOY_COMMAND)
-endif
 
 #########################################################################
 #  Default rules to compile .c and .cpp file to .o
 #  and assemble .s files to .o
 
-$(OUTDIR)/gcc4mbed.o : $(GCC4MBED_DIR)/src/gcc4mbed.c makefile
-	@echo "  CC      " $<
-	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	@$(GPP) $(GPFLAGS) -c $< -o $@
+$(OUTDIR)/mbed_custom.o : $(BUILD_DIR)/mbed_custom.c makefile
+	@echo Compiling $<
+	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	$(Q) $(GCC) $(GCFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.cpp makefile
-	@echo "  CC      " $<
-	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-# 	if you want to see the whole compile command, remove the @ preceding the line below
-	@$(GPP) $(GPFLAGS) -c $< -o $@
+	@echo Compiling $<
+	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	$(Q) $(GPP) $(GPFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.c makefile
-	@echo "  CC      " $<
-	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	@$(GCC) $(GCFLAGS) -c $< -o $@
+	@echo Compiling $<
+	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	$(Q) $(GCC) $(GCFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.S makefile
-	@echo "  AS      " $<
-	@$(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	@$(AS) $(ASFLAGS) -c $< -o $@
+	@echo Assembling $<
+	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	$(Q) $(GCC) $(AS_GCFLAGS) -c $< -o $@
+
+$(OUTDIR)/%.o : %.s makefile
+	@echo Assembling $<
+	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
+	$(Q) $(AS) $(AS_FLAGS) -o $@ $<
 
 #########################################################################

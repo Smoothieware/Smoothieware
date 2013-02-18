@@ -19,24 +19,25 @@ setlocal
 set ROOTDIR=%~dp0
 set LOGFILE=%ROOTDIR%win_install.log
 set ERRORFILE=%ROOTDIR%win_install.err
-set GCC4ARM_FILENAME=gcc-arm-none-eabi-4_6-2012q1-20120316.tar.bz2
-set GCC4ARM_URL=https://launchpad.net/gcc-arm-embedded/4.6/4.6-2012-q1-update/+download/%GCC4ARM_FILENAME%
+
+set GCC4ARM_FILENAME=gcc-arm-none-eabi-4_7-2012q4-20121208-linux.tar.bz2
+set GCC4ARM_URL=https://launchpad.net/gcc-arm-embedded/4.7/4.7-2012-q4-major/+download/%GCC4ARM_FILENAME%
 set GCC4ARM_TAR=%ROOTDIR%%GCC4ARM_FILENAME%
-set GCC4ARM_MD5=%ROOTDIR%external\win32\gcc-arm-none-eabi.md5
-set GCC4ARM_VERSION=gcc-arm-none-eabi-4_6-2012q1
+set GCC4ARM_MD5=%ROOTDIR%build\win32\gcc-arm-none-eabi.md5
+set GCC4ARM_VERSION=gcc-arm-none-eabi-4_7-2012q4
 set GCC4ARM_EXTRACT=%ROOTDIR%%GCC4ARM_VERSION%
 set GCC4ARM_DIR=%ROOTDIR%gcc-arm-none-eabi
 set GCC4ARM_BINDIR=%GCC4ARM_DIR%\bin
-set GCC4ARM_LIBEXEC=%GCC4ARM_DIR%\libexec\gcc\arm-none-eabi\4.6.2
-set WINBIN_URL=https://github.com/adamgreen/GCC-ARM-Embedded-20120316/tarball/master
-set WINBIN_TAR=%ROOTDIR%GCC-ARM-Embedded-20120316.tar.gz
-set WINBIN_MD5=%ROOTDIR%external\win32\GCC-ARM-Embedded.md5
+set GCC4ARM_LIBEXEC=%GCC4ARM_DIR%\lib\gcc\arm-none-eabi\4.7.3
+set WINBIN_URL=https://github.com/adamgreen/GCC-ARM-Embedded-20121208/tarball/master
+set WINBIN_TAR=%ROOTDIR%GCC-ARM-Embedded-20121208.tar.gz
+
+set WINBIN_MD5=%ROOTDIR%build\win32\GCC-ARM-Embedded.md5
 set WINBIN_BASEDIR=%ROOTDIR%GCC-ARM-Embedded
 set WINBIN_DIR=%WINBIN_BASEDIR%\win32
-set OUR_MAKE=%ROOTDIR%external\win32\make.exe
+set OUR_MAKE=%ROOTDIR%build\win32\make.exe
 set BUILDENV_CMD=%GCC4ARM_BINDIR%\buildenv.cmd
 set BUILDSHELL_CMD=%ROOTDIR%BuildShell.cmd
-set BUILDSHELL_DEBUG_CMD=%ROOTDIR%BuildShellDebug.cmd
 set ERROR_ENCOUNTERED=0
 
 
@@ -49,33 +50,34 @@ echo Logging install results to %LOGFILE%
 echo %DATE% %TIME%  Starting %0 %*>%LOGFILE%
 
 echo Downloading GNU Tools for ARM Embedded Processors...
-echo %DATE% %TIME%  Executing external\win32\curl -kL0 %GCC4ARM_URL%>>%LOGFILE%
-external\win32\curl -kL0 %GCC4ARM_URL% >%GCC4ARM_TAR%
+echo %DATE% %TIME%  Executing build\win32\curl -kL0 %GCC4ARM_URL%>>%LOGFILE%
+build\win32\curl -kL0 %GCC4ARM_URL% >%GCC4ARM_TAR%
 if errorlevel 1 goto ExitOnError
 
 echo Validating md5 signature of Code Sourcery G++ Lite...
-call :RunAndLog external\win32\md5sum --check %GCC4ARM_MD5%
+call :RunAndLog build\win32\md5sum --check %GCC4ARM_MD5%
 if errorlevel 1 goto ExitOnError
 
 echo Downloading Windows GCC binaries from github...
-echo %DATE% %TIME%  Executing external\win32\curl -kL0 %WINBIN_URL%>>%LOGFILE%
-external\win32\curl -kL0 %WINBIN_URL% >%WINBIN_TAR%
+echo %DATE% %TIME%  Executing build\win32\curl -kL0 %WINBIN_URL%>>%LOGFILE%
+build\win32\curl -kL0 %WINBIN_URL% >%WINBIN_TAR%
 if errorlevel 1 goto ExitOnError
 
 echo Validating md5 signature of Windows GCC binaries...
-call :RunAndLog external\win32\md5sum --check %WINBIN_MD5%
+call :RunAndLog build\win32\md5sum --check %WINBIN_MD5%
 if errorlevel 1 goto ExitOnError
 
 echo Extracting GNU Tools for ARM Embedded Processors...
+call :RunAndLog rd /s /q %GCC4ARM_EXTRACT%
 call :RunAndLog rd /s /q %GCC4ARM_DIR%
-call :RunAndLog external\win32\bsdtar xf %GCC4ARM_TAR%
+call :RunAndLog build\win32\bsdtar xf %GCC4ARM_TAR%
 if errorlevel 1 goto ExitOnError
 call :RunAndLog move %GCC4ARM_EXTRACT% %GCC4ARM_DIR%
 if errorlevel 1 goto ExitOnError
 
 echo Extracting Windows GCC binaries...
 call :RunAndLog rd /s /q %WINBIN_BASEDIR%
-call :RunAndLog external\win32\bsdtar xf %WINBIN_TAR%
+call :RunAndLog build\win32\bsdtar xf %WINBIN_TAR%
 for /d %%i in (adamgreen-GCC-ARM-Embedded-*) do call :RunAndLog move %%i %WINBIN_BASEDIR%
 if errorlevel 1 goto ExitOnError
 
@@ -85,7 +87,6 @@ call :RunAndLog copy %WINBIN_DIR%\arm-none-eabi-* %GCC4ARM_BINDIR%\
 if errorlevel 1 goto ExitOnError
 for %%i in (as g++ ld objcopy ranlib ar c++ gcc nm objdump strip) do call :CopyGccFile %%i
 if "%ERROR_ENCOUNTERED%"=="1" goto ExitOnError
-call :RunAndLog rd /s /q %GCC4ARM_LIBEXEC%
 call :RunAndLog xcopy /eiy %WINBIN_DIR%\libexec %GCC4ARM_LIBEXEC%
 if errorlevel 1 goto ExitOnError
 
@@ -94,20 +95,9 @@ echo @echo off>%BUILDENV_CMD%
 echo REM Uncomment next line and set destination drive to match mbed device>>%BUILDENV_CMD%
 echo REM SET LPC_DEPLOY=copy PROJECT.bin f:\>>%BUILDENV_CMD%
 echo.>>%BUILDENV_CMD%
-echo SET PATH=%%~dp0;%%~dp0..\..\external\win32;%%PATH%%>>%BUILDENV_CMD%
+echo SET PATH=%%~dp0;%%~dp0..\..\build\win32;%%PATH%%>>%BUILDENV_CMD%
 rem
 echo @cmd.exe /K %%~dp0\gcc-arm-none-eabi\bin\buildenv.cmd>%BUILDSHELL_CMD%
-rem
-echo @cmd.exe /K "set GCC4MBED_TYPE=Debug& %%~dp0\gcc-arm-none-eabi\bin\buildenv.cmd">%BUILDSHELL_DEBUG_CMD%
-
-rem Place GNU Tool for ARM Embedded Processors in the path before building gcc4mbed code.
-set path=%GCC4ARM_BINDIR%;%ROOTDIR%external\win32;%PATH%
-
-echo Performing a clean build of the gcc4mbed samples...
-call :RunAndLog %OUR_MAKE% clean
-if errorlevel 1 goto ExitOnError
-call :RunAndLog %OUR_MAKE%
-if errorlevel 1 goto ExitOnError
 
 echo Cleaning up intermediate files...
 call :RunAndLog rd /s /q %WINBIN_BASEDIR%
@@ -115,13 +105,12 @@ call :RunAndLog del /f %WINBIN_TAR%
 call :RunAndLog del /f %GCC4ARM_TAR%
 
 echo **************************************************************************
-echo To build gcc4mbed samples, you will first need to run the following batch
+echo To build Smoothie, you will first need to run the following batch
 echo file so that your environment variables are set correctly:
 echo  %BUILDSHELL_CMD%
 echo You will want to run this each time you start a new Command Prompt.  You
 echo can simply double-click on this batch file from Explorer to launch a
-echo Command Prompt that has been properly initialized for building gcc4mbed
-echo based code.
+echo Command Prompt that has been properly initialized for building.
 echo **************************************************************************
 
 rem Restore current directory and exit batch file on success.
