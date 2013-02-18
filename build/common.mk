@@ -70,7 +70,7 @@ endif
 MRI_INIT_PARAMETERS=$(MRI_UART)
 
 # Output Object Directory
-OUTDIR=$(DEVICE)
+OUTDIR=../$(DEVICE)
 
 # List of sources to be compiled/assembled
 CSRCS = $(wildcard $(SRC)/*.c $(SRC)/*/*.c $(SRC)/*/*/*.c $(SRC)/*/*/*/*.c $(SRC)/*/*/*/*/*.c)
