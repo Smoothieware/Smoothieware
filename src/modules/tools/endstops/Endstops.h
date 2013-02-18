@@ -44,6 +44,18 @@
 #define gamma_homing_retract_checksum    CHECKSUM("gamma_homing_retract")
 #define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
 
+#define alpha_homing_direction_checksum  CHECKSUM("alpha_homing_direction")
+#define beta_homing_direction_checksum   CHECKSUM("beta_homing_direction")
+#define gamma_homing_direction_checksum  CHECKSUM("gamma_homing_direction")
+
+#define alpha_min_checksum               CHECKSUM("alpha_min")
+#define beta_min_checksum                CHECKSUM("beta_min")
+#define gamma_min_checksum               CHECKSUM("gamma_min")
+
+#define alpha_max_checksum               CHECKSUM("alpha_max")
+#define beta_max_checksum                CHECKSUM("beta_max")
+#define gamma_max_checksum               CHECKSUM("gamma_max")
+
 
 class Endstops : public Module{
     private:
@@ -61,6 +73,8 @@ class Endstops : public Module{
         double  fast_rates[3];
         unsigned int  retract_steps[3];
         unsigned int  debounce_count;
+        int direction[3];
+        double homing_position[3];
         char status;
 };
 

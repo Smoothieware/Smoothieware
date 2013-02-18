@@ -20,13 +20,18 @@
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
-#include "modules/robot/Player.h"
+#include "modules/robot/Conveyor.h"
 #include <malloc.h>
 
 
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
+
+static int isDebugMonitorUsingUart0()
+{
+    return NVIC_GetPriority(UART0_IRQn) == 0;
+}
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
@@ -38,18 +43,7 @@ Kernel::Kernel(){
 
     // Configure UART depending on MRI config
     NVIC_SetPriorityGrouping(0);
-    /*
-    if (strstr(MRI_UART, "MRI_UART_MBED_USB")){
-        if (strstr(MRI_UART, "MRI_UART_SHARED")){
-            this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-        }else{
-            this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-        }
-    }else{
-        this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-    }
-    */
-    if( NVIC_GetPriority(UART0_IRQn) > 0 ){
+    if( !isDebugMonitorUsingUart0() ){
         this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
     }else{
         this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
@@ -99,7 +93,7 @@ Kernel::Kernel(){
     this->add_module( this->robot          = new Robot()         );
     this->add_module( this->stepper        = new Stepper()       );
     this->add_module( this->planner        = new Planner()       );
-    this->add_module( this->player         = new Player()        );
+    this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
 }
 

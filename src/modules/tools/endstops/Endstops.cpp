@@ -8,7 +8,7 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
-#include "modules/robot/Player.h"
+#include "modules/robot/Conveyor.h"
 #include "Endstops.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Pin.h"
@@ -41,16 +41,23 @@ void Endstops::on_config_reload(void* argument){
     this->pins[3].from_string(         this->kernel->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input()->pull_up();
     this->pins[4].from_string(         this->kernel->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input()->pull_up();
     this->pins[5].from_string(         this->kernel->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input()->pull_up();
-    this->fast_rates[0]              = this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default("500" )->as_number();
-    this->fast_rates[1]              = this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default("500" )->as_number();
-    this->fast_rates[2]              = this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default("5" )->as_number();
-    this->slow_rates[0]              = this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default("100" )->as_number();
-    this->slow_rates[1]              = this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default("100" )->as_number();
-    this->slow_rates[2]              = this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default("5" )->as_number();
-    this->retract_steps[0]           = this->kernel->config->value(alpha_homing_retract_checksum       )->by_default("30" )->as_number();
-    this->retract_steps[1]           = this->kernel->config->value(beta_homing_retract_checksum        )->by_default("30" )->as_number();
-    this->retract_steps[2]           = this->kernel->config->value(gamma_homing_retract_checksum       )->by_default("10" )->as_number();
-    this->debounce_count             = this->kernel->config->value(endstop_debounce_count_checksum     )->by_default("100" )->as_number();
+    this->fast_rates[0]             =  this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default("500" )->as_number();
+    this->fast_rates[1]             =  this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default("500" )->as_number();
+    this->fast_rates[2]             =  this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default("5" )->as_number();
+    this->slow_rates[0]             =  this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default("100" )->as_number();
+    this->slow_rates[1]             =  this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default("100" )->as_number();
+    this->slow_rates[2]             =  this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default("5" )->as_number();
+    this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default("30" )->as_number();
+    this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default("30" )->as_number();
+    this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default("10" )->as_number();
+    this->debounce_count            =  this->kernel->config->value(endstop_debounce_count_checksum     )->by_default("100" )->as_number();
+    this->direction[0]              =  this->kernel->config->value(alpha_homing_direction_checksum     )->by_default(-1   )->as_number();
+    this->direction[1]              =  this->kernel->config->value(beta_homing_direction_checksum      )->by_default(-1   )->as_number();
+    this->direction[2]              =  this->kernel->config->value(gamma_homing_direction_checksum     )->by_default(1   )->as_number();
+    for (int i=0; i<3; i++) direction[i] = direction[i] > 0;
+    this->homing_position[0]        =  this->direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default("0")->as_number():this->kernel->config->value(alpha_max_checksum)->by_default("200")->as_number();
+    this->homing_position[1]        =  this->direction[1]?this->kernel->config->value(beta_min_checksum)->by_default("0")->as_number():this->kernel->config->value(beta_max_checksum)->by_default("200")->as_number();;
+    this->homing_position[2]        =  this->direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default("0")->as_number():this->kernel->config->value(gamma_max_checksum)->by_default("200")->as_number();;
 }
 
 void Endstops::wait_for_homed(char axes_to_move)
@@ -61,7 +68,7 @@ void Endstops::wait_for_homed(char axes_to_move)
         running = false;
         for( char c = 'X'; c <= 'Z'; c++ ){
             if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                if( this->pins[c - 'X'].get() ){
+                if( this->pins[c - 'X' + (this->direction[c - 'X']?0:3)].get() ){
                     if( debounce[c - 'X'] < debounce_count ) {
                         debounce[c - 'X'] ++;
                         running = true;
@@ -90,7 +97,7 @@ void Endstops::on_gcode_received(void* argument)
             // G28 is received, we have homing to do
 
             // First wait for the queue to be empty
-            while(this->kernel->player->queue.size() > 0) { wait_us(500); }
+            while(this->kernel->conveyor->queue.size() > 0) { wait_us(500); }
 
             // Do we move select axes or all of them
             char axes_to_move = ( ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ) ? 0x00 : 0xff );
@@ -105,8 +112,8 @@ void Endstops::on_gcode_received(void* argument)
             this->status = MOVING_TO_ORIGIN_FAST;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->steppers[c - 'X']->set_speed(this->fast_rates[c -'X']);
-                    this->steppers[c - 'X']->move(1,10000000);
+                    this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
+                    this->steppers[c - 'X']->move(this->direction[c - 'X'],10000000);
                 }
             }
 
@@ -116,10 +123,12 @@ void Endstops::on_gcode_received(void* argument)
             printf("test a\r\n");
             // Move back a small distance
             this->status = MOVING_BACK;
+            int inverted_dir;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                    inverted_dir = -(this->direction[c - 'X'] - 1);
                     this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-                    this->steppers[c - 'X']->move(0,this->retract_steps[c - 'X']);
+                    this->steppers[c - 'X']->move(inverted_dir,this->retract_steps[c - 'X']);
                 }
             }
 
@@ -139,7 +148,7 @@ void Endstops::on_gcode_received(void* argument)
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                     this->steppers[c - 'X']->set_speed(this->slow_rates[c -'X']);
-                    this->steppers[c - 'X']->move(1,10000000);
+                    this->steppers[c - 'X']->move(this->direction[c - 'X'],10000000);
                 }
             }
 
@@ -148,6 +157,15 @@ void Endstops::on_gcode_received(void* argument)
 
             // Homing is done
             this->status = NOT_HOMING;
+
+            // Zero the ax(i/e)s position
+            for( char c = 'X'; c <= 'Z'; c++ ){
+                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+
+                    this->kernel->robot->reset_axis_position(this->homing_position[c - 'X'], c - 'X');
+                }
+            }
+
         }
     }
     else if (gcode->has_m)

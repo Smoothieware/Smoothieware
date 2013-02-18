@@ -14,7 +14,7 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "Block.h"
 #include "Planner.h"
-#include "Player.h"
+#include "Conveyor.h"
 
 
 Planner::Planner(){
@@ -41,9 +41,9 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     //printf("new block\r\n");
 
     // Stall here if the queue is ful
-    this->kernel->player->wait_for_queue(2);
+    this->kernel->conveyor->wait_for_queue(2);
 
-    Block* block = this->kernel->player->new_block();
+    Block* block = this->kernel->conveyor->new_block();
     block->planner = this;
 
     //Block* test = new Block();
@@ -107,7 +107,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // nonlinearities of both the junction angle and junction velocity.
     double vmax_junction = MINIMUM_PLANNER_SPEED; // Set default max junction speed
 
-    if (this->kernel->player->queue.size() > 1 && (this->previous_nominal_speed > 0.0)) {
+    if (this->kernel->conveyor->queue.size() > 1 && (this->previous_nominal_speed > 0.0)) {
       // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
       // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
       double cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
@@ -178,7 +178,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
-   //this->kernel->streams->printf("recalculate last: %p, queue size: %d \r\n", this->kernel->player->queue.get_ref( this->kernel->player->queue.size()-1  ), this->kernel->player->queue.size() );
+   //this->kernel->streams->printf("recalculate last: %p, queue size: %d \r\n", this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size()-1  ), this->kernel->conveyor->queue.size() );
    this->reverse_pass();
    this->forward_pass();
    this->recalculate_trapezoids();
@@ -188,14 +188,14 @@ void Planner::recalculate() {
 // implements the reverse pass.
 void Planner::reverse_pass(){
     // For each block
-    int block_index = this->kernel->player->queue.tail;
+    int block_index = this->kernel->conveyor->queue.tail;
     Block* blocks[3] = {NULL,NULL,NULL};
 
-    while(block_index!=this->kernel->player->queue.head){
-        block_index = this->kernel->player->queue.prev_block_index( block_index );
+    while(block_index!=this->kernel->conveyor->queue.head){
+        block_index = this->kernel->conveyor->queue.prev_block_index( block_index );
         blocks[2] = blocks[1];
         blocks[1] = blocks[0];
-        blocks[0] = &this->kernel->player->queue.buffer[block_index];
+        blocks[0] = &this->kernel->conveyor->queue.buffer[block_index];
         if( blocks[1] == NULL ){ continue; }
         blocks[1]->reverse_pass(blocks[2], blocks[0]);
     }
@@ -206,16 +206,16 @@ void Planner::reverse_pass(){
 // implements the forward pass.
 void Planner::forward_pass() {
     // For each block
-    int block_index = this->kernel->player->queue.head;
+    int block_index = this->kernel->conveyor->queue.head;
     Block* blocks[3] = {NULL,NULL,NULL};
 
-    while(block_index!=this->kernel->player->queue.tail){
+    while(block_index!=this->kernel->conveyor->queue.tail){
         blocks[0] = blocks[1];
         blocks[1] = blocks[2];
-        blocks[2] = &this->kernel->player->queue.buffer[block_index];
+        blocks[2] = &this->kernel->conveyor->queue.buffer[block_index];
         if( blocks[0] == NULL ){ continue; }
         blocks[1]->forward_pass(blocks[0],blocks[2]);
-        block_index = this->kernel->player->queue.next_block_index( block_index );
+        block_index = this->kernel->conveyor->queue.next_block_index( block_index );
     }
     blocks[2]->forward_pass(blocks[1],NULL);
 
@@ -227,13 +227,13 @@ void Planner::forward_pass() {
 // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
 // to exit speed and entry speed of one another.
 void Planner::recalculate_trapezoids() {
-    int block_index = this->kernel->player->queue.head;
+    int block_index = this->kernel->conveyor->queue.head;
     Block* current;
     Block* next = NULL;
 
-    while(block_index != this->kernel->player->queue.tail){
+    while(block_index != this->kernel->conveyor->queue.tail){
         current = next;
-        next = &this->kernel->player->queue.buffer[block_index];
+        next = &this->kernel->conveyor->queue.buffer[block_index];
         //this->kernel->streams->printf("index:%d current:%p next:%p \r\n", block_index, current, next );
         if( current ){
             // Recalculate if current block entry or exit junction speed has changed.
@@ -242,7 +242,7 @@ void Planner::recalculate_trapezoids() {
                 current->recalculate_flag = false;
             }
         }
-        block_index = this->kernel->player->queue.next_block_index( block_index );
+        block_index = this->kernel->conveyor->queue.next_block_index( block_index );
     }
 
     // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
@@ -253,10 +253,10 @@ void Planner::recalculate_trapezoids() {
 
 // Debug function
 void Planner::dump_queue(){
-    for( int index = 0; index <= this->kernel->player->queue.size()-1; index++ ){
-       if( index > 10 && index < this->kernel->player->queue.size()-10 ){ continue; }
+    for( int index = 0; index <= this->kernel->conveyor->queue.size()-1; index++ ){
+       if( index > 10 && index < this->kernel->conveyor->queue.size()-10 ){ continue; }
        this->kernel->streams->printf("block %03d > ", index);
-       this->kernel->player->queue.get_ref(index)->debug(this->kernel);
+       this->kernel->conveyor->queue.get_ref(index)->debug(this->kernel);
     }
 }
 

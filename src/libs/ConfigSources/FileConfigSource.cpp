@@ -85,10 +85,10 @@ void FileConfigSource::write( string setting, string value ){
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
             if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
-            size_t begin_key = buffer.find_first_not_of(" ");
-            size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
+            size_t begin_key = buffer.find_first_not_of(" \t");
+            size_t begin_value = buffer.find_first_not_of(" \t", buffer.find_first_of(" \t", begin_key));
             // If this line matches the checksum
-            string candidate = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key);
+            string candidate = buffer.substr(begin_key,  buffer.find_first_of(" \t", begin_key) - begin_key);
             if( candidate.compare(setting) != 0 ){ buffer.clear(); continue; }
             int free_space = int(int(buffer.find_first_of("\r\n#", begin_value+1))-begin_value);
             if( int(value.length()) >= free_space ){
@@ -130,9 +130,9 @@ string FileConfigSource::read( uint16_t check_sums[3] ){
             // We have a new line
             if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
             if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
-            size_t begin_key = buffer.find_first_not_of(" ");
-            size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
-            string key = buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" ");
+            size_t begin_key = buffer.find_first_not_of(" \t");
+            size_t begin_value = buffer.find_first_not_of(" \t", buffer.find_first_of(" \t", begin_key));
+            string key = buffer.substr(begin_key,  buffer.find_first_of(" \t", begin_key) - begin_key).append(" ");
 
             uint16_t line_checksums[3];
             get_checksums(line_checksums, key);

@@ -5,33 +5,28 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef PLAYER_H
-#define PLAYER_H
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+#include <math.h>
 using namespace std;
-#include <string>
 #include <vector>
+#include "ButtonPool.h"
+#include "Button.h"
 
-class Player : public Module {
-    public:
-        Player();
+ButtonPool::ButtonPool(){}
 
-        void on_module_loaded(void);
-        void on_idle(void*);
+void ButtonPool::on_module_loaded(){
 
-        Block* new_block();
-        void new_block_added();
-        void pop_and_process_new_block(int debug);
-        void wait_for_queue(int free_blocks);
+    vector<uint16_t> modules;
+    this->kernel->config->get_module_list( &modules, button_checksum );
 
-        RingBuffer<Block,16> queue;  // Queue of Blocks
-        Block* current_block;
-        bool looking_for_new_block;
+    for( unsigned int i = 0; i < modules.size(); i++ ){
+        // If module is enabled
+        if( this->kernel->config->value(button_checksum, modules[i], enable_checksum )->as_bool() == true ){
+            Button* controller = new Button(modules[i]);
+            this->kernel->add_module(controller);
+            this->controllers.push_back( controller );
+        }
+    }
+}
 
-        volatile int flush_blocks;
-};
-
-
-
-#endif

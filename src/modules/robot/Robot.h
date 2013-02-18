@@ -27,6 +27,11 @@ using std::string;
 #define x_axis_max_speed_checksum              CHECKSUM("x_axis_max_speed")
 #define y_axis_max_speed_checksum              CHECKSUM("y_axis_max_speed")
 #define z_axis_max_speed_checksum              CHECKSUM("z_axis_max_speed")
+#define arm_solution_checksum                  CHECKSUM("arm_solution")
+#define cartesian_checksum                     CHECKSUM("cartesian")
+#define rotatable_cartesian_checksum           CHECKSUM("rotatable_cartesian")
+#define rostock_checksum                       CHECKSUM("rostock")
+#define delta_checksum                         CHECKSUM("delta")
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
@@ -57,6 +62,7 @@ class Robot : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
+        void reset_axis_position(double position, int axis);
 
     private:
         void execute_gcode(Gcode* gcode);

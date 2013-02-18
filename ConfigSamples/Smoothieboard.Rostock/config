@@ -2,12 +2,21 @@
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
-mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
+mm_per_line_segment                          0.5              # Lines can be cut into segments ( not usefull with cartesian coordinates robots, but very useful on a delta type bot ).
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
+arm_solution                                 rostock          # selects the rostock arm solution
+
 alpha_steps_per_mm                           80               # Steps per mm for alpha stepper
 beta_steps_per_mm                            80               # Steps per mm for beta stepper
-gamma_steps_per_mm                           1600             # Steps per mm for gamma stepper
+gamma_steps_per_mm                           80               # Steps per mm for gamma stepper
+
+alpha_angle                                  30.0             # this provides an optional offset from the alpha tower to the x/y system
+beta_relative_angle                          120.0            # this is the angle in degrees from the alpha tower to the beta tower
+gamma_relative_angle                         240.0            # this is the angle in degrees from the alpha tower to the gamma tower
+
+arm_length                                   250.0            # this is the length of an arm from hinge to hinge
+arm_radius                                   124.0            # this is the horiontal distance from hinge to hinge when the effector is centered
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           64               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
@@ -38,11 +47,10 @@ gamma_step_pin                               2.2              # Pin for gamma st
 gamma_dir_pin                                0.20             # Pin for gamma stepper direction
 gamma_en_pin                                 0.19             # Pin for gamma enable
 gamma_current                                1.5              # Z stepper motor current
-z_axis_max_speed                             300              # mm/min
+z_axis_max_speed                             30000            # mm/min
 
 # Serial communications configuration ( baud rate default to 9600 if undefined )
-uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
-second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface and a terminal connected)
+uart0.baud_rate                              115200           # Baud rate for the default serial port
 
 # Extruder module configuration
 extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -93,30 +101,30 @@ switch.spindle.enable                        false            #
 # Endstops
 alpha_min_endstop                            1.24             #
 alpha_max_endstop                            1.25             #
-alpha_homing_direction                       -1               #
+alpha_homing_direction                       1                #
 alpha_min                                    0                #
-alpha_max                                    200              #
+alpha_max                                    0                #
 beta_min_endstop                             1.26             #
 beta_max_endstop                             1.27             #
-beta_homing_direction                        -1               #
+beta_homing_direction                        1                #
 beta_min                                     0                #
-beta_max                                     200              #
+beta_max                                     0                #
 gamma_min_endstop                            1.28             #
 gamma_max_endstop                            1.29             #
 gamma_homing_direction                       1                #
 gamma_min                                    0                #
-gamma_max                                    200              #
+gamma_max                                    300              #
 
 alpha_fast_homing_rate                       3000              # rates in steps/second 
-beta_fast_homing_rate                        3000              # depends on steps/mm setting above
-gamma_fast_homing_rate                       30000             # "
-alpha_slow_homing_rate                       1000              # "
-beta_slow_homing_rate                        1000              # "
-gamma_slow_homing_rate                       10000              
+beta_fast_homing_rate                        3000              #
+gamma_fast_homing_rate                       3000              #
+alpha_slow_homing_rate                       1000              # 
+beta_slow_homing_rate                        1000              #
+gamma_slow_homing_rate                       1000              
 
-alpha_homing_retract                         500               # "
-beta_homing_retract                          500               # "
-gamma_homing_retract                         5000              # "
+alpha_homing_retract                         500               #
+beta_homing_retract                          500               #
+gamma_homing_retract                         500               #
 
 # Pause button
 pause_button_enable                          true             #

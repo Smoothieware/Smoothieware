@@ -6,8 +6,8 @@
 */
 
 
-#ifndef simpleshell_h
-#define simpleshell_h
+#ifndef PLAYER_H
+#define PLAYER_H
 
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
@@ -15,33 +15,35 @@
 #include "libs/StreamOutput.h"
 
 
-#define ls_command_checksum       CHECKSUM("ls")
+#define play_command_checksum           CHECKSUM("play")
+#define progress_command_checksum       CHECKSUM("progress")
+#define abort_command_checksum          CHECKSUM("abort")
 #define cd_command_checksum       CHECKSUM("cd")
-#define pwd_command_checksum      CHECKSUM("pwd")
-#define cat_command_checksum      CHECKSUM("cat")
-#define reset_command_checksum    CHECKSUM("reset")
-#define dfu_command_checksum      CHECKSUM("dfu")
-#define break_command_checksum    CHECKSUM("break")
-#define help_command_checksum     CHECKSUM("help")
+#define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
+#define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
 
-class SimpleShell : public Module {
+class Player : public Module {
     public:
-        SimpleShell(){}
+        Player(){}
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
+        void on_main_loop( void* argument );
         string absolute_from_relative( string path );
-        void ls_command(   string parameters, StreamOutput* stream );
         void cd_command(   string parameters, StreamOutput* stream );
-        void pwd_command(  string parameters, StreamOutput* stream );
-        void cat_command(  string parameters, StreamOutput* stream );
-        void break_command(string parameters, StreamOutput* stream );
-		void reset_command(string parameters, StreamOutput* stream );
-		void help_command(string parameters, StreamOutput* stream );
-		
-	private:
+        void play_command( string parameters, StreamOutput* stream );
+        void progress_command( string parameters, StreamOutput* stream );
+        void abort_command( string parameters, StreamOutput* stream );
+
         string current_path;
+
+        bool on_boot_enable;
+        bool booted;
+        string on_boot_file_name;
+        bool playing_file;
+        StreamOutput* current_stream;
+        FILE* current_file_handler;
+		long file_size, played_cnt;
 };
 
-
-#endif
+#endif // PLAYER_H
