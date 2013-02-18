@@ -223,6 +223,10 @@ void USBSerial::on_module_loaded()
 
 void USBSerial::on_main_loop(void *argument)
 {
+    // apparently some OSes don't assert DTR when a program opens the port
+    if (available() && !attach)
+        attach = true;
+
     if (attach != attached)
     {
         if (attach)
