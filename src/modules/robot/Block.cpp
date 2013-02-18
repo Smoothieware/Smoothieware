@@ -206,7 +206,7 @@ void Block::release(){
         }
 
         if( conveyor->looking_for_new_block == false ){
-            if( conveyor->queue.size() > 0 ){
+            if( conveyor->queue.size() > conveyor->flush_blocks ){
                 Block* candidate =  conveyor->queue.get_ref(conveyor->flush_blocks);
                 if( candidate->is_ready ){
                     conveyor->current_block = candidate;
