@@ -32,19 +32,19 @@ CONSOLE?=/dev/arduino_A900K10V
 
 .PHONY: debug-store flash upload debug console dfu
 
-debug-store: LPC1768/$(PROJECT).elf
-	cp LPC1768/$(PROJECT).elf LPC1768/$(PROJECT)_lastupload.elf
+debug-store: ../LPC1768/$(PROJECT).elf
+	cp ../LPC1768/$(PROJECT).elf ../LPC1768/$(PROJECT)_lastupload.elf
 
-flash: LPC1768/$(PROJECT).hex debug-store
+flash: ../LPC1768/$(PROJECT).hex debug-store
 	lpc21isp $< $(CONSOLE) 115200 12000
 
-dfu: LPC1768/$(PROJECT).bin
+dfu: ../LPC1768/$(PROJECT).bin
 	dfu-util -D $< -R
 
-upload: LPC1768/$(PROJECT).bin debug-store
+upload: ../LPC1768/$(PROJECT).bin debug-store
 	dfu-util -d 1d50:6015 -D $<
 
-debug: LPC1768/$(PROJECT)_lastupload.elf
+debug: ../LPC1768/$(PROJECT)_lastupload.elf
 	arm-none-eabi-gdb $< -ex  "set target-charset ASCII" -ex "set remotelogfile mri.log" -ex "target remote $(CONSOLE)"
 
 console:
