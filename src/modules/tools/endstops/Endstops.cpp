@@ -74,7 +74,7 @@ void Endstops::wait_for_homed(char axes_to_move)
                         running = true;
                     } else if ( this->steppers[c - 'X']->moving ){
                         this->steppers[c - 'X']->move(0,0);
-                        printf("move done %c\r\n", c);
+                        this->kernel->streams->printf("move done %c\r\n", c);
                     }
                 }else{
                     // The endstop was not hit yet
@@ -112,6 +112,7 @@ void Endstops::on_gcode_received(void* argument)
             this->status = MOVING_TO_ORIGIN_FAST;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                    this->kernel->streams->printf("homing axis %c\r\n", c);
                     this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
                     this->steppers[c - 'X']->move(this->direction[c - 'X'],10000000);
                 }
@@ -120,7 +121,7 @@ void Endstops::on_gcode_received(void* argument)
             // Wait for all axes to have homed
             this->wait_for_homed(axes_to_move);
 
-            printf("test a\r\n");
+            this->kernel->streams->printf("test a\r\n");
             // Move back a small distance
             this->status = MOVING_BACK;
             int inverted_dir;
@@ -132,16 +133,16 @@ void Endstops::on_gcode_received(void* argument)
                 }
             }
 
-            printf("test b\r\n");
+            this->kernel->streams->printf("test b\r\n");
             // Wait for moves to be done
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    printf("axis %c \r\n", c );
+                    this->kernel->streams->printf("axis %c \r\n", c );
                     while( this->steppers[c - 'X']->moving ){ }
                 }
             }
 
-            printf("test c\r\n");
+            this->kernel->streams->printf("test c\r\n");
 
             // Start moving the axes to the origin slowly
             this->status = MOVING_TO_ORIGIN_SLOW;
