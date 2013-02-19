@@ -28,17 +28,17 @@ HEAP_TAGS=1
 # Set to 1 configure MPU to disable write buffering and eliminate imprecise bus faults.
 WRITE_BUFFER_DISABLE=1
 
-# Set to 1 to allow MRI debug monitor to take full control of UART0 and use it
-# as a dedicated debug channel.  If you are using the USB based serial port for
-# the console then this should cause you no problems.  Set MRI_BREAK_ON_INIT to
-# 0 if you don't want to break into GDB at startup.
-ENABLE_DEBUG_MONITOR?=0
-
 # Set to non zero value if you want checks to be enabled which reserve a
 # specific amount of space for the stack.  The heap's growth will be
 # constrained to reserve this much space for the stack and the stack won't be
 # able to grow larger than this amount.
 STACK_SIZE=3072
+
+# Set to 1 to allow MRI debug monitor to take full control of UART0 and use it
+# as a dedicated debug channel.  If you are using the USB based serial port for
+# the console then this should cause you no problems.  Set MRI_BREAK_ON_INIT to
+# 0 if you don't want to break into GDB at startup.
+ENABLE_DEBUG_MONITOR?=0
 
 ifeq "$(ENABLE_DEBUG_MONITOR)" "1"
 # Can add MRI_UART_BAUD=115200 to next line if GDB fails to connect to MRI.
