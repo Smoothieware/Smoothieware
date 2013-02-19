@@ -9,7 +9,7 @@ mri.log
 debug
 /mbed/src/Debug/
 /mbed/src/Release/
-/src/LPC1768/
+/LPC1768/
 /mbed/drop/
 /gcc-arm-none-eabi/
 /BuildShell
