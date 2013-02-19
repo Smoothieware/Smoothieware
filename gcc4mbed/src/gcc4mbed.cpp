@@ -34,7 +34,7 @@ static void configureMpuRegionToAccessAllMemoryWithNoCaching(void);
 extern unsigned int     __bss_start__;
 extern unsigned int     __bss_end__;
 extern unsigned int     __StackTop;
-extern "C" unsigned int __HeapBase;
+extern "C" unsigned int __end__;
 
 
 extern "C" int  main(void);
@@ -219,7 +219,7 @@ static int doesHeapCollideWithStack(unsigned int newHeap);
 /* Dynamic memory allocation related syscalls. */
 extern "C" caddr_t _sbrk(int incr) 
 {
-    static unsigned char* heap = (unsigned char*)&__HeapBase;
+    static unsigned char* heap = (unsigned char*)&__end__;
     unsigned char*        prev_heap = heap;
     unsigned char*        new_heap = heap + incr;
 
@@ -243,7 +243,7 @@ static int doesHeapCollideWithStack(unsigned int newHeap)
 /* Optional functionality which will tag each heap allocation with the caller's return address. */
 #ifdef HEAP_TAGS
 
-const unsigned int* __smoothieHeapBase = &__HeapBase;
+const unsigned int* __smoothieHeapBase = &__end__;
 
 extern "C" void* __real_malloc(size_t size);
 extern "C" void* __real_realloc(void* ptr, size_t size);
