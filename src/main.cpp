@@ -40,14 +40,9 @@
 
 // Watchdog wd(5000000, WDT_MRI);
 
-// #include "libs/USBCDCMSC/USBCDCMSC.h"
-// SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
+// USB Stuff
 SDCard sd(P0_9, P0_8, P0_7, P0_6);
-//LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
-// USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
-
 USB u;
-
 USBSerial usbserial(&u);
 USBMSD msc(&u, &sd);
 DFU dfu(&u);
@@ -76,7 +71,7 @@ int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 \r\n");
+    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 with new accel \r\n");
 
     // Create and add main modules
     kernel->add_module( new Laser() );
