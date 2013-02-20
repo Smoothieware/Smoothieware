@@ -42,17 +42,11 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
 // Called a great many times per second, to step if we have to now
 void StepperMotor::tick(){
 
-    LPC_GPIO1->FIODIR |= 1<<31;
-    LPC_GPIO1->FIOSET = 1<<31;
-
     // increase the ( fixed point ) counter by one tick 11t
     this->fx_counter += (uint64_t)((uint64_t)1<<32);
 
     // if we are to step now 10t
     if( this->fx_counter >= this->fx_ticks_per_step ){
-
-        LPC_GPIO1->FIODIR |= 1<<30;
-        LPC_GPIO1->FIOSET = 1<<30;
 
         // output to pins 37t
         this->step_pin->set( 1                   );
@@ -75,11 +69,7 @@ void StepperMotor::tick(){
             this->step_ticker->moves_finished = true;
         }
 
-        LPC_GPIO1->FIOCLR = 1<<30;
-
     }
-
-    LPC_GPIO1->FIOCLR = 1<<31;
 
 }
 
@@ -146,15 +136,6 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( double speed ){
-//     if( speed <= 1.0 ){
-//         this->steps_per_second = 0;
-//         this->fx_ticks_per_step = 1ULL<<63;
-//         return;
-//     }
-
-    //if( speed < this->steps_per_second ){
-        LPC_GPIO1->FIOSET = 1<<19;
-    //}
 
     if (speed < 1.0)
         speed = 1.0;

@@ -131,16 +131,10 @@ extern "C" void TIMER1_IRQHandler (void){
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
 
-    LPC_GPIO1->FIODIR |= 1<<22;
-    LPC_GPIO1->FIOSET = 1<<22;
-
-//     uint32_t initial_tc = LPC_TIM0->TC;
-
     LPC_TIM0->IR |= 1 << 0;
 
     // If no axes enabled, just ignore for now
     if( global_step_ticker->active_motor_bm == 0 ){
-        LPC_GPIO1->FIOCLR = 1<<22;
         return;
     }
 
@@ -174,9 +168,6 @@ extern "C" void TIMER0_IRQHandler (void){
     // That can happen tipically when we change blocks, where more than usual computation is done
     // This can be OK, if we take notice of it, which we do now
     if( LPC_TIM0->TC > global_step_ticker->period ){ // TODO: remove the size condition
-
-        LPC_GPIO1->FIODIR |= 1<<23;
-        LPC_GPIO1->FIOSET = 1<<23;
 
         uint32_t start_tc = LPC_TIM0->TC;
 
@@ -214,8 +205,6 @@ extern "C" void TIMER0_IRQHandler (void){
 
         //if( global_step_ticker->last_duration > 2000 || LPC_TIM0->MR0 > 2000 || LPC_TIM0->TC > 2000 || initial_tc > 2000 ){ __debugbreak(); }
 
-        LPC_GPIO1->FIOCLR = 1<<23;
-
     }else{
         LPC_TIM0->MR0 = global_step_ticker->period;
     }
@@ -224,7 +213,6 @@ extern "C" void TIMER0_IRQHandler (void){
         LPC_TIM0->MR0 += global_step_ticker->period;
     }
 
-    LPC_GPIO1->FIOCLR = 1<<22;
 }
 
 
