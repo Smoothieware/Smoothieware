@@ -22,11 +22,6 @@ using std::string;
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/RostockSolution.h"
 
-#include "mbed.h"
-static Timer m2st;
-static double m2stime;
-static int m2scnt= 0;
-
 Robot::Robot(){
     this->inch_mode = false;
     this->absolute_mode = true;
@@ -35,10 +30,7 @@ Robot::Robot(){
     clear_vector(this->current_position);
     clear_vector(this->last_milestone);
     this->arm_solution = NULL;
-	seconds_per_minute = 60.0;
-
-	m2st.start();
- 
+    seconds_per_minute = 60.0;
 }
 
 //Called when the module has just been loaded
@@ -181,11 +173,10 @@ void Robot::execute_gcode(Gcode* gcode){
                 gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", steps[0], steps[1], steps[2], seconds_per_minute);
                 gcode->add_nl = true;
                 return;
-            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f %f",
+            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
                                                  this->current_position[0],
                                                  this->current_position[1],
-											this->current_position[2], m2scnt > 0 ? m2stime/m2scnt:0);
-				m2scnt= 0;	m2stime= 0;
+                                                 this->current_position[2]);
                 gcode->add_nl = true;
                 return;
             case 220: // M220 - speed override percentage
@@ -242,11 +233,8 @@ void Robot::execute_gcode(Gcode* gcode){
 void Robot::append_milestone( double target[], double rate ){
     int steps[3]; //Holds the result of the conversion
 
-	m2st.reset();
     this->arm_solution->millimeters_to_steps( target, steps );
-	m2stime += m2st.read_us();
-	m2scnt++;
-	
+
     double deltas[3];
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
 
