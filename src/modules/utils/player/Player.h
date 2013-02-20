@@ -14,6 +14,7 @@
 #include "libs/utils.h"
 #include "libs/StreamOutput.h"
 
+#include "mbed.h"
 
 #define play_command_checksum           CHECKSUM("play")
 #define progress_command_checksum       CHECKSUM("progress")
@@ -35,6 +36,7 @@ class Player : public Module {
         void progress_command( string parameters, StreamOutput* stream );
         void abort_command( string parameters, StreamOutput* stream );
 
+    private:
         string current_path;
 
         bool on_boot_enable;
@@ -43,7 +45,8 @@ class Player : public Module {
         bool playing_file;
         StreamOutput* current_stream;
         FILE* current_file_handler;
-		long file_size, played_cnt;
+        long file_size, played_cnt;
+        time_t start_time;
 };
 
 #endif // PLAYER_H
