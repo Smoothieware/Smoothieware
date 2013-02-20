@@ -77,19 +77,6 @@ StepperMotor* StepTicker::add_stepper_motor(StepperMotor* stepper_motor){
 
 // Call tick() on each active motor
 inline void StepTicker::tick(){
-    _isr_context = true;
-
-    int i;
-    uint32_t bm;
-    for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
-    {
-        if (this->active_motor_bm & bm)
-        {
-            this->active_motors[i]->tick();
-        }
-    }
-
-    _isr_context = false;
 }
 
 // Call signal_mode_finished() on each active motor that asked to be signaled. We do this instead of inside of tick() so that
@@ -97,21 +84,15 @@ inline void StepTicker::tick(){
 void StepTicker::signal_moves_finished(){
     _isr_context = true;
 
-    int i;
-    uint32_t bm;
-    for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
-    {
-        if (this->active_motor_bm & bm)
-        {
-            if (this->active_motors[i]->is_move_finished)
-            {
-                this->active_motors[i]->signal_move_finished();
-                if (this->active_motors[i]->moving == false)
-                {
-                    if (i > 0)
-                    {
-                        i--;
-                        bm >>= 1;
+    uint16_t bitmask;
+    for ( char motor = 0, bitmask = 1; motor < 12; motor++, bitmask <<= 1){
+        if (this->active_motor_bm & bitmask){
+            if(this->active_motors[motor]->is_move_finished){
+                this->active_motors[motor]->signal_move_finished();
+                if(this->active_motors[motor]->moving == false){
+                    if (motor > 0){
+                        motor--;
+                        bitmask >>= 1;
                     }
                 }
             }
@@ -150,8 +131,8 @@ extern "C" void TIMER1_IRQHandler (void){
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
 
-    LPC_GPIO1->FIODIR |= 1<<18;
-    LPC_GPIO1->FIOSET = 1<<18;
+    LPC_GPIO1->FIODIR |= 1<<22;
+    LPC_GPIO1->FIOSET = 1<<22;
 
 //     uint32_t initial_tc = LPC_TIM0->TC;
 
@@ -159,7 +140,7 @@ extern "C" void TIMER0_IRQHandler (void){
 
     // If no axes enabled, just ignore for now
     if( global_step_ticker->active_motor_bm == 0 ){
-        LPC_GPIO1->FIOCLR = 1<<18;
+        LPC_GPIO1->FIOCLR = 1<<22;
         return;
     }
 
@@ -167,7 +148,15 @@ extern "C" void TIMER0_IRQHandler (void){
     LPC_TIM0->MR0 = 2000000;
 
     // Step pins
-    global_step_ticker->tick();
+    //global_step_ticker->tick();
+    _isr_context = true;
+    uint16_t bitmask;
+    for (char motor = 0, bitmask = 1; motor < 12; motor++, bitmask <<= 1){
+        if (global_step_ticker->active_motor_bm & bitmask){
+            global_step_ticker->active_motors[motor]->tick();
+        }
+    }
+    _isr_context = false;
 
     // We may have set a pin on in this tick, now we start the timer to set it off
     if( global_step_ticker->reset_step_pins ){
@@ -186,10 +175,10 @@ extern "C" void TIMER0_IRQHandler (void){
     // This can be OK, if we take notice of it, which we do now
     if( LPC_TIM0->TC > global_step_ticker->period ){ // TODO: remove the size condition
 
-        LPC_GPIO1->FIODIR |= 1<<19;
-        LPC_GPIO1->FIOSET = 1<<19;
+        LPC_GPIO1->FIODIR |= 1<<23;
+        LPC_GPIO1->FIOSET = 1<<23;
 
-       uint32_t start_tc = LPC_TIM0->TC;
+        uint32_t start_tc = LPC_TIM0->TC;
 
         // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
         uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + global_step_ticker->last_duration ) / global_step_ticker->period );
@@ -225,19 +214,17 @@ extern "C" void TIMER0_IRQHandler (void){
 
         //if( global_step_ticker->last_duration > 2000 || LPC_TIM0->MR0 > 2000 || LPC_TIM0->TC > 2000 || initial_tc > 2000 ){ __debugbreak(); }
 
-        LPC_GPIO1->FIOCLR = 1<<19;
+        LPC_GPIO1->FIOCLR = 1<<23;
 
     }else{
         LPC_TIM0->MR0 = global_step_ticker->period;
     }
 
-    LPC_GPIO1->FIOCLR = 1<<18;
-
     while( LPC_TIM0->TC > LPC_TIM0->MR0 ){
         LPC_TIM0->MR0 += global_step_ticker->period;
     }
 
-    LPC_GPIO1->FIOCLR = 1<<18;
+    LPC_GPIO1->FIOCLR = 1<<22;
 }
 
 
