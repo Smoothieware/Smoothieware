@@ -27,24 +27,24 @@ class RostockSolution : public BaseSolution {
         void set_steps_per_millimeter( double steps[] );
         void get_steps_per_millimeter( double steps[] );
 
-        double solve_arm( double millimeters[] );
-        void rotate( double in[], double out[], double sin, double cos );
+        float solve_arm( float millimeters[] );
+        void rotate( float in[], float out[], float sin, float cos );
 
         Config* config;
-        double alpha_steps_per_mm;
-        double beta_steps_per_mm;
-        double gamma_steps_per_mm;
+        float alpha_steps_per_mm;
+        float beta_steps_per_mm;
+        float gamma_steps_per_mm;
 
-        double arm_length;
-        double arm_radius;
-        double arm_length_squared;
+        float arm_length;
+        float arm_radius;
+        float arm_length_squared;
 
-        double sin_alpha;
-        double cos_alpha;
-        double sin_beta;
-        double cos_beta;
-        double sin_gamma;
-        double cos_gamma;
+        float sin_alpha;
+        float cos_alpha;
+        float sin_beta;
+        float cos_beta;
+        float sin_gamma;
+        float cos_gamma;
 };
 
 
