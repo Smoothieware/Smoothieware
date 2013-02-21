@@ -78,17 +78,14 @@ StepperMotor* StepTicker::add_stepper_motor(StepperMotor* stepper_motor){
 // Call tick() on each active motor
 inline void StepTicker::tick(){
     _isr_context = true;
-
     int i;
-    uint32_t bm;
-    for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
-    {
-        if (this->active_motor_bm & bm)
-        {
+    uint32_t bm = 1;
+    // We iterate over each active motor 
+    for (i = 0; i < 12; i++, bm <<= 1){
+        if (this->active_motor_bm & bm){
             this->active_motors[i]->tick();
         }
     }
-
     _isr_context = false;
 }
 
@@ -169,11 +166,17 @@ extern "C" void TIMER0_IRQHandler (void){
     // Step pins
     global_step_ticker->tick();
 
+
     // We may have set a pin on in this tick, now we start the timer to set it off
     if( global_step_ticker->reset_step_pins ){
         LPC_TIM1->TCR = 3;
         LPC_TIM1->TCR = 1;
         global_step_ticker->reset_step_pins = false;
+    }else{
+        // Nothing happened, nothing after this really matters
+        // TODO : This could be a problem when we use Actuators instead of StepperMotors, because this flag is specific to step generation
+        LPC_GPIO1->FIOCLR = 1<<18;
+        return;
     }
 
     // If a move finished in this tick, we have to tell the actuator to act accordingly
