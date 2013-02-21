@@ -17,6 +17,7 @@ public:
 
     void     on_module_loaded(void);
     uint32_t on_tick(uint32_t);
+    void     on_idle(void*);
 
     TemperatureControl *t;
 
@@ -26,6 +27,8 @@ public:
     bool output;
     bool last_output;
     StreamOutput *s;
+
+    volatile bool tick;
 
     struct {
         double t_max;
