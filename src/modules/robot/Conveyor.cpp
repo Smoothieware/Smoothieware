@@ -57,16 +57,13 @@ Block* Conveyor::new_block(){
     // but that function is called inside an interrupt and thus can break everything if the interrupt was trigerred during a memory access
 
     // Take the next untaken block on the queue ( the one after the last one )
-    Block* block = this->queue.get_ref( this->queue.size() );
-//     printf("cleanup %p\n", block);
+    Block* block = this->queue.get_tail_ref();
     // Then clean it up
     if( block->conveyor == this ){
         for(; block->gcodes.size(); ){
             Gcode* g = block->gcodes.back();
-//             printf("Block:pop %p (%d refs)\n", g, g->queued);
             block->gcodes.pop_back();
-            if (--g->queued == 0)
-                delete g;
+            delete g;
         }
     }
 
