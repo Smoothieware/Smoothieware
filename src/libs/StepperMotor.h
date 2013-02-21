@@ -18,6 +18,7 @@ class StepperMotor {
         StepperMotor();
         StepperMotor(Pin* step, Pin* dir, Pin* en);
         void tick();
+        void step();
         void move_finished();
         void move( bool direction, unsigned int steps );
         void signal_move_finished();
@@ -26,19 +27,19 @@ class StepperMotor {
         void pause();
         void unpause();
 
+
+
         template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook();
             hook->attach(optr, fptr);
             this->end_hook = hook;
         }
 
-
         template<typename T> void attach_signal_step(uint32_t step, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             this->step_signal_hook->attach(optr, fptr);
             this->signal_step_number = step;
             this->signal_step = true;
         }
-
 
         Hook* end_hook;
         Hook* step_signal_hook;
@@ -69,6 +70,22 @@ class StepperMotor {
 
         bool is_move_finished; // Whether the move just finished
 };
+
+
+// Called a great many times per second, to step if we have to now
+inline void StepperMotor::tick(){
+
+    LPC_GPIO1->FIOSET =  1<<23;
+    
+    // increase the ( fixed point ) counter by one tick 11t
+    this->fx_counter += (uint64_t)((uint64_t)1<<32);
+
+    // if we are to step now 10t
+    if( this->fx_counter >= this->fx_ticks_per_step ){ this->step(); }
+
+    LPC_GPIO1->FIOCLR =  1<<23;
+
+}
 
 
 

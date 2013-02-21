@@ -39,39 +39,35 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     set_high_on_debug(en->port_number, en->pin);
 }
 
-// Called a great many times per second, to step if we have to now
-void StepperMotor::tick(){
+void StepperMotor::step(){
 
-    // increase the ( fixed point ) counter by one tick 11t
-    this->fx_counter += (uint64_t)((uint64_t)1<<32);
+    LPC_GPIO1->FIOSET =  1<<31;
 
-    // if we are to step now 10t
-    if( this->fx_counter >= this->fx_ticks_per_step ){
+    // output to pins 37t
+    this->step_pin->set( 1                   );
+    this->step_ticker->reset_step_pins = true;
 
-        // output to pins 37t
-        this->step_pin->set( 1                   );
-        this->step_ticker->reset_step_pins = true;
+    // move counter back 11t
+    this->fx_counter -= this->fx_ticks_per_step;
 
-        // move counter back 11t
-        this->fx_counter -= this->fx_ticks_per_step;
+    // we have moved a step 9t
+    this->stepped++;
 
-        // we have moved a step 9t
-        this->stepped++;
-
-        // Do we need to signal this step
-        if( this->stepped == this->signal_step_number && this->signal_step ){
-            this->step_signal_hook->call();
-        }
-
-        // is this move finished ? 11t
-        if( this->stepped == this->steps_to_move ){
-            this->is_move_finished = true;
-            this->step_ticker->moves_finished = true;
-        }
-
+    // Do we need to signal this step
+    if( this->stepped == this->signal_step_number && this->signal_step ){
+        this->step_signal_hook->call();
     }
 
+    // is this move finished ? 11t
+    if( this->stepped == this->steps_to_move ){
+        this->is_move_finished = true;
+        this->step_ticker->moves_finished = true;
+    }
+
+    LPC_GPIO1->FIOCLR =  1<<31;
+
 }
+
 
 // If the move is finished, the StepTicker will call this ( because we asked it to in tick() )
 void StepperMotor::signal_move_finished(){
