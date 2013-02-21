@@ -137,8 +137,8 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( double speed ){
 
-    if (speed < 1.0)
-        speed = 1.0;
+    if (speed < 20.0)
+        speed = 20.0;
 
     // How many steps we must output per second
     this->steps_per_second = speed;
