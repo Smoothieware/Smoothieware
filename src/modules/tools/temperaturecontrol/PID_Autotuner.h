@@ -14,10 +14,12 @@ class PID_Autotuner : public Module
 public:
              PID_Autotuner();
     void     begin(TemperatureControl*, double, StreamOutput*);
+    void     abort();
 
     void     on_module_loaded(void);
     uint32_t on_tick(uint32_t);
     void     on_idle(void*);
+    void     on_gcode_received(void*);
 
     TemperatureControl *t;
 
