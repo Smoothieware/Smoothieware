@@ -97,7 +97,7 @@ void Endstops::on_gcode_received(void* argument)
             // G28 is received, we have homing to do
 
             // First wait for the queue to be empty
-            while(this->kernel->conveyor->queue.size() > 0) { wait_us(500); }
+            this->kernel->conveyor->wait_for_empty_queue();
 
             // Do we move select axes or all of them
             char axes_to_move = ( ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ) ? 0x00 : 0xff );
