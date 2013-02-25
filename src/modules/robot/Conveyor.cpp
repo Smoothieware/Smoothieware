@@ -127,3 +127,10 @@ void Conveyor::wait_for_queue(int free_blocks)
         this->kernel->call_event(ON_IDLE);
     }
 }
+
+void Conveyor::wait_for_empty_queue()
+    while( this->queue.size() >= 0){
+        this->kernel->call_event(ON_IDLE);
+    }
+}
+
