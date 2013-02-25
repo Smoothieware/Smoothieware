@@ -46,8 +46,8 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->reset_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == dfu_command_checksum)
         this->dfu_command(get_arguments(possible_command),new_message.stream );
-	else if (check_sum == help_command_checksum)
-		this->help_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == help_command_checksum)
+        this->help_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -65,8 +65,8 @@ void SimpleShell::ls_command( string parameters, StreamOutput* stream ){
     struct dirent* p;
     d = opendir(folder.c_str());
     if(d != NULL) {
-		while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
-		closedir(d);
+        while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
+        closedir(d);
     } else {
         stream->printf("Could not open directory %s \r\n", folder.c_str());
     }
@@ -81,8 +81,8 @@ void SimpleShell::cd_command( string parameters, StreamOutput* stream ){
     if(d == NULL) {
         stream->printf("Could not open directory %s \r\n", folder.c_str() );
     }else{
-		this->current_path = folder;
-		closedir(d);
+        this->current_path = folder;
+        closedir(d);
     }
 }
 
@@ -138,8 +138,8 @@ void SimpleShell::reset_command( string parameters, StreamOutput* stream){
 
 // go into dfu boot mode
 void SimpleShell::dfu_command( string parameters, StreamOutput* stream){
-	stream->printf("Entering boot mode...\r\n");
-	system_reset(true);
+    stream->printf("Entering boot mode...\r\n");
+    system_reset(true);
 }
 
 // Break out into the MRI debugging system
@@ -149,19 +149,19 @@ void SimpleShell::break_command( string parameters, StreamOutput* stream){
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){
-	stream->printf("Commands:\r\n");
-	stream->printf("ls [folder]\r\n");
-	stream->printf("cd folder\r\n");
-	stream->printf("pwd\r\n");	
-	stream->printf("cat file [limit]\r\n");
-	stream->printf("play file [-q]\r\n");
-	stream->printf("progress - shows progress of current play\r\n");
-	stream->printf("abort - abort currently playing file\r\n");
-	stream->printf("reset - reset smoothie\r\n");			
-	stream->printf("dfu - enter dfu boot loader\r\n");			
-	stream->printf("break- break into debugger\r\n");			
-	stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
-	stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
-	stream->printf("config-load [<file_name>]\r\n");
+    stream->printf("Commands:\r\n");
+    stream->printf("ls [folder]\r\n");
+    stream->printf("cd folder\r\n");
+    stream->printf("pwd\r\n");  
+    stream->printf("cat file [limit]\r\n");
+    stream->printf("play file [-q]\r\n");
+    stream->printf("progress - shows progress of current play\r\n");
+    stream->printf("abort - abort currently playing file\r\n");
+    stream->printf("reset - reset smoothie\r\n");           
+    stream->printf("dfu - enter dfu boot loader\r\n");          
+    stream->printf("break- break into debugger\r\n");           
+    stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
+    stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
+    stream->printf("config-load [<file_name>]\r\n");
 }
 

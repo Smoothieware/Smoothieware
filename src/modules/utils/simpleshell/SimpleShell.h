@@ -36,11 +36,11 @@ class SimpleShell : public Module {
         void pwd_command(  string parameters, StreamOutput* stream );
         void cat_command(  string parameters, StreamOutput* stream );
         void break_command(string parameters, StreamOutput* stream );
-		void reset_command(string parameters, StreamOutput* stream );
-		void dfu_command(string parameters, StreamOutput* stream );
-		void help_command(string parameters, StreamOutput* stream );
-		
-	private:
+        void reset_command(string parameters, StreamOutput* stream );
+        void dfu_command(string parameters, StreamOutput* stream );
+        void help_command(string parameters, StreamOutput* stream );
+        
+    private:
         string current_path;
 };
 
