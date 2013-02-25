@@ -19,6 +19,18 @@
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
+    this->reset_delay_secs= 0;
+    
+    register_for_event(ON_IDLE);
+}
+
+void SimpleShell::on_idle(void*) {
+    // we are timing out for the reset
+    if (this->reset_delay_secs) {
+        if(time(NULL) >= this->reset_delay_secs){
+            system_reset(false);
+        }
+    }
 }
 
 // When a new line is received, check if it is a command, and if it is, act upon it
@@ -132,8 +144,8 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 
 // Reset the system
 void SimpleShell::reset_command( string parameters, StreamOutput* stream){
-    stream->printf("Smoothie out. Peace.\r\n");
-    system_reset(false);
+    stream->printf("Smoothie out. Peace. Rebooting in 5 seconds...\r\n");
+    this->reset_delay_secs= time(NULL) + 5; // reboot in 5 seconds
 }
 
 // go into dfu boot mode
@@ -159,7 +171,7 @@ void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("abort - abort currently playing file\r\n");
     stream->printf("reset - reset smoothie\r\n");           
     stream->printf("dfu - enter dfu boot loader\r\n");          
-    stream->printf("break- break into debugger\r\n");           
+    stream->printf("break - break into debugger\r\n");          
     stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
     stream->printf("config-load [<file_name>]\r\n");
