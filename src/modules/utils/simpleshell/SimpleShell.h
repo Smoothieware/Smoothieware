@@ -37,6 +37,7 @@ class SimpleShell : public Module {
         void cat_command(  string parameters, StreamOutput* stream );
         void break_command(string parameters, StreamOutput* stream );
 		void reset_command(string parameters, StreamOutput* stream );
+		void dfu_command(string parameters, StreamOutput* stream );
 		void help_command(string parameters, StreamOutput* stream );
 		
 	private:

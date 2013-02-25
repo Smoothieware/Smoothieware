@@ -45,7 +45,7 @@ void SimpleShell::on_console_line_received( void* argument ){
     else if (check_sum == reset_command_checksum)
         this->reset_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == dfu_command_checksum)
-        this->reset_command(get_arguments(possible_command),new_message.stream );
+        this->dfu_command(get_arguments(possible_command),new_message.stream );
 	else if (check_sum == help_command_checksum)
 		this->help_command(get_arguments(possible_command),new_message.stream );
 }
@@ -133,7 +133,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 // Reset the system
 void SimpleShell::reset_command( string parameters, StreamOutput* stream){
     stream->printf("Smoothie out. Peace.\r\n");
-    system_reset();
+    system_reset(false);
+}
+
+// go into dfu boot mode
+void SimpleShell::dfu_command( string parameters, StreamOutput* stream){
+	stream->printf("Entering boot mode...\r\n");
+	system_reset(true);
 }
 
 // Break out into the MRI debugging system
@@ -149,9 +155,11 @@ void SimpleShell::help_command( string parameters, StreamOutput* stream ){
 	stream->printf("pwd\r\n");	
 	stream->printf("cat file [limit]\r\n");
 	stream->printf("play file [-q]\r\n");
-	stream->printf("progress\r\n");
-	stream->printf("abort\r\n");
-	stream->printf("reset\r\n");			
+	stream->printf("progress - shows progress of current play\r\n");
+	stream->printf("abort - abort currently playing file\r\n");
+	stream->printf("reset - reset smoothie\r\n");			
+	stream->printf("dfu - enter dfu boot loader\r\n");			
+	stream->printf("break- break into debugger\r\n");			
 	stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
 	stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
 	stream->printf("config-load [<file_name>]\r\n");

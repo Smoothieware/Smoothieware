@@ -120,13 +120,17 @@ bool file_exists( const string file_name ){
     return exists;
 }
 
-// Prepares and executes a watchdog reset
-void system_reset( void ){
-    LPC_WDT->WDCLKSEL = 0x1;                // Set CLK src to PCLK
-    uint32_t clk = SystemCoreClock / 16;    // WD has a fixed /4 prescaler, PCLK default is /4
-    LPC_WDT->WDTC = 1 * (float)clk;         // Reset in 1 second
-    LPC_WDT->WDMOD = 0x3;                   // Enabled and Reset
-    LPC_WDT->WDFEED = 0xAA;                 // Kick the dog!
-    LPC_WDT->WDFEED = 0x55;
+// Prepares and executes a watchdog reset for dfu or reboot
+void system_reset( bool dfu ){
+	if(dfu) {
+		LPC_WDT->WDCLKSEL = 0x1;                // Set CLK src to PCLK
+		uint32_t clk = SystemCoreClock / 16;    // WD has a fixed /4 prescaler, PCLK default is /4
+		LPC_WDT->WDTC = 1 * (float)clk;         // Reset in 1 second
+		LPC_WDT->WDMOD = 0x3;                   // Enabled and Reset
+		LPC_WDT->WDFEED = 0xAA;                 // Kick the dog!
+		LPC_WDT->WDFEED = 0x55;
+	}else{
+		NVIC_SystemReset();
+	}
 }
 
