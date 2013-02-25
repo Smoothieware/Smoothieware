@@ -37,10 +37,10 @@ void Player::on_console_line_received( void* argument ){
     // Act depending on command
     if (check_sum == play_command_checksum)
         this->play_command(  get_arguments(possible_command), new_message.stream );
-	else if (check_sum == progress_command_checksum)
-		this->progress_command(get_arguments(possible_command),new_message.stream );
-	else if (check_sum == abort_command_checksum)
-		this->abort_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == progress_command_checksum)
+        this->progress_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == abort_command_checksum)
+        this->abort_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == cd_command_checksum)
         this->cd_command(  get_arguments(possible_command), new_message.stream );
 }
@@ -78,34 +78,43 @@ void Player::play_command( string parameters, StreamOutput* stream ){
             fseek(this->current_file_handler, 0, SEEK_SET);
             stream->printf("  File size %ld\r\n", file_size);
     }
-    played_cnt= 0;
-
+    this->played_cnt= 0;
+    this->start_time= time(NULL);
 }
 
 void Player::progress_command( string parameters, StreamOutput* stream ){
-	if(!playing_file) {
-		stream->printf("Not currently playing\r\n");
-		return;
-	}
+    if(!playing_file) {
+        stream->printf("Not currently playing\r\n");
+        return;
+    }
 
-	if(file_size > 0) {
-		int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
-		stream->printf("%d %% complete\r\n", pcnt);
-	}else{
-		stream->printf("File size is unknown\r\n");
-	}
+    if(file_size > 0) {
+        int elapsed= time(NULL) - this->start_time;
+        int est= -1;
+        if(elapsed > 0) {
+            int bytespersec= played_cnt/elapsed;
+            if(bytespersec > 0)
+                est= (file_size - played_cnt) / bytespersec;
+        }
+        
+        int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
+        stream->printf("%d %% complete, elapsed time: %d s, est time: %d s\r\n", pcnt, elapsed, est);
+        
+    }else{
+        stream->printf("File size is unknown\r\n");
+    }
 }
 
 void Player::abort_command( string parameters, StreamOutput* stream ){
-	if(!playing_file) {
-		stream->printf("Not currently playing\r\n");
-		return;
-	}
-	playing_file = false;
-	played_cnt= 0;
-	file_size= 0;
-	fclose(current_file_handler);
-	stream->printf("Aborted playing file\r\n");
+    if(!playing_file) {
+        stream->printf("Not currently playing\r\n");
+        return;
+    }
+    playing_file = false;
+    played_cnt= 0;
+    file_size= 0;
+    fclose(current_file_handler);
+    stream->printf("Aborted playing file\r\n");
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -124,8 +133,8 @@ void Player::cd_command( string parameters, StreamOutput* stream ){
     if(d == NULL) {
 //        stream->printf("Could not open directory %s \r\n", folder.c_str() );
     }else{
-		this->current_path = folder;
-		closedir(d);
+        this->current_path = folder;
+        closedir(d);
     }
 }
 
@@ -148,17 +157,17 @@ void Player::on_main_loop(void* argument){
                 message.stream = this->current_stream;
                 // wait for the queue to have enough room that a serial message could still be received before sending
                 this->kernel->conveyor->wait_for_queue(2);
-				this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-				played_cnt += buffer.size();
+                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+                played_cnt += buffer.size();
                 buffer.clear();
                 return;
             }else{
                 buffer += c;
             }
         };
-		this->playing_file = false;
-		played_cnt= 0;
-		file_size= 0;
+        this->playing_file = false;
+        played_cnt= 0;
+        file_size= 0;
         fclose(this->current_file_handler);
     }
 }
