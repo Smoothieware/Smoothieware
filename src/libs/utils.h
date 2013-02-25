@@ -29,7 +29,7 @@ string get_arguments( string possible_command );
 
 bool file_exists( const string file_name );
 
-void system_reset( void );
+void system_reset( bool dfu= false );
 
 
 
