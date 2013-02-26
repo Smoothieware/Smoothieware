@@ -42,8 +42,9 @@ StepTicker::StepTicker(){
     this->set_frequency(0.001);
     this->set_reset_delay(100);
     this->last_duration = 0;
-    for (int i = 0; i < 12; i++)
+    for (int i = 0; i < 12; i++){
         this->active_motors[i] = NULL;
+    }
     this->active_motor_bm = 0;
 
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
@@ -121,6 +122,7 @@ void StepTicker::signal_moves_finished(){
 
 // Reset step pins on all active motors
 inline void StepTicker::reset_tick(){
+    LPC_GPIO3->FIOSET = 1<<25;
     _isr_context = true;
 
     int i;
@@ -132,6 +134,7 @@ inline void StepTicker::reset_tick(){
     }
 
     _isr_context = false;
+    LPC_GPIO3->FIOCLR = 1<<25;
 }
 
 extern "C" void TIMER1_IRQHandler (void){
@@ -147,6 +150,7 @@ extern "C" void TIMER1_IRQHandler (void){
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
 
+    LPC_GPIO3->FIODIR |= 1<<25;
     LPC_GPIO1->FIODIR |= 1<<22;
     LPC_GPIO1->FIODIR |= 1<<23;
     LPC_GPIO1->FIODIR |= 1<<30;
@@ -171,59 +175,63 @@ extern "C" void TIMER0_IRQHandler (void){
         LPC_GPIO1->FIOCLR = 1<<22;
         return;
     }
-
-    // Do not get out of here before everything is nice and tidy
-    LPC_TIM0->MR0 = 2000000;
-
+    
     // If a move finished in this tick, we have to tell the actuator to act accordingly
-    if( global_step_ticker->moves_finished ){ global_step_ticker->signal_moves_finished(); }
+    if( global_step_ticker->moves_finished ){ 
+ 
+        // Do not get out of here before everything is nice and tidy
+        LPC_TIM0->MR0 = 2000000;
+        
+        global_step_ticker->signal_moves_finished();
 
-    // If we went over the duration an interrupt is supposed to last, we have a problem
-    // That can happen tipically when we change blocks, where more than usual computation is done
-    // This can be OK, if we take notice of it, which we do now
-    if( LPC_TIM0->TC > global_step_ticker->period ){ // TODO: remove the size condition
+        // If we went over the duration an interrupt is supposed to last, we have a problem
+        // That can happen tipically when we change blocks, where more than usual computation is done
+        // This can be OK, if we take notice of it, which we do now
+        if( LPC_TIM0->TC > global_step_ticker->period ){ // TODO: remove the size condition
 
-        LPC_GPIO1->FIOCLR = 1<<22;
-        uint32_t start_tc = LPC_TIM0->TC;
-        LPC_GPIO1->FIOSET = 1<<22;
+            LPC_GPIO1->FIOCLR = 1<<22;
+            uint32_t start_tc = LPC_TIM0->TC;
+            LPC_GPIO1->FIOSET = 1<<22;
 
-        // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
-        uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + global_step_ticker->last_duration ) / global_step_ticker->period );
+            // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
+            uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + global_step_ticker->last_duration ) / global_step_ticker->period );
 
-        // Next step is now to reduce this to how many steps we can *actually* skip
-        uint32_t ticks_we_actually_can_skip = ticks_to_skip;
+            // Next step is now to reduce this to how many steps we can *actually* skip
+            uint32_t ticks_we_actually_can_skip = ticks_to_skip;
 
-        int i;
-        uint32_t bm;
-        for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
-        {
-            if (global_step_ticker->active_motor_bm & bm)
-                ticks_we_actually_can_skip =
-                    min(ticks_we_actually_can_skip,
-                        (uint32_t)((uint64_t)( (uint64_t)global_step_ticker->active_motors[i]->fx_ticks_per_step - (uint64_t)global_step_ticker->active_motors[i]->fx_counter ) >> 32)
-                        );
+            int i;
+            uint32_t bm;
+            for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
+            {
+                if (global_step_ticker->active_motor_bm & bm)
+                    ticks_we_actually_can_skip =
+                        min(ticks_we_actually_can_skip,
+                            (uint32_t)((uint64_t)( (uint64_t)global_step_ticker->active_motors[i]->fx_ticks_per_step - (uint64_t)global_step_ticker->active_motors[i]->fx_counter ) >> 32)
+                            );
+            }
+
+            // Adding to MR0 for this time is not enough, we must also increment the counters ourself artificially
+            for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
+            {
+                if (global_step_ticker->active_motor_bm & bm)
+                    global_step_ticker->active_motors[i]->fx_counter += (uint64_t)((uint64_t)(ticks_we_actually_can_skip)<<32);
+            }
+
+            // When must we have our next MR0 ? ( +1 is here to account that we are actually doing a legit MR0 match here too, not only overtime )
+            LPC_TIM0->MR0 = ( ticks_to_skip + 1 ) * global_step_ticker->period;
+
+            // This is so that we know how long this computation takes, and we can take it into account next time
+            int difference = (int)(LPC_TIM0->TC) - (int)(start_tc);
+            if( difference > 0 ){ global_step_ticker->last_duration = (uint32_t)difference; }
+
+        }else{
+            LPC_TIM0->MR0 = global_step_ticker->period;
         }
 
-        // Adding to MR0 for this time is not enough, we must also increment the counters ourself artificially
-        for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
-        {
-            if (global_step_ticker->active_motor_bm & bm)
-                global_step_ticker->active_motors[i]->fx_counter += (uint64_t)((uint64_t)(ticks_we_actually_can_skip)<<32);
+        while( LPC_TIM0->TC > LPC_TIM0->MR0 ){
+            LPC_TIM0->MR0 += global_step_ticker->period;
         }
 
-        // When must we have our next MR0 ? ( +1 is here to account that we are actually doing a legit MR0 match here too, not only overtime )
-        LPC_TIM0->MR0 = ( ticks_to_skip + 1 ) * global_step_ticker->period;
-
-        // This is so that we know how long this computation takes, and we can take it into account next time
-        int difference = (int)(LPC_TIM0->TC) - (int)(start_tc);
-        if( difference > 0 ){ global_step_ticker->last_duration = (uint32_t)difference; }
-
-    }else{
-        LPC_TIM0->MR0 = global_step_ticker->period;
-    }
-
-    while( LPC_TIM0->TC > LPC_TIM0->MR0 ){
-        LPC_TIM0->MR0 += global_step_ticker->period;
     }
 
     LPC_GPIO1->FIOCLR = 1<<22;

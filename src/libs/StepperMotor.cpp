@@ -16,7 +16,6 @@ StepperMotor::StepperMotor(){
     this->stepped = 0;
     this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
-    //this->direction_bit = 0;
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
     this->signal_step = false;
@@ -30,7 +29,6 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->stepped = 0;
     this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
-    //this->direction_bit = 0;
     this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
     this->signal_step = false;
