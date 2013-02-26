@@ -62,8 +62,8 @@ class StepperMotor {
 
         uint32_t steps_to_move;
         uint32_t stepped;
-        uint64_t fx_counter;
-        uint64_t fx_ticks_per_step;
+        uint32_t fx_counter;
+        uint32_t fx_ticks_per_step;
 
         //bool exit_tick;
         bool remove_from_active_list_next_reset;
@@ -78,7 +78,7 @@ inline void StepperMotor::tick(){
     LPC_GPIO1->FIOSET =  1<<23;
     
     // increase the ( fixed point ) counter by one tick 11t
-    this->fx_counter += (uint64_t)((uint64_t)1<<32);
+    this->fx_counter += (uint32_t)(1<<16);
 
     // if we are to step now 10t
     if( this->fx_counter >= this->fx_ticks_per_step ){ this->step(); }
