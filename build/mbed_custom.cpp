@@ -332,4 +332,36 @@ __attribute__((naked)) void* operator new(size_t size)
     return (void*)1;
 }
 
+#else
+
+/* Wrap memory allocation routines to make sure that they aren't being called from interrupt handler. */
+static void breakOnHeapOpFromInterruptHandler(void)
+{
+    if (__get_IPSR() != 0)
+        __debugbreak();
+}
+
+extern "C" void* __real_malloc(size_t size);
+extern "C" void* __wrap_malloc(size_t size)
+{
+    breakOnHeapOpFromInterruptHandler();
+    return __real_malloc(size);
+}
+
+
+extern "C" void* __real_realloc(void* ptr, size_t size);
+extern "C" void* __wrap_realloc(void* ptr, size_t size)
+{
+    breakOnHeapOpFromInterruptHandler();
+    return __real_realloc(ptr, size);
+}
+
+
+extern "C" void __real_free(void* ptr);
+extern "C" void __wrap_free(void* ptr)
+{
+    breakOnHeapOpFromInterruptHandler();
+    __real_free(ptr);
+}
+
 #endif // HEAP_TAGS
