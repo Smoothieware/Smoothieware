@@ -8,6 +8,19 @@ DEVICES=lpc1768
 #  Debug - Optimization disabled with MRI debug monitor support.
 BUILD_TYPE=Checked
 
+# Set to 1 to tag each heap allocation with the caller's return address.
+# NOTE: Can't be enabled with latest build as not compatible with newlib nano.
+HEAP_TAGS=0
+
+# Set to 1 configure MPU to disable write buffering and eliminate imprecise bus faults.
+WRITE_BUFFER_DISABLE=0
+
+# Set to non zero value if you want checks to be enabled which reserve a
+# specific amount of space for the stack.  The heap's growth will be
+# constrained to reserve this much space for the stack and the stack won't be
+# able to grow larger than this amount.
+STACK_SIZE=3072
+
 # Set to 1 to allow MRI debug monitor to take full control of UART0 and use it
 # as a dedicated debug channel.  If you are using the USB based serial port for
 # the console then this should cause you no problems.  Set MRI_BREAK_ON_INIT to

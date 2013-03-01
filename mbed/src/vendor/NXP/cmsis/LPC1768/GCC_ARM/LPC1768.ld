@@ -146,6 +146,9 @@ SECTIONS
     PROVIDE(__stack = __StackTop);
     PROVIDE(__heapLimit = __HeapLimit);
     PROVIDE(__stackSize = __StackTop - __HeapLimit);
+
+    /* Area of memory, heap and stack, to fill on startup - 8 bytes at a time. */
+    __FillStart = ALIGN(__end__, 8);
     
     /* Check if data + heap + stack exceeds RAM limit */
     ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")

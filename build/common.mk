@@ -44,6 +44,9 @@ SRC ?= .
 BUILD_TYPE ?= Release
 MRI_BREAK_ON_INIT ?= 1
 MRI_UART ?= MRI_UART_MBED_USB
+HEAP_TAGS ?= 0
+WRITE_BUFFER_DISABLE ?= 0
+STACK_SIZE ?= 0
 
 
 # Configure MRI variables based on BUILD_TYPE build type variable.
@@ -105,6 +108,7 @@ INCDIRS += $(SRC) $(PROJINCS) $(MRI_DIR) $(MBED_DIR) $(MBED_DIR)/$(DEVICE)
 DEFINES += -DTARGET_$(DEVICE)
 DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"' 
 DEFINES += -DMRI_BREAK_ON_INIT=$(MRI_BREAK_ON_INIT) -DMRI_SEMIHOST_STDIO=$(MRI_SEMIHOST_STDIO)
+DEFINES += -DWRITE_BUFFER_DISABLE=$(WRITE_BUFFER_DISABLE) -DSTACK_SIZE=$(STACK_SIZE)
 
 ifeq "$(OPTIMIZATION)" "0"
 DEFINES += -DDEBUG
@@ -126,6 +130,20 @@ LIBS += $(LIBS_SUFFIX)
 # Compiler flags used to enable creation of header dependencies.
 DEPFLAGS = -MMD -MP
 
+# Setup wraps for newlib read/writes to redirect to MRI debugger. 
+ifeq "$(MRI_ENABLE)" "1"
+MRI_WRAPS=,--wrap=_read,--wrap=_write,--wrap=semihost_connected
+else
+MRI_WRAPS=
+endif
+
+# Setup wraps to memory allocations routines if we want to tag heap allocations.
+HEAP_WRAPS=
+ifeq "$(HEAP_TAGS)" "1"
+HEAP_WRAPS=,--wrap=malloc,--wrap=realloc,--wrap=free
+DEFINES += -DHEAP_TAGS
+endif
+
 # Compiler Options
 GCFLAGS += -O$(OPTIMIZATION) -g3 $(DEVICE_CFLAGS)
 GCFLAGS += -ffunction-sections -fdata-sections  -fno-exceptions -fno-delete-null-pointer-checks
@@ -141,15 +159,10 @@ AS_GCFLAGS += $(patsubst %,-I%,$(INCDIRS))
 AS_FLAGS += -g3 $(DEVICE_FLAGS)
 
 
-# Setup wraps for newlib read/writes to redirect to MRI debugger. 
-ifeq "$(MRI_ENABLE)" "1"
-MRI_WRAPS=,--wrap=_read,--wrap=_write,--wrap=semihost_connected
-else
-MRI_WRAPS=
-endif
-
 # Linker Options.
-LDFLAGS = $(DEVICE_FLAGS) -specs=$(BUILD_DIR)/startfile.spec -Wl,-Map=$(OUTDIR)/$(PROJECT).map,--cref,--gc-sections,--wrap=_isatty$(MRI_WRAPS) -T$(LSCRIPT)
+LDFLAGS = $(DEVICE_FLAGS) -specs=$(BUILD_DIR)/startfile.spec 
+LDFLAGS += -Wl,-Map=$(OUTDIR)/$(PROJECT).map,--cref,--gc-sections,--wrap=_isatty$(MRI_WRAPS)$(HEAP_WRAPS)
+LDFLAGS += -T$(LSCRIPT)  -L $(EXTERNAL_DIR)/gcc/LPC1768
 ifneq "$(NO_FLOAT_SCANF)" "1"
 LDFLAGS += -u _scanf_float
 endif
@@ -233,10 +246,10 @@ clean:
 #  Default rules to compile .c and .cpp file to .o
 #  and assemble .s files to .o
 
-$(OUTDIR)/mbed_custom.o : $(BUILD_DIR)/mbed_custom.c makefile
+$(OUTDIR)/mbed_custom.o : $(BUILD_DIR)/mbed_custom.cpp makefile
 	@echo Compiling $<
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	$(Q) $(GCC) $(GCFLAGS) -c $< -o $@
+	$(Q) $(GPP) $(GPFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.cpp makefile
 	@echo Compiling $<
