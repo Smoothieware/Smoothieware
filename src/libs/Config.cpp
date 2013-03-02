@@ -24,8 +24,21 @@ Config::Config(){
     this->config_cache_loaded = false;
 
     // Config source for */config files
-    this->config_sources.push_back( new FileConfigSource("/local/config", LOCAL_CONFIGSOURCE_CHECKSUM) );
-    this->config_sources.push_back( new FileConfigSource("/sd/config",    SD_CONFIGSOURCE_CHECKSUM   ) );
+    FileConfigSource* fcs = NULL;
+    if( file_exists("/local/config") )
+        fcs = new FileConfigSource("/local/config", LOCAL_CONFIGSOURCE_CHECKSUM);
+    else if( file_exists("/local/config.txt") )
+        fcs = new FileConfigSource("/local/config.txt", LOCAL_CONFIGSOURCE_CHECKSUM);
+    if( fcs != NULL ){
+        this->config_sources.push_back( fcs );
+        fcs = NULL;
+    }
+    if( file_exists("/sd/config") )
+       fcs = new FileConfigSource("/sd/config",    SD_CONFIGSOURCE_CHECKSUM   );
+    else if( file_exists("/sd/config.txt") )
+       fcs = new FileConfigSource("/sd/config.txt",    SD_CONFIGSOURCE_CHECKSUM   );
+    if( fcs != NULL )
+        this->config_sources.push_back( fcs );
 
     // Pre-load the config cache
     this->config_cache_load();
