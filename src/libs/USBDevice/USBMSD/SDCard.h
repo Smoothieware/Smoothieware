@@ -99,7 +99,7 @@ protected:
     uint32_t _sd_sectors();
     uint32_t _sectors;
 
-    SPI _spi;
+    ::SPI _spi;
     GPIO _cs;
 
     volatile bool busyflag;
