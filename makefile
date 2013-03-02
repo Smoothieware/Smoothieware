@@ -3,13 +3,13 @@
 DIRS = mbed src
 DIRSCLEAN = $(addsuffix .clean,$(DIRS))
 
-all: $(DIRS)
+all:
+	@echo Building mbed SDK
+	@ $(MAKE) -C mbed
+	@echo Building Smoothie
+	@ $(MAKE) -C src
 
 clean: $(DIRSCLEAN)
-
-$(DIRS):
-	@echo Building $@
-	@ $(MAKE) -C $@
 
 $(DIRSCLEAN): %.clean:
 	@echo Cleaning $*
