@@ -93,15 +93,12 @@ void Extruder::on_play(void* argument){
 void Extruder::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode*>(argument);
-    if (gcode->has_m)
-    {
-        if (gcode->m == 114)
-        {
+    if (gcode->has_m){
+        if (gcode->m == 114){
             gcode->stream->printf("E:%4.1f ", this->current_position);
             gcode->add_nl = true;
         }
-        if (gcode->m == 92 )
-        {
+        if (gcode->m == 92 ){
             double spm = this->steps_per_millimeter;
             if (gcode->has_letter('E'))
                 spm = gcode->get_value('E');
@@ -109,7 +106,48 @@ void Extruder::on_gcode_received(void *argument)
             gcode->add_nl = true;
         }
     }
+    
+    if( ( gcode->has_m && ( gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) ){
+        if( this->kernel->conveyor->queue.size() == 0 ){
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+        }else{
+            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            block->append_gcode(gcode);
+            gcode->queued++;
+        }
+    }
+
+    // Add to the queue for on_gcode_execute to process
+    if( gcode->has_g && gcode->g < 4 && gcode->has_letter('E') ){
+        if( !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ){
+            // This is a solo move, we add an empty block to the queue
+            //If the queue is empty, execute immediatly, otherwise attach to the last added block
+            if( this->kernel->conveyor->queue.size() == 0 ){
+                this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+                this->append_empty_block();
+            }else{
+                Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+                this->append_empty_block();
+                block->append_gcode(gcode);
+                gcode->queued++;
+            }
+        }
+    }
 }
+
+// Append an empty block in the queue so that solo mode can pick it up
+void Extruder::append_empty_block(){
+    this->kernel->conveyor->wait_for_queue(2);
+    Block* block = this->kernel->conveyor->new_block();
+    block->planner = this->kernel->planner;
+    block->millimeters = 0;
+    block->steps[0] = 0; 
+    block->steps[1] = 0; 
+    block->steps[2] = 0; 
+    // feed the block into the system. Will execute it if we are at the beginning of the queue
+    block->ready();
+}
+
 
 // Compute extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void* argument){
@@ -120,10 +158,8 @@ void Extruder::on_gcode_execute(void* argument){
         if( gcode->m == 82 ){ this->absolute_mode = true; }
         if( gcode->m == 83 ){ this->absolute_mode = false; }
         if( gcode->m == 84 ){ this->en_pin.set(1); }
-        if (gcode->m == 92 )
-        {
-            if (gcode->has_letter('E'))
-            {
+        if (gcode->m == 92 ){
+            if (gcode->has_letter('E')){
                 this->steps_per_millimeter = gcode->get_value('E');
                 this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
             }

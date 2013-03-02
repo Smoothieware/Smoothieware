@@ -94,21 +94,28 @@ void Robot::on_config_reload(void* argument){
 //A GCode has been received
 void Robot::on_gcode_received(void * argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    gcode->call_on_gcode_execute_event_immediatly = false;
-    gcode->on_gcode_execute_event_called = false;
-    //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( this->kernel->conveyor->queue.size() == 0 ){
-        gcode->call_on_gcode_execute_event_immediatly = true;
-        this->execute_gcode(gcode);
-        if( gcode->on_gcode_execute_event_called == false ){
-            //printf("GCODE A: %s \r\n", gcode->command.c_str() );
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+
+    // If this gcode is a movement gcode
+    if( gcode->has_g && gcode->g < 4 && ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ) ){
+        gcode->call_on_gcode_execute_event_immediatly = false;
+        gcode->on_gcode_execute_event_called = false;
+        //If the queue is empty, execute immediatly, otherwise attach to the last added block
+        if( this->kernel->conveyor->queue.size() == 0 ){
+            gcode->call_on_gcode_execute_event_immediatly = true;
+            this->process_gcode(gcode);
+            if( gcode->on_gcode_execute_event_called == false ){
+                //printf("GCODE A: %s \r\n", gcode->command.c_str() );
+                this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+            }
+        }else{
+            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            this->process_gcode(gcode);
+            block->append_gcode(gcode);
+            gcode->queued++;
         }
+
     }else{
-        Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-        this->execute_gcode(gcode);
-        block->append_gcode(gcode);
-        gcode->queued++;
+        this->process_gcode(gcode);
     }
 }
 
@@ -120,15 +127,15 @@ void Robot::reset_axis_position(double position, int axis) {
 
 
 //See if the current Gcode line has some orders for us
-void Robot::execute_gcode(Gcode* gcode){
+void Robot::process_gcode(Gcode* gcode){
 
     //Temp variables, constant properties are stored in the object
     uint8_t next_action = NEXT_ACTION_DEFAULT;
     this->motion_mode = -1;
 
    //G-letter Gcodes are mostly what the Robot module is interrested in, other modules also catch the gcode event and do stuff accordingly
-    if( gcode->has_letter('G')){
-        switch( (int) gcode->get_value('G') ){
+    if( gcode->has_g){
+        switch( gcode->g ){
             case 0:  this->motion_mode = MOTION_MODE_SEEK; break;
             case 1:  this->motion_mode = MOTION_MODE_LINEAR; break;
             case 2:  this->motion_mode = MOTION_MODE_CW_ARC; break;
@@ -154,8 +161,8 @@ void Robot::execute_gcode(Gcode* gcode){
                 return; // TODO: Wait until queue empty
            }
        }
-   }else if( gcode->has_letter('M')){
-     switch( (int) gcode->get_value('M') ){
+   }else if( gcode->has_m){
+     switch( gcode->m ){
             case 92: // M92 - set steps per mm
                 double steps[3];
                 this->arm_solution->get_steps_per_millimeter(steps);

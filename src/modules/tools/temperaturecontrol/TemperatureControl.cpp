@@ -14,6 +14,7 @@
 #include "TemperatureControlPool.h"
 #include "libs/Pin.h"
 #include "libs/Median.h"
+#include "modules/robot/Conveyor.h"
 
 #include "MRI_Hooks.h"
 
@@ -114,8 +115,7 @@ void TemperatureControl::on_config_reload(void* argument){
     this->last_reading = 0.0;
 }
 
-void TemperatureControl::on_gcode_received(void* argument)
-{
+void TemperatureControl::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if (gcode->has_m)
     {
@@ -151,6 +151,17 @@ void TemperatureControl::on_gcode_received(void* argument)
                 }
                 gcode->stream->printf("Start PID tune, command is %s\n", gcode->command.c_str());
                 this->pool->PIDtuner->begin(this, target, gcode->stream);
+            }
+        }
+        
+        // Attach gcodes to the last block for on_gcode_execute
+        if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ){
+            if( this->kernel->conveyor->queue.size() == 0 ){
+                this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+            }else{
+                Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+                block->append_gcode(gcode);
+                gcode->queued++;
             }
         }
     }

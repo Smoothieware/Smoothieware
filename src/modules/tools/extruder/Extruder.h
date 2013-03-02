@@ -43,6 +43,7 @@ class Extruder : public Module{
         void on_speed_change(void* argument);
         uint32_t acceleration_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
+        void append_empty_block();
 
         Pin             step_pin;                     // Step pin for the stepper driver
         Pin             dir_pin;                      // Dir pin for the stepper driver

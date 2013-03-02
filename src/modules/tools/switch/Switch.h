@@ -24,6 +24,7 @@ class Switch : public Module {
 
         void on_module_loaded();
         void on_config_reload(void* argument);
+        void on_gcode_received(void* argument);
         void on_gcode_execute(void* argument);
 
         uint16_t name_checksum;
