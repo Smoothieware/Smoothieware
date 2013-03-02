@@ -43,7 +43,7 @@ void TemperatureControl::on_main_loop(void* argument){
     if (this->min_temp_violated) {
         kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
         this->min_temp_violated = false;
-    } 
+    }
 }
 
 // Get configuration from the config file
@@ -54,8 +54,6 @@ void TemperatureControl::on_config_reload(void* argument){
     this->set_and_wait_m_code = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
     this->get_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
     this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
-
-    this->max_pwm             = this->kernel->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number();
 
     this->designator          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
@@ -95,6 +93,7 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // Heater pin
     this->heater_pin.from_string(    this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_string())->as_output();
+    this->heater_pin.max_pwm(        this->kernel->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
     this->heater_pin.set(0);
 
     set_low_on_debug(heater_pin.port_number, heater_pin.pin);
@@ -271,8 +270,6 @@ void TemperatureControl::pid_process(double temperature)
             i = 0;
         this->o = 0;
     }
-
-    if( this->o > this->max_pwm ){ this->o = max_pwm; }
 
     this->heater_pin.pwm(o);
 }

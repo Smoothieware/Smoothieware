@@ -76,8 +76,6 @@ class TemperatureControl : public Module {
         double j;
         double k;
 
-        int max_pwm;
-
         // PID settings
         double p_factor;
         double i_factor;
