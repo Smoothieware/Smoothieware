@@ -33,7 +33,7 @@ void Conveyor::on_idle(void* argument)
 {
     if (flush_blocks)
     {
-        Block* block = queue.get_tail_ref();
+        Block* block = queue.get_ref(0);
 //         printf("Block: clean %p\n", block);
         while (block->gcodes.size())
         {
