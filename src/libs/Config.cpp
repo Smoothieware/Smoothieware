@@ -29,9 +29,10 @@ Config::Config(){
         fcs = new FileConfigSource("/local/config", LOCAL_CONFIGSOURCE_CHECKSUM);
     else if( file_exists("/local/config.txt") )
         fcs = new FileConfigSource("/local/config.txt", LOCAL_CONFIGSOURCE_CHECKSUM);
-    if( fcs != NULL )
+    if( fcs != NULL ){
         this->config_sources.push_back( fcs );
-    fcs = NULL;
+        fcs = NULL;
+    }
     if( file_exists("/sd/config") )
        fcs = new FileConfigSource("/sd/config",    SD_CONFIGSOURCE_CHECKSUM   );
     else if( file_exists("/sd/config.txt") )
