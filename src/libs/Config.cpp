@@ -19,9 +19,13 @@ using namespace std;
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/ConfigSources/FileConfigSource.h"
+#include "libs/ConfigSources/FirmConfigSource.h"
 
 Config::Config(){
     this->config_cache_loaded = false;
+
+    // Config source for firm config found in src/config.default
+    this->config_sources.push_back( new FirmConfigSource() );
 
     // Config source for */config files
     FileConfigSource* fcs = NULL;

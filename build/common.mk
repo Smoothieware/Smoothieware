@@ -89,6 +89,8 @@ OBJECTS = $(patsubst %.c,$(OUTDIR)/%.o,$(CSRCS)) $(patsubst %.s,$(OUTDIR)/%.o,$(
 # Add in the MBED customization stubs which allow hooking in the MRI debug monitor.
 OBJECTS += $(OUTDIR)/mbed_custom.o
 
+OBJECTS += $(OUTDIR)/configdefault.o
+
 # List of the header dependency files, one per object file.
 DEPFILES = $(patsubst %.o,%.d,$(OBJECTS))
 
@@ -268,5 +270,8 @@ $(OUTDIR)/%.o : %.s makefile
 	@echo Assembling $<
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(AS) $(AS_FLAGS) -o $@ $<
+
+$(OUTDIR)/configdefault.o : config.default
+	$(Q) $(OBJCOPY) -I binary -O elf32-littlearm -B arm $< $@
 
 #########################################################################
