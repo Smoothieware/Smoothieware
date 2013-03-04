@@ -52,29 +52,29 @@ void Robot::on_config_reload(void* argument){
     if (this->arm_solution) delete this->arm_solution;
     int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
 
-	// Note checksums are not const expressions when in debug mode, so don't use switch
-	if(solution_checksum == rostock_checksum) {
-		this->arm_solution = new RostockSolution(this->kernel->config);
+    // Note checksums are not const expressions when in debug mode, so don't use switch
+    if(solution_checksum == rostock_checksum) {
+        this->arm_solution = new RostockSolution(this->kernel->config);
 
-	}else if(solution_checksum ==  delta_checksum) {
-		// place holder for now
-		this->arm_solution = new RostockSolution(this->kernel->config);
+    }else if(solution_checksum ==  delta_checksum) {
+        // place holder for now
+        this->arm_solution = new RostockSolution(this->kernel->config);
 
     }else if(solution_checksum == rotatable_cartesian_checksum) {
         this->arm_solution = new RotatableCartesianSolution(this->kernel->config);
 
-	}else if(solution_checksum == cartesian_checksum) {
-		this->arm_solution = new CartesianSolution(this->kernel->config);
+    }else if(solution_checksum == cartesian_checksum) {
+        this->arm_solution = new CartesianSolution(this->kernel->config);
 
-	}else{
-		this->arm_solution = new CartesianSolution(this->kernel->config);
-	}
+    }else{
+        this->arm_solution = new CartesianSolution(this->kernel->config);
+    }
 
 
     this->feed_rate           = this->kernel->config->value(default_feed_rate_checksum   )->by_default(100    )->as_number() / 60;
     this->seek_rate           = this->kernel->config->value(default_seek_rate_checksum   )->by_default(100    )->as_number() / 60;
-	this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum )->by_default(0.0    )->as_number();
-	this->delta_segments_per_second = this->kernel->config->value(delta_segments_per_second_checksum )->by_default(0.0    )->as_number();
+    this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum )->by_default(0.0    )->as_number();
+    this->delta_segments_per_second = this->kernel->config->value(delta_segments_per_second_checksum )->by_default(0.0    )->as_number();
     this->mm_per_arc_segment  = this->kernel->config->value(mm_per_arc_segment_checksum  )->by_default(0.5    )->as_number();
     this->arc_correction      = this->kernel->config->value(arc_correction_checksum      )->by_default(5      )->as_number();
     this->max_speeds[X_AXIS]  = this->kernel->config->value(x_axis_max_speed_checksum    )->by_default(60000  )->as_number();
@@ -272,29 +272,29 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
         return;
     }
 
-	// We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
-	// In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
-	// In delta robots either mm_per_line_segment can be used OR delta_segments_per_second The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
+    // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
+    // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
+    // In delta robots either mm_per_line_segment can be used OR delta_segments_per_second The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
 
-	uint16_t segments;
-	
-	if(this->delta_segments_per_second > 1.0) {
-		// enabled if set to something > 1, it is set to 0.0 by default
-		// segment based on current speed and requested segments per second
-		// the faster the travel speed the fewer segments needed
-		// NOTE rate is mm/sec and we take into account any speed override
-		float seconds = seconds_per_minute/60.0 * gcode->millimeters_of_travel / rate;
-		segments= max(1, ceil(this->delta_segments_per_second * seconds));
-		// TODO if we are only moving in Z on a delta we don't really need to segment at all
-		
-	}else{
-		if(this->mm_per_line_segment == 0.0){
-			segments= 1; // don't split it up
-		}else{
-			segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment);
-		}
-	}
-	
+    uint16_t segments;
+    
+    if(this->delta_segments_per_second > 1.0) {
+        // enabled if set to something > 1, it is set to 0.0 by default
+        // segment based on current speed and requested segments per second
+        // the faster the travel speed the fewer segments needed
+        // NOTE rate is mm/sec and we take into account any speed override
+        float seconds = 60.0/seconds_per_minute * gcode->millimeters_of_travel / rate;
+        segments= max(1, ceil(this->delta_segments_per_second * seconds));
+        // TODO if we are only moving in Z on a delta we don't really need to segment at all
+        
+    }else{
+        if(this->mm_per_line_segment == 0.0){
+            segments= 1; // don't split it up
+        }else{
+            segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment);
+        }
+    }
+    
     // A vector to keep track of the endpoint of each segment
     double temp_target[3];
     //Initialize axes

@@ -89,7 +89,7 @@ class Robot : public Module {
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         double mm_per_line_segment;                           // Setting : Used to split lines into segments
         double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
-		double delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
+        double delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
