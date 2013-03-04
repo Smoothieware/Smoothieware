@@ -18,7 +18,7 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #THE SOFTWARE.
 #
-# Updates: 
+# Updates:
 #    Arthur Wolf & Adam Green in 2011 - 2012 - Updated to work with mbed.
 ###############################################################################
 # Check for undefined variables.
@@ -108,7 +108,7 @@ INCDIRS += $(SRC) $(PROJINCS) $(MRI_DIR) $(MBED_DIR) $(MBED_DIR)/$(DEVICE)
 
 # DEFINEs to be used when building C/C++ code
 DEFINES += -DTARGET_$(DEVICE)
-DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"' 
+DEFINES += -DMRI_ENABLE=$(MRI_ENABLE) -DMRI_INIT_PARAMETERS='"$(MRI_INIT_PARAMETERS)"'
 DEFINES += -DMRI_BREAK_ON_INIT=$(MRI_BREAK_ON_INIT) -DMRI_SEMIHOST_STDIO=$(MRI_SEMIHOST_STDIO)
 DEFINES += -DWRITE_BUFFER_DISABLE=$(WRITE_BUFFER_DISABLE) -DSTACK_SIZE=$(STACK_SIZE)
 
@@ -119,7 +119,7 @@ endif
 # Libraries to be linked into final binary
 MBED_LIBS = $(MBED_DIR)/$(DEVICE)/GCC_ARM/libmbed.a
 SYS_LIBS = -lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys
-LIBS = $(LIBS_PREFIX) 
+LIBS = $(LIBS_PREFIX)
 
 ifeq "$(MRI_ENABLE)" "1"
 LIBS += $(MRI_DIR)/mri.ar
@@ -132,7 +132,7 @@ LIBS += $(LIBS_SUFFIX)
 # Compiler flags used to enable creation of header dependencies.
 DEPFLAGS = -MMD -MP
 
-# Setup wraps for newlib read/writes to redirect to MRI debugger. 
+# Setup wraps for newlib read/writes to redirect to MRI debugger.
 ifeq "$(MRI_ENABLE)" "1"
 MRI_WRAPS=,--wrap=_read,--wrap=_write,--wrap=semihost_connected
 else
@@ -160,7 +160,7 @@ AS_FLAGS += -g3 $(DEVICE_FLAGS)
 
 
 # Linker Options.
-LDFLAGS = $(DEVICE_FLAGS) -specs=$(BUILD_DIR)/startfile.spec 
+LDFLAGS = $(DEVICE_FLAGS) -specs=$(BUILD_DIR)/startfile.spec
 LDFLAGS += -Wl,-Map=$(OUTDIR)/$(PROJECT).map,--cref,--gc-sections,--wrap=_isatty,--wrap=malloc,--wrap=realloc,--wrap=free$(MRI_WRAPS)
 LDFLAGS += -T$(LSCRIPT)  -L $(EXTERNAL_DIR)/gcc/LPC1768
 ifneq "$(NO_FLOAT_SCANF)" "1"
@@ -221,12 +221,12 @@ $(OUTDIR)/$(PROJECT).hex: $(OUTDIR)/$(PROJECT).elf
 	@echo Extracting $@
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(OBJCOPY) -R .stack -O ihex $< $@
-	
+
 $(OUTDIR)/$(PROJECT).disasm: $(OUTDIR)/$(PROJECT).elf
 	@echo Extracting disassembly to $@
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(OBJDUMP) -d -f -M reg-names-std --demangle $< >$@
-	
+
 $(OUTDIR)/$(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
 	@echo Linking $@
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
@@ -272,6 +272,6 @@ $(OUTDIR)/%.o : %.s makefile
 	$(Q) $(AS) $(AS_FLAGS) -o $@ $<
 
 $(OUTDIR)/configdefault.o : config.default
-	$(Q) $(OBJCOPY) -I binary -O elf32-littlearm -B arm $< $@
+	$(Q) $(OBJCOPY) -I binary -O elf32-littlearm -B arm --readonly-text --rename-section .data=.rodata.configdefault $< $@
 
 #########################################################################
