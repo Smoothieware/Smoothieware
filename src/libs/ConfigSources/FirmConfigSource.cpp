@@ -15,6 +15,8 @@
 using namespace std;
 #include <string>
 
+// we use objdump in the Makefile to import your config.default file into the compiled code
+// Since the two symbols below are derived from the filename, we need to change them if the filename changes
 extern char _binary_config_default_start;
 extern char _binary_config_default_end;
 
@@ -26,42 +28,10 @@ FirmConfigSource::FirmConfigSource(uint16_t name_checksum){
 // Transfer all values found in the file to the passed cache
 void FirmConfigSource::transfer_values_to_cache( ConfigCache* cache ){
 
-    // Default empty value
-    ConfigValue* result = new ConfigValue;
-
     char* p = &_binary_config_default_start;
-    string buffer;
-    int c;
     // For each line
     while( p != &_binary_config_default_end ){
-        c = *p++;
-        if (c == '\n' || c == '\r' || c == EOF){
-
-            // We have a new line
-            if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
-            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
-            size_t begin_key = buffer.find_first_not_of(" ");
-            size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
-
-            uint16_t check_sums[3];
-            get_checksums(check_sums, buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" "));
-
-            result = new ConfigValue;
-
-            result->found = true;
-            result->check_sums[0] = check_sums[0];
-            result->check_sums[1] = check_sums[1];
-            result->check_sums[2] = check_sums[2];
-
-            result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
-            // Append the newly found value to the cache we were passed
-            cache->replace_or_push_back(result);
-
-            buffer.clear();
-
-        }else{
-            buffer += c;
-        }
+        process_char_from_ascii_config(*p++, cache);
     }
 }
 
@@ -81,31 +51,11 @@ string FirmConfigSource::read( uint16_t check_sums[3] ){
     string value = "";
 
     char* p = &_binary_config_default_start;
-    string buffer;
-    int c;
     // For each line
     while( p != &_binary_config_default_end ){
-        c = *p++;
-        if (c == '\n' || c == '\r' || c == EOF){
-            // We have a new line
-            if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
-            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
-            size_t begin_key = buffer.find_first_not_of(" \t");
-            size_t begin_value = buffer.find_first_not_of(" \t", buffer.find_first_of(" \t", begin_key));
-            string key = buffer.substr(begin_key,  buffer.find_first_of(" \t", begin_key) - begin_key).append(" ");
-
-            uint16_t line_checksums[3];
-            get_checksums(line_checksums, key);
-
-            if(check_sums[0] == line_checksums[0] && check_sums[1] == line_checksums[1] && check_sums[2] == line_checksums[2] ){
-                value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
-                break;
-            }
-
-            buffer.clear();
-        }else{
-            buffer += c;
-        }
+        value = process_char_from_ascii_config(*p++, check_sums);
+        if (value.length())
+            return value;
     }
 
     return value;
