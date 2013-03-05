@@ -22,6 +22,7 @@ using std::string;
 #define default_seek_rate_checksum             CHECKSUM("default_seek_rate")
 #define default_feed_rate_checksum             CHECKSUM("default_feed_rate")
 #define mm_per_line_segment_checksum           CHECKSUM("mm_per_line_segment")
+#define delta_segments_per_second_checksum     CHECKSUM("delta_segments_per_second")
 #define mm_per_arc_segment_checksum            CHECKSUM("mm_per_arc_segment")
 #define arc_correction_checksum                CHECKSUM("arc_correction")
 #define x_axis_max_speed_checksum              CHECKSUM("x_axis_max_speed")
@@ -88,6 +89,7 @@ class Robot : public Module {
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         double mm_per_line_segment;                           // Setting : Used to split lines into segments
         double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
+        double delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc

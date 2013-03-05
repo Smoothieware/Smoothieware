@@ -2,7 +2,8 @@
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
-mm_per_line_segment                          0.5              # Lines can be cut into segments ( not usefull with cartesian coordinates robots, but very useful on a delta type bot ).
+mm_per_line_segment                          0.0              # Lines can be cut into segments ( not usefull with cartesian coordinates robots, but very useful on a delta type bot ). set to 0.0 to disable
+delta_segments_per_second                    100              # for deltas only same as in Marlin/Delta, set to 0 to disable and use mm_per_line_segment
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 arm_solution                                 rostock          # selects the rostock arm solution
