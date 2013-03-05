@@ -160,8 +160,8 @@ void TemperatureControl::on_gcode_received(void* argument){
             }else{
                 Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
                 block->append_gcode(gcode);
-                gcode->queued++;
             }
+            
         }
     }
 }

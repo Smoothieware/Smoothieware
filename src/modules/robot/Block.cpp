@@ -166,6 +166,7 @@ void Block::forward_pass(Block* previous, Block* next){
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
 void Block::append_gcode(Gcode* gcode){
    __disable_irq();
+   gcode->will_go_thru_new_block_context = true;
    this->gcodes.push_back(gcode);
    __enable_irq();
 }

@@ -52,23 +52,20 @@ void Robot::on_config_reload(void* argument){
     if (this->arm_solution) delete this->arm_solution;
     int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
 
-	// Note checksums are not const expressions when in debug mode, so don't use switch
-	if(solution_checksum == rostock_checksum) {
-		this->arm_solution = new RostockSolution(this->kernel->config);
-
-	}else if(solution_checksum ==  delta_checksum) {
-		// place holder for now
-		this->arm_solution = new RostockSolution(this->kernel->config);
-
+    // Note checksums are not const expressions when in debug mode, so don't use switch
+    if(solution_checksum == rostock_checksum) {
+            this->arm_solution = new RostockSolution(this->kernel->config);
+    }else if(solution_checksum ==  delta_checksum) {
+            // place holder for now
+            this->arm_solution = new RostockSolution(this->kernel->config);
     }else if(solution_checksum == rotatable_cartesian_checksum) {
         this->arm_solution = new RotatableCartesianSolution(this->kernel->config);
 
-	}else if(solution_checksum == cartesian_checksum) {
-		this->arm_solution = new CartesianSolution(this->kernel->config);
-
-	}else{
-		this->arm_solution = new CartesianSolution(this->kernel->config);
-	}
+    }else if(solution_checksum == cartesian_checksum) {
+            this->arm_solution = new CartesianSolution(this->kernel->config);
+    }else{
+            this->arm_solution = new CartesianSolution(this->kernel->config);
+    }
 
 
     this->feed_rate           = this->kernel->config->value(default_feed_rate_checksum   )->by_default(100    )->as_number() / 60;
@@ -91,34 +88,32 @@ void Robot::on_config_reload(void* argument){
 
 }
 
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
+
+
 //A GCode has been received
 void Robot::on_gcode_received(void * argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-
-    // If this gcode is a movement gcode
-    if( gcode->has_g && gcode->g < 4 && ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ) ){
-        gcode->call_on_gcode_execute_event_immediatly = false;
-        gcode->on_gcode_execute_event_called = false;
-        //If the queue is empty, execute immediatly, otherwise attach to the last added block
-        if( this->kernel->conveyor->queue.size() == 0 ){
-            gcode->call_on_gcode_execute_event_immediatly = true;
-            this->process_gcode(gcode);
-            if( gcode->on_gcode_execute_event_called == false ){
-                //printf("GCODE A: %s \r\n", gcode->command.c_str() );
-                this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-            }
-        }else{
-            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-            this->process_gcode(gcode);
-            block->append_gcode(gcode);
-            gcode->queued++;
-        }
-
-    }else{
-        this->process_gcode(gcode);
-    }
+    this->process_gcode(gcode);
 }
 
+// We called process_gcode with a new gcode, and one of the functions 
+// determined the distance for that given gcode. So now we can attach this gcode to the right block
+// and continue
+void Robot::distance_in_gcode_is_known(Gcode* gcode){
+
+    //If the queue is empty, execute immediatly, otherwise attach to the last added block
+    if( this->kernel->conveyor->queue.size() == 0 ){
+        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+    }else{
+        Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+        block->append_gcode(gcode);
+    }
+
+}
+
+//#pragma GCC pop_options
 
 void Robot::reset_axis_position(double position, int axis) {
     this->last_milestone[axis] = this->current_position[axis] = position;
@@ -270,16 +265,13 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
     gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
 
-    if( gcode->call_on_gcode_execute_event_immediatly == true ){
+    //if( gcode->call_on_gcode_execute_event_immediatly == true ){
             //printf("GCODE B: %s \r\n", gcode->command.c_str() );
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-            gcode->on_gcode_execute_event_called = true;
-    }
+    //        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+    //        gcode->on_gcode_execute_event_called = true;
+    //}
+    this->distance_in_gcode_is_known( gcode );
 
-    if (gcode->millimeters_of_travel == 0.0) {
-        this->append_milestone(this->current_position, 0.0);
-        return;
-    }
 
     uint16_t segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment);
     // A vector to keep track of the endpoint of each segment
@@ -313,16 +305,20 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
 
     gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
 
-    if( gcode->call_on_gcode_execute_event_immediatly == true ){
+    //if( gcode->call_on_gcode_execute_event_immediatly == true ){
             //printf("GCODE C: %s \r\n", gcode->command.c_str() );
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-            gcode->on_gcode_execute_event_called = true;
-    }
+    //        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+    //        gcode->on_gcode_execute_event_called = true;
+    //}
 
+    this->distance_in_gcode_is_known( gcode );
+    
+    /* 
     if (gcode->millimeters_of_travel == 0.0) {
         this->append_milestone(this->current_position, 0.0);
         return;
     }
+    */
 
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
 

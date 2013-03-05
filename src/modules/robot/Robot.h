@@ -65,6 +65,7 @@ class Robot : public Module {
         void reset_axis_position(double position, int axis);
 
     private:
+        void distance_in_gcode_is_known(Gcode* gcode);
         void process_gcode(Gcode* gcode);
         void append_milestone( double target[], double feed_rate);
         void append_line( Gcode* gcode, double target[], double feed_rate);
