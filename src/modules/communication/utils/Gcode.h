@@ -30,7 +30,7 @@ class Gcode {
         int    get_num_args();
         void   prepare_cached_values();
 
-        const string command;
+        string command;
         double millimeters_of_travel;
 
         bool has_m;
