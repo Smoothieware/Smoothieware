@@ -22,13 +22,13 @@ void SimpleShell::on_module_loaded(){
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->reset_delay_secs= 0;
     
-    register_for_event(ON_IDLE);
+    register_for_event(ON_SECOND_TICK);
 }
 
-void SimpleShell::on_idle(void*) {
+void SimpleShell::on_second_tick(void*) {
     // we are timing out for the reset
-    if (this->reset_delay_secs) {
-        if(time(NULL) >= this->reset_delay_secs){
+    if (this->reset_delay_secs > 0) {
+        if(--this->reset_delay_secs == 0){
             system_reset(false);
         }
     }
@@ -146,7 +146,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 // Reset the system
 void SimpleShell::reset_command( string parameters, StreamOutput* stream){
     stream->printf("Smoothie out. Peace. Rebooting in 5 seconds...\r\n");
-    this->reset_delay_secs= time(NULL) + 5; // reboot in 5 seconds
+    this->reset_delay_secs= 5; // reboot in 5 seconds
 }
 
 // go into dfu boot mode

@@ -14,8 +14,6 @@
 #include "libs/utils.h"
 #include "libs/StreamOutput.h"
 
-#include "mbed.h" // for time_t and time()
-
 #define ls_command_checksum       CHECKSUM("ls")
 #define cd_command_checksum       CHECKSUM("cd")
 #define pwd_command_checksum      CHECKSUM("pwd")
@@ -31,7 +29,7 @@ class SimpleShell : public Module {
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
-        void on_idle(void*);
+        void on_second_tick(void*);
         string absolute_from_relative( string path );
         void ls_command(   string parameters, StreamOutput* stream );
         void cd_command(   string parameters, StreamOutput* stream );
@@ -44,7 +42,7 @@ class SimpleShell : public Module {
         
     private:
         string current_path;
-        time_t reset_delay_secs;
+        int reset_delay_secs;
 };
 
 
