@@ -31,7 +31,7 @@ void PlayLed::on_config_reload(void* argument)
     ledpin = kernel->config->value( pause_led_pin_checksum )->by_default(ledpin)->as_string(); // check for pause_led_pin first
     ledpin = kernel->config->value( play_led_pin_checksum  )->by_default(ledpin)->as_string(); // override with play_led_pin if it's found
 
-    led.from_string(ledpin)->as_output()->set(true);
+    led.from_string(ledpin)->as_output()->set(false);
 }
 
 void PlayLed::on_block_begin(void* argument)
