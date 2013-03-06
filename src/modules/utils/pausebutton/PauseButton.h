@@ -21,8 +21,6 @@ class PauseButton : public Module {
         Pin        button;
         bool       button_state;
         bool       play_state;
-
-        static PauseButton* instance;
 };
 
 #endif

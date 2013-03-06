@@ -5,12 +5,7 @@
 #include <string>
 using namespace std;
 
-// so other modules can find us
-PauseButton* PauseButton::instance;
-
-PauseButton::PauseButton(){
-    instance = this;
-}
+PauseButton::PauseButton(){}
 
 void PauseButton::on_module_loaded(){
     this->button_state = true;
