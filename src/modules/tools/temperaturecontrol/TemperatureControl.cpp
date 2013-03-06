@@ -79,6 +79,9 @@ void TemperatureControl::on_config_reload(void* argument){
     this->r1 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
     this->r2 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
 
+    this->preset1 =             this->kernel->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
+    this->preset2 =             this->kernel->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
+
 
     // Thermistor math
     j = (1.0 / beta);
@@ -161,14 +164,21 @@ void TemperatureControl::on_gcode_execute(void* argument){
         // Set temperature without waiting
         if( gcode->m == this->set_m_code && gcode->has_letter('S') )
         {
-            if (gcode->get_value('S') == 0)
+            double v = gcode->get_value('S');
+
+            if (v == 1.0)
+                v = preset1;
+            else if (v == 2.0)
+                v = preset2;
+
+            if (v == 0)
             {
                 this->target_temperature = UNDEFINED;
                 this->heater_pin.set(0);
             }
             else
             {
-                this->set_desired_temperature(gcode->get_value('S'));
+                this->set_desired_temperature(v);
             }
         }
         // Set temperature and wait

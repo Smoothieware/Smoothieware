@@ -49,8 +49,6 @@ int USBSerial::_putc(int c)
 {
     if (!attached)
         return 1;
-    if (c == '\r')
-        return 1;
     ensure_tx_space(1);
     txbuf.queue(c);
 
@@ -85,8 +83,7 @@ int USBSerial::puts(const char *str)
     while (*str)
     {
         ensure_tx_space(1);
-        if ((*str != '\r'))
-            txbuf.queue(*str);
+        txbuf.queue(*str);
         if ((txbuf.available() % 64) == 0)
             usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
         i++;
@@ -250,7 +247,6 @@ void USBSerial::on_main_loop(void *argument)
         while (available())
         {
             char c = _getc();
-            if( c == '\r' ){ c = '\n'; } 
             if( c == '\n' )
             {
                 struct SerialMessage message;

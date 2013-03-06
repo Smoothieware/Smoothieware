@@ -121,17 +121,21 @@ void SlowTicker::on_gcode_execute(void* argument)
     {
         if (gcode->g == 4)
         {
-            if (gcode->has_letter('P'))
+            bool updated = false;
+            if (gcode->has_letter('P')) {
+                updated = true;
+                g4_ticks += gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
+            }
+            if (gcode->has_letter('S')) {
+                updated = true;
+                g4_ticks += gcode->get_int('S') * (SystemCoreClock >> 2);
+            }
+            if (updated)
             {
-                // G4 Pnn should pause for nn milliseconds
+                // G4 Smm Pnn should pause for mm seconds + nn milliseconds
                 // at 120MHz core clock, the longest possible delay is (2^32 / (120MHz / 4)) = 143 seconds
-                if (g4_pause)
+                if (!g4_pause)
                 {
-                    g4_ticks += gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
-                }
-                else
-                {
-                    g4_ticks = gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
                     g4_pause = true;
                     kernel->pauser->take();
                 }
