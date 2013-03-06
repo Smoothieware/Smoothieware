@@ -23,9 +23,9 @@ class CurrentControl : public Module {
         double alpha_current;
         double beta_current;
         double gamma_current;
-		double delta_current;
+        double delta_current;
 
-		Digipot* digipot;
+        Digipot* digipot;
 };
 
 
