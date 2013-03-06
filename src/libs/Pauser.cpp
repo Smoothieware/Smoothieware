@@ -26,3 +26,8 @@ void Pauser::release(){
         this->kernel->call_event(ON_PLAY, &this->counter);
     }
 }
+
+bool Pauser::paused()
+{
+    return (counter != 0);
+}
