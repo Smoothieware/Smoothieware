@@ -93,7 +93,7 @@ int USBSerial::puts(const char *str)
     return i;
 }
 
-uint16_t USBSerial::writeBlock(uint8_t * buf, uint16_t size)
+uint16_t USBSerial::writeBlock(const uint8_t * buf, uint16_t size)
 {
     if (!attached)
         return size;
@@ -230,7 +230,7 @@ void USBSerial::on_main_loop(void *argument)
         {
             attached = true;
             kernel->streams->append_stream(this);
-            writeBlock((uint8_t *) "Smoothie\nok\n", 12);
+            writeBlock((const uint8_t *) "Smoothie\nok\n", 12);
         }
         else
         {
