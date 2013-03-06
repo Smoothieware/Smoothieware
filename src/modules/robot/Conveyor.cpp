@@ -41,7 +41,7 @@ void Conveyor::on_idle(void* argument){
             if( gcode->passed_thru_all_blocks_added_context_without_deleting == true ){
                 delete gcode;
             }else{
-                gcode->passed_thru_new_block_context_without_deleting = false;
+                gcode->passed_thru_new_block_context_without_deleting = true;
             }
         
         }
@@ -73,7 +73,7 @@ Block* Conveyor::new_block(){
             if( gcode->passed_thru_all_blocks_added_context_without_deleting == true ){
                 delete gcode;
             }else{
-                gcode->passed_thru_new_block_context_without_deleting = false;
+                gcode->passed_thru_new_block_context_without_deleting = true;
             }
        
         }
