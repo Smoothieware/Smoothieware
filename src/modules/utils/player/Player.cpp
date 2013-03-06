@@ -28,7 +28,7 @@ void Player::on_module_loaded(){
 }
 
 void Player::on_second_tick(void*) {
-    this->elapsed_secs++;
+     if (!kernel->pauser->paused()) this->elapsed_secs++;
 }
 
 // When a new line is received, check if it is a command, and if it is, act upon it
@@ -97,14 +97,18 @@ void Player::progress_command( string parameters, StreamOutput* stream ){
 
     if(file_size > 0) {
         int est= -1;
-        if(this->elapsed_secs > 0) {
+        if(this->elapsed_secs > 10) {
             int bytespersec= played_cnt / this->elapsed_secs;
             if(bytespersec > 0)
                 est= (file_size - played_cnt) / bytespersec;
         }
         
         int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
-        stream->printf("%d %% complete, elapsed time: %d s, est time: %d s\r\n", pcnt, this->elapsed_secs, est);
+        stream->printf("%d %% complete, elapsed time: %d s", pcnt, this->elapsed_secs);
+        if(est > 0){
+            stream->printf(", est time: %d s",  est);
+        }
+        stream->printf("\r\n");
         
     }else{
         stream->printf("File size is unknown\r\n");
