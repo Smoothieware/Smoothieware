@@ -32,11 +32,7 @@ void Conveyor::on_idle(void* argument){
     if (flush_blocks){
 
         Block* block = queue.get_tail_ref();
-        while (block->gcodes.size()){
-            Gcode* gcode = &(block->gcodes.back());
-            block->gcodes.pop_back();
-            delete gcode;
-        }
+        block->gcodes.clear(); 
         queue.delete_first();
 
         __disable_irq();
@@ -56,11 +52,7 @@ Block* Conveyor::new_block(){
     Block* block = this->queue.get_tail_ref();
     // Then clean it up
     if( block->conveyor == this ){
-        for(; block->gcodes.size(); ){
-            Gcode* gcode = &(block->gcodes.back());
-            block->gcodes.pop_back();
-            delete gcode;
-        }
+        block->gcodes.clear();
     }
 
     // Create a new virgin Block in the queue
