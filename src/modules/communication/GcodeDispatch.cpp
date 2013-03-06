@@ -102,12 +102,7 @@ void GcodeDispatch::on_console_line_received(void * line){
                     new_message.stream->printf("\r\n");
                 new_message.stream->printf("ok\r\n");
 
-                // This is part of a pretty complicated thing, see Gcode.h for a long explanation
-                if( gcode->will_go_thru_new_block_context == true && gcode->passed_thru_new_block_context_without_deleting == true ){
-                    delete gcode;
-                }else{
-                    gcode->passed_thru_all_blocks_added_context_without_deleting = true;
-                }
+                delete gcode;
             
             }
         }else{

@@ -33,17 +33,9 @@ void Conveyor::on_idle(void* argument){
 
         Block* block = queue.get_tail_ref();
         while (block->gcodes.size()){
-            Gcode* gcode = block->gcodes.back();
+            Gcode* gcode = &(block->gcodes.back());
             block->gcodes.pop_back();
-        
-            // Do we just delete this gcode from this vector, or do we also actually delete the gcode ?
-            // This is pretty complex and explained in detail in Gcode.h 
-            if( gcode->passed_thru_all_blocks_added_context_without_deleting == true ){
-                delete gcode;
-            }else{
-                gcode->passed_thru_new_block_context_without_deleting = true;
-            }
-        
+            delete gcode;
         }
         queue.delete_first();
 
@@ -65,17 +57,9 @@ Block* Conveyor::new_block(){
     // Then clean it up
     if( block->conveyor == this ){
         for(; block->gcodes.size(); ){
-            Gcode* gcode = block->gcodes.back();
+            Gcode* gcode = &(block->gcodes.back());
             block->gcodes.pop_back();
-        
-            // Do we just delete this gcode from this vector, or do we also actually delete the gcode ?
-            // This is pretty complex and explained in detail in Gcode.h 
-            if( gcode->passed_thru_all_blocks_added_context_without_deleting == true ){
-                delete gcode;
-            }else{
-                gcode->passed_thru_new_block_context_without_deleting = true;
-            }
-       
+            delete gcode;
         }
     }
 

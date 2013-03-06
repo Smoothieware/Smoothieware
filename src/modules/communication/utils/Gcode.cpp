@@ -15,7 +15,7 @@ using std::string;
 #include <stdlib.h>
 
 
-Gcode::Gcode(const string& command, StreamOutput* stream) : command(command), m(0), g(0), add_nl(false), will_go_thru_new_block_context(false), stream(stream), passed_thru_all_blocks_added_context_without_deleting(false), passed_thru_new_block_context_without_deleting(false){
+Gcode::Gcode(const string& command, StreamOutput* stream) : command(command), m(0), g(0), add_nl(false), stream(stream) {
     prepare_cached_values();
     this->millimeters_of_travel = 0L;
 }

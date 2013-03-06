@@ -38,7 +38,7 @@ class Block {
 
         vector<std::string> commands;
         vector<double> travel_distances;
-        vector<Gcode*> gcodes;
+        vector<Gcode> gcodes;
 
         unsigned int   steps[3];           // Number of steps for each axis for this block
         unsigned int   steps_event_count;  // Steps for the longest axis
