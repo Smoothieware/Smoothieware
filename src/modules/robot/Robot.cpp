@@ -266,11 +266,6 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
 
     gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
 
-    //if( gcode->call_on_gcode_execute_event_immediatly == true ){
-            //printf("GCODE B: %s \r\n", gcode->command.c_str() );
-    //        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-    //        gcode->on_gcode_execute_event_called = true;
-    //}
     this->distance_in_gcode_is_known( gcode );
 
 
@@ -327,12 +322,6 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
     if (is_clockwise) { angular_travel -= 2*M_PI; }
 
     gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
-
-    //if( gcode->call_on_gcode_execute_event_immediatly == true ){
-            //printf("GCODE C: %s \r\n", gcode->command.c_str() );
-    //        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-    //        gcode->on_gcode_execute_event_called = true;
-    //}
 
     this->distance_in_gcode_is_known( gcode );
     
