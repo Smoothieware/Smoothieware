@@ -25,8 +25,9 @@ void PauseButton::on_module_loaded(){
 uint32_t PauseButton::button_tick(uint32_t dummy){
     if(!this->enable) return 0;
     // If button changed
-    if(this->button_state != this->button.get()){
-        this->button_state = this->button.get();
+    bool newstate = this->button.get();
+    if(this->button_state != newstate){
+        this->button_state = newstate;
         // If button pressed
         if( this->button_state ){
             if( this->play_state ){
