@@ -16,18 +16,18 @@ Laser::Laser(){
 }
 
 void Laser::on_module_loaded() {
-	if( !this->kernel->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){
-		// as not needed free up resource
-		delete this;
-		return;
-	}
+    if( !this->kernel->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){
+        // as not needed free up resource
+        delete this;
+        return;
+    }
 
     this->laser_pin = new mbed::PwmOut(p21);
     this->laser_pin->period_us(20);
 
     this->laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.3)->as_number() ;
     this->laser_tickle_power = this->kernel->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
-    
+
     //register for events
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_SPEED_CHANGE);
