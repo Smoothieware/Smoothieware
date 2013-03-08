@@ -107,7 +107,7 @@ void Extruder::on_gcode_received(void *argument)
         }
     }
     
-    if( ( gcode->has_m && ( gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) ){
+    if( ( gcode->has_m && ( gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
         if( this->kernel->conveyor->queue.size() == 0 ){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
         }else{
