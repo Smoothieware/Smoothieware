@@ -189,8 +189,17 @@ void Extruder::on_gcode_execute(void* argument){
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )){
                 // Get relative extrusion distance depending on mode ( in absolute mode we must substract target_position )
-                double relative_extrusion_distance = gcode->get_value('E');
-                if( this->absolute_mode == true ){ relative_extrusion_distance = relative_extrusion_distance - this->target_position; }
+                double extrusion_distance = gcode->get_value('E');
+                double relative_extrusion_distance = extrusion_distance;
+                if (this->absolute_mode)
+                {
+                    relative_extrusion_distance -= this->target_position;
+                    this->target_position = extrusion_distance;
+                }
+                else
+                {
+                    this->target_position += relative_extrusion_distance;
+                }
 
                 // If the robot is moving, we follow it's movement, otherwise, we move alone
                 if( fabs(gcode->millimeters_of_travel) < 0.0001 ){  // With floating numbers, we can have 0 != 0 ... beeeh. For more info see : http://upload.wikimedia.org/wikipedia/commons/0/0a/Cain_Henri_Vidal_Tuileries.jpg
