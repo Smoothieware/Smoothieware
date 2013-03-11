@@ -240,7 +240,7 @@ void Extruder::on_block_begin(void* argument){
 
         this->current_position += this->travel_distance ;
 
-        int steps_to_step = int(floor(this->steps_per_millimeter * this->travel_distance));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter * this->travel_distance)));
 
         if( steps_to_step != 0 ){
 
@@ -257,17 +257,17 @@ void Extruder::on_block_begin(void* argument){
 
     }else if( this->mode == FOLLOW ){
         // In non-solo mode, we just follow the stepper module
-        this->current_block = block;
-
-        this->travel_distance = this->current_block->millimeters * this->travel_ratio;
+        this->travel_distance = block->millimeters * this->travel_ratio;
 
         this->current_position += this->travel_distance;
 
-        int steps_to_step = int(floor(this->steps_per_millimeter * this->travel_distance));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter * this->travel_distance)));
 
         if( steps_to_step != 0 ){
             block->take();
-            this->stepper_motor->move( ( steps_to_step > 0 ), abs(steps_to_step) );
+            this->current_block = block;
+
+            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step );
         }else{
             this->current_block = NULL;
         }
