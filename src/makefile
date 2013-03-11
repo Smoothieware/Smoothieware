@@ -42,6 +42,7 @@ endif
 include $(BUILD_DIR)/build.mk
 
 CONSOLE?=/dev/arduino_A900K10V
+BAUD?=2000000
 
 .PHONY: debug-store flash upload debug console dfu
 
@@ -61,5 +62,5 @@ debug: ../LPC1768/$(PROJECT)_lastupload.elf
 	arm-none-eabi-gdb $< -ex  "set target-charset ASCII" -ex "set remotelogfile mri.log" -ex "target remote $(CONSOLE)"
 
 console:
-	stty raw ignbrk -echo 2000000 < $(CONSOLE)
+	stty raw ignbrk -echo $(BAUD) < $(CONSOLE)
 	( cat <&3 & cat >&3 ; kill %% ) 3<>$(CONSOLE)
