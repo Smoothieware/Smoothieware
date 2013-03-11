@@ -97,9 +97,6 @@ Kernel::Kernel(){
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
 
-    // Only for debug
-    this->add_module( this->endstops       = new Endstops()      );
-
 }
 
 void Kernel::add_module(Module* module){

@@ -46,9 +46,6 @@ class Kernel {
         Conveyor*         conveyor;
         Pauser*           pauser;
 
-        // This is needed only for debug
-        Endstops*          endstops; 
-
         int debug;
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
