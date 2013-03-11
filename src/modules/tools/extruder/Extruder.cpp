@@ -265,8 +265,6 @@ void Extruder::on_block_begin(void* argument){
 
         int steps_to_step = int(floor(this->steps_per_millimeter * this->travel_distance));
 
-        feed_rate = block->nominal_speed * travel_ratio;
-
         if( steps_to_step != 0 ){
             block->take();
             this->stepper_motor->move( ( steps_to_step > 0 ), abs(steps_to_step) );
