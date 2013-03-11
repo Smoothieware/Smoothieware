@@ -25,44 +25,13 @@ FileConfigSource::FileConfigSource(string config_file, uint16_t name_checksum){
 // Transfer all values found in the file to the passed cache
 void FileConfigSource::transfer_values_to_cache( ConfigCache* cache ){
 
-    // Default empty value
-    ConfigValue* result = new ConfigValue;
-
     if( this->has_config_file() == false ){return;}
     // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
-    string buffer;
     int c;
     // For each line
     do {
-        c = fgetc (lp);
-        if (c == '\n' || c == EOF){
-
-            // We have a new line
-            if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
-            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
-            size_t begin_key = buffer.find_first_not_of(" ");
-            size_t begin_value = buffer.find_first_not_of(" ", buffer.find_first_of(" ", begin_key));
-
-            uint16_t check_sums[3];
-            get_checksums(check_sums, buffer.substr(begin_key,  buffer.find_first_of(" ", begin_key) - begin_key).append(" "));
-
-            result = new ConfigValue;
-
-            result->found = true;
-            result->check_sums[0] = check_sums[0];
-            result->check_sums[1] = check_sums[1];
-            result->check_sums[2] = check_sums[2];
-
-            result->value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
-            // Append the newly found value to the cache we were passed
-            cache->replace_or_push_back(result);
-
-            buffer.clear();
-
-        }else{
-            buffer += c;
-        }
+        process_char_from_ascii_config(c = fgetc(lp), cache);
     } while (c != EOF);
     fclose(lp);
 }
@@ -121,31 +90,11 @@ string FileConfigSource::read( uint16_t check_sums[3] ){
     if( this->has_config_file() == false ){return value;}
     // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
-    string buffer;
     int c;
     // For each line
     do {
         c = fgetc (lp);
-        if (c == '\n' || c == EOF){
-            // We have a new line
-            if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
-            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
-            size_t begin_key = buffer.find_first_not_of(" \t");
-            size_t begin_value = buffer.find_first_not_of(" \t", buffer.find_first_of(" \t", begin_key));
-            string key = buffer.substr(begin_key,  buffer.find_first_of(" \t", begin_key) - begin_key).append(" ");
-
-            uint16_t line_checksums[3];
-            get_checksums(line_checksums, key);
-
-            if(check_sums[0] == line_checksums[0] && check_sums[1] == line_checksums[1] && check_sums[2] == line_checksums[2] ){
-                value = buffer.substr(begin_value, buffer.find_first_of("\r\n# ", begin_value+1)-begin_value);
-                break;
-            }
-
-            buffer.clear();
-        }else{
-            buffer += c;
-        }
+        process_char_from_ascii_config(c, check_sums);
     } while (c != EOF);
     fclose(lp);
 
