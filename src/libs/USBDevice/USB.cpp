@@ -427,11 +427,8 @@ int USB::addEndpoint(usbdesc_endpoint *epp) {
 }
 
 int USB::addString(const void *ss) {
-	usbdesc_base *s = (usbdesc_base *) ss;
-// 	iprintf("[AST %p ", s);
+	const usbdesc_base *s = (const usbdesc_base *) ss;
 	if (s->bDescType == DT_STRING) {
-// 		iprintf("LEN:%d ", s->bLength);
-
 		uint8_t i;
 		uint8_t stringcount = 0;
 		for (i = 0; i < N_DESCRIPTORS; i++) {
@@ -442,17 +439,10 @@ int USB::addString(const void *ss) {
 		}
 		if (i >= N_DESCRIPTORS) return -1;
 
-// 		iprintf("INS %d ", i);
-
-		descriptors[i] = s;
-
-// 		conf.wTotalLength += descriptors[i]->bLength;
-
-// 		iprintf("%p STROK]", descriptors[i]);
+		descriptors[i] = const_cast<usbdesc_base*>(s);
 
 		return stringcount;
 	}
-// 	iprintf("INVAL]\n");
 	return -1;
 }
 
