@@ -239,14 +239,9 @@ void Extruder::on_block_begin(void* argument){
     if( this->mode == SOLO ){
         // In solo mode we take the block so we can move even if the stepper has nothing to do
 
-        this->target_position = this->current_position + this->travel_distance ;
+        this->current_position += this->travel_distance ;
 
-        //int32_t steps_to_step = abs( int( floor(this->steps_per_millimeter*this->target_position) - floor(this->steps_per_millimeter*this->current_position) ) );
-
-        int old_steps = this->current_steps;
-        int target_steps = int( floor(this->steps_per_millimeter*this->target_position) );
-        int steps_to_step = abs( target_steps - old_steps );
-        this->current_steps = target_steps;
+        int steps_to_step = int(floor(this->steps_per_millimeter * this->travel_distance));
 
         if( steps_to_step != 0 ){
 
@@ -264,12 +259,14 @@ void Extruder::on_block_begin(void* argument){
     }else if( this->mode == FOLLOW ){
         // In non-solo mode, we just follow the stepper module
         this->current_block = block;
-        this->target_position =  this->current_position + ( this->current_block->millimeters * this->travel_ratio );
 
-        int old_steps = this->current_steps;
-        int target_steps = int( floor(this->steps_per_millimeter*this->target_position) );
-        int steps_to_step = target_steps - old_steps ;
-        this->current_steps = target_steps;
+        this->travel_distance = this->current_block->millimeters * this->travel_ratio;
+
+        this->current_position += this->travel_distance;
+
+        int steps_to_step = int(floor(this->steps_per_millimeter * this->travel_distance));
+
+        feed_rate = block->nominal_speed * travel_ratio;
 
         if( steps_to_step != 0 ){
             block->take();
@@ -299,7 +296,7 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy){
     if( this->current_block == NULL ||  this->paused || this->mode != SOLO ){ return 0; }
 
     uint32_t current_rate = this->stepper_motor->steps_per_second;
-    uint32_t target_rate = int(floor((this->feed_rate/60)*this->steps_per_millimeter));
+    uint32_t target_rate = int(floor(this->feed_rate * this->steps_per_millimeter));
 
     if( current_rate < target_rate ){
         uint32_t rate_increase = int(floor((this->acceleration/this->kernel->stepper->acceleration_ticks_per_second)*this->steps_per_millimeter));
