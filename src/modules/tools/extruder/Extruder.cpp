@@ -106,7 +106,7 @@ void Extruder::on_gcode_received(void *argument)
             gcode->add_nl = true;
         }
     }
-    
+
     if( ( gcode->has_m && ( gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
         if( this->kernel->conveyor->queue.size() == 0 ){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
@@ -303,6 +303,7 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy){
     }
     if( current_rate > target_rate ){ current_rate = target_rate; }
 
+    // steps per second
     this->stepper_motor->set_speed(max(current_rate, this->kernel->stepper->minimum_steps_per_minute/60));
 
     return 0;
@@ -335,10 +336,10 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy){
     //printf("extruder releasing\r\n");
 
     if (this->current_block){ // this should always be true, but sometimes it isn't. TODO: find out why
-        Block* block = this->current_block; 
+        Block* block = this->current_block;
         this->current_block = NULL;
         block->release();
-    } 
+    }
     return 0;
 
 }
