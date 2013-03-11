@@ -335,8 +335,6 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy){
 
     //printf("extruder releasing\r\n");
 
-    this->current_position = this->target_position;
-
     if (this->current_block){ // this should always be true, but sometimes it isn't. TODO: find out why
         Block* block = this->current_block; 
         this->current_block = NULL;
