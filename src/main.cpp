@@ -77,7 +77,7 @@ int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 \r\n");
+    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 @%dMHz\r\n", SystemCoreClock / 1000000);
 
     // Create and add main modules
     kernel->add_module( new Laser() );
