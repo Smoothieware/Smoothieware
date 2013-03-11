@@ -33,6 +33,9 @@ void Endstops::on_module_loaded() {
 
 }
 
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
+
 // Get config
 void Endstops::on_config_reload(void* argument){
     this->pins[0].from_string(         this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input()->pull_up();
@@ -41,27 +44,28 @@ void Endstops::on_config_reload(void* argument){
     this->pins[3].from_string(         this->kernel->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input()->pull_up();
     this->pins[4].from_string(         this->kernel->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input()->pull_up();
     this->pins[5].from_string(         this->kernel->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input()->pull_up();
-    this->fast_rates[0]             =  this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default("500" )->as_number();
-    this->fast_rates[1]             =  this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default("500" )->as_number();
-    this->fast_rates[2]             =  this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default("5" )->as_number();
-    this->slow_rates[0]             =  this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default("100" )->as_number();
-    this->slow_rates[1]             =  this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default("100" )->as_number();
-    this->slow_rates[2]             =  this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default("5" )->as_number();
-    this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default("30" )->as_number();
-    this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default("30" )->as_number();
-    this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default("10" )->as_number();
-    this->debounce_count            =  this->kernel->config->value(endstop_debounce_count_checksum     )->by_default("100" )->as_number();
+    this->fast_rates[0]             =  this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default(500  )->as_number();
+    this->fast_rates[1]             =  this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default(500  )->as_number();
+    this->fast_rates[2]             =  this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default(5    )->as_number();
+    this->slow_rates[0]             =  this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default(100  )->as_number();
+    this->slow_rates[1]             =  this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default(100  )->as_number();
+    this->slow_rates[2]             =  this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default(5    )->as_number();
+    this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default(30   )->as_number();
+    this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(30   )->as_number();
+    this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(10   )->as_number();
+    this->debounce_count            =  this->kernel->config->value(endstop_debounce_count_checksum     )->by_default(100  )->as_number();
     this->direction[0]              =  this->kernel->config->value(alpha_homing_direction_checksum     )->by_default(-1   )->as_number();
     this->direction[1]              =  this->kernel->config->value(beta_homing_direction_checksum      )->by_default(-1   )->as_number();
-    this->direction[2]              =  this->kernel->config->value(gamma_homing_direction_checksum     )->by_default(1   )->as_number();
+    this->direction[2]              =  this->kernel->config->value(gamma_homing_direction_checksum     )->by_default(1    )->as_number();
     for (int i=0; i<3; i++) direction[i] = direction[i] > 0;
-    this->homing_position[0]        =  this->direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default("0")->as_number():this->kernel->config->value(alpha_max_checksum)->by_default("200")->as_number();
-    this->homing_position[1]        =  this->direction[1]?this->kernel->config->value(beta_min_checksum)->by_default("0")->as_number():this->kernel->config->value(beta_max_checksum)->by_default("200")->as_number();;
-    this->homing_position[2]        =  this->direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default("0")->as_number():this->kernel->config->value(gamma_max_checksum)->by_default("200")->as_number();;
+    this->homing_position[0]        =  this->direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default(0)->as_number():this->kernel->config->value(alpha_max_checksum)->by_default(200)->as_number();
+    this->homing_position[1]        =  this->direction[1]?this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number():this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
+    this->homing_position[2]        =  this->direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number():this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
 }
 
-void Endstops::wait_for_homed(char axes_to_move)
-{
+//#pragma GCC pop_options
+
+void Endstops::wait_for_homed(char axes_to_move){
     bool running = true;
     unsigned int debounce[3] = {0,0,0};
     while(running){

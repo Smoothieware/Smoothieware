@@ -21,6 +21,7 @@
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
+#include "modules/tools/endstops/Endstops.h"
 #include <malloc.h>
 
 
@@ -95,6 +96,10 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
+
+    // Only for debug
+    this->add_module( this->endstops       = new Endstops()      );
+
 }
 
 void Kernel::add_module(Module* module){

@@ -88,7 +88,7 @@ int main() {
     kernel->add_module( new SwitchPool() );
     kernel->add_module( new ButtonPool() );
     kernel->add_module( new PauseButton() );
-    kernel->add_module( new Endstops() );
+    //kernel->add_module( new Endstops() );
     kernel->add_module( new Player() );
 
     // Create and initialize USB stuff
