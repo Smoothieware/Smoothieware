@@ -122,11 +122,10 @@ void Extruder::on_gcode_received(void *argument)
             // This is a solo move, we add an empty block to the queue
             //If the queue is empty, execute immediatly, otherwise attach to the last added block
             if( this->kernel->conveyor->queue.size() == 0 ){
+                this->append_empty_block();
                 this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-                this->append_empty_block();
             }else{
-                this->append_empty_block();
-                Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+                Block* block = this->append_empty_block();
                 block->append_gcode(gcode);
             }
         }
