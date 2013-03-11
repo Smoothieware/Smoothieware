@@ -205,9 +205,6 @@ void Extruder::on_gcode_execute(void* argument){
                 if( fabs(gcode->millimeters_of_travel) < 0.0001 ){  // With floating numbers, we can have 0 != 0 ... beeeh. For more info see : http://upload.wikimedia.org/wikipedia/commons/0/0a/Cain_Henri_Vidal_Tuileries.jpg
                     this->mode = SOLO;
                     this->travel_distance = relative_extrusion_distance;
-                    if( gcode->has_letter('F') ){ this->feed_rate = gcode->get_value('F'); }
-                    if (this->feed_rate > (this->max_speed * 60))
-                        this->feed_rate = this->max_speed * 60;
                 }else{
                     // We move proportionally to the robot's movement
                     this->mode = FOLLOW;
@@ -216,6 +213,13 @@ void Extruder::on_gcode_execute(void* argument){
                 }
 
                 this->en_pin.set(0);
+            }
+            if (gcode->has_letter('F'))
+            {
+                this->feed_rate = gcode->get_value('F');
+                if (this->feed_rate > (this->max_speed * kernel->robot->seconds_per_minute))
+                    this->feed_rate = this->max_speed * kernel->robot->seconds_per_minute;
+                feed_rate /= kernel->robot->seconds_per_minute;
             }
         }else if( gcode->g == 90 ){ this->absolute_mode = true;
         }else if( gcode->g == 91 ){ this->absolute_mode = false;
