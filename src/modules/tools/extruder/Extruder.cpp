@@ -138,16 +138,18 @@ void Extruder::on_gcode_received(void *argument)
 }
 
 // Append an empty block in the queue so that solo mode can pick it up
-void Extruder::append_empty_block(){
+Block* Extruder::append_empty_block(){
     this->kernel->conveyor->wait_for_queue(2);
     Block* block = this->kernel->conveyor->new_block();
     block->planner = this->kernel->planner;
     block->millimeters = 0;
-    block->steps[0] = 0; 
-    block->steps[1] = 0; 
-    block->steps[2] = 0; 
+    block->steps[0] = 0;
+    block->steps[1] = 0;
+    block->steps[2] = 0;
     // feed the block into the system. Will execute it if we are at the beginning of the queue
     block->ready();
+
+    return block;
 }
 
 //#pragma GCC push_options
