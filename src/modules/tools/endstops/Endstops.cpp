@@ -70,6 +70,7 @@ void Endstops::wait_for_homed(char axes_to_move){
     unsigned int debounce[3] = {0,0,0};
     while(running){
         running = false;
+        this->kernel->call_event(ON_IDLE);
         for( char c = 'X'; c <= 'Z'; c++ ){
             if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                 if( this->pins[c - 'X' + (this->direction[c - 'X']?0:3)].get() ){
@@ -78,7 +79,7 @@ void Endstops::wait_for_homed(char axes_to_move){
                         running = true;
                     } else if ( this->steppers[c - 'X']->moving ){
                         this->steppers[c - 'X']->move(0,0);
-                        this->kernel->streams->printf("move done %c\r\n", c);
+                        //this->kernel->streams->printf("move done %c\r\n", c);
                     }
                 }else{
                     // The endstop was not hit yet
@@ -116,7 +117,7 @@ void Endstops::on_gcode_received(void* argument)
             this->status = MOVING_TO_ORIGIN_FAST;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    this->kernel->streams->printf("homing axis %c\r\n", c);
+                    gcode->stream->printf("homing axis %c\r\n", c);
                     this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
                     this->steppers[c - 'X']->move(this->direction[c - 'X'],10000000);
                 }
@@ -125,7 +126,7 @@ void Endstops::on_gcode_received(void* argument)
             // Wait for all axes to have homed
             this->wait_for_homed(axes_to_move);
 
-            this->kernel->streams->printf("test a\r\n");
+            gcode->stream->printf("test a\r\n");
             // Move back a small distance
             this->status = MOVING_BACK;
             int inverted_dir;
@@ -137,16 +138,18 @@ void Endstops::on_gcode_received(void* argument)
                 }
             }
 
-            this->kernel->streams->printf("test b\r\n");
+            gcode->stream->printf("test b\r\n");
             // Wait for moves to be done
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                     this->kernel->streams->printf("axis %c \r\n", c );
-                    while( this->steppers[c - 'X']->moving ){ }
+                    while( this->steppers[c - 'X']->moving ){
+                        this->kernel->call_event(ON_IDLE);
+                    }
                 }
             }
 
-            this->kernel->streams->printf("test c\r\n");
+            gcode->stream->printf("test c\r\n");
 
             // Start moving the axes to the origin slowly
             this->status = MOVING_TO_ORIGIN_SLOW;
@@ -173,19 +176,10 @@ void Endstops::on_gcode_received(void* argument)
 
         }
     }
-    else if (gcode->has_m)
-    {
-        switch(gcode->m)
-        {
+    else if (gcode->has_m){
+        switch(gcode->m){
             case 119:
-                gcode->stream->printf("X min:%d max:%d Y min:%d max:%d Z min:%d max:%d\n",
-                                                this->pins[0].get(),
-                                                        this->pins[3].get(),
-                                                                this->pins[1].get(),
-                                                                        this->pins[4].get(),
-                                                                                this->pins[2].get(),
-                                                                                    this->pins[5].get()
-                                        );
+                gcode->stream->printf("X min:%d max:%d Y min:%d max:%d Z min:%d max:%d\n", this->pins[0].get(), this->pins[3].get(), this->pins[1].get(), this->pins[4].get(), this->pins[2].get(), this->pins[5].get() );
                 break;
         }
     }
