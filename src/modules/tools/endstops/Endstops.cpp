@@ -54,8 +54,8 @@ void Endstops::on_config_reload(void* argument){
     this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(30   )->as_number();
     this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(10   )->as_number();
     this->debounce_count            =  this->kernel->config->value(endstop_debounce_count_checksum     )->by_default(100  )->as_number();
-    this->direction[0]              =  this->kernel->config->value(alpha_homing_direction_checksum     )->by_default(-1   )->as_number();
-    this->direction[1]              =  this->kernel->config->value(beta_homing_direction_checksum      )->by_default(-1   )->as_number();
+    this->direction[0]              =  this->kernel->config->value(alpha_homing_direction_checksum     )->by_default(1   )->as_number();
+    this->direction[1]              =  this->kernel->config->value(beta_homing_direction_checksum      )->by_default(1   )->as_number();
     this->direction[2]              =  this->kernel->config->value(gamma_homing_direction_checksum     )->by_default(1    )->as_number();
     for (int i=0; i<3; i++) direction[i] = direction[i] > 0;
     this->homing_position[0]        =  this->direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default(0)->as_number():this->kernel->config->value(alpha_max_checksum)->by_default(200)->as_number();
