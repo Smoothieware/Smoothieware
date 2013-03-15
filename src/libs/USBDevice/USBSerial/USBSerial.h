@@ -41,7 +41,7 @@ public:
 
     uint8_t available();
 
-    uint16_t writeBlock(uint8_t * buf, uint16_t size);
+    uint16_t writeBlock(const uint8_t * buf, uint16_t size);
 
     CircBuffer<uint8_t> rxbuf;
     CircBuffer<uint8_t> txbuf;

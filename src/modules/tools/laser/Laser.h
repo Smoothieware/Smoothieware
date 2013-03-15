@@ -21,6 +21,7 @@
 class Laser : public Module{
     public:
         Laser();
+        virtual ~Laser() {};
         void on_module_loaded();
         void on_block_end(void* argument);
         void on_block_begin(void* argument);

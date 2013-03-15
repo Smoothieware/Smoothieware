@@ -18,6 +18,7 @@
 #include "modules/utils/currentcontrol/CurrentControl.h"
 #include "modules/utils/player/Player.h"
 #include "modules/utils/pausebutton/PauseButton.h"
+#include "modules/utils/PlayLed/PlayLed.h"
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/Config.h"
 #include "libs/nuts_bolts.h"
@@ -76,7 +77,7 @@ int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 \r\n");
+    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 @%dMHz\r\n", SystemCoreClock / 1000000);
 
     // Create and add main modules
     kernel->add_module( new Laser() );
@@ -88,10 +89,11 @@ int main() {
     kernel->add_module( new SwitchPool() );
     kernel->add_module( new ButtonPool() );
     kernel->add_module( new PauseButton() );
+    kernel->add_module( new PlayLed() );
     kernel->add_module( new Endstops() );
     kernel->add_module( new Player() );
 
-    // Create and initialize USB stuff
+    // Create and initialize USB stuff
     u.init();
     kernel->add_module( &msc );
     kernel->add_module( &usbserial );

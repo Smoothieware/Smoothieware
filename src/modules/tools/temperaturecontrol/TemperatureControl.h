@@ -42,6 +42,9 @@
 
 #define i_max_checksum                     CHECKSUM("i_max")
 
+#define preset1_checksum                   CHECKSUM("preset1")
+#define preset2_checksum                   CHECKSUM("preset2")
+
 #define QUEUE_LEN 8
 
 class TemperatureControlPool;
@@ -66,6 +69,9 @@ class TemperatureControl : public Module {
         void pid_process(double);
 
         double target_temperature;
+
+        double preset1;
+        double preset2;
 
         // Thermistor computation settings
         double r0;
