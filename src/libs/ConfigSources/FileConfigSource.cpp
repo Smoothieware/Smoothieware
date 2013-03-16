@@ -94,7 +94,9 @@ string FileConfigSource::read( uint16_t check_sums[3] ){
     // For each line
     do {
         c = fgetc (lp);
-        process_char_from_ascii_config(c, check_sums);
+        value = process_char_from_ascii_config(c, check_sums);
+        if (value.length())
+            return value;
     } while (c != EOF);
     fclose(lp);
 

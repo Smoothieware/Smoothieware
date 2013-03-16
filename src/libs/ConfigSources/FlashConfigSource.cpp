@@ -16,23 +16,30 @@ using namespace std;
 #include <string>
 
 
+
 FlashConfigSource::FlashConfigSource(uint16_t name_checksum){
     this->name_checksum = name_checksum;
 }
 
 // Transfer all values found in the file to the passed cache
 void FlashConfigSource::transfer_values_to_cache( ConfigCache* cache ){
-/*
-    if( this->has_config_file() == false ){return;}
-    // Open the config file ( find it if we haven't already found it )
-    FILE *lp = fopen(this->get_config_file().c_str(), "r");
+    // start by selecting the last sector
+    char* sector = (char*)FLASH_SECTOR_29;
     int c;
-    // For each line
+    // if the first byte is 0x00, assume that sector data is invalid and select the second to last sector instead
+    if( *sector == 0x00 ) {
+        sector = (char*)FLASH_SECTOR_28;
+        // if the first byte of the selected sector is also 0x00, then assume the second sector is invalid and bail out
+        if( *sector == 0x00 ) {
+            return;
+        }
+    }
+
     do {
-        process_char_from_ascii_config(c = fgetc(lp), cache);
+        c = *sector;
+        process_char_from_ascii_config(c, cache);
+        sector++;
     } while (c != EOF);
-    fclose(lp);
-*/
 }
 
 // Return true if the check_sums match
@@ -86,18 +93,26 @@ void FlashConfigSource::write( string setting, string value ){
 // Return the value for a specific checksum
 string FlashConfigSource::read( uint16_t check_sums[3] ){
     string value = "";
-/*
-    if( this->has_config_file() == false ){return value;}
-    // Open the config file ( find it if we haven't already found it )
-    FILE *lp = fopen(this->get_config_file().c_str(), "r");
+    // start by selecting the last sector
+    char* sector = (char*)FLASH_SECTOR_29;
     int c;
-    // For each line
+    // if the first byte is 0x00, assume that sector data is invalid and select the second to last sector instead
+    if( *sector == 0x00 ) {
+        sector = (char*)FLASH_SECTOR_28;
+        // if the first byte of the selected sector is also 0x00, then assume the second sector is invalid and bail out
+        if( *sector == 0x00 ) {
+            return value;
+        }
+    }
+
     do {
-        c = fgetc (lp);
-        process_char_from_ascii_config(c, check_sums);
+        c = *sector;
+        value = process_char_from_ascii_config(c, check_sums);
+        sector++;
+        if(value.length())
+            return value;
     } while (c != EOF);
-    fclose(lp);
-*/
+
     return value;
 }
 
