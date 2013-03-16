@@ -13,12 +13,25 @@
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "modules/robot/Conveyor.h"
+#include "DirHandle.h"
 #include "mri.h"
 
 
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
+    this->reset_delay_secs= 0;
+    
+    register_for_event(ON_SECOND_TICK);
+}
+
+void SimpleShell::on_second_tick(void*) {
+    // we are timing out for the reset
+    if (this->reset_delay_secs > 0) {
+        if(--this->reset_delay_secs == 0){
+            system_reset(false);
+        }
+    }
 }
 
 // When a new line is received, check if it is a command, and if it is, act upon it
@@ -45,9 +58,9 @@ void SimpleShell::on_console_line_received( void* argument ){
     else if (check_sum == reset_command_checksum)
         this->reset_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == dfu_command_checksum)
-        this->reset_command(get_arguments(possible_command),new_message.stream );
-	else if (check_sum == help_command_checksum)
-		this->help_command(get_arguments(possible_command),new_message.stream );
+        this->dfu_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == help_command_checksum)
+        this->help_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -65,8 +78,8 @@ void SimpleShell::ls_command( string parameters, StreamOutput* stream ){
     struct dirent* p;
     d = opendir(folder.c_str());
     if(d != NULL) {
-		while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
-		closedir(d);
+        while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
+        closedir(d);
     } else {
         stream->printf("Could not open directory %s \r\n", folder.c_str());
     }
@@ -81,8 +94,8 @@ void SimpleShell::cd_command( string parameters, StreamOutput* stream ){
     if(d == NULL) {
         stream->printf("Could not open directory %s \r\n", folder.c_str() );
     }else{
-		this->current_path = folder;
-		closedir(d);
+        this->current_path = folder;
+        closedir(d);
     }
 }
 
@@ -132,8 +145,14 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 
 // Reset the system
 void SimpleShell::reset_command( string parameters, StreamOutput* stream){
-    stream->printf("Smoothie out. Peace.\r\n");
-    system_reset();
+    stream->printf("Smoothie out. Peace. Rebooting in 5 seconds...\r\n");
+    this->reset_delay_secs= 5; // reboot in 5 seconds
+}
+
+// go into dfu boot mode
+void SimpleShell::dfu_command( string parameters, StreamOutput* stream){
+    stream->printf("Entering boot mode...\r\n");
+    system_reset(true);
 }
 
 // Break out into the MRI debugging system
@@ -143,17 +162,19 @@ void SimpleShell::break_command( string parameters, StreamOutput* stream){
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){
-	stream->printf("Commands:\r\n");
-	stream->printf("ls [folder]\r\n");
-	stream->printf("cd folder\r\n");
-	stream->printf("pwd\r\n");	
-	stream->printf("cat file [limit]\r\n");
-	stream->printf("play file [-q]\r\n");
-	stream->printf("progress\r\n");
-	stream->printf("abort\r\n");
-	stream->printf("reset\r\n");			
-	stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
-	stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
-	stream->printf("config-load [<file_name>]\r\n");
+    stream->printf("Commands:\r\n");
+    stream->printf("ls [folder]\r\n");
+    stream->printf("cd folder\r\n");
+    stream->printf("pwd\r\n");  
+    stream->printf("cat file [limit]\r\n");
+    stream->printf("play file [-q]\r\n");
+    stream->printf("progress - shows progress of current play\r\n");
+    stream->printf("abort - abort currently playing file\r\n");
+    stream->printf("reset - reset smoothie\r\n");           
+    stream->printf("dfu - enter dfu boot loader\r\n");          
+    stream->printf("break - break into debugger\r\n");          
+    stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
+    stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
+    stream->printf("config-load [<file_name>]\r\n");
 }
 

@@ -17,7 +17,9 @@ using std::string;
 class Gcode {
     public:
         Gcode(const string&, StreamOutput*);
-
+        Gcode(const Gcode& to_copy); 
+        Gcode& operator= (const Gcode& to_copy);
+        
         bool   has_letter ( char letter );
 
         double get_value  ( char letter );
@@ -28,10 +30,8 @@ class Gcode {
         int    get_num_args();
         void   prepare_cached_values();
 
-        const string command;
+        string command;
         double millimeters_of_travel;
-        bool call_on_gcode_execute_event_immediatly;
-        bool on_gcode_execute_event_called;
 
         bool has_m;
         bool has_g;
@@ -39,9 +39,8 @@ class Gcode {
         unsigned int g;
 
         bool add_nl;
-
-        int queued;
-
         StreamOutput* stream;
+
+
 };
 #endif

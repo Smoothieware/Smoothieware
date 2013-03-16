@@ -32,17 +32,18 @@
 class Extruder : public Module{
     public:
         Extruder();
-        void on_module_loaded();
-        void on_config_reload(void* argument);
-        void on_gcode_received(void*);
-        void on_gcode_execute(void* argument);
-        void on_block_begin(void* argument);
-        void on_block_end(void* argument);
-        void on_play(void* argument);
-        void on_pause(void* argument);
-        void on_speed_change(void* argument);
+        void     on_module_loaded();
+        void     on_config_reload(void* argument);
+        void     on_gcode_received(void*);
+        void     on_gcode_execute(void* argument);
+        void     on_block_begin(void* argument);
+        void     on_block_end(void* argument);
+        void     on_play(void* argument);
+        void     on_pause(void* argument);
+        void     on_speed_change(void* argument);
         uint32_t acceleration_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
+        Block*   append_empty_block();
 
         Pin             step_pin;                     // Step pin for the stepper driver
         Pin             dir_pin;                      // Dir pin for the stepper driver

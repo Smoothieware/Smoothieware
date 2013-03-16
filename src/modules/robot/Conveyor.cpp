@@ -24,23 +24,15 @@ Conveyor::Conveyor(){
     flush_blocks = 0;
 }
 
-void Conveyor::on_module_loaded()
-{
+void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
 }
 
-void Conveyor::on_idle(void* argument)
-{
-    if (flush_blocks)
-    {
-        Block* block = queue.get_ref(0);
-//         printf("Block: clean %p\n", block);
-        while (block->gcodes.size())
-        {
-            Gcode* g = block->gcodes.back();
-            block->gcodes.pop_back();
-            delete g;
-        }
+void Conveyor::on_idle(void* argument){
+    if (flush_blocks){
+
+        Block* block = queue.get_tail_ref();
+        block->gcodes.clear(); 
         queue.delete_first();
 
         __disable_irq();
@@ -57,17 +49,10 @@ Block* Conveyor::new_block(){
     // but that function is called inside an interrupt and thus can break everything if the interrupt was trigerred during a memory access
 
     // Take the next untaken block on the queue ( the one after the last one )
-    Block* block = this->queue.get_ref( this->queue.size() );
-//     printf("cleanup %p\n", block);
+    Block* block = this->queue.get_tail_ref();
     // Then clean it up
     if( block->conveyor == this ){
-        for(; block->gcodes.size(); ){
-            Gcode* g = block->gcodes.back();
-//             printf("Block:pop %p (%d refs)\n", g, g->queued);
-            block->gcodes.pop_back();
-            if (--g->queued == 0)
-                delete g;
-        }
+        block->gcodes.clear();
     }
 
     // Create a new virgin Block in the queue
@@ -114,8 +99,10 @@ void Conveyor::pop_and_process_new_block(int debug){
 
     // In case the module was not taken
     if( this->current_block->times_taken < 1 ){
-        this->current_block->release();
+        Block* temp = this->current_block; 
         this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect 
+        temp->take(); 
+        temp->release();
     }
 
     this->looking_for_new_block = false;
@@ -128,3 +115,10 @@ void Conveyor::wait_for_queue(int free_blocks)
         this->kernel->call_event(ON_IDLE);
     }
 }
+
+void Conveyor::wait_for_empty_queue(){
+    while( this->queue.size() > 0){
+        this->kernel->call_event(ON_IDLE);
+    }
+}
+

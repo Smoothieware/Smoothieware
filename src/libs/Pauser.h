@@ -12,6 +12,8 @@ class Pauser : public Module {
         void take();
         void release();
 
+        bool paused();
+
         unsigned short counter;
 };
 

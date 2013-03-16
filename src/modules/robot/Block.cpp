@@ -166,7 +166,8 @@ void Block::forward_pass(Block* previous, Block* next){
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
 void Block::append_gcode(Gcode* gcode){
    __disable_irq();
-   this->gcodes.push_back(gcode);
+   Gcode new_gcode = *gcode;
+   this->gcodes.push_back(new_gcode);
    __enable_irq();
 }
 
@@ -175,7 +176,7 @@ void Block::pop_and_execute_gcode(Kernel* &kernel){
     Block* block = const_cast<Block*>(this);
     for(unsigned short index=0; index<block->gcodes.size(); index++){
         //printf("GCODE Z: %s \r\n", block->gcodes[index].command.c_str() );
-        kernel->call_event(ON_GCODE_EXECUTE, block->gcodes[index]);
+        kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
     }
 }
 

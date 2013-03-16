@@ -10,6 +10,7 @@
 #include <math.h>
 #include "Switch.h"
 #include "libs/Pin.h"
+#include "modules/robot/Conveyor.h"
 
 #include "MRI_Hooks.h"
 
@@ -21,6 +22,7 @@ Switch::Switch(uint16_t name){
 
 void Switch::on_module_loaded(){
     register_for_event(ON_CONFIG_RELOAD);
+    this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
 
     // Settings
@@ -39,6 +41,20 @@ void Switch::on_config_reload(void* argument){
     this->output_pin.set(this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(0)->as_number() );
 
     set_low_on_debug(output_pin.port_number, output_pin.pin);
+}
+
+
+void Switch::on_gcode_received(void* argument){
+    Gcode* gcode = static_cast<Gcode*>(argument);
+    // Add the gcode to the queue ourselves if we need it
+    if( gcode->has_m && ( gcode->m == this->on_m_code || gcode->m == this->off_m_code ) ){
+        if( this->kernel->conveyor->queue.size() == 0 ){
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+        }else{
+            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            block->append_gcode(gcode);
+        }
+    }
 }
 
 // Turn pin on and off

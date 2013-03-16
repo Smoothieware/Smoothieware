@@ -1,0 +1,10 @@
+# This is a place for the user to specify their own 'firm' defaults at compile time
+# One can also use this as the primary config system if an sdcard is unavailable
+# The format of this file is identical to that of a normal config file
+#
+# to have git ignore this file so you can keep your own defaults in here that are
+# preserved through updates run this command:
+# git update-index --assume-unchanged src/config.default
+#
+
+

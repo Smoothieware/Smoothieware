@@ -4,15 +4,13 @@ Smoothie is a free, opensource, high performance G-code interpreter and CNC cont
 Documentation can be found here : [[http://smoothieware.org/]]
 
 ==Quick Start
-These are the quick steps to get Smoothie/gcc4mbed dependencies installed on your computer:
+These are the quick steps to get Smoothie dependencies installed on your computer:
 * Pull down a clone of the Smoothie github project to your local machine.
-* In the gcc4mbed subdirectory of the cloned Smoothie project, there are install scripts for the supported platforms.  Run the install script appropriate for your platform:
+* In the root subdirectory of the cloned Smoothie project, there are install scripts for the supported platforms.  Run the install script appropriate for your platform:
 ** Windows: win_install.cmd
 ** OS X: mac_install
 ** Linux: linux_install
 * You can then run the BuildShell script which will be created during the install to properly configure the PATH environment variable to point to the required version of GCC for ARM which was just installed on your machine.  You may want to edit this script to further customize your development environment.
-
-More information on the gcc4mbed project can be found [[https://github.com/adamgreen/gcc4mbed|here]].
 
 ==Building Smoothie
 From a shell, switch into the root Smoothie project directory and run:

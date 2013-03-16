@@ -42,13 +42,15 @@
 
 #define i_max_checksum                     CHECKSUM("i_max")
 
+#define preset1_checksum                   CHECKSUM("preset1")
+#define preset2_checksum                   CHECKSUM("preset2")
+
 #define QUEUE_LEN 8
 
 class TemperatureControlPool;
 
 class TemperatureControl : public Module {
     public:
-        TemperatureControl();
         TemperatureControl(uint16_t name);
 
         void on_module_loaded();
@@ -68,6 +70,9 @@ class TemperatureControl : public Module {
 
         double target_temperature;
 
+        double preset1;
+        double preset2;
+
         // Thermistor computation settings
         double r0;
         double t0;
@@ -76,8 +81,6 @@ class TemperatureControl : public Module {
         double beta;
         double j;
         double k;
-
-        int max_pwm;
 
         // PID settings
         double p_factor;
@@ -105,6 +108,7 @@ class TemperatureControl : public Module {
         Pwm  heater_pin;
 
         bool waiting;
+        bool min_temp_violated;
 
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;

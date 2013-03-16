@@ -19,6 +19,7 @@
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
+#include "modules/tools/endstops/Endstops.h"
 #include <array>
 
 //Module manager

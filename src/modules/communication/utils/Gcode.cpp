@@ -15,12 +15,36 @@ using std::string;
 #include <stdlib.h>
 
 
-Gcode::Gcode(const string& command, StreamOutput* stream) :
-  command(command), m(0), g(0), add_nl(false),
-  queued(0), stream(stream)
-{
+Gcode::Gcode(const string& command, StreamOutput* stream) : command(command), m(0), g(0), add_nl(false), stream(stream) {
     prepare_cached_values();
+    this->millimeters_of_travel = 0L;
 }
+
+Gcode::Gcode(const Gcode& to_copy){
+    this->command.assign( to_copy.command );
+    this->millimeters_of_travel = to_copy.millimeters_of_travel;
+    this->has_m                 = to_copy.has_m;
+    this->has_g                 = to_copy.has_g;
+    this->m                     = to_copy.m;
+    this->g                     = to_copy.g;
+    this->add_nl                = to_copy.add_nl;
+    this->stream                = to_copy.stream;
+}
+
+Gcode& Gcode::operator= (const Gcode& to_copy){
+    if( this != &to_copy ){
+        this->command.assign( to_copy.command );
+        this->millimeters_of_travel = to_copy.millimeters_of_travel;
+        this->has_m                 = to_copy.has_m;
+        this->has_g                 = to_copy.has_g;
+        this->m                     = to_copy.m;
+        this->g                     = to_copy.g;
+        this->add_nl                = to_copy.add_nl;
+        this->stream                = to_copy.stream;
+    }
+    return *this;
+}
+
 
 // Whether or not a Gcode has a letter
 bool Gcode::has_letter( char letter ){

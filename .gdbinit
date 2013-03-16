@@ -57,6 +57,19 @@ end
 
 
 
+define freespace
+    printf "free space: %d bytes\n", (unsigned int)$sp - '_sbrk::heap'
+end
+
+document freespace
+Displays the free space.
+
+This is the amount of space between the heap and stack that is currently
+unused.
+end
+
+
+
 define maxstacksize
     set var $fill_curr=(unsigned int*)'_sbrk::heap'
     while ($fill_curr < $sp && *$fill_curr == 0xdeadbeef)

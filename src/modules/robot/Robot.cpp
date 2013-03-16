@@ -52,28 +52,29 @@ void Robot::on_config_reload(void* argument){
     if (this->arm_solution) delete this->arm_solution;
     int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
 
-	// Note checksums are not const expressions when in debug mode, so don't use switch
-	if(solution_checksum == rostock_checksum) {
-		this->arm_solution = new RostockSolution(this->kernel->config);
+    // Note checksums are not const expressions when in debug mode, so don't use switch
+    if(solution_checksum == rostock_checksum) {
+        this->arm_solution = new RostockSolution(this->kernel->config);
 
-	}else if(solution_checksum ==  delta_checksum) {
-		// place holder for now
-		this->arm_solution = new RostockSolution(this->kernel->config);
+    }else if(solution_checksum ==  delta_checksum) {
+        // place holder for now
+        this->arm_solution = new RostockSolution(this->kernel->config);
 
     }else if(solution_checksum == rotatable_cartesian_checksum) {
         this->arm_solution = new RotatableCartesianSolution(this->kernel->config);
 
-	}else if(solution_checksum == cartesian_checksum) {
-		this->arm_solution = new CartesianSolution(this->kernel->config);
+    }else if(solution_checksum == cartesian_checksum) {
+        this->arm_solution = new CartesianSolution(this->kernel->config);
 
-	}else{
-		this->arm_solution = new CartesianSolution(this->kernel->config);
-	}
+    }else{
+        this->arm_solution = new CartesianSolution(this->kernel->config);
+    }
 
 
     this->feed_rate           = this->kernel->config->value(default_feed_rate_checksum   )->by_default(100    )->as_number() / 60;
     this->seek_rate           = this->kernel->config->value(default_seek_rate_checksum   )->by_default(100    )->as_number() / 60;
-    this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum )->by_default(5.0    )->as_number();
+    this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum )->by_default(0.0    )->as_number();
+    this->delta_segments_per_second = this->kernel->config->value(delta_segments_per_second_checksum )->by_default(0.0    )->as_number();
     this->mm_per_arc_segment  = this->kernel->config->value(mm_per_arc_segment_checksum  )->by_default(0.5    )->as_number();
     this->arc_correction      = this->kernel->config->value(arc_correction_checksum      )->by_default(5      )->as_number();
     this->max_speeds[X_AXIS]  = this->kernel->config->value(x_axis_max_speed_checksum    )->by_default(60000  )->as_number();
@@ -91,27 +92,32 @@ void Robot::on_config_reload(void* argument){
 
 }
 
+//#pragma GCC push_options
+//#pragma GCC optimize ("O0")
+
+
 //A GCode has been received
 void Robot::on_gcode_received(void * argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    gcode->call_on_gcode_execute_event_immediatly = false;
-    gcode->on_gcode_execute_event_called = false;
-    //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( this->kernel->conveyor->queue.size() == 0 ){
-        gcode->call_on_gcode_execute_event_immediatly = true;
-        this->execute_gcode(gcode);
-        if( gcode->on_gcode_execute_event_called == false ){
-            //printf("GCODE A: %s \r\n", gcode->command.c_str() );
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-        }
-    }else{
-        Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-        this->execute_gcode(gcode);
-        block->append_gcode(gcode);
-        gcode->queued++;
-    }
+    this->process_gcode(gcode);
 }
 
+// We called process_gcode with a new gcode, and one of the functions 
+// determined the distance for that given gcode. So now we can attach this gcode to the right block
+// and continue
+void Robot::distance_in_gcode_is_known(Gcode* gcode){
+
+    //If the queue is empty, execute immediatly, otherwise attach to the last added block
+    if( this->kernel->conveyor->queue.size() == 0 ){
+        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+    }else{
+        Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+        block->append_gcode(gcode);
+    }
+
+}
+
+//#pragma GCC pop_options
 
 void Robot::reset_axis_position(double position, int axis) {
     this->last_milestone[axis] = this->current_position[axis] = position;
@@ -120,15 +126,15 @@ void Robot::reset_axis_position(double position, int axis) {
 
 
 //See if the current Gcode line has some orders for us
-void Robot::execute_gcode(Gcode* gcode){
+void Robot::process_gcode(Gcode* gcode){
 
     //Temp variables, constant properties are stored in the object
     uint8_t next_action = NEXT_ACTION_DEFAULT;
     this->motion_mode = -1;
 
    //G-letter Gcodes are mostly what the Robot module is interrested in, other modules also catch the gcode event and do stuff accordingly
-    if( gcode->has_letter('G')){
-        switch( (int) gcode->get_value('G') ){
+    if( gcode->has_g){
+        switch( gcode->g ){
             case 0:  this->motion_mode = MOTION_MODE_SEEK; break;
             case 1:  this->motion_mode = MOTION_MODE_LINEAR; break;
             case 2:  this->motion_mode = MOTION_MODE_CW_ARC; break;
@@ -154,8 +160,8 @@ void Robot::execute_gcode(Gcode* gcode){
                 return; // TODO: Wait until queue empty
            }
        }
-   }else if( gcode->has_letter('M')){
-     switch( (int) gcode->get_value('M') ){
+   }else if( gcode->has_m){
+     switch( gcode->m ){
             case 92: // M92 - set steps per mm
                 double steps[3];
                 this->arm_solution->get_steps_per_millimeter(steps);
@@ -258,23 +264,34 @@ void Robot::append_milestone( double target[], double rate ){
 
 void Robot::append_line(Gcode* gcode, double target[], double rate ){
 
+    gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
+
+    this->distance_in_gcode_is_known( gcode );
+
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
-    gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
+    // In delta robots either mm_per_line_segment can be used OR delta_segments_per_second The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
 
-    if( gcode->call_on_gcode_execute_event_immediatly == true ){
-            //printf("GCODE B: %s \r\n", gcode->command.c_str() );
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-            gcode->on_gcode_execute_event_called = true;
+    uint16_t segments;
+    
+    if(this->delta_segments_per_second > 1.0) {
+        // enabled if set to something > 1, it is set to 0.0 by default
+        // segment based on current speed and requested segments per second
+        // the faster the travel speed the fewer segments needed
+        // NOTE rate is mm/sec and we take into account any speed override
+        float seconds = 60.0/seconds_per_minute * gcode->millimeters_of_travel / rate;
+        segments= max(1, ceil(this->delta_segments_per_second * seconds));
+        // TODO if we are only moving in Z on a delta we don't really need to segment at all
+        
+    }else{
+        if(this->mm_per_line_segment == 0.0){
+            segments= 1; // don't split it up
+        }else{
+            segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment);
+        }
     }
-
-    if (gcode->millimeters_of_travel == 0.0) {
-        this->append_milestone(this->current_position, 0.0);
-        return;
-    }
-
-    uint16_t segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment);
+    
     // A vector to keep track of the endpoint of each segment
     double temp_target[3];
     //Initialize axes
@@ -306,16 +323,14 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
 
     gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
 
-    if( gcode->call_on_gcode_execute_event_immediatly == true ){
-            //printf("GCODE C: %s \r\n", gcode->command.c_str() );
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-            gcode->on_gcode_execute_event_called = true;
-    }
-
+    this->distance_in_gcode_is_known( gcode );
+    
+    /* 
     if (gcode->millimeters_of_travel == 0.0) {
         this->append_milestone(this->current_position, 0.0);
         return;
     }
+    */
 
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
 

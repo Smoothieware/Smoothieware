@@ -95,21 +95,15 @@ inline void StepTicker::tick(){
 void StepTicker::signal_moves_finished(){
     _isr_context = true;
 
-    int i;
-    uint32_t bm;
-    for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
-    {
-        if (this->active_motor_bm & bm)
-        {
-            if (this->active_motors[i]->is_move_finished)
-            {
-                this->active_motors[i]->signal_move_finished();
-                if (this->active_motors[i]->moving == false)
-                {
-                    if (i > 0)
-                    {
-                        i--;
-                        bm >>= 1;
+    uint16_t bitmask = 1;
+    for ( uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
+        if (this->active_motor_bm & bitmask){
+            if(this->active_motors[motor]->is_move_finished){
+                this->active_motors[motor]->signal_move_finished();
+                if(this->active_motors[motor]->moving == false){
+                    if (motor > 0){
+                        motor--;
+                        bitmask >>= 1;
                     }
                 }
             }
@@ -161,7 +155,15 @@ extern "C" void TIMER0_IRQHandler (void){
     LPC_TIM0->IR |= 1 << 0;
 
     // Step pins
-    global_step_ticker->tick();
+    //global_step_ticker->tick();
+    _isr_context = true;
+    uint16_t bitmask = 1;
+    for (uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
+        if (global_step_ticker->active_motor_bm & bitmask){
+            global_step_ticker->active_motors[motor]->tick();
+        }
+    }
+    _isr_context = false;
 
     // We may have set a pin on in this tick, now we start the timer to set it off
     if( global_step_ticker->reset_step_pins ){

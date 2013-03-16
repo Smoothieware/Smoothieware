@@ -12,6 +12,7 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "SlowTicker.h"
 #include "libs/Hook.h"
+#include "modules/robot/Conveyor.h"
 
 #include <mri.h>
 
@@ -38,6 +39,7 @@ SlowTicker::SlowTicker(){
 void SlowTicker::on_module_loaded()
 {
     register_for_event(ON_IDLE);
+    register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GCODE_EXECUTE);
 }
 
@@ -113,25 +115,41 @@ void SlowTicker::on_idle(void*)
     }
 }
 
-void SlowTicker::on_gcode_execute(void* argument)
-{
+void SlowTicker::on_gcode_received(void* argument){
+    Gcode* gcode = static_cast<Gcode*>(argument);
+    // Add the gcode to the queue ourselves if we need it
+    if( gcode->has_g && gcode->g == 4 ){
+        if( this->kernel->conveyor->queue.size() == 0 ){
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+        }else{
+            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            block->append_gcode(gcode);
+        }
+    }
+}    
+    
+void SlowTicker::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
 
     if (gcode->has_g)
     {
         if (gcode->g == 4)
         {
-            if (gcode->has_letter('P'))
+            bool updated = false;
+            if (gcode->has_letter('P')) {
+                updated = true;
+                g4_ticks += gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
+            }
+            if (gcode->has_letter('S')) {
+                updated = true;
+                g4_ticks += gcode->get_int('S') * (SystemCoreClock >> 2);
+            }
+            if (updated)
             {
-                // G4 Pnn should pause for nn milliseconds
+                // G4 Smm Pnn should pause for mm seconds + nn milliseconds
                 // at 120MHz core clock, the longest possible delay is (2^32 / (120MHz / 4)) = 143 seconds
-                if (g4_pause)
+                if (!g4_pause)
                 {
-                    g4_ticks += gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
-                }
-                else
-                {
-                    g4_ticks = gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
                     g4_pause = true;
                     kernel->pauser->take();
                 }

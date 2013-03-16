@@ -10,7 +10,10 @@ PID_Autotuner::PID_Autotuner()
 
 void PID_Autotuner::on_module_loaded()
 {
+    tick = false;
     this->kernel->slow_ticker->attach(20, this, &PID_Autotuner::on_tick );
+    register_for_event(ON_IDLE);
+    register_for_event(ON_GCODE_RECEIVED);
 }
 
 void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput *stream)
@@ -18,6 +21,7 @@ void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput 
     if (t)
         t->heater_pin.set(0);
 
+    s = stream;
     t = temp;
 
     t->target_temperature = 0.0;
@@ -33,9 +37,7 @@ void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput 
     }
     cycle = 0;
 
-    s = stream;
-
-    s->printf("%s: Starting PID Autotune\n", t->designator.c_str());
+    s->printf("%s: Starting PID Autotune, M304 aborts\n", t->designator.c_str());
 
     bias = d = t->heater_pin.max_pwm() >> 1;
 
@@ -43,17 +45,51 @@ void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput 
     last_output = true;
 }
 
+void PID_Autotuner::abort()
+{
+    if (!t)
+        return;
+
+    t->target_temperature = 0;
+    t->heater_pin.set(0);
+    t = NULL;
+
+    if (s)
+        s->printf("PID Autotune Aborted\n");
+    s = NULL;
+}
+
+void PID_Autotuner::on_gcode_received(void* argument)
+{
+    Gcode* gcode = static_cast<Gcode*>(argument);
+
+    if ((gcode->has_m) && (gcode->m == 304))
+        abort();
+}
+
 uint32_t PID_Autotuner::on_tick(uint32_t dummy)
 {
+    if (t)
+        tick = true;
+    return 0;
+}
+
+void PID_Autotuner::on_idle(void*)
+{
+    if (!tick)
+        return;
+
+    tick = false;
+
     if (cycle >= PID_AUTOTUNER_CYCLES)
-        return 0;
+        return;
     if (t == NULL)
-        return 0;
+        return;
 
     if (t->last_reading > (target_temperature + 0.25))
         output = false;
     else if (t->last_reading < (target_temperature - 0.25))
-        output = true;;
+        output = true;
 
     if (last_output == false && output)
     {
@@ -109,10 +145,12 @@ uint32_t PID_Autotuner::on_tick(uint32_t dummy)
             t->i_factor = ki;
             t->d_factor = kd;
 
+            s->printf("PID Autotune Complete! The settings above have been loaded into memory, but not written to your config file.\n");
+
             t = NULL;
             s = NULL;
 
-            return 0;
+            return;
         }
         s->printf("Cycle %d:\n\tbias: %4d d: %4d\n", cycle, bias, d);
     }
@@ -142,6 +180,4 @@ uint32_t PID_Autotuner::on_tick(uint32_t dummy)
         cycles[cycle].t_min = t->last_reading;
 
     last_output = output;
-
-    return 0;
 }

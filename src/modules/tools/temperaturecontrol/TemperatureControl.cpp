@@ -14,16 +14,12 @@
 #include "TemperatureControlPool.h"
 #include "libs/Pin.h"
 #include "libs/Median.h"
+#include "modules/robot/Conveyor.h"
 
 #include "MRI_Hooks.h"
 
-TemperatureControl::TemperatureControl(){}
-
-TemperatureControl::TemperatureControl(uint16_t name){
-    this->name_checksum = name;
-//     this->error_count = 0;
-    this->waiting = false;
-}
+TemperatureControl::TemperatureControl(uint16_t name) :
+  name_checksum(name), waiting(false), min_temp_violated(false) {}
 
 void TemperatureControl::on_module_loaded(){
 
@@ -44,7 +40,12 @@ void TemperatureControl::on_module_loaded(){
 
 }
 
-void TemperatureControl::on_main_loop(void* argument){ }
+void TemperatureControl::on_main_loop(void* argument){
+    if (this->min_temp_violated) {
+        kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
+        this->min_temp_violated = false;
+    }
+}
 
 // Get configuration from the config file
 void TemperatureControl::on_config_reload(void* argument){
@@ -54,8 +55,6 @@ void TemperatureControl::on_config_reload(void* argument){
     this->set_and_wait_m_code = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
     this->get_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
     this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
-
-    this->max_pwm             = this->kernel->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number();
 
     this->designator          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
@@ -81,6 +80,9 @@ void TemperatureControl::on_config_reload(void* argument){
     this->r1 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
     this->r2 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
 
+    this->preset1 =             this->kernel->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
+    this->preset2 =             this->kernel->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
+
 
     // Thermistor math
     j = (1.0 / beta);
@@ -95,6 +97,7 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // Heater pin
     this->heater_pin.from_string(    this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_string())->as_output();
+    this->heater_pin.max_pwm(        this->kernel->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
     this->heater_pin.set(0);
 
     set_low_on_debug(heater_pin.port_number, heater_pin.pin);
@@ -114,8 +117,7 @@ void TemperatureControl::on_config_reload(void* argument){
     this->last_reading = 0.0;
 }
 
-void TemperatureControl::on_gcode_received(void* argument)
-{
+void TemperatureControl::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if (gcode->has_m)
     {
@@ -153,6 +155,17 @@ void TemperatureControl::on_gcode_received(void* argument)
                 this->pool->PIDtuner->begin(this, target, gcode->stream);
             }
         }
+        
+        // Attach gcodes to the last block for on_gcode_execute
+        if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ){
+            if( this->kernel->conveyor->queue.size() == 0 ){
+                this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+            }else{
+                Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+                block->append_gcode(gcode);
+            }
+            
+        }
     }
 }
 
@@ -162,14 +175,21 @@ void TemperatureControl::on_gcode_execute(void* argument){
         // Set temperature without waiting
         if( gcode->m == this->set_m_code && gcode->has_letter('S') )
         {
-            if (gcode->get_value('S') == 0)
+            double v = gcode->get_value('S');
+
+            if (v == 1.0)
+                v = preset1;
+            else if (v == 2.0)
+                v = preset2;
+
+            if (v == 0)
             {
                 this->target_temperature = UNDEFINED;
                 this->heater_pin.set(0);
             }
             else
             {
-                this->set_desired_temperature(gcode->get_value('S'));
+                this->set_desired_temperature(v);
             }
         }
         // Set temperature and wait
@@ -221,7 +241,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     {
         if ((r <= 1) || (r >= 4094))
         {
-            kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
+            this->min_temp_violated = true;
             target_temperature = UNDEFINED;
             heater_pin.set(0);
         }
@@ -271,8 +291,6 @@ void TemperatureControl::pid_process(double temperature)
             i = 0;
         this->o = 0;
     }
-
-    if( this->o > this->max_pwm ){ this->o = max_pwm; }
 
     this->heater_pin.pwm(o);
 }

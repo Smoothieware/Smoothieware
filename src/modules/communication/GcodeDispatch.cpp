@@ -102,8 +102,8 @@ void GcodeDispatch::on_console_line_received(void * line){
                     new_message.stream->printf("\r\n");
                 new_message.stream->printf("ok\r\n");
 
-                if (gcode->queued == 0)
-                    delete gcode;
+                delete gcode;
+            
             }
         }else{
             //Request resend
