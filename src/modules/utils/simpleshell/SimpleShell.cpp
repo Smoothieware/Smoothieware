@@ -61,6 +61,10 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->dfu_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == isp_command_checksum)
         this->isp_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == isp_command_checksum)
+        this->mcu_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == isp_command_checksum)
+        this->serial_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == help_command_checksum)
         this->help_command(get_arguments(possible_command),new_message.stream );
 }
@@ -161,6 +165,16 @@ void SimpleShell::dfu_command( string parameters, StreamOutput* stream){
 void SimpleShell::isp_command( string parameters, StreamOutput* stream){
     stream->printf("Entering isp mode...\r\n");
     this->kernel->iap->reinvoke_isp();
+}
+
+// output the chip id
+void SimpleShell::mcu_command( string parameters, StreamOutput* stream){
+    stream->printf("Microcontroller ID: 0x%x\r\n", this->kernel->iap->read_ID());
+}
+
+// output the mcu serial number
+void SimpleShell::serial_command( string parameters, StreamOutput* stream){
+    stream->printf("Microcontroller Serial Number: 0x%x\r\n", this->kernel->iap->read_serial());
 }
 
 // Break out into the MRI debugging system
