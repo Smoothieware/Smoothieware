@@ -5,8 +5,8 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef FILECONFIGSOURCE_H
-#define FILECONFIGSOURCE_H
+#ifndef FlashConfigSOURCE_H
+#define FlashConfigSOURCE_H
 
 #include "ConfigValue.h"
 #include "ConfigSource.h"
@@ -15,25 +15,18 @@
 using namespace std;
 #include <string>
 
-#define FILE_CONFIGSOURCE_CHECKSUM    CHECKSUM("file")
+#define FLASH_CONFIGSOURCE_CHECKSUM    CHECKSUM("flash")
 
-class FileConfigSource : public ConfigSource {
+class FlashConfigSource : public ConfigSource {
     public:
-        FileConfigSource(string config_file = "/sd/config", uint16_t name_checksum = FILE_CONFIGSOURCE_CHECKSUM);
+        FlashConfigSource(uint16_t name_checksum = FLASH_CONFIGSOURCE_CHECKSUM);
         void transfer_values_to_cache( ConfigCache* cache );
         bool is_named( uint16_t check_sum );
         void write( string setting, string value );
         string read( uint16_t check_sums[3] );
-        bool has_config_file();
-        void try_config_file(string candidate);
-        string get_config_file();
-
-        string config_file;         // Path to the config file
-        bool   config_file_found;   // Wether or not the config file's location is known
-
 
 };
 
 
 
-#endif
+#endif // FlashConfigSOURCE_H

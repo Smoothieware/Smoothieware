@@ -12,6 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/ConfigSources/FileConfigSource.h"
 
 
 void Configurator::on_module_loaded(){
