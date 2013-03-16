@@ -57,13 +57,13 @@ void Endstops::on_config_reload(void* argument){
     
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(this->kernel->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
-    this->home_direction[0]         = home_dir == home_to_min_checksum;
+    this->home_direction[0]         = home_dir != home_to_max_checksum;
     
     home_dir                        = get_checksum(this->kernel->config->value(beta_homing_direction_checksum)->by_default("home_to_min")->as_string());
-    this->home_direction[1]         = home_dir == home_to_min_checksum;
+    this->home_direction[1]         = home_dir != home_to_max_checksum;
     
     home_dir                        = get_checksum(this->kernel->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string());
-    this->home_direction[2]         = home_dir == home_to_min_checksum;
+    this->home_direction[2]         = home_dir != home_to_max_checksum;
     
     this->homing_position[0]        =  this->home_direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default(0)->as_number():this->kernel->config->value(alpha_max_checksum)->by_default(200)->as_number();
     this->homing_position[1]        =  this->home_direction[1]?this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number():this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
