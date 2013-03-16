@@ -207,6 +207,7 @@ public:
     int prepare( int start, int end );
     int write( char *source_addr, char *target_addr, int size );
     int compare( char *source_addr, char *target_addr, int size );
+    int reinvoke_isp( void );
     
     char *reserved_flash_area_start( void );
     int   reserved_flash_area_size( void );

@@ -13,6 +13,7 @@
 #include "libs/StreamOutputPool.h"
 #include "libs/StepTicker.h"
 #include "libs/Adc.h"
+#include "libs/IAP.h"
 #include "libs/Pauser.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
@@ -50,6 +51,7 @@ class Kernel {
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
+        IAP*              iap;
 
     private:
         std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

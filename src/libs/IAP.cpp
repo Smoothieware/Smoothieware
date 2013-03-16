@@ -179,6 +179,20 @@ int IAP::compare( char *source_addr, char *target_addr, int size ) {
 }
 
 
+/** Compare <address1> <address2> <no of bytes>
+ *  
+ *  @return   none
+ */
+
+int IAP::reinvoke_isp( void ) {
+    IAP_command[ 0 ]    = IAPCommand_Reinvoke_ISP;
+
+    iap_entry( IAP_command, IAP_result );
+
+    return ( (int)IAP_result[ 0 ] );
+}
+
+
 /** Get user reserved flash start address
  *
  *  @return    start address of user reserved flash memory

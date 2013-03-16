@@ -59,6 +59,8 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->reset_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == dfu_command_checksum)
         this->dfu_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == isp_command_checksum)
+        this->isp_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == help_command_checksum)
         this->help_command(get_arguments(possible_command),new_message.stream );
 }
@@ -153,6 +155,12 @@ void SimpleShell::reset_command( string parameters, StreamOutput* stream){
 void SimpleShell::dfu_command( string parameters, StreamOutput* stream){
     stream->printf("Entering boot mode...\r\n");
     system_reset(true);
+}
+
+// go into isp boot mode
+void SimpleShell::isp_command( string parameters, StreamOutput* stream){
+    stream->printf("Entering isp mode...\r\n");
+    this->kernel->iap->reinvoke_isp();
 }
 
 // Break out into the MRI debugging system

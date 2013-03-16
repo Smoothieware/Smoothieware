@@ -37,6 +37,7 @@ static int isDebugMonitorUsingUart0()
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
     // Config first, because we need the baud_rate setting before we start serial
+    this->iap            = new IAP();
     this->config         = new Config();
 
     // Serial second, because the other modules might want to say something
