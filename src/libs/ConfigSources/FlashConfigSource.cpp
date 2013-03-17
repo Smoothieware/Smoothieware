@@ -16,6 +16,7 @@ using namespace std;
 #include <string>
 
 #define FLASH_BUFFER_SIZE       256
+#define FLASH_CONFIG_SIZE       ((32 * 1024) - FLASH_BUFFER_SIZE)
 #define BLANK_SECTOR            0x00
 #define VALID_SECTOR            0x01
 
@@ -31,19 +32,22 @@ void FlashConfigSource::transfer_values_to_cache( ConfigCache* cache ){
     char* sector = (char*)FLASH_SECTOR_29;
     int c;
     // if the first byte is 0x00, assume that sector data is invalid and select the second to last sector instead
-    if( *sector == BLANK_SECTOR ) {
+    if( *sector != VALID_SECTOR ) {
         sector = (char*)FLASH_SECTOR_28;
-        // if the first byte of the selected sector is also 0x00, then assume the second sector is invalid and bail out
-        if( *sector == BLANK_SECTOR ) {
-            return;
-        }
     }
+    // if the sector isn't valid bail out
+    if( *sector != VALID_SECTOR ) {
+        return;
+    }
+    char* address = sector + FLASH_BUFFER_SIZE;
 
+    int t = 0;
     do {
-        c = *sector;
+        c = *address;
         process_char_from_ascii_config(c, cache);
-        sector++;
-    } while (c != EOF);
+        address++;
+        t++;
+    } while (c != EOF && t < FLASH_CONFIG_SIZE);
 }
 
 // Return true if the check_sums match
@@ -75,7 +79,7 @@ void FlashConfigSource::write( string setting, string value ){
     char* current_address = current_base + FLASH_BUFFER_SIZE;
     char* target_address = target_base + FLASH_BUFFER_SIZE;
     // if the first byte is not 0x01 then assume both sectors are invalid and start a new empty config
-    if( *current_address != VALID_SECTOR ) {
+    if( *current_base != VALID_SECTOR ) {
         this->iap->prepare(current_sector, current_sector);
         this->iap->erase(current_sector, current_sector);
         flash_buffer[0] = VALID_SECTOR;
@@ -159,22 +163,24 @@ string FlashConfigSource::read( uint16_t check_sums[3] ){
     char* sector = (char*)FLASH_SECTOR_29;
     int c;
     // if the first byte is 0x00, assume that sector data is invalid and select the second to last sector instead
-    if( *sector == BLANK_SECTOR ) {
+    if( *sector != VALID_SECTOR ) {
         sector = (char*)FLASH_SECTOR_28;
-        // if the first byte of the selected sector is also 0x00, then assume the second sector is invalid and bail out
-        if( *sector == BLANK_SECTOR ) {
-            return value;
-        }
     }
+    // if the sector isn't valid bail out
+    if( *sector != VALID_SECTOR ) {
+        return value;
+    }
+    char* address = sector + FLASH_BUFFER_SIZE;
 
+    int t = 0;
     do {
-        c = *sector;
+        c = *address;
         value = process_char_from_ascii_config(c, check_sums);
-        sector++;
+        address++;
+        t++;
         if(value.length())
             return value;
-    } while (c != EOF);
-
+    } while (c != EOF && t < FLASH_CONFIG_SIZE);
     return value;
 }
 
