@@ -55,8 +55,6 @@ using std::string;
 #define SPINDLE_DIRECTION_CW 0
 #define SPINDLE_DIRECTION_CCW 1
 
-
-
 class Robot : public Module {
     public:
         Robot();

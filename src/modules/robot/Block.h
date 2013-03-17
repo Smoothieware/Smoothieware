@@ -7,22 +7,51 @@
 
 #ifndef BLOCK_H
 #define BLOCK_H
-#include "libs/Module.h"
-#include "libs/Kernel.h"
+
 using namespace std;
 #include <string>
 #include <vector>
 
-#include "../communication/utils/Gcode.h"
-#include "Planner.h"
+class Block;
+class BlockData;
 class Planner;
 class Conveyor;
+class RobotData;
 
-double max_allowable_speed( double acceleration, double target_velocity, double distance);
+#include "libs/Module.h"
+#include "../communication/utils/Gcode.h"
+
+// double max_allowable_speed( double acceleration, double target_velocity, double distance);
+
+class BlockData {
+public:
+    BlockData(){};
+    virtual ~BlockData(){};
+
+    Module* owner;
+
+    bool valid;
+    Block* block;
+    BlockData* next;
+};
 
 class Block {
     public:
         Block();
+        void take();
+        void release();
+        void ready();
+
+        BlockData* first_data;
+
+        // this is for code efficiency. it could be looked up via first_data if we had spare cycles where it mattered
+        RobotData* robotdata;
+
+        void add_data(BlockData*);
+        void remove_data(BlockData*);
+
+        void clean();
+
         void calculate_trapezoid( double entry_factor, double exit_factor );
         double estimate_acceleration_distance( double initial_rate, double target_rate, double acceleration );
         double intersection_distance(double initial_rate, double final_rate, double acceleration, double distance);
@@ -31,10 +60,7 @@ class Block {
         void debug(Kernel* kernel);
         void append_gcode(Gcode* gcode);
         void pop_and_execute_gcode(Kernel* &kernel);
-        double get_duration_left(unsigned int already_taken_steps);
-        void take();
-        void release();
-        void ready();
+//         double get_duration_left(unsigned int already_taken_steps);
 
         vector<std::string> commands;
         vector<double> travel_distances;
@@ -60,7 +86,7 @@ class Block {
         double max_entry_speed;
         Planner* planner;
         Conveyor*  conveyor;
-        
+
         bool is_ready;
 
         short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.

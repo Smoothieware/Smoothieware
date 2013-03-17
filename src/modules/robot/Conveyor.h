@@ -27,6 +27,8 @@ class Conveyor : public Module {
         void wait_for_queue(int free_blocks);
         void wait_for_empty_queue();
 
+        Block* next_block();
+
         RingBuffer<Block,16> queue;  // Queue of Blocks
         Block* current_block;
         bool looking_for_new_block;

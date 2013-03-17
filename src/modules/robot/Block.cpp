@@ -18,11 +18,7 @@ using std::string;
 #include "../communication/utils/Gcode.h"
 
 Block::Block(){
-    clear_vector(this->steps);
-    this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
-    this->is_ready = false;
-    this->initial_rate = -1;
-    this->final_rate = -1;
+    clean();
 }
 
 void Block::debug(Kernel* kernel){
@@ -107,7 +103,7 @@ double Block::intersection_distance(double initialrate, double finalrate, double
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.
-inline double max_allowable_speed(double acceleration, double target_velocity, double distance) {
+static inline double max_allowable_speed(double acceleration, double target_velocity, double distance) {
   return(
     sqrt(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
   );
@@ -178,6 +174,17 @@ void Block::pop_and_execute_gcode(Kernel* &kernel){
         //printf("GCODE Z: %s \r\n", block->gcodes[index].command.c_str() );
         kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
     }
+
+    // run through any valid module data blocks
+    BlockData* data = first_data;
+    bool valid = false;
+    while (data) {
+        if (data->valid)
+            data->owner->on_block_invoke(data);
+        if (data->valid)
+            valid = true;
+        data = data->next;
+    }
 }
 
 // Signal the conveyor that this block is ready to be injected into the system
@@ -229,4 +236,37 @@ void Block::release(){
 }
 
 
+void Block::add_data(BlockData* data)
+{
+    data->valid = true;
+    data->next = first_data;
+    data->block = this;
+    first_data = data;
+}
 
+void Block::remove_data(BlockData* data)
+{
+    data->valid = false;
+}
+
+void Block::clean()
+{
+    BlockData* data = first_data;
+    BlockData* next;
+    while (data)
+    {
+        next = data->next;
+        delete data;
+        data = next;
+    }
+    first_data = NULL;
+
+    gcodes.clear();
+
+    clear_vector(this->steps);
+    this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
+    this->is_ready = false;
+    this->initial_rate = -1;
+    this->final_rate = -1;
+    this->first_data = NULL;
+}

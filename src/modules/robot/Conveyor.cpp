@@ -32,7 +32,7 @@ void Conveyor::on_idle(void* argument){
     if (flush_blocks){
 
         Block* block = queue.get_tail_ref();
-        block->gcodes.clear(); 
+        block->clean();
         queue.delete_first();
 
         __disable_irq();
@@ -52,7 +52,7 @@ Block* Conveyor::new_block(){
     Block* block = this->queue.get_tail_ref();
     // Then clean it up
     if( block->conveyor == this ){
-        block->gcodes.clear();
+        block->clean();
     }
 
     // Create a new virgin Block in the queue
@@ -61,11 +61,8 @@ Block* Conveyor::new_block(){
     while( block == NULL ){
         block = this->queue.get_ref( this->queue.size()-1 );
     }
-    block->is_ready = false;
-    block->initial_rate = -2;
-    block->final_rate = -2;
-    block->conveyor = this;
-    
+    block->clean();
+
     return block;
 }
 
@@ -99,9 +96,9 @@ void Conveyor::pop_and_process_new_block(int debug){
 
     // In case the module was not taken
     if( this->current_block->times_taken < 1 ){
-        Block* temp = this->current_block; 
-        this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect 
-        temp->take(); 
+        Block* temp = this->current_block;
+        this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect
+        temp->take();
         temp->release();
     }
 
@@ -122,3 +119,7 @@ void Conveyor::wait_for_empty_queue(){
     }
 }
 
+Block* Conveyor::next_block()
+{
+    return queue.get_tail_ref();
+}

@@ -14,6 +14,8 @@
 
 #include "RingBuffer.h"
 
+#include "Block.h"
+
 #define UNDEFINED -1
 
 #define thermistor_checksum                CHECKSUM("thermistor")
@@ -49,16 +51,24 @@
 
 class TemperatureControlPool;
 
+class TemperatureControlData : public BlockData {
+public:
+    double target_temperature;
+    bool wait;
+};
+
 class TemperatureControl : public Module {
     public:
         TemperatureControl(uint16_t name);
 
         void on_module_loaded();
         void on_main_loop(void* argument);
-        void on_gcode_execute(void* argument);
+//         void on_gcode_execute(void* argument);
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
         void on_second_tick(void* argument);
+
+        void on_block_invoke(void*);
 
         void set_desired_temperature(double desired_temperature);
         double get_temperature();
