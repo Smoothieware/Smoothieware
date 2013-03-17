@@ -12,6 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/IAP.h"
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
@@ -164,17 +165,20 @@ void SimpleShell::dfu_command( string parameters, StreamOutput* stream){
 // go into isp boot mode
 void SimpleShell::isp_command( string parameters, StreamOutput* stream){
     stream->printf("Entering isp mode...\r\n");
-    this->kernel->iap->reinvoke_isp();
+    IAP iap;
+    iap.reinvoke_isp();
 }
 
 // output the chip id
 void SimpleShell::mcu_command( string parameters, StreamOutput* stream){
-    stream->printf("Microcontroller ID: 0x%x\r\n", this->kernel->iap->read_ID());
+    IAP iap;
+    stream->printf("Microcontroller ID: 0x%x\r\n", iap.read_ID());
 }
 
 // output the mcu serial number
 void SimpleShell::serial_command( string parameters, StreamOutput* stream){
-    stream->printf("Microcontroller Serial Number: 0x%x\r\n", this->kernel->iap->read_serial());
+    IAP iap;
+    stream->printf("Microcontroller Serial Number: 0x%x\r\n", iap.read_serial());
 }
 
 // Break out into the MRI debugging system

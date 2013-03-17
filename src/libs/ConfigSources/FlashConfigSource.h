@@ -8,6 +8,7 @@
 #ifndef FlashConfigSOURCE_H
 #define FlashConfigSOURCE_H
 
+#include "libs/IAP.h"
 #include "ConfigValue.h"
 #include "ConfigSource.h"
 #include "ConfigCache.h"
@@ -25,6 +26,7 @@ class FlashConfigSource : public ConfigSource {
         void write( string setting, string value );
         string read( uint16_t check_sums[3] );
 
+        IAP* iap;
 };
 
 

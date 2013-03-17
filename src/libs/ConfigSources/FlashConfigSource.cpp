@@ -15,10 +15,14 @@
 using namespace std;
 #include <string>
 
+#define FLASH_BUFFER_SIZE       256
+#define BLANK_SECTOR            0x00
+#define VALID_SECTOR            0x01
 
 
 FlashConfigSource::FlashConfigSource(uint16_t name_checksum){
     this->name_checksum = name_checksum;
+    this->iap = new IAP();
 }
 
 // Transfer all values found in the file to the passed cache
@@ -27,10 +31,10 @@ void FlashConfigSource::transfer_values_to_cache( ConfigCache* cache ){
     char* sector = (char*)FLASH_SECTOR_29;
     int c;
     // if the first byte is 0x00, assume that sector data is invalid and select the second to last sector instead
-    if( *sector == 0x00 ) {
+    if( *sector == BLANK_SECTOR ) {
         sector = (char*)FLASH_SECTOR_28;
         // if the first byte of the selected sector is also 0x00, then assume the second sector is invalid and bail out
-        if( *sector == 0x00 ) {
+        if( *sector == BLANK_SECTOR ) {
             return;
         }
     }
@@ -49,45 +53,103 @@ bool FlashConfigSource::is_named( uint16_t check_sum ){
 
 // Write a config setting to the file
 void FlashConfigSource::write( string setting, string value ){
-/*
-    // Open the config file ( find it if we haven't already found it )
-    FILE *lp = fopen(this->get_config_file().c_str(), "r+");
+    char flash_buffer[FLASH_BUFFER_SIZE];
+    for(int i=0;i<FLASH_BUFFER_SIZE;i++){
+        flash_buffer[i] = 0x00;
+    }
+    // start by assuming that the last sector is the current valid sector and target second to last
+    int current_sector = 29;
+    int target_sector = 28;
+    char* current_base = (char*)FLASH_SECTOR_29;
+    char* target_base = (char*)FLASH_SECTOR_28;
     string buffer;
     int c;
-    // For each line
+    int n;
+    // if first byte is 0x00 then see if second to last is valid
+    if( *current_base == BLANK_SECTOR ) {
+        current_sector = 28;
+        target_sector = 29;
+        current_base = (char*)FLASH_SECTOR_28;
+        target_base = (char*)FLASH_SECTOR_29;
+    }
+    char* current_address = current_base + FLASH_BUFFER_SIZE;
+    char* target_address = target_base + FLASH_BUFFER_SIZE;
+    // if the first byte is not 0x01 then assume both sectors are invalid and start a new empty config
+    if( *current_address != VALID_SECTOR ) {
+        this->iap->prepare(current_sector, current_sector);
+        this->iap->erase(current_sector, current_sector);
+        flash_buffer[0] = VALID_SECTOR;
+        this->iap->write(flash_buffer, current_base, FLASH_BUFFER_SIZE);
+        flash_buffer[0] = EOF;
+        this->iap->write(flash_buffer, current_address, FLASH_BUFFER_SIZE);
+    }
+
+    this->iap->prepare(target_sector, target_sector);
+    this->iap->erase(target_sector, target_sector);
+    target_address += FLASH_BUFFER_SIZE;
+
+    n = 0;
+    // copy all current values to the target sector
     do {
-        c = fgetc (lp);
+        c = *current_address;
+        current_address++;
         if (c == '\n' || c == EOF){
-            // We have a new line
-            if( buffer[0] == '#' ){ buffer.clear(); continue; } // Ignore comments
-            if( buffer.length() < 3 ){ buffer.clear(); continue; } //Ignore empty lines
+            if( buffer[0] == '#' ){ buffer.clear(); continue; } // ignore comments
+            if( buffer.length() < 3 ){ buffer.clear(); continue; } // ignore empty lines
+
             size_t begin_key = buffer.find_first_not_of(" \t");
-            size_t begin_value = buffer.find_first_not_of(" \t", buffer.find_first_of(" \t", begin_key));
+            //size_t begin_value = buffer.find_first_not_of(" \t", buffer.find_first_of(" \t", begin_key));
             // If this line matches the checksum
             string candidate = buffer.substr(begin_key,  buffer.find_first_of(" \t", begin_key) - begin_key);
-            if( candidate.compare(setting) != 0 ){ buffer.clear(); continue; }
-            int free_space = int(int(buffer.find_first_of("\r\n#", begin_value+1))-begin_value);
-            if( int(value.length()) >= free_space ){
-                //this->kernel->streams->printf("ERROR: Not enough room for value\r\n");
-                fclose(lp);
-                return;
+            if( candidate.compare(setting) != 0 ){ buffer.clear(); continue; } // drop old setting being overwritten
+            
+            // Copy current value to flash_buffer
+            c = '\n';
+            buffer += c;
+            const char* buf = buffer.c_str();
+            for(unsigned int i=0;i<buffer.length();i++){
+                flash_buffer[n] = buf[i];
+                n++;
+                if (n == FLASH_BUFFER_SIZE) {
+                    this->iap->write(flash_buffer, target_address, FLASH_BUFFER_SIZE);
+                    target_address += FLASH_BUFFER_SIZE;
+                    n = 0;
+                }
             }
-            // Update value
-            for( int i = value.length(); i < free_space; i++){ value += " "; }
-            fpos_t pos;
-            fgetpos( lp, &pos );
-            int start = pos - buffer.length() + begin_value - 1;
-            fseek(lp, start, SEEK_SET);
-            fputs(value.c_str(), lp);
-            fclose(lp);
-            return;
+            buffer.clear();
+            continue;
         }else{
             buffer += c;
         }
     } while (c != EOF);
-    fclose(lp);
-    //this->kernel->streams->printf("ERROR: configuration key not found\r\n");
-*/
+
+    // append the new value to the end
+    buffer = setting + " " + value + "\n";
+    const char* buf = buffer.c_str();
+    for(unsigned int i=0;i<buffer.length();i++){
+        flash_buffer[n] = buf[i];
+        n++;
+        if (n == FLASH_BUFFER_SIZE) {
+            this->iap->write(flash_buffer, target_address, FLASH_BUFFER_SIZE);
+            target_address += FLASH_BUFFER_SIZE;
+            n = 0;
+        }
+    }
+    flash_buffer[n] = EOF;
+    for(n++;n<FLASH_BUFFER_SIZE;n++){
+        flash_buffer[n] = 0x00;
+    }
+    this->iap->write(flash_buffer, target_address, FLASH_BUFFER_SIZE);
+
+    // finally set the target sector live and disable the current sector
+    for(int i=0;i<FLASH_BUFFER_SIZE;i++){
+        flash_buffer[n] = 0x00;
+    }
+    flash_buffer[0] = VALID_SECTOR; 
+    this->iap->write(flash_buffer, target_base, FLASH_BUFFER_SIZE);
+    flash_buffer[0] = BLANK_SECTOR;
+    this->iap->prepare(current_sector, current_sector);
+    this->iap->write(flash_buffer, current_base, FLASH_BUFFER_SIZE);
 }
 
 // Return the value for a specific checksum
@@ -97,10 +159,10 @@ string FlashConfigSource::read( uint16_t check_sums[3] ){
     char* sector = (char*)FLASH_SECTOR_29;
     int c;
     // if the first byte is 0x00, assume that sector data is invalid and select the second to last sector instead
-    if( *sector == 0x00 ) {
+    if( *sector == BLANK_SECTOR ) {
         sector = (char*)FLASH_SECTOR_28;
         // if the first byte of the selected sector is also 0x00, then assume the second sector is invalid and bail out
-        if( *sector == 0x00 ) {
+        if( *sector == BLANK_SECTOR ) {
             return value;
         }
     }
