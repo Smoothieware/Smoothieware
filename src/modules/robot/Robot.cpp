@@ -266,8 +266,9 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
 
     gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
 
-    this->distance_in_gcode_is_known( gcode );
+    if( gcode->millimeters_of_travel < 0.0001 ){ return; }
 
+    this->distance_in_gcode_is_known( gcode );
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
@@ -323,15 +324,10 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
 
     gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
 
+    if( gcode->millimeters_of_travel < 0.0001 ){ return; }
+
     this->distance_in_gcode_is_known( gcode );
     
-    /* 
-    if (gcode->millimeters_of_travel == 0.0) {
-        this->append_milestone(this->current_position, 0.0);
-        return;
-    }
-    */
-
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
 
     double theta_per_segment = angular_travel/segments;
