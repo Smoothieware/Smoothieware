@@ -43,7 +43,6 @@ bool FileConfigSource::is_named( uint16_t check_sum ){
 
 // Write a config setting to the file
 void FileConfigSource::write( string setting, string value ){
-/*
     // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r+");
     string buffer;
@@ -81,27 +80,25 @@ void FileConfigSource::write( string setting, string value ){
     } while (c != EOF);
     fclose(lp);
     //this->kernel->streams->printf("ERROR: configuration key not found\r\n");
-*/
 }
 
 // Return the value for a specific checksum
 string FileConfigSource::read( uint16_t check_sums[3] ){
     string value = "";
+    string result;
 
-/*
     if( this->has_config_file() == false ){return value;}
     // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
-    int c;
+    char c;
     // For each line
     do {
         c = fgetc (lp);
-        value = process_char_from_ascii_config(c, check_sums);
-        if (value.length())
-            return value;
+        result = process_char_from_ascii_config(c, check_sums);
+        if (result.length())
+            value = result;
     } while (c != EOF);
     fclose(lp);
-*/
 
     return value;
 }

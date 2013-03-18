@@ -57,7 +57,6 @@ bool FlashConfigSource::is_named( uint16_t check_sum ){
 
 // Write a config setting to the file
 void FlashConfigSource::write( string setting, string value ){
-/*
     char flash_buffer[FLASH_BUFFER_SIZE];
     for(int i=0;i<FLASH_BUFFER_SIZE;i++){
         flash_buffer[i] = 0x00;
@@ -154,13 +153,11 @@ void FlashConfigSource::write( string setting, string value ){
     flash_buffer[0] = BLANK_SECTOR;
     this->iap->prepare(current_sector, current_sector);
     this->iap->write(flash_buffer, current_base, FLASH_BUFFER_SIZE);
-*/
 }
 
 // Return the value for a specific checksum
 string FlashConfigSource::read( uint16_t check_sums[3] ){
     string value = "";
-/*
     // start by selecting the last sector
     char* sector = (char*)FLASH_SECTOR_29;
     int c;
@@ -183,7 +180,6 @@ string FlashConfigSource::read( uint16_t check_sums[3] ){
         if(value.length())
             return value;
     } while (c != EOF && t < FLASH_CONFIG_SIZE);
-*/
     return value;
 }
 
