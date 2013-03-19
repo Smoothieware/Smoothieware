@@ -85,11 +85,12 @@ void FileConfigSource::write( string setting, string value ){
 // Return the value for a specific checksum
 string FileConfigSource::read( uint16_t check_sums[3] ){
     string value = "";
-    string result;
+    string result = "";
 
     if( this->has_config_file() == false ){return value;}
     // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
+    if( lp == NULL ){return value;}
     char c;
     // For each line
     do {
