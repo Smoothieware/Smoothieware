@@ -33,6 +33,7 @@ using std::string;
 #define rotatable_cartesian_checksum           CHECKSUM("rotatable_cartesian")
 #define rostock_checksum                       CHECKSUM("rostock")
 #define delta_checksum                         CHECKSUM("delta")
+#define hbot_checksum                          CHECKSUM("hbot")
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
