@@ -21,6 +21,7 @@ using std::string;
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/RostockSolution.h"
+#include "arm_solutions/HBotSolution.h"
 
 Robot::Robot(){
     this->inch_mode = false;
@@ -53,7 +54,10 @@ void Robot::on_config_reload(void* argument){
     int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
 
     // Note checksums are not const expressions when in debug mode, so don't use switch
-    if(solution_checksum == rostock_checksum) {
+    if(solution_checksum == hbot_checksum) {
+        this->arm_solution = new HBotSolution(this->kernel->config);
+
+    }else if(solution_checksum == rostock_checksum) {
         this->arm_solution = new RostockSolution(this->kernel->config);
 
     }else if(solution_checksum ==  delta_checksum) {
