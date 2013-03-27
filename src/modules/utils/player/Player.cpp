@@ -23,7 +23,7 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_SECOND_TICK);
     
-    this->on_boot_file_name = this->kernel->config->value(on_boot_gcode_checksum)->by_default("on_boot.gcode")->as_string();
+    this->on_boot_file_name = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
     this->elapsed_secs= 0;
 }
 

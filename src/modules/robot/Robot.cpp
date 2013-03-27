@@ -21,6 +21,7 @@ using std::string;
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/RostockSolution.h"
+#include "arm_solutions/HBotSolution.h"
 
 Robot::Robot(){
     this->inch_mode = false;
@@ -53,7 +54,10 @@ void Robot::on_config_reload(void* argument){
     int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
 
     // Note checksums are not const expressions when in debug mode, so don't use switch
-    if(solution_checksum == rostock_checksum) {
+    if(solution_checksum == hbot_checksum) {
+        this->arm_solution = new HBotSolution(this->kernel->config);
+
+    }else if(solution_checksum == rostock_checksum) {
         this->arm_solution = new RostockSolution(this->kernel->config);
 
     }else if(solution_checksum ==  delta_checksum) {
@@ -266,8 +270,9 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
 
     gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
 
-    this->distance_in_gcode_is_known( gcode );
+    if( gcode->millimeters_of_travel < 0.0001 ){ return; }
 
+    this->distance_in_gcode_is_known( gcode );
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
@@ -323,15 +328,10 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
 
     gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
 
+    if( gcode->millimeters_of_travel < 0.0001 ){ return; }
+
     this->distance_in_gcode_is_known( gcode );
     
-    /* 
-    if (gcode->millimeters_of_travel == 0.0) {
-        this->append_milestone(this->current_position, 0.0);
-        return;
-    }
-    */
-
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
 
     double theta_per_segment = angular_travel/segments;
