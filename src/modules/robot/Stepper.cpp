@@ -9,7 +9,7 @@
 #include "libs/Kernel.h"
 #include "Stepper.h"
 #include "Planner.h"
-#include "Player.h"
+#include "Conveyor.h"
 #include <vector>
 using namespace std;
 #include "libs/nuts_bolts.h"
@@ -34,6 +34,7 @@ Stepper::Stepper(){
 //Called when the module has just been loaded
 void Stepper::on_module_loaded(){
     stepper = this;
+    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_EXECUTE);
@@ -50,7 +51,6 @@ void Stepper::on_module_loaded(){
     this->kernel->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
     this->kernel->robot->beta_stepper_motor->attach( this, &Stepper::stepper_motor_finished_move );
     this->kernel->robot->gamma_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
-
 }
 
 // Get configuration from the config file
@@ -59,9 +59,8 @@ void Stepper::on_config_reload(void* argument){
     this->acceleration_ticks_per_second =  this->kernel->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
     this->minimum_steps_per_minute      =  this->kernel->config->value(minimum_steps_per_minute_checksum     )->by_default(3000  )->as_number();
 
-    // Steppers start on by default
-    this->turn_enable_pins_on();
-
+    // Steppers start off by default
+    this->turn_enable_pins_off();
 }
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
@@ -96,16 +95,16 @@ void Stepper::on_gcode_execute(void* argument){
 }
 
 void Stepper::turn_enable_pins_on(){
-    this->kernel->robot->alpha_en_pin->set(0);
-    this->kernel->robot->beta_en_pin->set(0);
-    this->kernel->robot->gamma_en_pin->set(0);
+    this->kernel->robot->alpha_en_pin.set(0);
+    this->kernel->robot->beta_en_pin.set(0);
+    this->kernel->robot->gamma_en_pin.set(0);
     this->enable_pins_status = true;
 }
 
 void Stepper::turn_enable_pins_off(){
-    this->kernel->robot->alpha_en_pin->set(1);
-    this->kernel->robot->beta_en_pin->set(1);
-    this->kernel->robot->gamma_en_pin->set(1);
+    this->kernel->robot->alpha_en_pin.set(1);
+    this->kernel->robot->beta_en_pin.set(1);
+    this->kernel->robot->gamma_en_pin.set(1);
     this->enable_pins_status = false;
 }
 
@@ -193,8 +192,9 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
           return 0;
         }
 
-        if(current_steps_completed <= this->current_block->accelerate_until) {
+        if(current_steps_completed <= this->current_block->accelerate_until + 1) {
               this->trapezoid_adjusted_rate += ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
+
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
               }

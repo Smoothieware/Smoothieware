@@ -19,13 +19,30 @@ using namespace std;
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/ConfigSources/FileConfigSource.h"
+#include "libs/ConfigSources/FirmConfigSource.h"
 
 Config::Config(){
     this->config_cache_loaded = false;
 
+    // Config source for firm config found in src/config.default
+    this->config_sources.push_back( new FirmConfigSource() );
+
     // Config source for */config files
-    this->config_sources.push_back( new FileConfigSource("/local/config", LOCAL_CONFIGSOURCE_CHECKSUM) );
-    this->config_sources.push_back( new FileConfigSource("/sd/config",    SD_CONFIGSOURCE_CHECKSUM   ) );
+    FileConfigSource* fcs = NULL;
+    if( file_exists("/local/config") )
+        fcs = new FileConfigSource("/local/config", LOCAL_CONFIGSOURCE_CHECKSUM);
+    else if( file_exists("/local/config.txt") )
+        fcs = new FileConfigSource("/local/config.txt", LOCAL_CONFIGSOURCE_CHECKSUM);
+    if( fcs != NULL ){
+        this->config_sources.push_back( fcs );
+        fcs = NULL;
+    }
+    if( file_exists("/sd/config") )
+       fcs = new FileConfigSource("/sd/config",    SD_CONFIGSOURCE_CHECKSUM   );
+    else if( file_exists("/sd/config.txt") )
+       fcs = new FileConfigSource("/sd/config.txt",    SD_CONFIGSOURCE_CHECKSUM   );
+    if( fcs != NULL )
+        this->config_sources.push_back( fcs );
 
     // Pre-load the config cache
     this->config_cache_load();
@@ -50,8 +67,8 @@ void Config::set_string( string setting, string value ){
 void Config::get_module_list(vector<uint16_t>* list, uint16_t family){
     for( unsigned int i=1; i<this->config_cache.size(); i++){
         ConfigValue* value = this->config_cache.at(i);
-        //if( value->check_sums.size() == 3 && value->check_sums.at(2) == 29545 && value->check_sums.at(0) == family ){
-        if( value->check_sums[2] == 29545 && value->check_sums[0] == family ){
+        //if( value->check_sums.size() == 3 && value->check_sums.at(2) == CHECKSUM("enable") && value->check_sums.at(0) == family ){
+        if( value->check_sums[2] == CHECKSUM("enable") && value->check_sums[0] == family ){
             // We found a module enable for this family, add it's number
             list->push_back(value->check_sums[1]);
         }
@@ -67,13 +84,13 @@ void Config::config_cache_load(){
     // First element is a special empty ConfigValue for values not found
     ConfigValue* result = new ConfigValue;
     this->config_cache.push_back(result);
- 
+
     // For each ConfigSource in our stack
     for( unsigned int i = 0; i < this->config_sources.size(); i++ ){
         ConfigSource* source = this->config_sources[i];
         source->transfer_values_to_cache(&this->config_cache);
     }
-    
+
     this->config_cache_loaded = true;
 }
 
@@ -110,7 +127,7 @@ ConfigValue* Config::value(uint16_t check_sum){
     check_sums[2] = 0x0000;
     return this->value(check_sums);
 }
-    
+
 // Get a value from the configuration as a string
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
@@ -118,7 +135,7 @@ ConfigValue* Config::value(uint16_t check_sums[]){
     ConfigValue* result = this->config_cache[0];
     bool cache_preloaded = this->config_cache_loaded;
     if( !cache_preloaded ){ this->config_cache_load(); }
-     
+
     for( unsigned int i=1; i<this->config_cache.size(); i++){
         // If this line matches the checksum
         bool match = true;
@@ -136,7 +153,7 @@ ConfigValue* Config::value(uint16_t check_sums[]){
         result = this->config_cache[i];
         break;
     }
-    
+
     if( !cache_preloaded ){
         this->config_cache_clear();
     }

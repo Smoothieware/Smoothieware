@@ -12,14 +12,26 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
-#include "modules/robot/Player.h"
+#include "modules/robot/Conveyor.h"
+#include "DirHandle.h"
+#include "mri.h"
 
 
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
-    this->playing_file = false;
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    this->register_for_event(ON_MAIN_LOOP);
+    this->reset_delay_secs= 0;
+    
+    register_for_event(ON_SECOND_TICK);
+}
+
+void SimpleShell::on_second_tick(void*) {
+    // we are timing out for the reset
+    if (this->reset_delay_secs > 0) {
+        if(--this->reset_delay_secs == 0){
+            system_reset(false);
+        }
+    }
 }
 
 // When a new line is received, check if it is a command, and if it is, act upon it
@@ -33,15 +45,22 @@ void SimpleShell::on_console_line_received( void* argument ){
     unsigned short check_sum = get_checksum( possible_command.substr(0,possible_command.find_first_of(" \r\n")) );  // todo: put this method somewhere more convenient
 
     // Act depending on command
-    switch( check_sum ){
-        case ls_command_checksum      : this->ls_command(  get_arguments(possible_command), new_message.stream ); break;
-        case cd_command_checksum      : this->cd_command(  get_arguments(possible_command), new_message.stream ); break;
-        case pwd_command_checksum     : this->pwd_command( get_arguments(possible_command), new_message.stream ); break;
-        case cat_command_checksum     : this->cat_command( get_arguments(possible_command), new_message.stream ); break;
-        case play_command_checksum    : this->play_command(get_arguments(possible_command), new_message.stream ); break;
-        case reset_command_checksum   : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
-        case dfu_command_checksum     : this->reset_command(get_arguments(possible_command),new_message.stream ); break;
-    }
+    if (check_sum == ls_command_checksum)
+        this->ls_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == cd_command_checksum)
+        this->cd_command(  get_arguments(possible_command), new_message.stream );
+    else if (check_sum == pwd_command_checksum)
+        this->pwd_command( get_arguments(possible_command), new_message.stream );
+    else if (check_sum == cat_command_checksum)
+        this->cat_command( get_arguments(possible_command), new_message.stream );
+    else if (check_sum == break_command_checksum)
+        this->break_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == reset_command_checksum)
+        this->reset_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == dfu_command_checksum)
+        this->dfu_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == help_command_checksum)
+        this->help_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -60,6 +79,7 @@ void SimpleShell::ls_command( string parameters, StreamOutput* stream ){
     d = opendir(folder.c_str());
     if(d != NULL) {
         while((p = readdir(d)) != NULL) { stream->printf("%s\r\n", lc(string(p->d_name)).c_str()); }
+        closedir(d);
     } else {
         stream->printf("Could not open directory %s \r\n", folder.c_str());
     }
@@ -75,6 +95,7 @@ void SimpleShell::cd_command( string parameters, StreamOutput* stream ){
         stream->printf("Could not open directory %s \r\n", folder.c_str() );
     }else{
         this->current_path = folder;
+        closedir(d);
     }
 }
 
@@ -90,7 +111,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
     string limit_paramater   = shift_parameter( parameters );
     int limit = -1;
-    if( limit_paramater != "" ){ limit = int(atof(limit_paramater.c_str())); }
+    if( limit_paramater != "" )
+    {
+        char* e = NULL;
+        limit = strtol(limit_paramater.c_str(), &e, 10);
+        if (e <= limit_paramater.c_str())
+            limit = -1;
+    }
 
     // Open file
     FILE *lp = fopen(filename.c_str(), "r");
@@ -107,7 +134,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
         buffer.append((char *)&c, 1);
         if( char(c) == '\n' ){
             newlines++;
-            stream->printf("%s", buffer.c_str());
+            stream->puts(buffer.c_str());
             buffer.clear();
         }
         if( newlines == limit ){ break; }
@@ -116,57 +143,38 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 
 }
 
-// Play a gcode file by considering each line as if it was received on the serial console
-void SimpleShell::play_command( string parameters, StreamOutput* stream ){
-
-    // Get filename
-    string filename          = this->absolute_from_relative(shift_parameter( parameters ));
-    stream->printf("Playing %s\r\n", filename.c_str());
-    string options           = shift_parameter( parameters );
-
-    this->current_file_handler = fopen( filename.c_str(), "r");
-    if(this->current_file_handler == NULL)
-    {
-        stream->printf("File not found: %s\r\n", filename.c_str());
-        return;
-    }
-    this->playing_file = true;
-    if( options.find_first_of("Qq") == string::npos ){
-        this->current_stream = stream;
-    }else{
-        this->current_stream = new StreamOutput();
-    }
-}
-
 // Reset the system
 void SimpleShell::reset_command( string parameters, StreamOutput* stream){
-    stream->printf("Smoothie out. Peace.\r\n");
-    system_reset();
+    stream->printf("Smoothie out. Peace. Rebooting in 5 seconds...\r\n");
+    this->reset_delay_secs= 5; // reboot in 5 seconds
 }
 
-void SimpleShell::on_main_loop(void* argument){
-
-    if( this->playing_file ){
-        string buffer;
-        int c;
-        // Print each line of the file
-        while ((c = fgetc(this->current_file_handler)) != EOF){
-            if (c == '\n'){
-                this->current_stream->printf("%s\n", buffer.c_str());
-                struct SerialMessage message;
-                message.message = buffer;
-                message.stream = this->current_stream;
-                // wait for the queue to have enough room that a serial message could still be received before sending
-                this->kernel->player->wait_for_queue(2);
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-                buffer.clear();
-                return;
-            }else{
-                buffer += c;
-            }
-        };
-
-        fclose(this->current_file_handler);
-        this->playing_file = false;
-    }
+// go into dfu boot mode
+void SimpleShell::dfu_command( string parameters, StreamOutput* stream){
+    stream->printf("Entering boot mode...\r\n");
+    system_reset(true);
 }
+
+// Break out into the MRI debugging system
+void SimpleShell::break_command( string parameters, StreamOutput* stream){
+    stream->printf("Entering MRI debug mode...\r\n");
+    __debugbreak();
+}
+
+void SimpleShell::help_command( string parameters, StreamOutput* stream ){
+    stream->printf("Commands:\r\n");
+    stream->printf("ls [folder]\r\n");
+    stream->printf("cd folder\r\n");
+    stream->printf("pwd\r\n");  
+    stream->printf("cat file [limit]\r\n");
+    stream->printf("play file [-q]\r\n");
+    stream->printf("progress - shows progress of current play\r\n");
+    stream->printf("abort - abort currently playing file\r\n");
+    stream->printf("reset - reset smoothie\r\n");           
+    stream->printf("dfu - enter dfu boot loader\r\n");          
+    stream->printf("break - break into debugger\r\n");          
+    stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
+    stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
+    stream->printf("config-load [<file_name>]\r\n");
+}
+

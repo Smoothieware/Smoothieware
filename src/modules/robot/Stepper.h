@@ -12,19 +12,19 @@
 #include "Planner.h"
 #include "Block.h"
 
-#define microseconds_per_step_pulse_checksum        42333
-#define acceleration_ticks_per_second_checksum      25075
-#define minimum_steps_per_minute_checksum           9003
-#define base_stepping_frequency_checksum            21918
-#define alpha_step_pin_checksum                     11468
-#define beta_step_pin_checksum                      22114
-#define gamma_step_pin_checksum                     1225
-#define alpha_dir_pin_checksum                      55887
-#define beta_dir_pin_checksum                       28644
-#define gamma_dir_pin_checksum                      46412
-#define alpha_en_pin_checksum                       35042
-#define beta_en_pin_checksum                        34680
-#define gamma_en_pin_checksum                       26335
+#define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
+#define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
+#define minimum_steps_per_minute_checksum           CHECKSUM("minimum_steps_per_minute")
+#define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
+#define alpha_step_pin_checksum                     CHECKSUM("alpha_step_pin")
+#define beta_step_pin_checksum                      CHECKSUM("beta_step_pin")
+#define gamma_step_pin_checksum                     CHECKSUM("gamma_step_pin")
+#define alpha_dir_pin_checksum                      CHECKSUM("alpha_dir_pin")
+#define beta_dir_pin_checksum                       CHECKSUM("beta_dir_pin")
+#define gamma_dir_pin_checksum                      CHECKSUM("gamma_dir_pin")
+#define alpha_en_pin_checksum                       CHECKSUM("alpha_en_pin")
+#define beta_en_pin_checksum                        CHECKSUM("beta_en_pin")
+#define gamma_en_pin_checksum                       CHECKSUM("gamma_en_pin")
 
 
 class Stepper : public Module {
@@ -62,17 +62,8 @@ class Stepper : public Module {
         bool trapezoid_generator_busy;
         int microseconds_per_step_pulse;
         int acceleration_ticks_per_second;
-        int minimum_steps_per_minute;
+        unsigned int minimum_steps_per_minute;
         int base_stepping_frequency;
-        Pin* alpha_step_pin;
-        Pin* beta_step_pin;
-        Pin* gamma_step_pin;
-        Pin* alpha_dir_pin;
-        Pin* beta_dir_pin;
-        Pin* gamma_dir_pin;
-        Pin* alpha_en_pin;
-        Pin* beta_en_pin;
-        Pin* gamma_en_pin;
         unsigned short step_bits[3];
         int counter_increment;
         bool paused;

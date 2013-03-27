@@ -14,10 +14,15 @@
 #include "libs/Kernel.h"
 #include "modules/robot/Block.h"
 
-#define microseconds_per_step_pulse_checksum 42333
-#define extruder_module_enable_checksum      6183
-#define extruder_steps_per_mm_checksum       58088
-#define extruder_acceleration_checksum       60356
+#define microseconds_per_step_pulse_checksum CHECKSUM("microseconds_per_step_pulse")
+#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
+#define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
+#define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
+#define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
+#define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
+#define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
+#define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
+
 // default_feed_rate_checksum defined by Robot.h
 
 #define OFF 0
@@ -27,20 +32,22 @@
 class Extruder : public Module{
     public:
         Extruder();
-        void on_module_loaded();
-        void on_config_reload(void* argument);
-        void on_gcode_execute(void* argument);
-        void on_block_begin(void* argument);
-        void on_block_end(void* argument);
-        void on_play(void* argument);
-        void on_pause(void* argument);
-        void on_speed_change(void* argument);
+        void     on_module_loaded();
+        void     on_config_reload(void* argument);
+        void     on_gcode_received(void*);
+        void     on_gcode_execute(void* argument);
+        void     on_block_begin(void* argument);
+        void     on_block_end(void* argument);
+        void     on_play(void* argument);
+        void     on_pause(void* argument);
+        void     on_speed_change(void* argument);
         uint32_t acceleration_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
+        Block*   append_empty_block();
 
-        Pin*            step_pin;                     // Step pin for the stepper driver
-        Pin*            dir_pin;                      // Dir pin for the stepper driver
-        Pin*            en_pin;
+        Pin             step_pin;                     // Step pin for the stepper driver
+        Pin             dir_pin;                      // Dir pin for the stepper driver
+        Pin             en_pin;
 
         double          target_position;              // End point ( in steps ) for the current move
         double          current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed
@@ -50,6 +57,7 @@ class Extruder : public Module{
         double          steps_per_millimeter;         // Steps to travel one millimeter
         double          feed_rate;                    //
         double          acceleration;                 //
+        double          max_speed;
 
         int             counter_increment;
         int             step_counter;

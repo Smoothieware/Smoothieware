@@ -12,15 +12,23 @@
 #include "Laser.h"
 #include "libs/nuts_bolts.h"
 
-Laser::Laser(PinName pin) : laser_pin(pin){
-    this->laser_pin.period_us(20);
+Laser::Laser(){
 }
 
 void Laser::on_module_loaded() {
-    if( !this->kernel->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){ return; }
-  	this->laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.3)->as_number() ;
-  	this->laser_tickle_power = this->kernel->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
-  	//register for events
+    if( !this->kernel->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){
+        // as not needed free up resource
+        delete this;
+        return;
+    }
+
+    this->laser_pin = new mbed::PwmOut(p21);
+    this->laser_pin->period_us(20);
+
+    this->laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.3)->as_number() ;
+    this->laser_tickle_power = this->kernel->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
+
+    //register for events
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_PLAY);
@@ -31,7 +39,7 @@ void Laser::on_module_loaded() {
 
 // Turn laser off laser at the end of a move
 void  Laser::on_block_end(void* argument){
-    this->laser_pin = 0;
+    this->laser_pin->write(0);
 }
 
 // Set laser power at the beginning of a block
@@ -41,7 +49,7 @@ void Laser::on_block_begin(void* argument){
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Laser::on_pause(void* argument){
-    this->laser_pin = 0;
+    this->laser_pin->write(0);
 }
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
@@ -53,10 +61,10 @@ void Laser::on_play(void* argument){
 void Laser::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     this->laser_on = false;
-    if( gcode->has_letter('G' )){
-        int code = gcode->get_value('G');
+    if( gcode->has_g){
+        int code = gcode->g;
         if( code == 0 ){                    // G0
-            this->laser_pin = this->laser_tickle_power;
+            this->laser_pin->write(this->laser_tickle_power);
             this->laser_on =  false;
         }else if( code >= 1 && code <= 3 ){ // G1, G2, G3
             this->laser_on =  true;
@@ -79,6 +87,6 @@ void Laser::on_speed_change(void* argument){
 void Laser::set_proportional_power(){
     if( this->laser_on && this->kernel->stepper->current_block ){
         // adjust power to maximum power and actual velocity
-        this->laser_pin = double (this->laser_max_power) * double(this->kernel->stepper->trapezoid_adjusted_rate) / double(this->kernel->stepper->current_block->nominal_rate);
+        this->laser_pin->write(float(double(this->laser_max_power) * double(this->kernel->stepper->trapezoid_adjusted_rate) / double(this->kernel->stepper->current_block->nominal_rate)));
     }
 }

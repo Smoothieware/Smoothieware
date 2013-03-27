@@ -41,6 +41,7 @@ class StepTicker{
         bool reset_step_pins;
 
         StepperMotor* active_motors[12];
+        uint32_t active_motor_bm;
 };
 
 

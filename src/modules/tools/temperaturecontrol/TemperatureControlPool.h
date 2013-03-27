@@ -9,12 +9,13 @@
 #define TEMPERATURECONTROLPOOL_H
 
 #include "TemperatureControl.h"
+#include "PID_Autotuner.h"
 #include <math.h>
 using namespace std;
 #include <vector>
 
-#define temperature_control_checksum 44054
-#define enable_checksum              29545
+#define temperature_control_checksum CHECKSUM("temperature_control")
+#define enable_checksum              CHECKSUM("enable")
 
 class TemperatureControlPool : public Module {
     public:
@@ -23,6 +24,7 @@ class TemperatureControlPool : public Module {
         void on_module_loaded();
 
         vector<TemperatureControl*> controllers;
+        PID_Autotuner* PIDtuner;
 };
 
 

@@ -10,17 +10,47 @@
 using std::string;
 #include "Gcode.h"
 #include "libs/StreamOutput.h"
+#include "utils.h"
 
 #include <stdlib.h>
 
 
-Gcode::Gcode(){}
+Gcode::Gcode(const string& command, StreamOutput* stream) : command(command), m(0), g(0), add_nl(false), stream(stream) {
+    prepare_cached_values();
+    this->millimeters_of_travel = 0L;
+}
+
+Gcode::Gcode(const Gcode& to_copy){
+    this->command.assign( to_copy.command );
+    this->millimeters_of_travel = to_copy.millimeters_of_travel;
+    this->has_m                 = to_copy.has_m;
+    this->has_g                 = to_copy.has_g;
+    this->m                     = to_copy.m;
+    this->g                     = to_copy.g;
+    this->add_nl                = to_copy.add_nl;
+    this->stream                = to_copy.stream;
+}
+
+Gcode& Gcode::operator= (const Gcode& to_copy){
+    if( this != &to_copy ){
+        this->command.assign( to_copy.command );
+        this->millimeters_of_travel = to_copy.millimeters_of_travel;
+        this->has_m                 = to_copy.has_m;
+        this->has_g                 = to_copy.has_g;
+        this->m                     = to_copy.m;
+        this->g                     = to_copy.g;
+        this->add_nl                = to_copy.add_nl;
+        this->stream                = to_copy.stream;
+    }
+    return *this;
+}
+
 
 // Whether or not a Gcode has a letter
 bool Gcode::has_letter( char letter ){
     //return ( this->command->find( letter ) != string::npos );
-    for (size_t i=0; i < this->command.length(); i++){
-        if( this->command.at(i) == letter ){
+    for (std::string::const_iterator c = this->command.cbegin(); c != this->command.cend(); c++) {
+        if( *c == letter ){
             return true;
         }
     }
@@ -31,24 +61,32 @@ bool Gcode::has_letter( char letter ){
 // We don't use the high-level methods of std::string because they call malloc and it's very bad to do that inside of interrupts
 double Gcode::get_value( char letter ){
     //__disable_irq();
-    for (size_t i=0; i <= this->command.length()-1; i++){
-         if( letter == this->command.at(i) ){
-            size_t beginning = i+1;
-            char buffer[20];
-            for(size_t j=beginning; j <= this->command.length(); j++){
-                char c;
-                if( j == this->command.length() ){ c = ';'; }else{ c = this->command.at(j); }
-                if( c != '.' && c != '-' && ( c < '0' || c > '9' ) ){
-                    buffer[j-beginning] = '\0';
-                    //__enable_irq();
-                    return atof(buffer);
-                }else{
-                    buffer[j-beginning] = c;
-                }
-            }
+    const char* cs = command.c_str();
+    char* cn = NULL;
+    for (; *cs; cs++){
+         if( letter == *cs ){
+             cs++;
+             double r = strtod(cs, &cn);
+             if (cn > cs)
+                 return r;
          }
     }
     //__enable_irq();
+    return 0;
+}
+
+int Gcode::get_int( char letter )
+{
+    const char* cs = command.c_str();
+    char* cn = NULL;
+    for (; *cs; cs++){
+        if( letter == *cs ){
+            cs++;
+            int r = strtol(cs, &cn, 10);
+            if (cn > cs)
+                return r;
+        }
+    }
     return 0;
 }
 
@@ -65,13 +103,13 @@ int Gcode::get_num_args(){
 void Gcode::prepare_cached_values(){
     if( this->has_letter('G') ){
         this->has_g = true;
-        this->g = this->get_value('G');
+        this->g = this->get_int('G');
     }else{
         this->has_g = false;
     }
     if( this->has_letter('M') ){
         this->has_m = true;
-        this->m = this->get_value('M');
+        this->m = this->get_int('M');
     }else{
         this->has_m = false;
     }

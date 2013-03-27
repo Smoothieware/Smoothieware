@@ -14,14 +14,14 @@
 #include "libs/utils.h"
 #include "libs/StreamOutput.h"
 
-
-#define ls_command_checksum      19679
-#define cd_command_checksum      11207
-#define pwd_command_checksum     42060
-#define cat_command_checksum     24889
-#define play_command_checksum    17335
-#define reset_command_checksum   27429
-#define dfu_command_checksum     28480
+#define ls_command_checksum       CHECKSUM("ls")
+#define cd_command_checksum       CHECKSUM("cd")
+#define pwd_command_checksum      CHECKSUM("pwd")
+#define cat_command_checksum      CHECKSUM("cat")
+#define reset_command_checksum    CHECKSUM("reset")
+#define dfu_command_checksum      CHECKSUM("dfu")
+#define break_command_checksum    CHECKSUM("break")
+#define help_command_checksum     CHECKSUM("help")
 
 class SimpleShell : public Module {
     public:
@@ -29,19 +29,20 @@ class SimpleShell : public Module {
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
-        void on_main_loop( void* argument );
+        void on_second_tick(void*);
         string absolute_from_relative( string path );
         void ls_command(   string parameters, StreamOutput* stream );
         void cd_command(   string parameters, StreamOutput* stream );
         void pwd_command(  string parameters, StreamOutput* stream );
         void cat_command(  string parameters, StreamOutput* stream );
-        void play_command( string parameters, StreamOutput* stream );
+        void break_command(string parameters, StreamOutput* stream );
         void reset_command(string parameters, StreamOutput* stream );
-
+        void dfu_command(string parameters, StreamOutput* stream );
+        void help_command(string parameters, StreamOutput* stream );
+        
+    private:
         string current_path;
-        bool playing_file;
-        StreamOutput* current_stream;
-        FILE* current_file_handler;
+        int reset_delay_secs;
 };
 
 
