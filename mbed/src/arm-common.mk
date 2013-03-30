@@ -58,9 +58,6 @@ LD_DEST=$(RELEASE_DROP)/$(LD_FILE)
 
 
 # Copy headers to device drop directory.
-COMMON_HEADER_SRCS =$(notdir $(wildcard $(MBED_CPP_SRC)/*.h))
-COMMON_HEADER_SRCS+=$(notdir $(wildcard $(MBED_CAPI_SRC)/*.h))
-COMMON_HEADERS     =$(patsubst %.h,$(DROP_DIR)/%.h,$(COMMON_HEADER_SRCS))
 DEVICE_HEADER_SRCS =$(notdir $(wildcard $(VENDOR_CAPI_DEVICE_SRC)/*.h))
 DEVICE_HEADER_SRCS+=$(notdir $(wildcard $(VENDOR_CMSIS_SRC)/*.h))
 DEVICE_HEADERS     =$(patsubst %.h,$(DEVICE_DROP)/%.h,$(DEVICE_HEADER_SRCS))
@@ -160,6 +157,7 @@ COPY       =copy
 CAT        =type
 MKDIR      =mkdir
 QUIET      =>nul 2>nul & exit 0
+NOSTDOUT   =>nul
 else
 REMOVE     =rm
 REMOVE_DIR =rm -r -f
@@ -167,6 +165,7 @@ COPY       =cp
 CAT        =cat
 MKDIR      =mkdir -p
 QUIET      => /dev/null 2>&1 ; exit 0
+NOSTDOUT   => /dev/null
 endif
 
 
@@ -187,7 +186,7 @@ endif
 #########################################################################
 .PHONY: all clean
 
-all: $(RELEASE_MBED) $(DEBUG_MBED) $(COMMON_HEADERS) $(DEVICE_HEADERS) $(LD_DEST)
+all: $(RELEASE_MBED) $(DEBUG_MBED) $(DEVICE_HEADERS) $(LD_DEST)
 
 $(RELEASE_MBED): $(RELEASE_OBJECTS)
 	@echo Linking release library $@
@@ -205,10 +204,8 @@ $(LD_DEST): $(LD_SRC)
 	$(Q) $(COPY) $(call convert-slash,$?) $(call convert-slash,$@)
 
 clean:
-	@echo Cleaning up all build generated files
 	$(Q) $(REMOVE_DIR) $(call convert-slash,$(DEBUG_OBJDIR)) $(QUIET)
 	$(Q) $(REMOVE_DIR) $(call convert-slash,$(RELEASE_OBJDIR)) $(QUIET)
-	$(Q) $(REMOVE_DIR) $(call convert-slash,$(DROP_DIR)) $(QUIET)
 
 -include $(DEBUG_DEPFILES)
 -include $(RELEASE_DEPFILES)
@@ -247,18 +244,12 @@ $(RELEASE_OBJDIR)/%.o : %.s
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GCC) $(AS_FLAGS) -c $< -o $@
 
-$(DROP_DIR)/%.h : $(MBED_CPP_SRC)/%.h
-	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	$(Q) $(COPY) $(call convert-slash,$?) $(call convert-slash,$@)
-
-$(DROP_DIR)/%.h : $(MBED_CAPI_SRC)/%.h
-	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	$(Q) $(COPY) $(call convert-slash,$?) $(call convert-slash,$@)
-
 $(DEVICE_DROP)/%.h : $(VENDOR_CAPI_DEVICE_SRC)/%.h
+	@echo Deploying $? to drop
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	$(Q) $(COPY) $(call convert-slash,$?) $(call convert-slash,$@)
+	$(Q) $(COPY) $(call convert-slash,$?) $(call convert-slash,$@) $(NOSTDOUT)
 
 $(DEVICE_DROP)/%.h : $(VENDOR_CMSIS_SRC)/%.h
+	@echo Deploying $? to drop
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
-	$(Q) $(COPY) $(call convert-slash,$?) $(call convert-slash,$@)
+	$(Q) $(COPY) $(call convert-slash,$?) $(call convert-slash,$@) $(NOSTDOUT)
