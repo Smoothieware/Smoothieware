@@ -155,7 +155,7 @@ void TemperatureControl::on_gcode_received(void* argument){
                 this->pool->PIDtuner->begin(this, target, gcode->stream);
             }
         }
-        
+
         // Attach gcodes to the last block for on_gcode_execute
         if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ){
             if( this->kernel->conveyor->queue.size() == 0 ){
@@ -164,7 +164,7 @@ void TemperatureControl::on_gcode_received(void* argument){
                 Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
                 block->append_gcode(gcode);
             }
-            
+
         }
     }
 }
@@ -172,17 +172,12 @@ void TemperatureControl::on_gcode_received(void* argument){
 void TemperatureControl::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if( gcode->has_m){
-        // Set temperature without waiting
-        if( gcode->m == this->set_m_code && gcode->has_letter('S') )
+        if (((gcode->m == this->set_m_code) || (gcode->m == this->set_and_wait_m_code))
+            && gcode->has_letter('S'))
         {
             double v = gcode->get_value('S');
 
-            if (v == 1.0)
-                v = preset1;
-            else if (v == 2.0)
-                v = preset2;
-
-            if (v == 0)
+            if (v == 0.0)
             {
                 this->target_temperature = UNDEFINED;
                 this->heater_pin.set(0);
@@ -190,29 +185,25 @@ void TemperatureControl::on_gcode_execute(void* argument){
             else
             {
                 this->set_desired_temperature(v);
-            }
-        }
-        // Set temperature and wait
-        if( gcode->m == this->set_and_wait_m_code && gcode->has_letter('S') )
-        {
-            if (gcode->get_value('S') == 0)
-            {
-                this->target_temperature = UNDEFINED;
-                this->heater_pin.set(0);
-            }
-            else
-            {
-                this->set_desired_temperature(gcode->get_value('S'));
-                // Pause
-                this->kernel->pauser->take();
-                this->waiting = true;
+
+                if( gcode->m == this->set_and_wait_m_code)
+                {
+                    this->kernel->pauser->take();
+                    this->waiting = true;
+                }
             }
         }
     }
 }
 
 
-void TemperatureControl::set_desired_temperature(double desired_temperature){
+void TemperatureControl::set_desired_temperature(double desired_temperature)
+{
+    if (desired_temperature == 1.0)
+        desired_temperature = preset1;
+    else if (desired_temperature == 2.0)
+        desired_temperature = preset2;
+
     target_temperature = desired_temperature;
     if (desired_temperature == 0.0)
         heater_pin.set((o = 0));
