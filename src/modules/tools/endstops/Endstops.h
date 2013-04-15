@@ -23,6 +23,8 @@
 #define MOVING_BACK 2
 #define MOVING_TO_ORIGIN_SLOW 3
 
+#define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
+
 #define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
 #define beta_min_endstop_checksum        CHECKSUM("beta_min_endstop")
 #define gamma_min_endstop_checksum       CHECKSUM("gamma_min_endstop")

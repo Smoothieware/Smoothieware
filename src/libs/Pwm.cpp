@@ -17,7 +17,7 @@ void Pwm::pwm(int new_pwm)
 
 Pwm* Pwm::max_pwm(int new_max)
 {
-    _max = confine(new_max, 0, PID_PWM_MAX);
+    _max = confine(new_max, 0, PID_PWM_MAX - 1);
     _pwm = confine(   _pwm, 0, _max);
     return this;
 }

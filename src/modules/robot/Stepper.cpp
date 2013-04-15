@@ -142,6 +142,9 @@ void Stepper::on_block_begin(void* argument){
     if( this->kernel->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->beta_stepper_motor; }
     if( this->kernel->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->gamma_stepper_motor; }
 
+
+    this->trapezoid_generator_tick(0);
+
     // Synchronise the acceleration curve with the stepping
     this->synchronize_acceleration(0);
 
