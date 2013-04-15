@@ -39,7 +39,6 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
 
 void StepperMotor::step(){
 
-    LPC_GPIO1->FIOSET =  1<<31;
 
     // output to pins 37t
     this->step_pin->set( 1                   );
@@ -62,7 +61,6 @@ void StepperMotor::step(){
         this->step_ticker->moves_finished = true;
     }
 
-    LPC_GPIO1->FIOCLR =  1<<31;
 
 }
 

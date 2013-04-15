@@ -175,25 +175,20 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
 // current_block stays untouched by outside handlers for the duration of this function call.
 uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
 
+    LPC_GPIO1->FIOSET =  1<<31;
+    
     if(this->current_block && !this->paused && this->main_stepper->moving ) {
         uint32_t current_steps_completed = this->main_stepper->stepped;
-
-        if( previous_step_count == current_steps_completed && previous_step_count != 0 ){
-            // We must skip this step update because no step has happened
-            skipped_speed_updates++;
-            return 0;
-        }else{
-            previous_step_count = current_steps_completed;
-        }
 
         if( this->force_speed_update ){
           this->force_speed_update = false;
           this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+          LPC_GPIO1->FIOCLR =  1<<31;
           return 0;
         }
 
         if(current_steps_completed <= this->current_block->accelerate_until + 1) {
-              this->trapezoid_adjusted_rate += ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
+              this->trapezoid_adjusted_rate += this->current_block->rate_delta;
 
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
@@ -203,7 +198,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
               // NOTE: We will only reduce speed if the result will be > 0. This catches small
               // rounding errors that might leave steps hanging after the last trapezoid tick.
               if(this->trapezoid_adjusted_rate > this->current_block->rate_delta * 1.5) {
-                  this->trapezoid_adjusted_rate -= ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
+                  this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
               }else{
                   this->trapezoid_adjusted_rate = this->current_block->rate_delta * 1.5;
               }
@@ -220,9 +215,8 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
           }
     }
 
-    skipped_speed_updates = 0;
+    LPC_GPIO1->FIOCLR =  1<<31;
     return 0;
-
 }
 
 
