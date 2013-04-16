@@ -14,7 +14,8 @@ using std::string;
 
 #include <stdlib.h>
 
-
+// This is a gcode object. It reprensents a GCode string/command, an caches some important values about that command for the sake of performance.
+// It gets passed around in events, and attached to the queue ( that'll change )
 Gcode::Gcode(const string& command, StreamOutput* stream) : command(command), m(0), g(0), add_nl(false), stream(stream) {
     prepare_cached_values();
     this->millimeters_of_travel = 0L;
@@ -100,6 +101,7 @@ int Gcode::get_num_args(){
     return count;
 }
 
+// Cache some of this command's properties, so we don't have to parse the string every time we want to look at them
 void Gcode::prepare_cached_values(){
     if( this->has_letter('G') ){
         this->has_g = true;

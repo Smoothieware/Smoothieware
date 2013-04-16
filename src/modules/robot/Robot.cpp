@@ -23,6 +23,9 @@ using std::string;
 #include "arm_solutions/RostockSolution.h"
 #include "arm_solutions/HBotSolution.h"
 
+// The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
+// It takes care of cutting arcs into segments, same thing for line that are too long
+
 Robot::Robot(){
     this->inch_mode = false;
     this->absolute_mode = true;
@@ -50,9 +53,13 @@ void Robot::on_module_loaded() {
 }
 
 void Robot::on_config_reload(void* argument){
+    
+    // Arm solutions are used to convert positions in millimeters into position in steps for each stepper motor.
+    // While for a cartesian arm solution, this is a simple multiplication, in other, less simple cases, there is some serious math to be done.
+    // To make adding those solution easier, they have their own, separate object.
+    // Here we read the config to find out which arm solution to use 
     if (this->arm_solution) delete this->arm_solution;
     int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
-
     // Note checksums are not const expressions when in debug mode, so don't use switch
     if(solution_checksum == hbot_checksum) {
         this->arm_solution = new HBotSolution(this->kernel->config);
@@ -96,41 +103,10 @@ void Robot::on_config_reload(void* argument){
 
 }
 
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
-
-
 //A GCode has been received
+//See if the current Gcode line has some orders for us
 void Robot::on_gcode_received(void * argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    this->process_gcode(gcode);
-}
-
-// We called process_gcode with a new gcode, and one of the functions 
-// determined the distance for that given gcode. So now we can attach this gcode to the right block
-// and continue
-void Robot::distance_in_gcode_is_known(Gcode* gcode){
-
-    //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( this->kernel->conveyor->queue.size() == 0 ){
-        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-    }else{
-        Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-        block->append_gcode(gcode);
-    }
-
-}
-
-//#pragma GCC pop_options
-
-void Robot::reset_axis_position(double position, int axis) {
-    this->last_milestone[axis] = this->current_position[axis] = position;
-    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
-}
-
-
-//See if the current Gcode line has some orders for us
-void Robot::process_gcode(Gcode* gcode){
 
     //Temp variables, constant properties are stored in the object
     uint8_t next_action = NEXT_ACTION_DEFAULT;
@@ -237,20 +213,47 @@ void Robot::process_gcode(Gcode* gcode){
     // in any intermediate location.
     memcpy(this->current_position, target, sizeof(double)*3); // this->position[] = target[];
 
+
+
+
 }
+
+// We received a new gcode, and one of the functions 
+// determined the distance for that given gcode. So now we can attach this gcode to the right block
+// and continue
+void Robot::distance_in_gcode_is_known(Gcode* gcode){
+
+    //If the queue is empty, execute immediatly, otherwise attach to the last added block
+    if( this->kernel->conveyor->queue.size() == 0 ){
+        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+    }else{
+        Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+        block->append_gcode(gcode);
+    }
+
+}
+
+// Reset the position for all axes ( used in homing and G92 stuff )
+void Robot::reset_axis_position(double position, int axis) {
+    this->last_milestone[axis] = this->current_position[axis] = position;
+    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+}
+
 
 // Convert target from millimeters to steps, and append this to the planner
 void Robot::append_milestone( double target[], double rate ){
     int steps[3]; //Holds the result of the conversion
 
+    // We use an arm solution object so exotic arm solutions can be used and neatly abstracted
     this->arm_solution->millimeters_to_steps( target, steps );
 
     double deltas[3];
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
 
-
+    // Compute how long this move moves, so we can attach it to the block for later use
     double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
 
+    // Do not move faster than the configured limits
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
         if( this->max_speeds[axis] > 0 ){
             double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * seconds_per_minute;
@@ -260,24 +263,29 @@ void Robot::append_milestone( double target[], double rate ){
         }
     }
 
+    // Append the block to the planner
     this->kernel->planner->append_block( steps, rate * seconds_per_minute, millimeters_of_travel, deltas );
 
+    // Update the last_milestone to the current target for the next time we use last_milestone
     memcpy(this->last_milestone, target, sizeof(double)*3); // this->last_milestone[] = target[];
 
 }
 
+// Append a move to the queue ( cutting it into segments if needed )
 void Robot::append_line(Gcode* gcode, double target[], double rate ){
 
+    // Find out the distance for this gcode
     gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
 
+    // We ignore non-moves ( for example, extruder moves are not XYZ moves )
     if( gcode->millimeters_of_travel < 0.0001 ){ return; }
 
+    // Mark the gcode as having a known distance
     this->distance_in_gcode_is_known( gcode );
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
     // In delta robots either mm_per_line_segment can be used OR delta_segments_per_second The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
-
     uint16_t segments;
     
     if(this->delta_segments_per_second > 1.0) {
@@ -305,14 +313,19 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
     //For each segment
     for( int i=0; i<segments-1; i++ ){
         for(int axis=X_AXIS; axis <= Z_AXIS; axis++ ){ temp_target[axis] += ( target[axis]-this->current_position[axis] )/segments; }
+        // Append the end of this segment to the queue 
         this->append_milestone(temp_target, rate);
     }
+    
+    // Append the end of this full move to the queue 
     this->append_milestone(target, rate);
 }
 
 
+// Append an arc to the queue ( cutting it into segments as needed )
 void Robot::append_arc(Gcode* gcode, double target[], double offset[], double radius, bool is_clockwise ){
 
+    // Scary math
     double center_axis0 = this->current_position[this->plane_axis_0] + offset[this->plane_axis_0];
     double center_axis1 = this->current_position[this->plane_axis_1] + offset[this->plane_axis_1];
     double linear_travel = target[this->plane_axis_2] - this->current_position[this->plane_axis_2];
@@ -326,12 +339,16 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
     if (angular_travel < 0) { angular_travel += 2*M_PI; }
     if (is_clockwise) { angular_travel -= 2*M_PI; }
 
+    // Find the distance for this gcode
     gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
 
+    // We don't care about non-XYZ moves ( for example the extruder produces some of those )
     if( gcode->millimeters_of_travel < 0.0001 ){ return; }
 
+    // Mark the gcode as having a known distance
     this->distance_in_gcode_is_known( gcode );
-    
+   
+    // Figure out how many segments for this gcode 
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
 
     double theta_per_segment = angular_travel/segments;
@@ -396,14 +413,17 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
         arc_target[this->plane_axis_0] = center_axis0 + r_axis0;
         arc_target[this->plane_axis_1] = center_axis1 + r_axis1;
         arc_target[this->plane_axis_2] += linear_per_segment;
+
+        // Append this segment to the queue
         this->append_milestone(arc_target, this->feed_rate);
 
     }
+
     // Ensure last segment arrives at target location.
     this->append_milestone(target, this->feed_rate);
 }
 
-
+// Do the math for an arc and add it to the queue
 void Robot::compute_arc(Gcode* gcode, double offset[], double target[]){
 
     // Find the radius
