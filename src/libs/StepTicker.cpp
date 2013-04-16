@@ -22,6 +22,7 @@ using namespace std;
 // They then do Bresenham stuff themselves
 
 StepTicker* global_step_ticker;
+int debug_counter;
 
 StepTicker::StepTicker(){
     global_step_ticker = this;
@@ -46,6 +47,8 @@ StepTicker::StepTicker(){
         this->active_motors[i] = NULL;
     }
     this->active_motor_bm = 0;
+
+    debug_counter = 0;
 
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
@@ -144,6 +147,16 @@ extern "C" void TIMER1_IRQHandler (void){
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
 
+    if( global_step_ticker->active_motor_bm == 0 ){
+        debug_counter++;
+        if( debug_counter > 20 ){
+            debug_counter--;
+            debug_counter += LPC_TIM0->TCR;
+        }
+    }else{
+        debug_counter = 0;
+    }
+
     LPC_GPIO3->FIODIR |= 1<<25;
     LPC_GPIO1->FIODIR |= 1<<22;
     LPC_GPIO1->FIODIR |= 1<<23;
@@ -182,7 +195,7 @@ extern "C" void TIMER0_IRQHandler (void){
     if( global_step_ticker->moves_finished ){ 
  
         // Do not get out of here before everything is nice and tidy
-        LPC_TIM0->MR0 = 2000000;
+        LPC_TIM0->MR0 = 20000000;
         
         global_step_ticker->signal_moves_finished();
 
@@ -252,10 +265,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
         if (this->active_motors[i] == motor)
         {
             this->active_motor_bm |= bm;
-            // If we have no motor to work on, disable the whole interrupt
-            if( this->active_motor_bm == 0 ){
-                LPC_TIM0->TCR = 0;               // Disable interrupt
-            }else{
+            if( this->active_motor_bm != 0 ){
                 LPC_TIM0->TCR = 1;               // Enable interrupt
             }
             return;
@@ -264,10 +274,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
         {
             this->active_motors[i] = motor;
             this->active_motor_bm |= bm;
-            // If we have no motor to work on, disable the whole interrupt
-            if( this->active_motor_bm == 0 ){
-                LPC_TIM0->TCR = 0;               // Disable interrupt
-            }else{
+            if( this->active_motor_bm != 0 ){
                 LPC_TIM0->TCR = 1;               // Enable interrupt
             }
             return;
@@ -287,9 +294,7 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
             this->active_motor_bm &= ~bm;
             // If we have no motor to work on, disable the whole interrupt
             if( this->active_motor_bm == 0 ){
-                LPC_TIM0->TCR = 0;               // Disable interrupt
-            }else{
-                LPC_TIM0->TCR = 1;               // Enable interrupt
+                //LPC_TIM0->TCR = 0;               // Disable interrupt
             }
             return;
         }
