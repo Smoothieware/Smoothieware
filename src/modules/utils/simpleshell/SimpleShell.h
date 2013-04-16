@@ -20,6 +20,9 @@
 #define cat_command_checksum      CHECKSUM("cat")
 #define reset_command_checksum    CHECKSUM("reset")
 #define dfu_command_checksum      CHECKSUM("dfu")
+#define isp_command_checksum      CHECKSUM("isp")
+#define mcu_command_checksum      CHECKSUM("mcu")
+#define serial_command_checksum   CHECKSUM("serial")
 #define break_command_checksum    CHECKSUM("break")
 #define help_command_checksum     CHECKSUM("help")
 
@@ -38,6 +41,9 @@ class SimpleShell : public Module {
         void break_command(string parameters, StreamOutput* stream );
         void reset_command(string parameters, StreamOutput* stream );
         void dfu_command(string parameters, StreamOutput* stream );
+        void isp_command(string parameters, StreamOutput* stream );
+        void mcu_command(string parameters, StreamOutput* stream );
+        void serial_command(string parameters, StreamOutput* stream );
         void help_command(string parameters, StreamOutput* stream );
         
     private:

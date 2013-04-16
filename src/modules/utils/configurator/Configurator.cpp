@@ -12,6 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/ConfigSources/FileConfigSource.h"
 
 
 void Configurator::on_module_loaded(){
@@ -65,18 +66,33 @@ void Configurator::config_get_command( string parameters, StreamOutput* stream )
         get_checksums(setting_checksums, setting );
         ConfigValue* cv = this->kernel->config->value(setting_checksums);
         string value = "";
-        if(cv->found){ value = cv->as_string(); }
-        stream->printf( "live: %s is set to %s\r\n", setting.c_str(), value.c_str() );
+        if(cv->found){
+            value = cv->as_string();
+            stream->printf( "live: %s is set to %s\r\n", setting.c_str(), value.c_str() );
+        }else{
+            stream->printf( "live: %s was not found\r\n", setting.c_str() );
+        }
     } else { // output setting from specified source
         uint16_t source_checksum = get_checksum( source );
         uint16_t setting_checksums[3];
         get_checksums(setting_checksums, setting );
+        bool source_found = false;
+        stream->printf("%s: ", source.c_str() );
         for(unsigned int i=0; i < this->kernel->config->config_sources.size(); i++){
             if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
+                source_found = true;
+                stream->printf( "%s ", setting.c_str() );
                 string value = this->kernel->config->config_sources[i]->read(setting_checksums);
-                stream->printf( "%s: %s is set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
+                if(value != ""){
+                    stream->printf( "is set to %s\r\n", value.c_str() );
+                }else{
+                    stream->printf( "was not found\r\n" );
+                }
                 break;
             }
+        }
+        if( !source_found ){
+            stream->printf( "unrecognized config source\r\n" );
         }
     }
 }
@@ -94,12 +110,17 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
         stream->printf( "live: %s has been set to %s\r\n", setting.c_str(), value.c_str() );
     } else {
         uint16_t source_checksum = get_checksum(source);
+        bool source_found = false;
         for(unsigned int i=0; i < this->kernel->config->config_sources.size(); i++){
             if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
+                source_found = true;
                 this->kernel->config->config_sources[i]->write(setting, value);
                 stream->printf( "%s: %s has been set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
                 break;
             }
+        }
+        if( !source_found ){
+            stream->printf( "%s: unrecognized config source\r\n", source.c_str() );
         }
     }
 }

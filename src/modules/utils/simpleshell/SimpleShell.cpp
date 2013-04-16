@@ -12,6 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/IAP.h"
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
@@ -59,6 +60,12 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->reset_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == dfu_command_checksum)
         this->dfu_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == isp_command_checksum)
+        this->isp_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == mcu_command_checksum)
+        this->mcu_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == serial_command_checksum)
+        this->serial_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == help_command_checksum)
         this->help_command(get_arguments(possible_command),new_message.stream );
 }
@@ -153,6 +160,37 @@ void SimpleShell::reset_command( string parameters, StreamOutput* stream){
 void SimpleShell::dfu_command( string parameters, StreamOutput* stream){
     stream->printf("Entering boot mode...\r\n");
     system_reset(true);
+}
+
+// go into isp boot mode
+void SimpleShell::isp_command( string parameters, StreamOutput* stream){
+    stream->printf("Entering isp mode...\r\n");
+    IAP iap;
+    iap.reinvoke_isp();
+}
+
+// output the chip id
+void SimpleShell::mcu_command( string parameters, StreamOutput* stream){
+    IAP iap;
+    unsigned int id = iap.read_ID();
+    const char* mcu_name = "";
+    if(id == 0x26013f37){
+        mcu_name = "LPC1768";
+    }else if(id == 0x26113f37){
+        mcu_name = "LPC1769";
+    }
+    if(mcu_name == ""){
+        stream->printf("Microcontroller ID: 0x%x\r\n", id);
+    }else{
+        stream->printf("Microcontroller ID: 0x%x (%s)\r\n", id, mcu_name);
+    }
+}
+
+// output the mcu serial number
+void SimpleShell::serial_command( string parameters, StreamOutput* stream){
+    IAP iap;
+    unsigned int serial = iap.read_serial();
+    stream->printf("Microcontroller Serial Number: 0x%x\r\n", serial);
 }
 
 // Break out into the MRI debugging system

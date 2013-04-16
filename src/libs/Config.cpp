@@ -19,6 +19,7 @@ using namespace std;
 #include "libs/SerialMessage.h"
 #include "libs/ConfigSources/FileConfigSource.h"
 #include "libs/ConfigSources/FirmConfigSource.h"
+#include "libs/ConfigSources/FlashConfigSource.h"
 
 // Add various config sources. Config can be fetched from several places.
 // All values are read into a cache, that is then used by modules to read their configuration
@@ -27,6 +28,10 @@ Config::Config(){
 
     // Config source for firm config found in src/config.default
     this->config_sources.push_back( new FirmConfigSource() );
+
+    // This source allows live setting changes without a recompile
+    // It stores these settings in the last two sectors of program flash
+    this->config_sources.push_back( new FlashConfigSource() );
 
     // Config source for */config files
     FileConfigSource* fcs = NULL;
