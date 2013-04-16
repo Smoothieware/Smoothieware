@@ -75,15 +75,11 @@ class StepperMotor {
 // Called a great many times per second, to step if we have to now
 inline void StepperMotor::tick(){
 
-    LPC_GPIO1->FIOSET =  1<<23;
-    
     // increase the ( fixed point ) counter by one tick 11t
     this->fx_counter += (uint32_t)(1<<16);
 
     // if we are to step now 10t
     if( this->fx_counter >= this->fx_ticks_per_step ){ this->step(); }
-
-    LPC_GPIO1->FIOCLR =  1<<23;
 
 }
 

@@ -178,15 +178,12 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
 // current_block stays untouched by outside handlers for the duration of this function call.
 uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
 
-    LPC_GPIO1->FIOSET =  1<<31;
-    
     if(this->current_block && !this->paused && this->main_stepper->moving ) {
         uint32_t current_steps_completed = this->main_stepper->stepped;
 
         if( this->force_speed_update ){
           this->force_speed_update = false;
           this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
-          LPC_GPIO1->FIOCLR =  1<<31;
           return 0;
         }
 
@@ -218,7 +215,6 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
           }
     }
 
-    LPC_GPIO1->FIOCLR =  1<<31;
     return 0;
 }
 
@@ -260,10 +256,6 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
 // All we do is reset the other timer so that it does what we want
 uint32_t Stepper::synchronize_acceleration(uint32_t dummy){
 
-    LPC_GPIO1->FIODIR |= 1<<21;
-    LPC_GPIO1->FIOSET = 1<<21;
-
-
     // No move was done, this is called from on_block_begin
     // This means we setup the accel timer in a way where it gets called right after
     // we exit this step interrupt, and so that it is then in synch with
@@ -288,8 +280,6 @@ uint32_t Stepper::synchronize_acceleration(uint32_t dummy){
         // Synchronize both counters
         LPC_TIM2->TC = LPC_TIM0->TC;
     }
-
-    LPC_GPIO1->FIOCLR = 1<<21;
 
     return 0;
 }

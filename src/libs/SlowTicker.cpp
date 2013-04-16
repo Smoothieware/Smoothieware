@@ -36,8 +36,7 @@ SlowTicker::SlowTicker(){
     g4_pause = false;
 }
 
-void SlowTicker::on_module_loaded()
-{
+void SlowTicker::on_module_loaded(){
     register_for_event(ON_IDLE);
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GCODE_EXECUTE);
@@ -50,12 +49,8 @@ void SlowTicker::set_frequency( int frequency ){
     LPC_TIM2->TCR = 1;  // Reset
 }
 
-void SlowTicker::tick()
-{
+void SlowTicker::tick(){
     _isr_context = true;
-
-    LPC_GPIO1->FIODIR |= 1<<20;
-    LPC_GPIO1->FIOSET = 1<<20;
 
     for (uint32_t i=0; i<this->hooks.size(); i++){
         Hook* hook = this->hooks.at(i);
