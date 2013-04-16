@@ -59,7 +59,7 @@ void SlowTicker::set_frequency( int frequency ){
 
 // The actual interrupt being called by the timer, this is where work is done
 void SlowTicker::tick(){
-    
+
     // Call all hooks that need to be called ( bresenham )
     for (uint32_t i=0; i<this->hooks.size(); i++){
         Hook* hook = this->hooks.at(i);
@@ -71,15 +71,21 @@ void SlowTicker::tick(){
         }
     }
 
+    // deduct tick time from secound counter
     flag_1s_count -= this->interval;
+    // if a whole second has elapsed,
     if (flag_1s_count < 0)
     {
+        // add a second to our counter
         flag_1s_count += SystemCoreClock >> 2;
+        // and set a flag for idle event to pick up
         flag_1s_flag++;
     }
 
+    // if we're counting down a pause
     if (g4_ticks > 0)
     {
+        // deduct tick time from timeout
         if (g4_ticks > interval)
             g4_ticks -= interval;
         else
@@ -94,20 +100,29 @@ void SlowTicker::tick(){
 }
 
 bool SlowTicker::flag_1s(){
+    // atomic flag check routine
+    // first disable interrupts
     __disable_irq();
+    // then check for a flag
     if (flag_1s_flag)
     {
+        // if we have a flag, decrement the counter
         flag_1s_flag--;
+        // re-enable interrupts
         __enable_irq();
+        // and tell caller that we consumed a flag
         return true;
     }
+    // if no flag, re-enable interrupts and return false
     __enable_irq();
     return false;
 }
 
 void SlowTicker::on_idle(void*)
 {
+    // if interrupt has set the 1 second flag
     if (flag_1s())
+        // fire the on_second_tick event
         kernel->call_event(ON_SECOND_TICK);
 
     // if G4 has finished, release our pause
@@ -130,8 +145,8 @@ void SlowTicker::on_gcode_received(void* argument){
             block->append_gcode(gcode);
         }
     }
-}    
-   
+}
+
 // When a G4-type gcode is executed, start the pause
 void SlowTicker::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
