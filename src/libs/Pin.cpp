@@ -15,14 +15,23 @@ Pin* Pin::from_string(std::string value){
     // cn is the position of the next char after the number we just read
     char* cn = NULL;
 
+    // grab first integer as port. pointer to first non-digit goes in cn
     this->port_number = strtol(cs, &cn, 10);
+    // if cn > cs then strtol read at least one digit
     if ((cn > cs) && (port_number <= 4)){
+        // translate port index into something useful
         this->port = gpios[(unsigned int) this->port_number];
+        // if the char after the first integer is a . then we should expect a pin index next
         if (*cn == '.'){
+            // move pointer to first digit (hopefully) of pin index
             cs = ++cn;
+            // grab pin index.
             this->pin = strtol(cs, &cn, 10);
+            // if strtol read some numbers, cn will point to the first non-digit
             if ((cn > cs) & (pin < 32)){
+                // skip any whitespace following the pin index
                 while (is_whitespace(*cn)) cn++;
+                // if we have an exclamation, we invert the pin
                 this->inverting = (*cn == '!');
 
                 this->port->FIOMASK &= ~(1 << this->pin);
@@ -32,6 +41,7 @@ Pin* Pin::from_string(std::string value){
         }
     }
 
+    // from_string failed. TODO: some sort of error
     port_number = 0;
     port = gpios[0];
     pin = 255;
