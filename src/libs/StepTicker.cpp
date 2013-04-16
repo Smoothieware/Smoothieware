@@ -119,7 +119,6 @@ void StepTicker::signal_moves_finished(){
 
 // Reset step pins on all active motors
 inline void StepTicker::reset_tick(){
-    LPC_GPIO3->FIOSET = 1<<25;
     _isr_context = true;
 
     int i;
@@ -131,7 +130,6 @@ inline void StepTicker::reset_tick(){
     }
 
     _isr_context = false;
-    LPC_GPIO3->FIOCLR = 1<<25;
 }
 
 extern "C" void TIMER1_IRQHandler (void){
@@ -146,23 +144,6 @@ extern "C" void TIMER1_IRQHandler (void){
 
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
-
-    if( global_step_ticker->active_motor_bm == 0 ){
-        debug_counter++;
-        if( debug_counter > 20 ){
-            debug_counter--;
-            debug_counter += LPC_TIM0->TCR;
-        }
-    }else{
-        debug_counter = 0;
-    }
-
-    LPC_GPIO3->FIODIR |= 1<<25;
-    LPC_GPIO1->FIODIR |= 1<<22;
-    LPC_GPIO1->FIODIR |= 1<<23;
-    LPC_GPIO1->FIODIR |= 1<<30;
-    LPC_GPIO1->FIODIR |= 1<<31;
-    LPC_GPIO1->FIOSET =  1<<22;
 
     // Reset interrupt register
     LPC_TIM0->IR |= 1 << 0;
@@ -187,7 +168,6 @@ extern "C" void TIMER0_IRQHandler (void){
         // Nothing happened, nothing after this really matters
         // TODO : This could be a problem when we use Actuators instead of StepperMotors, because this flag is specific to step generation
         LPC_TIM0->MR0 = global_step_ticker->period;
-        LPC_GPIO1->FIOCLR = 1<<22;
         return;
     }
     
@@ -204,9 +184,7 @@ extern "C" void TIMER0_IRQHandler (void){
         // This can be OK, if we take notice of it, which we do now
         if( LPC_TIM0->TC > global_step_ticker->period ){ // TODO: remove the size condition
 
-            LPC_GPIO1->FIOCLR = 1<<22;
             uint32_t start_tc = LPC_TIM0->TC;
-            LPC_GPIO1->FIOSET = 1<<22;
 
             // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
             uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + global_step_ticker->last_duration ) / global_step_ticker->period );
@@ -249,7 +227,6 @@ extern "C" void TIMER0_IRQHandler (void){
 
     }
 
-    LPC_GPIO1->FIOCLR = 1<<22;
 }
 
 
@@ -294,7 +271,7 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
             this->active_motor_bm &= ~bm;
             // If we have no motor to work on, disable the whole interrupt
             if( this->active_motor_bm == 0 ){
-                //LPC_TIM0->TCR = 0;               // Disable interrupt
+                LPC_TIM0->TCR = 0;               // Disable interrupt
             }
             return;
         }
