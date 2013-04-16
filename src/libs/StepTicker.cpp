@@ -22,10 +22,11 @@ using namespace std;
 // They then do Bresenham stuff themselves
 
 StepTicker* global_step_ticker;
-int debug_counter;
 
 StepTicker::StepTicker(){
     global_step_ticker = this;
+
+    // Configure the timer
     LPC_TIM0->MR0 = 10000000;       // Initial dummy value for Match Register
     LPC_TIM0->MCR = 3;              // Match on MR0, reset on MR0, match on MR1
     LPC_TIM0->TCR = 0;              // Disable interrupt
@@ -47,8 +48,6 @@ StepTicker::StepTicker(){
         this->active_motors[i] = NULL;
     }
     this->active_motor_bm = 0;
-
-    debug_counter = 0;
 
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
@@ -137,11 +136,6 @@ extern "C" void TIMER1_IRQHandler (void){
     global_step_ticker->reset_tick();
 }
 
-
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
-
-
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
 
@@ -149,15 +143,12 @@ extern "C" void TIMER0_IRQHandler (void){
     LPC_TIM0->IR |= 1 << 0;
 
     // Step pins
-    //global_step_ticker->tick();
-    _isr_context = true;
     uint16_t bitmask = 1;
     for (uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
         if (global_step_ticker->active_motor_bm & bitmask){
             global_step_ticker->active_motors[motor]->tick();
         }
     }
-    _isr_context = false;
 
     // We may have set a pin on in this tick, now we start the timer to set it off
     if( global_step_ticker->reset_step_pins ){
@@ -229,8 +220,6 @@ extern "C" void TIMER0_IRQHandler (void){
 
 }
 
-
-//#pragma GCC pop_options
 
 // We make a list of steppers that want to be called so that we don't call them for nothing
 void StepTicker::add_motor_to_active_list(StepperMotor* motor)

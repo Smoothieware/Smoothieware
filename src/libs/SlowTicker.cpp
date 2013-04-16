@@ -16,19 +16,26 @@ using namespace std;
 
 #include <mri.h>
 
+// This module uses a Timer to periodically call hooks
+// Modules register with a function ( callback ) and a frequency, and we then call that function at the given frequency.
+
 SlowTicker* global_slow_ticker;
 
 SlowTicker::SlowTicker(){
     max_frequency = 0;
     global_slow_ticker = this;
+
+    // Configure the actual timer
     LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
-    LPC_TIM2->MR0 = 10000;        // Initial dummy value for Match Register
+    LPC_TIM2->MR0 = 10000;          // Initial dummy value for Match Register
     LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
     LPC_TIM2->TCR = 1;              // Enable interrupt
     NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
 
+    // ISP button
     ispbtn.from_string("2.10")->as_input()->pull_up();
 
+    // TODO: What is this ??
     flag_1s_flag = 0;
     flag_1s_count = SystemCoreClock;
 
@@ -42,6 +49,7 @@ void SlowTicker::on_module_loaded(){
     register_for_event(ON_GCODE_EXECUTE);
 }
 
+// Set the base frequency we use for all sub-frequencies
 void SlowTicker::set_frequency( int frequency ){
     this->interval = (SystemCoreClock >> 2) / frequency;   // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM2->MR0 = this->interval;
@@ -49,9 +57,10 @@ void SlowTicker::set_frequency( int frequency ){
     LPC_TIM2->TCR = 1;  // Reset
 }
 
+// The actual interrupt being called by the timer, this is where work is done
 void SlowTicker::tick(){
-    _isr_context = true;
-
+    
+    // Call all hooks that need to be called ( bresenham )
     for (uint32_t i=0; i<this->hooks.size(); i++){
         Hook* hook = this->hooks.at(i);
         hook->countdown -= this->interval;
@@ -77,12 +86,11 @@ void SlowTicker::tick(){
             g4_ticks = 0;
     }
 
-    LPC_GPIO1->FIOCLR = 1<<20;
-
+    // Enter MRI mode if the ISP button is pressed
+    // TODO : This should have it's own module
     if (ispbtn.get() == 0)
         __debugbreak();
 
-    _isr_context = false;
 }
 
 bool SlowTicker::flag_1s(){
@@ -110,6 +118,7 @@ void SlowTicker::on_idle(void*)
     }
 }
 
+// When a G4-type gcode is received, add it to the queue so we can execute it in time
 void SlowTicker::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
@@ -122,14 +131,13 @@ void SlowTicker::on_gcode_received(void* argument){
         }
     }
 }    
-    
+   
+// When a G4-type gcode is executed, start the pause
 void SlowTicker::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
 
-    if (gcode->has_g)
-    {
-        if (gcode->g == 4)
-        {
+    if (gcode->has_g){
+        if (gcode->g == 4){
             bool updated = false;
             if (gcode->has_letter('P')) {
                 updated = true;
@@ -139,12 +147,10 @@ void SlowTicker::on_gcode_execute(void* argument){
                 updated = true;
                 g4_ticks += gcode->get_int('S') * (SystemCoreClock >> 2);
             }
-            if (updated)
-            {
+            if (updated){
                 // G4 Smm Pnn should pause for mm seconds + nn milliseconds
                 // at 120MHz core clock, the longest possible delay is (2^32 / (120MHz / 4)) = 143 seconds
-                if (!g4_pause)
-                {
+                if (!g4_pause){
                     g4_pause = true;
                     kernel->pauser->take();
                 }

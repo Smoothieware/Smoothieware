@@ -3,6 +3,9 @@
 #include <sLPC17xx.h>
 #include <mri.h>
 
+// This is used by MRI to turn pins on and off when entering and leaving MRI. Useful for not burning everything down
+// See http://smoothieware.org/mri-debugging 
+
 extern "C" {
     static uint32_t _set_high_on_debug[5] = {
 //         (1 << 4) | (1 << 10) | (1 << 19) | (1 << 21), // smoothieboard stepper EN pins

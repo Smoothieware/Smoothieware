@@ -9,6 +9,9 @@
 #include "StepperMotor.h"
 #include "MRI_Hooks.h"
 
+// A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
+// TODO : Abstract this into Actuator
+
 StepperMotor::StepperMotor(){
     this->moving = false;
     this->paused = false;
@@ -37,8 +40,9 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     set_high_on_debug(en->port_number, en->pin);
 }
 
+// This is called ( see the .h file, we had to put a part of things there for obscure inline reasons ) when a step has to be generated
+// we also here check if the move is finished etc ...
 void StepperMotor::step(){
-
 
     // output to pins 37t
     this->step_pin->set( 1                   );
@@ -55,12 +59,13 @@ void StepperMotor::step(){
         this->step_signal_hook->call();
     }
 
-    // is this move finished ? 11t
+    // Is this move finished ?
     if( this->stepped == this->steps_to_move ){
+        // Mark it as finished, then StepTicker will call signal_mode_finished() 
+        // This is so we don't call that before all the steps have been generated for this tick()
         this->is_move_finished = true;
         this->step_ticker->moves_finished = true;
     }
-
 
 }
 
@@ -123,9 +128,6 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 
 }
 
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
-
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( double speed ){
 
@@ -142,13 +144,13 @@ void StepperMotor::set_speed( double speed ){
 
 }
 
-//#pragma GCC pop_options
-
+// Pause this stepper motor
 void StepperMotor::pause(){
     this->paused = true;
     this->update_exit_tick();
 }
 
+// Unpause this stepper motor
 void StepperMotor::unpause(){
     this->paused = false;
     this->update_exit_tick();

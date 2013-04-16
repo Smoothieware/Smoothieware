@@ -12,6 +12,10 @@
 #include <cstdarg>
 #include <cstring>
 
+// This is a base class for all StreamOutput objects.
+// StreamOutputs are basically "things you can sent strings to". They are passed along with gcodes for example so modules can answer to those gcodes.
+// They are usually associated with a command source, but can also be a NullStreamOutput if we just want to ignore whatever is sent
+
 class NullStreamOutput;
 
 class StreamOutput : public mbed::Stream {
