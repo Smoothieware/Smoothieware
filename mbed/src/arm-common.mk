@@ -215,41 +215,41 @@ clean:
 #  Default rules to compile c/c++/assembly language sources to objects.
 #########################################################################
 $(DEBUG_OBJDIR)/%.o : %.c
-	@echo Compiling $<
+	@echo "  CC     $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GCC) $(DEBUG_C_FLAGS) -c $< -o $@
 
 $(RELEASE_OBJDIR)/%.o : %.c
-	@echo Compiling $<
+	@echo "  CC     $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GCC) $(RELEASE_C_FLAGS) -c $< -o $@
 
 $(DEBUG_OBJDIR)/%.o : %.cpp
-	@echo Compiling $<
+	@echo "  C++    $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GPP) $(DEBUG_CPP_FLAGS) -c $< -o $@
 
 $(RELEASE_OBJDIR)/%.o : %.cpp
-	@echo Compiling $<
+	@echo "  C++    $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GPP) $(RELEASE_CPP_FLAGS) -c $< -o $@
 
 $(DEBUG_OBJDIR)/%.o : %.s
-	@echo Assembling $<
+	@echo "  AS     $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GCC) $(AS_FLAGS) -c $< -o $@
 
 $(RELEASE_OBJDIR)/%.o : %.s
-	@echo Assembling $<
+	@echo "  AS     $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GCC) $(AS_FLAGS) -c $< -o $@
 
 $(DEVICE_DROP)/%.h : $(VENDOR_CAPI_DEVICE_SRC)/%.h
-	@echo Deploying $? to drop
+	@echo "  DEPLOY $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(COPY) $(call convert-slash,$?) $(call convert-slash,$@) $(NOSTDOUT)
 
 $(DEVICE_DROP)/%.h : $(VENDOR_CMSIS_SRC)/%.h
-	@echo Deploying $? to drop
+	@echo "  DEPLOY $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(COPY) $(call convert-slash,$?) $(call convert-slash,$@) $(NOSTDOUT)

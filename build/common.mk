@@ -213,22 +213,23 @@ endif
 all:: $(OUTDIR)/$(PROJECT).hex $(OUTDIR)/$(PROJECT).bin $(OUTDIR)/$(PROJECT).disasm size
 
 $(OUTDIR)/$(PROJECT).bin: $(OUTDIR)/$(PROJECT).elf
-	@echo Extracting $@
+	@echo "  COPY   $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(OBJCOPY) -O binary $< $@
 
 $(OUTDIR)/$(PROJECT).hex: $(OUTDIR)/$(PROJECT).elf
+	@echo "  COPY   $<"
 	@echo Extracting $@
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(OBJCOPY) -R .stack -O ihex $< $@
 
 $(OUTDIR)/$(PROJECT).disasm: $(OUTDIR)/$(PROJECT).elf
-	@echo Extracting disassembly to $@
+	@echo "  DISASM $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(OBJDUMP) -d -f -M reg-names-std --demangle $< >$@
 
 $(OUTDIR)/$(PROJECT).elf: $(LSCRIPT) $(OBJECTS)
-	@echo Linking $@
+	@echo "  LINK   $@"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(LD) $(LDFLAGS) $(OBJECTS) $(LIBS) -o $@
 
@@ -247,27 +248,27 @@ clean:
 #  and assemble .s files to .o
 
 $(OUTDIR)/mbed_custom.o : $(BUILD_DIR)/mbed_custom.cpp makefile
-	@echo Compiling $<
+	@echo "  C++    $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GPP) $(GPFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.cpp makefile
-	@echo Compiling $<
+	@echo "  C++    $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GPP) $(GPFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.c makefile
-	@echo Compiling $<
+	@echo "  CC     $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GCC) $(GCFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.S makefile
-	@echo Assembling $<
+	@echo "  AS     $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(GCC) $(AS_GCFLAGS) -c $< -o $@
 
 $(OUTDIR)/%.o : %.s makefile
-	@echo Assembling $<
+	@echo "  AS     $<"
 	$(Q) $(MKDIR) $(call convert-slash,$(dir $@)) $(QUIET)
 	$(Q) $(AS) $(AS_FLAGS) -o $@ $<
 
