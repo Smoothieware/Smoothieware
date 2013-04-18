@@ -16,13 +16,25 @@ using namespace std;
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "libs/Hook.h"
-
 #include "libs/Pin.h"
+#include "Action.h"
 
 #include "system_LPC17xx.h" // for SystemCoreClock
 #include <math.h>
 
-class SlowTicker : public Module{
+class G4PauseData : public ActionData
+{
+public:
+    G4PauseData(uint32_t m, Module* owner)
+    {
+        millis = m;
+        this->owner = owner;
+    }
+    uint32_t millis;
+};
+
+class SlowTicker : public Module
+{
     public:
         SlowTicker();
 
@@ -30,6 +42,7 @@ class SlowTicker : public Module{
         void on_idle(void*);
         void on_gcode_received(void*);
         void on_gcode_execute(void*);
+        void on_action_invoke(void*);
 
         void set_frequency( int frequency );
         void tick();
@@ -53,13 +66,14 @@ class SlowTicker : public Module{
         uint32_t max_frequency;
         uint32_t interval;
 
-        uint32_t g4_ticks;
-        bool     g4_pause;
+        G4PauseData* current_g4_data;
 
         Pin ispbtn;
 protected:
     int flag_1s_count;
     volatile int flag_1s_flag;
+
+    int flag_1ms_count;
 };
 
 

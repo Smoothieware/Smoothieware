@@ -29,13 +29,21 @@
 #define SOLO 1
 #define FOLLOW 2
 
+class ExtruderData : public ActionData
+{
+public:
+    ExtruderData(Module* owner) { this->owner = owner; };
+    double travel_ratio;
+    int32_t solo_steps;
+    bool disable;
+};
+
 class Extruder : public Module{
     public:
         Extruder();
         void     on_module_loaded();
         void     on_config_reload(void* argument);
         void     on_gcode_received(void*);
-        void     on_gcode_execute(void* argument);
         void     on_block_begin(void* argument);
         void     on_block_end(void* argument);
         void     on_play(void* argument);

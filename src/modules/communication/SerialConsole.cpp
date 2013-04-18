@@ -42,7 +42,7 @@ void SerialConsole::on_serial_char_received(){
         char received = this->serial->getc();
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
-        this->buffer.push_back(received);
+        this->buffer.push(received);
     }
 }
 
@@ -53,7 +53,7 @@ void SerialConsole::on_main_loop(void * argument){
         received.reserve(20);
         while(1){
            char c;
-           this->buffer.pop_front(c);
+           this->buffer.pop(c);
            if( c == '\n' ){
                 struct SerialMessage message;
                 message.message = received;

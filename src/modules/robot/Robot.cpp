@@ -189,8 +189,13 @@ void Robot::on_gcode_received(void * argument){
 
     memcpy(target, this->current_position, sizeof(target));    //default to last target
 
-    for(char letter = 'I'; letter <= 'K'; letter++){ if( gcode->has_letter(letter) ){ offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));                                                    } }
-    for(char letter = 'X'; letter <= 'Z'; letter++){ if( gcode->has_letter(letter) ){ target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);  } }
+    for (char letter = 'I'; letter <= 'K'; letter++)
+        if ( gcode->has_letter(letter) )
+            offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));
+
+    for (char letter = 'X'; letter <= 'Z'; letter++)
+        if ( gcode->has_letter(letter) )
+            target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);
 
     if( gcode->has_letter('F') )
     {
@@ -216,26 +221,22 @@ void Robot::on_gcode_received(void * argument){
     // motion control system might still be processing the action and the real tool position
     // in any intermediate location.
     memcpy(this->current_position, target, sizeof(double)*3); // this->position[] = target[];
-
-
-
-
 }
 
 // We received a new gcode, and one of the functions
 // determined the distance for that given gcode. So now we can attach this gcode to the right block
 // and continue
-void Robot::distance_in_gcode_is_known(Gcode* gcode){
-
-    //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( this->kernel->conveyor->queue.size() == 0 ){
-        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-    }else{
-        Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-        block->append_gcode(gcode);
-    }
-
-}
+// void Robot::distance_in_gcode_is_known(Gcode* gcode){
+//
+//     //If the queue is empty, execute immediatly, otherwise attach to the last added block
+//     if( this->kernel->conveyor->queue.size() == 0 ){
+//         this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+//     }else{
+//         Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+//         block->append_gcode(gcode);
+//     }
+//
+// }
 
 // Reset the position for all axes ( used in homing and G92 stuff )
 void Robot::reset_axis_position(double position, int axis) {
@@ -252,18 +253,21 @@ void Robot::append_milestone( double target[], double rate ){
     this->arm_solution->millimeters_to_steps( target, steps );
 
     double deltas[3];
-    for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
+
+    for (int axis=X_AXIS;axis<=Z_AXIS;axis++)
+        deltas[axis] = target[axis] - this->last_milestone[axis];
 
     // Compute how long this move moves, so we can attach it to the block for later use
-    double millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
+    double millimeters_of_travel = hypotf(hypotf(deltas[X_AXIS], deltas[Y_AXIS]), deltas[Z_AXIS]);
 
     // Do not move faster than the configured limits
-    for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
-        if( this->max_speeds[axis] > 0 ){
+    for (int axis=X_AXIS;axis<=Z_AXIS;axis++)
+    {
+        if ( this->max_speeds[axis] > 0 )
+        {
             double axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * seconds_per_minute;
-            if( axis_speed > this->max_speeds[axis] ){
-                rate = rate * ( this->max_speeds[axis] / axis_speed );
-            }
+            if ( axis_speed > this->max_speeds[axis] )
+                rate = rate * this->max_speeds[axis] / axis_speed;
         }
     }
 
@@ -272,7 +276,6 @@ void Robot::append_milestone( double target[], double rate ){
 
     // Update the last_milestone to the current target for the next time we use last_milestone
     memcpy(this->last_milestone, target, sizeof(double)*3); // this->last_milestone[] = target[];
-
 }
 
 // Append a move to the queue ( cutting it into segments if needed )
@@ -285,7 +288,7 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
     if( gcode->millimeters_of_travel < 0.0001 ){ return; }
 
     // Mark the gcode as having a known distance
-    this->distance_in_gcode_is_known( gcode );
+//     this->distance_in_gcode_is_known( gcode );
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.

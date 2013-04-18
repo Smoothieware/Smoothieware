@@ -26,7 +26,7 @@ class Planner : public Module {
     public:
         Planner();
         void append_block( int target[], double feed_rate, double distance, double deltas[] );
-        double max_allowable_speed( double acceleration, double target_velocity, double distance);
+//         double max_allowable_speed( double acceleration, double target_velocity, double distance);
         void recalculate();
         void reverse_pass();
         void forward_pass();

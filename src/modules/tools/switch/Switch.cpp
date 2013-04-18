@@ -47,40 +47,44 @@ void Switch::on_config_reload(void* argument){
 void Switch::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
-    if( gcode->has_m && ( gcode->m == this->on_m_code || gcode->m == this->off_m_code ) ){
-        gcode->mark_as_taken();
-        if( this->kernel->conveyor->queue.size() == 0 ){
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-        }else{
-            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-            block->append_gcode(gcode);
-        }
-    }
-}
-
-// Turn pin on and off
-void Switch::on_gcode_execute(void* argument){
-    Gcode* gcode = static_cast<Gcode*>(argument);
-    if( gcode->has_m){
+    if (gcode->has_m)
+    {
         int code = gcode->m;
-        if( code == this->on_m_code ){
+        if (code == this->on_m_code )
+        {
+            SwitchData* data = new SwitchData(this);
+
             if (gcode->has_letter('S'))
             {
                 int v = gcode->get_value('S') * output_pin.max_pwm() / 256.0;
-                if (v)
-                    this->output_pin.pwm(v);
-                else
-                    this->output_pin.set(0);
+                data->value = v;
             }
             else
             {
                 // Turn pin on
-                this->output_pin.set(1);
+                data->value = 255;
             }
+            kernel->conveyor->next_action()->add_data(data);
         }
-        if( code == this->off_m_code ){
+        else if (code == this->off_m_code )
+        {
             // Turn pin off
-            this->output_pin.set(0);
+            SwitchData* data = new SwitchData(this);
+            data->value = 0;
+            kernel->conveyor->next_action()->add_data(data);
         }
     }
+}
+
+void Switch::on_action_invoke(void* argument){
+    SwitchData* data = static_cast<SwitchData*>(argument);
+
+    if (data->value == 255)
+        output_pin.set(1);
+    else if (data->value == 0)
+        output_pin.set(0);
+    else
+        output_pin.pwm(value);
+
+    data->finish();
 }

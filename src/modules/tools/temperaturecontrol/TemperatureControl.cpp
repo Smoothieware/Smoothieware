@@ -160,45 +160,33 @@ void TemperatureControl::on_gcode_received(void* argument){
 
         // Attach gcodes to the last block for on_gcode_execute
         if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ){
-            if( this->kernel->conveyor->queue.size() == 0 ){
-                this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-            }else{
-                Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-                block->append_gcode(gcode);
-            }
 
+            TemperatureControlData* tdata = new TemperatureControlData();
+
+            tdata->temperature = gcode->get_value('S');
+            tdata->wait = (gcode->m == set_and_wait_m_code);
+
+            Action* action = kernel->conveyor->next_action();
+
+            action->add_data(tdata);
         }
     }
 }
 
-void TemperatureControl::on_gcode_execute(void* argument){
-    Gcode* gcode = static_cast<Gcode*>(argument);
-    if( gcode->has_m){
-        if (((gcode->m == this->set_m_code) || (gcode->m == this->set_and_wait_m_code))
-            && gcode->has_letter('S'))
-        {
-            double v = gcode->get_value('S');
+void TemperatureControl::on_action_invoke(void* argument)
+{
+    TemperatureControlData* data = static_cast<TemperatureControlData*>(argument);
 
-            if (v == 0.0)
-            {
-                this->target_temperature = UNDEFINED;
-                this->heater_pin.set(0);
-            }
-            else
-            {
-                this->set_desired_temperature(v);
+    set_desired_temperature(data->temperature);
 
-                if( gcode->m == this->set_and_wait_m_code)
-                {
-                    gcode->mark_as_taken();
-                    this->kernel->pauser->take();
-                    this->waiting = true;
-                }
-            }
-        }
-    }
+    if (data->wait)
+        waiting = (last_reading < target_temperature);
+    else
+        waiting = false;
+
+    if (!waiting)
+        data->finish();
 }
-
 
 void TemperatureControl::set_desired_temperature(double desired_temperature)
 {
@@ -208,6 +196,7 @@ void TemperatureControl::set_desired_temperature(double desired_temperature)
         desired_temperature = preset2;
 
     target_temperature = desired_temperature;
+
     if (desired_temperature == 0.0)
         heater_pin.set((o = 0));
 }
@@ -242,11 +231,6 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
         else
         {
             pid_process(temperature);
-            if ((temperature > target_temperature) && waiting)
-            {
-                kernel->pauser->release();
-                waiting = false;
-            }
         }
     }
     else

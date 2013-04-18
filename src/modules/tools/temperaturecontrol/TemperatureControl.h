@@ -8,11 +8,12 @@
 #ifndef temperaturecontrol_h
 #define temperaturecontrol_h
 
-#include "libs/Pin.h"
-#include "Pwm.h"
 #include <math.h>
 
+#include "Pin.h"
+#include "Pwm.h"
 #include "RingBuffer.h"
+#include "Action.h"
 
 #define UNDEFINED -1
 
@@ -49,16 +50,22 @@
 
 class TemperatureControlPool;
 
+class TemperatureControlData : public ActionData {
+public:
+    float temperature;
+    bool wait;
+};
+
 class TemperatureControl : public Module {
     public:
         TemperatureControl(uint16_t name);
 
         void on_module_loaded();
         void on_main_loop(void* argument);
-        void on_gcode_execute(void* argument);
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
         void on_second_tick(void* argument);
+        void on_action_invoke(void*);
 
         void set_desired_temperature(double desired_temperature);
         double get_temperature();

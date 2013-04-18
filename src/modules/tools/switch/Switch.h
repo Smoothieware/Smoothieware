@@ -9,6 +9,8 @@
 #define SWITCH_H
 
 #include "libs/Pin.h"
+#include "Action.h"
+
 #include <math.h>
 
 #define    switch_checksum            CHECKSUM("switch")
@@ -16,6 +18,12 @@
 #define    off_m_code_checksum        CHECKSUM("off_m_code")
 #define    output_pin_checksum        CHECKSUM("output_pin")
 #define    startup_state_checksum     CHECKSUM("startup_state")
+
+class SwitchData : public ActionData {
+public:
+    SwitchData(Module* owner) { this->owner = owner; }
+    uint8_t value;
+}
 
 class Switch : public Module {
     public:

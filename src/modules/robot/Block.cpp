@@ -24,14 +24,12 @@ using std::string;
 
 Block::Block(){
     clear_vector(this->steps);
-    this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
-    this->is_ready = false;
     this->initial_rate = -1;
     this->final_rate = -1;
 }
 
 void Block::debug(Kernel* kernel){
-    kernel->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
+    kernel->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d\r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate);
 }
 
 
@@ -106,8 +104,8 @@ inline double max_allowable_speed(double acceleration, double target_velocity, d
 
 
 // Called by Planner::recalculate() when scanning the plan from last to first entry.
-void Block::reverse_pass(Block* next, Block* previous){
-
+void Block::reverse_pass(Block* next, Block* previous)
+{
     if (next) {
         // If entry speed is already at the maximum entry speed, no need to recheck. Block is cruising.
         // If not, block in state of acceleration or deceleration. Reset entry speed to maximum and
@@ -130,8 +128,8 @@ void Block::reverse_pass(Block* next, Block* previous){
 
 
 // Called by Planner::recalculate() when scanning the plan from first to last entry.
-void Block::forward_pass(Block* previous, Block* next){
-
+void Block::forward_pass(Block* previous, Block* next)
+{
     if(!previous) { return; } // Begin planning after buffer_tail
 
     // If the previous block is an acceleration block, but it is not long enough to complete the
@@ -155,83 +153,40 @@ void Block::forward_pass(Block* previous, Block* next){
 
 
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
-void Block::append_gcode(Gcode* gcode){
-   __disable_irq();
-   Gcode new_gcode = *gcode;
-   this->gcodes.push_back(new_gcode);
-   __enable_irq();
-}
+// void Block::append_gcode(Gcode* gcode){
+//    __disable_irq();
+//    Gcode new_gcode = *gcode;
+//    this->gcodes.push_back(new_gcode);
+//    __enable_irq();
+// }
 
 // The attached gcodes are then poped and the on_gcode_execute event is called with them as a parameter
-void Block::pop_and_execute_gcode(Kernel* &kernel){
-    Block* block = const_cast<Block*>(this);
-    for(unsigned short index=0; index<block->gcodes.size(); index++){
-        kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
-    }
-}
+// void Block::pop_and_execute_gcode(Kernel* &kernel){
+//     Block* block = const_cast<Block*>(this);
+//     for(unsigned short index=0; index<block->gcodes.size(); index++){
+//         kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
+//     }
+// }
 
 // Signal the conveyor that this block is ready to be injected into the system
-void Block::ready(){
-    this->is_ready = true;
-    this->conveyor->new_block_added();
+void Block::ready()
+{
+    this->conveyor->next_action()->add_data(this);
+    this->conveyor->next_action()->block_data = this;
+    this->conveyor->commit_action();
 }
 
 // Mark the block as taken by one more module
 void Block::take(){
-    this->times_taken++;
 }
 
 // Mark the block as no longer taken by one module, go to next block if this free's it
-// This is one of the craziest bits in smoothie
-void Block::release(){
+void Block::release()
+{
+    // Call the on_block_end event so all modules can act accordingly
+    this->conveyor->kernel->call_event(ON_BLOCK_END, this);
 
-    // A block can be taken by several modules, we want to actually release it only when all modules have release()d it
-    this->times_taken--;
-    if( this->times_taken < 1 ){
-
-        // All modules are done with this block
-        // Call the on_block_end event so all modules can act accordingly
-        this->conveyor->kernel->call_event(ON_BLOCK_END, this);
-
-        // Gcodes corresponding to the *following* blocks are stored in this block. 
-        // We execute them all in order when this block is finished executing
-        this->pop_and_execute_gcode(this->conveyor->kernel);
-       
-        // We would normally delete this block directly here, but we can't, because this is interrupt context, no crazy memory stuff here
-        // So instead we increment a counter, and it will be deleted in main loop context 
-        Conveyor* conveyor = this->conveyor;
-        if( conveyor->queue.size() > conveyor->flush_blocks ){
-            conveyor->flush_blocks++;
-        }
-
-        // We don't look for the next block to execute if the conveyor is already doing that itself
-        if( conveyor->looking_for_new_block == false ){
-
-            // If there are still blocks to execute
-            if( conveyor->queue.size() > conveyor->flush_blocks ){
-                Block* candidate =  conveyor->queue.get_ref(conveyor->flush_blocks);
-                
-                // We only execute blocks that are ready ( their math is done ) 
-                if( candidate->is_ready ){
-
-                    // Execute this candidate
-                    conveyor->current_block = candidate;
-                    conveyor->kernel->call_event(ON_BLOCK_BEGIN, conveyor->current_block);
-
-                    // If no module took this block, release it ourselves, as nothing else will do it otherwise
-                    if( conveyor->current_block->times_taken < 1 ){
-                        conveyor->current_block->times_taken = 1;
-                        conveyor->current_block->release();
-                    }
-                }else{
-                    conveyor->current_block = NULL;
-                }
-            }else{
-                conveyor->current_block = NULL;
-            }
-        }
-    }
+    // call to ActionData::finish to remove us from the Action
+    this->action->block_data = NULL;
+    this->finish();
 }
-
-
-

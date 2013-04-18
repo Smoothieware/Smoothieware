@@ -20,10 +20,11 @@ using namespace std;
 
 // The conveyor holds the queue of blocks, takes care of creating them, and starting the executing chain of blocks
 
-Conveyor::Conveyor(){
-    this->current_block = NULL;
-    this->looking_for_new_block = false;
-    flush_blocks = 0;
+Conveyor::Conveyor()
+{
+    current_action_index = queue.tail;
+    current_action = queue.get_tail_ref();
+    _next_action = queue.get_head_ref();
 }
 
 void Conveyor::on_module_loaded(){
@@ -31,93 +32,66 @@ void Conveyor::on_module_loaded(){
 }
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
-void Conveyor::on_idle(void* argument){
-    if (flush_blocks){
-        // Cleanly delete block 
-        Block* block = queue.get_tail_ref();
-        block->gcodes.clear(); 
-        queue.delete_first();
-        __disable_irq();
-        flush_blocks--;
-        __enable_irq();
+void Conveyor::on_idle(void* argument)
+{
+    // clean up completed actions
+    while (queue.get_tail_ref() != current_action)
+        queue.consume_tail()->clean();
+}
+
+Action* Conveyor::next_action(void)
+{
+    _next_action = queue.get_head_ref();
+    return _next_action;
+}
+
+void Conveyor::start_next_action()
+{
+    current_action_index = queue.next_block_index(current_action_index);
+    current_action = queue.get_ref(current_action_index);
+
+    ActionData* data = current_action->first_data;
+    while (data)
+    {
+        data->owner->on_action_invoke(data);
+        data = data->next;
     }
 }
 
-// Append a block to the list
-Block* Conveyor::new_block(){
+// call this when _next_action is ready to be executed
+Action* Conveyor::commit_action()
+{
+    Action* added_action = _next_action;
 
-    // Take the next untaken block on the queue ( the one after the last one )
-    Block* block = this->queue.get_tail_ref();
-    // Then clean it up
-    if( block->conveyor == this ){
-        block->gcodes.clear();
-    }
+    while (queue.full());
+    queue.produce_head();
 
-    // Create a new virgin Block in the queue
-    this->queue.push_back(Block());
-    block = this->queue.get_ref( this->queue.size()-1 );
-    while( block == NULL ){
-        block = this->queue.get_ref( this->queue.size()-1 );
-    }
-    block->is_ready = false;
-    block->initial_rate = -2;
-    block->final_rate = -2;
-    block->conveyor = this;
-    
-    return block;
-}
+    // grab a pointer to the next free action. it WILL be free because a ringbuffer always has one unused element when it's full
+    _next_action = queue.get_head_ref();
 
-// Used by blocks to signal when they are ready to be used by the system
-void Conveyor::new_block_added(){
-    if( this->current_block == NULL ){
-        this->pop_and_process_new_block(33);
-    }
-}
+    // if queue was empty, restart it
+    __disable_irq();
+    if (current_action == NULL)
+        current_action = queue.get_tail_ref();
+    __enable_irq();
 
-// Process a new block in the queue
-void Conveyor::pop_and_process_new_block(int debug){
-    if( this->looking_for_new_block ){ return; }
-    this->looking_for_new_block = true;
-
-    if( this->current_block != NULL ){ this->looking_for_new_block = false; return; }
-
-    // Return if queue is empty
-    if( this->queue.size() == 0 ){
-        this->current_block = NULL;
-        // TODO : ON_QUEUE_EMPTY event
-        this->looking_for_new_block = false;
-        return;
-    }
-
-    // Get a new block
-    this->current_block = this->queue.get_ref(0);
-
-    // Tell all modules about it
-    this->kernel->call_event(ON_BLOCK_BEGIN, this->current_block);
-
-    // In case the module was not taken
-    if( this->current_block->times_taken < 1 ){
-        Block* temp = this->current_block; 
-        this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect 
-        temp->take(); 
-        temp->release();
-    }
-
-    this->looking_for_new_block = false;
-
+    return added_action;
 }
 
 // Wait for the queue to have a given number of free blocks
-void Conveyor::wait_for_queue(int free_blocks){
-    while( this->queue.size() >= this->queue.capacity()-free_blocks ){
+void Conveyor::wait_for_queue(int free_blocks)
+{
+    while( this->queue.size() >= this->queue.capacity() - free_blocks )
+    {
         this->kernel->call_event(ON_IDLE);
     }
 }
 
 // Wait for the queue to be empty
-void Conveyor::wait_for_empty_queue(){
-    while( this->queue.size() > 0){
+void Conveyor::wait_for_empty_queue()
+{
+    while( this->queue.size() > 0)
+    {
         this->kernel->call_event(ON_IDLE);
     }
 }
-

@@ -40,7 +40,6 @@ void Extruder::on_module_loaded() {
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
     this->register_for_event(ON_SPEED_CHANGE);
@@ -97,44 +96,115 @@ void Extruder::on_gcode_received(void *argument){
 
     // Gcodes to execute immediately
     if (gcode->has_m){
-        if (gcode->m == 114){
-            gcode->stream->printf("E:%4.1f ", this->current_position);
-            gcode->add_nl = true;
-            gcode->mark_as_taken();
-        }
-        if (gcode->m == 92 ){
-            double spm = this->steps_per_millimeter;
-            if (gcode->has_letter('E'))
-                spm = gcode->get_value('E');
-            gcode->stream->printf("E:%g ", spm);
-            gcode->add_nl = true;
-            gcode->mark_as_taken();
-        }
-    }
+        switch (gcode->m)
+        {
+            case 114: // M114 - report position
+            {
+                gcode->stream->printf("E:%4.1f ", this->current_position);
+                gcode->add_nl = true;
+                gcode->mark_as_taken();
+                break;
+            };
+            case 82: // M82 - absolute extruder mode
+            case 90: // M90 - absolute mode (all axes)
+                this->absolute_mode = true;
+                gcode->mark_as_taken();
+                break;
+            case 83: // M83 - relative extruder mode
+            case 91: // M91 - relative mode (all axes)
+                this->absolute_mode = false;
+                gcode->mark_as_taken();
+                break;
 
-    // Gcodes to pass along to on_gcode_execute
-    if( ( gcode->has_m && ( gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
-        gcode->mark_as_taken();
-        if( this->kernel->conveyor->queue.size() == 0 ){
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-        }else{
-            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-            block->append_gcode(gcode);
+            // M84 must be executed in sequence, so we create a new Action
+            case 84:{
+                ExtruderData* data = new ExtruderData(this);
+                data->disable = true;
+                data->solo_steps = 0;
+                data->travel_ratio = 0.0;
+                kernel->conveyor->next_action()->add_data(data);
+                kernel->conveyor->commit_action();
+                gcode->mark_as_taken();
+                break;
+            };
+
+            case 92: // M92 - set steps per mm
+            {
+                if (gcode->has_letter('E')){
+                    this->steps_per_millimeter = gcode->get_value('E');
+                    this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
+                }
+                gcode->stream->printf("E:%g ", steps_per_millimeter);
+                gcode->add_nl = true;
+                gcode->mark_as_taken();
+                break;
+            };
         }
     }
 
     // Add to the queue for on_gcode_execute to process
-    if( gcode->has_g && gcode->g < 4 && gcode->has_letter('E') ){
-        if( !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ){
-            // This is a solo move, we add an empty block to the queue
-            //If the queue is empty, execute immediatly, otherwise attach to the last added block
-            if( this->kernel->conveyor->queue.size() == 0 ){
-                this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-                this->append_empty_block();
-            }else{
-                Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-                block->append_gcode(gcode);
-                this->append_empty_block();
+    if( gcode->has_g){
+        if( gcode->g == 92 ){
+            gcode->mark_as_taken();
+            if( gcode->has_letter('E') ){
+                this->current_position = gcode->get_value('E');
+                this->target_position  = this->current_position;
+                this->current_steps    = int(floor(this->steps_per_millimeter * this->current_position));
+            }else if( gcode->get_num_args() == 0){
+                this->current_position = 0.0;
+                this->target_position  = this->current_position;
+                this->current_steps    = 0;
+            }
+        }
+        if (gcode->g < 4)
+        {
+            if (gcode->has_letter('F'))
+            {
+                this->feed_rate = gcode->get_value('F');
+                if (this->feed_rate > (this->max_speed * kernel->robot->seconds_per_minute))
+                    this->feed_rate = this->max_speed * kernel->robot->seconds_per_minute;
+                feed_rate /= kernel->robot->seconds_per_minute;
+            }
+            if (gcode->has_letter('E'))
+            {
+                double distance = gcode->get_value('E');
+
+                double relative_distance = distance;
+                if (absolute_mode)
+                {
+                    relative_distance -= target_position;
+                    target_position = distance;
+                }
+                else
+                {
+                    target_position += relative_distance;
+                }
+
+                // we could use relative_distance but this way keeps more precision
+                int steps = int(floor(distance * steps_per_millimeter));
+                if (absolute_mode)
+                    steps -= current_steps;
+
+                ExtruderData* data = new ExtruderData(this);
+                data->travel_ratio = 0;
+                data->solo_steps = 0;
+
+                if ( fabs(gcode->millimeters_of_travel) < 0.0001 )
+                {
+                    // SOLO move
+                    data->solo_steps = steps;
+                    current_steps += steps;
+
+                    // now we commit the action so we can do our move solo
+                    kernel->conveyor->next_action()->add_data(data);
+                    kernel->conveyor->commit_action();
+                }
+                else
+                {
+                    // FOLLOW move
+                    data->travel_ratio = relative_distance / gcode->millimeters_of_travel;
+                    kernel->conveyor->next_action()->add_data(data);
+                }
             }
         }
     }else{
@@ -143,95 +213,27 @@ void Extruder::on_gcode_received(void *argument){
     }
 }
 
-// Append an empty block in the queue so that solo mode can pick it up
-Block* Extruder::append_empty_block(){
-    this->kernel->conveyor->wait_for_queue(2);
-    Block* block = this->kernel->conveyor->new_block();
-    block->planner = this->kernel->planner;
-    block->millimeters = 0;
-    block->steps[0] = 0;
-    block->steps[1] = 0;
-    block->steps[2] = 0;
-    // feed the block into the system. Will execute it if we are at the beginning of the queue
-    block->ready();
+void Extruder::on_action_invoke(void* argument)
+{
+    ExtruderData* data = static_cast<ExtruderData*>(argument);
 
-    return block;
+    // TODO: something intelligent. maybe fill class variables from our data?
 }
 
-// Compute extrusion speed based on parameters and gcode distance of travel
-void Extruder::on_gcode_execute(void* argument){
-    Gcode* gcode = static_cast<Gcode*>(argument);
-
-    // Absolute/relative mode
-    if( gcode->has_m ){
-        if( gcode->m == 82 ){ this->absolute_mode = true; }
-        if( gcode->m == 83 ){ this->absolute_mode = false; }
-        if( gcode->m == 84 ){ this->en_pin.set(1); }
-        if (gcode->m == 92 ){
-            if (gcode->has_letter('E')){
-                this->steps_per_millimeter = gcode->get_value('E');
-                this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
-            }
-        }
-    }
-
-    // The mode is OFF by default, and SOLO or FOLLOW only if we need to extrude
-    this->mode = OFF;
-
-    if( gcode->has_g ){
-        // G92: Reset extruder position
-        if( gcode->g == 92 ){
-            gcode->mark_as_taken();
-            if( gcode->has_letter('E') ){
-                this->current_position = gcode->get_value('E');
-                this->target_position  = this->current_position;
-                this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
-            }else if( gcode->get_num_args() == 0){
-                this->current_position = 0.0;
-                this->target_position = this->current_position;
-                this->current_steps = 0;
-            }
-        }else if ((gcode->g == 0) || (gcode->g == 1)){
-            // Extrusion length from 'G' Gcode
-            if( gcode->has_letter('E' )){
-                // Get relative extrusion distance depending on mode ( in absolute mode we must substract target_position )
-                double extrusion_distance = gcode->get_value('E');
-                double relative_extrusion_distance = extrusion_distance;
-                if (this->absolute_mode)
-                {
-                    relative_extrusion_distance -= this->target_position;
-                    this->target_position = extrusion_distance;
-                }
-                else
-                {
-                    this->target_position += relative_extrusion_distance;
-                }
-
-                // If the robot is moving, we follow it's movement, otherwise, we move alone
-                if( fabs(gcode->millimeters_of_travel) < 0.0001 ){  // With floating numbers, we can have 0 != 0 ... beeeh. For more info see : http://upload.wikimedia.org/wikipedia/commons/0/0a/Cain_Henri_Vidal_Tuileries.jpg
-                    this->mode = SOLO;
-                    this->travel_distance = relative_extrusion_distance;
-                }else{
-                    // We move proportionally to the robot's movement
-                    this->mode = FOLLOW;
-                    this->travel_ratio = relative_extrusion_distance / gcode->millimeters_of_travel;
-                    // TODO: check resulting flowrate, limit robot speed if it exceeds max_speed
-                }
-
-                this->en_pin.set(0);
-            }
-            if (gcode->has_letter('F'))
-            {
-                this->feed_rate = gcode->get_value('F');
-                if (this->feed_rate > (this->max_speed * kernel->robot->seconds_per_minute))
-                    this->feed_rate = this->max_speed * kernel->robot->seconds_per_minute;
-                feed_rate /= kernel->robot->seconds_per_minute;
-            }
-        }else if( gcode->g == 90 ){ this->absolute_mode = true;
-        }else if( gcode->g == 91 ){ this->absolute_mode = false;
-        }
-    }
-}
+// // Append an empty block in the queue so that solo mode can pick it up
+// Block* Extruder::append_empty_block(){
+//     this->kernel->conveyor->wait_for_queue(2);
+//     Block* block = this->kernel->conveyor->new_block();
+//     block->planner = this->kernel->planner;
+//     block->millimeters = 0;
+//     block->steps[0] = 0;
+//     block->steps[1] = 0;
+//     block->steps[2] = 0;
+//     // feed the block into the system. Will execute it if we are at the beginning of the queue
+//     block->ready();
+//
+//     return block;
+// }
 
 // When a new block begins, either follow the robot, or step by ourselves ( or stay back and do nothing )
 void Extruder::on_block_begin(void* argument){

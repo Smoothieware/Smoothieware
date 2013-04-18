@@ -14,6 +14,10 @@ using namespace std;
 #include <string>
 #include <vector>
 
+#include "Action.h"
+
+typedef RingBuffer<Action,16> ActionQueue;
+
 class Conveyor : public Module {
     public:
         Conveyor();
@@ -21,17 +25,25 @@ class Conveyor : public Module {
         void on_module_loaded(void);
         void on_idle(void*);
 
-        Block* new_block();
-        void new_block_added();
-        void pop_and_process_new_block(int debug);
+        Action* commit_action();
+
+        void start_next_action(void);
+
+        // first ensures we have an available action, then returns a pointer to it
+        Action* next_action(void);
+
         void wait_for_queue(int free_blocks);
         void wait_for_empty_queue();
 
-        RingBuffer<Block,16> queue;  // Queue of Blocks
-        Block* current_block;
-        bool looking_for_new_block;
+        ActionQueue queue;  // Queue of Blocks
 
-        volatile int flush_blocks;
+        // the next FREE action. Data is added to this action and it's placed in the queue when someone calls commit_action()
+        Action* _next_action;
+
+        // the CURRENTLY EXECUTING action. This is the tail of the queue for interrupt context.
+        // in idle context, we advance the ring's tail to the action before this one, cleaning the completed actions as we go.
+        Action* current_action;
+        int current_action_index;
 };
 
 #endif // CONVEYOR_H
