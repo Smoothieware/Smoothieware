@@ -272,18 +272,11 @@ void TemperatureControl::pid_process(double temperature)
     this->o = (p + i + d) * heater_pin.max_pwm() / 256;
 
     if (this->o >= heater_pin.max_pwm())
-    {
-        i = 0;
         this->o = heater_pin.max_pwm();
-    }
-    if (this->o < 0)
-    {
-        if (this->o < -(heater_pin.max_pwm()))
-            i = 0;
+    else if (this->o < 0)
         this->o = 0;
-    }
 
-    this->heater_pin.pwm(o);
+    this->heater_pin.pwm(this->o);
 }
 
 int TemperatureControl::new_thermistor_reading()
