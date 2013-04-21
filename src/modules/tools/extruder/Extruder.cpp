@@ -186,13 +186,14 @@ void Extruder::on_gcode_received(void *argument){
                     steps -= current_steps;
 
                 ExtruderData* data = new ExtruderData(this);
-                data->travel_ratio = 0;
+                data->travel_ratio = 0.0;
                 data->solo_steps = 0;
 
                 if ( fabs(gcode->millimeters_of_travel) < 0.0001 )
                 {
                     // SOLO move
                     data->solo_steps = steps;
+                    data->step_rate = this->feed_rate * this->steps_per_millimeter;
                     current_steps += steps;
 
                     // now we commit the action so we can do our move solo
@@ -218,6 +219,18 @@ void Extruder::on_action_invoke(void* argument)
     ExtruderData* data = static_cast<ExtruderData*>(argument);
 
     // TODO: something intelligent. maybe fill class variables from our data?
+    if (data->solo_steps)
+    {
+        this->mode = SOLO;
+
+        this->stepper_motor->set_speed(data->step_rate);
+        this->stepper_motor->move( data->solo_steps > 0, labs(data->solo_steps));
+    }
+    else
+    {
+        this->travel_ratio = data->travel_ratio;
+        this->mode = FOLLOW;
+    }
 }
 
 // // Append an empty block in the queue so that solo mode can pick it up
@@ -240,27 +253,7 @@ void Extruder::on_block_begin(void* argument){
     Block* block = static_cast<Block*>(argument);
 
 
-    if( this->mode == SOLO ){
-        // In solo mode we take the block so we can move even if the stepper has nothing to do
-
-        this->current_position += this->travel_distance ;
-
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * this->travel_distance)));
-
-        if( steps_to_step != 0 ){
-
-            // We take the block, we have to release it or everything gets stuck
-            block->take();
-            this->current_block = block;
-
-            this->stepper_motor->steps_per_second = 0;
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
-
-        }else{
-            this->current_block = NULL;
-        }
-
-    }else if( this->mode == FOLLOW ){
+    if( this->mode == FOLLOW ){
         // In non-solo mode, we just follow the stepper module
         this->travel_distance = block->millimeters * this->travel_ratio;
 
@@ -338,10 +331,16 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy){
 
     //printf("extruder releasing\r\n");
 
-    if (this->current_block){ // this should always be true, but sometimes it isn't. TODO: find out why
+    if (this->current_block)
+    {
         Block* block = this->current_block;
         this->current_block = NULL;
         block->release();
+    }
+    if (this->mode == SOLO)
+    {
+        data->finish();
+        data = NULL;
     }
     return 0;
 

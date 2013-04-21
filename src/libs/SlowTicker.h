@@ -41,7 +41,6 @@ class SlowTicker : public Module
         void on_module_loaded(void);
         void on_idle(void*);
         void on_gcode_received(void*);
-        void on_gcode_execute(void*);
         void on_action_invoke(void*);
 
         void set_frequency( int frequency );

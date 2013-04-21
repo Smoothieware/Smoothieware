@@ -79,12 +79,14 @@ void Switch::on_gcode_received(void* argument){
 void Switch::on_action_invoke(void* argument){
     SwitchData* data = static_cast<SwitchData*>(argument);
 
+    printf("Switch::on_action_invoke(pin: %d.%d, value: %d)\n", output_pin.pin, output_pin.port_number, data->value);
+
     if (data->value == 255)
         output_pin.set(1);
     else if (data->value == 0)
         output_pin.set(0);
     else
-        output_pin.pwm(value);
+        output_pin.pwm(data->value);
 
     data->finish();
 }

@@ -33,7 +33,10 @@ class ExtruderData : public ActionData
 {
 public:
     ExtruderData(Module* owner) { this->owner = owner; };
-    double travel_ratio;
+    union {
+        double travel_ratio;
+        double step_rate;
+    };
     int32_t solo_steps;
     bool disable;
 };
@@ -49,6 +52,8 @@ class Extruder : public Module{
         void     on_play(void* argument);
         void     on_pause(void* argument);
         void     on_speed_change(void* argument);
+        void     on_action_invoke(void* argument);
+
         uint32_t acceleration_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
         Block*   append_empty_block();
@@ -61,6 +66,7 @@ class Extruder : public Module{
         double          current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed
         int             current_steps;
         Block*          current_block;                // Current block we are stepping, same as Stepper's one
+        ExtruderData*   data;                         // current ExtruderData being executed (solo moves)
         int             microseconds_per_step_pulse;  // Pulse duration for step pulses
         double          steps_per_millimeter;         // Steps to travel one millimeter
         double          feed_rate;                    //

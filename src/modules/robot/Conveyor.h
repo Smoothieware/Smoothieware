@@ -24,6 +24,7 @@ class Conveyor : public Module {
 
         void on_module_loaded(void);
         void on_idle(void*);
+        void on_second_tick(void*);
 
         Action* commit_action();
 
@@ -36,9 +37,6 @@ class Conveyor : public Module {
         void wait_for_empty_queue();
 
         ActionQueue queue;  // Queue of Blocks
-
-        // the next FREE action. Data is added to this action and it's placed in the queue when someone calls commit_action()
-        Action* _next_action;
 
         // the CURRENTLY EXECUTING action. This is the tail of the queue for interrupt context.
         // in idle context, we advance the ring's tail to the action before this one, cleaning the completed actions as we go.

@@ -30,6 +30,8 @@ Action::Action()
 
 Action* Action::add_data(ActionData* data)
 {
+    printf("Action::add_data(%p, %p)\n", this, data);
+
     data->next = first_data;
     first_data = data;
 
@@ -40,13 +42,15 @@ Action* Action::add_data(ActionData* data)
 
 Action* Action::remove_data(ActionData* data)
 {
+    printf("Action::remove_data(%p, %p)\n", this, data);
+
     if (!data)
         return this;
 
     if (!first_data)
         return this;
 
-    if (first_data == data)
+    else if (first_data == data)
     {
         first_data = data->next;
     }
@@ -68,6 +72,28 @@ Action* Action::remove_data(ActionData* data)
     // if action is complete, start next action
     if (first_data == NULL)
         conveyor->start_next_action();
+
+    return this;
+}
+
+Action* Action::invoke()
+{
+    ActionData* data = first_data;
+    ActionData* temp;
+
+    printf("Action::invoke(%p)\n", this);
+
+    while (data)
+    {
+        printf("\tData: %p\n", data);
+
+        // we use a temp register because on_action_invoke might remove the ActionData straight away,
+        // in which case data->next points to an item in the garbage collection queue and we'd get confused
+        temp = data;
+        data = data->next;
+        printf("\tinvoke(%p, owner:%p)\n", temp, temp->owner);
+        temp->owner->on_action_invoke(temp);
+    }
 
     return this;
 }

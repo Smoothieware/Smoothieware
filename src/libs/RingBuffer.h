@@ -99,13 +99,9 @@ template<class kind, int length> kind* RingBuffer<kind, length>::get_tail_ref()
 }
 
 // get reference to next head (item that will be added by produce_head)
-// WARNING: busy loops while queue is full. Check queue size before calling if you don't want this!
 template<class kind, int length> kind* RingBuffer<kind, length>::get_head_ref()
 {
-    // busy loop while queue is full
-    while (next_block_index(head) == tail);
-
-    return &(buffer[next_block_index(head)]);
+    return &(buffer[head]);
 }
 
 // get reference to a specific item.
@@ -173,8 +169,10 @@ template<class kind, int length> kind* RingBuffer<kind, length>::produce_head()
 template<class kind, int length> kind* RingBuffer<kind, length>::consume_tail()
 {
     // increment tail if queue is not empty, leave it alone if queue is empty
-    if (tail != head)
-        tail = next_block_index(tail);
+    if (tail == head)
+        return NULL;
+
+    tail = next_block_index(tail);
 
     // return pointer to new tail
     return &(buffer[tail]);

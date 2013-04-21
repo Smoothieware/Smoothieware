@@ -30,6 +30,7 @@ class Action {
         // this is an efficiency shortcut.
         Block* block_data;
 
+        Action* invoke();
         Action* clean();
 
         Action* add_data(ActionData*);

@@ -23,7 +23,7 @@ class SwitchData : public ActionData {
 public:
     SwitchData(Module* owner) { this->owner = owner; }
     uint8_t value;
-}
+};
 
 class Switch : public Module {
     public:
@@ -33,7 +33,8 @@ class Switch : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
-        void on_gcode_execute(void* argument);
+//         void on_gcode_execute(void* argument);
+        void on_action_invoke(void* argument);
 
         uint16_t name_checksum;
         uint16_t on_m_code;

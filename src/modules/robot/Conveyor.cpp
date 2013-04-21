@@ -23,51 +23,77 @@ using namespace std;
 Conveyor::Conveyor()
 {
     current_action_index = queue.tail;
-    current_action = queue.get_tail_ref();
-    _next_action = queue.get_head_ref();
+    current_action = NULL;
+    queue.get_head_ref()->conveyor = this;
 }
 
 void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
+    register_for_event(ON_SECOND_TICK);
 }
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
 void Conveyor::on_idle(void* argument)
 {
     // clean up completed actions
-    while (queue.get_tail_ref() != current_action)
+    if (current_action)
+    {
+        while (queue.get_tail_ref() != current_action)
+            queue.consume_tail()->clean();
+    }
+    else if (queue.empty() == false)
         queue.consume_tail()->clean();
+
+    if (current_action == NULL && queue.get_head_ref()->first_data)
+    {
+        commit_action();
+        current_action->invoke();
+    }
+}
+
+// for debugging
+void Conveyor::on_second_tick(void* argument)
+{
+//     printf("Conveyor::current_action: %p\n", current_action);
+//     printf("Queue: head:%d tail:%d\n", queue.head, queue.tail);
+//     printf("Tail Data: %p\n", queue.get_tail_ref()->first_data);
 }
 
 Action* Conveyor::next_action(void)
 {
-    _next_action = queue.get_head_ref();
-    return _next_action;
+    return queue.get_head_ref();
 }
 
 void Conveyor::start_next_action()
 {
+    printf("Conveyor::start_next_action(%p)\n", current_action);
+
+    if (queue.empty())
+    {
+        current_action = NULL;
+        return;
+    }
+
     current_action_index = queue.next_block_index(current_action_index);
     current_action = queue.get_ref(current_action_index);
 
-    ActionData* data = current_action->first_data;
-    while (data)
-    {
-        data->owner->on_action_invoke(data);
-        data = data->next;
-    }
+    if (current_action->first_data)
+        current_action->invoke();
+    else
+        current_action = NULL;
 }
 
 // call this when _next_action is ready to be executed
 Action* Conveyor::commit_action()
 {
-    Action* added_action = _next_action;
+    printf("Conveyor::commit_action(%p)\n", queue.get_head_ref());
+
+    Action* added_action = queue.get_head_ref();
 
     while (queue.full());
     queue.produce_head();
 
-    // grab a pointer to the next free action. it WILL be free because a ringbuffer always has one unused element when it's full
-    _next_action = queue.get_head_ref();
+    queue.get_head_ref()->conveyor = this;
 
     // if queue was empty, restart it
     __disable_irq();

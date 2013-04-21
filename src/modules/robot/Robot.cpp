@@ -353,7 +353,7 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
     if( gcode->millimeters_of_travel < 0.0001 ){ return; }
 
     // Mark the gcode as having a known distance
-    this->distance_in_gcode_is_known( gcode );
+//     this->distance_in_gcode_is_known( gcode );
 
     // Figure out how many segments for this gcode
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);

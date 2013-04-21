@@ -272,11 +272,11 @@ int TemperatureControl::new_thermistor_reading()
     if (queue.size() >= queue.capacity())
     {
         uint16_t l;
-        queue.pop_front(l);
+        queue.pop(l);
         d = l;
     }
     uint16_t r = last_raw;
-    queue.push_back(r);
+    queue.push(r);
     for (int i=0; i<queue.size(); i++)
       median_buffer[i] = *queue.get_ref(i);
     uint16_t m = median_buffer[quick_median(median_buffer, queue.size())];
