@@ -20,7 +20,7 @@ Endstops::Endstops(){
 }
 
 void Endstops::on_module_loaded() {
-    // Do not do anything if not enabledd
+    // Do not do anything if not enabled
     if( this->kernel->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ){ return; }
 
     register_for_event(ON_CONFIG_RELOAD);
@@ -108,9 +108,12 @@ void Endstops::on_gcode_received(void* argument)
             this->kernel->conveyor->wait_for_empty_queue();
 
             // Do we move select axes or all of them
-            char axes_to_move = ( ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ) ? 0x00 : 0xff );
+            char axes_to_move = 0;
+            // only enable homing if the endstop is defined
+            bool home_all= !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
+            
             for( char c = 'X'; c <= 'Z'; c++ ){
-                if( gcode->has_letter(c) && this->pins[c - 'X'].connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }
+                if( (home_all || gcode->has_letter(c)) && this->pins[c - 'X' + (this->direction[c - 'X']?0:3)].connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }
             }
 
             // Enable the motors
