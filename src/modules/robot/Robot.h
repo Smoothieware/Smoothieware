@@ -33,6 +33,7 @@ using std::string;
 #define rotatable_cartesian_checksum           CHECKSUM("rotatable_cartesian")
 #define rostock_checksum                       CHECKSUM("rostock")
 #define delta_checksum                         CHECKSUM("delta")
+#define hbot_checksum                          CHECKSUM("hbot")
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
@@ -67,7 +68,6 @@ class Robot : public Module {
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
-        void process_gcode(Gcode* gcode);
         void append_milestone( double target[], double feed_rate);
         void append_line( Gcode* gcode, double target[], double feed_rate);
         //void append_arc(double theta_start, double angular_travel, double radius, double depth, double rate);

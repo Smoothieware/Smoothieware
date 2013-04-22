@@ -10,6 +10,7 @@
 #include "modules/robot/Conveyor.h"
 #include "modules/robot/Block.h"
 #include "modules/tools/extruder/Extruder.h"
+#include <mri.h>
 
 /* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
 * It can work in two modes : either the head does not move, and the extruder moves the filament at a specified speed ( SOLO mode here )
@@ -90,9 +91,11 @@ void Extruder::on_play(void* argument){
     this->stepper_motor->unpause();
 }
 
-void Extruder::on_gcode_received(void *argument)
-{
+
+void Extruder::on_gcode_received(void *argument){
     Gcode *gcode = static_cast<Gcode*>(argument);
+
+    // Gcodes to execute immediately
     if (gcode->has_m){
         if (gcode->m == 114){
             gcode->stream->printf("E:%4.1f ", this->current_position);
@@ -107,6 +110,7 @@ void Extruder::on_gcode_received(void *argument)
         }
     }
 
+    // Gcodes to pass along to on_gcode_execute
     if( ( gcode->has_m && ( gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
         if( this->kernel->conveyor->queue.size() == 0 ){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
@@ -122,16 +126,16 @@ void Extruder::on_gcode_received(void *argument)
             // This is a solo move, we add an empty block to the queue
             //If the queue is empty, execute immediatly, otherwise attach to the last added block
             if( this->kernel->conveyor->queue.size() == 0 ){
-                this->append_empty_block();
                 this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+                this->append_empty_block();
             }else{
-                Block* block = this->append_empty_block();
+                Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
                 block->append_gcode(gcode);
+                this->append_empty_block();
             }
         }
     }else{
         // This is for follow move
-
 
     }
 }
@@ -150,9 +154,6 @@ Block* Extruder::append_empty_block(){
 
     return block;
 }
-
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
 
 // Compute extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void* argument){
@@ -227,8 +228,6 @@ void Extruder::on_gcode_execute(void* argument){
         }
     }
 }
-
-//#pragma GCC pop_options
 
 // When a new block begins, either follow the robot, or step by ourselves ( or stay back and do nothing )
 void Extruder::on_block_begin(void* argument){

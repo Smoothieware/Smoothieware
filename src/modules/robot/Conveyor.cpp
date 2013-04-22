@@ -18,6 +18,8 @@ using namespace std;
 #include "Conveyor.h"
 #include "Planner.h"
 
+// The conveyor holds the queue of blocks, takes care of creating them, and starting the executing chain of blocks
+
 Conveyor::Conveyor(){
     this->current_block = NULL;
     this->looking_for_new_block = false;
@@ -28,13 +30,13 @@ void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
 }
 
+// Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
 void Conveyor::on_idle(void* argument){
     if (flush_blocks){
-
+        // Cleanly delete block 
         Block* block = queue.get_tail_ref();
         block->gcodes.clear(); 
         queue.delete_first();
-
         __disable_irq();
         flush_blocks--;
         __enable_irq();
@@ -43,10 +45,6 @@ void Conveyor::on_idle(void* argument){
 
 // Append a block to the list
 Block* Conveyor::new_block(){
-
-    // Clean up the vector of commands in the block we are about to replace
-    // It is quite strange to do this here, we really should do it inside Block->pop_and_execute_gcode
-    // but that function is called inside an interrupt and thus can break everything if the interrupt was trigerred during a memory access
 
     // Take the next untaken block on the queue ( the one after the last one )
     Block* block = this->queue.get_tail_ref();
@@ -109,13 +107,14 @@ void Conveyor::pop_and_process_new_block(int debug){
 
 }
 
-void Conveyor::wait_for_queue(int free_blocks)
-{
+// Wait for the queue to have a given number of free blocks
+void Conveyor::wait_for_queue(int free_blocks){
     while( this->queue.size() >= this->queue.capacity()-free_blocks ){
         this->kernel->call_event(ON_IDLE);
     }
 }
 
+// Wait for the queue to be empty
 void Conveyor::wait_for_empty_queue(){
     while( this->queue.size() > 0){
         this->kernel->call_event(ON_IDLE);

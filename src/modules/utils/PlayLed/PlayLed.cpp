@@ -16,8 +16,9 @@ void PlayLed::on_module_loaded()
     register_for_event(ON_CONFIG_RELOAD);
 
     register_for_event(ON_PLAY);
-    register_for_event(ON_BLOCK_BEGIN);
-    register_for_event(ON_BLOCK_END);
+    //TODO: these two events happen in interrupt context and it's extremely important they don't last long. This should be done by checking the size of the queue once a second or something
+    //register_for_event(ON_BLOCK_BEGIN);
+    //register_for_event(ON_BLOCK_END);
 
     on_config_reload(this);
 
@@ -36,12 +37,12 @@ void PlayLed::on_config_reload(void* argument)
 
 void PlayLed::on_block_begin(void* argument)
 {
-    led.set(true);
+    //led.set(true);
 }
 
 void PlayLed::on_block_end(void* argument)
 {
-    led.set(false);
+    //led.set(false);
 }
 
 void PlayLed::on_play(void* argument)

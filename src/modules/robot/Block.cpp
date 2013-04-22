@@ -17,6 +17,11 @@ using std::string;
 #include <vector>
 #include "../communication/utils/Gcode.h"
 
+// A block represents a movement, it's length for each stepper motor, and the corresponding acceleration curves.
+// It's stacked on a queue, and that queue is then executed in order, to move the motors.
+// Most of the accel math is also done in this class
+// And GCode objects for use in on_gcode_execute are also help in here
+
 Block::Block(){
     clear_vector(this->steps);
     this->times_taken = 0;   // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
@@ -38,25 +43,20 @@ void Block::debug(Kernel* kernel){
 //                              |             + <- nominal_rate*exit_factor
 //                              +-------------+
 //                                  time -->
-//*/
+*/
 void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
-    //this->conveyor->kernel->streams->printf("%p calculating trapezoid\r\n", this);
-
+    // The planner passes us factors, we need to transform them in rates
     this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min)
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
 
-    //this->conveyor->kernel->streams->printf("initrate:%f finalrate:%f\r\n", this->initial_rate, this->final_rate);
-
+    // How many steps to accelerate and decelerate
     double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
     int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
 
-
-    // Calculate the size of Plateau of Nominal Rate.
+    // Calculate the size of Plateau of Nominal Rate ( during which we don't accelerate nor decelerate, but just cruise )
     int plateau_steps = this->steps_event_count-accelerate_steps-decelerate_steps;
-
-    //this->conveyor->kernel->streams->printf("accelperminute:%f accelerate_steps:%d decelerate_steps:%d plateau:%d \r\n", acceleration_per_minute, accelerate_steps, decelerate_steps, plateau_steps );
 
    // Is the Plateau of Nominal Rate smaller than nothing? That means no cruising, and we will
    // have to use intersection_distance() to calculate when to abort acceleration and start braking
@@ -67,18 +67,9 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
        accelerate_steps = min( accelerate_steps, int(this->steps_event_count) );
        plateau_steps = 0;
    }
-
    this->accelerate_until = accelerate_steps;
    this->decelerate_after = accelerate_steps+plateau_steps;
 
-   //this->debug(this->conveyor->kernel);
-
-   /*
-   // TODO: FIX THIS: DIRTY HACK so that we don't end too early for blocks with 0 as final_rate. Doing the math right would be better. Probably fixed in latest grbl
-   if( this->final_rate < 0.01 ){
-        this->decelerate_after += floor( this->nominal_rate / 60 / this->planner->kernel->stepper->acceleration_ticks_per_second ) * 3;
-    }
-    */
 }
 
 // Calculates the distance (not time) it takes to accelerate from initial_rate to target_rate using the
@@ -175,7 +166,6 @@ void Block::append_gcode(Gcode* gcode){
 void Block::pop_and_execute_gcode(Kernel* &kernel){
     Block* block = const_cast<Block*>(this);
     for(unsigned short index=0; index<block->gcodes.size(); index++){
-        //printf("GCODE Z: %s \r\n", block->gcodes[index].command.c_str() );
         kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
     }
 }
@@ -189,37 +179,52 @@ void Block::ready(){
 // Mark the block as taken by one more module
 void Block::take(){
     this->times_taken++;
-    //printf("taking %p times now:%d\r\n", this, int(this->times_taken) );
 }
 
 // Mark the block as no longer taken by one module, go to next block if this free's it
+// This is one of the craziest bits in smoothie
 void Block::release(){
-    //printf("release %p \r\n", this );
-    this->times_taken--;
-    //printf("releasing %p times now:%d\r\n", this, int(this->times_taken) );
-    if( this->times_taken < 1 ){
-        this->conveyor->kernel->call_event(ON_BLOCK_END, this);
-        this->pop_and_execute_gcode(this->conveyor->kernel);
-        Conveyor* conveyor = this->conveyor;
 
+    // A block can be taken by several modules, we want to actually release it only when all modules have release()d it
+    this->times_taken--;
+    if( this->times_taken < 1 ){
+
+        // All modules are done with this block
+        // Call the on_block_end event so all modules can act accordingly
+        this->conveyor->kernel->call_event(ON_BLOCK_END, this);
+
+        // Gcodes corresponding to the *following* blocks are stored in this block. 
+        // We execute them all in order when this block is finished executing
+        this->pop_and_execute_gcode(this->conveyor->kernel);
+       
+        // We would normally delete this block directly here, but we can't, because this is interrupt context, no crazy memory stuff here
+        // So instead we increment a counter, and it will be deleted in main loop context 
+        Conveyor* conveyor = this->conveyor;
         if( conveyor->queue.size() > conveyor->flush_blocks ){
             conveyor->flush_blocks++;
         }
 
+        // We don't look for the next block to execute if the conveyor is already doing that itself
         if( conveyor->looking_for_new_block == false ){
+
+            // If there are still blocks to execute
             if( conveyor->queue.size() > conveyor->flush_blocks ){
                 Block* candidate =  conveyor->queue.get_ref(conveyor->flush_blocks);
+                
+                // We only execute blocks that are ready ( their math is done ) 
                 if( candidate->is_ready ){
+
+                    // Execute this candidate
                     conveyor->current_block = candidate;
                     conveyor->kernel->call_event(ON_BLOCK_BEGIN, conveyor->current_block);
+
+                    // If no module took this block, release it ourselves, as nothing else will do it otherwise
                     if( conveyor->current_block->times_taken < 1 ){
                         conveyor->current_block->times_taken = 1;
                         conveyor->current_block->release();
                     }
                 }else{
-
                     conveyor->current_block = NULL;
-
                 }
             }else{
                 conveyor->current_block = NULL;

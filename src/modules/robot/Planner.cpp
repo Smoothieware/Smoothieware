@@ -16,6 +16,9 @@ using namespace std;
 #include "Planner.h"
 #include "Conveyor.h"
 
+// The Planner does the acceleration math for the queue of Blocks ( movements ).
+// It makes sure the speed stays within the configured constraints ( acceleration, junction_deviation, etc )
+// It goes over the list in both direction, every time a block is added, re-doing the math to make sure everything is optimal
 
 Planner::Planner(){
     clear_vector(this->position);
@@ -29,6 +32,7 @@ void Planner::on_module_loaded(){
     this->on_config_reload(this);
 }
 
+// Configure acceleration
 void Planner::on_config_reload(void* argument){
     this->acceleration =       this->kernel->config->value(acceleration_checksum       )->by_default(100 )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
     this->junction_deviation = this->kernel->config->value(junction_deviation_checksum )->by_default(0.05)->as_number();
@@ -38,18 +42,13 @@ void Planner::on_config_reload(void* argument){
 // Append a block to the queue, compute it's speed factors
 void Planner::append_block( int target[], double feed_rate, double distance, double deltas[] ){
 
-    //printf("new block\r\n");
-
     // Stall here if the queue is ful
     this->kernel->conveyor->wait_for_queue(2);
 
+    // Create ( recycle ) a new block
     Block* block = this->kernel->conveyor->new_block();
     block->planner = this;
 
-    //Block* test = new Block();
-    //this->kernel->streams->printf("%p queue:%u\r\n", test, this->kernel->player->queue.size());
-    //delete test;
-    //
     // Direction bits
     block->direction_bits = 0;
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){
@@ -61,7 +60,6 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
-    //if( block->steps_event_count == 0 ){ this->computing = false; return; }
 
     block->millimeters = distance;
     double inverse_millimeters = 0;
@@ -78,8 +76,6 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
         block->nominal_rate = 0;
     }
 
-    //this->kernel->streams->printf("nom_speed: %f nom_rate: %u step_event_count: %u block->steps_z: %u \r\n", block->nominal_speed, block->nominal_rate, block->steps_event_count, block->steps[2]  );
-    
     // Compute the acceleration rate for the trapezoid generator. Depending on the slope of the line
     // average travel per step event changes. For a line along one axis the travel per step event
     // is equal to the travel/step in the particular axis. For a 45 degree line the steppers of both
@@ -88,7 +84,6 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // specifically for each line to compensate for this phenomenon:
     // Convert universal acceleration for direction-dependent stepper rate change parameter
     block->rate_delta = (float)( ( block->steps_event_count*inverse_millimeters * this->acceleration ) / ( this->kernel->stepper->acceleration_ticks_per_second * 60 ) ); // (step/min/acceleration_tick)
-
 
     // Compute path unit vector
     double unit_vec[3];
@@ -178,7 +173,6 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
-   //this->kernel->streams->printf("recalculate last: %p, queue size: %d \r\n", this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size()-1  ), this->kernel->conveyor->queue.size() );
    this->reverse_pass();
    this->forward_pass();
    this->recalculate_trapezoids();
@@ -234,7 +228,6 @@ void Planner::recalculate_trapezoids() {
     while(block_index != this->kernel->conveyor->queue.tail){
         current = next;
         next = &this->kernel->conveyor->queue.buffer[block_index];
-        //this->kernel->streams->printf("index:%d current:%p next:%p \r\n", block_index, current, next );
         if( current ){
             // Recalculate if current block entry or exit junction speed has changed.
             if( current->recalculate_flag || next->recalculate_flag ){
@@ -264,7 +257,6 @@ void Planner::dump_queue(){
 // acceleration within the allotted distance.
 double Planner::max_allowable_speed(double acceleration, double target_velocity, double distance) {
   return(
-    //sqrt(target_velocity*target_velocity-2L*acceleration*60*60*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
     sqrt(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
   );
 }

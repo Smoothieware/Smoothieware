@@ -20,6 +20,9 @@ Endstops::Endstops(){
 }
 
 void Endstops::on_module_loaded() {
+    // Do not do anything if not enabledd
+    if( this->kernel->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ){ return; }
+
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
 

@@ -5,7 +5,6 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 using namespace std;
 #include <vector>
 #include <string>
@@ -21,6 +20,8 @@ using namespace std;
 #include "libs/ConfigSources/FileConfigSource.h"
 #include "libs/ConfigSources/FirmConfigSource.h"
 
+// Add various config sources. Config can be fetched from several places.
+// All values are read into a cache, that is then used by modules to read their configuration
 Config::Config(){
     this->config_cache_loaded = false;
 
@@ -53,6 +54,7 @@ void Config::on_module_loaded(){}
 
 void Config::on_console_line_received( void* argument ){}
 
+// Set a value in the config cache, but not in any config source
 void Config::set_string( string setting, string value ){
     ConfigValue* cv = new ConfigValue;
     cv->found = true;
@@ -64,6 +66,7 @@ void Config::set_string( string setting, string value ){
     this->kernel->call_event(ON_CONFIG_RELOAD);
 }
 
+// Get a list of modules, used by module "pools" that look for the "enable" keyboard to find things like "moduletype.modulename.enable" as the marker of a new instance of a module
 void Config::get_module_list(vector<uint16_t>* list, uint16_t family){
     for( unsigned int i=1; i<this->config_cache.size(); i++){
         ConfigValue* value = this->config_cache.at(i);
@@ -79,6 +82,7 @@ void Config::get_module_list(vector<uint16_t>* list, uint16_t family){
 // Command to load config cache into buffer for multiple reads during init
 void Config::config_cache_load(){
 
+    // First clear the cache
     this->config_cache_clear();
 
     // First element is a special empty ConfigValue for values not found
@@ -103,7 +107,7 @@ void Config::config_cache_clear(){
     this->config_cache_loaded = false;
 }
 
-
+// Three ways to read a value from the config, depending on adress length
 ConfigValue* Config::value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t check_sum_c ){
     uint16_t check_sums[3];
     check_sums[0] = check_sum_a;

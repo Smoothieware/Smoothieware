@@ -60,7 +60,7 @@ void GcodeDispatch::on_console_line_received(void * line){
                 cs -= chksum;
             }
             //Strip line number value from possible_command
-            size_t lnsize = possible_command.find_first_of(" ") + 1;
+            size_t lnsize = possible_command.find_first_not_of("N0123456789.,- ");
             possible_command = possible_command.substr(lnsize);
 
         }else{
