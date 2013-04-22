@@ -57,13 +57,20 @@ void Endstops::on_config_reload(void* argument){
     this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(30   )->as_number();
     this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(10   )->as_number();
     this->debounce_count            =  this->kernel->config->value(endstop_debounce_count_checksum     )->by_default(100  )->as_number();
-    this->direction[0]              =  this->kernel->config->value(alpha_homing_direction_checksum     )->by_default(1   )->as_number();
-    this->direction[1]              =  this->kernel->config->value(beta_homing_direction_checksum      )->by_default(1   )->as_number();
-    this->direction[2]              =  this->kernel->config->value(gamma_homing_direction_checksum     )->by_default(1    )->as_number();
-    for (int i=0; i<3; i++) direction[i] = direction[i] > 0;
-    this->homing_position[0]        =  this->direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default(0)->as_number():this->kernel->config->value(alpha_max_checksum)->by_default(200)->as_number();
-    this->homing_position[1]        =  this->direction[1]?this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number():this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
-    this->homing_position[2]        =  this->direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number():this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
+    
+    // get homing direction and convert to boolean where true is home to min, and false is home to max
+    int home_dir                    = get_checksum(this->kernel->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
+    this->home_direction[0]         = home_dir != home_to_max_checksum;
+    
+    home_dir                        = get_checksum(this->kernel->config->value(beta_homing_direction_checksum)->by_default("home_to_min")->as_string());
+    this->home_direction[1]         = home_dir != home_to_max_checksum;
+    
+    home_dir                        = get_checksum(this->kernel->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string());
+    this->home_direction[2]         = home_dir != home_to_max_checksum;
+    
+    this->homing_position[0]        =  this->home_direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default(0)->as_number():this->kernel->config->value(alpha_max_checksum)->by_default(200)->as_number();
+    this->homing_position[1]        =  this->home_direction[1]?this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number():this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
+    this->homing_position[2]        =  this->home_direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number():this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
 }
 
 //#pragma GCC pop_options
@@ -76,7 +83,7 @@ void Endstops::wait_for_homed(char axes_to_move){
         this->kernel->call_event(ON_IDLE);
         for( char c = 'X'; c <= 'Z'; c++ ){
             if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                if( this->pins[c - 'X' + (this->direction[c - 'X']?0:3)].get() ){
+                if( this->pins[c - 'X' + (this->home_direction[c - 'X']?0:3)].get() ){
                     if( debounce[c - 'X'] < debounce_count ) {
                         debounce[c - 'X'] ++;
                         running = true;
@@ -125,7 +132,7 @@ void Endstops::on_gcode_received(void* argument)
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                     gcode->stream->printf("homing axis %c\r\n", c);
                     this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
-                    this->steppers[c - 'X']->move(this->direction[c - 'X'],10000000);
+                    this->steppers[c - 'X']->move(this->home_direction[c - 'X'],10000000);
                 }
             }
 
@@ -138,7 +145,7 @@ void Endstops::on_gcode_received(void* argument)
             int inverted_dir;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    inverted_dir = -(this->direction[c - 'X'] - 1);
+                    inverted_dir = -(this->home_direction[c - 'X'] - 1);
                     this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
                     this->steppers[c - 'X']->move(inverted_dir,this->retract_steps[c - 'X']);
                 }
@@ -162,7 +169,7 @@ void Endstops::on_gcode_received(void* argument)
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
                     this->steppers[c - 'X']->set_speed(this->slow_rates[c -'X']);
-                    this->steppers[c - 'X']->move(this->direction[c - 'X'],10000000);
+                    this->steppers[c - 'X']->move(this->home_direction[c - 'X'],10000000);
                 }
             }
 

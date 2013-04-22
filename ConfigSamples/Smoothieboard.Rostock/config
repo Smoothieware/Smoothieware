@@ -103,18 +103,15 @@ switch.spindle.enable                        false            #
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
 alpha_min_endstop                            1.24             #
 alpha_max_endstop                            1.25             #
-alpha_homing_direction                       0                # Home up
-alpha_min                                    0                #
+alpha_homing_direction                       home_to_max      # Home up
 alpha_max                                    0                #
 beta_min_endstop                             1.26             #
 beta_max_endstop                             1.27             #
-beta_homing_direction                        0                #
-beta_min                                     0                #
+beta_homing_direction                        home_to_max      #
 beta_max                                     0                #
 gamma_min_endstop                            1.28             #
 gamma_max_endstop                            1.29             #
-gamma_homing_direction                       0                #
-gamma_min                                    0                #
+gamma_homing_direction                       home_to_max      #
 gamma_max                                    300              #
 
 alpha_fast_homing_rate                       3000              # rates in steps/second 
