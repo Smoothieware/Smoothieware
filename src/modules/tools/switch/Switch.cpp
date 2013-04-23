@@ -48,7 +48,8 @@ void Switch::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
     if( gcode->has_m && ( gcode->m == this->on_m_code || gcode->m == this->off_m_code ) ){
-        if( this->kernel->conveyor->queue.size() == 0 ){
+		gcode->this_gcode_was_not_taken = false;
+		if( this->kernel->conveyor->queue.size() == 0 ){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
         }else{
             Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );

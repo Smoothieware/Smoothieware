@@ -46,7 +46,8 @@ void CurrentControl::on_gcode_received(void *argument)
     {
         if (gcode->m == 907)
         {
-            int i;
+            gcode->this_gcode_was_not_taken = false;
+			int i;
             for (i = 0; i < 4; i++)
             {
                 if (gcode->has_letter(alpha[i]))

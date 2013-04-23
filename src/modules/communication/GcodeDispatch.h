@@ -16,14 +16,20 @@ using std::string;
 
 #include "libs/StreamOutput.h"
 
+#define return_error_on_unhandled_gcode_checksum	CHECKSUM("return_error_on_unhandled_gcode")
+
+
 class GcodeDispatch : public Module {
     public:
         GcodeDispatch();
         
         virtual void on_module_loaded();
         virtual void on_console_line_received(void* line);
-    private:
+
+	private:
         int currentline;
+		bool return_error_on_unhandled_gcode;
+		
 };
 
 #endif

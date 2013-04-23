@@ -39,6 +39,7 @@ class Gcode {
         unsigned int g;
 
         bool add_nl;
+		bool this_gcode_was_not_taken;
         StreamOutput* stream;
 
 
