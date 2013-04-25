@@ -120,7 +120,7 @@ void Endstops::on_gcode_received(void* argument)
             bool home_all= !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
             
             for( char c = 'X'; c <= 'Z'; c++ ){
-                if( (home_all || gcode->has_letter(c)) && this->pins[c - 'X' + (this->direction[c - 'X']?0:3)].connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }
+                if( (home_all || gcode->has_letter(c)) && this->pins[c - 'X' + (this->home_direction[c - 'X']?0:3)].connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }
             }
 
             // Enable the motors
