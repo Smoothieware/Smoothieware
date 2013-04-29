@@ -142,7 +142,7 @@ void SlowTicker::on_gcode_received(void* argument){
 
         if (millis)
         {
-            kernel->conveyor->next_action()->add_data(new G4PauseData(millis, this));
+            kernel->conveyor->next_action()->add_data(allocate_action_data(G4PauseData, this, millis));
             kernel->conveyor->commit_action();
             gcode->mark_as_taken();
         }

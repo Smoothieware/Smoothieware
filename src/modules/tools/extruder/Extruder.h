@@ -32,7 +32,7 @@
 class ExtruderData : public ActionData
 {
 public:
-    ExtruderData(Module* owner) { this->owner = owner; };
+    ExtruderData(Module* owner) : ActionData(owner) {};
     union {
         double travel_ratio;
         double step_rate;

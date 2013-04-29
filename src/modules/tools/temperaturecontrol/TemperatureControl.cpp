@@ -19,7 +19,7 @@
 #include "MRI_Hooks.h"
 
 TemperatureControl::TemperatureControl(uint16_t name) :
-  name_checksum(name), waiting(false), min_temp_violated(false) {}
+  name_checksum(name), waiting(NULL), min_temp_violated(false) {}
 
 void TemperatureControl::on_module_loaded(){
 
@@ -161,7 +161,7 @@ void TemperatureControl::on_gcode_received(void* argument){
         // Attach gcodes to the last block for on_gcode_execute
         if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ){
 
-            TemperatureControlData* tdata = new TemperatureControlData();
+            TemperatureControlData* tdata = allocate_action_data(TemperatureControlData, this);
 
             tdata->temperature = gcode->get_value('S');
             tdata->wait = (gcode->m == set_and_wait_m_code);
@@ -180,12 +180,14 @@ void TemperatureControl::on_action_invoke(void* argument)
     set_desired_temperature(data->temperature);
 
     if (data->wait)
-        waiting = (last_reading < target_temperature);
+    {
+        waiting = data;
+    }
     else
-        waiting = false;
-
-    if (!waiting)
+    {
+        waiting = NULL;
         data->finish();
+    }
 }
 
 void TemperatureControl::set_desired_temperature(double desired_temperature)
@@ -231,6 +233,12 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
         else
         {
             pid_process(temperature);
+
+            if ((waiting) && (temperature >= target_temperature))
+            {
+                waiting->finish();
+                waiting = NULL;
+            }
         }
     }
     else
@@ -246,10 +254,10 @@ void TemperatureControl::pid_process(double temperature)
     double error = target_temperature - temperature;
 
     p  = error * p_factor;
-    i += (error * this->i_factor);
+    i += (error * (this->i_factor / this->readings_per_second));
     // d was imbued with oldest_raw earlier in new_thermistor_reading
     d = adc_value_to_temperature(d);
-    d = (d - temperature) * this->d_factor;
+    d = (d - temperature) * (this->d_factor * this->readings_per_second) * -1;
 
     if (i > this->i_max)
         i = this->i_max;

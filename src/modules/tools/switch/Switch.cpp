@@ -52,7 +52,7 @@ void Switch::on_gcode_received(void* argument){
         int code = gcode->m;
         if (code == this->on_m_code )
         {
-            SwitchData* data = new SwitchData(this);
+            SwitchData* data = allocate_action_data(SwitchData, this);
 
             if (gcode->has_letter('S'))
             {
@@ -69,7 +69,7 @@ void Switch::on_gcode_received(void* argument){
         else if (code == this->off_m_code )
         {
             // Turn pin off
-            SwitchData* data = new SwitchData(this);
+            SwitchData* data = allocate_action_data(SwitchData, this);
             data->value = 0;
             kernel->conveyor->next_action()->add_data(data);
         }

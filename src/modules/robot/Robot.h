@@ -64,6 +64,8 @@ class Robot : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
+        void on_action_invoke(void* argument);
+
         void reset_axis_position(double position, int axis);
 
     private:

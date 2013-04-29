@@ -102,8 +102,11 @@ Action* Action::clean()
 {
     ActionData* d;
 
+    printf("Action::clean(%p, %p)\n", this, gc_data);
+
     while ((d = gc_data))
     {
+        printf("Action::gc_data(%p)\n", d);
         gc_data = gc_data->next;
 
         delete d;

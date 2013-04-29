@@ -21,7 +21,7 @@
 
 class SwitchData : public ActionData {
 public:
-    SwitchData(Module* owner) { this->owner = owner; }
+    SwitchData(Module* owner) : ActionData(owner) {};
     uint8_t value;
 };
 

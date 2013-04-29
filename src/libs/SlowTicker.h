@@ -25,10 +25,9 @@ using namespace std;
 class G4PauseData : public ActionData
 {
 public:
-    G4PauseData(uint32_t m, Module* owner)
+    G4PauseData(Module* owner, uint32_t m) : ActionData(owner)
     {
         millis = m;
-        this->owner = owner;
     }
     uint32_t millis;
 };

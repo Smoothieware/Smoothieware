@@ -20,6 +20,8 @@ class Module;
 class Action;
 class ActionData;
 
+#define allocate_action_data(type, ...) new type(__VA_ARGS__)
+
 class Action {
     public:
         Action();
@@ -42,7 +44,8 @@ class Action {
 
 class ActionData {
 public:
-    ActionData(){};
+//     ActionData(){};
+    ActionData(Module* owner){ this->owner = owner; };
     virtual ~ActionData(){};
 
     Module* owner;

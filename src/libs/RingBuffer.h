@@ -172,10 +172,12 @@ template<class kind, int length> kind* RingBuffer<kind, length>::consume_tail()
     if (tail == head)
         return NULL;
 
+    kind* r = &(buffer[tail]);
+
     tail = next_block_index(tail);
 
-    // return pointer to new tail
-    return &(buffer[tail]);
+    // return pointer to old tail
+    return r;
 }
 
 #endif

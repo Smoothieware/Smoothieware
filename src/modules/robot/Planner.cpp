@@ -56,7 +56,8 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 
     // Create ( recycle ) a new block
     // TODO: consider using a fixed pool of blocks
-    Block* block = new Block();
+//     Block* block = new Block(kernel->robot);
+    Block* block = allocate_action_data(Block, kernel->robot);
     block->planner = this;
 
     // Direction bits
@@ -183,14 +184,14 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
-   this->reverse_pass();
-   this->forward_pass();
+    int start = this->reverse_pass();
+   this->forward_pass(start);
    this->recalculate_trapezoids();
 }
 
 // Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
 // implements the reverse pass.
-void Planner::reverse_pass(){
+int Planner::reverse_pass(){
     ActionQueue* q = &kernel->conveyor->queue;
 
     // For each block
@@ -208,20 +209,21 @@ void Planner::reverse_pass(){
         // TODO: reverse pass should find this index, and pass it to forward_pass as a starting point
         blocks[0] = q->buffer[block_index].block_data;
 
+        if (blocks[0] == NULL)
+            return q->next_block_index(block_index);
+
         if (blocks[1] == NULL)
             continue;
 
         blocks[1]->reverse_pass(blocks[2], blocks[0]);
     }
+    return block_index;
 }
 
 // Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
 // implements the forward pass.
-void Planner::forward_pass() {
+void Planner::forward_pass(int block_index) {
     ActionQueue* q = &kernel->conveyor->queue;
-
-    // For each block
-    int block_index = q->tail;
 
     Block* blocks[3] = {NULL,NULL,NULL};
 
@@ -265,13 +267,16 @@ void Planner::recalculate_trapezoids() {
         next = q->buffer[block_index].block_data;
         if( current ){
             // Recalculate if current block entry or exit junction speed has changed.
-            if( current->recalculate_flag || next->recalculate_flag ){
+            if( current->recalculate_flag || (next && next->recalculate_flag) ){
                 current->calculate_trapezoid( current->entry_speed/current->nominal_speed, next->entry_speed/current->nominal_speed );
                 current->recalculate_flag = false;
             }
         }
         block_index = q->next_block_index( block_index );
     }
+
+    if (!next)
+        return;
 
     // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
     next->calculate_trapezoid( next->entry_speed/next->nominal_speed, MINIMUM_PLANNER_SPEED/next->nominal_speed); //TODO: Make configuration option

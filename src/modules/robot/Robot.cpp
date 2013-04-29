@@ -37,6 +37,13 @@ Robot::Robot(){
     seconds_per_minute = 60.0;
 }
 
+void Robot::on_action_invoke(void* argument)
+{
+    Block* block = static_cast<Block*>(argument);
+
+    kernel->call_event(ON_BLOCK_BEGIN, block);
+}
+
 //Called when the module has just been loaded
 void Robot::on_module_loaded() {
     register_for_event(ON_CONFIG_RELOAD);

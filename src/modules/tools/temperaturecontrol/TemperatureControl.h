@@ -52,6 +52,7 @@ class TemperatureControlPool;
 
 class TemperatureControlData : public ActionData {
 public:
+    TemperatureControlData(Module* owner) : ActionData(owner) {};
     float temperature;
     bool wait;
 };
@@ -114,7 +115,7 @@ class TemperatureControl : public Module {
         Pin  thermistor_pin;
         Pwm  heater_pin;
 
-        bool waiting;
+        TemperatureControlData* waiting;
         bool min_temp_violated;
 
         uint16_t set_m_code;

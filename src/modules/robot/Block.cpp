@@ -22,10 +22,12 @@ using std::string;
 // Most of the accel math is also done in this class
 // And GCode objects for use in on_gcode_execute are also help in here
 
-Block::Block(){
+Block::Block(Module* owner) : ActionData(owner)
+{
     clear_vector(this->steps);
     this->initial_rate = -1;
     this->final_rate = -1;
+    this->taken = 0;
 }
 
 void Block::debug(Kernel* kernel){
@@ -178,15 +180,17 @@ void Block::ready()
 
 // Mark the block as taken by one more module
 void Block::take(){
+    taken++;
 }
 
 // Mark the block as no longer taken by one module, go to next block if this free's it
 void Block::release()
 {
+    if (--taken)
+        return;
+
     // Call the on_block_end event so all modules can act accordingly
     this->conveyor->kernel->call_event(ON_BLOCK_END, this);
 
-    // call to ActionData::finish to remove us from the Action
-    this->action->block_data = NULL;
     this->finish();
 }

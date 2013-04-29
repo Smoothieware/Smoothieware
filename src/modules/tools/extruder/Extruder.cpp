@@ -118,7 +118,7 @@ void Extruder::on_gcode_received(void *argument){
 
             // M84 must be executed in sequence, so we create a new Action
             case 84:{
-                ExtruderData* data = new ExtruderData(this);
+                ExtruderData* data = allocate_action_data(ExtruderData, this);
                 data->disable = true;
                 data->solo_steps = 0;
                 data->travel_ratio = 0.0;
@@ -185,7 +185,7 @@ void Extruder::on_gcode_received(void *argument){
                 if (absolute_mode)
                     steps -= current_steps;
 
-                ExtruderData* data = new ExtruderData(this);
+                ExtruderData* data = allocate_action_data(ExtruderData, this);
                 data->travel_ratio = 0.0;
                 data->solo_steps = 0;
 
