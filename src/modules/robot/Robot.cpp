@@ -160,9 +160,9 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 return;
             case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
-                                                 this->current_position[0],
-                                                 this->current_position[1],
-                                                 this->current_position[2]);
+                                                 from_millimeters(this->current_position[0]),
+                                                 from_millimeters(this->current_position[1]),
+                                                 from_millimeters(this->current_position[2]));
                 gcode->add_nl = true;
                 return;
             case 220: // M220 - speed override percentage
@@ -441,7 +441,10 @@ void Robot::compute_arc(Gcode* gcode, double offset[], double target[]){
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed
 inline double Robot::to_millimeters( double value ){
-        return this->inch_mode ? value/25.4 : value;
+    return this->inch_mode ? value * 25.4 : value;
+}
+inline double Robot::from_millimeters( double value){
+    return this->inch_mode ? value/25.4 : value;
 }
 
 double Robot::theta(double x, double y){

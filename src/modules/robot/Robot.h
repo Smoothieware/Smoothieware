@@ -76,6 +76,7 @@ class Robot : public Module {
 
         void compute_arc(Gcode* gcode, double offset[], double target[]);
         double to_millimeters(double value);
+        double from_millimeters(double value);
         double theta(double x, double y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
 
