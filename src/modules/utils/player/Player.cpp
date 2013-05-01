@@ -23,7 +23,7 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_SECOND_TICK);
     
     this->on_boot_file_name = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode -q")->as_string();
-    this->on_boot_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(false)->as_bool();
+    this->on_boot_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs= 0;
 }
 
@@ -153,7 +153,7 @@ void Player::on_main_loop(void* argument){
         if( this->on_boot_enable ){
             this->play_command(this->on_boot_file_name, this->kernel->serial);
         }else{
-            this->kernel->serial->printf("On boot gcode disabled! skipping...\n");
+            //this->kernel->serial->printf("On boot gcode disabled! skipping...\n");
         }
         this->booted = true;
     }
