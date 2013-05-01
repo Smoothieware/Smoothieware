@@ -1,12 +1,12 @@
 /**********************************************************************
-* $Id$        lpc17xx_rit.h                2010-05-21
+* $Id$		lpc17xx_rit.h				2010-05-21
 *//**
-* @file        lpc17xx_rit.h
-* @brief    Contains all macro definitions and function prototypes
-*             support for RIT firmware library on LPC17xx
-* @version    2.0
-* @date        21. May. 2010
-* @author    NXP MCU SW Application Team
+* @file		lpc17xx_rit.h
+* @brief	Contains all macro definitions and function prototypes
+* 			support for RIT firmware library on LPC17xx
+* @version	2.0
+* @date		21. May. 2010
+* @author	NXP MCU SW Application Team
 *
 * Copyright(C) 2010, NXP Semiconductor
 * All rights reserved.
@@ -53,17 +53,17 @@ extern "C"
 /*********************************************************************//**
  * Macro defines for RIT control register
  **********************************************************************/
-/**    Set interrupt flag when the counter value equals the masked compare value */
-#define RIT_CTRL_INTEN    ((uint32_t) (1))
+/**	Set interrupt flag when the counter value equals the masked compare value */
+#define RIT_CTRL_INTEN	((uint32_t) (1))
 /** Set timer enable clear to 0 when the counter value equals the masked compare value  */
-#define RIT_CTRL_ENCLR     ((uint32_t) _BIT(1))
+#define RIT_CTRL_ENCLR 	((uint32_t) _BIT(1))
 /** Set timer enable on debug */
-#define RIT_CTRL_ENBR    ((uint32_t) _BIT(2))
+#define RIT_CTRL_ENBR	((uint32_t) _BIT(2))
 /** Set timer enable */
-#define RIT_CTRL_TEN    ((uint32_t) _BIT(3))
+#define RIT_CTRL_TEN	((uint32_t) _BIT(3))
 
 /** Macro to determine if it is valid RIT peripheral */
-#define PARAM_RITx(n)    (((uint32_t *)n)==((uint32_t *)LPC_RIT))
+#define PARAM_RITx(n)	(((uint32_t *)n)==((uint32_t *)LPC_RIT))
 /**
  * @}
  */

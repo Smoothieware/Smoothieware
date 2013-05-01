@@ -124,7 +124,7 @@ USBMSD::USBMSD(USB *u, MSD_Disk *d) {
     usb->addEndpoint(&MSC_BulkOut);
 
     MSC_Interface.iInterface =
-        usb->addString(&MSC_Description);
+    	usb->addString(&MSC_Description);
 }
 
 // Called in ISR context to process a class specific request
@@ -695,15 +695,15 @@ void USBMSD::on_module_loaded()
 
 bool USBMSD::USBEvent_busReset(void)
 {
-    return true;
+	return true;
 }
 
 bool USBMSD::USBEvent_connectStateChanged(bool connected)
 {
-    return true;
+	return true;
 }
 
 bool USBMSD::USBEvent_suspendStateChanged(bool suspended)
 {
-    return true;
+	return true;
 }

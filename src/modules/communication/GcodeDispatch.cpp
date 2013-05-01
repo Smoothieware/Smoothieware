@@ -21,16 +21,16 @@ GcodeDispatch::GcodeDispatch(){}
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded() {
 
-    if( this->kernel->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool() == false )
-        return_error_on_unhandled_gcode = false;
-    else 
-        return_error_on_unhandled_gcode = true;
+	if( this->kernel->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool() == false )
+		return_error_on_unhandled_gcode = false;
+	else 
+		return_error_on_unhandled_gcode = true;
 
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     currentline = -1;
-    
+	
 
-    
+	
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -109,13 +109,13 @@ void GcodeDispatch::on_console_line_received(void * line){
                 this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
                 if (gcode->add_nl)
                     new_message.stream->printf("\r\n");
+				
+				if ( gcode->this_gcode_was_not_taken == true && return_error_on_unhandled_gcode == true )
+				    new_message.stream->printf("error\r\n");
+				else
+				    new_message.stream->printf("ok\r\n");
                 
-                if ( return_error_on_unhandled_gcode == true && gcode->accepted_by_module == false)
-                    new_message.stream->printf("error: Command hasn't been processed.\r\n");
-                else
-                    new_message.stream->printf("ok\r\n");
-                
-                delete gcode;
+				delete gcode;
             }
         }else{
             //Request resend

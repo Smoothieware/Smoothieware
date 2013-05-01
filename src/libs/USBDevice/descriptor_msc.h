@@ -1,5 +1,5 @@
 #ifndef _DESCRIPTOR_MSC_H
-#define    _DESCRIPTOR_MSC_H
+#define	_DESCRIPTOR_MSC_H
 
 /* MSC Subclass Codes */
 #define MSC_SUBCLASS_RBC                0x01
@@ -29,21 +29,21 @@
 
 /* Bulk-only Command Block Wrapper */
 typedef struct __attribute__ ((packed)) {
-    uint32_t dSignature;
-    uint32_t dTag;
-    uint32_t dDataLength;
-    uint8_t  bmFlags;
-    uint8_t  bLUN;
-    uint8_t  bCBLength;
-    uint8_t  CB[16];
+	uint32_t dSignature;
+	uint32_t dTag;
+	uint32_t dDataLength;
+	uint8_t  bmFlags;
+	uint8_t  bLUN;
+	uint8_t  bCBLength;
+	uint8_t  CB[16];
 } MSC_CBW;
 
 /* Bulk-only Command Status Wrapper */
 typedef struct __attribute__ ((packed)) {
-    uint32_t dSignature;
-    uint32_t dTag;
-    uint32_t dDataResidue;
-    uint8_t  bStatus;
+	uint32_t dSignature;
+	uint32_t dTag;
+	uint32_t dDataResidue;
+	uint8_t  bStatus;
 } MSC_CSW;
 
 #define MSC_CBW_Signature               0x43425355

@@ -9,19 +9,19 @@
 using namespace std;
 
 CurrentControl::CurrentControl(){
-    digipot= NULL;
+	digipot= NULL;
 }
 
 void CurrentControl::on_module_loaded(){
-    if( !this->kernel->config->value( currentcontrol_module_enable_checksum )->by_default(false)->as_bool() ){
-        // as this module is not needed free up the resource
-        delete this;
-        return;
-    }
+	if( !this->kernel->config->value( currentcontrol_module_enable_checksum )->by_default(false)->as_bool() ){
+		// as this module is not needed free up the resource
+		delete this;
+		return;
+	}
 
-    // allocate digipot, if already allocated delete it first
-    delete digipot;
-    digipot = new Digipot();
+	// allocate digipot, if already allocated delete it first
+	delete digipot;
+	digipot = new Digipot();
 
     // Get configuration
     this->alpha_current =           this->kernel->config->value(alpha_current_checksum  )->by_default(0.8)->as_number();
@@ -46,8 +46,8 @@ void CurrentControl::on_gcode_received(void *argument)
     {
         if (gcode->m == 907)
         {
-            gcode->accepted_by_module = true;
-            int i;
+            gcode->this_gcode_was_not_taken = false;
+			int i;
             for (i = 0; i < 4; i++)
             {
                 if (gcode->has_letter(alpha[i]))

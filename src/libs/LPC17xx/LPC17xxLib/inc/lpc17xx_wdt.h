@@ -1,12 +1,12 @@
 /**********************************************************************
-* $Id$        lpc17xx_wdt.h                2010-05-21
+* $Id$		lpc17xx_wdt.h				2010-05-21
 *//**
-* @file        lpc17xx_wdt.h
-* @brief    Contains all macro definitions and function prototypes
-*             support for WDT firmware library on LPC17xx
-* @version    2.0
-* @date        21. May. 2010
-* @author    NXP MCU SW Application Team
+* @file		lpc17xx_wdt.h
+* @brief	Contains all macro definitions and function prototypes
+* 			support for WDT firmware library on LPC17xx
+* @version	2.0
+* @date		21. May. 2010
+* @author	NXP MCU SW Application Team
 *
 * Copyright(C) 2010, NXP Semiconductor
 * All rights reserved.
@@ -51,37 +51,37 @@ extern "C"
 
 /* --------------------- BIT DEFINITIONS -------------------------------------- */
 /** WDT interrupt enable bit */
-#define WDT_WDMOD_WDEN                ((uint32_t)(1<<0))
+#define WDT_WDMOD_WDEN			    ((uint32_t)(1<<0))
 /** WDT interrupt enable bit */
-#define WDT_WDMOD_WDRESET            ((uint32_t)(1<<1))
+#define WDT_WDMOD_WDRESET			((uint32_t)(1<<1))
 /** WDT time out flag bit */
-#define WDT_WDMOD_WDTOF                ((uint32_t)(1<<2))
+#define WDT_WDMOD_WDTOF				((uint32_t)(1<<2))
 /** WDT Time Out flag bit */
-#define WDT_WDMOD_WDINT                ((uint32_t)(1<<3))
+#define WDT_WDMOD_WDINT				((uint32_t)(1<<3))
 /** WDT Mode */
-#define WDT_WDMOD(n)                ((uint32_t)(1<<1))
+#define WDT_WDMOD(n)				((uint32_t)(1<<1))
 
 /** Define divider index for microsecond ( us ) */
-#define WDT_US_INDEX    ((uint32_t)(1000000))
+#define WDT_US_INDEX	((uint32_t)(1000000))
 /** WDT Time out minimum value */
-#define WDT_TIMEOUT_MIN    ((uint32_t)(0xFF))
+#define WDT_TIMEOUT_MIN	((uint32_t)(0xFF))
 /** WDT Time out maximum value */
-#define WDT_TIMEOUT_MAX    ((uint32_t)(0xFFFFFFFF))
+#define WDT_TIMEOUT_MAX	((uint32_t)(0xFFFFFFFF))
 
 /** Watchdog mode register mask */
-#define WDT_WDMOD_MASK            (uint8_t)(0x02)
+#define WDT_WDMOD_MASK			(uint8_t)(0x02)
 /** Watchdog timer constant register mask */
-#define WDT_WDTC_MASK            (uint8_t)(0xFFFFFFFF)
+#define WDT_WDTC_MASK			(uint8_t)(0xFFFFFFFF)
 /** Watchdog feed sequence register mask */
-#define WDT_WDFEED_MASK         (uint8_t)(0x000000FF)
+#define WDT_WDFEED_MASK 		(uint8_t)(0x000000FF)
 /** Watchdog timer value register mask */
-#define WDT_WDCLKSEL_MASK         (uint8_t)(0x03)
+#define WDT_WDCLKSEL_MASK 		(uint8_t)(0x03)
 /** Clock selected from internal RC */
-#define WDT_WDCLKSEL_RC            (uint8_t)(0x00)
+#define WDT_WDCLKSEL_RC			(uint8_t)(0x00)
 /** Clock selected from PCLK */
-#define WDT_WDCLKSEL_PCLK        (uint8_t)(0x01)
+#define WDT_WDCLKSEL_PCLK		(uint8_t)(0x01)
 /** Clock selected from external RTC */
-#define WDT_WDCLKSEL_RTC        (uint8_t)(0x02)
+#define WDT_WDCLKSEL_RTC		(uint8_t)(0x02)
 
 /* ---------------- CHECK PARAMETER DEFINITIONS ---------------------------- */
 /* Macro check clock source selection  */
@@ -102,15 +102,15 @@ extern "C"
 
 /** @brief Clock source option for WDT */
 typedef enum {
-    WDT_CLKSRC_IRC = 0, /*!< Clock source from Internal RC oscillator */
-    WDT_CLKSRC_PCLK = 1, /*!< Selects the APB peripheral clock (PCLK) */
-    WDT_CLKSRC_RTC = 2 /*!< Selects the RTC oscillator */
+	WDT_CLKSRC_IRC = 0, /*!< Clock source from Internal RC oscillator */
+	WDT_CLKSRC_PCLK = 1, /*!< Selects the APB peripheral clock (PCLK) */
+	WDT_CLKSRC_RTC = 2 /*!< Selects the RTC oscillator */
 } WDT_CLK_OPT;
 
 /** @brief WDT operation mode */
 typedef enum {
-    WDT_MODE_INT_ONLY = 0, /*!< Use WDT to generate interrupt only */
-    WDT_MODE_RESET = 1    /*!< Use WDT to generate interrupt and reset MCU */
+	WDT_MODE_INT_ONLY = 0, /*!< Use WDT to generate interrupt only */
+	WDT_MODE_RESET = 1    /*!< Use WDT to generate interrupt and reset MCU */
 } WDT_MODE_OPT;
 
 /**
