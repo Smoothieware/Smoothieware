@@ -21,7 +21,7 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_SECOND_TICK);
-    
+
     this->on_boot_file_name = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode -q")->as_string();
     this->on_boot_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs= 0;
@@ -57,7 +57,6 @@ void Player::play_command( string parameters, StreamOutput* stream ){
 
     // Get filename
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
-    stream->printf("Playing %s\r\n", filename.c_str());
     string options           = shift_parameter( parameters );
 
     this->current_file_handler = fopen( filename.c_str(), "r");
@@ -65,6 +64,8 @@ void Player::play_command( string parameters, StreamOutput* stream ){
         stream->printf("File not found: %s\r\n", filename.c_str());
         return;
     }
+
+    stream->printf("Playing %s\r\n", filename.c_str());
 
     this->playing_file = true;
 
@@ -102,14 +103,14 @@ void Player::progress_command( string parameters, StreamOutput* stream ){
             if(bytespersec > 0)
                 est= (file_size - played_cnt) / bytespersec;
         }
-        
+
         int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
         stream->printf("%d %% complete, elapsed time: %d s", pcnt, this->elapsed_secs);
         if(est > 0){
             stream->printf(", est time: %d s",  est);
         }
         stream->printf("\r\n");
-        
+
     }else{
         stream->printf("File size is unknown\r\n");
     }
