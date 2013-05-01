@@ -125,11 +125,10 @@ void TemperatureControl::on_gcode_received(void* argument){
         if( gcode->m == this->get_m_code ){
             gcode->stream->printf("%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
             gcode->add_nl = true;
-			gcode->this_gcode_was_not_taken = false;
         }
         if (gcode->m == 301)
         {
-			gcode->this_gcode_was_not_taken = false;
+            gcode->accepted_by_module = true;
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
             {
                 if (gcode->has_letter('P'))
@@ -145,7 +144,7 @@ void TemperatureControl::on_gcode_received(void* argument){
         }
         if (gcode->m == 303)
         {
-			gcode->this_gcode_was_not_taken = false;
+            gcode->accepted_by_module = true;
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
             {
                 double target = 150.0;
@@ -198,7 +197,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
         // Set temperature and wait
         if( gcode->m == this->set_and_wait_m_code && gcode->has_letter('S') )
         {
-			gcode->this_gcode_was_not_taken = false;
+            gcode->accepted_by_module = true;
             if (gcode->get_value('S') == 0)
             {
                 this->target_temperature = UNDEFINED;

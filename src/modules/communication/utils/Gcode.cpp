@@ -18,7 +18,7 @@ using std::string;
 Gcode::Gcode(const string& command, StreamOutput* stream) : command(command), m(0), g(0), add_nl(false), stream(stream) {
     prepare_cached_values();
     this->millimeters_of_travel = 0L;
-	this->this_gcode_was_not_taken=true;
+    this->accepted_by_module=false;
 }
 
 Gcode::Gcode(const Gcode& to_copy){
@@ -30,7 +30,7 @@ Gcode::Gcode(const Gcode& to_copy){
     this->g                     = to_copy.g;
     this->add_nl                = to_copy.add_nl;
     this->stream                = to_copy.stream;
-	this->this_gcode_was_not_taken=true;
+    this->accepted_by_module=false;
 }
 
 Gcode& Gcode::operator= (const Gcode& to_copy){
@@ -44,7 +44,7 @@ Gcode& Gcode::operator= (const Gcode& to_copy){
         this->add_nl                = to_copy.add_nl;
         this->stream                = to_copy.stream;
     }
-	this->this_gcode_was_not_taken=true;
+    this->accepted_by_module=false;
     return *this;
 }
 

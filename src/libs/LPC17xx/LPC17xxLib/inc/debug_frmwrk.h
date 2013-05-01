@@ -1,11 +1,11 @@
 /**********************************************************************
-* $Id$		debug_frmwrk.h		2010-05-21
+* $Id$        debug_frmwrk.h        2010-05-21
 *//**
-* @file		debug_frmwrk.h
-* @brief	Contains some utilities that used for debugging through UART
-* @version	2.0
-* @date		21. May. 2010
-* @author	NXP MCU SW Application Team
+* @file        debug_frmwrk.h
+* @brief    Contains some utilities that used for debugging through UART
+* @version    2.0
+* @date        21. May. 2010
+* @author    NXP MCU SW Application Team
 *
 * Copyright(C) 2010, NXP Semiconductor
 * All rights reserved.
@@ -28,24 +28,24 @@
 //#include <stdarg.h>
 #include "lpc17xx_uart.h"
 
-#define USED_UART_DEBUG_PORT	0
+#define USED_UART_DEBUG_PORT    0
 
 #if (USED_UART_DEBUG_PORT==0)
-#define DEBUG_UART_PORT	LPC_UART0
+#define DEBUG_UART_PORT    LPC_UART0
 #elif (USED_UART_DEBUG_PORT==1)
-#define DEBUG_UART_PORT	LPC_UART1
+#define DEBUG_UART_PORT    LPC_UART1
 #endif
 
-#define _DBG(x)	 	_db_msg(DEBUG_UART_PORT, x)
-#define _DBG_(x)	_db_msg_(DEBUG_UART_PORT, x)
-#define _DBC(x)	 	_db_char(DEBUG_UART_PORT, x)
-#define _DBD(x)	 	_db_dec(DEBUG_UART_PORT, x)
-#define _DBD16(x)	 _db_dec_16(DEBUG_UART_PORT, x)
-#define _DBD32(x)	 _db_dec_32(DEBUG_UART_PORT, x)
-#define _DBH(x)	 	_db_hex(DEBUG_UART_PORT, x)
-#define _DBH16(x)	 _db_hex_16(DEBUG_UART_PORT, x)
-#define _DBH32(x)	 _db_hex_32(DEBUG_UART_PORT, x)
-#define _DG			_db_get_char(DEBUG_UART_PORT)
+#define _DBG(x)         _db_msg(DEBUG_UART_PORT, x)
+#define _DBG_(x)    _db_msg_(DEBUG_UART_PORT, x)
+#define _DBC(x)         _db_char(DEBUG_UART_PORT, x)
+#define _DBD(x)         _db_dec(DEBUG_UART_PORT, x)
+#define _DBD16(x)     _db_dec_16(DEBUG_UART_PORT, x)
+#define _DBD32(x)     _db_dec_32(DEBUG_UART_PORT, x)
+#define _DBH(x)         _db_hex(DEBUG_UART_PORT, x)
+#define _DBH16(x)     _db_hex_16(DEBUG_UART_PORT, x)
+#define _DBH32(x)     _db_hex_32(DEBUG_UART_PORT, x)
+#define _DG            _db_get_char(DEBUG_UART_PORT)
 //void  _printf (const  char *format, ...);
 
 extern void (*_db_msg)(LPC_UART_TypeDef *UARTx, const void *s);
