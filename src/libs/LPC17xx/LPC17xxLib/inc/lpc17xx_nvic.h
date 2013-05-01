@@ -1,13 +1,13 @@
 /**********************************************************************
-* $Id$        lpc17xx_nvic.h                2010-05-21
+* $Id$		lpc17xx_nvic.h				2010-05-21
 *//**
-* @file        lpc17xx_nvic.h
-* @brief    Contains all macro definitions and function prototypes
-*             support for Nesting Vectored Interrupt firmware library
-*             on LPC17xx
-* @version    2.0
-* @date        21. May. 2010
-* @author    NXP MCU SW Application Team
+* @file		lpc17xx_nvic.h
+* @brief	Contains all macro definitions and function prototypes
+* 			support for Nesting Vectored Interrupt firmware library
+* 			on LPC17xx
+* @version	2.0
+* @date		21. May. 2010
+* @author	NXP MCU SW Application Team
 *
 * Copyright(C) 2010, NXP Semiconductor
 * All rights reserved.

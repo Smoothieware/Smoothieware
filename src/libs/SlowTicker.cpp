@@ -135,9 +135,9 @@ void SlowTicker::on_gcode_execute(void* argument){
     {
         if (gcode->g == 4)
         {
-            gcode->accepted_by_module = true;
-            
-            bool updated = false;
+            gcode->this_gcode_was_not_taken = false;
+			
+			bool updated = false;
             if (gcode->has_letter('P')) {
                 updated = true;
                 g4_ticks += gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);

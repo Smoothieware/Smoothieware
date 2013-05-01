@@ -41,11 +41,25 @@
 
 // Watchdog wd(5000000, WDT_MRI);
 
-// USB Stuff
-//SDCard sd(P0_9, P0_8, P0_7, P0_6);      // this selects SPI1 as the sdcard as it is on Smoothieboard
-SDCard sd(P0_18, P0_17, P0_15, P0_16);  // this selects SPI0 as the sdcard
+// #include "libs/USBCDCMSC/USBCDCMSC.h"
+// SDFileSystem sd(p5, p6, p7, p8, "sd");  // LPC17xx specific : comment if you are not using a SD card ( for example with a mBed ).
+// spi1
+//SDCard sd(P0_9, P0_8, P0_7, P0_6);
+//spi0
+SDCard sd(P0_18, P0_17, P0_15, P0_16);
+
+//	LED1 = P0_6,
+//	LED2 = P0_7,
+//	LED3 = P0_8,
+//	LED4 = P0_9,
+//	LED5 = P1_16,
+
+
+//LocalFileSystem local("local");       // LPC17xx specific : comment if you are not running a mBed
+// USBCDCMSC cdcmsc(&sd);                  // LPC17xx specific : Composite serial + msc USB device
 
 USB u;
+
 USBSerial usbserial(&u);
 USBMSD msc(&u, &sd);
 DFU dfu(&u);
@@ -55,11 +69,16 @@ SDFAT mounter("sd", &sd);
 char buf[512];
 
 GPIO leds[5] = {
-    GPIO(P1_18),
-    GPIO(P1_19),
-    GPIO(P1_20),
-    GPIO(P1_21),
-    GPIO(P4_28)
+//    GPIO(P1_18),
+    GPIO(P0_6),
+//    GPIO(P1_19),
+    GPIO(P0_7),
+//    GPIO(P1_20),
+    GPIO(P0_8),
+//    GPIO(P1_21),
+    GPIO(P0_9),
+//    GPIO(P4_28)
+    GPIO(P1_16)
 };
 
 int main() {
@@ -74,7 +93,7 @@ int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 with new accel @%dMHz\r\n", SystemCoreClock / 1000000);
+    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 @%dMHz\r\n", SystemCoreClock / 1000000);
 
     // Create and add main modules
     kernel->add_module( new Laser() );

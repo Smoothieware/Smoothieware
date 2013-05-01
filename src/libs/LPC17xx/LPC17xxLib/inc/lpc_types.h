@@ -1,14 +1,14 @@
 /**********************************************************************
-* $Id$        lpc_types.h        2008-07-27
+* $Id$		lpc_types.h		2008-07-27
 *//**
-* @file        lpc_types.h
-* @brief    Contains the NXP ABL typedefs for C standard types.
-*             It is intended to be used in ISO C conforming development
-*             environments and checks for this insofar as it is possible
-*             to do so.
-* @version    2.0
-* @date        27 Jul. 2008
-* @author    NXP MCU SW Application Team
+* @file		lpc_types.h
+* @brief	Contains the NXP ABL typedefs for C standard types.
+*     		It is intended to be used in ISO C conforming development
+*     		environments and checks for this insofar as it is possible
+*     		to do so.
+* @version	2.0
+* @date		27 Jul. 2008
+* @author	NXP MCU SW Application Team
 *
 * Copyright(C) 2008, NXP Semiconductor
 * All rights reserved.
@@ -72,8 +72,8 @@ typedef enum {ERROR = 0, SUCCESS = !ERROR} Status;
  */
 typedef enum
 {
-    NONE_BLOCKING = 0,        /**< None Blocking type */
-    BLOCKING                /**< Blocking type */
+	NONE_BLOCKING = 0,		/**< None Blocking type */
+	BLOCKING				/**< Blocking type */
 } TRANSFER_BLOCK_Type;
 
 
@@ -99,7 +99,7 @@ typedef int32_t(*PFI)();
  */
 #undef _BIT
 /* Set bit macro */
-#define _BIT(n)    (1<<n)
+#define _BIT(n)	(1<<n)
 
 /* _SBF(f,v) sets the bit field starting at position "f" to value "v".
  * _SBF(f,v) is intended to be used in "OR" and "AND" expressions:
@@ -166,16 +166,16 @@ typedef uint8_t UNS_8;
 typedef int8_t INT_8;
 
 /** SMA type for 16 bit unsigned value */
-typedef    uint16_t UNS_16;
+typedef	uint16_t UNS_16;
 
 /** SMA type for 16 bit signed value */
-typedef    int16_t INT_16;
+typedef	int16_t INT_16;
 
 /** SMA type for 32 bit unsigned value */
-typedef    uint32_t UNS_32;
+typedef	uint32_t UNS_32;
 
 /** SMA type for 32 bit signed value */
-typedef    int32_t INT_32;
+typedef	int32_t INT_32;
 
 /** SMA type for 64 bit signed value */
 typedef int64_t INT_64;

@@ -1,11 +1,11 @@
 /**********************************************************************
-* $Id$        lpc17xx_libcfg_default.h                2010-05-21
+* $Id$		lpc17xx_libcfg_default.h				2010-05-21
 *//**
-* @file        lpc17xx_libcfg_default.h
-* @brief    Default Library configuration header file
-* @version    2.0
-* @date        21. May. 2010
-* @author    NXP MCU SW Application Team
+* @file		lpc17xx_libcfg_default.h
+* @brief	Default Library configuration header file
+* @version	2.0
+* @date		21. May. 2010
+* @author	NXP MCU SW Application Team
 *
 * Copyright(C) 2010, NXP Semiconductor
 * All rights reserved.
@@ -136,13 +136,13 @@
 
 #ifdef  DEBUG
 /*******************************************************************************
-* @brief        The CHECK_PARAM macro is used for function's parameters check.
-*                 It is used only if the library is compiled in DEBUG mode.
-* @param[in]    expr - If expr is false, it calls check_failed() function
-*                        which reports the name of the source file and the source
-*                        line number of the call that failed.
+* @brief		The CHECK_PARAM macro is used for function's parameters check.
+* 				It is used only if the library is compiled in DEBUG mode.
+* @param[in]	expr - If expr is false, it calls check_failed() function
+*                    	which reports the name of the source file and the source
+*                    	line number of the call that failed.
 *                    - If expr is true, it returns no value.
-* @return        None
+* @return		None
 *******************************************************************************/
 #define CHECK_PARAM(expr) ((expr) ? (void)0 : check_failed((uint8_t *)__FILE__, __LINE__))
 #else
