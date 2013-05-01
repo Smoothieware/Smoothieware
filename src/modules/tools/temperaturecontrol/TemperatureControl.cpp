@@ -128,7 +128,7 @@ void TemperatureControl::on_gcode_received(void* argument){
         }
         if (gcode->m == 301)
         {
-            gcode->accepted_by_module = true;
+            gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
             {
                 if (gcode->has_letter('P'))
@@ -144,7 +144,7 @@ void TemperatureControl::on_gcode_received(void* argument){
         }
         if (gcode->m == 303)
         {
-            gcode->accepted_by_module = true;
+            gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
             {
                 double target = 150.0;
@@ -197,7 +197,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
         // Set temperature and wait
         if( gcode->m == this->set_and_wait_m_code && gcode->has_letter('S') )
         {
-            gcode->accepted_by_module = true;
+            gcode->mark_as_taken();
             if (gcode->get_value('S') == 0)
             {
                 this->target_temperature = UNDEFINED;

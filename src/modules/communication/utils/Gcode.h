@@ -29,6 +29,7 @@ class Gcode {
 
         int    get_num_args();
         void   prepare_cached_values();
+        void   mark_as_taken();
 
         string command;
         double millimeters_of_travel;
@@ -39,9 +40,8 @@ class Gcode {
         unsigned int g;
 
         bool add_nl;
-        bool accepted_by_module;
         StreamOutput* stream;
 
-
+        bool accepted_by_module;
 };
 #endif

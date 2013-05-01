@@ -140,37 +140,37 @@ void Robot::process_gcode(Gcode* gcode){
     if( gcode->has_g){
         switch( gcode->g ){
             case 0:  this->motion_mode = MOTION_MODE_SEEK; 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 1:  this->motion_mode = MOTION_MODE_LINEAR; 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 2:  this->motion_mode = MOTION_MODE_CW_ARC; 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 3:  this->motion_mode = MOTION_MODE_CCW_ARC; 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 20: this->inch_mode = true; 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 21: this->inch_mode = false; 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 90: this->absolute_mode = true; 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 91: this->absolute_mode = false; 
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 break;
             case 92: {
                 if(gcode->get_num_args() == 0){
@@ -183,7 +183,7 @@ void Robot::process_gcode(Gcode* gcode){
                 }
                 memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
                 this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 return; // TODO: Wait until queue empty
            }
        }
@@ -205,17 +205,17 @@ void Robot::process_gcode(Gcode* gcode){
                 this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
                 gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", steps[0], steps[1], steps[2], seconds_per_minute);
                 gcode->add_nl = true;
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 return;
             case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
                                                  this->current_position[0],
                                                  this->current_position[1],
                                                  this->current_position[2]);
                 gcode->add_nl = true;
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 return;
             case 220: // M220 - speed override percentage
-                gcode->accepted_by_module = true;
+                gcode->mark_as_taken();
                 if (gcode->has_letter('S'))
                 {
                     double factor = gcode->get_value('S');

@@ -46,7 +46,7 @@ void CurrentControl::on_gcode_received(void *argument)
     {
         if (gcode->m == 907)
         {
-            gcode->accepted_by_module = true;
+            gcode->mark_as_taken();
             int i;
             for (i = 0; i < 4; i++)
             {

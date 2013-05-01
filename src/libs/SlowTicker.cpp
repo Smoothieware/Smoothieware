@@ -135,7 +135,7 @@ void SlowTicker::on_gcode_execute(void* argument){
     {
         if (gcode->g == 4)
         {
-            gcode->accepted_by_module = true;
+            gcode->mark_as_taken();
             
             bool updated = false;
             if (gcode->has_letter('P')) {
