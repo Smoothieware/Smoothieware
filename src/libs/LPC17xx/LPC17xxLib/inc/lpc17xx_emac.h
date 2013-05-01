@@ -1,12 +1,12 @@
 /**********************************************************************
-* $Id$		lpc17xx_emac.h				2010-05-21
+* $Id$        lpc17xx_emac.h                2010-05-21
 *//**
-* @file		lpc17xx_emac.h
-* @brief	Contains all macro definitions and function prototypes
-* 			support for Ethernet MAC firmware library on LPC17xx
-* @version	2.0
-* @date		21. May. 2010
-* @author	NXP MCU SW Application Team
+* @file        lpc17xx_emac.h
+* @brief    Contains all macro definitions and function prototypes
+*             support for Ethernet MAC firmware library on LPC17xx
+* @version    2.0
+* @date        21. May. 2010
+* @author    NXP MCU SW Application Team
 *
 * Copyright(C) 2010, NXP Semiconductor
 * All rights reserved.
@@ -53,16 +53,16 @@ extern "C"
 
 
 /* EMAC PHY status type definitions */
-#define EMAC_PHY_STAT_LINK			(0)		/**< Link Status */
-#define EMAC_PHY_STAT_SPEED			(1)		/**< Speed Status */
-#define EMAC_PHY_STAT_DUP			(2)		/**< Duplex Status */
+#define EMAC_PHY_STAT_LINK            (0)        /**< Link Status */
+#define EMAC_PHY_STAT_SPEED            (1)        /**< Speed Status */
+#define EMAC_PHY_STAT_DUP            (2)        /**< Duplex Status */
 
 /* EMAC PHY device Speed definitions */
-#define EMAC_MODE_AUTO				(0)		/**< Auto-negotiation mode */
-#define EMAC_MODE_10M_FULL			(1)		/**< 10Mbps FullDuplex mode */
-#define EMAC_MODE_10M_HALF			(2)		/**< 10Mbps HalfDuplex mode */
-#define EMAC_MODE_100M_FULL			(3)		/**< 100Mbps FullDuplex mode */
-#define EMAC_MODE_100M_HALF			(4)		/**< 100Mbps HalfDuplex mode */
+#define EMAC_MODE_AUTO                (0)        /**< Auto-negotiation mode */
+#define EMAC_MODE_10M_FULL            (1)        /**< 10Mbps FullDuplex mode */
+#define EMAC_MODE_10M_HALF            (2)        /**< 10Mbps HalfDuplex mode */
+#define EMAC_MODE_100M_FULL            (3)        /**< 100Mbps FullDuplex mode */
+#define EMAC_MODE_100M_HALF            (4)        /**< 100Mbps HalfDuplex mode */
 
 /**
  * @}
@@ -117,11 +117,11 @@ extern "C"
  **********************************************************************/
 /** Programmable field representing the nibble time offset of the minimum possible period
  * between the end of any transmitted packet to the beginning of the next */
-#define EMAC_IPGT_BBIPG(n)		(n&0x7F)
+#define EMAC_IPGT_BBIPG(n)        (n&0x7F)
 /** Recommended value for Full Duplex of Programmable field representing the nibble time
  * offset of the minimum possible period between the end of any transmitted packet to the
  * beginning of the next */
-#define EMAC_IPGT_FULL_DUP		(EMAC_IPGT_BBIPG(0x15))
+#define EMAC_IPGT_FULL_DUP        (EMAC_IPGT_BBIPG(0x15))
 /** Recommended value for Half Duplex of Programmable field representing the nibble time
  * offset of the minimum possible period between the end of any transmitted packet to the
  * beginning of the next */
@@ -131,12 +131,12 @@ extern "C"
  * Macro defines for Non Back-to-Back Inter-Packet-Gap Register
  **********************************************************************/
 /** Programmable field representing the Non-Back-to-Back Inter-Packet-Gap */
-#define EMAC_IPGR_NBBIPG_P2(n)	(n&0x7F)
+#define EMAC_IPGR_NBBIPG_P2(n)    (n&0x7F)
 /** Recommended value for Programmable field representing the Non-Back-to-Back Inter-Packet-Gap Part 1 */
-#define EMAC_IPGR_P2_DEF		(EMAC_IPGR_NBBIPG_P2(0x12))
+#define EMAC_IPGR_P2_DEF        (EMAC_IPGR_NBBIPG_P2(0x12))
 /** Programmable field representing the optional carrierSense window referenced in
  * IEEE 802.3/4.2.3.2.1 'Carrier Deference' */
-#define EMAC_IPGR_NBBIPG_P1(n)	((n&0x7F)<<8)
+#define EMAC_IPGR_NBBIPG_P1(n)    ((n&0x7F)<<8)
 /** Recommended value for Programmable field representing the Non-Back-to-Back Inter-Packet-Gap Part 2 */
 #define EMAC_IPGR_P1_DEF        EMAC_IPGR_NBBIPG_P1(0x0C)
 
@@ -145,10 +145,10 @@ extern "C"
  **********************************************************************/
 /** Programmable field specifying the number of retransmission attempts following a collision before
  * aborting the packet due to excessive collisions */
-#define EMAC_CLRT_MAX_RETX(n)	(n&0x0F)
+#define EMAC_CLRT_MAX_RETX(n)    (n&0x0F)
 /** Programmable field representing the slot time or collision window during which collisions occur
  * in properly configured networks */
-#define EMAC_CLRT_COLL(n)		((n&0x3F)<<8)
+#define EMAC_CLRT_COLL(n)        ((n&0x3F)<<8)
 /** Default value for Collision Window / Retry register */
 #define EMAC_CLRT_DEF           ((EMAC_CLRT_MAX_RETX(0x0F))|(EMAC_CLRT_COLL(0x37)))
 
@@ -156,62 +156,62 @@ extern "C"
  * Macro defines for Maximum Frame Register
  **********************************************************************/
 /** Represents a maximum receive frame of 1536 octets */
-#define EMAC_MAXF_MAXFRMLEN(n)	(n&0xFFFF)
+#define EMAC_MAXF_MAXFRMLEN(n)    (n&0xFFFF)
 
 /*********************************************************************//**
  * Macro defines for PHY Support Register
  **********************************************************************/
-#define EMAC_SUPP_SPEED			0x00000100  	/**< Reduced MII Logic Current Speed   */
-#define EMAC_SUPP_RES_RMII      0x00000800  	/**< Reset Reduced MII Logic           */
+#define EMAC_SUPP_SPEED            0x00000100      /**< Reduced MII Logic Current Speed   */
+#define EMAC_SUPP_RES_RMII      0x00000800      /**< Reset Reduced MII Logic           */
 
 /*********************************************************************//**
  * Macro defines for Test Register
  **********************************************************************/
-#define EMAC_TEST_SHCUT_PQUANTA  0x00000001  	/**< Shortcut Pause Quanta             */
-#define EMAC_TEST_TST_PAUSE      0x00000002  	/**< Test Pause                        */
-#define EMAC_TEST_TST_BACKP      0x00000004  	/**< Test Back Pressure                */
+#define EMAC_TEST_SHCUT_PQUANTA  0x00000001      /**< Shortcut Pause Quanta             */
+#define EMAC_TEST_TST_PAUSE      0x00000002      /**< Test Pause                        */
+#define EMAC_TEST_TST_BACKP      0x00000004      /**< Test Back Pressure                */
 
 /*********************************************************************//**
  * Macro defines for MII Management Configuration Register
  **********************************************************************/
-#define EMAC_MCFG_SCAN_INC       0x00000001  	/**< Scan Increment PHY Address        */
-#define EMAC_MCFG_SUPP_PREAM     0x00000002  	/**< Suppress Preamble                 */
+#define EMAC_MCFG_SCAN_INC       0x00000001      /**< Scan Increment PHY Address        */
+#define EMAC_MCFG_SUPP_PREAM     0x00000002      /**< Suppress Preamble                 */
 #define EMAC_MCFG_CLK_SEL(n)     ((n&0x0F)<<2)  /**< Clock Select Field                 */
-#define EMAC_MCFG_RES_MII        0x00008000  	/**< Reset MII Management Hardware     */
-#define EMAC_MCFG_MII_MAXCLK	 2500000UL		/**< MII Clock max */
+#define EMAC_MCFG_RES_MII        0x00008000      /**< Reset MII Management Hardware     */
+#define EMAC_MCFG_MII_MAXCLK     2500000UL        /**< MII Clock max */
 
 /*********************************************************************//**
  * Macro defines for MII Management Command Register
  **********************************************************************/
-#define EMAC_MCMD_READ           0x00000001  	/**< MII Read                          */
-#define EMAC_MCMD_SCAN           0x00000002  	/**< MII Scan continuously             */
+#define EMAC_MCMD_READ           0x00000001      /**< MII Read                          */
+#define EMAC_MCMD_SCAN           0x00000002      /**< MII Scan continuously             */
 
-#define EMAC_MII_WR_TOUT         0x00050000  	/**< MII Write timeout count           */
-#define EMAC_MII_RD_TOUT         0x00050000  	/**< MII Read timeout count            */
+#define EMAC_MII_WR_TOUT         0x00050000      /**< MII Write timeout count           */
+#define EMAC_MII_RD_TOUT         0x00050000      /**< MII Read timeout count            */
 
 /*********************************************************************//**
  * Macro defines for MII Management Address Register
  **********************************************************************/
-#define EMAC_MADR_REG_ADR(n)     (n&0x1F)  		/**< MII Register Address field         */
+#define EMAC_MADR_REG_ADR(n)     (n&0x1F)          /**< MII Register Address field         */
 #define EMAC_MADR_PHY_ADR(n)     ((n&0x1F)<<8)  /**< PHY Address Field                  */
 
 /*********************************************************************//**
  * Macro defines for MII Management Write Data Register
  **********************************************************************/
-#define EMAC_MWTD_DATA(n)		(n&0xFFFF)		/**< Data field for MMI Management Write Data register */
+#define EMAC_MWTD_DATA(n)        (n&0xFFFF)        /**< Data field for MMI Management Write Data register */
 
 /*********************************************************************//**
  * Macro defines for MII Management Read Data Register
  **********************************************************************/
-#define EMAC_MRDD_DATA(n)		(n&0xFFFF)		/**< Data field for MMI Management Read Data register */
+#define EMAC_MRDD_DATA(n)        (n&0xFFFF)        /**< Data field for MMI Management Read Data register */
 
 /*********************************************************************//**
  * Macro defines for MII Management Indicators Register
  **********************************************************************/
-#define EMAC_MIND_BUSY           0x00000001  	/**< MII is Busy                       */
-#define EMAC_MIND_SCAN           0x00000002  	/**< MII Scanning in Progress          */
-#define EMAC_MIND_NOT_VAL        0x00000004  	/**< MII Read Data not valid           */
-#define EMAC_MIND_MII_LINK_FAIL  0x00000008  	/**< MII Link Failed                   */
+#define EMAC_MIND_BUSY           0x00000001      /**< MII is Busy                       */
+#define EMAC_MIND_SCAN           0x00000002      /**< MII Scanning in Progress          */
+#define EMAC_MIND_NOT_VAL        0x00000004      /**< MII Read Data not valid           */
+#define EMAC_MIND_MII_LINK_FAIL  0x00000008      /**< MII Link Failed                   */
 
 /* Station Address 0 Register */
 /* Station Address 1 Register */
@@ -222,22 +222,22 @@ extern "C"
 /*********************************************************************//**
  * Macro defines for Command Register
  **********************************************************************/
-#define EMAC_CR_RX_EN            0x00000001  	/**< Enable Receive                    */
-#define EMAC_CR_TX_EN            0x00000002  	/**< Enable Transmit                   */
-#define EMAC_CR_REG_RES          0x00000008  	/**< Reset Host Registers              */
-#define EMAC_CR_TX_RES           0x00000010  	/**< Reset Transmit Datapath           */
-#define EMAC_CR_RX_RES           0x00000020  	/**< Reset Receive Datapath            */
-#define EMAC_CR_PASS_RUNT_FRM    0x00000040  	/**< Pass Runt Frames                  */
-#define EMAC_CR_PASS_RX_FILT     0x00000080  	/**< Pass RX Filter                    */
-#define EMAC_CR_TX_FLOW_CTRL     0x00000100  	/**< TX Flow Control                   */
-#define EMAC_CR_RMII             0x00000200  	/**< Reduced MII Interface             */
-#define EMAC_CR_FULL_DUP         0x00000400  	/**< Full Duplex                       */
+#define EMAC_CR_RX_EN            0x00000001      /**< Enable Receive                    */
+#define EMAC_CR_TX_EN            0x00000002      /**< Enable Transmit                   */
+#define EMAC_CR_REG_RES          0x00000008      /**< Reset Host Registers              */
+#define EMAC_CR_TX_RES           0x00000010      /**< Reset Transmit Datapath           */
+#define EMAC_CR_RX_RES           0x00000020      /**< Reset Receive Datapath            */
+#define EMAC_CR_PASS_RUNT_FRM    0x00000040      /**< Pass Runt Frames                  */
+#define EMAC_CR_PASS_RX_FILT     0x00000080      /**< Pass RX Filter                    */
+#define EMAC_CR_TX_FLOW_CTRL     0x00000100      /**< TX Flow Control                   */
+#define EMAC_CR_RMII             0x00000200      /**< Reduced MII Interface             */
+#define EMAC_CR_FULL_DUP         0x00000400      /**< Full Duplex                       */
 
 /*********************************************************************//**
  * Macro defines for Status Register
  **********************************************************************/
-#define EMAC_SR_RX_EN            0x00000001  	/**< Enable Receive                    */
-#define EMAC_SR_TX_EN            0x00000002  	/**< Enable Transmit                   */
+#define EMAC_SR_RX_EN            0x00000001      /**< Enable Receive                    */
+#define EMAC_SR_TX_EN            0x00000002      /**< Enable Transmit                   */
 
 /*********************************************************************//**
  * Macro defines for Transmit Status Vector 0 Register
@@ -289,13 +289,13 @@ extern "C"
 /*********************************************************************//**
  * Macro defines for Flow Control Counter Register
  **********************************************************************/
-#define EMAC_FCC_MIRR_CNT(n)        	(n&0xFFFF)  		/**< Mirror Counter                    */
-#define EMAC_FCC_PAUSE_TIM(n)       	((n&0xFFFF)<<16)  	/**< Pause Timer                       */
+#define EMAC_FCC_MIRR_CNT(n)            (n&0xFFFF)          /**< Mirror Counter                    */
+#define EMAC_FCC_PAUSE_TIM(n)           ((n&0xFFFF)<<16)      /**< Pause Timer                       */
 
 /*********************************************************************//**
  * Macro defines for Flow Control Status Register
  **********************************************************************/
-#define EMAC_FCS_MIRR_CNT(n)        	(n&0xFFFF)  		/**< Mirror Counter Current            */
+#define EMAC_FCS_MIRR_CNT(n)            (n&0xFFFF)          /**< Mirror Counter Current            */
 
 
 /* Receive filter register definitions -------------------------------------------------------- */
@@ -322,7 +322,7 @@ extern "C"
 #define EMAC_WOL_PERFECT         0x00000020  /**< Perfect Filter WoL                */
 #define EMAC_WOL_RX_FILTER       0x00000080  /**< RX Filter caused WoL              */
 #define EMAC_WOL_MAG_PACKET      0x00000100  /**< Magic Packet Filter caused WoL    */
-#define EMAC_WOL_BITMASK		 0x01BF		/**< Receive Filter WoL Status/Clear bitmasl value */
+#define EMAC_WOL_BITMASK         0x01BF        /**< Receive Filter WoL Status/Clear bitmasl value */
 
 
 /* Module control register definitions ---------------------------------------------------- */
@@ -349,14 +349,14 @@ extern "C"
 /*********************************************************************//**
  * Macro defines for RX Descriptor Control Word
  **********************************************************************/
-#define EMAC_RCTRL_SIZE(n)       (n&0x7FF)  	/**< Buffer size field                  */
-#define EMAC_RCTRL_INT           0x80000000  	/**< Generate RxDone Interrupt         */
+#define EMAC_RCTRL_SIZE(n)       (n&0x7FF)      /**< Buffer size field                  */
+#define EMAC_RCTRL_INT           0x80000000      /**< Generate RxDone Interrupt         */
 
 /*********************************************************************//**
  * Macro defines for RX Status Hash CRC Word
  **********************************************************************/
-#define EMAC_RHASH_SA            0x000001FF  	/**< Hash CRC for Source Address       */
-#define EMAC_RHASH_DA            0x001FF000  	/**< Hash CRC for Destination Address  */
+#define EMAC_RHASH_SA            0x000001FF      /**< Hash CRC for Source Address       */
+#define EMAC_RHASH_DA            0x001FF000      /**< Hash CRC for Destination Address  */
 
 /*********************************************************************//**
  * Macro defines for RX Status Information Word
@@ -406,7 +406,7 @@ EMAC_RINFO_LEN_ERR   | EMAC_RINFO_ALIGN_ERR | EMAC_RINFO_OVERRUN)
 /* DP83848C PHY definition ------------------------------------------------------------ */
 
 /** PHY device reset time out definition */
-#define EMAC_PHY_RESP_TOUT		0x100000UL
+#define EMAC_PHY_RESP_TOUT        0x100000UL
 
 /* ENET Device Revision ID */
 #define EMAC_OLD_EMAC_MODULE_ID  0x39022000  /**< Rev. ID for first rev '-'         */
@@ -422,7 +422,7 @@ EMAC_RINFO_LEN_ERR   | EMAC_RINFO_ALIGN_ERR | EMAC_RINFO_OVERRUN)
 #define EMAC_PHY_REG_ANLPAR      0x05        /**< Auto-Neg. Link Partner Abitily    */
 #define EMAC_PHY_REG_ANER        0x06        /**< Auto-Neg. Expansion Register      */
 #define EMAC_PHY_REG_ANNPTR      0x07        /**< Auto-Neg. Next Page TX            */
-#define EMAC_PHY_REG_LPNPA		 0x08
+#define EMAC_PHY_REG_LPNPA         0x08
 
 /*********************************************************************//**
  * Macro defines for PHY Extended Registers
@@ -443,39 +443,39 @@ EMAC_RINFO_LEN_ERR   | EMAC_RINFO_ALIGN_ERR | EMAC_RINFO_OVERRUN)
 /*********************************************************************//**
  * Macro defines for PHY Basic Mode Control Register
  **********************************************************************/
-#define EMAC_PHY_BMCR_RESET     			(1<<15)		/**< Reset bit */
-#define EMAC_PHY_BMCR_LOOPBACK      		(1<<14)		/**< Loop back */
-#define EMAC_PHY_BMCR_SPEED_SEL     		(1<<13)		/**< Speed selection */
-#define EMAC_PHY_BMCR_AN					(1<<12)		/**< Auto Negotiation */
-#define EMAC_PHY_BMCR_POWERDOWN				(1<<11)		/**< Power down mode */
-#define EMAC_PHY_BMCR_ISOLATE				(1<<10)		/**< Isolate */
-#define EMAC_PHY_BMCR_RE_AN					(1<<9)		/**< Restart auto negotiation */
-#define EMAC_PHY_BMCR_DUPLEX				(1<<8)		/**< Duplex mode */
+#define EMAC_PHY_BMCR_RESET                 (1<<15)        /**< Reset bit */
+#define EMAC_PHY_BMCR_LOOPBACK              (1<<14)        /**< Loop back */
+#define EMAC_PHY_BMCR_SPEED_SEL             (1<<13)        /**< Speed selection */
+#define EMAC_PHY_BMCR_AN                    (1<<12)        /**< Auto Negotiation */
+#define EMAC_PHY_BMCR_POWERDOWN                (1<<11)        /**< Power down mode */
+#define EMAC_PHY_BMCR_ISOLATE                (1<<10)        /**< Isolate */
+#define EMAC_PHY_BMCR_RE_AN                    (1<<9)        /**< Restart auto negotiation */
+#define EMAC_PHY_BMCR_DUPLEX                (1<<8)        /**< Duplex mode */
 
 /*********************************************************************//**
  * Macro defines for PHY Basic Mode Status Status Register
  **********************************************************************/
-#define EMAC_PHY_BMSR_100BE_T4        	   	(1<<15)		/**< 100 base T4 */
-#define EMAC_PHY_BMSR_100TX_FULL			(1<<14)		/**< 100 base full duplex */
-#define EMAC_PHY_BMSR_100TX_HALF			(1<<13)		/**< 100 base half duplex */
-#define EMAC_PHY_BMSR_10BE_FULL				(1<<12)		/**< 10 base T full duplex */
-#define EMAC_PHY_BMSR_10BE_HALF				(1<<11)		/**< 10 base T half duplex */
-#define EMAC_PHY_BMSR_NOPREAM				(1<<6)		/**< MF Preamable Supress */
-#define EMAC_PHY_BMSR_AUTO_DONE				(1<<5)		/**< Auto negotiation complete */
-#define EMAC_PHY_BMSR_REMOTE_FAULT			(1<<4)		/**< Remote fault */
-#define EMAC_PHY_BMSR_NO_AUTO				(1<<3)		/**< Auto Negotiation ability */
-#define EMAC_PHY_BMSR_LINK_ESTABLISHED		(1<<2)		/**< Link status */
+#define EMAC_PHY_BMSR_100BE_T4                   (1<<15)        /**< 100 base T4 */
+#define EMAC_PHY_BMSR_100TX_FULL            (1<<14)        /**< 100 base full duplex */
+#define EMAC_PHY_BMSR_100TX_HALF            (1<<13)        /**< 100 base half duplex */
+#define EMAC_PHY_BMSR_10BE_FULL                (1<<12)        /**< 10 base T full duplex */
+#define EMAC_PHY_BMSR_10BE_HALF                (1<<11)        /**< 10 base T half duplex */
+#define EMAC_PHY_BMSR_NOPREAM                (1<<6)        /**< MF Preamable Supress */
+#define EMAC_PHY_BMSR_AUTO_DONE                (1<<5)        /**< Auto negotiation complete */
+#define EMAC_PHY_BMSR_REMOTE_FAULT            (1<<4)        /**< Remote fault */
+#define EMAC_PHY_BMSR_NO_AUTO                (1<<3)        /**< Auto Negotiation ability */
+#define EMAC_PHY_BMSR_LINK_ESTABLISHED        (1<<2)        /**< Link status */
 
 /*********************************************************************//**
  * Macro defines for PHY Status Register
  **********************************************************************/
-#define EMAC_PHY_SR_REMOTE_FAULT   			(1<<6)		/**< Remote Fault */
-#define EMAC_PHY_SR_JABBER					(1<<5)		/**< Jabber detect */
-#define EMAC_PHY_SR_AUTO_DONE				(1<<4)		/**< Auto Negotiation complete */
-#define EMAC_PHY_SR_LOOPBACK				(1<<3)		/**< Loop back status */
-#define EMAC_PHY_SR_DUP						(1<<2)		/**< Duplex status */
-#define EMAC_PHY_SR_SPEED					(1<<1)		/**< Speed status */
-#define EMAC_PHY_SR_LINK					(1<<0)		/**< Link Status */
+#define EMAC_PHY_SR_REMOTE_FAULT               (1<<6)        /**< Remote Fault */
+#define EMAC_PHY_SR_JABBER                    (1<<5)        /**< Jabber detect */
+#define EMAC_PHY_SR_AUTO_DONE                (1<<4)        /**< Auto Negotiation complete */
+#define EMAC_PHY_SR_LOOPBACK                (1<<3)        /**< Loop back status */
+#define EMAC_PHY_SR_DUP                        (1<<2)        /**< Duplex status */
+#define EMAC_PHY_SR_SPEED                    (1<<1)        /**< Speed status */
+#define EMAC_PHY_SR_LINK                    (1<<0)        /**< Link Status */
 
 #define EMAC_PHY_FULLD_100M      0x2100      /**< Full Duplex 100Mbit               */
 #define EMAC_PHY_HALFD_100M      0x2000      /**< Half Duplex 100Mbit               */
@@ -486,14 +486,14 @@ EMAC_RINFO_LEN_ERR   | EMAC_RINFO_ALIGN_ERR | EMAC_RINFO_OVERRUN)
 #define EMAC_DEF_ADR    0x0100      /**< Default PHY device address        */
 #define EMAC_DP83848C_ID         0x20005C90  /**< PHY Identifier                    */
 
-#define EMAC_PHY_SR_100_SPEED		((1<<14)|(1<<13))
-#define EMAC_PHY_SR_FULL_DUP		((1<<14)|(1<<12))
-#define EMAC_PHY_BMSR_LINK_STATUS			(1<<2)		/**< Link status */
+#define EMAC_PHY_SR_100_SPEED        ((1<<14)|(1<<13))
+#define EMAC_PHY_SR_FULL_DUP        ((1<<14)|(1<<12))
+#define EMAC_PHY_BMSR_LINK_STATUS            (1<<2)        /**< Link status */
 
 #elif defined(IAR_LPC_1768)
 /* KSZ8721BL PHY definition ------------------------------------------------------------ */
 /** PHY device reset time out definition */
-#define EMAC_PHY_RESP_TOUT		0x100000UL
+#define EMAC_PHY_RESP_TOUT        0x100000UL
 
 /* ENET Device Revision ID */
 #define EMAC_OLD_EMAC_MODULE_ID  0x39022000  /**< Rev. ID for first rev '-'         */
@@ -509,62 +509,62 @@ EMAC_RINFO_LEN_ERR   | EMAC_RINFO_ALIGN_ERR | EMAC_RINFO_OVERRUN)
 #define EMAC_PHY_REG_ANLPAR      0x05        /**< Auto-Neg. Link Partner Abitily    */
 #define EMAC_PHY_REG_ANER        0x06        /**< Auto-Neg. Expansion Register      */
 #define EMAC_PHY_REG_ANNPTR      0x07        /**< Auto-Neg. Next Page TX            */
-#define EMAC_PHY_REG_LPNPA		 0x08		 /**< Link Partner Next Page Ability    */
-#define EMAC_PHY_REG_REC		 0x15		 /**< RXError Counter Register			*/
-#define EMAC_PHY_REG_ISC		 0x1b		 /**< Interrupt Control/Status Register */
-#define EMAC_PHY_REG_100BASE	 0x1f		 /**< 100BASE-TX PHY Control Register   */
+#define EMAC_PHY_REG_LPNPA         0x08         /**< Link Partner Next Page Ability    */
+#define EMAC_PHY_REG_REC         0x15         /**< RXError Counter Register            */
+#define EMAC_PHY_REG_ISC         0x1b         /**< Interrupt Control/Status Register */
+#define EMAC_PHY_REG_100BASE     0x1f         /**< 100BASE-TX PHY Control Register   */
 
 /*********************************************************************//**
  * Macro defines for PHY Basic Mode Control Register
  **********************************************************************/
-#define EMAC_PHY_BMCR_RESET     			(1<<15)		/**< Reset bit */
-#define EMAC_PHY_BMCR_LOOPBACK      		(1<<14)		/**< Loop back */
-#define EMAC_PHY_BMCR_SPEED_SEL     		(1<<13)		/**< Speed selection */
-#define EMAC_PHY_BMCR_AN					(1<<12)		/**< Auto Negotiation */
-#define EMAC_PHY_BMCR_POWERDOWN				(1<<11)		/**< Power down mode */
-#define EMAC_PHY_BMCR_ISOLATE				(1<<10)		/**< Isolate */
-#define EMAC_PHY_BMCR_RE_AN					(1<<9)		/**< Restart auto negotiation */
-#define EMAC_PHY_BMCR_DUPLEX				(1<<8)		/**< Duplex mode */
-#define EMAC_PHY_BMCR_COLLISION				(1<<7)		/**< Collision test */
-#define EMAC_PHY_BMCR_TXDIS					(1<<0)		/**< Disable transmit */
+#define EMAC_PHY_BMCR_RESET                 (1<<15)        /**< Reset bit */
+#define EMAC_PHY_BMCR_LOOPBACK              (1<<14)        /**< Loop back */
+#define EMAC_PHY_BMCR_SPEED_SEL             (1<<13)        /**< Speed selection */
+#define EMAC_PHY_BMCR_AN                    (1<<12)        /**< Auto Negotiation */
+#define EMAC_PHY_BMCR_POWERDOWN                (1<<11)        /**< Power down mode */
+#define EMAC_PHY_BMCR_ISOLATE                (1<<10)        /**< Isolate */
+#define EMAC_PHY_BMCR_RE_AN                    (1<<9)        /**< Restart auto negotiation */
+#define EMAC_PHY_BMCR_DUPLEX                (1<<8)        /**< Duplex mode */
+#define EMAC_PHY_BMCR_COLLISION                (1<<7)        /**< Collision test */
+#define EMAC_PHY_BMCR_TXDIS                    (1<<0)        /**< Disable transmit */
 
 /*********************************************************************//**
  * Macro defines for PHY Basic Mode Status Register
  **********************************************************************/
-#define EMAC_PHY_BMSR_100BE_T4        	   	(1<<15)		/**< 100 base T4 */
-#define EMAC_PHY_BMSR_100TX_FULL			(1<<14)		/**< 100 base full duplex */
-#define EMAC_PHY_BMSR_100TX_HALF			(1<<13)		/**< 100 base half duplex */
-#define EMAC_PHY_BMSR_10BE_FULL				(1<<12)		/**< 10 base T full duplex */
-#define EMAC_PHY_BMSR_10BE_HALF				(1<<11)		/**< 10 base T half duplex */
-#define EMAC_PHY_BMSR_NOPREAM				(1<<6)		/**< MF Preamable Supress */
-#define EMAC_PHY_BMSR_AUTO_DONE				(1<<5)		/**< Auto negotiation complete */
-#define EMAC_PHY_BMSR_REMOTE_FAULT			(1<<4)		/**< Remote fault */
-#define EMAC_PHY_BMSR_NO_AUTO				(1<<3)		/**< Auto Negotiation ability */
-#define EMAC_PHY_BMSR_LINK_STATUS			(1<<2)		/**< Link status */
-#define EMAC_PHY_BMSR_JABBER_DETECT			(1<<1)		/**< Jabber detect */
-#define EMAC_PHY_BMSR_EXTEND				(1<<0)		/**< Extended support */
+#define EMAC_PHY_BMSR_100BE_T4                   (1<<15)        /**< 100 base T4 */
+#define EMAC_PHY_BMSR_100TX_FULL            (1<<14)        /**< 100 base full duplex */
+#define EMAC_PHY_BMSR_100TX_HALF            (1<<13)        /**< 100 base half duplex */
+#define EMAC_PHY_BMSR_10BE_FULL                (1<<12)        /**< 10 base T full duplex */
+#define EMAC_PHY_BMSR_10BE_HALF                (1<<11)        /**< 10 base T half duplex */
+#define EMAC_PHY_BMSR_NOPREAM                (1<<6)        /**< MF Preamable Supress */
+#define EMAC_PHY_BMSR_AUTO_DONE                (1<<5)        /**< Auto negotiation complete */
+#define EMAC_PHY_BMSR_REMOTE_FAULT            (1<<4)        /**< Remote fault */
+#define EMAC_PHY_BMSR_NO_AUTO                (1<<3)        /**< Auto Negotiation ability */
+#define EMAC_PHY_BMSR_LINK_STATUS            (1<<2)        /**< Link status */
+#define EMAC_PHY_BMSR_JABBER_DETECT            (1<<1)        /**< Jabber detect */
+#define EMAC_PHY_BMSR_EXTEND                (1<<0)        /**< Extended support */
 
 /*********************************************************************//**
  * Macro defines for PHY Identifier
  **********************************************************************/
 /* PHY Identifier 1 bitmap definitions */
-#define EMAC_PHY_IDR1(n)		(n & 0xFFFF)		/**< PHY ID1 Number */
+#define EMAC_PHY_IDR1(n)        (n & 0xFFFF)        /**< PHY ID1 Number */
 
 /* PHY Identifier 2 bitmap definitions */
-#define EMAC_PHY_IDR2(n)		(n & 0xFFFF)		/**< PHY ID2 Number */
+#define EMAC_PHY_IDR2(n)        (n & 0xFFFF)        /**< PHY ID2 Number */
 
 /*********************************************************************//**
  * Macro defines for Auto-Negotiation Advertisement
  **********************************************************************/
-#define EMAC_PHY_AN_NEXTPAGE					(1<<15)		/**<  Next page capable */
-#define EMAC_PHY_AN_REMOTE_FAULT				(1<<13)		/**< Remote Fault support */
-#define EMAC_PHY_AN_PAUSE						(1<<10)		/**< Pause support */
-#define EMAC_PHY_AN_100BASE_T4					(1<<9)		/**< T4 capable */
-#define EMAC_PHY_AN_100BASE_TX_FD				(1<<8)		/**< TX with Full-duplex capable */
-#define EMAC_PHY_AN_100BASE_TX					(1<<7)		/**< TX capable */
-#define EMAC_PHY_AN_10BASE_T_FD					(1<<6)		/**< 10Mbps with full-duplex capable */
-#define EMAC_PHY_AN_10BASE_T					(1<<5)		/**< 10Mbps capable */
-#define EMAC_PHY_AN_FIELD(n)					(n & 0x1F)  /**< Selector Field */
+#define EMAC_PHY_AN_NEXTPAGE                    (1<<15)        /**<  Next page capable */
+#define EMAC_PHY_AN_REMOTE_FAULT                (1<<13)        /**< Remote Fault support */
+#define EMAC_PHY_AN_PAUSE                        (1<<10)        /**< Pause support */
+#define EMAC_PHY_AN_100BASE_T4                    (1<<9)        /**< T4 capable */
+#define EMAC_PHY_AN_100BASE_TX_FD                (1<<8)        /**< TX with Full-duplex capable */
+#define EMAC_PHY_AN_100BASE_TX                    (1<<7)        /**< TX capable */
+#define EMAC_PHY_AN_10BASE_T_FD                    (1<<6)        /**< 10Mbps with full-duplex capable */
+#define EMAC_PHY_AN_10BASE_T                    (1<<5)        /**< 10Mbps capable */
+#define EMAC_PHY_AN_FIELD(n)                    (n & 0x1F)  /**< Selector Field */
 
 #define EMAC_PHY_FULLD_100M      0x2100      /**< Full Duplex 100Mbit               */
 #define EMAC_PHY_HALFD_100M      0x2000      /**< Half Duplex 100Mbit               */
@@ -572,11 +572,11 @@ EMAC_RINFO_LEN_ERR   | EMAC_RINFO_ALIGN_ERR | EMAC_RINFO_OVERRUN)
 #define EMAC_PHY_HALFD_10M       0x0000      /**< Half Duplex 10MBit                */
 #define EMAC_PHY_AUTO_NEG        0x3000      /**< Select Auto Negotiation           */
 
-#define EMAC_PHY_SR_100_SPEED		((1<<14)|(1<<13))
-#define EMAC_PHY_SR_FULL_DUP		((1<<14)|(1<<12))
+#define EMAC_PHY_SR_100_SPEED        ((1<<14)|(1<<13))
+#define EMAC_PHY_SR_FULL_DUP        ((1<<14)|(1<<12))
 
-#define EMAC_DEF_ADR    (0x01<<8)		/**< Default PHY device address        */
-#define EMAC_KSZ8721BL_ID 	((0x22 << 16) | 0x1619 ) /**< PHY Identifier */
+#define EMAC_DEF_ADR    (0x01<<8)        /**< Default PHY device address        */
+#define EMAC_KSZ8721BL_ID     ((0x22 << 16) | 0x1619 ) /**< PHY Identifier */
 #endif
 
 /**
@@ -595,31 +595,31 @@ EMAC_RINFO_LEN_ERR   | EMAC_RINFO_ALIGN_ERR | EMAC_RINFO_OVERRUN)
  * @brief RX Descriptor structure type definition
  */
 typedef struct {
-	uint32_t Packet;	/**< Receive Packet Descriptor */
-	uint32_t Ctrl;		/**< Receive Control Descriptor */
+    uint32_t Packet;    /**< Receive Packet Descriptor */
+    uint32_t Ctrl;        /**< Receive Control Descriptor */
 } RX_Desc;
 
 /**
  * @brief RX Status structure type definition
  */
 typedef struct {
-	uint32_t Info;		/**< Receive Information Status */
-	uint32_t HashCRC;	/**< Receive Hash CRC Status */
+    uint32_t Info;        /**< Receive Information Status */
+    uint32_t HashCRC;    /**< Receive Hash CRC Status */
 } RX_Stat;
 
 /**
  * @brief TX Descriptor structure type definition
  */
 typedef struct {
-	uint32_t Packet;	/**< Transmit Packet Descriptor */
-	uint32_t Ctrl;		/**< Transmit Control Descriptor */
+    uint32_t Packet;    /**< Transmit Packet Descriptor */
+    uint32_t Ctrl;        /**< Transmit Control Descriptor */
 } TX_Desc;
 
 /**
  * @brief TX Status structure type definition
  */
 typedef struct {
-   uint32_t Info;		/**< Transmit Information Status */
+   uint32_t Info;        /**< Transmit Information Status */
 } TX_Stat;
 
 
@@ -627,24 +627,24 @@ typedef struct {
  * @brief TX Data Buffer structure definition
  */
 typedef struct {
-	uint32_t ulDataLen;			/**< Data length */
-	uint32_t *pbDataBuf;		/**< A word-align data pointer to data buffer */
+    uint32_t ulDataLen;            /**< Data length */
+    uint32_t *pbDataBuf;        /**< A word-align data pointer to data buffer */
 } EMAC_PACKETBUF_Type;
 
 /**
  * @brief EMAC configuration structure definition
  */
 typedef struct {
-	uint32_t	Mode;						/**< Supported EMAC PHY device speed, should be one of the following:
-											- EMAC_MODE_AUTO
-											- EMAC_MODE_10M_FULL
-											- EMAC_MODE_10M_HALF
-											- EMAC_MODE_100M_FULL
-											- EMAC_MODE_100M_HALF
-											*/
-	uint8_t 	*pbEMAC_Addr;				/**< Pointer to EMAC Station address that contains 6-bytes
-											of MAC address, it must be sorted in order (bEMAC_Addr[0]..[5])
-											*/
+    uint32_t    Mode;                        /**< Supported EMAC PHY device speed, should be one of the following:
+                                            - EMAC_MODE_AUTO
+                                            - EMAC_MODE_10M_FULL
+                                            - EMAC_MODE_10M_HALF
+                                            - EMAC_MODE_100M_FULL
+                                            - EMAC_MODE_100M_HALF
+                                            */
+    uint8_t     *pbEMAC_Addr;                /**< Pointer to EMAC Station address that contains 6-bytes
+                                            of MAC address, it must be sorted in order (bEMAC_Addr[0]..[5])
+                                            */
 } EMAC_CFG_Type;
 
 

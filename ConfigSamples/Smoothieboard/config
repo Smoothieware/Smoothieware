@@ -134,3 +134,6 @@ panel.encoder_b_pin                          0.17!            #
 
 # Only needed on a smoothieboard
 currentcontrol_module_enable                 true             #
+
+# Only needed when using g-code senders that requests special confirmation
+return_error_on_unhandled_gcode              false
