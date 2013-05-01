@@ -17,7 +17,7 @@
 #define play_command_checksum           CHECKSUM("play")
 #define progress_command_checksum       CHECKSUM("progress")
 #define abort_command_checksum          CHECKSUM("abort")
-#define cd_command_checksum       CHECKSUM("cd")
+#define cd_command_checksum             CHECKSUM("cd")
 #define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
 #define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
 
