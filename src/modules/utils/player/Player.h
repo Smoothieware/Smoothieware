@@ -38,9 +38,9 @@ class Player : public Module {
     private:
         string current_path;
 
-        bool on_boot_enable;
+        bool on_boot_gcode_enable;
         bool booted;
-        string on_boot_file_name;
+        string on_boot_gcode;
         bool playing_file;
         StreamOutput* current_stream;
         FILE* current_file_handler;
