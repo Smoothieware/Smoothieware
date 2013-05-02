@@ -20,6 +20,8 @@
 #define cd_command_checksum             CHECKSUM("cd")
 #define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
 #define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
+#define post_play_gcode_checksum        CHECKSUM("post_play_gcode")
+#define post_play_gcode_enable_checksum CHECKSUM("post_play_gcode_enable")
 
 class Player : public Module {
     public:
@@ -42,6 +44,9 @@ class Player : public Module {
         bool booted;
         string on_boot_gcode;
         bool playing_file;
+        bool post_play_enable;
+        bool is_post_play;
+        string post_play_gcode;
         StreamOutput* current_stream;
         FILE* current_file_handler;
         long file_size, played_cnt;
