@@ -15,6 +15,7 @@ using std::string;
 #include "utils/Gcode.h"
 
 #include "libs/StreamOutput.h"
+#define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
 
 class GcodeDispatch : public Module {
     public:
@@ -22,6 +23,7 @@ class GcodeDispatch : public Module {
         
         virtual void on_module_loaded();
         virtual void on_console_line_received(void* line);
+        bool return_error_on_unhandled_gcode;
     private:
         int currentline;
 };
