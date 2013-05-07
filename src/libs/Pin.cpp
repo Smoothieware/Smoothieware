@@ -39,6 +39,8 @@ Pin* Pin::from_string(std::string value){
                 // o = set pin to open drain
                 // ^ = set pin to pull up
                 // v = set pin to pull down
+                // - = set pin to no pull up or down
+                // @ = set pin to repeater mode
                 bool done= false;
                 while(!done) {
                     // skip any whitespace following the pin index
@@ -55,6 +57,12 @@ Pin* Pin::from_string(std::string value){
                             break;
                         case 'v':
                             pull_down();
+                            break;
+                        case '-':
+                            pull_none();
+                            break;
+                        case '@':
+                            as_repeater();
                             break;
                         default:
                             done= true;
@@ -88,6 +96,20 @@ Pin* Pin::as_open_drain(){
     return this;
 }
 
+
+// Configure this pin as a repeater
+Pin* Pin::as_repeater(){
+    if (this->pin >= 32) return this;
+    // Set the two bits for this pin as 01
+    if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE0 &= ~(2<<( this->pin    *2)); }
+    if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE1 &= ~(2<<((this->pin-16)*2)); }
+    if( this->port_number == 1 && this->pin < 16  ){ LPC_PINCON->PINMODE2 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE2 &= ~(2<<( this->pin    *2)); }
+    if( this->port_number == 1 && this->pin >= 16 ){ LPC_PINCON->PINMODE3 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE3 &= ~(2<<((this->pin-16)*2)); }
+    if( this->port_number == 2 && this->pin < 16  ){ LPC_PINCON->PINMODE4 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE4 &= ~(2<<( this->pin    *2)); }
+    if( this->port_number == 3 && this->pin >= 16 ){ LPC_PINCON->PINMODE7 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE7 &= ~(2<<((this->pin-16)*2)); }
+    if( this->port_number == 4 && this->pin >= 16 ){ LPC_PINCON->PINMODE9 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE9 &= ~(2<<((this->pin-16)*2)); }
+    return this;
+}
 // Configure this pin as no pullup or pulldown
 Pin* Pin::pull_none(){
     if (this->pin >= 32) return this;
