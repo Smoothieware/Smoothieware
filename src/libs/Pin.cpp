@@ -43,8 +43,6 @@ Pin* Pin::from_string(std::string value){
                 // @ = set pin to repeater mode
                 bool done= false;
                 while(!done) {
-                    // skip any whitespace following the pin index
-                    while (is_whitespace(*cn)) cn++;
                     switch(*cn) {
                         case '!':
                             this->inverting = true;
@@ -65,11 +63,14 @@ Pin* Pin::from_string(std::string value){
                             as_repeater();
                             break;
                         default:
-                            done= true;
+                            // skip any whitespace following the pin index
+                            if (!is_whitespace(*cn))
+                                done = true;
                     }
-                    if(!done) cn++;
+                    if (!done)
+                        cn++;
                 }
-                
+
 
                 return this;
             }
