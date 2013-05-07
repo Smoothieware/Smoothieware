@@ -53,11 +53,11 @@ void Robot::on_module_loaded() {
 }
 
 void Robot::on_config_reload(void* argument){
-    
+
     // Arm solutions are used to convert positions in millimeters into position in steps for each stepper motor.
     // While for a cartesian arm solution, this is a simple multiplication, in other, less simple cases, there is some serious math to be done.
     // To make adding those solution easier, they have their own, separate object.
-    // Here we read the config to find out which arm solution to use 
+    // Here we read the config to find out which arm solution to use
     if (this->arm_solution) delete this->arm_solution;
     int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
     // Note checksums are not const expressions when in debug mode, so don't use switch
@@ -93,13 +93,13 @@ void Robot::on_config_reload(void* argument){
     this->max_speeds[Z_AXIS]  = this->kernel->config->value(z_axis_max_speed_checksum    )->by_default(300    )->as_number();
     this->alpha_step_pin.from_string( this->kernel->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
     this->alpha_dir_pin.from_string(  this->kernel->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
-    this->alpha_en_pin.from_string(   this->kernel->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output()->as_open_drain();
+    this->alpha_en_pin.from_string(   this->kernel->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
     this->beta_step_pin.from_string(  this->kernel->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
     this->gamma_step_pin.from_string( this->kernel->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
     this->gamma_dir_pin.from_string(  this->kernel->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
-    this->gamma_en_pin.from_string(   this->kernel->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output()->as_open_drain();
+    this->gamma_en_pin.from_string(   this->kernel->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
     this->beta_dir_pin.from_string(   this->kernel->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
-    this->beta_en_pin.from_string(    this->kernel->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output()->as_open_drain();
+    this->beta_en_pin.from_string(    this->kernel->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
 
 }
 
@@ -218,7 +218,7 @@ void Robot::on_gcode_received(void * argument){
 
 }
 
-// We received a new gcode, and one of the functions 
+// We received a new gcode, and one of the functions
 // determined the distance for that given gcode. So now we can attach this gcode to the right block
 // and continue
 void Robot::distance_in_gcode_is_known(Gcode* gcode){
@@ -287,7 +287,7 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
     // In delta robots either mm_per_line_segment can be used OR delta_segments_per_second The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
     uint16_t segments;
-    
+
     if(this->delta_segments_per_second > 1.0) {
         // enabled if set to something > 1, it is set to 0.0 by default
         // segment based on current speed and requested segments per second
@@ -296,7 +296,7 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
         float seconds = 60.0/seconds_per_minute * gcode->millimeters_of_travel / rate;
         segments= max(1, ceil(this->delta_segments_per_second * seconds));
         // TODO if we are only moving in Z on a delta we don't really need to segment at all
-        
+
     }else{
         if(this->mm_per_line_segment == 0.0){
             segments= 1; // don't split it up
@@ -304,7 +304,7 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
             segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment);
         }
     }
-    
+
     // A vector to keep track of the endpoint of each segment
     double temp_target[3];
     //Initialize axes
@@ -313,11 +313,11 @@ void Robot::append_line(Gcode* gcode, double target[], double rate ){
     //For each segment
     for( int i=0; i<segments-1; i++ ){
         for(int axis=X_AXIS; axis <= Z_AXIS; axis++ ){ temp_target[axis] += ( target[axis]-this->current_position[axis] )/segments; }
-        // Append the end of this segment to the queue 
+        // Append the end of this segment to the queue
         this->append_milestone(temp_target, rate);
     }
-    
-    // Append the end of this full move to the queue 
+
+    // Append the end of this full move to the queue
     this->append_milestone(target, rate);
 }
 
@@ -347,8 +347,8 @@ void Robot::append_arc(Gcode* gcode, double target[], double offset[], double ra
 
     // Mark the gcode as having a known distance
     this->distance_in_gcode_is_known( gcode );
-   
-    // Figure out how many segments for this gcode 
+
+    // Figure out how many segments for this gcode
     uint16_t segments = floor(gcode->millimeters_of_travel/this->mm_per_arc_segment);
 
     double theta_per_segment = angular_travel/segments;
