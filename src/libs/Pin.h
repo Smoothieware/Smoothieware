@@ -35,6 +35,8 @@ class Pin {
 
         Pin* pull_down(void);
 
+        Pin* pull_none(void);
+
         inline bool get(){
             if (this->pin >= 32) return false;
             return this->inverting ^ (( this->port->FIOPIN >> this->pin ) & 1);
