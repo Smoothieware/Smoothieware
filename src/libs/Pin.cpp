@@ -2,11 +2,12 @@
 
 #include "utils.h"
 
-Pin::Pin(){}
+Pin::Pin(){
+    this->inverting= false;
+}
 
 // Make a new pin object from a string
 // TODO : Comment this more, how does it work ?
-// TODO : Make this able to configure pull-up, pull-down, and open-drain
 Pin* Pin::from_string(std::string value){
     LPC_GPIO_TypeDef* gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
 
@@ -25,16 +26,42 @@ Pin* Pin::from_string(std::string value){
         if (*cn == '.'){
             // move pointer to first digit (hopefully) of pin index
             cs = ++cn;
+
             // grab pin index.
             this->pin = strtol(cs, &cn, 10);
+
             // if strtol read some numbers, cn will point to the first non-digit
             if ((cn > cs) & (pin < 32)){
-                // skip any whitespace following the pin index
-                while (is_whitespace(*cn)) cn++;
-                // if we have an exclamation, we invert the pin
-                this->inverting = (*cn == '!');
-
                 this->port->FIOMASK &= ~(1 << this->pin);
+
+                // now check for modifiers:-
+                // ! = invert pin
+                // o = set pin to open drain
+                // ^ = set pin to pull up
+                // v = set pin to pull down
+                bool done= false;
+                while(!done) {
+                    // skip any whitespace following the pin index
+                    while (is_whitespace(*cn)) cn++;
+                    switch(*cn) {
+                        case '!':
+                            this->inverting = true;
+                            break;
+                        case 'o':
+                            as_open_drain();
+                            break;
+                        case '^':
+                            pull_up();
+                            break;
+                        case 'v':
+                            pull_down();
+                            break;
+                        default:
+                            done= true;
+                    }
+                    if(!done) cn++;
+                }
+                
 
                 return this;
             }
