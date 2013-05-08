@@ -100,6 +100,7 @@ void Extruder::on_gcode_received(void *argument){
         if (gcode->m == 114){
             gcode->stream->printf("E:%4.1f ", this->current_position);
             gcode->add_nl = true;
+            gcode->mark_as_taken();
         }
         if (gcode->m == 92 ){
             double spm = this->steps_per_millimeter;
@@ -107,11 +108,13 @@ void Extruder::on_gcode_received(void *argument){
                 spm = gcode->get_value('E');
             gcode->stream->printf("E:%g ", spm);
             gcode->add_nl = true;
+            gcode->mark_as_taken();
         }
     }
 
     // Gcodes to pass along to on_gcode_execute
     if( ( gcode->has_m && ( gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
+        gcode->mark_as_taken();
         if( this->kernel->conveyor->queue.size() == 0 ){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
         }else{
@@ -178,6 +181,7 @@ void Extruder::on_gcode_execute(void* argument){
     if( gcode->has_g ){
         // G92: Reset extruder position
         if( gcode->g == 92 ){
+            gcode->mark_as_taken();
             if( gcode->has_letter('E') ){
                 this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;

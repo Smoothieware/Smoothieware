@@ -89,9 +89,11 @@ void Stepper::on_gcode_execute(void* argument){
     if( gcode->has_m){
         if( gcode->m == 17 ){
             this->turn_enable_pins_on();
+            gcode->mark_as_taken();
         }
         if( gcode->m == 84 || gcode->m == 18 ){
             this->turn_enable_pins_off();
+            gcode->mark_as_taken();
         }
     }
 }

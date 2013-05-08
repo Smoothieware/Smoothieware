@@ -153,6 +153,7 @@ void SlowTicker::on_gcode_execute(void* argument){
 
     if (gcode->has_g){
         if (gcode->g == 4){
+            gcode->mark_as_taken();
             bool updated = false;
             if (gcode->has_letter('P')) {
                 updated = true;
