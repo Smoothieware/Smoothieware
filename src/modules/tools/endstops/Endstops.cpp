@@ -109,6 +109,7 @@ void Endstops::on_gcode_received(void* argument)
     {
         if( gcode->g == 28 )
         {
+            gcode->mark_as_taken();
             // G28 is received, we have homing to do
 
             // First wait for the queue to be empty
@@ -193,6 +194,7 @@ void Endstops::on_gcode_received(void* argument)
         switch(gcode->m){
             case 119:
                 gcode->stream->printf("X min:%d max:%d Y min:%d max:%d Z min:%d max:%d\n", this->pins[0].get(), this->pins[3].get(), this->pins[1].get(), this->pins[4].get(), this->pins[2].get(), this->pins[5].get() );
+                gcode->mark_as_taken();
                 break;
         }
     }

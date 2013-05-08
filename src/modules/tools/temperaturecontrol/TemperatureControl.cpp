@@ -128,6 +128,7 @@ void TemperatureControl::on_gcode_received(void* argument){
         }
         if (gcode->m == 301)
         {
+            gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
             {
                 if (gcode->has_letter('P'))
@@ -143,6 +144,7 @@ void TemperatureControl::on_gcode_received(void* argument){
         }
         if (gcode->m == 303)
         {
+            gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
             {
                 double target = 150.0;
@@ -188,6 +190,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
 
                 if( gcode->m == this->set_and_wait_m_code)
                 {
+                    gcode->mark_as_taken();
                     this->kernel->pauser->take();
                     this->waiting = true;
                 }
