@@ -18,7 +18,7 @@ using namespace std;
 
 
 // The stepper reacts to blocks that have XYZ movement to transform them into actual stepper motor moves
-// TODO: This does accel, accel should be in StepperMotor
+// TODO: This does accel, accel should be in StepperMotor
 
 Stepper* stepper;
 uint32_t previous_step_count;

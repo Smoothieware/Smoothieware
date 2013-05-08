@@ -7,7 +7,6 @@ Pin::Pin(){
 }
 
 // Make a new pin object from a string
-// TODO : Comment this more, how does it work ?
 Pin* Pin::from_string(std::string value){
     LPC_GPIO_TypeDef* gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
 

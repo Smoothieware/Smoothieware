@@ -4,8 +4,8 @@
 
 #include <mri.h>
 
-// TODO : comment this
-// Basically, when stuff stop answering, reset, or enter MRI mode, or something
+// TODO : comment this
+// Basically, when stuff stop answering, reset, or enter MRI mode, or something
 
 Watchdog::Watchdog(uint32_t timeout, WDT_ACTION action)
 {

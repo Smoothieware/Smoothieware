@@ -157,7 +157,7 @@ extern "C" void TIMER0_IRQHandler (void){
         global_step_ticker->reset_step_pins = false;
     }else{
         // Nothing happened, nothing after this really matters
-        // TODO : This could be a problem when we use Actuators instead of StepperMotors, because this flag is specific to step generation
+        // TODO : This could be a problem when we use Actuators instead of StepperMotors, because this flag is specific to step generation
         LPC_TIM0->MR0 = global_step_ticker->period;
         return;
     }

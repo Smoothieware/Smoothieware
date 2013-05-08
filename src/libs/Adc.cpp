@@ -15,7 +15,7 @@ using namespace std;
 #include "libs/Pin.h"
 
 // This is an interface to the mbed.org ADC library you can find in libs/ADC/adc.h
-// TODO : Having the same name is confusing, should change that
+// TODO : Having the same name is confusing, should change that
 
 Adc::Adc(){
     this->adc = new ADC(1000, 1);

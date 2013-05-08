@@ -9,8 +9,8 @@
 #include "StepperMotor.h"
 #include "MRI_Hooks.h"
 
-// A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
-// TODO : Abstract this into Actuator
+// A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
+// TODO : Abstract this into Actuator
 
 StepperMotor::StepperMotor(){
     this->moving = false;
@@ -139,7 +139,7 @@ void StepperMotor::set_speed( double speed ){
 
     // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64
     double ticks_per_step = (double)( (double)this->step_ticker->frequency / speed );
-    double double_fx_ticks_per_step = (double)(1<<8) * ( (double)(1<<8) * ticks_per_step ); // 8x8 because we had to do 16x16 because 32 did not work
+    double double_fx_ticks_per_step = (double)(1<<8) * ( (double)(1<<8) * ticks_per_step ); // 8x8 because we had to do 16x16 because 32 did not work
     this->fx_ticks_per_step = (uint32_t)( floor(double_fx_ticks_per_step) );
 
 }

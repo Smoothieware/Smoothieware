@@ -8,7 +8,7 @@ using namespace std;
 // The Pauser module is the core of the pausing subsystem in smoothie. Basically we want several modules to be able to pause smoothie at the same time 
 // ( think both the user with a button, and the temperature control because a temperature is not reached ). To do that, modules call the take() methode, 
 // a pause event is called, and the pause does not end before all modules have called the release() method. 
-// Please note : Modules should keep track of their pause status themselves
+// Please note : Modules should keep track of their pause status themselves
 Pauser::Pauser(){}
 
 void Pauser::on_module_loaded(){

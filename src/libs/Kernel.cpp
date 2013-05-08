@@ -29,7 +29,7 @@
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
 
-// This is used to configure UARTs depending on the MRI configuration, see Kernel::Kernel()
+// This is used to configure UARTs depending on the MRI configuration, see Kernel::Kernel()
 static int isDebugMonitorUsingUart0(){
     return NVIC_GetPriority(UART0_IRQn) == 0;
 }
@@ -43,7 +43,7 @@ Kernel::Kernel(){
     this->streams        = new StreamOutputPool();
 
     // Configure UART depending on MRI config
-    // If MRI is using UART0, we want to use UART1, otherwise, we want to use UART0. This makes it easy to use only one UART for both debug and actual commands.
+    // If MRI is using UART0, we want to use UART1, otherwise, we want to use UART0. This makes it easy to use only one UART for both debug and actual commands.
     NVIC_SetPriorityGrouping(0);
     if( !isDebugMonitorUsingUart0() ){
         this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
@@ -59,7 +59,7 @@ Kernel::Kernel(){
     this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
 
-    // TODO : These should go into platform-specific files
+    // TODO : These should go into platform-specific files
     // LPC17xx-specific
     NVIC_SetPriorityGrouping(0);
     NVIC_SetPriority(TIMER0_IRQn, 2);
@@ -87,7 +87,7 @@ Kernel::Kernel(){
     int base_stepping_frequency          =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
     double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
 
-    // Configure the step ticker ( TODO : shouldnt this go into stepticker's code ? )
+    // Configure the step ticker ( TODO : shouldnt this go into stepticker's code ? )
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
     this->step_ticker->set_frequency(   base_stepping_frequency );
 
