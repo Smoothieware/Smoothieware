@@ -149,7 +149,7 @@ void SlowTicker::on_gcode_received(void* argument){
     }
 }
 
-void SlowTicker::on_action_invoke(void* argument)
+void SlowTicker::on_action_invoke(ActionData* argument)
 {
     G4PauseData* data = static_cast<G4PauseData*>(argument);
     if (data->millis == 0)

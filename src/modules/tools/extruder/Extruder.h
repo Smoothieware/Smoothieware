@@ -32,7 +32,7 @@
 class ExtruderData : public ActionData
 {
 public:
-    ExtruderData(Module* owner) : ActionData(owner) {};
+    ExtruderData(ActionReceiver* owner) : ActionData(owner) {};
     union {
         double travel_ratio;
         double step_rate;
@@ -41,7 +41,8 @@ public:
     bool disable;
 };
 
-class Extruder : public Module{
+class Extruder : public Module, public ActionReceiver
+{
     public:
         Extruder();
         void     on_module_loaded();

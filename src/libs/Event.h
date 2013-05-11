@@ -38,10 +38,6 @@ EVENT( ON_IDLE                  , on_idle                   )
 // this event called once per second. intended for generating informational and/or debug output eg temperature reports during warmup
 EVENT( ON_SECOND_TICK           , on_second_tick            )
 
-// action_invoke is called repeatedly until all data is removed from the action
-// once that happens, we move to the next action in the queue
-EVENT( ON_ACTION_INVOKE         , on_action_invoke          )
-
 // this event is fired from main loop when there is space in the action queue
 // all gcode sources should flush their buffers from this event
 EVENT( ON_FREE_ACTION           , on_free_action            )

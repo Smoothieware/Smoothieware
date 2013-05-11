@@ -58,7 +58,8 @@ using std::string;
 
 
 
-class Robot : public Module {
+class Robot : public Module, public ActionReceiver
+{
     public:
         Robot();
         void on_module_loaded();

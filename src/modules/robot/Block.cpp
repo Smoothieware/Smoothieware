@@ -22,7 +22,7 @@ using std::string;
 // Most of the accel math is also done in this class
 // And GCode objects for use in on_gcode_execute are also help in here
 
-Block::Block(Module* owner) : ActionData(owner)
+Block::Block(ActionReceiver* owner) : ActionData(owner)
 {
     clear_vector(this->steps);
     this->initial_rate = -1;

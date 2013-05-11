@@ -21,11 +21,12 @@
 
 class SwitchData : public ActionData {
 public:
-    SwitchData(Module* owner) : ActionData(owner) {};
+    SwitchData(ActionReceiver* owner) : ActionData(owner) {};
     uint8_t value;
 };
 
-class Switch : public Module {
+class Switch : public Module, public ActionReceiver
+{
     public:
         Switch();
         Switch(uint16_t name);

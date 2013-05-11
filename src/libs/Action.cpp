@@ -87,7 +87,7 @@ Action* Action::invoke()
     {
         printf("\tData: %p\n", data);
 
-        // we use a temp register because on_action_invoke might remove the ActionData straight away,
+        // we use a temp variable because on_action_invoke might remove the ActionData straight away,
         // in which case data->next points to an item in the garbage collection queue and we'd get confused
         temp = data;
         data = data->next;

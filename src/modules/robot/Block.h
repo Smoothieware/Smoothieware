@@ -21,9 +21,10 @@ class Conveyor;
 
 // double max_allowable_speed( double acceleration, double target_velocity, double distance);
 
-class Block : public ActionData {
+class Block : public ActionData
+{
 public:
-    Block(Module* owner);
+    Block(ActionReceiver* owner);
 
     void calculate_trapezoid( double entry_factor, double exit_factor );
     double estimate_acceleration_distance( double initial_rate, double target_rate, double acceleration );

@@ -25,14 +25,14 @@ using namespace std;
 class G4PauseData : public ActionData
 {
 public:
-    G4PauseData(Module* owner, uint32_t m) : ActionData(owner)
+    G4PauseData(ActionReceiver* owner, uint32_t m) : ActionData(owner)
     {
         millis = m;
     }
     uint32_t millis;
 };
 
-class SlowTicker : public Module
+class SlowTicker : public Module, public ActionReceiver
 {
     public:
         SlowTicker();
@@ -40,7 +40,7 @@ class SlowTicker : public Module
         void on_module_loaded(void);
         void on_idle(void*);
         void on_gcode_received(void*);
-        void on_action_invoke(void*);
+        void on_action_invoke(ActionData*);
 
         void set_frequency( int frequency );
         void tick();

@@ -52,12 +52,13 @@ class TemperatureControlPool;
 
 class TemperatureControlData : public ActionData {
 public:
-    TemperatureControlData(Module* owner) : ActionData(owner) {};
+    TemperatureControlData(ActionReceiver* owner) : ActionData(owner) {};
     float temperature;
     bool wait;
 };
 
-class TemperatureControl : public Module {
+class TemperatureControl : public Module, public ActionReceiver
+{
     public:
         TemperatureControl(uint16_t name);
 

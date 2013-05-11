@@ -22,6 +22,11 @@ class ActionData;
 
 #define allocate_action_data(type, ...) new type(__VA_ARGS__)
 
+class ActionReceiver {
+public:
+    virtual void on_action_invoke(ActionData*);
+};
+
 class Action {
     public:
         Action();
@@ -45,10 +50,10 @@ class Action {
 class ActionData {
 public:
 //     ActionData(){};
-    ActionData(Module* owner){ this->owner = owner; };
+    ActionData(ActionReceiver* owner){ this->owner = owner; };
     virtual ~ActionData(){};
 
-    Module* owner;
+    ActionReceiver* owner;
     Action* action;
 
     virtual void finish(void) {
