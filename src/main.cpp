@@ -39,6 +39,12 @@
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 
+// memory regions for serial, USB, disk etc to use
+extern uint8_t Image$$RW_IRAM2$$Base;
+extern uint8_t Image$$RW_IRAM3$$Base;
+MemoryPool AHB1(&Image$$RW_IRAM3$$Base, 16384);
+MemoryPool AHB0(&Image$$RW_IRAM2$$Base, 16384);
+
 // Watchdog wd(5000000, WDT_MRI);
 
 // USB Stuff

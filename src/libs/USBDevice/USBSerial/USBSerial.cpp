@@ -69,7 +69,7 @@ int USBSerial::_getc()
         iprintf("rxbuf has room for another packet, interrupt enabled\n");
     }
     if (nl_in_rx > 0)
-        if (c == '\n')
+        if (c == '\n' || c == '\r')
             nl_in_rx--;
 
     return c;
@@ -193,7 +193,7 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
         {
             iprintf("\\x%02X", c[i]);
         }
-        if (c[i] == '\n')
+        if (c[i] == '\n' || c[i] == '\r')
             nl_in_rx++;
     }
     iprintf("\nQueued, %d empty\n", rxbuf.free());
@@ -247,7 +247,7 @@ void USBSerial::on_main_loop(void *argument)
         while (available())
         {
             char c = _getc();
-            if( c == '\n' )
+            if( c == '\n' || c == '\r')
             {
                 struct SerialMessage message;
                 message.message = received;
