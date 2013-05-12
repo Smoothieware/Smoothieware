@@ -214,7 +214,7 @@ void Extruder::on_gcode_received(void *argument){
     }
 }
 
-void Extruder::on_action_invoke(void* argument)
+void Extruder::on_action_invoke(ActionData* argument)
 {
     ExtruderData* data = static_cast<ExtruderData*>(argument);
 

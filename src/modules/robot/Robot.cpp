@@ -37,7 +37,7 @@ Robot::Robot(){
     seconds_per_minute = 60.0;
 }
 
-void Robot::on_action_invoke(void* argument)
+void Robot::on_action_invoke(ActionData* argument)
 {
     Block* block = static_cast<Block*>(argument);
 

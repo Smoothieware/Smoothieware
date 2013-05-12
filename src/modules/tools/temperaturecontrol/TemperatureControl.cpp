@@ -173,7 +173,7 @@ void TemperatureControl::on_gcode_received(void* argument){
     }
 }
 
-void TemperatureControl::on_action_invoke(void* argument)
+void TemperatureControl::on_action_invoke(ActionData* argument)
 {
     TemperatureControlData* data = static_cast<TemperatureControlData*>(argument);
 

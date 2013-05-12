@@ -65,7 +65,7 @@ class Robot : public Module, public ActionReceiver
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
-        void on_action_invoke(void* argument);
+        void on_action_invoke(ActionData* argument);
 
         void reset_axis_position(double position, int axis);
 

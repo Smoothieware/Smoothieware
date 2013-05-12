@@ -76,7 +76,7 @@ void Switch::on_gcode_received(void* argument){
     }
 }
 
-void Switch::on_action_invoke(void* argument){
+void Switch::on_action_invoke(ActionData* argument){
     SwitchData* data = static_cast<SwitchData*>(argument);
 
     printf("Switch::on_action_invoke(pin: %d.%d, value: %d)\n", output_pin.pin, output_pin.port_number, data->value);

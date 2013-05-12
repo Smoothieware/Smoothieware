@@ -67,7 +67,7 @@ class TemperatureControl : public Module, public ActionReceiver
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
         void on_second_tick(void* argument);
-        void on_action_invoke(void*);
+        void on_action_invoke(ActionData*);
 
         void set_desired_temperature(double desired_temperature);
         double get_temperature();

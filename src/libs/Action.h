@@ -20,11 +20,14 @@ class Module;
 class Action;
 class ActionData;
 
-#define allocate_action_data(type, ...) new type(__VA_ARGS__)
+#include "MemoryPool.h"
+extern MemoryPool AHB0; // from main.c
+
+#define allocate_action_data(type, ...) new(AHB0) type(__VA_ARGS__)
 
 class ActionReceiver {
 public:
-    virtual void on_action_invoke(ActionData*);
+    virtual void on_action_invoke(ActionData*) = 0;
 };
 
 class Action {

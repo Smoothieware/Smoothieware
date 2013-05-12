@@ -35,7 +35,7 @@ class Switch : public Module, public ActionReceiver
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
 //         void on_gcode_execute(void* argument);
-        void on_action_invoke(void* argument);
+        void on_action_invoke(ActionData* argument);
 
         uint16_t name_checksum;
         uint16_t on_m_code;

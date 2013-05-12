@@ -53,7 +53,7 @@ class Extruder : public Module, public ActionReceiver
         void     on_play(void* argument);
         void     on_pause(void* argument);
         void     on_speed_change(void* argument);
-        void     on_action_invoke(void* argument);
+        void     on_action_invoke(ActionData* argument);
 
         uint32_t acceleration_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
