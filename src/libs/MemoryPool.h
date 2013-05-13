@@ -11,6 +11,12 @@
     #define MDEBUG(...) do {} while (0)
 #endif
 
+/*
+ * with MUCH thanks to http://www.parashift.com/c++-faq-lite/memory-pools.html
+ *
+ * test framework at https://gist.github.com/triffid/5563987
+ */
+
 class MemoryPool
 {
 public:

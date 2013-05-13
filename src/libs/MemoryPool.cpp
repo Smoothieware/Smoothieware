@@ -1,6 +1,7 @@
 #include "MemoryPool.h"
 
 #include <stdio.h>
+#include <mri.h>
 
 #define offset(x) (((uint8_t*) x) - ((uint8_t*) this->base))
 
@@ -92,6 +93,14 @@ void* MemoryPool::alloc(size_t nbytes)
                 // move sbrk so we know where the end of the list is
                 if (offset(q) > sbrk)
                     sbrk = offset(q);
+
+                // sanity check
+                if (sbrk > size)
+                {
+                    // captain, we have a problem!
+                    // this can only happen if something has corrupted our heap, since we should simply fail to find a free block if it's full
+                    __debugbreak();
+                }
             }
 
             MDEBUG("\t\tsbrk is %d (%p)\n", sbrk, ((uint8_t*) base) + sbrk);
@@ -129,6 +138,14 @@ void MemoryPool::dealloc(void* d)
 
         MDEBUG("\t\tsbrk is %d (%p)\n", sbrk, ((uint8_t*) base) + sbrk);
 
+        // sanity check
+        if (sbrk > size)
+        {
+            // captain, we have a problem!
+            // this can only happen if something has corrupted our heap, since we should simply fail to find a free block if it's full
+            __debugbreak();
+        }
+
         p->next += q->next;
     }
 
@@ -150,6 +167,14 @@ void MemoryPool::dealloc(void* d)
                     sbrk = offset(q);
 
                 MDEBUG("\t\tsbrk is %d (%p)\n", sbrk, ((uint8_t*) base) + sbrk);
+
+                // sanity check
+                if (sbrk > size)
+                {
+                    // captain, we have a problem!
+                    // this can only happen if something has corrupted our heap, since we should simply fail to find a free block if it's full
+                    __debugbreak();
+                }
             }
 
             // we found previous block, return
