@@ -185,7 +185,7 @@ void Block::take(){
 // This is one of the craziest bits in smoothie
 void Block::release(){
 
-    // A block can be taken by several modules, we want to actually release it only when all modules have release()d it
+    // A block can be taken by several modules, we want to actually release it only when all modules have release()d it
     this->times_taken--;
     if( this->times_taken < 1 ){
 

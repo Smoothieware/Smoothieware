@@ -20,6 +20,7 @@ GcodeDispatch::GcodeDispatch(){}
 
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded() {
+    return_error_on_unhandled_gcode = this->kernel->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     currentline = -1;
 }
@@ -100,7 +101,11 @@ void GcodeDispatch::on_console_line_received(void * line){
                 this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
                 if (gcode->add_nl)
                     new_message.stream->printf("\r\n");
-                new_message.stream->printf("ok\r\n");
+
+                if ( return_error_on_unhandled_gcode == true && gcode->accepted_by_module == false)
+                    new_message.stream->printf("ok (command unclaimed)\r\n");
+                else
+                    new_message.stream->printf("ok\r\n");
 
                 delete gcode;
             

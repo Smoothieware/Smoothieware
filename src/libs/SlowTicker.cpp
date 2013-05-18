@@ -35,7 +35,7 @@ SlowTicker::SlowTicker(){
     // ISP button
     ispbtn.from_string("2.10")->as_input()->pull_up();
 
-    // TODO: What is this ??
+    // TODO: What is this ??
     flag_1s_flag = 0;
     flag_1s_count = SystemCoreClock;
 
@@ -92,8 +92,8 @@ void SlowTicker::tick(){
             g4_ticks = 0;
     }
 
-    // Enter MRI mode if the ISP button is pressed
-    // TODO : This should have it's own module
+    // Enter MRI mode if the ISP button is pressed
+    // TODO: This should have it's own module
     if (ispbtn.get() == 0)
         __debugbreak();
 
@@ -153,6 +153,7 @@ void SlowTicker::on_gcode_execute(void* argument){
 
     if (gcode->has_g){
         if (gcode->g == 4){
+            gcode->mark_as_taken();
             bool updated = false;
             if (gcode->has_letter('P')) {
                 updated = true;

@@ -3,7 +3,7 @@
 #include <sLPC17xx.h>
 #include <mri.h>
 
-// This is used by MRI to turn pins on and off when entering and leaving MRI. Useful for not burning everything down
+// This is used by MRI to turn pins on and off when entering and leaving MRI. Useful for not burning everything down
 // See http://smoothieware.org/mri-debugging 
 
 extern "C" {
