@@ -20,12 +20,12 @@
 #define touchprobe_debounce_count_checksum   CHECKSUM("touchprobe_debounce_count")
 
 class Touchprobe: public Module {
-	private:
+    private:
         void wait_for_touch(int remaining_steps[]);
-	public:
-		void on_module_loaded();
-		void on_config_reload(void* argument);
-		void on_gcode_received(void* argument);
+    public:
+        void on_module_loaded();
+        void on_config_reload(void* argument);
+        void on_gcode_received(void* argument);
 
         StepperMotor*  steppers[3];
         Pin            pin;

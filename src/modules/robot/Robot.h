@@ -17,6 +17,7 @@ using std::string;
 #include "Planner.h"
 #include "libs/Pin.h"
 #include "libs/StepperMotor.h"
+#include "modules/tools/touchprobe/Touchprobe.h"
 
 
 #define default_seek_rate_checksum             CHECKSUM("default_seek_rate")

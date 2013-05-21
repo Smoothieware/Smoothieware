@@ -116,6 +116,13 @@ void Robot::on_gcode_received(void * argument){
     if( gcode->has_g){
         switch( gcode->g ){
             case 0:  this->motion_mode = MOTION_MODE_SEEK; gcode->mark_as_taken(); break;
+            case 31:
+                if( Touchprobe::enabled ){
+                    this->motion_mode = MOTION_MODE_LINEAR; gcode->mark_as_taken();
+                }
+                // First wait for the queue to be empty
+                this->kernel->conveyor->wait_for_empty_queue();
+                break;
             case 1:  this->motion_mode = MOTION_MODE_LINEAR; gcode->mark_as_taken();  break;
             case 2:  this->motion_mode = MOTION_MODE_CW_ARC; gcode->mark_as_taken();  break;
             case 3:  this->motion_mode = MOTION_MODE_CCW_ARC; gcode->mark_as_taken();  break;

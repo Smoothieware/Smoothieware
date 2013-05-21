@@ -7,9 +7,11 @@
 
 #include "Touchprobe.h"
 
+bool Touchprobe::enabled = false;
+
 void Touchprobe::on_module_loaded() {
     // if the module is disabled -> do nothing
-	Touchprobe::enabled = this->kernel->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
+    Touchprobe::enabled = this->kernel->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
     if( !enabled ){ return; }
     // load settings
     this->on_config_reload(this);
@@ -45,12 +47,12 @@ void Touchprobe::wait_for_touch(int remaining_steps[]){
                 debounce++;
                 running = true;
             } else {
-                // ...otherwise stop the steppers, return it's remaining steps
+                // ...otherwise stop the steppers, return its remaining steps
                 for( int i=0; i<3; i++ ){
                     if ( this->steppers[i]->moving ){
                         remaining_steps[i] =  this->steppers[i]->steps_to_move - this->steppers[i]->stepped;
                         remaining_steps[i] *= this->steppers[i]->dir_pin->get() ? -1 : 1;
-                        this->steppers[i]->set_speed(0);
+                        this->steppers[i]->move(0,0);
                     }
                 }
             }
@@ -71,23 +73,6 @@ void Touchprobe::on_gcode_received(void* argument)
     if( gcode->has_g) {
         if( gcode->g == 31 ) {
             int remaining_steps[3];
-            double target[3];
-
-            // First wait for the queue to be empty
-            this->kernel->conveyor->wait_for_empty_queue();
-            // append a line to the planner
-            robot->get_position(target); // default to current position
-            for(char letter = 'X'; letter <= 'Z'; letter++){
-                if( gcode->has_letter(letter) ){
-                    target[letter-'X'] = robot->to_millimeters(gcode->get_value(letter)) + ( robot->absolute_mode ? 0 : target[letter-'X']);
-                }
-            }
-            if( gcode->has_letter('F') ) {
-                robot->feed_rate = robot->to_millimeters( gcode->get_value('F') ) / 60.0;
-            }
-            robot->append_line(gcode,target,robot->feed_rate);
-
-            gcode->stream->printf("Pin: %d.%d =%d ", this->pin.port_number, this->pin.pin, this->pin.get() );
 
             wait_for_touch(remaining_steps);
 
