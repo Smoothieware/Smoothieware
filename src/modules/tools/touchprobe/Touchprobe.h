@@ -30,6 +30,7 @@ class Touchprobe: public Module {
         StepperMotor*  steppers[3];
         Pin            pin;
         unsigned int   debounce_count;
+        static bool enabled;
 };
 
 #endif /* TOUCHPROBE_H_ */
