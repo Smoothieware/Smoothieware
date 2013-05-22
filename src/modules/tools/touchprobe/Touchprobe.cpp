@@ -7,12 +7,11 @@
 
 #include "Touchprobe.h"
 
-bool Touchprobe::enabled = false;
-
 void Touchprobe::on_module_loaded() {
     // if the module is disabled -> do nothing
-    Touchprobe::enabled = this->kernel->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
-    if( !enabled ){ return; }
+    this->enabled = this->kernel->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
+    if( !(this->enabled) ){ return; }
+    this->probe_rate = 5;
     // load settings
     this->on_config_reload(this);
     // register event-handlers
@@ -28,10 +27,15 @@ void Touchprobe::on_config_reload(void* argument){
     this->steppers[1] = this->kernel->robot->beta_stepper_motor;
     this->steppers[2] = this->kernel->robot->gamma_stepper_motor;
 
+    this->should_log = this->enabled = this->kernel->config->value( touchprobe_log_enable_checksum )->by_default(false)->as_bool();
+    if( this->should_log){
+        this->filename = this->kernel->config->value(touchprobe_logfile_name_checksum)->by_default("/sd/probe_log.csv")->as_string();
+        logfile = fopen( filename.c_str(), "w");
+    }
 }
 
 
-void Touchprobe::wait_for_touch(int remaining_steps[]){
+void Touchprobe::wait_for_touch(int distance[]){
     bool running = true;
     unsigned int debounce = 0;
 
@@ -40,7 +44,7 @@ void Touchprobe::wait_for_touch(int remaining_steps[]){
         this->kernel->call_event(ON_IDLE);
         // if the touchprobe is active or there are no moves left
         //     -> the probe only hit air, move fully completed...
-        if( this->pin.get() || (this->kernel->conveyor->queue.size() == 0 ) ){
+        if( this->pin.get() || ((this->steppers[0]->moving ? 0:1 ) + (this->steppers[1]->moving ? 0:1 ) + (this->steppers[2]->moving ? 0:1 )) == 3 ){
             //...increase debounce counter...
             if( debounce < debounce_count) {
                 // ...but only if the counter hasn't reached the max. value
@@ -49,9 +53,10 @@ void Touchprobe::wait_for_touch(int remaining_steps[]){
             } else {
                 // ...otherwise stop the steppers, return its remaining steps
                 for( int i=0; i<3; i++ ){
+                    distance[i] = 0;
                     if ( this->steppers[i]->moving ){
-                        remaining_steps[i] =  this->steppers[i]->steps_to_move - this->steppers[i]->stepped;
-                        remaining_steps[i] *= this->steppers[i]->dir_pin->get() ? -1 : 1;
+                        distance[i] =  this->steppers[i]->stepped;
+                        distance[i] *= this->steppers[i]->dir_pin->get() ? -1 : 1;
                         this->steppers[i]->move(0,0);
                     }
                 }
@@ -62,7 +67,6 @@ void Touchprobe::wait_for_touch(int remaining_steps[]){
             debounce = 0;
         }
     }
-    this->kernel->streams->printf( "touch end\r\n" );
 }
 
 void Touchprobe::on_gcode_received(void* argument)
@@ -72,13 +76,48 @@ void Touchprobe::on_gcode_received(void* argument)
 
     if( gcode->has_g) {
         if( gcode->g == 31 ) {
-            int remaining_steps[3];
+            double tmp[3], pos[3];
+            int steps[3], distance[3];
+            // first wait for an empty queue i.e. no moves left
+            this->kernel->conveyor->wait_for_empty_queue();
 
-            wait_for_touch(remaining_steps);
+            robot->get_target(gcode,tmp);
+            if( gcode->has_letter('F') )            {
+                    this->probe_rate = robot->to_millimeters( gcode->get_value('F') ) / 60.0;
+            }
+            //
+            robot->arm_solution->millimeters_to_steps(tmp,steps);
 
-            //clear the queue
-            while( this->kernel->conveyor->queue.size() > 0 ) {
-                this->kernel->conveyor->queue.delete_first();
+            if( ((abs(steps[0]) > 0 ? 1:0) + (abs(steps[1]) > 0 ? 1:0) + (abs(steps[2]) > 0 ? 1:0)) != 1 ){
+                return; //FIXME coordinated movement not supported yet
+            }
+
+            // Enable the motors
+            this->kernel->stepper->turn_enable_pins_on();
+            // move
+            robot->arm_solution->get_steps_per_millimeter(tmp);
+            for(char c='X'; c<='Z'; c++){
+                if( steps[c-'X'] == 0 ){
+                    continue;
+                }
+                bool dir = steps[c-'X'] < 0;
+                // tmp is steps/mm, probe_rate in mm/s -> speed needs steps/s
+                this->steppers[c-'X']->set_speed(this->probe_rate * tmp[c-'X']);
+                this->steppers[c-'X']->move(dir,abs(steps[c-'X']));
+            }
+
+            wait_for_touch(distance);
+            robot->get_axis_position(pos);
+            for(char c='X'; c<='Z'; c++){
+                robot->reset_axis_position(pos[c-'X']+distance[c-'X']/tmp[c-'X'], c-'X');
+            }
+
+            if( this->should_log ){
+
+                robot->get_axis_position(pos);
+                fprintf(logfile,"%f, %f, %f\n", robot->from_millimeters(pos[0]), robot->from_millimeters(pos[1]), robot->from_millimeters(pos[2]) );
+                //FIXME look into f_sync *sigh* fflush doesn't work as expected
+                fflush(logfile);
             }
         }
     }

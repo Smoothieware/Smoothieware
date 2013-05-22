@@ -116,13 +116,6 @@ void Robot::on_gcode_received(void * argument){
     if( gcode->has_g){
         switch( gcode->g ){
             case 0:  this->motion_mode = MOTION_MODE_SEEK; gcode->mark_as_taken(); break;
-            case 31:
-                if( Touchprobe::enabled ){
-                    this->motion_mode = MOTION_MODE_LINEAR; gcode->mark_as_taken();
-                }
-                // First wait for the queue to be empty
-                this->kernel->conveyor->wait_for_empty_queue();
-                break;
             case 1:  this->motion_mode = MOTION_MODE_LINEAR; gcode->mark_as_taken();  break;
             case 2:  this->motion_mode = MOTION_MODE_CW_ARC; gcode->mark_as_taken();  break;
             case 3:  this->motion_mode = MOTION_MODE_CCW_ARC; gcode->mark_as_taken();  break;
@@ -197,7 +190,7 @@ void Robot::on_gcode_received(void * argument){
     memcpy(target, this->current_position, sizeof(target));    //default to last target
 
     for(char letter = 'I'; letter <= 'K'; letter++){ if( gcode->has_letter(letter) ){ offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));                                                    } }
-    for(char letter = 'X'; letter <= 'Z'; letter++){ if( gcode->has_letter(letter) ){ target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);  } }
+    this->get_target(gcode,target);
 
     if( gcode->has_letter('F') )
     {
@@ -223,9 +216,6 @@ void Robot::on_gcode_received(void * argument){
     // motion control system might still be processing the action and the real tool position
     // in any intermediate location.
     memcpy(this->current_position, target, sizeof(double)*3); // this->position[] = target[];
-
-
-
 
 }
 
@@ -449,14 +439,6 @@ void Robot::compute_arc(Gcode* gcode, double offset[], double target[]){
 
 }
 
-
-// Convert from inches to millimeters ( our internal storage unit ) if needed
-inline double Robot::to_millimeters( double value ){
-    return this->inch_mode ? value * 25.4 : value;
-}
-inline double Robot::from_millimeters( double value){
-    return this->inch_mode ? value/25.4 : value;
-}
 
 double Robot::theta(double x, double y){
     double t = atan(x/fabs(y));
