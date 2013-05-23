@@ -66,10 +66,11 @@ class Robot : public Module {
         void on_gcode_received(void* argument);
         void reset_axis_position(double position, int axis);
         void get_axis_position(double position[]);
-        void get_target(Gcode* gcode, double target[] );
         double to_millimeters(double value);
         double from_millimeters(double value);
+
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
+        bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
@@ -87,7 +88,6 @@ class Robot : public Module {
         double current_position[3];                           // Current position, in millimeters
         double last_milestone[3];                             // Last position, in millimeters
         bool inch_mode;                                       // true for inch mode, false for millimeter mode ( default )
-        bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
         int8_t motion_mode;                                   // Motion mode for the current received Gcode
         double seek_rate;                                     // Current rate for seeking moves ( mm/s )
         double feed_rate;                                     // Current rate for feeding moves ( mm/s )
@@ -129,13 +129,6 @@ inline double Robot::to_millimeters( double value ){
 }
 inline double Robot::from_millimeters( double value){
     return this->inch_mode ? value/25.4 : value;
-}
-inline void Robot::get_target(Gcode* gcode, double target[] ){
-    for(char letter = 'X'; letter <= 'Z'; letter++){
-        if( gcode->has_letter(letter) ){
-            target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);
-        }
-    }
 }
 inline void Robot::get_axis_position(double position[]){
     memcpy(position, this->current_position, sizeof(double)*3 );

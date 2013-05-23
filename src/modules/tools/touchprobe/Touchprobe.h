@@ -9,8 +9,7 @@
 #define TOUCHPROBE_H_
 
 #include "libs/Module.h"
-#include "ff.h" //for f_sync
-#include "wait_api.h" // for wait
+#include "libs/SDFAT.h"
 #include "modules/robot/Conveyor.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
@@ -20,15 +19,17 @@
 #define touchprobe_enable_checksum           CHECKSUM("touchprobe_enable")
 #define touchprobe_log_enable_checksum       CHECKSUM("touchprobe_log_enable")
 #define touchprobe_logfile_name_checksum     CHECKSUM("touchprobe_logfile_name")
+#define touchprobe_log_rotate_mcode_checksum CHECKSUM("touchprobe_log_rotate_mcode")
 #define touchprobe_pin_checksum              CHECKSUM("touchprobe_pin")
 #define touchprobe_debounce_count_checksum   CHECKSUM("touchprobe_debounce_count")
+
 
 class Touchprobe: public Module {
     private:
         void wait_for_touch(int distance[]);
 
-        FILE* logfile;
-        string filename;
+        FILE*          logfile;
+        string         filename;
         StepperMotor*  steppers[3];
         Pin            pin;
         unsigned int   debounce_count;
@@ -37,10 +38,12 @@ class Touchprobe: public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
+        void on_idle(void* argument);
 
-        double probe_rate;
-        bool enabled;
-        bool should_log;
+        double         probe_rate;
+        int            mcode;
+        bool           enabled;
+        bool           should_log;
 };
 
 #endif /* TOUCHPROBE_H_ */

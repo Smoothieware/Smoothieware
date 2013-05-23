@@ -190,7 +190,7 @@ void Robot::on_gcode_received(void * argument){
     memcpy(target, this->current_position, sizeof(target));    //default to last target
 
     for(char letter = 'I'; letter <= 'K'; letter++){ if( gcode->has_letter(letter) ){ offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));                                                    } }
-    this->get_target(gcode,target);
+    for(char letter = 'X'; letter <= 'Z'; letter++){ if( gcode->has_letter(letter) ){ target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);  } }
 
     if( gcode->has_letter('F') )
     {
