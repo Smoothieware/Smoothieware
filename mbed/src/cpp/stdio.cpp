@@ -196,7 +196,7 @@ extern "C" int PREFIX(_write)(FILEHANDLE fh, const unsigned char *buffer, unsign
     }
 #ifdef __ARMCC_VERSION
     return length-n;
-# else
+#else
     return n;
 #endif
 }
