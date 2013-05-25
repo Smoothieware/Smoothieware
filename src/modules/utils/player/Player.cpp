@@ -24,11 +24,6 @@ void Player::on_module_loaded(){
 
     this->on_boot_gcode = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode -q")->as_string();
     this->on_boot_gcode_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
-
-    this->post_play_gcode = this->kernel->config->value(post_play_gcode_checksum)->by_default("/sd/post_play.gcode -q")->as_string();
-    this->post_play_enable = this->kernel->config->value(post_play_gcode_enable_checksum)->by_default(false)->as_bool();
-    this->is_post_play = false;
-
     this->elapsed_secs= 0;
 }
 
@@ -73,7 +68,6 @@ void Player::play_command( string parameters, StreamOutput* stream ){
     stream->printf("Playing %s\r\n", filename.c_str());
 
     this->playing_file = true;
-    this->is_post_play = false;
 
     // Do not output to any stream if we were passed the -q ( quiet ) option
     if( options.find_first_of("Qq") == string::npos ){
@@ -159,7 +153,6 @@ void Player::on_main_loop(void* argument){
     if( !this->booted ) {
         if( this->on_boot_gcode_enable ){
             this->play_command(this->on_boot_gcode, this->kernel->serial);
-            this->is_post_play = true; //this prevents playing the post-play file after the on-boot file
         }else{
             //this->kernel->serial->printf("On boot gcode disabled! skipping...\n");
         }
@@ -191,12 +184,6 @@ void Player::on_main_loop(void* argument){
         played_cnt= 0;
         file_size= 0;
         fclose(this->current_file_handler);
-
-        // play the Post-Play file
-        if( !this->is_post_play && this->post_play_enable ){
-            this->play_command(this->post_play_gcode, this->current_stream);
-            this->is_post_play = true;
-        }
     }
 }
 
