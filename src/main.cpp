@@ -10,6 +10,7 @@
 #include "modules/tools/extruder/Extruder.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
+#include "modules/tools/touchprobe/Touchprobe.h"
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/button/ButtonPool.h"
@@ -89,6 +90,7 @@ int main() {
     kernel->add_module( new PlayLed() );
     kernel->add_module( new Endstops() );
     kernel->add_module( new Player() );
+    kernel->add_module( new Touchprobe() );
 
     // Create and initialize USB stuff
     u.init();

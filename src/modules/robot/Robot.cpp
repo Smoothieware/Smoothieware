@@ -217,9 +217,6 @@ void Robot::on_gcode_received(void * argument){
     // in any intermediate location.
     memcpy(this->current_position, target, sizeof(double)*3); // this->position[] = target[];
 
-
-
-
 }
 
 // We received a new gcode, and one of the functions
@@ -442,14 +439,6 @@ void Robot::compute_arc(Gcode* gcode, double offset[], double target[]){
 
 }
 
-
-// Convert from inches to millimeters ( our internal storage unit ) if needed
-inline double Robot::to_millimeters( double value ){
-    return this->inch_mode ? value * 25.4 : value;
-}
-inline double Robot::from_millimeters( double value){
-    return this->inch_mode ? value/25.4 : value;
-}
 
 double Robot::theta(double x, double y){
     double t = atan(x/fabs(y));
