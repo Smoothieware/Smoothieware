@@ -70,8 +70,17 @@ void Touchprobe::wait_for_touch(int distance[]){
 }
 
 
+void Touchprobe::flush_log(){
+    //FIXME *sigh* fflush doesn't work as expected, see: http://mbed.org/forum/mbed/topic/3234/ or http://mbed.org/search/?type=&q=fflush
+    //fflush(logfile);
+    fclose(logfile);
+    //can't reopen the file here -> crash
+    logfile = NULL;
+}
+// Workaround for the close<->reopen crash, which itself is a workaround for wrong (or unimplemented) fflush behaviour
 void Touchprobe::on_idle(void* argument){
     if( this->logfile == NULL) {
+        // NOTE: File creation is buggy, a file may appear but writing to it will fail
         this->logfile = fopen( filename.c_str(), "a");
     }
 }
@@ -128,19 +137,19 @@ void Touchprobe::on_gcode_received(void* argument)
 
             if( this->should_log ){
                 robot->get_axis_position(pos);
-                fprintf(logfile,"%1.3f, %1.3f, %1.3f\n", robot->from_millimeters(pos[0]), robot->from_millimeters(pos[1]), robot->from_millimeters(pos[2]) );
-                //FIXME *sigh* fflush doesn't work as expected
-                //fflush(logfile);
-                fclose(logfile);
-                //can't reopen the file here -> crash
-                logfile = NULL;
+                fprintf(logfile,"%1.3f %1.3f %1.3f\n", robot->from_millimeters(pos[0]), robot->from_millimeters(pos[1]), robot->from_millimeters(pos[2]) );
+                flush_log();
             }
         }
     }else if(gcode->has_m) {
+        // log rotation
+        // for now this only writes a separator
+        // TODO do a actual log rotation
         if( this->mcode != 0 && this->should_log && gcode->m == this->mcode){
             string name;
-            fclose(logfile);
-            //TODO open new file
+            fputs("--\n",logfile);
+            flush_log();
         }
     }
 }
+

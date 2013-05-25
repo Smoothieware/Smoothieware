@@ -27,6 +27,7 @@
 class Touchprobe: public Module {
     private:
         void wait_for_touch(int distance[]);
+        void flush_log();
 
         FILE*          logfile;
         string         filename;
@@ -41,7 +42,7 @@ class Touchprobe: public Module {
         void on_idle(void* argument);
 
         double         probe_rate;
-        int            mcode;
+        unsigned int   mcode;
         bool           enabled;
         bool           should_log;
 };
