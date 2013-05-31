@@ -1,0 +1,19 @@
+Button is a highly versatile Module that effects the other 'half' of the Switch module.
+Basically it allows you to trigger 'M' codes based on an input pin. Any number of Switch
+modules can be created simply by specifying different names for them in the config file.
+
+
+The following is an example button for turning a fan on and off each time a button is pushed:
+
+button.fan1.enable        true     # this tells Smoothie to create a new button named "fan1"
+button.fan1.input_pin     2.11!    # watch for changes on this pin, '!' is used to invert the pin's input
+button.fan1.on_m_code     106      # internally send an "Mxxx" when this button 'closes'
+button.fan1.off_m_code    107      # internally send an "Myyy" when this button 'opens'
+button.fan1.toggle        true     # if false the button behaves as momentary, set to true the button output will toggle anytime the pin is 'pushed'
+                                   # remember that the pin itself can be inverted on the input_pin setting with an '!'
+button.fan1.normal_state  false    # if false the button is normally open, if true it is normally closed
+                                   # for a toggle switch this sets the initial startup state of the button.
+
+button.fan2.enable        true     # to begin creating another button named "fan2"
+button.fan2.etc...
+
