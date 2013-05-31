@@ -30,7 +30,7 @@ class Button : public Module {
         uint16_t   name_checksum;
         std::string   on_m_code;
         std::string   off_m_code;
-        Pin*       button;
+        Pin       button;
 
         StreamOutput* dummy_stream;
 };
