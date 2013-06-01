@@ -79,20 +79,26 @@ void Switch::on_gcode_execute(void* argument){
         if (gcode->has_letter('S'))
         {
             int v = gcode->get_value('S') * output_pin.max_pwm() / 256.0;
-            if (v)
+            if (v) {
                 this->output_pin.pwm(v);
-            else
+                this->switch_state = true;
+            }
+            else {
                 this->output_pin.set(0);
+                this->switch_state = false;
+            }
         }
         else
         {
             // Turn pin on
             this->output_pin.set(1);
+            this->switch_state = true;
         }
     }
     else if(gcode->command.compare(0, input_off_command.length(), input_off_command)){
         // Turn pin off
         this->output_pin.set(0);
+        this->switch_state = false;
     }
 }
 
@@ -127,8 +133,10 @@ void Switch::flip(){
     this->switch_state = !this->switch_state;
     if( this->switch_state ){
         this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
+            this->output_pin.set(1);
     }else{
         this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
+            this->output_pin.set(0);
     }
 }
 

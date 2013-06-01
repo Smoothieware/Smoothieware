@@ -13,7 +13,6 @@
 #include "modules/tools/touchprobe/Touchprobe.h"
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/robot/Conveyor.h"
-#include "modules/utils/button/ButtonPool.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/configurator/Configurator.h"
 #include "modules/utils/currentcontrol/CurrentControl.h"
@@ -85,7 +84,6 @@ int main() {
     kernel->add_module( new CurrentControl() );
     kernel->add_module( new TemperatureControlPool() );
     kernel->add_module( new SwitchPool() );
-    kernel->add_module( new ButtonPool() );
     kernel->add_module( new PauseButton() );
     kernel->add_module( new PlayLed() );
     kernel->add_module( new Endstops() );
