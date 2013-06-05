@@ -22,6 +22,7 @@
 #define dfu_command_checksum      CHECKSUM("dfu")
 #define break_command_checksum    CHECKSUM("break")
 #define help_command_checksum     CHECKSUM("help")
+#define version_command_checksum  CHECKSUM("version")
 
 class SimpleShell : public Module {
     public:
@@ -39,6 +40,7 @@ class SimpleShell : public Module {
         void reset_command(string parameters, StreamOutput* stream );
         void dfu_command(string parameters, StreamOutput* stream );
         void help_command(string parameters, StreamOutput* stream );
+        void version_command(string parameters, StreamOutput* stream );
         
     private:
         string current_path;

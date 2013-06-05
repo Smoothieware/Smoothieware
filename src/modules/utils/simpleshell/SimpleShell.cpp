@@ -15,6 +15,7 @@
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
+#include "version.h"
 
 
 void SimpleShell::on_module_loaded(){
@@ -61,6 +62,8 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->dfu_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == help_command_checksum)
         this->help_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == version_command_checksum)
+        this->version_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -143,6 +146,12 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 
 }
 
+// print out build version
+void SimpleShell::version_command( string parameters, StreamOutput* stream){
+    Version vers;
+    stream->printf("Build version: %s, Build date: %s,  System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000);
+}
+
 // Reset the system
 void SimpleShell::reset_command( string parameters, StreamOutput* stream){
     stream->printf("Smoothie out. Peace. Rebooting in 5 seconds...\r\n");
@@ -163,6 +172,7 @@ void SimpleShell::break_command( string parameters, StreamOutput* stream){
 
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("Commands:\r\n");
+    stream->printf("version\r\n");
     stream->printf("ls [folder]\r\n");
     stream->printf("cd folder\r\n");
     stream->printf("pwd\r\n");  

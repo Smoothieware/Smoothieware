@@ -104,7 +104,10 @@ void GcodeDispatch::on_console_line_received(void * line){
 
                 if ( return_error_on_unhandled_gcode == true && gcode->accepted_by_module == false)
                     new_message.stream->printf("ok (command unclaimed)\r\n");
-                else
+                else if(!gcode->txt_after_ok.empty()) {
+                    new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
+                    gcode->txt_after_ok.clear();
+                }else
                     new_message.stream->printf("ok\r\n");
 
                 delete gcode;
