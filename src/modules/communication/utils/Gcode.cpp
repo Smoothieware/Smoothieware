@@ -32,6 +32,7 @@ Gcode::Gcode(const Gcode& to_copy){
     this->add_nl                = to_copy.add_nl;
     this->stream                = to_copy.stream;
     this->accepted_by_module=false;
+    this->txt_after_ok.assign( to_copy.txt_after_ok );
 }
 
 Gcode& Gcode::operator= (const Gcode& to_copy){
@@ -44,6 +45,7 @@ Gcode& Gcode::operator= (const Gcode& to_copy){
         this->g                     = to_copy.g;
         this->add_nl                = to_copy.add_nl;
         this->stream                = to_copy.stream;
+        this->txt_after_ok.assign( to_copy.txt_after_ok );
     }
     this->accepted_by_module=false;
     return *this;

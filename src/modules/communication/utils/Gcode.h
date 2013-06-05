@@ -42,6 +42,7 @@ class Gcode {
         bool add_nl;
         StreamOutput* stream;
 
+        string txt_after_ok;
         bool accepted_by_module;
 
 };

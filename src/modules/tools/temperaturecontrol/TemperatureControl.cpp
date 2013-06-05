@@ -123,8 +123,9 @@ void TemperatureControl::on_gcode_received(void* argument){
     {
         // Get temperature
         if( gcode->m == this->get_m_code ){
-            gcode->stream->printf("%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
-            gcode->add_nl = true;
+            char buf[32]; // should be big enough for any status
+            int n= snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
+            gcode->txt_after_ok.append(buf, n);
         }
         if (gcode->m == 301)
         {
