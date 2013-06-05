@@ -25,10 +25,12 @@ Switch::Switch(uint16_t name){
 void Switch::on_module_loaded(){
     this->input_pin_state = true;
     this->switch_state = true;
+    this->switch_changed = false;
 
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
+    this->register_for_event(ON_MAIN_LOOP);
 
     // Settings
     this->on_config_reload(this);
@@ -48,6 +50,7 @@ void Switch::on_config_reload(void* argument){
     this->input_on_command     = this->kernel->config->value(switch_checksum, this->name_checksum, input_on_command_checksum     )->by_default("")->as_string();
     this->input_off_command    = this->kernel->config->value(switch_checksum, this->name_checksum, input_off_command_checksum    )->by_default("")->as_string();
     this->switch_state         = this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
+    this->switch_value         = this->kernel->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(1)->as_number();
     this->output_pin.from_string(this->kernel->config->value(switch_checksum, this->name_checksum, output_pin_checksum    )->by_default("nc")->as_string())->as_output();
     this->output_pin.set(this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(0)->as_number() );
     this->output_on_command     = this->kernel->config->value(switch_checksum, this->name_checksum, output_on_command_checksum     )->by_default("")->as_string();
@@ -81,6 +84,7 @@ void Switch::on_gcode_execute(void* argument){
             int v = gcode->get_value('S') * output_pin.max_pwm() / 256.0;
             if (v) {
                 this->output_pin.pwm(v);
+                this->switch_value = v;
                 this->switch_state = true;
             }
             else {
@@ -91,7 +95,7 @@ void Switch::on_gcode_execute(void* argument){
         else
         {
             // Turn pin on
-            this->output_pin.set(1);
+            this->output_pin.pwm(this->switch_value);
             this->switch_state = true;
         }
     }
@@ -102,12 +106,26 @@ void Switch::on_gcode_execute(void* argument){
     }
 }
 
+void Switch::on_main_loop(void* argument){
+    if(this->switch_changed){  
+        if(this->switch_state){
+            this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
+            this->output_pin.pwm(this->switch_value);
+        }else{
+            this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
+            this->output_pin.set(0);
+        }
+        this->switch_changed=false;      
+    }
+}
+
 //TODO: Make this use InterruptIn
 //Check the state of the button and act accordingly
 uint32_t Switch::pinpoll_tick(uint32_t dummy){
     // If pin changed
-    if(this->input_pin_state != this->input_pin.get()){
-        this->input_pin_state = this->input_pin.get();
+    bool current_state = this->input_pin.get();
+    if(this->input_pin_state != current_state){
+        this->input_pin_state = current_state;
         // If pin high
         if( this->input_pin_state ){
             // if switch is a toggle switch
@@ -131,13 +149,7 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy){
 
 void Switch::flip(){
     this->switch_state = !this->switch_state;
-    if( this->switch_state ){
-        this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
-            this->output_pin.set(1);
-    }else{
-        this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
-            this->output_pin.set(0);
-    }
+    this->switch_changed = true;
 }
 
 void Switch::send_gcode(std::string msg, StreamOutput* stream) {

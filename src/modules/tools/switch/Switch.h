@@ -13,6 +13,7 @@
 
 #define    switch_checksum              CHECKSUM("switch")
 #define    startup_state_checksum       CHECKSUM("startup_state")
+#define    startup_value_checksum       CHECKSUM("startup_value")
 #define    input_pin_checksum           CHECKSUM("input_pin")
 #define    input_pin_behavior_checksum  CHECKSUM("input_pin_behavior")
 #define    toggle_checksum              CHECKSUM("toggle")
@@ -32,6 +33,7 @@ class Switch : public Module {
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
         void on_gcode_execute(void* argument);
+        void on_main_loop(void* argument);
         uint32_t pinpoll_tick(uint32_t dummy);
 
         void flip();
@@ -44,6 +46,8 @@ class Switch : public Module {
         string    input_on_command;
         string    input_off_command;
         bool      switch_state;
+        float     switch_value;
+        bool      switch_changed;
         Pwm       output_pin;
         string    output_on_command;
         string    output_off_command;
