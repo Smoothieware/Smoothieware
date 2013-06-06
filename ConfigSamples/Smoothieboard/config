@@ -58,6 +58,9 @@ delta_current                                1.5              # Extruder stepper
 
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is ignored if false.
+#laser_module_pin                             2.7              # this pin will be PWMed to control the laser
+#laser_module_max_power                       0.8              # this is the maximum duty cycle that will be applied to the laser
+#laser_module_tickle_power                    0.0              # this duty cycle will be used for travel moves to keep the laser active without actually burning
 
 # Hotend temperature control configuration
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all. All configuration is ignored if false.
