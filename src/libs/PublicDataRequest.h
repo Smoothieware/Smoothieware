@@ -12,38 +12,21 @@
 
 class PublicDataRequest {
 	public:
- 		// targets.. the module(s) that needs to respond
- 		static const uint16_t pdr_temperature_control_checksum=    CHECKSUM("temperature_control");
- 		static const uint16_t pdr_robot_checksum=                  CHECKSUM("robot");
- 
- 		// sub targets.. the sub target in a module
- 		static const uint16_t pdr_hotend_checksum=                 CHECKSUM("hotend");
- 		static const uint16_t pdr_bed_checksum=                    CHECKSUM("bed");
- 
- 
- 		// values.. The values to retrieve from the target
- 		static const uint16_t pdr_current_temperature_checksum=    CHECKSUM("current_temperature");
- 		static const uint16_t pdr_target_temperature_checksum=     CHECKSUM("target_temperature");
- 		static const uint16_t pdr_temperature_pwm_checksum=        CHECKSUM("temperature_pwm");
- 		static const uint16_t pdr_speed_override_percent_checksum= CHECKSUM("speed_override_percent");
-
-
-	public:
 		PublicDataRequest(uint16_t addrcs1){ target[0]= addrcs1; target[1]= 0; target[2]= 0; data_taken= false; data= NULL; }
 		PublicDataRequest(uint16_t addrcs1, uint16_t addrcs2){ target[0]= addrcs1; target[1]= addrcs2; target[2]= 0; data_taken= false; data= NULL; }
 		PublicDataRequest(uint16_t addrcs1, uint16_t addrcs2, uint16_t addrcs3){ target[0]= addrcs1; target[1]= addrcs2; target[2]= addrcs3; data_taken= false; data= NULL; }
 
 		virtual ~PublicDataRequest() { data= NULL; }
 		
-		bool starts_with(uint16_t addr) const { return addr == target[0]; }
-		bool second_element_is(uint16_t addr) const { return addr == target[1]; }
-		bool third_element_is(uint16_t addr) const { return addr == target[2]; }
+		bool starts_with(uint16_t addr) const { return addr == this->target[0]; }
+		bool second_element_is(uint16_t addr) const { return addr == this->target[1]; }
+		bool third_element_is(uint16_t addr) const { return addr == this->target[2]; }
 
-		bool is_taken() const { return data_taken; }
+		bool is_taken() const { return this->data_taken; }
 		void set_taken() { this->data_taken= true; }
 		
-		void set_data_ptr(void *d) { data= d; }
-		void* get_data_ptr(void) { return data; }
+		void set_data_ptr(void *d) { this->data= d; }
+		void* get_data_ptr(void) const { return this->data; }
 
 	private:
 		uint16_t target[3];

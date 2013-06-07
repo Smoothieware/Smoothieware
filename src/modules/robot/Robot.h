@@ -35,6 +35,10 @@ using std::string;
 #define delta_checksum                         CHECKSUM("delta")
 #define hbot_checksum                          CHECKSUM("hbot")
 
+// addresses used for public data access
+#define robot_checksum                         CHECKSUM("robot");
+#define speed_override_percent_checksum        CHECKSUM("speed_override_percent");
+
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
 #define NEXT_ACTION_GO_HOME 2

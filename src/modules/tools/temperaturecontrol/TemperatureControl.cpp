@@ -204,18 +204,18 @@ void TemperatureControl::on_gcode_execute(void* argument){
 void TemperatureControl::on_get_public_data(void* argument){
 	PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
 	
-	if(!pdr->starts_with(PublicDataRequest::pdr_temperature_control_checksum)) return;
+	if(!pdr->starts_with(temperature_control_checksum)) return;
 
 	if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
 
 	// ok this is us send back the requested value
-	if(pdr->third_element_is(PublicDataRequest::pdr_current_temperature_checksum)) {
+	if(pdr->third_element_is(current_temperature_checksum)) {
 		pdr->set_data_ptr(&this->last_reading);
 		pdr->set_taken();
-	}else if(pdr->third_element_is(PublicDataRequest::pdr_target_temperature_checksum)) {
+	}else if(pdr->third_element_is(target_temperature_checksum)) {
 		pdr->set_data_ptr((target_temperature == UNDEFINED) ? NULL : &this->target_temperature);
 		pdr->set_taken();
-	}else if(pdr->third_element_is(PublicDataRequest::pdr_temperature_pwm_checksum)) {
+	}else if(pdr->third_element_is(temperature_pwm_checksum)) {
 		pdr->set_data_ptr(&this->o);
 		pdr->set_taken();
 	}

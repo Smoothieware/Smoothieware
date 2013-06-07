@@ -18,6 +18,8 @@
 #include "version.h"
 #include "PublicDataRequest.h"
 
+#include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
+
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
@@ -174,10 +176,15 @@ void SimpleShell::break_command( string parameters, StreamOutput* stream){
 
 // used to test out the get public data events
 void SimpleShell::get_temp_command( string parameters, StreamOutput* stream){
+	string type= shift_parameter( parameters );
 	double* temp;
-	this->kernel->public_data->get_value( PublicDataRequest::pdr_temperature_control_checksum, PublicDataRequest::pdr_hotend_checksum, PublicDataRequest::pdr_current_temperature_checksum, (void**)&temp );
-	stream->printf("hotend temp: %f\r\n", *temp);
-	
+	bool ok= this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, (void**)&temp );
+
+	if(ok) {
+		stream->printf("%s temp: %f\r\n", type.c_str(), *temp);
+	}else{
+		stream->printf("%s is not a known temperature device\r\n", type.c_str());
+	}
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){

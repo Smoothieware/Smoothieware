@@ -16,6 +16,7 @@
 
 #define UNDEFINED -1
 
+#include "TemperatureControlPublicAccess.h"
 #define thermistor_checksum                CHECKSUM("thermistor")
 #define r0_checksum                        CHECKSUM("r0")
 #define readings_per_second_checksum       CHECKSUM("readings_per_second")
@@ -26,7 +27,6 @@
 #define vcc_checksum                       CHECKSUM("vcc")
 #define r1_checksum                        CHECKSUM("r1")
 #define r2_checksum                        CHECKSUM("r2")
-#define temperature_control_checksum       CHECKSUM("temperature_control")
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
 #define heater_pin_checksum                CHECKSUM("heater_pin")
 
@@ -45,12 +45,14 @@
 #define preset1_checksum                   CHECKSUM("preset1")
 #define preset2_checksum                   CHECKSUM("preset2")
 
+
 #define QUEUE_LEN 8
 
 class TemperatureControlPool;
 
 class TemperatureControl : public Module {
-    public:
+
+	public:
         TemperatureControl(uint16_t name);
 
         void on_module_loaded();
