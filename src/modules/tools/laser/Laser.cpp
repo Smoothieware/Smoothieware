@@ -22,10 +22,12 @@ void Laser::on_module_loaded() {
         return;
     }
 
-    this->laser_pin = new mbed::PwmOut(p21);
-    this->laser_pin->period_us(20);
+    //this->laser_pin = new mbed::PwmOut(p21);
+    this->laser_pin.from_string(this->kernel->config->value(laser_module_pin_checksum)->by_default("nc")->as_string())->as_output();
+//    this->laser_pin.period_us(20);
+    this->laser_pin.set(0);
 
-    this->laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.3)->as_number() ;
+    this->laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.8)->as_number() ;
     this->laser_tickle_power = this->kernel->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
 
     //register for events
@@ -39,7 +41,7 @@ void Laser::on_module_loaded() {
 
 // Turn laser off laser at the end of a move
 void  Laser::on_block_end(void* argument){
-    this->laser_pin->write(0);
+    this->laser_pin.set(0);
 }
 
 // Set laser power at the beginning of a block
@@ -49,7 +51,7 @@ void Laser::on_block_begin(void* argument){
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Laser::on_pause(void* argument){
-    this->laser_pin->write(0);
+    this->laser_pin.set(0);
 }
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
@@ -64,7 +66,7 @@ void Laser::on_gcode_execute(void* argument){
     if( gcode->has_g){
         int code = gcode->g;
         if( code == 0 ){                    // G0
-            this->laser_pin->write(this->laser_tickle_power);
+            this->laser_pin.set(this->laser_tickle_power);
             this->laser_on =  false;
         }else if( code >= 1 && code <= 3 ){ // G1, G2, G3
             this->laser_on =  true;
@@ -87,6 +89,6 @@ void Laser::on_speed_change(void* argument){
 void Laser::set_proportional_power(){
     if( this->laser_on && this->kernel->stepper->current_block ){
         // adjust power to maximum power and actual velocity
-        this->laser_pin->write(float(double(this->laser_max_power) * double(this->kernel->stepper->trapezoid_adjusted_rate) / double(this->kernel->stepper->current_block->nominal_rate)));
+        this->laser_pin.set(float(double(this->laser_max_power) * double(this->kernel->stepper->trapezoid_adjusted_rate) / double(this->kernel->stepper->current_block->nominal_rate)));
     }
 }
