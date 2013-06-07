@@ -208,18 +208,17 @@ void TemperatureControl::on_get_public_data(void* argument){
 
 	if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
 
-	// ok this is us send back the requested value
+	// ok this is targeted at us, so send back the requested data
 	if(pdr->third_element_is(current_temperature_checksum)) {
-		pdr->set_data_ptr(&this->last_reading);
-		pdr->set_taken();
-	}else if(pdr->third_element_is(target_temperature_checksum)) {
-		pdr->set_data_ptr((target_temperature == UNDEFINED) ? NULL : &this->target_temperature);
-		pdr->set_taken();
-	}else if(pdr->third_element_is(temperature_pwm_checksum)) {
-		pdr->set_data_ptr(&this->o);
+		// this must be static as it will be accessed long after we have returned
+		static struct pad_temperature temp_return;
+		temp_return.current_temperature= this->get_temperature();
+		temp_return.target_temperature= (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
+		temp_return.pwm= this->o;
+		
+		pdr->set_data_ptr(&temp_return);
 		pdr->set_taken();
 	}
-
 }
 
 void TemperatureControl::set_desired_temperature(double desired_temperature)

@@ -177,11 +177,12 @@ void SimpleShell::break_command( string parameters, StreamOutput* stream){
 // used to test out the get public data events
 void SimpleShell::get_temp_command( string parameters, StreamOutput* stream){
 	string type= shift_parameter( parameters );
-	double* temp;
-	bool ok= this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, (void**)&temp );
+	void *returned_data;
+	bool ok= this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
 
 	if(ok) {
-		stream->printf("%s temp: %f\r\n", type.c_str(), *temp);
+		struct pad_temperature temp=  *static_cast<struct pad_temperature*>(returned_data);
+		stream->printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
 	}else{
 		stream->printf("%s is not a known temperature device\r\n", type.c_str());
 	}
