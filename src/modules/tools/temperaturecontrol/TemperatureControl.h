@@ -62,6 +62,7 @@ class TemperatureControl : public Module {
         void on_config_reload(void* argument);
         void on_second_tick(void* argument);
         void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
 
         void set_desired_temperature(double desired_temperature);
         double get_temperature();

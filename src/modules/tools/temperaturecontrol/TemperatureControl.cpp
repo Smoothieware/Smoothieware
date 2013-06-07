@@ -39,6 +39,7 @@ void TemperatureControl::on_module_loaded(){
     this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_SECOND_TICK);
     this->register_for_event(ON_GET_PUBLIC_DATA);
+	this->register_for_event(ON_SET_PUBLIC_DATA);
 }
 
 void TemperatureControl::on_main_loop(void* argument){
@@ -219,6 +220,19 @@ void TemperatureControl::on_get_public_data(void* argument){
         pdr->set_data_ptr(&temp_return);
         pdr->set_taken();
     }
+}
+
+void TemperatureControl::on_set_public_data(void* argument){
+	PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+	if(!pdr->starts_with(temperature_control_checksum)) return;
+
+	if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
+
+	// ok this is targeted at us, so set the temp
+	double t= *static_cast<double*>(pdr->get_data_ptr());
+	this->set_desired_temperature(t);
+	pdr->set_taken();
 }
 
 void TemperatureControl::set_desired_temperature(double desired_temperature)
