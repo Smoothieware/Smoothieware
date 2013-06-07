@@ -15,6 +15,7 @@
 #include "libs/Pin.h"
 #include "libs/Median.h"
 #include "modules/robot/Conveyor.h"
+#include "PublicDataRequest.h"
 
 #include "MRI_Hooks.h"
 
@@ -37,7 +38,7 @@ void TemperatureControl::on_module_loaded(){
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_SECOND_TICK);
-
+    this->register_for_event(ON_GET_PUBLIC_DATA);
 }
 
 void TemperatureControl::on_main_loop(void* argument){
@@ -200,6 +201,26 @@ void TemperatureControl::on_gcode_execute(void* argument){
     }
 }
 
+void TemperatureControl::on_get_public_data(void* argument){
+	PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+	
+	if(!pdr->starts_with(PublicDataRequest::pdr_temperature_control_checksum)) return;
+
+	if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
+
+	// ok this is us send back the requested value
+	if(pdr->third_element_is(PublicDataRequest::pdr_current_temperature_checksum)) {
+		pdr->set_data_ptr(&this->last_reading);
+		pdr->set_taken();
+	}else if(pdr->third_element_is(PublicDataRequest::pdr_target_temperature_checksum)) {
+		pdr->set_data_ptr((target_temperature == UNDEFINED) ? NULL : &this->target_temperature);
+		pdr->set_taken();
+	}else if(pdr->third_element_is(PublicDataRequest::pdr_temperature_pwm_checksum)) {
+		pdr->set_data_ptr(&this->o);
+		pdr->set_taken();
+	}
+
+}
 
 void TemperatureControl::set_desired_temperature(double desired_temperature)
 {

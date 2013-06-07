@@ -16,7 +16,7 @@
 #include "DirHandle.h"
 #include "mri.h"
 #include "version.h"
-
+#include "PublicDataRequest.h"
 
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
@@ -64,6 +64,8 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->help_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == version_command_checksum)
         this->version_command(get_arguments(possible_command),new_message.stream );
+	else if (check_sum == get_temp_command_checksum)
+		this->get_temp_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -168,6 +170,14 @@ void SimpleShell::dfu_command( string parameters, StreamOutput* stream){
 void SimpleShell::break_command( string parameters, StreamOutput* stream){
     stream->printf("Entering MRI debug mode...\r\n");
     __debugbreak();
+}
+
+// used to test out the get public data events
+void SimpleShell::get_temp_command( string parameters, StreamOutput* stream){
+	double* temp;
+	this->kernel->public_data->get_value( PublicDataRequest::pdr_temperature_control_checksum, PublicDataRequest::pdr_hotend_checksum, PublicDataRequest::pdr_current_temperature_checksum, (void**)&temp );
+	stream->printf("hotend temp: %f\r\n", *temp);
+	
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){
