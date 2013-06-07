@@ -68,8 +68,8 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->version_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == get_temp_command_checksum)
         this->get_temp_command(get_arguments(possible_command),new_message.stream );
-	else if (check_sum == set_temp_command_checksum)
-		this->set_temp_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == set_temp_command_checksum)
+        this->set_temp_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -192,16 +192,16 @@ void SimpleShell::get_temp_command( string parameters, StreamOutput* stream){
 
 // used to test out the get public data events
 void SimpleShell::set_temp_command( string parameters, StreamOutput* stream){
-	string type= shift_parameter( parameters );
-	string temp= shift_parameter( parameters );
-	double t= temp.empty() ? 0.0 : strtod(temp.c_str(), NULL);
-	bool ok= this->kernel->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
+    string type= shift_parameter( parameters );
+    string temp= shift_parameter( parameters );
+    double t= temp.empty() ? 0.0 : strtod(temp.c_str(), NULL);
+    bool ok= this->kernel->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
 
-	if(ok) {
-		stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
-	}else{
-		stream->printf("%s is not a known temperature device\r\n", type.c_str());
-	}
+    if(ok) {
+        stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
+    }else{
+        stream->printf("%s is not a known temperature device\r\n", type.c_str());
+    }
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){
@@ -220,7 +220,7 @@ void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
     stream->printf("config-load [<file_name>]\r\n");
-	stream->printf("get_temp bed|hotend\r\n");
-	stream->printf("set_temp bed|hotend 185\r\n");
+    stream->printf("get_temp bed|hotend\r\n");
+    stream->printf("set_temp bed|hotend 185\r\n");
 }
 
