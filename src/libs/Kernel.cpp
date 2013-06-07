@@ -41,7 +41,7 @@ Kernel::Kernel(){
 
     // Serial second, because the other modules might want to say something
     this->streams        = new StreamOutputPool();
-	
+    
     // Configure UART depending on MRI config
     // If MRI is using UART0, we want to use UART1, otherwise, we want to use UART0. This makes it easy to use only one UART for both debug and actual commands.
     NVIC_SetPriorityGrouping(0);
@@ -98,7 +98,7 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
-	this->add_module( this->public_data    = new PublicData()    );
+    this->add_module( this->public_data    = new PublicData()    );
 
 }
 

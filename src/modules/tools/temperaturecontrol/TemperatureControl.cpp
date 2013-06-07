@@ -202,23 +202,23 @@ void TemperatureControl::on_gcode_execute(void* argument){
 }
 
 void TemperatureControl::on_get_public_data(void* argument){
-	PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
-	
-	if(!pdr->starts_with(temperature_control_checksum)) return;
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+    
+    if(!pdr->starts_with(temperature_control_checksum)) return;
 
-	if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
+    if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
 
-	// ok this is targeted at us, so send back the requested data
-	if(pdr->third_element_is(current_temperature_checksum)) {
-		// this must be static as it will be accessed long after we have returned
-		static struct pad_temperature temp_return;
-		temp_return.current_temperature= this->get_temperature();
-		temp_return.target_temperature= (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
-		temp_return.pwm= this->o;
-		
-		pdr->set_data_ptr(&temp_return);
-		pdr->set_taken();
-	}
+    // ok this is targeted at us, so send back the requested data
+    if(pdr->third_element_is(current_temperature_checksum)) {
+        // this must be static as it will be accessed long after we have returned
+        static struct pad_temperature temp_return;
+        temp_return.current_temperature= this->get_temperature();
+        temp_return.target_temperature= (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
+        temp_return.pwm= this->o;
+        
+        pdr->set_data_ptr(&temp_return);
+        pdr->set_taken();
+    }
 }
 
 void TemperatureControl::set_desired_temperature(double desired_temperature)

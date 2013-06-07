@@ -66,8 +66,8 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->help_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == version_command_checksum)
         this->version_command(get_arguments(possible_command),new_message.stream );
-	else if (check_sum == get_temp_command_checksum)
-		this->get_temp_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == get_temp_command_checksum)
+        this->get_temp_command(get_arguments(possible_command),new_message.stream );
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
@@ -176,16 +176,16 @@ void SimpleShell::break_command( string parameters, StreamOutput* stream){
 
 // used to test out the get public data events
 void SimpleShell::get_temp_command( string parameters, StreamOutput* stream){
-	string type= shift_parameter( parameters );
-	void *returned_data;
-	bool ok= this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
+    string type= shift_parameter( parameters );
+    void *returned_data;
+    bool ok= this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
 
-	if(ok) {
-		struct pad_temperature temp=  *static_cast<struct pad_temperature*>(returned_data);
-		stream->printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
-	}else{
-		stream->printf("%s is not a known temperature device\r\n", type.c_str());
-	}
+    if(ok) {
+        struct pad_temperature temp=  *static_cast<struct pad_temperature*>(returned_data);
+        stream->printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
+    }else{
+        stream->printf("%s is not a known temperature device\r\n", type.c_str());
+    }
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){

@@ -52,7 +52,7 @@ class TemperatureControlPool;
 
 class TemperatureControl : public Module {
 
-	public:
+    public:
         TemperatureControl(uint16_t name);
 
         void on_module_loaded();
@@ -61,7 +61,7 @@ class TemperatureControl : public Module {
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
         void on_second_tick(void* argument);
-		void on_get_public_data(void* argument);
+        void on_get_public_data(void* argument);
 
         void set_desired_temperature(double desired_temperature);
         double get_temperature();

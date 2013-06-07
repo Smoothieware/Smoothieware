@@ -10,8 +10,8 @@
 #define temperature_pwm_checksum          CHECKSUM("temperature_pwm")
 
 struct pad_temperature {
-	double current_temperature;
-	double target_temperature;
-	int pwm;
+    double current_temperature;
+    double target_temperature;
+    int pwm;
 };
 #endif
