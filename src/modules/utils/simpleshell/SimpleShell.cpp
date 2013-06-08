@@ -19,6 +19,7 @@
 #include "PublicDataRequest.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
+#include "modules/robot/RobotPublicAccess.h"
 
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
@@ -66,8 +67,8 @@ void SimpleShell::on_console_line_received( void* argument ){
         this->help_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == version_command_checksum)
         this->version_command(get_arguments(possible_command),new_message.stream );
-    else if (check_sum == get_temp_command_checksum)
-        this->get_temp_command(get_arguments(possible_command),new_message.stream );
+    else if (check_sum == get_command_checksum)
+        this->get_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == set_temp_command_checksum)
         this->set_temp_command(get_arguments(possible_command),new_message.stream );
 }
@@ -177,17 +178,32 @@ void SimpleShell::break_command( string parameters, StreamOutput* stream){
 }
 
 // used to test out the get public data events
-void SimpleShell::get_temp_command( string parameters, StreamOutput* stream){
-    string type= shift_parameter( parameters );
-    void *returned_data;
-    bool ok= this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
+void SimpleShell::get_command( string parameters, StreamOutput* stream){
+    int what= get_checksum(shift_parameter( parameters ));
+	void *returned_data;
+	
+	if(what == get_temp_command_checksum) {
+		string type= shift_parameter( parameters );
+		bool ok= this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
 
-    if(ok) {
-        struct pad_temperature temp=  *static_cast<struct pad_temperature*>(returned_data);
-        stream->printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
-    }else{
-        stream->printf("%s is not a known temperature device\r\n", type.c_str());
-    }
+		if(ok) {
+			struct pad_temperature temp=  *static_cast<struct pad_temperature*>(returned_data);
+			stream->printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
+		}else{
+			stream->printf("%s is not a known temperature device\r\n", type.c_str());
+		}
+		
+	}else if(what == get_pos_command_checksum) {
+		bool ok= this->kernel->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+
+		if(ok) {
+			double *pos= static_cast<double *>(returned_data);
+			stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
+			
+		}else{
+			stream->printf("get pos command failed\r\n");
+		}
+	}
 }
 
 // used to test out the get public data events
@@ -220,7 +236,8 @@ void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
     stream->printf("config-load [<file_name>]\r\n");
-    stream->printf("get_temp bed|hotend\r\n");
+    stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
+	stream->printf("get pos\r\n");
 }
 
