@@ -64,10 +64,10 @@ class Robot : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
-		void on_get_public_data(void* argument);
-		void on_set_public_data(void* argument);
+        void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
 
-		void reset_axis_position(double position, int axis);
+        void reset_axis_position(double position, int axis);
         void get_axis_position(double position[]);
         double to_millimeters(double value);
         double from_millimeters(double value);
