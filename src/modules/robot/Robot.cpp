@@ -17,6 +17,7 @@ using std::string;
 #include "libs/Pin.h"
 #include "libs/StepperMotor.h"
 #include "../communication/utils/Gcode.h"
+#include "PublicDataRequest.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
@@ -41,6 +42,8 @@ Robot::Robot(){
 void Robot::on_module_loaded() {
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
+    this->register_for_event(ON_GET_PUBLIC_DATA);
+    this->register_for_event(ON_SET_PUBLIC_DATA);
 
     // Configuration
     this->on_config_reload(this);
@@ -101,6 +104,39 @@ void Robot::on_config_reload(void* argument){
     this->beta_dir_pin.from_string(   this->kernel->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
     this->beta_en_pin.from_string(    this->kernel->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
 
+}
+
+void Robot::on_get_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(robot_checksum)) return;
+
+    if(pdr->second_element_is(speed_override_percent_checksum)) {
+        static double return_data= 100*60/seconds_per_minute;
+        pdr->set_data_ptr(&return_data);
+        pdr->set_taken();
+        
+    }else if(pdr->second_element_is(current_position_checksum)) {
+        static double return_data[3];
+        return_data[0]= from_millimeters(this->current_position[0]);
+        return_data[1]= from_millimeters(this->current_position[1]);
+        return_data[2]= from_millimeters(this->current_position[2]);
+
+        pdr->set_data_ptr(&return_data);
+        pdr->set_taken();       
+    }
+}
+
+void Robot::on_set_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(robot_checksum)) return;
+
+    if(pdr->second_element_is(speed_override_percent_checksum)) {
+        double t= *static_cast<double*>(pdr->get_data_ptr());
+        seconds_per_minute= t * 0.6;
+        pdr->set_taken();
+    }
 }
 
 //A GCode has been received
