@@ -29,6 +29,8 @@
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
 
+Kernel* Kernel::instance;
+
 // This is used to configure UARTs depending on the MRI configuration, see Kernel::Kernel()
 static int isDebugMonitorUsingUart0(){
     return NVIC_GetPriority(UART0_IRQn) == 0;
@@ -36,6 +38,8 @@ static int isDebugMonitorUsingUart0(){
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
+    instance= this; // setup the Singleton instance of the kernel
+    
     // Config first, because we need the baud_rate setting before we start serial
     this->config         = new Config();
 

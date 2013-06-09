@@ -23,6 +23,8 @@
 #include "modules/tools/endstops/Endstops.h"
 #include <array>
 
+#define THEKERNEL Kernel::instance
+
 //Module manager
 class Module;
 class Conveyor;
@@ -30,6 +32,7 @@ class SlowTicker;
 class Kernel {
     public:
         Kernel();
+        static Kernel* instance; // the Singleton instance of Kernel usable anywhere
         void add_module(Module* module);
         void register_for_event(_EVENT_ENUM id_event, Module* module);
         void call_event(_EVENT_ENUM id_event);
