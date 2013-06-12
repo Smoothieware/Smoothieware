@@ -39,6 +39,13 @@ MRI_BREAK_ON_INIT=0
 MRI_SEMIHOST_STDIO=0
 endif
 
+# generate a git version string, sorry only on linux and mac osx
+ifneq "$(OS)" "Windows_NT"
+DEFINES += -D__GITVERSIONSTRING__=\"$(shell ./generate-version.sh)\"
+else
+DEFINES += -D__GITVERSIONSTRING__=\"placeholder\"
+endif
+
 include $(BUILD_DIR)/build.mk
 
 CONSOLE?=/dev/arduino_A900K10V
