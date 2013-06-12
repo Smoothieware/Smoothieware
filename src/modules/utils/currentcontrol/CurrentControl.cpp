@@ -5,6 +5,10 @@
 
 #include "Gcode.h"
 
+// add new digipot chips here
+#include "mcp4451.h"
+#include "ad5206.h"
+
 #include <string>
 using namespace std;
 
@@ -21,7 +25,16 @@ void CurrentControl::on_module_loaded(){
 
 	// allocate digipot, if already allocated delete it first
 	delete digipot;
-	digipot = new Digipot();
+
+	// see which chip to use
+	int chip_checksum = get_checksum(this->kernel->config->value(digipotchip_checksum)->by_default("mcp4451")->as_string());
+	if(chip_checksum == mcp4451_checksum) {
+		digipot = new MCP4451();
+	}else if(chip_checksum == ad5206_checksum) {
+		digipot = new AD5206();
+	}else { // need a default so use smoothie
+		digipot = new MCP4451();
+	}
 
     // Get configuration
     this->alpha_current =           this->kernel->config->value(alpha_current_checksum  )->by_default(0.8)->as_number();
