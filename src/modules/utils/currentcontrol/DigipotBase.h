@@ -9,7 +9,7 @@
 class DigipotBase {
     public:
         DigipotBase(){}
-		virtual ~DigipotBase(){}
+        virtual ~DigipotBase(){}
 
         virtual void set_current( int channel, double current )= 0;
         virtual double get_current(int channel)= 0;

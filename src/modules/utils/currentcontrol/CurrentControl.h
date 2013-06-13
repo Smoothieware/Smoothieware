@@ -12,10 +12,10 @@
 #define gamma_current_checksum                  CHECKSUM("gamma_current")
 #define delta_current_checksum                  CHECKSUM("delta_current")
 #define currentcontrol_module_enable_checksum   CHECKSUM("currentcontrol_module_enable")
-#define digipotchip_checksum					CHECKSUM("digipotchip")
+#define digipotchip_checksum                    CHECKSUM("digipotchip")
 
-#define mcp4451_checksum						CHECKSUM("mcp4451")
-#define ad5206_checksum						    CHECKSUM("ad5206")
+#define mcp4451_checksum                        CHECKSUM("mcp4451")
+#define ad5206_checksum                         CHECKSUM("ad5206")
 
 class CurrentControl : public Module {
     public:
