@@ -42,7 +42,7 @@ void TemperatureControl::on_module_loaded(){
 
 void TemperatureControl::on_main_loop(void* argument){
     if (this->min_temp_violated) {
-        kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
+        kernel->streams->printf("Error: MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
         this->min_temp_violated = false;
     }
 }
