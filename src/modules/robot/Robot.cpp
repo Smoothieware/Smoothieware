@@ -214,7 +214,7 @@ void Robot::on_gcode_received(void * argument){
                         acc = 1.0;
                     this->kernel->planner->acceleration= acc;
                 }
-            
+                break;
                 
             case 220: // M220 - speed override percentage
                 gcode->mark_as_taken();
@@ -226,6 +226,7 @@ void Robot::on_gcode_received(void * argument){
                         factor = 1.0;
                     seconds_per_minute = factor * 0.6;
                 }
+                break;
         }
    }
     if( this->motion_mode < 0)
