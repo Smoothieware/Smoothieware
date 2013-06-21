@@ -121,3 +121,8 @@ void Conveyor::wait_for_empty_queue(){
     }
 }
 
+// Return true if the queue is empty
+bool Conveyor::is_queue_empty(){
+    return (this->queue.size() == 0);
+}
+
