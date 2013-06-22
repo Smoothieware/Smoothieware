@@ -22,6 +22,7 @@ using std::string;
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/RostockSolution.h"
+#include "arm_solutions/JohannKosselSolution.h"
 #include "arm_solutions/HBotSolution.h"
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
@@ -69,6 +70,9 @@ void Robot::on_config_reload(void* argument){
 
     }else if(solution_checksum == rostock_checksum) {
         this->arm_solution = new RostockSolution(this->kernel->config);
+
+    }else if(solution_checksum == kossel_checksum) {
+        this->arm_solution = new JohannKosselSolution(this->kernel->config);
 
     }else if(solution_checksum ==  delta_checksum) {
         // place holder for now
