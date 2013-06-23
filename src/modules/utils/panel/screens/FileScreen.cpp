@@ -21,8 +21,8 @@
 using namespace std;
 
 FileScreen::FileScreen(){
-	this->current_folder = "";
-	this->start_play= false;
+    this->current_folder = "";
+    this->start_play= false;
 }
 
 // When entering this screen
@@ -95,13 +95,13 @@ void FileScreen::clicked_line(uint16_t line){
         if( path.compare("/") == 0 ){ path = ""; } 
         path = path + "/" + this->file_at( line-1 ); 
         if( this->is_a_folder( path ) ){
-			this->enter_folder(path);
-			return;
+            this->enter_folder(path);
+            return;
         } 
 
-		// start printing that file...
-		this->play_path= path;
-		this->start_play= true;
+        // start printing that file...
+        this->play_path= path;
+        this->start_play= true;
     }
 
 }
@@ -140,10 +140,10 @@ string FileScreen::file_at(uint16_t line){
             }
             count++;
         }
-	}
-	
+    }
+    
     if(d != NULL) closedir(d);
-	return ""; 
+    return ""; 
 }
 
 // Count how many files there are in the current folder
@@ -163,18 +163,18 @@ uint16_t FileScreen::count_folder_content(std::string folder){
     }
 }
 void FileScreen::on_main_loop(){
-	if(this->start_play){
-		this->start_play= false;
-		play(this->play_path);
-		panel->set_playing_file(this->play_path);
-		this->panel->enter_screen(this->parent);
-		return;
-	}
+    if(this->start_play){
+        this->start_play= false;
+        play(this->play_path);
+        panel->set_playing_file(this->play_path);
+        this->panel->enter_screen(this->parent);
+        return;
+    }
 }
 
 void FileScreen::play(string path) {
-	struct SerialMessage message;
-	message.message = string("play ") + path + " -q";
-	message.stream = &(StreamOutput::NullStream);
-	THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    struct SerialMessage message;
+    message.message = string("play ") + path + " -q";
+    message.stream = &(StreamOutput::NullStream);
+    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }

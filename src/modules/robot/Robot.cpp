@@ -116,8 +116,8 @@ void Robot::on_get_public_data(void* argument){
     if(!pdr->starts_with(robot_checksum)) return;
 
     if(pdr->second_element_is(speed_override_percent_checksum)) {
-		static double return_data;
-		return_data= 100*this->seconds_per_minute/60;
+        static double return_data;
+        return_data= 100*this->seconds_per_minute/60;
         pdr->set_data_ptr(&return_data);
         pdr->set_taken();
         
@@ -202,7 +202,7 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
-			case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
+            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
                                                  from_millimeters(this->current_position[0]),
                                                  from_millimeters(this->current_position[1]),
                                                  from_millimeters(this->current_position[2]));

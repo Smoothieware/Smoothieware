@@ -22,12 +22,12 @@
 using namespace std;
 
 MainMenuScreen::MainMenuScreen(){
-	// Children screens
-	this->jog_screen     = (new JogScreen()     )->set_parent(this);
-	this->watch_screen   = (new WatchScreen()   )->set_parent(this);
-	this->file_screen    = (new FileScreen()    )->set_parent(this);
-	this->prepare_screen = (new PrepareScreen() )->set_parent(this);
-	this->set_parent(this->watch_screen);
+    // Children screens
+    this->jog_screen     = (new JogScreen()     )->set_parent(this);
+    this->watch_screen   = (new WatchScreen()   )->set_parent(this);
+    this->file_screen    = (new FileScreen()    )->set_parent(this);
+    this->prepare_screen = (new PrepareScreen() )->set_parent(this);
+    this->set_parent(this->watch_screen);
 }
 
 void MainMenuScreen::on_enter(){
@@ -66,11 +66,11 @@ void MainMenuScreen::display_menu_line(uint16_t line){
 void MainMenuScreen::clicked_menu_entry(uint16_t line){
     switch( line ){
         case 0: this->panel->enter_screen(this->watch_screen   ); break;
-		case 1: if(this->panel->is_playing())
-					abort_playing();
-				else
-					this->panel->enter_screen(this->file_screen);
-				break;
+        case 1: if(this->panel->is_playing())
+                    abort_playing();
+                else
+                    this->panel->enter_screen(this->file_screen);
+                break;
         case 2: this->panel->enter_screen(this->jog_screen     ); break;
         case 3: this->panel->enter_screen(this->prepare_screen ); break;
     }
@@ -78,7 +78,7 @@ void MainMenuScreen::clicked_menu_entry(uint16_t line){
 
 
 void MainMenuScreen::abort_playing() {
-	THEKERNEL->public_data->set_value(player_checksum, abort_play_checksum, NULL);
-	this->panel->enter_screen(this->watch_screen);
+    THEKERNEL->public_data->set_value(player_checksum, abort_play_checksum, NULL);
+    this->panel->enter_screen(this->watch_screen);
 }
 

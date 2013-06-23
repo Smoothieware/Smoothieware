@@ -20,44 +20,44 @@ using namespace std;
 
 
 JogScreen::JogScreen(){
-	this->control_screen = new ControlScreen();
-	this->control_screen->set_parent(this);
+    this->control_screen = new ControlScreen();
+    this->control_screen->set_parent(this);
 }
 
 void JogScreen::on_enter(){
-	this->panel->enter_menu_mode();
-	this->panel->setup_menu(4, 4);  // 6 menu items, 4 lines
-	this->refresh_screen();
+    this->panel->enter_menu_mode();
+    this->panel->setup_menu(4, 4);  // 6 menu items, 4 lines
+    this->refresh_screen();
 }
 
 void JogScreen::on_refresh(){
-	if( this->panel->menu_change() ){
-		this->refresh_screen();
-	}
-	if( this->panel->click() ){
-		this->clicked_menu_entry(this->panel->menu_current_line());
-	}
+    if( this->panel->menu_change() ){
+        this->refresh_screen();
+    }
+    if( this->panel->click() ){
+        this->clicked_menu_entry(this->panel->menu_current_line());
+    }
 }
 
 void JogScreen::refresh_screen(){
-	this->refresh_menu();
+    this->refresh_menu();
 }
 
 void JogScreen::display_menu_line(uint16_t line){
     switch( line ){
-		case 0: this->panel->lcd->printf("Back");  break;  
-		case 1: this->panel->lcd->printf("Move 10.0mm      \x7E"); break;  
-		case 2: this->panel->lcd->printf("Move  1.0mm      \x7E");  break;  
-		case 3: this->panel->lcd->printf("Move  0.1mm      \x7E");  break;  
+        case 0: this->panel->lcd->printf("Back");  break;  
+        case 1: this->panel->lcd->printf("Move 10.0mm      \x7E"); break;  
+        case 2: this->panel->lcd->printf("Move  1.0mm      \x7E");  break;  
+        case 3: this->panel->lcd->printf("Move  0.1mm      \x7E");  break;  
     }
 }
 
 void JogScreen::clicked_menu_entry(uint16_t line){
     switch( line ){
-		case 0: this->panel->enter_screen(this->parent); return;
-		case 1: this->control_screen->set_jog_increment(10.0); break;
-		case 2: this->control_screen->set_jog_increment(1.0); break;
-		case 3: this->control_screen->set_jog_increment(0.1); break;
+        case 0: this->panel->enter_screen(this->parent); return;
+        case 1: this->control_screen->set_jog_increment(10.0); break;
+        case 2: this->control_screen->set_jog_increment(1.0); break;
+        case 3: this->control_screen->set_jog_increment(0.1); break;
     }
-	this->panel->enter_screen(this->control_screen);
+    this->panel->enter_screen(this->control_screen);
 }

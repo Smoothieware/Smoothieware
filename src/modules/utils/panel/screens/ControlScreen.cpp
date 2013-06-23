@@ -26,48 +26,48 @@ ControlScreen::ControlScreen(){
 void ControlScreen::on_enter(){
     this->panel->enter_menu_mode();
     this->panel->setup_menu(4, 4);
-	get_current_pos(this->pos);
-	this->refresh_menu();
-	this->pos_changed= false;
+    get_current_pos(this->pos);
+    this->refresh_menu();
+    this->pos_changed= false;
 }
 
 // called in on_idle()
 void ControlScreen::on_refresh(){
     if( this->panel->menu_change() ){
         this->refresh_menu();
-	}
+    }
 
-	if(this->control_mode == AXIS_CONTROL_MODE) {
-		
-		if( this->panel->click() ){
-			this->enter_menu_control();
-			this->refresh_menu();
-			
-		}else if(this->panel->control_value_change()) {
-			this->pos[this->controlled_axis-'X'] = this->panel->get_control_value();
-			this->panel->lcd->setCursor(0,2);
-			this->display_axis_line(this->controlled_axis);
-			this->pos_changed= true; // make the gcode in main_loop
-		}
-		
-	}else{
-		if( this->panel->click() ){
-			this->clicked_menu_entry(this->panel->menu_current_line());
-		}
-	}
+    if(this->control_mode == AXIS_CONTROL_MODE) {
+        
+        if( this->panel->click() ){
+            this->enter_menu_control();
+            this->refresh_menu();
+            
+        }else if(this->panel->control_value_change()) {
+            this->pos[this->controlled_axis-'X'] = this->panel->get_control_value();
+            this->panel->lcd->setCursor(0,2);
+            this->display_axis_line(this->controlled_axis);
+            this->pos_changed= true; // make the gcode in main_loop
+        }
+        
+    }else{
+        if( this->panel->click() ){
+            this->clicked_menu_entry(this->panel->menu_current_line());
+        }
+    }
 }
 
 // queuing gcodes needs to be done from main loop
 void ControlScreen::on_main_loop() {
-	// change actual axis value
-	if(!this->pos_changed) return;
-	this->pos_changed= false;
-	
-	set_current_pos(this->controlled_axis, this->pos[this->controlled_axis-'X']);
+    // change actual axis value
+    if(!this->pos_changed) return;
+    this->pos_changed= false;
+    
+    set_current_pos(this->controlled_axis, this->pos[this->controlled_axis-'X']);
 }
 
 void ControlScreen::display_menu_line(uint16_t line){
-	// in menu mode
+    // in menu mode
     switch( line ){
         case 0: this->panel->lcd->printf("Back");  break;  
         case 1: this->display_axis_line('X'); break;  
@@ -95,38 +95,38 @@ void ControlScreen::enter_axis_control(char axis){
     this->controlled_axis = axis;
     this->panel->enter_control_mode(this->jog_increment, this->jog_increment/10);
     this->panel->set_control_value(this->pos[axis-'X']);
-	this->panel->lcd->clear();
-	this->panel->lcd->setCursor(0,2);
-	this->display_axis_line(this->controlled_axis);	
+    this->panel->lcd->clear();
+    this->panel->lcd->setCursor(0,2);
+    this->display_axis_line(this->controlled_axis);    
 }
 
 void ControlScreen::enter_menu_control(){
-	this->control_mode = NULL_CONTROL_MODE;
-	this->panel->enter_menu_mode();
+    this->control_mode = NULL_CONTROL_MODE;
+    this->panel->enter_menu_mode();
 }
 
 
 void ControlScreen::get_current_pos(double *cp){
-	void *returned_data;
+    void *returned_data;
 
-	bool ok= THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
-	if(ok) {
-		double *p= static_cast<double *>(returned_data);
-		cp[0]= p[0];
-		cp[1]= p[1];
-		cp[2]= p[2];
-	}
+    bool ok= THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+    if(ok) {
+        double *p= static_cast<double *>(returned_data);
+        cp[0]= p[0];
+        cp[1]= p[1];
+        cp[2]= p[2];
+    }
 }
-void ControlScreen::set_current_pos(char axis, double p){	
-	// change pos by issuing a G0 Xnnn
-	char buf[32];
-	int n= snprintf(buf, sizeof(buf), "G0 %c%f F%d", axis, p, (int)round(panel->get_jogging_speed(axis)));
-	string g(buf, n);
-	send_gcode(g);
+void ControlScreen::set_current_pos(char axis, double p){    
+    // change pos by issuing a G0 Xnnn
+    char buf[32];
+    int n= snprintf(buf, sizeof(buf), "G0 %c%f F%d", axis, p, (int)round(panel->get_jogging_speed(axis)));
+    string g(buf, n);
+    send_gcode(g);
 }
 
 void ControlScreen::send_gcode(std::string g) {
-	Gcode gcode(g, &(StreamOutput::NullStream));
-	THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+    Gcode gcode(g, &(StreamOutput::NullStream));
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
 }
 

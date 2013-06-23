@@ -36,11 +36,11 @@ void PanelScreen::refresh_menu(bool clear){
 }
 
 void PanelScreen::refresh_screen(bool clear){
-	if(clear) this->panel->lcd->clear(); 
-	for(uint16_t i = this->panel->menu_start_line; i < this->panel->menu_start_line + min( this->panel->menu_rows, this->panel->menu_lines ); i++ ){
-		this->panel->lcd->setCursor(0, i - this->panel->menu_start_line );
-		this->display_menu_line(i);
-	}
+    if(clear) this->panel->lcd->clear(); 
+    for(uint16_t i = this->panel->menu_start_line; i < this->panel->menu_start_line + min( this->panel->menu_rows, this->panel->menu_lines ); i++ ){
+        this->panel->lcd->setCursor(0, i - this->panel->menu_start_line );
+        this->display_menu_line(i);
+    }
 }
 
 void PanelScreen::display_menu_line(uint16_t line){};

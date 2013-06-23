@@ -16,9 +16,9 @@
 using namespace std;
 
 PrepareScreen::PrepareScreen(){
-	// Children screens
-//	this->extruder_screen = (new ExtruderScreen()  )->set_parent(this);
-//	this->temp_screen     = (new TempScreen()      )->set_parent(this);
+    // Children screens
+//    this->extruder_screen = (new ExtruderScreen()  )->set_parent(this);
+//    this->temp_screen     = (new TempScreen()      )->set_parent(this);
 }
 
 void PrepareScreen::on_enter(){
@@ -46,7 +46,7 @@ void PrepareScreen::display_menu_line(uint16_t line){
         case 1: this->panel->lcd->printf("Home All Axis"  ); break; 
         case 2: this->panel->lcd->printf("Set Home"       ); break; 
         case 3: this->panel->lcd->printf("Pre Heat"       ); break; 
-		case 4: this->panel->lcd->printf("Cool Down"      ); break; 
+        case 4: this->panel->lcd->printf("Cool Down"      ); break; 
         case 5: this->panel->lcd->printf("Extrude"        ); break; 
         case 6: this->panel->lcd->printf("Set Temperature"); break; 
     }
@@ -54,9 +54,9 @@ void PrepareScreen::display_menu_line(uint16_t line){
 
 void PrepareScreen::clicked_menu_entry(uint16_t line){
     switch( line ){
-		case 0: this->panel->enter_screen(this->parent           ); break;
-		case 1: send_gcode("G28"); break;
-		case 2: send_gcode("G92 X0 Y0 Z0"); break;
+        case 0: this->panel->enter_screen(this->parent           ); break;
+        case 1: send_gcode("G28"); break;
+        case 2: send_gcode("G92 X0 Y0 Z0"); break;
         case 3: this->preheat(); break;
         case 4: this->cooldown(); break;
         case 5: this->panel->enter_screen(this->extruder_screen  ); break;
@@ -74,9 +74,9 @@ void PrepareScreen::cooldown() {
 }
 
 void PrepareScreen::send_gcode(const char* gcstr) {
-	string gcode(gcstr);
-	struct SerialMessage message;
-	message.message = gcode;
-	message.stream = &(StreamOutput::NullStream);
-	THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    string gcode(gcstr);
+    struct SerialMessage message;
+    message.message = gcode;
+    message.stream = &(StreamOutput::NullStream);
+    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }

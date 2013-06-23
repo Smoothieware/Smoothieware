@@ -94,7 +94,7 @@ int main() {
     kernel->add_module( new PlayLed() );
     kernel->add_module( new Endstops() );
     kernel->add_module( new Player() );
-	kernel->add_module( new Panel() );
+    kernel->add_module( new Panel() );
     kernel->add_module( new Touchprobe() );
 
     // Create and initialize USB stuff
