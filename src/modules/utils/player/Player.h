@@ -29,6 +29,9 @@ class Player : public Module {
         void on_console_line_received( void* argument );
         void on_main_loop( void* argument );
         void on_second_tick(void* argument);
+        void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
+
         string absolute_from_relative( string path );
         void cd_command(   string parameters, StreamOutput* stream );
         void play_command( string parameters, StreamOutput* stream );

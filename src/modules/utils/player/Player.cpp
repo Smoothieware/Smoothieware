@@ -14,6 +14,8 @@
 #include "libs/StreamOutput.h"
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
+#include "PublicDataRequest.h"
+#include "PlayerPublicAccess.h"
 
 void Player::on_module_loaded(){
     this->playing_file = false;
@@ -21,6 +23,8 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_SECOND_TICK);
+    this->register_for_event(ON_GET_PUBLIC_DATA);
+    this->register_for_event(ON_SET_PUBLIC_DATA);
 
     this->on_boot_gcode = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode -q")->as_string();
     this->on_boot_gcode_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
@@ -186,6 +190,48 @@ void Player::on_main_loop(void* argument){
         fclose(this->current_file_handler);
     }
 }
+
+void Player::on_get_public_data(void* argument) {
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(player_checksum)) return;
+
+    if(pdr->second_element_is(is_playing_checksum)) {
+        static bool bool_data;
+        bool_data= this->playing_file;
+        pdr->set_data_ptr(&bool_data);
+        pdr->set_taken();
+        
+    }else if(pdr->second_element_is(get_progress_checksum)) {
+        static struct pad_progress p;
+        if(file_size > 0 && playing_file) {
+            p.elapsed_secs= this->elapsed_secs;
+            p.percent_complete= (this->file_size - (this->file_size - this->played_cnt)) * 100 / this->file_size;
+            pdr->set_data_ptr(&p);
+            pdr->set_taken();
+        }
+    }
+}
+
+void Player::on_set_public_data(void* argument) {
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(player_checksum)) return;
+
+    if(pdr->second_element_is(abort_play_checksum)) {
+        if(playing_file) {
+            playing_file = false;
+            played_cnt= 0;
+            file_size= 0;
+            fclose(current_file_handler);
+            pdr->set_taken();
+        }
+    }
+}
+
+
+
+
 
 /*
 void Player::on_main_loop(void* argument){

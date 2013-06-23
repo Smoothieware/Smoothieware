@@ -116,7 +116,8 @@ void Robot::on_get_public_data(void* argument){
     if(!pdr->starts_with(robot_checksum)) return;
 
     if(pdr->second_element_is(speed_override_percent_checksum)) {
-        static double return_data= 100*60/seconds_per_minute;
+        static double return_data;
+        return_data= 100*this->seconds_per_minute/60;
         pdr->set_data_ptr(&return_data);
         pdr->set_taken();
         
@@ -138,7 +139,7 @@ void Robot::on_set_public_data(void* argument){
 
     if(pdr->second_element_is(speed_override_percent_checksum)) {
         double t= *static_cast<double*>(pdr->get_data_ptr());
-        seconds_per_minute= t * 0.6;
+        this->seconds_per_minute= t * 0.6;
         pdr->set_taken();
     }
 }

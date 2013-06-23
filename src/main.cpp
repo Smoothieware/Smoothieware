@@ -19,6 +19,8 @@
 #include "modules/utils/player/Player.h"
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
+#include "modules/utils/panel/Panel.h"
+
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/Config.h"
 #include "libs/nuts_bolts.h"
@@ -92,6 +94,7 @@ int main() {
     kernel->add_module( new PlayLed() );
     kernel->add_module( new Endstops() );
     kernel->add_module( new Player() );
+    kernel->add_module( new Panel() );
     kernel->add_module( new Touchprobe() );
 
     // Create and initialize USB stuff

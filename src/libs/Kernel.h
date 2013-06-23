@@ -33,6 +33,7 @@ class Kernel {
     public:
         Kernel();
         static Kernel* instance; // the Singleton instance of Kernel usable anywhere
+
         void add_module(Module* module);
         void register_for_event(_EVENT_ENUM id_event, Module* module);
         void call_event(_EVENT_ENUM id_event);

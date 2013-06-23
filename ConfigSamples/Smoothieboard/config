@@ -126,12 +126,18 @@ gamma_homing_retract                         5000              # "
 pause_button_enable                          true             #
 
 # Panel
-panel.enable                                 false            #
-panel.up_button_pin                          0.1!             #
-panel.down_button_pin                        0.0!             #
-panel.click_button_pin                       0.18!            #
-panel.encoder_a_pin                          0.15!            #
-panel.encoder_b_pin                          0.17!            #
+panel.enable                                 false             # set to true to enabel the panel code
+panel.lcd                                    viki_lcd          # set type of panel also i2c_lcd is a generic i2c panel
+panel.encoder_a_pin                          0.15!^            # encoder pin if used
+panel.encoder_b_pin                          0.17!^            # encoder pin if used
+#panel.button_pause_pin                      0.18^             # pin used for pause button on VikiLcd
+#panel.up_button_pin                         0.1!              # up button if used
+#panel.down_button_pin                       0.0!              # down button if used
+#panel.click_button_pin                      0.18!             # click button if used
+
+panel.alpha_jog_feedrate                     6000              # x jogging feedrate in mm/min
+panel.beta_jog_feedrate                      6000              # y jogging feedrate in mm/min
+panel.gamma_jog_feedrate                     200               # z jogging feedrate in mm/min
 
 # Only needed on a smoothieboard
 currentcontrol_module_enable                 true             #
