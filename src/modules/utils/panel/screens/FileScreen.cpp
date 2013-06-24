@@ -165,8 +165,8 @@ uint16_t FileScreen::count_folder_content(std::string folder){
 void FileScreen::on_main_loop(){
     if(this->start_play){
         this->start_play= false;
-        play(this->play_path);
-        panel->set_playing_file(this->play_path);
+        this->panel->set_playing_file(this->play_path);
+        this->play(this->play_path);
         this->panel->enter_screen(this->parent);
         return;
     }
