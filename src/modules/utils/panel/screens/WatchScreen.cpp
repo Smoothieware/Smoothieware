@@ -71,6 +71,10 @@ void WatchScreen::get_temp_data() {
         this->bedtemp= round(temp.current_temperature);
         this->bedtarget= round(temp.target_temperature);
         //this->bedpwm= temp.pwm;
+    }else{
+        // temp probably disabled
+        this->bedtemp= 0;
+        this->bedtarget= 0;
     }
 
     ok= THEKERNEL->public_data->get_value( temperature_control_checksum, hotend_checksum, current_temperature_checksum, &returned_data );
@@ -79,6 +83,10 @@ void WatchScreen::get_temp_data() {
         this->hotendtemp= round(temp.current_temperature);
         this->hotendtarget= round(temp.target_temperature);
         //this->hotendpwm= temp.pwm;
+    }else{
+        // temp probably disabled
+        this->hotendtemp= 0;
+        this->hotendtarget= 0;
     }
 }
 
