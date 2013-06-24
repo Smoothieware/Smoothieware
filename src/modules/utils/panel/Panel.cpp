@@ -66,7 +66,11 @@ void Panel::on_module_loaded(){
     jogging_speed_mm_min[0]= this->kernel->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
     jogging_speed_mm_min[1]= this->kernel->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0)->as_number();
     jogging_speed_mm_min[2]= this->kernel->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0)->as_number();
-        
+
+    // load the default preset temeratures
+    default_hotend_temperature= this->kernel->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0)->as_number();
+    default_bed_temperature= this->kernel->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
+
     this->encoder_click_resolution= this->lcd->getEncoderResolution();
     this->lcd->init();
     this->lcd->printf("Starting...");

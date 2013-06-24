@@ -27,6 +27,9 @@
 #define jog_y_feedrate_checksum    CHECKSUM("beta_jog_feedrate")
 #define jog_z_feedrate_checksum    CHECKSUM("gamma_jog_feedrate")
 
+#define hotend_temp_checksum CHECKSUM("hotend_temperature")
+#define bed_temp_checksum    CHECKSUM("bed_temperature")
+
 #define MENU_MODE                  0
 #define CONTROL_MODE               1
 
@@ -68,6 +71,8 @@ class Panel : public Module {
         bool control_value_change();
         void control_value_update();
         double get_jogging_speed(char axis) { return jogging_speed_mm_min[axis-'X']; }
+        double get_default_hotend_temp() { return default_hotend_temperature; }
+        double get_default_bed_temp() { return default_bed_temperature; }
 
         // file playing from sd
         bool is_playing() const;
@@ -116,7 +121,9 @@ class Panel : public Module {
         PanelScreen* current_screen;
 
         double jogging_speed_mm_min[3];
-
+        double default_hotend_temperature;
+        double default_bed_temperature;
+        
         string playing_file;
 };
 
