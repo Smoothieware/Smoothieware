@@ -32,7 +32,7 @@ MainMenuScreen::MainMenuScreen(){
 
 void MainMenuScreen::on_enter(){
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(6, 4);  // 6 menu items, 4 lines
+    this->panel->setup_menu(4, 4);  // 6 menu items, 4 lines
     this->refresh_screen();
 }
 
@@ -57,8 +57,8 @@ void MainMenuScreen::display_menu_line(uint16_t line){
         case 1: this->panel->lcd->printf(panel->is_playing() ? "Abort" : "Play"); break; 
         case 2: this->panel->lcd->printf("Jog"); break; 
         case 3: this->panel->lcd->printf("Prepare"); break; 
-        case 4: this->panel->lcd->printf("Configure"); break; 
-        case 5: this->panel->lcd->printf("Tune"); break; 
+        //case 4: this->panel->lcd->printf("Configure"); break; 
+        //case 5: this->panel->lcd->printf("Tune"); break; 
     }
 
 }
