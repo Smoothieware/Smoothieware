@@ -76,8 +76,8 @@ class Panel : public Module {
 
         // file playing from sd
         bool is_playing() const;
-        void set_playing_file(string f) { playing_file= f; }
-        string get_playing_file() { return playing_file; }
+        void set_playing_file(string f);
+        const char* get_playing_file() { return playing_file; }
         
         // public as it is directly accessed by screens... not good
         // TODO pass lcd into ctor of each sub screen
@@ -124,7 +124,7 @@ class Panel : public Module {
         double default_hotend_temperature;
         double default_bed_temperature;
         
-        string playing_file;
+        char playing_file[20];
 };
 
 #endif
