@@ -11,8 +11,11 @@
 #include "PrepareScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
-#include <string>
 #include "libs/SerialMessage.h"
+#include "PublicDataRequest.h"
+#include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
+
+#include <string>
 using namespace std;
 
 PrepareScreen::PrepareScreen(){
@@ -23,7 +26,7 @@ PrepareScreen::PrepareScreen(){
 
 void PrepareScreen::on_enter(){
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(7, 4);  // 7 menu items, 4 lines
+    this->panel->setup_menu(5, 4);  // 7 menu items, 4 lines
     this->refresh_screen();
 }
 
@@ -47,8 +50,8 @@ void PrepareScreen::display_menu_line(uint16_t line){
         case 2: this->panel->lcd->printf("Set Home"       ); break; 
         case 3: this->panel->lcd->printf("Pre Heat"       ); break; 
         case 4: this->panel->lcd->printf("Cool Down"      ); break; 
-        case 5: this->panel->lcd->printf("Extrude"        ); break; 
-        case 6: this->panel->lcd->printf("Set Temperature"); break; 
+        //case 5: this->panel->lcd->printf("Extrude"        ); break; 
+        //case 6: this->panel->lcd->printf("Set Temperature"); break; 
     }
 }
 
@@ -59,18 +62,23 @@ void PrepareScreen::clicked_menu_entry(uint16_t line){
         case 2: send_gcode("G92 X0 Y0 Z0"); break;
         case 3: this->preheat(); break;
         case 4: this->cooldown(); break;
-        case 5: this->panel->enter_screen(this->extruder_screen  ); break;
-        case 6: this->panel->enter_screen(this->temp_screen      ); break;
+        //case 5: this->panel->enter_screen(this->extruder_screen  ); break;
+        //case 6: this->panel->enter_screen(this->temp_screen      ); break;
     }
-
 
 }
 
-
 void PrepareScreen::preheat() {
+    double t= panel->get_default_hotend_temp();
+    THEKERNEL->public_data->set_value( temperature_control_checksum, hotend_checksum, &t );
+    t= panel->get_default_bed_temp();
+    THEKERNEL->public_data->set_value( temperature_control_checksum, bed_checksum, &t );
 }
 
 void PrepareScreen::cooldown() {
+    double t= 0;
+    THEKERNEL->public_data->set_value( temperature_control_checksum, hotend_checksum, &t );
+    THEKERNEL->public_data->set_value( temperature_control_checksum, bed_checksum, &t );
 }
 
 void PrepareScreen::send_gcode(const char* gcstr) {

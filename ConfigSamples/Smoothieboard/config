@@ -139,6 +139,9 @@ panel.alpha_jog_feedrate                     6000              # x jogging feedr
 panel.beta_jog_feedrate                      6000              # y jogging feedrate in mm/min
 panel.gamma_jog_feedrate                     200               # z jogging feedrate in mm/min
 
+panel.hotend_temperature                     185               # temp to set hotend when preheat is selected
+panel.bed_temperature                        60                # temp to set bed when preheat is selected
+
 # Only needed on a smoothieboard
 currentcontrol_module_enable                 true             #
 
