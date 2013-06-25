@@ -15,12 +15,18 @@ using std::string;
 
 volatile bool _isr_context = false;
 
-uint16_t get_checksum(const string to_check){
+uint16_t get_checksum(const string& to_check){
+    return get_checksum(to_check.c_str());
+}
+
+uint16_t get_checksum(const char* to_check){
    // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum
    uint16_t sum1 = 0;
    uint16_t sum2 = 0;
-   for( unsigned int index = 0; index < to_check.length(); ++index ){
-      sum1 = (sum1 + to_check[index]) % 255;
+   const char* p= to_check;
+   char c;
+   while((c= *p++) != 0) {
+      sum1 = (sum1 + c) % 255;
       sum2 = (sum2 + sum1) % 255;
    }
    return (sum2 << 8) | sum1;
