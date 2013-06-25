@@ -9,6 +9,7 @@
 #include "Panel.h"
 #include "PanelScreen.h"
 #include "PrepareScreen.h"
+#include "ExtruderScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
@@ -20,13 +21,13 @@ using namespace std;
 
 PrepareScreen::PrepareScreen(){
     // Children screens
-//    this->extruder_screen = (new ExtruderScreen()  )->set_parent(this);
+    this->extruder_screen = (new ExtruderScreen()  )->set_parent(this);
 //    this->temp_screen     = (new TempScreen()      )->set_parent(this);
 }
 
 void PrepareScreen::on_enter(){
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(5, 4);  // 7 menu items, 4 lines
+    this->panel->setup_menu(6, 4);  // 7 menu items, 4 lines
     this->refresh_screen();
 }
 
@@ -50,19 +51,19 @@ void PrepareScreen::display_menu_line(uint16_t line){
         case 2: this->panel->lcd->printf("Set Home"       ); break; 
         case 3: this->panel->lcd->printf("Pre Heat"       ); break; 
         case 4: this->panel->lcd->printf("Cool Down"      ); break; 
-        //case 5: this->panel->lcd->printf("Extrude"        ); break; 
+        case 5: this->panel->lcd->printf("Extrude"        ); break; 
         //case 6: this->panel->lcd->printf("Set Temperature"); break; 
     }
 }
 
 void PrepareScreen::clicked_menu_entry(uint16_t line){
     switch( line ){
-        case 0: this->panel->enter_screen(this->parent           ); break;
+        case 0: this->panel->enter_screen(this->parent); break;
         case 1: send_gcode("G28"); break;
         case 2: send_gcode("G92 X0 Y0 Z0"); break;
         case 3: this->preheat(); break;
         case 4: this->cooldown(); break;
-        //case 5: this->panel->enter_screen(this->extruder_screen  ); break;
+        case 5: this->panel->enter_screen(this->extruder_screen); break;
         //case 6: this->panel->enter_screen(this->temp_screen      ); break;
     }
 
