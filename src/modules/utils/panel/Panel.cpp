@@ -18,6 +18,7 @@ using namespace std;
 
 #include "panels/I2CLCD.h"
 #include "panels/VikiLCD.h"
+#include "panels/Smoothiepanel.h"
 
 Panel::Panel(){
     this->counter_changed = false;
@@ -55,6 +56,8 @@ void Panel::on_module_loaded(){
         this->lcd = new I2CLCD();
     }else if(lcd_cksm == viki_lcd_checksum) {
         this->lcd = new VikiLCD();
+    }else if(lcd_cksm == smoothiepanel_checksum) {
+        this->lcd = new Smoothiepanel();
     }else{
         // no lcd type defined
         return;
@@ -81,8 +84,8 @@ void Panel::on_module_loaded(){
     this->click_button.down_attach( this, &Panel::on_click_release );
     this->back_button.up_attach(    this, &Panel::on_back );
 
-    this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
-    this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
+//    this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
+//    this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
 
     // Default top screen
     this->top_screen = new MainMenuScreen();
