@@ -94,7 +94,9 @@ void VikiLCD::init(){
 	i2c->write(this->i2c_address, data, 2);
 
 	// turn leds off
-	setBacklight(0);
+	setLed(0, false);
+	setLed(1, false);
+	setLed(2, false);
 	
 	//put the LCD into 4 bit mode
 	// start with a non-standard command to make it realize we're speaking 4-bit here
@@ -295,13 +297,13 @@ void VikiLCD::write(char value) {
 	send(value, 1);
 }
 
-// Allows to set the backlight, if the LCD backpack is used
-void VikiLCD::setBacklight(uint8_t status) {
+// Sets the indicator leds
+void VikiLCD::setLed(uint16_t led, bool onoff) {
 	// LED turns on when bit is cleared
 	_backlightBits = M17_BIT_LB|M17_BIT_LG|M17_BIT_LR; // all off
-	if (status & LED_RED) _backlightBits &= ~M17_BIT_LR; // red on
-	if (status & LED_GREEN) _backlightBits &= ~M17_BIT_LG; // green on
-	if (status & LED_BLUE) _backlightBits &= ~M17_BIT_LB; // blue on
+	if (status & LED_1) _backlightBits &= ~M17_BIT_LR; // on
+	if (status & LED_2) _backlightBits &= ~M17_BIT_LG; // green on
+	if (status & LED_3) _backlightBits &= ~M17_BIT_LB; // blue on
 
 	burstBits16(_backlightBits);
 }
