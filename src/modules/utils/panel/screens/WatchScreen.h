@@ -29,6 +29,7 @@ class WatchScreen : public PanelScreen {
         void set_current_speed();
         void get_current_pos(double *cp);
         void get_sd_play_info();
+        const char* get_status();
         
         int hotendtemp;
         int hotendtarget;
