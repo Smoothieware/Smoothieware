@@ -76,7 +76,7 @@ class VikiLCD : public LcdBase {
         void write(char value);
 
         // added viki commands
-        void setBacklight(uint8_t status); 
+        void setLed(int led, bool onoff); 
 
         uint8_t readButtons();
         int readEncoderDelta();
@@ -105,7 +105,6 @@ class VikiLCD : public LcdBase {
         char displayfunction;
         char displaycontrol;
         char i2c_address;
-        char backlightval;
         uint8_t _numlines,_currline;
         uint16_t _backlightBits; // only for MCP23017
         mbed::I2C* i2c;
