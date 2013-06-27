@@ -57,15 +57,10 @@ using namespace std;
 #define LCD_BACKLIGHT 0x08
 #define LCD_NOBACKLIGHT 0x00
 
-// for setBacklight(), sets specific leds on some panels
-#define LED_OFF 0x0
-#define LED_RED 0x1
-#define LED_YELLOW 0x3
-#define LED_GREEN 0x2
-#define LED_TEAL 0x6
-#define LED_BLUE 0x4
-#define LED_VIOLET 0x5
-#define LED_WHITE 0x7 
+// specific LED assignments
+#define LED_FAN_ON    1
+#define LED_HOTEND_ON 2
+#define LED_BED_ON    3
 
 // Standard directional button bits
 #define BUTTON_SELECT 0x01
@@ -107,7 +102,8 @@ class LcdBase {
         virtual int getEncoderResolution()= 0;
                                             
         // optional
-        virtual void setBacklight(uint8_t status){};
+        virtual void setLed(int led, bool onoff){};
+        virtual void setLedBrightness(int led, int val){};
         virtual void buzz(long,uint16_t){};
 
         // only used on certain panels

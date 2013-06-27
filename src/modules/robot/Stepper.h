@@ -34,6 +34,7 @@ class Stepper : public Module {
         void on_config_reload(void* argument);
         void on_block_begin(void* argument);
         void on_block_end(void* argument);
+        void on_gcode_received(void* argument);
         void on_gcode_execute(void* argument);
         void on_play(void* argument);
         void on_pause(void* argument);

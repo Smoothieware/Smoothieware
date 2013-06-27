@@ -40,6 +40,7 @@ void Stepper::on_module_loaded(){
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_EXECUTE);
+    this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
 
@@ -82,6 +83,20 @@ void Stepper::on_play(void* argument){
     this->kernel->robot->gamma_stepper_motor->unpause();
 }
 
+void Stepper::on_gcode_received(void* argument){
+    Gcode* gcode = static_cast<Gcode*>(argument);
+    // Attach gcodes to the last block for on_gcode_execute
+    if( gcode->has_m && (gcode->m == 84 || gcode->m == 17 || gcode->m == 18 )) {
+        gcode->mark_as_taken();
+        if( this->kernel->conveyor->queue.size() == 0 ){
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+        }else{
+            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            block->append_gcode(gcode);
+        }
+    }  
+}
+
 // React to enable/disable gcodes
 void Stepper::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
@@ -89,11 +104,9 @@ void Stepper::on_gcode_execute(void* argument){
     if( gcode->has_m){
         if( gcode->m == 17 ){
             this->turn_enable_pins_on();
-            gcode->mark_as_taken();
         }
         if( gcode->m == 84 || gcode->m == 18 ){
             this->turn_enable_pins_off();
-            gcode->mark_as_taken();
         }
     }
 }
