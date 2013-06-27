@@ -15,7 +15,7 @@ void i2cbang_init(I2C i2c){
     cmd[1] = 0x3F;
     i2c.write(addr, cmd, 2);
     cmd[0] = 0x0B;
-    cmd[1] = 0xFF;
+    cmd[1] = 0xC0;
     i2c.write(addr, cmd, 2);
     wait_ms(1);
 }

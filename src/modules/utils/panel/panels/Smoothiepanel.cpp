@@ -38,6 +38,8 @@ Smoothiepanel::Smoothiepanel() {
     this->lcd_contrast  = THEKERNEL->config->value(panel_checksum, lcd_contrast_checksum)->by_default(0)->as_number();
 
 //  this->interrupt_pin.from_string(THEKERNEL->config->value(panel_checksum, i2c_interrupt_pin_checksum)->by_default("nc")->as_string())->as_input();
+    this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();
+    this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input();
 
     paused= false;
 }
@@ -93,25 +95,32 @@ void ledbang_init(I2C i2c, int address){
 void Smoothiepanel::init(){
     // init lcd and buzzer
     lcdbang_init(*this->i2c);
-    lcdbang_print(*this->i2c, " Smoothiepanel Beta - design by Logxen -");
+//    lcdbang_print(*this->i2c, " Smoothiepanel Beta - design by Logxen -");
     lcdbang_contrast(*this->i2c, this->lcd_contrast);
 
     ledbang_init(*this->i2c, this->i2c_address);
-    wait_us(1000);
-    this->clear();
+//    wait_us(3000);
+//    this->clear();
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms) 
 void Smoothiepanel::buzz(long duration, uint16_t freq) {
     const int expander = PCA9505_ADDRESS | this->i2c_address;
     char cmd[2];
+    char saved;
+
+    // save register state
+    cmd[0] = 0x04;
+    this->i2c->write(expander, cmd, 1, false);
+    this->i2c->read(expander, cmd, 1);
+    saved = cmd[0];
 
     // buzz
     cmd[0] = 0x0C;
-    cmd[1] = 0xFE;
+    cmd[1] = saved & 0xFE;
     this->i2c->write(expander, cmd, 2);
     wait_ms(duration); // TODO: Make this not hold up the whole system
-    cmd[1] = 0xFF;
+    cmd[1] = saved;
     this->i2c->write(expander, cmd, 2);
 }
 
@@ -123,48 +132,41 @@ uint8_t Smoothiepanel::readButtons(void) {
     cmd[0] = 0x03;
     this->i2c->write(expander, cmd, 1, false);
     this->i2c->read(expander, cmd, 1);
-    if(cmd[0] & 0x10) button_bits |= BUTTON_SELECT;
-    if(cmd[0] & 0x02) button_bits |= BUTTON_AUX1; // back button
-    if(cmd[0] & 0x01) button_bits |= BUTTON_AUX2; // play button
+    //cmd[0] = ~cmd[0];
+    if((cmd[0] & 0x10) > 0) button_bits |= BUTTON_SELECT;
+    if((cmd[0] & 0x02) > 0) button_bits |= BUTTON_LEFT; // back button
+//    if((cmd[0] & 0x01) > 0) button_bits |= BUTTON_AUX1; // play button
 
 	// check the button pause
 //	button_pause.check_signal();
+//    this->setCursor(6, 4);
+//    this->printf("Buttons:  0x%02X", button_bits);
 	
 	return button_bits;
 }
 
 int Smoothiepanel::readEncoderDelta() {
-    const int expander = PCA9505_ADDRESS | this->i2c_address;
-    char cmd[1];
-    bool enc_a, enc_b;
-
-    cmd[0] = 0x03;
-    this->i2c->write(expander, cmd, 1, false);
-    this->i2c->read(expander, cmd, 1);
-    enc_a = cmd[0] & 0x04;
-    enc_b = cmd[0] & 0x08;
-
-    static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
-    static uint8_t old_AB = 0;
-    old_AB <<= 2;                   //remember previous state
-    old_AB |= ( enc_a + ( enc_b * 2 ) );  //add current state 
-    return  enc_states[(old_AB&0x0f)];
+	static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
+	static uint8_t old_AB = 0;
+	old_AB <<= 2;                   //remember previous state
+	old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state 
+	return  enc_states[(old_AB&0x0f)];
 }
 
 void Smoothiepanel::clear()
 {
     command(LCD_CLEARDISPLAY);  // clear display, set cursor position to zero
-#ifndef USE_FASTMODE
-    wait_us(2000);  // this command takes a long time!
-#endif
+//#ifndef USE_FASTMODE
+//    wait_ms(50);  // this command takes a long time!
+//#endif
 }
 
 void Smoothiepanel::home()
 {
     command(LCD_RETURNHOME);  // set cursor position to zero
-#ifndef USE_FASTMODE
-    wait_us(2000);  // this command takes a long time!
-#endif
+//#ifndef USE_FASTMODE
+//    wait_us(2000);  // this command takes a long time!
+//#endif
 }
 
 void Smoothiepanel::setCursor(uint8_t col, uint8_t row)

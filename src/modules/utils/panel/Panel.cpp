@@ -84,8 +84,8 @@ void Panel::on_module_loaded(){
     this->click_button.down_attach( this, &Panel::on_click_release );
     this->back_button.up_attach(    this, &Panel::on_back );
 
-//    this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
-//    this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
+    this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
+    this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
 
     // Default top screen
     this->top_screen = new MainMenuScreen();
@@ -127,7 +127,7 @@ uint32_t Panel::encoder_check(uint32_t dummy){
     int change = lcd->readEncoderDelta();
     encoder_counter += change;
     // TODO divisor needs to be configurable
-    if( change != 0 /*&& encoder_counter % 2 == 0*/ ){
+    if( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ){
         this->counter_changed = true;
         (*this->counter) += change;
         this->idle_time= 0;
@@ -177,7 +177,7 @@ void Panel::on_idle(void* argument){
         this->click_button.check_signal(but&BUTTON_SELECT);
 
         // FIXME test
-        //if(but&BUTTON_AUX1) lcd->buzz(10, 500);
+//        if(but&BUTTON_AUX1) lcd->buzz(10, 500);
     }
     
     // If we are in menu mode and the position has changed

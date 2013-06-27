@@ -39,6 +39,8 @@ using namespace std;
 #define i2c_address_checksum       CHECKSUM("i2c_address")
 #define i2c_frequency_checksum     CHECKSUM("i2c_frequency")
 #define i2c_interrupt_pin_checksum CHECKSUM("i2c_interrupt_pin")
+#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
+#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
 
 #define lcd_contrast_checksum      CHECKSUM("lcd_contrast")
 
@@ -95,6 +97,8 @@ class Smoothiepanel : public LcdBase {
         mbed::I2C* i2c;
 
         Pin interrupt_pin;
+        Pin encoder_a_pin;
+        Pin encoder_b_pin;    
 //        Button button_pause;
 //        uint32_t on_pause_release(uint32_t dummy);
         bool paused;

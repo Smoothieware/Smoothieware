@@ -12,8 +12,8 @@
 void lcdbang_writenibble(I2C i2c, char c, bool command = false){
     const int addr = 0x40;
     char cmd[2];
-    c &= 0x0F;
     c <<= 4;
+    c &= 0xF0;
     c |= 0x01;
     if(!command) c |= 0x02;
 
@@ -24,7 +24,7 @@ void lcdbang_writenibble(I2C i2c, char c, bool command = false){
     i2c.write(addr, cmd, 2);
     cmd[1] = c;
     i2c.write(addr, cmd, 2);
-    wait_ms(1);
+//    wait_ms(1);
 }
 
 void lcdbang_write(I2C i2c, char c, bool command = false){
