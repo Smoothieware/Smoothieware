@@ -18,6 +18,7 @@ using namespace std;
 
 #include "panels/I2CLCD.h"
 #include "panels/VikiLCD.h"
+#include "panels/Smoothiepanel.h"
 
 Panel::Panel(){
     this->counter_changed = false;
@@ -55,6 +56,8 @@ void Panel::on_module_loaded(){
         this->lcd = new I2CLCD();
     }else if(lcd_cksm == viki_lcd_checksum) {
         this->lcd = new VikiLCD();
+    }else if(lcd_cksm == smoothiepanel_checksum) {
+        this->lcd = new Smoothiepanel();
     }else{
         // no lcd type defined
         return;
@@ -124,7 +127,7 @@ uint32_t Panel::encoder_check(uint32_t dummy){
     int change = lcd->readEncoderDelta();
     encoder_counter += change;
     // TODO divisor needs to be configurable
-    if( change != 0 /*&& encoder_counter % 2 == 0*/ ){
+    if( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ){
         this->counter_changed = true;
         (*this->counter) += change;
         this->idle_time= 0;
@@ -174,7 +177,7 @@ void Panel::on_idle(void* argument){
         this->click_button.check_signal(but&BUTTON_SELECT);
 
         // FIXME test
-        //if(but&BUTTON_AUX1) lcd->buzz(10, 500);
+//        if(but&BUTTON_AUX1) lcd->buzz(10, 500);
     }
     
     // If we are in menu mode and the position has changed
