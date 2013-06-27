@@ -25,7 +25,6 @@ Panel::Panel(){
     this->click_changed = false;
     this->refresh_flag = false;
     this->enter_menu_mode();
-    this->menu_offset = 1;
     this->lcd= NULL;
     this->do_buttons = false;
     this->idle_time= 0;
@@ -65,6 +64,10 @@ void Panel::on_module_loaded(){
 
     // some panels may need access to this global info
     this->lcd->setPanel(this);
+
+    // some encoders may need more clicks to move menu, this is a divisor and is in config as it is
+    // an end user usability issue
+    this->menu_offset = this->kernel->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
 
     // load jogging feedrates in mm/min
     jogging_speed_mm_min[0]= this->kernel->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
@@ -175,9 +178,6 @@ void Panel::on_idle(void* argument){
         this->down_button.check_signal(but&BUTTON_DOWN);
         this->back_button.check_signal(but&BUTTON_LEFT);
         this->click_button.check_signal(but&BUTTON_SELECT);
-
-        // FIXME test
-//        if(but&BUTTON_AUX1) lcd->buzz(10, 500);
     }
     
     // If we are in menu mode and the position has changed
@@ -302,7 +302,7 @@ void Panel::set_control_value(double value){
 }
 
 double Panel::get_control_value(){
-    return this->control_base_value + (this->control_normal_counter*this->normal_increment/this->encoder_click_resolution);
+    return this->control_base_value + (this->control_normal_counter*this->normal_increment);
 }
 
 bool Panel::is_playing() const {
