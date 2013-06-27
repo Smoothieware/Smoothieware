@@ -22,6 +22,7 @@
 #define lcd_checksum               CHECKSUM("lcd")
 #define i2c_lcd_checksum           CHECKSUM("i2c_lcd")
 #define viki_lcd_checksum          CHECKSUM("viki_lcd")
+#define smoothiepanel_checksum     CHECKSUM("smoothiepanel")
 
 #define jog_x_feedrate_checksum    CHECKSUM("alpha_jog_feedrate")
 #define jog_y_feedrate_checksum    CHECKSUM("beta_jog_feedrate")
