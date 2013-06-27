@@ -60,7 +60,7 @@ class Smoothiepanel : public LcdBase {
 
         uint8_t readButtons();
         int readEncoderDelta();
-        int getEncoderResolution() { return 2; }
+        int getEncoderResolution() { return 4; }
 
         void buzz(long,uint16_t);
 
