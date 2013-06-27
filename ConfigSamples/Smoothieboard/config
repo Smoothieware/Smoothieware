@@ -130,6 +130,8 @@ panel.enable                                 false             # set to true to 
 panel.lcd                                    viki_lcd          # set type of panel also i2c_lcd is a generic i2c panel
 panel.encoder_a_pin                          0.15!^            # encoder pin if used
 panel.encoder_b_pin                          0.17!^            # encoder pin if used
+panel.menu_offset                            0                 # some panels will need 1 here
+
 #panel.button_pause_pin                      0.18^             # pin used for pause button on VikiLcd
 #panel.up_button_pin                         0.1!              # up button if used
 #panel.down_button_pin                       0.0!              # down button if used

@@ -80,6 +80,8 @@ class VikiLCD : public LcdBase {
 
         uint8_t readButtons();
         int readEncoderDelta();
+        
+        // this is the number of clicks per detent
         int getEncoderResolution() { return 2; }
 
         void buzz(long,uint16_t);
