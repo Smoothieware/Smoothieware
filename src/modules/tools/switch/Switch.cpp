@@ -49,12 +49,12 @@ void Switch::on_config_reload(void* argument){
     this->input_pin_behavior     = this->kernel->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum     )->by_default(momentary_checksum)->as_number();
     this->input_on_command     = this->kernel->config->value(switch_checksum, this->name_checksum, input_on_command_checksum     )->by_default("")->as_string();
     this->input_off_command    = this->kernel->config->value(switch_checksum, this->name_checksum, input_off_command_checksum    )->by_default("")->as_string();
-    this->switch_state         = this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    this->switch_value         = this->kernel->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(1)->as_number();
     this->output_pin.from_string(this->kernel->config->value(switch_checksum, this->name_checksum, output_pin_checksum    )->by_default("nc")->as_string())->as_output();
     this->output_pin.set(this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(0)->as_number() );
     this->output_on_command     = this->kernel->config->value(switch_checksum, this->name_checksum, output_on_command_checksum     )->by_default("")->as_string();
     this->output_off_command    = this->kernel->config->value(switch_checksum, this->name_checksum, output_off_command_checksum    )->by_default("")->as_string();
+    this->switch_state         = this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
+    this->switch_value         = this->kernel->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
 
     set_low_on_debug(output_pin.port_number, output_pin.pin);
 }
