@@ -63,8 +63,8 @@ void Switch::on_config_reload(void* argument){
 void Switch::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
-    if( ( input_on_command.length() > 0 && gcode->command.compare(0, input_on_command.length(), input_on_command) )
-        || ( input_off_command.length() > 0 && gcode->command.compare(0, input_off_command.length(), input_off_command) ) ){
+    if( ( input_on_command.length() > 0 && ! gcode->command.compare(0, input_on_command.length(), input_on_command) )
+        || ( input_off_command.length() > 0 && ! gcode->command.compare(0, input_off_command.length(), input_off_command) ) ){
         gcode->mark_as_taken();
         if( this->kernel->conveyor->queue.size() == 0 ){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
@@ -78,7 +78,7 @@ void Switch::on_gcode_received(void* argument){
 // Turn pin on and off
 void Switch::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    if(gcode->command.compare(0, input_on_command.length(), input_on_command)){
+    if(! gcode->command.compare(0, input_on_command.length(), input_on_command)){
         if (gcode->has_letter('S'))
         {
             int v = gcode->get_value('S') * output_pin.max_pwm() / 256.0;
@@ -99,7 +99,7 @@ void Switch::on_gcode_execute(void* argument){
             this->switch_state = true;
         }
     }
-    else if(gcode->command.compare(0, input_off_command.length(), input_off_command)){
+    else if(! gcode->command.compare(0, input_off_command.length(), input_off_command)){
         // Turn pin off
         this->output_pin.set(0);
         this->switch_state = false;
