@@ -50,7 +50,7 @@ void Switch::on_config_reload(void* argument){
     this->input_on_command     = this->kernel->config->value(switch_checksum, this->name_checksum, input_on_command_checksum     )->by_default("")->as_string();
     this->input_off_command    = this->kernel->config->value(switch_checksum, this->name_checksum, input_off_command_checksum    )->by_default("")->as_string();
     this->output_pin.from_string(this->kernel->config->value(switch_checksum, this->name_checksum, output_pin_checksum    )->by_default("nc")->as_string())->as_output();
-    this->output_pin.set(this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(0)->as_number() );
+    this->output_pin.set(this->switch_state);
     this->output_on_command     = this->kernel->config->value(switch_checksum, this->name_checksum, output_on_command_checksum     )->by_default("")->as_string();
     this->output_off_command    = this->kernel->config->value(switch_checksum, this->name_checksum, output_off_command_checksum    )->by_default("")->as_string();
     this->switch_state         = this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
