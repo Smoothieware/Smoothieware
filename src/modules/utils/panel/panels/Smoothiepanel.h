@@ -40,15 +40,25 @@ using namespace std;
 #define i2c_address_checksum       CHECKSUM("i2c_address")
 #define i2c_frequency_checksum     CHECKSUM("i2c_frequency")
 #define i2c_interrupt_pin_checksum CHECKSUM("i2c_interrupt_pin")
-#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
-#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
 
 #define lcd_contrast_checksum      CHECKSUM("lcd_contrast")
+#define lcd_led_checksum           CHECKSUM("lcd_led")
+#define lcd_led_red_checksum       CHECKSUM("lcd_led_red")
+#define lcd_led_green_checksum     CHECKSUM("lcd_led_green")
+#define lcd_led_blue_checksum      CHECKSUM("lcd_led_blue")
+
+#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
+#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
+#define encoder_led_hue_checksum   CHECKSUM("encoder_led_hue")
+
+#define play_led_brightness_checksum CHECKSUM("play_led_brightness")
+#define back_led_brightness_checksum CHECKSUM("back_led_brightness")
 
 class Smoothiepanel : public LcdBase {
     public:
         Smoothiepanel();
         ~Smoothiepanel();
+
         void home();
         void clear();
         void display();
@@ -57,7 +67,13 @@ class Smoothiepanel : public LcdBase {
         void write(char value);
 
         // added viki commands
-        void setBacklight(uint8_t status); 
+        void setBacklight(uint8_t status);
+        void setBacklightColor(uint8_t r, uint8_t g, uint8_t b);
+        void setBacklightByHue(int h);
+        void setEncoderLED(uint8_t r, uint8_t g, uint8_t b);
+        void setEncoderByHue(int h);
+        void setPlayLED(uint8_t v);
+        void setBackLED(uint8_t v);
 
         uint8_t readButtons();
         int readEncoderDelta();
@@ -92,7 +108,13 @@ class Smoothiepanel : public LcdBase {
         char i2c_address;
         int i2c_frequency;
         int lcd_contrast;
+        int encoder_hue;
+        char backlight_red;
+        char backlight_green;
+        char backlight_blue;
         char backlightval;
+        char playledval;
+        char backledval;
         uint8_t _numlines,_currline;
 //        uint16_t _backlightBits; // only for MCP23017
         mbed::I2C* i2c;
@@ -105,6 +127,7 @@ class Smoothiepanel : public LcdBase {
         Wiichuck* wii;
         bool wii_connected;
         bool paused;
+        bool encoder_changed;
 };
 
 #endif // SMOOTHIEPANEL_H

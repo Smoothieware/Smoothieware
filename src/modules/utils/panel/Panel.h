@@ -52,7 +52,7 @@ class Panel : public Module {
         uint32_t on_up(uint32_t dummy);
         uint32_t on_down(uint32_t dummy);
         uint32_t on_back(uint32_t dummy);
-        uint32_t on_click_release(uint32_t dummy);
+        uint32_t on_select(uint32_t dummy);
         uint32_t refresh_tick(uint32_t dummy);
         uint32_t encoder_check(uint32_t dummy);
         bool counter_change();

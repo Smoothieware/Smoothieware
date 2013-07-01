@@ -84,7 +84,7 @@ void Panel::on_module_loaded(){
     
     this->up_button.up_attach(    this, &Panel::on_up );
     this->down_button.up_attach(  this, &Panel::on_down );
-    this->click_button.up_attach( this, &Panel::on_click_release );
+    this->click_button.up_attach( this, &Panel::on_select );
     this->back_button.up_attach(  this, &Panel::on_back );
 
     this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
@@ -222,7 +222,7 @@ uint32_t Panel::on_back(uint32_t dummy){
     return 0;
 }
 
-uint32_t Panel::on_click_release(uint32_t dummy){
+uint32_t Panel::on_select(uint32_t dummy){
     // TODO make configurable, including turning off
     // buzz is ignored on panels that do not support buzz
     lcd->buzz(60,300); // 50ms 300Hz
