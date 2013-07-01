@@ -63,6 +63,8 @@ using namespace std;
 #define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
 #define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
 #define button_pause_pin_checksum  CHECKSUM("button_pause_pin")
+#define i2c_pins_checksum          CHECKSUM("i2c_pins")
+#define i2c_frequency_checksum     CHECKSUM("i2c_frequency")
 
 class VikiLCD : public LcdBase {
     public:
@@ -110,7 +112,7 @@ class VikiLCD : public LcdBase {
         uint8_t _numlines,_currline;
         uint16_t _backlightBits; // only for MCP23017
         mbed::I2C* i2c;
-
+        int i2c_frequency;
         Pin encoder_a_pin;
         Pin encoder_b_pin;    
         Pin button_pause_pin;
