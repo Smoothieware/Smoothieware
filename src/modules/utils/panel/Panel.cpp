@@ -82,10 +82,10 @@ void Panel::on_module_loaded(){
     this->lcd->init();
     this->lcd->printf("Starting...");
     
-    this->up_button.up_attach(      this, &Panel::on_up );
-    this->down_button.up_attach(    this, &Panel::on_down );
-    this->click_button.down_attach( this, &Panel::on_click_release );
-    this->back_button.up_attach(    this, &Panel::on_back );
+    this->up_button.up_attach(    this, &Panel::on_up );
+    this->down_button.up_attach(  this, &Panel::on_down );
+    this->click_button.up_attach( this, &Panel::on_click_release );
+    this->back_button.up_attach(  this, &Panel::on_back );
 
     this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
     this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
