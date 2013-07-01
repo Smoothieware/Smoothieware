@@ -79,6 +79,15 @@ void pca9634_init(I2C i2c, int address){
     i2c.write(leds, cmd, 2);
 }
 
+void pca9634_setLed(I2C *i2c, int address, char led, char val){
+    const int leds = PCA9634_ADDRESS | (address & 0x0E);
+    char cmd[2];
+
+    cmd[0] = led; // lcd blue
+    cmd[1] = val;
+    i2c->write(leds, cmd, 2);
+}
+
 void Smoothiepanel::init(){
     // init lcd and buzzer
     lcdbang_init(*this->i2c);
@@ -92,6 +101,31 @@ void Smoothiepanel::init(){
     setBackLED(this->backledval);
 //    wait_us(3000);
 //    this->clear();
+}
+
+void Smoothiepanel::setLed(int led, bool on){
+    // LED turns on when bit is cleared
+    if(on) {
+        switch(led) {
+//            case LED_FAN_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x09, this->backlight_red); break; // on
+//            case LED_HOTEND_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x08, this->backlight_green); break; // on
+//            case LED_BED_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x07, this->backlight_blue); break; // on
+        }
+    }else{
+        switch(led) {
+//            case LED_FAN_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x09, 0); break; // off
+//            case LED_HOTEND_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x08, 0); break; // off
+//            case LED_BED_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x07, 0); break; // off
+        }
+    }
+}
+
+void Smoothiepanel::setLedBrightness(int led, int val){
+    switch(led){
+//        case LED_FAN_ON: this->backlight_green = val; break; // on
+        case LED_HOTEND_ON: this->backlight_red = val; break; // on
+        case LED_BED_ON: this->backlight_blue = val; break; // on
+    }
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms) 

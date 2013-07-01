@@ -66,7 +66,6 @@ class Smoothiepanel : public LcdBase {
         void init();
         void write(char value);
 
-        // added viki commands
         void setBacklight(uint8_t status);
         void setBacklightColor(uint8_t r, uint8_t g, uint8_t b);
         void setBacklightByHue(int h);
@@ -79,6 +78,8 @@ class Smoothiepanel : public LcdBase {
         int readEncoderDelta();
         int getEncoderResolution() { return 4; }
 
+        void setLed(int led, bool on);
+        void setLedBrightness(int led, int val);
         void buzz(long,uint16_t);
 
         void noCursor();

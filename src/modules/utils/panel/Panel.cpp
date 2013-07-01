@@ -225,9 +225,9 @@ uint32_t Panel::on_back(uint32_t dummy){
 uint32_t Panel::on_select(uint32_t dummy){
     // TODO make configurable, including turning off
     // buzz is ignored on panels that do not support buzz
-    lcd->buzz(60,300); // 50ms 300Hz
     this->click_changed = true;
     this->idle_time= 0;
+    lcd->buzz(60,300); // 50ms 300Hz
     return 0;
 }
 

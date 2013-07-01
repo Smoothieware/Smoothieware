@@ -115,4 +115,5 @@ class LcdBase {
 
 };
 
-#endif
+#endif // LCDBASE_H
+
