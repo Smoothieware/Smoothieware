@@ -200,15 +200,16 @@ void Panel::on_idle(void* argument){
 
 // Hooks for button clicks
 uint32_t Panel::on_up(uint32_t dummy){
-    // this is simulating encoder clicks, but as one press should move menu one
-    // we need to increment twice as two clicks are needed to move the menu once
-    // this needs to be configurable and tied to menu increment
-    *this->counter -= 1;
+    // this is simulating encoder clicks, but needs to be inverted to
+    // increment values on up
+    int inc= (this->mode == CONTROL_MODE) ? 1 : -1;
+    *this->counter += inc;
     this->counter_changed = true;
     return 0;
 }
 uint32_t Panel::on_down(uint32_t dummy){
-    *this->counter += 1;
+    int inc= (this->mode == CONTROL_MODE) ? -1 : 1;
+    *this->counter += inc;
     this->counter_changed = true;
     return 0;
 }

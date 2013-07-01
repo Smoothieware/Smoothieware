@@ -35,18 +35,27 @@ You should have received a copy of the GNU General Public License along with Smo
 #define M17_BIT_B0 0x0001
 
 VikiLCD::VikiLCD() {
-    // Default values
+    // I2C com
+    int i2c_pins = THEKERNEL->config->value(panel_checksum, i2c_pins_checksum)->by_default(3)->as_number();
+    if(i2c_pins == 0){
+        this->i2c = new mbed::I2C(P0_0, P0_1);
+    }else if(i2c_pins == 1){
+        this->i2c = new mbed::I2C(P0_10, P0_11);
+    }else if(i2c_pins == 2){
+        this->i2c = new mbed::I2C(P0_19, P0_20);
+    }else{ // 3, default
+        this->i2c = new mbed::I2C(P0_27, P0_28);
+    }
+
+    this->i2c_frequency = THEKERNEL->config->value(panel_checksum, i2c_frequency_checksum)->by_default(60000)->as_number();
+    i2c->frequency(this->i2c_frequency);
+
+   // Default values
     this->i2c_address      = MCP23017_ADDRESS;
     this->displaycontrol   = 0x00;
     this->displayfunction  = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS; // in case they forget to call begin() at least we have somethin
     this->displaymode      = 0x00;
     this->_numlines        = 4;
-    
-    // I2C com
-//  this->i2c = new mbed::I2C(P0_27, P0_28);
-    this->i2c = new mbed::I2C(p9, p10); // P0_0, P0_1
-
-    i2c->frequency(60000);
     
     // configure the pins to use
     this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();
