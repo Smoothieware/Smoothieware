@@ -17,7 +17,8 @@ Much of this was copied from LiquidTWI2
 #include "LcdBase.h"
 #include "libs/Pin.h"
 #include "Button.h"
-   
+#include "smoothiepanel/Wiichuck.h"
+
 using namespace std;
 #include <vector>
 #include <string>
@@ -101,6 +102,8 @@ class Smoothiepanel : public LcdBase {
         Pin encoder_b_pin;    
 //        Button button_pause;
 //        uint32_t on_pause_release(uint32_t dummy);
+        Wiichuck* wii;
+        bool wii_connected;
         bool paused;
 };
 

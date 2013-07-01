@@ -19,6 +19,8 @@ Smoothiepanel::Smoothiepanel() {
     this->displaymode      = 0x00;
     this->_numlines        = 4;
 
+    this->wii_connected    = false;
+
     // I2C com
     int i2c_pins = THEKERNEL->config->value(panel_checksum, i2c_pins_checksum)->by_default(3)->as_number();
     if(i2c_pins == 0){
@@ -30,6 +32,7 @@ Smoothiepanel::Smoothiepanel() {
     }else{ // 3, default
         this->i2c = new mbed::I2C(P0_27, P0_28);
     }
+    this->wii = new Wiichuck(this->i2c);
 
     this->i2c_address   = (char)THEKERNEL->config->value(panel_checksum, i2c_address_checksum)->by_default(0)->as_number();
     this->i2c_address = (this->i2c_address & 0x07) << 1;
@@ -45,6 +48,7 @@ Smoothiepanel::Smoothiepanel() {
 }
 
 Smoothiepanel::~Smoothiepanel() {
+    delete this->wii;
     delete this->i2c;
 }
 
@@ -133,9 +137,42 @@ uint8_t Smoothiepanel::readButtons(void) {
     this->i2c->write(expander, cmd, 1, false);
     this->i2c->read(expander, cmd, 1);
     //cmd[0] = ~cmd[0];
-    if((cmd[0] & 0x10) > 0) button_bits |= BUTTON_SELECT;
+    if((cmd[0] & 0x10) > 0) button_bits |= BUTTON_SELECT; // encoder click
     if((cmd[0] & 0x02) > 0) button_bits |= BUTTON_LEFT; // back button
 //    if((cmd[0] & 0x01) > 0) button_bits |= BUTTON_AUX1; // play button
+    if((cmd[0] & 0x20) > 0){ // wii accessory connected
+        if(!this->wii_connected){
+            this->wii->init_device();
+            if(this->wii->device_type >= 0){
+                this->wii_connected = true;
+                wait_ms(100);
+            }
+        }
+        if(this->wii_connected){
+            this->wii->poll_device();
+            if(this->wii->data_ready){
+                if(this->wii->device_type == DEVICE_NUNCHUCK){
+                    if(this->wii->SY > 192) button_bits |= BUTTON_UP;
+                    else if(this->wii->SY < 64) button_bits |= BUTTON_DOWN;
+                    if(this->wii->SX > 192) button_bits |= BUTTON_RIGHT;
+                    else if(this->wii->SX < 64) button_bits |= BUTTON_LEFT;
+                    if(!this->wii->BC) button_bits |= BUTTON_SELECT;
+                    if(!this->wii->BZ) button_bits |= BUTTON_LEFT;
+                }else if(this->wii->device_type == DEVICE_CLASSIC){
+                    if(this->wii->LY > 192) button_bits |= BUTTON_UP;
+                    else if(this->wii->LY < 64) button_bits |= BUTTON_DOWN;
+                    if(this->wii->LX > 192) button_bits |= BUTTON_RIGHT;
+                    else if(this->wii->LX < 64) button_bits |= BUTTON_LEFT;
+                    if(!this->wii->BDU) button_bits |= BUTTON_UP;
+                    else if(!this->wii->BDD) button_bits |= BUTTON_DOWN;
+                    if(!this->wii->BDL) button_bits |= BUTTON_LEFT;
+                    else if(!this->wii->BDR) button_bits |= BUTTON_RIGHT;
+                    if(!this->wii->BA) button_bits |= BUTTON_SELECT;
+                    if(!this->wii->BB) button_bits |= BUTTON_LEFT;
+                }
+            }else this->wii_connected = false;
+        }
+    }else this->wii_connected = false;
 
 	// check the button pause
 //	button_pause.check_signal();

@@ -25,21 +25,29 @@ using namespace std;
 
 class Wiichuck {
 public:
-    Wiichuck(PinName sda, PinName scl){
-        // I2C com
+    Wiichuck(PinName sda, PinName scl, int frequency = 10000){
+        this->i2c_mine = true;
+
         this->i2c = new mbed::I2C(sda, scl);   
-        this->i2c->frequency(10000);
+        this->i2c->frequency(frequency);
+    }
+
+    Wiichuck(I2C* i2c){
+        this->i2c_mine = false;
+
+        this->i2c = i2c;
     }
 
     ~Wiichuck(){
-        delete this->i2c;
+        if(this->i2c_mine)
+            delete this->i2c;
     }
 
     void init_device(){
         char cmd[2];
         data_ready = false;
 
-        cmd[0] = 0xF0;
+        cmd[0] = 0xF0; // first two writes are a magic init sequence
         cmd[1] = 0x55;
         this->i2c->write(WIICHUCK, cmd, 2);
         wait_ms(10);
@@ -47,10 +55,10 @@ public:
         cmd[1] = 0x00;
         this->i2c->write(WIICHUCK, cmd, 2);
         wait_ms(10);
-        cmd[0] = 0xFA;
+        cmd[0] = 0xFA; // read out the device type
         this->i2c->write(WIICHUCK, cmd, 1, false);
         int res = this->i2c->read(WIICHUCK, data_buf, 6);
-        cmd[0] = 0x00;
+        cmd[0] = 0x00; // request first sensor readings
         this->i2c->write(WIICHUCK, cmd, 1);
         if(res == 0 && data_buf[2] == 0xA4){
             device_type = (data_buf[4] << 8) + data_buf[5];
@@ -65,16 +73,13 @@ public:
             init_device();
             wait_ms(100);
         }
+        // if there is a connected device read it and if it responds right parse the data
         if(device_type >= 0 && read_device() == 0) {
             switch(device_type) {
-            case DEVICE_NUNCHUCK:       parse_nunchuck();
-                break;
-            case DEVICE_CLASSIC:        parse_classic();
-                break;
-            case DEVICE_INACT_WMP:   init_wmp();
-                break;
-            case DEVICE_WMP:            parse_wmp();
-                break;
+            case DEVICE_NUNCHUCK:       parse_nunchuck(); break;
+            case DEVICE_CLASSIC:        parse_classic(); break;
+            case DEVICE_INACT_WMP:      init_wmp(); break;
+            case DEVICE_WMP:            parse_wmp(); break;
             default:
                 break;
             }
@@ -83,8 +88,8 @@ public:
 
     int read_device() {
         char cmd = 0x00;
-        int res = this->i2c->read(WIICHUCK, data_buf, 6);
-        this->i2c->write(WIICHUCK, &cmd, 1);
+        int res = this->i2c->read(WIICHUCK, data_buf, 6); // read sensors
+        this->i2c->write(WIICHUCK, &cmd, 1); // request next sensor readings
         return res;
     }
 
@@ -152,6 +157,7 @@ public:
     bool BH,BP,BM;            // home, plus, minus buttons
     bool BA,BB,BX,BY,BZL,BZR; // buttons
 
+    bool i2c_mine;
     bool data_ready = false;
     char data_buf[6];
     int device_type = -1;
