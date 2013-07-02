@@ -109,7 +109,9 @@ class LcdBase {
         // only used on certain panels
         virtual void on_refresh(){};
         virtual void on_main_loop(){};
-
+        // override this if the panel can hndle more or less screen lines
+        virtual uint16_t get_screen_lines() { return 4; }
+        
     protected:
         Panel* panel;
 

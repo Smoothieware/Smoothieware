@@ -32,7 +32,7 @@ MainMenuScreen::MainMenuScreen(){
 
 void MainMenuScreen::on_enter(){
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(4, 4);  // 6 menu items, 4 lines
+    this->panel->setup_menu(4);  // 6 menu items
     this->refresh_screen();
 }
 
