@@ -25,7 +25,7 @@ ControlScreen::ControlScreen(){
 
 void ControlScreen::on_enter(){
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(4, 4);
+    this->panel->setup_menu(4);
     get_current_pos(this->pos);
     this->refresh_menu();
     this->pos_changed= false;
