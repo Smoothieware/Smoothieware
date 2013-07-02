@@ -65,6 +65,9 @@ void Panel::on_module_loaded(){
     // some panels may need access to this global info
     this->lcd->setPanel(this);
 
+    // the number of screen lines the panel supports
+    this->screen_lines= this->lcd->get_screen_lines();
+    
     // some encoders may need more clicks to move menu, this is a divisor and is in config as it is
     // an end user usability issue
     this->menu_offset = this->kernel->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
@@ -240,6 +243,10 @@ void Panel::enter_menu_mode(){
     this->mode = MENU_MODE;
     this->counter = &this->menu_selected_line;
     this->menu_changed = false;
+}
+
+void Panel::setup_menu(uint16_t rows){
+    this->setup_menu(rows, min(rows, this->max_screen_lines()));
 }
 
 void Panel::setup_menu(uint16_t rows, uint16_t lines){

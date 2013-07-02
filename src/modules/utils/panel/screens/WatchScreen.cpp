@@ -23,7 +23,7 @@ WatchScreen::WatchScreen(){}
 
 void WatchScreen::on_enter(){
     this->panel->lcd->clear();
-    this->panel->setup_menu(4, 4);
+    this->panel->setup_menu(4);
     get_temp_data();
     get_current_pos(this->pos);
     get_sd_play_info();

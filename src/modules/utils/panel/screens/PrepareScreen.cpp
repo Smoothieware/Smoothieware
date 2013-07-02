@@ -27,7 +27,7 @@ PrepareScreen::PrepareScreen(){
 
 void PrepareScreen::on_enter(){
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(6, 4);  // 7 menu items, 4 lines
+    this->panel->setup_menu(7);  // 7 menu items
     this->refresh_screen();
 }
 
@@ -52,7 +52,8 @@ void PrepareScreen::display_menu_line(uint16_t line){
         case 3: this->panel->lcd->printf("Pre Heat"       ); break; 
         case 4: this->panel->lcd->printf("Cool Down"      ); break; 
         case 5: this->panel->lcd->printf("Extrude"        ); break; 
-        //case 6: this->panel->lcd->printf("Set Temperature"); break; 
+        case 6: this->panel->lcd->printf("Motors off"     ); break; 
+        //case 7: this->panel->lcd->printf("Set Temperature"); break; 
     }
 }
 
@@ -64,7 +65,8 @@ void PrepareScreen::clicked_menu_entry(uint16_t line){
         case 3: this->preheat(); break;
         case 4: this->cooldown(); break;
         case 5: this->panel->enter_screen(this->extruder_screen); break;
-        //case 6: this->panel->enter_screen(this->temp_screen      ); break;
+        case 6: send_gcode("M84"); break;
+        //case 7: this->panel->enter_screen(this->temp_screen      ); break;
     }
 
 }

@@ -62,10 +62,12 @@ class Panel : public Module {
         // Menu
         void enter_menu_mode();
         void setup_menu(uint16_t rows, uint16_t lines);
+        void setup_menu(uint16_t rows);
         void menu_update();
         bool menu_change();
         uint16_t menu_current_line();
-
+        uint16_t max_screen_lines() { return screen_lines; }
+        
         // Control
         bool enter_control_mode(double passed_normal_increment, double passed_pressed_increment);
         void set_control_value(double value);
@@ -118,6 +120,7 @@ class Panel : public Module {
         int idle_time;
         int encoder_click_resolution;
         char mode;
+        uint16_t screen_lines;
 
         MainMenuScreen* top_screen;
         PanelScreen* current_screen;

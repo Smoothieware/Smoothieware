@@ -58,7 +58,7 @@ void FileScreen::enter_folder(std::string folder){
     uint16_t number_of_files_in_folder = this->count_folder_content(this->current_folder);
 
     // Setup menu
-    this->panel->setup_menu(number_of_files_in_folder+1, 4);  // same number of files as menu items, 4 lines
+    this->panel->setup_menu(number_of_files_in_folder+1);  // same number of files as menu items, 4 lines
     this->panel->enter_menu_mode();
 
     // Display menu
