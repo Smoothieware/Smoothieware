@@ -52,8 +52,6 @@ Smoothiepanel::Smoothiepanel() {
     this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->encoder_hue   = THEKERNEL->config->value(panel_checksum, encoder_led_hue_checksum)->by_default(220)->as_number();
-
-    paused= false;
 }
 
 Smoothiepanel::~Smoothiepanel() {
@@ -88,6 +86,25 @@ void pca9634_setLed(I2C *i2c, int address, char led, char val){
     i2c->write(leds, cmd, 2);
 }
 
+void pca9505_write(I2C *i2c, int address, char reg, char val){
+    const int expander = PCA9505_ADDRESS | (address & 0x0E);
+    char cmd[2];
+
+    cmd[0] = reg;
+    cmd[1] = val;
+    i2c->write(expander, cmd, 2);
+}
+
+char pca9505_read(I2C *i2c, int address, char reg){
+    const int expander = PCA9505_ADDRESS | (address & 0x0E);
+    char cmd[1];
+
+    cmd[0] = 0x04;
+    i2c->write(expander, cmd, 1, false);
+    i2c->read(expander, cmd, 1);
+    return cmd[0];
+}
+
 void Smoothiepanel::init(){
     // init lcd and buzzer
     lcdbang_init(*this->i2c);
@@ -99,23 +116,27 @@ void Smoothiepanel::init(){
     setBacklightColor(this->backlight_red, this->backlight_green, this->backlight_blue);
     setPlayLED(this->playledval);
     setBackLED(this->backledval);
+
+    pca9505_write(this->i2c, this->i2c_address, 0x18, 0xAA); // enable leds for button/led wing on port0
+    pca9505_write(this->i2c, this->i2c_address, 0x08, 0x01); // enable leds for button/led wing on port0
 //    wait_us(3000);
 //    this->clear();
 }
 
 void Smoothiepanel::setLed(int led, bool on){
     // LED turns on when bit is cleared
+    char saved = pca9505_read(this->i2c, this->i2c_address, 0x08);
     if(on) {
         switch(led) {
-//            case LED_FAN_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x09, this->backlight_red); break; // on
-//            case LED_HOTEND_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x08, this->backlight_green); break; // on
-//            case LED_BED_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x07, this->backlight_blue); break; // on
+            case LED_FAN_ON: pca9505_write(this->i2c, this->i2c_address, 0x08, saved | 0x40); break; // on
+            case LED_HOTEND_ON: pca9505_write(this->i2c, this->i2c_address, 0x08, saved | 0x10); break; // on
+            case LED_BED_ON: pca9505_write(this->i2c, this->i2c_address, 0x08, saved | 0x04); break; // on
         }
     }else{
         switch(led) {
-//            case LED_FAN_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x09, 0); break; // off
-//            case LED_HOTEND_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x08, 0); break; // off
-//            case LED_BED_ON: pca9634_setLed(this->i2c, this->i2c_address, 0x07, 0); break; // off
+            case LED_FAN_ON: pca9505_write(this->i2c, this->i2c_address, 0x08, saved & ~0x40); break; // off
+            case LED_HOTEND_ON: pca9505_write(this->i2c, this->i2c_address, 0x08, saved & ~0x10); break; // off
+            case LED_BED_ON: pca9505_write(this->i2c, this->i2c_address, 0x08, saved & ~0x04); break; // off
         }
     }
 }
@@ -123,8 +144,8 @@ void Smoothiepanel::setLed(int led, bool on){
 void Smoothiepanel::setLedBrightness(int led, int val){
     switch(led){
 //        case LED_FAN_ON: this->backlight_green = val; break; // on
-        case LED_HOTEND_ON: this->backlight_red = val; break; // on
-        case LED_BED_ON: this->backlight_blue = val; break; // on
+//        case LED_HOTEND_ON: this->backlight_red = val; break; // on
+//        case LED_BED_ON: this->backlight_blue = val; break; // on
     }
 }
 
@@ -160,7 +181,7 @@ uint8_t Smoothiepanel::readButtons(void) {
     //cmd[0] = ~cmd[0];
     if((cmd[0] & 0x10) > 0) button_bits |= BUTTON_SELECT; // encoder click
     if((cmd[0] & 0x02) > 0) button_bits |= BUTTON_LEFT; // back button
-//    if((cmd[0] & 0x01) > 0) button_bits |= BUTTON_AUX1; // play button
+    if((cmd[0] & 0x01) > 0) button_bits |= BUTTON_PAUSE; // play button
     if((cmd[0] & 0x20) > 0){ // wii accessory connected
         if(!this->wii_connected){
             this->wii->init_device();
@@ -194,11 +215,6 @@ uint8_t Smoothiepanel::readButtons(void) {
             }else this->wii_connected = false;
         }
     }else this->wii_connected = false;
-
-	// check the button pause
-//	button_pause.check_signal();
-//    this->setCursor(6, 4);
-//    this->printf("Buttons:  0x%02X", button_bits);
 
     // update the encoder color
     if(this->encoder_changed){

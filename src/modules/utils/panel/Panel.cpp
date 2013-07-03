@@ -89,6 +89,7 @@ void Panel::on_module_loaded(){
     this->down_button.up_attach(  this, &Panel::on_down );
     this->click_button.up_attach( this, &Panel::on_select );
     this->back_button.up_attach(  this, &Panel::on_back );
+    this->pause_button.up_attach( this, &Panel::on_pause );
 
     this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
     this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
@@ -181,6 +182,7 @@ void Panel::on_idle(void* argument){
         this->down_button.check_signal(but&BUTTON_DOWN);
         this->back_button.check_signal(but&BUTTON_LEFT);
         this->click_button.check_signal(but&BUTTON_SELECT);
+        this->pause_button.check_signal(but&BUTTON_PAUSE);
     }
     
     // If we are in menu mode and the position has changed
@@ -231,6 +233,17 @@ uint32_t Panel::on_select(uint32_t dummy){
     this->click_changed = true;
     this->idle_time= 0;
     lcd->buzz(60,300); // 50ms 300Hz
+    return 0;
+}
+
+uint32_t Panel::on_pause(uint32_t dummy){
+    if(!paused) {
+        THEKERNEL->pauser->take();
+        paused= true;
+    }else{
+        THEKERNEL->pauser->release();
+        paused= false;
+    }
     return 0;
 }
 

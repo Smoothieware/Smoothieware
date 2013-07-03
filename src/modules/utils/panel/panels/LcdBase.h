@@ -68,9 +68,9 @@ using namespace std;
 #define BUTTON_DOWN   0x04
 #define BUTTON_UP     0x08
 #define BUTTON_LEFT   0x10
-#define BUTTON_AUX1   0x20
-#define BUTTON_AUX2   0x40
-#define BUTTON_AUX3   0x80
+#define BUTTON_PAUSE  0x20
+#define BUTTON_AUX1   0x40
+#define BUTTON_AUX2   0x80
 
 class Panel;
 

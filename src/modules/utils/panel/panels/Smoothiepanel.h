@@ -123,11 +123,8 @@ class Smoothiepanel : public LcdBase {
         Pin interrupt_pin;
         Pin encoder_a_pin;
         Pin encoder_b_pin;    
-//        Button button_pause;
-//        uint32_t on_pause_release(uint32_t dummy);
         Wiichuck* wii;
         bool wii_connected;
-        bool paused;
         bool encoder_changed;
 };
 
