@@ -13,7 +13,8 @@ class MCP4451 : public DigipotBase {
         MCP4451(){
             // I2C com
             this->i2c = new mbed::I2C(p9, p10);
-            for (int i = 0; i < 4; i++)
+            this->i2c->frequency(20000);
+            for (int i = 0; i < 8; i++)
                 currents[i] = 0.0;
         }
         
@@ -24,15 +25,20 @@ class MCP4451 : public DigipotBase {
         void set_current( int channel, double current )
         {
             current = min( max( current, 0.0L ), 2.0L );
+            currents[channel] = current;
+            char addr = 0x58;
+            while(channel > 3){
+                addr += 0x02;
+                channel -= 4;
+            }
 
             // Initial setup
-            this->i2c_send( 0x58, 0x40, 0xff );
-            this->i2c_send( 0x58, 0xA0, 0xff );
+            this->i2c_send( addr, 0x40, 0xff );
+            this->i2c_send( addr, 0xA0, 0xff );
 
             // Set actual wiper value
-            char adresses[4] = { 0x00, 0x10, 0x60, 0x70 };
-            this->i2c_send( 0x58, adresses[channel], this->current_to_wiper(current) );
-            currents[channel] = current;
+            char addresses[4] = { 0x00, 0x10, 0x60, 0x70 };
+            this->i2c_send( addr, addresses[channel], this->current_to_wiper(current) );
         }
 
         double get_current(int channel)
@@ -55,7 +61,7 @@ class MCP4451 : public DigipotBase {
         }
 
         mbed::I2C* i2c;
-        double currents[4];
+        double currents[8];
 };
 
 

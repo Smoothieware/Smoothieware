@@ -11,6 +11,10 @@
 #define beta_current_checksum                   CHECKSUM("beta_current")
 #define gamma_current_checksum                  CHECKSUM("gamma_current")
 #define delta_current_checksum                  CHECKSUM("delta_current")
+#define epsilon_current_checksum                CHECKSUM("epsilon_current")
+#define zeta_current_checksum                   CHECKSUM("zeta_current")
+#define eta_current_checksum                    CHECKSUM("eta_current")
+#define theta_current_checksum                  CHECKSUM("theta_current")
 #define currentcontrol_module_enable_checksum   CHECKSUM("currentcontrol_module_enable")
 #define digipotchip_checksum                    CHECKSUM("digipotchip")
 
@@ -29,6 +33,10 @@ class CurrentControl : public Module {
         double beta_current;
         double gamma_current;
         double delta_current;
+        double epsilon_current;
+        double zeta_current;
+        double eta_current;
+        double theta_current;
 
         DigipotBase* digipot;
 };

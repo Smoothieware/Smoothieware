@@ -41,11 +41,21 @@ void CurrentControl::on_module_loaded(){
     this->beta_current  =           this->kernel->config->value(beta_current_checksum   )->by_default(0.8)->as_number();
     this->gamma_current =           this->kernel->config->value(gamma_current_checksum  )->by_default(0.8)->as_number();
     this->delta_current =           this->kernel->config->value(delta_current_checksum  )->by_default(0.8)->as_number();
+    this->epsilon_current =         this->kernel->config->value(epsilon_current_checksum)->by_default(-1)->as_number();
+    this->zeta_current  =           this->kernel->config->value(zeta_current_checksum   )->by_default(-1)->as_number();
+    this->eta_current =             this->kernel->config->value(eta_current_checksum    )->by_default(-1)->as_number();
+    this->theta_current =           this->kernel->config->value(theta_current_checksum  )->by_default(-1)->as_number();
 
     this->digipot->set_current(0, this->alpha_current);
     this->digipot->set_current(1, this->beta_current );
     this->digipot->set_current(2, this->gamma_current);
     this->digipot->set_current(3, this->delta_current);
+    if(this->epsilon_current >= 0){
+        this->digipot->set_current(4, this->epsilon_current);
+        this->digipot->set_current(5, this->zeta_current );
+        this->digipot->set_current(6, this->eta_current);
+        this->digipot->set_current(7, this->theta_current);
+    }
 
     this->register_for_event(ON_GCODE_RECEIVED);
 }
@@ -54,17 +64,17 @@ void CurrentControl::on_module_loaded(){
 void CurrentControl::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode*>(argument);
-    char alpha[4] = { 'X', 'Y', 'Z', 'E' };
+    char alpha[8] = { 'X', 'Y', 'Z', 'E', 'A', 'B', 'C', 'D' };
     if (gcode->has_m)
     {
         if (gcode->m == 907)
         {
             int i;
-            for (i = 0; i < 4; i++)
+            for (i = 0; i < 8; i++)
             {
                 if (gcode->has_letter(alpha[i]))
                     this->digipot->set_current(i, gcode->get_value(alpha[i]));
-                gcode->stream->printf("%c:%3.1fA%c", alpha[i], this->digipot->get_current(i), (i == 3)?'\n':' ');
+                gcode->stream->printf("%c:%3.1fA%c", alpha[i], this->digipot->get_current(i), (i == 7)?'\n':' ');
             }
         }
     }
