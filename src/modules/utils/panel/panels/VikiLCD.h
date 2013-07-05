@@ -27,7 +27,7 @@ using namespace std;
 // VikiLcd specific settings
 
 // readButtons() will only return these bit values 
-#define ALL_BUTTON_BITS (BUTTON_UP|BUTTON_DOWN|BUTTON_LEFT|BUTTON_RIGHT|BUTTON_SELECT)
+#define ALL_BUTTON_BITS (BUTTON_PAUSE|BUTTON_UP|BUTTON_DOWN|BUTTON_LEFT|BUTTON_RIGHT|BUTTON_SELECT)
 
 
 #define MCP23017_ADDRESS 0x20<<1
