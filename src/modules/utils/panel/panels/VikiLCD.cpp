@@ -63,9 +63,6 @@ VikiLCD::VikiLCD() {
     this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input();
 
     this->button_pause_pin.from_string(THEKERNEL->config->value( panel_checksum, button_pause_pin_checksum)->by_default("nc")->as_string())->as_input();
-
-    paused= false;
-    button_pause.pin(&this->button_pause_pin)->up_attach( this, &VikiLCD::on_pause_release);    
 }
 
 VikiLCD::~VikiLCD() {
@@ -199,7 +196,7 @@ uint8_t VikiLCD::readButtons(void) {
     i2c->read(this->i2c_address, data, 1);       // Read from selected Register
 
     // check the button pause
-    button_pause.check_signal();
+    if(this->button_pause_pin.get()) data[0] |= BUTTON_PAUSE;
     
     return (~data[0]) & ALL_BUTTON_BITS;
 }
@@ -396,16 +393,4 @@ void VikiLCD::send(uint8_t value, uint8_t mode) {
     // resend w/ EN turned off
     buf &= ~(M17_BIT_EN >> 8);
     burstBits8b(buf);
-}
-
-// We pause the system
-uint32_t VikiLCD::on_pause_release(uint32_t dummy){
-    if(!paused) {
-        THEKERNEL->pauser->take();
-        paused= true;
-    }else{
-        THEKERNEL->pauser->release();
-        paused= false;
-    }
-    return 0;
 }
