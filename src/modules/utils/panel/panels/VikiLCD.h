@@ -27,7 +27,7 @@ using namespace std;
 // VikiLcd specific settings
 
 // readButtons() will only return these bit values 
-#define ALL_BUTTON_BITS (BUTTON_UP|BUTTON_DOWN|BUTTON_LEFT|BUTTON_RIGHT|BUTTON_SELECT)
+#define ALL_BUTTON_BITS (BUTTON_PAUSE|BUTTON_UP|BUTTON_DOWN|BUTTON_LEFT|BUTTON_RIGHT|BUTTON_SELECT)
 
 
 #define MCP23017_ADDRESS 0x20<<1
@@ -116,9 +116,6 @@ class VikiLCD : public LcdBase {
         Pin encoder_a_pin;
         Pin encoder_b_pin;    
         Pin button_pause_pin;
-        Button button_pause;
-        uint32_t on_pause_release(uint32_t dummy);
-        bool paused;
 };
 
 
