@@ -116,9 +116,6 @@ class VikiLCD : public LcdBase {
         Pin encoder_a_pin;
         Pin encoder_b_pin;    
         Pin button_pause_pin;
-        Button button_pause;
-        uint32_t on_pause_release(uint32_t dummy);
-        bool paused;
 };
 
 
