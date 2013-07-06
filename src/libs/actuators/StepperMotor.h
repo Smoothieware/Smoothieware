@@ -10,13 +10,15 @@
 
 #include "libs/Kernel.h"
 #include "libs/Hook.h"
+#include "libs/actuators/Actuator.h"
 
 class StepTicker;
 
-class StepperMotor {
+class StepperMotor : public Actuator {
     public:
-        StepperMotor();
+        //StepperMotor();
         StepperMotor(Pin* step, Pin* dir, Pin* en);
+
         void tick();
         void step();
         void move_finished();
@@ -28,25 +30,6 @@ class StepperMotor {
         void unpause();
 
 
-
-        template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
-            Hook* hook = new Hook();
-            hook->attach(optr, fptr);
-            this->end_hook = hook;
-        }
-
-        template<typename T> void attach_signal_step(uint32_t step, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
-            this->step_signal_hook->attach(optr, fptr);
-            this->signal_step_number = step;
-            this->signal_step = true;
-        }
-
-        Hook* end_hook;
-        Hook* step_signal_hook;
-
-        bool signal_step;
-        uint32_t signal_step_number;
-
         StepTicker* step_ticker;
         Pin* step_pin;
         Pin* dir_pin;
@@ -57,15 +40,11 @@ class StepperMotor {
         volatile bool moving;
         bool paused;
 
-        //bool direction_bit;
-        //bool step_bit;
-
         uint32_t steps_to_move;
         uint32_t stepped;
         uint32_t fx_counter;
         uint32_t fx_ticks_per_step;
 
-        //bool exit_tick;
         bool remove_from_active_list_next_reset;
 
         bool is_move_finished; // Whether the move just finished

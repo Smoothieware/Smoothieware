@@ -6,24 +6,12 @@
 */
 #include "mri.h"
 #include "libs/Kernel.h"
-#include "StepperMotor.h"
+#include "libs/actuators/StepperMotor.h"
+#include "libs/actuators/Actuator.h"
 #include "MRI_Hooks.h"
 
 // A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
 // TODO : Abstract this into Actuator
-
-StepperMotor::StepperMotor(){
-    this->moving = false;
-    this->paused = false;
-    this->fx_counter = 0;
-    this->stepped = 0;
-    this->fx_ticks_per_step = 0;
-    this->steps_to_move = 0;
-    this->remove_from_active_list_next_reset = false;
-    this->is_move_finished = false;
-    this->signal_step = false;
-    this->step_signal_hook = new Hook();
-}
 
 StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
     this->moving = false;
