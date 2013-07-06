@@ -126,8 +126,8 @@ gamma_homing_retract                         5000              # "
 pause_button_enable                          true             #
 
 # Panel
-panel.enable                                 false             # set to true to enabel the panel code
-panel.lcd                                    viki_lcd          # set type of panel also i2c_lcd is a generic i2c panel
+panel.enable                                 false             # set to true to enable the panel code
+panel.lcd                                    smoothiepanel     # set type of panel also viki_lcd, i2c_lcd is a generic i2c panel, panelolu2 
 panel.encoder_a_pin                          0.15!^            # encoder pin if used
 panel.encoder_b_pin                          0.17!^            # encoder pin if used
 panel.menu_offset                            0                 # some panels will need 1 here
