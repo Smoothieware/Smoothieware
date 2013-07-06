@@ -15,7 +15,7 @@ using namespace std;
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "libs/StepperMotor.h"
+#include "libs/actuators/StepperMotor.h"
 
 class StepTicker{
     public:

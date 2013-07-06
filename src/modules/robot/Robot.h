@@ -16,7 +16,7 @@ using std::string;
 #include "arm_solutions/BaseSolution.h"
 #include "Planner.h"
 #include "libs/Pin.h"
-#include "libs/StepperMotor.h"
+#include "libs/actuators/StepperMotor.h"
 #include "RobotPublicAccess.h"
 
 #define default_seek_rate_checksum             CHECKSUM("default_seek_rate")

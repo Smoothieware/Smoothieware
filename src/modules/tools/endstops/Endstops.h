@@ -11,7 +11,7 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
-#include "libs/StepperMotor.h"
+#include "libs/actuators/StepperMotor.h"
 #include "libs/Pin.h"
 
 #define ALPHA_AXIS 0
