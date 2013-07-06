@@ -42,10 +42,7 @@ void Panel::on_module_loaded(){
         return;
     } 
 
-    // Register for events
-    this->register_for_event(ON_IDLE);
-    this->register_for_event(ON_MAIN_LOOP);
-
+  
     // Initialise the LCD, see which LCD to use
     if (this->lcd != NULL) delete this->lcd;
     int lcd_cksm = get_checksum(this->kernel->config->value(panel_checksum, lcd_checksum)->by_default("i2c")->as_string());
@@ -99,9 +96,12 @@ void Panel::on_module_loaded(){
     this->top_screen->set_panel(this);
     this->enter_screen(this->top_screen->watch_screen); // default first screen is watch screen even though its parent is Mainmenu
     
+    // Register for events
+    this->register_for_event(ON_IDLE);
+    this->register_for_event(ON_MAIN_LOOP);
+
     // Refresh timer
     this->kernel->slow_ticker->attach( 20, this, &Panel::refresh_tick );
-
 }
 
 // Enter a screen, we only care about it now
