@@ -10,6 +10,7 @@
 #include "modules/robot/Conveyor.h"
 #include "modules/robot/Block.h"
 #include "modules/tools/extruder/Extruder.h"
+#include "libs/actuators/StepperMotor.h"
 #include <mri.h>
 
 /* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling

@@ -28,24 +28,11 @@ class StepperMotor : public Actuator {
         void update_exit_tick();
         void pause();
         void unpause();
-
-
+ 
         StepTicker* step_ticker;
         Pin* step_pin;
         Pin* dir_pin;
         Pin* en_pin;
-
-        double steps_per_second;
-
-        volatile bool moving;
-        bool paused;
-
-        uint32_t steps_to_move;
-        uint32_t stepped;
-        uint32_t fx_counter;
-        uint32_t fx_ticks_per_step;
-
-        bool remove_from_active_list_next_reset;
 
         bool is_move_finished; // Whether the move just finished
 };

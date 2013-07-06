@@ -11,7 +11,7 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
-#include "libs/actuators/StepperMotor.h"
+#include "libs/actuators/Actuator.h"
 #include "libs/Pin.h"
 
 #define ALPHA_AXIS 0
@@ -70,7 +70,7 @@ class Endstops : public Module{
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
 
-        StepperMotor* steppers[3];
+        Actuator* steppers[3];
         Pin           pins[6];
         double  slow_rates[3];
         double  fast_rates[3];

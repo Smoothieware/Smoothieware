@@ -71,7 +71,7 @@ void StepTicker::set_reset_delay( double seconds ){
 }
 
 // Add a stepper motor object to our list of steppers we must take care of
-StepperMotor* StepTicker::add_stepper_motor(StepperMotor* stepper_motor){
+Actuator* StepTicker::add_stepper_motor(Actuator* stepper_motor){
     this->stepper_motors.push_back(stepper_motor);
     stepper_motor->step_ticker = this;
     this->has_axes = true;
@@ -222,7 +222,7 @@ extern "C" void TIMER0_IRQHandler (void){
 
 
 // We make a list of steppers that want to be called so that we don't call them for nothing
-void StepTicker::add_motor_to_active_list(StepperMotor* motor)
+void StepTicker::add_motor_to_active_list(Actuator* motor)
 {
     uint32_t bm;
     int i;
@@ -250,7 +250,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
 }
 
 // Remove a stepper from the list of active motors
-void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
+void StepTicker::remove_motor_from_active_list(Actuator* motor)
 {
     uint32_t bm; int i;
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)

@@ -13,7 +13,7 @@
 #include "modules/robot/Conveyor.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
-#include "libs/actuators/StepperMotor.h"
+#include "libs/actuators/Actuator.h"
 
 #include "libs/Pin.h"
 
@@ -32,7 +32,7 @@ class Touchprobe: public Module {
 
         FILE*          logfile;
         string         filename;
-        StepperMotor*  steppers[3];
+        Actuator*  steppers[3];
         Pin            pin;
         unsigned int   debounce_count;
 

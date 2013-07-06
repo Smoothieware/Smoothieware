@@ -12,6 +12,7 @@
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+#include "libs/actuators/Actuator.h"
 #include "modules/robot/Block.h"
 
 #define microseconds_per_step_pulse_checksum CHECKSUM("microseconds_per_step_pulse")
@@ -74,7 +75,7 @@ class Extruder : public Module{
 
         bool paused;
 
-        StepperMotor* stepper_motor;
+        Actuator* stepper_motor;
 
 };
 

@@ -9,6 +9,7 @@
 #define STEPPER_H
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+#include "libs/actuators/Actuator.h"
 #include "Planner.h"
 #include "Block.h"
 
@@ -72,7 +73,7 @@ class Stepper : public Module {
         bool enable_pins_status;
         Hook* acceleration_tick_hook;
 
-        StepperMotor* main_stepper;
+        Actuator* main_stepper;
 
 };
 
