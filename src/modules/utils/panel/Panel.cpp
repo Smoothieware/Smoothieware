@@ -52,6 +52,10 @@ void Panel::on_module_loaded(){
         this->lcd = new I2CLCD();
     }else if(lcd_cksm == viki_lcd_checksum) {
         this->lcd = new VikiLCD();
+        this->lcd->set_variant(0);
+    }else if(lcd_cksm == panelolu2_checksum) {
+        this->lcd = new VikiLCD();
+        this->lcd->set_variant(1);
     }else if(lcd_cksm == smoothiepanel_checksum) {
         this->lcd = new Smoothiepanel();
     }else{
