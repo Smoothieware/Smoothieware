@@ -196,9 +196,17 @@ uint8_t VikiLCD::readButtons(void) {
     i2c->read(this->i2c_address, data, 1);       // Read from selected Register
 
     // check the button pause
-    if(this->button_pause_pin.get()) data[0] |= BUTTON_PAUSE;
+    if(this->button_pause_pin.connected() && this->button_pause_pin.get()) data[0] |= BUTTON_PAUSE;
     
-    return (~data[0]) & ALL_BUTTON_BITS;
+    // if it is the variant Panelolu2 swap the buttons around
+    if(this->isPanelolu2) {
+        // the select button bit is on GPA2 not GPA0
+        if((data[0]&M17_BIT_B2) == 0) return BUTTON_SELECT;
+        return 0; // only one button on Panelolu2 ignore the ena_a and en_b
+
+    } else {
+        return (~data[0]) & ALL_BUTTON_BITS;
+    }
 }
 
 int VikiLCD::readEncoderDelta() {

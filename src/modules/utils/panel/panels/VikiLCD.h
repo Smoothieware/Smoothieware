@@ -29,7 +29,6 @@ using namespace std;
 // readButtons() will only return these bit values 
 #define ALL_BUTTON_BITS (BUTTON_PAUSE|BUTTON_UP|BUTTON_DOWN|BUTTON_LEFT|BUTTON_RIGHT|BUTTON_SELECT)
 
-
 #define MCP23017_ADDRESS 0x20<<1
 
 // registers
@@ -85,7 +84,9 @@ class VikiLCD : public LcdBase {
         
         // this is the number of clicks per detent
         int getEncoderResolution() { return 2; }
-
+        
+        void set_variant(int n) { isPanelolu2= (n==1); }
+     
         void buzz(long,uint16_t);
         void noCursor();
         void cursor();
@@ -116,6 +117,7 @@ class VikiLCD : public LcdBase {
         Pin encoder_a_pin;
         Pin encoder_b_pin;    
         Pin button_pause_pin;
+        bool isPanelolu2;
 };
 
 
