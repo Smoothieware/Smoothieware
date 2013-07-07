@@ -21,7 +21,6 @@ class StepperMotor : public Actuator {
 
         void tick();
         void step();
-        void move_finished();
         void move( bool direction, unsigned int steps );
         void signal_move_finished();
         void set_speed( double speed );

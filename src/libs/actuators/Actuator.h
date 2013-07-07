@@ -18,17 +18,17 @@ class StepTicker;
 class Actuator {
     public:
         Actuator(){};
+        virtual ~Actuator(){};
 
         /* Functions all actuators must have are still to be defined, but here are a few bellow for a start */
-        void tick(){};
-        void step(){};
-        void move_finished(){};
-        void move( bool direction, unsigned int steps ){};
-        void signal_move_finished(){};
-        void set_speed( double speed ){};
-        void update_exit_tick(){};
-        void pause(){};
-        void unpause(){};
+        virtual void tick()=0;
+        virtual void step()=0;
+        virtual void move( bool direction, unsigned int steps )=0;
+        virtual void signal_move_finished()=0;
+        virtual void set_speed( double speed )=0;
+        virtual void update_exit_tick()=0;
+        virtual void pause()=0;
+        virtual void unpause()=0;
 
         template<typename t> void attach( t *optr, uint32_t ( t::*fptr )( uint32_t ) ){
             Hook* hook = new Hook();
