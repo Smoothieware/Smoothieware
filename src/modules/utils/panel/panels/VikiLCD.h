@@ -75,7 +75,8 @@ class VikiLCD : public LcdBase {
         void setCursor(uint8_t col, uint8_t row);
         void init();
         void write(char value);
-
+        void on_refresh();
+        
         // added viki commands
         void setLed(int led, bool onoff); 
 

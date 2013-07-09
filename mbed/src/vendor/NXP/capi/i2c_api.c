@@ -69,6 +69,8 @@ static const uint32_t I2C_addr_offset[2][4] = {
     {0x30, 0x34, 0x38, 0x3C}
 };
 
+static int i2c_timed_out= 0;
+
 static void i2c_conclr(i2c_t *obj, int start, int stop, int interrupt, int acknowledge) {
     I2C_CONCLR(obj) = (start << 5)
                     | (stop << 4)
@@ -166,13 +168,23 @@ int i2c_start(i2c_t *obj) {
     return status;
 }
 
-void i2c_stop(i2c_t *obj) {
+int i2c_stop(i2c_t *obj) {
+	int timeout = 0;
+
     // write the stop bit
     i2c_conset(obj, 0, 1, 0, 0);
     i2c_clear_SI(obj);
 
     // wait for STO bit to reset
-    while(I2C_CONSET(obj) & (1 << 4));
+    //while(I2C_CONSET(obj) & (1 << 4));
+	while(I2C_CONSET(obj) & (1 << 4)) {
+		timeout ++;
+		if (timeout > 100000){
+            i2c_timed_out++;
+            return 1;
+        }
+	}
+	return 0;
 }
 
 
@@ -276,7 +288,8 @@ int i2c_read(i2c_t *obj, int address, char *data, int length, int stop) {
 
     // If not repeated start, send stop.
     if (stop) {
-        i2c_stop(obj);
+        if(i2c_stop(obj) == 1)
+            return 1;
     }
 
     return 0;
@@ -309,7 +322,8 @@ int i2c_write(i2c_t *obj, int address, const char *data, int length, int stop) {
     i2c_clear_SI(obj);
 
     if (stop) {
-        i2c_stop(obj);
+      if(i2c_stop(obj) == 1)
+            return 1;       
     }
 
     return 0;
@@ -343,6 +357,14 @@ int i2c_byte_write(i2c_t *obj, int data) {
     }
 
     return ack;
+}
+
+int i2c_is_timed_out() {
+    if(i2c_timed_out > 0) {
+        i2c_timed_out= 0;
+        return 1;
+    }
+    return 0;
 }
 
 #if DEVICE_I2CSLAVE

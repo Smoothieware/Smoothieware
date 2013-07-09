@@ -209,6 +209,17 @@ uint8_t VikiLCD::readButtons(void) {
     }
 }
 
+void VikiLCD::on_refresh(){
+    // FIXME this is a hack to get around I2C noise
+    // Update Only every 20 refreshes, 1 a second
+    static int update_counts = 0;
+    update_counts++;
+    if( update_counts % 20 == 0 && i2c->is_timed_out()) {
+        // if there was a timeout on i2c then reset the lcd
+        this->init();
+    }
+}
+
 int VikiLCD::readEncoderDelta() {
     static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
     static uint8_t old_AB = 0;

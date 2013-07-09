@@ -87,6 +87,9 @@ void I2C::stop(void) {
     i2c_stop(&_i2c);
 }
 
+bool I2C::is_timed_out() {
+    return i2c_is_timed_out() > 0;
+}
 } // namespace mbed
 
 #endif
