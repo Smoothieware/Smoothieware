@@ -15,7 +15,7 @@ using std::string;
 #include "Robot.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Pin.h"
-#include "libs/actuators/StepperMotor.h"
+#include "libs/StepperMotor.h"
 #include "../communication/utils/Gcode.h"
 #include "PublicDataRequest.h"
 #include "arm_solutions/BaseSolution.h"

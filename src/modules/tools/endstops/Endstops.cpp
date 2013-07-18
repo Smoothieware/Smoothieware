@@ -12,7 +12,7 @@
 #include "Endstops.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Pin.h"
-#include "libs/actuators/Actuator.h"
+#include "libs/StepperMotor.h"
 #include "wait_api.h" // mbed.h lib
 
 Endstops::Endstops(){

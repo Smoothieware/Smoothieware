@@ -15,7 +15,7 @@ using namespace std;
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "libs/actuators/Actuator.h"
+#include "libs/StepperMotor.h"
 
 class StepTicker{
     public:
@@ -23,14 +23,14 @@ class StepTicker{
         void set_frequency( double frequency );
         void tick();
         void signal_moves_finished();
-        Actuator* add_stepper_motor(Actuator* stepper_motor);
+        StepperMotor* add_stepper_motor(StepperMotor* stepper_motor);
         void set_reset_delay( double seconds );
         void reset_tick();
-        void add_motor_to_active_list(Actuator* motor);
-        void remove_motor_from_active_list(Actuator* motor);
+        void add_motor_to_active_list(StepperMotor* motor);
+        void remove_motor_from_active_list(StepperMotor* motor);
 
         double frequency;
-        vector<Actuator*> stepper_motors;
+        vector<StepperMotor*> stepper_motors;
         uint32_t delay;
         uint32_t period;
         uint32_t debug;
@@ -40,7 +40,7 @@ class StepTicker{
         bool moves_finished;
         bool reset_step_pins;
 
-        Actuator* active_motors[12];
+        StepperMotor* active_motors[12];
         uint32_t active_motor_bm;
 
 };

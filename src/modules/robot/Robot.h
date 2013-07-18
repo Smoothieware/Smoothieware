@@ -16,7 +16,7 @@ using std::string;
 #include "arm_solutions/BaseSolution.h"
 #include "Planner.h"
 #include "libs/Pin.h"
-#include "libs/actuators/Actuator.h"
+#include "libs/StepperMotor.h"
 #include "RobotPublicAccess.h"
 
 #define default_seek_rate_checksum             CHECKSUM("default_seek_rate")
@@ -120,9 +120,9 @@ class Robot : public Module {
         Pin gamma_dir_pin;
         Pin gamma_en_pin;
 
-        Actuator* alpha_stepper_motor;
-        Actuator* beta_stepper_motor;
-        Actuator* gamma_stepper_motor;
+        StepperMotor* alpha_stepper_motor;
+        StepperMotor* beta_stepper_motor;
+        StepperMotor* gamma_stepper_motor;
 
         double seconds_per_minute;                            // for realtime speed change
 };

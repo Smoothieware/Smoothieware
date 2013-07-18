@@ -13,8 +13,7 @@
 #include "modules/robot/Conveyor.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
-#include "libs/actuators/Actuator.h"
-
+#include "libs/StepperMotor.h"
 #include "libs/Pin.h"
 
 #define touchprobe_enable_checksum           CHECKSUM("touchprobe_enable")
@@ -32,7 +31,7 @@ class Touchprobe: public Module {
 
         FILE*          logfile;
         string         filename;
-        Actuator*  steppers[3];
+        StepperMotor*  steppers[3];
         Pin            pin;
         unsigned int   debounce_count;
 

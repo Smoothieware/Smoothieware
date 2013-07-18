@@ -5,38 +5,37 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef ACTUATOR_H
-#define ACTUATOR_H
+#ifndef STEPPERMOTOR_H
+#define STEPPERMOTOR_H
 
+#include "libs/Kernel.h"
 #include "libs/Hook.h"
-#include "libs/StepTicker.h"
-
-/* Actuator is the base class for all actuator-type things ( StepperMotors, ServoMotors etc ). */
 
 class StepTicker;
 
-class Actuator {
+class StepperMotor {
     public:
-        Actuator(){};
-        virtual ~Actuator(){};
+        StepperMotor();
+        StepperMotor(Pin* step, Pin* dir, Pin* en);
+        void tick();
+        void step();
+        void move_finished();
+        void move( bool direction, unsigned int steps );
+        void signal_move_finished();
+        void set_speed( double speed );
+        void update_exit_tick();
+        void pause();
+        void unpause();
 
-        /* Functions all actuators must have are still to be defined, but here are a few bellow for a start */
-        virtual void tick()=0;
-        virtual void step()=0;
-        virtual void move( bool direction, unsigned int steps )=0;
-        virtual void signal_move_finished()=0;
-        virtual void set_speed( double speed )=0;
-        virtual void update_exit_tick()=0;
-        virtual void pause()=0;
-        virtual void unpause()=0;
 
-        template<typename t> void attach( t *optr, uint32_t ( t::*fptr )( uint32_t ) ){
+
+        template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook();
             hook->attach(optr, fptr);
             this->end_hook = hook;
         }
 
-        template<typename t> void attach_signal_step(uint32_t step, t *optr, uint32_t ( t::*fptr )( uint32_t ) ){
+        template<typename T> void attach_signal_step(uint32_t step, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             this->step_signal_hook->attach(optr, fptr);
             this->signal_step_number = step;
             this->signal_step = true;
@@ -48,30 +47,43 @@ class Actuator {
         bool signal_step;
         uint32_t signal_step_number;
 
-        double steps_per_second;
-
-        volatile bool moving;
-        bool paused;
-
-        uint32_t steps_to_move;
- 
         StepTicker* step_ticker;
         Pin* step_pin;
         Pin* dir_pin;
         Pin* en_pin;
 
+        double steps_per_second;
 
-       uint32_t stepped;
+        volatile bool moving;
+        bool paused;
+
+        //bool direction_bit;
+        //bool step_bit;
+
+        uint32_t steps_to_move;
+        uint32_t stepped;
         uint32_t fx_counter;
         uint32_t fx_ticks_per_step;
 
+        //bool exit_tick;
         bool remove_from_active_list_next_reset;
 
         bool is_move_finished; // Whether the move just finished
-
-
 };
+
+
+// Called a great many times per second, to step if we have to now
+inline void StepperMotor::tick(){
+
+    // increase the ( fixed point ) counter by one tick 11t
+    this->fx_counter += (uint32_t)(1<<16);
+
+    // if we are to step now 10t
+    if( this->fx_counter >= this->fx_ticks_per_step ){ this->step(); }
+
+}
 
 
 
 #endif
+
