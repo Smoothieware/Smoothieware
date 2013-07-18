@@ -187,6 +187,11 @@ void Panel::on_idle(void* argument){
         this->back_button.check_signal(but&BUTTON_LEFT);
         this->click_button.check_signal(but&BUTTON_SELECT);
         this->pause_button.check_signal(but&BUTTON_PAUSE);
+
+        // for debugging
+        if(but&BUTTON_RIGHT) {
+            lcd->init();    
+        }
     }
     
     // If we are in menu mode and the position has changed
