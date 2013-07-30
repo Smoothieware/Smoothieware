@@ -105,6 +105,7 @@ class LcdBase {
         virtual void setLed(int led, bool onoff){};
         virtual void setLedBrightness(int led, int val){};
         virtual void buzz(long,uint16_t){};
+        virtual void writeDone(){};
 
         // only used on certain panels
         virtual void on_refresh(){};

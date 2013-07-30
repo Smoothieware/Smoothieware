@@ -19,6 +19,7 @@ using namespace std;
 #include "panels/I2CLCD.h"
 #include "panels/VikiLCD.h"
 #include "panels/Smoothiepanel.h"
+#include "panels/ReprapDiscountGLCD.h"
 
 Panel::Panel(){
     this->counter_changed = false;
@@ -58,6 +59,8 @@ void Panel::on_module_loaded(){
         this->lcd->set_variant(1);
     }else if(lcd_cksm == smoothiepanel_checksum) {
         this->lcd = new Smoothiepanel();
+    }else if(lcd_cksm == rrd_glcd_checksum) {
+        this->lcd = new ReprapDiscountGLCD();
     }else{
         // no lcd type defined
         return;

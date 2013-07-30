@@ -24,6 +24,7 @@
 #define viki_lcd_checksum          CHECKSUM("viki_lcd")
 #define smoothiepanel_checksum     CHECKSUM("smoothiepanel")
 #define panelolu2_checksum         CHECKSUM("panelolu2")
+#define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 
 #define menu_offset_checksum       CHECKSUM("menu_offset")
 #define jog_x_feedrate_checksum    CHECKSUM("alpha_jog_feedrate")

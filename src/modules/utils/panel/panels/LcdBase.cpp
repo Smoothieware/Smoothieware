@@ -20,6 +20,8 @@ int LcdBase::printf(const std::string format, ...){
 	for(unsigned int i=0; i < message.size(); i++){
 		this->write(message.at(i)); 
 	}
+	this->writeDone();
+	
 	delete[] buffer;
 	return 0;
 }
