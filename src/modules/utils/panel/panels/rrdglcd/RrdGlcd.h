@@ -37,7 +37,6 @@ public:
     void initDisplay(void);
     void clearScreen(void);
     void displayString(int Row, int Column, const char *ptr, int length);
-    void displayChar(int Row, int Column,char inpChr);
     void refresh();
 
      /**
@@ -52,8 +51,12 @@ public:
 private:
     Pin cs;
     mbed::SPI* spi;
+    void renderChar(uint8_t *fb, char c, int ox, int oy);
+    void displayChar(int Row, int Column,char inpChr);
+
     uint8_t fb[1024];
     bool inited;
+    bool dirty;
 };
 #endif
 

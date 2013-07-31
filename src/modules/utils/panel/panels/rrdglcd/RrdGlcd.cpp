@@ -276,6 +276,7 @@ RrdGlcd::RrdGlcd(PinName mosi, PinName sclk, Pin cs) {
     this->cs= cs;
     this->cs.set(0);
     inited= false;
+    dirty= false;
 }
 
 RrdGlcd::~RrdGlcd() {
@@ -311,6 +312,7 @@ void RrdGlcd::initDisplay() {
 
 void RrdGlcd::clearScreen() {
     memset(this->fb, 0, sizeof(fb));
+    dirty= true;
 }
 
 // render into local screenbuffer
@@ -319,9 +321,10 @@ void RrdGlcd::displayString(int row, int col, const char *ptr, int length) {
         displayChar(row, col, ptr[i]);
         col+=1;
     }
+    dirty= true;
 }
 
-static void renderChar(uint8_t *fb, char c, int ox, int oy) {
+void RrdGlcd::renderChar(uint8_t *fb, char c, int ox, int oy) {
     int i= c*5;
     for(int y=0;y<8;y++) {
       for(int x=0;x<5;x++) {
@@ -361,6 +364,7 @@ void RrdGlcd::fillGDRAM(const uint8_t *bitmap) {
 }
 
 void RrdGlcd::refresh() {
-    if(!inited) return;
+    if(!inited || !dirty) return;
     fillGDRAM(this->fb);
+    dirty= false;
 }
