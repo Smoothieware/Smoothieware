@@ -123,6 +123,7 @@ class Panel : public Module {
         volatile bool do_buttons;
         bool paused;
         int idle_time;
+        bool start_up;
         int encoder_click_resolution;
         char mode;
         uint16_t screen_lines;

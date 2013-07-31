@@ -31,16 +31,10 @@ ReprapDiscountGLCD::ReprapDiscountGLCD() {
 
     int spi_frequency = THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(1000000)->as_number();
     this->glcd->setFrequency(spi_frequency);
-
-    char_buffer.clear();
 }
 
 ReprapDiscountGLCD::~ReprapDiscountGLCD() {
     delete this->glcd;
-}
-
-int getEncoderResolution() {
-    return 2;
 }
 
 uint8_t ReprapDiscountGLCD::readButtons() {
@@ -75,25 +69,21 @@ void ReprapDiscountGLCD::buzz(long duration, uint16_t freq) {
     }
 }
 
-// we buffer the characters due to the way the glcd does things
 void ReprapDiscountGLCD::ReprapDiscountGLCD::write(char value){
-    char_buffer.append(1, value);
+    this->glcd->displayString(this->row, this->col, &value, 1);
+    this->col++;
 }
 
 void ReprapDiscountGLCD::writeDone(){
-    this->glcd->displayString(this->row, this->col, char_buffer.c_str(), char_buffer.size());
-    char_buffer.clear();
 }
 
 void ReprapDiscountGLCD::home(){
-    this->glcd->returnHome();
     this->col= 0;
     this->row= 0;
 }
 
 void ReprapDiscountGLCD::clear(){
     this->glcd->clearScreen();
-    char_buffer.clear();
     this->col= 0;
     this->row= 0;
 }
@@ -109,4 +99,14 @@ void ReprapDiscountGLCD::setCursor(uint8_t col, uint8_t row){
 
 void ReprapDiscountGLCD::init(){
     this->glcd->initDisplay();
+}
+
+void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *glyph) {
+    // TODO
+}
+
+void ReprapDiscountGLCD::on_refresh(){
+    static int refresh_counts = 0;
+    refresh_counts++;
+    if( refresh_counts % 10 == 0 ) this->glcd->refresh();
 }

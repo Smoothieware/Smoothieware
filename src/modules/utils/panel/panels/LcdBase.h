@@ -79,7 +79,7 @@ class LcdBase {
         LcdBase();
         virtual ~LcdBase();
         virtual void init()= 0;
-        int printf(const std::string format, ...);
+        int printf(const char* format, ...);
 
         void setPanel(Panel* p) { panel= p; }
         
@@ -106,11 +106,13 @@ class LcdBase {
         virtual void setLedBrightness(int led, int val){};
         virtual void buzz(long,uint16_t){};
         virtual void writeDone(){};
+        virtual bool hasGraphics() { return false; }
+        virtual void bltGlyph(int x, int y, const uint8_t *glyph, int size){};
 
         // only used on certain panels
         virtual void on_refresh(){};
         virtual void on_main_loop(){};
-        // override this if the panel can hndle more or less screen lines
+        // override this if the panel can handle more or less screen lines
         virtual uint16_t get_screen_lines() { return 4; }
         // used to set a variant for a panel (like viki vs panelolou2)
         virtual void set_variant(int n) {};

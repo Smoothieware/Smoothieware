@@ -28,8 +28,10 @@ class ReprapDiscountGLCD : public LcdBase {
         ReprapDiscountGLCD();
         virtual ~ReprapDiscountGLCD();
 
-        int getEncoderResolution() { return 4; }
-        
+        int getEncoderResolution() { return 2; }
+        bool hasGraphics() { return false; }
+        uint16_t get_screen_lines() { return 8; }
+
         uint8_t readButtons();
         int readEncoderDelta();
         void write(char value);
@@ -40,12 +42,14 @@ class ReprapDiscountGLCD : public LcdBase {
         void setCursor(uint8_t col, uint8_t row);
         void init();
         void buzz(long,uint16_t);
+        // blit a glyph of w pixels wide and h pixels high to x,y. The glyph will be zero left padded bytes from top left to bottom right
+        void bltGlyph(int x, int y, int w, int h, const uint8_t *glyph);
+        void on_refresh();
 
     private:
         RrdGlcd* glcd;
         uint8_t col;
         uint8_t row;
-        string char_buffer;
 
         Pin spi_cs_pin;
         Pin encoder_a_pin;
