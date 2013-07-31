@@ -333,8 +333,10 @@ void Smoothiepanel::command(uint8_t value) {
     lcdbang_write(*this->i2c, value, true);
 }
 
-void Smoothiepanel::write(char value) {
-    lcdbang_write(*this->i2c, value);
+void Smoothiepanel::write(const char* line, int len) {
+    for (int i = 0; i < len; ++i) {
+        lcdbang_write(*this->i2c, *line++);
+    }
 }
 
 // Allows to set the backlight, if the LCD backpack is used

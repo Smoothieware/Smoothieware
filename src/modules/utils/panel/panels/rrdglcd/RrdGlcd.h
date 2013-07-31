@@ -27,7 +27,6 @@ public:
     *@param sclk mbed name for sclk
     *@param cd Smoothie Pin for cs
     *@return none
-    *@  ----> pin PSB @ Gnd for Serial/SPI bus mode.
     */
     RrdGlcd (PinName mosi, PinName sclk, Pin cs);
 
@@ -35,33 +34,9 @@ public:
 
     void setFrequency(int f);
 
-    /**
-     *@brief Display initialization
-     *
-     *@param none
-     *@return none
-     *
-     */
     void initDisplay(void);
-
     void clearScreen(void);
-
-    /**
-    *@brief Places a string on the screen with internal characters from the HCGROM
-    *@
-    *@param row, column, string
-    *@return none
-    *
-    */
-    void displayString(int Row,int Column, const char *ptr,int length);
-
-    /**
-    *@brief Places a character on the screen with an internal character from the HCGROM
-    *@
-    *@param row, column, character
-    *@return none
-    *
-    */    
+    void displayString(int Row, int Column, const char *ptr, int length);
     void displayChar(int Row, int Column,char inpChr);
     void refresh();
 

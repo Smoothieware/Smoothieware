@@ -43,9 +43,6 @@ void PanelScreen::refresh_screen(bool clear){
     }
 }
 
-void PanelScreen::display_menu_line(uint16_t line){};
-
-
 PanelScreen* PanelScreen::set_parent(PanelScreen* passed_parent){
     this->parent = passed_parent;
     this->set_panel( passed_parent->panel );

@@ -165,19 +165,26 @@ void Panel::on_idle(void* argument){
         this->lcd->init();
 
         if(this->lcd->hasGraphics()) {
-      
+            // TODO display nifty graphics startup screen
+
         }else{
+            Version v;
+            string build(v.get_build());
+            string date(v.get_build_date());
             this->lcd->clear();
-            this->lcd->setCursor(0,0); this->lcd->printf("Smoothie");
-            Version vers;
-            this->lcd->setCursor(0,1); this->lcd->printf("Build %s", vers.get_build());
-            this->lcd->setCursor(0,2); this->lcd->printf("Date %s",  vers.get_build_date());
+            this->lcd->setCursor(0,0); this->lcd->printf("Welcome to Smoothie");
+            this->lcd->setCursor(0,1); this->lcd->printf("%s", build.substr(0, 20).c_str());
+            this->lcd->setCursor(0,2); this->lcd->printf("%s", date.substr(0, 20).c_str());
+            this->lcd->setCursor(0,3); this->lcd->printf("Please wait....");
         }
+
+        this->lcd->on_refresh(true); // tell lcd to display now
 
         // Default top screen
         this->top_screen = new MainMenuScreen();
         this->top_screen->set_panel(this);
         this->start_up= false;
+        this->idle_time= 20*3; // only show for 2 seconds
     }
 
     // after being idle for a while switch to Watch screen

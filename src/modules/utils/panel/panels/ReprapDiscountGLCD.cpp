@@ -69,12 +69,11 @@ void ReprapDiscountGLCD::buzz(long duration, uint16_t freq) {
     }
 }
 
-void ReprapDiscountGLCD::ReprapDiscountGLCD::write(char value){
-    this->glcd->displayString(this->row, this->col, &value, 1);
-    this->col++;
-}
-
-void ReprapDiscountGLCD::writeDone(){
+void ReprapDiscountGLCD::write(const char* line, int len) {
+    for (int i = 0; i < len; ++i) {
+        this->glcd->displayString(this->row, this->col, line, len);
+    }
+    this->col+=len;
 }
 
 void ReprapDiscountGLCD::home(){
@@ -105,8 +104,8 @@ void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *gly
     // TODO
 }
 
-void ReprapDiscountGLCD::on_refresh(){
+void ReprapDiscountGLCD::on_refresh(bool now){
     static int refresh_counts = 0;
     refresh_counts++;
-    if( refresh_counts % 10 == 0 ) this->glcd->refresh();
+    if(now || refresh_counts % 4 == 0 ) this->glcd->refresh();
 }

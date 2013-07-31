@@ -287,17 +287,8 @@ void RrdGlcd::setFrequency(int freq) {
 }
 
 void RrdGlcd::initDisplay() {
-    // wait_ms(40); // wait 40ms
-    // writeInstruction(FUNCTION_SET | DATA_LENGTH_DL); // 8 bits interface, RE=0
-    // writeInstruction(DISPLAY_CONTROL | DISPLAY_ON_D ); // display on
-    // writeInstruction(DISPLAY_CLEAR); // clear display
-    // wait_ms(2); // wait 2ms for clear
-    // writeInstruction(ENTRY_MODE_SET | INCREASE_DECREASE_ID); // move cursor right
-    // writeInstruction(RETURN_HOME);
-    // setGraphicsMode();
-    // wait_ms(100);
-
     ST7920_CS();
+    clearScreen();  // clear framebuffer
     wait_ms(90);                 //initial delay for boot up
     ST7920_SET_CMD();
     ST7920_WRITE_BYTE(0x08);       //display off, cursor+blink off
@@ -315,13 +306,11 @@ void RrdGlcd::initDisplay() {
     }
     ST7920_WRITE_BYTE(0x0C); //display on, cursor+blink off
     ST7920_NCS();
-    wait_ms(100);
-    memset(fb, 0, sizeof(fb));
     inited= true;
 }
 
 void RrdGlcd::clearScreen() {
-    memset(fb, 0, sizeof(fb));
+    memset(this->fb, 0, sizeof(fb));
 }
 
 // render into local screenbuffer
@@ -347,43 +336,11 @@ static void renderChar(uint8_t *fb, char c, int ox, int oy) {
 }
 
 void RrdGlcd::displayChar(int row, int col, char c) {
+    // convert row/column into y and x pixel positions based on font size
     renderChar(this->fb, c, col*6, row*8);
 }
-
-// static void draw(uint8_t *fb) {
-//   int ox= 0;
-//   int oy= 0;
-//   for(int c=' ';c<='z';c++) {
-//     int i= c*5;
-//     for(int y=0;y<8;y++) {
-//       for(int x=0;x<5;x++) {
-//         int b= font5x7[i+x];
-//         if((b & (1<<(y))) != 0){
-//             fb[(y+oy)*16 + (x+ox)/8] |= (1<<(8-(x+ox)%8-1));
-//         }
-//       }
-//     }
-//     ox += 6;
-//     if(ox >= 20*6){
-//       ox= 0;
-//       oy+=8;
-//     }
-//   }
-// }
-
-
-// static void draw(uint8_t *fb) {
-//     for (int i = 0; i < 1024; ++i) {
-//         *fb++ = 0x92;
-//     }
-// }
-
-void RrdGlcd::refresh() {
-    if(!inited) return;
-    fillGDRAM(this->fb);
-}
    
-// Graphic functions
+// copy frame buffer to graphic buffer on display
 void RrdGlcd::fillGDRAM(const uint8_t *bitmap) {
     unsigned char i, y;
     for ( i = 0 ; i < 2 ; i++ ) {
@@ -403,31 +360,7 @@ void RrdGlcd::fillGDRAM(const uint8_t *bitmap) {
     }
 }
 
-// void RrdGlcd::fillGDRAM_Turned(unsigned char *bitmap) {
-//     int i, j, k, m, offset_row, mask ;
-//     unsigned char data;
-
-//     for ( i = 0 ; i < 2 ; i++ ) { //upper and lower page
-//         for ( j = 0 ; j < 32 ; j++ ) { //32 lines per page
-//             writeInstruction(SET_GRAPHIC_RAM_ADDRESS | j) ;
-//             if ( i == 0 ) {
-//                 writeInstruction(SET_GRAPHIC_RAM_ADDRESS) ;
-//             } else {
-//                 writeInstruction(SET_GRAPHIC_RAM_ADDRESS | 0x08) ;
-//             }
-//             mask=1<<(j%8); // extract bitnumber
-//             //printf("mask: %d\r\n",mask);
-//             for ( k = 0 ; k < 16 ; k++ ) { //16 bytes per line
-//                 offset_row=((i*32+j)/8)*128 + k*8; //y coordinate/8 = row 0-7 * 128 = byte offset, read 8 bytes
-//                 data=0;
-//                 for (m = 0 ; m < 8 ; m++) { // read 8 bytes from source
-
-//                     if ((bitmap[offset_row+m] & mask)) { //pixel = 1
-//                         data|=(128>>m);
-//                     }
-//                 }
-//                 writeRAM(data) ;
-//             }
-//         }
-//     }
-// }
+void RrdGlcd::refresh() {
+    if(!inited) return;
+    fillGDRAM(this->fb);
+}

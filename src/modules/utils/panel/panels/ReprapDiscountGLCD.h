@@ -34,8 +34,7 @@ class ReprapDiscountGLCD : public LcdBase {
 
         uint8_t readButtons();
         int readEncoderDelta();
-        void write(char value);
-        void writeDone();
+        void write(const char* line, int len);
         void home();
         void clear();
         void display();
@@ -44,7 +43,7 @@ class ReprapDiscountGLCD : public LcdBase {
         void buzz(long,uint16_t);
         // blit a glyph of w pixels wide and h pixels high to x,y. The glyph will be zero left padded bytes from top left to bottom right
         void bltGlyph(int x, int y, int w, int h, const uint8_t *glyph);
-        void on_refresh();
+        void on_refresh(bool now=false);
 
     private:
         RrdGlcd* glcd;
