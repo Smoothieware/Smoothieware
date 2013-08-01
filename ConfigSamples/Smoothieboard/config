@@ -132,6 +132,16 @@ panel.encoder_a_pin                          0.15!^            # encoder pin if 
 panel.encoder_b_pin                          0.17!^            # encoder pin if used
 panel.menu_offset                            0                 # some panels will need 1 here
 
+# Example for reprap discount GLCD
+#panel.lcd                                   reprap_discount_glcd     # set type of panel also smoothiepanel, i2c_lcd is a generic i2c panel
+#panel.spi_channel                           0                 # set spi channel to use
+#panel.spi_cs_pin                            0.16               # set spi chip select
+#panel.encoder_a_pin                         0.26!^            # encoder pin if used
+#panel.encoder_b_pin                         0.25!^            # encoder pin if used
+#panel.click_button_pin                      1.30!^            # click button if used
+#panel.buzz_pin                              1.31              # pin for buzzer
+
+
 #panel.button_pause_pin                      0.18^             # pin used for pause button on VikiLcd
 #panel.up_button_pin                         0.1!              # up button if used
 #panel.down_button_pin                       0.0!              # down button if used

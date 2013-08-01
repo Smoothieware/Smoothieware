@@ -19,7 +19,9 @@
 #include <string>
 using namespace std;
 
-WatchScreen::WatchScreen(){}
+WatchScreen::WatchScreen(){
+    speed_changed= false;
+}
 
 void WatchScreen::on_enter(){
     this->panel->lcd->clear();
@@ -43,9 +45,15 @@ void WatchScreen::on_refresh(){
     // see if speed is being changed
     if(this->panel->control_value_change()) {
         this->current_speed= this->panel->get_control_value();
-        // change actual speed
-        set_current_speed();
-        this->refresh_screen(false);
+        if(this->current_speed < 1.0) {
+            this->current_speed= 1.0;
+            this->panel->set_control_value(this->current_speed);
+            this->panel->reset_counter();
+        }else{
+            // change actual speed
+            this->speed_changed= true; // flag main loop to isseu g code
+            this->refresh_screen(false);
+        }
     }
     
     // Update Only every 20 refreshes, 1 a second
@@ -56,6 +64,9 @@ void WatchScreen::on_refresh(){
         get_current_pos(this->pos);
         get_temp_data();
         this->current_speed= get_current_speed();
+        this->panel->set_control_value(this->current_speed); // in case it was changed via M220
+        this->panel->reset_counter();
+
         this->refresh_screen(false);
 
         // for LCDs with leds set them according to heater status
@@ -64,6 +75,13 @@ void WatchScreen::on_refresh(){
         this->panel->lcd->setLed(LED_HOTEND_ON, this->hotendtarget > 0);
         //this->panel->lcd->setLed(LED_FAN_ON, this->fanon);
     }
+}
+
+// queuing gcodes needs to be done from main loop
+void WatchScreen::on_main_loop() {
+    if(!this->speed_changed) return;
+    this->speed_changed= false;
+    set_speed();
 }
 
 // fetch the data we are displaying
@@ -110,12 +128,6 @@ double WatchScreen::get_current_speed() {
     return 0.0;
 }
 
-void WatchScreen::set_current_speed() {
-    bool ok= THEKERNEL->public_data->set_value( robot_checksum, speed_override_percent_checksum, &this->current_speed );
-    if(!ok) this->current_speed= 0;
-        
-}
-
 void WatchScreen::get_current_pos(double *cp){
     void *returned_data;
 
@@ -159,4 +171,12 @@ const char* WatchScreen::get_status(){
         return panel->get_playing_file();
 
     return "Smoothie ready";
+}
+
+void WatchScreen::set_speed(){    
+    // change pos by issuing a M220 Snnn
+    char buf[32];
+    int n= snprintf(buf, sizeof(buf), "M220 S%f", this->current_speed);
+    string g(buf, n);
+    send_gcode(g);
 }
