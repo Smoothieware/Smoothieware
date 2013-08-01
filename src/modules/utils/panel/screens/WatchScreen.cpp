@@ -43,9 +43,15 @@ void WatchScreen::on_refresh(){
     // see if speed is being changed
     if(this->panel->control_value_change()) {
         this->current_speed= this->panel->get_control_value();
-        // change actual speed
-        set_current_speed();
-        this->refresh_screen(false);
+        if(this->current_speed <= 1.0) {
+            this->current_speed= 1.0;
+            this->panel->set_control_value(this->current_speed);
+            this->panel->reset_counter();
+        }else{
+            // change actual speed
+            set_current_speed();
+            this->refresh_screen(false);
+        }
     }
     
     // Update Only every 20 refreshes, 1 a second
@@ -56,6 +62,9 @@ void WatchScreen::on_refresh(){
         get_current_pos(this->pos);
         get_temp_data();
         this->current_speed= get_current_speed();
+        this->panel->set_control_value(this->current_speed); // in case it was changed via M220
+        this->panel->reset_counter();
+
         this->refresh_screen(false);
 
         // for LCDs with leds set them according to heater status

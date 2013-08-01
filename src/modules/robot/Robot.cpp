@@ -138,7 +138,11 @@ void Robot::on_set_public_data(void* argument){
     if(!pdr->starts_with(robot_checksum)) return;
 
     if(pdr->second_element_is(speed_override_percent_checksum)) {
+        // NOTE do not use this while printing!
         double t= *static_cast<double*>(pdr->get_data_ptr());
+        // enforce minimum 1% speed
+        if (t < 1.0) t= 1.0;
+    
         this->seconds_per_minute= t * 0.6;
         pdr->set_taken();
     }

@@ -107,5 +107,6 @@ void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *gly
 void ReprapDiscountGLCD::on_refresh(bool now){
     static int refresh_counts = 0;
     refresh_counts++;
+    // 5Hz refresh rate
     if(now || refresh_counts % 4 == 0 ) this->glcd->refresh();
 }
