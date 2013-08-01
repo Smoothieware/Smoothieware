@@ -17,8 +17,6 @@
 #include "modules/robot/RobotPublicAccess.h"
 using namespace std;
 
-#define JOGGING_SPEED_MM_MIN 1200
-
 ControlScreen::ControlScreen(){
     this->control_mode = NULL_CONTROL_MODE;
 }
@@ -124,9 +122,3 @@ void ControlScreen::set_current_pos(char axis, double p){
     string g(buf, n);
     send_gcode(g);
 }
-
-void ControlScreen::send_gcode(std::string g) {
-    Gcode gcode(g, &(StreamOutput::NullStream));
-    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
-}
-

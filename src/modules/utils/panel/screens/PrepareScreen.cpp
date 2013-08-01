@@ -60,12 +60,12 @@ void PrepareScreen::display_menu_line(uint16_t line){
 void PrepareScreen::clicked_menu_entry(uint16_t line){
     switch( line ){
         case 0: this->panel->enter_screen(this->parent); break;
-        case 1: send_gcode("G28"); break;
-        case 2: send_gcode("G92 X0 Y0 Z0"); break;
+        case 1: send_command("G28"); break;
+        case 2: send_command("G92 X0 Y0 Z0"); break;
         case 3: this->preheat(); break;
         case 4: this->cooldown(); break;
         case 5: this->panel->enter_screen(this->extruder_screen); break;
-        case 6: send_gcode("M84"); break;
+        case 6: send_command("M84"); break;
         //case 7: this->panel->enter_screen(this->temp_screen      ); break;
     }
 
@@ -84,10 +84,10 @@ void PrepareScreen::cooldown() {
     THEKERNEL->public_data->set_value( temperature_control_checksum, bed_checksum, &t );
 }
 
-void PrepareScreen::send_gcode(const char* gcstr) {
-    string gcode(gcstr);
+void PrepareScreen::send_command(const char* gcstr) {
+    string cmd(gcstr);
     struct SerialMessage message;
-    message.message = gcode;
+    message.message = cmd;
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }

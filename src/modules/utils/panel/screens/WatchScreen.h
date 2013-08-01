@@ -21,16 +21,18 @@ class WatchScreen : public PanelScreen {
         WatchScreen();
         void on_refresh(); 
         void on_enter();
+        void on_main_loop();
         void display_menu_line(uint16_t line);
 
     private:
         void get_temp_data();
         double get_current_speed();
-        void set_current_speed();
+        void set_speed();
         void get_current_pos(double *cp);
         void get_sd_play_info();
         const char* get_status();
         
+        bool speed_changed;
         int hotendtemp;
         int hotendtarget;
         int bedtemp;

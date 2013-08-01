@@ -32,6 +32,9 @@ class PanelScreen {
 
         Panel* panel;
         PanelScreen* parent;
+
+      protected:
+        void send_gcode(std::string g);
 };
 
 

@@ -49,6 +49,8 @@ PanelScreen* PanelScreen::set_parent(PanelScreen* passed_parent){
     return this;
 }
 
-
-
-
+// Helper for screens to send a gcode
+void PanelScreen::send_gcode(std::string g) {
+    Gcode gcode(g, &(StreamOutput::NullStream));
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+}

@@ -50,15 +50,15 @@ void ExtruderScreen::display_menu_line(uint16_t line){
 void ExtruderScreen::clicked_menu_entry(uint16_t line){
     switch( line ){
         case 0: this->panel->enter_screen(this->parent); return;
-        case 1: send_gcode("G91"); send_gcode("G1 E5");  send_gcode("G90"); break;
-        case 2: send_gcode("G91"); send_gcode("G1 E-5"); send_gcode("G90"); break;
+        case 1: send_command("G91"); send_command("G1 E5");  send_command("G90"); break;
+        case 2: send_command("G91"); send_command("G1 E-5"); send_command("G90"); break;
     }
 }
 
-void ExtruderScreen::send_gcode(const char* gcstr) {
-    string gcode(gcstr);
+void ExtruderScreen::send_command(const char* gcstr) {
+    string cmd(gcstr);
     struct SerialMessage message;
-    message.message = gcode;
+    message.message = cmd;
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
