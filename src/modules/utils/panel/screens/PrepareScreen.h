@@ -31,7 +31,7 @@ class PrepareScreen : public PanelScreen {
         PanelScreen* temp_screen;
         void preheat();
         void cooldown();
-        void send_gcode(const char* gcstr);
+        void send_command(const char* gcstr);
 };
 
 #endif

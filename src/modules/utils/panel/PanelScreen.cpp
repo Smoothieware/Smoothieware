@@ -43,15 +43,14 @@ void PanelScreen::refresh_screen(bool clear){
     }
 }
 
-void PanelScreen::display_menu_line(uint16_t line){};
-
-
 PanelScreen* PanelScreen::set_parent(PanelScreen* passed_parent){
     this->parent = passed_parent;
     this->set_panel( passed_parent->panel );
     return this;
 }
 
-
-
-
+// Helper for screens to send a gcode
+void PanelScreen::send_gcode(std::string g) {
+    Gcode gcode(g, &(StreamOutput::NullStream));
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+}

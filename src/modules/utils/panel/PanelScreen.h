@@ -28,10 +28,13 @@ class PanelScreen {
         void refresh_screen(bool clear);
         void refresh_menu(bool clear);
         void refresh_menu(void){ refresh_menu(true); };
-        virtual void display_menu_line(uint16_t line);
+        virtual void display_menu_line(uint16_t line)= 0;
 
         Panel* panel;
         PanelScreen* parent;
+
+      protected:
+        void send_gcode(std::string g);
 };
 
 

@@ -33,7 +33,6 @@ class ControlScreen : public PanelScreen {
     private:
         void clicked_menu_entry(uint16_t line);
         void display_axis_line(char axis);
-        void send_gcode(std::string msg);
         void enter_axis_control(char axis);
         void enter_menu_control();
         void get_current_pos(double *p);

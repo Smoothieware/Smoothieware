@@ -317,8 +317,10 @@ void VikiLCD::command(uint8_t value) {
     send(value, 0);
 }
 
-void VikiLCD::write(char value) {
-    send(value, 1);
+void VikiLCD::write(const char* line, int len) {
+    for (int i = 0; i < len; ++i) {
+        send(*line++, 1);
+    }
 }
 
 // Sets the indicator leds

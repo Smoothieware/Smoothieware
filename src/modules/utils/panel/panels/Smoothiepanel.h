@@ -64,7 +64,7 @@ class Smoothiepanel : public LcdBase {
         void display();
         void setCursor(uint8_t col, uint8_t row);
         void init();
-        void write(char value);
+        void write(const char* line, int len);
 
         void setBacklight(uint8_t status);
         void setBacklightColor(uint8_t r, uint8_t g, uint8_t b);

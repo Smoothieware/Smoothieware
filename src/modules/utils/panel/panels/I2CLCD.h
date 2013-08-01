@@ -149,10 +149,12 @@ class I2CLCD : public LcdBase {
             this->send(value, 0);
         }
 
-        void write(char value){
-            this->send(value, Rs);
-        }
-
+        void write(const char* line, int len) {
+            for (int i = 0; i < len; ++i) {
+                this->send(*line++, Rs);
+            }
+        }      
+        
         void home(){
             this->command(LCD_RETURNHOME);  // set cursor position to zero
             wait_us(2000);            // this command takes a long time!
