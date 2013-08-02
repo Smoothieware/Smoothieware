@@ -19,8 +19,6 @@
 
 Extruder::Extruder() {
     this->absolute_mode = true;
-    this->step_counter = 0;
-    this->counter_increment = 0;
     this->paused = false;
 }
 
@@ -48,7 +46,7 @@ void Extruder::on_module_loaded() {
     // Start values
     this->target_position = 0;
     this->current_position = 0;
-    this->current_steps = 0;
+    this->unstepped_distance = 0;
     this->current_block = NULL;
     this->mode = OFF;
 
@@ -64,7 +62,6 @@ void Extruder::on_module_loaded() {
 
 // Get config
 void Extruder::on_config_reload(void* argument){
-    this->microseconds_per_step_pulse = this->kernel->config->value(microseconds_per_step_pulse_checksum)->by_default(5)->as_number();
     this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
     this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
     this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
@@ -170,7 +167,6 @@ void Extruder::on_gcode_execute(void* argument){
         if (gcode->m == 92 ){
             if (gcode->has_letter('E')){
                 this->steps_per_millimeter = gcode->get_value('E');
-                this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
             }
         }
     }
@@ -185,11 +181,11 @@ void Extruder::on_gcode_execute(void* argument){
             if( gcode->has_letter('E') ){
                 this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;
-                this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
+                this->unstepped_distance = 0;
             }else if( gcode->get_num_args() == 0){
                 this->current_position = 0.0;
                 this->target_position = this->current_position;
-                this->current_steps = 0;
+                this->unstepped_distance = 0;
             }
         }else if ((gcode->g == 0) || (gcode->g == 1)){
             // Extrusion length from 'G' Gcode
@@ -243,7 +239,13 @@ void Extruder::on_block_begin(void* argument){
 
         this->current_position += this->travel_distance ;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * this->travel_distance)));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance +this->unstepped_distance) )));
+        
+        if ( this->travel_distance > 0 ){
+            this->unstepped_distance += this->travel_distance -(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }   else {
+            this->unstepped_distance += this->travel_distance +(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }
 
         if( steps_to_step != 0 ){
 
@@ -264,7 +266,13 @@ void Extruder::on_block_begin(void* argument){
 
         this->current_position += this->travel_distance;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * this->travel_distance)));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) )));
+
+        if ( this->travel_distance > 0 ){
+            this->unstepped_distance += this->travel_distance -(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }   else {
+            this->unstepped_distance += this->travel_distance +(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }
 
         if( steps_to_step != 0 ){
             block->take();

@@ -125,6 +125,10 @@ alpha_homing_retract                         500               #
 beta_homing_retract                          500               #
 gamma_homing_retract                         500               #
 
+alpha_trim                                   0                 # software trim for alpha stepper endstop (in steps)
+beta_trim                                    0                 # software trim for beta stepper endstop (in steps)
+gamma_trim                                   0                 # software trim for gamma stepper endstop (in steps)
+
 # Pause button
 pause_button_enable                          true             #
 
