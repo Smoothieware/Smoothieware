@@ -14,7 +14,6 @@
 #include "libs/Kernel.h"
 #include "modules/robot/Block.h"
 
-#define microseconds_per_step_pulse_checksum CHECKSUM("microseconds_per_step_pulse")
 #define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
 #define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
 #define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
@@ -49,28 +48,20 @@ class Extruder : public Module{
         Pin             dir_pin;                      // Dir pin for the stepper driver
         Pin             en_pin;
 
-        double          target_position;              // End point ( in steps ) for the current move
-        double          current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed
-        int             current_steps;
+        double          target_position;              // End point ( in mm ) for the current move
+        double          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
+        double          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
         Block*          current_block;                // Current block we are stepping, same as Stepper's one
-        int             microseconds_per_step_pulse;  // Pulse duration for step pulses
         double          steps_per_millimeter;         // Steps to travel one millimeter
         double          feed_rate;                    //
         double          acceleration;                 //
         double          max_speed;
 
-        int             counter_increment;
-        int             step_counter;
-
-        bool            solo_mode;
         double          travel_ratio;
         double          travel_distance;
-        bool            absolute_mode;
+        bool            absolute_mode;                // absolute/relative coordinate mode switch
 
-        bool            debug;
-        int debug_count;
-
-        char mode;
+        char mode;                                    // extruder motion mode,  OFF, SOLO, or FOLLOW
 
         bool paused;
 

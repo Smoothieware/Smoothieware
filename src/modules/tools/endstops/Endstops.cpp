@@ -56,6 +56,9 @@ void Endstops::on_config_reload(void* argument){
     this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default(30   )->as_number();
     this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(30   )->as_number();
     this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(10   )->as_number();
+    this->trim[0]                   =  this->kernel->config->value(alpha_trim_checksum                 )->by_default(0   )->as_number();
+    this->trim[1]                   =  this->kernel->config->value(beta_trim_checksum                  )->by_default(0   )->as_number();
+    this->trim[2]                   =  this->kernel->config->value(gamma_trim_checksum                 )->by_default(0   )->as_number();
     this->debounce_count            =  this->kernel->config->value(endstop_debounce_count_checksum     )->by_default(100  )->as_number();
     
     // get homing direction and convert to boolean where true is home to min, and false is home to max
@@ -176,6 +179,26 @@ void Endstops::on_gcode_received(void* argument)
 
             // Wait for all axes to have homed
             this->wait_for_homed(axes_to_move);
+
+            // move for soft trim
+            this->status = MOVING_BACK;
+            for( char c = 'X'; c <= 'Z'; c++ ){
+                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                    inverted_dir = -(this->home_direction[c - 'X'] - 1);
+                    this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
+                    this->steppers[c - 'X']->move(inverted_dir,this->trim[c - 'X']);
+                }
+            }
+
+            // Wait for moves to be done
+            for( char c = 'X'; c <= 'Z'; c++ ){
+                if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                    this->kernel->streams->printf("axis %c \r\n", c );
+                    while( this->steppers[c - 'X']->moving ){
+                        this->kernel->call_event(ON_IDLE);
+                    }
+                }
+            }
 
             // Homing is done
             this->status = NOT_HOMING;
