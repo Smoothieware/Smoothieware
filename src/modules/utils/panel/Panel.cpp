@@ -167,16 +167,16 @@ void Panel::on_idle(void* argument){
         if(this->lcd->hasGraphics()) {
             // TODO display nifty graphics startup screen
 
-        }else{
-            Version v;
-            string build(v.get_build());
-            string date(v.get_build_date());
-            this->lcd->clear();
-            this->lcd->setCursor(0,0); this->lcd->printf("Welcome to Smoothie");
-            this->lcd->setCursor(0,1); this->lcd->printf("%s", build.substr(0, 20).c_str());
-            this->lcd->setCursor(0,2); this->lcd->printf("%s", date.substr(0, 20).c_str());
-            this->lcd->setCursor(0,3); this->lcd->printf("Please wait....");
         }
+
+        Version v;
+        string build(v.get_build());
+        string date(v.get_build_date());
+        this->lcd->clear();
+        this->lcd->setCursor(0,0); this->lcd->printf("Welcome to Smoothie");
+        this->lcd->setCursor(0,1); this->lcd->printf("%s", build.substr(0, 20).c_str());
+        this->lcd->setCursor(0,2); this->lcd->printf("%s", date.substr(0, 20).c_str());
+        this->lcd->setCursor(0,3); this->lcd->printf("Please wait....");
 
         this->lcd->on_refresh(true); // tell lcd to display now
 

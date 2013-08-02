@@ -100,8 +100,24 @@ void ReprapDiscountGLCD::init(){
     this->glcd->initDisplay();
 }
 
-void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *glyph) {
-    // TODO
+// displays a selectable rectangle from the glyph
+void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span, int x_offset, int y_offset) {
+    if(x_offset == 0 && y_offset == 0 && span == 0) {
+        // blt the whole thing
+        this->glcd->renderGlyph(x, y, glyph, w, h);
+
+    }else{
+        // copy portion of glyph into g where x_offset is left byte aligned
+        // Note currently thw x_offset must be byte aligned
+        int n= w/8; // bytes per line to copy
+        if(w%8 != 0) n++; // round up to next byte
+        uint8_t g[n*h];
+
+        for (int i = 0; i < h; ++i) {
+            memcpy(&g[i*n], &glyph[(i+y_offset)*span+x_offset/8], n);
+        }
+        this->glcd->renderGlyph(x, y, g, w, h);
+    }
 }
 
 void ReprapDiscountGLCD::on_refresh(bool now){

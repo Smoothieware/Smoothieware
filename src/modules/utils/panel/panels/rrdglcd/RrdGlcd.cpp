@@ -325,14 +325,15 @@ void RrdGlcd::displayString(int row, int col, const char *ptr, int length) {
 }
 
 void RrdGlcd::renderChar(uint8_t *fb, char c, int ox, int oy) {
+    // using the specific font data where y is in consecutive bytes and x is each bit position lsbit->msbit
     int i= c*5;
     for(int y=0;y<8;y++) {
       for(int x=0;x<5;x++) {
         int b= font5x7[i+x];
         if((b & (1<<(y))) != 0){
-            fb[(y+oy)*16 + (x+ox)/8] |= (1<<(8-(x+ox)%8-1));
+            fb[(y+oy)*16 + (x+ox)/8] |= (1<<(7-(x+ox)%8));
         }else{
-            fb[(y+oy)*16 + (x+ox)/8] &= ~(1<<(8-(x+ox)%8-1));
+            fb[(y+oy)*16 + (x+ox)/8] &= ~(1<<(7-(x+ox)%8));
         }
       }
     }
@@ -342,7 +343,26 @@ void RrdGlcd::displayChar(int row, int col, char c) {
     // convert row/column into y and x pixel positions based on font size
     renderChar(this->fb, c, col*6, row*8);
 }
-   
+
+void RrdGlcd::renderGlyph(int xp, int yp, const uint8_t *g, int pixelWidth, int pixelHeight) {
+    for(int y=0;y<pixelHeight;y++) {
+        int m= 0x80;
+        int b= *g++;
+        for(int x=0;x<pixelWidth;x++) {
+            if((b & m) != 0){
+                fb[(y+yp)*16 + (x+xp)/8] |= (1<<(7-(x+xp)%8));
+            }else{
+                fb[(y+yp)*16 + (x+xp)/8] &= ~(1<<(7-(x+xp)%8));
+            }
+            m= m>>1;
+            if(m == 0){
+                m= 0x80;
+                b= *g++;
+            } 
+        }
+    }
+}
+
 // copy frame buffer to graphic buffer on display
 void RrdGlcd::fillGDRAM(const uint8_t *bitmap) {
     unsigned char i, y;
