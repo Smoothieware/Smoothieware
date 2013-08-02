@@ -48,6 +48,7 @@ void Extruder::on_module_loaded() {
     // Start values
     this->target_position = 0;
     this->current_position = 0;
+    this->unstepped_distance = 0;
     this->current_steps = 0;
     this->current_block = NULL;
     this->mode = OFF;
@@ -186,10 +187,12 @@ void Extruder::on_gcode_execute(void* argument){
                 this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;
                 this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
+                this->unstepped_distance = 0;
             }else if( gcode->get_num_args() == 0){
                 this->current_position = 0.0;
                 this->target_position = this->current_position;
                 this->current_steps = 0;
+                this->unstepped_distance = 0;
             }
         }else if ((gcode->g == 0) || (gcode->g == 1)){
             // Extrusion length from 'G' Gcode
@@ -243,7 +246,13 @@ void Extruder::on_block_begin(void* argument){
 
         this->current_position += this->travel_distance ;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * this->travel_distance)));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance +this->unstepped_distance) )));
+        
+        if ( this->travel_distance > 0 ){
+            this->unstepped_distance += this->travel_distance -(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }   else {
+            this->unstepped_distance += this->travel_distance +(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }
 
         if( steps_to_step != 0 ){
 
@@ -264,7 +273,13 @@ void Extruder::on_block_begin(void* argument){
 
         this->current_position += this->travel_distance;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * this->travel_distance)));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) )));
+
+        if ( this->travel_distance > 0 ){
+            this->unstepped_distance += this->travel_distance -(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }   else {
+            this->unstepped_distance += this->travel_distance +(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }
 
         if( steps_to_step != 0 ){
             block->take();
