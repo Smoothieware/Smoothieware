@@ -33,6 +33,10 @@
 #define beta_max_endstop_checksum        CHECKSUM("beta_max_endstop")
 #define gamma_max_endstop_checksum       CHECKSUM("gamma_max_endstop")
 
+#define alpha_trim_checksum       CHECKSUM("alpha_trim")
+#define beta_trim_checksum        CHECKSUM("beta_trim")
+#define gamma_trim_checksum       CHECKSUM("gamma_trim")
+
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
 #define beta_fast_homing_rate_checksum   CHECKSUM("beta_fast_homing_rate")
 #define gamma_fast_homing_rate_checksum  CHECKSUM("gamma_fast_homing_rate")
@@ -74,6 +78,7 @@ class Endstops : public Module{
         Pin           pins[6];
         double  slow_rates[3];
         double  fast_rates[3];
+        double  trim[3];
         unsigned int  retract_steps[3];
         unsigned int  debounce_count;
         bool home_direction[3];
