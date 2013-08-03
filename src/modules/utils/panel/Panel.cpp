@@ -184,7 +184,7 @@ void Panel::on_idle(void* argument){
         this->top_screen = new MainMenuScreen();
         this->top_screen->set_panel(this);
         this->start_up= false;
-        this->idle_time= 20*3; // only show for 2 seconds
+        //this->idle_time= 20*3; // only show for 2 seconds
     }
 
     // after being idle for a while switch to Watch screen
