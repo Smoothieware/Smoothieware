@@ -223,14 +223,43 @@ void RrdGlcd::displayChar(int row, int col, char c) {
 }
 
 void RrdGlcd::renderGlyph(int xp, int yp, const uint8_t *g, int pixelWidth, int pixelHeight) {
+    // NOTE the source is expected to be byte aligned and the exact number of pixels
+    // TODO need to optimize by copying bytes instead of pixels...
+    int xf= xp%8;
+    int rf= pixelWidth%8;
+    int a= yp*16 + xp/8; // start address in frame buffer
+    const uint8_t *src= g;
+    if(xf == 0) {
+        // If xp is on a byte boundary simply memcpy each line from source to dest
+        uint8_t *dest= &fb[a];
+        int n= pixelWidth/8; // bytes per line to copy
+        if(rf != 0) n++; // if not a multiple of 8 pixels copy last byte as a byte
+        if(n > 0) {
+            for(int y=0;y<pixelHeight;y++) {
+                memcpy(dest, src, n);
+                src += n;
+                dest+=16; // next line
+            }
+        }
+
+        // TODO now handle ragged end if we have one but as we always render left to right we probably don't need to
+        // if(rf != 0) {
+
+        // }
+        return;
+    }
+
+    // if xp is not on a byte boundary we do the slow pixel by pixel copy
     for(int y=0;y<pixelHeight;y++) {
         int m= 0x80;
         int b= *g++;
         for(int x=0;x<pixelWidth;x++) {
+            a= (y+yp)*16 + (x+xp)/8;
+            int p= 1<<(7-(x+xp)%8);
             if((b & m) != 0){
-                fb[(y+yp)*16 + (x+xp)/8] |= (1<<(7-(x+xp)%8));
+                fb[a] |= p;
             }else{
-                fb[(y+yp)*16 + (x+xp)/8] &= ~(1<<(7-(x+xp)%8));
+                fb[a] &= ~p;
             }
             m= m>>1;
             if(m == 0){
