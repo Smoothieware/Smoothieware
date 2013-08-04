@@ -108,13 +108,16 @@ void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *gly
 
     }else{
         // copy portion of glyph into g where x_offset is left byte aligned
-        // Note currently thw x_offset must be byte aligned
+        // Note currently the x_offset must be byte aligned
         int n= w/8; // bytes per line to copy
         if(w%8 != 0) n++; // round up to next byte
         uint8_t g[n*h];
-
+        uint8_t *dst= g;
+        const uint8_t *src= &glyph[y_offset*span + x_offset/8];
         for (int i = 0; i < h; ++i) {
-            memcpy(&g[i*n], &glyph[(i+y_offset)*span+x_offset/8], n);
+            memcpy(dst, src, n);
+            dst+=n;
+            src+= span;
         }
         this->glcd->renderGlyph(x, y, g, w, h);
     }
