@@ -24,6 +24,7 @@
 #define MOVING_TO_ORIGIN_SLOW 3
 
 #define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
+#define corexy_homing_checksum                  CHECKSUM("corexy_homing")
 
 #define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
 #define beta_min_endstop_checksum        CHECKSUM("beta_min_endstop")
@@ -75,6 +76,8 @@ class Endstops : public Module{
         void on_config_reload(void* argument);
 
     private:
+        void do_homing(char axes_to_move);
+        void do_homing_corexy(char axes_to_move);
         void wait_for_homed(char axes_to_move);
         double steps_per_mm[3];
         double homing_position[3];
@@ -87,22 +90,7 @@ class Endstops : public Module{
         Pin           pins[6];
         StepperMotor* steppers[3];
         char status;
+        bool is_corexy;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #endif
