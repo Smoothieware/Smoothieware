@@ -182,7 +182,7 @@ void Endstops::do_homing(char axes_to_move) {
     // Wait for moves to be done
     for( char c = 'X'; c <= 'Z'; c++ ){
         if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-            this->kernel->streams->printf("axis %c \r\n", c );
+            //this->kernel->streams->printf("axis %c \r\n", c );
             while( this->steppers[c - 'X']->moving ){
                 this->kernel->call_event(ON_IDLE);
             }
