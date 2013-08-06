@@ -44,24 +44,40 @@ void Endstops::on_config_reload(void* argument){
     this->pins[3].from_string(         this->kernel->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
     this->pins[4].from_string(         this->kernel->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
     this->pins[5].from_string(         this->kernel->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->fast_rates[0]             =  this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default(500  )->as_number();
-    this->fast_rates[1]             =  this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default(500  )->as_number();
-    this->fast_rates[2]             =  this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default(5    )->as_number();
-    this->slow_rates[0]             =  this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default(100  )->as_number();
-    this->slow_rates[1]             =  this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default(100  )->as_number();
-    this->slow_rates[2]             =  this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default(5    )->as_number();
-    this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default(30   )->as_number();
-    this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(30   )->as_number();
-    this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(10   )->as_number();
-    this->trim[0]                   =  this->kernel->config->value(alpha_trim_checksum                 )->by_default(0   )->as_number();
-    this->trim[1]                   =  this->kernel->config->value(beta_trim_checksum                  )->by_default(0   )->as_number();
-    this->trim[2]                   =  this->kernel->config->value(gamma_trim_checksum                 )->by_default(0   )->as_number();
-    this->debounce_count            =  this->kernel->config->value(endstop_debounce_count_checksum     )->by_default(100  )->as_number();
 
-    // we need to know steps per mm for M206, TODO should probably use them for all settings
+    // we need to know steps per mm for M206, also use them for all settings
     this->steps_per_mm[0]           =  this->kernel->config->value(alpha_steps_per_mm_checksum         )->as_number();
     this->steps_per_mm[1]           =  this->kernel->config->value(beta_steps_per_mm_checksum          )->as_number();
     this->steps_per_mm[2]           =  this->kernel->config->value(gamma_steps_per_mm_checksum         )->as_number();
+
+    this->fast_rates[0]             =  this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default(4000 )->as_number();
+    this->fast_rates[1]             =  this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default(4000 )->as_number();
+    this->fast_rates[2]             =  this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default(6400 )->as_number();
+    this->slow_rates[0]             =  this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default(2000 )->as_number();
+    this->slow_rates[1]             =  this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default(2000 )->as_number();
+    this->slow_rates[2]             =  this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default(3200 )->as_number();
+    this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default(400  )->as_number();
+    this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(400  )->as_number();
+    this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(1600 )->as_number();
+
+    // newer mm based config values override the old ones, convert to steps/mm and steps, defaults to what was set in the older config settings above
+    this->fast_rates[0]=    this->kernel->config->value(alpha_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->fast_rates[1]=    this->kernel->config->value(beta_fast_homing_rate_mm_checksum  )->by_default(this->fast_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->fast_rates[2]=    this->kernel->config->value(gamma_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->slow_rates[0]=    this->kernel->config->value(alpha_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->slow_rates[1]=    this->kernel->config->value(beta_slow_homing_rate_mm_checksum  )->by_default(this->slow_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->slow_rates[2]=    this->kernel->config->value(gamma_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->retract_steps[0]= this->kernel->config->value(alpha_homing_retract_mm_checksum   )->by_default(this->retract_steps[0]/steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->retract_steps[1]= this->kernel->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1]/steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->retract_steps[2]= this->kernel->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2]/steps_per_mm[2])->as_number() * steps_per_mm[2];
+
+    // endstop trim used by deltas to do soft adjusting, in mm, convert to steps
+    this->trim[0]         = this->kernel->config->value(alpha_trim_checksum                )->by_default(0  )->as_number() * steps_per_mm[0];
+    this->trim[1]         = this->kernel->config->value(beta_trim_checksum                 )->by_default(0  )->as_number() * steps_per_mm[0];
+    this->trim[2]         = this->kernel->config->value(gamma_trim_checksum                )->by_default(0  )->as_number() * steps_per_mm[0];
+
+    this->debounce_count  = this->kernel->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
+
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(this->kernel->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
