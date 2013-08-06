@@ -114,16 +114,16 @@ gamma_max_endstop                            1.29^            #
 gamma_homing_direction                       home_to_max      #
 gamma_max                                    300              #
 
-alpha_fast_homing_rate                       200              # homing feedrates in mm/second
-beta_fast_homing_rate                        200              #
-gamma_fast_homing_rate                       200              #
-alpha_slow_homing_rate                       20               #
-beta_slow_homing_rate                        20               #
-gamma_slow_homing_rate                       20
+alpha_fast_homing_rate_mm_s                  200              # homing feedrates in mm/second
+beta_fast_homing_rate_mm_s                   200              #
+gamma_fast_homing_rate_mm_s                  200              #
+alpha_slow_homing_rate_mm_s                  20               #
+beta_slow_homing_rate_mm_s                   20               #
+gamma_slow_homing_rate_mm_s                  20
 
-alpha_homing_retract                         5                 # retract/bounce distance after homing in mm
-beta_homing_retract                          5                 #
-gamma_homing_retract                         5                 #
+alpha_homing_retract_mm                      5                # retract/bounce distance after homing in mm
+beta_homing_retract_mm                       5                #
+gamma_homing_retract_mm                      5                #
 
 alpha_trim                                   0                 # software trim for alpha stepper endstop (in mm)
 beta_trim                                    0                 # software trim for beta stepper endstop (in mm)
