@@ -36,9 +36,6 @@ void Endstops::on_module_loaded() {
 
 }
 
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
-
 // Get config
 void Endstops::on_config_reload(void* argument){
     this->pins[0].from_string(         this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
@@ -80,8 +77,6 @@ void Endstops::on_config_reload(void* argument){
     this->homing_position[1]        =  this->home_direction[1]?this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number():this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
     this->homing_position[2]        =  this->home_direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number():this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
 }
-
-//#pragma GCC pop_options
 
 void Endstops::wait_for_homed(char axes_to_move){
     bool running = true;
@@ -223,27 +218,40 @@ void Endstops::on_gcode_received(void* argument)
     else if (gcode->has_m){
         switch(gcode->m){
             case 119:
-                gcode->stream->printf("X min:%d max:%d Y min:%d max:%d Z min:%d max:%d\n", this->pins[0].get(), this->pins[3].get(), this->pins[1].get(), this->pins[4].get(), this->pins[2].get(), this->pins[5].get() );
-                gcode->mark_as_taken();
+                {
+
+                    int px= this->home_direction[0] ? 0 : 3;
+                    int py= this->home_direction[1] ? 1 : 4;
+                    int pz= this->home_direction[2] ? 2 : 5;
+                    const char* mx= this->home_direction[0] ? "min" : "max";
+                    const char* my= this->home_direction[1] ? "min" : "max";
+                    const char* mz= this->home_direction[2] ? "min" : "max";
+
+                    gcode->stream->printf("X %s:%d Y %s:%d Z %s:%d\n", mx, this->pins[px].get(), my, this->pins[py].get(), mz, this->pins[pz].get());
+                    gcode->mark_as_taken();
+                }
                 break;
 
             case 206: // M206 - set trim for each axis in mm
                 {
+                    int dirx= (this->home_direction[0] ? 1 : -1);
+                    int diry= (this->home_direction[1] ? 1 : -1);
+                    int dirz= (this->home_direction[2] ? 1 : -1);
                     double mm[3];
-                    mm[0]= trim[0]/steps_per_mm[0]; // convert to mm
-                    mm[1]= trim[1]/steps_per_mm[1];
-                    mm[2]= trim[2]/steps_per_mm[2];
+                    mm[0]= trim[0]/steps_per_mm[0] * dirx; // convert to mm
+                    mm[1]= trim[1]/steps_per_mm[1] * diry;
+                    mm[2]= trim[2]/steps_per_mm[2] * dirz;
 
                     if(gcode->has_letter('X')) mm[0]= gcode->get_value('X');
                     if(gcode->has_letter('Y')) mm[1]= gcode->get_value('Y');
                     if(gcode->has_letter('Z')) mm[2]= gcode->get_value('Z');
 
-                    trim[0]= lround(mm[0]*steps_per_mm[0]); // convert back to steps
-                    trim[1]= lround(mm[1]*steps_per_mm[1]);
-                    trim[2]= lround(mm[2]*steps_per_mm[2]);
+                    trim[0]= lround(mm[0]*steps_per_mm[0]) * dirx; // convert back to steps
+                    trim[1]= lround(mm[1]*steps_per_mm[1]) * diry;
+                    trim[2]= lround(mm[2]*steps_per_mm[2]) * dirz;
 
                     // print the current trim values in mm and steps
-                    char buf[32];
+                    char buf[64];
                     int n= snprintf(buf, sizeof(buf), "X:%5.3f (%d) Y:%5.3f (%d) Z:%5.3f (%d) ", mm[0], trim[0], mm[1], trim[1], mm[2], trim[2]);
                     gcode->txt_after_ok.append(buf, n);
                     gcode->mark_as_taken();
