@@ -33,9 +33,9 @@
 #define beta_max_endstop_checksum        CHECKSUM("beta_max_endstop")
 #define gamma_max_endstop_checksum       CHECKSUM("gamma_max_endstop")
 
-#define alpha_trim_checksum       CHECKSUM("alpha_trim")
-#define beta_trim_checksum        CHECKSUM("beta_trim")
-#define gamma_trim_checksum       CHECKSUM("gamma_trim")
+#define alpha_trim_checksum              CHECKSUM("alpha_trim")
+#define beta_trim_checksum               CHECKSUM("beta_trim")
+#define gamma_trim_checksum              CHECKSUM("gamma_trim")
 
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
 #define beta_fast_homing_rate_checksum   CHECKSUM("beta_fast_homing_rate")
@@ -63,26 +63,29 @@
 #define beta_max_checksum                CHECKSUM("beta_max")
 #define gamma_max_checksum               CHECKSUM("gamma_max")
 
+#define alpha_steps_per_mm_checksum      CHECKSUM("alpha_steps_per_mm")
+#define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
+#define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
 
 class Endstops : public Module{
-    private:
-        void wait_for_homed(char axes_to_move);
-
     public:
         Endstops();
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
 
-        StepperMotor* steppers[3];
-        Pin           pins[6];
-        double  slow_rates[3];
-        double  fast_rates[3];
-        double  trim[3];
-        unsigned int  retract_steps[3];
-        unsigned int  debounce_count;
-        bool home_direction[3];
+    private:
+        void wait_for_homed(char axes_to_move);
+        double steps_per_mm[3];
         double homing_position[3];
+        bool home_direction[3];
+        unsigned int  debounce_count;
+        unsigned int  retract_steps[3];
+        int  trim[3];
+        double  fast_rates[3];
+        double  slow_rates[3];
+        Pin           pins[6];
+        StepperMotor* steppers[3];
         char status;
 };
 

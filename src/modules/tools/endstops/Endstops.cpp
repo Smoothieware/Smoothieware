@@ -60,17 +60,22 @@ void Endstops::on_config_reload(void* argument){
     this->trim[1]                   =  this->kernel->config->value(beta_trim_checksum                  )->by_default(0   )->as_number();
     this->trim[2]                   =  this->kernel->config->value(gamma_trim_checksum                 )->by_default(0   )->as_number();
     this->debounce_count            =  this->kernel->config->value(endstop_debounce_count_checksum     )->by_default(100  )->as_number();
-    
+
+    // we need to know steps per mm for M206, TODO should probably use them for all settings
+    this->steps_per_mm[0]           =  this->kernel->config->value(alpha_steps_per_mm_checksum         )->as_number();
+    this->steps_per_mm[1]           =  this->kernel->config->value(beta_steps_per_mm_checksum          )->as_number();
+    this->steps_per_mm[2]           =  this->kernel->config->value(gamma_steps_per_mm_checksum         )->as_number();
+
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(this->kernel->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[0]         = home_dir != home_to_max_checksum;
-    
+
     home_dir                        = get_checksum(this->kernel->config->value(beta_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[1]         = home_dir != home_to_max_checksum;
-    
+
     home_dir                        = get_checksum(this->kernel->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[2]         = home_dir != home_to_max_checksum;
-    
+
     this->homing_position[0]        =  this->home_direction[0]?this->kernel->config->value(alpha_min_checksum)->by_default(0)->as_number():this->kernel->config->value(alpha_max_checksum)->by_default(200)->as_number();
     this->homing_position[1]        =  this->home_direction[1]?this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number():this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
     this->homing_position[2]        =  this->home_direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number():this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
@@ -122,7 +127,7 @@ void Endstops::on_gcode_received(void* argument)
             char axes_to_move = 0;
             // only enable homing if the endstop is defined
             bool home_all= !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
-            
+
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( (home_all || gcode->has_letter(c)) && this->pins[c - 'X' + (this->home_direction[c - 'X']?0:3)].connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }
             }
@@ -146,10 +151,10 @@ void Endstops::on_gcode_received(void* argument)
             gcode->stream->printf("test a\r\n");
             // Move back a small distance
             this->status = MOVING_BACK;
-            int inverted_dir;
+            bool inverted_dir;
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    inverted_dir = -(this->home_direction[c - 'X'] - 1);
+                    inverted_dir = !this->home_direction[c - 'X'];
                     this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
                     this->steppers[c - 'X']->move(inverted_dir,this->retract_steps[c - 'X']);
                 }
@@ -183,8 +188,10 @@ void Endstops::on_gcode_received(void* argument)
             // move for soft trim
             this->status = MOVING_BACK;
             for( char c = 'X'; c <= 'Z'; c++ ){
-                if( ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-                    inverted_dir = -(this->home_direction[c - 'X'] - 1);
+                if( this->trim[c - 'X'] != 0 && ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                    inverted_dir = !this->home_direction[c - 'X'];
+                    // move up or down depending on sign of trim
+                    if(this->trim[c - 'X'] < 0) inverted_dir= !inverted_dir;
                     this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
                     this->steppers[c - 'X']->move(inverted_dir,this->trim[c - 'X']);
                 }
@@ -219,6 +226,30 @@ void Endstops::on_gcode_received(void* argument)
                 gcode->stream->printf("X min:%d max:%d Y min:%d max:%d Z min:%d max:%d\n", this->pins[0].get(), this->pins[3].get(), this->pins[1].get(), this->pins[4].get(), this->pins[2].get(), this->pins[5].get() );
                 gcode->mark_as_taken();
                 break;
+
+            case 206: // M206 - set trim for each axis in mm
+                {
+                    double mm[3];
+                    mm[0]= trim[0]/steps_per_mm[0]; // convert to mm
+                    mm[1]= trim[1]/steps_per_mm[1];
+                    mm[2]= trim[2]/steps_per_mm[2];
+
+                    if(gcode->has_letter('X')) mm[0]= gcode->get_value('X');
+                    if(gcode->has_letter('Y')) mm[1]= gcode->get_value('Y');
+                    if(gcode->has_letter('Z')) mm[2]= gcode->get_value('Z');
+
+                    trim[0]= lround(mm[0]*steps_per_mm[0]); // convert back to steps
+                    trim[1]= lround(mm[1]*steps_per_mm[1]);
+                    trim[2]= lround(mm[2]*steps_per_mm[2]);
+
+                    // print the current trim values in mm and steps
+                    char buf[32];
+                    int n= snprintf(buf, sizeof(buf), "X:%5.3f (%d) Y:%5.3f (%d) Z:%5.3f (%d) ", mm[0], trim[0], mm[1], trim[1], mm[2], trim[2]);
+                    gcode->txt_after_ok.append(buf, n);
+                    gcode->mark_as_taken();
+                }
+                break;
+
         }
     }
 }
