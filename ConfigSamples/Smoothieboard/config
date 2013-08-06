@@ -13,7 +13,7 @@ gamma_steps_per_mm                           1600             # Steps per mm for
 planner_queue_size                           64               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
 acceleration                                 3000             # Acceleration in mm/second/second.
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
-junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409 
+junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8 . Lower values mean being more careful, higher values means being faster and have more jerk
 
 # Stepper module configuration
@@ -95,6 +95,7 @@ switch.fan.output_pin                        2.6              #
 
 # Endstops
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
+#corexy_homing                               false            # set to true if homing on a hbit or corexy
 alpha_min_endstop                            1.24^            # add a ! to invert if endstop is NO connected to ground
 alpha_max_endstop                            1.25^            #
 alpha_homing_direction                       home_to_min      # or set to home_to_max and set alpha_max
@@ -111,35 +112,35 @@ gamma_homing_direction                       home_to_min      #
 gamma_min                                    0                #
 gamma_max                                    200              #
 
-alpha_fast_homing_rate                       3000              # rates in steps/second 
-beta_fast_homing_rate                        3000              # depends on steps/mm setting above
-gamma_fast_homing_rate                       30000             # "
-alpha_slow_homing_rate                       1000              # "
-beta_slow_homing_rate                        1000              # "
-gamma_slow_homing_rate                       10000              
+alpha_fast_homing_rate_mm_s                  50               # feedrates in mm/second
+beta_fast_homing_rate_mm_s                   50               # "
+gamma_fast_homing_rate_mm_s                  4                # "
+alpha_slow_homing_rate_mm_s                  25               # "
+beta_slow_homing_rate_mm_s                   25               # "
+gamma_slow_homing_rate_mm_s                  2                # "
 
-alpha_homing_retract                         500               # "
-beta_homing_retract                          500               # "
-gamma_homing_retract                         5000              # "
+alpha_homing_retract_mm                      5                # distance in mm
+beta_homing_retract_mm                       5                # "
+gamma_homing_retract_mm                      1                # "
 
 # Pause button
 pause_button_enable                          true             #
 
 # Panel
 panel.enable                                 false             # set to true to enable the panel code
-panel.lcd                                    smoothiepanel     # set type of panel also viki_lcd, i2c_lcd is a generic i2c panel, panelolu2 
+panel.lcd                                    smoothiepanel     # set type of panel also viki_lcd, i2c_lcd is a generic i2c panel, panelolu2
 panel.encoder_a_pin                          1.22!^            # encoder pin
 panel.encoder_b_pin                          1.23!^            # encoder pin
 
 # Example for reprap discount GLCD
-# on glcd EXP1 is to left and EXP2 is to right, pin 1 is bottom left, pin 2 is top left etc. 
+# on glcd EXP1 is to left and EXP2 is to right, pin 1 is bottom left, pin 2 is top left etc.
 # +5v is EXP1 pin 10, Gnd is EXP1 pin 9
 #panel.lcd                                   reprap_discount_glcd     #
 #panel.spi_channel                           0                 # spi channel to use  ; GLCD EXP1 Pins 3,5 (MOSI, SCLK)
 #panel.spi_cs_pin                            0.16              # spi chip select     ; GLCD EXP1 Pin 4
 #panel.encoder_a_pin                         1.22!^            # encoder pin         ; GLCD EXP2 Pin 3
 #panel.encoder_b_pin                         1.23!^            # encoder pin         ; GLCD EXP2 Pin 5
-#panel.click_button_pin                      1.30!^            # click button        ; GLCD EXP1 Pin 2 
+#panel.click_button_pin                      1.30!^            # click button        ; GLCD EXP1 Pin 2
 #panel.buzz_pin                              1.31              # pin for buzzer      ; GLCD EXP1 Pin 1
 #panel.button_pause_pin                      2.11^             # kill/pause          ; GLCD EXP2 Pin 8
 

@@ -22,7 +22,7 @@ void Touchprobe::on_module_loaded() {
 
 void Touchprobe::on_config_reload(void* argument){
     this->pin.from_string(  this->kernel->config->value(touchprobe_pin_checksum)->by_default("nc" )->as_string())->as_input();
-    this->debounce_count =  this->kernel->config->value(endstop_debounce_count_checksum      )->by_default(100  )->as_number();
+    this->debounce_count =  this->kernel->config->value(touchprobe_debounce_count_checksum)->by_default(100  )->as_number();
 
     this->steppers[0] = this->kernel->robot->alpha_stepper_motor;
     this->steppers[1] = this->kernel->robot->beta_stepper_motor;
