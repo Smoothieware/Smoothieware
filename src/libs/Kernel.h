@@ -20,7 +20,6 @@
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
-#include "modules/tools/endstops/Endstops.h"
 #include <array>
 
 #define THEKERNEL Kernel::instance
@@ -56,7 +55,7 @@ class Kernel {
         StepTicker*       step_ticker;
         Adc*              adc;
         PublicData*       public_data;
-        
+
     private:
         std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
 

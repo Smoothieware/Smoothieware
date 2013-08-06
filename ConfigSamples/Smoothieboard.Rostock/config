@@ -23,7 +23,7 @@ arm_radius                                   124.0            # this is the hori
 planner_queue_size                           64               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
 acceleration                                 3000             # Acceleration in mm/second/second.
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
-junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409 
+junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8 . Lower values mean being more careful, higher values means being faster and have more jerk
 
 # Stepper module configuration
@@ -114,20 +114,20 @@ gamma_max_endstop                            1.29^            #
 gamma_homing_direction                       home_to_max      #
 gamma_max                                    300              #
 
-alpha_fast_homing_rate                       3000              # rates in steps/second 
-beta_fast_homing_rate                        3000              #
-gamma_fast_homing_rate                       3000              #
-alpha_slow_homing_rate                       1000              # 
-beta_slow_homing_rate                        1000              #
-gamma_slow_homing_rate                       1000              
+alpha_fast_homing_rate_mm_s                  200              # homing feedrates in mm/second
+beta_fast_homing_rate_mm_s                   200              #
+gamma_fast_homing_rate_mm_s                  200              #
+alpha_slow_homing_rate_mm_s                  20               #
+beta_slow_homing_rate_mm_s                   20               #
+gamma_slow_homing_rate_mm_s                  20
 
-alpha_homing_retract                         500               #
-beta_homing_retract                          500               #
-gamma_homing_retract                         500               #
+alpha_homing_retract_mm                      5                # retract/bounce distance after homing in mm
+beta_homing_retract_mm                       5                #
+gamma_homing_retract_mm                      5                #
 
-alpha_trim                                   0                 # software trim for alpha stepper endstop (in steps)
-beta_trim                                    0                 # software trim for beta stepper endstop (in steps)
-gamma_trim                                   0                 # software trim for gamma stepper endstop (in steps)
+alpha_trim                                   0                 # software trim for alpha stepper endstop (in mm)
+beta_trim                                    0                 # software trim for beta stepper endstop (in mm)
+gamma_trim                                   0                 # software trim for gamma stepper endstop (in mm)
 
 # Pause button
 pause_button_enable                          true             #
