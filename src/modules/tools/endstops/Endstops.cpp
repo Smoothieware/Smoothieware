@@ -242,6 +242,7 @@ void Endstops::do_homing_corexy(char axes_to_move) {
 
         // wait until done
         while( this->steppers[X_AXIS]->moving ){ this->kernel->call_event(ON_IDLE); }
+        while( this->steppers[Y_AXIS]->moving ){ this->kernel->call_event(ON_IDLE); }
 
         // Start moving the axes to the origin slowly
         this->status = MOVING_TO_ORIGIN_SLOW;
@@ -272,6 +273,7 @@ void Endstops::do_homing_corexy(char axes_to_move) {
         this->steppers[Y_AXIS]->move(this->home_direction[Y_AXIS], this->retract_steps[Y_AXIS]);
 
         // wait until done
+        while( this->steppers[X_AXIS]->moving ){ this->kernel->call_event(ON_IDLE); }
         while( this->steppers[Y_AXIS]->moving ){ this->kernel->call_event(ON_IDLE); }
 
         // Start moving the axes to the origin slowly
