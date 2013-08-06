@@ -197,6 +197,29 @@ void Endstops::do_homing(char axes_to_move) {
 #define Y_AXIS 1
 #define Z_AXIS 2
 
+void Endstops::wait_for_homed_corexy(int axis){
+    bool running = true;
+    unsigned int debounce[3] = {0,0,0};
+    while(running){
+        running = false;
+        this->kernel->call_event(ON_IDLE);
+        if( this->pins[axis + (this->home_direction[axis]?0:3)].get() ){
+            if( debounce[axis] < debounce_count ) {
+                debounce[axis] ++;
+                running = true;
+            } else {
+                // turn both off if running
+                if(this->steppers[X_AXIS]->moving) this->steppers[X_AXIS]->move(0,0);
+                if(this->steppers[Y_AXIS]->moving) this->steppers[Y_AXIS]->move(0,0);
+            }
+        }else{
+            // The endstop was not hit yet
+            running = true;
+            debounce[axis] = 0;
+        }
+    }
+}
+
 // this homing works for HBots/CoreXY
 void Endstops::do_homing_corexy(char axes_to_move) {
     // Start moving the axes to the origin
@@ -208,7 +231,7 @@ void Endstops::do_homing_corexy(char axes_to_move) {
         this->steppers[Y_AXIS]->move(this->home_direction[X_AXIS], 10000000);
 
         // wait for X
-        this->wait_for_homed(0x01);
+        this->wait_for_homed_corexy(X_AXIS);
 
         // Move back a small distance
         this->status = MOVING_BACK;
@@ -228,7 +251,7 @@ void Endstops::do_homing_corexy(char axes_to_move) {
         this->steppers[Y_AXIS]->move(this->home_direction[X_AXIS], 10000000);
 
         // wait for X
-        this->wait_for_homed(0x01);
+        this->wait_for_homed_corexy(X_AXIS);
     }
 
     if(axes_to_move & 0x02) { // Home Y, which means both X and Y in different directions
@@ -239,7 +262,7 @@ void Endstops::do_homing_corexy(char axes_to_move) {
         this->steppers[Y_AXIS]->move(!this->home_direction[Y_AXIS], 10000000);
 
         // wait for Y
-        this->wait_for_homed(0x02);
+        this->wait_for_homed_corexy(Y_AXIS);
 
         // Move back a small distance
         this->status = MOVING_BACK;
@@ -259,7 +282,7 @@ void Endstops::do_homing_corexy(char axes_to_move) {
         this->steppers[Y_AXIS]->move(!this->home_direction[Y_AXIS], 10000000);
 
         // wait for Y
-        this->wait_for_homed(0x02);
+        this->wait_for_homed_corexy(Y_AXIS);
     }
 
     if(axes_to_move & 0x04) { // move Z

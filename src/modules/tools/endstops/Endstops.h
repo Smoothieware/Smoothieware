@@ -95,6 +95,7 @@ class Endstops : public Module{
         void do_homing(char axes_to_move);
         void do_homing_corexy(char axes_to_move);
         void wait_for_homed(char axes_to_move);
+        void wait_for_homed_corexy(int axis);
         double steps_per_mm[3];
         double homing_position[3];
         bool home_direction[3];
