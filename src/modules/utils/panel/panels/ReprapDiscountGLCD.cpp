@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "ReprapDiscountGLCD.h"
 
@@ -24,7 +24,7 @@ ReprapDiscountGLCD::ReprapDiscountGLCD() {
     }else if(spi_channel == 1){
         mosi= P0_9; sclk= P0_7;
     }else{
-        mosi= P0_18; sclk= P0_15;  
+        mosi= P0_18; sclk= P0_15;
     }
 
     this->glcd= new RrdGlcd(mosi, sclk, this->spi_cs_pin);
@@ -45,16 +45,16 @@ uint8_t ReprapDiscountGLCD::readButtons() {
     return state;
 }
 
-int ReprapDiscountGLCD::readEncoderDelta() { 
-    static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
+int ReprapDiscountGLCD::readEncoderDelta() {
+    static const int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
     static uint8_t old_AB = 0;
     old_AB <<= 2;                   //remember previous state
-    old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state 
+    old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state
     return  enc_states[(old_AB&0x0f)];
 }
 
-// cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms) 
-void ReprapDiscountGLCD::buzz(long duration, uint16_t freq) {  
+// cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
+void ReprapDiscountGLCD::buzz(long duration, uint16_t freq) {
     if(!this->buzz_pin.connected()) return;
 
     duration *=1000; //convert from ms to us

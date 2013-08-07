@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Kernel.h"
@@ -59,7 +59,7 @@ void WatchScreen::on_enter(){
 }
 
 void WatchScreen::on_refresh(){
-    // Exit if the button is clicked 
+    // Exit if the button is clicked
     if( this->panel->click() ){
         this->panel->enter_screen(this->parent);
         return;
@@ -78,7 +78,7 @@ void WatchScreen::on_refresh(){
             this->refresh_screen(false);
         }
     }
-    
+
     // Update Only every 20 refreshes, 1 a second
     static int update_counts = 0;
     update_counts++;
@@ -109,8 +109,8 @@ void WatchScreen::on_refresh(){
 
             if(this->bedtarget > 0)
                 this->panel->lcd->bltGlyph(32, 38, 23, 19, icons, 15, 64, 0);
-            
-            // fan always on for now
+
+            // fan appears always on for now
             this->panel->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
         }
     }
@@ -158,7 +158,7 @@ void WatchScreen::get_temp_data() {
 // fetch the data we are displaying
 double WatchScreen::get_current_speed() {
     void *returned_data;
-    
+
     bool ok= THEKERNEL->public_data->get_value( robot_checksum, speed_override_percent_checksum, &returned_data );
     if(ok) {
         double cs= *static_cast<double *>(returned_data);
@@ -205,14 +205,14 @@ void WatchScreen::display_menu_line(uint16_t line){
 const char* WatchScreen::get_status(){
     if(THEKERNEL->pauser->paused())
         return "Paused";
-    
+
     if(panel->is_playing())
         return panel->get_playing_file();
 
     return "Smoothie ready";
 }
 
-void WatchScreen::set_speed(){    
+void WatchScreen::set_speed(){
     // change pos by issuing a M220 Snnn
     char buf[32];
     int n= snprintf(buf, sizeof(buf), "M220 S%f", this->current_speed);
