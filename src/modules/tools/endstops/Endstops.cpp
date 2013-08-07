@@ -71,11 +71,6 @@ void Endstops::on_config_reload(void* argument){
     this->retract_steps[1]= this->kernel->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1]/steps_per_mm[1])->as_number() * steps_per_mm[1];
     this->retract_steps[2]= this->kernel->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2]/steps_per_mm[2])->as_number() * steps_per_mm[2];
 
-    // endstop trim used by deltas to do soft adjusting, in mm, convert to steps
-    this->trim[0]         = this->kernel->config->value(alpha_trim_checksum                )->by_default(0  )->as_number() * steps_per_mm[0];
-    this->trim[1]         = this->kernel->config->value(beta_trim_checksum                 )->by_default(0  )->as_number() * steps_per_mm[0];
-    this->trim[2]         = this->kernel->config->value(gamma_trim_checksum                )->by_default(0  )->as_number() * steps_per_mm[0];
-
     this->debounce_count  = this->kernel->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
 
 
@@ -94,6 +89,15 @@ void Endstops::on_config_reload(void* argument){
     this->homing_position[2]        =  this->home_direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number():this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
 
     this->is_corexy                 =  this->kernel->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
+
+    // endstop trim used by deltas to do soft adjusting, in mm, convert to steps, and negate depending on homing direction
+    // eg on a delta homing to max, a negative trim value will move the carriage down, and a positive will move it up
+    int dirx= (this->home_direction[0] ? 1 : -1);
+    int diry= (this->home_direction[1] ? 1 : -1);
+    int dirz= (this->home_direction[2] ? 1 : -1);
+    this->trim[0]= this->kernel->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[0] * dirx;
+    this->trim[1]= this->kernel->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * steps_per_mm[1] * diry;
+    this->trim[2]= this->kernel->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
 }
 
 void Endstops::wait_for_homed(char axes_to_move){
