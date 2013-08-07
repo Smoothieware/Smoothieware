@@ -1,3 +1,4 @@
+#if 0
 #include "LPC17XX_Ethernet.h"
 
 #include <cstring>
@@ -497,3 +498,5 @@ extern "C" {
 //     up = false;
 //     n->set_interface_status(this, up);
 // }
+
+#endif
