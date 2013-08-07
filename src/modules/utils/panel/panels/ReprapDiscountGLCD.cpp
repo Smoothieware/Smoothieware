@@ -70,9 +70,7 @@ void ReprapDiscountGLCD::buzz(long duration, uint16_t freq) {
 }
 
 void ReprapDiscountGLCD::write(const char* line, int len) {
-    for (int i = 0; i < len; ++i) {
-        this->glcd->displayString(this->row, this->col, line, len);
-    }
+    this->glcd->displayString(this->row, this->col, line, len);
     this->col+=len;
 }
 
