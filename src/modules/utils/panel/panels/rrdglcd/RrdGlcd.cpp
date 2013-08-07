@@ -1,6 +1,8 @@
 #include "RrdGlcd.h"
 
-static const uint8_t font5x8[] = { 
+uint8_t RrdGlcd::fb[1024] __attribute__ ((section ("AHBSRAM0")));
+
+static const uint8_t font5x8[] = {
     // 5x8 font each byte is consecutive x bits left aligned then each subsequent byte is Y 8 bytes per character
     // TODO probably only need someof these characters not all 256
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x70,0xF8,0xA8,0xF8,0xD8,0x88,0x70,0x00, // 0x00, 0x01
@@ -144,7 +146,7 @@ static const uint8_t font5x8[] = {
 #define HEIGHT 64
 
 RrdGlcd::RrdGlcd(PinName mosi, PinName sclk, Pin cs) {
-    this->spi= new mbed::SPI(mosi, NC, sclk); 
+    this->spi= new mbed::SPI(mosi, NC, sclk);
      //chip select
     this->cs= cs;
     this->cs.set(0);
@@ -265,7 +267,7 @@ void RrdGlcd::renderGlyph(int xp, int yp, const uint8_t *g, int pixelWidth, int 
             if(m == 0){
                 m= 0x80;
                 b= *g++;
-            } 
+            }
         }
     }
 }
@@ -284,7 +286,7 @@ void RrdGlcd::fillGDRAM(const uint8_t *bitmap) {
                 ST7920_WRITE_BYTE(0x80 | 0x08);
             }
             ST7920_SET_DAT();
-            ST7920_WRITE_BYTES(bitmap, WIDTH/8);
+            ST7920_WRITE_BYTES(bitmap, WIDTH/8); // bitmap gets incremented in this macro
         }
         ST7920_NCS();
     }
