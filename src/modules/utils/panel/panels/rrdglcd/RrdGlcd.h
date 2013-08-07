@@ -57,7 +57,7 @@ private:
     void renderChar(uint8_t *fb, char c, int ox, int oy);
     void displayChar(int row, int column,char inpChr);
 
-    static uint8_t fb[1024];
+    uint8_t *fb;
     bool inited;
     bool dirty;
 };

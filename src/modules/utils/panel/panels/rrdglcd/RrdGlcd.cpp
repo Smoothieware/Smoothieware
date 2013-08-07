@@ -1,6 +1,6 @@
 #include "RrdGlcd.h"
 
-uint8_t RrdGlcd::fb[1024] __attribute__ ((section ("AHBSRAM1")));
+#include "ahbmalloc.h"
 
 static const uint8_t font5x8[] = {
     // 5x8 font each byte is consecutive x bits left aligned then each subsequent byte is Y 8 bytes per character
@@ -144,18 +144,24 @@ static const uint8_t font5x8[] = {
 #define PAGE_HEIGHT 32  //512 byte framebuffer
 #define WIDTH 128
 #define HEIGHT 64
+#define FB_SIZE WIDTH*HEIGHT/8
 
 RrdGlcd::RrdGlcd(PinName mosi, PinName sclk, Pin cs) {
     this->spi= new mbed::SPI(mosi, NC, sclk);
      //chip select
     this->cs= cs;
     this->cs.set(0);
+    fb= (uint8_t *)ahbmalloc(FB_SIZE, AHB_BANK_0); // grab some memoery from USB_RAM
+    if(fb == NULL) {
+        THEKERNEL->streams->printf("Not enough memory available for frame buffer");
+    }
     inited= false;
     dirty= false;
 }
 
 RrdGlcd::~RrdGlcd() {
     delete this->spi;
+    ahbfree(fb, FB_SIZE);
 }
 
 void RrdGlcd::setFrequency(int freq) {
@@ -163,6 +169,7 @@ void RrdGlcd::setFrequency(int freq) {
 }
 
 void RrdGlcd::initDisplay() {
+    if(fb == NULL) return;
     ST7920_CS();
     clearScreen();  // clear framebuffer
     wait_ms(90);                 //initial delay for boot up
@@ -186,7 +193,8 @@ void RrdGlcd::initDisplay() {
 }
 
 void RrdGlcd::clearScreen() {
-    memset(this->fb, 0, sizeof(fb));
+    if(fb == NULL) return;
+    memset(this->fb, 0, FB_SIZE);
     dirty= true;
 }
 
@@ -200,6 +208,7 @@ void RrdGlcd::displayString(int row, int col, const char *ptr, int length) {
 }
 
 void RrdGlcd::renderChar(uint8_t *fb, char c, int ox, int oy) {
+    if(fb == NULL) return;
     // using the specific font data where x is in one byte and y is in consecutive bytes
     // the x bits are left aligned and right padded
     int i= c*8; // character offset in font array
@@ -225,6 +234,7 @@ void RrdGlcd::displayChar(int row, int col, char c) {
 }
 
 void RrdGlcd::renderGlyph(int xp, int yp, const uint8_t *g, int pixelWidth, int pixelHeight) {
+    if(fb == NULL) return;
     // NOTE the source is expected to be byte aligned and the exact number of pixels
     // TODO need to optimize by copying bytes instead of pixels...
     int xf= xp%8;
