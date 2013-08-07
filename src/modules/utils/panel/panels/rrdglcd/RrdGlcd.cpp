@@ -1,6 +1,6 @@
 #include "RrdGlcd.h"
 
-uint8_t RrdGlcd::fb[1024] __attribute__ ((section ("AHBSRAM0")));
+uint8_t RrdGlcd::fb[1024] __attribute__ ((section ("AHBSRAM1")));
 
 static const uint8_t font5x8[] = {
     // 5x8 font each byte is consecutive x bits left aligned then each subsequent byte is Y 8 bytes per character
