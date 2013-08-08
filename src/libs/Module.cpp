@@ -18,6 +18,7 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 };
 
 Module::Module(){}
+Module::~Module(){}
 
 void Module::on_module_loaded(){}
 
