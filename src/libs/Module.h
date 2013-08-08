@@ -32,8 +32,9 @@ class Kernel;
 class Module {
     public:
         Module();
+        virtual ~Module();
         virtual void on_module_loaded();
-                void register_for_event(        _EVENT_ENUM event_id);
+        void register_for_event(        _EVENT_ENUM event_id);
         #define EVENT(name, func) virtual void func (void*);
         #include "Event.h"
         #undef EVENT

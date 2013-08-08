@@ -65,7 +65,7 @@ void Robot::on_config_reload(void* argument){
     if (this->arm_solution) delete this->arm_solution;
     int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
     // Note checksums are not const expressions when in debug mode, so don't use switch
-    if(solution_checksum == hbot_checksum) {
+    if(solution_checksum == hbot_checksum || solution_checksum == corexy_checksum) {
         this->arm_solution = new HBotSolution(this->kernel->config);
 
     }else if(solution_checksum == rostock_checksum) {
@@ -120,7 +120,7 @@ void Robot::on_get_public_data(void* argument){
         return_data= 100*this->seconds_per_minute/60;
         pdr->set_data_ptr(&return_data);
         pdr->set_taken();
-        
+
     }else if(pdr->second_element_is(current_position_checksum)) {
         static double return_data[3];
         return_data[0]= from_millimeters(this->current_position[0]);
@@ -128,7 +128,7 @@ void Robot::on_get_public_data(void* argument){
         return_data[2]= from_millimeters(this->current_position[2]);
 
         pdr->set_data_ptr(&return_data);
-        pdr->set_taken();       
+        pdr->set_taken();
     }
 }
 
@@ -140,9 +140,9 @@ void Robot::on_set_public_data(void* argument){
     if(pdr->second_element_is(speed_override_percent_checksum)) {
         // NOTE do not use this while printing!
         double t= *static_cast<double*>(pdr->get_data_ptr());
-        // enforce minimum 1% speed
-        if (t < 1.0) t= 1.0;
-    
+        // enforce minimum 10% speed
+        if (t < 10.0) t= 10.0;
+
         this->seconds_per_minute= t * 0.6;
         pdr->set_taken();
     }
@@ -218,21 +218,21 @@ void Robot::on_gcode_received(void * argument){
                 if (gcode->has_letter('S'))
                 {
                     double acc= gcode->get_value('S');
-                    // enforce minimum 
+                    // enforce minimum
                     if (acc < 1.0)
                         acc = 1.0;
                     this->kernel->planner->acceleration= acc;
                 }
                 break;
-                
+
             case 220: // M220 - speed override percentage
                 gcode->mark_as_taken();
                 if (gcode->has_letter('S'))
                 {
                     double factor = gcode->get_value('S');
-                    // enforce minimum 1% speed
-                    if (factor < 1.0)
-                        factor = 1.0;
+                    // enforce minimum 10% speed
+                    if (factor < 10.0)
+                        factor = 10.0;
                     seconds_per_minute = factor * 0.6;
                 }
                 break;

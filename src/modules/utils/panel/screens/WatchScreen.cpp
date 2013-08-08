@@ -68,8 +68,8 @@ void WatchScreen::on_refresh(){
     // see if speed is being changed
     if(this->panel->control_value_change()) {
         this->current_speed= this->panel->get_control_value();
-        if(this->current_speed < 1.0) {
-            this->current_speed= 1.0;
+        if(this->current_speed < 10.0) {
+            this->current_speed= 10.0;
             this->panel->set_control_value(this->current_speed);
             this->panel->reset_counter();
         }else{
