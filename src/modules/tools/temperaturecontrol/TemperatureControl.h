@@ -21,6 +21,7 @@
 #define r0_checksum                        CHECKSUM("r0")
 #define readings_per_second_checksum       CHECKSUM("readings_per_second")
 #define max_pwm_checksum                   CHECKSUM("max_pwm")
+#define pwm_frequency_checksum             CHECKSUM("pwm_frequency")
 #define t0_checksum                        CHECKSUM("t0")
 #define beta_checksum                      CHECKSUM("beta")
 #define vadc_checksum                      CHECKSUM("vadc")

@@ -106,7 +106,7 @@ void TemperatureControl::on_config_reload(void* argument){
     set_low_on_debug(heater_pin.port_number, heater_pin.pin);
 
     // activate SD-DAC timer
-    this->kernel->slow_ticker->attach(1000, &heater_pin, &Pwm::on_tick);
+    this->kernel->slow_ticker->attach( this->kernel->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number() , &heater_pin, &Pwm::on_tick);
 
     // reading tick
     this->kernel->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
