@@ -73,7 +73,7 @@ void TemperatureControl::on_config_reload(void* argument){
     }else if( thermistor->value.compare("RRRF100K"     ) == 0 ){ this->beta = 3960;
     }else if( thermistor->value.compare("RRRF10K"      ) == 0 ){ this->beta = 3964; this->r0 = 10000; this->r1 = 680; this->r2 = 1600;
     }else if( thermistor->value.compare("Honeywell100K") == 0 ){ this->beta = 3974;
-    }else if( thermistor->value.compare("Semitec"      ) == 0 ){ this->beta = 4267; 
+    }else if( thermistor->value.compare("Semitec"      ) == 0 ){ this->beta = 4267;
     }else if( thermistor->value.compare("HT100K"       ) == 0 ){ this->beta = 3990; }
 
     // Preset values are overriden by specified values
@@ -110,11 +110,12 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // reading tick
     this->kernel->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
+    this->PIDdt= 1.0 / this->readings_per_second;
 
     // PID
-    this->p_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number();
-    this->i_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number();
-    this->d_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number();
+    setPIDp( this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number() );
+    setPIDi( this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number() );
+    setPIDd( this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number() );
     this->i_max    = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(255)->as_number();
     this->i = 0.0;
     this->last_reading = 0.0;
@@ -137,15 +138,15 @@ void TemperatureControl::on_gcode_received(void* argument){
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
             {
                 if (gcode->has_letter('P'))
-                    this->p_factor = gcode->get_value('P');
+                    setPIDp( gcode->get_value('P') );
                 if (gcode->has_letter('I'))
-                    this->i_factor = gcode->get_value('I');
+                    setPIDi( gcode->get_value('I') );
                 if (gcode->has_letter('D'))
-                    this->d_factor = gcode->get_value('D');
+                    setPIDd( gcode->get_value('D') );
                 if (gcode->has_letter('X'))
                     this->i_max    = gcode->get_value('X');
             }
-            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor, this->d_factor, this->i_max, this->p, this->i, this->d, o);
+            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, this->p, this->i, this->d, o);
         }
         if (gcode->m == 303)
         {
@@ -206,7 +207,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
 
 void TemperatureControl::on_get_public_data(void* argument){
     PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
-    
+
     if(!pdr->starts_with(temperature_control_checksum)) return;
 
     if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
@@ -218,7 +219,7 @@ void TemperatureControl::on_get_public_data(void* argument){
         temp_return.current_temperature= this->get_temperature();
         temp_return.target_temperature= (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
         temp_return.pwm= this->o;
-        
+
         pdr->set_data_ptr(&temp_return);
         pdr->set_taken();
     }
@@ -340,4 +341,16 @@ void TemperatureControl::on_second_tick(void* argument)
 {
     if (waiting)
         kernel->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o);
+}
+
+void TemperatureControl::setPIDp(double p) {
+    this->p_factor= p;
+}
+
+void TemperatureControl::setPIDi(double i) {
+    this->i_factor= i*this->PIDdt;
+}
+
+void TemperatureControl::setPIDd(double d) {
+    this->d_factor= d/this->PIDdt;
 }
