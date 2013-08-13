@@ -87,15 +87,10 @@ class TemperatureControl : public Module {
         double j;
         double k;
 
-        // PID settings
-        double p_factor;
-        double i_factor;
-        double d_factor;
 
         // PID runtime
         double i_max;
 
-        double p, i, d;
         int o;
 
         double last_reading;
@@ -123,6 +118,18 @@ class TemperatureControl : public Module {
 
         TemperatureControlPool *pool;
         int pool_index;
+
+        void setPIDp(double p);
+        void setPIDi(double i);
+        void setPIDd(double d);
+
+    private:
+        double p, i, d;
+        // PID settings
+        double p_factor;
+        double i_factor;
+        double d_factor;
+        double PIDdt;
 };
 
 #endif
