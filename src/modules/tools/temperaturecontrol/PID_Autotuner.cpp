@@ -141,9 +141,9 @@ void PID_Autotuner::on_idle(void*)
             s->printf("\tTrying:\n\tKp: %5.1f\n\tKi: %5.3f\n\tKd: %5.0f\n", kp, ki, kd);
             // end code from Marlin Firmware
 
-            t->p_factor = kp;
-            t->i_factor = ki;
-            t->d_factor = kd;
+            t->setPIDp(kp);
+            t->setPIDi(ki);
+            t->setPIDd(kd);
 
             s->printf("PID Autotune Complete! The settings above have been loaded into memory, but not written to your config file.\n");
 
