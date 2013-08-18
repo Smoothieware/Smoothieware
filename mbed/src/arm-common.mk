@@ -151,6 +151,7 @@ SIZE    =arm-none-eabi-size
 
 # Command line tools that are different between *nix and Windows.
 ifeq "$(OS)" "Windows_NT"
+SHELL      =cmd.exe
 REMOVE     =del /q
 REMOVE_DIR =rd /s /q
 COPY       =copy
