@@ -116,8 +116,10 @@ void TemperatureControl::on_config_reload(void* argument){
     setPIDp( this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number() );
     setPIDi( this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number() );
     setPIDd( this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number() );
-    this->i_max    = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(255)->as_number();
-    this->i = 0.0;
+    // set to the same as max_pwm by default
+    this->i_max = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
+    this->iTerm = 0.0;
+    this->lastInput= -1.0;
     this->last_reading = 0.0;
 }
 
@@ -146,7 +148,8 @@ void TemperatureControl::on_gcode_received(void* argument){
                 if (gcode->has_letter('X'))
                     this->i_max    = gcode->get_value('X');
             }
-            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, this->p, this->i, this->d, o);
+            //gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, this->p, this->i, this->d, o);
+            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, o);
         }
         if (gcode->m == 303)
         {
@@ -295,22 +298,23 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     return 0;
 }
 
+/**
+ * Based on https://github.com/br3ttb/Arduino-PID-Library
+ */
 void TemperatureControl::pid_process(double temperature)
 {
     double error = target_temperature - temperature;
 
-    p  = error * p_factor;
-    i += (error * this->i_factor);
-    // d was imbued with oldest_raw earlier in new_thermistor_reading
-    d = adc_value_to_temperature(d);
-    d = (d - temperature) * this->d_factor;
+    this->iTerm += (error * this->i_factor);
+    if (this->iTerm > this->i_max) this->iTerm = this->i_max;
+    else if (this->iTerm < 0.0) this->iTerm = 0.0;
 
-    if (i > this->i_max)
-        i = this->i_max;
-    if (i < -this->i_max)
-        i = -this->i_max;
+    if(this->lastInput < 0.0) this->lastInput= temperature; // set first time
+    double d= (temperature - this->lastInput);
 
-    this->o = (p + i + d) * heater_pin.max_pwm() / 256;
+    // calculate the PID output
+    // TODO does this need to be scaled by max_pwm/256? I think not as p_factor already does that
+    this->o = (this->p_factor*error) + this->iTerm - (this->d_factor*d);
 
     if (this->o >= heater_pin.max_pwm())
         this->o = heater_pin.max_pwm();
@@ -318,16 +322,15 @@ void TemperatureControl::pid_process(double temperature)
         this->o = 0;
 
     this->heater_pin.pwm(this->o);
+    this->lastInput= temperature;
 }
 
 int TemperatureControl::new_thermistor_reading()
 {
     int last_raw = this->kernel->adc->read(&thermistor_pin);
-    if (queue.size() >= queue.capacity())
-    {
+    if (queue.size() >= queue.capacity()) {
         uint16_t l;
         queue.pop_front(l);
-        d = l;
     }
     uint16_t r = last_raw;
     queue.push_back(r);
