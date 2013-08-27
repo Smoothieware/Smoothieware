@@ -160,7 +160,8 @@ void PID_Autotuner::on_idle(void*)
     if (output)
     {
         ticks = ++cycles[cycle].ticks_high;
-        t->heater_pin.pwm((t->o = ((bias + d) >> 1)));
+        //t->heater_pin.pwm((t->o = ((bias + d) >> 1)));
+        t->heater_pin.pwm(t->o = (bias + d)); // why use half PWM???
     }
     else
     {

@@ -90,7 +90,7 @@ void WatchScreen::on_refresh(){
         this->panel->set_control_value(this->current_speed); // in case it was changed via M220
         this->panel->reset_counter();
 
-        this->refresh_screen(false);
+        this->refresh_screen(this->panel->lcd->hasGraphics()?true:false); // graphics screens should be cleared
 
         // for LCDs with leds set them according to heater status
         // TODO should be enabled and disabled and settable from config
