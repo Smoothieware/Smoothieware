@@ -18,11 +18,12 @@ class JohannKosselSolution : public BaseSolution {
     public:
         JohannKosselSolution(Config* passed_config);
         void millimeters_to_steps( double millimeters[], int steps[] );
-        void steps_to_millimeters( int steps[], double millimeters[] ); 
+        void steps_to_millimeters( int steps[], double millimeters[] );
 
         void set_steps_per_millimeter( double steps[] );
         void get_steps_per_millimeter( double steps[] );
 
+    private:
         Config* config;
         float alpha_steps_per_mm;
         float beta_steps_per_mm;
