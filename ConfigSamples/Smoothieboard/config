@@ -71,6 +71,12 @@ temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
 
+#temperature_control.hotend.p_factor         13.7             # permanenetly set the PID values after an auto pid
+#temperature_control.hotend.i_factor         0.097            #
+#temperature_control.hotend.d_factor         24               #
+
+#temperature_control.hotend.max_pwm          64               # override max pwm, 64 is a good value if driving a 12v resistor with 24v.
+
 temperature_control.bed.enable               true             #
 temperature_control.bed.thermistor_pin       0.24             #
 temperature_control.bed.heater_pin           2.5              #
