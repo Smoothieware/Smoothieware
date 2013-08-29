@@ -125,17 +125,15 @@ void TemperatureControl::on_config_reload(void* argument){
 
 void TemperatureControl::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    if (gcode->has_m)
-    {
+    if (gcode->has_m) {
         // Get temperature
         if( gcode->m == this->get_m_code ){
             char buf[32]; // should be big enough for any status
             int n= snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);
             gcode->mark_as_taken();
-        }
-        if (gcode->m == 301)
-        {
+
+        } else if (gcode->m == 301) {
             gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
             {
@@ -150,32 +148,33 @@ void TemperatureControl::on_gcode_received(void* argument){
             }
             //gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, this->p, this->i, this->d, o);
             gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, o);
-        }
-        if (gcode->m == 303)
-        {
-            gcode->mark_as_taken();
-            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
-            {
+
+        } else if (gcode->m == 303) {
+            if (gcode->has_letter('E') && (gcode->get_value('E') == this->pool_index)) {
+                gcode->mark_as_taken();
                 double target = 150.0;
-                if (gcode->has_letter('P'))
-                {
-                    target = gcode->get_value('P');
+                if (gcode->has_letter('S')) {
+                    target = gcode->get_value('S');
                     gcode->stream->printf("Target: %5.1f\n", target);
                 }
+                int ncycles= 8;
+                if (gcode->has_letter('C')) {
+                    ncycles= gcode->get_value('C');
+                }
                 gcode->stream->printf("Start PID tune, command is %s\n", gcode->command.c_str());
-                this->pool->PIDtuner->begin(this, target, gcode->stream);
+                this->pool->PIDtuner->begin(this, target, gcode->stream, ncycles);
             }
-        }
 
-        // Attach gcodes to the last block for on_gcode_execute
-        if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ){
+        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ) {
+            gcode->mark_as_taken();
+
+            // Attach gcodes to the last block for on_gcode_execute
             if( this->kernel->conveyor->queue.size() == 0 ){
                 this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
             }else{
                 Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
                 block->append_gcode(gcode);
             }
-
         }
     }
 }
@@ -199,7 +198,6 @@ void TemperatureControl::on_gcode_execute(void* argument){
 
                 if( gcode->m == this->set_and_wait_m_code)
                 {
-                    gcode->mark_as_taken();
                     this->kernel->pauser->take();
                     this->waiting = true;
                 }

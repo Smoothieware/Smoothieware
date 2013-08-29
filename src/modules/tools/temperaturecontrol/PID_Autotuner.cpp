@@ -16,7 +16,7 @@ void PID_Autotuner::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
 }
 
-void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput *stream)
+void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput *stream, int ncycles)
 {
     if (t)
         t->heater_pin.set(0);
@@ -28,7 +28,7 @@ void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput 
 
     target_temperature = target;
 
-    for (cycle = 0; cycle < 8; cycle++)
+    for (cycle = 0; cycle < ncycles; cycle++)
     {
         cycles[cycle].ticks_high = 0;
         cycles[cycle].ticks_low  = 0;
