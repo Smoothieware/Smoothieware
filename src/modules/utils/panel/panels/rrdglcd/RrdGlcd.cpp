@@ -229,8 +229,12 @@ void RrdGlcd::renderChar(uint8_t *fb, char c, int ox, int oy) {
 }
 
 void RrdGlcd::displayChar(int row, int col, char c) {
+    int x= col*6;
+    // if this wraps the line ignore it
+    if(x+6 > WIDTH) return;
+
     // convert row/column into y and x pixel positions based on font size
-    renderChar(this->fb, c, col*6, row*8);
+    renderChar(this->fb, c, x, row*8);
 }
 
 void RrdGlcd::renderGlyph(int xp, int yp, const uint8_t *g, int pixelWidth, int pixelHeight) {
