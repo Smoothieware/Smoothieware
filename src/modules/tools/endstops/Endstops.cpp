@@ -89,6 +89,7 @@ void Endstops::on_config_reload(void* argument){
     this->homing_position[2]        =  this->home_direction[2]?this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number():this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
 
     this->is_corexy                 =  this->kernel->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
+    this->is_delta                  =  this->kernel->config->value(delta_homing_checksum)->by_default(false)->as_bool();
 
     // endstop trim used by deltas to do soft adjusting, in mm, convert to steps, and negate depending on homing direction
     // eg on a delta homing to max, a negative trim value will move the carriage down, and a positive will move it up
@@ -171,24 +172,26 @@ void Endstops::do_homing(char axes_to_move) {
     // Wait for all axes to have homed
     this->wait_for_homed(axes_to_move);
 
-    // move for soft trim
-    this->status = MOVING_BACK;
-    for( char c = 'X'; c <= 'Z'; c++ ){
-        if( this->trim[c - 'X'] != 0 && ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-            inverted_dir = !this->home_direction[c - 'X'];
-            // move up or down depending on sign of trim
-            if(this->trim[c - 'X'] < 0) inverted_dir= !inverted_dir;
-            this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-            this->steppers[c - 'X']->move(inverted_dir,this->trim[c - 'X']);
+    if(this->is_delta) {
+        // move for soft trim
+        this->status = MOVING_BACK;
+        for( char c = 'X'; c <= 'Z'; c++ ){
+            if( this->trim[c - 'X'] != 0 && ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                inverted_dir = !this->home_direction[c - 'X'];
+                // move up or down depending on sign of trim
+                if(this->trim[c - 'X'] < 0) inverted_dir= !inverted_dir;
+                this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
+                this->steppers[c - 'X']->move(inverted_dir,this->trim[c - 'X']);
+            }
         }
-    }
 
-    // Wait for moves to be done
-    for( char c = 'X'; c <= 'Z'; c++ ){
-        if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
-            //this->kernel->streams->printf("axis %c \r\n", c );
-            while( this->steppers[c - 'X']->moving ){
-                this->kernel->call_event(ON_IDLE);
+        // Wait for moves to be done
+        for( char c = 'X'; c <= 'Z'; c++ ){
+            if(  ( axes_to_move >> ( c - 'X' ) ) & 1 ){
+                //this->kernel->streams->printf("axis %c \r\n", c );
+                while( this->steppers[c - 'X']->moving ){
+                    this->kernel->call_event(ON_IDLE);
+                }
             }
         }
     }
@@ -315,8 +318,8 @@ void Endstops::on_gcode_received(void* argument)
 
             // Do we move select axes or all of them
             char axes_to_move = 0;
-            // only enable homing if the endstop is defined
-            bool home_all= !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
+            // only enable homing if the endstop is defined, deltas always home all axis
+            bool home_all= this->is_delta || !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
 
             for( char c = 'X'; c <= 'Z'; c++ ){
                 if( (home_all || gcode->has_letter(c)) && this->pins[c - 'X' + (this->home_direction[c - 'X']?0:3)].connected() ){ axes_to_move += ( 1 << (c - 'X' ) ); }

@@ -25,6 +25,7 @@
 
 #define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
 #define corexy_homing_checksum                  CHECKSUM("corexy_homing")
+#define delta_homing_checksum                   CHECKSUM("delta_homing")
 
 #define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
 #define beta_min_endstop_checksum        CHECKSUM("beta_min_endstop")
@@ -108,6 +109,7 @@ class Endstops : public Module{
         StepperMotor* steppers[3];
         char status;
         bool is_corexy;
+        bool is_delta;
 };
 
 #endif
