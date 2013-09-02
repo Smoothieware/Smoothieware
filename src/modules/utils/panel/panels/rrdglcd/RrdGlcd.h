@@ -1,11 +1,11 @@
 #ifndef __RRDGLCD_H
 #define __RRDGLCD_H
 
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 /**
@@ -36,7 +36,7 @@ public:
 
     void initDisplay(void);
     void clearScreen(void);
-    void displayString(int Row, int Column, const char *ptr, int length);
+    void displayString(int row, int column, const char *ptr, int length);
     void refresh();
 
      /**
@@ -47,14 +47,17 @@ public:
     *
     */
     void fillGDRAM(const uint8_t *bitmap);
-    
+
+    // copy the bits in g, of X line size pixels, to x, y in frame buffer
+    void renderGlyph(int x, int y, const uint8_t *g, int pixelWidth, int pixelHeight);
+
 private:
     Pin cs;
     mbed::SPI* spi;
     void renderChar(uint8_t *fb, char c, int ox, int oy);
-    void displayChar(int Row, int Column,char inpChr);
+    void displayChar(int row, int column,char inpChr);
 
-    uint8_t fb[1024];
+    uint8_t *fb;
     bool inited;
     bool dirty;
 };

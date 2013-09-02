@@ -16,7 +16,7 @@ void PID_Autotuner::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
 }
 
-void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput *stream)
+void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput *stream, int ncycles)
 {
     if (t)
         t->heater_pin.set(0);
@@ -28,7 +28,7 @@ void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput 
 
     target_temperature = target;
 
-    for (cycle = 0; cycle < 8; cycle++)
+    for (cycle = 0; cycle < ncycles; cycle++)
     {
         cycles[cycle].ticks_high = 0;
         cycles[cycle].ticks_low  = 0;
@@ -141,9 +141,9 @@ void PID_Autotuner::on_idle(void*)
             s->printf("\tTrying:\n\tKp: %5.1f\n\tKi: %5.3f\n\tKd: %5.0f\n", kp, ki, kd);
             // end code from Marlin Firmware
 
-            t->p_factor = kp;
-            t->i_factor = ki;
-            t->d_factor = kd;
+            t->setPIDp(kp);
+            t->setPIDi(ki);
+            t->setPIDd(kd);
 
             s->printf("PID Autotune Complete! The settings above have been loaded into memory, but not written to your config file.\n");
 
@@ -160,7 +160,8 @@ void PID_Autotuner::on_idle(void*)
     if (output)
     {
         ticks = ++cycles[cycle].ticks_high;
-        t->heater_pin.pwm((t->o = ((bias + d) >> 1)));
+        //t->heater_pin.pwm((t->o = ((bias + d) >> 1)));
+        t->heater_pin.pwm(t->o = (bias + d)); // why use half PWM???
     }
     else
     {

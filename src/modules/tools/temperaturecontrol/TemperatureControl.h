@@ -21,6 +21,7 @@
 #define r0_checksum                        CHECKSUM("r0")
 #define readings_per_second_checksum       CHECKSUM("readings_per_second")
 #define max_pwm_checksum                   CHECKSUM("max_pwm")
+#define pwm_frequency_checksum             CHECKSUM("pwm_frequency")
 #define t0_checksum                        CHECKSUM("t0")
 #define beta_checksum                      CHECKSUM("beta")
 #define vadc_checksum                      CHECKSUM("vadc")
@@ -70,6 +71,12 @@ class TemperatureControl : public Module {
         uint32_t thermistor_read_tick(uint32_t dummy);
         int new_thermistor_reading();
 
+
+        int pool_index;
+        TemperatureControlPool *pool;
+        friend class PID_Autotuner;
+
+    private:
         void pid_process(double);
 
         double target_temperature;
@@ -86,15 +93,10 @@ class TemperatureControl : public Module {
         double j;
         double k;
 
-        // PID settings
-        double p_factor;
-        double i_factor;
-        double d_factor;
 
         // PID runtime
         double i_max;
 
-        double p, i, d;
         int o;
 
         double last_reading;
@@ -120,8 +122,18 @@ class TemperatureControl : public Module {
 
         string designator;
 
-        TemperatureControlPool *pool;
-        int pool_index;
+
+        void setPIDp(double p);
+        void setPIDi(double i);
+        void setPIDd(double d);
+
+        double iTerm;
+        double lastInput;
+        // PID settings
+        double p_factor;
+        double i_factor;
+        double d_factor;
+        double PIDdt;
 };
 
 #endif

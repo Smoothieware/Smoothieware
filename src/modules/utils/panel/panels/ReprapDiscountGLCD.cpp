@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "ReprapDiscountGLCD.h"
 
@@ -24,7 +24,7 @@ ReprapDiscountGLCD::ReprapDiscountGLCD() {
     }else if(spi_channel == 1){
         mosi= P0_9; sclk= P0_7;
     }else{
-        mosi= P0_18; sclk= P0_15;  
+        mosi= P0_18; sclk= P0_15;
     }
 
     this->glcd= new RrdGlcd(mosi, sclk, this->spi_cs_pin);
@@ -45,16 +45,16 @@ uint8_t ReprapDiscountGLCD::readButtons() {
     return state;
 }
 
-int ReprapDiscountGLCD::readEncoderDelta() { 
-    static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
+int ReprapDiscountGLCD::readEncoderDelta() {
+    static const int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
     static uint8_t old_AB = 0;
     old_AB <<= 2;                   //remember previous state
-    old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state 
+    old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state
     return  enc_states[(old_AB&0x0f)];
 }
 
-// cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms) 
-void ReprapDiscountGLCD::buzz(long duration, uint16_t freq) {  
+// cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
+void ReprapDiscountGLCD::buzz(long duration, uint16_t freq) {
     if(!this->buzz_pin.connected()) return;
 
     duration *=1000; //convert from ms to us
@@ -70,9 +70,7 @@ void ReprapDiscountGLCD::buzz(long duration, uint16_t freq) {
 }
 
 void ReprapDiscountGLCD::write(const char* line, int len) {
-    for (int i = 0; i < len; ++i) {
-        this->glcd->displayString(this->row, this->col, line, len);
-    }
+    this->glcd->displayString(this->row, this->col, line, len);
     this->col+=len;
 }
 
@@ -100,13 +98,32 @@ void ReprapDiscountGLCD::init(){
     this->glcd->initDisplay();
 }
 
-void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *glyph) {
-    // TODO
+// displays a selectable rectangle from the glyph
+void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span, int x_offset, int y_offset) {
+    if(x_offset == 0 && y_offset == 0 && span == 0) {
+        // blt the whole thing
+        this->glcd->renderGlyph(x, y, glyph, w, h);
+
+    }else{
+        // copy portion of glyph into g where x_offset is left byte aligned
+        // Note currently the x_offset must be byte aligned
+        int n= w/8; // bytes per line to copy
+        if(w%8 != 0) n++; // round up to next byte
+        uint8_t g[n*h];
+        uint8_t *dst= g;
+        const uint8_t *src= &glyph[y_offset*span + x_offset/8];
+        for (int i = 0; i < h; ++i) {
+            memcpy(dst, src, n);
+            dst+=n;
+            src+= span;
+        }
+        this->glcd->renderGlyph(x, y, g, w, h);
+    }
 }
 
 void ReprapDiscountGLCD::on_refresh(bool now){
     static int refresh_counts = 0;
     refresh_counts++;
-    // 5Hz refresh rate
-    if(now || refresh_counts % 4 == 0 ) this->glcd->refresh();
+    // 10Hz refresh rate
+    if(now || refresh_counts % 2 == 0 ) this->glcd->refresh();
 }

@@ -10,7 +10,11 @@
 void Touchprobe::on_module_loaded() {
     // if the module is disabled -> do nothing
     this->enabled = this->kernel->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
-    if( !(this->enabled) ){ return; }
+    if( !(this->enabled) ){
+        // as this module is not needed free up the resource
+        delete this;
+        return;
+    }
     this->probe_rate = 5;
     // load settings
     this->on_config_reload(this);
@@ -22,7 +26,7 @@ void Touchprobe::on_module_loaded() {
 
 void Touchprobe::on_config_reload(void* argument){
     this->pin.from_string(  this->kernel->config->value(touchprobe_pin_checksum)->by_default("nc" )->as_string())->as_input();
-    this->debounce_count =  this->kernel->config->value(endstop_debounce_count_checksum      )->by_default(100  )->as_number();
+    this->debounce_count =  this->kernel->config->value(touchprobe_debounce_count_checksum)->by_default(100  )->as_number();
 
     this->steppers[0] = this->kernel->robot->alpha_stepper_motor;
     this->steppers[1] = this->kernel->robot->beta_stepper_motor;
