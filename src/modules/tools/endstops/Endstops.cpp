@@ -72,7 +72,9 @@ void Endstops::on_config_reload(void* argument){
     this->retract_steps[2]= this->kernel->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2]/steps_per_mm[2])->as_number() * steps_per_mm[2];
 
     this->debounce_count  = this->kernel->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
-
+    this->lift_steps = this->kernel->config->value(calibrate_lift_checksum )->by_default(10)->as_number() * steps_per_mm[0];
+    this->calibrate_radius = this->kernel->config->value(calibrate_radius_checksum )->by_default(50)->as_number();
+    this->arm_radius = this->kernel->config->value(arm_radius_checksum )->by_default(124.0)->as_number();
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(this->kernel->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
@@ -124,6 +126,44 @@ void Endstops::wait_for_homed(char axes_to_move){
             }
         }
     }
+}
+
+void Endstops::wait_for_moves(){
+    // Wait for moves to be done
+    for( char c = 'X'; c <= 'Z'; c++ ){
+        while( this->steppers[c - 'X']->moving ){
+            this->kernel->call_event(ON_IDLE);
+        }
+    }
+}
+
+
+uint32_t Endstops::wait_for_ztouch(){
+    bool running = true;
+    unsigned int debounce = 0;
+    uint32_t saved_steps = 0;
+    while(running){
+        running = false;
+        this->kernel->call_event(ON_IDLE);
+        if( this->pins[2].get() ){  //probe contact  //TODO configure probe pin?
+            if( debounce < debounce_count ) { //debounce and loop
+                debounce ++;
+                running = true;
+            } else { //fully debounced, stop all motors
+                saved_steps = this->steppers[0]->stepped; //save the number of actually moved steps from alpha tower before tool counters get reset
+                for( int i = 0; i <= 2; i++ ){ //TODO support more than 3 axis
+                    this->steppers[i]->move(0,0);
+                }
+                return (saved_steps);
+            }
+        }else{
+            // The endstop was not hit yet
+            running = true;
+            debounce = 0;
+        }
+    }
+
+    return(0);
 }
 
 // this homing works for cartesian and delta printers, not for HBots/CoreXY
@@ -302,6 +342,221 @@ void Endstops::do_homing_corexy(char axes_to_move) {
     this->status = NOT_HOMING;
 }
 
+void Endstops::move_all(bool direction, bool speed, unsigned int steps){
+    bool move_dir;
+    for( char c = 'X'; c <= 'Z'; c++ ){
+        move_dir = this->home_direction[c - 'X']^direction ;
+        if(speed){
+            this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
+        } else {
+            this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
+        }
+        this->steppers[c - 'X']->move(move_dir,steps);
+    }
+}
+
+// auto calibration routine for delta bots
+void Endstops::calibrate_delta( StreamOutput *stream){
+
+    uint32_t current_z_steps = 0;
+
+    uint32_t originHeight = 0;
+    long tower1Height = 0;
+    long tower2Height = 0;
+    long tower3Height = 0;
+    double targetX = 0;
+    double targetY = 0;
+
+    char buf[32];
+    int buffered_length = 0;
+    string g;
+
+/*
+  #define PROBE_RADIUS  80
+  #define DELTA_RADIUS_CORRECTION_FACTOR 0.15
+*/
+    // First wait for the queue to be empty
+    this->kernel->conveyor->wait_for_empty_queue();
+    // Enable the motors
+    this->kernel->stepper->turn_enable_pins_on();
+// home axis
+
+    buffered_length = snprintf(buf, sizeof(buf), "G21");
+    g.assign(buf, buffered_length);
+    send_gcode(g);
+
+    buffered_length = snprintf(buf, sizeof(buf), "G90");
+    g.assign(buf, buffered_length);
+    send_gcode(g);
+
+    // deploy probe, check or abort
+    if( this->pins[2].get() ){  //TODO configure probe pin?
+        //probe not deployed - abort
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        return;
+    }
+
+    //probe min z height at 0,0
+    this->move_all(DOWN,FAST,10000000);
+    current_z_steps += this->wait_for_ztouch();
+
+    this->move_all(UP,FAST,this->retract_steps[0]); //alpha tower retract distance for all
+    this->wait_for_moves();
+    current_z_steps -= this->retract_steps[0];
+
+    this->move_all(DOWN,SLOW,10000000);
+    current_z_steps += this->wait_for_ztouch();
+
+    originHeight = current_z_steps;
+
+    //lift and reposition
+    this->move_all(UP,FAST,this->lift_steps); //alpha tower retract distance for all
+    this->wait_for_moves();
+    current_z_steps -= this->lift_steps;
+
+    // update planner position so we can make coordinated moves
+    for( int i = 0; i <= 2; i++ ){
+        this->kernel->robot->reset_axis_position( this->homing_position[i] - (current_z_steps / this->steps_per_mm[0]) , i);
+    }
+    targetY = this->calibrate_radius * cos(240 * (3.141592653589793/180));
+    targetX = this->calibrate_radius * sin(240 * (3.141592653589793/180));
+    
+    buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX,targetY);
+    g.assign(buf, buffered_length);
+    send_gcode(g);
+    this->kernel->conveyor->wait_for_empty_queue();
+
+
+    // check probe retraction
+    if( this->pins[2].get() ){  //TODO configure probe pin?
+        //probe not deployed - abort
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        return;
+    }
+
+    //probe tower 1 
+    this->move_all(DOWN,FAST,10000000);
+    current_z_steps += this->wait_for_ztouch();
+
+    this->move_all(UP,FAST,this->retract_steps[0]); //alpha tower retract distance for all
+    this->wait_for_moves();
+    current_z_steps -= this->retract_steps[0];
+
+    this->move_all(DOWN,SLOW,10000000);
+    current_z_steps += this->wait_for_ztouch();
+
+    tower1Height = current_z_steps;    
+
+    //lift and reposition
+    this->move_all(UP,FAST, current_z_steps - (originHeight-this->lift_steps)); //alpha tower retract distance for all
+    this->wait_for_moves();
+    current_z_steps = originHeight;
+
+    targetY = this->calibrate_radius * cos(120 * (3.141592653589793/180));
+    targetX = this->calibrate_radius * sin(120 * (3.141592653589793/180));
+    
+    buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX,targetY);
+    g.assign(buf, buffered_length);
+    send_gcode(g);
+    this->kernel->conveyor->wait_for_empty_queue();
+
+
+    // check probe retraction
+    if( this->pins[2].get() ){  //TODO configure probe pin?
+        //probe not deployed - abort
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        return;
+    }    
+
+    //probe tower 2
+    this->move_all(DOWN,FAST,10000000);
+    current_z_steps += this->wait_for_ztouch();
+
+    this->move_all(UP,FAST,this->retract_steps[0]); //alpha tower retract distance for all
+    this->wait_for_moves();
+    current_z_steps -= this->retract_steps[0];
+
+    this->move_all(DOWN,SLOW,10000000);
+    current_z_steps += this->wait_for_ztouch();
+
+    tower2Height = current_z_steps;    
+
+    //lift and reposition
+    this->move_all(UP,FAST, current_z_steps - (originHeight-this->lift_steps)); //alpha tower retract distance for all
+    this->wait_for_moves();
+    current_z_steps = originHeight;
+
+    targetY = this->calibrate_radius * cos(0 * (3.141592653589793/180));
+    targetX = this->calibrate_radius * sin(0 * (3.141592653589793/180));
+    
+    buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX,targetY);
+    g.assign(buf, buffered_length);
+    send_gcode(g);
+    this->kernel->conveyor->wait_for_empty_queue();    
+
+    // check probe retraction
+    if( this->pins[2].get() ){  //TODO configure probe pin?
+        //probe not deployed - abort
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        return;
+    }  
+
+    //probe tower 3 
+    this->move_all(DOWN,FAST,10000000);
+    current_z_steps += this->wait_for_ztouch();
+
+    this->move_all(UP,FAST,this->retract_steps[0]); //alpha tower retract distance for all
+    this->wait_for_moves();
+    current_z_steps -= this->retract_steps[0];
+
+    this->move_all(DOWN,SLOW,10000000);
+    current_z_steps += this->wait_for_ztouch();
+
+    tower3Height = current_z_steps;        
+
+//retract probe
+
+    //calculate 3 tower trim levels
+    
+    float centerAverage = (tower1Height + tower2Height + tower3Height)/3;
+
+    long lowestTower = min(tower1Height,min(tower2Height,tower3Height));
+    stream->printf("Detected offsets:\r\n");
+
+    stream->printf("Origin Offset: %f.3\r\n", (centerAverage - originHeight)/this->steps_per_mm[0]); 
+    stream->printf("T1CV: %f.3\r\n", -((tower1Height-lowestTower) / this->steps_per_mm[0])* ( this->arm_radius*.6/ calibrate_radius)); 
+    stream->printf("T2CV: %f.3\r\n", -((tower2Height-lowestTower) / this->steps_per_mm[0])* ( this->arm_radius*.6/ calibrate_radius)); 
+    stream->printf("T3CV: %f.3\r\n", -((tower3Height-lowestTower) / this->steps_per_mm[0])* ( this->arm_radius*.6/ calibrate_radius)); 
+
+    float t1Trim = -((tower1Height-lowestTower) / this->steps_per_mm[0])* ( this->arm_radius*.6/ calibrate_radius);
+    float t2Trim = -((tower2Height-lowestTower) / this->steps_per_mm[0])* ( this->arm_radius*.6/ calibrate_radius);
+    float t3Trim = -((tower3Height-lowestTower) / this->steps_per_mm[0])* ( this->arm_radius*.6/ calibrate_radius);
+    t1Trim += trim[0];
+    t2Trim += trim[1];
+    t3Trim += trim[2];
+    float maxTrim = max(t1Trim,max(t2Trim,t3Trim));
+    t1Trim -= maxTrim;
+    t2Trim -= maxTrim;
+    t3Trim -= maxTrim;
+ 
+    stream->printf("Calibrated Values:\r\n");
+    stream->printf("Origin Height:%f.3\r\n",  originHeight/this->steps_per_mm[0] );//+ printer_state.probe_offset); 
+    stream->printf("Delta Radius:%f.3\r\n", ((centerAverage - originHeight)/this->steps_per_mm[0])/0.15 + this->arm_radius); 
+    stream->printf("T1trim:%f.3\r\n", t1Trim); 
+    stream->printf("T2trim:%f.3\r\n", t2Trim); 
+    stream->printf("T3trim:%f.3\r\n", t3Trim);
+
+// apply values
+    /*
+      printer_state.delta_radius = ((centerAverage - originHeight)/axis_steps_per_unit[0])/DELTA_RADIUS_CORRECTION_FACTOR + printer_state.delta_radius;
+      printer_state.tower1_trim = t1Trim ; 
+      printer_state.tower2_trim = t2Trim ; 
+      printer_state.tower3_trim = t3Trim ; 
+      printer_state.zLength = abs( originHeight/axis_steps_per_unit[0]) + printer_state.probe_offset;
+    */
+
+}
+
 // Start homing sequences by response to GCode commands
 void Endstops::on_gcode_received(void* argument)
 {
@@ -342,7 +597,13 @@ void Endstops::on_gcode_received(void* argument)
                 }
             }
 
+        } else if (gcode->g == 32 )
+        {
+            gcode->mark_as_taken();
+            this->calibrate_delta(gcode->stream);
         }
+
+
     }
     else if (gcode->has_m){
         switch(gcode->m){
@@ -391,3 +652,7 @@ void Endstops::on_gcode_received(void* argument)
     }
 }
 
+void Endstops::send_gcode(std::string g) {
+    Gcode gcode(g, &(StreamOutput::NullStream));
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+}

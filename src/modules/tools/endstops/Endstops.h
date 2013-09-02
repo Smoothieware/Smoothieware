@@ -11,6 +11,7 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
+
 #include "libs/StepperMotor.h"
 #include "libs/Pin.h"
 
@@ -38,6 +39,9 @@
 #define alpha_trim_checksum              CHECKSUM("alpha_trim")
 #define beta_trim_checksum               CHECKSUM("beta_trim")
 #define gamma_trim_checksum              CHECKSUM("gamma_trim")
+#define calibrate_lift_checksum          CHECKSUM("calibrate_lift")
+#define calibrate_radius_checksum          CHECKSUM("calibrate_radius")
+#define arm_radius_checksum         CHECKSUM("arm_radius")
 
 // these values are in steps and should be deprecated
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
@@ -85,24 +89,35 @@
 #define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
 #define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
 
+#define UP false
+#define DOWN true
+#define FAST true
+#define SLOW false
+
 class Endstops : public Module{
     public:
         Endstops();
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
-        void calibrate_delta();
+        void calibrate_delta(StreamOutput*);
+        float arm_radius;
 
     private:
         void do_homing(char axes_to_move);
         void do_homing_corexy(char axes_to_move);
+        uint32_t wait_for_ztouch();
         void wait_for_homed(char axes_to_move);
         void wait_for_homed_corexy(int axis);
+        void wait_for_moves();
+        void move_all(bool, bool, unsigned int);
         double steps_per_mm[3];
         double homing_position[3];
         bool home_direction[3];
         unsigned int  debounce_count;
         unsigned int  retract_steps[3];
+        unsigned int lift_steps;
+        double calibrate_radius;
         int  trim[3];
         double  fast_rates[3];
         double  slow_rates[3];
@@ -111,6 +126,7 @@ class Endstops : public Module{
         char status;
         bool is_corexy;
         bool is_delta;
+        void send_gcode(std::string msg);
 };
 
 #endif
