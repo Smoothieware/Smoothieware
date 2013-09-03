@@ -526,20 +526,20 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     long lowestTower = min(tower1Height,min(tower2Height,tower3Height));
     stream->printf("Detected offsets:\r\n");
 
-    float t1Trim = -((tower1Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
-    float t2Trim = -((tower2Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
-    float t3Trim = -((tower3Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
+    float t1Trim = ((tower1Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
+    float t2Trim = ((tower2Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
+    float t3Trim = ((tower3Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
 
     stream->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
-    stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", t1Trim, t2Trim, t3Trim); 
+    stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
 
-    t1Trim += trim[0];
-    t2Trim += trim[1];
-    t3Trim += trim[2];
-    float maxTrim = max(t1Trim,max(t2Trim,t3Trim));
-    t1Trim -= maxTrim;
-    t2Trim -= maxTrim;
-    t3Trim -= maxTrim;
+    t1Trim += trim[0]/steps_per_mm[0];
+    t2Trim += trim[1]/steps_per_mm[0];
+    t3Trim += trim[2]/steps_per_mm[0];
+    float minTrim = min(t1Trim,min(t2Trim,t3Trim));
+    t1Trim -= minTrim;
+    t2Trim -= minTrim;
+    t3Trim -= minTrim;
  
     float newDeltaRadius = ((centerAverage - originHeight)/steps_per_mm[0])/0.15 + arm_radius;
 
