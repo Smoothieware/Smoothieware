@@ -544,9 +544,9 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     float newDeltaRadius = ((centerAverage - originHeight)/steps_per_mm[0])/0.15 + arm_radius;
 
     stream->printf("Calibrated Values:\r\n");
-    stream->printf("Origin Height:%5.3f\r\n",  originHeight/steps_per_mm[0] + calibrate_probe_offset); 
-    stream->printf("Delta Radius:%5.3f\r\n",newDeltaRadius) ; 
-    stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", t1Trim, t2Trim, t3Trim); 
+    stream->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
+    stream->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
+    stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
 
 
 // apply values
