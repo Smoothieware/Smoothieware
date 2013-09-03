@@ -415,9 +415,8 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     current_z_steps -= this->lift_steps;
 
     // update planner position so we can make coordinated moves
-    for( int i = 0; i <= 2; i++ ){
-        this->kernel->robot->reset_axis_position( this->homing_position[i] - (current_z_steps / this->steps_per_mm[0]) , i);
-    }
+        this->kernel->robot->reset_axis_position( this->homing_position[2] - (current_z_steps / this->steps_per_mm[0]) , 2);
+
     targetY = this->calibrate_radius * cos(240 * (3.141592653589793/180));
     targetX = this->calibrate_radius * sin(240 * (3.141592653589793/180));
     
@@ -448,9 +447,9 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     tower1Height = current_z_steps;    
 
     //lift and reposition
-    this->move_all(UP,FAST, current_z_steps - (originHeight-this->lift_steps)); //alpha tower retract distance for all
+    this->move_all(UP,FAST, current_z_steps - (originHeight - this->lift_steps)); //alpha tower retract distance for all
     this->wait_for_moves();
-    current_z_steps = originHeight;
+    current_z_steps = originHeight - this->lift_steps;
 
     targetY = this->calibrate_radius * cos(120 * (3.141592653589793/180));
     targetX = this->calibrate_radius * sin(120 * (3.141592653589793/180));
@@ -484,7 +483,7 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     //lift and reposition
     this->move_all(UP,FAST, current_z_steps - (originHeight-this->lift_steps)); //alpha tower retract distance for all
     this->wait_for_moves();
-    current_z_steps = originHeight;
+    current_z_steps = originHeight - this->lift_steps;
 
     targetY = this->calibrate_radius * cos(0 * (3.141592653589793/180));
     targetX = this->calibrate_radius * sin(0 * (3.141592653589793/180));
