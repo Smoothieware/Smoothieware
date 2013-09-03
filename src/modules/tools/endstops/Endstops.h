@@ -40,8 +40,9 @@
 #define beta_trim_checksum               CHECKSUM("beta_trim")
 #define gamma_trim_checksum              CHECKSUM("gamma_trim")
 #define calibrate_lift_checksum          CHECKSUM("calibrate_lift")
-#define calibrate_radius_checksum          CHECKSUM("calibrate_radius")
-#define arm_radius_checksum         CHECKSUM("arm_radius")
+#define calibrate_radius_checksum        CHECKSUM("calibrate_radius")
+#define calibrate_probe_offset_checksum  CHECKSUM("calibrate_probe_offset")
+#define arm_radius_checksum              CHECKSUM("arm_radius")
 
 // these values are in steps and should be deprecated
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
@@ -55,7 +56,6 @@
 #define alpha_homing_retract_checksum    CHECKSUM("alpha_homing_retract")
 #define beta_homing_retract_checksum     CHECKSUM("beta_homing_retract")
 #define gamma_homing_retract_checksum    CHECKSUM("gamma_homing_retract")
-#define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
 
 // same as above but in user friendly mm/s and mm
 #define alpha_fast_homing_rate_mm_checksum  CHECKSUM("alpha_fast_homing_rate_mm_s")
@@ -118,6 +118,7 @@ class Endstops : public Module{
         unsigned int  retract_steps[3];
         unsigned int lift_steps;
         double calibrate_radius;
+        double calibrate_probe_offset;
         int  trim[3];
         double  fast_rates[3];
         double  slow_rates[3];
