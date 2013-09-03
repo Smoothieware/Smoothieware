@@ -129,6 +129,10 @@ alpha_trim                                   0                 # software trim f
 beta_trim                                    0                 # software trim for beta stepper endstop (in mm)
 gamma_trim                                   0                 # software trim for gamma stepper endstop (in mm)
 
+calibrate_lift                              10                 # delta auto calibrate lift distance (in mm)
+calibrate_radius                            75                 # delta auto calibrate probing radius (in mm)	
+calibrate_probe_offset                      2.5                # delta auto calibrate distance between probe tip and hotend when activated (in mm)	
+
 # Pause button
 pause_button_enable                          true             #
 
