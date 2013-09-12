@@ -25,8 +25,9 @@ void SimpleShell::on_module_loaded(){
     this->current_path = "/";
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->reset_delay_secs= 0;
-    
-    register_for_event(ON_SECOND_TICK);
+
+    this->register_for_event(ON_SECOND_TICK);
+    this->register_for_event(ON_GCODE_RECEIVED);
 }
 
 void SimpleShell::on_second_tick(void*) {
@@ -34,6 +35,19 @@ void SimpleShell::on_second_tick(void*) {
     if (this->reset_delay_secs > 0) {
         if(--this->reset_delay_secs == 0){
             system_reset(false);
+        }
+    }
+}
+
+void SimpleShell::on_gcode_received(void *argument) {
+    Gcode *gcode = static_cast<Gcode*>(argument);
+
+    if (gcode->has_m) {
+        if (gcode->m == 20) { // list sd card
+            gcode->mark_as_taken();
+            gcode->stream->printf("Begin file list\r\n");
+            ls_command("/sd", gcode->stream);
+            gcode->stream->printf("End file list\r\n");
         }
     }
 }
@@ -181,7 +195,7 @@ void SimpleShell::break_command( string parameters, StreamOutput* stream){
 void SimpleShell::get_command( string parameters, StreamOutput* stream){
     int what= get_checksum(shift_parameter( parameters ));
     void *returned_data;
-    
+
     if(what == get_temp_command_checksum) {
         string type= shift_parameter( parameters );
         bool ok= this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
@@ -192,14 +206,14 @@ void SimpleShell::get_command( string parameters, StreamOutput* stream){
         }else{
             stream->printf("%s is not a known temperature device\r\n", type.c_str());
         }
-        
+
     }else if(what == get_pos_command_checksum) {
         bool ok= this->kernel->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
 
         if(ok) {
             double *pos= static_cast<double *>(returned_data);
             stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
-            
+
         }else{
             stream->printf("get pos command failed\r\n");
         }
@@ -225,14 +239,14 @@ void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("version\r\n");
     stream->printf("ls [folder]\r\n");
     stream->printf("cd folder\r\n");
-    stream->printf("pwd\r\n");  
+    stream->printf("pwd\r\n");
     stream->printf("cat file [limit]\r\n");
     stream->printf("play file [-q]\r\n");
     stream->printf("progress - shows progress of current play\r\n");
     stream->printf("abort - abort currently playing file\r\n");
-    stream->printf("reset - reset smoothie\r\n");           
-    stream->printf("dfu - enter dfu boot loader\r\n");          
-    stream->printf("break - break into debugger\r\n");          
+    stream->printf("reset - reset smoothie\r\n");
+    stream->printf("dfu - enter dfu boot loader\r\n");
+    stream->printf("break - break into debugger\r\n");
     stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
     stream->printf("config-load [<file_name>]\r\n");
