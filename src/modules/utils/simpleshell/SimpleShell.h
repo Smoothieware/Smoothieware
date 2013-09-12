@@ -35,6 +35,7 @@ class SimpleShell : public Module {
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
+        void on_gcode_received(void *argument);
         void on_second_tick(void*);
         string absolute_from_relative( string path );
         void ls_command(   string parameters, StreamOutput* stream );
@@ -48,7 +49,7 @@ class SimpleShell : public Module {
         void version_command(string parameters, StreamOutput* stream );
         void get_command(string parameters, StreamOutput* stream );
         void set_temp_command(string parameters, StreamOutput* stream );
-        
+
     private:
         string current_path;
         int reset_delay_secs;
