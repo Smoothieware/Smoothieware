@@ -86,6 +86,9 @@ void Player::on_gcode_received(void *argument) {
             }else{
                 this->playing_file = true;
             }
+        }else if (gcode->m == 27) { // report print progress
+            gcode->mark_as_taken();
+            progress_command("", gcode->stream);
         }
     }
 }
