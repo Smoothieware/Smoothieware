@@ -8,16 +8,16 @@ HBotSolution::HBotSolution(Config* passed_config) : config(passed_config){
 }
 
 void HBotSolution::millimeters_to_steps( double millimeters[], int steps[] ){
-    int delta_x = lround( millimeters[X_AXIS] * this->alpha_steps_per_mm );
-    int delta_y = lround( millimeters[Y_AXIS] * this->beta_steps_per_mm );
-    steps[ALPHA_STEPPER] = delta_x + delta_y;
-    steps[BETA_STEPPER ] = delta_x - delta_y;
+    double delta_x = millimeters[X_AXIS] * this->alpha_steps_per_mm;
+    double delta_y = millimeters[Y_AXIS] * this->beta_steps_per_mm;
+    steps[ALPHA_STEPPER] = lround(delta_x + delta_y);
+    steps[BETA_STEPPER ] = lround(delta_x - delta_y);
     steps[GAMMA_STEPPER] = lround( millimeters[Z_AXIS] * this->gamma_steps_per_mm );
 }
 
 void HBotSolution::steps_to_millimeters( int steps[], double millimeters[] ){
-    int delta_alpha = steps[X_AXIS] / this->alpha_steps_per_mm;
-    int delta_beta = steps[Y_AXIS] / this->beta_steps_per_mm;
+    double delta_alpha = steps[X_AXIS] / this->alpha_steps_per_mm;
+    double delta_beta = steps[Y_AXIS] / this->beta_steps_per_mm;
     millimeters[ALPHA_STEPPER] = 0.5*(delta_alpha + delta_beta);
     millimeters[BETA_STEPPER ] = 0.5*(delta_alpha - delta_beta);
     millimeters[GAMMA_STEPPER] = steps[Z_AXIS] / this->gamma_steps_per_mm;
