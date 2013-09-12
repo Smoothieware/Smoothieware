@@ -25,15 +25,71 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_SECOND_TICK);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
+    this->register_for_event(ON_GCODE_RECEIVED);
 
     this->on_boot_gcode = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode -q")->as_string();
     this->on_boot_gcode_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs= 0;
+    this->reply_stream= NULL;
 }
 
 void Player::on_second_tick(void*) {
      if (!kernel->pauser->paused()) this->elapsed_secs++;
 }
+
+void Player::on_gcode_received(void *argument) {
+    Gcode *gcode = static_cast<Gcode*>(argument);
+    string args= get_arguments(gcode->command);
+    if (gcode->has_m) {
+        if (gcode->m == 23) { // select file
+            gcode->mark_as_taken();
+            // Get filename
+            string filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->current_stream = &(StreamOutput::NullStream);
+
+            if(this->current_file_handler != NULL) {
+                this->playing_file = false;
+                fclose(this->current_file_handler);
+            }
+            this->current_file_handler = fopen( filename.c_str(), "r");
+            if(this->current_file_handler == NULL){
+                gcode->stream->printf("file.open failed: %s\r\n", filename.c_str());
+            }else{
+                gcode->stream->printf("File selected: %s\r\n", filename.c_str());
+            }
+
+        }else if (gcode->m == 24) { // start print
+            gcode->mark_as_taken();
+            if (this->current_file_handler != NULL) {
+                this->playing_file = true;
+                this->reply_stream= gcode->stream;
+            }
+
+        }else if (gcode->m == 25) { // pause print
+            gcode->mark_as_taken();
+            this->playing_file = false;
+
+        }else if (gcode->m == 32) { // select file and start print
+            gcode->mark_as_taken();
+            // Get filename
+            string filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->current_stream = &(StreamOutput::NullStream);
+
+            if(this->current_file_handler != NULL) {
+                this->playing_file = false;
+                fclose(this->current_file_handler);
+            }
+
+            this->current_file_handler = fopen( filename.c_str(), "r");
+            if(this->current_file_handler == NULL){
+                gcode->stream->printf("file.open failed: %s\r\n", filename.c_str());
+            }else{
+                this->playing_file = true;
+            }
+        }
+    }
+}
+
 
 // When a new line is received, check if it is a command, and if it is, act upon it
 void Player::on_console_line_received( void* argument ){
@@ -183,11 +239,18 @@ void Player::on_main_loop(void* argument){
             }else{
                 buffer += c;
             }
-        };
+        }
+
         this->playing_file = false;
         played_cnt= 0;
         file_size= 0;
         fclose(this->current_file_handler);
+
+        if(this->reply_stream != NULL) {
+            // if we were printing from an M command from pronterface we need to send this back
+            this->reply_stream->printf("Done printing file\r\n");
+            this->reply_stream= NULL;
+        }
     }
 }
 
@@ -201,7 +264,7 @@ void Player::on_get_public_data(void* argument) {
         bool_data= this->playing_file;
         pdr->set_data_ptr(&bool_data);
         pdr->set_taken();
-        
+
     }else if(pdr->second_element_is(get_progress_checksum)) {
         static struct pad_progress p;
         if(file_size > 0 && playing_file) {
