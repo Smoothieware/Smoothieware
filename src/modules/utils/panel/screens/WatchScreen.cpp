@@ -44,6 +44,7 @@ static const uint8_t icons[] = { // 115x19 - 3 bytes each: he1, he2, he3, bed, f
 
 WatchScreen::WatchScreen(){
     speed_changed= false;
+    issue_change_speed= false;
 }
 
 void WatchScreen::on_enter(){
@@ -52,7 +53,7 @@ void WatchScreen::on_enter(){
     get_temp_data();
     get_current_pos(this->pos);
     get_sd_play_info();
-    this->current_speed= get_current_speed();
+    this->current_speed= lround(get_current_speed());
     this->refresh_screen(false);
     this->panel->enter_control_mode(1,0.5);
     this->panel->set_control_value(this->current_speed);
@@ -68,13 +69,14 @@ void WatchScreen::on_refresh(){
     // see if speed is being changed
     if(this->panel->control_value_change()) {
         this->current_speed= this->panel->get_control_value();
-        if(this->current_speed < 10.0) {
-            this->current_speed= 10.0;
+        if(this->current_speed < 10) {
+            this->current_speed= 10;
             this->panel->set_control_value(this->current_speed);
             this->panel->reset_counter();
         }else{
-            // change actual speed
-            this->speed_changed= true; // flag main loop to issue g code
+            // flag the update to change the speed, we don't want to issue hundreds of M220s
+            // but we do want to display the change we are going to make
+            this->speed_changed= true; // flag indicating speed changed
             this->refresh_screen(false);
         }
     }
@@ -86,9 +88,15 @@ void WatchScreen::on_refresh(){
         get_sd_play_info();
         get_current_pos(this->pos);
         get_temp_data();
-        this->current_speed= get_current_speed();
-        this->panel->set_control_value(this->current_speed); // in case it was changed via M220
-        this->panel->reset_counter();
+        if(this->speed_changed) {
+            this->issue_change_speed= true; // trigger actual command to change speed
+            this->speed_changed= false;
+        }else if(!this->issue_change_speed){ // change still queued
+            // read it in case it was changed via M220
+            this->current_speed= lround(get_current_speed());
+            this->panel->set_control_value(this->current_speed);
+            this->panel->reset_counter();
+        }
 
         this->refresh_screen(this->panel->lcd->hasGraphics()?true:false); // graphics screens should be cleared
 
@@ -118,9 +126,11 @@ void WatchScreen::on_refresh(){
 
 // queuing gcodes needs to be done from main loop
 void WatchScreen::on_main_loop() {
-    if(!this->speed_changed) return;
-    this->speed_changed= false;
-    set_speed();
+    if(this->issue_change_speed) {
+        this->issue_change_speed= false;
+        set_speed();
+    }
+    //time_idle();
 }
 
 // fetch the data we are displaying
@@ -197,7 +207,7 @@ void WatchScreen::display_menu_line(uint16_t line){
     switch( line ){
         case 0: this->panel->lcd->printf("H%03d/%03dc B%03d/%03dc", this->hotendtemp, this->hotendtarget, this->bedtemp, this->bedtarget); break;
         case 1: this->panel->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]); break;
-        case 2: this->panel->lcd->printf("%3d%% %2d:%02d %3d%% sd", (int)round(this->current_speed), this->elapsed_time/60, this->elapsed_time%60, this->sd_pcnt_played); break;
+        case 2: this->panel->lcd->printf("%3d%% %2d:%02d %3d%% sd", this->current_speed, this->elapsed_time/60, this->elapsed_time%60, this->sd_pcnt_played); break;
         case 3: this->panel->lcd->printf("%19s", this->get_status()); break;
     }
 }
@@ -215,7 +225,7 @@ const char* WatchScreen::get_status(){
 void WatchScreen::set_speed(){
     // change pos by issuing a M220 Snnn
     char buf[32];
-    int n= snprintf(buf, sizeof(buf), "M220 S%f", this->current_speed);
+    int n= snprintf(buf, sizeof(buf), "M220 S%d", this->current_speed);
     string g(buf, n);
     send_gcode(g);
 }
