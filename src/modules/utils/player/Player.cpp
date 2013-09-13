@@ -86,9 +86,9 @@ void Player::on_gcode_received(void *argument) {
             }else{
                 this->playing_file = true;
             }
-        }else if (gcode->m == 27) { // report print progress
+        }else if (gcode->m == 27) { // report print progress, in format used by Marlin
             gcode->mark_as_taken();
-            progress_command("", gcode->stream);
+            progress_command("-b", gcode->stream);
         }
     }
 }
@@ -154,6 +154,10 @@ void Player::play_command( string parameters, StreamOutput* stream ){
 }
 
 void Player::progress_command( string parameters, StreamOutput* stream ){
+
+    // get options
+    string options           = shift_parameter( parameters );
+
     if(!playing_file) {
         stream->printf("Not currently playing\r\n");
         return;
@@ -168,11 +172,16 @@ void Player::progress_command( string parameters, StreamOutput* stream ){
         }
 
         int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
-        stream->printf("%d %% complete, elapsed time: %d s", pcnt, this->elapsed_secs);
-        if(est > 0){
-            stream->printf(", est time: %d s",  est);
+        // If -b or -B is passed, report in the format used by Marlin and the others.
+        if ( options.find_first_of("Bb") == string::npos ){
+            stream->printf("%d %% complete, elapsed time: %d s", pcnt, this->elapsed_secs);
+            if(est > 0){
+                stream->printf(", est time: %d s",  est);
+            }
+            stream->printf("\r\n");
+        }else{
+            stream->printf("SD printing byte %ld/%ld\r\n", played_cnt, file_size);
         }
-        stream->printf("\r\n");
 
     }else{
         stream->printf("File size is unknown\r\n");
