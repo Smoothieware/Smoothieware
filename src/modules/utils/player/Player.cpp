@@ -180,7 +180,7 @@ void Player::progress_command( string parameters, StreamOutput* stream ){
             }
             stream->printf("\r\n");
         }else{
-            stream->printf("SD printing byte %ld/%ld", played_cnt, file_size);
+            stream->printf("SD printing byte %ld/%ld\r\n", played_cnt, file_size);
         }
 
     }else{
