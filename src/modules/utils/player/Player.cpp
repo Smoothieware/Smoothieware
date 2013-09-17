@@ -52,11 +52,25 @@ void Player::on_gcode_received(void *argument) {
                 fclose(this->current_file_handler);
             }
             this->current_file_handler = fopen( filename.c_str(), "r");
+            // get size of file
+            int result = fseek(this->current_file_handler, 0, SEEK_END);
+            if (0 != result){
+                    gcode->stream->printf("WARNING - Could not get file size\r\n");
+                    file_size= -1;
+            }else{
+                    file_size= ftell(this->current_file_handler);
+                    fseek(this->current_file_handler, 0, SEEK_SET);
+            }
+
             if(this->current_file_handler == NULL){
                 gcode->stream->printf("file.open failed: %s\r\n", filename.c_str());
             }else{
-                gcode->stream->printf("File selected: %s\r\n", filename.c_str());
+                gcode->stream->printf("File opened:%s Size:%ld\r\n", filename.c_str(),file_size);
+                gcode->stream->printf("File selected\r\n");
             }
+
+            this->played_cnt= 0;
+            this->elapsed_secs= 0;
 
         }else if (gcode->m == 24) { // start print
             gcode->mark_as_taken();
@@ -89,6 +103,9 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 27) { // report print progress, in format used by Marlin
             gcode->mark_as_taken();
             progress_command("-b", gcode->stream);
+        }else if (gcode->m == 21) { // Dummy code; makes Octoprint happy
+            gcode->mark_as_taken();
+            gcode->stream->printf("SD card ok\r\n");
         }
     }
 }
