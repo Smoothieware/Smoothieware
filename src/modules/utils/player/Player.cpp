@@ -103,6 +103,9 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 27) { // report print progress, in format used by Marlin
             gcode->mark_as_taken();
             progress_command("-b", gcode->stream);
+        }else if (gcode->m == 21) { // Dummy code; makes Octoprint happy
+            gcode->mark_as_taken();
+            gcode->stream->printf("SD card ok\r\n");
         }
     }
 }
