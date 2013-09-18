@@ -40,6 +40,7 @@ class Player : public Module {
 
     private:
         string current_path;
+        string filename;
 
         bool on_boot_gcode_enable;
         bool booted;

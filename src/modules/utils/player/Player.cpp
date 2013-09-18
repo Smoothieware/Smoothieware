@@ -44,14 +44,14 @@ void Player::on_gcode_received(void *argument) {
         if (gcode->m == 23) { // select file
             gcode->mark_as_taken();
             // Get filename
-            string filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
                 this->playing_file = false;
                 fclose(this->current_file_handler);
             }
-            this->current_file_handler = fopen( filename.c_str(), "r");
+            this->current_file_handler = fopen( this->filename.c_str(), "r");
             // get size of file
             int result = fseek(this->current_file_handler, 0, SEEK_END);
             if (0 != result){
@@ -63,9 +63,9 @@ void Player::on_gcode_received(void *argument) {
             }
 
             if(this->current_file_handler == NULL){
-                gcode->stream->printf("file.open failed: %s\r\n", filename.c_str());
+                gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
             }else{
-                gcode->stream->printf("File opened:%s Size:%ld\r\n", filename.c_str(),file_size);
+                gcode->stream->printf("File opened:%s Size:%ld\r\n", this->filename.c_str(),file_size);
                 gcode->stream->printf("File selected\r\n");
             }
 
@@ -86,7 +86,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 32) { // select file and start print
             gcode->mark_as_taken();
             // Get filename
-            string filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
@@ -94,12 +94,18 @@ void Player::on_gcode_received(void *argument) {
                 fclose(this->current_file_handler);
             }
 
-            this->current_file_handler = fopen( filename.c_str(), "r");
+            this->current_file_handler = fopen( this->filename.c_str(), "r");
             if(this->current_file_handler == NULL){
-                gcode->stream->printf("file.open failed: %s\r\n", filename.c_str());
+                gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
             }else{
                 this->playing_file = true;
             }
+//        }else if (gcode->m == 26) { // Reset print. Mostly used for resets
+//            gcode->mark_as_taken();
+//            if(this->current_file_handler != NULL){
+//                abort_command("", gcode->stream);
+//                
+//            }
         }else if (gcode->m == 27) { // report print progress, in format used by Marlin
             gcode->mark_as_taken();
             progress_command("-b", gcode->stream);
@@ -136,16 +142,16 @@ void Player::on_console_line_received( void* argument ){
 void Player::play_command( string parameters, StreamOutput* stream ){
 
     // Get filename
-    string filename          = this->absolute_from_relative(shift_parameter( parameters ));
+    this->filename          = this->absolute_from_relative(shift_parameter( parameters ));
     string options           = shift_parameter( parameters );
 
-    this->current_file_handler = fopen( filename.c_str(), "r");
+    this->current_file_handler = fopen( this->filename.c_str(), "r");
     if(this->current_file_handler == NULL){
-        stream->printf("File not found: %s\r\n", filename.c_str());
+        stream->printf("File not found: %s\r\n", this->filename.c_str());
         return;
     }
 
-    stream->printf("Playing %s\r\n", filename.c_str());
+    stream->printf("Playing %s\r\n", this->filename.c_str());
 
     this->playing_file = true;
 
