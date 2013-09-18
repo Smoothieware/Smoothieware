@@ -20,6 +20,7 @@ using namespace std;
 #include "panels/VikiLCD.h"
 #include "panels/Smoothiepanel.h"
 #include "panels/ReprapDiscountGLCD.h"
+#include "panels/ST7565.h"
 #include "version.h"
 
 Panel::Panel(){
@@ -63,6 +64,8 @@ void Panel::on_module_loaded(){
         this->lcd = new Smoothiepanel();
     }else if(lcd_cksm == rrd_glcd_checksum) {
         this->lcd = new ReprapDiscountGLCD();
+	}else if(lcd_cksm == st7565_glcd_checksum) {
+        this->lcd = new ST7565();
     }else{
         // no lcd type defined
         return;
