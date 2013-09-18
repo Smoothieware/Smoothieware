@@ -220,7 +220,7 @@ void ST7565::renderGlyph(int x, int y, const uint8_t *g, int w, int h) {
 
     for(int i=0; i<w; i++){
     	for(int j=0; j<h; j++){
-    	 pixel(x+i,y+j,g[(i/8)+(j*((w/8)+1))] & (1<<(7-i%8)));
+    	 pixel(x+i,y+j,g[(i/8)+ j*((w-1)/8 +1)] & (1<<(7-i%8)));
     	}
     }
 }
