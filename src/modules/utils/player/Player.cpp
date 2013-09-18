@@ -100,15 +100,37 @@ void Player::on_gcode_received(void *argument) {
             }else{
                 this->playing_file = true;
             }
-//        }else if (gcode->m == 26) { // Reset print. Mostly used for resets
-//            gcode->mark_as_taken();
-//            if(this->current_file_handler != NULL){
-//                abort_command("", gcode->stream);
-//                
-//            }
+            
+        }else if (gcode->m == 26) { // Reset print. Slightly different than M26 in Marlin and the rest
+            gcode->mark_as_taken();
+            if(this->current_file_handler != NULL){
+                // abort the print
+                abort_command("", gcode->stream);
+                
+                // reload the last file opened
+                this->current_file_handler = fopen( this->filename.c_str(), "r");
+                
+                if(this->current_file_handler == NULL){
+                    gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
+                }else{
+                    // get size of file
+                    int result = fseek(this->current_file_handler, 0, SEEK_END);
+                    if (0 != result){
+                            gcode->stream->printf("WARNING - Could not get file size\r\n");
+                            file_size= -1;
+                    }else{
+                            file_size= ftell(this->current_file_handler);
+                            fseek(this->current_file_handler, 0, SEEK_SET);
+                    }
+                }
+            }else{
+                gcode->stream->printf("No file loaded\r\n");
+            }
+            
         }else if (gcode->m == 27) { // report print progress, in format used by Marlin
             gcode->mark_as_taken();
             progress_command("-b", gcode->stream);
+            
         }else if (gcode->m == 21) { // Dummy code; makes Octoprint happy
             gcode->mark_as_taken();
             gcode->stream->printf("SD card ok\r\n");
