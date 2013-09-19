@@ -41,7 +41,11 @@ void Player::on_gcode_received(void *argument) {
     Gcode *gcode = static_cast<Gcode*>(argument);
     string args= get_arguments(gcode->command);
     if (gcode->has_m) {
-        if (gcode->m == 23) { // select file
+        if (gcode->m == 21) { // Dummy code; makes Octoprint happy -- supposed to initialize SD card
+            gcode->mark_as_taken();
+            gcode->stream->printf("SD card ok\r\n");
+        
+        }else if (gcode->m == 23) { // select file
             gcode->mark_as_taken();
             // Get filename
             this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
@@ -83,24 +87,6 @@ void Player::on_gcode_received(void *argument) {
             gcode->mark_as_taken();
             this->playing_file = false;
 
-        }else if (gcode->m == 32) { // select file and start print
-            gcode->mark_as_taken();
-            // Get filename
-            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
-            this->current_stream = &(StreamOutput::NullStream);
-
-            if(this->current_file_handler != NULL) {
-                this->playing_file = false;
-                fclose(this->current_file_handler);
-            }
-
-            this->current_file_handler = fopen( this->filename.c_str(), "r");
-            if(this->current_file_handler == NULL){
-                gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
-            }else{
-                this->playing_file = true;
-            }
-            
         }else if (gcode->m == 26) { // Reset print. Slightly different than M26 in Marlin and the rest
             gcode->mark_as_taken();
             if(this->current_file_handler != NULL){
@@ -130,10 +116,24 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 27) { // report print progress, in format used by Marlin
             gcode->mark_as_taken();
             progress_command("-b", gcode->stream);
-            
-        }else if (gcode->m == 21) { // Dummy code; makes Octoprint happy
+
+        }else if (gcode->m == 32) { // select file and start print
             gcode->mark_as_taken();
-            gcode->stream->printf("SD card ok\r\n");
+            // Get filename
+            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->current_stream = &(StreamOutput::NullStream);
+
+            if(this->current_file_handler != NULL) {
+                this->playing_file = false;
+                fclose(this->current_file_handler);
+            }
+
+            this->current_file_handler = fopen( this->filename.c_str(), "r");
+            if(this->current_file_handler == NULL){
+                gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
+            }else{
+                this->playing_file = true;
+            }
         }
     }
 }
