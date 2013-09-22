@@ -107,6 +107,9 @@ int main() {
     kernel->add_module( &dfu );
     kernel->add_module( &u );
 
+    // clear up the config cache to save some memory
+    kernel->config->config_cache_clear();
+
     // Main loop
     while(1){
         kernel->call_event(ON_MAIN_LOOP);
