@@ -110,7 +110,7 @@ void Extruder::on_gcode_received(void *argument){
     }
 
     // Gcodes to pass along to on_gcode_execute
-    if( ( gcode->has_m && ( gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
+    if( ( gcode->has_m && (gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
         gcode->mark_as_taken();
         if( this->kernel->conveyor->queue.size() == 0 ){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
@@ -161,6 +161,8 @@ void Extruder::on_gcode_execute(void* argument){
 
     // Absolute/relative mode
     if( gcode->has_m ){
+        if( gcode->m == 17 ){ this->en_pin.set(0); }
+        if( gcode->m == 18 ){ this->en_pin.set(1); }
         if( gcode->m == 82 ){ this->absolute_mode = true; }
         if( gcode->m == 83 ){ this->absolute_mode = false; }
         if( gcode->m == 84 ){ this->en_pin.set(1); }

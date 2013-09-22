@@ -105,7 +105,7 @@ void Stepper::on_gcode_execute(void* argument){
         if( gcode->m == 17 ){
             this->turn_enable_pins_on();
         }
-        if( gcode->m == 84 || gcode->m == 18 ){
+        if( (gcode->m == 84 || gcode->m == 18) && !gcode->has_letter('E') ){
             this->turn_enable_pins_off();
         }
     }
