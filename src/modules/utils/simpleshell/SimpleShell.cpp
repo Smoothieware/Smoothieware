@@ -21,8 +21,75 @@
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
 
-extern "C" caddr_t _sbrk(int incr);
+//extern "C" caddr_t _sbrk(int incr);
 extern unsigned int g_maximumHeapAddress;
+
+#include <malloc.h>
+#include <mri.h>
+#include <stdio.h>
+#include <stdint.h>
+
+extern "C" uint32_t  __end__;
+extern "C" uint32_t  __malloc_free_list;
+extern "C" uint32_t  _sbrk(int size);
+
+
+// Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
+static void heapWalk(StreamOutput* stream, bool verbose)
+{
+    uint32_t chunkNumber = 1;
+    // The __end__ linker symbol points to the beginning of the heap.
+    uint32_t chunkCurr = (uint32_t)&__end__;
+    // __malloc_free_list is the head pointer to newlib-nano's link list of free chunks.
+    uint32_t freeCurr = __malloc_free_list;
+    // Calling _sbrk() with 0 reserves no more memory but it returns the current top of heap.
+    uint32_t heapEnd = _sbrk(0);
+    // accumulate totals
+    uint32_t freeSize= 0;
+    uint32_t usedSize= 0;
+
+    stream->printf("Used Heap Size: %lu\n", heapEnd - chunkCurr);
+
+    // Walk through the chunks until we hit the end of the heap.
+    while (chunkCurr < heapEnd)
+    {
+        // Assume the chunk is in use.  Will update later.
+        int      isChunkFree = 0;
+        // The first 32-bit word in a chunk is the size of the allocation.  newlib-nano over allocates by 8 bytes.
+        // 4 bytes for this 32-bit chunk size and another 4 bytes to allow for 8 byte-alignment of returned pointer.
+        uint32_t chunkSize = *(uint32_t*)chunkCurr;
+        // The start of the next chunk is right after the end of this one.
+        uint32_t chunkNext = chunkCurr + chunkSize;
+
+        // The free list is sorted by address.
+        // Check to see if we have found the next free chunk in the heap.
+        if (chunkCurr == freeCurr)
+        {
+            // Chunk is free so flag it as such.
+            isChunkFree = 1;
+            // The second 32-bit word in a free chunk is a pointer to the next free chunk (again sorted by address).
+            freeCurr = *(uint32_t*)(freeCurr + 4);
+        }
+
+        // Skip past the 32-bit size field in the chunk header.
+        chunkCurr += 4;
+        // 8-byte align the data pointer.
+        chunkCurr = (chunkCurr + 7) & ~7;
+        // newlib-nano over allocates by 8 bytes, 4 bytes for the 32-bit chunk size and another 4 bytes to allow for 8
+        // byte-alignment of the returned pointer.
+        chunkSize -= 8;
+        if(verbose)
+            stream->printf("  Chunk: %lu  Address: 0x%08lX  Size: %lu  %s\n", chunkNumber, chunkCurr, chunkSize, isChunkFree ? "CHUNK FREE" : "");
+
+        if(isChunkFree) freeSize += chunkSize;
+        else usedSize += chunkSize;
+
+        chunkCurr = chunkNext;
+        chunkNumber++;
+    }
+    stream->printf("Allocated: %lu, Free: %lu\r\n", usedSize, freeSize);
+}
+
 
 void SimpleShell::on_module_loaded(){
     this->current_path = "/";
@@ -175,9 +242,12 @@ void SimpleShell::cat_command( string parameters, StreamOutput* stream ){
 
 // show free memory
 void SimpleShell::mem_command( string parameters, StreamOutput* stream){
+    bool verbose= shift_parameter( parameters ).find_first_of("Vv") != string::npos ;
     unsigned long heap= (unsigned long)_sbrk(0);
     unsigned long m= g_maximumHeapAddress - heap;
-    stream->printf("Memory available: %lu bytes\r\n", m);
+    stream->printf("Unused Heap: %lu bytes\r\n", m);
+
+    heapWalk(stream, verbose);
 }
 
 // print out build version
@@ -250,7 +320,7 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput* stream){
 void SimpleShell::help_command( string parameters, StreamOutput* stream ){
     stream->printf("Commands:\r\n");
     stream->printf("version\r\n");
-    stream->printf("mem\r\n");
+    stream->printf("mem [-v]\r\n");
     stream->printf("ls [folder]\r\n");
     stream->printf("cd folder\r\n");
     stream->printf("pwd\r\n");
