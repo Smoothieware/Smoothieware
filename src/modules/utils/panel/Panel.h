@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef PANEL_H
@@ -48,6 +48,7 @@ class Panel : public Module {
         uint32_t button_tick(uint32_t dummy);
         void on_idle(void* argument);
         void on_main_loop(void* argument);
+        void on_gcode_received(void* argument);
         void enter_screen(PanelScreen* screen);
         void reset_counter();
 
@@ -62,7 +63,7 @@ class Panel : public Module {
         bool counter_change();
         bool click();
         int get_encoder_resolution() const { return encoder_click_resolution; }
-        
+
         // Menu
         void enter_menu_mode();
         void setup_menu(uint16_t rows, uint16_t lines);
@@ -71,7 +72,7 @@ class Panel : public Module {
         bool menu_change();
         uint16_t menu_current_line();
         uint16_t max_screen_lines() { return screen_lines; }
-        
+
         // Control
         bool enter_control_mode(double passed_normal_increment, double passed_pressed_increment);
         void set_control_value(double value);
@@ -86,14 +87,17 @@ class Panel : public Module {
         bool is_playing() const;
         void set_playing_file(string f);
         const char* get_playing_file() { return playing_file; }
-        
+
+        string getMessage() { return message; }
+        bool hasMessage() { return message.size() > 0; }
+
         // public as it is directly accessed by screens... not good
         // TODO pass lcd into ctor of each sub screen
         LcdBase* lcd;
 
         // as panelscreen accesses private fields in Panel
         friend class PanelScreen;
-    
+
     private:
         // Menu
         char menu_offset;
@@ -110,7 +114,7 @@ class Panel : public Module {
         int control_normal_counter;
         int control_pressed_counter;
         double control_base_value;
-        
+
         Button up_button;
         Button down_button;
         Button back_button;
@@ -135,8 +139,9 @@ class Panel : public Module {
         double jogging_speed_mm_min[3];
         double default_hotend_temperature;
         double default_bed_temperature;
-        
+
         char playing_file[20];
+        string message;
 };
 
 #endif

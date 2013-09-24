@@ -26,7 +26,6 @@ using namespace std;
 #define FB_SIZE LCDWIDTH*LCDPAGES
 #define FONT_SIZE_X 6
 #define FONT_SIZE_Y 8
-#define ALL_BUTTON_BITS (BUTTON_UP|BUTTON_DOWN|BUTTON_LEFT|BUTTON_RIGHT|BUTTON_SELECT)
 
 #define spi_frequency_checksum     CHECKSUM("spi_frequency")
 #define click_button_pin_checksum  CHECKSUM("click_button_pin")

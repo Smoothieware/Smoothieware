@@ -1,4 +1,4 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
@@ -7,7 +7,7 @@
 Much of this was copied from LiquidTWI2
   LiquidTWI2 High Performance i2c LCD driver for MCP23008 & MCP23017
   hacked by Sam C. Lin / http://www.lincomatic.com
-  from 
+  from
    LiquidTWI by Matt Falcon (FalconFour) / http://falconfour.com
    logic gleaned from Adafruit RGB LCD Shield library
 */
@@ -17,7 +17,7 @@ Much of this was copied from LiquidTWI2
 #include "LcdBase.h"
 #include "libs/Pin.h"
 #include "Button.h"
-   
+
 using namespace std;
 #include <vector>
 #include <string>
@@ -26,8 +26,8 @@ using namespace std;
 
 // VikiLcd specific settings
 
-// readButtons() will only return these bit values 
-#define ALL_BUTTON_BITS (BUTTON_PAUSE|BUTTON_UP|BUTTON_DOWN|BUTTON_LEFT|BUTTON_RIGHT|BUTTON_SELECT)
+// readButtons() will only return these bit values
+#define VIKI_ALL_BUTTON_BITS (BUTTON_PAUSE|BUTTON_UP|BUTTON_DOWN|BUTTON_LEFT|BUTTON_RIGHT|BUTTON_SELECT)
 
 #define MCP23017_ADDRESS 0x20<<1
 
@@ -76,18 +76,18 @@ class VikiLCD : public LcdBase {
         void init();
         void write(const char* line, int len);
         void on_refresh();
-        
+
         // added viki commands
-        void setLed(int led, bool onoff); 
+        void setLed(int led, bool onoff);
 
         uint8_t readButtons();
         int readEncoderDelta();
-        
+
         // this is the number of clicks per detent
         int getEncoderResolution() { return 2; }
-        
+
         void set_variant(int n) { isPanelolu2= (n==1); }
-     
+
         void buzz(long,uint16_t);
         void noCursor();
         void cursor();
@@ -100,11 +100,11 @@ class VikiLCD : public LcdBase {
         void autoscroll();
         void noAutoscroll();
         void noDisplay();
-        
+
     private:
         void send(uint8_t, uint8_t);
         void command(uint8_t value);
-    
+
         void burstBits16(uint16_t);
         void burstBits8b(uint8_t);
         char displaymode;
@@ -116,7 +116,7 @@ class VikiLCD : public LcdBase {
         mbed::I2C* i2c;
         int i2c_frequency;
         Pin encoder_a_pin;
-        Pin encoder_b_pin;    
+        Pin encoder_b_pin;
         Pin button_pause_pin;
         bool isPanelolu2;
 };

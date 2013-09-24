@@ -1,8 +1,8 @@
-/*  
+/*
 This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
 Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "VikiLCD.h"
 
@@ -14,9 +14,9 @@ You should have received a copy of the GNU General Public License along with Smo
 //MCP23017 - Adafruit RGB LCD Shield and VikiLCD
 // bit pattern for the burstBits function is
 //
-//  B7 B6 B5 B4 B3 B2 B1 B0 A7 A6 A5 A4 A3 A2 A1 A0 - MCP23017 
-//  RS RW EN D4 D5 D6 D7 LB LG LR BZ B4 B3 B2 B1 B0 
-//  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0  
+//  B7 B6 B5 B4 B3 B2 B1 B0 A7 A6 A5 A4 A3 A2 A1 A0 - MCP23017
+//  RS RW EN D4 D5 D6 D7 LB LG LR BZ B4 B3 B2 B1 B0
+//  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
 #define M17_BIT_RS 0x8000
 #define M17_BIT_RW 0x4000
 #define M17_BIT_EN 0x2000
@@ -56,7 +56,7 @@ VikiLCD::VikiLCD() {
     this->displayfunction  = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS; // in case they forget to call begin() at least we have somethin
     this->displaymode      = 0x00;
     this->_numlines        = 4;
-    
+
     // configure the pins to use
     this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();
 
@@ -68,7 +68,7 @@ VikiLCD::VikiLCD() {
 VikiLCD::~VikiLCD() {
     delete this->i2c;
 }
-    
+
 
 void VikiLCD::init(){
     // SEE PAGE 45/46 FOR INITIALIZATION SPECIFICATION!
@@ -76,7 +76,7 @@ void VikiLCD::init(){
     // before sending commands. Arduino can turn on way befer 4.5V so we'll wait 50
 
     char data[2];
-    
+
     // Setup
     this->displayfunction = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS;
     this->_backlightBits = M17_BIT_LB|M17_BIT_LG|M17_BIT_LR; // all off
@@ -114,9 +114,9 @@ void VikiLCD::init(){
 
     // bit pattern for the burstBits function is
     //
-    //  B7 B6 B5 B4 B3 B2 B1 B0 A7 A6 A5 A4 A3 A2 A1 A0 - MCP23017 
-    //  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0  
-    //  RS RW EN D4 D5 D6 D7 B  G  R     B4 B3 B2 B1 B0 
+    //  B7 B6 B5 B4 B3 B2 B1 B0 A7 A6 A5 A4 A3 A2 A1 A0 - MCP23017
+    //  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
+    //  RS RW EN D4 D5 D6 D7 B  G  R     B4 B3 B2 B1 B0
     for (uint8_t i=0;i < 3;i++) {
         burstBits8b((M17_BIT_EN|M17_BIT_D5|M17_BIT_D4) >> 8);
         burstBits8b((M17_BIT_D5|M17_BIT_D4) >> 8);
@@ -160,7 +160,7 @@ void VikiLCD::burstBits16(uint16_t value) {
     i2c->write(this->i2c_address, data, 3);
 }
 
-// cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms) 
+// cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
 void VikiLCD::buzz(long duration, uint16_t freq) {
     char data[2];
     int currentRegister = 0;
@@ -169,7 +169,7 @@ void VikiLCD::buzz(long duration, uint16_t freq) {
     i2c->write(this->i2c_address, data, 1);
     i2c->read(this->i2c_address, data, 1);       // Read from selected Register
     currentRegister= data[0];
-    
+
     duration *=1000; //convert from ms to us
     long period = 1000000 / freq; // period in us
     long elapsed_time = 0;
@@ -197,7 +197,7 @@ uint8_t VikiLCD::readButtons(void) {
 
     // check the button pause
     if(this->button_pause_pin.connected() && this->button_pause_pin.get()) data[0] |= BUTTON_PAUSE;
-    
+
     // if it is the variant Panelolu2 swap the buttons around
     if(this->isPanelolu2) {
         // the select button bit is on GPA2 not GPA0
@@ -205,7 +205,7 @@ uint8_t VikiLCD::readButtons(void) {
         return 0; // only one button on Panelolu2 ignore the ena_a and en_b
 
     } else {
-        return (~data[0]) & ALL_BUTTON_BITS;
+        return (~data[0]) & VIKI_ALL_BUTTON_BITS;
     }
 }
 
@@ -224,7 +224,7 @@ int VikiLCD::readEncoderDelta() {
     static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
     static uint8_t old_AB = 0;
     old_AB <<= 2;                   //remember previous state
-    old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state 
+    old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state
     return  enc_states[(old_AB&0x0f)];
 }
 
@@ -338,7 +338,7 @@ void VikiLCD::setLed(int led, bool onoff) {
             case LED_HOTEND_ON: _backlightBits |= M17_BIT_LG; break; // off
             case LED_BED_ON: _backlightBits |= M17_BIT_LB; break; // off
         }
-    }       
+    }
     burstBits16(_backlightBits);
 }
 
@@ -346,14 +346,14 @@ void VikiLCD::setLed(int led, bool onoff) {
 void VikiLCD::send(uint8_t value, uint8_t mode) {
 #ifdef USE_FASTMODE
     // polls for ready. not sure on I2C this is any faster
-    
+
     // set Data pins as input
     char data[2];
     data[0]= MCP23017_IODIRB;
     data[1]= 0x1E;
     i2c->write(this->i2c_address, data, 2);
     uint8_t b= _backlightBits >> 8;
-    burstBits8b((M17_BIT_RW>>8)|b); // RW hi,RS lo 
+    burstBits8b((M17_BIT_RW>>8)|b); // RW hi,RS lo
     char busy;
     data[0] = MCP23017_GPIOB;
     do {
@@ -369,17 +369,17 @@ void VikiLCD::send(uint8_t value, uint8_t mode) {
     data[0]= MCP23017_IODIRB;
     data[1]= 0x00;
     i2c->write(this->i2c_address, data, 2);
-    burstBits8b(b); // RW lo 
+    burstBits8b(b); // RW lo
 
 #else
 //  wait_us(320);
 #endif
-    
+
     // BURST SPEED, OH MY GOD
     // the (now High Speed!) I/O expander pinout
-    //  B7 B6 B5 B4 B3 B2 B1 B0 A7 A6 A5 A4 A3 A2 A1 A0 - MCP23017 
-    //  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0  
-    //  RS RW EN D4 D5 D6 D7 B  G  R     B4 B3 B2 B1 B0 
+    //  B7 B6 B5 B4 B3 B2 B1 B0 A7 A6 A5 A4 A3 A2 A1 A0 - MCP23017
+    //  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
+    //  RS RW EN D4 D5 D6 D7 B  G  R     B4 B3 B2 B1 B0
 
     // n.b. RW bit stays LOW to write
     uint8_t buf = _backlightBits >> 8;
@@ -388,7 +388,7 @@ void VikiLCD::send(uint8_t value, uint8_t mode) {
     if (value & 0x20) buf |= M17_BIT_D5 >> 8;
     if (value & 0x40) buf |= M17_BIT_D6 >> 8;
     if (value & 0x80) buf |= M17_BIT_D7 >> 8;
-    
+
     if (mode) buf |= (M17_BIT_RS|M17_BIT_EN) >> 8; // RS+EN
     else buf |= M17_BIT_EN >> 8; // EN
 
@@ -405,7 +405,7 @@ void VikiLCD::send(uint8_t value, uint8_t mode) {
     if (value & 0x02) buf |= M17_BIT_D5 >> 8;
     if (value & 0x04) buf |= M17_BIT_D6 >> 8;
     if (value & 0x08) buf |= M17_BIT_D7 >> 8;
-    
+
     if (mode) buf |= (M17_BIT_RS|M17_BIT_EN) >> 8; // RS+EN
     else buf |= M17_BIT_EN >> 8; // EN
 
