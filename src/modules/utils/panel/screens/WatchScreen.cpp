@@ -213,6 +213,10 @@ void WatchScreen::display_menu_line(uint16_t line){
 }
 
 const char* WatchScreen::get_status(){
+    if(panel->hasMessage()) {
+        return panel->getMessage().c_str();
+    }
+
     if(THEKERNEL->pauser->paused())
         return "Paused";
 
