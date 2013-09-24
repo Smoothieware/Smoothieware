@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Kernel.h"
@@ -45,7 +45,7 @@ void Panel::on_module_loaded(){
     if( !this->kernel->config->value( panel_checksum, enable_checksum )->by_default(false)->as_bool() ){
         delete this;
         return;
-    } 
+    }
 
     // Initialise the LCD, see which LCD to use
     if (this->lcd != NULL) delete this->lcd;
@@ -76,7 +76,7 @@ void Panel::on_module_loaded(){
 
     // the number of screen lines the panel supports
     this->screen_lines= this->lcd->get_screen_lines();
-    
+
     // some encoders may need more clicks to move menu, this is a divisor and is in config as it is
     // an end user usability issue
     this->menu_offset = this->kernel->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
@@ -91,7 +91,7 @@ void Panel::on_module_loaded(){
     default_bed_temperature= this->kernel->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
 
     this->encoder_click_resolution= this->lcd->getEncoderResolution();
-    
+
     this->up_button.up_attach(    this, &Panel::on_up );
     this->down_button.up_attach(  this, &Panel::on_down );
     this->click_button.up_attach( this, &Panel::on_select );
@@ -100,10 +100,11 @@ void Panel::on_module_loaded(){
 
     this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
     this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
-   
+
     // Register for events
     this->register_for_event(ON_IDLE);
     this->register_for_event(ON_MAIN_LOOP);
+    this->register_for_event(ON_GCODE_RECEIVED);
 
     // Refresh timer
     this->kernel->slow_ticker->attach( 20, this, &Panel::refresh_tick );
@@ -151,6 +152,18 @@ uint32_t Panel::encoder_check(uint32_t dummy){
 uint32_t Panel::button_tick(uint32_t dummy){
     this->do_buttons = true;
     return 0;
+}
+
+void Panel::on_gcode_received(void* argument)
+{
+    Gcode* gcode = static_cast<Gcode*>(argument);
+    if( gcode->has_m) {
+        if( gcode->m == 117 ) { // set LCD message
+            this->message= get_arguments(gcode->command);
+            if(this->message.size() > 20) this->message= this->message.substr(0, 20);
+            gcode->mark_as_taken();
+        }
+    }
 }
 
 // on main loop, we can send gcodes or do anything that waits in this loop
@@ -212,10 +225,10 @@ void Panel::on_idle(void* argument){
             this->enter_screen(this->top_screen->watch_screen);
             // TODO do we need to reset any state?
         }
-        
+
         return;
     }
-    
+
     if(this->do_buttons) {
         // we don't want to do I2C in interrupt mode
         this->do_buttons = false;
@@ -233,7 +246,7 @@ void Panel::on_idle(void* argument){
         this->click_button.check_signal(but&BUTTON_SELECT);
         this->pause_button.check_signal(but&BUTTON_PAUSE);
      }
-    
+
     // If we are in menu mode and the position has changed
     if( this->mode == MENU_MODE && this->counter_change() ){
         this->menu_update();
@@ -315,7 +328,7 @@ void Panel::setup_menu(uint16_t rows){
 
 void Panel::setup_menu(uint16_t rows, uint16_t lines){
     this->menu_selected_line = 0;
-    this->menu_start_line = 0; 
+    this->menu_start_line = 0;
     this->menu_rows = rows;
     this->menu_lines = lines;
 }
@@ -326,7 +339,7 @@ uint16_t Panel::menu_current_line(){
 
 void Panel::menu_update(){
 
-    // Limits, up and down 
+    // Limits, up and down
     this->menu_selected_line = this->menu_selected_line % ( this->menu_rows<<this->menu_offset );
     while( this->menu_selected_line < 0 ){ this->menu_selected_line += this->menu_rows << this->menu_offset; }
 
