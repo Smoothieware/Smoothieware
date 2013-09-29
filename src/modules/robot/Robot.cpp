@@ -213,17 +213,17 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
-            case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
-                gcode->mark_as_taken();
-                if (gcode->has_letter('S'))
-                {
-                    double acc= gcode->get_value('S');
-                    // enforce minimum
-                    if (acc < 1.0)
-                        acc = 1.0;
-                    this->kernel->planner->acceleration= acc;
-                }
-                break;
+            // case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
+            //     gcode->mark_as_taken();
+            //     if (gcode->has_letter('S'))
+            //     {
+            //         double acc= gcode->get_value('S');
+            //         // enforce minimum
+            //         if (acc < 1.0)
+            //             acc = 1.0;
+            //         this->kernel->planner->acceleration= acc;
+            //     }
+            //     break;
 
             case 220: // M220 - speed override percentage
                 gcode->mark_as_taken();
