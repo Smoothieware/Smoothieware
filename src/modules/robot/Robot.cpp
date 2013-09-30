@@ -217,7 +217,7 @@ void Robot::on_gcode_received(void * argument){
             //     gcode->mark_as_taken();
             //     if (gcode->has_letter('S'))
             //     {
-            //         double acc= gcode->get_value('S');
+            //         double acc= gcode->get_value('S') * 60 * 60; // mm/min^2
             //         // enforce minimum
             //         if (acc < 1.0)
             //             acc = 1.0;
