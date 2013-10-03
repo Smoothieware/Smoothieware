@@ -9,5 +9,6 @@
 struct pad_progress {
     unsigned int percent_complete;
     unsigned long elapsed_secs;
+    string filename;
 };
 #endif

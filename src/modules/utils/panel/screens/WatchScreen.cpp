@@ -196,6 +196,8 @@ void WatchScreen::get_sd_play_info(){
         struct pad_progress p=  *static_cast<struct pad_progress*>(returned_data);
         this->elapsed_time= p.elapsed_secs;
         this->sd_pcnt_played= p.percent_complete;
+        this->panel->set_playing_file(p.filename);
+
     }else{
         this->elapsed_time= 0;
         this->sd_pcnt_played= 0;
