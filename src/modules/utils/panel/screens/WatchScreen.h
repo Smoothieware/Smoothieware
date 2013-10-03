@@ -40,8 +40,8 @@ class WatchScreen : public PanelScreen {
         int bedtarget;
         int current_speed;
         double pos[3];
-        int elapsed_time;
-        int sd_pcnt_played;
+        unsigned long elapsed_time;
+        unsigned int sd_pcnt_played;
 };
 
 
