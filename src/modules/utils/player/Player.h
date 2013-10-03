@@ -49,8 +49,8 @@ class Player : public Module {
         StreamOutput* current_stream;
         StreamOutput* reply_stream;
         FILE* current_file_handler;
-        long file_size, played_cnt;
-        int elapsed_secs;
+        unsigned long file_size, played_cnt;
+        unsigned long elapsed_secs;
 };
 
 #endif // PLAYER_H

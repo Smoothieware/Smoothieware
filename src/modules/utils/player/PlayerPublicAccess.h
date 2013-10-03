@@ -7,7 +7,7 @@
 #define get_progress_checksum     CHECKSUM("progress")
 
 struct pad_progress {
-    int percent_complete;
-    int elapsed_secs;
+    unsigned int percent_complete;
+    unsigned long elapsed_secs;
 };
 #endif

@@ -188,7 +188,7 @@ void Player::play_command( string parameters, StreamOutput* stream ){
     int result = fseek(this->current_file_handler, 0, SEEK_END);
     if (0 != result){
             stream->printf("WARNING - Could not get file size\r\n");
-            file_size= -1;
+            file_size= 0;
     }else{
             file_size= ftell(this->current_file_handler);
             fseek(this->current_file_handler, 0, SEEK_SET);
@@ -209,23 +209,23 @@ void Player::progress_command( string parameters, StreamOutput* stream ){
     }
 
     if(file_size > 0) {
-        int est= -1;
+        unsigned long est= 0;
         if(this->elapsed_secs > 10) {
-            int bytespersec= played_cnt / this->elapsed_secs;
+            unsigned long bytespersec= played_cnt / this->elapsed_secs;
             if(bytespersec > 0)
                 est= (file_size - played_cnt) / bytespersec;
         }
 
-        int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
+        unsigned int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
         // If -b or -B is passed, report in the format used by Marlin and the others.
         if ( options.find_first_of("Bb") == string::npos ){
-            stream->printf("%d %% complete, elapsed time: %d s", pcnt, this->elapsed_secs);
+            stream->printf("%u %% complete, elapsed time: %lu s", pcnt, this->elapsed_secs);
             if(est > 0){
-                stream->printf(", est time: %d s",  est);
+                stream->printf(", est time: %lu s",  est);
             }
             stream->printf("\r\n");
         }else{
-            stream->printf("SD printing byte %ld/%ld\r\n", played_cnt, file_size);
+            stream->printf("SD printing byte %lu/%lu\r\n", played_cnt, file_size);
         }
 
     }else{
