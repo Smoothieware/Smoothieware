@@ -11,6 +11,9 @@ class BaseSolution {
 
         virtual void set_steps_per_millimeter( double steps[] ) = 0;
         virtual void get_steps_per_millimeter( double steps[] ) = 0;
+
+        virtual bool set_optional(char parameter, double value) { return false; };
+        virtual bool get_optional(char parameter, double *value) { return false; };
 };
 
 #endif

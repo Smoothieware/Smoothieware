@@ -361,7 +361,20 @@ void Endstops::on_gcode_received(void* argument)
                 }
                 break;
 
-            case 206: // M206 - set trim for each axis in mm
+            case 665: { // M665 - set max gamma/z height
+                    gcode->mark_as_taken();
+                    double gamma_max= this->homing_position[2];
+                    if(gcode->has_letter('Z')) {
+                        this->homing_position[2]= gamma_max= gcode->get_value('Z');
+                    }
+                    char buf[16];
+                    int n= snprintf(buf, sizeof(buf), "Max Z:%8.3f ", gamma_max);
+                    gcode->txt_after_ok.append(buf, n);
+                }
+                break;
+
+            case 206: // M206 - set trim for each axis in mm (TODO to be deprecated)
+            case 666: // M666 - set trim for each axis in mm
                 {
                     int dirx= (this->home_direction[0] ? 1 : -1);
                     int diry= (this->home_direction[1] ? 1 : -1);

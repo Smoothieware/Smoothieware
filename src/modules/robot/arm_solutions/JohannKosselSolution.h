@@ -22,8 +22,12 @@ class JohannKosselSolution : public BaseSolution {
 
         void set_steps_per_millimeter( double steps[] );
         void get_steps_per_millimeter( double steps[] );
+        bool set_optional(char parameter, double value);
+        bool get_optional(char parameter, double *value);
 
     private:
+        void init();
+
         Config* config;
         float alpha_steps_per_mm;
         float beta_steps_per_mm;
