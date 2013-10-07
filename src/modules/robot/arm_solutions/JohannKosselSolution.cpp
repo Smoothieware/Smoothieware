@@ -2,6 +2,7 @@
 #include <fastmath.h>
 
 #define PIOVER180       0.01745329251994329576923690768489F
+#define SQ(x) powf(x, 2)
 
 JohannKosselSolution::JohannKosselSolution(Config* passed_config) : config(passed_config){
     this->alpha_steps_per_mm = this->config->value(alpha_steps_per_mm_checksum)->as_number();
@@ -13,8 +14,12 @@ JohannKosselSolution::JohannKosselSolution(Config* passed_config) : config(passe
     // arm_radius is the horizontal distance from hinge to hinge when the effector is centered
     this->arm_radius         = this->config->value(arm_radius_checksum)->by_default(124.0)->as_number();
 
-    this->arm_length_squared = powf(this->arm_length, 2);
-    
+    init();
+}
+
+void JohannKosselSolution::init() {
+    this->arm_length_squared = SQ(this->arm_length);
+
     // Effective X/Y positions of the three vertical towers.
     float DELTA_RADIUS= this->arm_radius;
     float SIN_60= 0.8660254037844386F;
@@ -27,8 +32,6 @@ JohannKosselSolution::JohannKosselSolution(Config* passed_config) : config(passe
     DELTA_TOWER3_Y= DELTA_RADIUS;
 }
 
-#define sq(x) powf((x), 2)
-
 void JohannKosselSolution::millimeters_to_steps( double millimeters[], int steps[] ){
     float cartesian[3];
     // convert input to float
@@ -37,25 +40,25 @@ void JohannKosselSolution::millimeters_to_steps( double millimeters[], int steps
     cartesian[2]= millimeters[2];
 
     float delta_x = sqrtf(this->arm_length_squared
-                         - sq(DELTA_TOWER1_X-cartesian[0])
-                         - sq(DELTA_TOWER1_Y-cartesian[1])
+                         - SQ(DELTA_TOWER1_X-cartesian[0])
+                         - SQ(DELTA_TOWER1_Y-cartesian[1])
                         ) + cartesian[2];
     float delta_y = sqrtf(this->arm_length_squared
-                         - sq(DELTA_TOWER2_X-cartesian[0])
-                         - sq(DELTA_TOWER2_Y-cartesian[1])
+                         - SQ(DELTA_TOWER2_X-cartesian[0])
+                         - SQ(DELTA_TOWER2_Y-cartesian[1])
                         ) + cartesian[2];
     float delta_z = sqrtf(this->arm_length_squared
-                         - sq(DELTA_TOWER3_X-cartesian[0])
-                         - sq(DELTA_TOWER3_Y-cartesian[1])
+                         - SQ(DELTA_TOWER3_X-cartesian[0])
+                         - SQ(DELTA_TOWER3_Y-cartesian[1])
                         ) + cartesian[2];
 
-   
+
     steps[ALPHA_STEPPER] = lround( delta_x * this->alpha_steps_per_mm );
     steps[BETA_STEPPER ] = lround( delta_y * this->beta_steps_per_mm );
     steps[GAMMA_STEPPER] = lround( delta_z * this->gamma_steps_per_mm );
 }
 
-void JohannKosselSolution::steps_to_millimeters( int steps[], double millimeters[] ){} 
+void JohannKosselSolution::steps_to_millimeters( int steps[], double millimeters[] ){}
 
 void JohannKosselSolution::set_steps_per_millimeter( double steps[] )
 {
@@ -71,3 +74,36 @@ void JohannKosselSolution::get_steps_per_millimeter( double steps[] )
     steps[2] = this->gamma_steps_per_mm;
 }
 
+bool JohannKosselSolution::set_optional(char parameter, double value) {
+
+    switch(parameter) {
+        case 'L': // sets arm_length
+            this->arm_length= value;
+            init();
+            break;
+        case 'R': // sets arm_radius
+            this->arm_radius= value;
+            init();
+            break;
+        default:
+            return false;
+    }
+    return true;
+}
+
+bool JohannKosselSolution::get_optional(char parameter, double *value) {
+    if(value == NULL) return false;
+
+    switch(parameter) {
+        case 'L': // get arm_length
+            *value= this->arm_length;
+            break;
+        case 'R': // get arm_radius
+            *value= this->arm_radius;
+            break;
+        default:
+            return false;
+    }
+
+    return true;
+};
