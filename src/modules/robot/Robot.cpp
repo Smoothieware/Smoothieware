@@ -236,6 +236,26 @@ void Robot::on_gcode_received(void * argument){
                     seconds_per_minute = factor * 0.6;
                 }
                 break;
+
+            case 665: // M665 set optional arm solution variables based on arm solution
+                gcode->mark_as_taken();
+                // the parameter args could be any letter so try each one
+                for(char c='A';c<='Z';c++) {
+                    double v;
+                    bool supported= arm_solution->get_optional(c, &v); // retrieve current value if supported
+
+                    if(supported && gcode->has_letter(c)) { // set new value if supported
+                        v= gcode->get_value(c);
+                        arm_solution->set_optional(c, v);
+                    }
+                    if(supported) { // print all current values of supported options
+                        char buf[16];
+                        int n= snprintf(buf, sizeof(buf), "%c:%8.3f ", c, v);
+                        gcode->txt_after_ok.append(buf, n);
+                    }
+                }
+                break;
+
         }
    }
     if( this->motion_mode < 0)
