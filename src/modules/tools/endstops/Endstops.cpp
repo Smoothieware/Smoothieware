@@ -367,9 +367,8 @@ void Endstops::on_gcode_received(void* argument)
                     if(gcode->has_letter('Z')) {
                         this->homing_position[2]= gamma_max= gcode->get_value('Z');
                     }
-                    char buf[16];
-                    int n= snprintf(buf, sizeof(buf), "Max Z:%8.3f ", gamma_max);
-                    gcode->txt_after_ok.append(buf, n);
+                    gcode->stream->printf("Max Z %8.3f ", gamma_max);
+                    gcode->add_nl = true;
                 }
                 break;
 
@@ -393,9 +392,7 @@ void Endstops::on_gcode_received(void* argument)
                     trim[2]= lround(mm[2]*steps_per_mm[2]) * dirz;
 
                     // print the current trim values in mm and steps
-                    char buf[64];
-                    int n= snprintf(buf, sizeof(buf), "X:%5.3f (%d) Y:%5.3f (%d) Z:%5.3f (%d) ", mm[0], trim[0], mm[1], trim[1], mm[2], trim[2]);
-                    gcode->txt_after_ok.append(buf, n);
+                    gcode->stream->printf("X %5.3f (%d) Y %5.3f (%d) Z %5.3f (%d)\n", mm[0], trim[0], mm[1], trim[1], mm[2], trim[2]);
                     gcode->mark_as_taken();
                 }
                 break;
