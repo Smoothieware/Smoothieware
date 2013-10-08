@@ -249,9 +249,8 @@ void Robot::on_gcode_received(void * argument){
                         arm_solution->set_optional(c, v);
                     }
                     if(supported) { // print all current values of supported options
-                        char buf[16];
-                        int n= snprintf(buf, sizeof(buf), "%c:%8.3f ", c, v);
-                        gcode->txt_after_ok.append(buf, n);
+                        gcode->stream->printf("%c %8.3f ", c, v);
+                        gcode->add_nl = true;
                     }
                 }
                 break;
