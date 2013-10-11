@@ -12,6 +12,7 @@
 #include "libs/Pin.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
+#include "PwmOut.h" // mbed.h lib
 
 
 #define laser_module_enable_checksum        CHECKSUM("laser_module_enable")
@@ -32,10 +33,10 @@ class Laser : public Module{
         void on_speed_change(void* argument);
         void set_proportional_power();
 
-        Pwm laser_pin;    // PWM output to regulate the laser power
-        bool   laser_on;     // Laser status
-        float  laser_max_power; // maximum allowed laser power to be output on the pwm pin
-        float  laser_tickle_power; // value used to tickle the laser on moves
+        mbed::PwmOut*    laser_pin;    // PWM output to regulate the laser power
+        bool             laser_on;     // Laser status
+        float            laser_max_power; // maximum allowed laser power to be output on the pwm pin
+        float            laser_tickle_power; // value used to tickle the laser on moves
 };
 
 #endif
