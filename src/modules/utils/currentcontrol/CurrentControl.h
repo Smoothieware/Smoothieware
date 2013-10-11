@@ -17,6 +17,8 @@
 #define theta_current_checksum                  CHECKSUM("theta_current")
 #define currentcontrol_module_enable_checksum   CHECKSUM("currentcontrol_module_enable")
 #define digipotchip_checksum                    CHECKSUM("digipotchip")
+#define digipot_max_current                     CHECKSUM("digipot_max_current")
+#define digipot_factor                          CHECKSUM("digipot_factor")
 
 #define mcp4451_checksum                        CHECKSUM("mcp4451")
 #define ad5206_checksum                         CHECKSUM("ad5206")
@@ -39,6 +41,7 @@ class CurrentControl : public Module {
         double theta_current;
 
         DigipotBase* digipot;
+
 };
 
 
