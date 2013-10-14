@@ -17,14 +17,14 @@ class MCP4451 : public DigipotBase {
             for (int i = 0; i < 8; i++)
                 currents[i] = 0.0;
         }
-        
+
         ~MCP4451(){
             delete this->i2c;
         }
 
         void set_current( int channel, double current )
         {
-            current = min( max( current, 0.0L ), 2.0L );
+            current = min( max( current, 0.0 ), this->max_current );
             currents[channel] = current;
             char addr = 0x58;
             while(channel > 3){
@@ -45,7 +45,7 @@ class MCP4451 : public DigipotBase {
         {
             return currents[channel];
         }
-        
+
     private:
 
         void i2c_send( char first, char second, char third ){
@@ -57,7 +57,7 @@ class MCP4451 : public DigipotBase {
         }
 
         char current_to_wiper( double current ){
-            return char(ceil(double((113.33*current))));
+            return char(ceil(double((this->factor*current))));
         }
 
         mbed::I2C* i2c;
