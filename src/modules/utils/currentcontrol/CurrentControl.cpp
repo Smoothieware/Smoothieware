@@ -46,6 +46,9 @@ void CurrentControl::on_module_loaded(){
     this->eta_current =             this->kernel->config->value(eta_current_checksum    )->by_default(-1)->as_number();
     this->theta_current =           this->kernel->config->value(theta_current_checksum  )->by_default(-1)->as_number();
 
+    digipot->set_max_current(       this->kernel->config->value(digipot_max_current     )->by_default(2.0)->as_number());
+    digipot->set_factor(            this->kernel->config->value(digipot_factor          )->by_default(113.33)->as_number());
+
     this->digipot->set_current(0, this->alpha_current);
     this->digipot->set_current(1, this->beta_current );
     this->digipot->set_current(2, this->gamma_current);
