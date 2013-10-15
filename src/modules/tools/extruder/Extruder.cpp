@@ -242,7 +242,7 @@ void Extruder::on_block_begin(void* argument){
         this->current_position += this->travel_distance ;
 
         int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance +this->unstepped_distance) )));
-        
+
         if ( this->travel_distance > 0 ){
             this->unstepped_distance += this->travel_distance -(steps_to_step/this->steps_per_millimeter); //catch any overflow
         }   else {
@@ -281,6 +281,7 @@ void Extruder::on_block_begin(void* argument){
             this->current_block = block;
 
             this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step );
+            this->on_speed_change(0); // initialise speed in case we get called first
         }else{
             this->current_block = NULL;
         }
@@ -335,7 +336,7 @@ void Extruder::on_speed_change( void* argument ){
     * or even : ( stepper steps per minute / 60 ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed( max( ( this->kernel->stepper->trapezoid_adjusted_rate /60L) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ), this->kernel->stepper->minimum_steps_per_minute/60 ) );
+    this->stepper_motor->set_speed( max( ( this->kernel->stepper->trapezoid_adjusted_rate /60.0) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ), this->kernel->stepper->minimum_steps_per_minute/60.0 ) );
 
 }
 
