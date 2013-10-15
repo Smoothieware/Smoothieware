@@ -21,7 +21,7 @@
 #include "mpu.h"
 
 
-static unsigned int g_maximumHeapAddress;
+unsigned int g_maximumHeapAddress;
 
 static void fillUnusedRAM(void);
 static void configureStackSizeLimit(unsigned int stackSizeLimit);
@@ -44,10 +44,10 @@ extern "C" void _start(void)
 {
     int bssSize = (int)&__bss_end__ - (int)&__bss_start__;
     int mainReturnValue;
-    
+
     memset(&__bss_start__, 0, bssSize);
     fillUnusedRAM();
-    
+
     if (STACK_SIZE)
     {
         configureStackSizeLimit(STACK_SIZE);
@@ -55,7 +55,7 @@ extern "C" void _start(void)
     if (WRITE_BUFFER_DISABLE)
     {
         disableMPU();
-        configureMpuRegionToAccessAllMemoryWithNoCaching();    
+        configureMpuRegionToAccessAllMemoryWithNoCaching();
         enableMPU();
     }
     if (MRI_ENABLE)
@@ -106,7 +106,7 @@ static unsigned int alignTo32Bytes(unsigned int value)
 static void configureMpuToCatchStackOverflowIntoHeap(unsigned int maximumHeapAddress)
 {
     #define MPU_REGION_SIZE_OF_32_BYTES ((5-1) << MPU_RASR_SIZE_SHIFT)  // 2^5 = 32 bytes.
-    
+
     prepareToAccessMPURegion(getHighestMPUDataRegionIndex());
     setMPURegionAddress(maximumHeapAddress);
     setMPURegionAttributeAndSize(MPU_REGION_SIZE_OF_32_BYTES | MPU_RASR_ENABLE);
@@ -121,7 +121,7 @@ static void configureMpuRegionToAccessAllMemoryWithNoCaching(void)
     static const uint32_t regionEnable    = MPU_RASR_ENABLE;
     static const uint32_t regionSizeAndAttributes = regionReadWrite | regionSizeAt4GB | regionEnable;
     uint32_t regionIndex = STACK_SIZE ? getHighestMPUDataRegionIndex() - 1 : getHighestMPUDataRegionIndex();
-    
+
     prepareToAccessMPURegion(regionIndex);
     setMPURegionAddress(regionToStartAtAddress0);
     setMPURegionAttributeAndSize(regionSizeAndAttributes);
@@ -170,7 +170,7 @@ extern "C" void abort(void)
 {
     if (MRI_ENABLE)
         __debugbreak();
-        
+
     exit(1);
 }
 
@@ -200,18 +200,18 @@ extern int errno;
 static int doesHeapCollideWithStack(unsigned int newHeap);
 
 /* Dynamic memory allocation related syscalls. */
-extern "C" caddr_t _sbrk(int incr) 
+extern "C" caddr_t _sbrk(int incr)
 {
     static unsigned char* heap = (unsigned char*)&__end__;
     unsigned char*        prev_heap = heap;
     unsigned char*        new_heap = heap + incr;
 
-    if (doesHeapCollideWithStack((unsigned int)new_heap)) 
+    if (doesHeapCollideWithStack((unsigned int)new_heap))
     {
         errno = ENOMEM;
         return (caddr_t)-1;
     }
-    
+
     heap = new_heap;
     return (caddr_t) prev_heap;
 }

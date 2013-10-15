@@ -213,17 +213,17 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
-            case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
-                gcode->mark_as_taken();
-                if (gcode->has_letter('S'))
-                {
-                    double acc= gcode->get_value('S');
-                    // enforce minimum
-                    if (acc < 1.0)
-                        acc = 1.0;
-                    this->kernel->planner->acceleration= acc;
-                }
-                break;
+            // case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
+            //     gcode->mark_as_taken();
+            //     if (gcode->has_letter('S'))
+            //     {
+            //         double acc= gcode->get_value('S') * 60 * 60; // mm/min^2
+            //         // enforce minimum
+            //         if (acc < 1.0)
+            //             acc = 1.0;
+            //         this->kernel->planner->acceleration= acc;
+            //     }
+            //     break;
 
             case 220: // M220 - speed override percentage
                 gcode->mark_as_taken();
@@ -236,6 +236,25 @@ void Robot::on_gcode_received(void * argument){
                     seconds_per_minute = factor * 0.6;
                 }
                 break;
+
+            case 665: // M665 set optional arm solution variables based on arm solution
+                gcode->mark_as_taken();
+                // the parameter args could be any letter so try each one
+                for(char c='A';c<='Z';c++) {
+                    double v;
+                    bool supported= arm_solution->get_optional(c, &v); // retrieve current value if supported
+
+                    if(supported && gcode->has_letter(c)) { // set new value if supported
+                        v= gcode->get_value(c);
+                        arm_solution->set_optional(c, v);
+                    }
+                    if(supported) { // print all current values of supported options
+                        gcode->stream->printf("%c %8.3f ", c, v);
+                        gcode->add_nl = true;
+                    }
+                }
+                break;
+
         }
    }
     if( this->motion_mode < 0)

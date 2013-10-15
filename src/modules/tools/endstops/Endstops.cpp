@@ -625,7 +625,19 @@ void Endstops::on_gcode_received(void* argument)
                 }
                 break;
 
-            case 206: // M206 - set trim for each axis in mm
+            case 665: { // M665 - set max gamma/z height
+                    gcode->mark_as_taken();
+                    double gamma_max= this->homing_position[2];
+                    if(gcode->has_letter('Z')) {
+                        this->homing_position[2]= gamma_max= gcode->get_value('Z');
+                    }
+                    gcode->stream->printf("Max Z %8.3f ", gamma_max);
+                    gcode->add_nl = true;
+                }
+                break;
+
+            case 206: // M206 - set trim for each axis in mm (TODO to be deprecated)
+            case 666: // M666 - set trim for each axis in mm
                 {
                     int dirx= (this->home_direction[0] ? 1 : -1);
                     int diry= (this->home_direction[1] ? 1 : -1);
@@ -644,9 +656,7 @@ void Endstops::on_gcode_received(void* argument)
                     trim[2]= lround(mm[2]*steps_per_mm[2]) * dirz;
 
                     // print the current trim values in mm and steps
-                    char buf[64];
-                    int n= snprintf(buf, sizeof(buf), "X:%5.3f (%d) Y:%5.3f (%d) Z:%5.3f (%d) ", mm[0], trim[0], mm[1], trim[1], mm[2], trim[2]);
-                    gcode->txt_after_ok.append(buf, n);
+                    gcode->stream->printf("X %5.3f (%d) Y %5.3f (%d) Z %5.3f (%d)\n", mm[0], trim[0], mm[1], trim[1], mm[2], trim[2]);
                     gcode->mark_as_taken();
                 }
                 break;

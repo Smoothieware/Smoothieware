@@ -23,6 +23,7 @@
 #define break_command_checksum    CHECKSUM("break")
 #define help_command_checksum     CHECKSUM("help")
 #define version_command_checksum  CHECKSUM("version")
+#define mem_command_checksum      CHECKSUM("mem")
 #define get_command_checksum      CHECKSUM("get")
 #define get_temp_command_checksum CHECKSUM("temp")
 #define get_pos_command_checksum  CHECKSUM("pos")
@@ -35,12 +36,14 @@ class SimpleShell : public Module {
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
+        void on_gcode_received(void *argument);
         void on_second_tick(void*);
         string absolute_from_relative( string path );
-        void ls_command(   string parameters, StreamOutput* stream );
-        void cd_command(   string parameters, StreamOutput* stream );
-        void pwd_command(  string parameters, StreamOutput* stream );
-        void cat_command(  string parameters, StreamOutput* stream );
+        void ls_command(string parameters, StreamOutput* stream );
+        void mem_command(string parameters, StreamOutput* stream );
+        void cd_command(string parameters, StreamOutput* stream );
+        void pwd_command(string parameters, StreamOutput* stream );
+        void cat_command(string parameters, StreamOutput* stream );
         void break_command(string parameters, StreamOutput* stream );
         void reset_command(string parameters, StreamOutput* stream );
         void dfu_command(string parameters, StreamOutput* stream );
@@ -48,7 +51,7 @@ class SimpleShell : public Module {
         void version_command(string parameters, StreamOutput* stream );
         void get_command(string parameters, StreamOutput* stream );
         void set_temp_command(string parameters, StreamOutput* stream );
-        
+
     private:
         string current_path;
         int reset_delay_secs;

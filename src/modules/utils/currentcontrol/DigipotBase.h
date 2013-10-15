@@ -13,6 +13,12 @@ class DigipotBase {
 
         virtual void set_current( int channel, double current )= 0;
         virtual double get_current(int channel)= 0;
+        void set_max_current(double c) { max_current= c; }
+        void set_factor(double f) { factor= f; }
+
+    protected:
+        double factor;
+        double max_current;
 };
 
 

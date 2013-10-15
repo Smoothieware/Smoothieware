@@ -25,15 +25,119 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_SECOND_TICK);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
+    this->register_for_event(ON_GCODE_RECEIVED);
 
     this->on_boot_gcode = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode -q")->as_string();
     this->on_boot_gcode_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs= 0;
+    this->reply_stream= NULL;
 }
 
 void Player::on_second_tick(void*) {
      if (!kernel->pauser->paused()) this->elapsed_secs++;
 }
+
+void Player::on_gcode_received(void *argument) {
+    Gcode *gcode = static_cast<Gcode*>(argument);
+    string args= get_arguments(gcode->command);
+    if (gcode->has_m) {
+        if (gcode->m == 21) { // Dummy code; makes Octoprint happy -- supposed to initialize SD card
+            gcode->mark_as_taken();
+            gcode->stream->printf("SD card ok\r\n");
+
+        }else if (gcode->m == 23) { // select file
+            gcode->mark_as_taken();
+            // Get filename
+            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->current_stream = &(StreamOutput::NullStream);
+
+            if(this->current_file_handler != NULL) {
+                this->playing_file = false;
+                fclose(this->current_file_handler);
+            }
+            this->current_file_handler = fopen( this->filename.c_str(), "r");
+            // get size of file
+            int result = fseek(this->current_file_handler, 0, SEEK_END);
+            if (0 != result){
+                    gcode->stream->printf("WARNING - Could not get file size\r\n");
+                    file_size= -1;
+            }else{
+                    file_size= ftell(this->current_file_handler);
+                    fseek(this->current_file_handler, 0, SEEK_SET);
+            }
+
+            if(this->current_file_handler == NULL){
+                gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
+            }else{
+                gcode->stream->printf("File opened:%s Size:%ld\r\n", this->filename.c_str(),file_size);
+                gcode->stream->printf("File selected\r\n");
+            }
+
+            this->played_cnt= 0;
+            this->elapsed_secs= 0;
+
+        }else if (gcode->m == 24) { // start print
+            gcode->mark_as_taken();
+            if (this->current_file_handler != NULL) {
+                this->playing_file = true;
+                this->reply_stream= gcode->stream;
+            }
+
+        }else if (gcode->m == 25) { // pause print
+            gcode->mark_as_taken();
+            this->playing_file = false;
+
+        }else if (gcode->m == 26) { // Reset print. Slightly different than M26 in Marlin and the rest
+            gcode->mark_as_taken();
+            if(this->current_file_handler != NULL){
+                // abort the print
+                abort_command("", gcode->stream);
+
+                // reload the last file opened
+                this->current_file_handler = fopen( this->filename.c_str(), "r");
+
+                if(this->current_file_handler == NULL){
+                    gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
+                }else{
+                    // get size of file
+                    int result = fseek(this->current_file_handler, 0, SEEK_END);
+                    if (0 != result){
+                            gcode->stream->printf("WARNING - Could not get file size\r\n");
+                            file_size= 0;
+                    }else{
+                            file_size= ftell(this->current_file_handler);
+                            fseek(this->current_file_handler, 0, SEEK_SET);
+                    }
+                }
+            }else{
+                gcode->stream->printf("No file loaded\r\n");
+            }
+
+        }else if (gcode->m == 27) { // report print progress, in format used by Marlin
+            gcode->mark_as_taken();
+            progress_command("-b", gcode->stream);
+
+        }else if (gcode->m == 32) { // select file and start print
+            gcode->mark_as_taken();
+            // Get filename
+            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->current_stream = &(StreamOutput::NullStream);
+
+            if(this->current_file_handler != NULL) {
+                this->playing_file = false;
+                fclose(this->current_file_handler);
+            }
+
+            this->current_file_handler = fopen( this->filename.c_str(), "r");
+            if(this->current_file_handler == NULL){
+                gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
+            }else{
+                this->playing_file = true;
+            }
+        }
+    }
+}
+
 
 // When a new line is received, check if it is a command, and if it is, act upon it
 void Player::on_console_line_received( void* argument ){
@@ -60,16 +164,16 @@ void Player::on_console_line_received( void* argument ){
 void Player::play_command( string parameters, StreamOutput* stream ){
 
     // Get filename
-    string filename          = this->absolute_from_relative(shift_parameter( parameters ));
+    this->filename          = this->absolute_from_relative(shift_parameter( parameters ));
     string options           = shift_parameter( parameters );
 
-    this->current_file_handler = fopen( filename.c_str(), "r");
+    this->current_file_handler = fopen( this->filename.c_str(), "r");
     if(this->current_file_handler == NULL){
-        stream->printf("File not found: %s\r\n", filename.c_str());
+        stream->printf("File not found: %s\r\n", this->filename.c_str());
         return;
     }
 
-    stream->printf("Playing %s\r\n", filename.c_str());
+    stream->printf("Playing %s\r\n", this->filename.c_str());
 
     this->playing_file = true;
 
@@ -84,7 +188,7 @@ void Player::play_command( string parameters, StreamOutput* stream ){
     int result = fseek(this->current_file_handler, 0, SEEK_END);
     if (0 != result){
             stream->printf("WARNING - Could not get file size\r\n");
-            file_size= -1;
+            file_size= 0;
     }else{
             file_size= ftell(this->current_file_handler);
             fseek(this->current_file_handler, 0, SEEK_SET);
@@ -95,25 +199,34 @@ void Player::play_command( string parameters, StreamOutput* stream ){
 }
 
 void Player::progress_command( string parameters, StreamOutput* stream ){
+
+    // get options
+    string options           = shift_parameter( parameters );
+
     if(!playing_file) {
         stream->printf("Not currently playing\r\n");
         return;
     }
 
     if(file_size > 0) {
-        int est= -1;
+        unsigned long est= 0;
         if(this->elapsed_secs > 10) {
-            int bytespersec= played_cnt / this->elapsed_secs;
+            unsigned long bytespersec= played_cnt / this->elapsed_secs;
             if(bytespersec > 0)
                 est= (file_size - played_cnt) / bytespersec;
         }
 
-        int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
-        stream->printf("%d %% complete, elapsed time: %d s", pcnt, this->elapsed_secs);
-        if(est > 0){
-            stream->printf(", est time: %d s",  est);
+        unsigned int pcnt= (file_size - (file_size - played_cnt)) * 100 / file_size;
+        // If -b or -B is passed, report in the format used by Marlin and the others.
+        if ( options.find_first_of("Bb") == string::npos ){
+            stream->printf("%u %% complete, elapsed time: %lu s", pcnt, this->elapsed_secs);
+            if(est > 0){
+                stream->printf(", est time: %lu s",  est);
+            }
+            stream->printf("\r\n");
+        }else{
+            stream->printf("SD printing byte %lu/%lu\r\n", played_cnt, file_size);
         }
-        stream->printf("\r\n");
 
     }else{
         stream->printf("File size is unknown\r\n");
@@ -128,6 +241,7 @@ void Player::abort_command( string parameters, StreamOutput* stream ){
     playing_file = false;
     played_cnt= 0;
     file_size= 0;
+    this->filename= "";
     fclose(current_file_handler);
     stream->printf("Aborted playing file\r\n");
 }
@@ -183,11 +297,19 @@ void Player::on_main_loop(void* argument){
             }else{
                 buffer += c;
             }
-        };
+        }
+
         this->playing_file = false;
+        this->filename= "";
         played_cnt= 0;
         file_size= 0;
         fclose(this->current_file_handler);
+
+        if(this->reply_stream != NULL) {
+            // if we were printing from an M command from pronterface we need to send this back
+            this->reply_stream->printf("Done printing file\r\n");
+            this->reply_stream= NULL;
+        }
     }
 }
 
@@ -201,12 +323,13 @@ void Player::on_get_public_data(void* argument) {
         bool_data= this->playing_file;
         pdr->set_data_ptr(&bool_data);
         pdr->set_taken();
-        
+
     }else if(pdr->second_element_is(get_progress_checksum)) {
         static struct pad_progress p;
         if(file_size > 0 && playing_file) {
             p.elapsed_secs= this->elapsed_secs;
             p.percent_complete= (this->file_size - (this->file_size - this->played_cnt)) * 100 / this->file_size;
+            p.filename= this->filename;
             pdr->set_data_ptr(&p);
             pdr->set_taken();
         }
@@ -219,13 +342,8 @@ void Player::on_set_public_data(void* argument) {
     if(!pdr->starts_with(player_checksum)) return;
 
     if(pdr->second_element_is(abort_play_checksum)) {
-        if(playing_file) {
-            playing_file = false;
-            played_cnt= 0;
-            file_size= 0;
-            fclose(current_file_handler);
-            pdr->set_taken();
-        }
+        abort_command("", &(StreamOutput::NullStream));
+        pdr->set_taken();
     }
 }
 
