@@ -250,10 +250,29 @@ void SimpleShell::mem_command( string parameters, StreamOutput* stream){
     heapWalk(stream, verbose);
 }
 
+static uint32_t getDeviceType() {
+    #define IAP_LOCATION 0x1FFF1FF1
+    uint32_t command[1];
+    uint32_t result[5];
+    typedef void (*IAP)(uint32_t*, uint32_t*);
+    IAP iap = (IAP) IAP_LOCATION;
+
+    __disable_irq();
+
+    command[0] = 54;
+    iap(command, result);
+
+    __enable_irq();
+
+    return result[1];
+}
+
 // print out build version
 void SimpleShell::version_command( string parameters, StreamOutput* stream){
     Version vers;
-    stream->printf("Build version: %s, Build date: %s,  System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000);
+    uint32_t dev= getDeviceType();
+    const char* mcu= (dev&0x00100000)?"LPC1769":"LPC1768";
+    stream->printf("Build version: %s, Build date: %s, MCU: %s, System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), mcu, SystemCoreClock / 1000000);
 }
 
 // Reset the system

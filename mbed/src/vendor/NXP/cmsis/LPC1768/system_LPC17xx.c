@@ -304,7 +304,8 @@
 #    define CCLKCFG_Val           0x00000003
 #    define USBCLKCFG_Val         0x00000000
 #else
-#    define PLL0CFG_Val           0x0000000B
+
+#    define PLL0CFG_Val           0x0000000B // 96Mhz
 #    define PLL1_SETUP            0
 #    define PLL1CFG_Val           0x00000000
 #    define CCLKCFG_Val           0x00000002
@@ -463,7 +464,9 @@ uint32_t SystemCoreClock = __CORE_CLK;/*!< System Clock Frequency (Core Clock)*/
  *
  * @brief  Updates the SystemCoreClock with current core Clock
  *         retrieved from cpu registers.
- */void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
+ */
+
+void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
 {
   /* Determine clock frequency according to clock register values             */
   if (((LPC_SC->PLL0STAT >> 24) & 3) == 3) { /* If PLL0 enabled and connected */
@@ -505,6 +508,21 @@ uint32_t SystemCoreClock = __CORE_CLK;/*!< System Clock Frequency (Core Clock)*/
 
 }
 
+// detect 1768 or 1769
+static int isLPC1769() {
+    #define IAP_LOCATION 0x1FFF1FF1
+    uint32_t command[1];
+    uint32_t result[5];
+    typedef void (*IAP)(uint32_t*, uint32_t*);
+    IAP iap = (IAP) IAP_LOCATION;
+
+    command[0] = 54;
+    iap(command, result);
+
+    return result[1] & 0x00100000;
+}
+
+
 // Make sure we are pulling in the retargeting module at link time
 extern int stdio_retargeting_module;
 
@@ -524,6 +542,49 @@ void SystemInit (void)
   if (LPC_SC->SCS & (1 << 5)) {             /* If Main Oscillator is enabled  */
     while ((LPC_SC->SCS & (1<<6)) == 0);/* Wait for Oscillator to be ready    */
   }
+
+
+  if(isLPC1769()) {
+    LPC_SC->CCLKCFG   = 0x00000003;      /* Setup Clock Divider                */
+    /* Periphral clock must be selected before PLL0 enabling and connecting
+     * - according errata.lpc1768-16.March.2010 -
+     */
+    LPC_SC->PCLKSEL0  = PCLKSEL0_Val;     /* Peripheral Clock Selection         */
+    LPC_SC->PCLKSEL1  = PCLKSEL1_Val;
+    LPC_SC->CLKSRCSEL = CLKSRCSEL_Val;    /* Select Clock Source for PLL0       */
+
+    LPC_SC->PLL0CFG   = 0x00000013;      /* configure PLL0                     */
+    LPC_SC->PLL0FEED  = 0xAA;
+    LPC_SC->PLL0FEED  = 0x55;
+
+    LPC_SC->PLL0CON   = 0x01;             /* PLL0 Enable                        */
+    LPC_SC->PLL0FEED  = 0xAA;
+    LPC_SC->PLL0FEED  = 0x55;
+    while (!(LPC_SC->PLL0STAT & (1<<26)));/* Wait for PLOCK0                    */
+
+    LPC_SC->PLL0CON   = 0x03;             /* PLL0 Enable & Connect              */
+    LPC_SC->PLL0FEED  = 0xAA;
+    LPC_SC->PLL0FEED  = 0x55;
+    while (!(LPC_SC->PLL0STAT & ((1<<25) | (1<<24))));/* Wait for PLLC0_STAT & PLLE0_STAT */
+
+    LPC_SC->PLL1CFG   = 0x00000023;
+    LPC_SC->PLL1FEED  = 0xAA;
+    LPC_SC->PLL1FEED  = 0x55;
+
+    LPC_SC->PLL1CON   = 0x01;             /* PLL1 Enable                        */
+    LPC_SC->PLL1FEED  = 0xAA;
+    LPC_SC->PLL1FEED  = 0x55;
+    while (!(LPC_SC->PLL1STAT & (1<<10)));/* Wait for PLOCK1                    */
+
+    LPC_SC->PLL1CON   = 0x03;             /* PLL1 Enable & Connect              */
+    LPC_SC->PLL1FEED  = 0xAA;
+    LPC_SC->PLL1FEED  = 0x55;
+    while (!(LPC_SC->PLL1STAT & ((1<< 9) | (1<< 8))));/* Wait for PLLC1_STAT & PLLE1_STAT */
+
+    // this sets up the clock to show the new speed
+    SystemCoreClockUpdate();
+
+  }else{
 
   LPC_SC->CCLKCFG   = CCLKCFG_Val;      /* Setup Clock Divider                */
   /* Periphral clock must be selected before PLL0 enabling and connecting
@@ -567,6 +628,7 @@ void SystemInit (void)
 #else
   LPC_SC->USBCLKCFG = USBCLKCFG_Val;    /* Setup USB Clock Divider            */
 #endif
+}
 
   LPC_SC->PCONP     = PCONP_Val;        /* Power Control for Peripherals      */
 
@@ -576,7 +638,7 @@ void SystemInit (void)
 #if (FLASH_SETUP == 1)                  /* Flash Accelerator Setup            */
   LPC_SC->FLASHCFG  = (LPC_SC->FLASHCFG & ~0x0000F000) | FLASHCFG_Val;
 #endif
-  
+
   stdio_retargeting_module = 1;
 }
 
