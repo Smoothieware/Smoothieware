@@ -75,7 +75,8 @@ int main() {
         leds[i] = (i & 1) ^ 1;
     }
 
-    bool sdok= (sd.disk_initialize() == 0);
+    //bool sdok= (sd.disk_initialize() == 0);
+    sd.disk_initialize();
 
     Kernel* kernel = new Kernel();
 

@@ -131,7 +131,7 @@ uint32_t Panel::refresh_tick(uint32_t dummy){
     return 0;
 }
 
-// Encoder pins changed
+// Encoder pins changed in interrupt
 uint32_t Panel::encoder_check(uint32_t dummy){
     // TODO if encoder reads go through i2c like on smoothie panel this needs to be
     // optionally done in idle loop, however when reading encoder directly it needs to be done
@@ -328,28 +328,29 @@ void Panel::setup_menu(uint16_t rows){
 
 void Panel::setup_menu(uint16_t rows, uint16_t lines){
     this->menu_selected_line = 0;
+    this->menu_current_line= 0;
     this->menu_start_line = 0;
     this->menu_rows = rows;
     this->menu_lines = lines;
 }
 
-uint16_t Panel::menu_current_line(){
-    return this->menu_selected_line >> this->menu_offset;
-}
-
 void Panel::menu_update(){
-
     // Limits, up and down
-    this->menu_selected_line = this->menu_selected_line % ( this->menu_rows<<this->menu_offset );
-    while( this->menu_selected_line < 0 ){ this->menu_selected_line += this->menu_rows << this->menu_offset; }
+    // NOTE menu_selected_line is changed in an interrupt and can change at any time
+    int msl= this->menu_selected_line; // hopefully this is atomic
+    msl = msl % ( this->menu_rows<<this->menu_offset );
+    while( msl < 0 ){ msl += this->menu_rows << this->menu_offset; }
+    this->menu_selected_line= msl; // update atomically we hope
+
+    this->menu_current_line= msl >> this->menu_offset;
 
     // What to display
     this->menu_start_line = 0;
     if( this->menu_rows > this->menu_lines ){
-        if( this->menu_current_line() >= 2 ){
-            this->menu_start_line = this->menu_current_line() - 1;
+        if( this->menu_current_line >= 2 ){
+            this->menu_start_line = this->menu_current_line - 1;
         }
-        if( this->menu_current_line() > this->menu_rows - this->menu_lines ){
+        if( this->menu_current_line > this->menu_rows - this->menu_lines ){
             this->menu_start_line = this->menu_rows - this->menu_lines;
         }
     }
@@ -365,14 +366,11 @@ bool Panel::control_value_change(){
     if( this->control_value_changed ){ this->control_value_changed = false; return true; }else{ return false; }
 }
 
-
 bool Panel::enter_control_mode(double passed_normal_increment, double passed_pressed_increment){
     this->mode = CONTROL_MODE;
     this->normal_increment  = passed_normal_increment;
-    this->pressed_increment = passed_pressed_increment;
     this->counter = &this->control_normal_counter;
     this->control_normal_counter = 0;
-    this->control_pressed_counter = 0;
     this->control_base_value = 0;
     return true;
 }

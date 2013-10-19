@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "libs/Kernel.h"
@@ -36,7 +36,7 @@ void PrepareScreen::on_refresh(){
         this->refresh_screen();
     }
     if( this->panel->click() ){
-        this->clicked_menu_entry(this->panel->menu_current_line());
+        this->clicked_menu_entry(this->panel->get_menu_current_line());
     }
 }
 
@@ -46,14 +46,14 @@ void PrepareScreen::refresh_screen(){
 
 void PrepareScreen::display_menu_line(uint16_t line){
     switch( line ){
-        case 0: this->panel->lcd->printf("Back"           ); break;  
-        case 1: this->panel->lcd->printf("Home All Axis"  ); break; 
-        case 2: this->panel->lcd->printf("Set Home"       ); break; 
-        case 3: this->panel->lcd->printf("Pre Heat"       ); break; 
-        case 4: this->panel->lcd->printf("Cool Down"      ); break; 
-        case 5: this->panel->lcd->printf("Extrude"        ); break; 
-        case 6: this->panel->lcd->printf("Motors off"     ); break; 
-        //case 7: this->panel->lcd->printf("Set Temperature"); break; 
+        case 0: this->panel->lcd->printf("Back"           ); break;
+        case 1: this->panel->lcd->printf("Home All Axis"  ); break;
+        case 2: this->panel->lcd->printf("Set Home"       ); break;
+        case 3: this->panel->lcd->printf("Pre Heat"       ); break;
+        case 4: this->panel->lcd->printf("Cool Down"      ); break;
+        case 5: this->panel->lcd->printf("Extrude"        ); break;
+        case 6: this->panel->lcd->printf("Motors off"     ); break;
+        //case 7: this->panel->lcd->printf("Set Temperature"); break;
     }
 }
 
