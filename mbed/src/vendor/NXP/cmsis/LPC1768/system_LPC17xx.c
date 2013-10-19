@@ -568,8 +568,8 @@ void SystemInit (void)
     LPC_SC->PLL0FEED  = 0xAA;
     LPC_SC->PLL0FEED  = 0x55;
   } else {
-    LPC_SC->PLL0CFG   = 0x0000000B;     // 96MHz
-//     LPC_SC->PLL0CFG   = 0x00020031;  // 100MHz
+//     LPC_SC->PLL0CFG   = 0x0000000B;  // 96MHz
+    LPC_SC->PLL0CFG   = 0x00020031;     // 100MHz
     LPC_SC->PLL0FEED  = 0xAA;
     LPC_SC->PLL0FEED  = 0x55;
   }
