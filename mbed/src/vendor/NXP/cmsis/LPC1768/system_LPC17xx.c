@@ -554,7 +554,7 @@ void SystemInit (void)
    *
    * |   Fcpu |--|   Fin |  M | N |   PLL0 | D | PLL0CFG | CCLKCFG |
    *    96MHz :2*  12MHz * 12 / 1 = 288MHz / 3   0x0000B       0x2
-   *   100MHz :2*  12MHz * 50 / 4 = 300MHz / 3   0x20031       0x2
+   *   100MHz :2*  12MHz * 50 / 4 = 300MHz / 3   0x30031       0x2
    *   120MHz :2*  12MHz * 15 / 1 = 360MHz / 3   0x0000E       0x2
    *
    */
@@ -569,7 +569,7 @@ void SystemInit (void)
     LPC_SC->PLL0FEED  = 0x55;
   } else {
 //     LPC_SC->PLL0CFG   = 0x0000000B;  // 96MHz
-    LPC_SC->PLL0CFG   = 0x00020031;     // 100MHz
+    LPC_SC->PLL0CFG   = 0x00030031;     // 100MHz
     LPC_SC->PLL0FEED  = 0xAA;
     LPC_SC->PLL0FEED  = 0x55;
   }
