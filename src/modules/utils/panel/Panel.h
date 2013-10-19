@@ -70,8 +70,8 @@ class Panel : public Module {
         void setup_menu(uint16_t rows);
         void menu_update();
         bool menu_change();
-        uint16_t menu_current_line();
         uint16_t max_screen_lines() { return screen_lines; }
+        uint16_t get_menu_current_line() { return menu_current_line; }
 
         // Control
         bool enter_control_mode(double passed_normal_increment, double passed_pressed_increment);
@@ -107,12 +107,11 @@ class Panel : public Module {
         int menu_lines;
         bool menu_changed;
         bool control_value_changed;
+        uint16_t menu_current_line;
 
         // Control
         double normal_increment;
-        double pressed_increment;
         int control_normal_counter;
-        int control_pressed_counter;
         double control_base_value;
 
         Button up_button;
