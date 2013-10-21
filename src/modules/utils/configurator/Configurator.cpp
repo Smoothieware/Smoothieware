@@ -23,6 +23,10 @@ void Configurator::on_module_loaded(){
 // When a new line is received, check if it is a command, and if it is, act upon it
 void Configurator::on_console_line_received( void* argument ){
     SerialMessage new_message = *static_cast<SerialMessage*>(argument);
+
+    // ignore comments
+    if(new_message.message[0] == ';') return;
+
     string possible_command = new_message.message;
 
     // We don't compare to a string but to a checksum of that string, this saves some space in flash memory

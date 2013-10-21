@@ -125,6 +125,10 @@ void SimpleShell::on_gcode_received(void *argument) {
 // When a new line is received, check if it is a command, and if it is, act upon it
 void SimpleShell::on_console_line_received( void* argument ){
     SerialMessage new_message = *static_cast<SerialMessage*>(argument);
+
+    // ignore comments
+    if(new_message.message[0] == ';') return;
+
     string possible_command = new_message.message;
 
     //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
