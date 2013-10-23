@@ -57,8 +57,6 @@ DFU dfu(&u);
 
 SDFAT mounter("sd", &sd);
 
-char buf[512];
-
 GPIO leds[5] = {
     GPIO(P1_18),
     GPIO(P1_19),
