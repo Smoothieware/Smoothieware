@@ -218,3 +218,18 @@ bool MemoryPool::has(void* p)
 {
     return ((p >= base) && (p < (void*) (((uint8_t*) base) + size)));
 }
+
+uint32_t MemoryPool::free()
+{
+    uint32_t free = this->size - sbrk; // start with (end of pool - end of heap)
+
+    _poolregion* p = (_poolregion*) base;
+
+    do {
+        if (p->used == 0)
+            free += p->next - sizeof(_poolregion);
+        if (p->next >= sbrk)
+            return free;
+        p = (_poolregion*) (((uint8_t*) p) + p->next);
+    } while (1);
+}

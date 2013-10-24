@@ -30,6 +30,8 @@ public:
 
     bool  has(void*);
 
+    uint32_t free(void);
+
     MemoryPool* next;
 
     static MemoryPool* first;
