@@ -7,7 +7,9 @@
 
 #include "ST7565.h"
 #include "ST7565/glcdfont.h"
-#include "ahbmalloc.h"
+
+#include "MemoryPool.h"
+extern MemoryPool AHB0; // from main.c
 
 #define CLAMP(x, low, high) { if ( (x) < (low) ) x = (low); if ( (x) > (high) ) x = (high); } while (0);
 #define swap(a, b) { uint8_t t = a; a = b; b = t; }
@@ -30,7 +32,7 @@ ST7565::ST7565() {
     this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
 
-    framebuffer= (uint8_t *)ahbmalloc(FB_SIZE, AHB_BANK_0); // grab some memoery from USB_RAM
+    framebuffer= (uint8_t *) AHB0.alloc(FB_SIZE); // grab some memoery from USB_RAM
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
     }

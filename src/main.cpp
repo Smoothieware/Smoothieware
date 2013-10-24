@@ -43,6 +43,16 @@
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 
+// memory regions for serial, USB, disk etc to use
+// these symbols are defined by the linker script at mbed/src/vendor/NXP/cmsis/LPC1768/GCC_ARM/LPC1768.ld
+extern uint8_t Image$$RW_IRAM2$$Base;      // address following any statically allocated vars in AHB0
+extern uint8_t Image$$RW_IRAM2$$ZI$$Limit; // address of end of AHB0
+MemoryPool AHB0(&Image$$RW_IRAM2$$Base, &Image$$RW_IRAM2$$ZI$$Limit - &Image$$RW_IRAM2$$Base);
+
+extern uint8_t Image$$RW_IRAM3$$Base;      // address following any statically allocated vars in AHB1
+extern uint8_t Image$$RW_IRAM3$$ZI$$Limit; // address of end of AHB1
+MemoryPool AHB1(&Image$$RW_IRAM3$$Base, &Image$$RW_IRAM3$$ZI$$Limit - &Image$$RW_IRAM3$$Base);
+
 // Watchdog wd(5000000, WDT_MRI);
 
 // USB Stuff
