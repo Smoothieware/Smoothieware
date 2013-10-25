@@ -37,7 +37,7 @@ SlowTicker::SlowTicker(){
 
     // TODO: What is this ??
     flag_1s_flag = 0;
-    flag_1s_count = SystemCoreClock;
+    flag_1s_count = SystemCoreClock>>2;
 
     g4_ticks = 0;
     g4_pause = false;
@@ -55,6 +55,7 @@ void SlowTicker::set_frequency( int frequency ){
     LPC_TIM2->MR0 = this->interval;
     LPC_TIM2->TCR = 3;  // Reset
     LPC_TIM2->TCR = 1;  // Reset
+    flag_1s_count= SystemCoreClock>>2;
 }
 
 // The actual interrupt being called by the timer, this is where work is done
