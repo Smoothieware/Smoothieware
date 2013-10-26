@@ -551,12 +551,58 @@ void Endstops::calibrate_delta( StreamOutput *stream){
 
 // apply values
 
-      //printer_state.delta_radius = newDeltaRadius;
-      trim[0] = lround(t1Trim * steps_per_mm[0]); 
-      trim[1] = lround(t2Trim * steps_per_mm[0]); 
-      trim[2] = lround(t3Trim * steps_per_mm[0]); 
-      homing_position[2] = ( originHeight/steps_per_mm[0]) + calibrate_probe_offset;
-       stream->printf("Trims and Homing position have been changed in memory, but your config file has not been modified.\r\n");
+    trim[0] = lround(t1Trim * steps_per_mm[0]); 
+    trim[1] = lround(t2Trim * steps_per_mm[0]); 
+    trim[2] = lround(t3Trim * steps_per_mm[0]); 
+    homing_position[2] = ( originHeight/steps_per_mm[0]) + calibrate_probe_offset;
+
+    buffered_length = snprintf(buf, sizeof(buf), "M665 R%f", newDeltaRadius);
+    g.assign(buf, buffered_length);
+    send_gcode(g);
+
+
+       stream->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
+
+}
+
+void Endstops::calibrate_zprobe_offset( StreamOutput *stream){
+
+    uint32_t current_z_steps = 0;
+
+    long originHeight = 0;
+
+    // First wait for the queue to be empty
+    this->kernel->conveyor->wait_for_empty_queue();
+    // Enable the motors
+    this->kernel->stepper->turn_enable_pins_on();
+// home axis
+
+    move_all(UP,FAST,lift_steps); //alpha tower retract distance for all
+    wait_for_moves();
+    current_z_steps = 0;
+
+    if( pins[2].get() ){  //TODO configure probe pin?
+        //probe not deployed - abort
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        return;
+    }
+
+    move_all(DOWN,SLOW,10000000);
+    current_z_steps += wait_for_ztouch();
+
+    originHeight = lift_steps - current_z_steps;
+
+    //lift and reposition
+    move_all(UP,FAST,lift_steps); //alpha tower retract distance for all
+    wait_for_moves();
+
+    //calculate
+    stream->printf("Calibrated Values:\r\n");
+    stream->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
+
+// apply values
+      calibrate_probe_offset = originHeight/steps_per_mm[0]; 
+       stream->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
 
 }
 
@@ -604,6 +650,10 @@ void Endstops::on_gcode_received(void* argument)
         {
             gcode->mark_as_taken();
             this->calibrate_delta(gcode->stream);
+        } else if (gcode->g == 31 )
+        {
+            gcode->mark_as_taken();
+            this->calibrate_zprobe_offset(gcode->stream);
         }
 
 

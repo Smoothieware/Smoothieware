@@ -101,6 +101,7 @@ class Endstops : public Module{
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
         void calibrate_delta(StreamOutput*);
+        void calibrate_zprobe_offset(StreamOutput*);
         float arm_radius;
 
     private:
