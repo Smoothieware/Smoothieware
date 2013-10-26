@@ -51,12 +51,11 @@ SDCard sd(P0_9, P0_8, P0_7, P0_6);      // this selects SPI1 as the sdcard as it
 
 USB u;
 USBSerial usbserial(&u);
-USBMSD *msc;
+USBMSD msc(&u, &sd);
+//USBMSD *msc;
 DFU dfu(&u);
 
 SDFAT mounter("sd", &sd);
-
-char buf[512];
 
 GPIO leds[5] = {
     GPIO(P1_18),
@@ -74,7 +73,8 @@ int main() {
         leds[i] = (i & 1) ^ 1;
     }
 
-    bool sdok= (sd.disk_initialize() == 0);
+    //bool sdok= (sd.disk_initialize() == 0);
+    sd.disk_initialize();
 
     Kernel* kernel = new Kernel();
 
@@ -99,10 +99,12 @@ int main() {
 
     // Create and initialize USB stuff
     u.init();
-    if(sdok) { // only do this if there is an sd disk
-        msc= new USBMSD(&u, &sd);
-        kernel->add_module( msc );
-    }
+    //if(sdok) { // only do this if there is an sd disk
+    //    msc= new USBMSD(&u, &sd);
+    //    kernel->add_module( msc );
+    //}
+
+    kernel->add_module( &msc );
 
     kernel->add_module( &usbserial );
     if( kernel->config->value( second_usb_serial_enable_checksum )->by_default(false)->as_bool() ){

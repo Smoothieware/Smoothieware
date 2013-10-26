@@ -124,13 +124,13 @@
 #define _MCPWM
 
 /* CAN--------------------------------*/
-#define _CAN
+//#define _CAN
 
 /* RIT ------------------------------- */
 #define _RIT
 
 /* EMAC ------------------------------ */
-#define _EMAC
+//#define _EMAC
 
 /************************** GLOBAL/PUBLIC MACRO DEFINITIONS *********************************/
 
