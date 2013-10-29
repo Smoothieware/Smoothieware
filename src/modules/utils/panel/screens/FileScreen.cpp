@@ -72,7 +72,7 @@ void FileScreen::display_menu_line(uint16_t line){
     if( line == 0 ){
         this->panel->lcd->printf("..");
     }else{
-        this->panel->lcd->printf("%s", (this->file_at(line-1)).c_str() );
+        this->panel->lcd->printf("%s", (this->file_at(line-1).substr(0,18)).c_str());
     }
 }
 
@@ -132,7 +132,7 @@ string FileScreen::file_at(uint16_t line){
     if(d != NULL) {
         while((p = readdir(d)) != NULL) {
             if( count == line ){
-                string to_return =  lc(string(p->d_name).substr(0,18));
+                string to_return =  lc(string(p->d_name));
                 //printf("line: %u string:%s\r\n", line, to_return.c_str());
                 //if( to_return[to_return.length()-1] == '.' ){ to_return[to_return.length()-1] = 0x00; }
                 closedir(d);
