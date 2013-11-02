@@ -63,7 +63,7 @@ dfu: ../LPC1768/$(PROJECT).bin
 	dfu-util -D $< -R
 
 upload: ../LPC1768/$(PROJECT).bin debug-store
-	dfu-util -d 1d50:6015 -D $<
+	dfu-util -R -d 1d50:6015 -D $<
 
 debug: ../LPC1768/$(PROJECT)_lastupload.elf
 	arm-none-eabi-gdb $< -ex  "set target-charset ASCII" -ex "set remotelogfile mri.log" -ex "target remote $(CONSOLE)"
