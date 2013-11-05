@@ -133,6 +133,7 @@ void SimpleShell::on_second_tick(void *)
 void SimpleShell::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
+    string args= get_arguments(gcode->command);
 
     if (gcode->has_m) {
         if (gcode->m == 20) { // list sd card
@@ -140,6 +141,10 @@ void SimpleShell::on_gcode_received(void *argument)
             gcode->stream->printf("Begin file list\r\n");
             ls_command("/sd", gcode->stream);
             gcode->stream->printf("End file list\r\n");
+        }
+        else if (gcode->m == 30) { // remove file
+            gcode->mark_as_taken();
+            rm_command("/sd/" + args, gcode->stream);
         }
     }
 }
