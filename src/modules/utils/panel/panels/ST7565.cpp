@@ -14,21 +14,43 @@
 
 ST7565::ST7565() {
 	//SPI com
-    this->spi= new mbed::SPI(P0_18,P0_17,P0_15); //should be able to set those pins in config
+
+   // select which SPI channel to use
+    int spi_channel = THEKERNEL->config->value(panel_checksum, spi_channel_checksum)->by_default(0)->as_number();
+    PinName mosi;
+    PinName sclk;
+    if(spi_channel == 0){
+        mosi= P0_18; sclk= P0_15;
+    }else if(spi_channel == 1){
+        mosi= P0_9; sclk= P0_7;
+    }else{
+        mosi= P0_18; sclk= P0_15;
+    }
+
+    this->spi= new mbed::SPI(mosi,NC,sclk);
     this->spi->frequency(THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(1000000)->as_number()); //4Mhz freq, can try go a little lower
+
     //chip select
-    cs.from_string("0.16")->as_output(); //this also should be configurable
+    this->cs.from_string(THEKERNEL->config->value( panel_checksum, spi_cs_pin_checksum)->by_default("0.16")->as_string())->as_output();
     cs.set(1);
+
     //lcd reset
-    rst.from_string("2.8")->as_output(); //this also should be configurable
+    this->rst.from_string(THEKERNEL->config->value( panel_checksum, rst_pin_checksum)->by_default("nc")->as_string())->as_output();
     rst.set(1);
+
     //a0
-    a0.from_string("2.13")->as_output(); //this also should be configurable
+    this->a0.from_string(THEKERNEL->config->value( panel_checksum, a0_pin_checksum)->by_default("2.13")->as_string())->as_output();
     a0.set(1);
 
-    this->click_pin.from_string(THEKERNEL->config->value( panel_checksum, click_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
+
+    this->click_pin.from_string(THEKERNEL->config->value( panel_checksum, click_button_pin_checksum )->by_default("nc")->as_string())->as_input();
+    this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();
+    this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input();
+
+    // contrast, mviki needs  0x018
+    this->contrast= THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(9)->as_number();
 
     framebuffer= (uint8_t *)ahbmalloc(FB_SIZE, AHB_BANK_0); // grab some memoery from USB_RAM
     if(framebuffer == NULL) {
@@ -114,7 +136,7 @@ void ST7565::init(){
       0x00,
       0x27,    //Contrast set
       0x81,
-      0x09,    //contrast value
+      this->contrast,    //contrast value
       0xac,    //No indicator
       0x00,
       0xaf,    //Display on
@@ -181,13 +203,25 @@ void ST7565::on_refresh(bool now){
 uint8_t ST7565::readButtons(void) {
     uint8_t state= 0;
     state |= (this->click_pin.get() ? BUTTON_SELECT : 0);
-    state |= (this->up_pin.get() ? BUTTON_UP : 0);
-    state |= (this->down_pin.get() ? BUTTON_DOWN : 0);
+    if(this->up_pin.connected()) {
+        state |= (this->up_pin.get() ? BUTTON_UP : 0);
+        state |= (this->down_pin.get() ? BUTTON_DOWN : 0);
+    }
     return state;
 }
 
 int ST7565::readEncoderDelta() {
-	return 0;
+    static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
+    static uint8_t old_AB = 0;
+    if(this->encoder_a_pin.connected()) {
+        // mviki
+        old_AB <<= 2;                   //remember previous state
+        old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state
+        return  enc_states[(old_AB&0x0f)];
+
+    }else{
+        return 0;
+    }
 }
 
 void ST7565::bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span, int x_offset, int y_offset) {

@@ -27,10 +27,18 @@ using namespace std;
 #define FONT_SIZE_X 6
 #define FONT_SIZE_Y 8
 
+#define spi_channel_checksum       CHECKSUM("spi_channel")
+#define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
 #define spi_frequency_checksum     CHECKSUM("spi_frequency")
+#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
+#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
 #define click_button_pin_checksum  CHECKSUM("click_button_pin")
 #define up_button_pin_checksum     CHECKSUM("up_button_pin")
 #define down_button_pin_checksum   CHECKSUM("down_button_pin")
+#define contrast_checksum          CHECKSUM("contrast")
+#define rst_pin_checksum           CHECKSUM("rst_pin")
+#define a0_pin_checksum            CHECKSUM("a0_pin")
+
 class Panel;
 
 class ST7565: public LcdBase {
@@ -79,8 +87,12 @@ private:
 	Pin click_pin;
 	Pin up_pin;
 	Pin down_pin;
+    Pin encoder_a_pin;
+    Pin encoder_b_pin;
+
 	// text cursor position
 	uint8_t tx, ty;
+    uint8_t contrast;
 };
 
 #endif /* ST7565_H_ */
