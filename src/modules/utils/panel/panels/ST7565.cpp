@@ -36,7 +36,7 @@ ST7565::ST7565() {
 
     //lcd reset
     this->rst.from_string(THEKERNEL->config->value( panel_checksum, rst_pin_checksum)->by_default("nc")->as_string())->as_output();
-    rst.set(1);
+    if(this->rst.connected()) rst.set(1);
 
     //a0
     this->a0.from_string(THEKERNEL->config->value( panel_checksum, a0_pin_checksum)->by_default("2.13")->as_string())->as_output();
@@ -51,6 +51,8 @@ ST7565::ST7565() {
 
     // contrast, mviki needs  0x018
     this->contrast= THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(9)->as_number();
+    // reverse display
+    this->reversed= THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(false)->as_bool();
 
     framebuffer= (uint8_t *)ahbmalloc(FB_SIZE, AHB_BANK_0); // grab some memoery from USB_RAM
     if(framebuffer == NULL) {
@@ -127,8 +129,8 @@ void ST7565::display(){
 void ST7565::init(){
     const unsigned char init_seq[] = {
       0x40,    //Display start line 0
-      0xa1,    //ADC reverse
-      0xc0,    //Normal COM0...COM63
+      reversed?0xa0:0xa1, // ADC
+      reversed?0xc8:0xc0, // COM select
       0xa6,    //Display normal
       0xa2,    //Set Bias 1/9 (Duty 1/65)
       0x2f,    //Booster, Regulator and Follower On
@@ -142,7 +144,7 @@ void ST7565::init(){
       0xaf,    //Display on
   };
   //rst.set(0);
-  rst.set(1);
+  if(this->rst.connected()) rst.set(1);
   send_commands(init_seq, sizeof(init_seq));
   clear();
 }

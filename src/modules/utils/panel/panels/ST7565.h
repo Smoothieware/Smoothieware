@@ -36,6 +36,7 @@ using namespace std;
 #define up_button_pin_checksum     CHECKSUM("up_button_pin")
 #define down_button_pin_checksum   CHECKSUM("down_button_pin")
 #define contrast_checksum          CHECKSUM("contrast")
+#define reverse_checksum           CHECKSUM("reverse")
 #define rst_pin_checksum           CHECKSUM("rst_pin")
 #define a0_pin_checksum            CHECKSUM("a0_pin")
 
@@ -93,6 +94,7 @@ private:
 	// text cursor position
 	uint8_t tx, ty;
     uint8_t contrast;
+    bool reversed;
 };
 
 #endif /* ST7565_H_ */
