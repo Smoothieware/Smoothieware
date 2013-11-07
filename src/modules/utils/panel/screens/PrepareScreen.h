@@ -16,24 +16,24 @@
 #include "Panel.h"
 #include "PanelScreen.h"
 
-class PrepareScreen : public PanelScreen {
-    public:
-        PrepareScreen();
+class PrepareScreen : public PanelScreen
+{
+public:
+    PrepareScreen();
 
-        void on_refresh();
-        void on_enter();
-        void refresh_screen();
-        void on_main_loop();
-        void display_menu_line(uint16_t line);
-        void clicked_menu_entry(uint16_t line);
+    void on_refresh();
+    void on_enter();
+    void on_main_loop();
+    void display_menu_line(uint16_t line);
+    void clicked_menu_entry(uint16_t line);
 
-    private:
-        PanelScreen* extruder_screen;
-        PanelScreen* temp_screen;
-        void preheat();
-        void cooldown();
+private:
+    PanelScreen *extruder_screen;
+    PanelScreen *temp_screen;
+    void preheat();
+    void cooldown();
 
-        string command;
+    string command;
 };
 
 #endif
