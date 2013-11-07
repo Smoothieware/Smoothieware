@@ -88,8 +88,7 @@ int main() {
     //     kernel->streams->printf("MSD is disabled\r\n");
     // }
 
-    //bool sdok= (sd.disk_initialize() == 0);
-    sd.disk_initialize();
+    bool sdok= (sd.disk_initialize() == 0);
 
     // Create and add main modules
     kernel->add_module( new Laser() );
@@ -128,8 +127,9 @@ int main() {
     // clear up the config cache to save some memory
     kernel->config->config_cache_clear();
 
-    // indicate we are done with init
-    leds[0]= 1;
+    // set some leds to indicate status... led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok
+    leds[0]= 1; // indicate we are done with init
+    leds[3]= sdok?1:0; // 4th led inidicates sdcard is available (TODO maye should indicate config was found)
 
     uint16_t cnt= 0;
     // Main loop
