@@ -155,6 +155,7 @@ void WatchScreen::get_temp_data()
         this->bedtarget = -1;
     }
 
+
     ok = THEKERNEL->public_data->get_value( temperature_control_checksum, hotend_checksum, current_temperature_checksum, &returned_data );
     if (ok) {
         struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
