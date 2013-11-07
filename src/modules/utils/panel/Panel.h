@@ -104,7 +104,7 @@ class Panel : public Module {
         int menu_selected_line;
         int menu_start_line;
         int menu_rows;
-        int menu_lines;
+        int panel_lines;
         bool menu_changed;
         bool control_value_changed;
         uint16_t menu_current_line;

@@ -365,7 +365,7 @@ void Panel::setup_menu(uint16_t rows, uint16_t lines)
     this->menu_current_line = 0;
     this->menu_start_line = 0;
     this->menu_rows = rows;
-    this->menu_lines = lines;
+    this->panel_lines = lines;
 }
 
 void Panel::menu_update()
@@ -373,23 +373,47 @@ void Panel::menu_update()
     // Limits, up and down
     // NOTE menu_selected_line is changed in an interrupt and can change at any time
     int msl = this->menu_selected_line; // hopefully this is atomic
+
+    #if 0
+    // this allows it to wrap but with new method we dont; want to wrap
     msl = msl % ( this->menu_rows << this->menu_offset );
     while ( msl < 0 ) {
         msl += this->menu_rows << this->menu_offset;
     }
-    this->menu_selected_line = msl; // update atomically we hope
+    #else
+        // limit selected line to screen lines available
+        if(msl >= this->menu_rows<<this->menu_offset){
+            msl= (this->menu_rows-1)<<this->menu_offset;
+        }else if(msl < 0) msl= 0;
+    #endif
 
+    this->menu_selected_line = msl; // update atomically we hope
     this->menu_current_line = msl >> this->menu_offset;
 
     // What to display
-    this->menu_start_line = 0;
-    if ( this->menu_rows > this->menu_lines ) {
+    if ( this->menu_rows > this->panel_lines ) {
+        #if 0
+        // old way of scrolling not nice....
         if ( this->menu_current_line >= 2 ) {
             this->menu_start_line = this->menu_current_line - 1;
         }
-        if ( this->menu_current_line > this->menu_rows - this->menu_lines ) {
-            this->menu_start_line = this->menu_rows - this->menu_lines;
+        if ( this->menu_current_line > this->menu_rows - this->panel_lines ) {
+            this->menu_start_line = this->menu_rows - this->panel_lines;
         }
+        #else
+        // new way we only scroll the lines when the cursor hits the bottom of the screen or the top of the screen
+        // do we want to scroll up?
+        int sl= this->menu_current_line - this->menu_start_line; // screen line we are on
+        if(sl >= this->panel_lines) {
+            this->menu_start_line += ((sl+1)-this->panel_lines); // scroll up to keep it on the screen
+
+        }else if(sl < 0 ) { // do we want to scroll down?
+            this->menu_start_line += sl; // scroll down
+        }
+        #endif
+
+    }else{
+        this->menu_start_line = 0;
     }
 
     this->menu_changed = true;
