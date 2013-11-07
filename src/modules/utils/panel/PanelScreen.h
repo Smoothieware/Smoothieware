@@ -35,6 +35,7 @@ class PanelScreen {
 
       protected:
         void send_gcode(std::string g);
+        void send_command(const char* gcstr);
 };
 
 

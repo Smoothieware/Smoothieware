@@ -42,6 +42,7 @@
 #include "version.h"
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
+#define disable_msd_checksum  CHECKSUM("msd_disable")
 
 // Watchdog wd(5000000, WDT_MRI);
 
@@ -52,7 +53,7 @@ SDCard sd(P0_9, P0_8, P0_7, P0_6);      // this selects SPI1 as the sdcard as it
 USB u;
 USBSerial usbserial(&u);
 USBMSD msc(&u, &sd);
-//USBMSD *msc;
+//USBMSD *msc= NULL;
 DFU dfu(&u);
 
 SDFAT mounter("sd", &sd);
@@ -70,17 +71,25 @@ int main() {
     // Default pins to low status
     for (int i = 0; i < 5; i++){
         leds[i].output();
-        leds[i] = (i & 1) ^ 1;
+        leds[i]= 0;
     }
-
-    //bool sdok= (sd.disk_initialize() == 0);
-    sd.disk_initialize();
 
     Kernel* kernel = new Kernel();
 
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 with new accel @%ldMHz\r\n", SystemCoreClock / 1000000);
     Version version;
     kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
+
+    // attempt to be able to disable msd in config
+    // if(!kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
+    //     msc= new USBMSD(&u, &sd);
+    // }else{
+    //     msc= NULL;
+    //     kernel->streams->printf("MSD is disabled\r\n");
+    // }
+
+    //bool sdok= (sd.disk_initialize() == 0);
+    sd.disk_initialize();
 
     // Create and add main modules
     kernel->add_module( new Laser() );
@@ -104,8 +113,11 @@ int main() {
     //    kernel->add_module( msc );
     //}
 
-    kernel->add_module( &msc );
+    // if(msc != NULL){
+    //     kernel->add_module( msc );
+    // }
 
+    kernel->add_module( &msc );
     kernel->add_module( &usbserial );
     if( kernel->config->value( second_usb_serial_enable_checksum )->by_default(false)->as_bool() ){
         kernel->add_module( new USBSerial(&u) );
@@ -116,8 +128,14 @@ int main() {
     // clear up the config cache to save some memory
     kernel->config->config_cache_clear();
 
+    // indicate we are done with init
+    leds[0]= 1;
+
+    uint16_t cnt= 0;
     // Main loop
     while(1){
+        // flash led 2 to show we are alive
+        leds[1]= (cnt++ & 0x1000) ? 1 : 0;
         kernel->call_event(ON_MAIN_LOOP);
         kernel->call_event(ON_IDLE);
     }

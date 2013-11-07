@@ -10,7 +10,10 @@
 #include "PanelScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+#include "libs/SerialMessage.h"
 #include <string>
+#include <vector>
+
 using namespace std;
 
 PanelScreen::PanelScreen(){}
@@ -49,8 +52,32 @@ PanelScreen* PanelScreen::set_parent(PanelScreen* passed_parent){
     return this;
 }
 
-// Helper for screens to send a gcode
+// Helper for screens to send a gcode, must be called from main loop
 void PanelScreen::send_gcode(std::string g) {
     Gcode gcode(g, &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+}
+
+// Helper to send commands, must be called from mainloop
+// may contain multipe commands separated by \n
+void PanelScreen::send_command(const char* gcstr) {
+    string cmd(gcstr);
+    vector<string> q;
+    while(cmd.size() > 0) {
+        size_t b = cmd.find_first_of("\n");
+        if( b == string::npos ){
+            q.push_back(cmd);
+            break;
+        }
+        q.push_back(cmd.substr( 0, b ));
+        cmd = cmd.substr(b+1);
+    }
+
+    // for each command send it
+    for (std::vector<string>::iterator i = q.begin(); i != q.end(); ++i) {
+        struct SerialMessage message;
+        message.message = *i;
+        message.stream = &(StreamOutput::NullStream);
+        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    }
 }
