@@ -129,8 +129,8 @@ void ST7565::display(){
 void ST7565::init(){
     const unsigned char init_seq[] = {
       0x40,    //Display start line 0
-      reversed?0xa0:0xa1, // ADC
-      reversed?0xc8:0xc0, // COM select
+      (unsigned char)(reversed?0xa0:0xa1), // ADC
+      (unsigned char)(reversed?0xc8:0xc0), // COM select
       0xa6,    //Display normal
       0xa2,    //Set Bias 1/9 (Duty 1/65)
       0x2f,    //Booster, Regulator and Follower On
