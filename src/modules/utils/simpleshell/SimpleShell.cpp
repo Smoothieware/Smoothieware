@@ -50,6 +50,7 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {CHECKSUM("mem"),      &SimpleShell::mem_command},
     {CHECKSUM("get"),      &SimpleShell::get_command},
     {CHECKSUM("set_temp"), &SimpleShell::set_temp_command},
+    {CHECKSUM("test"),     &SimpleShell::test_command},
 
     // unknown command
     {0, NULL}
@@ -385,6 +386,58 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     } else {
         stream->printf("%s is not a known temperature device\r\n", type.c_str());
     }
+}
+
+#if 0
+#include "mbed.h"
+#include "BaseSolution.h"
+#include "RostockSolution.h"
+#include "JohannKosselSolution.h"
+#endif
+void SimpleShell::test_command( string parameters, StreamOutput *stream)
+{
+#if 0
+    double millimeters[3]= {100.0, 200.0, 300.0};
+    int steps[3];
+    BaseSolution* r= new RostockSolution(THEKERNEL->config);
+    BaseSolution* k= new JohannKosselSolution(THEKERNEL->config);
+    Timer timer;
+    timer.start();
+    for(int i=0;i<10;i++) r->millimeters_to_steps(millimeters, steps);
+    timer.stop();
+    float tr= timer.read();
+    timer.reset();
+    timer.start();
+    for(int i=0;i<10;i++) k->millimeters_to_steps(millimeters, steps);
+    timer.stop();
+    float tk= timer.read();
+    stream->printf("time RostockSolution: %f, time JohannKosselSolution: %f\n", tr, tk);
+    delete kr;
+    delete tk;
+#endif
+#if 0
+// time idle loop
+#include "mbed.h"
+static int tmin = 1000000;
+static int tmax = 0;
+void time_idle()
+void time_idle()
+{
+    Timer timer;
+    timer.start();
+    int begin, end;
+    for (int i = 0; i < 1000; ++i) {
+        begin = timer.read_us();
+        THEKERNEL->call_event(ON_IDLE);
+        end = timer.read_us();
+        int d = end - begin;
+        if (d < tmin) tmin = d;
+        if (d > tmax) tmax = d;
+    }
+}
+static Timer timer;
+static int lastt = 0;
+#endif
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )

@@ -23,26 +23,29 @@ using namespace std;
 #include "panels/ST7565.h"
 #include "version.h"
 
-Panel::Panel(){
+Panel::Panel()
+{
     this->counter_changed = false;
     this->click_changed = false;
     this->refresh_flag = false;
     this->enter_menu_mode();
-    this->lcd= NULL;
+    this->lcd = NULL;
     this->do_buttons = false;
-    this->idle_time= 0;
-    this->start_up= true;
-    this->current_screen= NULL;
+    this->idle_time = 0;
+    this->start_up = true;
+    this->current_screen = NULL;
     strcpy(this->playing_file, "Playing file");
 }
 
-Panel::~Panel() {
+Panel::~Panel()
+{
     delete this->lcd;
 }
 
-void Panel::on_module_loaded(){
+void Panel::on_module_loaded()
+{
     // Exit if this module is not enabled
-    if( !this->kernel->config->value( panel_checksum, enable_checksum )->by_default(false)->as_bool() ){
+    if ( !this->kernel->config->value( panel_checksum, enable_checksum )->by_default(false)->as_bool() ) {
         delete this;
         return;
     }
@@ -52,21 +55,21 @@ void Panel::on_module_loaded(){
     int lcd_cksm = get_checksum(this->kernel->config->value(panel_checksum, lcd_checksum)->by_default("i2c")->as_string());
 
     // Note checksums are not const expressions when in debug mode, so don't use switch
-    if(lcd_cksm == i2c_lcd_checksum) {
+    if (lcd_cksm == i2c_lcd_checksum) {
         this->lcd = new I2CLCD();
-    }else if(lcd_cksm == viki_lcd_checksum) {
+    } else if (lcd_cksm == viki_lcd_checksum) {
         this->lcd = new VikiLCD();
         this->lcd->set_variant(0);
-    }else if(lcd_cksm == panelolu2_checksum) {
+    } else if (lcd_cksm == panelolu2_checksum) {
         this->lcd = new VikiLCD();
         this->lcd->set_variant(1);
-    }else if(lcd_cksm == smoothiepanel_checksum) {
+    } else if (lcd_cksm == smoothiepanel_checksum) {
         this->lcd = new Smoothiepanel();
-    }else if(lcd_cksm == rrd_glcd_checksum) {
+    } else if (lcd_cksm == rrd_glcd_checksum) {
         this->lcd = new ReprapDiscountGLCD();
-	}else if(lcd_cksm == st7565_glcd_checksum) {
+    } else if (lcd_cksm == st7565_glcd_checksum) {
         this->lcd = new ST7565();
-    }else{
+    } else {
         // no lcd type defined
         return;
     }
@@ -75,22 +78,22 @@ void Panel::on_module_loaded(){
     this->lcd->setPanel(this);
 
     // the number of screen lines the panel supports
-    this->screen_lines= this->lcd->get_screen_lines();
+    this->screen_lines = this->lcd->get_screen_lines();
 
     // some encoders may need more clicks to move menu, this is a divisor and is in config as it is
     // an end user usability issue
     this->menu_offset = this->kernel->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
 
     // load jogging feedrates in mm/min
-    jogging_speed_mm_min[0]= this->kernel->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
-    jogging_speed_mm_min[1]= this->kernel->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0)->as_number();
-    jogging_speed_mm_min[2]= this->kernel->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0)->as_number();
+    jogging_speed_mm_min[0] = this->kernel->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
+    jogging_speed_mm_min[1] = this->kernel->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0)->as_number();
+    jogging_speed_mm_min[2] = this->kernel->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0)->as_number();
 
     // load the default preset temeratures
-    default_hotend_temperature= this->kernel->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0)->as_number();
-    default_bed_temperature= this->kernel->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
+    default_hotend_temperature = this->kernel->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0)->as_number();
+    default_bed_temperature = this->kernel->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
 
-    this->encoder_click_resolution= this->lcd->getEncoderResolution();
+    this->encoder_click_resolution = this->lcd->getEncoderResolution();
 
     this->up_button.up_attach(    this, &Panel::on_up );
     this->down_button.up_attach(  this, &Panel::on_down );
@@ -111,7 +114,8 @@ void Panel::on_module_loaded(){
 }
 
 // Enter a screen, we only care about it now
-void Panel::enter_screen(PanelScreen* screen){
+void Panel::enter_screen(PanelScreen *screen)
+{
     screen->panel = this;
     this->current_screen = screen;
     this->reset_counter();
@@ -119,20 +123,23 @@ void Panel::enter_screen(PanelScreen* screen){
 }
 
 // Reset the counter
-void Panel::reset_counter(){
+void Panel::reset_counter()
+{
     *this->counter = 0;
     this->counter_changed = false;
 }
 
 // Indicate the idle loop we want to call the refresh hook in the current screen
-uint32_t Panel::refresh_tick(uint32_t dummy){
+uint32_t Panel::refresh_tick(uint32_t dummy)
+{
     this->refresh_flag = true;
     this->idle_time++;
     return 0;
 }
 
 // Encoder pins changed in interrupt
-uint32_t Panel::encoder_check(uint32_t dummy){
+uint32_t Panel::encoder_check(uint32_t dummy)
+{
     // TODO if encoder reads go through i2c like on smoothie panel this needs to be
     // optionally done in idle loop, however when reading encoder directly it needs to be done
     // frequently, smoothie panel will return an actual delta count so won't miss any if polled slowly
@@ -140,35 +147,37 @@ uint32_t Panel::encoder_check(uint32_t dummy){
     int change = lcd->readEncoderDelta();
     encoder_counter += change;
     // TODO divisor needs to be configurable
-    if( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ){
+    if ( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ) {
         this->counter_changed = true;
         (*this->counter) += change;
-        this->idle_time= 0;
+        this->idle_time = 0;
     }
     return 0;
 }
 
 // Read and update each button
-uint32_t Panel::button_tick(uint32_t dummy){
+uint32_t Panel::button_tick(uint32_t dummy)
+{
     this->do_buttons = true;
     return 0;
 }
 
-void Panel::on_gcode_received(void* argument)
+void Panel::on_gcode_received(void *argument)
 {
-    Gcode* gcode = static_cast<Gcode*>(argument);
-    if( gcode->has_m) {
-        if( gcode->m == 117 ) { // set LCD message
-            this->message= get_arguments(gcode->command);
-            if(this->message.size() > 20) this->message= this->message.substr(0, 20);
+    Gcode *gcode = static_cast<Gcode *>(argument);
+    if ( gcode->has_m) {
+        if ( gcode->m == 117 ) { // set LCD message
+            this->message = get_arguments(gcode->command);
+            if (this->message.size() > 20) this->message = this->message.substr(0, 20);
             gcode->mark_as_taken();
         }
     }
 }
 
 // on main loop, we can send gcodes or do anything that waits in this loop
-void Panel::on_main_loop(void* argument){
-    if(this->current_screen != NULL) {
+void Panel::on_main_loop(void *argument)
+{
+    if (this->current_screen != NULL) {
         this->current_screen->on_main_loop();
         this->lcd->on_main_loop();
     }
@@ -178,34 +187,35 @@ void Panel::on_main_loop(void* argument){
 #define ohw_logo_antipixel_width 80
 #define ohw_logo_antipixel_height 15
 static const uint8_t ohw_logo_antipixel_bits[] = {
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF, 0xFF,0xFF,0x80,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x01,0x80,0x0C,0x00,0x33, 0x18,0xBB,0xFF,0xFF,0xFF,0xFD,0x80,0x5E,
-    0x80,0x2D,0x6B,0x9B,0xFF,0xFF,0xFF,0xFD, 0x80,0xFF,0xC0,0x2D,0x18,0xAB,0xFF,0xFF,
-    0xFF,0xFD,0x80,0xFF,0xC0,0x2D,0x7B,0xB3, 0xFF,0xFF,0xFF,0xFD,0x80,0x7F,0x80,0x33,
-    0x78,0xBB,0xFF,0xFF,0xFF,0xFD,0x81,0xF3, 0xE0,0x3F,0xFF,0xFF,0xFF,0xFF,0xFF,0xFD,
-    0x81,0xF3,0xE0,0x3F,0xFD,0xB3,0x18,0xDD, 0x98,0xC5,0x81,0xF3,0xE0,0x3F,0xFD,0xAD,
-    0x6B,0x5D,0x6B,0x5D,0x80,0x73,0x80,0x3F, 0xFC,0x21,0x1B,0x55,0x08,0xC5,0x80,0xF3,
-    0xC0,0x3F,0xFD,0xAD,0x5B,0x49,0x6A,0xDD, 0x80,0xE1,0xC0,0x3F,0xFD,0xAD,0x68,0xDD,
-    0x6B,0x45,0x80,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x01,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x01, 0x80, 0x0C, 0x00, 0x33, 0x18, 0xBB, 0xFF, 0xFF, 0xFF, 0xFD, 0x80, 0x5E,
+    0x80, 0x2D, 0x6B, 0x9B, 0xFF, 0xFF, 0xFF, 0xFD, 0x80, 0xFF, 0xC0, 0x2D, 0x18, 0xAB, 0xFF, 0xFF,
+    0xFF, 0xFD, 0x80, 0xFF, 0xC0, 0x2D, 0x7B, 0xB3, 0xFF, 0xFF, 0xFF, 0xFD, 0x80, 0x7F, 0x80, 0x33,
+    0x78, 0xBB, 0xFF, 0xFF, 0xFF, 0xFD, 0x81, 0xF3, 0xE0, 0x3F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFD,
+    0x81, 0xF3, 0xE0, 0x3F, 0xFD, 0xB3, 0x18, 0xDD, 0x98, 0xC5, 0x81, 0xF3, 0xE0, 0x3F, 0xFD, 0xAD,
+    0x6B, 0x5D, 0x6B, 0x5D, 0x80, 0x73, 0x80, 0x3F, 0xFC, 0x21, 0x1B, 0x55, 0x08, 0xC5, 0x80, 0xF3,
+    0xC0, 0x3F, 0xFD, 0xAD, 0x5B, 0x49, 0x6A, 0xDD, 0x80, 0xE1, 0xC0, 0x3F, 0xFD, 0xAD, 0x68, 0xDD,
+    0x6B, 0x45, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
 // On idle things, we don't want to do shit in interrupts
 // don't queue gcodes in this
-void Panel::on_idle(void* argument){
-    if(this->start_up) {
+void Panel::on_idle(void *argument)
+{
+    if (this->start_up) {
         this->lcd->init();
 
         Version v;
         string build(v.get_build());
         string date(v.get_build_date());
         this->lcd->clear();
-        this->lcd->setCursor(0,0); this->lcd->printf("Welcome to Smoothie");
-        this->lcd->setCursor(0,1); this->lcd->printf("%s", build.substr(0, 20).c_str());
-        this->lcd->setCursor(0,2); this->lcd->printf("%s", date.substr(0, 20).c_str());
-        this->lcd->setCursor(0,3); this->lcd->printf("Please wait....");
+        this->lcd->setCursor(0, 0); this->lcd->printf("Welcome to Smoothie");
+        this->lcd->setCursor(0, 1); this->lcd->printf("%s", build.substr(0, 20).c_str());
+        this->lcd->setCursor(0, 2); this->lcd->printf("%s", date.substr(0, 20).c_str());
+        this->lcd->setCursor(0, 3); this->lcd->printf("Please wait....");
 
-        if(this->lcd->hasGraphics()) {
+        if (this->lcd->hasGraphics()) {
             this->lcd->bltGlyph(24, 40, ohw_logo_antipixel_width, ohw_logo_antipixel_height, ohw_logo_antipixel_bits);
         }
 
@@ -214,14 +224,14 @@ void Panel::on_idle(void* argument){
         // Default top screen
         this->top_screen = new MainMenuScreen();
         this->top_screen->set_panel(this);
-        this->start_up= false;
+        this->start_up = false;
         //this->idle_time= 20*3; // only show for 2 seconds
     }
 
     // after being idle for a while switch to Watch screen
-    if(this->idle_time > 20*5) { // 5 seconds
-        this->idle_time= 0;
-        if(this->top_screen->watch_screen != this->current_screen) {
+    if (this->idle_time > 20 * 5) { // 5 seconds
+        this->idle_time = 0;
+        if (this->top_screen->watch_screen != this->current_screen) {
             this->enter_screen(this->top_screen->watch_screen);
             // TODO do we need to reset any state?
         }
@@ -229,38 +239,38 @@ void Panel::on_idle(void* argument){
         return;
     }
 
-    if(this->do_buttons) {
+    if (this->do_buttons) {
         // we don't want to do I2C in interrupt mode
         this->do_buttons = false;
 
         // read the actual buttons
-        int but= lcd->readButtons();
-        if(but != 0){
-            this->idle_time= 0;
+        int but = lcd->readButtons();
+        if (but != 0) {
+            this->idle_time = 0;
         }
 
         // fire events if the buttons are active and debounce is satisfied
-        this->up_button.check_signal(but&BUTTON_UP);
-        this->down_button.check_signal(but&BUTTON_DOWN);
-        this->back_button.check_signal(but&BUTTON_LEFT);
-        this->click_button.check_signal(but&BUTTON_SELECT);
-        this->pause_button.check_signal(but&BUTTON_PAUSE);
-     }
+        this->up_button.check_signal(but & BUTTON_UP);
+        this->down_button.check_signal(but & BUTTON_DOWN);
+        this->back_button.check_signal(but & BUTTON_LEFT);
+        this->click_button.check_signal(but & BUTTON_SELECT);
+        this->pause_button.check_signal(but & BUTTON_PAUSE);
+    }
 
     // If we are in menu mode and the position has changed
-    if( this->mode == MENU_MODE && this->counter_change() ){
+    if ( this->mode == MENU_MODE && this->counter_change() ) {
         this->menu_update();
     }
 
     // If we are in control mode
-    if( this->mode == CONTROL_MODE && this->counter_change() ){
+    if ( this->mode == CONTROL_MODE && this->counter_change() ) {
         this->control_value_update();
     }
 
     // If we must refresh
-    if( this->refresh_flag ){
+    if ( this->refresh_flag ) {
         this->refresh_flag = false;
-        if(this->current_screen != NULL) {
+        if (this->current_screen != NULL) {
             this->current_screen->on_refresh();
             this->lcd->on_refresh();
         }
@@ -268,89 +278,116 @@ void Panel::on_idle(void* argument){
 }
 
 // Hooks for button clicks
-uint32_t Panel::on_up(uint32_t dummy){
+uint32_t Panel::on_up(uint32_t dummy)
+{
     // this is simulating encoder clicks, but needs to be inverted to
     // increment values on up
-    int inc= (this->mode == CONTROL_MODE) ? 1 : -1;
+    int inc = (this->mode == CONTROL_MODE) ? 1 : -1;
     *this->counter += inc;
     this->counter_changed = true;
     return 0;
 }
-uint32_t Panel::on_down(uint32_t dummy){
-    int inc= (this->mode == CONTROL_MODE) ? -1 : 1;
+uint32_t Panel::on_down(uint32_t dummy)
+{
+    int inc = (this->mode == CONTROL_MODE) ? -1 : 1;
     *this->counter += inc;
     this->counter_changed = true;
     return 0;
 }
 
 // on most menu screens will go back to previous higher menu
-uint32_t Panel::on_back(uint32_t dummy){
-    if(this->mode == MENU_MODE && this->current_screen != NULL && this->current_screen->parent != NULL) {
+uint32_t Panel::on_back(uint32_t dummy)
+{
+    if (this->mode == MENU_MODE && this->current_screen != NULL && this->current_screen->parent != NULL) {
         this->enter_screen(this->current_screen->parent);
     }
     return 0;
 }
 
-uint32_t Panel::on_select(uint32_t dummy){
+uint32_t Panel::on_select(uint32_t dummy)
+{
     // TODO make configurable, including turning off
     // buzz is ignored on panels that do not support buzz
     this->click_changed = true;
-    this->idle_time= 0;
-    lcd->buzz(60,300); // 50ms 300Hz
+    this->idle_time = 0;
+    lcd->buzz(60, 300); // 50ms 300Hz
     return 0;
 }
 
-uint32_t Panel::on_pause(uint32_t dummy){
-    if(!paused) {
+uint32_t Panel::on_pause(uint32_t dummy)
+{
+    if (!paused) {
         THEKERNEL->pauser->take();
-        paused= true;
-    }else{
+        paused = true;
+    } else {
         THEKERNEL->pauser->release();
-        paused= false;
+        paused = false;
     }
     return 0;
 }
 
-bool Panel::counter_change(){ if( this->counter_changed ){ this->counter_changed = false; return true; }else{ return false; } }
-bool Panel::click(){ if( this->click_changed ){ this->click_changed = false; return true; }else{ return false; } }
+bool Panel::counter_change()
+{
+    if ( this->counter_changed ) {
+        this->counter_changed = false;
+        return true;
+    } else {
+        return false;
+    }
+}
+bool Panel::click()
+{
+    if ( this->click_changed ) {
+        this->click_changed = false;
+        return true;
+    } else {
+        return false;
+    }
+}
 
 
 // Enter menu mode
-void Panel::enter_menu_mode(){
+void Panel::enter_menu_mode()
+{
     this->mode = MENU_MODE;
     this->counter = &this->menu_selected_line;
     this->menu_changed = false;
 }
 
-void Panel::setup_menu(uint16_t rows){
+void Panel::setup_menu(uint16_t rows)
+{
     this->setup_menu(rows, min(rows, this->max_screen_lines()));
 }
 
-void Panel::setup_menu(uint16_t rows, uint16_t lines){
+void Panel::setup_menu(uint16_t rows, uint16_t lines)
+{
     this->menu_selected_line = 0;
-    this->menu_current_line= 0;
+    this->menu_current_line = 0;
     this->menu_start_line = 0;
     this->menu_rows = rows;
     this->menu_lines = lines;
 }
 
-void Panel::menu_update(){
+void Panel::menu_update()
+{
     // Limits, up and down
     // NOTE menu_selected_line is changed in an interrupt and can change at any time
-    int msl= this->menu_selected_line; // hopefully this is atomic
-    msl = msl % ( this->menu_rows<<this->menu_offset );
-    while( msl < 0 ){ msl += this->menu_rows << this->menu_offset; }
-    this->menu_selected_line= msl; // update atomically we hope
+    int msl = this->menu_selected_line; // hopefully this is atomic
+    msl = msl % ( this->menu_rows << this->menu_offset );
+    while ( msl < 0 ) {
+        msl += this->menu_rows << this->menu_offset;
+    }
+    this->menu_selected_line = msl; // update atomically we hope
 
-    this->menu_current_line= msl >> this->menu_offset;
+    this->menu_current_line = msl >> this->menu_offset;
 
     // What to display
     this->menu_start_line = 0;
-    if( this->menu_rows > this->menu_lines ){
-        if( this->menu_current_line >= 2 ){
+    if ( this->menu_rows > this->menu_lines ) {
+        if ( this->menu_current_line >= 2 ) {
             this->menu_start_line = this->menu_current_line - 1;
         }
-        if( this->menu_current_line > this->menu_rows - this->menu_lines ){
+        if ( this->menu_current_line > this->menu_rows - this->menu_lines ) {
             this->menu_start_line = this->menu_rows - this->menu_lines;
         }
     }
@@ -358,15 +395,28 @@ void Panel::menu_update(){
     this->menu_changed = true;
 }
 
-bool Panel::menu_change(){
-    if( this->menu_changed ){ this->menu_changed = false; return true; }else{ return false; }
+bool Panel::menu_change()
+{
+    if ( this->menu_changed ) {
+        this->menu_changed = false;
+        return true;
+    } else {
+        return false;
+    }
 }
 
-bool Panel::control_value_change(){
-    if( this->control_value_changed ){ this->control_value_changed = false; return true; }else{ return false; }
+bool Panel::control_value_change()
+{
+    if ( this->control_value_changed ) {
+        this->control_value_changed = false;
+        return true;
+    } else {
+        return false;
+    }
 }
 
-bool Panel::enter_control_mode(double passed_normal_increment, double passed_pressed_increment){
+bool Panel::enter_control_mode(double passed_normal_increment, double passed_pressed_increment)
+{
     this->mode = CONTROL_MODE;
     this->normal_increment  = passed_normal_increment;
     this->counter = &this->control_normal_counter;
@@ -375,34 +425,39 @@ bool Panel::enter_control_mode(double passed_normal_increment, double passed_pre
     return true;
 }
 
-void Panel::control_value_update(){
+void Panel::control_value_update()
+{
     // TODO what do we do here?
     this->control_value_changed = true;
 }
 
-void Panel::set_control_value(double value){
+void Panel::set_control_value(double value)
+{
     this->control_base_value = value;
 }
 
-double Panel::get_control_value(){
-    return this->control_base_value + (this->control_normal_counter*this->normal_increment);
+double Panel::get_control_value()
+{
+    return this->control_base_value + (this->control_normal_counter * this->normal_increment);
 }
 
-bool Panel::is_playing() const {
+bool Panel::is_playing() const
+{
     void *returned_data;
 
-    bool ok= THEKERNEL->public_data->get_value( player_checksum, is_playing_checksum, &returned_data );
-    if(ok) {
-        bool b= *static_cast<bool*>(returned_data);
+    bool ok = THEKERNEL->public_data->get_value( player_checksum, is_playing_checksum, &returned_data );
+    if (ok) {
+        bool b = *static_cast<bool *>(returned_data);
         return b;
     }
     return false;
 }
 
-void  Panel::set_playing_file(string f) {
+void  Panel::set_playing_file(string f)
+{
     // just copy the first 20 characters after the first / if there
-    size_t n= f.find_last_of('/');
-    if(n == string::npos) n= 0;
-    strncpy(playing_file, f.substr(n+1, 19).c_str(), sizeof(playing_file));
-    playing_file[sizeof(playing_file)-1]= 0;
+    size_t n = f.find_last_of('/');
+    if (n == string::npos) n = 0;
+    strncpy(playing_file, f.substr(n + 1, 19).c_str(), sizeof(playing_file));
+    playing_file[sizeof(playing_file) - 1] = 0;
 }
