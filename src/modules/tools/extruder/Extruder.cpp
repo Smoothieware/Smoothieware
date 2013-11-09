@@ -12,6 +12,8 @@
 #include "modules/tools/extruder/Extruder.h"
 #include <mri.h>
 
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+
 /* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
 * It can work in two modes : either the head does not move, and the extruder moves the filament at a specified speed ( SOLO mode here )
 * or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
