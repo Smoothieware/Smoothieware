@@ -164,6 +164,15 @@ panel.gamma_jog_feedrate                     200               # z jogging feedr
 panel.hotend_temperature                     185               # temp to set hotend when preheat is selected
 panel.bed_temperature                        60                # temp to set bed when preheat is selected
 
+# Example of a custom menu entry, which will show up in the Custom entry. NOTE _ gets converted to space in the menu
+custom_menu.power_on.enable                true              #
+custom_menu.power_on.name                  Power_on          #
+custom_menu.power_on.command               M80               #
+
+custom_menu.power_off.enable               true              #
+custom_menu.power_off.name                 Power_off         #
+custom_menu.power_off.command              M81               #
+
 # Only needed on a smoothieboard
 currentcontrol_module_enable                 true             #
 

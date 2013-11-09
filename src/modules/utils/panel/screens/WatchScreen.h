@@ -8,45 +8,35 @@
 #ifndef WATCHSCREEN_H
 #define WATCHSCREEN_H
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/Pin.h"
-#include "LcdBase.h"
-#include "Panel.h"
 #include "PanelScreen.h"
 
-class WatchScreen : public PanelScreen {
-    public:
-        WatchScreen();
-        void on_refresh();
-        void on_enter();
-        void on_main_loop();
-        void display_menu_line(uint16_t line);
+class WatchScreen : public PanelScreen
+{
+public:
+    WatchScreen();
+    void on_refresh();
+    void on_enter();
+    void on_main_loop();
+    void display_menu_line(uint16_t line);
 
-    private:
-        void get_temp_data();
-        double get_current_speed();
-        void set_speed();
-        void get_current_pos(double *cp);
-        void get_sd_play_info();
-        const char* get_status();
+private:
+    void get_temp_data();
+    double get_current_speed();
+    void set_speed();
+    void get_current_pos(double *cp);
+    void get_sd_play_info();
+    const char *get_status();
 
-        bool speed_changed;
-        bool issue_change_speed;
-        int hotendtemp;
-        int hotendtarget;
-        int bedtemp;
-        int bedtarget;
-        int current_speed;
-        double pos[3];
-        unsigned long elapsed_time;
-        unsigned int sd_pcnt_played;
+    bool speed_changed;
+    bool issue_change_speed;
+    int hotendtemp;
+    int hotendtarget;
+    int bedtemp;
+    int bedtarget;
+    int current_speed;
+    double pos[3];
+    unsigned long elapsed_time;
+    unsigned int sd_pcnt_played;
 };
-
-
-
-
-
 
 #endif

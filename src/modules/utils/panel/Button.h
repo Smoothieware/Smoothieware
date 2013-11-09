@@ -1,12 +1,9 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
-#include <stdlib.h>
-#include "libs/LPC17xx/sLPC17xx.h" // smoothed mbed.h lib
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"
-#include <string>
 #include "libs/Hook.h"
 
 

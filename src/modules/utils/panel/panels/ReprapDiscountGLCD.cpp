@@ -6,6 +6,17 @@
 */
 #include "ReprapDiscountGLCD.h"
 
+// config settings
+#define panel_checksum             CHECKSUM("panel")
+#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
+#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
+#define click_button_pin_checksum  CHECKSUM("click_button_pin")
+#define pause_button_pin_checksum  CHECKSUM("pause_button_pin")
+#define buzz_pin_checksum          CHECKSUM("buzz_pin")
+#define spi_channel_checksum       CHECKSUM("spi_channel")
+#define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
+#define spi_frequency_checksum     CHECKSUM("spi_frequency")
+
 ReprapDiscountGLCD::ReprapDiscountGLCD() {
     // configure the pins to use
     this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();

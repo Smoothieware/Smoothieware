@@ -5,33 +5,29 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef PANELSCREEN_H
-#define PANELSCREEN_H
+#ifndef CUSTOMSCREEN_H
+#define CUSTOMSCREEN_H
 
-#include "Panel.h"
+#include "PanelScreen.h"
 
-class Panel;
-class PanelScreen
+#include <string>
+#include <vector>
+#include <tuple>
+
+class CustomScreen : public PanelScreen
 {
 public:
-    PanelScreen();
-    virtual void on_refresh();
-    virtual void on_main_loop();
-    PanelScreen *set_panel(Panel *parent);
-    PanelScreen *set_parent(PanelScreen *passed_parent);
-    virtual void on_enter();
-    // if you completely rewrite the screen do not clear it, this avoids flicker
-    void refresh_screen(bool clear);
-    void refresh_menu(bool clear);
-    void refresh_menu(void) { refresh_menu(true); };
-    virtual void display_menu_line(uint16_t line) = 0;
+    CustomScreen();
 
-    Panel *panel;
-    PanelScreen *parent;
+    void on_refresh();
+    void on_enter();
+    void on_main_loop();
+    void display_menu_line(uint16_t line);
+    void clicked_menu_entry(uint16_t line);
 
-protected:
-    void send_gcode(std::string g);
-    void send_command(const char *gcstr);
+private:
+    std::string command;
+    std::vector<std::tuple<const char*,const char*> > menu_items;
 };
 
 #endif
