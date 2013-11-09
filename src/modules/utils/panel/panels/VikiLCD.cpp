@@ -6,6 +6,14 @@ You should have received a copy of the GNU General Public License along with Smo
 */
 #include "VikiLCD.h"
 
+// config settings for Viki LCD
+#define panel_checksum             CHECKSUM("panel")
+#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
+#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
+#define button_pause_pin_checksum  CHECKSUM("button_pause_pin")
+#define i2c_pins_checksum          CHECKSUM("i2c_pins")
+#define i2c_frequency_checksum     CHECKSUM("i2c_frequency")
+
 // if this is defined we use the R/W poll mode instead of fixed delays
 // However at the slower I2C frequency required for Viki long cables it is slower than fixed delay
 // taken from LiquidCrystalFast.cpp and implemented for Viki LCD here by Jim Morris

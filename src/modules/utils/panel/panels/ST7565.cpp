@@ -9,6 +9,28 @@
 #include "ST7565/glcdfont.h"
 #include "ahbmalloc.h"
 
+//definitions for lcd
+#define LCDWIDTH 128
+#define LCDHEIGHT 64
+#define LCDPAGES  (LCDHEIGHT+7)/8
+#define FB_SIZE LCDWIDTH*LCDPAGES
+#define FONT_SIZE_X 6
+#define FONT_SIZE_Y 8
+
+#define panel_checksum             CHECKSUM("panel")
+#define spi_channel_checksum       CHECKSUM("spi_channel")
+#define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
+#define spi_frequency_checksum     CHECKSUM("spi_frequency")
+#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
+#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
+#define click_button_pin_checksum  CHECKSUM("click_button_pin")
+#define up_button_pin_checksum     CHECKSUM("up_button_pin")
+#define down_button_pin_checksum   CHECKSUM("down_button_pin")
+#define contrast_checksum          CHECKSUM("contrast")
+#define reverse_checksum           CHECKSUM("reverse")
+#define rst_pin_checksum           CHECKSUM("rst_pin")
+#define a0_pin_checksum            CHECKSUM("a0_pin")
+
 #define CLAMP(x, low, high) { if ( (x) < (low) ) x = (low); if ( (x) > (high) ) x = (high); } while (0);
 #define swap(a, b) { uint8_t t = a; a = b; b = t; }
 

@@ -8,14 +8,7 @@
 #ifndef CONTROLSCREEN_H
 #define CONTROLSCREEN_H
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/Pin.h"
-#include "LcdBase.h"
-#include "Panel.h"
 #include "PanelScreen.h"
-#include "MainMenuScreen.h"
 
 #define NULL_CONTROL_MODE        0
 #define AXIS_CONTROL_MODE        1

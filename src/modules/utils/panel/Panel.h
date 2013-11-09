@@ -8,37 +8,15 @@
 #ifndef PANEL_H
 #define PANEL_H
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/Pin.h"
+#include "Kernel.h"
+#include "PanelScreen.h"
 #include "panels/LcdBase.h"
 #include "Button.h"
-#include "PanelScreen.h"
-#include "screens/MainMenuScreen.h"
-
-#define panel_checksum             CHECKSUM("panel")
-#define enable_checksum            CHECKSUM("enable")
-#define lcd_checksum               CHECKSUM("lcd")
-#define i2c_lcd_checksum           CHECKSUM("i2c_lcd")
-#define viki_lcd_checksum          CHECKSUM("viki_lcd")
-#define smoothiepanel_checksum     CHECKSUM("smoothiepanel")
-#define panelolu2_checksum         CHECKSUM("panelolu2")
-#define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
-#define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
-
-#define menu_offset_checksum       CHECKSUM("menu_offset")
-#define jog_x_feedrate_checksum    CHECKSUM("alpha_jog_feedrate")
-#define jog_y_feedrate_checksum    CHECKSUM("beta_jog_feedrate")
-#define jog_z_feedrate_checksum    CHECKSUM("gamma_jog_feedrate")
-
-#define hotend_temp_checksum CHECKSUM("hotend_temperature")
-#define bed_temp_checksum    CHECKSUM("bed_temperature")
 
 #define MENU_MODE                  0
 #define CONTROL_MODE               1
 
-
+class PanelScreen;
 class Panel : public Module {
     public:
         Panel();
@@ -94,6 +72,7 @@ class Panel : public Module {
         // public as it is directly accessed by screens... not good
         // TODO pass lcd into ctor of each sub screen
         LcdBase* lcd;
+        PanelScreen* custom_screen;
 
         // as panelscreen accesses private fields in Panel
         friend class PanelScreen;
@@ -132,7 +111,7 @@ class Panel : public Module {
         char mode;
         uint16_t screen_lines;
 
-        MainMenuScreen* top_screen;
+        PanelScreen* top_screen;
         PanelScreen* current_screen;
 
         double jogging_speed_mm_min[3];

@@ -7,14 +7,15 @@
 
 #include "libs/Kernel.h"
 #include "Panel.h"
+#include "PanelScreen.h"
+
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
-#include <string>
-using namespace std;
 #include "Button.h"
-#include "PanelScreen.h"
-#include "screens/MainMenuScreen.h"
+
 #include "modules/utils/player/PlayerPublicAccess.h"
+#include "screens/CustomScreen.h"
+#include "screens/MainMenuScreen.h"
 
 #include "panels/I2CLCD.h"
 #include "panels/VikiLCD.h"
@@ -22,6 +23,24 @@ using namespace std;
 #include "panels/ReprapDiscountGLCD.h"
 #include "panels/ST7565.h"
 #include "version.h"
+
+#define panel_checksum             CHECKSUM("panel")
+#define enable_checksum            CHECKSUM("enable")
+#define lcd_checksum               CHECKSUM("lcd")
+#define i2c_lcd_checksum           CHECKSUM("i2c_lcd")
+#define viki_lcd_checksum          CHECKSUM("viki_lcd")
+#define smoothiepanel_checksum     CHECKSUM("smoothiepanel")
+#define panelolu2_checksum         CHECKSUM("panelolu2")
+#define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
+#define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
+
+#define menu_offset_checksum       CHECKSUM("menu_offset")
+#define jog_x_feedrate_checksum    CHECKSUM("alpha_jog_feedrate")
+#define jog_y_feedrate_checksum    CHECKSUM("beta_jog_feedrate")
+#define jog_z_feedrate_checksum    CHECKSUM("gamma_jog_feedrate")
+
+#define hotend_temp_checksum CHECKSUM("hotend_temperature")
+#define bed_temp_checksum    CHECKSUM("bed_temperature")
 
 Panel::Panel()
 {
@@ -73,6 +92,8 @@ void Panel::on_module_loaded()
         // no lcd type defined
         return;
     }
+
+    this->custom_screen= new CustomScreen(); // this needs to be called here as it needs the config cache loaded
 
     // some panels may need access to this global info
     this->lcd->setPanel(this);
@@ -222,17 +243,19 @@ void Panel::on_idle(void *argument)
         this->lcd->on_refresh(true); // tell lcd to display now
 
         // Default top screen
-        this->top_screen = new MainMenuScreen();
+        this->top_screen= new MainMenuScreen();
         this->top_screen->set_panel(this);
+        this->custom_screen->set_parent(this->top_screen);
         this->start_up = false;
         //this->idle_time= 20*3; // only show for 2 seconds
     }
 
+    MainMenuScreen *mms= static_cast<MainMenuScreen*>(this->top_screen);
     // after being idle for a while switch to Watch screen
     if (this->idle_time > 20 * 5) { // 5 seconds
         this->idle_time = 0;
-        if (this->top_screen->watch_screen != this->current_screen) {
-            this->enter_screen(this->top_screen->watch_screen);
+        if (mms->watch_screen != this->current_screen) {
+            this->enter_screen(mms->watch_screen);
             // TODO do we need to reset any state?
         }
 

@@ -57,14 +57,6 @@ using namespace std;
 #define MCP23017_GPIOB 0x13
 #define MCP23017_OLATB 0x15
 
-// config settings for Viki LCD
-#define panel_checksum             CHECKSUM("panel")
-#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
-#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
-#define button_pause_pin_checksum  CHECKSUM("button_pause_pin")
-#define i2c_pins_checksum          CHECKSUM("i2c_pins")
-#define i2c_frequency_checksum     CHECKSUM("i2c_frequency")
-
 class VikiLCD : public LcdBase {
     public:
         VikiLCD();
