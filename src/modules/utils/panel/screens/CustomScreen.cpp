@@ -7,8 +7,6 @@
 #include "CustomScreen.h"
 #include "libs/Kernel.h"
 
-// BAD BAD we redefine max somewhere
-#undef max
 #include <algorithm>
 
 #define enable_checksum      CHECKSUM("enable")
