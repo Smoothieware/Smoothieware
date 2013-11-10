@@ -1,5 +1,8 @@
 #include "LcdBase.h"
 
+#include "stdarg.h"
+#include "stdio.h"
+
 LcdBase::LcdBase() {}
 LcdBase::~LcdBase() {}
 
@@ -9,6 +12,6 @@ int LcdBase::printf(const char* format, ...){
     char buffer[80]; // max length for display anyway
     int n= vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
-    this->write(buffer, n); 
+    this->write(buffer, n);
     return 0;
 }
