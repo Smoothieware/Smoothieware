@@ -1,19 +1,7 @@
 #ifndef LCDBASE_H
 #define LCDBASE_H
 
-#include "I2C.h" // mbed.h lib
-#include "wait_api.h" // mbed.h lib
-
-#include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/Config.h"
-
-using namespace std;
-#include <vector>
-#include <string>
-#include <cstdio>
-#include <cstdarg>
+#include "stdint.h"
 
 // commands
 #define LCD_CLEARDISPLAY 0x01
@@ -83,7 +71,7 @@ class LcdBase {
         int printf(const char* format, ...);
 
         void setPanel(Panel* p) { panel= p; }
-        
+
         // Required LCD functions
         virtual void home()= 0;
         virtual void clear()= 0;
@@ -95,12 +83,12 @@ class LcdBase {
 
         // returns the current encoder position
         virtual int readEncoderDelta()= 0;
-        
+
         // the number of encoder clicks per detent. this is divided into
         // accumulated clicks for control values so one detent is one
         // increment, this varies depending on encoder type usually 1,2 or 4
         virtual int getEncoderResolution()= 0;
-                                            
+
         // optional
         virtual void setLed(int led, bool onoff){};
         virtual void setLedBrightness(int led, int val){};
@@ -117,7 +105,7 @@ class LcdBase {
         virtual uint16_t get_screen_lines() { return 4; }
         // used to set a variant for a panel (like viki vs panelolou2)
         virtual void set_variant(int n) {};
-        
+
     protected:
         Panel* panel;
         virtual void write(const char* line, int len)= 0;

@@ -7,6 +7,7 @@
 
 #include "ST7565.h"
 #include "ST7565/glcdfont.h"
+#include "Kernel.h"
 #include "ahbmalloc.h"
 
 //definitions for lcd

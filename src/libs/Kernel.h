@@ -25,6 +25,7 @@
 #define THEKERNEL Kernel::instance
 
 //Module manager
+class Config;
 class Module;
 class Conveyor;
 class SlowTicker;

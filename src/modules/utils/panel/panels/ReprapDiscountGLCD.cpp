@@ -6,6 +6,8 @@
 */
 #include "ReprapDiscountGLCD.h"
 
+#include "Kernel.h"
+
 // config settings
 #define panel_checksum             CHECKSUM("panel")
 #define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
