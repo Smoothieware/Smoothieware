@@ -8,12 +8,6 @@ You should have received a copy of the GNU General Public License along with Smo
 
 #include "Button.h"
 
-#include <vector>
-#include <string>
-#include <cstdio>
-#include <cstdarg>
-using namespace std;
-
 // config settings for Viki LCD
 #define panel_checksum             CHECKSUM("panel")
 #define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
