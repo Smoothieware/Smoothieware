@@ -151,6 +151,7 @@ void Panel::reset_counter()
 }
 
 // Indicate the idle loop we want to call the refresh hook in the current screen
+// called 20 times a second
 uint32_t Panel::refresh_tick(uint32_t dummy)
 {
     this->refresh_flag = true;
@@ -247,18 +248,23 @@ void Panel::on_idle(void *argument)
         this->top_screen->set_panel(this);
         this->custom_screen->set_parent(this->top_screen);
         this->start_up = false;
-        //this->idle_time= 20*3; // only show for 2 seconds
+        return;
     }
 
     MainMenuScreen *mms= static_cast<MainMenuScreen*>(this->top_screen);
     // after being idle for a while switch to Watch screen
-    if (this->idle_time > 20 * 5) { // 5 seconds
+    if (this->current_screen != NULL && this->idle_time > this->current_screen->idle_timeout_secs()*20) {
         this->idle_time = 0;
         if (mms->watch_screen != this->current_screen) {
             this->enter_screen(mms->watch_screen);
             // TODO do we need to reset any state?
         }
 
+        return;
+    }
+
+    if(current_screen == NULL && this->idle_time > 20*4) {
+        this->enter_screen(mms->watch_screen);
         return;
     }
 
@@ -270,6 +276,11 @@ void Panel::on_idle(void *argument)
         int but = lcd->readButtons();
         if (but != 0) {
             this->idle_time = 0;
+            if(current_screen == NULL) {
+                // we were in startup screen so go to watch screen
+                this->enter_screen(mms->watch_screen);
+                return;
+            }
         }
 
         // fire events if the buttons are active and debounce is satisfied
@@ -310,6 +321,7 @@ uint32_t Panel::on_up(uint32_t dummy)
     this->counter_changed = true;
     return 0;
 }
+
 uint32_t Panel::on_down(uint32_t dummy)
 {
     int inc = (this->mode == CONTROL_MODE) ? -1 : 1;

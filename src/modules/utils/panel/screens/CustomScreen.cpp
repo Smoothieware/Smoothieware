@@ -27,10 +27,13 @@ CustomScreen::CustomScreen()
         if (THEKERNEL->config->value(custom_menu_checksum, modules[i], enable_checksum )->as_bool()) {
             // Get Menu entry name
             string name = THEKERNEL->config->value(custom_menu_checksum, modules[i], name_checksum )->as_string();
-            std::replace( name.begin(), name.end(), '_', ' ');
+            std::replace( name.begin(), name.end(), '_', ' '); // replace _ with space
 
             // Get Command
             string command = THEKERNEL->config->value(custom_menu_checksum, modules[i], command_checksum )->as_string();
+            std::replace( command.begin(), command.end(), '_', ' '); // replace _ with space
+            std::replace( command.begin(), command.end(), '|', '\n'); // replace | with \n for multiple commands
+
             // put in menu item list
             menu_items.push_back(make_tuple(strdup(name.c_str()), strdup(command.c_str())));
             //printf("added menu %s, command %s\n", name.c_str(), command.c_str());
