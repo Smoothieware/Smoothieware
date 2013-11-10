@@ -7,31 +7,10 @@
 
 #ifndef ST7565_H_
 #define ST7565_H_
+
 #include "LcdBase.h"
-#include "libs/Kernel.h"
 #include "mbed.h"
 #include "libs/Pin.h"
-#include "Panel.h"
-
-using namespace std;
-#include <vector>
-#include <string>
-#include <cstdio>
-#include <cstdarg>
-
-//definitions for lcd
-#define LCDWIDTH 128
-#define LCDHEIGHT 64
-#define LCDPAGES  (LCDHEIGHT+7)/8
-#define FB_SIZE LCDWIDTH*LCDPAGES
-#define FONT_SIZE_X 6
-#define FONT_SIZE_Y 8
-
-#define spi_frequency_checksum     CHECKSUM("spi_frequency")
-#define click_button_pin_checksum  CHECKSUM("click_button_pin")
-#define up_button_pin_checksum     CHECKSUM("up_button_pin")
-#define down_button_pin_checksum   CHECKSUM("down_button_pin")
-class Panel;
 
 class ST7565: public LcdBase {
 public:
@@ -79,8 +58,13 @@ private:
 	Pin click_pin;
 	Pin up_pin;
 	Pin down_pin;
+    Pin encoder_a_pin;
+    Pin encoder_b_pin;
+
 	// text cursor position
 	uint8_t tx, ty;
+    uint8_t contrast;
+    bool reversed;
 };
 
 #endif /* ST7565_H_ */

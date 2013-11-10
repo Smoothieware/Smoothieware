@@ -106,6 +106,9 @@ class LcdBase {
         virtual void setLedBrightness(int led, int val){};
         virtual void buzz(long,uint16_t){};
         virtual bool hasGraphics() { return false; }
+        // on graphics panels, the input bitmap is in X windows XBM format but
+        // with the bits in a byte reversed so bit7 is left most and bit0 is
+        // right most. x_offset must by byte aligned if used
         virtual void bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span= 0, int x_offset=0, int y_offset=0){}
         // only used on certain panels
         virtual void on_refresh(bool now= false){};

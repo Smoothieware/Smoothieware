@@ -10,24 +10,29 @@
 #include "PanelScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+#include "libs/SerialMessage.h"
 #include <string>
+#include <vector>
+
 using namespace std;
 
-PanelScreen::PanelScreen(){}
+PanelScreen::PanelScreen() {}
 
-void PanelScreen::on_refresh(){}
-void PanelScreen::on_main_loop(){}
+void PanelScreen::on_refresh() {}
+void PanelScreen::on_main_loop() {}
 
-PanelScreen* PanelScreen::set_panel(Panel* parent){
+PanelScreen *PanelScreen::set_panel(Panel *parent)
+{
     this->panel = parent;
     return this;
 }
 
-void PanelScreen::on_enter(){}
+void PanelScreen::on_enter() {}
 
-void PanelScreen::refresh_menu(bool clear){
-    if(clear) this->panel->lcd->clear();
-    for(uint16_t i = this->panel->menu_start_line; i < this->panel->menu_start_line + min( this->panel->menu_rows, this->panel->menu_lines ); i++ ){
+void PanelScreen::refresh_menu(bool clear)
+{
+    if (clear) this->panel->lcd->clear();
+    for (uint16_t i = this->panel->menu_start_line; i < this->panel->menu_start_line + min( this->panel->menu_rows, this->panel->panel_lines ); i++ ) {
         this->panel->lcd->setCursor(2, i - this->panel->menu_start_line );
         this->display_menu_line(i);
     }
@@ -35,22 +40,50 @@ void PanelScreen::refresh_menu(bool clear){
     this->panel->lcd->printf(">");
 }
 
-void PanelScreen::refresh_screen(bool clear){
-    if(clear) this->panel->lcd->clear();
-    for(uint16_t i = this->panel->menu_start_line; i < this->panel->menu_start_line + min( this->panel->menu_rows, this->panel->menu_lines ); i++ ){
+void PanelScreen::refresh_screen(bool clear)
+{
+    if (clear) this->panel->lcd->clear();
+    for (uint16_t i = this->panel->menu_start_line; i < this->panel->menu_start_line + min( this->panel->menu_rows, this->panel->panel_lines ); i++ ) {
         this->panel->lcd->setCursor(0, i - this->panel->menu_start_line );
         this->display_menu_line(i);
     }
 }
 
-PanelScreen* PanelScreen::set_parent(PanelScreen* passed_parent){
+PanelScreen *PanelScreen::set_parent(PanelScreen *passed_parent)
+{
     this->parent = passed_parent;
     this->set_panel( passed_parent->panel );
     return this;
 }
 
-// Helper for screens to send a gcode
-void PanelScreen::send_gcode(std::string g) {
+// Helper for screens to send a gcode, must be called from main loop
+void PanelScreen::send_gcode(std::string g)
+{
     Gcode gcode(g, &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+}
+
+// Helper to send commands, must be called from mainloop
+// may contain multipe commands separated by \n
+void PanelScreen::send_command(const char *gcstr)
+{
+    string cmd(gcstr);
+    vector<string> q;
+    while (cmd.size() > 0) {
+        size_t b = cmd.find_first_of("\n");
+        if ( b == string::npos ) {
+            q.push_back(cmd);
+            break;
+        }
+        q.push_back(cmd.substr( 0, b ));
+        cmd = cmd.substr(b + 1);
+    }
+
+    // for each command send it
+    for (std::vector<string>::iterator i = q.begin(); i != q.end(); ++i) {
+        struct SerialMessage message;
+        message.message = *i;
+        message.stream = &(StreamOutput::NullStream);
+        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    }
 }

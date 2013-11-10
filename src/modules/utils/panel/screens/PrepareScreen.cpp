@@ -12,82 +12,86 @@
 #include "ExtruderScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
-#include "libs/SerialMessage.h"
 #include "PublicDataRequest.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 
 #include <string>
 using namespace std;
 
-PrepareScreen::PrepareScreen(){
+PrepareScreen::PrepareScreen()
+{
     // Children screens
     this->extruder_screen = (new ExtruderScreen()  )->set_parent(this);
-//    this->temp_screen     = (new TempScreen()      )->set_parent(this);
+    //    this->temp_screen     = (new TempScreen()      )->set_parent(this);
 }
 
-void PrepareScreen::on_enter(){
+void PrepareScreen::on_enter()
+{
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(7);  // 7 menu items
-    this->refresh_screen();
+    this->panel->setup_menu(8);
+    this->refresh_menu();
 }
 
-void PrepareScreen::on_refresh(){
-    if( this->panel->menu_change() ){
-        this->refresh_screen();
+void PrepareScreen::on_refresh()
+{
+    if ( this->panel->menu_change() ) {
+        this->refresh_menu();
     }
-    if( this->panel->click() ){
+    if ( this->panel->click() ) {
         this->clicked_menu_entry(this->panel->get_menu_current_line());
     }
 }
 
-void PrepareScreen::refresh_screen(){
-    this->refresh_menu();
-}
-
-void PrepareScreen::display_menu_line(uint16_t line){
-    switch( line ){
+void PrepareScreen::display_menu_line(uint16_t line)
+{
+    switch ( line ) {
         case 0: this->panel->lcd->printf("Back"           ); break;
         case 1: this->panel->lcd->printf("Home All Axis"  ); break;
         case 2: this->panel->lcd->printf("Set Home"       ); break;
-        case 3: this->panel->lcd->printf("Pre Heat"       ); break;
-        case 4: this->panel->lcd->printf("Cool Down"      ); break;
-        case 5: this->panel->lcd->printf("Extrude"        ); break;
-        case 6: this->panel->lcd->printf("Motors off"     ); break;
-        //case 7: this->panel->lcd->printf("Set Temperature"); break;
+        case 3: this->panel->lcd->printf("Set Z0"         ); break;
+        case 4: this->panel->lcd->printf("Pre Heat"       ); break;
+        case 5: this->panel->lcd->printf("Cool Down"      ); break;
+        case 6: this->panel->lcd->printf("Extrude"        ); break;
+        case 7: this->panel->lcd->printf("Motors off"     ); break;
+            //case 8: this->panel->lcd->printf("Set Temperature"); break;
     }
 }
 
-void PrepareScreen::clicked_menu_entry(uint16_t line){
-    switch( line ){
+void PrepareScreen::clicked_menu_entry(uint16_t line)
+{
+    switch ( line ) {
         case 0: this->panel->enter_screen(this->parent); break;
-        case 1: send_command("G28"); break;
-        case 2: send_command("G92 X0 Y0 Z0"); break;
-        case 3: this->preheat(); break;
-        case 4: this->cooldown(); break;
-        case 5: this->panel->enter_screen(this->extruder_screen); break;
-        case 6: send_command("M84"); break;
-        //case 7: this->panel->enter_screen(this->temp_screen      ); break;
+        case 1: command = "G28"; break;
+        case 2: command = "G92 X0 Y0 Z0"; break;
+        case 3: command = "G92 Z0"; break;
+        case 4: this->preheat(); break;
+        case 5: this->cooldown(); break;
+        case 6: this->panel->enter_screen(this->extruder_screen); break;
+        case 7: command = "M84"; break;
+            //case 8: this->panel->enter_screen(this->temp_screen      ); break;
     }
-
 }
 
-void PrepareScreen::preheat() {
-    double t= panel->get_default_hotend_temp();
+void PrepareScreen::preheat()
+{
+    double t = panel->get_default_hotend_temp();
     THEKERNEL->public_data->set_value( temperature_control_checksum, hotend_checksum, &t );
-    t= panel->get_default_bed_temp();
+    t = panel->get_default_bed_temp();
     THEKERNEL->public_data->set_value( temperature_control_checksum, bed_checksum, &t );
 }
 
-void PrepareScreen::cooldown() {
-    double t= 0;
+void PrepareScreen::cooldown()
+{
+    double t = 0;
     THEKERNEL->public_data->set_value( temperature_control_checksum, hotend_checksum, &t );
     THEKERNEL->public_data->set_value( temperature_control_checksum, bed_checksum, &t );
 }
 
-void PrepareScreen::send_command(const char* gcstr) {
-    string cmd(gcstr);
-    struct SerialMessage message;
-    message.message = cmd;
-    message.stream = &(StreamOutput::NullStream);
-    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+// queuing commands needs to be done from main loop
+void PrepareScreen::on_main_loop()
+{
+    // change actual axis value
+    if (this->command.empty()) return;
+    send_command(this->command.c_str());
+    this->command.clear();
 }

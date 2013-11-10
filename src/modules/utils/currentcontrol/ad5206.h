@@ -8,6 +8,8 @@
 #include <string>
 #include <math.h>
 
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+
 class AD5206 : public DigipotBase {
     public:
         AD5206(){
