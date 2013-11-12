@@ -23,6 +23,7 @@ void GcodeDispatch::on_module_loaded() {
     return_error_on_unhandled_gcode = this->kernel->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     currentline = -1;
+    uploading= false;
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -92,26 +93,81 @@ void GcodeDispatch::on_console_line_received(void * line){
                     single_command = possible_command.substr(0,nextcmd);
                     possible_command = possible_command.substr(nextcmd);
                 }
-                //Prepare gcode for dispatch
-                Gcode* gcode = new Gcode(single_command, new_message.stream);
-                gcode->prepare_cached_values();
 
-//                 printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
-                //Dispatch message!
-                this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
-                if (gcode->add_nl)
-                    new_message.stream->printf("\r\n");
+                if(!uploading) {
+                    //Prepare gcode for dispatch
+                    Gcode* gcode = new Gcode(single_command, new_message.stream);
+                    gcode->prepare_cached_values();
 
-                if ( return_error_on_unhandled_gcode == true && gcode->accepted_by_module == false)
-                    new_message.stream->printf("ok (command unclaimed)\r\n");
-                else if(!gcode->txt_after_ok.empty()) {
-                    new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
-                    gcode->txt_after_ok.clear();
-                }else
-                    new_message.stream->printf("ok\r\n");
+                    if(gcode->has_m && gcode->m == 28) {
+                        // start upload command
+                        delete gcode;
 
-                delete gcode;
-            
+                        this->upload_filename= "/sd/" + single_command.substr(4); // rest of line is filename
+                        // open file
+                        upload_fd= fopen(this->upload_filename.c_str(), "w");
+                        if(upload_fd != NULL) {
+                            this->uploading= true;
+                            new_message.stream->printf("Writing to file: %s\r\n", this->upload_filename.c_str());
+                        }else{
+                            new_message.stream->printf("open failed, File: %s.\r\n", this->upload_filename.c_str());
+                        }
+                        //printf("Start Uploading file: %s, %p\n", upload_filename.c_str(), upload_fd);
+                        continue;
+                    }
+
+    //                 printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
+                    //Dispatch message!
+                    this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                    if (gcode->add_nl)
+                        new_message.stream->printf("\r\n");
+
+                    if ( return_error_on_unhandled_gcode == true && gcode->accepted_by_module == false)
+                        new_message.stream->printf("ok (command unclaimed)\r\n");
+                    else if(!gcode->txt_after_ok.empty()) {
+                        new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
+                        gcode->txt_after_ok.clear();
+                    }else
+                        new_message.stream->printf("ok\r\n");
+
+                    delete gcode;
+
+                }else{
+                    // we are uploading a file so save it
+                    if(single_command.substr(0, 3) == "M29") {
+                        // done uploading, close file
+                        fclose(upload_fd);
+                        upload_fd= NULL;
+                        uploading= false;
+                        upload_filename.clear();
+                        new_message.stream->printf("Done saving file.\r\n");
+                        continue;
+                    }
+                    if(upload_fd == NULL) {
+                        // error detected writing to file so discard everything until it stops
+                        new_message.stream->printf("ok\r\n");
+                        continue;
+                    }
+                    single_command.append("\n");
+                    static int cnt= 0;
+                    if(fwrite(single_command.c_str(), 1, single_command.size(), upload_fd) != single_command.size()) {
+                        // error writing to file
+                        new_message.stream->printf("Error:error writing to file.\r\n");
+                        fclose(upload_fd);
+                        upload_fd= NULL;
+                        continue;
+                    }else{
+                        cnt+=single_command.size();
+                        if(cnt > 400) {
+                            // HACK ALERT to get around fwrite corruption close and re open for append
+                            fclose(upload_fd);
+                            upload_fd= fopen(upload_filename.c_str(), "a");
+                            cnt= 0;
+                        }
+                        new_message.stream->printf("ok\r\n");
+                        //printf("uploading file write ok\n");
+                    }
+                }
             }
         }else{
             //Request resend
