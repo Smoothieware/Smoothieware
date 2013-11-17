@@ -43,6 +43,7 @@
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
+#define disable_leds_checksum  CHECKSUM("leds_disable")
 
 // Watchdog wd(5000000, WDT_MRI);
 
@@ -79,6 +80,9 @@ int main() {
     kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 with new accel @%ldMHz\r\n", SystemCoreClock / 1000000);
     Version version;
     kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
+
+    //some boards don't have leds.. TOO BAD!
+    kernel->use_leds= !kernel->config->value( disable_leds_checksum )->by_default(false)->as_bool();
 
     // attempt to be able to disable msd in config
     // if(!kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
@@ -127,15 +131,19 @@ int main() {
     // clear up the config cache to save some memory
     kernel->config->config_cache_clear();
 
-    // set some leds to indicate status... led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok
-    leds[0]= 1; // indicate we are done with init
-    leds[3]= sdok?1:0; // 4th led inidicates sdcard is available (TODO maye should indicate config was found)
+    if(kernel->use_leds) {
+        // set some leds to indicate status... led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok
+        leds[0]= 1; // indicate we are done with init
+        leds[3]= sdok?1:0; // 4th led inidicates sdcard is available (TODO maye should indicate config was found)
+    }
 
     uint16_t cnt= 0;
     // Main loop
     while(1){
-        // flash led 2 to show we are alive
-        leds[1]= (cnt++ & 0x1000) ? 1 : 0;
+        if(kernel->use_leds) {
+            // flash led 2 to show we are alive
+            leds[1]= (cnt++ & 0x1000) ? 1 : 0;
+        }
         kernel->call_event(ON_MAIN_LOOP);
         kernel->call_event(ON_IDLE);
     }
