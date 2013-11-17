@@ -56,6 +56,7 @@ class Kernel {
         StepTicker*       step_ticker;
         Adc*              adc;
         PublicData*       public_data;
+        bool              use_leds;
 
     private:
         std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
