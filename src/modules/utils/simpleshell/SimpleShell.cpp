@@ -450,7 +450,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("pwd\r\n");
     stream->printf("cat file [limit]\r\n");
     stream->printf("rm file\r\n");
-    stream->printf("play file [-q]\r\n");
+    stream->printf("play file [-v]\r\n");
     stream->printf("progress - shows progress of current play\r\n");
     stream->printf("abort - abort currently playing file\r\n");
     stream->printf("reset - reset smoothie\r\n");
