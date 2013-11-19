@@ -80,6 +80,7 @@ void Player::on_gcode_received(void *argument) {
             gcode->mark_as_taken();
             if (this->current_file_handler != NULL) {
                 this->playing_file = true;
+                // FIXME this is a problem if the stream goes away before the file has finished
                 this->reply_stream= gcode->stream;
             }
 
@@ -181,11 +182,11 @@ void Player::play_command( string parameters, StreamOutput* stream ){
 
     this->playing_file = true;
 
-    // Do not output to any stream if we were passed the -q ( quiet ) option
-    if( options.find_first_of("Qq") == string::npos ){
-        this->current_stream = stream;
-    }else{
+    // Output to the current stream if we were passed the -v ( verbose ) option
+    if( options.find_first_of("Vv") == string::npos ){
         this->current_stream = &(StreamOutput::NullStream);
+    }else{
+        this->current_stream = stream;
     }
 
     // get size of file
