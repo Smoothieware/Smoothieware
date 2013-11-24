@@ -7,7 +7,7 @@
 
 #include "libs/Kernel.h"
 #include "modules/tools/laser/Laser.h"
-#include "modules/tools/extruder/Extruder.h"
+#include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
 #include "modules/tools/touchprobe/Touchprobe.h"
@@ -96,7 +96,7 @@ int main() {
 
     // Create and add main modules
     kernel->add_module( new Laser() );
-    kernel->add_module( new Extruder() );
+    kernel->add_module( new ExtruderMaker() );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
     kernel->add_module( new CurrentControl() );

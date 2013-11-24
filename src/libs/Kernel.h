@@ -17,6 +17,7 @@
 #include "libs/PublicData.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
+#include "modules/tools/toolsmanager/ToolsManager.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
@@ -50,6 +51,7 @@ class Kernel {
         Config*           config;
         Conveyor*         conveyor;
         Pauser*           pauser;
+        ToolsManager*     toolsmanager;
 
         int debug;
         SlowTicker*       slow_ticker;

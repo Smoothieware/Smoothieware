@@ -19,15 +19,14 @@
 * or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
 */
 
-Extruder::Extruder() {
+Extruder::Extruder( uint16_t config_identifier ) {
     this->absolute_mode = true;
-    this->paused = false;
+    this->paused        = false;
+    this->single_config = false;
+    this->identifier    = config_identifier;
 }
 
 void Extruder::on_module_loaded() {
-
-    // Do not do anything if not enabledd
-    if( this->kernel->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() == false ){ return; }
 
     // Settings
     this->on_config_reload(this);
@@ -64,17 +63,36 @@ void Extruder::on_module_loaded() {
 
 // Get config
 void Extruder::on_config_reload(void* argument){
-    this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
-    this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
-    this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
-    this->max_speed                   = this->kernel->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
 
-    this->step_pin.from_string(         this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
-    this->dir_pin.from_string(          this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
-    this->en_pin.from_string(           this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+    // If this module uses the old "single extruder" configuration style
+    if( this->single_config ){ 
 
-	// disable by default
-	this->en_pin.set(1);
+        this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
+        this->max_speed                   = this->kernel->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
+        this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
+
+        this->step_pin.from_string(         this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
+        this->dir_pin.from_string(          this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
+        this->en_pin.from_string(           this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+
+    }else{
+    // If this module was created with the new multi extruder configuration style
+
+        this->steps_per_millimeter        = this->kernel->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->acceleration                = this->kernel->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
+        this->max_speed                   = this->kernel->config->value(extruder_checksum, this->identifier, max_speed_checksum         )->by_default(1000)->as_number();
+        this->feed_rate                   = this->kernel->config->value(                                     default_feed_rate_checksum )->by_default(1000)->as_number();
+
+        this->step_pin.from_string(         this->kernel->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
+        this->dir_pin.from_string(          this->kernel->config->value(extruder_checksum, this->identifier, dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
+        this->en_pin.from_string(           this->kernel->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+
+    }
+
+    // disable by default
+    this->en_pin.set(1);
+
 }
 
 
