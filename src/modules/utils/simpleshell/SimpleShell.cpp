@@ -267,14 +267,15 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     string buffer;
     int c;
     int newlines = 0;
-
+    int linecnt= 0;
     // Print each line of the file
     while ((c = fgetc (lp)) != EOF) {
         buffer.append((char *)&c, 1);
-        if ( char(c) == '\n' ) {
+        if ( char(c) == '\n' || ++linecnt > 80) {
             newlines++;
             stream->puts(buffer.c_str());
             buffer.clear();
+            if(linecnt > 80) linecnt= 0;
         }
         if ( newlines == limit ) {
             break;
