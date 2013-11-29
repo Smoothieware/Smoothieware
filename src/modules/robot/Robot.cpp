@@ -214,6 +214,7 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
+            // TODO I'm not sure if the following is safe to do here, or should it go on the block queue?
             // case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
             //     gcode->mark_as_taken();
             //     if (gcode->has_letter('S'))
@@ -238,6 +239,11 @@ void Robot::on_gcode_received(void * argument){
                 }
                 break;
 
+            case 400: // wait until all moves are done up to this point
+                gcode->mark_as_taken();
+                this->kernel->conveyor->wait_for_empty_queue();
+                break;
+
             case 665: // M665 set optional arm solution variables based on arm solution
                 gcode->mark_as_taken();
                 // the parameter args could be any letter so try each one
@@ -257,7 +263,8 @@ void Robot::on_gcode_received(void * argument){
                 break;
 
         }
-   }
+    }
+
     if( this->motion_mode < 0)
         return;
 
