@@ -26,7 +26,7 @@ public:
     void on_main_loop();
     void display_menu_line(uint16_t line);
     void clicked_menu_entry(uint16_t line);
-    int idle_timeout_secs() { return 30; }
+    int idle_timeout_secs() { return 60; }
 
 private:
     PanelScreen *extruder_screen;
