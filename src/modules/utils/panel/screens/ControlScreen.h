@@ -23,6 +23,7 @@ public:
     void on_enter();
     void display_menu_line(uint16_t line);
     void set_jog_increment(double i) { jog_increment = i;}
+    int idle_timeout_secs() { return 120; }
 
 private:
     void clicked_menu_entry(uint16_t line);
