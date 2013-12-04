@@ -12,6 +12,24 @@
 #include "modules/tools/extruder/Extruder.h"
 #include <mri.h>
 
+#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
+#define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
+#define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
+#define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
+#define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
+#define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
+#define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
+
+#define extruder_checksum                    CHECKSUM("extruder")
+
+#define default_feed_rate_checksum           CHECKSUM("default_feed_rate")
+#define steps_per_mm_checksum                CHECKSUM("steps_per_mm")
+#define acceleration_checksum                CHECKSUM("acceleration")
+#define step_pin_checksum                    CHECKSUM("step_pin")
+#define dir_pin_checksum                     CHECKSUM("dir_pin")
+#define en_pin_checksum                      CHECKSUM("en_pin")
+#define max_speed_checksum                   CHECKSUM("max_speed")
+
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
 /* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
@@ -65,7 +83,7 @@ void Extruder::on_module_loaded() {
 void Extruder::on_config_reload(void* argument){
 
     // If this module uses the old "single extruder" configuration style
-    if( this->single_config ){ 
+    if( this->single_config ){
 
         this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
         this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
