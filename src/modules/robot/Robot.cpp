@@ -25,6 +25,26 @@ using std::string;
 #include "arm_solutions/JohannKosselSolution.h"
 #include "arm_solutions/HBotSolution.h"
 
+#define default_seek_rate_checksum             CHECKSUM("default_seek_rate")
+#define default_feed_rate_checksum             CHECKSUM("default_feed_rate")
+#define mm_per_line_segment_checksum           CHECKSUM("mm_per_line_segment")
+#define delta_segments_per_second_checksum     CHECKSUM("delta_segments_per_second")
+#define mm_per_arc_segment_checksum            CHECKSUM("mm_per_arc_segment")
+#define arc_correction_checksum                CHECKSUM("arc_correction")
+#define x_axis_max_speed_checksum              CHECKSUM("x_axis_max_speed")
+#define y_axis_max_speed_checksum              CHECKSUM("y_axis_max_speed")
+#define z_axis_max_speed_checksum              CHECKSUM("z_axis_max_speed")
+
+// arm solutions
+#define arm_solution_checksum                  CHECKSUM("arm_solution")
+#define cartesian_checksum                     CHECKSUM("cartesian")
+#define rotatable_cartesian_checksum           CHECKSUM("rotatable_cartesian")
+#define rostock_checksum                       CHECKSUM("rostock")
+#define delta_checksum                         CHECKSUM("delta")
+#define hbot_checksum                          CHECKSUM("hbot")
+#define corexy_checksum                        CHECKSUM("corexy")
+#define kossel_checksum                        CHECKSUM("kossel")
+
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
 #define max(a,b) (((a) > (b)) ? (a) : (b))

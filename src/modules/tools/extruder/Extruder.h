@@ -15,27 +15,6 @@
 #include "modules/robot/Block.h"
 #include "modules/tools/toolsmanager/Tool.h"
 
-#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
-#define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
-#define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
-#define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
-#define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
-#define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
-#define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
-
-#define extruder_checksum                    CHECKSUM("extruder")
-
-#define steps_per_mm_checksum                CHECKSUM("steps_per_mm")
-#define acceleration_checksum                CHECKSUM("acceleration")
-#define step_pin_checksum                    CHECKSUM("step_pin")
-#define dir_pin_checksum                     CHECKSUM("dir_pin")
-#define en_pin_checksum                      CHECKSUM("en_pin")
-#define max_speed_checksum                   CHECKSUM("max_speed")
-
-
-
-// default_feed_rate_checksum defined by Robot.h
-
 #define OFF 0
 #define SOLO 1
 #define FOLLOW 2
