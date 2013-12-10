@@ -165,10 +165,11 @@ uint32_t Panel::encoder_check(uint32_t dummy)
     // TODO if encoder reads go through i2c like on smoothie panel this needs to be
     // optionally done in idle loop, however when reading encoder directly it needs to be done
     // frequently, smoothie panel will return an actual delta count so won't miss any if polled slowly
+    // NOTE this code will not work if change is not -1,0,-1 anything greater (as in above case) will not work properly
     static int encoder_counter = 0;
     int change = lcd->readEncoderDelta();
     encoder_counter += change;
-    // TODO divisor needs to be configurable
+
     if ( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ) {
         this->counter_changed = true;
         (*this->counter) += change;
@@ -315,8 +316,8 @@ void Panel::on_idle(void *argument)
 uint32_t Panel::on_up(uint32_t dummy)
 {
     // this is simulating encoder clicks, but needs to be inverted to
-    // increment values on up
-    int inc = (this->mode == CONTROL_MODE) ? 1 : -1;
+    // increment values on up,increment by
+    int inc = (this->mode == CONTROL_MODE) ? 1 : -(this->menu_offset+1);
     *this->counter += inc;
     this->counter_changed = true;
     return 0;
@@ -324,7 +325,7 @@ uint32_t Panel::on_up(uint32_t dummy)
 
 uint32_t Panel::on_down(uint32_t dummy)
 {
-    int inc = (this->mode == CONTROL_MODE) ? -1 : 1;
+    int inc = (this->mode == CONTROL_MODE) ? -1 : (this->menu_offset+1);
     *this->counter += inc;
     this->counter_changed = true;
     return 0;
@@ -423,7 +424,10 @@ void Panel::menu_update()
     #endif
 
     this->menu_selected_line = msl; // update atomically we hope
-    this->menu_current_line = msl >> this->menu_offset;
+    // figure out which actual line to select, if we have a menu offset it means we want to move one line per two clicks
+    if(msl % (this->menu_offset+1) == 0) { // only if divisible by offset
+        this->menu_current_line = msl >> this->menu_offset;
+    }
 
     // What to display
     if ( this->menu_rows > this->panel_lines ) {
