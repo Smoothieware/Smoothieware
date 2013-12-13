@@ -136,13 +136,17 @@ void Extruder::on_gcode_received(void *argument){
             gcode->stream->printf("E:%4.1f ", this->current_position);
             gcode->add_nl = true;
             gcode->mark_as_taken();
-        }
-        if (gcode->m == 92 ){
+
+        }else if (gcode->m == 92 ){
             double spm = this->steps_per_millimeter;
             if (gcode->has_letter('E'))
                 spm = gcode->get_value('E');
             gcode->stream->printf("E:%g ", spm);
             gcode->add_nl = true;
+            gcode->mark_as_taken();
+
+        }else if (gcode->m == 500 || gcode->m == 503){// M500 saves some volatile settings to config override file, M503 just prints the settings
+            gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter);
             gcode->mark_as_taken();
         }
     }

@@ -34,6 +34,7 @@ class Kernel {
     public:
         Kernel();
         static Kernel* instance; // the Singleton instance of Kernel usable anywhere
+        const char* config_override_filename(){ return "/sd/config-override"; }
 
         void add_module(Module* module);
         void register_for_event(_EVENT_ENUM id_event, Module* module);

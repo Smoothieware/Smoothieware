@@ -15,6 +15,7 @@ using std::string;
 #include "modules/robot/Conveyor.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/AppendFileStream.h"
 
 GcodeDispatch::GcodeDispatch(){}
 
@@ -116,7 +117,26 @@ void GcodeDispatch::on_console_line_received(void * line){
                         continue;
                     }
 
-    //                 printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
+                    if(gcode->has_m && gcode->m == 500) { // M500 save volatile settings to config-override
+                        // delete the existing file
+                        remove(kernel->config_override_filename());
+                        // replace stream with one that appends to config-override file
+                        gcode->stream= new AppendFileStream(kernel->config_override_filename());
+                        // dispatch the M500
+                        this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                        delete gcode->stream;
+                        delete gcode;
+                        new_message.stream->printf("Settings Stored to %s\r\nok\r\n", kernel->config_override_filename());
+                        continue;
+                    }
+                    if(gcode->has_m && gcode->m == 501) { // M501 deletes config-override so everything defaults to what is in config
+                        remove(kernel->config_override_filename());
+                        new_message.stream->printf("config override file deleted %s\r\nok\r\n", kernel->config_override_filename());
+                        delete gcode;
+                        continue;
+                    }
+
+                    //printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
                     //Dispatch message!
                     this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
                     if (gcode->add_nl)
