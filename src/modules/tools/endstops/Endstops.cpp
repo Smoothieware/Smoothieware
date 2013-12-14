@@ -350,11 +350,13 @@ void Endstops::do_homing_corexy(char axes_to_move)
     // Home Y first so the X limit swicth canbe in a fixed pplace on the frame not on the X Gantry
     // TODO should really make order configurable
     if (axes_to_move & 0x02) { // Home Y, which means both X and Y in different directions
-        corexy_home(Y_AXIS, true, false, this->fast_rates[Y_AXIS], this->slow_rates[Y_AXIS], this->retract_steps[Y_AXIS]);
+        bool dir= this->home_direction[Y_AXIS];
+        corexy_home(Y_AXIS, dir, !dir, this->fast_rates[Y_AXIS], this->slow_rates[Y_AXIS], this->retract_steps[Y_AXIS]);
     }
 
     if (axes_to_move & 0x01) { // Home X, which means both X and Y in same direction
-        corexy_home(X_AXIS, true, true, this->fast_rates[X_AXIS], this->slow_rates[X_AXIS], this->retract_steps[X_AXIS]);
+        bool dir= this->home_direction[X_AXIS];
+        corexy_home(X_AXIS, dir, dir, this->fast_rates[X_AXIS], this->slow_rates[X_AXIS], this->retract_steps[X_AXIS]);
     }
 
     if (axes_to_move & 0x04) { // move Z
