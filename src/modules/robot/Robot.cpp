@@ -208,9 +208,9 @@ void Robot::on_gcode_received(void * argument){
            }
        }
    }else if( gcode->has_m){
-     switch( gcode->m ){
+        double steps[3];
+        switch( gcode->m ){
             case 92: // M92 - set steps per mm
-                double steps[3];
                 this->arm_solution->get_steps_per_millimeter(steps);
                 if (gcode->has_letter('X'))
                     steps[0] = this->to_millimeters(gcode->get_value('X'));
@@ -234,6 +234,7 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
+
             // TODO I'm not sure if the following is safe to do here, or should it go on the block queue?
             // case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
             //     gcode->mark_as_taken();
@@ -262,6 +263,13 @@ void Robot::on_gcode_received(void * argument){
             case 400: // wait until all moves are done up to this point
                 gcode->mark_as_taken();
                 this->kernel->conveyor->wait_for_empty_queue();
+                break;
+
+            case 500: // M500 saves some volatile settings to config override file
+            case 503: // M503 just prints the settings
+                this->arm_solution->get_steps_per_millimeter(steps);
+                gcode->stream->printf(";Steps per unit:\nM92 X%1.4f Y%1.4f Z%1.4f\n", steps[0], steps[1], steps[2]);
+                gcode->mark_as_taken();
                 break;
 
             case 665: // M665 set optional arm solution variables based on arm solution

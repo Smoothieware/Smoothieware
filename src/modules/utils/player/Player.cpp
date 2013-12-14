@@ -27,7 +27,7 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_SET_PUBLIC_DATA);
     this->register_for_event(ON_GCODE_RECEIVED);
 
-    this->on_boot_gcode = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode -q")->as_string();
+    this->on_boot_gcode = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
     this->on_boot_gcode_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs= 0;
     this->reply_stream= NULL;
@@ -170,7 +170,7 @@ void Player::play_command( string parameters, StreamOutput* stream ){
 
     // Get filename
     this->filename          = this->absolute_from_relative(shift_parameter( parameters ));
-    string options           = shift_parameter( parameters );
+    string options          = shift_parameter( parameters );
 
     this->current_file_handler = fopen( this->filename.c_str(), "r");
     if(this->current_file_handler == NULL){
@@ -274,12 +274,12 @@ void Player::cd_command( string parameters, StreamOutput* stream ){
 
 void Player::on_main_loop(void* argument){
     if( !this->booted ) {
+        this->booted = true;
         if( this->on_boot_gcode_enable ){
             this->play_command(this->on_boot_gcode, this->kernel->serial);
         }else{
             //this->kernel->serial->printf("On boot gcode disabled! skipping...\n");
         }
-        this->booted = true;
     }
 
     if( this->playing_file ){
