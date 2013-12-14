@@ -268,7 +268,7 @@ void Robot::on_gcode_received(void * argument){
             case 500: // M500 saves some volatile settings to config override file
             case 503: // M503 just prints the settings
                 this->arm_solution->get_steps_per_millimeter(steps);
-                gcode->stream->printf(";Steps per unit:\nM92 X%1.4f Y%1.4f Z%1.4f\n", steps[0], steps[1], steps[2]);
+                gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", steps[0], steps[1], steps[2]);
                 gcode->mark_as_taken();
                 break;
 
