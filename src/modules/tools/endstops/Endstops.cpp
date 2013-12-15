@@ -347,8 +347,55 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate
 // this homing works for HBots/CoreXY
 void Endstops::do_homing_corexy(char axes_to_move)
 {
+<<<<<<< HEAD
     // TODO should really make order configurable, and allow XY to home at the same time, diagonally
+=======
+    // TODO should really make order configurable, and selectr whether to allow XY to home at the same time, diagonally
+    // To move XY at the same time only one motor needs to turn, determine which motor and which direction based on min or max directions
+    // allow to move until an endstop triggers, then stop that motor.
+    // continue moving in the direction not yet triggered (which means two motors turning) until endstop hit
+>>>>>>> ba2094f... Make X and Y home at the same time on corexy/hbot like regular homing
 
+    if((axes_to_move & 0x03) == 0x03) { // both X and Y need Homing
+        // determine which motor to turn and which way
+        bool dirx= this->home_direction[X_AXIS];
+        bool diry= this->home_direction[Y_AXIS];
+        int motor;
+        bool dir;
+        if(dirx && diry) { // min/min
+            motor= X_AXIS;
+            dir= true;
+        }else if(dirx && !diry) { // min/max
+            motor= Y_AXIS;
+            dir= true;
+        }else if(!dirx && diry) { // max/min
+            motor= Y_AXIS;
+            dir= false;
+        }else if(!dirx && !diry) { // max/max
+            motor= X_AXIS;
+            dir= false;
+        }
+
+        // then move both X and Y until one hits the endstop
+        this->status = MOVING_TO_ORIGIN_FAST;
+        this->steppers[motor]->set_speed(this->fast_rates[motor]);
+        this->steppers[motor]->move(dir, 10000000);
+        // wait until either X or Y hits the endstop
+        bool running= true;
+        while (running) {
+            this->kernel->call_event(ON_IDLE);
+            for(int m=X_AXIS;m<=Y_AXIS;m++) {
+                if(this->pins[m + (this->home_direction[m] ? 0 : 3)].get()) {
+                    // turn off motor
+                    if(this->steppers[motor]->moving) this->steppers[motor]->move(0, 0);
+                    running= false;
+                    break;
+                }
+            }
+        }
+    }
+
+    // move individual axis
     if (axes_to_move & 0x01) { // Home X, which means both X and Y in same direction
         bool dir= this->home_direction[X_AXIS];
         corexy_home(X_AXIS, dir, dir, this->fast_rates[X_AXIS], this->slow_rates[X_AXIS], this->retract_steps[X_AXIS]);
