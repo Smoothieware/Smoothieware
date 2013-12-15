@@ -347,14 +347,10 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate
 // this homing works for HBots/CoreXY
 void Endstops::do_homing_corexy(char axes_to_move)
 {
-<<<<<<< HEAD
-    // TODO should really make order configurable, and allow XY to home at the same time, diagonally
-=======
     // TODO should really make order configurable, and selectr whether to allow XY to home at the same time, diagonally
     // To move XY at the same time only one motor needs to turn, determine which motor and which direction based on min or max directions
     // allow to move until an endstop triggers, then stop that motor.
     // continue moving in the direction not yet triggered (which means two motors turning) until endstop hit
->>>>>>> ba2094f... Make X and Y home at the same time on corexy/hbot like regular homing
 
     if((axes_to_move & 0x03) == 0x03) { // both X and Y need Homing
         // determine which motor to turn and which way
