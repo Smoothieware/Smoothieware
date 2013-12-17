@@ -1,16 +1,18 @@
 #ifndef _APPENDFILESTREAM_H_
 #define _APPENDFILESTREAM_H_
 
-#include <string>
 #include "StreamOutput.h"
+#include "string.h"
+#include "stdlib.h"
 
 class AppendFileStream : public StreamOutput {
     public:
-        AppendFileStream(const char *filename){ fn= filename; }
+        AppendFileStream(const char *filename) { fn= strdup(filename); }
+        virtual ~AppendFileStream(){ free(fn); }
         int puts(const char*);
 
     private:
-        std::string fn;
+        char *fn;
 };
 
 #endif

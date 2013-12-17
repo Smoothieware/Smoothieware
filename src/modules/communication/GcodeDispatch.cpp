@@ -15,7 +15,7 @@ using std::string;
 #include "modules/robot/Conveyor.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
-#include "libs/AppendFileStream.h"
+#include "libs/FileStream.h"
 
 GcodeDispatch::GcodeDispatch() {}
 
@@ -123,8 +123,8 @@ void GcodeDispatch::on_console_line_received(void *line)
                             case 500: // M500 save volatile settings to config-override
                                 // delete the existing file
                                 remove(kernel->config_override_filename());
-                                // replace stream with one that appends to config-override file
-                                gcode->stream = new AppendFileStream(kernel->config_override_filename());
+                                // replace stream with one that writes to config-override file
+                                gcode->stream = new FileStream(kernel->config_override_filename());
                                 // dispatch the M500 here so we can free up the stream when done
                                 this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
                                 delete gcode->stream;
