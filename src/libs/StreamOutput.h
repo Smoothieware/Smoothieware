@@ -18,9 +18,11 @@
 
 class NullStreamOutput;
 
-class StreamOutput : public mbed::Stream {
+class StreamOutput {
     public:
         StreamOutput(){}
+        virtual ~StreamOutput(){}
+
 //         virtual int puts(const char *str) = 0;
         virtual int printf(const char* format, ...) __attribute__ ((format(printf, 2, 3))) {
             char *buffer;
