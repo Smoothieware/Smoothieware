@@ -51,8 +51,8 @@ void ExtruderScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
         case 0: this->panel->enter_screen(this->parent); return;
-        case 1: command = "G91\nG1 E5\nG90"; break;
-        case 2: command = "G91\nG1 E-5\nG90"; break;
+        case 1: command = "G91\nG1 E5 F100\nG90"; break;
+        case 2: command = "G91\nG1 E-5 F100\nG90"; break;
     }
 }
 
