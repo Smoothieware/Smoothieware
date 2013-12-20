@@ -34,10 +34,11 @@
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
 
-#define menu_offset_checksum       CHECKSUM("menu_offset")
-#define jog_x_feedrate_checksum    CHECKSUM("alpha_jog_feedrate")
-#define jog_y_feedrate_checksum    CHECKSUM("beta_jog_feedrate")
-#define jog_z_feedrate_checksum    CHECKSUM("gamma_jog_feedrate")
+#define menu_offset_checksum        CHECKSUM("menu_offset")
+#define encoder_resolution_checksum CHECKSUM("encoder_resolution")
+#define jog_x_feedrate_checksum     CHECKSUM("alpha_jog_feedrate")
+#define jog_y_feedrate_checksum     CHECKSUM("beta_jog_feedrate")
+#define jog_z_feedrate_checksum     CHECKSUM("gamma_jog_feedrate")
 
 #define hotend_temp_checksum CHECKSUM("hotend_temperature")
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
@@ -105,6 +106,9 @@ void Panel::on_module_loaded()
     // an end user usability issue
     this->menu_offset = this->kernel->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
 
+    // override default encoder resolution if needed
+    this->encoder_click_resolution = this->kernel->config->value( panel_checksum, encoder_resolution_checksum )->by_default(this->lcd->getEncoderResolution())->as_number();
+
     // load jogging feedrates in mm/min
     jogging_speed_mm_min[0] = this->kernel->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
     jogging_speed_mm_min[1] = this->kernel->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0)->as_number();
@@ -114,7 +118,6 @@ void Panel::on_module_loaded()
     default_hotend_temperature = this->kernel->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0)->as_number();
     default_bed_temperature = this->kernel->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
 
-    this->encoder_click_resolution = this->lcd->getEncoderResolution();
 
     this->up_button.up_attach(    this, &Panel::on_up );
     this->down_button.up_attach(  this, &Panel::on_down );
