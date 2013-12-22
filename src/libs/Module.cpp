@@ -8,6 +8,9 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 
+// Events are the basic building blocks of Smoothie. They register for events, and then do stuff when those events are called.
+// You add things to Smoothie by making a new class that inherits the Module class. See http://smoothieware.org/moduleexample for a crude introduction
+
 const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
     #define EVENT(name, func) &Module::func ,
     #include "Event.h"
@@ -15,6 +18,7 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
 };
 
 Module::Module(){}
+Module::~Module(){}
 
 void Module::on_module_loaded(){}
 

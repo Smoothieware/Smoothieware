@@ -17,7 +17,7 @@
 #define play_command_checksum           CHECKSUM("play")
 #define progress_command_checksum       CHECKSUM("progress")
 #define abort_command_checksum          CHECKSUM("abort")
-#define cd_command_checksum       CHECKSUM("cd")
+#define cd_command_checksum             CHECKSUM("cd")
 #define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
 #define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
 
@@ -29,6 +29,9 @@ class Player : public Module {
         void on_console_line_received( void* argument );
         void on_main_loop( void* argument );
         void on_second_tick(void* argument);
+        void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
+        void on_gcode_received(void *argument);
         string absolute_from_relative( string path );
         void cd_command(   string parameters, StreamOutput* stream );
         void play_command( string parameters, StreamOutput* stream );
@@ -37,15 +40,17 @@ class Player : public Module {
 
     private:
         string current_path;
+        string filename;
 
-        bool on_boot_enable;
+        bool on_boot_gcode_enable;
         bool booted;
-        string on_boot_file_name;
+        string on_boot_gcode;
         bool playing_file;
         StreamOutput* current_stream;
+        StreamOutput* reply_stream;
         FILE* current_file_handler;
-        long file_size, played_cnt;
-        int elapsed_secs;
+        unsigned long file_size, played_cnt;
+        unsigned long elapsed_secs;
 };
 
 #endif // PLAYER_H

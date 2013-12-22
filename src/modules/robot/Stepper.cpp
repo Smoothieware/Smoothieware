@@ -17,11 +17,13 @@ using namespace std;
 #include <mri.h>
 
 
+// The stepper reacts to blocks that have XYZ movement to transform them into actual stepper motor moves
+// TODO: This does accel, accel should be in StepperMotor
+
 Stepper* stepper;
 uint32_t previous_step_count;
 uint32_t skipped_speed_updates;
 uint32_t speed_ticks_counter;
-
 
 Stepper::Stepper(){
     this->current_block = NULL;
@@ -38,6 +40,7 @@ void Stepper::on_module_loaded(){
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_EXECUTE);
+    this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
 
@@ -80,7 +83,21 @@ void Stepper::on_play(void* argument){
     this->kernel->robot->gamma_stepper_motor->unpause();
 }
 
+void Stepper::on_gcode_received(void* argument){
+    Gcode* gcode = static_cast<Gcode*>(argument);
+    // Attach gcodes to the last block for on_gcode_execute
+    if( gcode->has_m && (gcode->m == 84 || gcode->m == 17 || gcode->m == 18 )) {
+        gcode->mark_as_taken();
+        if( this->kernel->conveyor->queue.size() == 0 ){
+            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+        }else{
+            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            block->append_gcode(gcode);
+        }
+    }  
+}
 
+// React to enable/disable gcodes
 void Stepper::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
 
@@ -88,12 +105,13 @@ void Stepper::on_gcode_execute(void* argument){
         if( gcode->m == 17 ){
             this->turn_enable_pins_on();
         }
-        if( gcode->m == 84 || gcode->m == 18 ){
+        if( (gcode->m == 84 || gcode->m == 18) && !gcode->has_letter('E') ){
             this->turn_enable_pins_off();
         }
     }
 }
 
+// Enable steppers
 void Stepper::turn_enable_pins_on(){
     this->kernel->robot->alpha_en_pin.set(0);
     this->kernel->robot->beta_en_pin.set(0);
@@ -101,6 +119,7 @@ void Stepper::turn_enable_pins_on(){
     this->enable_pins_status = true;
 }
 
+// Disable steppers
 void Stepper::turn_enable_pins_off(){
     this->kernel->robot->alpha_en_pin.set(1);
     this->kernel->robot->beta_en_pin.set(1);
@@ -142,6 +161,9 @@ void Stepper::on_block_begin(void* argument){
     if( this->kernel->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->beta_stepper_motor; }
     if( this->kernel->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->gamma_stepper_motor; }
 
+    // Set the initial speed for this move
+    this->trapezoid_generator_tick(0);
+
     // Synchronise the acceleration curve with the stepping
     this->synchronize_acceleration(0);
 
@@ -151,9 +173,6 @@ void Stepper::on_block_begin(void* argument){
 void Stepper::on_block_end(void* argument){
     this->current_block = NULL; //stfu !
 }
-
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
 
 // When a stepper motor has finished it's assigned movement
 uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
@@ -175,35 +194,35 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
 // current_block stays untouched by outside handlers for the duration of this function call.
 uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
 
+    // Do not do the accel math for nothing
     if(this->current_block && !this->paused && this->main_stepper->moving ) {
+       
+        // Store this here because we use it a lot down there 
         uint32_t current_steps_completed = this->main_stepper->stepped;
 
-        if( previous_step_count == current_steps_completed && previous_step_count != 0 ){
-            // We must skip this step update because no step has happened
-            skipped_speed_updates++;
-            return 0;
-        }else{
-            previous_step_count = current_steps_completed;
-        }
-
+        // Do not accel, just set the value
         if( this->force_speed_update ){
           this->force_speed_update = false;
           this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
           return 0;
         }
 
+        // If we are accelerating
         if(current_steps_completed <= this->current_block->accelerate_until + 1) {
-              this->trapezoid_adjusted_rate += ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
-
+            // Increase speed   
+            this->trapezoid_adjusted_rate += this->current_block->rate_delta;
               if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
                   this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
               }
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+        
+        // If we are decelerating 
         }else if (current_steps_completed > this->current_block->decelerate_after) {
-              // NOTE: We will only reduce speed if the result will be > 0. This catches small
+             // Reduce speed  
+             // NOTE: We will only reduce speed if the result will be > 0. This catches small
               // rounding errors that might leave steps hanging after the last trapezoid tick.
               if(this->trapezoid_adjusted_rate > this->current_block->rate_delta * 1.5) {
-                  this->trapezoid_adjusted_rate -= ( skipped_speed_updates + 1 ) * this->current_block->rate_delta;
+                  this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
               }else{
                   this->trapezoid_adjusted_rate = this->current_block->rate_delta * 1.5;
               }
@@ -211,6 +230,8 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
                   this->trapezoid_adjusted_rate = this->current_block->final_rate;
               }
               this->set_step_events_per_minute(this->trapezoid_adjusted_rate);
+        
+        // If we are cruising 
         }else {
               // Make sure we cruise at exactly nominal rate
               if (this->trapezoid_adjusted_rate != this->current_block->nominal_rate) {
@@ -220,9 +241,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
           }
     }
 
-    skipped_speed_updates = 0;
     return 0;
-
 }
 
 
@@ -247,12 +266,12 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
         steps_per_minute = this->minimum_steps_per_minute;
     }
 
-
     // Instruct the stepper motors
     if( this->kernel->robot->alpha_stepper_motor->moving ){ this->kernel->robot->alpha_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[ALPHA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
     if( this->kernel->robot->beta_stepper_motor->moving  ){ this->kernel->robot->beta_stepper_motor->set_speed(  (steps_per_minute/60L) * ( (double)this->current_block->steps[BETA_STEPPER ] / (double)this->current_block->steps_event_count ) ); }
     if( this->kernel->robot->gamma_stepper_motor->moving ){ this->kernel->robot->gamma_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[GAMMA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
 
+    // Other modules might want to know the speed changed
     this->kernel->call_event(ON_SPEED_CHANGE, this);
 
 }
@@ -262,10 +281,6 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
 // This is caller in "step just occured" or "block just began" ( step Timer ) context, so we need to be fast.
 // All we do is reset the other timer so that it does what we want
 uint32_t Stepper::synchronize_acceleration(uint32_t dummy){
-
-    LPC_GPIO1->FIODIR |= 1<<21;
-    LPC_GPIO1->FIOSET = 1<<21;
-
 
     // No move was done, this is called from on_block_begin
     // This means we setup the accel timer in a way where it gets called right after
@@ -292,10 +307,6 @@ uint32_t Stepper::synchronize_acceleration(uint32_t dummy){
         LPC_TIM2->TC = LPC_TIM0->TC;
     }
 
-    LPC_GPIO1->FIOCLR = 1<<21;
-
     return 0;
 }
 
-
-//#pragma GCC pop_options

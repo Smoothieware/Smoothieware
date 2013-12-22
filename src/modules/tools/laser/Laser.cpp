@@ -22,10 +22,24 @@ void Laser::on_module_loaded() {
         return;
     }
 
-    this->laser_pin = new mbed::PwmOut(p21);
-    this->laser_pin->period_us(20);
+    // Get smoothie-style pin from config
+    Pin* dummy_pin = new Pin();
+    dummy_pin->from_string(this->kernel->config->value(laser_module_pin_checksum)->by_default("nc")->as_string())->as_output();
+    
+    // Get mBed-style pin from smoothie-style pin
+    if( dummy_pin->port_number == 2 ){
+        if( dummy_pin->pin == 0 ){ this->laser_pin = new mbed::PwmOut(p26); }
+        if( dummy_pin->pin == 1 ){ this->laser_pin = new mbed::PwmOut(p25); }
+        if( dummy_pin->pin == 2 ){ this->laser_pin = new mbed::PwmOut(p24); }
+        if( dummy_pin->pin == 3 ){ this->laser_pin = new mbed::PwmOut(p23); }
+        if( dummy_pin->pin == 4 ){ this->laser_pin = new mbed::PwmOut(p22); }
+        if( dummy_pin->pin == 5 ){ this->laser_pin = new mbed::PwmOut(p21); }
+    }
 
-    this->laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.3)->as_number() ;
+    this->laser_pin->period_us(20);
+    this->laser_pin->write(0);
+
+    this->laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.8)->as_number() ;
     this->laser_tickle_power = this->kernel->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
 
     //register for events

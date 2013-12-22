@@ -15,4 +15,4 @@ $(DIRSCLEAN): %.clean:
 	@echo Cleaning $*
 	@ $(MAKE) -C $*  clean
 
-.PHONY: all $(DIRS) $(DIRSCLEAN)
+.PHONY: all clean $(DIRS) $(DIRSCLEAN)

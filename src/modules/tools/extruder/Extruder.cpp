@@ -12,22 +12,39 @@
 #include "modules/tools/extruder/Extruder.h"
 #include <mri.h>
 
+#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
+#define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
+#define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
+#define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
+#define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
+#define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
+#define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
+
+#define extruder_checksum                    CHECKSUM("extruder")
+
+#define default_feed_rate_checksum           CHECKSUM("default_feed_rate")
+#define steps_per_mm_checksum                CHECKSUM("steps_per_mm")
+#define acceleration_checksum                CHECKSUM("acceleration")
+#define step_pin_checksum                    CHECKSUM("step_pin")
+#define dir_pin_checksum                     CHECKSUM("dir_pin")
+#define en_pin_checksum                      CHECKSUM("en_pin")
+#define max_speed_checksum                   CHECKSUM("max_speed")
+
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+
 /* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
 * It can work in two modes : either the head does not move, and the extruder moves the filament at a specified speed ( SOLO mode here )
 * or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
 */
 
-Extruder::Extruder() {
+Extruder::Extruder( uint16_t config_identifier ) {
     this->absolute_mode = true;
-    this->step_counter = 0;
-    this->counter_increment = 0;
-    this->paused = false;
+    this->paused        = false;
+    this->single_config = false;
+    this->identifier    = config_identifier;
 }
 
 void Extruder::on_module_loaded() {
-
-    // Do not do anything if not enabledd
-    if( this->kernel->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() == false ){ return; }
 
     // Settings
     this->on_config_reload(this);
@@ -48,7 +65,7 @@ void Extruder::on_module_loaded() {
     // Start values
     this->target_position = 0;
     this->current_position = 0;
-    this->current_steps = 0;
+    this->unstepped_distance = 0;
     this->current_block = NULL;
     this->mode = OFF;
 
@@ -64,18 +81,36 @@ void Extruder::on_module_loaded() {
 
 // Get config
 void Extruder::on_config_reload(void* argument){
-    this->microseconds_per_step_pulse = this->kernel->config->value(microseconds_per_step_pulse_checksum)->by_default(5)->as_number();
-    this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
-    this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
-    this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
-    this->max_speed                   = this->kernel->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
 
-    this->step_pin.from_string(         this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
-    this->dir_pin.from_string(          this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
-    this->en_pin.from_string(           this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output()->as_open_drain();
+    // If this module uses the old "single extruder" configuration style
+    if( this->single_config ){
 
-	// disable by default
-	this->en_pin.set(1);
+        this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
+        this->max_speed                   = this->kernel->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
+        this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
+
+        this->step_pin.from_string(         this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
+        this->dir_pin.from_string(          this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
+        this->en_pin.from_string(           this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+
+    }else{
+    // If this module was created with the new multi extruder configuration style
+
+        this->steps_per_millimeter        = this->kernel->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->acceleration                = this->kernel->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
+        this->max_speed                   = this->kernel->config->value(extruder_checksum, this->identifier, max_speed_checksum         )->by_default(1000)->as_number();
+        this->feed_rate                   = this->kernel->config->value(                                     default_feed_rate_checksum )->by_default(1000)->as_number();
+
+        this->step_pin.from_string(         this->kernel->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
+        this->dir_pin.from_string(          this->kernel->config->value(extruder_checksum, this->identifier, dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
+        this->en_pin.from_string(           this->kernel->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+
+    }
+
+    // disable by default
+    this->en_pin.set(1);
+
 }
 
 
@@ -100,18 +135,26 @@ void Extruder::on_gcode_received(void *argument){
         if (gcode->m == 114){
             gcode->stream->printf("E:%4.1f ", this->current_position);
             gcode->add_nl = true;
-        }
-        if (gcode->m == 92 ){
+            gcode->mark_as_taken();
+
+        }else if (gcode->m == 92 ){
             double spm = this->steps_per_millimeter;
             if (gcode->has_letter('E'))
                 spm = gcode->get_value('E');
             gcode->stream->printf("E:%g ", spm);
             gcode->add_nl = true;
+            gcode->mark_as_taken();
+
+        }else if (gcode->m == 500 || gcode->m == 503){// M500 saves some volatile settings to config override file, M503 just prints the settings
+            gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter);
+            gcode->mark_as_taken();
+            return;
         }
     }
 
     // Gcodes to pass along to on_gcode_execute
-    if( ( gcode->has_m && ( gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
+    if( ( gcode->has_m && (gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
+        gcode->mark_as_taken();
         if( this->kernel->conveyor->queue.size() == 0 ){
             this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
         }else{
@@ -161,13 +204,14 @@ void Extruder::on_gcode_execute(void* argument){
 
     // Absolute/relative mode
     if( gcode->has_m ){
+        if( gcode->m == 17 ){ this->en_pin.set(0); }
+        if( gcode->m == 18 ){ this->en_pin.set(1); }
         if( gcode->m == 82 ){ this->absolute_mode = true; }
         if( gcode->m == 83 ){ this->absolute_mode = false; }
         if( gcode->m == 84 ){ this->en_pin.set(1); }
         if (gcode->m == 92 ){
             if (gcode->has_letter('E')){
                 this->steps_per_millimeter = gcode->get_value('E');
-                this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
             }
         }
     }
@@ -178,14 +222,15 @@ void Extruder::on_gcode_execute(void* argument){
     if( gcode->has_g ){
         // G92: Reset extruder position
         if( gcode->g == 92 ){
+            gcode->mark_as_taken();
             if( gcode->has_letter('E') ){
                 this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;
-                this->current_steps = int(floor(this->steps_per_millimeter * this->current_position));
+                this->unstepped_distance = 0;
             }else if( gcode->get_num_args() == 0){
                 this->current_position = 0.0;
                 this->target_position = this->current_position;
-                this->current_steps = 0;
+                this->unstepped_distance = 0;
             }
         }else if ((gcode->g == 0) || (gcode->g == 1)){
             // Extrusion length from 'G' Gcode
@@ -239,7 +284,13 @@ void Extruder::on_block_begin(void* argument){
 
         this->current_position += this->travel_distance ;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * this->travel_distance)));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance +this->unstepped_distance) )));
+
+        if ( this->travel_distance > 0 ){
+            this->unstepped_distance += this->travel_distance -(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }   else {
+            this->unstepped_distance += this->travel_distance +(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }
 
         if( steps_to_step != 0 ){
 
@@ -260,13 +311,20 @@ void Extruder::on_block_begin(void* argument){
 
         this->current_position += this->travel_distance;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * this->travel_distance)));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) )));
+
+        if ( this->travel_distance > 0 ){
+            this->unstepped_distance += this->travel_distance -(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }   else {
+            this->unstepped_distance += this->travel_distance +(steps_to_step/this->steps_per_millimeter); //catch any overflow
+        }
 
         if( steps_to_step != 0 ){
             block->take();
             this->current_block = block;
 
             this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step );
+            this->on_speed_change(0); // initialise speed in case we get called first
         }else{
             this->current_block = NULL;
         }
@@ -321,7 +379,7 @@ void Extruder::on_speed_change( void* argument ){
     * or even : ( stepper steps per minute / 60 ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed( max( ( this->kernel->stepper->trapezoid_adjusted_rate /60L) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ), this->kernel->stepper->minimum_steps_per_minute/60 ) );
+    this->stepper_motor->set_speed( max( ( this->kernel->stepper->trapezoid_adjusted_rate /60.0) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ), this->kernel->stepper->minimum_steps_per_minute/60.0 ) );
 
 }
 

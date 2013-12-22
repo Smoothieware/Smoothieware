@@ -31,9 +31,13 @@ class Pin {
 
         Pin* as_open_drain(void);
 
+        Pin* as_repeater(void);
+
         Pin* pull_up(void);
 
         Pin* pull_down(void);
+
+        Pin* pull_none(void);
 
         inline bool get(){
             if (this->pin >= 32) return false;

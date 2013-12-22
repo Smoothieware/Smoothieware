@@ -4,7 +4,6 @@ DIRS = mbed src
 DIRSCLEAN = $(addsuffix .clean,$(DIRS))
 
 all:
-	@echo Building mbed SDK
 	@ $(MAKE) -C mbed
 	@echo Building Smoothie
 	@ $(MAKE) -C src

@@ -15,6 +15,7 @@
 #include "libs/Pin.h"
 #include "libs/Median.h"
 #include "modules/robot/Conveyor.h"
+#include "PublicDataRequest.h"
 
 #include "MRI_Hooks.h"
 
@@ -37,12 +38,13 @@ void TemperatureControl::on_module_loaded(){
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_SECOND_TICK);
-
+    this->register_for_event(ON_GET_PUBLIC_DATA);
+    this->register_for_event(ON_SET_PUBLIC_DATA);
 }
 
 void TemperatureControl::on_main_loop(void* argument){
     if (this->min_temp_violated) {
-        kernel->streams->printf("MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
+        kernel->streams->printf("Error: MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
         this->min_temp_violated = false;
     }
 }
@@ -71,7 +73,8 @@ void TemperatureControl::on_config_reload(void* argument){
     }else if( thermistor->value.compare("RRRF100K"     ) == 0 ){ this->beta = 3960;
     }else if( thermistor->value.compare("RRRF10K"      ) == 0 ){ this->beta = 3964; this->r0 = 10000; this->r1 = 680; this->r2 = 1600;
     }else if( thermistor->value.compare("Honeywell100K") == 0 ){ this->beta = 3974;
-    }else if( thermistor->value.compare("Semitec"      ) == 0 ){ this->beta = 4267; }
+    }else if( thermistor->value.compare("Semitec"      ) == 0 ){ this->beta = 4267;
+    }else if( thermistor->value.compare("HT100K"       ) == 0 ){ this->beta = 3990; }
 
     // Preset values are overriden by specified values
     this->r0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r0_checksum  )->by_default(this->r0  )->as_number();               // Stated resistance eg. 100K
@@ -103,68 +106,79 @@ void TemperatureControl::on_config_reload(void* argument){
     set_low_on_debug(heater_pin.port_number, heater_pin.pin);
 
     // activate SD-DAC timer
-    this->kernel->slow_ticker->attach(1000, &heater_pin, &Pwm::on_tick);
+    this->kernel->slow_ticker->attach( this->kernel->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number() , &heater_pin, &Pwm::on_tick);
 
     // reading tick
     this->kernel->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
+    this->PIDdt= 1.0 / this->readings_per_second;
 
     // PID
-    this->p_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number();
-    this->i_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number();
-    this->d_factor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number();
-    this->i_max    = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(255)->as_number();
-    this->i = 0.0;
+    setPIDp( this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number() );
+    setPIDi( this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number() );
+    setPIDd( this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number() );
+    // set to the same as max_pwm by default
+    this->i_max = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
+    this->iTerm = 0.0;
+    this->lastInput= -1.0;
     this->last_reading = 0.0;
 }
 
 void TemperatureControl::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    if (gcode->has_m)
-    {
+    if (gcode->has_m) {
         // Get temperature
         if( gcode->m == this->get_m_code ){
-            gcode->stream->printf("%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
-            gcode->add_nl = true;
-        }
-        if (gcode->m == 301)
-        {
+            char buf[32]; // should be big enough for any status
+            int n= snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
+            gcode->txt_after_ok.append(buf, n);
+            gcode->mark_as_taken();
+
+        } else if (gcode->m == 301) {
+            gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
             {
                 if (gcode->has_letter('P'))
-                    this->p_factor = gcode->get_value('P');
+                    setPIDp( gcode->get_value('P') );
                 if (gcode->has_letter('I'))
-                    this->i_factor = gcode->get_value('I');
+                    setPIDi( gcode->get_value('I') );
                 if (gcode->has_letter('D'))
-                    this->d_factor = gcode->get_value('D');
+                    setPIDd( gcode->get_value('D') );
                 if (gcode->has_letter('X'))
                     this->i_max    = gcode->get_value('X');
             }
-            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor, this->d_factor, this->i_max, this->p, this->i, this->d, o);
-        }
-        if (gcode->m == 303)
-        {
-            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
-            {
+            //gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, this->p, this->i, this->d, o);
+            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, o);
+
+        } else if (gcode->m == 303) {
+            if (gcode->has_letter('E') && (gcode->get_value('E') == this->pool_index)) {
+                gcode->mark_as_taken();
                 double target = 150.0;
-                if (gcode->has_letter('P'))
-                {
-                    target = gcode->get_value('P');
+                if (gcode->has_letter('S')) {
+                    target = gcode->get_value('S');
                     gcode->stream->printf("Target: %5.1f\n", target);
                 }
+                int ncycles= 8;
+                if (gcode->has_letter('C')) {
+                    ncycles= gcode->get_value('C');
+                }
                 gcode->stream->printf("Start PID tune, command is %s\n", gcode->command.c_str());
-                this->pool->PIDtuner->begin(this, target, gcode->stream);
+                this->pool->PIDtuner->begin(this, target, gcode->stream, ncycles);
             }
-        }
-        
-        // Attach gcodes to the last block for on_gcode_execute
-        if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ){
+
+        } else if (gcode->m == 500 || gcode->m == 503){// M500 saves some volatile settings to config override file, M503 just prints the settings
+            gcode->stream->printf(";PID settings:\nM301 P%1.4f I%1.4f D%1.4f\n", this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt);
+            gcode->mark_as_taken();
+
+        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ) {
+            gcode->mark_as_taken();
+
+            // Attach gcodes to the last block for on_gcode_execute
             if( this->kernel->conveyor->queue.size() == 0 ){
                 this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
             }else{
                 Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
                 block->append_gcode(gcode);
             }
-            
         }
     }
 }
@@ -172,17 +186,12 @@ void TemperatureControl::on_gcode_received(void* argument){
 void TemperatureControl::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if( gcode->has_m){
-        // Set temperature without waiting
-        if( gcode->m == this->set_m_code && gcode->has_letter('S') )
+        if (((gcode->m == this->set_m_code) || (gcode->m == this->set_and_wait_m_code))
+            && gcode->has_letter('S'))
         {
             double v = gcode->get_value('S');
 
-            if (v == 1.0)
-                v = preset1;
-            else if (v == 2.0)
-                v = preset2;
-
-            if (v == 0)
+            if (v == 0.0)
             {
                 this->target_temperature = UNDEFINED;
                 this->heater_pin.set(0);
@@ -190,29 +199,57 @@ void TemperatureControl::on_gcode_execute(void* argument){
             else
             {
                 this->set_desired_temperature(v);
-            }
-        }
-        // Set temperature and wait
-        if( gcode->m == this->set_and_wait_m_code && gcode->has_letter('S') )
-        {
-            if (gcode->get_value('S') == 0)
-            {
-                this->target_temperature = UNDEFINED;
-                this->heater_pin.set(0);
-            }
-            else
-            {
-                this->set_desired_temperature(gcode->get_value('S'));
-                // Pause
-                this->kernel->pauser->take();
-                this->waiting = true;
+
+                if( gcode->m == this->set_and_wait_m_code)
+                {
+                    this->kernel->pauser->take();
+                    this->waiting = true;
+                }
             }
         }
     }
 }
 
+void TemperatureControl::on_get_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
 
-void TemperatureControl::set_desired_temperature(double desired_temperature){
+    if(!pdr->starts_with(temperature_control_checksum)) return;
+
+    if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
+
+    // ok this is targeted at us, so send back the requested data
+    if(pdr->third_element_is(current_temperature_checksum)) {
+        // this must be static as it will be accessed long after we have returned
+        static struct pad_temperature temp_return;
+        temp_return.current_temperature= this->get_temperature();
+        temp_return.target_temperature= (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
+        temp_return.pwm= this->o;
+
+        pdr->set_data_ptr(&temp_return);
+        pdr->set_taken();
+    }
+}
+
+void TemperatureControl::on_set_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(temperature_control_checksum)) return;
+
+    if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
+
+    // ok this is targeted at us, so set the temp
+    double t= *static_cast<double*>(pdr->get_data_ptr());
+    this->set_desired_temperature(t);
+    pdr->set_taken();
+}
+
+void TemperatureControl::set_desired_temperature(double desired_temperature)
+{
+    if (desired_temperature == 1.0)
+        desired_temperature = preset1;
+    else if (desired_temperature == 2.0)
+        desired_temperature = preset2;
+
     target_temperature = desired_temperature;
     if (desired_temperature == 0.0)
         heater_pin.set((o = 0));
@@ -263,46 +300,39 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     return 0;
 }
 
+/**
+ * Based on https://github.com/br3ttb/Arduino-PID-Library
+ */
 void TemperatureControl::pid_process(double temperature)
 {
     double error = target_temperature - temperature;
 
-    p  = error * p_factor;
-    i += (error * this->i_factor);
-    // d was imbued with oldest_raw earlier in new_thermistor_reading
-    d = adc_value_to_temperature(d);
-    d = (d - temperature) * this->d_factor;
+    this->iTerm += (error * this->i_factor);
+    if (this->iTerm > this->i_max) this->iTerm = this->i_max;
+    else if (this->iTerm < 0.0) this->iTerm = 0.0;
 
-    if (i > this->i_max)
-        i = this->i_max;
-    if (i < -this->i_max)
-        i = -this->i_max;
+    if(this->lastInput < 0.0) this->lastInput= temperature; // set first time
+    double d= (temperature - this->lastInput);
 
-    this->o = (p + i + d) * heater_pin.max_pwm() / 256;
+    // calculate the PID output
+    // TODO does this need to be scaled by max_pwm/256? I think not as p_factor already does that
+    this->o = (this->p_factor*error) + this->iTerm - (this->d_factor*d);
 
     if (this->o >= heater_pin.max_pwm())
-    {
-        i = 0;
         this->o = heater_pin.max_pwm();
-    }
-    if (this->o < 0)
-    {
-        if (this->o < -(heater_pin.max_pwm()))
-            i = 0;
+    else if (this->o < 0)
         this->o = 0;
-    }
 
-    this->heater_pin.pwm(o);
+    this->heater_pin.pwm(this->o);
+    this->lastInput= temperature;
 }
 
 int TemperatureControl::new_thermistor_reading()
 {
     int last_raw = this->kernel->adc->read(&thermistor_pin);
-    if (queue.size() >= queue.capacity())
-    {
+    if (queue.size() >= queue.capacity()) {
         uint16_t l;
         queue.pop_front(l);
-        d = l;
     }
     uint16_t r = last_raw;
     queue.push_back(r);
@@ -316,4 +346,16 @@ void TemperatureControl::on_second_tick(void* argument)
 {
     if (waiting)
         kernel->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o);
+}
+
+void TemperatureControl::setPIDp(double p) {
+    this->p_factor= p;
+}
+
+void TemperatureControl::setPIDi(double i) {
+    this->i_factor= i*this->PIDdt;
+}
+
+void TemperatureControl::setPIDd(double d) {
+    this->d_factor= d/this->PIDdt;
 }

@@ -16,17 +16,18 @@
 
 #define UNDEFINED -1
 
+#include "TemperatureControlPublicAccess.h"
 #define thermistor_checksum                CHECKSUM("thermistor")
 #define r0_checksum                        CHECKSUM("r0")
 #define readings_per_second_checksum       CHECKSUM("readings_per_second")
 #define max_pwm_checksum                   CHECKSUM("max_pwm")
+#define pwm_frequency_checksum             CHECKSUM("pwm_frequency")
 #define t0_checksum                        CHECKSUM("t0")
 #define beta_checksum                      CHECKSUM("beta")
 #define vadc_checksum                      CHECKSUM("vadc")
 #define vcc_checksum                       CHECKSUM("vcc")
 #define r1_checksum                        CHECKSUM("r1")
 #define r2_checksum                        CHECKSUM("r2")
-#define temperature_control_checksum       CHECKSUM("temperature_control")
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
 #define heater_pin_checksum                CHECKSUM("heater_pin")
 
@@ -45,11 +46,13 @@
 #define preset1_checksum                   CHECKSUM("preset1")
 #define preset2_checksum                   CHECKSUM("preset2")
 
+
 #define QUEUE_LEN 8
 
 class TemperatureControlPool;
 
 class TemperatureControl : public Module {
+
     public:
         TemperatureControl(uint16_t name);
 
@@ -59,6 +62,8 @@ class TemperatureControl : public Module {
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
         void on_second_tick(void* argument);
+        void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
 
         void set_desired_temperature(double desired_temperature);
         double get_temperature();
@@ -66,6 +71,12 @@ class TemperatureControl : public Module {
         uint32_t thermistor_read_tick(uint32_t dummy);
         int new_thermistor_reading();
 
+
+        int pool_index;
+        TemperatureControlPool *pool;
+        friend class PID_Autotuner;
+
+    private:
         void pid_process(double);
 
         double target_temperature;
@@ -82,15 +93,10 @@ class TemperatureControl : public Module {
         double j;
         double k;
 
-        // PID settings
-        double p_factor;
-        double i_factor;
-        double d_factor;
 
         // PID runtime
         double i_max;
 
-        double p, i, d;
         int o;
 
         double last_reading;
@@ -116,8 +122,18 @@ class TemperatureControl : public Module {
 
         string designator;
 
-        TemperatureControlPool *pool;
-        int pool_index;
+
+        void setPIDp(double p);
+        void setPIDi(double i);
+        void setPIDd(double d);
+
+        double iTerm;
+        double lastInput;
+        // PID settings
+        double p_factor;
+        double i_factor;
+        double d_factor;
+        double PIDdt;
 };
 
 #endif
