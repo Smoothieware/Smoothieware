@@ -288,11 +288,19 @@ void Player::on_main_loop(void* argument){
 
     if( this->playing_file ){
         string buffer;
+        bool discard= false;
         int c;
         buffer.reserve(20);
         // Print each line of the file
         while ((c = fgetc(this->current_file_handler)) != EOF){
             if (c == '\n'){
+                if(discard) {
+                    // we hit a long line and discarded it
+                    discard= false;
+                    buffer.clear();
+                    this->current_stream->printf("Warning: Discarded long line\n");
+                    return;
+                }
                 this->current_stream->printf("%s\n", buffer.c_str());
                 struct SerialMessage message;
                 message.message = buffer;
@@ -303,6 +311,11 @@ void Player::on_main_loop(void* argument){
                 played_cnt += buffer.size();
                 buffer.clear();
                 return;
+
+            }else if(buffer.size() > 128) {
+                // discard rest of line
+                discard= true;
+
             }else{
                 buffer += c;
             }
