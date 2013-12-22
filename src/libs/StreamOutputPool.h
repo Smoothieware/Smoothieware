@@ -16,14 +16,10 @@ using namespace std;
 
 #include "libs/StreamOutput.h"
 
-#define PRINTF_DEFAULT_BUFFER_SIZE 32
-
 class StreamOutputPool : public StreamOutput {
-private:
-    char *printf_default_buffer;
+
 public:
     StreamOutputPool(){
-        printf_default_buffer = new char[PRINTF_DEFAULT_BUFFER_SIZE];
     }
 
     int puts(const char* s)
@@ -48,6 +44,7 @@ public:
         this->streams.erase(stream);
     }
 
+private:
     set<StreamOutput*> streams;
 };
 

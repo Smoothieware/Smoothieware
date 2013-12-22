@@ -39,13 +39,13 @@ static int isDebugMonitorUsingUart0(){
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
     instance= this; // setup the Singleton instance of the kernel
-    
+
     // Config first, because we need the baud_rate setting before we start serial
     this->config         = new Config();
 
     // Serial second, because the other modules might want to say something
     this->streams        = new StreamOutputPool();
-    
+
     // Configure UART depending on MRI config
     // If MRI is using UART0, we want to use UART1, otherwise, we want to use UART0. This makes it easy to use only one UART for both debug and actual commands.
     NVIC_SetPriorityGrouping(0);
