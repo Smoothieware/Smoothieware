@@ -116,7 +116,7 @@ void Network::on_module_loaded()
 
     // get IP address, mask and gateway address here....
     bool bad = false;
-    string s = THEKERNEL->config->value( network_checksum, network_ip_address_checksum )->by_default("192.168.3.222")->as_string();
+    string s = THEKERNEL->config->value( network_checksum, network_ip_address_checksum )->by_default("auto")->as_string();
     if (s == "auto") {
         use_dhcp = true;
 
