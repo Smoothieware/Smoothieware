@@ -236,17 +236,29 @@ void Robot::on_gcode_received(void * argument){
                 return;
 
             // TODO I'm not sure if the following is safe to do here, or should it go on the block queue?
-            // case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
-            //     gcode->mark_as_taken();
-            //     if (gcode->has_letter('S'))
-            //     {
-            //         double acc= gcode->get_value('S') * 60 * 60; // mm/min^2
-            //         // enforce minimum
-            //         if (acc < 1.0)
-            //             acc = 1.0;
-            //         this->kernel->planner->acceleration= acc;
-            //     }
-            //     break;
+            case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
+                gcode->mark_as_taken();
+                if (gcode->has_letter('S'))
+                {
+                    double acc= gcode->get_value('S') * 60 * 60; // mm/min^2
+                    // enforce minimum
+                    if (acc < 1.0)
+                        acc = 1.0;
+                    this->kernel->planner->acceleration= acc;
+                }
+                break;
+
+            case 205: // M205 Xnnn - set junction deviation
+                gcode->mark_as_taken();
+                if (gcode->has_letter('X'))
+                {
+                    double jd= gcode->get_value('X');
+                    // enforce minimum
+                    if (jd < 0.0)
+                        jd = 0.0;
+                    this->kernel->planner->junction_deviation= jd;
+                }
+                break;
 
             case 220: // M220 - speed override percentage
                 gcode->mark_as_taken();
@@ -269,6 +281,8 @@ void Robot::on_gcode_received(void * argument){
             case 503: // M503 just prints the settings
                 this->arm_solution->get_steps_per_millimeter(steps);
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", steps[0], steps[1], steps[2]);
+                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", this->kernel->planner->acceleration/3600);
+                gcode->stream->printf(";Junction Deviation:\nM205 X%1.5f\n", this->kernel->planner->junction_deviation);
                 gcode->mark_as_taken();
                 break;
 

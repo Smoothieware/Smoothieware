@@ -11,9 +11,9 @@
 // SMSC 8720A special control/status register
 #define EMAC_PHY_REG_SCSR 0x1F
 
-#define LPC17XX_MAX_PACKET 1536
-#define LPC17XX_TXBUFS     5
-#define LPC17XX_RXBUFS     5
+#define LPC17XX_MAX_PACKET 600
+#define LPC17XX_TXBUFS     4
+#define LPC17XX_RXBUFS     4
 
 typedef struct {
     void* packet;
@@ -49,7 +49,7 @@ public:
 
     void irq(void);
 
-    void _receive_frame(void);
+    bool _receive_frame(void *packet, int* size);
 
     // NetworkInterface methods
 //     void provide_net(netcore* n);
@@ -72,8 +72,11 @@ public:
 
     static LPC17XX_Ethernet* instance;
 
+private:
     static _rxbuf_t rxbuf;
     static _txbuf_t txbuf;
+
+    void check_interface();
 };
 
 #endif /* _LPC17XX_ETHERNET_H */

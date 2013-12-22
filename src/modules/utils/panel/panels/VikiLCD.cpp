@@ -181,11 +181,6 @@ void VikiLCD::init(){
     data[1]= 0x00; // all pins output
     i2c->write(this->i2c_address, data, 2);
 
-    // turn leds off
-    setLed(0, false);
-    setLed(1, false);
-    setLed(2, false);
-    
     //put the LCD into 4 bit mode
     // start with a non-standard command to make it realize we're speaking 4-bit here
     // per LCD datasheet, first command is a single 4-bit burst, 0011.

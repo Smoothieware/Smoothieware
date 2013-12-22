@@ -181,3 +181,13 @@ currentcontrol_module_enable                 true             #
 
 return_error_on_unhandled_gcode              false            #
 
+# network settings
+network.enable                               false            # enable the ethernet network services
+network.webserver.enable                     true             # enable the webserver
+network.telnet.enable                        true             # enable the telnet server
+network.ip_address                           auto             # use dhcp to get ip address
+# uncomment the 3 below to manually setup ip address 
+#network.ip_address                           192.168.3.222    # the IP address
+#network.ip_mask                              255.255.255.0    # the ip mask
+#network.ip_gateway                           192.168.3.1      # the gateway address
+#network.mac_override                         xx.xx.xx.xx.xx.xx  # override the mac address, only do this if you have a conflict

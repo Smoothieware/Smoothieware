@@ -26,6 +26,7 @@ private:
     void get_current_pos(double *cp);
     void get_sd_play_info();
     const char *get_status();
+    const char *get_network();
 
     bool speed_changed;
     bool issue_change_speed;
@@ -37,6 +38,8 @@ private:
     double pos[3];
     unsigned long elapsed_time;
     unsigned int sd_pcnt_played;
+
+    char *ipstr;
 };
 
 #endif

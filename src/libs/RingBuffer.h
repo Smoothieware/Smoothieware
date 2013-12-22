@@ -26,10 +26,11 @@ template<class kind, int length> class RingBuffer {
         void         delete_first();
 
         kind         buffer[length];
-        int          head;
-        int          tail;
+        volatile int          head;
+        volatile int          tail;
 };
 
+#include "sLPC17xx.h"
 
 template<class kind, int length> RingBuffer<kind, length>::RingBuffer(){
     this->head = this->tail = 0;
@@ -40,7 +41,11 @@ template<class kind, int length>  int RingBuffer<kind, length>::capacity(){
 }
 
 template<class kind, int length>  int RingBuffer<kind, length>::size(){
-return((this->head>this->tail)?length:0)+this->tail-head;
+	//return((this->head>this->tail)?length:0)+this->tail-head;
+	__disable_irq();
+	int i = tail - head + ((head > tail)?length:0);
+	__enable_irq();
+	return i;
 }
 
 template<class kind, int length> int RingBuffer<kind, length>::next_block_index(int index){

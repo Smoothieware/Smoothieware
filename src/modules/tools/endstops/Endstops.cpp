@@ -514,6 +514,29 @@ void Endstops::on_gcode_received(void *argument)
             }
             break;
 
+            // NOTE this is to test accuracy of lead screws etc.
+            case 910: { // M910 - move specific number of raw steps
+                int x= 0, y=0 , z= 0, f= 200*16;
+                if (gcode->has_letter('F')) f = gcode->get_value('F');
+                if (gcode->has_letter('X')) {
+                    x = gcode->get_value('X');
+                    this->steppers[X_AXIS]->set_speed(f);
+                    this->steppers[X_AXIS]->move(x<0, abs(x));
+                }
+                if (gcode->has_letter('Y')) {
+                    y = gcode->get_value('Y');
+                    this->steppers[Y_AXIS]->set_speed(f);
+                    this->steppers[Y_AXIS]->move(y<0, abs(y));
+                }
+                if (gcode->has_letter('Z')) {
+                    z = gcode->get_value('Z');
+                    this->steppers[Z_AXIS]->set_speed(f);
+                    this->steppers[Z_AXIS]->move(z<0, abs(z));
+                }
+                gcode->stream->printf("Moved X %d Y %d Z %d F %d steps\n", x, y, z, f);
+                gcode->mark_as_taken();
+                break;
+            }
         }
     }
 }
