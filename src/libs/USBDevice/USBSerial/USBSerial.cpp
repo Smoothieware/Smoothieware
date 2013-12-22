@@ -69,6 +69,15 @@ int USBSerial::_getc()
         usb->endpointSetInterrupt(CDC_BulkOut.bEndpointAddress, true);
         iprintf("rxbuf has room for another packet, interrupt enabled\n");
     }
+    else if ((rxbuf.free() < MAX_PACKET_SIZE_EPBULK) && (nl_in_rx == 0))
+    {
+        // handle potential deadlock where a short line, and the beginning of a very long line are bundled in one usb packet
+        rxbuf.flush();
+        flush_to_nl = true;
+
+        usb->endpointSetInterrupt(CDC_BulkOut.bEndpointAddress, true);
+        iprintf("rxbuf has room for another packet, interrupt enabled\n");
+    }
     if (nl_in_rx > 0)
         if (c == '\n' || c == '\r')
             nl_in_rx--;
