@@ -64,7 +64,16 @@ protected:
     volatile bool attach;
     bool attached;
 
+    // keep track of number of newlines in the buffer
+    // this makes it trivial to detect if there's a new line available
     volatile int nl_in_rx;
+
+    // if we receive a line that's longer than the buffer, to avoid a deadlock
+    // we must flush the buffer.
+    // then to avoid delivering the tail of a line to Smoothie we must keep
+    // flushing until we find a newline.
+    // this flag asserts when we are doing this
+    bool flush_to_nl;
 private:
     USB *usb;
 //     mbed::FunctionPointer rx;
