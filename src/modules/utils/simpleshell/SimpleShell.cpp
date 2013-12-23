@@ -299,6 +299,11 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
     stream->printf("Total Free RAM: %lu bytes\r\n", m + f);
 
     stream->printf("Free AHB0: %lu, AHB1: %lu\r\n", AHB0.free(), AHB1.free());
+    if (verbose)
+    {
+        AHB0.debug(stream);
+        AHB1.debug(stream);
+    }
 }
 
 static uint32_t getDeviceType()

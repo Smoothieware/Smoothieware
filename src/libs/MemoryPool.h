@@ -11,6 +11,8 @@
     #define MDEBUG(...) do {} while (0)
 #endif
 
+#include "StreamOutput.h"
+
 /*
  * with MUCH thanks to http://www.parashift.com/c++-faq-lite/memory-pools.html
  *
@@ -26,7 +28,7 @@ public:
     void* alloc(size_t);
     void  dealloc(void* p);
 
-    void  debug(void);
+    void  debug(StreamOutput*);
 
     bool  has(void*);
 

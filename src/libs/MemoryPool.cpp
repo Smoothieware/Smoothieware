@@ -1,6 +1,7 @@
 #include "MemoryPool.h"
 
 #include <mri.h>
+#include <cstdio>
 
 #define offset(x) (((uint8_t*) x) - ((uint8_t*) this->base))
 
@@ -177,21 +178,24 @@ void MemoryPool::dealloc(void* d)
     } while (q < (_poolregion*) (((uint8_t*) base) + size));
 }
 
-void MemoryPool::debug()
+void MemoryPool::debug(StreamOutput* str)
 {
-#ifdef MEMDEBUG
     _poolregion* p = (_poolregion*) base;
-    MDEBUG("Start: %p (%+d)\n", p, sbrk);
+    uint32_t tot = 0;
+    uint32_t free = 0;
+    str->printf("Start: %ub MemoryPool at %p\n", size, p);
     do {
-        MDEBUG("Region at %p (%+4d): %s, %d bytes\n", p, offset(p), (p->used?"used":"free"), p->next);
-        if (p->next > sbrk)
+        str->printf("\tChunk at %p (%+4d): %s, %lu bytes\n", p, offset(p), (p->used?"used":"free"), p->next);
+        tot += p->next;
+        if (p->used == 0)
+            free += p->next;
+        if ((offset(p) + p->next >= size) || (p->next <= sizeof(_poolregion)))
         {
-            MDEBUG("End\n");
+            str->printf("End: total %lub, free: %lub\n", tot, free);
             return;
         }
         p = (_poolregion*) (((uint8_t*) p) + p->next);
     } while (1);
-#endif
 }
 
 bool MemoryPool::has(void* p)
