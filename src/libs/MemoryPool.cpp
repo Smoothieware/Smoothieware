@@ -18,10 +18,9 @@ MemoryPool::MemoryPool(void* base, uint16_t size)
 {
     this->base = base;
     this->size = size;
+
     ((_poolregion*) base)->used = 0;
     ((_poolregion*) base)->next = size;
-
-    sbrk = 0;
 
     // insert ourselves into head of LL
     next = first;
@@ -89,20 +88,14 @@ void* MemoryPool::alloc(size_t nbytes)
                 // set our next to point to it
                 p->next = nsize;
 
-                // move sbrk so we know where the end of the list is
-                if (offset(q) > sbrk)
-                    sbrk = offset(q);
-
                 // sanity check
-                if (sbrk > size)
+                if (offset(q) >= size)
                 {
                     // captain, we have a problem!
                     // this can only happen if something has corrupted our heap, since we should simply fail to find a free block if it's full
                     __debugbreak();
                 }
             }
-
-            MDEBUG("\t\tsbrk is %d (%p)\n", sbrk, ((uint8_t*) base) + sbrk);
 
             // then return the data region for the block
             return &p->data;
@@ -112,7 +105,7 @@ void* MemoryPool::alloc(size_t nbytes)
         p = (_poolregion*) (((uint8_t*) p) + p->next);
 
         // make sure we don't walk off the end
-    } while (p <= (_poolregion*) (((uint8_t*)base) + sbrk));
+    } while (p <= (_poolregion*) (((uint8_t*)base) + size));
 
     // fell off the end of the region!
     return NULL;
@@ -131,14 +124,8 @@ void MemoryPool::dealloc(void* d)
     {
         MDEBUG("\t\tCombining with next free region at %p, new size is %d\n", q, p->next + q->next);
 
-        // if q was the last block, move sbrk back to p (the deallocated block)
-        if (offset(q) >= sbrk)
-            sbrk = offset(p);
-
-        MDEBUG("\t\tsbrk is %d (%p)\n", sbrk, ((uint8_t*) base) + sbrk);
-
         // sanity check
-        if (sbrk > size)
+        if (offset(q) > size)
         {
             // captain, we have a problem!
             // this can only happen if something has corrupted our heap, since we should simply fail to find a free block if it's full
@@ -161,14 +148,8 @@ void MemoryPool::dealloc(void* d)
                 // combine!
                 q->next += p->next;
 
-                // if this block was the last one, then set sbrk back to the start of the previos block we just combined
-                if ((offset(p) + p->next) >= sbrk)
-                    sbrk = offset(q);
-
-                MDEBUG("\t\tsbrk is %d (%p)\n", sbrk, ((uint8_t*) base) + sbrk);
-
                 // sanity check
-                if (sbrk > size)
+                if ((offset(p) + p->next) >= size)
                 {
                     // captain, we have a problem!
                     // this can only happen if something has corrupted our heap, since we should simply fail to find a free block if it's full
@@ -181,7 +162,7 @@ void MemoryPool::dealloc(void* d)
         }
 
         // return if last block
-        if (q->next >= sbrk)
+        if (offset(q) + q->next >= size)
             return;
 
         // q = q->next
@@ -192,8 +173,8 @@ void MemoryPool::dealloc(void* d)
         if (q->next == 0)
             return;
 
-    // make sure we don't walk off the end
-    } while (q < (_poolregion*) (((uint8_t*) base) + sbrk));
+        // make sure we don't walk off the end
+    } while (q < (_poolregion*) (((uint8_t*) base) + size));
 }
 
 void MemoryPool::debug()
@@ -220,14 +201,16 @@ bool MemoryPool::has(void* p)
 
 uint32_t MemoryPool::free()
 {
-    uint32_t free = this->size - sbrk; // start with (end of pool - end of heap)
+    uint32_t free = 0;
 
     _poolregion* p = (_poolregion*) base;
 
     do {
         if (p->used == 0)
-            free += p->next - sizeof(_poolregion);
-        if (p->next >= sbrk)
+            free += p->next;
+        if (offset(p) + p->next >= size)
+            return free;
+        if (p->next <= sizeof(_poolregion))
             return free;
         p = (_poolregion*) (((uint8_t*) p) + p->next);
     } while (1);

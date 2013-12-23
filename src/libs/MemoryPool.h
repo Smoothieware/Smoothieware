@@ -39,8 +39,6 @@ public:
 private:
     void* base;
     uint16_t size;
-
-    uint16_t sbrk;
 };
 
 // this overloads "placement new"
