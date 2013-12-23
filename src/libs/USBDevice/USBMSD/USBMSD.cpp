@@ -185,7 +185,7 @@ bool USBMSD::connect()
     BlockSize = disk->disk_blocksize();
 
     if ((BlockCount > 0) && (BlockSize != 0)) {
-        page = (uint8_t*) new (AHB0) char(BlockSize);
+        page = (uint8_t*) AHB0.alloc(BlockSize);
         if (page == NULL)
             return false;
     } else {
