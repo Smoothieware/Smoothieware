@@ -21,6 +21,7 @@
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
 #include "NetworkPublicAccess.h"
+#include "platform_memory.h"
 
 extern unsigned int g_maximumHeapAddress;
 
@@ -294,6 +295,8 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
     stream->printf("Unused Heap: %lu bytes\r\n", m);
 
     heapWalk(stream, verbose);
+
+    stream->printf("Free AHB0: %lu, AHB1: %lu\n", AHB0.free(), AHB1.free());
 }
 
 static uint32_t getDeviceType()
