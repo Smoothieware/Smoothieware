@@ -14,6 +14,7 @@
 #include "libs/utils.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
+#include "modules/robot/Conveyor.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "NetworkPublicAccess.h"
 
@@ -236,6 +237,10 @@ const char *WatchScreen::get_status()
 
     if (panel->is_playing())
         return panel->get_playing_file();
+
+    if (!THEKERNEL->conveyor->is_queue_empty()) {
+        return "Printing";
+    }
 
     const char *ip = get_network();
     if (ip == NULL) {
