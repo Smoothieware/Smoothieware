@@ -161,14 +161,20 @@ SECTIONS
     .AHBSRAM0 (NOLOAD):
     {
         Image$$RW_IRAM2$$Base = . ;
+        PROVIDE(__AHB0_block_start = .);
         *(AHBSRAM0)
         Image$$RW_IRAM2$$ZI$$Limit = .;
+        PROVIDE(__AHB0_dyn_start = .);
+        PROVIDE(__AHB0_end = ORIGIN(USB_RAM) + LENGTH(USB_RAM));
     } > USB_RAM
 
     .AHBSRAM1 (NOLOAD):
     {
         Image$$RW_IRAM3$$Base = . ;
+        PROVIDE(__AHB1_block_start = .);
         *(AHBSRAM1)
         Image$$RW_IRAM3$$ZI$$Limit = .;
+        PROVIDE(__AHB1_dyn_start = .);
+        PROVIDE(__AHB1_end = ORIGIN(ETH_RAM) + LENGTH(ETH_RAM));
     } > ETH_RAM
 }

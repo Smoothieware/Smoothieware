@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 #include "sLPC17xx.h"
-#include <ahbmalloc.h>
+#include "platform_memory.h"
 
 template <class T>
 class CircBuffer {
@@ -30,7 +30,7 @@ public:
         write = 0;
         read = 0;
         size = length;
-        buf = (T *)ahbmalloc(size * sizeof(T), AHB_BANK_0);
+        buf = (uint8_t*) AHB0.alloc(size * sizeof(T));
     };
 
 	bool isFull() {

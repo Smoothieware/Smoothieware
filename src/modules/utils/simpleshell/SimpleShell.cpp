@@ -21,6 +21,7 @@
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
 #include "NetworkPublicAccess.h"
+#include "platform_memory.h"
 
 extern unsigned int g_maximumHeapAddress;
 
@@ -59,7 +60,7 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
 };
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
-static void heapWalk(StreamOutput *stream, bool verbose)
+static uint32_t heapWalk(StreamOutput *stream, bool verbose)
 {
     uint32_t chunkNumber = 1;
     // The __end__ linker symbol points to the beginning of the heap.
@@ -110,6 +111,7 @@ static void heapWalk(StreamOutput *stream, bool verbose)
         chunkNumber++;
     }
     stream->printf("Allocated: %lu, Free: %lu\r\n", usedSize, freeSize);
+    return freeSize;
 }
 
 
@@ -293,7 +295,15 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
     unsigned long m = g_maximumHeapAddress - heap;
     stream->printf("Unused Heap: %lu bytes\r\n", m);
 
-    heapWalk(stream, verbose);
+    uint32_t f= heapWalk(stream, verbose);
+    stream->printf("Total Free RAM: %lu bytes\r\n", m + f);
+
+    stream->printf("Free AHB0: %lu, AHB1: %lu\r\n", AHB0.free(), AHB1.free());
+    if (verbose)
+    {
+        AHB0.debug(stream);
+        AHB1.debug(stream);
+    }
 }
 
 static uint32_t getDeviceType()
