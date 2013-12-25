@@ -17,14 +17,17 @@
 
 Endstops::Endstops(){
     this->status = NOT_HOMING;
+    do_calibrate_delta = false;
 }
 
 void Endstops::on_module_loaded() {
     // Do not do anything if not enabled
     if( this->kernel->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ){ return; }
 
+
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
+    this->register_for_event(ON_MAIN_LOOP);
 
     // Take StepperMotor objects from Robot and keep them here
     this->steppers[0] = this->kernel->robot->alpha_stepper_motor;
@@ -104,6 +107,14 @@ void Endstops::on_config_reload(void* argument){
     this->trim[2]= this->kernel->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
 }
 
+void Endstops::on_main_loop(void* argument){
+//
+    if (do_calibrate_delta) {
+        do_calibrate_delta = false;
+        calibrate_delta();
+    }
+}
+
 void Endstops::wait_for_homed(char axes_to_move){
     bool running = true;
     unsigned int debounce[3] = {0,0,0};
@@ -137,7 +148,6 @@ void Endstops::wait_for_moves(){
         }
     }
 }
-
 
 uint32_t Endstops::wait_for_ztouch(){
     bool running = true;
@@ -357,7 +367,7 @@ void Endstops::move_all(bool direction, bool speed, unsigned int steps){
 }
 
 // auto calibration routine for delta bots
-void Endstops::calibrate_delta( StreamOutput *stream){
+void Endstops::calibrate_delta( ){
 
     uint32_t current_z_steps = 0;
 
@@ -393,7 +403,7 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     // deploy probe, check or abort
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
@@ -430,7 +440,7 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     // check probe retraction
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
@@ -464,7 +474,7 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     // check probe retraction
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }    
 
@@ -497,7 +507,7 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     // check probe retraction
     if( this->pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }  
 
@@ -524,14 +534,14 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     float centerAverage = (tower1Height + tower2Height + tower3Height)/3;
 
     long lowestTower = min(tower1Height,min(tower2Height,tower3Height));
-    stream->printf("Detected offsets:\r\n");
+    kernel->streams->printf("Detected offsets:\r\n");
 
     float t1Trim = ((tower1Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
     float t2Trim = ((tower2Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
     float t3Trim = ((tower3Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
 
-    stream->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
-    stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+    kernel->streams->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
+    kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
 
     t1Trim += trim[0]/steps_per_mm[0];
     t2Trim += trim[1]/steps_per_mm[0];
@@ -543,10 +553,10 @@ void Endstops::calibrate_delta( StreamOutput *stream){
  
     float newDeltaRadius = ((centerAverage - originHeight)/steps_per_mm[0])/0.15 + arm_radius;
 
-    stream->printf("Calibrated Values:\r\n");
-    stream->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
-    stream->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
-    stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+    kernel->streams->printf("Calibrated Values:\r\n");
+    kernel->streams->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
+    kernel->streams->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
+    kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
 
 
 // apply values
@@ -561,11 +571,11 @@ void Endstops::calibrate_delta( StreamOutput *stream){
     send_gcode(g);
 
 
-       stream->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
+       kernel->streams->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
 
 }
 
-void Endstops::calibrate_zprobe_offset( StreamOutput *stream){
+void Endstops::calibrate_zprobe_offset( ){
 
     uint32_t current_z_steps = 0;
 
@@ -583,7 +593,7 @@ void Endstops::calibrate_zprobe_offset( StreamOutput *stream){
 
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        stream->printf("Z-Probe not deployed, aborting!\r\n");
+        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
@@ -597,12 +607,12 @@ void Endstops::calibrate_zprobe_offset( StreamOutput *stream){
     wait_for_moves();
 
     //calculate
-    stream->printf("Calibrated Values:\r\n");
-    stream->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
+    kernel->streams->printf("Calibrated Values:\r\n");
+    kernel->streams->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
 
 // apply values
       calibrate_probe_offset = originHeight/steps_per_mm[0]; 
-       stream->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
+       kernel->streams->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
 
 }
 
@@ -649,11 +659,11 @@ void Endstops::on_gcode_received(void* argument)
         } else if (gcode->g == 32 )
         {
             gcode->mark_as_taken();
-            this->calibrate_delta(gcode->stream);
+            this->do_calibrate_delta = true;
         } else if (gcode->g == 31 )
         {
             gcode->mark_as_taken();
-            this->calibrate_zprobe_offset(gcode->stream);
+            this->calibrate_zprobe_offset();
         }
 
 

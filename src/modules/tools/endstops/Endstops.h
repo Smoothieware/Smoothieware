@@ -100,8 +100,9 @@ class Endstops : public Module{
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
-        void calibrate_delta(StreamOutput*);
-        void calibrate_zprobe_offset(StreamOutput*);
+        void on_main_loop(void* argument);
+        void calibrate_delta();
+        void calibrate_zprobe_offset();
         float arm_radius;
 
     private:
@@ -128,6 +129,7 @@ class Endstops : public Module{
         char status;
         bool is_corexy;
         bool is_delta;
+        bool do_calibrate_delta;
         void send_gcode(std::string msg);
 };
 
