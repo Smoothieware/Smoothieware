@@ -94,14 +94,14 @@
 #define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
 #define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
 
-Endstops::Endstops()
+DeltaCalibrate::DeltaCalibrate()
 {
     this->status = NOT_HOMING;
     home_offset[0] = home_offset[1] = home_offset[2] = 0.0F;
     this->delta_calibrate_flags = 0;
 }
 
-void Endstops::on_module_loaded()
+void DeltaCalibrate::on_module_loaded()
 {
     // Do not do anything if not enabled
     if ( this->kernel->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ) {
@@ -124,7 +124,7 @@ void Endstops::on_module_loaded()
 }
 
 // Get config
-void Endstops::on_config_reload(void *argument)
+void DeltaCalibrate::on_config_reload(void *argument)
 {
     this->pins[0].from_string(         this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
     this->pins[1].from_string(         this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
@@ -192,7 +192,7 @@ void Endstops::on_config_reload(void *argument)
     this->trim[2] = this->kernel->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
 }
 
-void Endstops::on_main_loop(void* argument){
+void DeltaCalibrate::on_main_loop(void* argument){
 //
     if ((delta_calibrate_flags & DO_CALIBRATE_DELTA)>0) {
         calibrate_delta();
@@ -205,7 +205,7 @@ void Endstops::on_main_loop(void* argument){
     }
 }
 
-void Endstops::wait_for_homed(char axes_to_move){
+void DeltaCalibrate::wait_for_homed(char axes_to_move){
     bool running = true;
     unsigned int debounce[3] = {0, 0, 0};
     while (running) {
@@ -230,7 +230,7 @@ void Endstops::wait_for_homed(char axes_to_move){
     }
 }
 
-void Endstops::wait_for_moves(){
+void DeltaCalibrate::wait_for_moves(){
     // Wait for moves to be done
     for( char c = 'X'; c <= 'Z'; c++ ){
         while( this->steppers[c - 'X']->moving ){
@@ -239,7 +239,7 @@ void Endstops::wait_for_moves(){
     }
 }
 
-uint32_t Endstops::wait_for_ztouch(){
+uint32_t DeltaCalibrate::wait_for_ztouch(){
     bool running = true;
     unsigned int debounce = 0;
     uint32_t saved_steps = 0;
@@ -268,7 +268,7 @@ uint32_t Endstops::wait_for_ztouch(){
 }
 
 // this homing works for cartesian and delta printers, not for HBots/CoreXY
-void Endstops::do_homing(char axes_to_move)
+void DeltaCalibrate::do_homing(char axes_to_move)
 {
     // Start moving the axes to the origin
     this->status = MOVING_TO_ORIGIN_FAST;
@@ -342,7 +342,7 @@ void Endstops::do_homing(char axes_to_move)
     this->status = NOT_HOMING;
 }
 
-void Endstops::wait_for_homed_corexy(int axis)
+void DeltaCalibrate::wait_for_homed_corexy(int axis)
 {
     bool running = true;
     unsigned int debounce[3] = {0, 0, 0};
@@ -366,7 +366,7 @@ void Endstops::wait_for_homed_corexy(int axis)
     }
 }
 
-void Endstops::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate, double slow_rate, unsigned int retract_steps)
+void DeltaCalibrate::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate, double slow_rate, unsigned int retract_steps)
 {
     this->status = MOVING_TO_ORIGIN_FAST;
     this->steppers[X_AXIS]->set_speed(fast_rate);
@@ -401,7 +401,7 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate
 }
 
 // this homing works for HBots/CoreXY
-void Endstops::do_homing_corexy(char axes_to_move)
+void DeltaCalibrate::do_homing_corexy(char axes_to_move)
 {
     // TODO should really make order configurable, and selectr whether to allow XY to home at the same time, diagonally
     // To move XY at the same time only one motor needs to turn, determine which motor and which direction based on min or max directions
@@ -466,7 +466,7 @@ void Endstops::do_homing_corexy(char axes_to_move)
     this->status = NOT_HOMING;
 }
 
-void Endstops::move_all(bool direction, bool speed, unsigned int steps){
+void DeltaCalibrate::move_all(bool direction, bool speed, unsigned int steps){
     bool move_dir;
     for( char c = 'X'; c <= 'Z'; c++ ){
         move_dir = this->home_direction[c - 'X']^direction ;
@@ -480,7 +480,7 @@ void Endstops::move_all(bool direction, bool speed, unsigned int steps){
 }
 
 // auto calibration routine for delta bots
-void Endstops::calibrate_delta( ){
+void DeltaCalibrate::calibrate_delta( ){
 
     if (!is_delta) {
         kernel->streams->printf("Auto-Calibrate is only for delta machines, aborting.\r\n");
@@ -691,7 +691,7 @@ void Endstops::calibrate_delta( ){
     }
 }
 
-void Endstops::calibrate_zprobe_offset( ){
+void DeltaCalibrate::calibrate_zprobe_offset( ){
 
     uint32_t current_z_steps = 0;
     long originHeight = 0;
@@ -738,7 +738,7 @@ void Endstops::calibrate_zprobe_offset( ){
 }
 
 // Start homing sequences by response to GCode commands
-void Endstops::on_gcode_received(void *argument)
+void DeltaCalibrate::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
     if ( gcode->has_g) {
@@ -911,7 +911,7 @@ void Endstops::on_gcode_received(void *argument)
     }
 }
 
-void Endstops::trim2mm(double *mm)
+void DeltaCalibrate::trim2mm(double *mm)
 {
     int dirx = (this->home_direction[0] ? 1 : -1);
     int diry = (this->home_direction[1] ? 1 : -1);
@@ -922,7 +922,7 @@ void Endstops::trim2mm(double *mm)
     mm[2] = this->trim[2] / this->steps_per_mm[2] * dirz;
 }
 
-void Endstops::send_gcode(std::string g) {
+void DeltaCalibrate::send_gcode(std::string g) {
     Gcode gcode(g, &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
 }

@@ -27,9 +27,9 @@
 #define CALIBRATE_QUIET 8
 #define DO_CALIBRATE_PROBE 16
 
-class Endstops : public Module{
+class DeltaCalibrate : public Module{
     public:
-        Endstops();
+        DeltaCalibrate();
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
