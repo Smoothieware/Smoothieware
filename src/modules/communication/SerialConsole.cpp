@@ -85,8 +85,8 @@ int SerialConsole::_getc()
 
 // Does the queue have a given char ?
 bool SerialConsole::has_char(char letter){
-    int index = this->buffer.head;
-    while( index != this->buffer.tail ){
+    int index = this->buffer.tail;
+    while( index != this->buffer.head ){
         if( this->buffer.buffer[index] == letter ){
             return true;
         }
