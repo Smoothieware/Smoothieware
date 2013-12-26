@@ -26,8 +26,8 @@ class Block {
         void calculate_trapezoid( double entry_factor, double exit_factor );
         double estimate_acceleration_distance( double initial_rate, double target_rate, double acceleration );
         double intersection_distance(double initial_rate, double final_rate, double acceleration, double distance);
-        void reverse_pass(Block* previous, Block* next);
-        void forward_pass(Block* previous, Block* next);
+        void reverse_pass(Block* previous);
+        void forward_pass(Block* next);
         void debug(Kernel* kernel);
         void append_gcode(Gcode* gcode);
         void pop_and_execute_gcode(Kernel* &kernel);

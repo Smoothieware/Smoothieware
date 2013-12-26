@@ -191,7 +191,7 @@ void Planner::recalculate() {
 
         current->recalculate_flag = false;
 
-        current->reverse_pass(next, NULL);
+        current->reverse_pass(next);
     }
 
     block_index = this->kernel->conveyor->queue.next_block_index(block_index);
@@ -206,7 +206,7 @@ void Planner::recalculate() {
         previous = current;
         current = &this->kernel->conveyor->queue.buffer[block_index];
 
-        current->forward_pass(previous, NULL);
+        current->forward_pass(previous);
 
         // Recalculate if current block entry or exit junction speed has changed.
         if (previous->recalculate_flag || current->recalculate_flag )
