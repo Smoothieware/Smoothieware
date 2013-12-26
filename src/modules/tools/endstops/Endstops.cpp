@@ -17,7 +17,7 @@
 
 Endstops::Endstops(){
     this->status = NOT_HOMING;
-    do_calibrate_delta = false;
+    this->delta_calibrate_flags = 0;
 }
 
 void Endstops::on_module_loaded() {
@@ -109,9 +109,14 @@ void Endstops::on_config_reload(void* argument){
 
 void Endstops::on_main_loop(void* argument){
 //
-    if (do_calibrate_delta) {
-        do_calibrate_delta = false;
+    if ((delta_calibrate_flags & DO_CALIBRATE_DELTA)>0) {
         calibrate_delta();
+        delta_calibrate_flags = 0;
+    }
+
+    if ((delta_calibrate_flags & DO_CALIBRATE_PROBE)>0) {
+        calibrate_zprobe_offset();
+        delta_calibrate_flags = 0;
     }
 }
 
@@ -382,10 +387,6 @@ void Endstops::calibrate_delta( ){
     int buffered_length = 0;
     string g;
 
-/*
-  #define PROBE_RADIUS  80
-  #define DELTA_RADIUS_CORRECTION_FACTOR 0.15
-*/
     // First wait for the queue to be empty
     this->kernel->conveyor->wait_for_empty_queue();
     // Enable the motors
@@ -534,15 +535,16 @@ void Endstops::calibrate_delta( ){
     float centerAverage = (tower1Height + tower2Height + tower3Height)/3;
 
     long lowestTower = min(tower1Height,min(tower2Height,tower3Height));
-    kernel->streams->printf("Detected offsets:\r\n");
 
     float t1Trim = ((tower1Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
     float t2Trim = ((tower2Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
     float t3Trim = ((tower3Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
 
-    kernel->streams->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
-    kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
-
+    if ( (delta_calibrate_flags & (CALIBRATE_SILENT|CALIBRATE_QUIET) ) == 0 ){
+        kernel->streams->printf("Detected offsets:\r\n");
+        kernel->streams->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
+        kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+    }
     t1Trim += trim[0]/steps_per_mm[0];
     t2Trim += trim[1]/steps_per_mm[0];
     t3Trim += trim[2]/steps_per_mm[0];
@@ -553,26 +555,29 @@ void Endstops::calibrate_delta( ){
  
     float newDeltaRadius = ((centerAverage - originHeight)/steps_per_mm[0])/0.15 + arm_radius;
 
-    kernel->streams->printf("Calibrated Values:\r\n");
-    kernel->streams->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
-    kernel->streams->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
-    kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+    if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
+
+        kernel->streams->printf("Calibrated Values:\r\n");
+        kernel->streams->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
+        kernel->streams->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
+        kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+    }
 
 
 // apply values
 
-    trim[0] = lround(t1Trim * steps_per_mm[0]); 
-    trim[1] = lround(t2Trim * steps_per_mm[0]); 
-    trim[2] = lround(t3Trim * steps_per_mm[0]); 
-    homing_position[2] = ( originHeight/steps_per_mm[0]) + calibrate_probe_offset;
+    if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
+        trim[0] = lround(t1Trim * steps_per_mm[0]); 
+        trim[1] = lround(t2Trim * steps_per_mm[0]); 
+        trim[2] = lround(t3Trim * steps_per_mm[0]); 
+        homing_position[2] = ( originHeight/steps_per_mm[0]) + calibrate_probe_offset;
 
-    buffered_length = snprintf(buf, sizeof(buf), "M665 R%f", newDeltaRadius);
-    g.assign(buf, buffered_length);
-    send_gcode(g);
+        buffered_length = snprintf(buf, sizeof(buf), "M665 R%f", newDeltaRadius);
+        g.assign(buf, buffered_length);
+        send_gcode(g);
 
-
-       kernel->streams->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
-
+        kernel->streams->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
+    }
 }
 
 void Endstops::calibrate_zprobe_offset( ){
@@ -607,13 +612,15 @@ void Endstops::calibrate_zprobe_offset( ){
     wait_for_moves();
 
     //calculate
-    kernel->streams->printf("Calibrated Values:\r\n");
-    kernel->streams->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
-
+    if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
+        kernel->streams->printf("Calibrated Values:\r\n");
+        kernel->streams->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
+    }
 // apply values
-      calibrate_probe_offset = originHeight/steps_per_mm[0]; 
-       kernel->streams->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
-
+    if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
+        calibrate_probe_offset = originHeight/steps_per_mm[0]; 
+        kernel->streams->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
+    }
 }
 
 // Start homing sequences by response to GCode commands
@@ -659,11 +666,42 @@ void Endstops::on_gcode_received(void* argument)
         } else if (gcode->g == 32 )
         {
             gcode->mark_as_taken();
-            this->do_calibrate_delta = true;
+            delta_calibrate_flags = 0;
+            delta_calibrate_flags |= DO_CALIBRATE_DELTA;
+
+            if (gcode->has_letter('Q')) {
+                delta_calibrate_flags |= CALIBRATE_QUIET;
+            }
+            if (gcode->has_letter('S')) {
+                delta_calibrate_flags |= CALIBRATE_SILENT;
+            }
+            if (gcode->has_letter('D')) {
+                //disable auto-apply values
+            } else {
+                delta_calibrate_flags |= CALIBRATE_AUTOSET;
+            }
+            if (gcode->has_letter('R')) {
+                calibrate_radius = gcode->get_value('R');
+            }
+            if (gcode->has_letter('L')) {
+                double l = gcode->get_value('L');
+                lift_steps = l * steps_per_mm[0];
+            }
+
         } else if (gcode->g == 31 )
         {
             gcode->mark_as_taken();
-            this->calibrate_zprobe_offset();
+            delta_calibrate_flags = 0;
+            delta_calibrate_flags |= DO_CALIBRATE_PROBE;
+
+            if (gcode->has_letter('S')) {
+                delta_calibrate_flags |= CALIBRATE_SILENT;
+            }
+            if (gcode->has_letter('D')) {
+                //disable auto-apply values
+            } else {
+                delta_calibrate_flags |= CALIBRATE_AUTOSET;
+            }
         }
 
 

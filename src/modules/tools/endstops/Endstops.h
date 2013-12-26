@@ -94,6 +94,12 @@
 #define FAST true
 #define SLOW false
 
+#define DO_CALIBRATE_DELTA 1
+#define CALIBRATE_AUTOSET 2
+#define CALIBRATE_SILENT 4
+#define CALIBRATE_QUIET 8
+#define DO_CALIBRATE_PROBE 16
+
 class Endstops : public Module{
     public:
         Endstops();
@@ -129,7 +135,7 @@ class Endstops : public Module{
         char status;
         bool is_corexy;
         bool is_delta;
-        bool do_calibrate_delta;
+        unsigned int delta_calibrate_flags;
         void send_gcode(std::string msg);
 };
 
