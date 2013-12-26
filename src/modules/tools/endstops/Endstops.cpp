@@ -47,7 +47,7 @@
 #define calibrate_radius_checksum        CHECKSUM("calibrate_radius")
 #define calibrate_probe_offset_checksum  CHECKSUM("calibrate_probe_offset")
 #define arm_radius_checksum              CHECKSUM("arm_radius")
-      
+
 // these values are in steps and should be deprecated
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
 #define beta_fast_homing_rate_checksum   CHECKSUM("beta_fast_homing_rate")
@@ -482,6 +482,11 @@ void Endstops::move_all(bool direction, bool speed, unsigned int steps){
 // auto calibration routine for delta bots
 void Endstops::calibrate_delta( ){
 
+    if (!is_delta) {
+        kernel->streams->printf("Auto-Calibrate is only for delta machines, aborting.\r\n");
+        return; 
+    }
+
     uint32_t current_z_steps = 0;
 
     uint32_t originHeight = 0;
@@ -499,7 +504,8 @@ void Endstops::calibrate_delta( ){
     this->kernel->conveyor->wait_for_empty_queue();
     // Enable the motors
     this->kernel->stepper->turn_enable_pins_on();
-// home axis
+    
+    // TODO automatically home all home axis?
 
     buffered_length = snprintf(buf, sizeof(buf), "G21");
     g.assign(buf, buffered_length);
@@ -508,6 +514,8 @@ void Endstops::calibrate_delta( ){
     buffered_length = snprintf(buf, sizeof(buf), "G90");
     g.assign(buf, buffered_length);
     send_gcode(g);
+
+    //TODO auto-deploy probe
 
     // deploy probe, check or abort
     if( pins[2].get() ){  //TODO configure probe pin?
@@ -535,7 +543,7 @@ void Endstops::calibrate_delta( ){
     current_z_steps -= lift_steps;
 
     // update planner position so we can make coordinated moves
-        this->kernel->robot->reset_axis_position( homing_position[2] - (current_z_steps / steps_per_mm[0]) , 2);
+    this->kernel->robot->reset_axis_position( homing_position[2] - (current_z_steps / steps_per_mm[0]) , 2);
 
     targetY = calibrate_radius * cos(240 * (3.141592653589793/180));
     targetX = calibrate_radius * sin(240 * (3.141592653589793/180));
@@ -636,14 +644,12 @@ void Endstops::calibrate_delta( ){
     //lift
     move_all(UP,FAST, current_z_steps - (originHeight-lift_steps)); //alpha tower retract distance for all
     wait_for_moves();
-//retract probe
+
+    //TODO auto-retract probe
 
     //calculate 3 tower trim levels
-    
     float centerAverage = (tower1Height + tower2Height + tower3Height)/3;
-
     long lowestTower = min(tower1Height,min(tower2Height,tower3Height));
-
     float t1Trim = ((tower1Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
     float t2Trim = ((tower2Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
     float t3Trim = ((tower3Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
@@ -653,6 +659,7 @@ void Endstops::calibrate_delta( ){
         kernel->streams->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
         kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
     }
+
     t1Trim += trim[0]/steps_per_mm[0];
     t2Trim += trim[1]/steps_per_mm[0];
     t3Trim += trim[2]/steps_per_mm[0];
@@ -660,20 +667,16 @@ void Endstops::calibrate_delta( ){
     t1Trim -= minTrim;
     t2Trim -= minTrim;
     t3Trim -= minTrim;
- 
     float newDeltaRadius = ((centerAverage - originHeight)/steps_per_mm[0])/0.15 + arm_radius;
 
     if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
-
         kernel->streams->printf("Calibrated Values:\r\n");
         kernel->streams->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
         kernel->streams->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
         kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
     }
 
-
-// apply values
-
+    // apply values
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
         trim[0] = lround(t1Trim * steps_per_mm[0]); 
         trim[1] = lround(t2Trim * steps_per_mm[0]); 
@@ -691,14 +694,18 @@ void Endstops::calibrate_delta( ){
 void Endstops::calibrate_zprobe_offset( ){
 
     uint32_t current_z_steps = 0;
-
     long originHeight = 0;
 
     // First wait for the queue to be empty
     this->kernel->conveyor->wait_for_empty_queue();
     // Enable the motors
     this->kernel->stepper->turn_enable_pins_on();
-// home axis
+
+    if( !pins[2].get() ){  //TODO configure probe pin?
+        //probe not deployed - abort
+        kernel->streams->printf("Z-Probe not activated, Aborting!\r\n");
+        return;
+    }
 
     move_all(UP,FAST,lift_steps); //alpha tower retract distance for all
     wait_for_moves();
@@ -712,7 +719,6 @@ void Endstops::calibrate_zprobe_offset( ){
 
     move_all(DOWN,SLOW,10000000);
     current_z_steps += wait_for_ztouch();
-
     originHeight = lift_steps - current_z_steps;
 
     //lift and reposition
@@ -724,7 +730,7 @@ void Endstops::calibrate_zprobe_offset( ){
         kernel->streams->printf("Calibrated Values:\r\n");
         kernel->streams->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
     }
-// apply values
+    // apply values
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
         calibrate_probe_offset = originHeight/steps_per_mm[0]; 
         kernel->streams->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
