@@ -43,6 +43,11 @@
 #define beta_trim_checksum               CHECKSUM("beta_trim")
 #define gamma_trim_checksum              CHECKSUM("gamma_trim")
 
+#define calibrate_lift_checksum          CHECKSUM("calibrate_lift")
+#define calibrate_radius_checksum        CHECKSUM("calibrate_radius")
+#define calibrate_probe_offset_checksum  CHECKSUM("calibrate_probe_offset")
+#define arm_radius_checksum              CHECKSUM("arm_radius")
+      
 // these values are in steps and should be deprecated
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
 #define beta_fast_homing_rate_checksum   CHECKSUM("beta_fast_homing_rate")
