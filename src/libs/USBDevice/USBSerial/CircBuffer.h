@@ -20,7 +20,8 @@
 #define CIRCBUFFER_H
 
 #include <stdlib.h>
-#include <ahbmalloc.h>
+#include "sLPC17xx.h"
+#include "platform_memory.h"
 
 template <class T>
 class CircBuffer {
@@ -29,11 +30,14 @@ public:
         write = 0;
         read = 0;
         size = length;
-        buf = (T *)ahbmalloc(size * sizeof(T), AHB_BANK_0);
+        buf = (uint8_t*) AHB0.alloc(size * sizeof(T));
     };
 
-    bool isFull() {
-        return ((write + 1) % size == read);
+	bool isFull() {
+		__disable_irq();
+		bool b= ((write + 1) % size == read);
+		__enable_irq();
+		return b;
     };
 
     bool isEmpty() {
@@ -41,16 +45,21 @@ public:
     };
 
     void queue(T k) {
+		__disable_irq();
         if (isFull()) {
             read++;
             read %= size;
         }
         buf[write++] = k;
         write %= size;
+		__enable_irq();
     }
 
     uint16_t available() {
-        return (write >= read) ? write - read : (size - read) + write;
+		__disable_irq();
+		uint16_t i= (write >= read) ? write - read : (size - read) + write;
+		__enable_irq();
+		return i;
     };
     uint16_t free() {
         return size - available() - 1;

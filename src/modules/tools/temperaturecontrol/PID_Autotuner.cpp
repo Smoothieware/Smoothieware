@@ -1,11 +1,17 @@
 #include "PID_Autotuner.h"
-
 #include "Kernel.h"
+#include <cmath>        // std::abs
+
+#define DEBUG_PRINTF s->printf
 
 PID_Autotuner::PID_Autotuner()
 {
     t = NULL;
     s = NULL;
+    lastInputs = NULL;
+    peaks = NULL;
+    tick = false;
+    tickCnt= 0;
 }
 
 void PID_Autotuner::on_module_loaded()
@@ -18,31 +24,41 @@ void PID_Autotuner::on_module_loaded()
 
 void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput *stream, int ncycles)
 {
-    if (t)
-        t->heater_pin.set(0);
+    noiseBand = 0.5;
+    oStep = temp->heater_pin.max_pwm(); // use max pwm to cycle temp
+    nLookBack = 5 * 20; // 5 seconds of lookback
+    lookBackCnt= 0;
+    tickCnt= 0;
 
-    s = stream;
+    if (lastInputs != NULL) delete[] lastInputs;
+    lastInputs = new float[nLookBack+1];
     t = temp;
+    s = stream;
 
+    t->heater_pin.set(0);
     t->target_temperature = 0.0;
 
     target_temperature = target;
+    requested_cycles = ncycles;
 
-    for (cycle = 0; cycle < ncycles; cycle++)
-    {
-        cycles[cycle].ticks_high = 0;
-        cycles[cycle].ticks_low  = 0;
-        cycles[cycle].t_max      = 0.0;
-        cycles[cycle].t_min      = 1000.0;
+    if (peaks != NULL) delete[] peaks;
+    peaks = new float[ncycles];
+
+    for (int i = 0; i < ncycles; i++) {
+        peaks[i] = 0.0;
     }
-    cycle = 0;
 
-    s->printf("%s: Starting PID Autotune, M304 aborts\n", t->designator.c_str());
+    peakType = 0;
+    peakCount = 0;
+    justchanged = false;
 
-    bias = d = t->heater_pin.max_pwm() >> 1;
+    double refVal = t->get_temperature();
+    absMax = refVal;
+    absMin = refVal;
+    output= oStep;
+    t->heater_pin.pwm(oStep); // turn on to start heating
 
-    output = true;
-    last_output = true;
+    s->printf("%s: Starting PID Autotune, %d max cycles, M304 aborts\n", t->designator.c_str(), ncycles);
 }
 
 void PID_Autotuner::abort()
@@ -57,11 +73,18 @@ void PID_Autotuner::abort()
     if (s)
         s->printf("PID Autotune Aborted\n");
     s = NULL;
+
+    if (peaks != NULL)
+        delete[] peaks;
+    peaks = NULL;
+    if (lastInputs != NULL)
+        delete[] lastInputs;
+    lastInputs = NULL;
 }
 
-void PID_Autotuner::on_gcode_received(void* argument)
+void PID_Autotuner::on_gcode_received(void *argument)
 {
-    Gcode* gcode = static_cast<Gcode*>(argument);
+    Gcode *gcode = static_cast<Gcode *>(argument);
 
     if ((gcode->has_m) && (gcode->m == 304))
         abort();
@@ -71,114 +94,138 @@ uint32_t PID_Autotuner::on_tick(uint32_t dummy)
 {
     if (t)
         tick = true;
+    tickCnt += 1000/20; // millisecond tick count
     return 0;
 }
 
-void PID_Autotuner::on_idle(void*)
+/**
+ * this autopid is based on https://github.com/br3ttb/Arduino-PID-AutoTune-Library/blob/master/PID_AutoTune_v0/PID_AutoTune_v0.cpp
+ */
+void PID_Autotuner::on_idle(void *)
 {
     if (!tick)
         return;
 
     tick = false;
 
-    if (cycle >= PID_AUTOTUNER_CYCLES)
-        return;
     if (t == NULL)
         return;
 
-    if (t->last_reading > (target_temperature + 0.25))
-        output = false;
-    else if (t->last_reading < (target_temperature - 0.25))
-        output = true;
+    if(peakCount >= requested_cycles) {
+        finishUp();
+        return;
+    }
 
-    if (last_output == false && output)
-    {
-        s->printf("Cycle %d:\n\tMax: %5.1f  Min: %5.1f  high time: %3.1fs  low time: %3.1fs\n", cycle, cycles[cycle].t_max, cycles[cycle].t_min, cycles[cycle].ticks_high / 20.0, cycles[cycle].ticks_low / 20.0);
+    double refVal = t->get_temperature();
 
-        // this code taken from http://github.com/ErikZalm/Marlin/blob/Marlin_v1/Marlin/temperature.cpp
-        bias += (d * (cycles[cycle].ticks_high - cycles[cycle].ticks_low) * (1000.0 / 20.0)) / ((cycles[cycle].ticks_high + cycles[cycle].ticks_low) * (1000.0 / 20.0));
-        bias = confine(bias, 20, t->heater_pin.max_pwm() - 20);
-        if (bias > (t->heater_pin.max_pwm() / 2))
-            d = t->heater_pin.max_pwm() - 1 - bias;
-        else
-            d = bias;
-        // end code from Marlin firmware
+    if (refVal > absMax) absMax = refVal;
+    if (refVal < absMin) absMin = refVal;
 
-        cycle++;
-        if (cycle == PID_AUTOTUNER_CYCLES)
-        {
-            t->heater_pin.set(0);
-            t->set_desired_temperature(0.0);
-            // TODO: finish
-            double tmax_avg   = 0.0,
-                   tmin_avg   = 0.0,
-                   t_high_avg = 0.0,
-                   t_low_avg  = 0.0;
-            for (cycle = PID_AUTOTUNER_CYCLES - 3; cycle < PID_AUTOTUNER_CYCLES; cycle++)
-            {
-                tmax_avg   += cycles[cycle].t_max;
-                tmin_avg   += cycles[cycle].t_min;
-                t_high_avg += cycles[cycle].ticks_high;
-                t_low_avg  += cycles[cycle].ticks_low;
-            }
-            tmax_avg   /= (PID_AUTOTUNER_CYCLES - 1.0);
-            tmin_avg   /= (PID_AUTOTUNER_CYCLES - 1.0);
-            t_high_avg /= (PID_AUTOTUNER_CYCLES - 1.0);
-            t_low_avg  /= (PID_AUTOTUNER_CYCLES - 1.0);
+    // oscillate the output base on the input's relation to the setpoint
+    if (refVal > target_temperature + noiseBand){
+        output= 0;
+        //t->heater_pin.pwm(output);
+        t->heater_pin.set(0);
+    } else if (refVal < target_temperature - noiseBand) {
+        output= oStep;
+        t->heater_pin.pwm(output);
+    }
 
-            s->printf("Averages over last %d cycles: Max: %5.1fc  Min: %5.1fc  high samples: %3.0f  low samples: %3.0f\n", 3, tmax_avg, tmin_avg, t_high_avg, t_low_avg);
+    bool isMax = true, isMin = true;
 
-            // this code taken from http://github.com/ErikZalm/Marlin/blob/Marlin_v1/Marlin/temperature.cpp
-            double ku = (4.0 * d) / (3.141592653589 * (tmax_avg - tmin_avg) / 2.0);
-            double tu = (t_low_avg + t_high_avg) * (1000.0 / 20.0) / 1000.0;
+    // id peaks
+    for (int i = nLookBack - 1; i >= 0; i--) {
+        float val = lastInputs[i];
+        if (isMax) isMax = refVal > val;
+        if (isMin) isMin = refVal < val;
+        lastInputs[i + 1] = lastInputs[i];
+    }
 
-            s->printf("\tku: %g\n\ttu: %g\n", ku, tu);
+    lastInputs[0] = refVal;
 
-            double kp = 0.6 * ku;
-            double ki = 2 * kp / tu / 20.0;
-            double kd = kp * tu / 8.0;
+    if (lookBackCnt < nLookBack) {
+        lookBackCnt++; // count number of times we have filled lastInputs
+        //we don't want to trust the maxes or mins until the inputs array has been filled
+        return;
+    }
 
-            s->printf("\tTrying:\n\tKp: %5.1f\n\tKi: %5.3f\n\tKd: %5.0f\n", kp, ki, kd);
-            // end code from Marlin Firmware
+    if (isMax) {
+        if (peakType == 0) peakType = 1;
+        if (peakType == -1) {
+            peakType = 1;
+            justchanged = true;
+            peak2 = peak1;
+        }
+        peak1 = tickCnt;
+        peaks[peakCount] = refVal;
 
-            t->setPIDp(kp);
-            t->setPIDi(ki);
-            t->setPIDd(kd);
+    } else if (isMin) {
+        if (peakType == 0) peakType = -1;
+        if (peakType == 1) {
+            peakType = -1;
+            peakCount++;
+            justchanged = true;
+        }
 
-            s->printf("PID Autotune Complete! The settings above have been loaded into memory, but not written to your config file.\n");
+        if (peakCount < requested_cycles) peaks[peakCount] = refVal;
+    }
 
-            t = NULL;
-            s = NULL;
+    // we need to ignore the first cycle warming up from room temp
 
+    if (justchanged && peakCount > 2) {
+        if(peakCount == 3) { // reset min to new min
+            absMin= refVal;
+        }
+        //we've transitioned. check if we can autotune based on the last peaks
+        float avgSeparation = (std::abs(peaks[peakCount - 1] - peaks[peakCount - 2]) + std::abs(peaks[peakCount - 2] - peaks[peakCount - 3])) / 2;
+        s->printf("Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
+        if (peakCount > 3 && avgSeparation < 0.05 * (absMax - absMin)) {
+            DEBUG_PRINTF("Stabilized\n");
+            finishUp();
             return;
         }
-        s->printf("Cycle %d:\n\tbias: %4d d: %4d\n", cycle, bias, d);
     }
 
-    int ticks;
+    justchanged = false;
 
-    if (output)
-    {
-        ticks = ++cycles[cycle].ticks_high;
-        //t->heater_pin.pwm((t->o = ((bias + d) >> 1)));
-        t->heater_pin.pwm(t->o = (bias + d)); // why use half PWM???
+    if ((tickCnt % 1000) == 0) {
+        s->printf("%s: %5.1f/%5.1f @%d %d/%d\n", t->designator.c_str(), t->get_temperature(), target_temperature, output, peakCount, requested_cycles);
+        DEBUG_PRINTF("lookBackCnt= %d, peakCount= %d, absmax= %g, absmin= %g, peak1= %lu, peak2= %lu\n", lookBackCnt, peakCount, absMax, absMin, peak1, peak2);
     }
-    else
-    {
-        ticks = ++cycles[cycle].ticks_low;
-        t->heater_pin.set((t->o = 0));
-    }
+}
 
-    if ((ticks % 16) == 0)
-    {
-        s->printf("%s: %5.1f/%5.1f @%d %d %d/8\n", t->designator.c_str(), t->last_reading, target_temperature, t->o, (output?1:0), cycle);
-    }
 
-    if (t->last_reading > cycles[cycle].t_max)
-        cycles[cycle].t_max = t->last_reading;
+void PID_Autotuner::finishUp()
+{
+    //we can generate tuning parameters!
+    double Ku = 4*(2*oStep)/((absMax-absMin)*3.14159);
+    double Pu = (double)(peak1-peak2) / 1000;
+    s->printf("\tKu: %g, Pu: %g\n", Ku, Pu);
 
-    if (t->last_reading < cycles[cycle].t_min)
-        cycles[cycle].t_min = t->last_reading;
+    double kp = 0.6 * Ku;
+    double ki = 1.2 * Ku / Pu;
+    double kd = Ku * Pu * 0.075;
 
-    last_output = output;
+    s->printf("\tTrying:\n\tKp: %5.1f\n\tKi: %5.3f\n\tKd: %5.0f\n", kp, ki, kd);
+
+    t->setPIDp(kp);
+    t->setPIDi(ki);
+    t->setPIDd(kd);
+
+    s->printf("PID Autotune Complete! The settings above have been loaded into memory, but not written to your config file.\n");
+
+
+    // and clean up
+    t->target_temperature = 0;
+    t->heater_pin.set(0);
+    t = NULL;
+    s = NULL;
+
+    if (peaks != NULL)
+        delete[] peaks;
+    peaks = NULL;
+
+    if (lastInputs != NULL)
+        delete[] lastInputs;
+    lastInputs = NULL;
 }

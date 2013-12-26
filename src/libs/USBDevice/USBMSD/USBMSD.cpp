@@ -27,7 +27,7 @@
 
 #include "Kernel.h"
 
-#include "ahbmalloc.h"
+#include "platform_memory.h"
 
 #define DISK_OK         0x00
 #define NO_INIT         0x01
@@ -185,7 +185,7 @@ bool USBMSD::connect()
     BlockSize = disk->disk_blocksize();
 
     if ((BlockCount > 0) && (BlockSize != 0)) {
-        page = (uint8_t *) ahbmalloc(BlockSize, AHB_BANK_0);
+        page = (uint8_t*) AHB0.alloc(BlockSize);
         if (page == NULL)
             return false;
     } else {

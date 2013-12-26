@@ -182,10 +182,10 @@ void Planner::recalculate() {
 // implements the reverse pass.
 void Planner::reverse_pass(){
     // For each block
-    int block_index = this->kernel->conveyor->queue.tail;
+    int block_index = this->kernel->conveyor->queue.head;
     Block* blocks[3] = {NULL,NULL,NULL};
 
-    while(block_index!=this->kernel->conveyor->queue.head){
+    while(block_index!=this->kernel->conveyor->queue.tail){
         block_index = this->kernel->conveyor->queue.prev_block_index( block_index );
         blocks[2] = blocks[1];
         blocks[1] = blocks[0];
@@ -200,10 +200,10 @@ void Planner::reverse_pass(){
 // implements the forward pass.
 void Planner::forward_pass() {
     // For each block
-    int block_index = this->kernel->conveyor->queue.head;
+    int block_index = this->kernel->conveyor->queue.tail;
     Block* blocks[3] = {NULL,NULL,NULL};
 
-    while(block_index!=this->kernel->conveyor->queue.tail){
+    while(block_index!=this->kernel->conveyor->queue.head){
         blocks[0] = blocks[1];
         blocks[1] = blocks[2];
         blocks[2] = &this->kernel->conveyor->queue.buffer[block_index];
@@ -221,11 +221,11 @@ void Planner::forward_pass() {
 // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
 // to exit speed and entry speed of one another.
 void Planner::recalculate_trapezoids() {
-    int block_index = this->kernel->conveyor->queue.head;
+    int block_index = this->kernel->conveyor->queue.tail;
     Block* current;
     Block* next = NULL;
 
-    while(block_index != this->kernel->conveyor->queue.tail){
+    while(block_index != this->kernel->conveyor->queue.head){
         current = next;
         next = &this->kernel->conveyor->queue.buffer[block_index];
         if( current ){

@@ -48,8 +48,8 @@ endif
 
 include $(BUILD_DIR)/build.mk
 
-CONSOLE?=/dev/arduino_A900K10V
-BAUD?=2000000
+CONSOLE?=/dev/arduino
+BAUD?=1000000
 
 .PHONY: debug-store flash upload debug console dfu
 

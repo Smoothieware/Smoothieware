@@ -1,4 +1,4 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
@@ -7,7 +7,7 @@
 Much of this was copied from LiquidTWI2
   LiquidTWI2 High Performance i2c LCD driver for MCP23008 & MCP23017
   hacked by Sam C. Lin / http://www.lincomatic.com
-  from 
+  from
    LiquidTWI by Matt Falcon (FalconFour) / http://falconfour.com
    logic gleaned from Adafruit RGB LCD Shield library
 */
@@ -19,15 +19,10 @@ Much of this was copied from LiquidTWI2
 #include "Button.h"
 #include "smoothiepanel/Wiichuck.h"
 
-using namespace std;
-#include <vector>
-#include <string>
-#include <cstdio>
-#include <cstdarg>
 
 // Smoothiepanel specific settings
 
-// readButtons() will only return these bit values 
+// readButtons() will only return these bit values
 //#define ALL_BUTTON_BITS (BUTTON_AUX2|BUTTON_AUX1|BUTTON_SELECT)
 
 
@@ -122,7 +117,7 @@ class Smoothiepanel : public LcdBase {
 
         Pin interrupt_pin;
         Pin encoder_a_pin;
-        Pin encoder_b_pin;    
+        Pin encoder_b_pin;
         Wiichuck* wii;
         bool wii_connected;
         bool encoder_changed;

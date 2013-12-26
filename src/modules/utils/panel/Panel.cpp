@@ -34,10 +34,11 @@
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
 
-#define menu_offset_checksum       CHECKSUM("menu_offset")
-#define jog_x_feedrate_checksum    CHECKSUM("alpha_jog_feedrate")
-#define jog_y_feedrate_checksum    CHECKSUM("beta_jog_feedrate")
-#define jog_z_feedrate_checksum    CHECKSUM("gamma_jog_feedrate")
+#define menu_offset_checksum        CHECKSUM("menu_offset")
+#define encoder_resolution_checksum CHECKSUM("encoder_resolution")
+#define jog_x_feedrate_checksum     CHECKSUM("alpha_jog_feedrate")
+#define jog_y_feedrate_checksum     CHECKSUM("beta_jog_feedrate")
+#define jog_z_feedrate_checksum     CHECKSUM("gamma_jog_feedrate")
 
 #define hotend_temp_checksum CHECKSUM("hotend_temperature")
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
@@ -105,6 +106,9 @@ void Panel::on_module_loaded()
     // an end user usability issue
     this->menu_offset = this->kernel->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
 
+    // override default encoder resolution if needed
+    this->encoder_click_resolution = this->kernel->config->value( panel_checksum, encoder_resolution_checksum )->by_default(this->lcd->getEncoderResolution())->as_number();
+
     // load jogging feedrates in mm/min
     jogging_speed_mm_min[0] = this->kernel->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
     jogging_speed_mm_min[1] = this->kernel->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0)->as_number();
@@ -114,7 +118,6 @@ void Panel::on_module_loaded()
     default_hotend_temperature = this->kernel->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0)->as_number();
     default_bed_temperature = this->kernel->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
 
-    this->encoder_click_resolution = this->lcd->getEncoderResolution();
 
     this->up_button.up_attach(    this, &Panel::on_up );
     this->down_button.up_attach(  this, &Panel::on_down );
@@ -165,10 +168,11 @@ uint32_t Panel::encoder_check(uint32_t dummy)
     // TODO if encoder reads go through i2c like on smoothie panel this needs to be
     // optionally done in idle loop, however when reading encoder directly it needs to be done
     // frequently, smoothie panel will return an actual delta count so won't miss any if polled slowly
+    // NOTE this code will not work if change is not -1,0,-1 anything greater (as in above case) will not work properly
     static int encoder_counter = 0;
     int change = lcd->readEncoderDelta();
     encoder_counter += change;
-    // TODO divisor needs to be configurable
+
     if ( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ) {
         this->counter_changed = true;
         (*this->counter) += change;
@@ -315,8 +319,8 @@ void Panel::on_idle(void *argument)
 uint32_t Panel::on_up(uint32_t dummy)
 {
     // this is simulating encoder clicks, but needs to be inverted to
-    // increment values on up
-    int inc = (this->mode == CONTROL_MODE) ? 1 : -1;
+    // increment values on up,increment by
+    int inc = (this->mode == CONTROL_MODE) ? 1 : -(this->menu_offset+1);
     *this->counter += inc;
     this->counter_changed = true;
     return 0;
@@ -324,7 +328,7 @@ uint32_t Panel::on_up(uint32_t dummy)
 
 uint32_t Panel::on_down(uint32_t dummy)
 {
-    int inc = (this->mode == CONTROL_MODE) ? -1 : 1;
+    int inc = (this->mode == CONTROL_MODE) ? -1 : (this->menu_offset+1);
     *this->counter += inc;
     this->counter_changed = true;
     return 0;
@@ -423,7 +427,10 @@ void Panel::menu_update()
     #endif
 
     this->menu_selected_line = msl; // update atomically we hope
-    this->menu_current_line = msl >> this->menu_offset;
+    // figure out which actual line to select, if we have a menu offset it means we want to move one line per two clicks
+    if(msl % (this->menu_offset+1) == 0) { // only if divisible by offset
+        this->menu_current_line = msl >> this->menu_offset;
+    }
 
     // What to display
     if ( this->menu_rows > this->panel_lines ) {

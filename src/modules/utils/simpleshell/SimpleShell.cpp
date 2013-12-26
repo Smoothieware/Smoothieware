@@ -20,6 +20,8 @@
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
+#include "NetworkPublicAccess.h"
+#include "platform_memory.h"
 
 extern unsigned int g_maximumHeapAddress;
 
@@ -46,18 +48,19 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {CHECKSUM("dfu"),      &SimpleShell::dfu_command},
     {CHECKSUM("break"),    &SimpleShell::break_command},
     {CHECKSUM("help"),     &SimpleShell::help_command},
+    {CHECKSUM("?"),        &SimpleShell::help_command},
     {CHECKSUM("version"),  &SimpleShell::version_command},
     {CHECKSUM("mem"),      &SimpleShell::mem_command},
     {CHECKSUM("get"),      &SimpleShell::get_command},
     {CHECKSUM("set_temp"), &SimpleShell::set_temp_command},
-    {CHECKSUM("test"),     &SimpleShell::test_command},
+    {CHECKSUM("net"),      &SimpleShell::net_command},
 
     // unknown command
     {0, NULL}
 };
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
-static void heapWalk(StreamOutput *stream, bool verbose)
+static uint32_t heapWalk(StreamOutput *stream, bool verbose)
 {
     uint32_t chunkNumber = 1;
     // The __end__ linker symbol points to the beginning of the heap.
@@ -108,6 +111,7 @@ static void heapWalk(StreamOutput *stream, bool verbose)
         chunkNumber++;
     }
     stream->printf("Allocated: %lu, Free: %lu\r\n", usedSize, freeSize);
+    return freeSize;
 }
 
 
@@ -115,10 +119,10 @@ void SimpleShell::on_module_loaded()
 {
     this->current_path = "/";
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    this->reset_delay_secs = 0;
+	this->register_for_event(ON_GCODE_RECEIVED);
+	this->register_for_event(ON_SECOND_TICK);
 
-    this->register_for_event(ON_SECOND_TICK);
-    this->register_for_event(ON_GCODE_RECEIVED);
+    this->reset_delay_secs = 0;
 }
 
 void SimpleShell::on_second_tick(void *)
@@ -142,8 +146,8 @@ void SimpleShell::on_gcode_received(void *argument)
             gcode->stream->printf("Begin file list\r\n");
             ls_command("/sd", gcode->stream);
             gcode->stream->printf("End file list\r\n");
-        }
-        else if (gcode->m == 30) { // remove file
+
+        } else if (gcode->m == 30) { // remove file
             gcode->mark_as_taken();
             rm_command("/sd/" + args, gcode->stream);
         }
@@ -175,7 +179,6 @@ void SimpleShell::on_console_line_received( void *argument )
 
     //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
 
-    // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
     unsigned short check_sum = get_checksum( possible_command.substr(0, possible_command.find_first_of(" \r\n")) ); // todo: put this method somewhere more convenient
 
     // find command and execute it
@@ -246,7 +249,6 @@ void SimpleShell::pwd_command( string parameters, StreamOutput *stream )
 // Output the contents of a file, first parameter is the filename, second is the limit ( in number of lines to output )
 void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 {
-
     // Get parameters ( filename and line limit )
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
     string limit_paramater   = shift_parameter( parameters );
@@ -267,14 +269,15 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     string buffer;
     int c;
     int newlines = 0;
-
+    int linecnt= 0;
     // Print each line of the file
     while ((c = fgetc (lp)) != EOF) {
         buffer.append((char *)&c, 1);
-        if ( char(c) == '\n' ) {
+        if ( char(c) == '\n' || ++linecnt > 80) {
             newlines++;
             stream->puts(buffer.c_str());
             buffer.clear();
+            if(linecnt > 80) linecnt= 0;
         }
         if ( newlines == limit ) {
             break;
@@ -292,7 +295,15 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
     unsigned long m = g_maximumHeapAddress - heap;
     stream->printf("Unused Heap: %lu bytes\r\n", m);
 
-    heapWalk(stream, verbose);
+    uint32_t f= heapWalk(stream, verbose);
+    stream->printf("Total Free RAM: %lu bytes\r\n", m + f);
+
+    stream->printf("Free AHB0: %lu, AHB1: %lu\r\n", AHB0.free(), AHB1.free());
+    if (verbose)
+    {
+        AHB0.debug(stream);
+        AHB1.debug(stream);
+    }
 }
 
 static uint32_t getDeviceType()
@@ -311,6 +322,21 @@ static uint32_t getDeviceType()
     __enable_irq();
 
     return result[1];
+}
+
+// get network config
+void SimpleShell::net_command( string parameters, StreamOutput *stream)
+{
+    void *returned_data;
+    bool ok= THEKERNEL->public_data->get_value( network_checksum, get_ipconfig_checksum, &returned_data );
+    if(ok) {
+        char *str= (char *)returned_data;
+        stream->printf("%s\r\n", str);
+        free(str);
+
+    }else{
+        stream->printf("No network detected\n");
+    }
 }
 
 // print out build version
@@ -388,58 +414,6 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     }
 }
 
-#if 0
-#include "mbed.h"
-#include "BaseSolution.h"
-#include "RostockSolution.h"
-#include "JohannKosselSolution.h"
-#endif
-void SimpleShell::test_command( string parameters, StreamOutput *stream)
-{
-#if 0
-    double millimeters[3]= {100.0, 200.0, 300.0};
-    int steps[3];
-    BaseSolution* r= new RostockSolution(THEKERNEL->config);
-    BaseSolution* k= new JohannKosselSolution(THEKERNEL->config);
-    Timer timer;
-    timer.start();
-    for(int i=0;i<10;i++) r->millimeters_to_steps(millimeters, steps);
-    timer.stop();
-    float tr= timer.read();
-    timer.reset();
-    timer.start();
-    for(int i=0;i<10;i++) k->millimeters_to_steps(millimeters, steps);
-    timer.stop();
-    float tk= timer.read();
-    stream->printf("time RostockSolution: %f, time JohannKosselSolution: %f\n", tr, tk);
-    delete kr;
-    delete tk;
-#endif
-#if 0
-// time idle loop
-#include "mbed.h"
-static int tmin = 1000000;
-static int tmax = 0;
-void time_idle()
-void time_idle()
-{
-    Timer timer;
-    timer.start();
-    int begin, end;
-    for (int i = 0; i < 1000; ++i) {
-        begin = timer.read_us();
-        THEKERNEL->call_event(ON_IDLE);
-        end = timer.read_us();
-        int d = end - begin;
-        if (d < tmin) tmin = d;
-        if (d > tmax) tmax = d;
-    }
-}
-static Timer timer;
-static int lastt = 0;
-#endif
-}
-
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
 {
     stream->printf("Commands:\r\n");
@@ -450,7 +424,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("pwd\r\n");
     stream->printf("cat file [limit]\r\n");
     stream->printf("rm file\r\n");
-    stream->printf("play file [-q]\r\n");
+    stream->printf("play file [-v]\r\n");
     stream->printf("progress - shows progress of current play\r\n");
     stream->printf("abort - abort currently playing file\r\n");
     stream->printf("reset - reset smoothie\r\n");
@@ -462,5 +436,6 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("get pos\r\n");
+    stream->printf("net\r\n");
 }
 

@@ -76,12 +76,24 @@ MRI_INIT_PARAMETERS=$(MRI_UART)
 OUTDIR=../$(DEVICE)
 
 # List of sources to be compiled/assembled
-CSRCS = $(wildcard $(SRC)/*.c $(SRC)/*/*.c $(SRC)/*/*/*.c $(SRC)/*/*/*/*.c $(SRC)/*/*/*/*/*.c $(SRC)/*/*/*/*/*/*.c)
+CSRCS1 = $(wildcard $(SRC)/*.c $(SRC)/*/*.c $(SRC)/*/*/*.c $(SRC)/*/*/*/*.c $(SRC)/*/*/*/*/*.c $(SRC)/*/*/*/*/*/*.c)
+ifeq "$(NONETWORK)" "1"
+CSRCS = $(filter-out $(SRC)/libs/Network/%,$(CSRCS1))
+DEFINES += -DNONETWORK
+else
+CSRCS = $(CSRCS1)
+endif
+
 ASRCS =  $(wildcard $(SRC)/*.S $(SRC)/*/*.S $(SRC)/*/*/*.S $(SRC)/*/*/*/*.S $(SRC)/*/*/*/*/*.S)
 ifneq "$(OS)" "Windows_NT"
 ASRCS +=  $(wildcard $(SRC)/*.s $(SRC)/*/*.s $(SRC)/*/*/*.s $(SRC)/*/*/*/*.s $(SRC)/*/*/*/*/*.s)
 endif
-CPPSRCS = $(wildcard $(SRC)/*.cpp $(SRC)/*/*.cpp $(SRC)/*/*/*.cpp $(SRC)/*/*/*/*.cpp $(SRC)/*/*/*/*/*.cpp $(SRC)/*/*/*/*/*/*.cpp)
+CPPSRCS1 = $(wildcard $(SRC)/*.cpp $(SRC)/*/*.cpp $(SRC)/*/*/*.cpp $(SRC)/*/*/*/*.cpp $(SRC)/*/*/*/*/*.cpp $(SRC)/*/*/*/*/*/*.cpp)
+ifeq "$(NONETWORK)" "1"
+CPPSRCS = $(filter-out $(SRC)/libs/Network/%,$(CPPSRCS1))
+else
+CPPSRCS = $(CPPSRCS1)
+endif
 
 # List of the objects files to be compiled/assembled
 OBJECTS = $(patsubst %.c,$(OUTDIR)/%.o,$(CSRCS)) $(patsubst %.s,$(OUTDIR)/%.o,$(patsubst %.S,$(OUTDIR)/%.o,$(ASRCS))) $(patsubst %.cpp,$(OUTDIR)/%.o,$(CPPSRCS))

@@ -25,6 +25,26 @@ using std::string;
 #include "arm_solutions/JohannKosselSolution.h"
 #include "arm_solutions/HBotSolution.h"
 
+#define default_seek_rate_checksum             CHECKSUM("default_seek_rate")
+#define default_feed_rate_checksum             CHECKSUM("default_feed_rate")
+#define mm_per_line_segment_checksum           CHECKSUM("mm_per_line_segment")
+#define delta_segments_per_second_checksum     CHECKSUM("delta_segments_per_second")
+#define mm_per_arc_segment_checksum            CHECKSUM("mm_per_arc_segment")
+#define arc_correction_checksum                CHECKSUM("arc_correction")
+#define x_axis_max_speed_checksum              CHECKSUM("x_axis_max_speed")
+#define y_axis_max_speed_checksum              CHECKSUM("y_axis_max_speed")
+#define z_axis_max_speed_checksum              CHECKSUM("z_axis_max_speed")
+
+// arm solutions
+#define arm_solution_checksum                  CHECKSUM("arm_solution")
+#define cartesian_checksum                     CHECKSUM("cartesian")
+#define rotatable_cartesian_checksum           CHECKSUM("rotatable_cartesian")
+#define rostock_checksum                       CHECKSUM("rostock")
+#define delta_checksum                         CHECKSUM("delta")
+#define hbot_checksum                          CHECKSUM("hbot")
+#define corexy_checksum                        CHECKSUM("corexy")
+#define kossel_checksum                        CHECKSUM("kossel")
+
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
 #define max(a,b) (((a) > (b)) ? (a) : (b))
@@ -188,9 +208,9 @@ void Robot::on_gcode_received(void * argument){
            }
        }
    }else if( gcode->has_m){
-     switch( gcode->m ){
+        double steps[3];
+        switch( gcode->m ){
             case 92: // M92 - set steps per mm
-                double steps[3];
                 this->arm_solution->get_steps_per_millimeter(steps);
                 if (gcode->has_letter('X'))
                     steps[0] = this->to_millimeters(gcode->get_value('X'));
@@ -214,17 +234,31 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
-            // case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
-            //     gcode->mark_as_taken();
-            //     if (gcode->has_letter('S'))
-            //     {
-            //         double acc= gcode->get_value('S') * 60 * 60; // mm/min^2
-            //         // enforce minimum
-            //         if (acc < 1.0)
-            //             acc = 1.0;
-            //         this->kernel->planner->acceleration= acc;
-            //     }
-            //     break;
+
+            // TODO I'm not sure if the following is safe to do here, or should it go on the block queue?
+            case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
+                gcode->mark_as_taken();
+                if (gcode->has_letter('S'))
+                {
+                    double acc= gcode->get_value('S') * 60 * 60; // mm/min^2
+                    // enforce minimum
+                    if (acc < 1.0)
+                        acc = 1.0;
+                    this->kernel->planner->acceleration= acc;
+                }
+                break;
+
+            case 205: // M205 Xnnn - set junction deviation
+                gcode->mark_as_taken();
+                if (gcode->has_letter('X'))
+                {
+                    double jd= gcode->get_value('X');
+                    // enforce minimum
+                    if (jd < 0.0)
+                        jd = 0.0;
+                    this->kernel->planner->junction_deviation= jd;
+                }
+                break;
 
             case 220: // M220 - speed override percentage
                 gcode->mark_as_taken();
@@ -236,6 +270,20 @@ void Robot::on_gcode_received(void * argument){
                         factor = 10.0;
                     seconds_per_minute = factor * 0.6;
                 }
+                break;
+
+            case 400: // wait until all moves are done up to this point
+                gcode->mark_as_taken();
+                this->kernel->conveyor->wait_for_empty_queue();
+                break;
+
+            case 500: // M500 saves some volatile settings to config override file
+            case 503: // M503 just prints the settings
+                this->arm_solution->get_steps_per_millimeter(steps);
+                gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", steps[0], steps[1], steps[2]);
+                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", this->kernel->planner->acceleration/3600);
+                gcode->stream->printf(";Junction Deviation:\nM205 X%1.5f\n", this->kernel->planner->junction_deviation);
+                gcode->mark_as_taken();
                 break;
 
             case 665: // M665 set optional arm solution variables based on arm solution
@@ -257,7 +305,8 @@ void Robot::on_gcode_received(void * argument){
                 break;
 
         }
-   }
+    }
+
     if( this->motion_mode < 0)
         return;
 

@@ -20,19 +20,20 @@ template<class kind, int length> class RingBuffer {
         int          prev_block_index(int index);
         void         push_back(kind object);
         void         pop_front(kind &object);
-        kind*        get_tail_ref();
+        kind*        get_head_ref();
         void         get( int index, kind &object);
         kind*        get_ref( int index);
         void         delete_first();
 
         kind         buffer[length];
-        int          head;
-        int          tail;
+        volatile int          tail;
+        volatile int          head;
 };
 
+#include "sLPC17xx.h"
 
 template<class kind, int length> RingBuffer<kind, length>::RingBuffer(){
-    this->head = this->tail = 0;
+    this->tail = this->head = 0;
 }
 
 template<class kind, int length>  int RingBuffer<kind, length>::capacity(){
@@ -40,7 +41,11 @@ template<class kind, int length>  int RingBuffer<kind, length>::capacity(){
 }
 
 template<class kind, int length>  int RingBuffer<kind, length>::size(){
-return((this->head>this->tail)?length:0)+this->tail-head;
+	//return((this->tail>this->head)?length:0)+this->head-tail;
+	__disable_irq();
+	int i = head - tail + ((tail > head)?length:0);
+	__enable_irq();
+	return i;
 }
 
 template<class kind, int length> int RingBuffer<kind, length>::next_block_index(int index){
@@ -56,24 +61,24 @@ template<class kind, int length> int RingBuffer<kind, length>::prev_block_index(
 }
 
 template<class kind, int length> void RingBuffer<kind, length>::push_back(kind object){
-    this->buffer[this->tail] = object;
-    this->tail = (tail+1)&(length-1);
+    this->buffer[this->head] = object;
+    this->head = (head+1)&(length-1);
 }
 
-template<class kind, int length> kind* RingBuffer<kind, length>::get_tail_ref(){
-    return &(buffer[tail]);
+template<class kind, int length> kind* RingBuffer<kind, length>::get_head_ref(){
+    return &(buffer[head]);
 }
 
 template<class kind, int length> void RingBuffer<kind, length>::get(int index, kind &object){
     int j= 0;
-    int k= this->head;
-    while (k != this->tail){
+    int k= this->tail;
+    while (k != this->head){
         if (j == index) break;
         j++;
         k= (k + 1) & (length - 1);
     }
     // TODO : this checks wether we are asked a value out of range
-    //if (k == this->tail){
+    //if (k == this->head){
     //    return NULL;
     //}
     object = this->buffer[k];
@@ -82,28 +87,28 @@ template<class kind, int length> void RingBuffer<kind, length>::get(int index, k
 
 template<class kind, int length> kind* RingBuffer<kind, length>::get_ref(int index){
     int j= 0;
-    int k= this->head;
-    while (k != this->tail){
+    int k= this->tail;
+    while (k != this->head){
         if (j == index) break;
         j++;
         k= (k + 1) & (length - 1);
     }
     // TODO : this checks wether we are asked a value out of range
-    if (k == this->tail){
+    if (k == this->head){
         return NULL;
     }
     return &(this->buffer[k]);
 }
 
 template<class kind, int length> void RingBuffer<kind, length>::pop_front(kind &object){
-    object = this->buffer[this->head];
-    this->head = (this->head+1)&(length-1);
+    object = this->buffer[this->tail];
+    this->tail = (this->tail+1)&(length-1);
 }
 
 template<class kind, int length> void RingBuffer<kind, length>::delete_first(){
     //kind dummy;
     //this->pop_front(dummy);
-    this->head = (this->head+1)&(length-1);
+    this->tail = (this->tail+1)&(length-1);
 }
 
 
