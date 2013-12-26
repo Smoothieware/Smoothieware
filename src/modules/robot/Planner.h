@@ -28,9 +28,6 @@ class Planner : public Module {
         void append_block( int target[], double feed_rate, double distance, double deltas[] );
         double max_allowable_speed( double acceleration, double target_velocity, double distance);
         void recalculate();
-        void reverse_pass();
-        void forward_pass();
-        void recalculate_trapezoids();
         void dump_queue();
         Block* get_current_block();
         void cleanup_queue();
