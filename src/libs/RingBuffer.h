@@ -20,7 +20,7 @@ template<class kind, int length> class RingBuffer {
         int          prev_block_index(int index);
         void         push_back(kind object);
         void         pop_front(kind &object);
-        kind*        get_tail_ref();
+        kind*        get_head_ref();
         void         get( int index, kind &object);
         kind*        get_ref( int index);
         void         delete_first();
@@ -65,7 +65,7 @@ template<class kind, int length> void RingBuffer<kind, length>::push_back(kind o
     this->head = (head+1)&(length-1);
 }
 
-template<class kind, int length> kind* RingBuffer<kind, length>::get_tail_ref(){
+template<class kind, int length> kind* RingBuffer<kind, length>::get_head_ref(){
     return &(buffer[head]);
 }
 

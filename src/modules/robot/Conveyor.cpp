@@ -34,7 +34,7 @@ void Conveyor::on_module_loaded(){
 void Conveyor::on_idle(void* argument){
     if (flush_blocks){
         // Cleanly delete block 
-        Block* block = queue.get_tail_ref();
+        Block* block = queue.get_head_ref();
         block->gcodes.clear(); 
         queue.delete_first();
         __disable_irq();
@@ -47,7 +47,7 @@ void Conveyor::on_idle(void* argument){
 Block* Conveyor::new_block(){
 
     // Take the next untaken block on the queue ( the one after the last one )
-    Block* block = this->queue.get_tail_ref();
+    Block* block = this->queue.get_head_ref();
     // Then clean it up
     if( block->conveyor == this ){
         block->gcodes.clear();
