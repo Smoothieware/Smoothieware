@@ -194,7 +194,8 @@ void Planner::recalculate() {
         current->reverse_pass(next);
     }
 
-    block_index = this->kernel->conveyor->queue.next_block_index(block_index);
+    previous = current;
+    current = next;
 
     // Recalculates the trapezoid speed profiles for flagged blocks in the plan according to the
     // entry_speed for each junction and the entry_speed of the next junction. Must be called by
@@ -203,9 +204,6 @@ void Planner::recalculate() {
     // to exit speed and entry speed of one another.
     while (block_index != this->kernel->conveyor->queue.head)
     {
-        previous = current;
-        current = &this->kernel->conveyor->queue.buffer[block_index];
-
         current->forward_pass(previous);
 
         // Recalculate if current block entry or exit junction speed has changed.
@@ -216,6 +214,9 @@ void Planner::recalculate() {
         }
 
         block_index = this->kernel->conveyor->queue.next_block_index(block_index);
+        previous = current;
+        current = &this->kernel->conveyor->queue.buffer[block_index];
+
     }
 
     // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
