@@ -39,19 +39,12 @@ class DeltaCalibrate : public Module{
         float arm_radius;
 
     private:
-        void do_homing(char axes_to_move);
-        void do_homing_corexy(char axes_to_move);
         uint32_t wait_for_ztouch();
-        void wait_for_homed(char axes_to_move);
-        void wait_for_homed_corexy(int axis);
-        void corexy_home(int home_axis, bool dirx, bool diry, double fast_rate, double slow_rate, unsigned int retract_steps);
-        void trim2mm(double * mm);
 
         void wait_for_moves();
         void move_all(bool, bool, unsigned int);
         double steps_per_mm[3];
         double homing_position[3];
-        float home_offset[3];
         bool home_direction[3];
         unsigned int  debounce_count;
         unsigned int  retract_steps[3];
@@ -63,8 +56,6 @@ class DeltaCalibrate : public Module{
         double  slow_rates[3];
         Pin           pins[6];
         StepperMotor* steppers[3];
-        char status;
-        bool is_corexy;
         bool is_delta;
         unsigned int delta_calibrate_flags;
         void send_gcode(std::string msg);

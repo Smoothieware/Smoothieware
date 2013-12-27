@@ -10,10 +10,8 @@
 #include "modules/communication/utils/Gcode.h"
 #include "modules/robot/Conveyor.h"
 #include "DeltaCalibrate.h"
-#include "libs/nuts_bolts.h"
 #include "libs/Pin.h"
 #include "libs/StepperMotor.h"
-#include "wait_api.h" // mbed.h lib
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1
@@ -22,13 +20,7 @@
 #define Y_AXIS 1
 #define Z_AXIS 2
 
-#define NOT_HOMING 0
-#define MOVING_TO_ORIGIN_FAST 1
-#define MOVING_BACK 2
-#define MOVING_TO_ORIGIN_SLOW 3
-
 #define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
-#define corexy_homing_checksum                  CHECKSUM("corexy_homing")
 #define delta_homing_checksum                   CHECKSUM("delta_homing")
 
 #define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
@@ -96,8 +88,6 @@
 
 DeltaCalibrate::DeltaCalibrate()
 {
-    this->status = NOT_HOMING;
-    home_offset[0] = home_offset[1] = home_offset[2] = 0.0F;
     this->delta_calibrate_flags = 0;
 }
 
@@ -179,7 +169,6 @@ void DeltaCalibrate::on_config_reload(void *argument)
     this->homing_position[1]        =  this->home_direction[1] ? this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number() : this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
     this->homing_position[2]        =  this->home_direction[2] ? this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number() : this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
 
-    this->is_corexy                 =  this->kernel->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
     this->is_delta                  =  this->kernel->config->value(delta_homing_checksum)->by_default(false)->as_bool();
 
     // endstop trim used by deltas to do soft adjusting, in mm, convert to steps, and negate depending on homing direction
@@ -202,31 +191,6 @@ void DeltaCalibrate::on_main_loop(void* argument){
     if ((delta_calibrate_flags & DO_CALIBRATE_PROBE)>0) {
         calibrate_zprobe_offset();
         delta_calibrate_flags = 0;
-    }
-}
-
-void DeltaCalibrate::wait_for_homed(char axes_to_move){
-    bool running = true;
-    unsigned int debounce[3] = {0, 0, 0};
-    while (running) {
-        running = false;
-        this->kernel->call_event(ON_IDLE);
-        for ( char c = 'X'; c <= 'Z'; c++ ) {
-            if ( ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-                if ( this->pins[c - 'X' + (this->home_direction[c - 'X'] ? 0 : 3)].get() ) {
-                    if ( debounce[c - 'X'] < debounce_count ) {
-                        debounce[c - 'X'] ++;
-                        running = true;
-                    } else if ( this->steppers[c - 'X']->moving ) {
-                        this->steppers[c - 'X']->move(0, 0);
-                    }
-                } else {
-                    // The endstop was not hit yet
-                    running = true;
-                    debounce[c - 'X'] = 0;
-                }
-            }
-        }
     }
 }
 
@@ -267,204 +231,6 @@ uint32_t DeltaCalibrate::wait_for_ztouch(){
     return(0);
 }
 
-// this homing works for cartesian and delta printers, not for HBots/CoreXY
-void DeltaCalibrate::do_homing(char axes_to_move)
-{
-    // Start moving the axes to the origin
-    this->status = MOVING_TO_ORIGIN_FAST;
-    for ( char c = 'X'; c <= 'Z'; c++ ) {
-        if ( ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-            this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
-            this->steppers[c - 'X']->move(this->home_direction[c - 'X'], 10000000);
-        }
-    }
-
-    // Wait for all axes to have homed
-    this->wait_for_homed(axes_to_move);
-
-    // Move back a small distance
-    this->status = MOVING_BACK;
-    bool inverted_dir;
-    for ( char c = 'X'; c <= 'Z'; c++ ) {
-        if ( ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-            inverted_dir = !this->home_direction[c - 'X'];
-            this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-            this->steppers[c - 'X']->move(inverted_dir, this->retract_steps[c - 'X']);
-        }
-    }
-
-    // Wait for moves to be done
-    for ( char c = 'X'; c <= 'Z'; c++ ) {
-        if (  ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-            while ( this->steppers[c - 'X']->moving ) {
-                this->kernel->call_event(ON_IDLE);
-            }
-        }
-    }
-
-    // Start moving the axes to the origin slowly
-    this->status = MOVING_TO_ORIGIN_SLOW;
-    for ( char c = 'X'; c <= 'Z'; c++ ) {
-        if ( ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-            this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-            this->steppers[c - 'X']->move(this->home_direction[c - 'X'], 10000000);
-        }
-    }
-
-    // Wait for all axes to have homed
-    this->wait_for_homed(axes_to_move);
-
-    if (this->is_delta) {
-        // move for soft trim
-        this->status = MOVING_BACK;
-        for ( char c = 'X'; c <= 'Z'; c++ ) {
-            if ( this->trim[c - 'X'] != 0 && ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-                inverted_dir = !this->home_direction[c - 'X'];
-                // move up or down depending on sign of trim
-                if (this->trim[c - 'X'] < 0) inverted_dir = !inverted_dir;
-                this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-                this->steppers[c - 'X']->move(inverted_dir, this->trim[c - 'X']);
-            }
-        }
-
-        // Wait for moves to be done
-        for ( char c = 'X'; c <= 'Z'; c++ ) {
-            if (  ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-                //this->kernel->streams->printf("axis %c \r\n", c );
-                while ( this->steppers[c - 'X']->moving ) {
-                    this->kernel->call_event(ON_IDLE);
-                }
-            }
-        }
-    }
-
-    // Homing is done
-    this->status = NOT_HOMING;
-}
-
-void DeltaCalibrate::wait_for_homed_corexy(int axis)
-{
-    bool running = true;
-    unsigned int debounce[3] = {0, 0, 0};
-    while (running) {
-        running = false;
-        this->kernel->call_event(ON_IDLE);
-        if ( this->pins[axis + (this->home_direction[axis] ? 0 : 3)].get() ) {
-            if ( debounce[axis] < debounce_count ) {
-                debounce[axis] ++;
-                running = true;
-            } else {
-                // turn both off if running
-                if (this->steppers[X_AXIS]->moving) this->steppers[X_AXIS]->move(0, 0);
-                if (this->steppers[Y_AXIS]->moving) this->steppers[Y_AXIS]->move(0, 0);
-            }
-        } else {
-            // The endstop was not hit yet
-            running = true;
-            debounce[axis] = 0;
-        }
-    }
-}
-
-void DeltaCalibrate::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate, double slow_rate, unsigned int retract_steps)
-{
-    this->status = MOVING_TO_ORIGIN_FAST;
-    this->steppers[X_AXIS]->set_speed(fast_rate);
-    this->steppers[X_AXIS]->move(dirx, 10000000);
-    this->steppers[Y_AXIS]->set_speed(fast_rate);
-    this->steppers[Y_AXIS]->move(diry, 10000000);
-
-    // wait for primary axis
-    this->wait_for_homed_corexy(home_axis);
-
-    // Move back a small distance
-    this->status = MOVING_BACK;
-    this->steppers[X_AXIS]->set_speed(slow_rate);
-    this->steppers[X_AXIS]->move(!dirx, retract_steps);
-    this->steppers[Y_AXIS]->set_speed(slow_rate);
-    this->steppers[Y_AXIS]->move(!diry, retract_steps);
-
-    // wait until done
-    while ( this->steppers[X_AXIS]->moving || this->steppers[Y_AXIS]->moving) {
-        this->kernel->call_event(ON_IDLE);
-    }
-
-    // Start moving the axes to the origin slowly
-    this->status = MOVING_TO_ORIGIN_SLOW;
-    this->steppers[X_AXIS]->set_speed(slow_rate);
-    this->steppers[X_AXIS]->move(dirx, 10000000);
-    this->steppers[Y_AXIS]->set_speed(slow_rate);
-    this->steppers[Y_AXIS]->move(diry, 10000000);
-
-    // wait for primary axis
-    this->wait_for_homed_corexy(home_axis);
-}
-
-// this homing works for HBots/CoreXY
-void DeltaCalibrate::do_homing_corexy(char axes_to_move)
-{
-    // TODO should really make order configurable, and selectr whether to allow XY to home at the same time, diagonally
-    // To move XY at the same time only one motor needs to turn, determine which motor and which direction based on min or max directions
-    // allow to move until an endstop triggers, then stop that motor.
-    // continue moving in the direction not yet triggered (which means two motors turning) until endstop hit
-
-    if((axes_to_move & 0x03) == 0x03) { // both X and Y need Homing
-        // determine which motor to turn and which way
-        bool dirx= this->home_direction[X_AXIS];
-        bool diry= this->home_direction[Y_AXIS];
-        int motor;
-        bool dir;
-        if(dirx && diry) { // min/min
-            motor= X_AXIS;
-            dir= true;
-        }else if(dirx && !diry) { // min/max
-            motor= Y_AXIS;
-            dir= true;
-        }else if(!dirx && diry) { // max/min
-            motor= Y_AXIS;
-            dir= false;
-        }else if(!dirx && !diry) { // max/max
-            motor= X_AXIS;
-            dir= false;
-        }
-
-        // then move both X and Y until one hits the endstop
-        this->status = MOVING_TO_ORIGIN_FAST;
-        this->steppers[motor]->set_speed(this->fast_rates[motor]);
-        this->steppers[motor]->move(dir, 10000000);
-        // wait until either X or Y hits the endstop
-        bool running= true;
-        while (running) {
-            this->kernel->call_event(ON_IDLE);
-            for(int m=X_AXIS;m<=Y_AXIS;m++) {
-                if(this->pins[m + (this->home_direction[m] ? 0 : 3)].get()) {
-                    // turn off motor
-                    if(this->steppers[motor]->moving) this->steppers[motor]->move(0, 0);
-                    running= false;
-                    break;
-                }
-            }
-        }
-    }
-
-    // move individual axis
-    if (axes_to_move & 0x01) { // Home X, which means both X and Y in same direction
-        bool dir= this->home_direction[X_AXIS];
-        corexy_home(X_AXIS, dir, dir, this->fast_rates[X_AXIS], this->slow_rates[X_AXIS], this->retract_steps[X_AXIS]);
-    }
-
-    if (axes_to_move & 0x02) { // Home Y, which means both X and Y in different directions
-        bool dir= this->home_direction[Y_AXIS];
-        corexy_home(Y_AXIS, dir, !dir, this->fast_rates[Y_AXIS], this->slow_rates[Y_AXIS], this->retract_steps[Y_AXIS]);
-    }
-
-    if (axes_to_move & 0x04) { // move Z
-        do_homing(0x04); // just home normally for Z
-    }
-
-    // Homing is done
-    this->status = NOT_HOMING;
-}
 
 void DeltaCalibrate::move_all(bool direction, bool speed, unsigned int steps){
     bool move_dir;
@@ -742,40 +508,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
     if ( gcode->has_g) {
-        if ( gcode->g == 28 ) {
-            gcode->mark_as_taken();
-            // G28 is received, we have homing to do
-
-            // First wait for the queue to be empty
-            this->kernel->conveyor->wait_for_empty_queue();
-
-            // Do we move select axes or all of them
-            char axes_to_move = 0;
-            // only enable homing if the endstop is defined, deltas always home all axis
-            bool home_all = this->is_delta || !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
-
-            for ( char c = 'X'; c <= 'Z'; c++ ) {
-                if ( (home_all || gcode->has_letter(c)) && this->pins[c - 'X' + (this->home_direction[c - 'X'] ? 0 : 3)].connected() ) {
-                    axes_to_move += ( 1 << (c - 'X' ) );
-                }
-            }
-
-            // Enable the motors
-            this->kernel->stepper->turn_enable_pins_on();
-
-            // do the actual homing
-            if (is_corexy)
-                do_homing_corexy(axes_to_move);
-            else
-                do_homing(axes_to_move);
-
-            // Zero the ax(i/e)s position, add in the home offset
-            for ( int c = 0; c <= 2; c++ ) {
-                if ( (axes_to_move >> c)  & 1 ) {
-                    this->kernel->robot->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
-                }
-            }
-        } else if (gcode->g == 32 )
+        if (gcode->g == 32 )
         {
             gcode->mark_as_taken();
             delta_calibrate_flags = 0;
@@ -815,111 +548,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
                 delta_calibrate_flags |= CALIBRATE_AUTOSET;
             }
         }
-    } else if (gcode->has_m) {
-        switch (gcode->m) {
-            case 119: {
-
-                int px = this->home_direction[0] ? 0 : 3;
-                int py = this->home_direction[1] ? 1 : 4;
-                int pz = this->home_direction[2] ? 2 : 5;
-                const char *mx = this->home_direction[0] ? "min" : "max";
-                const char *my = this->home_direction[1] ? "min" : "max";
-                const char *mz = this->home_direction[2] ? "min" : "max";
-
-                gcode->stream->printf("X %s:%d Y %s:%d Z %s:%d\n", mx, this->pins[px].get(), my, this->pins[py].get(), mz, this->pins[pz].get());
-                gcode->mark_as_taken();
-            }
-            break;
-
-            case 206: // M206 - set homing offset
-                if (gcode->has_letter('X')) home_offset[0] = gcode->get_value('X');
-                if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
-                if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
-                gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
-                gcode->mark_as_taken();
-                break;
-
-            case 500: // save settings
-            case 503: // print settings
-                gcode->stream->printf(";Home offset (mm):\nM206 X%1.2f Y%1.2f Z%1.2f\n", home_offset[0], home_offset[1], home_offset[2]);
-                if (is_delta) {
-                    double mm[3];
-                    trim2mm(mm);
-                    gcode->stream->printf(";Trim (mm):\nM666 X%1.2f Y%1.2f Z%1.2f\n", mm[0], mm[1], mm[2]);
-                    gcode->stream->printf(";Max Z\nM665 Z%1.2f\n", this->homing_position[2]);
-                }
-                gcode->mark_as_taken();
-                break;
-
-            case 665: { // M665 - set max gamma/z height
-                gcode->mark_as_taken();
-                double gamma_max = this->homing_position[2];
-                if (gcode->has_letter('Z')) {
-                    this->homing_position[2] = gamma_max = gcode->get_value('Z');
-                }
-                gcode->stream->printf("Max Z %8.3f ", gamma_max);
-                gcode->add_nl = true;
-            }
-            break;
-
-
-            case 666: { // M666 - set trim for each axis in mm
-                double mm[3];
-                trim2mm(mm);
-
-                if (gcode->has_letter('X')) mm[0] = gcode->get_value('X');
-                if (gcode->has_letter('Y')) mm[1] = gcode->get_value('Y');
-                if (gcode->has_letter('Z')) mm[2] = gcode->get_value('Z');
-
-                int dirx = (this->home_direction[0] ? 1 : -1);
-                int diry = (this->home_direction[1] ? 1 : -1);
-                int dirz = (this->home_direction[2] ? 1 : -1);
-                trim[0] = lround(mm[0] * steps_per_mm[0]) * dirx; // convert back to steps
-                trim[1] = lround(mm[1] * steps_per_mm[1]) * diry;
-                trim[2] = lround(mm[2] * steps_per_mm[2]) * dirz;
-
-                // print the current trim values in mm and steps
-                gcode->stream->printf("X %5.3f (%d) Y %5.3f (%d) Z %5.3f (%d)\n", mm[0], trim[0], mm[1], trim[1], mm[2], trim[2]);
-                gcode->mark_as_taken();
-            }
-            break;
-
-            // NOTE this is to test accuracy of lead screws etc.
-            case 910: { // M910 - move specific number of raw steps
-                int x= 0, y=0 , z= 0, f= 200*16;
-                if (gcode->has_letter('F')) f = gcode->get_value('F');
-                if (gcode->has_letter('X')) {
-                    x = gcode->get_value('X');
-                    this->steppers[X_AXIS]->set_speed(f);
-                    this->steppers[X_AXIS]->move(x<0, abs(x));
-                }
-                if (gcode->has_letter('Y')) {
-                    y = gcode->get_value('Y');
-                    this->steppers[Y_AXIS]->set_speed(f);
-                    this->steppers[Y_AXIS]->move(y<0, abs(y));
-                }
-                if (gcode->has_letter('Z')) {
-                    z = gcode->get_value('Z');
-                    this->steppers[Z_AXIS]->set_speed(f);
-                    this->steppers[Z_AXIS]->move(z<0, abs(z));
-                }
-                gcode->stream->printf("Moved X %d Y %d Z %d F %d steps\n", x, y, z, f);
-                gcode->mark_as_taken();
-                break;
-            }
-        }
     }
-}
-
-void DeltaCalibrate::trim2mm(double *mm)
-{
-    int dirx = (this->home_direction[0] ? 1 : -1);
-    int diry = (this->home_direction[1] ? 1 : -1);
-    int dirz = (this->home_direction[2] ? 1 : -1);
-
-    mm[0] = this->trim[0] / this->steps_per_mm[0] * dirx; // convert to mm
-    mm[1] = this->trim[1] / this->steps_per_mm[1] * diry;
-    mm[2] = this->trim[2] / this->steps_per_mm[2] * dirz;
 }
 
 void DeltaCalibrate::send_gcode(std::string g) {
