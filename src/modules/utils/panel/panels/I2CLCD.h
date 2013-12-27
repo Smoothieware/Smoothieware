@@ -76,7 +76,6 @@ using namespace std;
 class I2CLCD : public LcdBase {
     public:
         I2CLCD() {
-            Kernel* kernel= THEKERNEL;
             // Default values
             this->i2c_address      = 0x27;
             this->backlightval     = 0x00;
@@ -88,11 +87,11 @@ class I2CLCD : public LcdBase {
             this->i2c = new mbed::I2C(P0_27, P0_28);   
         
             // configure the pins to use
-            this->encoder_a_pin.from_string(kernel->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
-            this->encoder_b_pin.from_string(kernel->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
-            this->click_pin.from_string(kernel->config->value( panel_checksum, click_button_pin_checksum )->by_default("nc")->as_string())->as_input()->pull_up();
-            this->up_pin.from_string(kernel->config->value( panel_checksum, up_button_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
-            this->down_pin.from_string(kernel->config->value( panel_checksum, down_button_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
+            this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
+            this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
+            this->click_pin.from_string(THEKERNEL->config->value( panel_checksum, click_button_pin_checksum )->by_default("nc")->as_string())->as_input()->pull_up();
+            this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
+            this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
 
         }
         virtual ~I2CLCD() {

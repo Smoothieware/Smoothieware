@@ -28,9 +28,9 @@ class Block {
         double intersection_distance(double initial_rate, double final_rate, double acceleration, double distance);
         void reverse_pass(Block* previous);
         void forward_pass(Block* next);
-        void debug(Kernel* kernel);
+        void debug();
         void append_gcode(Gcode* gcode);
-        void pop_and_execute_gcode(Kernel* &kernel);
+        void pop_and_execute_gcode();
         double get_duration_left(unsigned int already_taken_steps);
         void take();
         void release();

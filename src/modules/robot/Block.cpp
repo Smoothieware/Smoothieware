@@ -30,8 +30,8 @@ Block::Block(){
     this->final_rate = -1;
 }
 
-void Block::debug(Kernel* kernel){
-    kernel->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
+void Block::debug(){
+    THEKERNEL->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
 }
 
 
@@ -51,7 +51,7 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
 
     // How many steps to accelerate and decelerate
-    double acceleration_per_minute = this->rate_delta * this->planner->kernel->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
+    double acceleration_per_minute = this->rate_delta * THEKERNEL->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
     int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
 
@@ -163,10 +163,10 @@ void Block::append_gcode(Gcode* gcode){
 }
 
 // The attached gcodes are then poped and the on_gcode_execute event is called with them as a parameter
-void Block::pop_and_execute_gcode(Kernel* &kernel){
+void Block::pop_and_execute_gcode(){
     Block* block = const_cast<Block*>(this);
     for(unsigned short index=0; index<block->gcodes.size(); index++){
-        kernel->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
+        THEKERNEL->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
     }
 }
 
@@ -191,11 +191,11 @@ void Block::release(){
 
         // All modules are done with this block
         // Call the on_block_end event so all modules can act accordingly
-        this->conveyor->kernel->call_event(ON_BLOCK_END, this);
+        THEKERNEL->call_event(ON_BLOCK_END, this);
 
         // Gcodes corresponding to the *following* blocks are stored in this block. 
         // We execute them all in order when this block is finished executing
-        this->pop_and_execute_gcode(this->conveyor->kernel);
+        this->pop_and_execute_gcode();
        
         // We would normally delete this block directly here, but we can't, because this is interrupt context, no crazy memory stuff here
         // So instead we increment a counter, and it will be deleted in main loop context 
@@ -216,7 +216,7 @@ void Block::release(){
 
                     // Execute this candidate
                     conveyor->current_block = candidate;
-                    conveyor->kernel->call_event(ON_BLOCK_BEGIN, conveyor->current_block);
+                    THEKERNEL->call_event(ON_BLOCK_BEGIN, conveyor->current_block);
 
                     // If no module took this block, release it ourselves, as nothing else will do it otherwise
                     if( conveyor->current_block->times_taken < 1 ){

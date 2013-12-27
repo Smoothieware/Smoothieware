@@ -264,9 +264,9 @@ void Extruder::on_gcode_execute(void* argument){
             if (gcode->has_letter('F'))
             {
                 this->feed_rate = gcode->get_value('F');
-                if (this->feed_rate > (this->max_speed * kernel->robot->seconds_per_minute))
-                    this->feed_rate = this->max_speed * kernel->robot->seconds_per_minute;
-                feed_rate /= kernel->robot->seconds_per_minute;
+                if (this->feed_rate > (this->max_speed * THEKERNEL->robot->seconds_per_minute))
+                    this->feed_rate = this->max_speed * THEKERNEL->robot->seconds_per_minute;
+                feed_rate /= THEKERNEL->robot->seconds_per_minute;
             }
         }else if( gcode->g == 90 ){ this->absolute_mode = true;
         }else if( gcode->g == 91 ){ this->absolute_mode = false;

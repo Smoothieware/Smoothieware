@@ -34,7 +34,7 @@ void Player::on_module_loaded(){
 }
 
 void Player::on_second_tick(void*) {
-     if (!kernel->pauser->paused()) this->elapsed_secs++;
+     if (!THEKERNEL->pauser->paused()) this->elapsed_secs++;
 }
 
 void Player::on_gcode_received(void *argument) {

@@ -109,7 +109,6 @@ Kernel::Kernel(){
 
 // Add a module to Kernel. We don't actually hold a list of modules, we just tell it where Kernel is
 void Kernel::add_module(Module* module){
-    module->kernel = this;
     module->on_module_loaded();
 }
 

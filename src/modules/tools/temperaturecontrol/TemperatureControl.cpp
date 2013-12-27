@@ -44,7 +44,7 @@ void TemperatureControl::on_module_loaded(){
 
 void TemperatureControl::on_main_loop(void* argument){
     if (this->min_temp_violated) {
-        kernel->streams->printf("Error: MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
+        THEKERNEL->streams->printf("Error: MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
         this->min_temp_violated = false;
     }
 }
@@ -287,7 +287,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
             pid_process(temperature);
             if ((temperature > target_temperature) && waiting)
             {
-                kernel->pauser->release();
+                THEKERNEL->pauser->release();
                 waiting = false;
             }
         }
@@ -345,7 +345,7 @@ int TemperatureControl::new_thermistor_reading()
 void TemperatureControl::on_second_tick(void* argument)
 {
     if (waiting)
-        kernel->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o);
+        THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o);
 }
 
 void TemperatureControl::setPIDp(double p) {
