@@ -7,11 +7,13 @@
 
 using namespace std;
 #include <vector>
-#include "libs/nuts_bolts.h"
-#include "libs/RingBuffer.h"
-#include "../communication/utils/Gcode.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
+
+#include "mri.h"
+#include "nuts_bolts.h"
+#include "RingBuffer.h"
+#include "Gcode.h"
+#include "Module.h"
+#include "Kernel.h"
 #include "Block.h"
 #include "Planner.h"
 #include "Conveyor.h"
@@ -173,23 +175,30 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
-    int block_index = this->kernel->conveyor->queue.head;
-    block_index = this->kernel->conveyor->queue.prev_block_index(block_index);
+    RingBuffer<Block,32>* queue = &this->kernel->conveyor->queue;
+
+    int newest = queue->prev_block_index(queue->head);
+    int oldest = queue->tail;
+
+    int block_index = newest;
 
     Block* previous;
     Block* current;
     Block* next;
 
-    current = &this->kernel->conveyor->queue.buffer[block_index];
+    current = &queue->buffer[block_index];
     current->recalculate_flag = true;
+
+    // if there's only one block in the queue, we fall through both while loops and this ends up in current
+    // so we must set it here, or perform conditionals further down. this is easier
     next = current;
 
-    while ((block_index != this->kernel->conveyor->queue.tail) && (current->recalculate_flag))
+    while ((block_index != oldest) && (current->recalculate_flag))
     {
-        block_index = this->kernel->conveyor->queue.prev_block_index(block_index);
+        block_index = queue->prev_block_index(block_index);
 
         next = current;
-        current = &this->kernel->conveyor->queue.buffer[block_index];
+        current = &queue->buffer[block_index];
 
         current->recalculate_flag = false;
 
@@ -204,7 +213,7 @@ void Planner::recalculate() {
     // planner_recalculate() after updating the blocks. Any recalulate flagged junction will
     // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
     // to exit speed and entry speed of one another.
-    while (block_index != this->kernel->conveyor->queue.prev_block_index(this->kernel->conveyor->queue.head))
+    while (block_index != newest)
     {
         current->forward_pass(previous);
 
@@ -215,9 +224,9 @@ void Planner::recalculate() {
             previous->recalculate_flag = false;
         }
 
-        block_index = this->kernel->conveyor->queue.next_block_index(block_index);
+        block_index = queue->next_block_index(block_index);
         previous = current;
-        current = &this->kernel->conveyor->queue.buffer[block_index];
+        current = &queue->buffer[block_index];
     }
 
     // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
