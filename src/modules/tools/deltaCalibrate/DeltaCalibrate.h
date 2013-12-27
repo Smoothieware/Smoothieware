@@ -5,8 +5,8 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef ENDSTOPS_MODULE_H
-#define ENDSTOPS_MODULE_H
+#ifndef DELTACALIBRATE_MODULE_H
+#define DELTACALIBRATE_MODULE_H
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
