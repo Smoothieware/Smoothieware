@@ -33,24 +33,19 @@ void JohannKosselSolution::init() {
 }
 
 void JohannKosselSolution::millimeters_to_steps( float millimeters[], int steps[] ){
-    float cartesian[3];
-    // convert input to float
-    cartesian[0]= millimeters[0];
-    cartesian[1]= millimeters[1];
-    cartesian[2]= millimeters[2];
 
     float delta_x = sqrtf(this->arm_length_squared
-                         - SQ(DELTA_TOWER1_X-cartesian[0])
-                         - SQ(DELTA_TOWER1_Y-cartesian[1])
-                        ) + cartesian[2];
+                         - SQ(DELTA_TOWER1_X-millimeters[0])
+                         - SQ(DELTA_TOWER1_Y-millimeters[1])
+                        ) + millimeters[2];
     float delta_y = sqrtf(this->arm_length_squared
-                         - SQ(DELTA_TOWER2_X-cartesian[0])
-                         - SQ(DELTA_TOWER2_Y-cartesian[1])
-                        ) + cartesian[2];
+                         - SQ(DELTA_TOWER2_X-millimeters[0])
+                         - SQ(DELTA_TOWER2_Y-millimeters[1])
+                        ) + millimeters[2];
     float delta_z = sqrtf(this->arm_length_squared
-                         - SQ(DELTA_TOWER3_X-cartesian[0])
-                         - SQ(DELTA_TOWER3_Y-cartesian[1])
-                        ) + cartesian[2];
+                         - SQ(DELTA_TOWER3_X-millimeters[0])
+                         - SQ(DELTA_TOWER3_Y-millimeters[1])
+                        ) + millimeters[2];
 
 
     steps[ALPHA_STEPPER] = lround( delta_x * this->alpha_steps_per_mm );
