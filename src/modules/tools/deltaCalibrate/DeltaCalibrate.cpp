@@ -114,7 +114,6 @@ void DeltaCalibrate::on_module_loaded()
 
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_MAIN_LOOP);
 
     // Take StepperMotor objects from Robot and keep them here
     this->steppers[0] = this->kernel->robot->alpha_stepper_motor;
@@ -192,19 +191,6 @@ void DeltaCalibrate::on_config_reload(void *argument)
     this->trim[0] = this->kernel->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[0] * dirx;
     this->trim[1] = this->kernel->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * steps_per_mm[1] * diry;
     this->trim[2] = this->kernel->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
-}
-
-void DeltaCalibrate::on_main_loop(void* argument){
-//
-    if ((delta_calibrate_flags & DO_CALIBRATE_DELTA)>0) {
-        //
-        delta_calibrate_flags = 0;
-    }
-
-    if ((delta_calibrate_flags & DO_CALIBRATE_PROBE)>0) {
-        //calibrate_zprobe_offset();
-        delta_calibrate_flags = 0;
-    }
 }
 
 void DeltaCalibrate::wait_for_moves(){

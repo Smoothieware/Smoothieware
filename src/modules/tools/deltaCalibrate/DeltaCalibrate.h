@@ -24,7 +24,6 @@ class DeltaCalibrate : public Module{
 
 
     private:
-        void on_main_loop(void* argument);
         void calibrate_delta();
         void calibrate_zprobe_offset();
         uint32_t wait_for_ztouch();
