@@ -197,12 +197,12 @@ void DeltaCalibrate::on_config_reload(void *argument)
 void DeltaCalibrate::on_main_loop(void* argument){
 //
     if ((delta_calibrate_flags & DO_CALIBRATE_DELTA)>0) {
-        calibrate_delta();
+        //
         delta_calibrate_flags = 0;
     }
 
     if ((delta_calibrate_flags & DO_CALIBRATE_PROBE)>0) {
-        calibrate_zprobe_offset();
+        //calibrate_zprobe_offset();
         delta_calibrate_flags = 0;
     }
 }
@@ -444,7 +444,7 @@ void DeltaCalibrate::calibrate_delta( ){
     t1Trim -= minTrim;
     t2Trim -= minTrim;
     t3Trim -= minTrim;
-    float newDeltaRadius = ((centerAverage - originHeight)/steps_per_mm[0])/0.15 + arm_radius;
+    float newDeltaRadius = arm_radius - ((centerAverage - originHeight)/steps_per_mm[0])/0.15;
 
     if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
         kernel->streams->printf("Calibrated Values:\r\n");
@@ -544,6 +544,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
                     double l = gcode->get_value('L');
                     lift_steps = l * steps_per_mm[0];
                 }
+                calibrate_delta();
             }  
 
         } else if (gcode->g == 31 )
@@ -560,6 +561,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
             } else {
                 delta_calibrate_flags |= CALIBRATE_AUTOSET;
             }
+            calibrate_zprobe_offset();
         }
     } else if (gcode->has_m) {
         switch (gcode->m) {
