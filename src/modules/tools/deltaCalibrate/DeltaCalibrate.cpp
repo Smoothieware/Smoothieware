@@ -13,12 +13,17 @@
 #include "libs/Pin.h"
 #include "libs/StepperMotor.h"
 
-#define ALPHA_AXIS 0
-#define BETA_AXIS  1
-#define GAMMA_AXIS 2
-#define X_AXIS 0
-#define Y_AXIS 1
-#define Z_AXIS 2
+
+#define UP false
+#define DOWN true
+#define FAST true
+#define SLOW false
+
+#define DO_CALIBRATE_DELTA 1
+#define CALIBRATE_AUTOSET 2
+#define CALIBRATE_SILENT 4
+#define CALIBRATE_QUIET 8
+#define DO_CALIBRATE_PROBE 16
 
 #define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
 #define delta_homing_checksum                   CHECKSUM("delta_homing")
@@ -85,6 +90,7 @@
 #define alpha_steps_per_mm_checksum      CHECKSUM("alpha_steps_per_mm")
 #define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
 #define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
+
 
 DeltaCalibrate::DeltaCalibrate()
 {
@@ -247,11 +253,6 @@ void DeltaCalibrate::move_all(bool direction, bool speed, unsigned int steps){
 
 // auto calibration routine for delta bots
 void DeltaCalibrate::calibrate_delta( ){
-
-    if (!is_delta) {
-        kernel->streams->printf("Auto-Calibrate is only for delta machines, aborting.\r\n");
-        return; 
-    }
 
     uint32_t current_z_steps = 0;
 
@@ -444,12 +445,12 @@ void DeltaCalibrate::calibrate_delta( ){
 
     // apply values
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
-        trim[0] = lround(t1Trim * steps_per_mm[0]); 
-        trim[1] = lround(t2Trim * steps_per_mm[0]); 
-        trim[2] = lround(t3Trim * steps_per_mm[0]); 
-        homing_position[2] = ( originHeight/steps_per_mm[0]) + calibrate_probe_offset;
 
-        buffered_length = snprintf(buf, sizeof(buf), "M665 R%f", newDeltaRadius);
+        buffered_length = snprintf(buf, sizeof(buf), "M666 X%f Y%f Z%f", -t1Trim, -t2Trim, -t3Trim );
+        g.assign(buf, buffered_length);
+        send_gcode(g);
+
+        buffered_length = snprintf(buf, sizeof(buf), "M665 R%f Z%f", newDeltaRadius, (( originHeight/steps_per_mm[0]) + calibrate_probe_offset) );
         g.assign(buf, buffered_length);
         send_gcode(g);
 
@@ -510,28 +511,30 @@ void DeltaCalibrate::on_gcode_received(void *argument)
     if ( gcode->has_g) {
         if (gcode->g == 32 )
         {
-            gcode->mark_as_taken();
-            delta_calibrate_flags = 0;
-            delta_calibrate_flags |= DO_CALIBRATE_DELTA;
+            if (is_delta) {
+                gcode->mark_as_taken();
+                delta_calibrate_flags = 0;
+                delta_calibrate_flags |= DO_CALIBRATE_DELTA;
 
-            if (gcode->has_letter('Q')) {
-                delta_calibrate_flags |= CALIBRATE_QUIET;
-            }
-            if (gcode->has_letter('S')) {
-                delta_calibrate_flags |= CALIBRATE_SILENT;
-            }
-            if (gcode->has_letter('D')) {
-                //disable auto-apply values
-            } else {
-                delta_calibrate_flags |= CALIBRATE_AUTOSET;
-            }
-            if (gcode->has_letter('R')) {
-                calibrate_radius = gcode->get_value('R');
-            }
-            if (gcode->has_letter('L')) {
-                double l = gcode->get_value('L');
-                lift_steps = l * steps_per_mm[0];
-            }
+                if (gcode->has_letter('Q')) {
+                    delta_calibrate_flags |= CALIBRATE_QUIET;
+                }
+                if (gcode->has_letter('S')) {
+                    delta_calibrate_flags |= CALIBRATE_SILENT;
+                }
+                if (gcode->has_letter('D')) {
+                    //disable auto-apply values
+                } else {
+                    delta_calibrate_flags |= CALIBRATE_AUTOSET;
+                }
+                if (gcode->has_letter('R')) {
+                    calibrate_radius = gcode->get_value('R');
+                }
+                if (gcode->has_letter('L')) {
+                    double l = gcode->get_value('L');
+                    lift_steps = l * steps_per_mm[0];
+                }
+            }  
 
         } else if (gcode->g == 31 )
         {
