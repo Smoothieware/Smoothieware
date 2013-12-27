@@ -14,16 +14,16 @@
 class CartesianSolution : public BaseSolution {
     public:
         CartesianSolution(Config* passed_config);
-        void millimeters_to_steps( double millimeters[], int steps[] );
-        void steps_to_millimeters( int steps[], double millimeters[] );
+        void millimeters_to_steps( float millimeters[], int steps[] );
+        void steps_to_millimeters( int steps[], float millimeters[] );
 
-        void set_steps_per_millimeter( double steps[] );
-        void get_steps_per_millimeter( double steps[] );
+        void set_steps_per_millimeter( float steps[] );
+        void get_steps_per_millimeter( float steps[] );
 
         Config* config;
-        double alpha_steps_per_mm;
-        double beta_steps_per_mm;
-        double gamma_steps_per_mm;
+        float alpha_steps_per_mm;
+        float beta_steps_per_mm;
+        float gamma_steps_per_mm;
 };
 
 

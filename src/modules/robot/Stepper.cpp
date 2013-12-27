@@ -258,7 +258,7 @@ inline void Stepper::trapezoid_generator_reset(){
 }
 
 // Update the speed for all steppers
-void Stepper::set_step_events_per_minute( double steps_per_minute ){
+void Stepper::set_step_events_per_minute( float steps_per_minute ){
 
     // We do not step slower than this
     //steps_per_minute = max(steps_per_minute, this->minimum_steps_per_minute);
@@ -267,9 +267,9 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
     }
 
     // Instruct the stepper motors
-    if( THEKERNEL->robot->alpha_stepper_motor->moving ){ THEKERNEL->robot->alpha_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[ALPHA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
-    if( THEKERNEL->robot->beta_stepper_motor->moving  ){ THEKERNEL->robot->beta_stepper_motor->set_speed(  (steps_per_minute/60L) * ( (double)this->current_block->steps[BETA_STEPPER ] / (double)this->current_block->steps_event_count ) ); }
-    if( THEKERNEL->robot->gamma_stepper_motor->moving ){ THEKERNEL->robot->gamma_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[GAMMA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
+    if( THEKERNEL->robot->alpha_stepper_motor->moving ){ THEKERNEL->robot->alpha_stepper_motor->set_speed( (steps_per_minute/60L) * ( (float)this->current_block->steps[ALPHA_STEPPER] / (float)this->current_block->steps_event_count ) ); }
+    if( THEKERNEL->robot->beta_stepper_motor->moving  ){ THEKERNEL->robot->beta_stepper_motor->set_speed(  (steps_per_minute/60L) * ( (float)this->current_block->steps[BETA_STEPPER ] / (float)this->current_block->steps_event_count ) ); }
+    if( THEKERNEL->robot->gamma_stepper_motor->moving ){ THEKERNEL->robot->gamma_stepper_motor->set_speed( (steps_per_minute/60L) * ( (float)this->current_block->steps[GAMMA_STEPPER] / (float)this->current_block->steps_event_count ) ); }
 
     // Other modules might want to know the speed changed
     THEKERNEL->call_event(ON_SPEED_CHANGE, this);

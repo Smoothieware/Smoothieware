@@ -390,7 +390,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
 
         if (ok) {
-            double *pos = static_cast<double *>(returned_data);
+            float *pos = static_cast<float *>(returned_data);
             stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
 
         } else {
@@ -404,7 +404,7 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 {
     string type = shift_parameter( parameters );
     string temp = shift_parameter( parameters );
-    double t = temp.empty() ? 0.0 : strtod(temp.c_str(), NULL);
+    float t = temp.empty() ? 0.0 : strtod(temp.c_str(), NULL);
     bool ok = THEKERNEL->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
 
     if (ok) {

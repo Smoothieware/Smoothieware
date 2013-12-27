@@ -31,14 +31,14 @@ class CurrentControl : public Module {
         void on_module_loaded();
         void on_gcode_received(void *);
 
-        double alpha_current;
-        double beta_current;
-        double gamma_current;
-        double delta_current;
-        double epsilon_current;
-        double zeta_current;
-        double eta_current;
-        double theta_current;
+        float alpha_current;
+        float beta_current;
+        float gamma_current;
+        float delta_current;
+        float epsilon_current;
+        float zeta_current;
+        float eta_current;
+        float theta_current;
 
         DigipotBase* digipot;
 

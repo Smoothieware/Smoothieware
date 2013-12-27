@@ -39,8 +39,8 @@ void Laser::on_module_loaded() {
     this->laser_pin->period_us(20);
     this->laser_pin->write(0);
 
-    this->laser_max_power = THEKERNEL->config->value(laser_module_max_power_checksum)->by_default(0.8)->as_number() ;
-    this->laser_tickle_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
+    this->laser_max_power =    THEKERNEL->config->value(laser_module_max_power_checksum   )->by_default(0.8f)->as_number() ;
+    this->laser_tickle_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0   )->as_number() ;
 
     //register for events
     this->register_for_event(ON_GCODE_EXECUTE);
@@ -101,6 +101,6 @@ void Laser::on_speed_change(void* argument){
 void Laser::set_proportional_power(){
     if( this->laser_on && THEKERNEL->stepper->current_block ){
         // adjust power to maximum power and actual velocity
-        this->laser_pin->write(float(double(this->laser_max_power) * double(THEKERNEL->stepper->trapezoid_adjusted_rate) / double(THEKERNEL->stepper->current_block->nominal_rate)));
+        this->laser_pin->write(float(float(this->laser_max_power) * float(THEKERNEL->stepper->trapezoid_adjusted_rate) / float(THEKERNEL->stepper->current_block->nominal_rate)));
     }
 }

@@ -114,7 +114,7 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // PID
     setPIDp( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number() );
-    setPIDi( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number() );
+    setPIDi( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3f)->as_number() );
     setPIDd( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number() );
     // set to the same as max_pwm by default
     this->i_max = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
@@ -152,7 +152,7 @@ void TemperatureControl::on_gcode_received(void* argument){
         } else if (gcode->m == 303) {
             if (gcode->has_letter('E') && (gcode->get_value('E') == this->pool_index)) {
                 gcode->mark_as_taken();
-                double target = 150.0;
+                float target = 150.0;
                 if (gcode->has_letter('S')) {
                     target = gcode->get_value('S');
                     gcode->stream->printf("Target: %5.1f\n", target);
@@ -189,7 +189,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
         if (((gcode->m == this->set_m_code) || (gcode->m == this->set_and_wait_m_code))
             && gcode->has_letter('S'))
         {
-            double v = gcode->get_value('S');
+            float v = gcode->get_value('S');
 
             if (v == 0.0)
             {
@@ -238,12 +238,12 @@ void TemperatureControl::on_set_public_data(void* argument){
     if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
 
     // ok this is targeted at us, so set the temp
-    double t= *static_cast<double*>(pdr->get_data_ptr());
+    float t= *static_cast<float*>(pdr->get_data_ptr());
     this->set_desired_temperature(t);
     pdr->set_taken();
 }
 
-void TemperatureControl::set_desired_temperature(double desired_temperature)
+void TemperatureControl::set_desired_temperature(float desired_temperature)
 {
     if (desired_temperature == 1.0)
         desired_temperature = preset1;
@@ -255,15 +255,15 @@ void TemperatureControl::set_desired_temperature(double desired_temperature)
         heater_pin.set((o = 0));
 }
 
-double TemperatureControl::get_temperature(){
+float TemperatureControl::get_temperature(){
     return last_reading;
 }
 
-double TemperatureControl::adc_value_to_temperature(int adc_value)
+float TemperatureControl::adc_value_to_temperature(int adc_value)
 {
     if ((adc_value == 4095) || (adc_value == 0))
         return INFINITY;
-    double r = r2 / ((4095.0 / adc_value) - 1.0);
+    float r = r2 / ((4095.0 / adc_value) - 1.0);
     if (r1 > 0)
         r = (r1 * r) / (r1 - r);
     return (1.0 / (k + (j * log(r / r0)))) - 273.15;
@@ -272,7 +272,7 @@ double TemperatureControl::adc_value_to_temperature(int adc_value)
 uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     int r = new_thermistor_reading();
 
-    double temperature = adc_value_to_temperature(r);
+    float temperature = adc_value_to_temperature(r);
 
     if (target_temperature > 0)
     {
@@ -303,16 +303,16 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
 /**
  * Based on https://github.com/br3ttb/Arduino-PID-Library
  */
-void TemperatureControl::pid_process(double temperature)
+void TemperatureControl::pid_process(float temperature)
 {
-    double error = target_temperature - temperature;
+    float error = target_temperature - temperature;
 
     this->iTerm += (error * this->i_factor);
     if (this->iTerm > this->i_max) this->iTerm = this->i_max;
     else if (this->iTerm < 0.0) this->iTerm = 0.0;
 
     if(this->lastInput < 0.0) this->lastInput= temperature; // set first time
-    double d= (temperature - this->lastInput);
+    float d= (temperature - this->lastInput);
 
     // calculate the PID output
     // TODO does this need to be scaled by max_pwm/256? I think not as p_factor already does that
@@ -348,14 +348,14 @@ void TemperatureControl::on_second_tick(void* argument)
         THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o);
 }
 
-void TemperatureControl::setPIDp(double p) {
+void TemperatureControl::setPIDp(float p) {
     this->p_factor= p;
 }
 
-void TemperatureControl::setPIDi(double i) {
+void TemperatureControl::setPIDi(float i) {
     this->i_factor= i*this->PIDdt;
 }
 
-void TemperatureControl::setPIDd(double d) {
+void TemperatureControl::setPIDd(float d) {
     this->d_factor= d/this->PIDdt;
 }

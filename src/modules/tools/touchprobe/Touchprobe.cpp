@@ -96,7 +96,7 @@ void Touchprobe::on_gcode_received(void* argument)
 
     if( gcode->has_g) {
         if( gcode->g == 31 ) {
-            double tmp[3], pos[3];
+            float tmp[3], pos[3];
             int steps[3], distance[3];
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();

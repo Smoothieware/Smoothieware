@@ -44,14 +44,14 @@ void Block::debug(){
 //                              +-------------+
 //                                  time -->
 */
-void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
+void Block::calculate_trapezoid( float entryfactor, float exitfactor ){
 
     // The planner passes us factors, we need to transform them in rates
     this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min)
     this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
 
     // How many steps to accelerate and decelerate
-    double acceleration_per_minute = this->rate_delta * THEKERNEL->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
+    float acceleration_per_minute = this->rate_delta * THEKERNEL->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
     int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
 
@@ -74,7 +74,7 @@ void Block::calculate_trapezoid( double entryfactor, double exitfactor ){
 
 // Calculates the distance (not time) it takes to accelerate from initial_rate to target_rate using the
 // given acceleration:
-double Block::estimate_acceleration_distance(double initialrate, double targetrate, double acceleration) {
+float Block::estimate_acceleration_distance(float initialrate, float targetrate, float acceleration) {
       return( ((targetrate*targetrate)-(initialrate*initialrate))/(2L*acceleration));
 }
 
@@ -92,13 +92,13 @@ double Block::estimate_acceleration_distance(double initialrate, double targetra
                             ^ ^
                             | |
         intersection_distance distance */
-double Block::intersection_distance(double initialrate, double finalrate, double acceleration, double distance) {
+float Block::intersection_distance(float initialrate, float finalrate, float acceleration, float distance) {
    return((2*acceleration*distance-initialrate*initialrate+finalrate*finalrate)/(4*acceleration));
 }
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.
-inline double max_allowable_speed(double acceleration, double target_velocity, double distance) {
+inline float max_allowable_speed(float acceleration, float target_velocity, float distance) {
   return(
     sqrt(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
   );
@@ -140,7 +140,7 @@ void Block::forward_pass(Block* previous){
     // If nominal length is true, max junction speed is guaranteed to be reached. No need to recheck.
     if (!previous->nominal_length_flag) {
         if (previous->entry_speed < this->entry_speed) {
-          double entry_speed = min( this->entry_speed,
+          float entry_speed = min( this->entry_speed,
             max_allowable_speed(-this->planner->acceleration,previous->entry_speed,previous->millimeters) );
 
           // Check for junction speed change

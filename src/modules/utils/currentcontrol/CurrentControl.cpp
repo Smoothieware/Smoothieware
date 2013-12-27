@@ -37,17 +37,17 @@ void CurrentControl::on_module_loaded(){
     }
 
     // Get configuration
-    this->alpha_current =           THEKERNEL->config->value(alpha_current_checksum  )->by_default(0.8)->as_number();
-    this->beta_current  =           THEKERNEL->config->value(beta_current_checksum   )->by_default(0.8)->as_number();
-    this->gamma_current =           THEKERNEL->config->value(gamma_current_checksum  )->by_default(0.8)->as_number();
-    this->delta_current =           THEKERNEL->config->value(delta_current_checksum  )->by_default(0.8)->as_number();
+    this->alpha_current =           THEKERNEL->config->value(alpha_current_checksum  )->by_default(0.8f)->as_number();
+    this->beta_current  =           THEKERNEL->config->value(beta_current_checksum   )->by_default(0.8f)->as_number();
+    this->gamma_current =           THEKERNEL->config->value(gamma_current_checksum  )->by_default(0.8f)->as_number();
+    this->delta_current =           THEKERNEL->config->value(delta_current_checksum  )->by_default(0.8f)->as_number();
     this->epsilon_current =         THEKERNEL->config->value(epsilon_current_checksum)->by_default(-1)->as_number();
     this->zeta_current  =           THEKERNEL->config->value(zeta_current_checksum   )->by_default(-1)->as_number();
     this->eta_current =             THEKERNEL->config->value(eta_current_checksum    )->by_default(-1)->as_number();
     this->theta_current =           THEKERNEL->config->value(theta_current_checksum  )->by_default(-1)->as_number();
 
-    digipot->set_max_current(       THEKERNEL->config->value(digipot_max_current     )->by_default(2.0)->as_number());
-    digipot->set_factor(            THEKERNEL->config->value(digipot_factor          )->by_default(113.33)->as_number());
+    digipot->set_max_current(       THEKERNEL->config->value(digipot_max_current     )->by_default(2.0f)->as_number());
+    digipot->set_factor(            THEKERNEL->config->value(digipot_factor          )->by_default(113.33f)->as_number());
 
     this->digipot->set_current(0, this->alpha_current);
     this->digipot->set_current(1, this->beta_current );

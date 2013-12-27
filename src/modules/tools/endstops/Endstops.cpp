@@ -306,7 +306,7 @@ void Endstops::wait_for_homed_corexy(int axis)
     }
 }
 
-void Endstops::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate, double slow_rate, unsigned int retract_steps)
+void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps)
 {
     this->status = MOVING_TO_ORIGIN_FAST;
     this->steppers[X_AXIS]->set_speed(fast_rate);
@@ -473,7 +473,7 @@ void Endstops::on_gcode_received(void *argument)
             case 503: // print settings
                 gcode->stream->printf(";Home offset (mm):\nM206 X%1.2f Y%1.2f Z%1.2f\n", home_offset[0], home_offset[1], home_offset[2]);
                 if (is_delta) {
-                    double mm[3];
+                    float mm[3];
                     trim2mm(mm);
                     gcode->stream->printf(";Trim (mm):\nM666 X%1.2f Y%1.2f Z%1.2f\n", mm[0], mm[1], mm[2]);
                     gcode->stream->printf(";Max Z\nM665 Z%1.2f\n", this->homing_position[2]);
@@ -483,7 +483,7 @@ void Endstops::on_gcode_received(void *argument)
 
             case 665: { // M665 - set max gamma/z height
                 gcode->mark_as_taken();
-                double gamma_max = this->homing_position[2];
+                float gamma_max = this->homing_position[2];
                 if (gcode->has_letter('Z')) {
                     this->homing_position[2] = gamma_max = gcode->get_value('Z');
                 }
@@ -494,7 +494,7 @@ void Endstops::on_gcode_received(void *argument)
 
 
             case 666: { // M666 - set trim for each axis in mm
-                double mm[3];
+                float mm[3];
                 trim2mm(mm);
 
                 if (gcode->has_letter('X')) mm[0] = gcode->get_value('X');
@@ -541,7 +541,7 @@ void Endstops::on_gcode_received(void *argument)
     }
 }
 
-void Endstops::trim2mm(double *mm)
+void Endstops::trim2mm(float *mm)
 {
     int dirx = (this->home_direction[0] ? 1 : -1);
     int diry = (this->home_direction[1] ? 1 : -1);

@@ -174,25 +174,25 @@ void WatchScreen::get_temp_data()
 }
 
 // fetch the data we are displaying
-double WatchScreen::get_current_speed()
+float WatchScreen::get_current_speed()
 {
     void *returned_data;
 
     bool ok = THEKERNEL->public_data->get_value( robot_checksum, speed_override_percent_checksum, &returned_data );
     if (ok) {
-        double cs = *static_cast<double *>(returned_data);
+        float cs = *static_cast<float *>(returned_data);
         return cs;
     }
     return 0.0;
 }
 
-void WatchScreen::get_current_pos(double *cp)
+void WatchScreen::get_current_pos(float *cp)
 {
     void *returned_data;
 
     bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
     if (ok) {
-        double *p = static_cast<double *>(returned_data);
+        float *p = static_cast<float *>(returned_data);
         cp[0] = p[0];
         cp[1] = p[1];
         cp[2] = p[2];

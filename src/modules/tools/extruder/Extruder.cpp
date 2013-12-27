@@ -138,7 +138,7 @@ void Extruder::on_gcode_received(void *argument){
             gcode->mark_as_taken();
 
         }else if (gcode->m == 92 ){
-            double spm = this->steps_per_millimeter;
+            float spm = this->steps_per_millimeter;
             if (gcode->has_letter('E'))
                 spm = gcode->get_value('E');
             gcode->stream->printf("E:%g ", spm);
@@ -236,8 +236,8 @@ void Extruder::on_gcode_execute(void* argument){
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )){
                 // Get relative extrusion distance depending on mode ( in absolute mode we must substract target_position )
-                double extrusion_distance = gcode->get_value('E');
-                double relative_extrusion_distance = extrusion_distance;
+                float extrusion_distance = gcode->get_value('E');
+                float relative_extrusion_distance = extrusion_distance;
                 if (this->absolute_mode)
                 {
                     relative_extrusion_distance -= this->target_position;
@@ -379,7 +379,7 @@ void Extruder::on_speed_change( void* argument ){
     * or even : ( stepper steps per minute / 60 ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->trapezoid_adjusted_rate /60.0) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ), THEKERNEL->stepper->minimum_steps_per_minute/60.0 ) );
+    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->trapezoid_adjusted_rate /60.0) * ( (float)this->stepper_motor->steps_to_move / (float)this->current_block->steps_event_count ), THEKERNEL->stepper->minimum_steps_per_minute/60.0 ) );
 
 }
 

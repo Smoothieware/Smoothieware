@@ -10,9 +10,9 @@ JohannKosselSolution::JohannKosselSolution(Config* passed_config) : config(passe
     this->gamma_steps_per_mm = this->config->value(gamma_steps_per_mm_checksum)->as_number();
 
     // arm_length is the length of the arm from hinge to hinge
-    this->arm_length         = this->config->value(arm_length_checksum)->by_default(250.0)->as_number();
+    this->arm_length         = this->config->value(arm_length_checksum)->by_default(250.0f)->as_number();
     // arm_radius is the horizontal distance from hinge to hinge when the effector is centered
-    this->arm_radius         = this->config->value(arm_radius_checksum)->by_default(124.0)->as_number();
+    this->arm_radius         = this->config->value(arm_radius_checksum)->by_default(124.0f)->as_number();
 
     init();
 }
@@ -32,7 +32,7 @@ void JohannKosselSolution::init() {
     DELTA_TOWER3_Y= DELTA_RADIUS;
 }
 
-void JohannKosselSolution::millimeters_to_steps( double millimeters[], int steps[] ){
+void JohannKosselSolution::millimeters_to_steps( float millimeters[], int steps[] ){
     float cartesian[3];
     // convert input to float
     cartesian[0]= millimeters[0];
@@ -58,23 +58,23 @@ void JohannKosselSolution::millimeters_to_steps( double millimeters[], int steps
     steps[GAMMA_STEPPER] = lround( delta_z * this->gamma_steps_per_mm );
 }
 
-void JohannKosselSolution::steps_to_millimeters( int steps[], double millimeters[] ){}
+void JohannKosselSolution::steps_to_millimeters( int steps[], float millimeters[] ){}
 
-void JohannKosselSolution::set_steps_per_millimeter( double steps[] )
+void JohannKosselSolution::set_steps_per_millimeter( float steps[] )
 {
     this->alpha_steps_per_mm = steps[0];
     this->beta_steps_per_mm  = steps[1];
     this->gamma_steps_per_mm = steps[2];
 }
 
-void JohannKosselSolution::get_steps_per_millimeter( double steps[] )
+void JohannKosselSolution::get_steps_per_millimeter( float steps[] )
 {
     steps[0] = this->alpha_steps_per_mm;
     steps[1] = this->beta_steps_per_mm;
     steps[2] = this->gamma_steps_per_mm;
 }
 
-bool JohannKosselSolution::set_optional(char parameter, double value) {
+bool JohannKosselSolution::set_optional(char parameter, float value) {
 
     switch(parameter) {
         case 'L': // sets arm_length
@@ -91,7 +91,7 @@ bool JohannKosselSolution::set_optional(char parameter, double value) {
     return true;
 }
 
-bool JohannKosselSolution::get_optional(char parameter, double *value) {
+bool JohannKosselSolution::get_optional(char parameter, float *value) {
     if(value == NULL) return false;
 
     switch(parameter) {

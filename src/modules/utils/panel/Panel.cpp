@@ -110,13 +110,13 @@ void Panel::on_module_loaded()
     this->encoder_click_resolution = THEKERNEL->config->value( panel_checksum, encoder_resolution_checksum )->by_default(this->lcd->getEncoderResolution())->as_number();
 
     // load jogging feedrates in mm/min
-    jogging_speed_mm_min[0] = THEKERNEL->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
-    jogging_speed_mm_min[1] = THEKERNEL->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0)->as_number();
-    jogging_speed_mm_min[2] = THEKERNEL->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0)->as_number();
+    jogging_speed_mm_min[0] = THEKERNEL->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0f)->as_number();
+    jogging_speed_mm_min[1] = THEKERNEL->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0f)->as_number();
+    jogging_speed_mm_min[2] = THEKERNEL->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0f )->as_number();
 
     // load the default preset temeratures
-    default_hotend_temperature = THEKERNEL->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0)->as_number();
-    default_bed_temperature = THEKERNEL->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
+    default_hotend_temperature = THEKERNEL->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0f )->as_number();
+    default_bed_temperature    = THEKERNEL->config->value( panel_checksum, bed_temp_checksum    )->by_default(60.0f  )->as_number();
 
 
     this->up_button.up_attach(    this, &Panel::on_up );
@@ -481,7 +481,7 @@ bool Panel::control_value_change()
     }
 }
 
-bool Panel::enter_control_mode(double passed_normal_increment, double passed_pressed_increment)
+bool Panel::enter_control_mode(float passed_normal_increment, float passed_pressed_increment)
 {
     this->mode = CONTROL_MODE;
     this->normal_increment  = passed_normal_increment;
@@ -497,12 +497,12 @@ void Panel::control_value_update()
     this->control_value_changed = true;
 }
 
-void Panel::set_control_value(double value)
+void Panel::set_control_value(float value)
 {
     this->control_base_value = value;
 }
 
-double Panel::get_control_value()
+float Panel::get_control_value()
 {
     return this->control_base_value + (this->control_normal_counter * this->normal_increment);
 }

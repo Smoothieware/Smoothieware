@@ -27,18 +27,18 @@ class Endstops : public Module{
         void do_homing_corexy(char axes_to_move);
         void wait_for_homed(char axes_to_move);
         void wait_for_homed_corexy(int axis);
-        void corexy_home(int home_axis, bool dirx, bool diry, double fast_rate, double slow_rate, unsigned int retract_steps);
-        void trim2mm(double * mm);
+        void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
+        void trim2mm(float * mm);
 
-        double steps_per_mm[3];
-        double homing_position[3];
+        float steps_per_mm[3];
+        float homing_position[3];
         float home_offset[3];
         bool home_direction[3];
         unsigned int  debounce_count;
         unsigned int  retract_steps[3];
         int  trim[3];
-        double  fast_rates[3];
-        double  slow_rates[3];
+        float  fast_rates[3];
+        float  slow_rates[3];
         Pin           pins[6];
         StepperMotor* steppers[3];
         char status;

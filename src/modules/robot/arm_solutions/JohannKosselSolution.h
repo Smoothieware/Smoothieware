@@ -17,13 +17,13 @@
 class JohannKosselSolution : public BaseSolution {
     public:
         JohannKosselSolution(Config* passed_config);
-        void millimeters_to_steps( double millimeters[], int steps[] );
-        void steps_to_millimeters( int steps[], double millimeters[] );
+        void millimeters_to_steps( float millimeters[], int steps[] );
+        void steps_to_millimeters( int steps[], float millimeters[] );
 
-        void set_steps_per_millimeter( double steps[] );
-        void get_steps_per_millimeter( double steps[] );
-        bool set_optional(char parameter, double value);
-        bool get_optional(char parameter, double *value);
+        void set_steps_per_millimeter( float steps[] );
+        void get_steps_per_millimeter( float steps[] );
+        bool set_optional(char parameter, float value);
+        bool get_optional(char parameter, float *value);
 
     private:
         void init();
