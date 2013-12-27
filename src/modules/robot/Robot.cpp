@@ -71,9 +71,9 @@ void Robot::on_module_loaded() {
     this->on_config_reload(this);
 
     // Make our 3 StepperMotors
-    this->alpha_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&alpha_step_pin,&alpha_dir_pin,&alpha_en_pin) );
-    this->beta_stepper_motor   = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&beta_step_pin, &beta_dir_pin, &beta_en_pin ) );
-    this->gamma_stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&gamma_step_pin,&gamma_dir_pin,&gamma_en_pin) );
+    this->alpha_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&alpha_step_pin,&alpha_dir_pin,&alpha_en_pin) );
+    this->beta_stepper_motor   = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&beta_step_pin, &beta_dir_pin, &beta_en_pin ) );
+    this->gamma_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&gamma_step_pin,&gamma_dir_pin,&gamma_en_pin) );
 
 }
 
@@ -84,50 +84,50 @@ void Robot::on_config_reload(void* argument){
     // To make adding those solution easier, they have their own, separate object.
     // Here we read the config to find out which arm solution to use
     if (this->arm_solution) delete this->arm_solution;
-    int solution_checksum = get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
+    int solution_checksum = get_checksum(THEKERNEL->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
     // Note checksums are not const expressions when in debug mode, so don't use switch
     if(solution_checksum == hbot_checksum || solution_checksum == corexy_checksum) {
-        this->arm_solution = new HBotSolution(this->kernel->config);
+        this->arm_solution = new HBotSolution(THEKERNEL->config);
 
     }else if(solution_checksum == rostock_checksum) {
-        this->arm_solution = new RostockSolution(this->kernel->config);
+        this->arm_solution = new RostockSolution(THEKERNEL->config);
 
     }else if(solution_checksum == kossel_checksum) {
-        this->arm_solution = new JohannKosselSolution(this->kernel->config);
+        this->arm_solution = new JohannKosselSolution(THEKERNEL->config);
 
     }else if(solution_checksum ==  delta_checksum) {
         // place holder for now
-        this->arm_solution = new RostockSolution(this->kernel->config);
+        this->arm_solution = new RostockSolution(THEKERNEL->config);
 
     }else if(solution_checksum == rotatable_cartesian_checksum) {
-        this->arm_solution = new RotatableCartesianSolution(this->kernel->config);
+        this->arm_solution = new RotatableCartesianSolution(THEKERNEL->config);
 
     }else if(solution_checksum == cartesian_checksum) {
-        this->arm_solution = new CartesianSolution(this->kernel->config);
+        this->arm_solution = new CartesianSolution(THEKERNEL->config);
 
     }else{
-        this->arm_solution = new CartesianSolution(this->kernel->config);
+        this->arm_solution = new CartesianSolution(THEKERNEL->config);
     }
 
 
-    this->feed_rate           = this->kernel->config->value(default_feed_rate_checksum   )->by_default(100    )->as_number() / 60;
-    this->seek_rate           = this->kernel->config->value(default_seek_rate_checksum   )->by_default(100    )->as_number() / 60;
-    this->mm_per_line_segment = this->kernel->config->value(mm_per_line_segment_checksum )->by_default(0.0    )->as_number();
-    this->delta_segments_per_second = this->kernel->config->value(delta_segments_per_second_checksum )->by_default(0.0    )->as_number();
-    this->mm_per_arc_segment  = this->kernel->config->value(mm_per_arc_segment_checksum  )->by_default(0.5    )->as_number();
-    this->arc_correction      = this->kernel->config->value(arc_correction_checksum      )->by_default(5      )->as_number();
-    this->max_speeds[X_AXIS]  = this->kernel->config->value(x_axis_max_speed_checksum    )->by_default(60000  )->as_number();
-    this->max_speeds[Y_AXIS]  = this->kernel->config->value(y_axis_max_speed_checksum    )->by_default(60000  )->as_number();
-    this->max_speeds[Z_AXIS]  = this->kernel->config->value(z_axis_max_speed_checksum    )->by_default(300    )->as_number();
-    this->alpha_step_pin.from_string( this->kernel->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
-    this->alpha_dir_pin.from_string(  this->kernel->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
-    this->alpha_en_pin.from_string(   this->kernel->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
-    this->beta_step_pin.from_string(  this->kernel->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
-    this->gamma_step_pin.from_string( this->kernel->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
-    this->gamma_dir_pin.from_string(  this->kernel->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
-    this->gamma_en_pin.from_string(   this->kernel->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
-    this->beta_dir_pin.from_string(   this->kernel->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
-    this->beta_en_pin.from_string(    this->kernel->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
+    this->feed_rate           = THEKERNEL->config->value(default_feed_rate_checksum   )->by_default(100    )->as_number() / 60;
+    this->seek_rate           = THEKERNEL->config->value(default_seek_rate_checksum   )->by_default(100    )->as_number() / 60;
+    this->mm_per_line_segment = THEKERNEL->config->value(mm_per_line_segment_checksum )->by_default(0.0    )->as_number();
+    this->delta_segments_per_second = THEKERNEL->config->value(delta_segments_per_second_checksum )->by_default(0.0    )->as_number();
+    this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(0.5    )->as_number();
+    this->arc_correction      = THEKERNEL->config->value(arc_correction_checksum      )->by_default(5      )->as_number();
+    this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000  )->as_number();
+    this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000  )->as_number();
+    this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(300    )->as_number();
+    this->alpha_step_pin.from_string( THEKERNEL->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
+    this->alpha_dir_pin.from_string(  THEKERNEL->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
+    this->alpha_en_pin.from_string(   THEKERNEL->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
+    this->beta_step_pin.from_string(  THEKERNEL->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
+    this->gamma_step_pin.from_string( THEKERNEL->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
+    this->gamma_dir_pin.from_string(  THEKERNEL->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
+    this->gamma_en_pin.from_string(   THEKERNEL->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
+    this->beta_dir_pin.from_string(   THEKERNEL->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
+    this->beta_en_pin.from_string(    THEKERNEL->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
 
 }
 
@@ -202,7 +202,7 @@ void Robot::on_gcode_received(void * argument){
                     }
                 }
                 memcpy(this->current_position, this->last_milestone, sizeof(double)*3); // current_position[] = last_milestone[];
-                this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+                this->arm_solution->millimeters_to_steps(this->current_position, THEKERNEL->planner->position);
                 gcode->mark_as_taken();
                 return; // TODO: Wait until queue empty
            }
@@ -222,7 +222,7 @@ void Robot::on_gcode_received(void * argument){
                     seconds_per_minute = gcode->get_value('F');
                 this->arm_solution->set_steps_per_millimeter(steps);
                 // update current position in steps
-                this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+                this->arm_solution->millimeters_to_steps(this->current_position, THEKERNEL->planner->position);
                 gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", steps[0], steps[1], steps[2], seconds_per_minute);
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
@@ -244,7 +244,7 @@ void Robot::on_gcode_received(void * argument){
                     // enforce minimum
                     if (acc < 1.0)
                         acc = 1.0;
-                    this->kernel->planner->acceleration= acc;
+                    THEKERNEL->planner->acceleration= acc;
                 }
                 break;
 
@@ -256,7 +256,7 @@ void Robot::on_gcode_received(void * argument){
                     // enforce minimum
                     if (jd < 0.0)
                         jd = 0.0;
-                    this->kernel->planner->junction_deviation= jd;
+                    THEKERNEL->planner->junction_deviation= jd;
                 }
                 break;
 
@@ -274,15 +274,15 @@ void Robot::on_gcode_received(void * argument){
 
             case 400: // wait until all moves are done up to this point
                 gcode->mark_as_taken();
-                this->kernel->conveyor->wait_for_empty_queue();
+                THEKERNEL->conveyor->wait_for_empty_queue();
                 break;
 
             case 500: // M500 saves some volatile settings to config override file
             case 503: // M503 just prints the settings
                 this->arm_solution->get_steps_per_millimeter(steps);
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", steps[0], steps[1], steps[2]);
-                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", this->kernel->planner->acceleration/3600);
-                gcode->stream->printf(";Junction Deviation:\nM205 X%1.5f\n", this->kernel->planner->junction_deviation);
+                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration/3600);
+                gcode->stream->printf(";Junction Deviation:\nM205 X%1.5f\n", THEKERNEL->planner->junction_deviation);
                 gcode->mark_as_taken();
                 break;
 
@@ -352,10 +352,10 @@ void Robot::on_gcode_received(void * argument){
 void Robot::distance_in_gcode_is_known(Gcode* gcode){
 
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( this->kernel->conveyor->queue.size() == 0 ){
-        this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+    if( THEKERNEL->conveyor->queue.size() == 0 ){
+        THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
     }else{
-        Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+        Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
         block->append_gcode(gcode);
     }
 
@@ -364,7 +364,7 @@ void Robot::distance_in_gcode_is_known(Gcode* gcode){
 // Reset the position for all axes ( used in homing and G92 stuff )
 void Robot::reset_axis_position(double position, int axis) {
     this->last_milestone[axis] = this->current_position[axis] = position;
-    this->arm_solution->millimeters_to_steps(this->current_position, this->kernel->planner->position);
+    this->arm_solution->millimeters_to_steps(this->current_position, THEKERNEL->planner->position);
 }
 
 
@@ -392,7 +392,7 @@ void Robot::append_milestone( double target[], double rate ){
     }
 
     // Append the block to the planner
-    this->kernel->planner->append_block( steps, rate * seconds_per_minute, millimeters_of_travel, deltas );
+    THEKERNEL->planner->append_block( steps, rate * seconds_per_minute, millimeters_of_travel, deltas );
 
     // Update the last_milestone to the current target for the next time we use last_milestone
     memcpy(this->last_milestone, target, sizeof(double)*3); // this->last_milestone[] = target[];

@@ -65,14 +65,14 @@ Panel::~Panel()
 void Panel::on_module_loaded()
 {
     // Exit if this module is not enabled
-    if ( !this->kernel->config->value( panel_checksum, enable_checksum )->by_default(false)->as_bool() ) {
+    if ( !THEKERNEL->config->value( panel_checksum, enable_checksum )->by_default(false)->as_bool() ) {
         delete this;
         return;
     }
 
     // Initialise the LCD, see which LCD to use
     if (this->lcd != NULL) delete this->lcd;
-    int lcd_cksm = get_checksum(this->kernel->config->value(panel_checksum, lcd_checksum)->by_default("i2c")->as_string());
+    int lcd_cksm = get_checksum(THEKERNEL->config->value(panel_checksum, lcd_checksum)->by_default("i2c")->as_string());
 
     // Note checksums are not const expressions when in debug mode, so don't use switch
     if (lcd_cksm == i2c_lcd_checksum) {
@@ -104,19 +104,19 @@ void Panel::on_module_loaded()
 
     // some encoders may need more clicks to move menu, this is a divisor and is in config as it is
     // an end user usability issue
-    this->menu_offset = this->kernel->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
+    this->menu_offset = THEKERNEL->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
 
     // override default encoder resolution if needed
-    this->encoder_click_resolution = this->kernel->config->value( panel_checksum, encoder_resolution_checksum )->by_default(this->lcd->getEncoderResolution())->as_number();
+    this->encoder_click_resolution = THEKERNEL->config->value( panel_checksum, encoder_resolution_checksum )->by_default(this->lcd->getEncoderResolution())->as_number();
 
     // load jogging feedrates in mm/min
-    jogging_speed_mm_min[0] = this->kernel->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
-    jogging_speed_mm_min[1] = this->kernel->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0)->as_number();
-    jogging_speed_mm_min[2] = this->kernel->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0)->as_number();
+    jogging_speed_mm_min[0] = THEKERNEL->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
+    jogging_speed_mm_min[1] = THEKERNEL->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0)->as_number();
+    jogging_speed_mm_min[2] = THEKERNEL->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0)->as_number();
 
     // load the default preset temeratures
-    default_hotend_temperature = this->kernel->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0)->as_number();
-    default_bed_temperature = this->kernel->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
+    default_hotend_temperature = THEKERNEL->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0)->as_number();
+    default_bed_temperature = THEKERNEL->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
 
 
     this->up_button.up_attach(    this, &Panel::on_up );
@@ -125,8 +125,8 @@ void Panel::on_module_loaded()
     this->back_button.up_attach(  this, &Panel::on_back );
     this->pause_button.up_attach( this, &Panel::on_pause );
 
-    this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
-    this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
+    THEKERNEL->slow_ticker->attach( 100,  this, &Panel::button_tick );
+    THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
 
     // Register for events
     this->register_for_event(ON_IDLE);
@@ -134,7 +134,7 @@ void Panel::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
 
     // Refresh timer
-    this->kernel->slow_ticker->attach( 20, this, &Panel::refresh_tick );
+    THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
 }
 
 // Enter a screen, we only care about it now

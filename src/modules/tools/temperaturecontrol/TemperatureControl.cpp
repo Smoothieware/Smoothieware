@@ -53,12 +53,12 @@ void TemperatureControl::on_main_loop(void* argument){
 void TemperatureControl::on_config_reload(void* argument){
 
     // General config
-    this->set_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_m_code_checksum)->by_default(104)->as_number();
-    this->set_and_wait_m_code = this->kernel->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
-    this->get_m_code          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
-    this->readings_per_second = this->kernel->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
+    this->set_m_code          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, set_m_code_checksum)->by_default(104)->as_number();
+    this->set_and_wait_m_code = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
+    this->get_m_code          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
+    this->readings_per_second = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
 
-    this->designator          = this->kernel->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
+    this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
     // Values are here : http://reprap.org/wiki/Thermistor
     this->r0   = 100000;
@@ -68,7 +68,7 @@ void TemperatureControl::on_config_reload(void* argument){
     this->r2   = 4700;
 
     // Preset values for various common types of thermistors
-    ConfigValue* thermistor = this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_checksum);
+    ConfigValue* thermistor = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, thermistor_checksum);
     if(       thermistor->value.compare("EPCOS100K"    ) == 0 ){ // Default
     }else if( thermistor->value.compare("RRRF100K"     ) == 0 ){ this->beta = 3960;
     }else if( thermistor->value.compare("RRRF10K"      ) == 0 ){ this->beta = 3964; this->r0 = 10000; this->r1 = 680; this->r2 = 1600;
@@ -77,14 +77,14 @@ void TemperatureControl::on_config_reload(void* argument){
     }else if( thermistor->value.compare("HT100K"       ) == 0 ){ this->beta = 3990; }
 
     // Preset values are overriden by specified values
-    this->r0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r0_checksum  )->by_default(this->r0  )->as_number();               // Stated resistance eg. 100K
-    this->t0 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, t0_checksum  )->by_default(this->t0  )->as_number();               // Temperature at stated resistance, eg. 25C
-    this->beta =                this->kernel->config->value(temperature_control_checksum, this->name_checksum, beta_checksum)->by_default(this->beta)->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
-    this->r1 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
-    this->r2 =                  this->kernel->config->value(temperature_control_checksum, this->name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
+    this->r0 =                  THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, r0_checksum  )->by_default(this->r0  )->as_number();               // Stated resistance eg. 100K
+    this->t0 =                  THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, t0_checksum  )->by_default(this->t0  )->as_number();               // Temperature at stated resistance, eg. 25C
+    this->beta =                THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, beta_checksum)->by_default(this->beta)->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
+    this->r1 =                  THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
+    this->r2 =                  THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
 
-    this->preset1 =             this->kernel->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
-    this->preset2 =             this->kernel->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
+    this->preset1 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
+    this->preset2 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
 
 
     // Thermistor math
@@ -95,29 +95,29 @@ void TemperatureControl::on_config_reload(void* argument){
     o = 0;
 
     // Thermistor pin for ADC readings
-    this->thermistor_pin.from_string(this->kernel->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_string());
-    this->kernel->adc->enable_pin(&thermistor_pin);
+    this->thermistor_pin.from_string(THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_string());
+    THEKERNEL->adc->enable_pin(&thermistor_pin);
 
     // Heater pin
-    this->heater_pin.from_string(    this->kernel->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_string())->as_output();
-    this->heater_pin.max_pwm(        this->kernel->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
+    this->heater_pin.from_string(    THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_string())->as_output();
+    this->heater_pin.max_pwm(        THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
     this->heater_pin.set(0);
 
     set_low_on_debug(heater_pin.port_number, heater_pin.pin);
 
     // activate SD-DAC timer
-    this->kernel->slow_ticker->attach( this->kernel->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number() , &heater_pin, &Pwm::on_tick);
+    THEKERNEL->slow_ticker->attach( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number() , &heater_pin, &Pwm::on_tick);
 
     // reading tick
-    this->kernel->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
+    THEKERNEL->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
     this->PIDdt= 1.0 / this->readings_per_second;
 
     // PID
-    setPIDp( this->kernel->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number() );
-    setPIDi( this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number() );
-    setPIDd( this->kernel->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number() );
+    setPIDp( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number() );
+    setPIDi( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3)->as_number() );
+    setPIDd( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number() );
     // set to the same as max_pwm by default
-    this->i_max = this->kernel->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
+    this->i_max = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
     this->iTerm = 0.0;
     this->lastInput= -1.0;
     this->last_reading = 0.0;
@@ -173,10 +173,10 @@ void TemperatureControl::on_gcode_received(void* argument){
             gcode->mark_as_taken();
 
             // Attach gcodes to the last block for on_gcode_execute
-            if( this->kernel->conveyor->queue.size() == 0 ){
-                this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+            if( THEKERNEL->conveyor->queue.size() == 0 ){
+                THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
             }else{
-                Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+                Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
                 block->append_gcode(gcode);
             }
         }
@@ -202,7 +202,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
 
                 if( gcode->m == this->set_and_wait_m_code)
                 {
-                    this->kernel->pauser->take();
+                    THEKERNEL->pauser->take();
                     this->waiting = true;
                 }
             }
@@ -329,7 +329,7 @@ void TemperatureControl::pid_process(double temperature)
 
 int TemperatureControl::new_thermistor_reading()
 {
-    int last_raw = this->kernel->adc->read(&thermistor_pin);
+    int last_raw = THEKERNEL->adc->read(&thermistor_pin);
     if (queue.size() >= queue.capacity()) {
         uint16_t l;
         queue.pop_front(l);

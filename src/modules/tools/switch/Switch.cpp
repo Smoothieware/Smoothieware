@@ -36,24 +36,24 @@ void Switch::on_module_loaded(){
     this->on_config_reload(this);
 
     // input pin polling
-    this->kernel->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
+    THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
 
     // PWM
-    this->kernel->slow_ticker->attach(1000, &output_pin, &Pwm::on_tick);
+    THEKERNEL->slow_ticker->attach(1000, &output_pin, &Pwm::on_tick);
 }
 
 
 // Get config
 void Switch::on_config_reload(void* argument){
-    this->input_pin.from_string(this->kernel->config->value(switch_checksum, this->name_checksum, input_pin_checksum    )->by_default("nc")->as_string())->as_input();
-    this->input_pin_behavior     = this->kernel->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum     )->by_default(momentary_checksum)->as_number();
-    this->input_on_command     = this->kernel->config->value(switch_checksum, this->name_checksum, input_on_command_checksum     )->by_default("")->as_string();
-    this->input_off_command    = this->kernel->config->value(switch_checksum, this->name_checksum, input_off_command_checksum    )->by_default("")->as_string();
-    this->output_pin.from_string(this->kernel->config->value(switch_checksum, this->name_checksum, output_pin_checksum    )->by_default("nc")->as_string())->as_output();
-    this->output_on_command     = this->kernel->config->value(switch_checksum, this->name_checksum, output_on_command_checksum     )->by_default("")->as_string();
-    this->output_off_command    = this->kernel->config->value(switch_checksum, this->name_checksum, output_off_command_checksum    )->by_default("")->as_string();
-    this->switch_state         = this->kernel->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    this->switch_value         = this->kernel->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
+    this->input_pin.from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum    )->by_default("nc")->as_string())->as_input();
+    this->input_pin_behavior     = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum     )->by_default(momentary_checksum)->as_number();
+    this->input_on_command     = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum     )->by_default("")->as_string();
+    this->input_off_command    = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum    )->by_default("")->as_string();
+    this->output_pin.from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum    )->by_default("nc")->as_string())->as_output();
+    this->output_on_command     = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum     )->by_default("")->as_string();
+    this->output_off_command    = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum    )->by_default("")->as_string();
+    this->switch_state         = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
+    this->switch_value         = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
     if(this->switch_state)
         this->output_pin.set(this->switch_value);
     else
@@ -69,10 +69,10 @@ void Switch::on_gcode_received(void* argument){
     if( ( input_on_command.length() > 0 && ! gcode->command.compare(0, input_on_command.length(), input_on_command) )
         || ( input_off_command.length() > 0 && ! gcode->command.compare(0, input_off_command.length(), input_off_command) ) ){
         gcode->mark_as_taken();
-        if( this->kernel->conveyor->queue.size() == 0 ){
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+        if( THEKERNEL->conveyor->queue.size() == 0 ){
+            THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
         }else{
-            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
             block->append_gcode(gcode);
         }
     }
@@ -159,6 +159,6 @@ void Switch::send_gcode(std::string msg, StreamOutput* stream) {
     struct SerialMessage message;
     message.message = msg;
     message.stream = stream;
-    this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
 

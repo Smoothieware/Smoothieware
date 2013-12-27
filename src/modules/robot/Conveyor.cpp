@@ -93,7 +93,7 @@ void Conveyor::pop_and_process_new_block(int debug){
     this->current_block = this->queue.get_ref(0);
 
     // Tell all modules about it
-    this->kernel->call_event(ON_BLOCK_BEGIN, this->current_block);
+    THEKERNEL->call_event(ON_BLOCK_BEGIN, this->current_block);
 
 	// In case the module was not taken
     if( this->current_block->times_taken < 1 ){
@@ -110,14 +110,14 @@ void Conveyor::pop_and_process_new_block(int debug){
 // Wait for the queue to have a given number of free blocks
 void Conveyor::wait_for_queue(int free_blocks){
     while( this->queue.size() >= this->queue.capacity()-free_blocks ){
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
     }
 }
 
 // Wait for the queue to be empty
 void Conveyor::wait_for_empty_queue(){
     while( this->queue.size() > 0){
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
     }
 }
 

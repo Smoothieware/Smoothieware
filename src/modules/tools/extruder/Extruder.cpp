@@ -71,10 +71,10 @@ void Extruder::on_module_loaded() {
 
     // Update speed every *acceleration_ticks_per_second*
     // TODO: Make this an independent setting
-    this->kernel->slow_ticker->attach( this->kernel->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
+    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
 
     // Stepper motor object for the extruder
-    this->stepper_motor  = this->kernel->step_ticker->add_stepper_motor( new StepperMotor(&step_pin, &dir_pin, &en_pin) );
+    this->stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&step_pin, &dir_pin, &en_pin) );
     this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
 
 }
@@ -85,26 +85,26 @@ void Extruder::on_config_reload(void* argument){
     // If this module uses the old "single extruder" configuration style
     if( this->single_config ){
 
-        this->steps_per_millimeter        = this->kernel->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
-        this->acceleration                = this->kernel->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
-        this->max_speed                   = this->kernel->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
-        this->feed_rate                   = this->kernel->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
+        this->steps_per_millimeter        = THEKERNEL->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->acceleration                = THEKERNEL->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
+        this->max_speed                   = THEKERNEL->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
+        this->feed_rate                   = THEKERNEL->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
 
-        this->step_pin.from_string(         this->kernel->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
-        this->dir_pin.from_string(          this->kernel->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
-        this->en_pin.from_string(           this->kernel->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+        this->step_pin.from_string(         THEKERNEL->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
+        this->dir_pin.from_string(          THEKERNEL->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
+        this->en_pin.from_string(           THEKERNEL->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
 
     }else{
     // If this module was created with the new multi extruder configuration style
 
-        this->steps_per_millimeter        = this->kernel->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
-        this->acceleration                = this->kernel->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
-        this->max_speed                   = this->kernel->config->value(extruder_checksum, this->identifier, max_speed_checksum         )->by_default(1000)->as_number();
-        this->feed_rate                   = this->kernel->config->value(                                     default_feed_rate_checksum )->by_default(1000)->as_number();
+        this->steps_per_millimeter        = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->acceleration                = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
+        this->max_speed                   = THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum         )->by_default(1000)->as_number();
+        this->feed_rate                   = THEKERNEL->config->value(                                     default_feed_rate_checksum )->by_default(1000)->as_number();
 
-        this->step_pin.from_string(         this->kernel->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
-        this->dir_pin.from_string(          this->kernel->config->value(extruder_checksum, this->identifier, dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
-        this->en_pin.from_string(           this->kernel->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+        this->step_pin.from_string(         THEKERNEL->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
+        this->dir_pin.from_string(          THEKERNEL->config->value(extruder_checksum, this->identifier, dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
+        this->en_pin.from_string(           THEKERNEL->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
 
     }
 
@@ -155,10 +155,10 @@ void Extruder::on_gcode_received(void *argument){
     // Gcodes to pass along to on_gcode_execute
     if( ( gcode->has_m && (gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ){
         gcode->mark_as_taken();
-        if( this->kernel->conveyor->queue.size() == 0 ){
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+        if( THEKERNEL->conveyor->queue.size() == 0 ){
+            THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
         }else{
-            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
             block->append_gcode(gcode);
         }
     }
@@ -168,11 +168,11 @@ void Extruder::on_gcode_received(void *argument){
         if( !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ){
             // This is a solo move, we add an empty block to the queue
             //If the queue is empty, execute immediatly, otherwise attach to the last added block
-            if( this->kernel->conveyor->queue.size() == 0 ){
-                this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+            if( THEKERNEL->conveyor->queue.size() == 0 ){
+                THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
                 this->append_empty_block();
             }else{
-                Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+                Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
                 block->append_gcode(gcode);
                 this->append_empty_block();
             }
@@ -185,9 +185,9 @@ void Extruder::on_gcode_received(void *argument){
 
 // Append an empty block in the queue so that solo mode can pick it up
 Block* Extruder::append_empty_block(){
-    this->kernel->conveyor->wait_for_queue(2);
-    Block* block = this->kernel->conveyor->new_block();
-    block->planner = this->kernel->planner;
+    THEKERNEL->conveyor->wait_for_queue(2);
+    Block* block = THEKERNEL->conveyor->new_block();
+    block->planner = THEKERNEL->planner;
     block->millimeters = 0;
     block->steps[0] = 0;
     block->steps[1] = 0;
@@ -353,13 +353,13 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy){
     uint32_t target_rate = int(floor(this->feed_rate * this->steps_per_millimeter));
 
     if( current_rate < target_rate ){
-        uint32_t rate_increase = int(floor((this->acceleration/this->kernel->stepper->acceleration_ticks_per_second)*this->steps_per_millimeter));
+        uint32_t rate_increase = int(floor((this->acceleration/THEKERNEL->stepper->acceleration_ticks_per_second)*this->steps_per_millimeter));
         current_rate = min( target_rate, current_rate + rate_increase );
     }
     if( current_rate > target_rate ){ current_rate = target_rate; }
 
     // steps per second
-    this->stepper_motor->set_speed(max(current_rate, this->kernel->stepper->minimum_steps_per_minute/60));
+    this->stepper_motor->set_speed(max(current_rate, THEKERNEL->stepper->minimum_steps_per_minute/60));
 
     return 0;
 }
@@ -379,7 +379,7 @@ void Extruder::on_speed_change( void* argument ){
     * or even : ( stepper steps per minute / 60 ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed( max( ( this->kernel->stepper->trapezoid_adjusted_rate /60.0) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ), this->kernel->stepper->minimum_steps_per_minute/60.0 ) );
+    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->trapezoid_adjusted_rate /60.0) * ( (double)this->stepper_motor->steps_to_move / (double)this->current_block->steps_event_count ), THEKERNEL->stepper->minimum_steps_per_minute/60.0 ) );
 
 }
 

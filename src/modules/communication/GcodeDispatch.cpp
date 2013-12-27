@@ -22,7 +22,7 @@ GcodeDispatch::GcodeDispatch() {}
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded()
 {
-    return_error_on_unhandled_gcode = this->kernel->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
+    return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     currentline = -1;
     uploading = false;
@@ -126,7 +126,7 @@ void GcodeDispatch::on_console_line_received(void *line)
                                 // replace stream with one that writes to config-override file
                                 gcode->stream = new FileStream(kernel->config_override_filename());
                                 // dispatch the M500 here so we can free up the stream when done
-                                this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                                THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
                                 delete gcode->stream;
                                 delete gcode;
                                 new_message.stream->printf("Settings Stored to %s\r\nok\r\n", kernel->config_override_filename());
@@ -154,7 +154,7 @@ void GcodeDispatch::on_console_line_received(void *line)
 
                     //printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
                     //Dispatch message!
-                    this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                    THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
                     if(gcode->add_nl)
                         new_message.stream->printf("\r\n");
 

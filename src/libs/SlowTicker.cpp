@@ -147,10 +147,10 @@ void SlowTicker::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
     if( gcode->has_g && gcode->g == 4 ){
-        if( this->kernel->conveyor->queue.size() == 0 ){
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+        if( THEKERNEL->conveyor->queue.size() == 0 ){
+            THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
         }else{
-            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
             block->append_gcode(gcode);
         }
     }
