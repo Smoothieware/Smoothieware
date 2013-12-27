@@ -15,34 +15,22 @@
 #include "libs/StepperMotor.h"
 #include "libs/Pin.h"
 
-
-#define UP false
-#define DOWN true
-#define FAST true
-#define SLOW false
-
-#define DO_CALIBRATE_DELTA 1
-#define CALIBRATE_AUTOSET 2
-#define CALIBRATE_SILENT 4
-#define CALIBRATE_QUIET 8
-#define DO_CALIBRATE_PROBE 16
-
 class DeltaCalibrate : public Module{
     public:
         DeltaCalibrate();
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
+
+
+    private:
         void on_main_loop(void* argument);
         void calibrate_delta();
         void calibrate_zprobe_offset();
-        float arm_radius;
-
-    private:
         uint32_t wait_for_ztouch();
-
         void wait_for_moves();
         void move_all(bool, bool, unsigned int);
+        
         double steps_per_mm[3];
         double homing_position[3];
         bool home_direction[3];
@@ -51,6 +39,8 @@ class DeltaCalibrate : public Module{
         unsigned int lift_steps;
         double calibrate_radius;
         double calibrate_probe_offset;
+        float arm_radius;
+
         int  trim[3];
         double  fast_rates[3];
         double  slow_rates[3];

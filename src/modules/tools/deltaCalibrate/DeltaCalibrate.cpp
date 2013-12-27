@@ -202,8 +202,8 @@ void DeltaCalibrate::on_main_loop(void* argument){
 
 void DeltaCalibrate::wait_for_moves(){
     // Wait for moves to be done
-    for( char c = 'X'; c <= 'Z'; c++ ){
-        while( this->steppers[c - 'X']->moving ){
+    for( int i = 0; i <= 2; i++ ){
+        while( this->steppers[i]->moving ){
             this->kernel->call_event(ON_IDLE);
         }
     }
@@ -240,14 +240,14 @@ uint32_t DeltaCalibrate::wait_for_ztouch(){
 
 void DeltaCalibrate::move_all(bool direction, bool speed, unsigned int steps){
     bool move_dir;
-    for( char c = 'X'; c <= 'Z'; c++ ){
-        move_dir = this->home_direction[c - 'X']^direction ;
+    for( int i = 0; i <= 2; i++ ){
+        move_dir = (this->home_direction[i]^direction) != 0;
         if(speed){
-            this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
+            this->steppers[i]->set_speed(this->fast_rates[i]);
         } else {
-            this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
+            this->steppers[i]->set_speed(this->slow_rates[i]);
         }
-        this->steppers[c - 'X']->move(move_dir,steps);
+        this->steppers[i]->move(move_dir,steps);
     }
 }
 
