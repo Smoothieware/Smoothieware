@@ -568,7 +568,7 @@ void Robot::compute_arc(Gcode* gcode, float offset[], float target[]){
 
 
 float Robot::theta(float x, float y){
-    float t = atan(x/fabs(y));
+    float t = atanf(x/fabs(y));
     if (y>0) {return(t);} else {if (t>0){return(M_PI-t);} else {return(-M_PI-t);}}
 }
 
