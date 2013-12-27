@@ -9,8 +9,8 @@ RotatableCartesianSolution::RotatableCartesianSolution(Config* passed_config) : 
     this->gamma_steps_per_mm = this->config->value(gamma_steps_per_mm_checksum)->as_number();
 
     float alpha_angle  = PIOVER180 * this->config->value(alpha_angle_checksum)->by_default(0.0f)->as_number();
-    this->sin_alpha     = sin(alpha_angle);
-    this->cos_alpha     = cos(alpha_angle);
+    this->sin_alpha     = sinf(alpha_angle);
+    this->cos_alpha     = cosf(alpha_angle);
 }
 
 void RotatableCartesianSolution::millimeters_to_steps( float millimeters[], int steps[] ){

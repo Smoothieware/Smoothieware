@@ -117,7 +117,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
         // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
         if (cos_theta > -0.95) {
           // Compute maximum junction velocity based on maximum acceleration and junction deviation
-          float sin_theta_d2 = sqrt(0.5*(1.0-cos_theta)); // Trig half angle identity. Always positive.
+          float sin_theta_d2 = sqrtf(0.5*(1.0-cos_theta)); // Trig half angle identity. Always positive.
           vmax_junction = min(vmax_junction,
             sqrtf(this->acceleration * this->junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) );
         }
@@ -247,7 +247,7 @@ void Planner::dump_queue(){
 // acceleration within the allotted distance.
 float Planner::max_allowable_speed(float acceleration, float target_velocity, float distance) {
   return(
-    sqrt(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    sqrtf(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
   );
 }
 

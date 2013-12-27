@@ -379,7 +379,7 @@ void Robot::append_milestone( float target[], float rate ){
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
 
     // Compute how long this move moves, so we can attach it to the block for later use
-    float millimeters_of_travel = sqrt( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
+    float millimeters_of_travel = sqrtf( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
 
     // Do not move faster than the configured limits
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
@@ -403,7 +403,7 @@ void Robot::append_milestone( float target[], float rate ){
 void Robot::append_line(Gcode* gcode, float target[], float rate ){
 
     // Find out the distance for this gcode
-    gcode->millimeters_of_travel = sqrt( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
+    gcode->millimeters_of_travel = sqrtf( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
 
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
     if( gcode->millimeters_of_travel < 0.0001 ){ return; }
@@ -468,7 +468,7 @@ void Robot::append_arc(Gcode* gcode, float target[], float offset[], float radiu
     if (is_clockwise) { angular_travel -= 2*M_PI; }
 
     // Find the distance for this gcode
-    gcode->millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
+    gcode->millimeters_of_travel = hypotf(angular_travel*radius, fabs(linear_travel));
 
     // We don't care about non-XYZ moves ( for example the extruder produces some of those )
     if( gcode->millimeters_of_travel < 0.0001 ){ return; }
@@ -530,8 +530,8 @@ void Robot::append_arc(Gcode* gcode, float target[], float offset[], float radiu
         } else {
           // Arc correction to radius vector. Computed only every N_ARC_CORRECTION increments.
           // Compute exact location by applying transformation matrix from initial radius vector(=-offset).
-          cos_Ti = cos(i*theta_per_segment);
-          sin_Ti = sin(i*theta_per_segment);
+          cos_Ti = cosf(i*theta_per_segment);
+          sin_Ti = sinf(i*theta_per_segment);
           r_axis0 = -offset[this->plane_axis_0]*cos_Ti + offset[this->plane_axis_1]*sin_Ti;
           r_axis1 = -offset[this->plane_axis_0]*sin_Ti - offset[this->plane_axis_1]*cos_Ti;
           count = 0;
@@ -555,7 +555,7 @@ void Robot::append_arc(Gcode* gcode, float target[], float offset[], float radiu
 void Robot::compute_arc(Gcode* gcode, float offset[], float target[]){
 
     // Find the radius
-    float radius = hypot(offset[this->plane_axis_0], offset[this->plane_axis_1]);
+    float radius = hypotf(offset[this->plane_axis_0], offset[this->plane_axis_1]);
 
     // Set clockwise/counter-clockwise sign for mc_arc computations
     bool is_clockwise = false;
