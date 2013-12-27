@@ -174,6 +174,7 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 //
 void Planner::recalculate() {
     int block_index = this->kernel->conveyor->queue.head;
+    block_index = this->kernel->conveyor->queue.prev_block_index(block_index);
 
     Block* previous;
     Block* current;
@@ -181,6 +182,7 @@ void Planner::recalculate() {
 
     current = &this->kernel->conveyor->queue.buffer[block_index];
     current->recalculate_flag = true;
+    next = current;
 
     while ((block_index != this->kernel->conveyor->queue.tail) && (current->recalculate_flag))
     {
@@ -202,7 +204,7 @@ void Planner::recalculate() {
     // planner_recalculate() after updating the blocks. Any recalulate flagged junction will
     // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
     // to exit speed and entry speed of one another.
-    while (block_index != this->kernel->conveyor->queue.head)
+    while (block_index != this->kernel->conveyor->queue.prev_block_index(this->kernel->conveyor->queue.head))
     {
         current->forward_pass(previous);
 
@@ -216,7 +218,6 @@ void Planner::recalculate() {
         block_index = this->kernel->conveyor->queue.next_block_index(block_index);
         previous = current;
         current = &this->kernel->conveyor->queue.buffer[block_index];
-
     }
 
     // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
