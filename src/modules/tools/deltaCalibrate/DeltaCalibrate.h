@@ -30,7 +30,8 @@ class DeltaCalibrate : public Module{
         uint32_t wait_for_ztouch();
         void wait_for_moves();
         void move_all(bool, bool, unsigned int);
-        
+        void trim2mm(double * mm);
+
         double steps_per_mm[3];
         double homing_position[3];
         bool home_direction[3];
@@ -39,7 +40,7 @@ class DeltaCalibrate : public Module{
         unsigned int lift_steps;
         double calibrate_radius;
         double calibrate_probe_offset;
-        float arm_radius;
+        double arm_radius;
 
         int  trim[3];
         double  fast_rates[3];

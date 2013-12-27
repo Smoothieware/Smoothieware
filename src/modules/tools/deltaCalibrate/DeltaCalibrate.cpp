@@ -267,6 +267,9 @@ void DeltaCalibrate::calibrate_delta( ){
     int buffered_length = 0;
     string g;
 
+    // update machine geometry incase it has been modified since startup
+    THEKERNEL->robot->arm_solution->get_optional('R', &arm_radius);
+
     // First wait for the queue to be empty
     this->kernel->conveyor->wait_for_empty_queue();
     // Enable the motors
@@ -551,7 +554,38 @@ void DeltaCalibrate::on_gcode_received(void *argument)
                 delta_calibrate_flags |= CALIBRATE_AUTOSET;
             }
         }
+    } else if (gcode->has_m) {
+        switch (gcode->m) {
+            case 666: { // M666 - set trim for each axis in mm
+                double mm[3];
+                trim2mm(mm);
+
+                if (gcode->has_letter('X')) mm[0] = gcode->get_value('X');
+                if (gcode->has_letter('Y')) mm[1] = gcode->get_value('Y');
+                if (gcode->has_letter('Z')) mm[2] = gcode->get_value('Z');
+
+                int dirx = (this->home_direction[0] ? 1 : -1);
+                int diry = (this->home_direction[1] ? 1 : -1);
+                int dirz = (this->home_direction[2] ? 1 : -1);
+                trim[0] = lround(mm[0] * steps_per_mm[0]) * dirx; // convert back to steps
+                trim[1] = lround(mm[1] * steps_per_mm[1]) * diry;
+                trim[2] = lround(mm[2] * steps_per_mm[2]) * dirz;
+                gcode->mark_as_taken();
+            }
+            break;            
+        }
     }
+}
+
+void DeltaCalibrate::trim2mm(double *mm)
+{
+    int dirx = (this->home_direction[0] ? 1 : -1);
+    int diry = (this->home_direction[1] ? 1 : -1);
+    int dirz = (this->home_direction[2] ? 1 : -1);
+
+    mm[0] = this->trim[0] / this->steps_per_mm[0] * dirx; // convert to mm
+    mm[1] = this->trim[1] / this->steps_per_mm[1] * diry;
+    mm[2] = this->trim[2] / this->steps_per_mm[2] * dirz;
 }
 
 void DeltaCalibrate::send_gcode(std::string g) {
