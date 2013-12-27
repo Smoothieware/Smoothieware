@@ -91,6 +91,9 @@
 #define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
 #define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
 
+#define arm_solution_checksum                  CHECKSUM("arm_solution")
+#define kossel_checksum                        CHECKSUM("kossel")
+
 
 DeltaCalibrate::DeltaCalibrate()
 {
@@ -104,6 +107,10 @@ void DeltaCalibrate::on_module_loaded()
         return;
     }
 
+    // we directly access arm solution data to calculate calibration, currently only Kossel solution has the required methods
+    if ( get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string()) != kossel_checksum ) {
+        return;
+    }
 
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
