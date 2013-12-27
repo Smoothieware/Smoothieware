@@ -106,7 +106,7 @@ inline double max_allowable_speed(double acceleration, double target_velocity, d
 
 
 // Called by Planner::recalculate() when scanning the plan from last to first entry.
-void Block::reverse_pass(Block* next, Block* previous){
+void Block::reverse_pass(Block* next){
 
     if (next) {
         // If entry speed is already at the maximum entry speed, no need to recheck. Block is cruising.
@@ -130,7 +130,7 @@ void Block::reverse_pass(Block* next, Block* previous){
 
 
 // Called by Planner::recalculate() when scanning the plan from first to last entry.
-void Block::forward_pass(Block* previous, Block* next){
+void Block::forward_pass(Block* previous){
 
     if(!previous) { return; } // Begin planning after buffer_tail
 
