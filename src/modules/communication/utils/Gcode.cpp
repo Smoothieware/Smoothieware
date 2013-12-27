@@ -72,7 +72,7 @@ float Gcode::get_value( char letter ){
     for (; *cs; cs++){
          if( letter == *cs ){
              cs++;
-             float r = strtod(cs, &cn);
+             float r = strtof(cs, &cn);
              if (cn > cs)
                  return r;
          }

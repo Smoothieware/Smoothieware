@@ -45,7 +45,7 @@ class ConfigValue{
                 return this->default_double;
             }else{
                 char* endptr = NULL;
-                float result = strtod(remove_non_number(this->value).c_str(), &endptr);
+                float result = strtof(remove_non_number(this->value).c_str(), &endptr);
                 if( endptr <= remove_non_number(this->value).c_str() ){
                     error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
                 }

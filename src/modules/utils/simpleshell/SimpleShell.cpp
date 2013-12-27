@@ -404,7 +404,7 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 {
     string type = shift_parameter( parameters );
     string temp = shift_parameter( parameters );
-    float t = temp.empty() ? 0.0 : strtod(temp.c_str(), NULL);
+    float t = temp.empty() ? 0.0 : strtof(temp.c_str(), NULL);
     bool ok = THEKERNEL->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
 
     if (ok) {
