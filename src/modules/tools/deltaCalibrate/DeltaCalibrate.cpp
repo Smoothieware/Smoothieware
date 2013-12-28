@@ -413,11 +413,15 @@ void DeltaCalibrate::calibrate_delta( ){
     //calculate 3 tower trim levels
     float centerAverage = (tower1Height + tower2Height + tower3Height)/3;
     long lowestTower = min(tower1Height,min(tower2Height,tower3Height));
-    float t1Trim = ((tower1Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
-    float t2Trim = ((tower2Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
-    float t3Trim = ((tower3Height-lowestTower) / steps_per_mm[0])* ( arm_radius*.6/ calibrate_radius);
+
+    float multiplier =  (1.83606 *log(arm_radius*2)-9.76413)/(1.83606 *log(arm_radius+calibrate_radius)-9.76413);
+    float t1Trim = ((tower1Height-lowestTower) / steps_per_mm[0]) * multiplier;
+    float t2Trim = ((tower2Height-lowestTower) / steps_per_mm[0]) * multiplier;
+    float t3Trim = ((tower3Height-lowestTower) / steps_per_mm[0]) * multiplier;
 
     if ( (delta_calibrate_flags & (CALIBRATE_SILENT|CALIBRATE_QUIET) ) == 0 ){
+        kernel->streams->printf("Probed Points:\r\n");
+        kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -tower1Height/steps_per_mm[0], -tower2Height/steps_per_mm[0], -tower3Height/steps_per_mm[0]); 
         kernel->streams->printf("Detected offsets:\r\n");
         kernel->streams->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
         kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
