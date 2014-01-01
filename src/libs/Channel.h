@@ -23,6 +23,10 @@ class Channel {
         Channel(){}
         virtual ~Channel(){}
 
+        /*
+         * output methods
+         */
+
         virtual int printf(const char* format, ...) __attribute__ ((format(printf, 2, 3))) {
             char *buffer;
             // Make the message
@@ -43,7 +47,13 @@ class Channel {
         }
         virtual int _putc(int c) { return 1; }
         virtual int _getc(void) { return 0; }
-        virtual int puts(const char* str) = 0;
+        virtual int puts(const char* str) { return strlen(str); };
+
+        /*
+         * input methods
+         */
+
+        virtual bool on_receive_line() { return false; };
 
         static NullChannel NullStream;
 };

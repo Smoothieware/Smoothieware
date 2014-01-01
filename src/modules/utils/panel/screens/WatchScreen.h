@@ -16,7 +16,7 @@ public:
     WatchScreen();
     void on_refresh();
     void on_enter();
-    void on_main_loop();
+    bool on_receive_line();
     void display_menu_line(uint16_t line);
 
 private:

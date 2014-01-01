@@ -17,7 +17,7 @@
 #define CONTROL_MODE               1
 
 class PanelScreen;
-class Panel : public Module {
+class Panel : public Module, public Channel {
     public:
         Panel();
         virtual ~Panel();
@@ -27,6 +27,7 @@ class Panel : public Module {
         void on_idle(void* argument);
         void on_main_loop(void* argument);
         void on_gcode_received(void* argument);
+        bool on_receive_line();
         void enter_screen(PanelScreen* screen);
         void reset_counter();
 

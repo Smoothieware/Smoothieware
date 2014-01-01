@@ -21,7 +21,7 @@
 #define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
 #define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
 
-class Player : public Module {
+class Player : public Module, public Channel {
     public:
         Player(){}
 
@@ -32,6 +32,9 @@ class Player : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_gcode_received(void *argument);
+
+        bool on_receive_line();
+
         string absolute_from_relative( string path );
         void cd_command(   string parameters, Channel* stream );
         void play_command( string parameters, Channel* stream );

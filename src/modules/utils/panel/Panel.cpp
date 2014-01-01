@@ -135,6 +135,9 @@ void Panel::on_module_loaded()
 
     // Refresh timer
     THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
+
+    // receive on_receive_line events
+    THEKERNEL->channels->append_channel(this);
 }
 
 // Enter a screen, we only care about it now
@@ -207,6 +210,15 @@ void Panel::on_main_loop(void *argument)
         this->current_screen->on_main_loop();
         this->lcd->on_main_loop();
     }
+}
+
+bool Panel::on_receive_line()
+{
+    if (current_screen != NULL) {
+        if (current_screen->on_receive_line())
+            return true;
+    }
+    return false;
 }
 
 

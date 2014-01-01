@@ -20,6 +20,7 @@ class Conveyor : public Module {
 
         void on_module_loaded(void);
         void on_idle(void*);
+        void on_main_loop(void*);
 
         Block* new_block();
         void new_block_added();

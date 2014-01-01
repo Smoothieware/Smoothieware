@@ -17,6 +17,7 @@ public:
     PanelScreen();
     virtual void on_refresh();
     virtual void on_main_loop();
+    virtual bool on_receive_line();
     PanelScreen *set_panel(Panel *parent);
     PanelScreen *set_parent(PanelScreen *passed_parent);
     virtual void on_enter();

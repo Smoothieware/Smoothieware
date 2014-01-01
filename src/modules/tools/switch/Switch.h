@@ -24,7 +24,7 @@
 #define    output_on_command_checksum   CHECKSUM("output_on_command")
 #define    output_off_command_checksum  CHECKSUM("output_off_command")
 
-class Switch : public Module {
+class Switch : public Module, public Channel {
     public:
         Switch();
         Switch(uint16_t name);
@@ -33,7 +33,9 @@ class Switch : public Module {
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
         void on_gcode_execute(void* argument);
-        void on_main_loop(void* argument);
+
+        bool on_receive_line();
+
         uint32_t pinpoll_tick(uint32_t dummy);
 
         void flip();

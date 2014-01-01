@@ -254,7 +254,7 @@ void Shell::setConsole()
     // TODO do we do this for all connections? so pronterface will get file done when playing from M24?
     // then we need to turn it off for the streaming app
     DEBUG_PRINTF("Shell: Adding stream to kernel channels\n");
-    THEKERNEL->channels->append_stream(pstream);
+    THEKERNEL->channels->append_channel(pstream);
     isConsole= true;
 }
 
@@ -271,7 +271,7 @@ Shell::~Shell()
 {
     if(isConsole) {
         DEBUG_PRINTF("Shell: Removing stream from kernel channels\n");
-        THEKERNEL->channels->remove_stream(pstream);
+        THEKERNEL->channels->remove_channel(pstream);
     }
     // we cannot delete this stream until it is no longer in any command queue entries
     // so mark it as closed, and allow it to delete itself when it is no longer being used

@@ -29,11 +29,8 @@ void SerialConsole::on_module_loaded() {
     // We want to be called every time a new char is received
     this->serial->attach(this, &SerialConsole::on_serial_char_received, mbed::Serial::RxIrq);
 
-    // We only call the command dispatcher in the main loop, nowhere else
-    this->register_for_event(ON_MAIN_LOOP);
-
     // Add to the pack of channels kernel can call to, for example for broadcasting
-    THEKERNEL->channels->append_stream(this);
+    THEKERNEL->channels->append_channel(this);
 }
 
 // Called on Serial::RxIrq interrupt, meaning we have received a char
@@ -46,25 +43,31 @@ void SerialConsole::on_serial_char_received(){
     }
 }
 
-// Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
-void SerialConsole::on_main_loop(void * argument){
-    if( this->has_char('\n') ){
+bool SerialConsole::on_receive_line()
+{
+    if (this->has_char('\n'))
+    {
         string received;
         received.reserve(20);
-        while(1){
+        while(1)
+        {
            char c;
            this->buffer.pop_front(c);
-           if( c == '\n' ){
+           if (c == '\n')
+           {
                 struct SerialMessage message;
                 message.message = received;
                 message.stream = this;
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-                return;
-            }else{
+                return true;
+            }
+            else
+            {
                 received += c;
             }
         }
     }
+    return false;
 }
 
 

@@ -28,6 +28,7 @@ Conveyor::Conveyor(){
 
 void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
+    register_for_event(ON_MAIN_LOOP);
 }
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
@@ -40,6 +41,14 @@ void Conveyor::on_idle(void* argument){
         __disable_irq();
         flush_blocks--;
         __enable_irq();
+    }
+}
+
+void Conveyor::on_main_loop(void*)
+{
+    if (queue.free())
+    {
+        THEKERNEL->channels->on_receive_line();
     }
 }
 
@@ -109,7 +118,7 @@ void Conveyor::pop_and_process_new_block(int debug){
 
 // Wait for the queue to have a given number of free blocks
 void Conveyor::wait_for_queue(int free_blocks){
-    while( this->queue.size() >= this->queue.capacity()-free_blocks ){
+    while( this->queue.free() < free_blocks ){
         THEKERNEL->call_event(ON_IDLE);
     }
 }

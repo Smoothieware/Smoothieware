@@ -9,7 +9,7 @@
 #define STREAMOUTPUTPOOL_H
 
 using namespace std;
-#include <set>
+#include <forward_list>
 #include <string>
 #include <cstdio>
 #include <cstdarg>
@@ -25,7 +25,7 @@ public:
     int puts(const char* s)
     {
         int r = 0;
-        for(set<Channel*>::iterator i = this->channels.begin(); i != this->channels.end(); i++)
+        for(auto i = channels.begin(); i != channels.end(); i++)
         {
             int k = (*i)->puts(s);
             if (k > r)
@@ -34,18 +34,28 @@ public:
         return r;
     }
 
-    void append_stream(Channel* stream)
+    void append_channel(Channel* channel)
     {
-        this->channels.insert(stream);
+        channels.push_front(channel);
     }
 
-    void remove_stream(Channel* stream)
+    void remove_channel(Channel* channel)
     {
-        this->channels.erase(stream);
+        channels.remove(channel);
+    }
+
+    bool on_receive_line()
+    {
+        for (auto it = channels.begin(); it != channels.end(); ++it)
+        {
+            if ((*it)->on_receive_line())
+                return true;
+        }
+        return false;
     }
 
 private:
-    set<Channel*> channels;
+    forward_list<Channel*> channels;
 };
 
 #endif

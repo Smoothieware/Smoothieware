@@ -25,8 +25,11 @@ class SerialConsole : public Module, public Channel {
         SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate );
 
         void on_module_loaded();
+
+        bool on_receive_line();
+
         void on_serial_char_received();
-        void on_main_loop(void * argument);
+
         bool has_char(char letter);
 
         int _putc(int c);

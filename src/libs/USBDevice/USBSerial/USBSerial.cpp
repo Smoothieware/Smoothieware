@@ -266,18 +266,22 @@ void USBSerial::on_main_loop(void *argument)
         if (attach)
         {
             attached = true;
-            THEKERNEL->channels->append_stream(this);
+            THEKERNEL->channels->append_channel(this);
             writeBlock((const uint8_t *) "Smoothie\nok\n", 12);
         }
         else
         {
             attached = false;
-            THEKERNEL->channels->remove_stream(this);
+            THEKERNEL->channels->remove_channel(this);
             txbuf.flush();
             rxbuf.flush();
             nl_in_rx = 0;
         }
     }
+}
+
+bool USBSerial::on_receive_line()
+{
     if (nl_in_rx)
     {
         string received;
@@ -291,7 +295,7 @@ void USBSerial::on_main_loop(void *argument)
                 message.stream = this;
                 iprintf("USBSerial Received: %s\n", message.message.c_str());
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-                return;
+                return true;
             }
             else
             {
@@ -299,6 +303,7 @@ void USBSerial::on_main_loop(void *argument)
             }
         }
     }
+    return false;
 }
 
 void USBSerial::on_attach()

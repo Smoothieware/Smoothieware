@@ -16,6 +16,7 @@ template<class kind, int length> class RingBuffer {
         RingBuffer();
         int          size();
         int          capacity();
+        int          free();
         int          next_block_index(int index);
         int          prev_block_index(int index);
         void         push_back(kind object);
@@ -46,6 +47,14 @@ template<class kind, int length>  int RingBuffer<kind, length>::size(){
 	int i = head - tail + ((tail > head)?length:0);
 	__enable_irq();
 	return i;
+}
+
+template<class kind, int length>  int RingBuffer<kind, length>::free()
+{
+    __disable_irq();
+    int i = tail + ((tail <= head)?length:0) - head - 1;
+    __enable_irq();
+    return i;
 }
 
 template<class kind, int length> int RingBuffer<kind, length>::next_block_index(int index){

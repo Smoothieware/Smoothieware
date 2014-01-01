@@ -49,6 +49,8 @@ public:
     void on_module_loaded(void);
     void on_main_loop(void *);
 
+    bool on_receive_line();
+
 protected:
 //     virtual bool EpCallback(uint8_t, uint8_t);
     virtual bool USBEvent_EPIn(uint8_t, uint8_t);

@@ -22,7 +22,8 @@ Switch::Switch(uint16_t name){
     //this->dummy_stream = &(Channel::NullStream);
 }
 
-void Switch::on_module_loaded(){
+void Switch::on_module_loaded()
+{
     this->input_pin_state = true;
     this->switch_state = true;
     this->switch_changed = false;
@@ -30,7 +31,6 @@ void Switch::on_module_loaded(){
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
-    this->register_for_event(ON_MAIN_LOOP);
 
     // Settings
     this->on_config_reload(this);
@@ -40,6 +40,8 @@ void Switch::on_module_loaded(){
 
     // PWM
     THEKERNEL->slow_ticker->attach(1000, &output_pin, &Pwm::on_tick);
+
+    THEKERNEL->channels->append_channel(this);
 }
 
 
@@ -109,17 +111,24 @@ void Switch::on_gcode_execute(void* argument){
     }
 }
 
-void Switch::on_main_loop(void* argument){
-    if(this->switch_changed){  
-        if(this->switch_state){
+bool Switch::on_receive_line()
+{
+    if(this->switch_changed)
+    {
+        if(this->switch_state)
+        {
             this->send_gcode( this->output_on_command, &(Channel::NullStream) );
             this->output_pin.pwm(this->switch_value);
-        }else{
+        }
+        else
+        {
             this->send_gcode( this->output_off_command, &(Channel::NullStream) );
             this->output_pin.set(0);
         }
-        this->switch_changed=false;      
+        this->switch_changed = false;
+        return true;
     }
+    return false;
 }
 
 //TODO: Make this use InterruptIn

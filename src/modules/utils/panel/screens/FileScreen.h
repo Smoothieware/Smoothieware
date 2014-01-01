@@ -25,6 +25,7 @@ class FileScreen : public PanelScreen {
         void on_enter();
         void on_refresh(); 
         void on_main_loop();
+        bool on_receive_line();
         void enter_folder(std::string folder);
         uint16_t count_folder_content(std::string folder);
         void clicked_line(uint16_t line);

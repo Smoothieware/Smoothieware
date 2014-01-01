@@ -59,13 +59,16 @@ void ControlScreen::on_refresh()
 }
 
 // queuing gcodes needs to be done from main loop
-void ControlScreen::on_main_loop()
+bool ControlScreen::on_receive_line()
 {
     // change actual axis value
-    if (!this->pos_changed) return;
-    this->pos_changed = false;
-
-    set_current_pos(this->controlled_axis, this->pos[this->controlled_axis - 'X']);
+    if (this->pos_changed)
+    {
+        this->pos_changed = false;
+        set_current_pos(this->controlled_axis, this->pos[this->controlled_axis - 'X']);
+        return true;
+    }
+    return false;
 }
 
 void ControlScreen::display_menu_line(uint16_t line)

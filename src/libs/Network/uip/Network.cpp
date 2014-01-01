@@ -148,10 +148,16 @@ void Network::on_module_loaded()
 
     // Register for events
     this->register_for_event(ON_IDLE);
-    this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_GET_PUBLIC_DATA);
 
+    THEKERNEL->channels->append_channel(this);
+
     this->init();
+}
+
+bool Network::on_receive_line()
+{
+    return command_q->pop();
 }
 
 void Network::on_get_public_data(void* argument) {
@@ -329,14 +335,6 @@ void Network::init(void)
         dhcpc_request();
         printf("Getting IP address....\n");
     #endif
-    }
-}
-
-void Network::on_main_loop(void *argument)
-{
-    // issue commands here if any available
-    while(command_q->pop()) {
-        // keep feeding them until empty
     }
 }
 

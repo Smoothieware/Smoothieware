@@ -131,12 +131,14 @@ void WatchScreen::on_refresh()
 }
 
 // queuing gcodes needs to be done from main loop
-void WatchScreen::on_main_loop()
+bool WatchScreen::on_receive_line()
 {
     if (this->issue_change_speed) {
         this->issue_change_speed = false;
         set_speed();
+        return true;
     }
+    return false;
 }
 
 // fetch the data we are displaying

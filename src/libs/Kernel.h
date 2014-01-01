@@ -43,7 +43,7 @@ class Kernel {
 
         // These modules are aviable to all other modules
         SerialConsole*    serial;
-        ChannelPool* channels;
+        ChannelPool*      channels;
 
         GcodeDispatch*    gcode_dispatch;
         Robot*            robot;

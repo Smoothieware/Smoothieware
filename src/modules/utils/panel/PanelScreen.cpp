@@ -20,6 +20,7 @@ PanelScreen::PanelScreen() {}
 
 void PanelScreen::on_refresh() {}
 void PanelScreen::on_main_loop() {}
+bool PanelScreen::on_receive_line() { return false; }
 
 PanelScreen *PanelScreen::set_panel(Panel *parent)
 {
@@ -56,7 +57,7 @@ PanelScreen *PanelScreen::set_parent(PanelScreen *passed_parent)
     return this;
 }
 
-// Helper for screens to send a gcode, must be called from main loop
+// Helper for screens to send a gcode, must be called from on_receive_line event
 void PanelScreen::send_gcode(std::string g)
 {
     Gcode gcode(g, &(Channel::NullStream));

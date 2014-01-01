@@ -20,7 +20,8 @@ CommandQueue::CommandQueue()
 
 CommandQueue* CommandQueue::getInstance()
 {
-    if(instance == 0) instance= new CommandQueue();
+    if (instance == 0)
+        instance = new CommandQueue();
     return instance;
 }
 

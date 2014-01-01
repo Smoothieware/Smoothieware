@@ -54,6 +54,7 @@ void Player::on_gcode_received(void *argument) {
             if(this->current_file_handler != NULL) {
                 this->playing_file = false;
                 fclose(this->current_file_handler);
+                THEKERNEL->channels->remove_channel(this);
             }
             this->current_file_handler = fopen( this->filename.c_str(), "r");
             // get size of file
@@ -80,6 +81,8 @@ void Player::on_gcode_received(void *argument) {
             gcode->mark_as_taken();
             if (this->current_file_handler != NULL) {
                 this->playing_file = true;
+                THEKERNEL->channels->append_channel(this);
+
                 // this would be a problem if the stream goes away before the file has finished,
                 // so we attach it to the kernel stream, however network connections from pronterface
                 // do not connect to the kernel channels so won't see this FIXME
@@ -89,6 +92,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 25) { // pause print
             gcode->mark_as_taken();
             this->playing_file = false;
+            THEKERNEL->channels->remove_channel(this);
 
         }else if (gcode->m == 26) { // Reset print. Slightly different than M26 in Marlin and the rest
             gcode->mark_as_taken();
@@ -129,6 +133,7 @@ void Player::on_gcode_received(void *argument) {
             if(this->current_file_handler != NULL) {
                 this->playing_file = false;
                 fclose(this->current_file_handler);
+                THEKERNEL->channels->remove_channel(this);
             }
 
             this->current_file_handler = fopen( this->filename.c_str(), "r");
@@ -136,6 +141,7 @@ void Player::on_gcode_received(void *argument) {
                 gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
             }else{
                 this->playing_file = true;
+                THEKERNEL->channels->append_channel(this);
             }
         }
     }
@@ -183,6 +189,7 @@ void Player::play_command( string parameters, Channel* stream ){
     stream->printf("Playing %s\r\n", this->filename.c_str());
 
     this->playing_file = true;
+    THEKERNEL->channels->append_channel(this);
 
     // Output to the current stream if we were passed the -v ( verbose ) option
     if( options.find_first_of("Vv") == string::npos ){
@@ -247,6 +254,7 @@ void Player::abort_command( string parameters, Channel* stream ){
         return;
     }
     playing_file = false;
+    THEKERNEL->channels->remove_channel(this);
     played_cnt= 0;
     file_size= 0;
     this->filename= "";
@@ -285,7 +293,10 @@ void Player::on_main_loop(void* argument){
             //THEKERNEL->serial->printf("On boot gcode disabled! skipping...\n");
         }
     }
+}
 
+bool Player::on_receive_line()
+{
     if( this->playing_file ){
         string buffer;
         bool discard= false;
@@ -299,7 +310,7 @@ void Player::on_main_loop(void* argument){
                     discard= false;
                     buffer.clear();
                     this->current_stream->printf("Warning: Discarded long line\n");
-                    return;
+                    return false;
                 }
                 this->current_stream->printf("%s\n", buffer.c_str());
                 struct SerialMessage message;
@@ -310,7 +321,7 @@ void Player::on_main_loop(void* argument){
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 played_cnt += buffer.size();
                 buffer.clear();
-                return;
+                return true;
 
             }else if(buffer.size() > 128) {
                 // discard rest of line
@@ -322,6 +333,7 @@ void Player::on_main_loop(void* argument){
         }
 
         this->playing_file = false;
+        THEKERNEL->channels->remove_channel(this);
         this->filename= "";
         played_cnt= 0;
         file_size= 0;
@@ -334,6 +346,7 @@ void Player::on_main_loop(void* argument){
             this->reply_stream= NULL;
         }
     }
+    return false;
 }
 
 void Player::on_get_public_data(void* argument) {
