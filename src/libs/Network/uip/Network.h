@@ -14,7 +14,7 @@
 #define network_ip_gateway_checksum CHECKSUM("ip_gateway")
 #define network_ip_mask_checksum CHECKSUM("ip_mask")
 
-class Network : public Module, public Channel
+class Network : public Module
 {
 public:
     Network();
@@ -24,13 +24,16 @@ public:
     void on_idle(void* argument);
     void on_get_public_data(void* argument);
 
-    bool on_receive_line();
-
     void dhcpc_configured(uint32_t ipaddr, uint32_t ipmask, uint32_t ipgw);
     static Network *getInstance() { return instance;}
     void tapdev_send(void *pPacket, unsigned int size);
 
 private:
+    class NetworkChannel : public Channel {
+        bool on_receive_line();
+    };
+    NetworkChannel *channel;
+
     void init();
     uint32_t tick(uint32_t dummy);
     void handlePacket();

@@ -42,11 +42,14 @@ Network::Network()
     theNetwork= this;
     sftpd= NULL;
     instance= this;
+    channel= new NetworkChannel();
 }
 
 Network::~Network()
 {
     delete ethernet;
+    THEKERNEL->channels->remove_channel(this->channel);
+    delete channel;
 }
 
 static uint32_t getSerialNumberHash()
@@ -150,12 +153,12 @@ void Network::on_module_loaded()
     this->register_for_event(ON_IDLE);
     this->register_for_event(ON_GET_PUBLIC_DATA);
 
-    THEKERNEL->channels->append_channel(this);
+    THEKERNEL->channels->append_channel(this->channel);
 
     this->init();
 }
 
-bool Network::on_receive_line()
+bool Network::NetworkChannel::on_receive_line()
 {
     return command_q->pop();
 }
