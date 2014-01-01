@@ -12,16 +12,16 @@
 #include <cstring>
 #include <stdio.h>
 
-// This is a base class for all StreamOutput objects.
-// StreamOutputs are basically "things you can sent strings to". They are passed along with gcodes for example so modules can answer to those gcodes.
-// They are usually associated with a command source, but can also be a NullStreamOutput if we just want to ignore whatever is sent
+// This is a base class for all Channel objects.
+// Channels are basically "things you can sent strings to". They are passed along with gcodes for example so modules can answer to those gcodes.
+// They are usually associated with a command source, but can also be a NullChannel if we just want to ignore whatever is sent
 
-class NullStreamOutput;
+class NullChannel;
 
-class StreamOutput {
+class Channel {
     public:
-        StreamOutput(){}
-        virtual ~StreamOutput(){}
+        Channel(){}
+        virtual ~Channel(){}
 
         virtual int printf(const char* format, ...) __attribute__ ((format(printf, 2, 3))) {
             char *buffer;
@@ -45,10 +45,10 @@ class StreamOutput {
         virtual int _getc(void) { return 0; }
         virtual int puts(const char* str) = 0;
 
-        static NullStreamOutput NullStream;
+        static NullChannel NullStream;
 };
 
-class NullStreamOutput : public StreamOutput {
+class NullChannel : public Channel {
     public:
         int puts(const char* str) { return strlen(str); }
 };

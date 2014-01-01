@@ -79,7 +79,7 @@ ST7565::ST7565() {
 
     framebuffer= (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memoery from USB_RAM
     if(framebuffer == NULL) {
-        THEKERNEL->streams->printf("Not enough memory available for frame buffer");
+        THEKERNEL->channels->printf("Not enough memory available for frame buffer");
     }
 }
 

@@ -18,7 +18,7 @@ void Pauser::on_module_loaded(){
 // Pause smoothie if nobody else is currently doing so
 void Pauser::take(){
     this->counter++;
-    //THEKERNEL->streams->printf("take: %u \r\n", this->counter );
+    //THEKERNEL->channels->printf("take: %u \r\n", this->counter );
     if( this->counter == 1 ){
         THEKERNEL->call_event(ON_PAUSE, &this->counter);
     }
@@ -27,7 +27,7 @@ void Pauser::take(){
 // Unpause smoothie unless something else is pausing it too
 void Pauser::release(){
     this->counter--;
-    //THEKERNEL->streams->printf("release: %u \r\n", this->counter );
+    //THEKERNEL->channels->printf("release: %u \r\n", this->counter );
     if( this->counter == 0 ){
         THEKERNEL->call_event(ON_PLAY, &this->counter);
     }

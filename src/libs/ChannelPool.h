@@ -14,18 +14,18 @@ using namespace std;
 #include <cstdio>
 #include <cstdarg>
 
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 
-class StreamOutputPool : public StreamOutput {
+class ChannelPool : public Channel {
 
 public:
-    StreamOutputPool(){
+    ChannelPool(){
     }
 
     int puts(const char* s)
     {
         int r = 0;
-        for(set<StreamOutput*>::iterator i = this->streams.begin(); i != this->streams.end(); i++)
+        for(set<Channel*>::iterator i = this->channels.begin(); i != this->channels.end(); i++)
         {
             int k = (*i)->puts(s);
             if (k > r)
@@ -34,18 +34,18 @@ public:
         return r;
     }
 
-    void append_stream(StreamOutput* stream)
+    void append_stream(Channel* stream)
     {
-        this->streams.insert(stream);
+        this->channels.insert(stream);
     }
 
-    void remove_stream(StreamOutput* stream)
+    void remove_stream(Channel* stream)
     {
-        this->streams.erase(stream);
+        this->channels.erase(stream);
     }
 
 private:
-    set<StreamOutput*> streams;
+    set<Channel*> channels;
 };
 
 #endif

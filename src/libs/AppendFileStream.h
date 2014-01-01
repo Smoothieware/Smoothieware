@@ -1,11 +1,11 @@
 #ifndef _APPENDFILESTREAM_H_
 #define _APPENDFILESTREAM_H_
 
-#include "StreamOutput.h"
+#include "Channel.h"
 #include "string.h"
 #include "stdlib.h"
 
-class AppendFileStream : public StreamOutput {
+class AppendFileStream : public Channel {
     public:
         AppendFileStream(const char *filename) { fn= strdup(filename); }
         virtual ~AppendFileStream(){ free(fn); }

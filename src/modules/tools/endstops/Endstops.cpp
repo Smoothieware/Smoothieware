@@ -270,7 +270,7 @@ void Endstops::do_homing(char axes_to_move)
         // Wait for moves to be done
         for ( char c = 'X'; c <= 'Z'; c++ ) {
             if (  ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-                //THEKERNEL->streams->printf("axis %c \r\n", c );
+                //THEKERNEL->channels->printf("axis %c \r\n", c );
                 while ( this->steppers[c - 'X']->moving ) {
                     THEKERNEL->call_event(ON_IDLE);
                 }

@@ -14,7 +14,7 @@ using std::string;
 #include "SerialConsole.h"
 #include "libs/RingBuffer.h"
 #include "libs/SerialMessage.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 
 // Serial reading module
 // Treats every received line as a command and passes it ( via event call ) to the command dispatcher.
@@ -32,8 +32,8 @@ void SerialConsole::on_module_loaded() {
     // We only call the command dispatcher in the main loop, nowhere else
     this->register_for_event(ON_MAIN_LOOP);
 
-    // Add to the pack of streams kernel can call to, for example for broadcasting
-    THEKERNEL->streams->append_stream(this);
+    // Add to the pack of channels kernel can call to, for example for broadcasting
+    THEKERNEL->channels->append_stream(this);
 }
 
 // Called on Serial::RxIrq interrupt, meaning we have received a char

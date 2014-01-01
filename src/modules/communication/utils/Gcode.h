@@ -10,13 +10,13 @@
 #define GCODE_H
 #include <string>
 using std::string;
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 // Object to represent a Gcode command
 #include <stdlib.h>
 
 class Gcode {
     public:
-        Gcode(const string&, StreamOutput*);
+        Gcode(const string&, Channel*);
         Gcode(const Gcode& to_copy); 
         Gcode& operator= (const Gcode& to_copy);
         
@@ -40,7 +40,7 @@ class Gcode {
         unsigned int g;
 
         bool add_nl;
-        StreamOutput* stream;
+        Channel* stream;
 
         string txt_after_ok;
         bool accepted_by_module;

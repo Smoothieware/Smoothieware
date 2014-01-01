@@ -9,13 +9,13 @@
 
 #include "Module.h"
 #include "TemperatureControl.h"
-#include "StreamOutput.h"
+#include "Channel.h"
 
 class PID_Autotuner : public Module
 {
 public:
     PID_Autotuner();
-    void     begin(TemperatureControl *, float, StreamOutput *, int cycles = 8);
+    void     begin(TemperatureControl *, float, Channel *, int cycles = 8);
     void     abort();
 
     void     on_module_loaded(void);
@@ -28,7 +28,7 @@ private:
 
     TemperatureControl *t;
     float target_temperature;
-    StreamOutput *s;
+    Channel *s;
 
     volatile bool tick;
 

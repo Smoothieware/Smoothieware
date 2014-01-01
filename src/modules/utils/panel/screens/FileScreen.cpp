@@ -187,6 +187,6 @@ void FileScreen::play(string path)
 {
     struct SerialMessage message;
     message.message = string("play ") + path + " -q";
-    message.stream = &(StreamOutput::NullStream);
+    message.stream = &(Channel::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }

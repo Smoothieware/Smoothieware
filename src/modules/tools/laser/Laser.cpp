@@ -86,7 +86,7 @@ void Laser::on_gcode_execute(void* argument){
     }
     if ( gcode->has_letter('S' )){
         this->laser_max_power = gcode->get_value('S');
-//         THEKERNEL->streams->printf("Adjusted laser power to %d/100\r\n",(int)(this->laser_max_power*100.0+0.5));
+//         THEKERNEL->channels->printf("Adjusted laser power to %d/100\r\n",(int)(this->laser_max_power*100.0+0.5));
     }
 
 }

@@ -12,7 +12,7 @@
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 
 
 #define CONF_NONE       0
@@ -33,9 +33,9 @@ class Configurator : public Module {
         void on_gcode_received( void* argument );
         void on_main_loop( void* argument );
 
-        void config_get_command( string parameters, StreamOutput* stream );
-        void config_set_command( string parameters, StreamOutput* stream );
-        void config_load_command(string parameters, StreamOutput* stream );
+        void config_get_command( string parameters, Channel* stream );
+        void config_set_command( string parameters, Channel* stream );
+        void config_load_command(string parameters, Channel* stream );
 };
 
 

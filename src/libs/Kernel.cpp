@@ -12,7 +12,7 @@
 #include "libs/SlowTicker.h"
 #include "libs/Adc.h"
 #include "libs/Pauser.h"
-#include "libs/StreamOutputPool.h"
+#include "libs/ChannelPool.h"
 #include <mri.h>
 
 #include "modules/communication/SerialConsole.h"
@@ -44,7 +44,7 @@ Kernel::Kernel(){
     this->config         = new Config();
 
     // Serial second, because the other modules might want to say something
-    this->streams        = new StreamOutputPool();
+    this->channels        = new ChannelPool();
 
     // Configure UART depending on MRI config
     // If MRI is using UART0, we want to use UART1, otherwise, we want to use UART0. This makes it easy to use only one UART for both debug and actual commands.

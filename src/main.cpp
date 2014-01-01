@@ -77,9 +77,9 @@ int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 with new accel @%ldMHz\r\n", SystemCoreClock / 1000000);
+    kernel->channels->printf("Smoothie ( grbl port ) version 0.7.2 with new accel @%ldMHz\r\n", SystemCoreClock / 1000000);
     Version version;
-    kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
+    kernel->channels->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
 
     //some boards don't have leds.. TOO BAD!
     kernel->use_leds= !kernel->config->value( disable_leds_checksum )->by_default(false)->as_bool();
@@ -89,7 +89,7 @@ int main() {
     //     msc= new USBMSD(&u, &sd);
     // }else{
     //     msc= NULL;
-    //     kernel->streams->printf("MSD is disabled\r\n");
+    //     kernel->channels->printf("MSD is disabled\r\n");
     // }
 
     bool sdok= (sd.disk_initialize() == 0);
@@ -146,14 +146,14 @@ int main() {
         FILE *fp= fopen(kernel->config_override_filename(), "r");
         if(fp != NULL) {
             char buf[132];
-            kernel->streams->printf("Loading config override file: %s...\n", kernel->config_override_filename());
+            kernel->channels->printf("Loading config override file: %s...\n", kernel->config_override_filename());
             while(fgets(buf, sizeof buf, fp) != NULL) {
-                kernel->streams->printf("  %s", buf);
+                kernel->channels->printf("  %s", buf);
                 if(buf[0] == ';') continue; // skip the comments
-                struct SerialMessage message= {&(StreamOutput::NullStream), buf};
+                struct SerialMessage message= {&(Channel::NullStream), buf};
                 kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
             }
-            kernel->streams->printf("config override file executed\n");
+            kernel->channels->printf("config override file executed\n");
             fclose(fp);
         }
     }

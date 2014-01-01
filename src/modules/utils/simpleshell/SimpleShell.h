@@ -12,7 +12,7 @@
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 
 class SimpleShell : public Module
 {
@@ -26,26 +26,26 @@ public:
 
 private:
     string absolute_from_relative( string path );
-    void ls_command(string parameters, StreamOutput *stream );
-    void cd_command(string parameters, StreamOutput *stream );
-    void delete_file_command(string parameters, StreamOutput *stream );
-    void pwd_command(string parameters, StreamOutput *stream );
-    void cat_command(string parameters, StreamOutput *stream );
-    void rm_command(string parameters, StreamOutput *stream );
-    void break_command(string parameters, StreamOutput *stream );
-    void reset_command(string parameters, StreamOutput *stream );
-    void dfu_command(string parameters, StreamOutput *stream );
-    void help_command(string parameters, StreamOutput *stream );
-    void version_command(string parameters, StreamOutput *stream );
-    void get_command(string parameters, StreamOutput *stream );
-    void set_temp_command(string parameters, StreamOutput *stream );
-    void mem_command(string parameters, StreamOutput *stream );
+    void ls_command(string parameters, Channel *stream );
+    void cd_command(string parameters, Channel *stream );
+    void delete_file_command(string parameters, Channel *stream );
+    void pwd_command(string parameters, Channel *stream );
+    void cat_command(string parameters, Channel *stream );
+    void rm_command(string parameters, Channel *stream );
+    void break_command(string parameters, Channel *stream );
+    void reset_command(string parameters, Channel *stream );
+    void dfu_command(string parameters, Channel *stream );
+    void help_command(string parameters, Channel *stream );
+    void version_command(string parameters, Channel *stream );
+    void get_command(string parameters, Channel *stream );
+    void set_temp_command(string parameters, Channel *stream );
+    void mem_command(string parameters, Channel *stream );
 
-    void net_command( string parameters, StreamOutput *stream);
+    void net_command( string parameters, Channel *stream);
 
-    bool parse_command(unsigned short cs, string args, StreamOutput *stream);
+    bool parse_command(unsigned short cs, string args, Channel *stream);
 
-    typedef void (SimpleShell::*PFUNC)(string parameters, StreamOutput *stream);
+    typedef void (SimpleShell::*PFUNC)(string parameters, Channel *stream);
     typedef struct {
         unsigned short command_cs;
         PFUNC pfunc;

@@ -1,8 +1,8 @@
 #ifndef SERIALMESSAGE_H
 #define SERIALMESSAGE_H
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 struct SerialMessage {
-        StreamOutput* stream;
+        Channel* stream;
         std::string message;
 };
 #endif

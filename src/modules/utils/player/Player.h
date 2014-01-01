@@ -12,7 +12,7 @@
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 
 #define play_command_checksum           CHECKSUM("play")
 #define progress_command_checksum       CHECKSUM("progress")
@@ -33,10 +33,10 @@ class Player : public Module {
         void on_set_public_data(void* argument);
         void on_gcode_received(void *argument);
         string absolute_from_relative( string path );
-        void cd_command(   string parameters, StreamOutput* stream );
-        void play_command( string parameters, StreamOutput* stream );
-        void progress_command( string parameters, StreamOutput* stream );
-        void abort_command( string parameters, StreamOutput* stream );
+        void cd_command(   string parameters, Channel* stream );
+        void play_command( string parameters, Channel* stream );
+        void progress_command( string parameters, Channel* stream );
+        void abort_command( string parameters, Channel* stream );
 
     private:
         string current_path;
@@ -46,8 +46,8 @@ class Player : public Module {
         bool booted;
         string on_boot_gcode;
         bool playing_file;
-        StreamOutput* current_stream;
-        StreamOutput* reply_stream;
+        Channel* current_stream;
+        Channel* reply_stream;
         FILE* current_file_handler;
         unsigned long file_size, played_cnt;
         unsigned long elapsed_secs;

@@ -31,7 +31,7 @@ Block::Block(){
 }
 
 void Block::debug(){
-    THEKERNEL->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
+    THEKERNEL->channels->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->times_taken, this->is_ready );
 }
 
 

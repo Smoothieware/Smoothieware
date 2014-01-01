@@ -91,13 +91,13 @@ public:
     int queue_size();
     int can_output();
     static int command_result(const char *str, void *ti);
-    StreamOutput *getStream() { return pstream; }
+    Channel *getStream() { return pstream; }
     void setConsole();
 
 private:
     bool parse(register char *str, struct ptentry *t);
     Telnetd *telnet; // telnet instance we are connected to
-    StreamOutput *pstream;
+    Channel *pstream;
     bool isConsole;
 };
 

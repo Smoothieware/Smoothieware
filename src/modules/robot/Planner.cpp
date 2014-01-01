@@ -238,7 +238,7 @@ void Planner::recalculate() {
 void Planner::dump_queue(){
     for( int index = 0; index <= THEKERNEL->conveyor->queue.size()-1; index++ ){
        if( index > 10 && index < THEKERNEL->conveyor->queue.size()-10 ){ continue; }
-       THEKERNEL->streams->printf("block %03d > ", index);
+       THEKERNEL->channels->printf("block %03d > ", index);
        THEKERNEL->conveyor->queue.get_ref(index)->debug();
     }
 }

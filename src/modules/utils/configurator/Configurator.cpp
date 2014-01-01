@@ -11,7 +11,7 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 
 
 void Configurator::on_module_loaded(){
@@ -59,7 +59,7 @@ void Configurator::on_gcode_received(void* argument){
 void Configurator::on_main_loop(void* argument){}
 
 // Output a ConfigValue from the specified ConfigSource to the stream
-void Configurator::config_get_command( string parameters, StreamOutput* stream ){
+void Configurator::config_get_command( string parameters, Channel* stream ){
     string source = shift_parameter(parameters);
     string setting = shift_parameter(parameters);
     if (setting == "") { // output live setting
@@ -86,7 +86,7 @@ void Configurator::config_get_command( string parameters, StreamOutput* stream )
 }
 
 // Write the specified setting to the specified ConfigSource
-void Configurator::config_set_command( string parameters, StreamOutput* stream ){
+void Configurator::config_set_command( string parameters, Channel* stream ){
     string source = shift_parameter(parameters);
     string setting = shift_parameter(parameters);
     string value = shift_parameter(parameters);
@@ -109,7 +109,7 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
 }
 
 // Reload config values from the specified ConfigSource
-void Configurator::config_load_command( string parameters, StreamOutput* stream ){
+void Configurator::config_load_command( string parameters, Channel* stream ){
     string source = shift_parameter(parameters);
     if(source == ""){
         THEKERNEL->config->config_cache_load();

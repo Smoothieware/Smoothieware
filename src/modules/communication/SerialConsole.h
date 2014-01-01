@@ -15,12 +15,12 @@
 #include <string>
 using std::string;
 #include "libs/RingBuffer.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 
-class SerialConsole : public Module, public StreamOutput {
+class SerialConsole : public Module, public Channel {
     public:
         SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate );
 

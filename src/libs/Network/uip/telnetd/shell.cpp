@@ -253,8 +253,8 @@ void Shell::setConsole()
     // add it to the kernels output stream if we are a console
     // TODO do we do this for all connections? so pronterface will get file done when playing from M24?
     // then we need to turn it off for the streaming app
-    DEBUG_PRINTF("Shell: Adding stream to kernel streams\n");
-    THEKERNEL->streams->append_stream(pstream);
+    DEBUG_PRINTF("Shell: Adding stream to kernel channels\n");
+    THEKERNEL->channels->append_stream(pstream);
     isConsole= true;
 }
 
@@ -262,7 +262,7 @@ Shell::Shell(Telnetd *telnet)
 {
     DEBUG_PRINTF("Shell: ctor %p - %p\n", this, telnet);
     this->telnet= telnet;
-    // create a callback StreamOutput for this connection
+    // create a callback Channel for this connection
     pstream = new CallbackStream(command_result, this);
     isConsole= false;
 }
@@ -270,8 +270,8 @@ Shell::Shell(Telnetd *telnet)
 Shell::~Shell()
 {
     if(isConsole) {
-        DEBUG_PRINTF("Shell: Removing stream from kernel streams\n");
-        THEKERNEL->streams->remove_stream(pstream);
+        DEBUG_PRINTF("Shell: Removing stream from kernel channels\n");
+        THEKERNEL->channels->remove_stream(pstream);
     }
     // we cannot delete this stream until it is no longer in any command queue entries
     // so mark it as closed, and allow it to delete itself when it is no longer being used

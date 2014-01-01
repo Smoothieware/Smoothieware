@@ -153,7 +153,7 @@ RrdGlcd::RrdGlcd(PinName mosi, PinName sclk, Pin cs) {
     this->cs.set(0);
     fb= (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memoery from USB_RAM
     if(fb == NULL) {
-        THEKERNEL->streams->printf("Not enough memory available for frame buffer");
+        THEKERNEL->channels->printf("Not enough memory available for frame buffer");
     }
     inited= false;
     dirty= false;

@@ -59,7 +59,7 @@ PanelScreen *PanelScreen::set_parent(PanelScreen *passed_parent)
 // Helper for screens to send a gcode, must be called from main loop
 void PanelScreen::send_gcode(std::string g)
 {
-    Gcode gcode(g, &(StreamOutput::NullStream));
+    Gcode gcode(g, &(Channel::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
 }
 
@@ -83,7 +83,7 @@ void PanelScreen::send_command(const char *gcstr)
     for (std::vector<string>::iterator i = q.begin(); i != q.end(); ++i) {
         struct SerialMessage message;
         message.message = *i;
-        message.stream = &(StreamOutput::NullStream);
+        message.stream = &(Channel::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     }
 }

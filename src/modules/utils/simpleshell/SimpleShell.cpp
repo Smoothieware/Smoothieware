@@ -11,7 +11,7 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
@@ -60,7 +60,7 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
 };
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
-static uint32_t heapWalk(StreamOutput *stream, bool verbose)
+static uint32_t heapWalk(Channel *stream, bool verbose)
 {
     uint32_t chunkNumber = 1;
     // The __end__ linker symbol points to the beginning of the heap.
@@ -154,7 +154,7 @@ void SimpleShell::on_gcode_received(void *argument)
     }
 }
 
-bool SimpleShell::parse_command(unsigned short cs, string args, StreamOutput *stream)
+bool SimpleShell::parse_command(unsigned short cs, string args, Channel *stream)
 {
     for (ptentry_t *p = commands_table; p->pfunc != NULL; ++p) {
         if (cs == p->command_cs) {
@@ -199,7 +199,7 @@ string SimpleShell::absolute_from_relative( string path )
 
 // Act upon an ls command
 // Convert the first parameter into an absolute path, then list the files in that path
-void SimpleShell::ls_command( string parameters, StreamOutput *stream )
+void SimpleShell::ls_command( string parameters, Channel *stream )
 {
     string folder = this->absolute_from_relative( parameters );
     DIR *d;
@@ -216,7 +216,7 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
 }
 
 // Delete a file
-void SimpleShell::rm_command( string parameters, StreamOutput *stream )
+void SimpleShell::rm_command( string parameters, Channel *stream )
 {
     const char *fn= this->absolute_from_relative(shift_parameter( parameters )).c_str();
     int s = remove(fn);
@@ -224,7 +224,7 @@ void SimpleShell::rm_command( string parameters, StreamOutput *stream )
 }
 
 // Change current absolute path to provided path
-void SimpleShell::cd_command( string parameters, StreamOutput *stream )
+void SimpleShell::cd_command( string parameters, Channel *stream )
 {
     string folder = this->absolute_from_relative( parameters );
     if ( folder[folder.length() - 1] != '/' ) {
@@ -241,13 +241,13 @@ void SimpleShell::cd_command( string parameters, StreamOutput *stream )
 }
 
 // Responds with the present working directory
-void SimpleShell::pwd_command( string parameters, StreamOutput *stream )
+void SimpleShell::pwd_command( string parameters, Channel *stream )
 {
     stream->printf("%s\r\n", this->current_path.c_str());
 }
 
 // Output the contents of a file, first parameter is the filename, second is the limit ( in number of lines to output )
-void SimpleShell::cat_command( string parameters, StreamOutput *stream )
+void SimpleShell::cat_command( string parameters, Channel *stream )
 {
     // Get parameters ( filename and line limit )
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
@@ -288,7 +288,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 }
 
 // show free memory
-void SimpleShell::mem_command( string parameters, StreamOutput *stream)
+void SimpleShell::mem_command( string parameters, Channel *stream)
 {
     bool verbose = shift_parameter( parameters ).find_first_of("Vv") != string::npos ;
     unsigned long heap = (unsigned long)_sbrk(0);
@@ -325,7 +325,7 @@ static uint32_t getDeviceType()
 }
 
 // get network config
-void SimpleShell::net_command( string parameters, StreamOutput *stream)
+void SimpleShell::net_command( string parameters, Channel *stream)
 {
     void *returned_data;
     bool ok= THEKERNEL->public_data->get_value( network_checksum, get_ipconfig_checksum, &returned_data );
@@ -340,7 +340,7 @@ void SimpleShell::net_command( string parameters, StreamOutput *stream)
 }
 
 // print out build version
-void SimpleShell::version_command( string parameters, StreamOutput *stream)
+void SimpleShell::version_command( string parameters, Channel *stream)
 {
     Version vers;
     uint32_t dev = getDeviceType();
@@ -349,28 +349,28 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
 }
 
 // Reset the system
-void SimpleShell::reset_command( string parameters, StreamOutput *stream)
+void SimpleShell::reset_command( string parameters, Channel *stream)
 {
     stream->printf("Smoothie out. Peace. Rebooting in 5 seconds...\r\n");
     this->reset_delay_secs = 5; // reboot in 5 seconds
 }
 
 // go into dfu boot mode
-void SimpleShell::dfu_command( string parameters, StreamOutput *stream)
+void SimpleShell::dfu_command( string parameters, Channel *stream)
 {
     stream->printf("Entering boot mode...\r\n");
     system_reset(true);
 }
 
 // Break out into the MRI debugging system
-void SimpleShell::break_command( string parameters, StreamOutput *stream)
+void SimpleShell::break_command( string parameters, Channel *stream)
 {
     stream->printf("Entering MRI debug mode...\r\n");
     __debugbreak();
 }
 
 // used to test out the get public data events
-void SimpleShell::get_command( string parameters, StreamOutput *stream)
+void SimpleShell::get_command( string parameters, Channel *stream)
 {
     int what = get_checksum(shift_parameter( parameters ));
     void *returned_data;
@@ -400,7 +400,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 }
 
 // used to test out the get public data events
-void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
+void SimpleShell::set_temp_command( string parameters, Channel *stream)
 {
     string type = shift_parameter( parameters );
     string temp = shift_parameter( parameters );
@@ -414,7 +414,7 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     }
 }
 
-void SimpleShell::help_command( string parameters, StreamOutput *stream )
+void SimpleShell::help_command( string parameters, Channel *stream )
 {
     stream->printf("Commands:\r\n");
     stream->printf("version\r\n");

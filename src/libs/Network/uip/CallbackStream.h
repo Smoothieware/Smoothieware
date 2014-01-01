@@ -4,10 +4,10 @@
 typedef int (*cb_t)(const char *, void *);
 
 #ifdef __cplusplus
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 
 
-class CallbackStream : public StreamOutput {
+class CallbackStream : public Channel {
     public:
         CallbackStream(cb_t cb, void *u);
         virtual ~CallbackStream();

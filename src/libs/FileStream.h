@@ -1,10 +1,10 @@
 #ifndef _FILESTREAM_H_
 #define _FILESTREAM_H_
 
-#include "StreamOutput.h"
+#include "Channel.h"
 #include "stdlib.h"
 
-class FileStream : public StreamOutput {
+class FileStream : public Channel {
     public:
         FileStream(const char *filename) { fd= fopen(filename, "a"); }
         virtual ~FileStream(){ close(); }

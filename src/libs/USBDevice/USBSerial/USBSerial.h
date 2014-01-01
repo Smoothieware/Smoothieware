@@ -24,14 +24,14 @@
 #include "CircBuffer.h"
 
 #include "Module.h"
-#include "StreamOutput.h"
+#include "Channel.h"
 
 class USBSerial_Receiver {
 protected:
     virtual bool SerialEvent_RX(void) = 0;
 };
 
-class USBSerial: public USBCDC, public USBSerial_Receiver, public Module, public StreamOutput {
+class USBSerial: public USBCDC, public USBSerial_Receiver, public Module, public Channel {
 public:
     USBSerial(USB *);
 

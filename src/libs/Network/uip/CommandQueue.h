@@ -6,7 +6,7 @@
 #include "fifo.h"
 #include <string>
 
-#include "StreamOutput.h"
+#include "Channel.h"
 
 class CommandQueue
 {
@@ -14,15 +14,15 @@ public:
     CommandQueue();
     ~CommandQueue();
     bool pop();
-    int add(const char* cmd, StreamOutput *pstream);
+    int add(const char* cmd, Channel *pstream);
     int size() {return q.size();}
     static CommandQueue* getInstance();
 
 private:
-    typedef struct {char* str; StreamOutput *pstream; } cmd_t;
+    typedef struct {char* str; Channel *pstream; } cmd_t;
     Fifo<cmd_t> q;
     static CommandQueue *instance;
-    StreamOutput *null_stream;
+    Channel *null_stream;
 };
 
 #else

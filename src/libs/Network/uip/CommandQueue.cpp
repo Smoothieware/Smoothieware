@@ -15,7 +15,7 @@ CommandQueue *CommandQueue::instance = NULL;
 CommandQueue::CommandQueue()
 {
     command_queue_instance = this;
-    null_stream= &(StreamOutput::NullStream);
+    null_stream= &(Channel::NullStream);
 }
 
 CommandQueue* CommandQueue::getInstance()
@@ -27,11 +27,11 @@ CommandQueue* CommandQueue::getInstance()
 extern "C" {
     int network_add_command(const char *cmd, void *pstream)
     {
-        return command_queue_instance->add(cmd, (StreamOutput*)pstream);
+        return command_queue_instance->add(cmd, (Channel*)pstream);
     }
 }
 
-int CommandQueue::add(const char *cmd, StreamOutput *pstream)
+int CommandQueue::add(const char *cmd, Channel *pstream)
 {
     cmd_t c= {strdup(cmd), pstream==NULL?null_stream:pstream};
     q.push(c);

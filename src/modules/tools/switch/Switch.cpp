@@ -19,7 +19,7 @@ Switch::Switch(){}
 
 Switch::Switch(uint16_t name){
     this->name_checksum = name;
-    //this->dummy_stream = &(StreamOutput::NullStream);
+    //this->dummy_stream = &(Channel::NullStream);
 }
 
 void Switch::on_module_loaded(){
@@ -112,10 +112,10 @@ void Switch::on_gcode_execute(void* argument){
 void Switch::on_main_loop(void* argument){
     if(this->switch_changed){  
         if(this->switch_state){
-            this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
+            this->send_gcode( this->output_on_command, &(Channel::NullStream) );
             this->output_pin.pwm(this->switch_value);
         }else{
-            this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
+            this->send_gcode( this->output_off_command, &(Channel::NullStream) );
             this->output_pin.set(0);
         }
         this->switch_changed=false;      
@@ -155,7 +155,7 @@ void Switch::flip(){
     this->switch_changed = true;
 }
 
-void Switch::send_gcode(std::string msg, StreamOutput* stream) {
+void Switch::send_gcode(std::string msg, Channel* stream) {
     struct SerialMessage message;
     message.message = msg;
     message.stream = stream;

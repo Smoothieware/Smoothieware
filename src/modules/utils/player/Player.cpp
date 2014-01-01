@@ -11,7 +11,7 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "PublicDataRequest.h"
@@ -49,7 +49,7 @@ void Player::on_gcode_received(void *argument) {
             gcode->mark_as_taken();
             // Get filename
             this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
-            this->current_stream = &(StreamOutput::NullStream);
+            this->current_stream = &(Channel::NullStream);
 
             if(this->current_file_handler != NULL) {
                 this->playing_file = false;
@@ -82,8 +82,8 @@ void Player::on_gcode_received(void *argument) {
                 this->playing_file = true;
                 // this would be a problem if the stream goes away before the file has finished,
                 // so we attach it to the kernel stream, however network connections from pronterface
-                // do not connect to the kernel streams so won't see this FIXME
-                this->reply_stream= THEKERNEL->streams;
+                // do not connect to the kernel channels so won't see this FIXME
+                this->reply_stream= THEKERNEL->channels;
             }
 
         }else if (gcode->m == 25) { // pause print
@@ -124,7 +124,7 @@ void Player::on_gcode_received(void *argument) {
             gcode->mark_as_taken();
             // Get filename
             this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
-            this->current_stream = &(StreamOutput::NullStream);
+            this->current_stream = &(Channel::NullStream);
 
             if(this->current_file_handler != NULL) {
                 this->playing_file = false;
@@ -168,7 +168,7 @@ void Player::on_console_line_received( void* argument ){
 }
 
 // Play a gcode file by considering each line as if it was received on the serial console
-void Player::play_command( string parameters, StreamOutput* stream ){
+void Player::play_command( string parameters, Channel* stream ){
 
     // Get filename
     this->filename          = this->absolute_from_relative(shift_parameter( parameters ));
@@ -186,10 +186,10 @@ void Player::play_command( string parameters, StreamOutput* stream ){
 
     // Output to the current stream if we were passed the -v ( verbose ) option
     if( options.find_first_of("Vv") == string::npos ){
-        this->current_stream = &(StreamOutput::NullStream);
+        this->current_stream = &(Channel::NullStream);
     }else{
         // we send to the kernels stream as it cannot go away
-        this->current_stream = THEKERNEL->streams;
+        this->current_stream = THEKERNEL->channels;
     }
 
     // get size of file
@@ -206,7 +206,7 @@ void Player::play_command( string parameters, StreamOutput* stream ){
     this->elapsed_secs= 0;
 }
 
-void Player::progress_command( string parameters, StreamOutput* stream ){
+void Player::progress_command( string parameters, Channel* stream ){
 
     // get options
     string options           = shift_parameter( parameters );
@@ -241,7 +241,7 @@ void Player::progress_command( string parameters, StreamOutput* stream ){
     }
 }
 
-void Player::abort_command( string parameters, StreamOutput* stream ){
+void Player::abort_command( string parameters, Channel* stream ){
     if(!playing_file) {
         stream->printf("Not currently playing\r\n");
         return;
@@ -263,7 +263,7 @@ string Player::absolute_from_relative( string path ){
 }
 
 // Change current absolute path to provided path
-void Player::cd_command( string parameters, StreamOutput* stream ){
+void Player::cd_command( string parameters, Channel* stream ){
     string folder = this->absolute_from_relative( parameters );
     if( folder[folder.length()-1] != '/' ){ folder += "/"; }
     DIR *d;
@@ -304,7 +304,7 @@ void Player::on_main_loop(void* argument){
                 this->current_stream->printf("%s\n", buffer.c_str());
                 struct SerialMessage message;
                 message.message = buffer;
-                message.stream = &(StreamOutput::NullStream); // we don't really need to see the ok
+                message.stream = &(Channel::NullStream); // we don't really need to see the ok
                 // wait for the queue to have enough room that a serial message could still be received before sending
                 THEKERNEL->conveyor->wait_for_queue(2);
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
@@ -365,7 +365,7 @@ void Player::on_set_public_data(void* argument) {
     if(!pdr->starts_with(player_checksum)) return;
 
     if(pdr->second_element_is(abort_play_checksum)) {
-        abort_command("", &(StreamOutput::NullStream));
+        abort_command("", &(Channel::NullStream));
         pdr->set_taken();
     }
 }
@@ -377,7 +377,7 @@ void Player::on_set_public_data(void* argument) {
 /*
 void Player::on_main_loop(void* argument){
     if( !this->on_booted ){
-        this->play_command(this->on_boot_file_name, new StreamOutput());
+        this->play_command(this->on_boot_file_name, new Channel());
         this->on_booted = true;
     }
     if( this->playing_file ){

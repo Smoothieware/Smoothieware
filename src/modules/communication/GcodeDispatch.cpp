@@ -14,7 +14,7 @@ using std::string;
 #include "GcodeDispatch.h"
 #include "modules/robot/Conveyor.h"
 #include "libs/SerialMessage.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 #include "libs/FileStream.h"
 
 GcodeDispatch::GcodeDispatch() {}

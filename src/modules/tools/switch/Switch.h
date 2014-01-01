@@ -37,7 +37,7 @@ class Switch : public Module {
         uint32_t pinpoll_tick(uint32_t dummy);
 
         void flip();
-        void send_gcode(string msg, StreamOutput* stream);
+        void send_gcode(string msg, Channel* stream);
 
         uint16_t name_checksum;
         Pin       input_pin;

@@ -266,13 +266,13 @@ void USBSerial::on_main_loop(void *argument)
         if (attach)
         {
             attached = true;
-            THEKERNEL->streams->append_stream(this);
+            THEKERNEL->channels->append_stream(this);
             writeBlock((const uint8_t *) "Smoothie\nok\n", 12);
         }
         else
         {
             attached = false;
-            THEKERNEL->streams->remove_stream(this);
+            THEKERNEL->channels->remove_stream(this);
             txbuf.flush();
             rxbuf.flush();
             nl_in_rx = 0;

@@ -9,14 +9,14 @@
 #include <string>
 using std::string;
 #include "Gcode.h"
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 #include "utils.h"
 
 #include <stdlib.h>
 
 // This is a gcode object. It reprensents a GCode string/command, an caches some important values about that command for the sake of performance.
 // It gets passed around in events, and attached to the queue ( that'll change )
-Gcode::Gcode(const string& command, StreamOutput* stream) : command(command), m(0), g(0), add_nl(false), stream(stream) {
+Gcode::Gcode(const string& command, Channel* stream) : command(command), m(0), g(0), add_nl(false), stream(stream) {
     prepare_cached_values();
     this->millimeters_of_travel = 0L;
     this->accepted_by_module=false;

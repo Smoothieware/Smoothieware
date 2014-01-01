@@ -178,7 +178,7 @@ void MemoryPool::dealloc(void* d)
     } while (q < (_poolregion*) (((uint8_t*) base) + size));
 }
 
-void MemoryPool::debug(StreamOutput* str)
+void MemoryPool::debug(Channel* str)
 {
     _poolregion* p = (_poolregion*) base;
     uint32_t tot = 0;

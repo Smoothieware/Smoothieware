@@ -14,7 +14,7 @@ using std::string;
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
 
-#include "libs/StreamOutput.h"
+#include "libs/Channel.h"
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
 
 class GcodeDispatch : public Module {

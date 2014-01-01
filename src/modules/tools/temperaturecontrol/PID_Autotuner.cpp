@@ -22,7 +22,7 @@ void PID_Autotuner::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
 }
 
-void PID_Autotuner::begin(TemperatureControl *temp, float target, StreamOutput *stream, int ncycles)
+void PID_Autotuner::begin(TemperatureControl *temp, float target, Channel *stream, int ncycles)
 {
     noiseBand = 0.5;
     oStep = temp->heater_pin.max_pwm(); // use max pwm to cycle temp

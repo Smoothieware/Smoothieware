@@ -26,7 +26,7 @@ int CallbackStream::puts(const char *s)
     int len = strlen(s);
     int n;
     do {
-        // call this streams result callback
+        // call this channels result callback
         n= (*callback)(s, user);
 
         // if closed just pretend we sent it
