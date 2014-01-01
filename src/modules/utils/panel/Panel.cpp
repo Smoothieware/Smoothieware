@@ -55,11 +55,14 @@ Panel::Panel()
     this->start_up = true;
     this->current_screen = NULL;
     strcpy(this->playing_file, "Playing file");
+    channel= new PanelChannel(this);
 }
 
 Panel::~Panel()
 {
     delete this->lcd;
+    THEKERNEL->channels->remove_channel(channel);
+    delete channel;
 }
 
 void Panel::on_module_loaded()
@@ -137,7 +140,7 @@ void Panel::on_module_loaded()
     THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
 
     // receive on_receive_line events
-    THEKERNEL->channels->append_channel(this);
+    THEKERNEL->channels->append_channel(channel);
 }
 
 // Enter a screen, we only care about it now
@@ -212,10 +215,10 @@ void Panel::on_main_loop(void *argument)
     }
 }
 
-bool Panel::on_receive_line()
+bool Panel::PanelChannel::on_receive_line()
 {
-    if (current_screen != NULL) {
-        if (current_screen->on_receive_line())
+    if (parent->current_screen != NULL) {
+        if (parent->current_screen->on_receive_line())
             return true;
     }
     return false;

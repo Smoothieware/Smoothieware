@@ -17,7 +17,7 @@
 #define CONTROL_MODE               1
 
 class PanelScreen;
-class Panel : public Module, public Channel {
+class Panel : public Module {
     public:
         Panel();
         virtual ~Panel();
@@ -27,7 +27,6 @@ class Panel : public Module, public Channel {
         void on_idle(void* argument);
         void on_main_loop(void* argument);
         void on_gcode_received(void* argument);
-        bool on_receive_line();
         void enter_screen(PanelScreen* screen);
         void reset_counter();
 
@@ -121,6 +120,15 @@ class Panel : public Module, public Channel {
 
         char playing_file[20];
         string message;
+
+        class PanelChannel : public Channel {
+        public:
+            PanelChannel(Panel *p) { parent= p; }
+            bool on_receive_line();
+        private:
+            Panel *parent;
+        };
+        Channel *channel;
 };
 
 #endif
