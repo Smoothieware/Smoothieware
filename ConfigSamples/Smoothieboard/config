@@ -131,6 +131,8 @@ alpha_homing_retract_mm                      5                # distance in mm
 beta_homing_retract_mm                       5                # "
 gamma_homing_retract_mm                      1                # "
 
+#endstop_debounce_count                       100              # uncomment if you get noise on your endstops
+
 # Pause button
 pause_button_enable                          true             #
 
