@@ -43,6 +43,9 @@ private:
 
     void net_command( string parameters, StreamOutput *stream);
 
+    void load_command( string parameters, StreamOutput *stream);
+    void save_command( string parameters, StreamOutput *stream);
+
     bool parse_command(unsigned short cs, string args, StreamOutput *stream);
 
     typedef void (SimpleShell::*PFUNC)(string parameters, StreamOutput *stream);
