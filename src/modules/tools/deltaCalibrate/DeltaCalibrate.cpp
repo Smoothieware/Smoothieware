@@ -446,11 +446,11 @@ void DeltaCalibrate::calibrate_delta( ){
     // apply values
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
 
-        buffered_length = snprintf(buf, sizeof(buf), "M666 X%f Y%f Z%f", -t1Trim, -t2Trim, -t3Trim );
+        buffered_length = snprintf(buf, sizeof(buf), "M666 X%5.3f Y%5.3f Z%5.3f", -t1Trim, -t2Trim, -t3Trim );
         g.assign(buf, buffered_length);
         send_gcode(g);
 
-        buffered_length = snprintf(buf, sizeof(buf), "M665 R%f Z%f", newDeltaRadius, (( originHeight/steps_per_mm[0]) + calibrate_probe_offset) );
+        buffered_length = snprintf(buf, sizeof(buf), "M665 R%5.3f Z%5.3f", newDeltaRadius, (( originHeight/steps_per_mm[0]) + calibrate_probe_offset) );
         g.assign(buf, buffered_length);
         send_gcode(g);
 
