@@ -6,7 +6,6 @@
 */
 
 #include "libs/Module.h"
-#include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
 #include "modules/robot/Conveyor.h"
 #include "DeltaCalibrate.h"
@@ -103,12 +102,12 @@ DeltaCalibrate::DeltaCalibrate()
 void DeltaCalibrate::on_module_loaded()
 {
     // Do not do anything if not enabled
-    if ( this->kernel->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ) {
+    if ( THEKERNEL->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ) {
         return;
     }
 
     // we directly access arm solution data to calculate calibration, currently only Kossel solution has the required methods
-    if ( get_checksum(this->kernel->config->value(arm_solution_checksum)->by_default("cartesian")->as_string()) != kossel_checksum ) {
+    if ( get_checksum(THEKERNEL->config->value(arm_solution_checksum)->by_default("cartesian")->as_string()) != kossel_checksum ) {
         return;
     }
 
@@ -116,9 +115,9 @@ void DeltaCalibrate::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
 
     // Take StepperMotor objects from Robot and keep them here
-    this->steppers[0] = this->kernel->robot->alpha_stepper_motor;
-    this->steppers[1] = this->kernel->robot->beta_stepper_motor;
-    this->steppers[2] = this->kernel->robot->gamma_stepper_motor;
+    this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
+    this->steppers[1] = THEKERNEL->robot->beta_stepper_motor;
+    this->steppers[2] = THEKERNEL->robot->gamma_stepper_motor;
 
     // Settings
     this->on_config_reload(this);
@@ -128,76 +127,76 @@ void DeltaCalibrate::on_module_loaded()
 // Get config
 void DeltaCalibrate::on_config_reload(void *argument)
 {
-    this->pins[0].from_string(         this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->pins[1].from_string(         this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
-    this->pins[2].from_string(         this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->pins[3].from_string(         this->kernel->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->pins[4].from_string(         this->kernel->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
-    this->pins[5].from_string(         this->kernel->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
+    this->pins[0].from_string(         THEKERNEL->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
+    this->pins[1].from_string(         THEKERNEL->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
+    this->pins[2].from_string(         THEKERNEL->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
+    this->pins[3].from_string(         THEKERNEL->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
+    this->pins[4].from_string(         THEKERNEL->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
+    this->pins[5].from_string(         THEKERNEL->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
 
     // we need to know steps per mm for M206, also use them for all settings
-    this->steps_per_mm[0]           =  this->kernel->config->value(alpha_steps_per_mm_checksum         )->as_number();
-    this->steps_per_mm[1]           =  this->kernel->config->value(beta_steps_per_mm_checksum          )->as_number();
-    this->steps_per_mm[2]           =  this->kernel->config->value(gamma_steps_per_mm_checksum         )->as_number();
+    this->steps_per_mm[0]           =  THEKERNEL->config->value(alpha_steps_per_mm_checksum         )->as_number();
+    this->steps_per_mm[1]           =  THEKERNEL->config->value(beta_steps_per_mm_checksum          )->as_number();
+    this->steps_per_mm[2]           =  THEKERNEL->config->value(gamma_steps_per_mm_checksum         )->as_number();
 
-    this->fast_rates[0]             =  this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default(4000 )->as_number();
-    this->fast_rates[1]             =  this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default(4000 )->as_number();
-    this->fast_rates[2]             =  this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default(6400 )->as_number();
-    this->slow_rates[0]             =  this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default(2000 )->as_number();
-    this->slow_rates[1]             =  this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default(2000 )->as_number();
-    this->slow_rates[2]             =  this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default(3200 )->as_number();
-    this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default(400  )->as_number();
-    this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(400  )->as_number();
-    this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(1600 )->as_number();
+    this->fast_rates[0]             =  THEKERNEL->config->value(alpha_fast_homing_rate_checksum     )->by_default(4000 )->as_number();
+    this->fast_rates[1]             =  THEKERNEL->config->value(beta_fast_homing_rate_checksum      )->by_default(4000 )->as_number();
+    this->fast_rates[2]             =  THEKERNEL->config->value(gamma_fast_homing_rate_checksum     )->by_default(6400 )->as_number();
+    this->slow_rates[0]             =  THEKERNEL->config->value(alpha_slow_homing_rate_checksum     )->by_default(2000 )->as_number();
+    this->slow_rates[1]             =  THEKERNEL->config->value(beta_slow_homing_rate_checksum      )->by_default(2000 )->as_number();
+    this->slow_rates[2]             =  THEKERNEL->config->value(gamma_slow_homing_rate_checksum     )->by_default(3200 )->as_number();
+    this->retract_steps[0]          =  THEKERNEL->config->value(alpha_homing_retract_checksum       )->by_default(400  )->as_number();
+    this->retract_steps[1]          =  THEKERNEL->config->value(beta_homing_retract_checksum        )->by_default(400  )->as_number();
+    this->retract_steps[2]          =  THEKERNEL->config->value(gamma_homing_retract_checksum       )->by_default(1600 )->as_number();
 
     // newer mm based config values override the old ones, convert to steps/mm and steps, defaults to what was set in the older config settings above
-    this->fast_rates[0] =    this->kernel->config->value(alpha_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
-    this->fast_rates[1] =    this->kernel->config->value(beta_fast_homing_rate_mm_checksum  )->by_default(this->fast_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
-    this->fast_rates[2] =    this->kernel->config->value(gamma_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
-    this->slow_rates[0] =    this->kernel->config->value(alpha_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
-    this->slow_rates[1] =    this->kernel->config->value(beta_slow_homing_rate_mm_checksum  )->by_default(this->slow_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
-    this->slow_rates[2] =    this->kernel->config->value(gamma_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
-    this->retract_steps[0] = this->kernel->config->value(alpha_homing_retract_mm_checksum   )->by_default(this->retract_steps[0] / steps_per_mm[0])->as_number() * steps_per_mm[0];
-    this->retract_steps[1] = this->kernel->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1] / steps_per_mm[1])->as_number() * steps_per_mm[1];
-    this->retract_steps[2] = this->kernel->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2] / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->fast_rates[0] =    THEKERNEL->config->value(alpha_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->fast_rates[1] =    THEKERNEL->config->value(beta_fast_homing_rate_mm_checksum  )->by_default(this->fast_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->fast_rates[2] =    THEKERNEL->config->value(gamma_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->slow_rates[0] =    THEKERNEL->config->value(alpha_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->slow_rates[1] =    THEKERNEL->config->value(beta_slow_homing_rate_mm_checksum  )->by_default(this->slow_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->slow_rates[2] =    THEKERNEL->config->value(gamma_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->retract_steps[0] = THEKERNEL->config->value(alpha_homing_retract_mm_checksum   )->by_default(this->retract_steps[0] / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->retract_steps[1] = THEKERNEL->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1] / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->retract_steps[2] = THEKERNEL->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2] / steps_per_mm[2])->as_number() * steps_per_mm[2];
 
-    this->debounce_count  = this->kernel->config->value(endstop_debounce_count_checksum    )->by_default(0)->as_number();
-    this->lift_steps = this->kernel->config->value(calibrate_lift_checksum )->by_default(10)->as_number() * steps_per_mm[0];
-    this->calibrate_radius = this->kernel->config->value(calibrate_radius_checksum )->by_default(50)->as_number();
-    this->calibrate_probe_offset = this->kernel->config->value(calibrate_probe_offset_checksum )->by_default(0)->as_number();
-    this->arm_radius = this->kernel->config->value(arm_radius_checksum )->by_default(124.0)->as_number();
+    this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(0)->as_number();
+    this->lift_steps = THEKERNEL->config->value(calibrate_lift_checksum )->by_default(10)->as_number() * steps_per_mm[0];
+    this->calibrate_radius = THEKERNEL->config->value(calibrate_radius_checksum )->by_default(50)->as_number();
+    this->calibrate_probe_offset = THEKERNEL->config->value(calibrate_probe_offset_checksum )->by_default(0)->as_number();
+    this->arm_radius = THEKERNEL->config->value(arm_radius_checksum )->by_default(124.0)->as_number();
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
-    int home_dir                    = get_checksum(this->kernel->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
+    int home_dir                    = get_checksum(THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[0]         = home_dir != home_to_max_checksum;
 
-    home_dir                        = get_checksum(this->kernel->config->value(beta_homing_direction_checksum)->by_default("home_to_min")->as_string());
+    home_dir                        = get_checksum(THEKERNEL->config->value(beta_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[1]         = home_dir != home_to_max_checksum;
 
-    home_dir                        = get_checksum(this->kernel->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string());
+    home_dir                        = get_checksum(THEKERNEL->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[2]         = home_dir != home_to_max_checksum;
 
-    this->homing_position[0]        =  this->home_direction[0] ? this->kernel->config->value(alpha_min_checksum)->by_default(0)->as_number() : this->kernel->config->value(alpha_max_checksum)->by_default(200)->as_number();
-    this->homing_position[1]        =  this->home_direction[1] ? this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number() : this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
-    this->homing_position[2]        =  this->home_direction[2] ? this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number() : this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
+    this->homing_position[0]        =  this->home_direction[0] ? THEKERNEL->config->value(alpha_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(alpha_max_checksum)->by_default(200)->as_number();
+    this->homing_position[1]        =  this->home_direction[1] ? THEKERNEL->config->value(beta_min_checksum )->by_default(0)->as_number() : THEKERNEL->config->value(beta_max_checksum )->by_default(200)->as_number();;
+    this->homing_position[2]        =  this->home_direction[2] ? THEKERNEL->config->value(gamma_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number();;
 
-    this->is_delta                  =  this->kernel->config->value(delta_homing_checksum)->by_default(false)->as_bool();
+    this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
 
     // endstop trim used by deltas to do soft adjusting, in mm, convert to steps, and negate depending on homing direction
     // eg on a delta homing to max, a negative trim value will move the carriage down, and a positive will move it up
     int dirx = (this->home_direction[0] ? 1 : -1);
     int diry = (this->home_direction[1] ? 1 : -1);
     int dirz = (this->home_direction[2] ? 1 : -1);
-    this->trim[0] = this->kernel->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[0] * dirx;
-    this->trim[1] = this->kernel->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * steps_per_mm[1] * diry;
-    this->trim[2] = this->kernel->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
+    this->trim[0] = THEKERNEL->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[0] * dirx;
+    this->trim[1] = THEKERNEL->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * steps_per_mm[1] * diry;
+    this->trim[2] = THEKERNEL->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
 }
 
 void DeltaCalibrate::wait_for_moves(){
     // Wait for moves to be done
     for( int i = 0; i <= 2; i++ ){
         while( this->steppers[i]->moving ){
-            this->kernel->call_event(ON_IDLE);
+            THEKERNEL->call_event(ON_IDLE);
         }
     }
 }
@@ -208,7 +207,7 @@ uint32_t DeltaCalibrate::wait_for_ztouch(){
     uint32_t saved_steps = 0;
     while(running){
         running = false;
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
         if( this->pins[2].get() ){  //probe contact  //TODO configure probe pin?
             if( debounce < debounce_count ) { //debounce and loop
                 debounce ++;
@@ -264,11 +263,14 @@ void DeltaCalibrate::calibrate_delta( ){
     THEKERNEL->robot->arm_solution->get_optional('R', &arm_radius);
 
     // First wait for the queue to be empty
-    this->kernel->conveyor->wait_for_empty_queue();
+    THEKERNEL->conveyor->wait_for_empty_queue();
     // Enable the motors
-    this->kernel->stepper->turn_enable_pins_on();
+    THEKERNEL->stepper->turn_enable_pins_on();
     
-    // TODO automatically home all home axis?
+    //automatically home all home axis
+    buffered_length = snprintf(buf, sizeof(buf), "G28");
+    g.assign(buf, buffered_length);
+    send_gcode(g);
 
     buffered_length = snprintf(buf, sizeof(buf), "G21");
     g.assign(buf, buffered_length);
@@ -283,7 +285,7 @@ void DeltaCalibrate::calibrate_delta( ){
     // deploy probe, check or abort
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
@@ -306,7 +308,7 @@ void DeltaCalibrate::calibrate_delta( ){
     current_z_steps -= lift_steps;
 
     // update planner position so we can make coordinated moves
-    this->kernel->robot->reset_axis_position( homing_position[2] - (current_z_steps / steps_per_mm[0]) , 2);
+    THEKERNEL->robot->reset_axis_position( homing_position[2] - (current_z_steps / steps_per_mm[0]) , 2);
 
     targetY = calibrate_radius * cos(240 * (3.141592653589793/180));
     targetX = calibrate_radius * sin(240 * (3.141592653589793/180));
@@ -314,13 +316,13 @@ void DeltaCalibrate::calibrate_delta( ){
     buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX,targetY);
     g.assign(buf, buffered_length);
     send_gcode(g);
-    this->kernel->conveyor->wait_for_empty_queue();
+    THEKERNEL->conveyor->wait_for_empty_queue();
 
 
     // check probe retraction
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
@@ -348,13 +350,13 @@ void DeltaCalibrate::calibrate_delta( ){
     buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX,targetY);
     g.assign(buf, buffered_length);
     send_gcode(g);
-    this->kernel->conveyor->wait_for_empty_queue();
+    THEKERNEL->conveyor->wait_for_empty_queue();
 
 
     // check probe retraction
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }    
 
@@ -382,12 +384,12 @@ void DeltaCalibrate::calibrate_delta( ){
     buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX, targetY);
     g.assign(buf, buffered_length);
     send_gcode(g);
-    this->kernel->conveyor->wait_for_empty_queue();    
+    THEKERNEL->conveyor->wait_for_empty_queue();    
 
     // check probe retraction
     if( this->pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }  
 
@@ -420,11 +422,11 @@ void DeltaCalibrate::calibrate_delta( ){
     float t3Trim = ((tower3Height-lowestTower) / steps_per_mm[0]) * multiplier;
 
     if ( (delta_calibrate_flags & (CALIBRATE_SILENT|CALIBRATE_QUIET) ) == 0 ){
-        kernel->streams->printf("Probed Points:\r\n");
-        kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -tower1Height/steps_per_mm[0], -tower2Height/steps_per_mm[0], -tower3Height/steps_per_mm[0]); 
-        kernel->streams->printf("Detected offsets:\r\n");
-        kernel->streams->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
-        kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+        THEKERNEL->streams->printf("Probed Points:\r\n");
+        THEKERNEL->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -tower1Height/steps_per_mm[0], -tower2Height/steps_per_mm[0], -tower3Height/steps_per_mm[0]); 
+        THEKERNEL->streams->printf("Detected offsets:\r\n");
+        THEKERNEL->streams->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
+        THEKERNEL->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
     }
 
     t1Trim += trim[0]/steps_per_mm[0];
@@ -437,24 +439,24 @@ void DeltaCalibrate::calibrate_delta( ){
     float newDeltaRadius = arm_radius - ((centerAverage - originHeight)/steps_per_mm[0])/0.15;
 
     if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
-        kernel->streams->printf("Calibrated Values:\r\n");
-        kernel->streams->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
-        kernel->streams->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
-        kernel->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+        THEKERNEL->streams->printf("Calibrated Values:\r\n");
+        THEKERNEL->streams->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
+        THEKERNEL->streams->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
+        THEKERNEL->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
     }
 
     // apply values
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
 
-        buffered_length = snprintf(buf, sizeof(buf), "M666 X%f Y%f Z%f", -t1Trim, -t2Trim, -t3Trim );
+        buffered_length = snprintf(buf, sizeof(buf), "M666 X%5.3f Y%5.3f Z%5.3f", -t1Trim, -t2Trim, -t3Trim );
         g.assign(buf, buffered_length);
         send_gcode(g);
 
-        buffered_length = snprintf(buf, sizeof(buf), "M665 R%f Z%f", newDeltaRadius, (( originHeight/steps_per_mm[0]) + calibrate_probe_offset) );
+        buffered_length = snprintf(buf, sizeof(buf), "M665 R%5.3f Z%5.3f", newDeltaRadius, (( originHeight/steps_per_mm[0]) + calibrate_probe_offset) );
         g.assign(buf, buffered_length);
         send_gcode(g);
 
-        kernel->streams->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
+        THEKERNEL->streams->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
     }
 }
 
@@ -464,13 +466,13 @@ void DeltaCalibrate::calibrate_zprobe_offset( ){
     long originHeight = 0;
 
     // First wait for the queue to be empty
-    this->kernel->conveyor->wait_for_empty_queue();
+    THEKERNEL->conveyor->wait_for_empty_queue();
     // Enable the motors
-    this->kernel->stepper->turn_enable_pins_on();
+    THEKERNEL->stepper->turn_enable_pins_on();
 
     if( !pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        kernel->streams->printf("Z-Probe not activated, Aborting!\r\n");
+        THEKERNEL->streams->printf("Z-Probe not activated, Aborting!\r\n");
         return;
     }
 
@@ -480,7 +482,7 @@ void DeltaCalibrate::calibrate_zprobe_offset( ){
 
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        kernel->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
@@ -494,13 +496,13 @@ void DeltaCalibrate::calibrate_zprobe_offset( ){
 
     //calculate
     if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
-        kernel->streams->printf("Calibrated Values:\r\n");
-        kernel->streams->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
+        THEKERNEL->streams->printf("Calibrated Values:\r\n");
+        THEKERNEL->streams->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
     }
     // apply values
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
         calibrate_probe_offset = originHeight/steps_per_mm[0]; 
-        kernel->streams->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
+        THEKERNEL->streams->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
     }
 }
 
