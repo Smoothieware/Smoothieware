@@ -36,7 +36,7 @@ void Conveyor::on_idle(void* argument){
         // Cleanly delete block
         Block* block = queue.get_tail_ref();
         block->gcodes.clear();
-        queue.delete_first();
+        queue.delete_tail();
         __disable_irq();
         flush_blocks--;
         __enable_irq();

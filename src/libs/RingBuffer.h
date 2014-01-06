@@ -24,7 +24,7 @@ template<class kind, int length> class RingBuffer {
         kind*        get_tail_ref();
         void         get( int index, kind &object);
         kind*        get_ref( int index);
-        void         delete_first();
+        void         delete_tail();
 
         kind         buffer[length];
         volatile int          tail;
@@ -110,7 +110,7 @@ template<class kind, int length> void RingBuffer<kind, length>::pop_front(kind &
     this->tail = (this->tail+1)&(length-1);
 }
 
-template<class kind, int length> void RingBuffer<kind, length>::delete_first(){
+template<class kind, int length> void RingBuffer<kind, length>::delete_tail(){
     //kind dummy;
     //this->pop_front(dummy);
     this->tail = (this->tail+1)&(length-1);
