@@ -3,7 +3,7 @@
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
-      
+
       With chucks taken from http://en.wikipedia.org/wiki/Circular_buffer, see licence there also
 */
 
@@ -21,6 +21,7 @@ template<class kind, int length> class RingBuffer {
         void         push_back(kind object);
         void         pop_front(kind &object);
         kind*        get_head_ref();
+        kind*        get_tail_ref();
         void         get( int index, kind &object);
         kind*        get_ref( int index);
         void         delete_first();
@@ -67,6 +68,10 @@ template<class kind, int length> void RingBuffer<kind, length>::push_back(kind o
 
 template<class kind, int length> kind* RingBuffer<kind, length>::get_head_ref(){
     return &(buffer[head]);
+}
+
+template<class kind, int length> kind* RingBuffer<kind, length>::get_tail_ref(){
+    return &(buffer[tail]);
 }
 
 template<class kind, int length> void RingBuffer<kind, length>::get(int index, kind &object){

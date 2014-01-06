@@ -33,9 +33,9 @@ void Conveyor::on_module_loaded(){
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
 void Conveyor::on_idle(void* argument){
     if (flush_blocks){
-        // Cleanly delete block 
-        Block* block = queue.get_head_ref();
-        block->gcodes.clear(); 
+        // Cleanly delete block
+        Block* block = queue.get_tail_ref();
+        block->gcodes.clear();
         queue.delete_first();
         __disable_irq();
         flush_blocks--;
@@ -63,7 +63,7 @@ Block* Conveyor::new_block(){
     block->initial_rate = -2;
     block->final_rate = -2;
     block->conveyor = this;
-    
+
     return block;
 }
 
@@ -97,9 +97,9 @@ void Conveyor::pop_and_process_new_block(int debug){
 
 	// In case the module was not taken
     if( this->current_block->times_taken < 1 ){
-        Block* temp = this->current_block; 
-        this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect 
-        temp->take(); 
+        Block* temp = this->current_block;
+        this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect
+        temp->take();
         temp->release();
     }
 
