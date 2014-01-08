@@ -33,7 +33,7 @@ using std::string;
 #define GAMMA_STEPPER 2
 
 #define clear_vector(a) memset(a, 0, sizeof(a))
-#define clear_vector_double(a) memset(a, 0.0, sizeof(a))
+#define clear_vector_float(a) memset(a, 0.0F, sizeof(a))
 
 #define confine(value, min, max) (((value) < (min))?(min):(((value) > (max))?(max):(value)))
 
