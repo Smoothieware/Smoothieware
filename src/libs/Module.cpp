@@ -23,7 +23,7 @@ Module::~Module(){}
 void Module::on_module_loaded(){}
 
 void Module::register_for_event(_EVENT_ENUM event_id){
-    this->kernel->register_for_event(event_id, this);
+    THEKERNEL->register_for_event(event_id, this);
 }
 
 #define EVENT(name, func) void Module::func (void*) {}

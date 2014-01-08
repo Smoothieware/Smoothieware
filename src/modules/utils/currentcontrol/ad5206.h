@@ -18,7 +18,7 @@ class AD5206 : public DigipotBase {
             cs.set(1);
         }
 
-        void set_current( int channel, double current )
+        void set_current( int channel, float current )
         {
             current = min( max( current, 0.0L ), 2.0L );
 
@@ -32,13 +32,13 @@ class AD5206 : public DigipotBase {
 
 
         //taken from 4pi firmware
-        unsigned char current_to_wiper( double current ){
+        unsigned char current_to_wiper( float current ){
             unsigned int count = int((current*1000)*100/743); //6.8k resistor and 10k pot
 
             return (unsigned char)count;
         }
 
-        double get_current(int channel)
+        float get_current(int channel)
         {
             return currents[channel];
         }
@@ -47,7 +47,7 @@ class AD5206 : public DigipotBase {
 
         Pin cs;
         mbed::SPI* spi;
-        double currents[6];
+        float currents[6];
 };
 
 

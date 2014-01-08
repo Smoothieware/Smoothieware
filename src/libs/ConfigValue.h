@@ -40,12 +40,12 @@ class ConfigValue{
             }
         }
 
-        double as_number(){
+        float as_number(){
             if( this->found == false && this->default_set == true ){
                 return this->default_double;
             }else{
                 char* endptr = NULL;
-                double result = strtod(remove_non_number(this->value).c_str(), &endptr);
+                float result = strtof(remove_non_number(this->value).c_str(), &endptr);
                 if( endptr <= remove_non_number(this->value).c_str() ){
                     error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
                 }
@@ -91,7 +91,7 @@ class ConfigValue{
             return this;
         }
 
-        ConfigValue* by_default(double val){
+        ConfigValue* by_default(float val){
             this->default_set = true;
             this->default_double = val;
             return this;
@@ -113,7 +113,7 @@ class ConfigValue{
         }
 
         int default_int;
-        double default_double;
+        float default_double;
         uint16_t check_sums[3];
         string value;
         bool found;

@@ -7,11 +7,13 @@
 
 using namespace std;
 #include <vector>
-#include "libs/nuts_bolts.h"
-#include "libs/RingBuffer.h"
-#include "../communication/utils/Gcode.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
+
+#include "mri.h"
+#include "nuts_bolts.h"
+#include "RingBuffer.h"
+#include "Gcode.h"
+#include "Module.h"
+#include "Kernel.h"
 #include "Block.h"
 #include "Planner.h"
 #include "Conveyor.h"
@@ -34,19 +36,19 @@ void Planner::on_module_loaded(){
 
 // Configure acceleration
 void Planner::on_config_reload(void* argument){
-    this->acceleration =       this->kernel->config->value(acceleration_checksum       )->by_default(100 )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
-    this->junction_deviation = this->kernel->config->value(junction_deviation_checksum )->by_default(0.05)->as_number();
+    this->acceleration =       THEKERNEL->config->value(acceleration_checksum       )->by_default(100  )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
+    this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum )->by_default(0.05f)->as_number();
 }
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( int target[], double feed_rate, double distance, double deltas[] ){
+void Planner::append_block( int target[], float feed_rate, float distance, float deltas[] ){
 
     // Stall here if the queue is ful
-    this->kernel->conveyor->wait_for_queue(2);
+    THEKERNEL->conveyor->wait_for_queue(2);
 
     // Create ( recycle ) a new block
-    Block* block = this->kernel->conveyor->new_block();
+    Block* block = THEKERNEL->conveyor->new_block();
     block->planner = this;
 
     // Direction bits
@@ -62,12 +64,12 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
 
     block->millimeters = distance;
-    double inverse_millimeters = 0;
+    float inverse_millimeters = 0;
     if( distance > 0 ){ inverse_millimeters = 1.0/distance; }
 
     // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
-    double inverse_minute = feed_rate * inverse_millimeters;
+    float inverse_minute = feed_rate * inverse_millimeters;
     if( distance > 0 ){
         block->nominal_speed = block->millimeters * inverse_minute;           // (mm/min) Always > 0
         block->nominal_rate = ceil(block->steps_event_count * inverse_minute); // (step/min) Always > 0
@@ -83,10 +85,10 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
     // specifically for each line to compensate for this phenomenon:
     // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = (float)( ( block->steps_event_count*inverse_millimeters * this->acceleration ) / ( this->kernel->stepper->acceleration_ticks_per_second * 60 ) ); // (step/min/acceleration_tick)
+    block->rate_delta = (float)( ( block->steps_event_count*inverse_millimeters * this->acceleration ) / ( THEKERNEL->stepper->acceleration_ticks_per_second * 60 ) ); // (step/min/acceleration_tick)
 
     // Compute path unit vector
-    double unit_vec[3];
+    float unit_vec[3];
     unit_vec[X_AXIS] = deltas[X_AXIS]*inverse_millimeters;
     unit_vec[Y_AXIS] = deltas[Y_AXIS]*inverse_millimeters;
     unit_vec[Z_AXIS] = deltas[Z_AXIS]*inverse_millimeters;
@@ -100,12 +102,12 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
     // path width or max_jerk in the previous grbl version. This approach does not actually deviate
     // from path, but used as a robust way to compute cornering speeds, as it takes into account the
     // nonlinearities of both the junction angle and junction velocity.
-    double vmax_junction = MINIMUM_PLANNER_SPEED; // Set default max junction speed
+    float vmax_junction = MINIMUM_PLANNER_SPEED; // Set default max junction speed
 
-    if (this->kernel->conveyor->queue.size() > 1 && (this->previous_nominal_speed > 0.0)) {
+    if (THEKERNEL->conveyor->queue.size() > 1 && (this->previous_nominal_speed > 0.0)) {
       // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
       // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
-      double cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
+      float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
                          - this->previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
                          - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
                            
@@ -115,16 +117,16 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
         // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
         if (cos_theta > -0.95) {
           // Compute maximum junction velocity based on maximum acceleration and junction deviation
-          double sin_theta_d2 = sqrt(0.5*(1.0-cos_theta)); // Trig half angle identity. Always positive.
+          float sin_theta_d2 = sqrtf(0.5*(1.0-cos_theta)); // Trig half angle identity. Always positive.
           vmax_junction = min(vmax_junction,
-            sqrt(this->acceleration * this->junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) );
+            sqrtf(this->acceleration * this->junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) );
         }
       }
     }
     block->max_entry_speed = vmax_junction;
    
     // Initialize block entry speed. Compute based on deceleration to user-defined MINIMUM_PLANNER_SPEED.
-    double v_allowable = this->max_allowable_speed(-this->acceleration,0.0,block->millimeters); //TODO: Get from config
+    float v_allowable = this->max_allowable_speed(-this->acceleration,0.0,block->millimeters); //TODO: Get from config
     block->entry_speed = min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags
@@ -173,91 +175,79 @@ void Planner::append_block( int target[], double feed_rate, double distance, dou
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
-   this->reverse_pass();
-   this->forward_pass();
-   this->recalculate_trapezoids();
-}
+    RingBuffer<Block,32>* queue = &THEKERNEL->conveyor->queue;
 
-// Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
-// implements the reverse pass.
-void Planner::reverse_pass(){
-    // For each block
-    int block_index = this->kernel->conveyor->queue.head;
-    Block* blocks[3] = {NULL,NULL,NULL};
+    int newest = queue->prev_block_index(queue->head);
+    int oldest = queue->tail;
 
-    while(block_index!=this->kernel->conveyor->queue.tail){
-        block_index = this->kernel->conveyor->queue.prev_block_index( block_index );
-        blocks[2] = blocks[1];
-        blocks[1] = blocks[0];
-        blocks[0] = &this->kernel->conveyor->queue.buffer[block_index];
-        if( blocks[1] == NULL ){ continue; }
-        blocks[1]->reverse_pass(blocks[2], blocks[0]);
-    }
-    
-}
+    int block_index = newest;
 
-// Planner::recalculate() needs to go over the current plan twice. Once in reverse and once forward. This
-// implements the forward pass.
-void Planner::forward_pass() {
-    // For each block
-    int block_index = this->kernel->conveyor->queue.tail;
-    Block* blocks[3] = {NULL,NULL,NULL};
-
-    while(block_index!=this->kernel->conveyor->queue.head){
-        blocks[0] = blocks[1];
-        blocks[1] = blocks[2];
-        blocks[2] = &this->kernel->conveyor->queue.buffer[block_index];
-        if( blocks[0] == NULL ){ continue; }
-        blocks[1]->forward_pass(blocks[0],blocks[2]);
-        block_index = this->kernel->conveyor->queue.next_block_index( block_index );
-    }
-    blocks[2]->forward_pass(blocks[1],NULL);
-
-}
-
-// Recalculates the trapezoid speed profiles for flagged blocks in the plan according to the
-// entry_speed for each junction and the entry_speed of the next junction. Must be called by
-// planner_recalculate() after updating the blocks. Any recalulate flagged junction will
-// compute the two adjacent trapezoids to the junction, since the junction speed corresponds
-// to exit speed and entry speed of one another.
-void Planner::recalculate_trapezoids() {
-    int block_index = this->kernel->conveyor->queue.tail;
+    Block* previous;
     Block* current;
-    Block* next = NULL;
+    Block* next;
 
-    while(block_index != this->kernel->conveyor->queue.head){
-        current = next;
-        next = &this->kernel->conveyor->queue.buffer[block_index];
-        if( current ){
-            // Recalculate if current block entry or exit junction speed has changed.
-            if( current->recalculate_flag || next->recalculate_flag ){
-                current->calculate_trapezoid( current->entry_speed/current->nominal_speed, next->entry_speed/current->nominal_speed );
-                current->recalculate_flag = false;
-            }
+    current = &queue->buffer[block_index];
+    current->recalculate_flag = true;
+
+    // if there's only one block in the queue, we fall through both while loops and this ends up in current
+    // so we must set it here, or perform conditionals further down. this is easier
+    next = current;
+
+    while ((block_index != oldest) && (current->recalculate_flag))
+    {
+        block_index = queue->prev_block_index(block_index);
+
+        next = current;
+        current = &queue->buffer[block_index];
+
+        current->recalculate_flag = false;
+
+        current->reverse_pass(next);
+    }
+
+    previous = current;
+    current = next;
+
+    // Recalculates the trapezoid speed profiles for flagged blocks in the plan according to the
+    // entry_speed for each junction and the entry_speed of the next junction. Must be called by
+    // planner_recalculate() after updating the blocks. Any recalulate flagged junction will
+    // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
+    // to exit speed and entry speed of one another.
+    while (block_index != newest)
+    {
+        current->forward_pass(previous);
+
+        // Recalculate if current block entry or exit junction speed has changed.
+        if (previous->recalculate_flag || current->recalculate_flag )
+        {
+            previous->calculate_trapezoid( previous->entry_speed/previous->nominal_speed, current->entry_speed/previous->nominal_speed );
+            previous->recalculate_flag = false;
         }
-        block_index = this->kernel->conveyor->queue.next_block_index( block_index );
+
+        block_index = queue->next_block_index(block_index);
+        previous = current;
+        current = &queue->buffer[block_index];
     }
 
     // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
-    next->calculate_trapezoid( next->entry_speed/next->nominal_speed, MINIMUM_PLANNER_SPEED/next->nominal_speed); //TODO: Make configuration option
-    next->recalculate_flag = false;
-
+    current->calculate_trapezoid( current->entry_speed/current->nominal_speed, MINIMUM_PLANNER_SPEED/current->nominal_speed );
+    current->recalculate_flag = false;
 }
 
 // Debug function
 void Planner::dump_queue(){
-    for( int index = 0; index <= this->kernel->conveyor->queue.size()-1; index++ ){
-       if( index > 10 && index < this->kernel->conveyor->queue.size()-10 ){ continue; }
-       this->kernel->streams->printf("block %03d > ", index);
-       this->kernel->conveyor->queue.get_ref(index)->debug(this->kernel);
+    for( int index = 0; index <= THEKERNEL->conveyor->queue.size()-1; index++ ){
+       if( index > 10 && index < THEKERNEL->conveyor->queue.size()-10 ){ continue; }
+       THEKERNEL->streams->printf("block %03d > ", index);
+       THEKERNEL->conveyor->queue.get_ref(index)->debug();
     }
 }
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.
-double Planner::max_allowable_speed(double acceleration, double target_velocity, double distance) {
+float Planner::max_allowable_speed(float acceleration, float target_velocity, float distance) {
   return(
-    sqrt(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    sqrtf(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
   );
 }
 

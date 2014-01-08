@@ -129,7 +129,7 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 }
 
 // Set the speed at which this steper moves
-void StepperMotor::set_speed( double speed ){
+void StepperMotor::set_speed( float speed ){
 
     if (speed < 20.0)
         speed = 20.0;
@@ -138,8 +138,8 @@ void StepperMotor::set_speed( double speed ){
     this->steps_per_second = speed;
 
     // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64
-    double ticks_per_step = (double)( (double)this->step_ticker->frequency / speed );
-    double double_fx_ticks_per_step = (double)(1<<8) * ( (double)(1<<8) * ticks_per_step ); // 8x8 because we had to do 16x16 because 32 did not work
+    float ticks_per_step = (float)( (float)this->step_ticker->frequency / speed );
+    float double_fx_ticks_per_step = (float)(1<<8) * ( (float)(1<<8) * ticks_per_step ); // 8x8 because we had to do 16x16 because 32 did not work
     this->fx_ticks_per_step = (uint32_t)( floor(double_fx_ticks_per_step) );
 
 }

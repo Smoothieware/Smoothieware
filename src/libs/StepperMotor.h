@@ -22,7 +22,7 @@ class StepperMotor {
         void move_finished();
         void move( bool direction, unsigned int steps );
         void signal_move_finished();
-        void set_speed( double speed );
+        void set_speed( float speed );
         void update_exit_tick();
         void pause();
         void unpause();
@@ -52,7 +52,7 @@ class StepperMotor {
         Pin* dir_pin;
         Pin* en_pin;
 
-        double steps_per_second;
+        float steps_per_second;
 
         volatile bool moving;
         bool paused;

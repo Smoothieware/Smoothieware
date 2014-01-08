@@ -27,14 +27,14 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_SET_PUBLIC_DATA);
     this->register_for_event(ON_GCODE_RECEIVED);
 
-    this->on_boot_gcode = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
-    this->on_boot_gcode_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
+    this->on_boot_gcode = THEKERNEL->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
+    this->on_boot_gcode_enable = THEKERNEL->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs= 0;
     this->reply_stream= NULL;
 }
 
 void Player::on_second_tick(void*) {
-     if (!kernel->pauser->paused()) this->elapsed_secs++;
+     if (!THEKERNEL->pauser->paused()) this->elapsed_secs++;
 }
 
 void Player::on_gcode_received(void *argument) {
@@ -280,9 +280,9 @@ void Player::on_main_loop(void* argument){
     if( !this->booted ) {
         this->booted = true;
         if( this->on_boot_gcode_enable ){
-            this->play_command(this->on_boot_gcode, this->kernel->serial);
+            this->play_command(this->on_boot_gcode, THEKERNEL->serial);
         }else{
-            //this->kernel->serial->printf("On boot gcode disabled! skipping...\n");
+            //THEKERNEL->serial->printf("On boot gcode disabled! skipping...\n");
         }
     }
 
@@ -306,8 +306,8 @@ void Player::on_main_loop(void* argument){
                 message.message = buffer;
                 message.stream = &(StreamOutput::NullStream); // we don't really need to see the ok
                 // wait for the queue to have enough room that a serial message could still be received before sending
-                this->kernel->conveyor->wait_for_queue(2);
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+                THEKERNEL->conveyor->wait_for_queue(2);
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 played_cnt += buffer.size();
                 buffer.clear();
                 return;
@@ -391,8 +391,8 @@ void Player::on_main_loop(void* argument){
                 message.message = buffer;
                 message.stream = this->current_stream;
                 // wait for the queue to have enough room that a serial message could still be received before sending
-                this->kernel->conveyor->wait_for_queue(2);
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+                THEKERNEL->conveyor->wait_for_queue(2);
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 buffer.clear();
                 return;
             }else{

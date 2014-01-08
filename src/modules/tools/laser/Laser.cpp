@@ -16,7 +16,7 @@ Laser::Laser(){
 }
 
 void Laser::on_module_loaded() {
-    if( !this->kernel->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){
+    if( !THEKERNEL->config->value( laser_module_enable_checksum )->by_default(false)->as_bool() ){
         // as not needed free up resource
         delete this;
         return;
@@ -24,7 +24,7 @@ void Laser::on_module_loaded() {
 
     // Get smoothie-style pin from config
     Pin* dummy_pin = new Pin();
-    dummy_pin->from_string(this->kernel->config->value(laser_module_pin_checksum)->by_default("nc")->as_string())->as_output();
+    dummy_pin->from_string(THEKERNEL->config->value(laser_module_pin_checksum)->by_default("nc")->as_string())->as_output();
     
     // Get mBed-style pin from smoothie-style pin
     if( dummy_pin->port_number == 2 ){
@@ -39,8 +39,8 @@ void Laser::on_module_loaded() {
     this->laser_pin->period_us(20);
     this->laser_pin->write(0);
 
-    this->laser_max_power = this->kernel->config->value(laser_module_max_power_checksum)->by_default(0.8)->as_number() ;
-    this->laser_tickle_power = this->kernel->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
+    this->laser_max_power =    THEKERNEL->config->value(laser_module_max_power_checksum   )->by_default(0.8f)->as_number() ;
+    this->laser_tickle_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0   )->as_number() ;
 
     //register for events
     this->register_for_event(ON_GCODE_EXECUTE);
@@ -86,7 +86,7 @@ void Laser::on_gcode_execute(void* argument){
     }
     if ( gcode->has_letter('S' )){
         this->laser_max_power = gcode->get_value('S');
-//         this->kernel->streams->printf("Adjusted laser power to %d/100\r\n",(int)(this->laser_max_power*100.0+0.5));
+//         THEKERNEL->streams->printf("Adjusted laser power to %d/100\r\n",(int)(this->laser_max_power*100.0+0.5));
     }
 
 }
@@ -99,8 +99,8 @@ void Laser::on_speed_change(void* argument){
 }
 
 void Laser::set_proportional_power(){
-    if( this->laser_on && this->kernel->stepper->current_block ){
+    if( this->laser_on && THEKERNEL->stepper->current_block ){
         // adjust power to maximum power and actual velocity
-        this->laser_pin->write(float(double(this->laser_max_power) * double(this->kernel->stepper->trapezoid_adjusted_rate) / double(this->kernel->stepper->current_block->nominal_rate)));
+        this->laser_pin->write(float(float(this->laser_max_power) * float(THEKERNEL->stepper->trapezoid_adjusted_rate) / float(THEKERNEL->stepper->current_block->nominal_rate)));
     }
 }

@@ -51,37 +51,37 @@ class Robot : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
 
-        void reset_axis_position(double position, int axis);
-        void get_axis_position(double position[]);
-        double to_millimeters(double value);
-        double from_millimeters(double value);
+        void reset_axis_position(float position, int axis);
+        void get_axis_position(float position[]);
+        float to_millimeters(float value);
+        float from_millimeters(float value);
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
-        void append_milestone( double target[], double feed_rate);
-        void append_line( Gcode* gcode, double target[], double feed_rate);
-        //void append_arc(double theta_start, double angular_travel, double radius, double depth, double rate);
-        void append_arc( Gcode* gcode, double target[], double offset[], double radius, bool is_clockwise );
+        void append_milestone( float target[], float feed_rate);
+        void append_line( Gcode* gcode, float target[], float feed_rate);
+        //void append_arc(float theta_start, float angular_travel, float radius, float depth, float rate);
+        void append_arc( Gcode* gcode, float target[], float offset[], float radius, bool is_clockwise );
 
 
-        void compute_arc(Gcode* gcode, double offset[], double target[]);
+        void compute_arc(Gcode* gcode, float offset[], float target[]);
 
-        double theta(double x, double y);
+        float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
 
-        double current_position[3];                           // Current position, in millimeters
-        double last_milestone[3];                             // Last position, in millimeters
+        float current_position[3];                           // Current position, in millimeters
+        float last_milestone[3];                             // Last position, in millimeters
         bool inch_mode;                                       // true for inch mode, false for millimeter mode ( default )
         int8_t motion_mode;                                   // Motion mode for the current received Gcode
-        double seek_rate;                                     // Current rate for seeking moves ( mm/s )
-        double feed_rate;                                     // Current rate for feeding moves ( mm/s )
+        float seek_rate;                                     // Current rate for seeking moves ( mm/s )
+        float feed_rate;                                     // Current rate for feeding moves ( mm/s )
         uint8_t plane_axis_0, plane_axis_1, plane_axis_2;     // Current plane ( XY, XZ, YZ )
-        double mm_per_line_segment;                           // Setting : Used to split lines into segments
-        double mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
-        double delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
+        float mm_per_line_segment;                           // Setting : Used to split lines into segments
+        float mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
+        float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
@@ -89,7 +89,7 @@ class Robot : public Module {
         // of grbl, and should be on the order or greater than the size of the buffer to help with the
         // computational efficiency of generating arcs.
         int arc_correction;                                   // Setting : how often to rectify arc computation
-        double max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
+        float max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
 
     // Used by Stepper
     public:
@@ -107,18 +107,18 @@ class Robot : public Module {
         StepperMotor* beta_stepper_motor;
         StepperMotor* gamma_stepper_motor;
 
-        double seconds_per_minute;                            // for realtime speed change
+        float seconds_per_minute;                            // for realtime speed change
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed
-inline double Robot::to_millimeters( double value ){
+inline float Robot::to_millimeters( float value ){
     return this->inch_mode ? value * 25.4 : value;
 }
-inline double Robot::from_millimeters( double value){
+inline float Robot::from_millimeters( float value){
     return this->inch_mode ? value/25.4 : value;
 }
-inline void Robot::get_axis_position(double position[]){
-    memcpy(position, this->current_position, sizeof(double)*3 );
+inline void Robot::get_axis_position(float position[]){
+    memcpy(position, this->current_position, sizeof(float)*3 );
 }
 
 #endif

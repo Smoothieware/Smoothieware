@@ -22,7 +22,7 @@ GcodeDispatch::GcodeDispatch() {}
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded()
 {
-    return_error_on_unhandled_gcode = this->kernel->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
+    return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     currentline = -1;
     uploading = false;
@@ -121,40 +121,38 @@ void GcodeDispatch::on_console_line_received(void *line)
                                 continue;
 
                             case 500: // M500 save volatile settings to config-override
-                                // delete the existing file
-                                remove(kernel->config_override_filename());
                                 // replace stream with one that writes to config-override file
-                                gcode->stream = new FileStream(kernel->config_override_filename());
+                                gcode->stream = new FileStream(THEKERNEL->config_override_filename());
                                 // dispatch the M500 here so we can free up the stream when done
-                                this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                                THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
                                 delete gcode->stream;
                                 delete gcode;
-                                new_message.stream->printf("Settings Stored to %s\r\nok\r\n", kernel->config_override_filename());
+                                new_message.stream->printf("Settings Stored to %s\r\nok\r\n", THEKERNEL->config_override_filename());
                                 continue;
 
-                            case 501: // M501 deletes config-override so everything defaults to what is in config
-                                remove(kernel->config_override_filename());
-                                new_message.stream->printf("config override file deleted %s, reboot needed\r\nok\r\n", kernel->config_override_filename());
+                            case 502: // M502 deletes config-override so everything defaults to what is in config
+                                remove(THEKERNEL->config_override_filename());
+                                new_message.stream->printf("config override file deleted %s, reboot needed\r\nok\r\n", THEKERNEL->config_override_filename());
                                 delete gcode;
                                 continue;
 
                             case 503: { // M503 display live settings and indicates if there is an override file
-                                FILE *fd = fopen(kernel->config_override_filename(), "r");
+                                FILE *fd = fopen(THEKERNEL->config_override_filename(), "r");
                                 if(fd != NULL) {
                                     fclose(fd);
-                                    new_message.stream->printf("; config override present: %s\n",  kernel->config_override_filename());
+                                    new_message.stream->printf("; config override present: %s\n",  THEKERNEL->config_override_filename());
 
                                 } else {
                                     new_message.stream->printf("; No config override\n");
                                 }
-                                break; // fal through to process by modules
+                                break; // fall through to process by modules
                             }
                         }
                     }
 
                     //printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
                     //Dispatch message!
-                    this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                    THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
                     if(gcode->add_nl)
                         new_message.stream->printf("\r\n");
 

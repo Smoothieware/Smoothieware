@@ -9,7 +9,7 @@
 
 void Touchprobe::on_module_loaded() {
     // if the module is disabled -> do nothing
-    this->enabled = this->kernel->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
+    this->enabled = THEKERNEL->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
     if( !(this->enabled) ){
         // as this module is not needed free up the resource
         delete this;
@@ -25,17 +25,17 @@ void Touchprobe::on_module_loaded() {
 }
 
 void Touchprobe::on_config_reload(void* argument){
-    this->pin.from_string(  this->kernel->config->value(touchprobe_pin_checksum)->by_default("nc" )->as_string())->as_input();
-    this->debounce_count =  this->kernel->config->value(touchprobe_debounce_count_checksum)->by_default(100  )->as_number();
+    this->pin.from_string(  THEKERNEL->config->value(touchprobe_pin_checksum)->by_default("nc" )->as_string())->as_input();
+    this->debounce_count =  THEKERNEL->config->value(touchprobe_debounce_count_checksum)->by_default(100  )->as_number();
 
-    this->steppers[0] = this->kernel->robot->alpha_stepper_motor;
-    this->steppers[1] = this->kernel->robot->beta_stepper_motor;
-    this->steppers[2] = this->kernel->robot->gamma_stepper_motor;
+    this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
+    this->steppers[1] = THEKERNEL->robot->beta_stepper_motor;
+    this->steppers[2] = THEKERNEL->robot->gamma_stepper_motor;
 
-    this->should_log = this->enabled = this->kernel->config->value( touchprobe_log_enable_checksum )->by_default(false)->as_bool();
+    this->should_log = this->enabled = THEKERNEL->config->value( touchprobe_log_enable_checksum )->by_default(false)->as_bool();
     if( this->should_log){
-        this->filename = this->kernel->config->value(touchprobe_logfile_name_checksum)->by_default("/sd/probe_log.csv")->as_string();
-        this->mcode = this->kernel->config->value(touchprobe_log_rotate_mcode_checksum)->by_default(0)->as_int();
+        this->filename = THEKERNEL->config->value(touchprobe_logfile_name_checksum)->by_default("/sd/probe_log.csv")->as_string();
+        this->mcode = THEKERNEL->config->value(touchprobe_log_rotate_mcode_checksum)->by_default(0)->as_int();
         this->logfile = NULL;
     }
 }
@@ -43,7 +43,7 @@ void Touchprobe::on_config_reload(void* argument){
 void Touchprobe::wait_for_touch(int distance[]){
     unsigned int debounce = 0;
     while(true){
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
         // if no stepper is moving, moves are finished and there was no touch
         if( ((this->steppers[0]->moving ? 0:1 ) + (this->steppers[1]->moving ? 0:1 ) + (this->steppers[2]->moving ? 0:1 )) == 3 ){
             return;
@@ -92,14 +92,14 @@ void Touchprobe::on_idle(void* argument){
 void Touchprobe::on_gcode_received(void* argument)
 {
     Gcode* gcode = static_cast<Gcode*>(argument);
-    Robot* robot = this->kernel->robot;
+    Robot* robot = THEKERNEL->robot;
 
     if( gcode->has_g) {
         if( gcode->g == 31 ) {
-            double tmp[3], pos[3];
+            float tmp[3], pos[3];
             int steps[3], distance[3];
             // first wait for an empty queue i.e. no moves left
-            this->kernel->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_empty_queue();
 
             robot->get_axis_position(pos);
             for(char c = 'X'; c <= 'Z'; c++){
@@ -120,7 +120,7 @@ void Touchprobe::on_gcode_received(void* argument)
             }
 
             // Enable the motors
-            this->kernel->stepper->turn_enable_pins_on();
+            THEKERNEL->stepper->turn_enable_pins_on();
             // move
             robot->arm_solution->get_steps_per_millimeter(tmp);
             for(char c='X'; c<='Z'; c++){

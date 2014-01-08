@@ -266,13 +266,13 @@ void USBSerial::on_main_loop(void *argument)
         if (attach)
         {
             attached = true;
-            kernel->streams->append_stream(this);
+            THEKERNEL->streams->append_stream(this);
             writeBlock((const uint8_t *) "Smoothie\nok\n", 12);
         }
         else
         {
             attached = false;
-            kernel->streams->remove_stream(this);
+            THEKERNEL->streams->remove_stream(this);
             txbuf.flush();
             rxbuf.flush();
             nl_in_rx = 0;
@@ -290,7 +290,7 @@ void USBSerial::on_main_loop(void *argument)
                 message.message = received;
                 message.stream = this;
                 iprintf("USBSerial Received: %s\n", message.message.c_str());
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
                 return;
             }
             else

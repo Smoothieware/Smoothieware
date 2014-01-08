@@ -70,7 +70,7 @@
 // max packet size
 #define MAX_PACKET  MAX_PACKET_SIZE_EPBULK
 
-// #define iprintf(...) kernel->streams->printf(__VA_ARGS__)
+// #define iprintf(...) THEKERNEL->streams->printf(__VA_ARGS__)
 #define iprintf(...) do { } while (0)
 
 // CSW Status

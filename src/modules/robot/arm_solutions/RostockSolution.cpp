@@ -8,25 +8,25 @@ RostockSolution::RostockSolution(Config* passed_config) : config(passed_config){
     this->beta_steps_per_mm  = this->config->value( beta_steps_per_mm_checksum)->as_number();
     this->gamma_steps_per_mm = this->config->value(gamma_steps_per_mm_checksum)->as_number();
 
-    float alpha_angle  = PIOVER180 * this->config->value(alpha_angle_checksum)->by_default(30.0)->as_number();
+    float alpha_angle  = PIOVER180 * this->config->value(alpha_angle_checksum)->by_default(30.0f)->as_number();
     this->sin_alpha     = sinf(alpha_angle);
     this->cos_alpha     = cosf(alpha_angle);
-    float beta_angle   = PIOVER180 * this->config->value( beta_relative_angle_checksum)->by_default(120.0)->as_number();
+    float beta_angle   = PIOVER180 * this->config->value( beta_relative_angle_checksum)->by_default(120.0f)->as_number();
     this->sin_beta      = sinf(beta_angle);
     this->cos_beta      = cosf(beta_angle);
-    float gamma_angle  = PIOVER180 * this->config->value(gamma_relative_angle_checksum)->by_default(240.0)->as_number();
+    float gamma_angle  = PIOVER180 * this->config->value(gamma_relative_angle_checksum)->by_default(240.0f)->as_number();
     this->sin_gamma     = sinf(gamma_angle);
     this->cos_gamma     = cosf(gamma_angle);
 
     // arm_length is the length of the arm from hinge to hinge
-    this->arm_length         = this->config->value(arm_length_checksum)->by_default(250.0)->as_number();
+    this->arm_length         = this->config->value(arm_length_checksum)->by_default(250.0f)->as_number();
     // arm_radius is the horizontal distance from hinge to hinge when the effector is centered
-    this->arm_radius         = this->config->value(arm_radius_checksum)->by_default(124.0)->as_number();
+    this->arm_radius         = this->config->value(arm_radius_checksum)->by_default(124.0f)->as_number();
 
     this->arm_length_squared = powf(this->arm_length, 2);
 }
 
-void RostockSolution::millimeters_to_steps( double millimeters[], int steps[] ){
+void RostockSolution::millimeters_to_steps( float millimeters[], int steps[] ){
     float mm[3], alpha_rotated[3], rotated[3];
     
     // convert input to float
@@ -50,7 +50,7 @@ void RostockSolution::millimeters_to_steps( double millimeters[], int steps[] ){
     steps[GAMMA_STEPPER] = lround( solve_arm( rotated ) * this->gamma_steps_per_mm );
 }
 
-void RostockSolution::steps_to_millimeters( int steps[], double millimeters[] ){} 
+void RostockSolution::steps_to_millimeters( int steps[], float millimeters[] ){} 
 
 float RostockSolution::solve_arm( float millimeters[]) {
     return sqrtf(arm_length_squared - powf(millimeters[X_AXIS] - this->arm_radius, 2) - powf(millimeters[Y_AXIS], 2)) + millimeters[Z_AXIS];
@@ -62,14 +62,14 @@ void RostockSolution::rotate(float in[], float out[], float sin, float cos ){
     out[Z_AXIS] = in[Z_AXIS];
 }
 
-void RostockSolution::set_steps_per_millimeter( double steps[] )
+void RostockSolution::set_steps_per_millimeter( float steps[] )
 {
     this->alpha_steps_per_mm = steps[0];
     this->beta_steps_per_mm  = steps[1];
     this->gamma_steps_per_mm = steps[2];
 }
 
-void RostockSolution::get_steps_per_millimeter( double steps[] )
+void RostockSolution::get_steps_per_millimeter( float steps[] )
 {
     steps[0] = this->alpha_steps_per_mm;
     steps[1] = this->beta_steps_per_mm;

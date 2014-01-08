@@ -22,7 +22,7 @@ public:
     void on_refresh();
     void on_enter();
     void display_menu_line(uint16_t line);
-    void set_jog_increment(double i) { jog_increment = i;}
+    void set_jog_increment(float i) { jog_increment = i;}
     int idle_timeout_secs() { return 120; }
 
 private:
@@ -30,13 +30,13 @@ private:
     void display_axis_line(char axis);
     void enter_axis_control(char axis);
     void enter_menu_control();
-    void get_current_pos(double *p);
-    void set_current_pos(char axis, double p);
+    void get_current_pos(float *p);
+    void set_current_pos(char axis, float p);
     char control_mode;
     char controlled_axis;
-    double pos[3];
+    float pos[3];
     bool pos_changed;
-    double jog_increment;
+    float jog_increment;
 };
 
 

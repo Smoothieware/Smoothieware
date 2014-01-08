@@ -17,12 +17,12 @@ PID_Autotuner::PID_Autotuner()
 void PID_Autotuner::on_module_loaded()
 {
     tick = false;
-    this->kernel->slow_ticker->attach(20, this, &PID_Autotuner::on_tick );
+    THEKERNEL->slow_ticker->attach(20, this, &PID_Autotuner::on_tick );
     register_for_event(ON_IDLE);
     register_for_event(ON_GCODE_RECEIVED);
 }
 
-void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput *stream, int ncycles)
+void PID_Autotuner::begin(TemperatureControl *temp, float target, StreamOutput *stream, int ncycles)
 {
     noiseBand = 0.5;
     oStep = temp->heater_pin.max_pwm(); // use max pwm to cycle temp
@@ -52,7 +52,7 @@ void PID_Autotuner::begin(TemperatureControl *temp, double target, StreamOutput 
     peakCount = 0;
     justchanged = false;
 
-    double refVal = t->get_temperature();
+    float refVal = t->get_temperature();
     absMax = refVal;
     absMin = refVal;
     output= oStep;
@@ -116,7 +116,7 @@ void PID_Autotuner::on_idle(void *)
         return;
     }
 
-    double refVal = t->get_temperature();
+    float refVal = t->get_temperature();
 
     if (refVal > absMax) absMax = refVal;
     if (refVal < absMin) absMin = refVal;
@@ -198,13 +198,13 @@ void PID_Autotuner::on_idle(void *)
 void PID_Autotuner::finishUp()
 {
     //we can generate tuning parameters!
-    double Ku = 4*(2*oStep)/((absMax-absMin)*3.14159);
-    double Pu = (double)(peak1-peak2) / 1000;
+    float Ku = 4*(2*oStep)/((absMax-absMin)*3.14159);
+    float Pu = (float)(peak1-peak2) / 1000;
     s->printf("\tKu: %g, Pu: %g\n", Ku, Pu);
 
-    double kp = 0.6 * Ku;
-    double ki = 1.2 * Ku / Pu;
-    double kd = Ku * Pu * 0.075;
+    float kp = 0.6 * Ku;
+    float ki = 1.2 * Ku / Pu;
+    float kd = Ku * Pu * 0.075;
 
     s->printf("\tTrying:\n\tKp: %5.1f\n\tKi: %5.3f\n\tKd: %5.0f\n", kp, ki, kd);
 

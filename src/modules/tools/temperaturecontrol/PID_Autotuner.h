@@ -15,7 +15,7 @@ class PID_Autotuner : public Module
 {
 public:
     PID_Autotuner();
-    void     begin(TemperatureControl *, double, StreamOutput *, int cycles = 8);
+    void     begin(TemperatureControl *, float, StreamOutput *, int cycles = 8);
     void     abort();
 
     void     on_module_loaded(void);

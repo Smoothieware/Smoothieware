@@ -61,7 +61,7 @@ void FileConfigSource::write( string setting, string value ){
             if( candidate.compare(setting) != 0 ){ buffer.clear(); continue; }
             int free_space = int(int(buffer.find_first_of("\r\n#", begin_value+1))-begin_value);
             if( int(value.length()) >= free_space ){
-                //this->kernel->streams->printf("ERROR: Not enough room for value\r\n");
+                //THEKERNEL->streams->printf("ERROR: Not enough room for value\r\n");
                 fclose(lp);
                 return;
             }
@@ -79,7 +79,7 @@ void FileConfigSource::write( string setting, string value ){
         }
     } while (c != EOF);
     fclose(lp);
-    //this->kernel->streams->printf("ERROR: configuration key not found\r\n");
+    //THEKERNEL->streams->printf("ERROR: configuration key not found\r\n");
 }
 
 // Return the value for a specific checksum

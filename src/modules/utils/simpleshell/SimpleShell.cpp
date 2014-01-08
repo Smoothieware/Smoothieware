@@ -17,6 +17,7 @@
 #include "mri.h"
 #include "version.h"
 #include "PublicDataRequest.h"
+#include "FileStream.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
@@ -54,6 +55,8 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {CHECKSUM("get"),      &SimpleShell::get_command},
     {CHECKSUM("set_temp"), &SimpleShell::set_temp_command},
     {CHECKSUM("net"),      &SimpleShell::net_command},
+    {CHECKSUM("load"),     &SimpleShell::load_command},
+    {CHECKSUM("save"),     &SimpleShell::save_command},
 
     // unknown command
     {0, NULL}
@@ -150,6 +153,22 @@ void SimpleShell::on_gcode_received(void *argument)
         } else if (gcode->m == 30) { // remove file
             gcode->mark_as_taken();
             rm_command("/sd/" + args, gcode->stream);
+
+        }else if(gcode->m == 501) { // load config override
+            gcode->mark_as_taken();
+            if(args.empty()) {
+                load_command("/sd/config-override", gcode->stream);
+            }else{
+                load_command("/sd/config-override." + args, gcode->stream);
+            }
+
+        }else if(gcode->m == 504) { // save to specific config override file
+            gcode->mark_as_taken();
+            if(args.empty()) {
+                save_command("/sd/config-override", gcode->stream);
+            }else{
+                save_command("/sd/config-override." + args, gcode->stream);
+            }
         }
     }
 }
@@ -287,6 +306,58 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 
 }
 
+// loads the specified config-override file
+void SimpleShell::load_command( string parameters, StreamOutput *stream )
+{
+    // Get parameters ( filename )
+    string filename = this->absolute_from_relative(parameters);
+    if(filename == "/") {
+        filename = THEKERNEL->config_override_filename();
+    }
+
+    FILE *fp= fopen(filename.c_str(), "r");
+    if(fp != NULL) {
+        char buf[132];
+        stream->printf("Loading config override file: %s...\n", filename.c_str());
+        while(fgets(buf, sizeof buf, fp) != NULL) {
+            stream->printf("  %s", buf);
+            if(buf[0] == ';') continue; // skip the comments
+            struct SerialMessage message= {&(StreamOutput::NullStream), buf};
+            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+        }
+        stream->printf("config override file executed\n");
+        fclose(fp);
+
+    }else{
+        stream->printf("File not found: %s\n", filename.c_str());
+    }
+}
+
+// saves the specified config-override file
+void SimpleShell::save_command( string parameters, StreamOutput *stream )
+{
+    // Get parameters ( filename )
+    string filename = this->absolute_from_relative(parameters);
+    if(filename == "/") {
+        filename = THEKERNEL->config_override_filename();
+    }
+
+    // replace stream with one that writes to config-override file
+    FileStream *gs = new FileStream(filename.c_str());
+    if(!gs->is_open()) {
+        stream->printf("Unable to open File %s for write\n", filename.c_str());
+        return;
+    }
+
+    // issue a M500 which will store values in the file stream
+    Gcode *gcode = new Gcode("M500", gs);
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
+    delete gs;
+    delete gcode;
+
+    stream->printf("Settings Stored to %s\r\n", filename.c_str());
+}
+
 // show free memory
 void SimpleShell::mem_command( string parameters, StreamOutput *stream)
 {
@@ -377,7 +448,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     if (what == get_temp_command_checksum) {
         string type = shift_parameter( parameters );
-        bool ok = this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
+        bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
 
         if (ok) {
             struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
@@ -387,10 +458,10 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
     } else if (what == get_pos_command_checksum) {
-        bool ok = this->kernel->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+        bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
 
         if (ok) {
-            double *pos = static_cast<double *>(returned_data);
+            float *pos = static_cast<float *>(returned_data);
             stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
 
         } else {
@@ -404,8 +475,8 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 {
     string type = shift_parameter( parameters );
     string temp = shift_parameter( parameters );
-    double t = temp.empty() ? 0.0 : strtod(temp.c_str(), NULL);
-    bool ok = this->kernel->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
+    float t = temp.empty() ? 0.0 : strtof(temp.c_str(), NULL);
+    bool ok = THEKERNEL->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
 
     if (ok) {
         stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
@@ -437,5 +508,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("get pos\r\n");
     stream->printf("net\r\n");
+    stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
+    stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
 }
 

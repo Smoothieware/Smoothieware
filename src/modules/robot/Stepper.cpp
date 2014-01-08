@@ -48,19 +48,19 @@ void Stepper::on_module_loaded(){
     this->on_config_reload(this);
 
     // Acceleration ticker
-    this->acceleration_tick_hook = this->kernel->slow_ticker->attach( this->acceleration_ticks_per_second, this, &Stepper::trapezoid_generator_tick );
+    this->acceleration_tick_hook = THEKERNEL->slow_ticker->attach( this->acceleration_ticks_per_second, this, &Stepper::trapezoid_generator_tick );
 
     // Attach to the end_of_move stepper event
-    this->kernel->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
-    this->kernel->robot->beta_stepper_motor->attach( this, &Stepper::stepper_motor_finished_move );
-    this->kernel->robot->gamma_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
+    THEKERNEL->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
+    THEKERNEL->robot->beta_stepper_motor->attach( this, &Stepper::stepper_motor_finished_move );
+    THEKERNEL->robot->gamma_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
 }
 
 // Get configuration from the config file
 void Stepper::on_config_reload(void* argument){
 
-    this->acceleration_ticks_per_second =  this->kernel->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
-    this->minimum_steps_per_minute      =  this->kernel->config->value(minimum_steps_per_minute_checksum     )->by_default(3000  )->as_number();
+    this->acceleration_ticks_per_second =  THEKERNEL->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
+    this->minimum_steps_per_minute      =  THEKERNEL->config->value(minimum_steps_per_minute_checksum     )->by_default(3000  )->as_number();
 
     // Steppers start off by default
     this->turn_enable_pins_off();
@@ -69,18 +69,18 @@ void Stepper::on_config_reload(void* argument){
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Stepper::on_pause(void* argument){
     this->paused = true;
-    this->kernel->robot->alpha_stepper_motor->pause();
-    this->kernel->robot->beta_stepper_motor->pause();
-    this->kernel->robot->gamma_stepper_motor->pause();
+    THEKERNEL->robot->alpha_stepper_motor->pause();
+    THEKERNEL->robot->beta_stepper_motor->pause();
+    THEKERNEL->robot->gamma_stepper_motor->pause();
 }
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
 void Stepper::on_play(void* argument){
     // TODO: Re-compute the whole queue for a cold-start
     this->paused = false;
-    this->kernel->robot->alpha_stepper_motor->unpause();
-    this->kernel->robot->beta_stepper_motor->unpause();
-    this->kernel->robot->gamma_stepper_motor->unpause();
+    THEKERNEL->robot->alpha_stepper_motor->unpause();
+    THEKERNEL->robot->beta_stepper_motor->unpause();
+    THEKERNEL->robot->gamma_stepper_motor->unpause();
 }
 
 void Stepper::on_gcode_received(void* argument){
@@ -88,10 +88,10 @@ void Stepper::on_gcode_received(void* argument){
     // Attach gcodes to the last block for on_gcode_execute
     if( gcode->has_m && (gcode->m == 84 || gcode->m == 17 || gcode->m == 18 )) {
         gcode->mark_as_taken();
-        if( this->kernel->conveyor->queue.size() == 0 ){
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
+        if( THEKERNEL->conveyor->queue.size() == 0 ){
+            THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
         }else{
-            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
+            Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
             block->append_gcode(gcode);
         }
     }  
@@ -113,17 +113,17 @@ void Stepper::on_gcode_execute(void* argument){
 
 // Enable steppers
 void Stepper::turn_enable_pins_on(){
-    this->kernel->robot->alpha_en_pin.set(0);
-    this->kernel->robot->beta_en_pin.set(0);
-    this->kernel->robot->gamma_en_pin.set(0);
+    THEKERNEL->robot->alpha_en_pin.set(0);
+    THEKERNEL->robot->beta_en_pin.set(0);
+    THEKERNEL->robot->gamma_en_pin.set(0);
     this->enable_pins_status = true;
 }
 
 // Disable steppers
 void Stepper::turn_enable_pins_off(){
-    this->kernel->robot->alpha_en_pin.set(1);
-    this->kernel->robot->beta_en_pin.set(1);
-    this->kernel->robot->gamma_en_pin.set(1);
+    THEKERNEL->robot->alpha_en_pin.set(1);
+    THEKERNEL->robot->beta_en_pin.set(1);
+    THEKERNEL->robot->gamma_en_pin.set(1);
     this->enable_pins_status = false;
 }
 
@@ -147,9 +147,9 @@ void Stepper::on_block_begin(void* argument){
     }
 
     // Setup : instruct stepper motors to move
-    if( block->steps[ALPHA_STEPPER] > 0 ){ this->kernel->robot->alpha_stepper_motor->move( ( block->direction_bits >> 0  ) & 1 , block->steps[ALPHA_STEPPER] ); }
-    if( block->steps[BETA_STEPPER ] > 0 ){ this->kernel->robot->beta_stepper_motor->move(  ( block->direction_bits >> 1  ) & 1 , block->steps[BETA_STEPPER ] ); }
-    if( block->steps[GAMMA_STEPPER] > 0 ){ this->kernel->robot->gamma_stepper_motor->move( ( block->direction_bits >> 2  ) & 1 , block->steps[GAMMA_STEPPER] ); }
+    if( block->steps[ALPHA_STEPPER] > 0 ){ THEKERNEL->robot->alpha_stepper_motor->move( ( block->direction_bits >> 0  ) & 1 , block->steps[ALPHA_STEPPER] ); }
+    if( block->steps[BETA_STEPPER ] > 0 ){ THEKERNEL->robot->beta_stepper_motor->move(  ( block->direction_bits >> 1  ) & 1 , block->steps[BETA_STEPPER ] ); }
+    if( block->steps[GAMMA_STEPPER] > 0 ){ THEKERNEL->robot->gamma_stepper_motor->move( ( block->direction_bits >> 2  ) & 1 , block->steps[GAMMA_STEPPER] ); }
 
     this->current_block = block;
 
@@ -157,9 +157,9 @@ void Stepper::on_block_begin(void* argument){
     this->trapezoid_generator_reset();
 
     // Find the stepper with the more steps, it's the one the speed calculations will want to follow
-    this->main_stepper = this->kernel->robot->alpha_stepper_motor;
-    if( this->kernel->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->beta_stepper_motor; }
-    if( this->kernel->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = this->kernel->robot->gamma_stepper_motor; }
+    this->main_stepper = THEKERNEL->robot->alpha_stepper_motor;
+    if( THEKERNEL->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = THEKERNEL->robot->beta_stepper_motor; }
+    if( THEKERNEL->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = THEKERNEL->robot->gamma_stepper_motor; }
 
     // Set the initial speed for this move
     this->trapezoid_generator_tick(0);
@@ -178,7 +178,7 @@ void Stepper::on_block_end(void* argument){
 uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
 
     // We care only if none is still moving
-    if( this->kernel->robot->alpha_stepper_motor->moving || this->kernel->robot->beta_stepper_motor->moving || this->kernel->robot->gamma_stepper_motor->moving ){ return 0; }
+    if( THEKERNEL->robot->alpha_stepper_motor->moving || THEKERNEL->robot->beta_stepper_motor->moving || THEKERNEL->robot->gamma_stepper_motor->moving ){ return 0; }
 
     // This block is finished, release it
     if( this->current_block != NULL ){
@@ -258,7 +258,7 @@ inline void Stepper::trapezoid_generator_reset(){
 }
 
 // Update the speed for all steppers
-void Stepper::set_step_events_per_minute( double steps_per_minute ){
+void Stepper::set_step_events_per_minute( float steps_per_minute ){
 
     // We do not step slower than this
     //steps_per_minute = max(steps_per_minute, this->minimum_steps_per_minute);
@@ -267,12 +267,12 @@ void Stepper::set_step_events_per_minute( double steps_per_minute ){
     }
 
     // Instruct the stepper motors
-    if( this->kernel->robot->alpha_stepper_motor->moving ){ this->kernel->robot->alpha_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[ALPHA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
-    if( this->kernel->robot->beta_stepper_motor->moving  ){ this->kernel->robot->beta_stepper_motor->set_speed(  (steps_per_minute/60L) * ( (double)this->current_block->steps[BETA_STEPPER ] / (double)this->current_block->steps_event_count ) ); }
-    if( this->kernel->robot->gamma_stepper_motor->moving ){ this->kernel->robot->gamma_stepper_motor->set_speed( (steps_per_minute/60L) * ( (double)this->current_block->steps[GAMMA_STEPPER] / (double)this->current_block->steps_event_count ) ); }
+    if( THEKERNEL->robot->alpha_stepper_motor->moving ){ THEKERNEL->robot->alpha_stepper_motor->set_speed( (steps_per_minute/60L) * ( (float)this->current_block->steps[ALPHA_STEPPER] / (float)this->current_block->steps_event_count ) ); }
+    if( THEKERNEL->robot->beta_stepper_motor->moving  ){ THEKERNEL->robot->beta_stepper_motor->set_speed(  (steps_per_minute/60L) * ( (float)this->current_block->steps[BETA_STEPPER ] / (float)this->current_block->steps_event_count ) ); }
+    if( THEKERNEL->robot->gamma_stepper_motor->moving ){ THEKERNEL->robot->gamma_stepper_motor->set_speed( (steps_per_minute/60L) * ( (float)this->current_block->steps[GAMMA_STEPPER] / (float)this->current_block->steps_event_count ) ); }
 
     // Other modules might want to know the speed changed
-    this->kernel->call_event(ON_SPEED_CHANGE, this);
+    THEKERNEL->call_event(ON_SPEED_CHANGE, this);
 
 }
 

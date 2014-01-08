@@ -65,14 +65,14 @@ bool Gcode::has_letter( char letter ){
 
 // Retrieve the value for a given letter
 // We don't use the high-level methods of std::string because they call malloc and it's very bad to do that inside of interrupts
-double Gcode::get_value( char letter ){
+float Gcode::get_value( char letter ){
     //__disable_irq();
     const char* cs = command.c_str();
     char* cn = NULL;
     for (; *cs; cs++){
          if( letter == *cs ){
              cs++;
-             double r = strtod(cs, &cn);
+             float r = strtof(cs, &cn);
              if (cn > cs)
                  return r;
          }

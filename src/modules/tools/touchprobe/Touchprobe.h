@@ -41,7 +41,7 @@ class Touchprobe: public Module {
         void on_gcode_received(void* argument);
         void on_idle(void* argument);
 
-        double         probe_rate;
+        float         probe_rate;
         unsigned int   mcode;
         bool           enabled;
         bool           should_log;
