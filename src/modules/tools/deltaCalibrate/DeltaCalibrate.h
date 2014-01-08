@@ -23,8 +23,8 @@ class DeltaCalibrate : public Module{
 
 
     private:
-        void calibrate_delta();
-        void calibrate_zprobe_offset();
+        void calibrate_delta(StreamOutput*);
+        void calibrate_zprobe_offset(StreamOutput*);
         uint32_t wait_for_ztouch();
         void wait_for_moves();
         void move_all(bool, bool, unsigned int);

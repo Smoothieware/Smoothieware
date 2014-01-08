@@ -244,7 +244,7 @@ void DeltaCalibrate::move_all(bool direction, bool speed, unsigned int steps){
 }
 
 // auto calibration routine for delta bots
-void DeltaCalibrate::calibrate_delta( ){
+void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
 
     uint32_t current_z_steps = 0;
 
@@ -285,7 +285,7 @@ void DeltaCalibrate::calibrate_delta( ){
     // deploy probe, check or abort
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
@@ -322,7 +322,7 @@ void DeltaCalibrate::calibrate_delta( ){
     // check probe retraction
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
@@ -356,7 +356,7 @@ void DeltaCalibrate::calibrate_delta( ){
     // check probe retraction
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }    
 
@@ -389,7 +389,7 @@ void DeltaCalibrate::calibrate_delta( ){
     // check probe retraction
     if( this->pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }  
 
@@ -422,11 +422,11 @@ void DeltaCalibrate::calibrate_delta( ){
     float t3Trim = ((tower3Height-lowestTower) / steps_per_mm[0]) * multiplier;
 
     if ( (delta_calibrate_flags & (CALIBRATE_SILENT|CALIBRATE_QUIET) ) == 0 ){
-        THEKERNEL->streams->printf("Probed Points:\r\n");
-        THEKERNEL->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -tower1Height/steps_per_mm[0], -tower2Height/steps_per_mm[0], -tower3Height/steps_per_mm[0]); 
-        THEKERNEL->streams->printf("Detected offsets:\r\n");
-        THEKERNEL->streams->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
-        THEKERNEL->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+        stream->printf("Probed Points:\r\n");
+        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -tower1Height/steps_per_mm[0], -tower2Height/steps_per_mm[0], -tower3Height/steps_per_mm[0]); 
+        stream->printf("Detected offsets:\r\n");
+        stream->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
+        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
     }
 
     t1Trim += trim[0]/steps_per_mm[0];
@@ -439,10 +439,10 @@ void DeltaCalibrate::calibrate_delta( ){
     float newDeltaRadius = arm_radius - ((centerAverage - originHeight)/steps_per_mm[0])/0.15;
 
     if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
-        THEKERNEL->streams->printf("Calibrated Values:\r\n");
-        THEKERNEL->streams->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
-        THEKERNEL->streams->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
-        THEKERNEL->streams->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+        stream->printf("Calibrated Values:\r\n");
+        stream->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
+        stream->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
+        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
     }
 
     // apply values
@@ -456,11 +456,11 @@ void DeltaCalibrate::calibrate_delta( ){
         g.assign(buf, buffered_length);
         send_gcode(g);
 
-        THEKERNEL->streams->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
+        stream->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
     }
 }
 
-void DeltaCalibrate::calibrate_zprobe_offset( ){
+void DeltaCalibrate::calibrate_zprobe_offset(StreamOutput *stream){
 
     uint32_t current_z_steps = 0;
     long originHeight = 0;
@@ -472,7 +472,7 @@ void DeltaCalibrate::calibrate_zprobe_offset( ){
 
     if( !pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        THEKERNEL->streams->printf("Z-Probe not activated, Aborting!\r\n");
+        stream->printf("Z-Probe not activated, Aborting!\r\n");
         return;
     }
 
@@ -482,7 +482,7 @@ void DeltaCalibrate::calibrate_zprobe_offset( ){
 
     if( pins[2].get() ){  //TODO configure probe pin?
         //probe not deployed - abort
-        THEKERNEL->streams->printf("Z-Probe not deployed, aborting!\r\n");
+        stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
@@ -496,13 +496,13 @@ void DeltaCalibrate::calibrate_zprobe_offset( ){
 
     //calculate
     if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
-        THEKERNEL->streams->printf("Calibrated Values:\r\n");
-        THEKERNEL->streams->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
+        stream->printf("Calibrated Values:\r\n");
+        stream->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
     }
     // apply values
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
         calibrate_probe_offset = originHeight/steps_per_mm[0]; 
-        THEKERNEL->streams->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
+        stream->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
     }
 }
 
@@ -536,7 +536,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
                     float l = gcode->get_value('L');
                     lift_steps = l * steps_per_mm[0];
                 }
-                calibrate_delta();
+                calibrate_delta(gcode->stream);
             }  
 
         } else if (gcode->g == 31 )
@@ -553,7 +553,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
             } else {
                 delta_calibrate_flags |= CALIBRATE_AUTOSET;
             }
-            calibrate_zprobe_offset();
+            calibrate_zprobe_offset(gcode->stream);
         }
     } else if (gcode->has_m) {
         switch (gcode->m) {
