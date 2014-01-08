@@ -27,13 +27,7 @@
 #define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
 #define delta_homing_checksum                   CHECKSUM("delta_homing")
 
-#define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
-#define beta_min_endstop_checksum        CHECKSUM("beta_min_endstop")
 #define gamma_min_endstop_checksum       CHECKSUM("gamma_min_endstop")
-
-#define alpha_max_endstop_checksum       CHECKSUM("alpha_max_endstop")
-#define beta_max_endstop_checksum        CHECKSUM("beta_max_endstop")
-#define gamma_max_endstop_checksum       CHECKSUM("gamma_max_endstop")
 
 #define alpha_trim_checksum              CHECKSUM("alpha_trim")
 #define beta_trim_checksum               CHECKSUM("beta_trim")
@@ -46,31 +40,14 @@
 
 // these values are in steps and should be deprecated
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
-#define beta_fast_homing_rate_checksum   CHECKSUM("beta_fast_homing_rate")
-#define gamma_fast_homing_rate_checksum  CHECKSUM("gamma_fast_homing_rate")
-
 #define alpha_slow_homing_rate_checksum  CHECKSUM("alpha_slow_homing_rate")
-#define beta_slow_homing_rate_checksum   CHECKSUM("beta_slow_homing_rate")
-#define gamma_slow_homing_rate_checksum  CHECKSUM("gamma_slow_homing_rate")
-
 #define alpha_homing_retract_checksum    CHECKSUM("alpha_homing_retract")
-#define beta_homing_retract_checksum     CHECKSUM("beta_homing_retract")
-#define gamma_homing_retract_checksum    CHECKSUM("gamma_homing_retract")
 #define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
 
 // same as above but in user friendly mm/s and mm
 #define alpha_fast_homing_rate_mm_checksum  CHECKSUM("alpha_fast_homing_rate_mm_s")
-#define beta_fast_homing_rate_mm_checksum   CHECKSUM("beta_fast_homing_rate_mm_s")
-#define gamma_fast_homing_rate_mm_checksum  CHECKSUM("gamma_fast_homing_rate_mm_s")
-
 #define alpha_slow_homing_rate_mm_checksum  CHECKSUM("alpha_slow_homing_rate_mm_s")
-#define beta_slow_homing_rate_mm_checksum   CHECKSUM("beta_slow_homing_rate_mm_s")
-#define gamma_slow_homing_rate_mm_checksum  CHECKSUM("gamma_slow_homing_rate_mm_s")
-
 #define alpha_homing_retract_mm_checksum    CHECKSUM("alpha_homing_retract_mm")
-#define beta_homing_retract_mm_checksum     CHECKSUM("beta_homing_retract_mm")
-#define gamma_homing_retract_mm_checksum    CHECKSUM("gamma_homing_retract_mm")
-
 #define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
 
 #define alpha_homing_direction_checksum  CHECKSUM("alpha_homing_direction")
@@ -78,17 +55,10 @@
 #define gamma_homing_direction_checksum  CHECKSUM("gamma_homing_direction")
 #define home_to_max_checksum             CHECKSUM("home_to_max")
 #define home_to_min_checksum             CHECKSUM("home_to_min")
-#define alpha_min_checksum               CHECKSUM("alpha_min")
-#define beta_min_checksum                CHECKSUM("beta_min")
 #define gamma_min_checksum               CHECKSUM("gamma_min")
-
-#define alpha_max_checksum               CHECKSUM("alpha_max")
-#define beta_max_checksum                CHECKSUM("beta_max")
 #define gamma_max_checksum               CHECKSUM("gamma_max")
 
 #define alpha_steps_per_mm_checksum      CHECKSUM("alpha_steps_per_mm")
-#define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
-#define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
 
 #define arm_solution_checksum                  CHECKSUM("arm_solution")
 #define kossel_checksum                        CHECKSUM("kossel")
@@ -127,41 +97,22 @@ void DeltaCalibrate::on_module_loaded()
 // Get config
 void DeltaCalibrate::on_config_reload(void *argument)
 {
-    this->pins[0].from_string(         THEKERNEL->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->pins[1].from_string(         THEKERNEL->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
-    this->pins[2].from_string(         THEKERNEL->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->pins[3].from_string(         THEKERNEL->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->pins[4].from_string(         THEKERNEL->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
-    this->pins[5].from_string(         THEKERNEL->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
+    this->probe_pin.from_string(         THEKERNEL->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
 
     // we need to know steps per mm for M206, also use them for all settings
-    this->steps_per_mm[0]           =  THEKERNEL->config->value(alpha_steps_per_mm_checksum         )->as_number();
-    this->steps_per_mm[1]           =  THEKERNEL->config->value(beta_steps_per_mm_checksum          )->as_number();
-    this->steps_per_mm[2]           =  THEKERNEL->config->value(gamma_steps_per_mm_checksum         )->as_number();
+    this->steps_per_mm           =  THEKERNEL->config->value(alpha_steps_per_mm_checksum         )->as_number();
 
-    this->fast_rates[0]             =  THEKERNEL->config->value(alpha_fast_homing_rate_checksum     )->by_default(4000 )->as_number();
-    this->fast_rates[1]             =  THEKERNEL->config->value(beta_fast_homing_rate_checksum      )->by_default(4000 )->as_number();
-    this->fast_rates[2]             =  THEKERNEL->config->value(gamma_fast_homing_rate_checksum     )->by_default(6400 )->as_number();
-    this->slow_rates[0]             =  THEKERNEL->config->value(alpha_slow_homing_rate_checksum     )->by_default(2000 )->as_number();
-    this->slow_rates[1]             =  THEKERNEL->config->value(beta_slow_homing_rate_checksum      )->by_default(2000 )->as_number();
-    this->slow_rates[2]             =  THEKERNEL->config->value(gamma_slow_homing_rate_checksum     )->by_default(3200 )->as_number();
-    this->retract_steps[0]          =  THEKERNEL->config->value(alpha_homing_retract_checksum       )->by_default(400  )->as_number();
-    this->retract_steps[1]          =  THEKERNEL->config->value(beta_homing_retract_checksum        )->by_default(400  )->as_number();
-    this->retract_steps[2]          =  THEKERNEL->config->value(gamma_homing_retract_checksum       )->by_default(1600 )->as_number();
+    this->fast_rates             =  THEKERNEL->config->value(alpha_fast_homing_rate_checksum     )->by_default(4000 )->as_number();
+    this->slow_rates             =  THEKERNEL->config->value(alpha_slow_homing_rate_checksum     )->by_default(2000 )->as_number();
+    this->retract_steps          =  THEKERNEL->config->value(alpha_homing_retract_checksum       )->by_default(400  )->as_number();
 
     // newer mm based config values override the old ones, convert to steps/mm and steps, defaults to what was set in the older config settings above
-    this->fast_rates[0] =    THEKERNEL->config->value(alpha_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
-    this->fast_rates[1] =    THEKERNEL->config->value(beta_fast_homing_rate_mm_checksum  )->by_default(this->fast_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
-    this->fast_rates[2] =    THEKERNEL->config->value(gamma_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
-    this->slow_rates[0] =    THEKERNEL->config->value(alpha_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
-    this->slow_rates[1] =    THEKERNEL->config->value(beta_slow_homing_rate_mm_checksum  )->by_default(this->slow_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
-    this->slow_rates[2] =    THEKERNEL->config->value(gamma_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
-    this->retract_steps[0] = THEKERNEL->config->value(alpha_homing_retract_mm_checksum   )->by_default(this->retract_steps[0] / steps_per_mm[0])->as_number() * steps_per_mm[0];
-    this->retract_steps[1] = THEKERNEL->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1] / steps_per_mm[1])->as_number() * steps_per_mm[1];
-    this->retract_steps[2] = THEKERNEL->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2] / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->fast_rates =    THEKERNEL->config->value(alpha_fast_homing_rate_mm_checksum )->by_default(this->fast_rates  / steps_per_mm)->as_number() * steps_per_mm;
+    this->slow_rates =    THEKERNEL->config->value(alpha_slow_homing_rate_mm_checksum )->by_default(this->slow_rates  / steps_per_mm)->as_number() * steps_per_mm;
+    this->retract_steps = THEKERNEL->config->value(alpha_homing_retract_mm_checksum   )->by_default(this->retract_steps / steps_per_mm)->as_number() * steps_per_mm;
 
     this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(0)->as_number();
-    this->lift_steps = THEKERNEL->config->value(calibrate_lift_checksum )->by_default(10)->as_number() * steps_per_mm[0];
+    this->lift_steps = THEKERNEL->config->value(calibrate_lift_checksum )->by_default(10)->as_number() * steps_per_mm;
     this->calibrate_radius = THEKERNEL->config->value(calibrate_radius_checksum )->by_default(50)->as_number();
     this->calibrate_probe_offset = THEKERNEL->config->value(calibrate_probe_offset_checksum )->by_default(0)->as_number();
     this->arm_radius = THEKERNEL->config->value(arm_radius_checksum )->by_default(124.0f)->as_number();
@@ -176,9 +127,7 @@ void DeltaCalibrate::on_config_reload(void *argument)
     home_dir                        = get_checksum(THEKERNEL->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[2]         = home_dir != home_to_max_checksum;
 
-    this->homing_position[0]        =  this->home_direction[0] ? THEKERNEL->config->value(alpha_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(alpha_max_checksum)->by_default(200)->as_number();
-    this->homing_position[1]        =  this->home_direction[1] ? THEKERNEL->config->value(beta_min_checksum )->by_default(0)->as_number() : THEKERNEL->config->value(beta_max_checksum )->by_default(200)->as_number();;
-    this->homing_position[2]        =  this->home_direction[2] ? THEKERNEL->config->value(gamma_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number();;
+    this->homing_position_z        =  this->home_direction[2] ? THEKERNEL->config->value(gamma_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number();;
 
     this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
 
@@ -187,9 +136,9 @@ void DeltaCalibrate::on_config_reload(void *argument)
     int dirx = (this->home_direction[0] ? 1 : -1);
     int diry = (this->home_direction[1] ? 1 : -1);
     int dirz = (this->home_direction[2] ? 1 : -1);
-    this->trim[0] = THEKERNEL->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[0] * dirx;
-    this->trim[1] = THEKERNEL->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * steps_per_mm[1] * diry;
-    this->trim[2] = THEKERNEL->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
+    this->trim[0] = THEKERNEL->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * steps_per_mm * dirx;
+    this->trim[1] = THEKERNEL->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * steps_per_mm * diry;
+    this->trim[2] = THEKERNEL->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm * dirz;
 }
 
 void DeltaCalibrate::wait_for_moves(){
@@ -208,7 +157,7 @@ uint32_t DeltaCalibrate::wait_for_ztouch(){
     while(running){
         running = false;
         THEKERNEL->call_event(ON_IDLE);
-        if( this->pins[2].get() ){  //probe contact  //TODO configure probe pin?
+        if( this->probe_pin.get() ){  //probe contact  //TODO configure probe pin?
             if( debounce < debounce_count ) { //debounce and loop
                 debounce ++;
                 running = true;
@@ -235,9 +184,9 @@ void DeltaCalibrate::move_all(bool direction, bool speed, unsigned int steps){
     for( int i = 0; i <= 2; i++ ){
         move_dir = (this->home_direction[i]^direction) != 0;
         if(speed){
-            this->steppers[i]->set_speed(this->fast_rates[i]);
+            this->steppers[i]->set_speed(this->fast_rates);
         } else {
-            this->steppers[i]->set_speed(this->slow_rates[i]);
+            this->steppers[i]->set_speed(this->slow_rates);
         }
         this->steppers[i]->move(move_dir,steps);
     }
@@ -283,7 +232,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     //TODO auto-deploy probe
 
     // deploy probe, check or abort
-    if( pins[2].get() ){  //TODO configure probe pin?
+    if( probe_pin.get() ){  //TODO configure probe pin?
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -293,9 +242,9 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     move_all(DOWN,FAST,10000000);
     current_z_steps += wait_for_ztouch();
 
-    move_all(UP,FAST,retract_steps[0]); //alpha tower retract distance for all
+    move_all(UP,FAST,retract_steps);
     wait_for_moves();
-    current_z_steps -= retract_steps[0];
+    current_z_steps -= retract_steps;
 
     move_all(DOWN,SLOW,10000000);
     current_z_steps += wait_for_ztouch();
@@ -308,7 +257,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     current_z_steps -= lift_steps;
 
     // update planner position so we can make coordinated moves
-    THEKERNEL->robot->reset_axis_position( homing_position[2] - (current_z_steps / steps_per_mm[0]) , 2);
+    THEKERNEL->robot->reset_axis_position( homing_position_z - (current_z_steps / steps_per_mm) , 2);
 
     targetY = calibrate_radius * cos(240 * (3.141592653589793/180));
     targetX = calibrate_radius * sin(240 * (3.141592653589793/180));
@@ -320,7 +269,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
 
 
     // check probe retraction
-    if( pins[2].get() ){  //TODO configure probe pin?
+    if( probe_pin.get() ){  //TODO configure probe pin?
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -330,9 +279,9 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     move_all(DOWN,FAST,10000000);
     current_z_steps += wait_for_ztouch();
 
-    move_all(UP,FAST,retract_steps[0]); //alpha tower retract distance for all
+    move_all(UP,FAST,retract_steps); 
     wait_for_moves();
-    current_z_steps -= retract_steps[0];
+    current_z_steps -= retract_steps;
 
     move_all(DOWN,SLOW,10000000);
     current_z_steps += wait_for_ztouch();
@@ -354,7 +303,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
 
 
     // check probe retraction
-    if( pins[2].get() ){  //TODO configure probe pin?
+    if( probe_pin.get() ){  //TODO configure probe pin?
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -364,9 +313,9 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     move_all(DOWN,FAST,10000000);
     current_z_steps += wait_for_ztouch();
 
-    move_all(UP,FAST,retract_steps[0]); //alpha tower retract distance for all
+    move_all(UP,FAST,retract_steps); 
     wait_for_moves();
-    current_z_steps -= retract_steps[0];
+    current_z_steps -= retract_steps;
 
     move_all(DOWN,SLOW,10000000);
     current_z_steps += wait_for_ztouch();
@@ -387,7 +336,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     THEKERNEL->conveyor->wait_for_empty_queue();    
 
     // check probe retraction
-    if( this->pins[2].get() ){  //TODO configure probe pin?
+    if( this->probe_pin.get() ){  //TODO configure probe pin?
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -397,9 +346,9 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     move_all(DOWN,FAST,10000000);
     current_z_steps += wait_for_ztouch();
 
-    move_all(UP,FAST,retract_steps[0]); //alpha tower retract distance for all
+    move_all(UP,FAST,retract_steps); 
     wait_for_moves();
-    current_z_steps -= retract_steps[0];
+    current_z_steps -= retract_steps;
 
     move_all(DOWN,SLOW,10000000);
     current_z_steps += wait_for_ztouch();
@@ -417,30 +366,30 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     long lowestTower = min(tower1Height,min(tower2Height,tower3Height));
 
     float multiplier =  (1.83606 *log(arm_radius*2)-9.76413)/(1.83606 *log(arm_radius+calibrate_radius)-9.76413);
-    float t1Trim = ((tower1Height-lowestTower) / steps_per_mm[0]) * multiplier;
-    float t2Trim = ((tower2Height-lowestTower) / steps_per_mm[0]) * multiplier;
-    float t3Trim = ((tower3Height-lowestTower) / steps_per_mm[0]) * multiplier;
+    float t1Trim = ((tower1Height-lowestTower) / steps_per_mm) * multiplier;
+    float t2Trim = ((tower2Height-lowestTower) / steps_per_mm) * multiplier;
+    float t3Trim = ((tower3Height-lowestTower) / steps_per_mm) * multiplier;
 
     if ( (delta_calibrate_flags & (CALIBRATE_SILENT|CALIBRATE_QUIET) ) == 0 ){
         stream->printf("Probed Points:\r\n");
-        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -tower1Height/steps_per_mm[0], -tower2Height/steps_per_mm[0], -tower3Height/steps_per_mm[0]); 
+        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -tower1Height/steps_per_mm, -tower2Height/steps_per_mm, -tower3Height/steps_per_mm); 
         stream->printf("Detected offsets:\r\n");
-        stream->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm[0]); 
+        stream->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm); 
         stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
     }
 
-    t1Trim += trim[0]/steps_per_mm[0];
-    t2Trim += trim[1]/steps_per_mm[0];
-    t3Trim += trim[2]/steps_per_mm[0];
+    t1Trim += trim[0]/steps_per_mm;
+    t2Trim += trim[1]/steps_per_mm;
+    t3Trim += trim[2]/steps_per_mm;
     float minTrim = min(t1Trim,min(t2Trim,t3Trim));
     t1Trim -= minTrim;
     t2Trim -= minTrim;
     t3Trim -= minTrim;
-    float newDeltaRadius = arm_radius - ((centerAverage - originHeight)/steps_per_mm[0])/0.15;
+    float newDeltaRadius = arm_radius - ((centerAverage - originHeight)/steps_per_mm)/0.15;
 
     if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
         stream->printf("Calibrated Values:\r\n");
-        stream->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm[0]) + calibrate_probe_offset); 
+        stream->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm) + calibrate_probe_offset); 
         stream->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
         stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
     }
@@ -452,7 +401,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
         g.assign(buf, buffered_length);
         send_gcode(g);
 
-        buffered_length = snprintf(buf, sizeof(buf), "M665 R%5.3f Z%5.3f", newDeltaRadius, (( originHeight/steps_per_mm[0]) + calibrate_probe_offset) );
+        buffered_length = snprintf(buf, sizeof(buf), "M665 R%5.3f Z%5.3f", newDeltaRadius, (( originHeight/steps_per_mm) + calibrate_probe_offset) );
         g.assign(buf, buffered_length);
         send_gcode(g);
 
@@ -470,7 +419,7 @@ void DeltaCalibrate::calibrate_zprobe_offset(StreamOutput *stream){
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
 
-    if( !pins[2].get() ){  //TODO configure probe pin?
+    if( !probe_pin.get() ){  //TODO configure probe pin?
         //probe not deployed - abort
         stream->printf("Z-Probe not activated, Aborting!\r\n");
         return;
@@ -480,7 +429,7 @@ void DeltaCalibrate::calibrate_zprobe_offset(StreamOutput *stream){
     wait_for_moves();
     current_z_steps = 0;
 
-    if( pins[2].get() ){  //TODO configure probe pin?
+    if( probe_pin.get() ){  //TODO configure probe pin?
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -497,11 +446,11 @@ void DeltaCalibrate::calibrate_zprobe_offset(StreamOutput *stream){
     //calculate
     if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
         stream->printf("Calibrated Values:\r\n");
-        stream->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm[0])); 
+        stream->printf("Probe Offset:%5.3f\r\n",  (originHeight/steps_per_mm)); 
     }
     // apply values
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
-        calibrate_probe_offset = originHeight/steps_per_mm[0]; 
+        calibrate_probe_offset = originHeight/steps_per_mm; 
         stream->printf("Probe offset has been changed in memory, but your config file has not been modified.\r\n");
     }
 }
@@ -534,7 +483,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
                 }
                 if (gcode->has_letter('L')) {
                     float l = gcode->get_value('L');
-                    lift_steps = l * steps_per_mm[0];
+                    lift_steps = l * steps_per_mm;
                 }
                 calibrate_delta(gcode->stream);
             }  
@@ -568,9 +517,9 @@ void DeltaCalibrate::on_gcode_received(void *argument)
                 int dirx = (this->home_direction[0] ? 1 : -1);
                 int diry = (this->home_direction[1] ? 1 : -1);
                 int dirz = (this->home_direction[2] ? 1 : -1);
-                trim[0] = lround(mm[0] * steps_per_mm[0]) * dirx; // convert back to steps
-                trim[1] = lround(mm[1] * steps_per_mm[1]) * diry;
-                trim[2] = lround(mm[2] * steps_per_mm[2]) * dirz;
+                trim[0] = lround(mm[0] * steps_per_mm) * dirx; // convert back to steps
+                trim[1] = lround(mm[1] * steps_per_mm) * diry;
+                trim[2] = lround(mm[2] * steps_per_mm) * dirz;
                 gcode->mark_as_taken();
             }
             break;            
@@ -584,9 +533,9 @@ void DeltaCalibrate::trim2mm(float *mm)
     int diry = (this->home_direction[1] ? 1 : -1);
     int dirz = (this->home_direction[2] ? 1 : -1);
 
-    mm[0] = this->trim[0] / this->steps_per_mm[0] * dirx; // convert to mm
-    mm[1] = this->trim[1] / this->steps_per_mm[1] * diry;
-    mm[2] = this->trim[2] / this->steps_per_mm[2] * dirz;
+    mm[0] = this->trim[0] / this->steps_per_mm * dirx; // convert to mm
+    mm[1] = this->trim[1] / this->steps_per_mm * diry;
+    mm[2] = this->trim[2] / this->steps_per_mm * dirz;
 }
 
 void DeltaCalibrate::send_gcode(std::string g) {

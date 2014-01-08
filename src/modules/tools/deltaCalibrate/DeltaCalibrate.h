@@ -30,20 +30,20 @@ class DeltaCalibrate : public Module{
         void move_all(bool, bool, unsigned int);
         void trim2mm(float * mm);
 
-        float steps_per_mm[3];
-        float homing_position[3];
+        float steps_per_mm;
+        float homing_position_z;
         bool home_direction[3];
         unsigned int  debounce_count;
-        unsigned int  retract_steps[3];
+        unsigned int  retract_steps;
         unsigned int lift_steps;
         float calibrate_radius;
         float calibrate_probe_offset;
         float arm_radius;
 
         int  trim[3];
-        float  fast_rates[3];
-        float  slow_rates[3];
-        Pin           pins[6];
+        float  fast_rates;
+        float  slow_rates;
+        Pin           probe_pin;
         StepperMotor* steppers[3];
         bool is_delta;
         unsigned int delta_calibrate_flags;
