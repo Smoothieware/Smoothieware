@@ -24,7 +24,7 @@ using namespace std;
 
 Planner::Planner(){
     clear_vector(this->position);
-    clear_vector_double(this->previous_unit_vec);
+    clear_vector_float(this->previous_unit_vec);
     this->previous_nominal_speed = 0.0;
     this->has_deleted_block = false;
 }
@@ -49,22 +49,21 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
 
     // Create ( recycle ) a new block
     Block* block = THEKERNEL->conveyor->new_block();
-    block->planner = this;
 
     // Direction bits
     block->direction_bits = 0;
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){
         if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<stepper); }
     }
-    
+
     // Number of steps for each stepper
     for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); }
-    
+
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
 
     block->millimeters = distance;
-    float inverse_millimeters = 0;
+    float inverse_millimeters = 0.0F;
     if( distance > 0 ){ inverse_millimeters = 1.0/distance; }
 
     // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
@@ -92,7 +91,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     unit_vec[X_AXIS] = deltas[X_AXIS]*inverse_millimeters;
     unit_vec[Y_AXIS] = deltas[Y_AXIS]*inverse_millimeters;
     unit_vec[Z_AXIS] = deltas[Z_AXIS]*inverse_millimeters;
-  
+
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction
     // deviation is defined as the distance from the junction to the closest edge of the circle,
@@ -110,7 +109,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
       float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
                          - this->previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
                          - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
-                           
+
       // Skip and use default max junction speed for 0 degree acute junction.
       if (cos_theta < 0.95) {
         vmax_junction = min(this->previous_nominal_speed,block->nominal_speed);
@@ -124,7 +123,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
       }
     }
     block->max_entry_speed = vmax_junction;
-   
+
     // Initialize block entry speed. Compute based on deceleration to user-defined MINIMUM_PLANNER_SPEED.
     float v_allowable = this->max_allowable_speed(-this->acceleration,0.0,block->millimeters); //TODO: Get from config
     block->entry_speed = min(vmax_junction, v_allowable);
@@ -140,17 +139,17 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     if (block->nominal_speed <= v_allowable) { block->nominal_length_flag = true; }
     else { block->nominal_length_flag = false; }
     block->recalculate_flag = true; // Always calculate trapezoid for new block
- 
+
     // Update previous path unit_vector and nominal speed
     memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
     this->previous_nominal_speed = block->nominal_speed;
-    
+
     // Update current position
     memcpy(this->position, target, sizeof(int)*3);
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();
-    
+
     // The block can now be used
     block->ready();
 

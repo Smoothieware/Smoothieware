@@ -49,20 +49,13 @@ Block* Conveyor::new_block(){
     // Take the next untaken block on the queue ( the one after the last one )
     Block* block = this->queue.get_head_ref();
     // Then clean it up
-    if( block->conveyor == this ){
-        block->gcodes.clear();
-    }
+    block->clear();
+
+    block->initial_rate = -2;
+    block->final_rate = -2;
 
     // Create a new virgin Block in the queue
     this->queue.push_back(Block());
-    block = this->queue.get_ref( this->queue.size()-1 );
-    while( block == NULL ){
-        block = this->queue.get_ref( this->queue.size()-1 );
-    }
-    block->is_ready = false;
-    block->initial_rate = -2;
-    block->final_rate = -2;
-    block->conveyor = this;
 
     return block;
 }
