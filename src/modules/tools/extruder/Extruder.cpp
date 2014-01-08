@@ -188,10 +188,17 @@ Block* Extruder::append_empty_block(){
     THEKERNEL->conveyor->wait_for_queue(2);
     Block* block = THEKERNEL->conveyor->new_block();
     block->planner = THEKERNEL->planner;
+    // TODO these need to be cleared in the new_block() call
     block->millimeters = 0;
     block->steps[0] = 0;
     block->steps[1] = 0;
     block->steps[2] = 0;
+    block->entry_speed= 0;
+    block->max_entry_speed= 0;
+    block->steps_event_count= 0;
+    block->nominal_length_flag= true;
+    block->recalculate_flag= false;
+
     // feed the block into the system. Will execute it if we are at the beginning of the queue
     block->ready();
 

@@ -121,8 +121,6 @@ void GcodeDispatch::on_console_line_received(void *line)
                                 continue;
 
                             case 500: // M500 save volatile settings to config-override
-                                // delete the existing file
-                                remove(THEKERNEL->config_override_filename());
                                 // replace stream with one that writes to config-override file
                                 gcode->stream = new FileStream(THEKERNEL->config_override_filename());
                                 // dispatch the M500 here so we can free up the stream when done
@@ -132,7 +130,7 @@ void GcodeDispatch::on_console_line_received(void *line)
                                 new_message.stream->printf("Settings Stored to %s\r\nok\r\n", THEKERNEL->config_override_filename());
                                 continue;
 
-                            case 501: // M501 deletes config-override so everything defaults to what is in config
+                            case 502: // M502 deletes config-override so everything defaults to what is in config
                                 remove(THEKERNEL->config_override_filename());
                                 new_message.stream->printf("config override file deleted %s, reboot needed\r\nok\r\n", THEKERNEL->config_override_filename());
                                 delete gcode;
@@ -147,7 +145,7 @@ void GcodeDispatch::on_console_line_received(void *line)
                                 } else {
                                     new_message.stream->printf("; No config override\n");
                                 }
-                                break; // fal through to process by modules
+                                break; // fall through to process by modules
                             }
                         }
                     }
