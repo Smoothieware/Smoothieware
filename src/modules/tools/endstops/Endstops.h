@@ -21,6 +21,7 @@ class Endstops : public Module{
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
+        void calibrate_delta();
 
     private:
         void do_homing(char axes_to_move);
