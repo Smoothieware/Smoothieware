@@ -164,7 +164,7 @@ void DeltaCalibrate::on_config_reload(void *argument)
     this->lift_steps = THEKERNEL->config->value(calibrate_lift_checksum )->by_default(10)->as_number() * steps_per_mm[0];
     this->calibrate_radius = THEKERNEL->config->value(calibrate_radius_checksum )->by_default(50)->as_number();
     this->calibrate_probe_offset = THEKERNEL->config->value(calibrate_probe_offset_checksum )->by_default(0)->as_number();
-    this->arm_radius = THEKERNEL->config->value(arm_radius_checksum )->by_default(124.0)->as_number();
+    this->arm_radius = THEKERNEL->config->value(arm_radius_checksum )->by_default(124.0f)->as_number();
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
@@ -252,8 +252,8 @@ void DeltaCalibrate::calibrate_delta( ){
     long tower1Height = 0;
     long tower2Height = 0;
     long tower3Height = 0;
-    double targetX = 0;
-    double targetY = 0;
+    float targetX = 0;
+    float targetY = 0;
 
     char buf[32];
     int buffered_length = 0;
@@ -533,7 +533,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
                     calibrate_radius = gcode->get_value('R');
                 }
                 if (gcode->has_letter('L')) {
-                    double l = gcode->get_value('L');
+                    float l = gcode->get_value('L');
                     lift_steps = l * steps_per_mm[0];
                 }
                 calibrate_delta();
@@ -558,7 +558,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
     } else if (gcode->has_m) {
         switch (gcode->m) {
             case 666: { // M666 - set trim for each axis in mm
-                double mm[3];
+                float mm[3];
                 trim2mm(mm);
 
                 if (gcode->has_letter('X')) mm[0] = gcode->get_value('X');
@@ -578,7 +578,7 @@ void DeltaCalibrate::on_gcode_received(void *argument)
     }
 }
 
-void DeltaCalibrate::trim2mm(double *mm)
+void DeltaCalibrate::trim2mm(float *mm)
 {
     int dirx = (this->home_direction[0] ? 1 : -1);
     int diry = (this->home_direction[1] ? 1 : -1);

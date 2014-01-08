@@ -28,21 +28,21 @@ class DeltaCalibrate : public Module{
         uint32_t wait_for_ztouch();
         void wait_for_moves();
         void move_all(bool, bool, unsigned int);
-        void trim2mm(double * mm);
+        void trim2mm(float * mm);
 
-        double steps_per_mm[3];
-        double homing_position[3];
+        float steps_per_mm[3];
+        float homing_position[3];
         bool home_direction[3];
         unsigned int  debounce_count;
         unsigned int  retract_steps[3];
         unsigned int lift_steps;
-        double calibrate_radius;
-        double calibrate_probe_offset;
-        double arm_radius;
+        float calibrate_radius;
+        float calibrate_probe_offset;
+        float arm_radius;
 
         int  trim[3];
-        double  fast_rates[3];
-        double  slow_rates[3];
+        float  fast_rates[3];
+        float  slow_rates[3];
         Pin           pins[6];
         StepperMotor* steppers[3];
         bool is_delta;
