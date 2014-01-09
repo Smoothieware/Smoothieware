@@ -35,9 +35,10 @@ class Block {
         void take();
         void release();
         void ready();
+        void clear();
 
-        vector<std::string> commands;
-        vector<float> travel_distances;
+        //vector<std::string> commands;
+        //vector<float> travel_distances;
         vector<Gcode> gcodes;
 
         unsigned int   steps[3];           // Number of steps for each axis for this block
@@ -54,13 +55,11 @@ class Block {
         unsigned int   direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
 
-        uint8_t recalculate_flag; // Planner flag to recalculate trapezoids on entry junction
-        uint8_t nominal_length_flag; // Planner flag for nominal speed always reached
+        bool recalculate_flag;              // Planner flag to recalculate trapezoids on entry junction
+        bool nominal_length_flag;        // Planner flag for nominal speed always reached
 
         float max_entry_speed;
-        Planner* planner;
-        Conveyor*  conveyor;
-        
+
         bool is_ready;
 
         short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
