@@ -60,6 +60,8 @@ void CurrentControl::on_module_loaded(){
         this->digipot->set_current(7, this->theta_current);
     }
 
+    this->original_delta_current= this->delta_current; // remember this to determine if we want to save on M500
+
     this->register_for_event(ON_GCODE_RECEIVED);
 }
 
@@ -75,9 +77,26 @@ void CurrentControl::on_gcode_received(void *argument)
             int i;
             for (i = 0; i < 8; i++)
             {
-                if (gcode->has_letter(alpha[i]))
-                    this->digipot->set_current(i, gcode->get_value(alpha[i]));
+                if (gcode->has_letter(alpha[i])){
+                    float c= gcode->get_value(alpha[i]);
+                    this->digipot->set_current(i, c);
+                    switch(i) {
+                        case 0: this->alpha_current= c; break;
+                        case 1: this->beta_current= c; break;
+                        case 2: this->gamma_current= c; break;
+                        case 3: this->delta_current= c; break;
+                        case 4: this->epsilon_current= c; break;
+                        case 5: this->zeta_current= c; break;
+                        case 6: this->eta_current= c; break;
+                        case 7: this->theta_current= c; break;
+                    }
+                }
                 gcode->stream->printf("%c:%3.1fA%c", alpha[i], this->digipot->get_current(i), (i == 7)?'\n':' ');
+            }
+
+        }else if(gcode->m == 500 || gcode->m == 503) {
+            if(this->delta_current != this->original_delta_current) { // if not the same as loaded by config then save it
+                gcode->stream->printf(";Extruder current:\nM907 E%1.5f\n", this->delta_current);
             }
         }
     }
