@@ -18,7 +18,7 @@
 #define junction_deviation_checksum CHECKSUM("junction_deviation")
 
 // TODO: Get from config
-#define MINIMUM_PLANNER_SPEED 0.0
+#define MINIMUM_PLANNER_SPEED 0.0F
 using namespace std;
 
 
