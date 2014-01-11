@@ -14,25 +14,28 @@ using namespace std;
 #include <string>
 #include <vector>
 
-class Conveyor : public Module {
-    public:
-        Conveyor();
+class Conveyor : public Module
+{
+public:
+    Conveyor();
 
-        void on_module_loaded(void);
-        void on_idle(void*);
+    void on_module_loaded(void);
+    void on_idle(void *);
 
-        Block* new_block();
-        void new_block_added();
-        void pop_and_process_new_block(int debug);
-        void wait_for_queue(int free_blocks);
-        void wait_for_empty_queue();
-        bool is_queue_empty();
+    Block *new_block();
+    void new_block_added();
+    void pop_and_process_new_block(int debug);
+    void wait_for_queue(int free_blocks);
+    void wait_for_empty_queue();
+    bool is_queue_empty();
 
-        RingBuffer<Block,32> queue;  // Queue of Blocks
-        Block* current_block;
-        bool looking_for_new_block;
+    // right now block queue size can only be changed at compile time by changing the value below
+    typedef RingBuffer<Block, 32> BlockQueue_t;
+    BlockQueue_t queue;  // Queue of Blocks
+    Block *current_block;
+    bool looking_for_new_block;
 
-        volatile int flush_blocks;
+    volatile int flush_blocks;
 };
 
 #endif // CONVEYOR_H

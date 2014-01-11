@@ -406,7 +406,12 @@ void Robot::append_line(Gcode* gcode, float target[], float rate ){
     gcode->millimeters_of_travel = sqrtf( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
 
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
-    if( gcode->millimeters_of_travel < 0.0001 ){ return; }
+    if( gcode->millimeters_of_travel < 0.0001 ){
+        // an extruder only move means we stopped so we need to tell planner that previous speed and unitvector are zero
+        THEKERNEL->planner->previous_nominal_speed = 0;
+        clear_vector_float(THEKERNEL->planner->previous_unit_vec);
+        return;
+    }
 
     // Mark the gcode as having a known distance
     this->distance_in_gcode_is_known( gcode );

@@ -64,7 +64,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
 
     block->millimeters = distance;
     float inverse_millimeters = 0.0F;
-    if( distance > 0 ){ inverse_millimeters = 1.0/distance; }
+    if( distance > 0 ){ inverse_millimeters = 1.0F/distance; }
 
     // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
@@ -103,7 +103,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     // nonlinearities of both the junction angle and junction velocity.
     float vmax_junction = MINIMUM_PLANNER_SPEED; // Set default max junction speed
 
-    if (THEKERNEL->conveyor->queue.size() > 1 && (this->previous_nominal_speed > 0.0)) {
+    if (THEKERNEL->conveyor->queue.size() > 1 && (this->previous_nominal_speed > 0.0F)) {
       // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
       // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
       float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
@@ -111,21 +111,21 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
                          - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
 
       // Skip and use default max junction speed for 0 degree acute junction.
-      if (cos_theta < 0.95) {
+      if (cos_theta < 0.95F) {
         vmax_junction = min(this->previous_nominal_speed,block->nominal_speed);
         // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
-        if (cos_theta > -0.95) {
+        if (cos_theta > -0.95F) {
           // Compute maximum junction velocity based on maximum acceleration and junction deviation
-          float sin_theta_d2 = sqrtf(0.5*(1.0-cos_theta)); // Trig half angle identity. Always positive.
+          float sin_theta_d2 = sqrtf(0.5F*(1.0F-cos_theta)); // Trig half angle identity. Always positive.
           vmax_junction = min(vmax_junction,
-            sqrtf(this->acceleration * this->junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) );
+            sqrtf(this->acceleration * this->junction_deviation * sin_theta_d2/(1.0F-sin_theta_d2)) );
         }
       }
     }
     block->max_entry_speed = vmax_junction;
 
     // Initialize block entry speed. Compute based on deceleration to user-defined MINIMUM_PLANNER_SPEED.
-    float v_allowable = this->max_allowable_speed(-this->acceleration,0.0,block->millimeters); //TODO: Get from config
+    float v_allowable = this->max_allowable_speed(-this->acceleration,0.0F,block->millimeters); //TODO: Get from config
     block->entry_speed = min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags
@@ -174,7 +174,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
-    RingBuffer<Block,32>* queue = &THEKERNEL->conveyor->queue;
+    Conveyor::BlockQueue_t *queue = &THEKERNEL->conveyor->queue;
 
     int newest = queue->prev_block_index(queue->head);
     int oldest = queue->tail;
@@ -246,7 +246,7 @@ void Planner::dump_queue(){
 // acceleration within the allotted distance.
 float Planner::max_allowable_speed(float acceleration, float target_velocity, float distance) {
   return(
-    sqrtf(target_velocity*target_velocity-2L*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    sqrtf(target_velocity*target_velocity-2.0F*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
   );
 }
 
