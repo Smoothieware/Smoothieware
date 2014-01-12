@@ -18,6 +18,11 @@ using namespace std;
 #include "Planner.h"
 #include "Conveyor.h"
 
+#define acceleration_checksum          CHECKSUM("acceleration")
+#define max_jerk_checksum              CHECKSUM("max_jerk")
+#define junction_deviation_checksum    CHECKSUM("junction_deviation")
+#define minimum_planner_speed_checksum CHECKSUM("minimum_planner_speed")
+
 // The Planner does the acceleration math for the queue of Blocks ( movements ).
 // It makes sure the speed stays within the configured constraints ( acceleration, junction_deviation, etc )
 // It goes over the list in both direction, every time a block is added, re-doing the math to make sure everything is optimal
@@ -38,6 +43,7 @@ void Planner::on_module_loaded(){
 void Planner::on_config_reload(void* argument){
     this->acceleration =       THEKERNEL->config->value(acceleration_checksum       )->by_default(100  )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
     this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum )->by_default(0.05f)->as_number();
+    this->minimum_planner_speed = THEKERNEL->config->value(minimum_planner_speed_checksum )->by_default(0.0f)->as_number();
 }
 
 
@@ -101,7 +107,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     // path width or max_jerk in the previous grbl version. This approach does not actually deviate
     // from path, but used as a robust way to compute cornering speeds, as it takes into account the
     // nonlinearities of both the junction angle and junction velocity.
-    float vmax_junction = MINIMUM_PLANNER_SPEED; // Set default max junction speed
+    float vmax_junction = minimum_planner_speed; // Set default max junction speed
 
     if (THEKERNEL->conveyor->queue.size() > 1 && (this->previous_nominal_speed > 0.0F)) {
       // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
@@ -124,8 +130,8 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     }
     block->max_entry_speed = vmax_junction;
 
-    // Initialize block entry speed. Compute based on deceleration to user-defined MINIMUM_PLANNER_SPEED.
-    float v_allowable = this->max_allowable_speed(-this->acceleration,0.0F,block->millimeters); //TODO: Get from config
+    // Initialize block entry speed. Compute based on deceleration to user-defined minimum_planner_speed.
+    float v_allowable = this->max_allowable_speed(-this->acceleration,minimum_planner_speed,block->millimeters); //TODO: Get from config
     block->entry_speed = min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags
@@ -152,7 +158,6 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
 
     // The block can now be used
     block->ready();
-
 }
 
 
@@ -228,15 +233,15 @@ void Planner::recalculate() {
         current = &queue->buffer[block_index];
     }
 
-    // Last/newest block in buffer. Exit speed is set with MINIMUM_PLANNER_SPEED. Always recalculated.
-    current->calculate_trapezoid( current->entry_speed/current->nominal_speed, MINIMUM_PLANNER_SPEED/current->nominal_speed );
+    // Last/newest block in buffer. Exit speed is set with minimum_planner_speed. Always recalculated.
+    current->calculate_trapezoid( current->entry_speed/current->nominal_speed, minimum_planner_speed/current->nominal_speed );
     current->recalculate_flag = false;
 }
 
 // Debug function
 void Planner::dump_queue(){
     for( int index = 0; index <= THEKERNEL->conveyor->queue.size()-1; index++ ){
-       if( index > 10 && index < THEKERNEL->conveyor->queue.size()-10 ){ continue; }
+       //if( index > 10 && index < THEKERNEL->conveyor->queue.size()-10 ){ continue; }
        THEKERNEL->streams->printf("block %03d > ", index);
        THEKERNEL->conveyor->queue.get_ref(index)->debug();
     }

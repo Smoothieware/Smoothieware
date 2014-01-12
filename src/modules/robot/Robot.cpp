@@ -248,15 +248,23 @@ void Robot::on_gcode_received(void * argument){
                 }
                 break;
 
-            case 205: // M205 Xnnn - set junction deviation
+            case 205: // M205 Xnnn - set junction deviation Snnn - Set minimum planner speed
                 gcode->mark_as_taken();
                 if (gcode->has_letter('X'))
                 {
                     float jd= gcode->get_value('X');
                     // enforce minimum
-                    if (jd < 0.0)
-                        jd = 0.0;
+                    if (jd < 0.0F)
+                        jd = 0.0F;
                     THEKERNEL->planner->junction_deviation= jd;
+                }
+                if (gcode->has_letter('S'))
+                {
+                    float mps= gcode->get_value('S');
+                    // enforce minimum
+                    if (mps < 0.0F)
+                        mps = 0.0F;
+                    THEKERNEL->planner->minimum_planner_speed= mps;
                 }
                 break;
 
@@ -282,7 +290,7 @@ void Robot::on_gcode_received(void * argument){
                 this->arm_solution->get_steps_per_millimeter(steps);
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", steps[0], steps[1], steps[2]);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration/3600);
-                gcode->stream->printf(";Junction Deviation:\nM205 X%1.5f\n", THEKERNEL->planner->junction_deviation);
+                gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->mark_as_taken();
                 break;
 
