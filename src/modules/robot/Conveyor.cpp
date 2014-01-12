@@ -32,7 +32,7 @@ void Conveyor::on_module_loaded(){
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
 void Conveyor::on_idle(void* argument){
-    if (flush_blocks){
+    while (flush_blocks > 0){
         // Cleanly delete block
         Block* block = queue.get_tail_ref();
         block->gcodes.clear();

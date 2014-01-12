@@ -13,14 +13,7 @@
 #include "../communication/utils/Gcode.h"
 #include "Block.h"
 
-#define acceleration_checksum       CHECKSUM("acceleration")
-#define max_jerk_checksum           CHECKSUM("max_jerk")
-#define junction_deviation_checksum CHECKSUM("junction_deviation")
-
-// TODO: Get from config
-#define MINIMUM_PLANNER_SPEED 0.0F
 using namespace std;
-
 
 class Planner : public Module {
     public:
@@ -42,7 +35,7 @@ class Planner : public Module {
 
         float acceleration;          // Setting
         float junction_deviation;    // Setting
-
+        float minimum_planner_speed; // Setting
 };
 
 
