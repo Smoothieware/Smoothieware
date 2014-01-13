@@ -31,11 +31,6 @@
 
 Kernel* Kernel::instance;
 
-// This is used to configure UARTs depending on the MRI configuration, see Kernel::Kernel()
-static int isDebugMonitorUsingUart0(){
-    return NVIC_GetPriority(UART0_IRQn) == 0;
-}
-
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
     instance= this; // setup the Singleton instance of the kernel
@@ -47,12 +42,21 @@ Kernel::Kernel(){
     this->streams        = new StreamOutputPool();
 
     // Configure UART depending on MRI config
-    // If MRI is using UART0, we want to use UART1, otherwise, we want to use UART0. This makes it easy to use only one UART for both debug and actual commands.
+    // Match up the SerialConsole to MRI UART. This makes it easy to use only one UART for both debug and actual commands.
     NVIC_SetPriorityGrouping(0);
-    if( !isDebugMonitorUsingUart0() ){
-        this->serial         = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-    }else{
-        this->serial         = new SerialConsole(p13, p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+    switch( __mriPlatform_CommUartIndex() ) {
+        case 0:
+            this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+            break;
+        case 1:
+            this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+            break;
+        case 2:
+            this->serial = new SerialConsole(  p28,   p27, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+            break;
+        case 3:
+            this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+            break;
     }
 
     this->add_module( this->config );
