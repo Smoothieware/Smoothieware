@@ -63,7 +63,7 @@ void Config::set_string( string setting, string value ){
 
     this->config_cache.replace_or_push_back(cv);
 
-    this->kernel->call_event(ON_CONFIG_RELOAD);
+    THEKERNEL->call_event(ON_CONFIG_RELOAD);
 }
 
 // Get a list of modules, used by module "pools" that look for the "enable" keyboard to find things like "moduletype.modulename.enable" as the marker of a new instance of a module

@@ -23,15 +23,15 @@ void PlayLed::on_module_loaded()
 
     on_config_reload(this);
 
-    kernel->slow_ticker->attach(4, this, &PlayLed::half_second_tick);
+    THEKERNEL->slow_ticker->attach(4, this, &PlayLed::half_second_tick);
 }
 
 void PlayLed::on_config_reload(void* argument)
 {
     string ledpin = "4.28!";
 
-    ledpin = kernel->config->value( pause_led_pin_checksum )->by_default(ledpin)->as_string(); // check for pause_led_pin first
-    ledpin = kernel->config->value( play_led_pin_checksum  )->by_default(ledpin)->as_string(); // override with play_led_pin if it's found
+    ledpin = THEKERNEL->config->value( pause_led_pin_checksum )->by_default(ledpin)->as_string(); // check for pause_led_pin first
+    ledpin = THEKERNEL->config->value( play_led_pin_checksum  )->by_default(ledpin)->as_string(); // override with play_led_pin if it's found
 
     led.from_string(ledpin)->as_output()->set(false);
 }
@@ -53,9 +53,9 @@ void PlayLed::on_play(void* argument)
 
 uint32_t PlayLed::half_second_tick(uint32_t)
 {
-    if (kernel->pauser->paused())
+    if (THEKERNEL->pauser->paused())
         led.set(!led.get());
-    else led.set(!kernel->conveyor->is_queue_empty());
+    else led.set(!THEKERNEL->conveyor->is_queue_empty());
 
     return 0;
 }

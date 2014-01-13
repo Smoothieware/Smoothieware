@@ -20,16 +20,16 @@ using namespace std;
 class StepTicker{
     public:
         StepTicker();
-        void set_frequency( double frequency );
+        void set_frequency( float frequency );
         void tick();
         void signal_moves_finished();
         StepperMotor* add_stepper_motor(StepperMotor* stepper_motor);
-        void set_reset_delay( double seconds );
+        void set_reset_delay( float seconds );
         void reset_tick();
         void add_motor_to_active_list(StepperMotor* motor);
         void remove_motor_from_active_list(StepperMotor* motor);
 
-        double frequency;
+        float frequency;
         vector<StepperMotor*> stepper_motors;
         uint32_t delay;
         uint32_t period;

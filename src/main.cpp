@@ -20,6 +20,7 @@
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
+#include "libs/Network/uip/Network.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/Config.h"
@@ -34,7 +35,6 @@
 #include "libs/USBDevice/USBMSD/SDCard.h"
 #include "libs/USBDevice/USBSerial/USBSerial.h"
 #include "libs/USBDevice/DFU.h"
-
 #include "libs/SDFAT.h"
 
 #include "libs/Watchdog.h"
@@ -108,6 +108,9 @@ int main() {
     kernel->add_module( new Player() );
     kernel->add_module( new Panel() );
     kernel->add_module( new Touchprobe() );
+#ifndef NONETWORK
+    kernel->add_module( new Network() );
+#endif
 
     // Create and initialize USB stuff
     u.init();

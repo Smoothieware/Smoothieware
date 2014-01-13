@@ -32,11 +32,11 @@ void Conveyor::on_module_loaded(){
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
 void Conveyor::on_idle(void* argument){
-    if (flush_blocks){
-        // Cleanly delete block 
+    while (flush_blocks > 0){
+        // Cleanly delete block
         Block* block = queue.get_tail_ref();
-        block->gcodes.clear(); 
-        queue.delete_first();
+        block->gcodes.clear();
+        queue.delete_tail();
         __disable_irq();
         flush_blocks--;
         __enable_irq();
@@ -47,23 +47,16 @@ void Conveyor::on_idle(void* argument){
 Block* Conveyor::new_block(){
 
     // Take the next untaken block on the queue ( the one after the last one )
-    Block* block = this->queue.get_tail_ref();
+    Block* block = this->queue.get_head_ref();
     // Then clean it up
-    if( block->conveyor == this ){
-        block->gcodes.clear();
-    }
+    block->clear();
+
+    block->initial_rate = -2;
+    block->final_rate = -2;
 
     // Create a new virgin Block in the queue
     this->queue.push_back(Block());
-    block = this->queue.get_ref( this->queue.size()-1 );
-    while( block == NULL ){
-        block = this->queue.get_ref( this->queue.size()-1 );
-    }
-    block->is_ready = false;
-    block->initial_rate = -2;
-    block->final_rate = -2;
-    block->conveyor = this;
-    
+
     return block;
 }
 
@@ -93,13 +86,13 @@ void Conveyor::pop_and_process_new_block(int debug){
     this->current_block = this->queue.get_ref(0);
 
     // Tell all modules about it
-    this->kernel->call_event(ON_BLOCK_BEGIN, this->current_block);
+    THEKERNEL->call_event(ON_BLOCK_BEGIN, this->current_block);
 
 	// In case the module was not taken
     if( this->current_block->times_taken < 1 ){
-        Block* temp = this->current_block; 
-        this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect 
-        temp->take(); 
+        Block* temp = this->current_block;
+        this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect
+        temp->take();
         temp->release();
     }
 
@@ -110,14 +103,14 @@ void Conveyor::pop_and_process_new_block(int debug){
 // Wait for the queue to have a given number of free blocks
 void Conveyor::wait_for_queue(int free_blocks){
     while( this->queue.size() >= this->queue.capacity()-free_blocks ){
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
     }
 }
 
 // Wait for the queue to be empty
 void Conveyor::wait_for_empty_queue(){
     while( this->queue.size() > 0){
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
     }
 }
 

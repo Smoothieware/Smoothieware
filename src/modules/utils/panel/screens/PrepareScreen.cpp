@@ -74,7 +74,7 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
 
 void PrepareScreen::preheat()
 {
-    double t = panel->get_default_hotend_temp();
+    float t = panel->get_default_hotend_temp();
     THEKERNEL->public_data->set_value( temperature_control_checksum, hotend_checksum, &t );
     t = panel->get_default_bed_temp();
     THEKERNEL->public_data->set_value( temperature_control_checksum, bed_checksum, &t );
@@ -82,7 +82,7 @@ void PrepareScreen::preheat()
 
 void PrepareScreen::cooldown()
 {
-    double t = 0;
+    float t = 0;
     THEKERNEL->public_data->set_value( temperature_control_checksum, hotend_checksum, &t );
     THEKERNEL->public_data->set_value( temperature_control_checksum, bed_checksum, &t );
 }

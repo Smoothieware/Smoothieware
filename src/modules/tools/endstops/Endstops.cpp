@@ -98,7 +98,7 @@ Endstops::Endstops()
 void Endstops::on_module_loaded()
 {
     // Do not do anything if not enabled
-    if ( this->kernel->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ) {
+    if ( THEKERNEL->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ) {
         return;
     }
 
@@ -106,9 +106,9 @@ void Endstops::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
 
     // Take StepperMotor objects from Robot and keep them here
-    this->steppers[0] = this->kernel->robot->alpha_stepper_motor;
-    this->steppers[1] = this->kernel->robot->beta_stepper_motor;
-    this->steppers[2] = this->kernel->robot->gamma_stepper_motor;
+    this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
+    this->steppers[1] = THEKERNEL->robot->beta_stepper_motor;
+    this->steppers[2] = THEKERNEL->robot->gamma_stepper_motor;
 
     // Settings
     this->on_config_reload(this);
@@ -118,67 +118,67 @@ void Endstops::on_module_loaded()
 // Get config
 void Endstops::on_config_reload(void *argument)
 {
-    this->pins[0].from_string(         this->kernel->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->pins[1].from_string(         this->kernel->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
-    this->pins[2].from_string(         this->kernel->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->pins[3].from_string(         this->kernel->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
-    this->pins[4].from_string(         this->kernel->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
-    this->pins[5].from_string(         this->kernel->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
+    this->pins[0].from_string(         THEKERNEL->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
+    this->pins[1].from_string(         THEKERNEL->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
+    this->pins[2].from_string(         THEKERNEL->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
+    this->pins[3].from_string(         THEKERNEL->config->value(alpha_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
+    this->pins[4].from_string(         THEKERNEL->config->value(beta_max_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
+    this->pins[5].from_string(         THEKERNEL->config->value(gamma_max_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
 
     // we need to know steps per mm for M206, also use them for all settings
-    this->steps_per_mm[0]           =  this->kernel->config->value(alpha_steps_per_mm_checksum         )->as_number();
-    this->steps_per_mm[1]           =  this->kernel->config->value(beta_steps_per_mm_checksum          )->as_number();
-    this->steps_per_mm[2]           =  this->kernel->config->value(gamma_steps_per_mm_checksum         )->as_number();
+    this->steps_per_mm[0]           =  THEKERNEL->config->value(alpha_steps_per_mm_checksum         )->as_number();
+    this->steps_per_mm[1]           =  THEKERNEL->config->value(beta_steps_per_mm_checksum          )->as_number();
+    this->steps_per_mm[2]           =  THEKERNEL->config->value(gamma_steps_per_mm_checksum         )->as_number();
 
-    this->fast_rates[0]             =  this->kernel->config->value(alpha_fast_homing_rate_checksum     )->by_default(4000 )->as_number();
-    this->fast_rates[1]             =  this->kernel->config->value(beta_fast_homing_rate_checksum      )->by_default(4000 )->as_number();
-    this->fast_rates[2]             =  this->kernel->config->value(gamma_fast_homing_rate_checksum     )->by_default(6400 )->as_number();
-    this->slow_rates[0]             =  this->kernel->config->value(alpha_slow_homing_rate_checksum     )->by_default(2000 )->as_number();
-    this->slow_rates[1]             =  this->kernel->config->value(beta_slow_homing_rate_checksum      )->by_default(2000 )->as_number();
-    this->slow_rates[2]             =  this->kernel->config->value(gamma_slow_homing_rate_checksum     )->by_default(3200 )->as_number();
-    this->retract_steps[0]          =  this->kernel->config->value(alpha_homing_retract_checksum       )->by_default(400  )->as_number();
-    this->retract_steps[1]          =  this->kernel->config->value(beta_homing_retract_checksum        )->by_default(400  )->as_number();
-    this->retract_steps[2]          =  this->kernel->config->value(gamma_homing_retract_checksum       )->by_default(1600 )->as_number();
+    this->fast_rates[0]             =  THEKERNEL->config->value(alpha_fast_homing_rate_checksum     )->by_default(4000 )->as_number();
+    this->fast_rates[1]             =  THEKERNEL->config->value(beta_fast_homing_rate_checksum      )->by_default(4000 )->as_number();
+    this->fast_rates[2]             =  THEKERNEL->config->value(gamma_fast_homing_rate_checksum     )->by_default(6400 )->as_number();
+    this->slow_rates[0]             =  THEKERNEL->config->value(alpha_slow_homing_rate_checksum     )->by_default(2000 )->as_number();
+    this->slow_rates[1]             =  THEKERNEL->config->value(beta_slow_homing_rate_checksum      )->by_default(2000 )->as_number();
+    this->slow_rates[2]             =  THEKERNEL->config->value(gamma_slow_homing_rate_checksum     )->by_default(3200 )->as_number();
+    this->retract_steps[0]          =  THEKERNEL->config->value(alpha_homing_retract_checksum       )->by_default(400  )->as_number();
+    this->retract_steps[1]          =  THEKERNEL->config->value(beta_homing_retract_checksum        )->by_default(400  )->as_number();
+    this->retract_steps[2]          =  THEKERNEL->config->value(gamma_homing_retract_checksum       )->by_default(1600 )->as_number();
 
     // newer mm based config values override the old ones, convert to steps/mm and steps, defaults to what was set in the older config settings above
-    this->fast_rates[0] =    this->kernel->config->value(alpha_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
-    this->fast_rates[1] =    this->kernel->config->value(beta_fast_homing_rate_mm_checksum  )->by_default(this->fast_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
-    this->fast_rates[2] =    this->kernel->config->value(gamma_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
-    this->slow_rates[0] =    this->kernel->config->value(alpha_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
-    this->slow_rates[1] =    this->kernel->config->value(beta_slow_homing_rate_mm_checksum  )->by_default(this->slow_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
-    this->slow_rates[2] =    this->kernel->config->value(gamma_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
-    this->retract_steps[0] = this->kernel->config->value(alpha_homing_retract_mm_checksum   )->by_default(this->retract_steps[0] / steps_per_mm[0])->as_number() * steps_per_mm[0];
-    this->retract_steps[1] = this->kernel->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1] / steps_per_mm[1])->as_number() * steps_per_mm[1];
-    this->retract_steps[2] = this->kernel->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2] / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->fast_rates[0] =    THEKERNEL->config->value(alpha_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->fast_rates[1] =    THEKERNEL->config->value(beta_fast_homing_rate_mm_checksum  )->by_default(this->fast_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->fast_rates[2] =    THEKERNEL->config->value(gamma_fast_homing_rate_mm_checksum )->by_default(this->fast_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->slow_rates[0] =    THEKERNEL->config->value(alpha_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[0]  / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->slow_rates[1] =    THEKERNEL->config->value(beta_slow_homing_rate_mm_checksum  )->by_default(this->slow_rates[1]  / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->slow_rates[2] =    THEKERNEL->config->value(gamma_slow_homing_rate_mm_checksum )->by_default(this->slow_rates[2]  / steps_per_mm[2])->as_number() * steps_per_mm[2];
+    this->retract_steps[0] = THEKERNEL->config->value(alpha_homing_retract_mm_checksum   )->by_default(this->retract_steps[0] / steps_per_mm[0])->as_number() * steps_per_mm[0];
+    this->retract_steps[1] = THEKERNEL->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1] / steps_per_mm[1])->as_number() * steps_per_mm[1];
+    this->retract_steps[2] = THEKERNEL->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2] / steps_per_mm[2])->as_number() * steps_per_mm[2];
 
-    this->debounce_count  = this->kernel->config->value(endstop_debounce_count_checksum    )->by_default(0)->as_number();
+    this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(0)->as_number();
 
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
-    int home_dir                    = get_checksum(this->kernel->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
+    int home_dir                    = get_checksum(THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[0]         = home_dir != home_to_max_checksum;
 
-    home_dir                        = get_checksum(this->kernel->config->value(beta_homing_direction_checksum)->by_default("home_to_min")->as_string());
+    home_dir                        = get_checksum(THEKERNEL->config->value(beta_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[1]         = home_dir != home_to_max_checksum;
 
-    home_dir                        = get_checksum(this->kernel->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string());
+    home_dir                        = get_checksum(THEKERNEL->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[2]         = home_dir != home_to_max_checksum;
 
-    this->homing_position[0]        =  this->home_direction[0] ? this->kernel->config->value(alpha_min_checksum)->by_default(0)->as_number() : this->kernel->config->value(alpha_max_checksum)->by_default(200)->as_number();
-    this->homing_position[1]        =  this->home_direction[1] ? this->kernel->config->value(beta_min_checksum )->by_default(0)->as_number() : this->kernel->config->value(beta_max_checksum )->by_default(200)->as_number();;
-    this->homing_position[2]        =  this->home_direction[2] ? this->kernel->config->value(gamma_min_checksum)->by_default(0)->as_number() : this->kernel->config->value(gamma_max_checksum)->by_default(200)->as_number();;
+    this->homing_position[0]        =  this->home_direction[0] ? THEKERNEL->config->value(alpha_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(alpha_max_checksum)->by_default(200)->as_number();
+    this->homing_position[1]        =  this->home_direction[1] ? THEKERNEL->config->value(beta_min_checksum )->by_default(0)->as_number() : THEKERNEL->config->value(beta_max_checksum )->by_default(200)->as_number();;
+    this->homing_position[2]        =  this->home_direction[2] ? THEKERNEL->config->value(gamma_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number();;
 
-    this->is_corexy                 =  this->kernel->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
-    this->is_delta                  =  this->kernel->config->value(delta_homing_checksum)->by_default(false)->as_bool();
+    this->is_corexy                 =  THEKERNEL->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
+    this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
 
     // endstop trim used by deltas to do soft adjusting, in mm, convert to steps, and negate depending on homing direction
     // eg on a delta homing to max, a negative trim value will move the carriage down, and a positive will move it up
     int dirx = (this->home_direction[0] ? 1 : -1);
     int diry = (this->home_direction[1] ? 1 : -1);
     int dirz = (this->home_direction[2] ? 1 : -1);
-    this->trim[0] = this->kernel->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[0] * dirx;
-    this->trim[1] = this->kernel->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * steps_per_mm[1] * diry;
-    this->trim[2] = this->kernel->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
+    this->trim[0] = THEKERNEL->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[0] * dirx;
+    this->trim[1] = THEKERNEL->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * steps_per_mm[1] * diry;
+    this->trim[2] = THEKERNEL->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
 }
 
 void Endstops::wait_for_homed(char axes_to_move)
@@ -187,7 +187,7 @@ void Endstops::wait_for_homed(char axes_to_move)
     unsigned int debounce[3] = {0, 0, 0};
     while (running) {
         running = false;
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
         for ( char c = 'X'; c <= 'Z'; c++ ) {
             if ( ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
                 if ( this->pins[c - 'X' + (this->home_direction[c - 'X'] ? 0 : 3)].get() ) {
@@ -237,7 +237,7 @@ void Endstops::do_homing(char axes_to_move)
     for ( char c = 'X'; c <= 'Z'; c++ ) {
         if (  ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
             while ( this->steppers[c - 'X']->moving ) {
-                this->kernel->call_event(ON_IDLE);
+                THEKERNEL->call_event(ON_IDLE);
             }
         }
     }
@@ -270,9 +270,9 @@ void Endstops::do_homing(char axes_to_move)
         // Wait for moves to be done
         for ( char c = 'X'; c <= 'Z'; c++ ) {
             if (  ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-                //this->kernel->streams->printf("axis %c \r\n", c );
+                //THEKERNEL->streams->printf("axis %c \r\n", c );
                 while ( this->steppers[c - 'X']->moving ) {
-                    this->kernel->call_event(ON_IDLE);
+                    THEKERNEL->call_event(ON_IDLE);
                 }
             }
         }
@@ -288,7 +288,7 @@ void Endstops::wait_for_homed_corexy(int axis)
     unsigned int debounce[3] = {0, 0, 0};
     while (running) {
         running = false;
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
         if ( this->pins[axis + (this->home_direction[axis] ? 0 : 3)].get() ) {
             if ( debounce[axis] < debounce_count ) {
                 debounce[axis] ++;
@@ -306,7 +306,7 @@ void Endstops::wait_for_homed_corexy(int axis)
     }
 }
 
-void Endstops::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate, double slow_rate, unsigned int retract_steps)
+void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps)
 {
     this->status = MOVING_TO_ORIGIN_FAST;
     this->steppers[X_AXIS]->set_speed(fast_rate);
@@ -326,7 +326,7 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, double fast_rate
 
     // wait until done
     while ( this->steppers[X_AXIS]->moving || this->steppers[Y_AXIS]->moving) {
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
     }
 
     // Start moving the axes to the origin slowly
@@ -375,7 +375,7 @@ void Endstops::do_homing_corexy(char axes_to_move)
         // wait until either X or Y hits the endstop
         bool running= true;
         while (running) {
-            this->kernel->call_event(ON_IDLE);
+            THEKERNEL->call_event(ON_IDLE);
             for(int m=X_AXIS;m<=Y_AXIS;m++) {
                 if(this->pins[m + (this->home_direction[m] ? 0 : 3)].get()) {
                     // turn off motor
@@ -416,7 +416,7 @@ void Endstops::on_gcode_received(void *argument)
             // G28 is received, we have homing to do
 
             // First wait for the queue to be empty
-            this->kernel->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_empty_queue();
 
             // Do we move select axes or all of them
             char axes_to_move = 0;
@@ -430,7 +430,7 @@ void Endstops::on_gcode_received(void *argument)
             }
 
             // Enable the motors
-            this->kernel->stepper->turn_enable_pins_on();
+            THEKERNEL->stepper->turn_enable_pins_on();
 
             // do the actual homing
             if (is_corexy)
@@ -441,7 +441,7 @@ void Endstops::on_gcode_received(void *argument)
             // Zero the ax(i/e)s position, add in the home offset
             for ( int c = 0; c <= 2; c++ ) {
                 if ( (axes_to_move >> c)  & 1 ) {
-                    this->kernel->robot->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
+                    THEKERNEL->robot->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
                 }
             }
         }
@@ -473,7 +473,7 @@ void Endstops::on_gcode_received(void *argument)
             case 503: // print settings
                 gcode->stream->printf(";Home offset (mm):\nM206 X%1.2f Y%1.2f Z%1.2f\n", home_offset[0], home_offset[1], home_offset[2]);
                 if (is_delta) {
-                    double mm[3];
+                    float mm[3];
                     trim2mm(mm);
                     gcode->stream->printf(";Trim (mm):\nM666 X%1.2f Y%1.2f Z%1.2f\n", mm[0], mm[1], mm[2]);
                     gcode->stream->printf(";Max Z\nM665 Z%1.2f\n", this->homing_position[2]);
@@ -483,7 +483,7 @@ void Endstops::on_gcode_received(void *argument)
 
             case 665: { // M665 - set max gamma/z height
                 gcode->mark_as_taken();
-                double gamma_max = this->homing_position[2];
+                float gamma_max = this->homing_position[2];
                 if (gcode->has_letter('Z')) {
                     this->homing_position[2] = gamma_max = gcode->get_value('Z');
                 }
@@ -494,7 +494,7 @@ void Endstops::on_gcode_received(void *argument)
 
 
             case 666: { // M666 - set trim for each axis in mm
-                double mm[3];
+                float mm[3];
                 trim2mm(mm);
 
                 if (gcode->has_letter('X')) mm[0] = gcode->get_value('X');
@@ -514,11 +514,34 @@ void Endstops::on_gcode_received(void *argument)
             }
             break;
 
+            // NOTE this is to test accuracy of lead screws etc.
+            case 910: { // M910 - move specific number of raw steps
+                int x= 0, y=0 , z= 0, f= 200*16;
+                if (gcode->has_letter('F')) f = gcode->get_value('F');
+                if (gcode->has_letter('X')) {
+                    x = gcode->get_value('X');
+                    this->steppers[X_AXIS]->set_speed(f);
+                    this->steppers[X_AXIS]->move(x<0, abs(x));
+                }
+                if (gcode->has_letter('Y')) {
+                    y = gcode->get_value('Y');
+                    this->steppers[Y_AXIS]->set_speed(f);
+                    this->steppers[Y_AXIS]->move(y<0, abs(y));
+                }
+                if (gcode->has_letter('Z')) {
+                    z = gcode->get_value('Z');
+                    this->steppers[Z_AXIS]->set_speed(f);
+                    this->steppers[Z_AXIS]->move(z<0, abs(z));
+                }
+                gcode->stream->printf("Moved X %d Y %d Z %d F %d steps\n", x, y, z, f);
+                gcode->mark_as_taken();
+                break;
+            }
         }
     }
 }
 
-void Endstops::trim2mm(double *mm)
+void Endstops::trim2mm(float *mm)
 {
     int dirx = (this->home_direction[0] ? 1 : -1);
     int diry = (this->home_direction[1] ? 1 : -1);

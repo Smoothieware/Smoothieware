@@ -16,21 +16,21 @@
 class RotatableCartesianSolution : public BaseSolution {
     public:
         RotatableCartesianSolution(Config* passed_config);
-        void millimeters_to_steps( double millimeters[], int steps[] );
-        void steps_to_millimeters( int steps[], double millimeters[] );
+        void millimeters_to_steps( float millimeters[], int steps[] );
+        void steps_to_millimeters( int steps[], float millimeters[] );
 
-        void set_steps_per_millimeter( double steps[] );
-        void get_steps_per_millimeter( double steps[] );
+        void set_steps_per_millimeter( float steps[] );
+        void get_steps_per_millimeter( float steps[] );
 
-        void rotate( double in[], double out[], double sin, double cos );
+        void rotate( float in[], float out[], float sin, float cos );
 
         Config* config;
-        double alpha_steps_per_mm;
-        double beta_steps_per_mm;
-        double gamma_steps_per_mm;
+        float alpha_steps_per_mm;
+        float beta_steps_per_mm;
+        float gamma_steps_per_mm;
 
-        double sin_alpha;
-        double cos_alpha;
+        float sin_alpha;
+        float cos_alpha;
 };
 
 

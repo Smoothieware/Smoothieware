@@ -65,9 +65,9 @@ class TemperatureControl : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
 
-        void set_desired_temperature(double desired_temperature);
-        double get_temperature();
-        double adc_value_to_temperature(int adc_value);
+        void set_desired_temperature(float desired_temperature);
+        float get_temperature();
+        float adc_value_to_temperature(int adc_value);
         uint32_t thermistor_read_tick(uint32_t dummy);
         int new_thermistor_reading();
 
@@ -77,32 +77,32 @@ class TemperatureControl : public Module {
         friend class PID_Autotuner;
 
     private:
-        void pid_process(double);
+        void pid_process(float);
 
-        double target_temperature;
+        float target_temperature;
 
-        double preset1;
-        double preset2;
+        float preset1;
+        float preset2;
 
         // Thermistor computation settings
-        double r0;
-        double t0;
+        float r0;
+        float t0;
         int r1;
         int r2;
-        double beta;
-        double j;
-        double k;
+        float beta;
+        float j;
+        float k;
 
 
         // PID runtime
-        double i_max;
+        float i_max;
 
         int o;
 
-        double last_reading;
+        float last_reading;
 
-        double acceleration_factor;
-        double readings_per_second;
+        float acceleration_factor;
+        float readings_per_second;
 
         RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
         uint16_t median_buffer[QUEUE_LEN];
@@ -123,17 +123,17 @@ class TemperatureControl : public Module {
         string designator;
 
 
-        void setPIDp(double p);
-        void setPIDi(double i);
-        void setPIDd(double d);
+        void setPIDp(float p);
+        void setPIDi(float i);
+        void setPIDd(float d);
 
-        double iTerm;
-        double lastInput;
+        float iTerm;
+        float lastInput;
         // PID settings
-        double p_factor;
-        double i_factor;
-        double d_factor;
-        double PIDdt;
+        float p_factor;
+        float i_factor;
+        float d_factor;
+        float PIDdt;
 };
 
 #endif

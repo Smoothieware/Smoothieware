@@ -40,7 +40,11 @@ private:
     void get_command(string parameters, StreamOutput *stream );
     void set_temp_command(string parameters, StreamOutput *stream );
     void mem_command(string parameters, StreamOutput *stream );
-    void test_command(string parameters, StreamOutput *stream );
+
+    void net_command( string parameters, StreamOutput *stream);
+
+    void load_command( string parameters, StreamOutput *stream);
+    void save_command( string parameters, StreamOutput *stream);
 
     bool parse_command(unsigned short cs, string args, StreamOutput *stream);
 

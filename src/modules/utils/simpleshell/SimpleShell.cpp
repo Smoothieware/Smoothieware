@@ -17,9 +17,12 @@
 #include "mri.h"
 #include "version.h"
 #include "PublicDataRequest.h"
+#include "FileStream.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
+#include "NetworkPublicAccess.h"
+#include "platform_memory.h"
 
 extern unsigned int g_maximumHeapAddress;
 
@@ -46,18 +49,21 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {CHECKSUM("dfu"),      &SimpleShell::dfu_command},
     {CHECKSUM("break"),    &SimpleShell::break_command},
     {CHECKSUM("help"),     &SimpleShell::help_command},
+    {CHECKSUM("?"),        &SimpleShell::help_command},
     {CHECKSUM("version"),  &SimpleShell::version_command},
     {CHECKSUM("mem"),      &SimpleShell::mem_command},
     {CHECKSUM("get"),      &SimpleShell::get_command},
     {CHECKSUM("set_temp"), &SimpleShell::set_temp_command},
-    {CHECKSUM("test"),     &SimpleShell::test_command},
+    {CHECKSUM("net"),      &SimpleShell::net_command},
+    {CHECKSUM("load"),     &SimpleShell::load_command},
+    {CHECKSUM("save"),     &SimpleShell::save_command},
 
     // unknown command
     {0, NULL}
 };
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
-static void heapWalk(StreamOutput *stream, bool verbose)
+static uint32_t heapWalk(StreamOutput *stream, bool verbose)
 {
     uint32_t chunkNumber = 1;
     // The __end__ linker symbol points to the beginning of the heap.
@@ -108,6 +114,7 @@ static void heapWalk(StreamOutput *stream, bool verbose)
         chunkNumber++;
     }
     stream->printf("Allocated: %lu, Free: %lu\r\n", usedSize, freeSize);
+    return freeSize;
 }
 
 
@@ -115,10 +122,10 @@ void SimpleShell::on_module_loaded()
 {
     this->current_path = "/";
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    this->reset_delay_secs = 0;
+	this->register_for_event(ON_GCODE_RECEIVED);
+	this->register_for_event(ON_SECOND_TICK);
 
-    this->register_for_event(ON_SECOND_TICK);
-    this->register_for_event(ON_GCODE_RECEIVED);
+    this->reset_delay_secs = 0;
 }
 
 void SimpleShell::on_second_tick(void *)
@@ -142,10 +149,26 @@ void SimpleShell::on_gcode_received(void *argument)
             gcode->stream->printf("Begin file list\r\n");
             ls_command("/sd", gcode->stream);
             gcode->stream->printf("End file list\r\n");
-        }
-        else if (gcode->m == 30) { // remove file
+
+        } else if (gcode->m == 30) { // remove file
             gcode->mark_as_taken();
             rm_command("/sd/" + args, gcode->stream);
+
+        }else if(gcode->m == 501) { // load config override
+            gcode->mark_as_taken();
+            if(args.empty()) {
+                load_command("/sd/config-override", gcode->stream);
+            }else{
+                load_command("/sd/config-override." + args, gcode->stream);
+            }
+
+        }else if(gcode->m == 504) { // save to specific config override file
+            gcode->mark_as_taken();
+            if(args.empty()) {
+                save_command("/sd/config-override", gcode->stream);
+            }else{
+                save_command("/sd/config-override." + args, gcode->stream);
+            }
         }
     }
 }
@@ -175,7 +198,6 @@ void SimpleShell::on_console_line_received( void *argument )
 
     //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
 
-    // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
     unsigned short check_sum = get_checksum( possible_command.substr(0, possible_command.find_first_of(" \r\n")) ); // todo: put this method somewhere more convenient
 
     // find command and execute it
@@ -246,7 +268,6 @@ void SimpleShell::pwd_command( string parameters, StreamOutput *stream )
 // Output the contents of a file, first parameter is the filename, second is the limit ( in number of lines to output )
 void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 {
-
     // Get parameters ( filename and line limit )
     string filename          = this->absolute_from_relative(shift_parameter( parameters ));
     string limit_paramater   = shift_parameter( parameters );
@@ -285,6 +306,58 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 
 }
 
+// loads the specified config-override file
+void SimpleShell::load_command( string parameters, StreamOutput *stream )
+{
+    // Get parameters ( filename )
+    string filename = this->absolute_from_relative(parameters);
+    if(filename == "/") {
+        filename = THEKERNEL->config_override_filename();
+    }
+
+    FILE *fp= fopen(filename.c_str(), "r");
+    if(fp != NULL) {
+        char buf[132];
+        stream->printf("Loading config override file: %s...\n", filename.c_str());
+        while(fgets(buf, sizeof buf, fp) != NULL) {
+            stream->printf("  %s", buf);
+            if(buf[0] == ';') continue; // skip the comments
+            struct SerialMessage message= {&(StreamOutput::NullStream), buf};
+            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+        }
+        stream->printf("config override file executed\n");
+        fclose(fp);
+
+    }else{
+        stream->printf("File not found: %s\n", filename.c_str());
+    }
+}
+
+// saves the specified config-override file
+void SimpleShell::save_command( string parameters, StreamOutput *stream )
+{
+    // Get parameters ( filename )
+    string filename = this->absolute_from_relative(parameters);
+    if(filename == "/") {
+        filename = THEKERNEL->config_override_filename();
+    }
+
+    // replace stream with one that writes to config-override file
+    FileStream *gs = new FileStream(filename.c_str());
+    if(!gs->is_open()) {
+        stream->printf("Unable to open File %s for write\n", filename.c_str());
+        return;
+    }
+
+    // issue a M500 which will store values in the file stream
+    Gcode *gcode = new Gcode("M500", gs);
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
+    delete gs;
+    delete gcode;
+
+    stream->printf("Settings Stored to %s\r\n", filename.c_str());
+}
+
 // show free memory
 void SimpleShell::mem_command( string parameters, StreamOutput *stream)
 {
@@ -293,7 +366,15 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
     unsigned long m = g_maximumHeapAddress - heap;
     stream->printf("Unused Heap: %lu bytes\r\n", m);
 
-    heapWalk(stream, verbose);
+    uint32_t f= heapWalk(stream, verbose);
+    stream->printf("Total Free RAM: %lu bytes\r\n", m + f);
+
+    stream->printf("Free AHB0: %lu, AHB1: %lu\r\n", AHB0.free(), AHB1.free());
+    if (verbose)
+    {
+        AHB0.debug(stream);
+        AHB1.debug(stream);
+    }
 }
 
 static uint32_t getDeviceType()
@@ -312,6 +393,21 @@ static uint32_t getDeviceType()
     __enable_irq();
 
     return result[1];
+}
+
+// get network config
+void SimpleShell::net_command( string parameters, StreamOutput *stream)
+{
+    void *returned_data;
+    bool ok= THEKERNEL->public_data->get_value( network_checksum, get_ipconfig_checksum, &returned_data );
+    if(ok) {
+        char *str= (char *)returned_data;
+        stream->printf("%s\r\n", str);
+        free(str);
+
+    }else{
+        stream->printf("No network detected\n");
+    }
 }
 
 // print out build version
@@ -352,7 +448,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     if (what == get_temp_command_checksum) {
         string type = shift_parameter( parameters );
-        bool ok = this->kernel->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
+        bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
 
         if (ok) {
             struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
@@ -362,10 +458,10 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
     } else if (what == get_pos_command_checksum) {
-        bool ok = this->kernel->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+        bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
 
         if (ok) {
-            double *pos = static_cast<double *>(returned_data);
+            float *pos = static_cast<float *>(returned_data);
             stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
 
         } else {
@@ -379,66 +475,14 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 {
     string type = shift_parameter( parameters );
     string temp = shift_parameter( parameters );
-    double t = temp.empty() ? 0.0 : strtod(temp.c_str(), NULL);
-    bool ok = this->kernel->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
+    float t = temp.empty() ? 0.0 : strtof(temp.c_str(), NULL);
+    bool ok = THEKERNEL->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
 
     if (ok) {
         stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
     } else {
         stream->printf("%s is not a known temperature device\r\n", type.c_str());
     }
-}
-
-#if 0
-#include "mbed.h"
-#include "BaseSolution.h"
-#include "RostockSolution.h"
-#include "JohannKosselSolution.h"
-#endif
-void SimpleShell::test_command( string parameters, StreamOutput *stream)
-{
-#if 0
-    double millimeters[3]= {100.0, 200.0, 300.0};
-    int steps[3];
-    BaseSolution* r= new RostockSolution(THEKERNEL->config);
-    BaseSolution* k= new JohannKosselSolution(THEKERNEL->config);
-    Timer timer;
-    timer.start();
-    for(int i=0;i<10;i++) r->millimeters_to_steps(millimeters, steps);
-    timer.stop();
-    float tr= timer.read();
-    timer.reset();
-    timer.start();
-    for(int i=0;i<10;i++) k->millimeters_to_steps(millimeters, steps);
-    timer.stop();
-    float tk= timer.read();
-    stream->printf("time RostockSolution: %f, time JohannKosselSolution: %f\n", tr, tk);
-    delete kr;
-    delete tk;
-#endif
-#if 0
-// time idle loop
-#include "mbed.h"
-static int tmin = 1000000;
-static int tmax = 0;
-void time_idle()
-void time_idle()
-{
-    Timer timer;
-    timer.start();
-    int begin, end;
-    for (int i = 0; i < 1000; ++i) {
-        begin = timer.read_us();
-        THEKERNEL->call_event(ON_IDLE);
-        end = timer.read_us();
-        int d = end - begin;
-        if (d < tmin) tmin = d;
-        if (d > tmax) tmax = d;
-    }
-}
-static Timer timer;
-static int lastt = 0;
-#endif
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
@@ -463,5 +507,8 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("get pos\r\n");
+    stream->printf("net\r\n");
+    stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
+    stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
 }
 

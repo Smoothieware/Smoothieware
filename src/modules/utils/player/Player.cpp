@@ -27,14 +27,14 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_SET_PUBLIC_DATA);
     this->register_for_event(ON_GCODE_RECEIVED);
 
-    this->on_boot_gcode = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
-    this->on_boot_gcode_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
+    this->on_boot_gcode = THEKERNEL->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
+    this->on_boot_gcode_enable = THEKERNEL->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs= 0;
     this->reply_stream= NULL;
 }
 
 void Player::on_second_tick(void*) {
-     if (!kernel->pauser->paused()) this->elapsed_secs++;
+     if (!THEKERNEL->pauser->paused()) this->elapsed_secs++;
 }
 
 void Player::on_gcode_received(void *argument) {
@@ -80,8 +80,10 @@ void Player::on_gcode_received(void *argument) {
             gcode->mark_as_taken();
             if (this->current_file_handler != NULL) {
                 this->playing_file = true;
-                // FIXME this is a problem if the stream goes away before the file has finished
-                this->reply_stream= gcode->stream;
+                // this would be a problem if the stream goes away before the file has finished,
+                // so we attach it to the kernel stream, however network connections from pronterface
+                // do not connect to the kernel streams so won't see this FIXME
+                this->reply_stream= THEKERNEL->streams;
             }
 
         }else if (gcode->m == 25) { // pause print
@@ -186,7 +188,8 @@ void Player::play_command( string parameters, StreamOutput* stream ){
     if( options.find_first_of("Vv") == string::npos ){
         this->current_stream = &(StreamOutput::NullStream);
     }else{
-        this->current_stream = stream;
+        // we send to the kernels stream as it cannot go away
+        this->current_stream = THEKERNEL->streams;
     }
 
     // get size of file
@@ -247,6 +250,7 @@ void Player::abort_command( string parameters, StreamOutput* stream ){
     played_cnt= 0;
     file_size= 0;
     this->filename= "";
+    this->current_stream= NULL;
     fclose(current_file_handler);
     stream->printf("Aborted playing file\r\n");
 }
@@ -276,29 +280,42 @@ void Player::on_main_loop(void* argument){
     if( !this->booted ) {
         this->booted = true;
         if( this->on_boot_gcode_enable ){
-            this->play_command(this->on_boot_gcode, this->kernel->serial);
+            this->play_command(this->on_boot_gcode, THEKERNEL->serial);
         }else{
-            //this->kernel->serial->printf("On boot gcode disabled! skipping...\n");
+            //THEKERNEL->serial->printf("On boot gcode disabled! skipping...\n");
         }
     }
 
     if( this->playing_file ){
         string buffer;
+        bool discard= false;
         int c;
         buffer.reserve(20);
         // Print each line of the file
         while ((c = fgetc(this->current_file_handler)) != EOF){
             if (c == '\n'){
+                if(discard) {
+                    // we hit a long line and discarded it
+                    discard= false;
+                    buffer.clear();
+                    this->current_stream->printf("Warning: Discarded long line\n");
+                    return;
+                }
                 this->current_stream->printf("%s\n", buffer.c_str());
                 struct SerialMessage message;
                 message.message = buffer;
-                message.stream = this->current_stream;
+                message.stream = &(StreamOutput::NullStream); // we don't really need to see the ok
                 // wait for the queue to have enough room that a serial message could still be received before sending
-                this->kernel->conveyor->wait_for_queue(2);
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+                THEKERNEL->conveyor->wait_for_queue(2);
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 played_cnt += buffer.size();
                 buffer.clear();
                 return;
+
+            }else if(buffer.size() > 128) {
+                // discard rest of line
+                discard= true;
+
             }else{
                 buffer += c;
             }
@@ -309,6 +326,7 @@ void Player::on_main_loop(void* argument){
         played_cnt= 0;
         file_size= 0;
         fclose(this->current_file_handler);
+        this->current_stream= NULL;
 
         if(this->reply_stream != NULL) {
             // if we were printing from an M command from pronterface we need to send this back
@@ -373,8 +391,8 @@ void Player::on_main_loop(void* argument){
                 message.message = buffer;
                 message.stream = this->current_stream;
                 // wait for the queue to have enough room that a serial message could still be received before sending
-                this->kernel->conveyor->wait_for_queue(2);
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+                THEKERNEL->conveyor->wait_for_queue(2);
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 buffer.clear();
                 return;
             }else{

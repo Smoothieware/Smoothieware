@@ -39,13 +39,13 @@ static int isDebugMonitorUsingUart0(){
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
     instance= this; // setup the Singleton instance of the kernel
-    
+
     // Config first, because we need the baud_rate setting before we start serial
     this->config         = new Config();
 
     // Serial second, because the other modules might want to say something
     this->streams        = new StreamOutputPool();
-    
+
     // Configure UART depending on MRI config
     // If MRI is using UART0, we want to use UART1, otherwise, we want to use UART0. This makes it easy to use only one UART for both debug and actual commands.
     NVIC_SetPriorityGrouping(0);
@@ -89,7 +89,7 @@ Kernel::Kernel(){
 
     // Configure the step ticker
     int base_stepping_frequency          =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
-    double microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
+    float microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
 
     // Configure the step ticker ( TODO : shouldnt this go into stepticker's code ? )
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
@@ -109,7 +109,6 @@ Kernel::Kernel(){
 
 // Add a module to Kernel. We don't actually hold a list of modules, we just tell it where Kernel is
 void Kernel::add_module(Module* module){
-    module->kernel = this;
     module->on_module_loaded();
 }
 
