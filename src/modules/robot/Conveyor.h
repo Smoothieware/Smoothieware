@@ -10,7 +10,6 @@
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "HeapRing.h"
 
 using namespace std;
 #include <string>
@@ -36,14 +35,12 @@ public:
     void append_gcode(Gcode*);
 
     // right now block queue size can only be changed at compile time by changing the value below
-    typedef HeapRing<Block> Queue_t;
-
-    Queue_t queue;  // Queue of Blocks
-
+    typedef RingBuffer<Block, 32> BlockQueue_t;
+    BlockQueue_t queue;  // Queue of Blocks
     Block *current_block;
     bool looking_for_new_block;
 
-    volatile unsigned int gc_pending;
+    volatile int flush_blocks;
 };
 
 #endif // CONVEYOR_H

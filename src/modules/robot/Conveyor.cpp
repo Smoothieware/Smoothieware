@@ -23,8 +23,7 @@ using namespace std;
 Conveyor::Conveyor(){
     this->current_block = NULL;
     this->looking_for_new_block = false;
-    queue.resize(32);
-    gc_pending = queue.tail_i;
+    flush_blocks = 0;
 }
 
 void Conveyor::on_module_loaded(){
@@ -33,29 +32,31 @@ void Conveyor::on_module_loaded(){
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
 void Conveyor::on_idle(void* argument){
-    while (queue.tail_i != gc_pending)
-    {
+    while (flush_blocks > 0){
         // Cleanly delete block
-        Block* block = queue.tail_ref();
+        Block* block = queue.get_tail_ref();
         block->gcodes.clear();
-        queue.consume_tail();
+        queue.delete_tail();
+        __disable_irq();
+        flush_blocks--;
+        __enable_irq();
     }
 }
 
 void Conveyor::append_gcode(Gcode* gcode)
 {
     gcode->mark_as_taken();
-    if (queue.is_empty())
+    if (queue.size() == 0)
         THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode);
     else
-        queue.head_ref()->append_gcode(gcode);
+        queue.get_ref(queue.size() - 1)->append_gcode(gcode);
 }
 
 // Append a block to the list
 Block* Conveyor::new_block(){
 
     // Take the next untaken block on the queue ( the one after the last one )
-    Block* block = this->queue.head_ref();
+    Block* block = this->queue.get_head_ref();
     // Then clean it up
     block->clear();
 
@@ -63,7 +64,7 @@ Block* Conveyor::new_block(){
     block->final_rate = -2;
 
     // Create a new virgin Block in the queue
-    queue.produce_head();
+    this->queue.push_back(Block());
 
     return block;
 }
@@ -83,7 +84,7 @@ void Conveyor::pop_and_process_new_block(int debug){
     if( this->current_block != NULL ){ this->looking_for_new_block = false; return; }
 
     // Return if queue is empty
-    if( queue.is_empty() ){
+    if( this->queue.size() == 0 ){
         this->current_block = NULL;
         // TODO : ON_QUEUE_EMPTY event
         this->looking_for_new_block = false;
@@ -91,7 +92,7 @@ void Conveyor::pop_and_process_new_block(int debug){
     }
 
     // Get a new block
-    this->current_block = this->queue.tail_ref();
+    this->current_block = this->queue.get_ref(0);
 
     // Tell all modules about it
     THEKERNEL->call_event(ON_BLOCK_BEGIN, this->current_block);
@@ -109,26 +110,21 @@ void Conveyor::pop_and_process_new_block(int debug){
 }
 
 // Wait for the queue to have a given number of free blocks
-void Conveyor::wait_for_queue(int free_blocks)
-{
-    while (queue.is_full())
+void Conveyor::wait_for_queue(int free_blocks){
+    while( this->queue.size() >= this->queue.capacity()-free_blocks ){
         THEKERNEL->call_event(ON_IDLE);
+    }
 }
 
 // Wait for the queue to be empty
-void Conveyor::wait_for_empty_queue()
-{
-    while (!queue.is_empty())
+void Conveyor::wait_for_empty_queue(){
+    while( this->queue.size() > 0){
         THEKERNEL->call_event(ON_IDLE);
+    }
 }
 
 // Return true if the queue is empty
-bool Conveyor::is_queue_empty()
-{
-    return queue.is_empty();
+bool Conveyor::is_queue_empty(){
+    return (this->queue.size() == 0);
 }
 
-
-// feels hacky, but apparently the way to do it
-#include "HeapRing.cpp"
-template class HeapRing<Block>;
