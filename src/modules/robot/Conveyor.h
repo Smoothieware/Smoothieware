@@ -10,9 +10,12 @@
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+
 using namespace std;
 #include <string>
 #include <vector>
+
+class Gcode;
 
 class Conveyor : public Module
 {
@@ -28,6 +31,8 @@ public:
     void wait_for_queue(int free_blocks);
     void wait_for_empty_queue();
     bool is_queue_empty();
+
+    void append_gcode(Gcode*);
 
     // right now block queue size can only be changed at compile time by changing the value below
     typedef RingBuffer<Block, 32> BlockQueue_t;

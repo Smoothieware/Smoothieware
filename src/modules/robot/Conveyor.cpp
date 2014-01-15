@@ -43,6 +43,15 @@ void Conveyor::on_idle(void* argument){
     }
 }
 
+void Conveyor::append_gcode(Gcode* gcode)
+{
+    gcode->mark_as_taken();
+    if (queue.size() == 0)
+        THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode);
+    else
+        queue.get_ref(queue.size() - 1)->append_gcode(gcode);
+}
+
 // Append a block to the list
 Block* Conveyor::new_block(){
 
