@@ -235,22 +235,25 @@ void Block::release()
         // We would normally delete this block directly here, but we can't, because this is interrupt context, no crazy memory stuff here
         // So instead we increment a counter, and it will be deleted in main loop context
         Conveyor *conveyor = THEKERNEL->conveyor;
-        if( conveyor->queue.size() > conveyor->flush_blocks ) {
-            conveyor->flush_blocks++;
-        }
+
+        unsigned int n = conveyor->queue.next(conveyor->gc_pending);
+        if (n != conveyor->queue.head_i)
+            conveyor->gc_pending = n;
 
         // We don't look for the next block to execute if the conveyor is already doing that itself
         if( conveyor->looking_for_new_block == false ) {
 
             // If there are still blocks to execute
-            if( conveyor->queue.size() > conveyor->flush_blocks ) {
-                Block *candidate =  conveyor->queue.get_ref(conveyor->flush_blocks);
+            if (conveyor->gc_pending != conveyor->queue.head_i)
+            {
+                Block *candidate =  conveyor->queue.item_ref(conveyor->gc_pending);
 
                 // We only execute blocks that are ready ( their math is done )
                 if( candidate->is_ready ) {
 
                     // Execute this candidate
                     conveyor->current_block = candidate;
+                    candidate->recalculate_flag = false; // make sure planner doesn't alter this block while we're running it
                     THEKERNEL->call_event(ON_BLOCK_BEGIN, conveyor->current_block);
 
                     // If no module took this block, release it ourselves, as nothing else will do it otherwise

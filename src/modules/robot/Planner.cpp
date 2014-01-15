@@ -109,7 +109,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     // nonlinearities of both the junction angle and junction velocity.
     float vmax_junction = minimum_planner_speed; // Set default max junction speed
 
-    if (THEKERNEL->conveyor->queue.size() > 1 && (this->previous_nominal_speed > 0.0F)) {
+    if ((THEKERNEL->conveyor->queue.is_empty() == false) && (this->previous_nominal_speed > 0.0F)) {
       // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
       // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
       float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
@@ -179,18 +179,18 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
-    Conveyor::BlockQueue_t *queue = &THEKERNEL->conveyor->queue;
+    Conveyor::Queue_t *queue = &THEKERNEL->conveyor->queue;
 
-    int newest = queue->prev_block_index(queue->head);
-    int oldest = queue->tail;
+    unsigned int newest = queue->prev(queue->head_i);
+    unsigned int oldest = queue->tail_i;
 
-    int block_index = newest;
+    unsigned int block_index = newest;
 
     Block* previous;
     Block* current;
     Block* next;
 
-    current = &queue->buffer[block_index];
+    current = queue->item_ref(block_index);
     current->recalculate_flag = true;
 
     // if there's only one block in the queue, we fall through both while loops and this ends up in current
@@ -199,10 +199,10 @@ void Planner::recalculate() {
 
     while ((block_index != oldest) && (current->recalculate_flag))
     {
-        block_index = queue->prev_block_index(block_index);
+        block_index = queue->prev(block_index);
 
         next = current;
-        current = &queue->buffer[block_index];
+        current = queue->item_ref(block_index);
 
         current->recalculate_flag = false;
 
@@ -228,9 +228,9 @@ void Planner::recalculate() {
             previous->recalculate_flag = false;
         }
 
-        block_index = queue->next_block_index(block_index);
+        block_index = queue->next(block_index);
         previous = current;
-        current = &queue->buffer[block_index];
+        current = queue->item_ref(block_index);
     }
 
     // Last/newest block in buffer. Exit speed is set with minimum_planner_speed. Always recalculated.
@@ -239,11 +239,13 @@ void Planner::recalculate() {
 }
 
 // Debug function
-void Planner::dump_queue(){
-    for( int index = 0; index <= THEKERNEL->conveyor->queue.size()-1; index++ ){
+void Planner::dump_queue()
+{
+    for (unsigned int index = THEKERNEL->conveyor->queue.tail_i, i = 0; index != THEKERNEL->conveyor->queue.head_i; index = THEKERNEL->conveyor->queue.next(index), i++ )
+    {
        //if( index > 10 && index < THEKERNEL->conveyor->queue.size()-10 ){ continue; }
-       THEKERNEL->streams->printf("block %03d > ", index);
-       THEKERNEL->conveyor->queue.get_ref(index)->debug();
+       THEKERNEL->streams->printf("block %03d > ", i);
+       THEKERNEL->conveyor->queue.item_ref(index)->debug();
     }
 }
 
