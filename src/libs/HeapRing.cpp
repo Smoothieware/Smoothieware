@@ -153,7 +153,8 @@ template<class kind> bool HeapRing<kind>::resize(unsigned int length)
 
                 __enable_irq();
 
-                free(ring);
+                if (ring)
+                    delete [] ring;
                 ring = NULL;
 
                 return true;
