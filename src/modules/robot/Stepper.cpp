@@ -87,13 +87,7 @@ void Stepper::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Attach gcodes to the last block for on_gcode_execute
     if( gcode->has_m && (gcode->m == 84 || gcode->m == 17 || gcode->m == 18 )) {
-        gcode->mark_as_taken();
-        if( THEKERNEL->conveyor->queue.size() == 0 ){
-            THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
-        }else{
-            Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
-            block->append_gcode(gcode);
-        }
+        THEKERNEL->conveyor->append_gcode(gcode);
     }
 }
 

@@ -360,13 +360,7 @@ void Robot::on_gcode_received(void * argument){
 void Robot::distance_in_gcode_is_known(Gcode* gcode){
 
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
-    if( THEKERNEL->conveyor->queue.size() == 0 ){
-        THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
-    }else{
-        Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
-        block->append_gcode(gcode);
-    }
-
+    THEKERNEL->conveyor->append_gcode(gcode);
 }
 
 // Reset the position for all axes ( used in homing and G92 stuff )

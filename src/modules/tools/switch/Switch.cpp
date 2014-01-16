@@ -66,15 +66,10 @@ void Switch::on_config_reload(void* argument){
 void Switch::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
-    if( ( input_on_command.length() > 0 && ! gcode->command.compare(0, input_on_command.length(), input_on_command) )
-        || ( input_off_command.length() > 0 && ! gcode->command.compare(0, input_off_command.length(), input_off_command) ) ){
-        gcode->mark_as_taken();
-        if( THEKERNEL->conveyor->queue.size() == 0 ){
-            THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
-        }else{
-            Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
-            block->append_gcode(gcode);
-        }
+    if (( input_on_command.length() > 0 && ! gcode->command.compare(0, input_on_command.length(), input_on_command) ) ||
+        ( input_off_command.length() > 0 && ! gcode->command.compare(0, input_off_command.length(), input_off_command) ) )
+    {
+        THEKERNEL->conveyor->append_gcode(gcode);
     }
 }
 
