@@ -163,24 +163,12 @@ void Extruder::on_gcode_received(void *argument){
             // This is a solo move, we add an empty block to the queue
             //If the queue is empty, execute immediatly, otherwise attach to the last added block
             THEKERNEL->conveyor->append_gcode(gcode);
-            this->append_empty_block();
+            THEKERNEL->conveyor->queue_head_block();
         }
     }else{
         // This is for follow move
 
     }
-}
-
-// Append an empty block in the queue so that solo mode can pick it up
-Block* Extruder::append_empty_block(){
-    THEKERNEL->conveyor->wait_for_queue(2);
-    Block* block = THEKERNEL->conveyor->new_block();
-    // block cleared in new_block and everything set to default values (usually 0)
-
-    // feed the block into the system. Will execute it if we are at the beginning of the queue
-    block->ready();
-
-    return block;
 }
 
 // Compute extrusion speed based on parameters and gcode distance of travel

@@ -54,7 +54,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     THEKERNEL->conveyor->wait_for_queue(2);
 
     // Create ( recycle ) a new block
-    Block* block = THEKERNEL->conveyor->new_block();
+    Block* block = THEKERNEL->conveyor->queue.head_ref();
 
     // Direction bits
     block->direction_bits = 0;
@@ -144,7 +144,9 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     // the maximum junction speed and may always be ignored for any speed reduction checks.
     if (block->nominal_speed <= v_allowable) { block->nominal_length_flag = true; }
     else { block->nominal_length_flag = false; }
-    block->recalculate_flag = true; // Always calculate trapezoid for new block
+
+    // Always calculate trapezoid for new block
+    block->recalculate_flag = true;
 
     // Update previous path unit_vector and nominal speed
     memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
@@ -158,6 +160,8 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
 
     // The block can now be used
     block->ready();
+
+    THEKERNEL->conveyor->queue_head_block();
 }
 
 
@@ -181,7 +185,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
 void Planner::recalculate() {
     Conveyor::Queue_t *queue = &THEKERNEL->conveyor->queue;
 
-    unsigned int newest = queue->prev(queue->head_i);
+    unsigned int newest = queue->head_i; // head has been previously prepared in append_block above
     unsigned int oldest = queue->tail_i;
 
     unsigned int block_index = newest;
@@ -191,7 +195,6 @@ void Planner::recalculate() {
     Block* next;
 
     current = queue->item_ref(block_index);
-    current->recalculate_flag = true;
 
     // if there's only one block in the queue, we fall through both while loops and this ends up in current
     // so we must set it here, or perform conditionals further down. this is easier
@@ -199,53 +202,55 @@ void Planner::recalculate() {
 
     while ((block_index != oldest) && (current->recalculate_flag))
     {
-        block_index = queue->prev(block_index);
-
         next = current;
+        block_index = queue->prev(block_index);
         current = queue->item_ref(block_index);
-
-        current->recalculate_flag = false;
 
         current->reverse_pass(next);
     }
 
     previous = current;
-    current = next;
+    block_index = queue->next(block_index);
+    current = queue->item_ref(block_index);
 
+    previous->calculate_trapezoid( previous->entry_speed/previous->nominal_speed, current->entry_speed/previous->nominal_speed );
+    
     // Recalculates the trapezoid speed profiles for flagged blocks in the plan according to the
     // entry_speed for each junction and the entry_speed of the next junction. Must be called by
     // planner_recalculate() after updating the blocks. Any recalulate flagged junction will
     // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
     // to exit speed and entry speed of one another.
-    while (block_index != newest)
+    do
     {
         current->forward_pass(previous);
 
-        // Recalculate if current block entry or exit junction speed has changed.
-        if (previous->recalculate_flag || current->recalculate_flag )
+        if (block_index != newest)
         {
-            previous->calculate_trapezoid( previous->entry_speed/previous->nominal_speed, current->entry_speed/previous->nominal_speed );
-            previous->recalculate_flag = false;
-        }
+            current->calculate_trapezoid( previous->entry_speed/previous->nominal_speed, current->entry_speed/previous->nominal_speed );
 
-        block_index = queue->next(block_index);
-        previous = current;
-        current = queue->item_ref(block_index);
-    }
+            previous = current;
+            block_index = queue->next(block_index);
+            current = queue->item_ref(block_index);
+        }
+    } while (block_index != newest);
 
     // Last/newest block in buffer. Exit speed is set with minimum_planner_speed. Always recalculated.
     current->calculate_trapezoid( current->entry_speed/current->nominal_speed, minimum_planner_speed/current->nominal_speed );
-    current->recalculate_flag = false;
+
+    THEKERNEL->serial->printf("Queue: (head:%u tail:%u)\n", queue->head_i, queue->tail_i);
+    dump_queue();
 }
 
 // Debug function
 void Planner::dump_queue()
 {
-    for (unsigned int index = THEKERNEL->conveyor->queue.tail_i, i = 0; index != THEKERNEL->conveyor->queue.head_i; index = THEKERNEL->conveyor->queue.next(index), i++ )
+    for (unsigned int index = THEKERNEL->conveyor->queue.tail_i, i = 0; true; index = THEKERNEL->conveyor->queue.next(index), i++ )
     {
-       //if( index > 10 && index < THEKERNEL->conveyor->queue.size()-10 ){ continue; }
        THEKERNEL->streams->printf("block %03d > ", i);
        THEKERNEL->conveyor->queue.item_ref(index)->debug();
+
+       if (index == THEKERNEL->conveyor->queue.head_i)
+           break;
     }
 }
 

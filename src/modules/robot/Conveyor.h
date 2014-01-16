@@ -24,24 +24,27 @@ public:
     Conveyor();
 
     void on_module_loaded(void);
-    void on_idle(void *);
+    void on_idle(void*);
+    void on_block_end(void*);
 
-    Block *new_block();
-    void new_block_added();
-    void pop_and_process_new_block(int debug);
+    void notify_block_finished(Block*);
+
     void wait_for_queue(int free_blocks);
     void wait_for_empty_queue();
-    bool is_queue_empty();
+
+    void ensure_running(void);
+
+    bool is_queue_empty(void);
 
     void append_gcode(Gcode*);
+    void queue_head_block(void);
 
     // right now block queue size can only be changed at compile time by changing the value below
     typedef HeapRing<Block> Queue_t;
 
     Queue_t queue;  // Queue of Blocks
 
-    Block *current_block;
-    bool looking_for_new_block;
+    volatile bool running;
 
     volatile unsigned int gc_pending;
 };

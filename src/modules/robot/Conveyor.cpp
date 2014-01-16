@@ -21,14 +21,14 @@ using namespace std;
 // The conveyor holds the queue of blocks, takes care of creating them, and starting the executing chain of blocks
 
 Conveyor::Conveyor(){
-    this->current_block = NULL;
-    this->looking_for_new_block = false;
     queue.resize(32);
     gc_pending = queue.tail_i;
+    running = false;
 }
 
 void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
+    register_for_event(ON_BLOCK_END);
 }
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
@@ -38,6 +38,8 @@ void Conveyor::on_idle(void* argument){
         // Cleanly delete block
         Block* block = queue.tail_ref();
         block->gcodes.clear();
+        THEKERNEL->serial->printf("Popped: ");
+        block->debug();
         queue.consume_tail();
     }
 }
@@ -45,81 +47,48 @@ void Conveyor::on_idle(void* argument){
 void Conveyor::append_gcode(Gcode* gcode)
 {
     gcode->mark_as_taken();
-    if (queue.is_empty())
+    if (running == false)
         THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode);
     else
         queue.head_ref()->append_gcode(gcode);
 }
 
-// Append a block to the list
-Block* Conveyor::new_block(){
-
-    // Take the next untaken block on the queue ( the one after the last one )
-    Block* block = this->queue.head_ref();
-    // Then clean it up
-    block->clear();
-
-    block->initial_rate = -2;
-    block->final_rate = -2;
-
-    // Create a new virgin Block in the queue
-    queue.produce_head();
-
-    return block;
-}
-
-// Used by blocks to signal when they are ready to be used by the system
-void Conveyor::new_block_added(){
-    if( this->current_block == NULL ){
-        this->pop_and_process_new_block(33);
-    }
-}
-
 // Process a new block in the queue
-void Conveyor::pop_and_process_new_block(int debug){
-    if( this->looking_for_new_block ){ return; }
-    this->looking_for_new_block = true;
-
-    if( this->current_block != NULL ){ this->looking_for_new_block = false; return; }
+void Conveyor::on_block_end(void* block)
+{
+    gc_pending = queue.next(gc_pending);
 
     // Return if queue is empty
-    if( queue.is_empty() ){
-        this->current_block = NULL;
-        // TODO : ON_QUEUE_EMPTY event
-        this->looking_for_new_block = false;
+    if (gc_pending == queue.head_i)
+    {
+        running = false;
         return;
     }
 
     // Get a new block
-    this->current_block = this->queue.tail_ref();
+    Block* next = this->queue.item_ref(gc_pending);
 
-    // Tell all modules about it
-    THEKERNEL->call_event(ON_BLOCK_BEGIN, this->current_block);
-
-	// In case the module was not taken
-    if( this->current_block->times_taken < 1 ){
-        Block* temp = this->current_block;
-        this->current_block = NULL; // It seems this was missing and adding it fixes things, if something breaks, this may be a suspect
-        temp->take();
-        temp->release();
-    }
-
-    this->looking_for_new_block = false;
-
+    next->begin();
 }
 
 // Wait for the queue to have a given number of free blocks
 void Conveyor::wait_for_queue(int free_blocks)
 {
     while (queue.is_full())
+    {
+        ensure_running();
         THEKERNEL->call_event(ON_IDLE);
+    }
 }
 
 // Wait for the queue to be empty
 void Conveyor::wait_for_empty_queue()
 {
     while (!queue.is_empty())
+    {
+        ensure_running();
         THEKERNEL->call_event(ON_IDLE);
+    }
 }
 
 // Return true if the queue is empty
@@ -128,6 +97,25 @@ bool Conveyor::is_queue_empty()
     return queue.is_empty();
 }
 
+void Conveyor::queue_head_block()
+{
+    while (queue.is_full())
+    {
+        ensure_running();
+        THEKERNEL->call_event(ON_IDLE, this);
+    }
+
+    queue.produce_head();
+}
+
+void Conveyor::ensure_running()
+{
+    if (!running)
+    {
+        running = true;
+        queue.tail_ref()->begin();
+    }
+}
 
 // feels hacky, but apparently the way to do it
 #include "HeapRing.cpp"

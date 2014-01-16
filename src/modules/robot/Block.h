@@ -26,16 +26,23 @@ class Block {
         void calculate_trapezoid( float entry_factor, float exit_factor );
         float estimate_acceleration_distance( float initial_rate, float target_rate, float acceleration );
         float intersection_distance(float initial_rate, float final_rate, float acceleration, float distance);
+        float get_duration_left(unsigned int already_taken_steps);
+
         void reverse_pass(Block* previous);
         void forward_pass(Block* next);
+
         void debug();
+
         void append_gcode(Gcode* gcode);
-        void pop_and_execute_gcode();
-        float get_duration_left(unsigned int already_taken_steps);
+
         void take();
         void release();
+
         void ready();
+
         void clear();
+
+        void begin();
 
         //vector<std::string> commands;
         //vector<float> travel_distances;
@@ -55,8 +62,8 @@ class Block {
         unsigned int   direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
 
-        bool recalculate_flag;              // Planner flag to recalculate trapezoids on entry junction
-        bool nominal_length_flag;        // Planner flag for nominal speed always reached
+        bool recalculate_flag;             // Planner flag to recalculate trapezoids on entry junction
+        bool nominal_length_flag;          // Planner flag for nominal speed always reached
 
         float max_entry_speed;
 
@@ -65,15 +72,6 @@ class Block {
         short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
 
 };
-
-
-
-
-
-
-
-
-
 
 
 #endif

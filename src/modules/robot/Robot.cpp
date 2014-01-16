@@ -454,6 +454,9 @@ void Robot::append_line(Gcode* gcode, float target[], float rate ){
 
     // Append the end of this full move to the queue
     this->append_milestone(target, rate);
+
+    // if adding these blocks didn't start executing, do that now
+    THEKERNEL->conveyor->ensure_running();
 }
 
 

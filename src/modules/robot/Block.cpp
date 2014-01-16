@@ -54,7 +54,26 @@ void Block::clear()
 
 void Block::debug()
 {
-    THEKERNEL->streams->printf("%p: steps:%4d|%4d|%4d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d  entry/max: %10.4f/%10.4f taken:%d ready:%d \r\n", this, this->steps[0], this->steps[1], this->steps[2], this->steps_event_count, this->nominal_rate, this->nominal_speed, this->millimeters, this->rate_delta, this->accelerate_until, this->decelerate_after, this->initial_rate, this->final_rate, this->entry_speed, this->max_entry_speed, this->times_taken, this->is_ready );
+    THEKERNEL->serial->printf("%p: steps:X%04d Y%04d Z%04d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d  entry/max: %10.4f/%10.4f taken:%d ready:%d recalc:%d\r\n",
+                               this,
+                                         this->steps[0],
+                                               this->steps[1],
+                                                      this->steps[2],
+                                                               this->steps_event_count,
+                                                                             this->nominal_rate,
+                                                                                   this->nominal_speed,
+                                                                                            this->millimeters,
+                                                                                                         this->rate_delta,
+                                                                                                                 this->accelerate_until,
+                                                                                                                         this->decelerate_after,
+                                                                                                                                   this->initial_rate,
+                                                                                                                                        this->final_rate,
+                                                                                                                                                          this->entry_speed,
+                                                                                                                                                                this->max_entry_speed,
+                                                                                                                                                                             this->times_taken,
+                                                                                                                                                                                      this->is_ready,
+                                                                                                                                                                                                recalculate_flag?1:0
+                             );
 }
 
 
@@ -149,7 +168,6 @@ void Block::reverse_pass(Block *next)
             } else {
                 this->entry_speed = this->max_entry_speed;
             }
-            this->recalculate_flag = true;
 
         }
     } // Skip last block. Already initialized and set for recalculation.
@@ -177,7 +195,6 @@ void Block::forward_pass(Block *previous)
             // Check for junction speed change
             if (this->entry_speed != entry_speed) {
                 this->entry_speed = entry_speed;
-                this->recalculate_flag = true;
             }
         }
     }
@@ -185,28 +202,27 @@ void Block::forward_pass(Block *previous)
 }
 
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
-void Block::append_gcode(Gcode *gcode)
+void Block::append_gcode(Gcode* gcode)
 {
-    __disable_irq();
     Gcode new_gcode = *gcode;
-    this->gcodes.push_back(new_gcode);
-    __enable_irq();
+    gcodes.push_back(new_gcode);
 }
 
-// The attached gcodes are then poped and the on_gcode_execute event is called with them as a parameter
-void Block::pop_and_execute_gcode()
+void Block::begin()
 {
-    Block *block = const_cast<Block *>(this);
-    for(unsigned short index = 0; index < block->gcodes.size(); index++) {
-        THEKERNEL->call_event(ON_GCODE_EXECUTE, &(block->gcodes[index]));
-    }
+    recalculate_flag = false;
+    
+    // execute all the gcodes related to this block
+    for(unsigned int index = 0; index < gcodes.size(); index++)
+        THEKERNEL->call_event(ON_GCODE_EXECUTE, &(gcodes[index]));
+
+    THEKERNEL->call_event(ON_BLOCK_BEGIN, this);
 }
 
 // Signal the conveyor that this block is ready to be injected into the system
 void Block::ready()
 {
     this->is_ready = true;
-    THEKERNEL->conveyor->new_block_added();
 }
 
 // Mark the block as taken by one more module
@@ -216,60 +232,8 @@ void Block::take()
 }
 
 // Mark the block as no longer taken by one module, go to next block if this free's it
-// This is one of the craziest bits in smoothie
 void Block::release()
 {
-
-    // A block can be taken by several modules, we want to actually release it only when all modules have release()d it
-    this->times_taken--;
-    if( this->times_taken < 1 ) {
-
-        // All modules are done with this block
-        // Call the on_block_end event so all modules can act accordingly
+    if (--this->times_taken <= 0)
         THEKERNEL->call_event(ON_BLOCK_END, this);
-
-        // Gcodes corresponding to the *following* blocks are stored in this block.
-        // We execute them all in order when this block is finished executing
-        this->pop_and_execute_gcode();
-
-        // We would normally delete this block directly here, but we can't, because this is interrupt context, no crazy memory stuff here
-        // So instead we increment a counter, and it will be deleted in main loop context
-        Conveyor *conveyor = THEKERNEL->conveyor;
-
-        unsigned int n = conveyor->queue.next(conveyor->gc_pending);
-        if (n != conveyor->queue.head_i)
-            conveyor->gc_pending = n;
-
-        // We don't look for the next block to execute if the conveyor is already doing that itself
-        if( conveyor->looking_for_new_block == false ) {
-
-            // If there are still blocks to execute
-            if (conveyor->gc_pending != conveyor->queue.head_i)
-            {
-                Block *candidate =  conveyor->queue.item_ref(conveyor->gc_pending);
-
-                // We only execute blocks that are ready ( their math is done )
-                if( candidate->is_ready ) {
-
-                    // Execute this candidate
-                    conveyor->current_block = candidate;
-                    candidate->recalculate_flag = false; // make sure planner doesn't alter this block while we're running it
-                    THEKERNEL->call_event(ON_BLOCK_BEGIN, conveyor->current_block);
-
-                    // If no module took this block, release it ourselves, as nothing else will do it otherwise
-                    if( conveyor->current_block->times_taken < 1 ) {
-                        conveyor->current_block->times_taken = 1;
-                        conveyor->current_block->release();
-                    }
-                } else {
-                    conveyor->current_block = NULL;
-                }
-            } else {
-                conveyor->current_block = NULL;
-            }
-        }
-    }
 }
-
-
-
