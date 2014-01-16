@@ -170,15 +170,8 @@ void TemperatureControl::on_gcode_received(void* argument){
             gcode->mark_as_taken();
 
         } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ) {
-            gcode->mark_as_taken();
-
             // Attach gcodes to the last block for on_gcode_execute
-            if( THEKERNEL->conveyor->queue.size() == 0 ){
-                THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode );
-            }else{
-                Block* block = THEKERNEL->conveyor->queue.get_ref( THEKERNEL->conveyor->queue.size() - 1 );
-                block->append_gcode(gcode);
-            }
+            THEKERNEL->conveyor->append_gcode(gcode);
         }
     }
 }
