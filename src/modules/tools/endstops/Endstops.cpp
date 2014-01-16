@@ -343,9 +343,9 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate,
 // this homing works for HBots/CoreXY
 void Endstops::do_homing_corexy(char axes_to_move)
 {
-    // TODO should really make order configurable, and selectr whether to allow XY to home at the same time, diagonally
+    // TODO should really make order configurable, and select whether to allow XY to home at the same time, diagonally
     // To move XY at the same time only one motor needs to turn, determine which motor and which direction based on min or max directions
-    // allow to move until an endstop triggers, then stop that motor.
+    // allow to move until an endstop triggers, then stop that motor. Speed up when moving diagonally to match X or Y speed
     // continue moving in the direction not yet triggered (which means two motors turning) until endstop hit
 
     if((axes_to_move & 0x03) == 0x03) { // both X and Y need Homing
@@ -370,7 +370,7 @@ void Endstops::do_homing_corexy(char axes_to_move)
 
         // then move both X and Y until one hits the endstop
         this->status = MOVING_TO_ORIGIN_FAST;
-        this->steppers[motor]->set_speed(this->fast_rates[motor]);
+        this->steppers[motor]->set_speed(this->fast_rates[motor]*1.4142); // need to allow for more ground covered when moving diagonally
         this->steppers[motor]->move(dir, 10000000);
         // wait until either X or Y hits the endstop
         bool running= true;
