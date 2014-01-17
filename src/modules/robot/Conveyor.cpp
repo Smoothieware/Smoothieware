@@ -28,7 +28,6 @@ Conveyor::Conveyor(){
 
 void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
-    register_for_event(ON_BLOCK_END);
 }
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
