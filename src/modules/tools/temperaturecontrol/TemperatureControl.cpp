@@ -175,6 +175,7 @@ void TemperatureControl::on_gcode_received(void* argument){
 
             // push an empty block if we have to wait, so the Planner can get things right, and we can prevent subsequent non-move gcodes from executing
             if (gcode->m == this->set_and_wait_m_code)
+                // ensure that no subsequent gcodes get executed with our M109 or similar
                 THEKERNEL->conveyor->queue_head_block();
         }
     }

@@ -160,9 +160,8 @@ void Extruder::on_gcode_received(void *argument){
     // Add to the queue for on_gcode_execute to process
     if( gcode->has_g && gcode->g < 4 && gcode->has_letter('E') ){
         if( !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ){
-            // This is a solo move, we add an empty block to the queue
-            //If the queue is empty, execute immediatly, otherwise attach to the last added block
             THEKERNEL->conveyor->append_gcode(gcode);
+            // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
             THEKERNEL->conveyor->queue_head_block();
         }
     }else{
