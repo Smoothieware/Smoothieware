@@ -59,6 +59,9 @@ void Conveyor::on_idle(void* argument){
             ensure_running();
         }
     }
+    else
+        // queue not empty
+        ensure_running();
 }
 
 void Conveyor::on_config_reload(void* argument)
@@ -128,7 +131,6 @@ void Conveyor::queue_head_block()
     }
 
     queue.produce_head();
-    ensure_running();
 }
 
 void Conveyor::ensure_running()
