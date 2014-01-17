@@ -45,7 +45,7 @@ void Conveyor::on_idle(void* argument){
         {
             // Cleanly delete block
             Block* block = queue.tail_ref();
-            block->gcodes.clear();
+            block->clear();
             queue.consume_tail();
         }
     }
