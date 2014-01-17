@@ -237,7 +237,6 @@ void Planner::recalculate() {
         // entry_speed is set to the *exit* speed of current.
         // each block from current to head has its entry speed set to its max entry speed- limited by decel or nominal_rate
 
-        // TODO: if current is being executed, use its trapezoidal exit speed instead of max exit speed
         float exit_speed = current->max_exit_speed();
 
         while (block_index != queue.head_i)
@@ -250,7 +249,6 @@ void Planner::recalculate() {
             // so this block can decide if it's accel or decel limited and update its fields as appropriate
             exit_speed = current->forward_pass(exit_speed);
 
-            // TODO: don't touch previous if it's already being executed
             previous->calculate_trapezoid(previous->entry_speed, current->entry_speed);
         }
     }
