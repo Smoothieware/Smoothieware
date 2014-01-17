@@ -410,7 +410,6 @@ void Robot::append_line(Gcode* gcode, float target[], float rate ){
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
     if( gcode->millimeters_of_travel < 0.0001 ){
         // an extruder only move means we stopped so we need to tell planner that previous speed and unitvector are zero
-        THEKERNEL->planner->previous_nominal_speed = 0;
         clear_vector_float(THEKERNEL->planner->previous_unit_vec);
         return;
     }

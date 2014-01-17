@@ -30,7 +30,6 @@ using namespace std;
 Planner::Planner(){
     clear_vector(this->position);
     clear_vector_float(this->previous_unit_vec);
-    this->previous_nominal_speed = 0.0;
     this->has_deleted_block = false;
 }
 
@@ -106,24 +105,28 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     // nonlinearities of both the junction angle and junction velocity.
     float vmax_junction = minimum_planner_speed; // Set default max junction speed
 
-    if ((THEKERNEL->conveyor->queue.is_empty() == false) && (this->previous_nominal_speed > 0.0F)) {
-      // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
-      // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
-      float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
-                         - this->previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
-                         - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
+    if (!THEKERNEL->conveyor->queue.is_empty())
+    {
+        float previous_nominal_speed = THEKERNEL->conveyor->queue.item_ref(THEKERNEL->conveyor->queue.prev(THEKERNEL->conveyor->queue.head_i))->nominal_speed;
 
-      // Skip and use default max junction speed for 0 degree acute junction.
-      if (cos_theta < 0.95F) {
-        vmax_junction = min(this->previous_nominal_speed,block->nominal_speed);
-        // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
-        if (cos_theta > -0.95F) {
-          // Compute maximum junction velocity based on maximum acceleration and junction deviation
-          float sin_theta_d2 = sqrtf(0.5F*(1.0F-cos_theta)); // Trig half angle identity. Always positive.
-          vmax_junction = min(vmax_junction,
-            sqrtf(this->acceleration * this->junction_deviation * sin_theta_d2/(1.0F-sin_theta_d2)) );
+        if (previous_nominal_speed > 0.0F) {
+            // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
+            // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
+            float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
+                                - this->previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
+                                - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
+
+            // Skip and use default max junction speed for 0 degree acute junction.
+            if (cos_theta < 0.95F) {
+                vmax_junction = min(previous_nominal_speed, block->nominal_speed);
+                // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
+                if (cos_theta > -0.95F) {
+                    // Compute maximum junction velocity based on maximum acceleration and junction deviation
+                    float sin_theta_d2 = sqrtf(0.5F * (1.0F - cos_theta)); // Trig half angle identity. Always positive.
+                    vmax_junction = min(vmax_junction, sqrtf(this->acceleration * this->junction_deviation * sin_theta_d2 / (1.0F - sin_theta_d2)));
+                }
+            }
         }
-      }
     }
     block->max_entry_speed = vmax_junction;
 
@@ -147,7 +150,6 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
 
     // Update previous path unit_vector and nominal speed
     memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
-    this->previous_nominal_speed = block->nominal_speed;
 
     // Update current position
     memcpy(this->position, target, sizeof(int)*3);
