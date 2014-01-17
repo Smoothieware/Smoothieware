@@ -183,76 +183,83 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
 // 3. Recalculate trapezoids for all blocks.
 //
 void Planner::recalculate() {
-    Conveyor::Queue_t *queue = &THEKERNEL->conveyor->queue;
+    Conveyor::Queue_t &queue = THEKERNEL->conveyor->queue;
 
-    unsigned int newest = queue->head_i; // head has been previously prepared in append_block above
-    unsigned int oldest = queue->tail_i;
-
-    unsigned int block_index = newest;
+    unsigned int block_index;
 
     Block* previous;
     Block* current;
-    Block* next;
 
-    current = queue->item_ref(block_index);
+    /*
+     * a newly added block is decel limited
+     *
+     * we find its max entry speed given its exit speed
+     *
+     * if max entry speed == current entry speed
+     * then we can set recalculate to false, since clearly adding another block didn't allow us to enter faster
+     *
+     * once recalculate is false, we must find the max exit speed
+     *
+     * given the exit speed of the previous block and our own max entry speed
+     * we can tell if we're accel or decel limited (or coasting)
+     *
+     * if prev_exit > max_entry
+     * then we're still decel limited. update previous traps with our max entry for prev exit
+     * if max_entry >= prev_exit
+     * then we're accel limited. set recalculate to false, work out max exit speed
+     *
+     *
+     */
 
-    // if there's only one block in the queue, we fall through both while loops and this ends up in current
-    // so we must set it here, or perform conditionals further down. this is easier
-    next = current;
+    /*
+     * Step 1:
+     * For each block, given the exit speed and acceleration, find the maximum entry speed
+     */
 
-    while ((block_index != oldest) && (current->recalculate_flag))
+    float entry_speed = minimum_planner_speed;
+
+    block_index = queue.head_i;
+    current     = queue.item_ref(block_index);
+
+    if (!queue.is_empty())
     {
-        next = current;
-        block_index = queue->prev(block_index);
-        current = queue->item_ref(block_index);
-
-        current->reverse_pass(next);
-    }
-
-    previous = current;
-    block_index = queue->next(block_index);
-    current = queue->item_ref(block_index);
-
-    previous->calculate_trapezoid( previous->entry_speed/previous->nominal_speed, current->entry_speed/previous->nominal_speed );
-    
-    // Recalculates the trapezoid speed profiles for flagged blocks in the plan according to the
-    // entry_speed for each junction and the entry_speed of the next junction. Must be called by
-    // planner_recalculate() after updating the blocks. Any recalulate flagged junction will
-    // compute the two adjacent trapezoids to the junction, since the junction speed corresponds
-    // to exit speed and entry speed of one another.
-    do
-    {
-        current->forward_pass(previous);
-
-        if (block_index != newest)
+        while ((block_index != queue.tail_i) && current->recalculate_flag)
         {
-            current->calculate_trapezoid( previous->entry_speed/previous->nominal_speed, current->entry_speed/previous->nominal_speed );
+            entry_speed = current->reverse_pass(entry_speed);
 
-            previous = current;
-            block_index = queue->next(block_index);
-            current = queue->item_ref(block_index);
+            block_index = queue.prev(block_index);
+            current     = queue.item_ref(block_index);
         }
-    } while (block_index != newest);
 
-    // Last/newest block in buffer. Exit speed is set with minimum_planner_speed. Always recalculated.
-    current->calculate_trapezoid( current->entry_speed/current->nominal_speed, minimum_planner_speed/current->nominal_speed );
+        // now current points to either tail or first non-recalculate block
+        // and has not had its reverse_pass called
+        // or its calc trap
+        // entry_speed is set to the *exit* speed of current.
+        // each block from current to head has its entry speed set to its max entry speed- limited by decel or nominal_rate
 
-    THEKERNEL->serial->printf("Queue: (head:%u tail:%u)\n", queue->head_i, queue->tail_i);
-    dump_queue();
-}
+        // TODO: if current is being executed, use its trapezoidal exit speed instead of max exit speed
+        float exit_speed = current->max_exit_speed();
 
-// Debug function
-void Planner::dump_queue()
-{
-    for (unsigned int index = THEKERNEL->conveyor->queue.tail_i, i = 0; true; index = THEKERNEL->conveyor->queue.next(index), i++ )
-    {
-       THEKERNEL->streams->printf("block %03d > ", i);
-       THEKERNEL->conveyor->queue.item_ref(index)->debug();
+        while (block_index != queue.head_i)
+        {
+            previous    = current;
+            block_index = queue.next(block_index);
+            current     = queue.item_ref(block_index);
 
-       if (index == THEKERNEL->conveyor->queue.head_i)
-           break;
+            // we pass the exit speed of the previous block
+            // so this block can decide if it's accel or decel limited and update its fields as appropriate
+            exit_speed = current->forward_pass(exit_speed);
+
+            // TODO: don't touch previous if it's already being executed
+            previous->calculate_trapezoid(previous->entry_speed, current->entry_speed);
+        }
     }
+
+    // now current points to the head item
+    // which has not had calculate_trapezoid run yet
+    current->calculate_trapezoid(current->entry_speed, minimum_planner_speed);
 }
+
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.

@@ -54,7 +54,7 @@ void Block::clear()
 
 void Block::debug()
 {
-    THEKERNEL->serial->printf("%p: steps:X%04d Y%04d Z%04d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d  entry/max: %10.4f/%10.4f taken:%d ready:%d recalc:%d\r\n",
+    THEKERNEL->serial->printf("%p: steps:X%04d Y%04d Z%04d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d  entry/max: %10.4f/%10.4f taken:%d ready:%d recalc:%d nomlen:%d\r\n",
                                this,
                                          this->steps[0],
                                                this->steps[1],
@@ -72,7 +72,8 @@ void Block::debug()
                                                                                                                                                                 this->max_entry_speed,
                                                                                                                                                                              this->times_taken,
                                                                                                                                                                                       this->is_ready,
-                                                                                                                                                                                                recalculate_flag?1:0
+                                                                                                                                                                                                recalculate_flag?1:0,
+                                                                                                                                                                                                          nominal_length_flag?1:0
                              );
 }
 
@@ -86,12 +87,12 @@ void Block::debug()
 //                              +-------------+
 //                                  time -->
 */
-void Block::calculate_trapezoid( float entryfactor, float exitfactor )
+void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 {
 
     // The planner passes us factors, we need to transform them in rates
-    this->initial_rate = ceil(this->nominal_rate * entryfactor);   // (step/min)
-    this->final_rate   = ceil(this->nominal_rate * exitfactor);    // (step/min)
+    this->initial_rate = ceil(this->nominal_rate * entryspeed / this->nominal_speed);   // (step/min)
+    this->final_rate   = ceil(this->nominal_rate * exitspeed  / this->nominal_speed);   // (step/min)
 
     // How many steps to accelerate and decelerate
     float acceleration_per_minute = this->rate_delta * THEKERNEL->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
@@ -145,60 +146,77 @@ float Block::intersection_distance(float initialrate, float finalrate, float acc
 // acceleration within the allotted distance.
 inline float max_allowable_speed(float acceleration, float target_velocity, float distance)
 {
-    return(
-              sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance) //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
-          );
+    return sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance);
 }
 
 
 // Called by Planner::recalculate() when scanning the plan from last to first entry.
-void Block::reverse_pass(Block *next)
+float Block::reverse_pass(float exit_speed)
 {
+    // If entry speed is already at the maximum entry speed, no need to recheck. Block is cruising.
+    // If not, block in state of acceleration or deceleration. Reset entry speed to maximum and
+    // check for maximum allowable speed reductions to ensure maximum possible planned speed.
+    if (this->entry_speed != this->max_entry_speed)
+    {
+        // If nominal length true, max junction speed is guaranteed to be reached. Only compute
+        // for max allowable speed if block is decelerating and nominal length is false.
+        if ((!this->nominal_length_flag) && (this->max_entry_speed > exit_speed))
+        {
+            float max_entry_speed = max_allowable_speed(-THEKERNEL->planner->acceleration, exit_speed, this->millimeters);
 
-    if (next) {
-        // If entry speed is already at the maximum entry speed, no need to recheck. Block is cruising.
-        // If not, block in state of acceleration or deceleration. Reset entry speed to maximum and
-        // check for maximum allowable speed reductions to ensure maximum possible planned speed.
-        if (this->entry_speed != this->max_entry_speed) {
+            this->entry_speed = min(max_entry_speed, this->max_entry_speed);
 
-            // If nominal length true, max junction speed is guaranteed to be reached. Only compute
-            // for max allowable speed if block is decelerating and nominal length is false.
-            if ((!this->nominal_length_flag) && (this->max_entry_speed > next->entry_speed)) {
-                this->entry_speed = min( this->max_entry_speed, max_allowable_speed(-THEKERNEL->planner->acceleration, next->entry_speed, this->millimeters));
-            } else {
-                this->entry_speed = this->max_entry_speed;
-            }
-
+            return this->entry_speed;
         }
-    } // Skip last block. Already initialized and set for recalculation.
+        else
+            this->entry_speed = this->max_entry_speed;
+    }
 
+    return this->entry_speed;
 }
 
 
 // Called by Planner::recalculate() when scanning the plan from first to last entry.
-void Block::forward_pass(Block *previous)
+// returns maximum exit speed of this block
+float Block::forward_pass(float prev_max_exit_speed)
 {
-
-    if(!previous) {
-        return;    // Begin planning after buffer_tail
-    }
-
     // If the previous block is an acceleration block, but it is not long enough to complete the
     // full speed change within the block, we need to adjust the entry speed accordingly. Entry
     // speeds have already been reset, maximized, and reverse planned by reverse planner.
     // If nominal length is true, max junction speed is guaranteed to be reached. No need to recheck.
-    if (!previous->nominal_length_flag) {
-        if (previous->entry_speed < this->entry_speed) {
-            float entry_speed = min( this->entry_speed,
-                                     max_allowable_speed(-THEKERNEL->planner->acceleration, previous->entry_speed, previous->millimeters) );
 
-            // Check for junction speed change
-            if (this->entry_speed != entry_speed) {
-                this->entry_speed = entry_speed;
-            }
-        }
+    // TODO: find out if both of these checks are necessary
+    if (prev_max_exit_speed > nominal_speed)
+        prev_max_exit_speed = nominal_speed;
+    if (prev_max_exit_speed > max_entry_speed)
+        prev_max_exit_speed = max_entry_speed;
+
+    if (prev_max_exit_speed <= entry_speed)
+    {
+        // accel limited
+        entry_speed = prev_max_exit_speed;
+        // since we're now acceleration or cruise limited
+        // we don't need to recalculate our entry speed anymore
+        recalculate_flag = false;
     }
+    // else
+    // // decel limited, do nothing
 
+    return max_exit_speed();
+}
+
+float Block::max_exit_speed()
+{
+    // if nominal_length_flag is asserted
+    // we are guaranteed to reach nominal speed regardless of entry speed
+    // thus, max exit will always be nominal
+    if (nominal_length_flag)
+        return nominal_speed;
+
+    // otherwise, we have to work out max exit speed based on entry and acceleration
+    float max = max_allowable_speed(-THEKERNEL->planner->acceleration, this->entry_speed, this->millimeters);
+
+    return min(max, nominal_speed);
 }
 
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
@@ -211,7 +229,7 @@ void Block::append_gcode(Gcode* gcode)
 void Block::begin()
 {
     recalculate_flag = false;
-    
+
     // execute all the gcodes related to this block
     for(unsigned int index = 0; index < gcodes.size(); index++)
         THEKERNEL->call_event(ON_GCODE_EXECUTE, &(gcodes[index]));

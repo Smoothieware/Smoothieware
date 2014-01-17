@@ -21,7 +21,6 @@ class Planner : public Module {
         void append_block( int target[], float feed_rate, float distance, float deltas[] );
         float max_allowable_speed( float acceleration, float target_velocity, float distance);
         void recalculate();
-        void dump_queue();
         Block* get_current_block();
         void cleanup_queue();
         void on_module_loaded();

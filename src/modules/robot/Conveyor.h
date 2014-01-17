@@ -39,6 +39,8 @@ public:
     void append_gcode(Gcode*);
     void queue_head_block(void);
 
+    void dump_queue(void);
+
     // right now block queue size can only be changed at compile time by changing the value below
     typedef HeapRing<Block> Queue_t;
 

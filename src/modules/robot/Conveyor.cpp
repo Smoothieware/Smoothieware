@@ -37,8 +37,6 @@ void Conveyor::on_idle(void* argument){
         // Cleanly delete block
         Block* block = queue.tail_ref();
         block->gcodes.clear();
-        THEKERNEL->serial->printf("Popped: ");
-        block->debug();
         queue.consume_tail();
     }
 }
@@ -113,6 +111,19 @@ void Conveyor::ensure_running()
     {
         running = true;
         queue.tail_ref()->begin();
+    }
+}
+
+// Debug function
+void Conveyor::dump_queue()
+{
+    for (unsigned int index = queue.tail_i, i = 0; true; index = queue.next(index), i++ )
+    {
+        THEKERNEL->streams->printf("block %03d > ", i);
+        queue.item_ref(index)->debug();
+
+        if (index == queue.head_i)
+            break;
     }
 }
 
