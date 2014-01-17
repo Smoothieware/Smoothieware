@@ -239,13 +239,15 @@ void Block::begin()
 {
     recalculate_flag = false;
 
+    times_taken = -1;
+
     // execute all the gcodes related to this block
     for(unsigned int index = 0; index < gcodes.size(); index++)
         THEKERNEL->call_event(ON_GCODE_EXECUTE, &(gcodes[index]));
 
     THEKERNEL->call_event(ON_BLOCK_BEGIN, this);
 
-    if (times_taken <= 0)
+    if (times_taken < 0)
         release();
 }
 
@@ -258,7 +260,9 @@ void Block::ready()
 // Mark the block as taken by one more module
 void Block::take()
 {
-    this->times_taken++;
+    if (times_taken < 0)
+        times_taken = 0;
+    times_taken++;
 }
 
 // Mark the block as no longer taken by one module, go to next block if this free's it
