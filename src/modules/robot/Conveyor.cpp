@@ -59,10 +59,7 @@ void Conveyor::on_config_reload(void* argument)
 void Conveyor::append_gcode(Gcode* gcode)
 {
     gcode->mark_as_taken();
-    if (running == false)
-        THEKERNEL->call_event(ON_GCODE_EXECUTE, gcode);
-    else
-        queue.head_ref()->append_gcode(gcode);
+    queue.head_ref()->append_gcode(gcode);
 }
 
 // Process a new block in the queue
@@ -121,6 +118,7 @@ void Conveyor::queue_head_block()
     }
 
     queue.produce_head();
+    ensure_running();
 }
 
 void Conveyor::ensure_running()
