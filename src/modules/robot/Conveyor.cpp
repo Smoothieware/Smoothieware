@@ -139,8 +139,11 @@ void Conveyor::ensure_running()
 {
     if (!running)
     {
+        if (gc_pending == queue.head_i)
+            return;
+
         running = true;
-        queue.tail_ref()->begin();
+        queue.item_ref(gc_pending)->begin();
     }
 }
 
