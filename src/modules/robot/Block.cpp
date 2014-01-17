@@ -34,22 +34,22 @@ void Block::clear()
     gcodes.clear();
     clear_vector(this->steps);
 
-    steps_event_count= 0;
-    nominal_rate= 0;
-    nominal_speed= 0.0F;
-    millimeters= 0.0F;
-    entry_speed= 0.0F;
-    rate_delta= 0.0F;
-    initial_rate= -1;
-    final_rate= -1;
-    accelerate_until= 0;
-    decelerate_after= 0;
-    direction_bits= 0;
-    recalculate_flag= false;
-    nominal_length_flag= false;
-    max_entry_speed= 0.0F;
-    is_ready= false;
-    times_taken= 0;
+    steps_event_count   = 0;
+    nominal_rate        = 0;
+    nominal_speed       = 0.0F;
+    millimeters         = 0.0F;
+    entry_speed         = 0.0F;
+    rate_delta          = 0.0F;
+    initial_rate        = -1;
+    final_rate          = -1;
+    accelerate_until    = 0;
+    decelerate_after    = 0;
+    direction_bits      = 0;
+    recalculate_flag    = false;
+    nominal_length_flag = false;
+    max_entry_speed     = 0.0F;
+    is_ready            = false;
+    times_taken         = 0;
 }
 
 void Block::debug()
