@@ -55,7 +55,8 @@ class Block {
         unsigned int   nominal_rate;       // Nominal rate in steps per minute
         float          nominal_speed;      // Nominal speed in mm per minute
         float          millimeters;        // Distance for this move
-        float         entry_speed;
+        float          entry_speed;
+        float          exit_speed;
         float          rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
         unsigned int   initial_rate;       // Initial speed in steps per minute
         unsigned int   final_rate;         // Final speed in steps per minute

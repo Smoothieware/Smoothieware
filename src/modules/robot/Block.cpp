@@ -89,6 +89,9 @@ void Block::debug()
 */
 void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 {
+    // if block is currently executing, don't touch anything!
+    if (times_taken)
+        return;
 
     // The planner passes us factors, we need to transform them in rates
     this->initial_rate = ceil(this->nominal_rate * entryspeed / this->nominal_speed);   // (step/min)
@@ -114,6 +117,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     this->accelerate_until = accelerate_steps;
     this->decelerate_after = accelerate_steps + plateau_steps;
 
+    this->exit_speed = exitspeed;
 }
 
 // Calculates the distance (not time) it takes to accelerate from initial_rate to target_rate using the
@@ -207,6 +211,11 @@ float Block::forward_pass(float prev_max_exit_speed)
 
 float Block::max_exit_speed()
 {
+    // if block is currently executing, return cached exit speed from calculate_trapezoid
+    // this ensures that a block following a currently executing block will have correct entry speed
+    if (times_taken)
+        return exit_speed;
+
     // if nominal_length_flag is asserted
     // we are guaranteed to reach nominal speed regardless of entry speed
     // thus, max exit will always be nominal
