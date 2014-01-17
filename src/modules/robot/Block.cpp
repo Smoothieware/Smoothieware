@@ -253,8 +253,10 @@ void Block::take()
 void Block::release()
 {
     if (--this->times_taken <= 0)
+    {
         THEKERNEL->call_event(ON_BLOCK_END, this);
 
-    // ensure conveyor gets called last
-    THEKERNEL->conveyor->on_block_end(this);
+        // ensure conveyor gets called last
+        THEKERNEL->conveyor->on_block_end(this);
+    }
 }
