@@ -39,6 +39,7 @@ void Block::clear()
     nominal_speed       = 0.0F;
     millimeters         = 0.0F;
     entry_speed         = 0.0F;
+    exit_speed          = 0.0F;
     rate_delta          = 0.0F;
     initial_rate        = -1;
     final_rate          = -1;
