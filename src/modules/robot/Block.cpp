@@ -244,6 +244,9 @@ void Block::begin()
         THEKERNEL->call_event(ON_GCODE_EXECUTE, &(gcodes[index]));
 
     THEKERNEL->call_event(ON_BLOCK_BEGIN, this);
+
+    if (times_taken <= 0)
+        release();
 }
 
 // Signal the conveyor that this block is ready to be injected into the system
