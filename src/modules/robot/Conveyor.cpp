@@ -49,6 +49,16 @@ void Conveyor::on_idle(void* argument){
             queue.consume_tail();
         }
     }
+    else if (queue.is_empty())
+    {
+        // if someone has appended gcodes but the queue is stopped
+        // make sure they get executed in a timely fashion
+        if (queue.head_ref()->gcodes.size())
+        {
+            queue_head_block();
+            ensure_running();
+        }
+    }
 }
 
 void Conveyor::on_config_reload(void* argument)
