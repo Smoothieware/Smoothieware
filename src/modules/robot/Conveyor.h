@@ -25,6 +25,7 @@ public:
 
     void on_module_loaded(void);
     void on_idle(void*);
+    void on_main_loop(void*);
     void on_block_end(void*);
     void on_config_reload(void*);
 

@@ -30,6 +30,7 @@ Conveyor::Conveyor(){
 
 void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
+    register_for_event(ON_MAIN_LOOP);
     register_for_event(ON_CONFIG_RELOAD);
 
     on_config_reload(this);
@@ -50,10 +51,15 @@ void Conveyor::on_idle(void* argument){
             queue.consume_tail();
         }
     }
-    else if (queue.is_empty())
+}
+
+void Conveyor::on_main_loop(void*)
+{
+    if (running)
+        return;
+
+    if (queue.is_empty())
     {
-        // if someone has appended gcodes but the queue is stopped
-        // make sure they get executed in a timely fashion
         if (queue.head_ref()->gcodes.size())
         {
             queue_head_block();
