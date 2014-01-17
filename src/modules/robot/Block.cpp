@@ -13,9 +13,12 @@
 #include "Block.h"
 #include "Planner.h"
 #include "Conveyor.h"
+#include "Gcode.h"
+
+#include "mri.h"
+
 using std::string;
 #include <vector>
-#include "../communication/utils/Gcode.h"
 
 // A block represents a movement, it's length for each stepper motor, and the corresponding acceleration curves.
 // It's stacked on a queue, and that queue is then executed in order, to move the motors.
@@ -240,6 +243,9 @@ void Block::begin()
 {
     recalculate_flag = false;
 
+    if (!is_ready)
+        __debugbreak();
+
     times_taken = -1;
 
     // execute all the gcodes related to this block
@@ -271,9 +277,14 @@ void Block::release()
 {
     if (--this->times_taken <= 0)
     {
-        THEKERNEL->call_event(ON_BLOCK_END, this);
+        times_taken = 0;
+        if (is_ready)
+        {
+            is_ready = false;
+            THEKERNEL->call_event(ON_BLOCK_END, this);
 
-        // ensure conveyor gets called last
-        THEKERNEL->conveyor->on_block_end(this);
+            // ensure conveyor gets called last
+            THEKERNEL->conveyor->on_block_end(this);
+        }
     }
 }

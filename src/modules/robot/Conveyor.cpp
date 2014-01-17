@@ -45,6 +45,7 @@ void Conveyor::on_idle(void* argument){
         {
             // Cleanly delete block
             Block* block = queue.tail_ref();
+//             block->debug();
             block->clear();
             queue.consume_tail();
         }
@@ -130,6 +131,7 @@ void Conveyor::queue_head_block()
         THEKERNEL->call_event(ON_IDLE, this);
     }
 
+    queue.head_ref()->ready();
     queue.produce_head();
 }
 
