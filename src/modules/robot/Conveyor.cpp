@@ -17,6 +17,7 @@ using namespace std;
 #include "Block.h"
 #include "Conveyor.h"
 #include "Planner.h"
+#include "mri.h"
 
 // The conveyor holds the queue of blocks, takes care of creating them, and starting the executing chain of blocks
 
@@ -32,12 +33,17 @@ void Conveyor::on_module_loaded(){
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
 void Conveyor::on_idle(void* argument){
-    while (queue.tail_i != gc_pending)
+    if (queue.tail_i != gc_pending)
     {
-        // Cleanly delete block
-        Block* block = queue.tail_ref();
-        block->gcodes.clear();
-        queue.consume_tail();
+        if (queue.is_empty())
+            __debugbreak();
+        else
+        {
+            // Cleanly delete block
+            Block* block = queue.tail_ref();
+            block->gcodes.clear();
+            queue.consume_tail();
+        }
     }
 }
 
@@ -53,6 +59,9 @@ void Conveyor::append_gcode(Gcode* gcode)
 // Process a new block in the queue
 void Conveyor::on_block_end(void* block)
 {
+    if (queue.is_empty())
+        __debugbreak();
+    
     gc_pending = queue.next(gc_pending);
 
     // Return if queue is empty
