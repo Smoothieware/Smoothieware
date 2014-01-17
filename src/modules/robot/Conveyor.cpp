@@ -19,16 +19,20 @@ using namespace std;
 #include "Planner.h"
 #include "mri.h"
 
+#define planner_queue_size_checksum CHECKSUM("planner_queue_size")
+
 // The conveyor holds the queue of blocks, takes care of creating them, and starting the executing chain of blocks
 
 Conveyor::Conveyor(){
-    queue.resize(32);
     gc_pending = queue.tail_i;
     running = false;
 }
 
 void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
+    register_for_event(ON_CONFIG_RELOAD);
+
+    on_config_reload(this);
 }
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
@@ -47,6 +51,11 @@ void Conveyor::on_idle(void* argument){
     }
 }
 
+void Conveyor::on_config_reload(void* argument)
+{
+    queue.resize(THEKERNEL->config->value(planner_queue_size_checksum)->by_default(32)->as_number());
+}
+
 void Conveyor::append_gcode(Gcode* gcode)
 {
     gcode->mark_as_taken();
@@ -61,7 +70,7 @@ void Conveyor::on_block_end(void* block)
 {
     if (queue.is_empty())
         __debugbreak();
-    
+
     gc_pending = queue.next(gc_pending);
 
     // Return if queue is empty
