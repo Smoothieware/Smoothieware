@@ -195,20 +195,25 @@ void Planner::recalculate() {
      *
      * we find its max entry speed given its exit speed
      *
+     * for each block, walking backwards in the queue:
+     *
      * if max entry speed == current entry speed
      * then we can set recalculate to false, since clearly adding another block didn't allow us to enter faster
+     * and thus we don't need to check entry speed for this block any more
      *
-     * once recalculate is false, we must find the max exit speed
+     * once we find an accel limited block, we must find the max exit speed and walk the queue forwards
+     *
+     * for each block, walking forwards in the queue:
      *
      * given the exit speed of the previous block and our own max entry speed
      * we can tell if we're accel or decel limited (or coasting)
      *
      * if prev_exit > max_entry
-     * then we're still decel limited. update previous traps with our max entry for prev exit
+     *     then we're still decel limited. update previous trapezoid with our max entry for prev exit
      * if max_entry >= prev_exit
-     * then we're accel limited. set recalculate to false, work out max exit speed
+     *     then we're accel limited. set recalculate to false, work out max exit speed
      *
-     *
+     * finally, work out trapezoid for the final (and newest) block.
      */
 
     /*
@@ -231,11 +236,14 @@ void Planner::recalculate() {
             current     = queue.item_ref(block_index);
         }
 
-        // now current points to either tail or first non-recalculate block
-        // and has not had its reverse_pass called
-        // or its calc trap
-        // entry_speed is set to the *exit* speed of current.
-        // each block from current to head has its entry speed set to its max entry speed- limited by decel or nominal_rate
+        /*
+         * Step 2:
+         * now current points to either tail or first non-recalculate block
+         * and has not had its reverse_pass called
+         * or its calc trap
+         * entry_speed is set to the *exit* speed of current.
+         * each block from current to head has its entry speed set to its max entry speed- limited by decel or nominal_rate
+         */
 
         float exit_speed = current->max_exit_speed();
 
@@ -252,6 +260,11 @@ void Planner::recalculate() {
             previous->calculate_trapezoid(previous->entry_speed, current->entry_speed);
         }
     }
+
+    /*
+     * Step 3:
+     * work out trapezoid for final (and newest) block
+     */
 
     // now current points to the head item
     // which has not had calculate_trapezoid run yet
