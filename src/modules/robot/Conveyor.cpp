@@ -147,30 +147,14 @@ void Conveyor::on_block_end(void* block)
     next->begin();
 }
 
-// Wait for the queue to have a given number of free blocks
-void Conveyor::wait_for_queue(int free_blocks)
-{
-    while (queue.is_full())
-    {
-        ensure_running();
-        THEKERNEL->call_event(ON_IDLE);
-    }
-}
-
 // Wait for the queue to be empty
 void Conveyor::wait_for_empty_queue()
 {
     while (!queue.is_empty())
     {
         ensure_running();
-        THEKERNEL->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE, this);
     }
-}
-
-// Return true if the queue is empty
-bool Conveyor::is_queue_empty()
-{
-    return queue.is_empty();
 }
 
 /*

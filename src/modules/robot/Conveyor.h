@@ -31,12 +31,9 @@ public:
 
     void notify_block_finished(Block*);
 
-    void wait_for_queue(int free_blocks);
     void wait_for_empty_queue();
 
     void ensure_running(void);
-
-    bool is_queue_empty(void);
 
     void append_gcode(Gcode*);
     void queue_head_block(void);
