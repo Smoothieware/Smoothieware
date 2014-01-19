@@ -148,6 +148,8 @@ void SlowTicker::on_gcode_received(void* argument){
     // Add the gcode to the queue ourselves if we need it
     if( gcode->has_g && gcode->g == 4 ){
         THEKERNEL->conveyor->append_gcode(gcode);
+        // ensure that no subsequent gcodes get executed along with our G4
+        THEKERNEL->conveyor->queue_head_block();
     }
 }
 

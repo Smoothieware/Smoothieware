@@ -113,12 +113,14 @@ template<class kind> kind* HeapRing<kind>::item_ref(unsigned int i)
 
 template<class kind> void HeapRing<kind>::produce_head()
 {
+    while (is_full());
     head_i = next(head_i);
 }
 
 template<class kind> void HeapRing<kind>::consume_tail()
 {
-    tail_i = next(tail_i);
+    if (!is_empty())
+        tail_i = next(tail_i);
 }
 
 /*
@@ -127,12 +129,20 @@ template<class kind> void HeapRing<kind>::consume_tail()
 
 template<class kind> bool HeapRing<kind>::is_full()
 {
-    return (next(head_i) == tail_i);
+    __disable_irq();
+    bool r = (next(head_i) == tail_i);
+    __enable_irq();
+
+    return r;
 }
 
 template<class kind> bool HeapRing<kind>::is_empty()
 {
-    return (head_i == tail_i);
+    __disable_irq();
+    bool r = (head_i == tail_i);
+    __enable_irq();
+
+    return r;
 }
 
 /*

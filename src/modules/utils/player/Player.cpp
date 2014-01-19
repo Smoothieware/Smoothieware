@@ -306,7 +306,6 @@ void Player::on_main_loop(void* argument){
                 message.message = buffer;
                 message.stream = &(StreamOutput::NullStream); // we don't really need to see the ok
                 // wait for the queue to have enough room that a serial message could still be received before sending
-                THEKERNEL->conveyor->wait_for_queue(2);
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 played_cnt += buffer.size();
                 buffer.clear();
@@ -369,40 +368,3 @@ void Player::on_set_public_data(void* argument) {
         pdr->set_taken();
     }
 }
-
-
-
-
-
-/*
-void Player::on_main_loop(void* argument){
-    if( !this->on_booted ){
-        this->play_command(this->on_boot_file_name, new StreamOutput());
-        this->on_booted = true;
-    }
-    if( this->playing_file ){
-        string buffer;
-        int c;
-        // Print each line of the file
-        while ((c = fgetc(this->current_file_handler)) != EOF){
-            if (c == '\n'){
-                this->current_stream->printf("%s\n", buffer.c_str());
-                struct SerialMessage message;
-                message.message = buffer;
-                message.stream = this->current_stream;
-                // wait for the queue to have enough room that a serial message could still be received before sending
-                THEKERNEL->conveyor->wait_for_queue(2);
-                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-                buffer.clear();
-                return;
-            }else{
-                buffer += c;
-            }
-        };
-
-        fclose(this->current_file_handler);
-        this->playing_file = false;
-    }
-}
-*/
-
