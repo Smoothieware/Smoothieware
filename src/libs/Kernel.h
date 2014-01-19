@@ -30,6 +30,8 @@ class Config;
 class Module;
 class Conveyor;
 class SlowTicker;
+class Pauser;
+
 class Kernel {
     public:
         Kernel();
