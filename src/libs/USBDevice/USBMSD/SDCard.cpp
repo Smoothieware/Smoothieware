@@ -131,6 +131,7 @@ SDCard::SDCard(PinName mosi, PinName miso, PinName sclk, PinName cs) :
     _cs.output();
     _cs = 1;
     busyflag = false;
+    _sectors = 0;
 }
 
 #define R1_IDLE_STATE           (1 << 0)

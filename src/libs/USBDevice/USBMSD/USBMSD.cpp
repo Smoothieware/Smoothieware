@@ -170,6 +170,8 @@ bool USBMSD::USBEvent_RequestComplete(CONTROL_TRANSFER &transfer, uint8_t *buf, 
 
 bool USBMSD::connect()
 {
+    BlockCount = 0;
+
     //disk initialization
     if (disk->disk_status() & NO_INIT) {
         if (disk->disk_initialize()) {
@@ -479,6 +481,13 @@ bool USBMSD::requestSense (void) {
         0x00,
     };
 
+    if (BlockCount == 0)
+    {
+        request_sense[2] = 0x02; // Not Ready
+        request_sense[3] = 0x3A; // medium not present
+        request_sense[4] = 0x00; // medium not present - no specific reason
+    }
+
     if (!write(request_sense, sizeof(request_sense))) {
         return false;
     }
@@ -611,7 +620,10 @@ void USBMSD::testUnitReady (void) {
         }
     }
 
-    csw.Status = CSW_PASSED;
+    if (BlockCount > 0)
+        csw.Status = CSW_PASSED;
+    else
+        csw.Status = CSW_FAILED;
     sendCSW();
 }
 
