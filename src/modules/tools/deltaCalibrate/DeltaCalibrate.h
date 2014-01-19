@@ -26,6 +26,7 @@ class DeltaCalibrate : public Module{
         void calibrate_delta(StreamOutput*);
         void calibrate_zprobe_offset(StreamOutput*);
         uint32_t wait_for_ztouch();
+        uint32_t do_probe(bool);
         void wait_for_moves();
         void move_all(bool, bool, unsigned int);
         void trim2mm(float * mm);
@@ -38,7 +39,7 @@ class DeltaCalibrate : public Module{
         unsigned int lift_steps;
         float calibrate_radius;
         float calibrate_probe_offset;
-        float arm_radius;
+        
 
         int  trim[3];
         float  fast_rates;

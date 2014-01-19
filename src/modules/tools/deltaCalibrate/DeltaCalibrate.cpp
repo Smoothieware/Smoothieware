@@ -17,6 +17,7 @@
 #define DOWN true
 #define FAST true
 #define SLOW false
+#define DEG_TO_RAD (3.141592653589793/180)
 
 #define DO_CALIBRATE_DELTA 1
 #define CALIBRATE_AUTOSET 2
@@ -36,7 +37,6 @@
 #define calibrate_lift_checksum          CHECKSUM("calibrate_lift")
 #define calibrate_radius_checksum        CHECKSUM("calibrate_radius")
 #define calibrate_probe_offset_checksum  CHECKSUM("calibrate_probe_offset")
-#define arm_radius_checksum              CHECKSUM("arm_radius")
 
 // these values are in steps and should be deprecated
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
@@ -115,7 +115,6 @@ void DeltaCalibrate::on_config_reload(void *argument)
     this->lift_steps = THEKERNEL->config->value(calibrate_lift_checksum )->by_default(10)->as_number() * steps_per_mm;
     this->calibrate_radius = THEKERNEL->config->value(calibrate_radius_checksum )->by_default(50)->as_number();
     this->calibrate_probe_offset = THEKERNEL->config->value(calibrate_probe_offset_checksum )->by_default(0)->as_number();
-    this->arm_radius = THEKERNEL->config->value(arm_radius_checksum )->by_default(124.0f)->as_number();
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
@@ -178,6 +177,28 @@ uint32_t DeltaCalibrate::wait_for_ztouch(){
     return(0);
 }
 
+uint32_t DeltaCalibrate::do_probe(bool ret){
+    uint32_t current_z_steps = 0;
+
+    //probe current location
+    move_all(DOWN,FAST,10000000);
+    current_z_steps += wait_for_ztouch();
+
+    move_all(UP,FAST,retract_steps); 
+    wait_for_moves();
+    current_z_steps -= retract_steps;
+
+    move_all(DOWN,SLOW,10000000);
+    current_z_steps += wait_for_ztouch();
+
+    if (ret){
+        //return to original position
+        move_all(UP,FAST, current_z_steps); //alpha tower retract distance for all
+        wait_for_moves();
+    }
+
+    return(current_z_steps);
+}
 
 void DeltaCalibrate::move_all(bool direction, bool speed, unsigned int steps){
     bool move_dir;
@@ -196,6 +217,7 @@ void DeltaCalibrate::move_all(bool direction, bool speed, unsigned int steps){
 void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
 
     uint32_t current_z_steps = 0;
+    uint32_t probe_steps = 0;
 
     uint32_t originHeight = 0;
     long tower1Height = 0;
@@ -207,6 +229,8 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     char buf[32];
     int buffered_length = 0;
     string g;
+
+    float arm_radius = 0;
 
     // update machine geometry incase it has been modified since startup
     THEKERNEL->robot->arm_solution->get_optional('R', &arm_radius);
@@ -239,16 +263,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     }
 
     //probe min z height at 0,0
-    move_all(DOWN,FAST,10000000);
-    current_z_steps += wait_for_ztouch();
-
-    move_all(UP,FAST,retract_steps);
-    wait_for_moves();
-    current_z_steps -= retract_steps;
-
-    move_all(DOWN,SLOW,10000000);
-    current_z_steps += wait_for_ztouch();
-
+    current_z_steps = do_probe(false);
     originHeight = current_z_steps;
 
     //lift and reposition
@@ -259,8 +274,8 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     // update planner position so we can make coordinated moves
     THEKERNEL->robot->reset_axis_position( homing_position_z - (current_z_steps / steps_per_mm) , 2);
 
-    targetY = calibrate_radius * cos(240 * (3.141592653589793/180));
-    targetX = calibrate_radius * sin(240 * (3.141592653589793/180));
+    targetY = calibrate_radius * cos(240 * DEG_TO_RAD);
+    targetX = calibrate_radius * sin(240 * DEG_TO_RAD);
     
     buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX,targetY);
     g.assign(buf, buffered_length);
@@ -276,31 +291,16 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     }
 
     //probe tower 1 
-    move_all(DOWN,FAST,10000000);
-    current_z_steps += wait_for_ztouch();
+    probe_steps = do_probe(true);
+    tower1Height = current_z_steps + probe_steps;
 
-    move_all(UP,FAST,retract_steps); 
-    wait_for_moves();
-    current_z_steps -= retract_steps;
-
-    move_all(DOWN,SLOW,10000000);
-    current_z_steps += wait_for_ztouch();
-
-    tower1Height = current_z_steps;    
-
-    //lift and reposition
-    move_all(UP,FAST, current_z_steps - (originHeight - lift_steps)); //alpha tower retract distance for all
-    wait_for_moves();
-    current_z_steps = originHeight - lift_steps;
-
-    targetY = calibrate_radius * cos(120 * (3.141592653589793/180));
-    targetX = calibrate_radius * sin(120 * (3.141592653589793/180));
+    targetY = calibrate_radius * cos(120 * DEG_TO_RAD);
+    targetX = calibrate_radius * sin(120 * DEG_TO_RAD);
     
     buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX,targetY);
     g.assign(buf, buffered_length);
     send_gcode(g);
     THEKERNEL->conveyor->wait_for_empty_queue();
-
 
     // check probe retraction
     if( probe_pin.get() ){
@@ -310,25 +310,11 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     }    
 
     //probe tower 2
-    move_all(DOWN,FAST,10000000);
-    current_z_steps += wait_for_ztouch();
+    probe_steps = do_probe(true);
+    tower2Height = current_z_steps + probe_steps; 
 
-    move_all(UP,FAST,retract_steps); 
-    wait_for_moves();
-    current_z_steps -= retract_steps;
-
-    move_all(DOWN,SLOW,10000000);
-    current_z_steps += wait_for_ztouch();
-
-    tower2Height = current_z_steps;    
-
-    //lift and reposition
-    move_all(UP,FAST, current_z_steps - (originHeight-lift_steps)); //alpha tower retract distance for all
-    wait_for_moves();
-    current_z_steps = originHeight - this->lift_steps;
-
-    targetY = calibrate_radius * cos(0 * (3.141592653589793/180));
-    targetX = calibrate_radius * sin(0 * (3.141592653589793/180));
+    targetY = calibrate_radius * cos(0 * DEG_TO_RAD);
+    targetX = calibrate_radius * sin(0 * DEG_TO_RAD);
     
     buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX, targetY);
     g.assign(buf, buffered_length);
@@ -343,21 +329,8 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     }  
 
     //probe tower 3 
-    move_all(DOWN,FAST,10000000);
-    current_z_steps += wait_for_ztouch();
-
-    move_all(UP,FAST,retract_steps); 
-    wait_for_moves();
-    current_z_steps -= retract_steps;
-
-    move_all(DOWN,SLOW,10000000);
-    current_z_steps += wait_for_ztouch();
-
-    tower3Height = current_z_steps;        
-
-    //lift
-    move_all(UP,FAST, current_z_steps - (originHeight-lift_steps)); //alpha tower retract distance for all
-    wait_for_moves();
+    probe_steps = do_probe(true);
+    tower3Height = current_z_steps + probe_steps; 
 
     //TODO auto-retract probe
 
