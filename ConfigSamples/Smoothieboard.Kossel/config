@@ -16,7 +16,7 @@ arm_length                                   250.0            # this is the leng
 arm_radius                                   124.0            # this is the horiontal distance from hinge to hinge when the effector is centered
 
 # Planner module configuration : Look-ahead and acceleration configuration
-planner_queue_size                           64               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
+planner_queue_size                           32               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
 acceleration                                 3000             # Acceleration in mm/second/second.
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409
