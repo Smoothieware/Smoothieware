@@ -157,7 +157,7 @@ uint32_t DeltaCalibrate::wait_for_ztouch(){
     while(running){
         running = false;
         THEKERNEL->call_event(ON_IDLE);
-        if( this->probe_pin.get() ){  //probe contact  //TODO configure probe pin?
+        if( this->probe_pin.get() ){  //probe contact 
             if( debounce < debounce_count ) { //debounce and loop
                 debounce ++;
                 running = true;
@@ -232,7 +232,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     //TODO auto-deploy probe
 
     // deploy probe, check or abort
-    if( probe_pin.get() ){  //TODO configure probe pin?
+    if( probe_pin.get() ){
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -269,7 +269,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
 
 
     // check probe retraction
-    if( probe_pin.get() ){  //TODO configure probe pin?
+    if( probe_pin.get() ){
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -303,7 +303,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
 
 
     // check probe retraction
-    if( probe_pin.get() ){  //TODO configure probe pin?
+    if( probe_pin.get() ){
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -336,7 +336,7 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     THEKERNEL->conveyor->wait_for_empty_queue();    
 
     // check probe retraction
-    if( this->probe_pin.get() ){  //TODO configure probe pin?
+    if( this->probe_pin.get() ){
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -419,7 +419,7 @@ void DeltaCalibrate::calibrate_zprobe_offset(StreamOutput *stream){
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
 
-    if( !probe_pin.get() ){  //TODO configure probe pin?
+    if( !probe_pin.get() ){ 
         //probe not deployed - abort
         stream->printf("Z-Probe not activated, Aborting!\r\n");
         return;
@@ -429,7 +429,7 @@ void DeltaCalibrate::calibrate_zprobe_offset(StreamOutput *stream){
     wait_for_moves();
     current_z_steps = 0;
 
-    if( probe_pin.get() ){  //TODO configure probe pin?
+    if( probe_pin.get() ){ 
         //probe not deployed - abort
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
@@ -506,6 +506,15 @@ void DeltaCalibrate::on_gcode_received(void *argument)
         }
     } else if (gcode->has_m) {
         switch (gcode->m) {
+
+            case 119: {
+                gcode->stream->printf("ZProbe:%d ", probe_pin.get());
+                gcode->add_nl = true;
+                gcode->mark_as_taken();
+            }
+            break;
+
+
             case 666: { // M666 - set trim for each axis in mm
                 float mm[3];
                 trim2mm(mm);
