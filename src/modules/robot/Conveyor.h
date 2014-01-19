@@ -10,6 +10,7 @@
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+#include "HeapRing.h"
 
 using namespace std;
 #include <string>
@@ -23,24 +24,30 @@ public:
     Conveyor();
 
     void on_module_loaded(void);
-    void on_idle(void *);
+    void on_idle(void*);
+    void on_main_loop(void*);
+    void on_block_end(void*);
+    void on_config_reload(void*);
 
-    Block *new_block();
-    void new_block_added();
-    void pop_and_process_new_block(int debug);
-    void wait_for_queue(int free_blocks);
+    void notify_block_finished(Block*);
+
     void wait_for_empty_queue();
-    bool is_queue_empty();
+
+    void ensure_running(void);
 
     void append_gcode(Gcode*);
+    void queue_head_block(void);
+
+    void dump_queue(void);
 
     // right now block queue size can only be changed at compile time by changing the value below
-    typedef RingBuffer<Block, 32> BlockQueue_t;
-    BlockQueue_t queue;  // Queue of Blocks
-    Block *current_block;
-    bool looking_for_new_block;
+    typedef HeapRing<Block> Queue_t;
 
-    volatile int flush_blocks;
+    Queue_t queue;  // Queue of Blocks
+
+    volatile bool running;
+
+    volatile unsigned int gc_pending;
 };
 
 #endif // CONVEYOR_H
