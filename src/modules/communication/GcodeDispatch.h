@@ -29,6 +29,7 @@ class GcodeDispatch : public Module {
         bool uploading;
         string upload_filename;
         FILE *upload_fd;
+        uint8_t last_g;
 };
 
 #endif

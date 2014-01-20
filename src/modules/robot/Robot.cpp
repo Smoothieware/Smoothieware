@@ -320,19 +320,27 @@ void Robot::on_gcode_received(void * argument){
 
    //Get parameters
     float target[3], offset[3];
-    clear_vector(target); clear_vector(offset);
+    clear_vector(offset);
 
     memcpy(target, this->current_position, sizeof(target));    //default to last target
 
-    for(char letter = 'I'; letter <= 'K'; letter++){ if( gcode->has_letter(letter) ){ offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));                                                    } }
-    for(char letter = 'X'; letter <= 'Z'; letter++){ if( gcode->has_letter(letter) ){ target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);  } }
+    for(char letter = 'I'; letter <= 'K'; letter++){
+        if( gcode->has_letter(letter) ){
+            offset[letter-'I'] = this->to_millimeters(gcode->get_value(letter));
+        }
+    }
+    for(char letter = 'X'; letter <= 'Z'; letter++){
+        if( gcode->has_letter(letter) ){
+            target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);
+        }
+    }
 
     if( gcode->has_letter('F') )
     {
         if( this->motion_mode == MOTION_MODE_SEEK )
-            this->seek_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0;
+            this->seek_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0F;
         else
-            this->feed_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0;
+            this->feed_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0F;
     }
 
     //Perform any physical actions
@@ -350,7 +358,7 @@ void Robot::on_gcode_received(void * argument){
     // As far as the parser is concerned, the position is now == target. In reality the
     // motion control system might still be processing the action and the real tool position
     // in any intermediate location.
-    memcpy(this->current_position, target, sizeof(float)*3); // this->position[] = target[];
+    memcpy(this->current_position, target, sizeof(this->current_position)); // this->position[] = target[];
 
 }
 
@@ -397,7 +405,7 @@ void Robot::append_milestone( float target[], float rate ){
     THEKERNEL->planner->append_block( steps, rate * seconds_per_minute, millimeters_of_travel, deltas );
 
     // Update the last_milestone to the current target for the next time we use last_milestone
-    memcpy(this->last_milestone, target, sizeof(float)*3); // this->last_milestone[] = target[];
+    memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
 
 }
 
@@ -408,9 +416,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate ){
     gcode->millimeters_of_travel = sqrtf( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
 
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
-    if( gcode->millimeters_of_travel < 0.0001 ){
-        // an extruder only move means we stopped so we need to tell planner that previous speed and unitvector are zero
-        clear_vector_float(THEKERNEL->planner->previous_unit_vec);
+    if( gcode->millimeters_of_travel < 0.0001F ){
         return;
     }
 
@@ -422,7 +428,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate ){
     // In delta robots either mm_per_line_segment can be used OR delta_segments_per_second The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
     uint16_t segments;
 
-    if(this->delta_segments_per_second > 1.0) {
+    if(this->delta_segments_per_second > 1.0F) {
         // enabled if set to something > 1, it is set to 0.0 by default
         // segment based on current speed and requested segments per second
         // the faster the travel speed the fewer segments needed
@@ -432,7 +438,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate ){
         // TODO if we are only moving in Z on a delta we don't really need to segment at all
 
     }else{
-        if(this->mm_per_line_segment == 0.0){
+        if(this->mm_per_line_segment == 0.0F){
             segments= 1; // don't split it up
         }else{
             segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment);
@@ -442,7 +448,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate ){
     // A vector to keep track of the endpoint of each segment
     float temp_target[3];
     //Initialize axes
-    memcpy( temp_target, this->current_position, sizeof(float)*3); // temp_target[] = this->current_position[];
+    memcpy( temp_target, this->current_position, sizeof(temp_target)); // temp_target[] = this->current_position[];
 
     //For each segment
     for( int i=0; i<segments-1; i++ ){
@@ -480,7 +486,7 @@ void Robot::append_arc(Gcode* gcode, float target[], float offset[], float radiu
     gcode->millimeters_of_travel = hypotf(angular_travel*radius, fabs(linear_travel));
 
     // We don't care about non-XYZ moves ( for example the extruder produces some of those )
-    if( gcode->millimeters_of_travel < 0.0001 ){ return; }
+    if( gcode->millimeters_of_travel < 0.0001F ){ return; }
 
     // Mark the gcode as having a known distance
     this->distance_in_gcode_is_known( gcode );
@@ -515,7 +521,7 @@ void Robot::append_arc(Gcode* gcode, float target[], float offset[], float radiu
     This is important when there are successive arc motions.
     */
     // Vector rotation matrix values
-    float cos_T = 1-0.5*theta_per_segment*theta_per_segment; // Small angle approximation
+    float cos_T = 1-0.5F*theta_per_segment*theta_per_segment; // Small angle approximation
     float sin_T = theta_per_segment;
 
     float arc_target[3];
