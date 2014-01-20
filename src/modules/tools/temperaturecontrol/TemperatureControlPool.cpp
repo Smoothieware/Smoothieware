@@ -26,9 +26,9 @@ void TemperatureControlPool::on_module_loaded(){
         if( THEKERNEL->config->value(temperature_control_checksum, modules[i], enable_checksum )->as_bool() == true ){
             TemperatureControl* controller = new TemperatureControl(modules[i]);
             controller->pool = this;
-            controller->pool_index = i;
+            controllers.push_back( controller );
+            controller->pool_index = controllers.size();
             THEKERNEL->add_module(controller);
-            this->controllers.push_back( controller );
         }
     }
 
