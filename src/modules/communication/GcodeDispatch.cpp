@@ -26,6 +26,7 @@ void GcodeDispatch::on_module_loaded()
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     currentline = -1;
     uploading = false;
+    last_g= 255;
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -34,9 +35,13 @@ void GcodeDispatch::on_console_line_received(void *line)
     SerialMessage new_message = *static_cast<SerialMessage *>(line);
     string possible_command = new_message.message;
 
-    char first_char = possible_command[0];
     int ln = 0;
     int cs = 0;
+
+try_again:
+
+    char first_char = possible_command[0];
+    unsigned int n;
     if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'N' ) {
 
         //Get linenumber
@@ -101,8 +106,10 @@ void GcodeDispatch::on_console_line_received(void *line)
                 if(!uploading) {
                     //Prepare gcode for dispatch
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
-                    gcode->prepare_cached_values();
 
+                    if(gcode->has_g) {
+                        last_g= gcode->g;
+                    }
                     if(gcode->has_m) {
                         switch (gcode->m) {
                             case 28: // start upload command
@@ -211,6 +218,18 @@ void GcodeDispatch::on_console_line_received(void *line)
             //Request resend
             new_message.stream->printf("rs N%d\r\n", nextline);
         }
+
+    } else if( (n=possible_command.find_first_of("XYZF")) == 0 || (first_char == ' ' && n != string::npos) ) {
+        // handle pycam syntax, use last G0 or G1 and resubmit if an X Y Z or F is found on its own line
+        if(last_g != 0 && last_g != 1) {
+            //if no last G1 or G0 ignore
+            //THEKERNEL->streams->printf("ignored: %s\r\n", possible_command.c_str());
+            return;
+        }
+        char buf[6];
+        snprintf(buf, sizeof(buf), "G%d ", last_g);
+        possible_command.insert(0, buf);
+        goto try_again;
 
         // Ignore comments and blank lines
     } else if ( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ) {

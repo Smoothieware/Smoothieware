@@ -18,7 +18,7 @@ using std::string;
 // It gets passed around in events, and attached to the queue ( that'll change )
 Gcode::Gcode(const string& command, StreamOutput* stream) : command(command), m(0), g(0), add_nl(false), stream(stream) {
     prepare_cached_values();
-    this->millimeters_of_travel = 0L;
+    this->millimeters_of_travel = 0.0F;
     this->accepted_by_module=false;
 }
 
