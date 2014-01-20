@@ -35,10 +35,12 @@ void GcodeDispatch::on_console_line_received(void *line)
     SerialMessage new_message = *static_cast<SerialMessage *>(line);
     string possible_command = new_message.message;
 
-try_again:
-    char first_char = possible_command[0];
     int ln = 0;
     int cs = 0;
+
+try_again:
+
+    char first_char = possible_command[0];
     unsigned int n;
     if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'N' ) {
 
@@ -104,7 +106,7 @@ try_again:
                 if(!uploading) {
                     //Prepare gcode for dispatch
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
-                    gcode->prepare_cached_values();
+
                     if(gcode->has_g) {
                         last_g= gcode->g;
                     }
@@ -218,8 +220,12 @@ try_again:
         }
 
     } else if( (n=possible_command.find_first_of("XYZF")) == 0 || (first_char == ' ' && n != string::npos) ) {
-        if(last_g != 0 && last_g != 1) return;
-        // handle pycam syntax
+        // handle pycam syntax, use last G0 or G1 and resubmit if an X Y Z or F is found on its own line
+        if(last_g != 0 && last_g != 1) {
+            //if no last G1 or G0 ignore
+            //THEKERNEL->streams->printf("ignored: %s\r\n", possible_command.c_str());
+            return;
+        }
         char buf[6];
         snprintf(buf, sizeof(buf), "G%d ", last_g);
         possible_command.insert(0, buf);
