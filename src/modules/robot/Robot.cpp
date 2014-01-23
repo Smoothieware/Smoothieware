@@ -55,6 +55,7 @@ using std::string;
 #define  alpha_en_pin_checksum               CHECKSUM("alpha_en_pin")
 #define  beta_en_pin_checksum                CHECKSUM("beta_en_pin")
 #define  gamma_en_pin_checksum               CHECKSUM("gamma_en_pin")
+
 #define  alpha_steps_per_mm_checksum         CHECKSUM("alpha_steps_per_mm")
 #define  beta_steps_per_mm_checksum          CHECKSUM("beta_steps_per_mm")
 #define  gamma_steps_per_mm_checksum         CHECKSUM("gamma_steps_per_mm")
@@ -163,11 +164,21 @@ void Robot::on_config_reload(void* argument){
     beta_dir_pin.from_string(   THEKERNEL->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
     beta_en_pin.from_string(    THEKERNEL->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
 
+    float steps_per_mm[3] = {
+        THEKERNEL->config->value(alpha_steps_per_mm_checksum)->by_default(  80.0F)->as_number(),
+        THEKERNEL->config->value(beta_steps_per_mm_checksum )->by_default(  80.0F)->as_number(),
+        THEKERNEL->config->value(gamma_steps_per_mm_checksum)->by_default(2560.0F)->as_number(),
+    };
+
     // TODO: delete or detect old steppermotors
     // Make our 3 StepperMotors
     this->alpha_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&alpha_step_pin,&alpha_dir_pin,&alpha_en_pin) );
     this->beta_stepper_motor   = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&beta_step_pin, &beta_dir_pin, &beta_en_pin ) );
     this->gamma_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&gamma_step_pin,&gamma_dir_pin,&gamma_en_pin) );
+
+    alpha_stepper_motor->change_steps_per_mm(steps_per_mm[0]);
+    beta_stepper_motor->change_steps_per_mm(steps_per_mm[1]);
+    gamma_stepper_motor->change_steps_per_mm(steps_per_mm[2]);
 
     actuators.clear();
     actuators.push_back(alpha_stepper_motor);
