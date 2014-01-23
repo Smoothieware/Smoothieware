@@ -23,6 +23,9 @@ StepperMotor::StepperMotor(){
     this->is_move_finished = false;
     this->signal_step = false;
     this->step_signal_hook = new Hook();
+
+    last_milestone_steps = 0;
+    last_milestone_mm    = 0.0F;
 }
 
 StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
@@ -38,6 +41,9 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->step_signal_hook = new Hook();
 
     set_high_on_debug(en->port_number, en->pin);
+
+    last_milestone_steps = 0;
+    last_milestone_mm    = 0.0F;
 }
 
 // This is called ( see the .h file, we had to put a part of things there for obscure inline reasons ) when a step has to be generated
@@ -157,3 +163,20 @@ void StepperMotor::unpause(){
 }
 
 
+void StepperMotor::change_steps_per_mm(float new_steps)
+{
+    steps_per_mm = new_steps;
+    last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+}
+
+void StepperMotor::change_last_milestone(float new_milestone)
+{
+    last_milestone_mm = new_milestone;
+    last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+}
+
+int  StepperMotor::steps_to_target(float target)
+{
+    int target_steps = target * steps_per_mm;
+    return target_steps - last_milestone_steps;
+}

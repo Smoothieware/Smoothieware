@@ -27,7 +27,10 @@ class StepperMotor {
         void pause();
         void unpause();
 
+        void change_steps_per_mm(float);
+        void change_last_milestone(float);
 
+        int  steps_to_target(float);
 
         template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook();
@@ -56,6 +59,11 @@ class StepperMotor {
 
         volatile bool moving;
         bool paused;
+
+        float steps_per_mm;
+
+        int32_t last_milestone_steps;
+        float   last_milestone_mm;
 
         //bool direction_bit;
         //bool step_bit;

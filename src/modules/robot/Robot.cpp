@@ -25,25 +25,53 @@ using std::string;
 #include "arm_solutions/JohannKosselSolution.h"
 #include "arm_solutions/HBotSolution.h"
 
-#define default_seek_rate_checksum             CHECKSUM("default_seek_rate")
-#define default_feed_rate_checksum             CHECKSUM("default_feed_rate")
-#define mm_per_line_segment_checksum           CHECKSUM("mm_per_line_segment")
-#define delta_segments_per_second_checksum     CHECKSUM("delta_segments_per_second")
-#define mm_per_arc_segment_checksum            CHECKSUM("mm_per_arc_segment")
-#define arc_correction_checksum                CHECKSUM("arc_correction")
-#define x_axis_max_speed_checksum              CHECKSUM("x_axis_max_speed")
-#define y_axis_max_speed_checksum              CHECKSUM("y_axis_max_speed")
-#define z_axis_max_speed_checksum              CHECKSUM("z_axis_max_speed")
+#define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
+#define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
+#define  mm_per_line_segment_checksum        CHECKSUM("mm_per_line_segment")
+#define  delta_segments_per_second_checksum  CHECKSUM("delta_segments_per_second")
+#define  mm_per_arc_segment_checksum         CHECKSUM("mm_per_arc_segment")
+#define  arc_correction_checksum             CHECKSUM("arc_correction")
+#define  x_axis_max_speed_checksum           CHECKSUM("x_axis_max_speed")
+#define  y_axis_max_speed_checksum           CHECKSUM("y_axis_max_speed")
+#define  z_axis_max_speed_checksum           CHECKSUM("z_axis_max_speed")
 
 // arm solutions
-#define arm_solution_checksum                  CHECKSUM("arm_solution")
-#define cartesian_checksum                     CHECKSUM("cartesian")
-#define rotatable_cartesian_checksum           CHECKSUM("rotatable_cartesian")
-#define rostock_checksum                       CHECKSUM("rostock")
-#define delta_checksum                         CHECKSUM("delta")
-#define hbot_checksum                          CHECKSUM("hbot")
-#define corexy_checksum                        CHECKSUM("corexy")
-#define kossel_checksum                        CHECKSUM("kossel")
+#define  arm_solution_checksum               CHECKSUM("arm_solution")
+#define  cartesian_checksum                  CHECKSUM("cartesian")
+#define  rotatable_cartesian_checksum        CHECKSUM("rotatable_cartesian")
+#define  rostock_checksum                    CHECKSUM("rostock")
+#define  delta_checksum                      CHECKSUM("delta")
+#define  hbot_checksum                       CHECKSUM("hbot")
+#define  corexy_checksum                     CHECKSUM("corexy")
+#define  kossel_checksum                     CHECKSUM("kossel")
+
+// stepper motor stuff
+#define  alpha_step_pin_checksum             CHECKSUM("alpha_step_pin")
+#define  beta_step_pin_checksum              CHECKSUM("beta_step_pin")
+#define  gamma_step_pin_checksum             CHECKSUM("gamma_step_pin")
+#define  alpha_dir_pin_checksum              CHECKSUM("alpha_dir_pin")
+#define  beta_dir_pin_checksum               CHECKSUM("beta_dir_pin")
+#define  gamma_dir_pin_checksum              CHECKSUM("gamma_dir_pin")
+#define  alpha_en_pin_checksum               CHECKSUM("alpha_en_pin")
+#define  beta_en_pin_checksum                CHECKSUM("beta_en_pin")
+#define  gamma_en_pin_checksum               CHECKSUM("gamma_en_pin")
+#define  alpha_steps_per_mm_checksum         CHECKSUM("alpha_steps_per_mm")
+#define  beta_steps_per_mm_checksum          CHECKSUM("beta_steps_per_mm")
+#define  gamma_steps_per_mm_checksum         CHECKSUM("gamma_steps_per_mm")
+
+// new-style actuator stuff
+#define  actuator_checksum                   CHEKCSUM("actuator")
+
+#define  step_pin_checksum                   CHECKSUM("step_pin")
+#define  dir_pin_checksum                    CHEKCSUM("dir_pin")
+#define  en_pin_checksum                     CHECKSUM("en_pin")
+
+#define  steps_per_mm_checksum               CHECKSUM("steps_per_mm")
+
+#define  alpha_checksum                      CHECKSUM("alpha")
+#define  beta_checksum                       CHECKSUM("beta")
+#define  gamma_checksum                      CHECKSUM("gamma")
+
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
@@ -69,12 +97,6 @@ void Robot::on_module_loaded() {
 
     // Configuration
     this->on_config_reload(this);
-
-    // Make our 3 StepperMotors
-    this->alpha_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&alpha_step_pin,&alpha_dir_pin,&alpha_en_pin) );
-    this->beta_stepper_motor   = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&beta_step_pin, &beta_dir_pin, &beta_en_pin ) );
-    this->gamma_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&gamma_step_pin,&gamma_dir_pin,&gamma_en_pin) );
-
 }
 
 void Robot::on_config_reload(void* argument){
@@ -116,19 +138,41 @@ void Robot::on_config_reload(void* argument){
     this->delta_segments_per_second = THEKERNEL->config->value(delta_segments_per_second_checksum )->by_default(0.0f   )->as_number();
     this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(0.5f   )->as_number();
     this->arc_correction      = THEKERNEL->config->value(arc_correction_checksum      )->by_default(5      )->as_number();
+
     this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000  )->as_number();
     this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000  )->as_number();
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(300    )->as_number();
-    this->alpha_step_pin.from_string( THEKERNEL->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
-    this->alpha_dir_pin.from_string(  THEKERNEL->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
-    this->alpha_en_pin.from_string(   THEKERNEL->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
-    this->beta_step_pin.from_string(  THEKERNEL->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
-    this->gamma_step_pin.from_string( THEKERNEL->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
-    this->gamma_dir_pin.from_string(  THEKERNEL->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
-    this->gamma_en_pin.from_string(   THEKERNEL->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
-    this->beta_dir_pin.from_string(   THEKERNEL->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
-    this->beta_en_pin.from_string(    THEKERNEL->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
 
+    Pin alpha_step_pin;
+    Pin alpha_dir_pin;
+    Pin alpha_en_pin;
+    Pin beta_step_pin;
+    Pin beta_dir_pin;
+    Pin beta_en_pin;
+    Pin gamma_step_pin;
+    Pin gamma_dir_pin;
+    Pin gamma_en_pin;
+
+    alpha_step_pin.from_string( THEKERNEL->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
+    alpha_dir_pin.from_string(  THEKERNEL->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
+    alpha_en_pin.from_string(   THEKERNEL->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
+    beta_step_pin.from_string(  THEKERNEL->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
+    gamma_step_pin.from_string( THEKERNEL->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
+    gamma_dir_pin.from_string(  THEKERNEL->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
+    gamma_en_pin.from_string(   THEKERNEL->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
+    beta_dir_pin.from_string(   THEKERNEL->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
+    beta_en_pin.from_string(    THEKERNEL->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
+
+    // TODO: delete or detect old steppermotors
+    // Make our 3 StepperMotors
+    this->alpha_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&alpha_step_pin,&alpha_dir_pin,&alpha_en_pin) );
+    this->beta_stepper_motor   = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&beta_step_pin, &beta_dir_pin, &beta_en_pin ) );
+    this->gamma_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&gamma_step_pin,&gamma_dir_pin,&gamma_en_pin) );
+
+    actuators.clear();
+    actuators.push_back(alpha_stepper_motor);
+    actuators.push_back(beta_stepper_motor);
+    actuators.push_back(gamma_stepper_motor);
 }
 
 void Robot::on_get_public_data(void* argument){
@@ -202,28 +246,31 @@ void Robot::on_gcode_received(void * argument){
                     }
                 }
                 memcpy(this->current_position, this->last_milestone, sizeof(float)*3); // current_position[] = last_milestone[];
-                this->arm_solution->millimeters_to_steps(this->current_position, THEKERNEL->planner->position);
+
+                // TODO: handle any number of actuators
+                float actuator_pos[3];
+                arm_solution->cartesian_to_actuator(current_position, actuator_pos);
+
+                for (int i = 0; i < 3; i++)
+                    actuators[i]->change_last_milestone(actuator_pos[i]);
+
                 gcode->mark_as_taken();
-                return; // TODO: Wait until queue empty
+                return;
            }
        }
    }else if( gcode->has_m){
-        float steps[3];
         switch( gcode->m ){
             case 92: // M92 - set steps per mm
-                this->arm_solution->get_steps_per_millimeter(steps);
                 if (gcode->has_letter('X'))
-                    steps[0] = this->to_millimeters(gcode->get_value('X'));
+                    actuators[0]->change_steps_per_mm(this->to_millimeters(gcode->get_value('X')));
                 if (gcode->has_letter('Y'))
-                    steps[1] = this->to_millimeters(gcode->get_value('Y'));
+                    actuators[1]->change_steps_per_mm(this->to_millimeters(gcode->get_value('Y')));
                 if (gcode->has_letter('Z'))
-                    steps[2] = this->to_millimeters(gcode->get_value('Z'));
+                    actuators[2]->change_steps_per_mm(this->to_millimeters(gcode->get_value('Z')));
                 if (gcode->has_letter('F'))
                     seconds_per_minute = gcode->get_value('F');
-                this->arm_solution->set_steps_per_millimeter(steps);
-                // update current position in steps
-                this->arm_solution->millimeters_to_steps(this->current_position, THEKERNEL->planner->position);
-                gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", steps[0], steps[1], steps[2], seconds_per_minute);
+
+                gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm, seconds_per_minute);
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
@@ -287,8 +334,7 @@ void Robot::on_gcode_received(void * argument){
 
             case 500: // M500 saves some volatile settings to config override file
             case 503: // M503 just prints the settings
-                this->arm_solution->get_steps_per_millimeter(steps);
-                gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", steps[0], steps[1], steps[2]);
+                gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration/3600);
                 gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->mark_as_taken();
@@ -374,16 +420,16 @@ void Robot::distance_in_gcode_is_known(Gcode* gcode){
 // Reset the position for all axes ( used in homing and G92 stuff )
 void Robot::reset_axis_position(float position, int axis) {
     this->last_milestone[axis] = this->current_position[axis] = position;
-    this->arm_solution->millimeters_to_steps(this->current_position, THEKERNEL->planner->position);
+    actuators[axis]->change_last_milestone(position);
 }
 
 
 // Convert target from millimeters to steps, and append this to the planner
 void Robot::append_milestone( float target[], float rate ){
-    int steps[3]; //Holds the result of the conversion
+    float actuator_pos[3]; //Holds the result of the conversion
 
     // We use an arm solution object so exotic arm solutions can be used and neatly abstracted
-    this->arm_solution->millimeters_to_steps( target, steps );
+    this->arm_solution->cartesian_to_actuator( target, actuator_pos );
 
     float deltas[3];
     for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
@@ -402,7 +448,7 @@ void Robot::append_milestone( float target[], float rate ){
     }
 
     // Append the block to the planner
-    THEKERNEL->planner->append_block( steps, rate * seconds_per_minute, millimeters_of_travel, deltas );
+    THEKERNEL->planner->append_block( actuator_pos, rate * seconds_per_minute, millimeters_of_travel, deltas );
 
     // Update the last_milestone to the current target for the next time we use last_milestone
     memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];

@@ -16,16 +16,6 @@
 #define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
 #define minimum_steps_per_minute_checksum           CHECKSUM("minimum_steps_per_minute")
 #define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
-#define alpha_step_pin_checksum                     CHECKSUM("alpha_step_pin")
-#define beta_step_pin_checksum                      CHECKSUM("beta_step_pin")
-#define gamma_step_pin_checksum                     CHECKSUM("gamma_step_pin")
-#define alpha_dir_pin_checksum                      CHECKSUM("alpha_dir_pin")
-#define beta_dir_pin_checksum                       CHECKSUM("beta_dir_pin")
-#define gamma_dir_pin_checksum                      CHECKSUM("gamma_dir_pin")
-#define alpha_en_pin_checksum                       CHECKSUM("alpha_en_pin")
-#define beta_en_pin_checksum                        CHECKSUM("beta_en_pin")
-#define gamma_en_pin_checksum                       CHECKSUM("gamma_en_pin")
-
 
 class Stepper : public Module {
     public:

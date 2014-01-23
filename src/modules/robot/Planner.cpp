@@ -28,7 +28,6 @@ using namespace std;
 // It goes over the list in both direction, every time a block is added, re-doing the math to make sure everything is optimal
 
 Planner::Planner(){
-    clear_vector(this->position);
     clear_vector_float(this->previous_unit_vec);
     this->has_deleted_block = false;
 }
@@ -47,19 +46,22 @@ void Planner::on_config_reload(void* argument){
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( int target[], float feed_rate, float distance, float deltas[] ){
+void Planner::append_block( float actuator_pos[], float feed_rate, float distance, float deltas[] ){
 
     // Create ( recycle ) a new block
     Block* block = THEKERNEL->conveyor->queue.head_ref();
 
     // Direction bits
     block->direction_bits = 0;
-    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){
-        if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<stepper); }
-    }
+    for (int i = 0; i < 3; i++)
+    {
+        int steps = THEKERNEL->robot->actuators[i]->steps_to_target(actuator_pos[i]);
 
-    // Number of steps for each stepper
-    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); }
+        if (steps < 0)
+            block->direction_bits |= (1<<i);
+
+        block->steps[i] = labs(steps);
+    }
 
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
@@ -152,7 +154,8 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
 
     // Update current position
-    memcpy(this->position, target, sizeof(int)*3);
+    for (int i = 0; i < 3; i++)
+        THEKERNEL->robot->actuators[i]->change_last_milestone(actuator_pos[i]);
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();
