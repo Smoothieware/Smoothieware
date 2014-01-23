@@ -108,14 +108,14 @@ void Stepper::on_gcode_execute(void* argument){
 // Enable steppers
 void Stepper::turn_enable_pins_on(){
     for (StepperMotor* m : THEKERNEL->robot->actuators)
-        m->en_pin->set(0);
+        m->enable(true);
     this->enable_pins_status = true;
 }
 
 // Disable steppers
 void Stepper::turn_enable_pins_off(){
     for (StepperMotor* m : THEKERNEL->robot->actuators)
-        m->en_pin->set(1);
+        m->enable(false);
     this->enable_pins_status = false;
 }
 

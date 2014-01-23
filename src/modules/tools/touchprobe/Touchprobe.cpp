@@ -60,7 +60,7 @@ void Touchprobe::wait_for_touch(int distance[]){
                     distance[i] = 0;
                     if ( this->steppers[i]->moving ){
                         distance[i] =  this->steppers[i]->stepped;
-                        distance[i] *= this->steppers[i]->dir_pin->get() ? -1 : 1;
+                        distance[i] *= this->steppers[i]->direction ? -1 : 1;
                         this->steppers[i]->move(0,0);
                     }
                 }

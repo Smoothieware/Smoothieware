@@ -49,9 +49,6 @@ void Extruder::on_module_loaded() {
     // Settings
     this->on_config_reload(this);
 
-    // We start with the enable pin off
-    this->en_pin.set(1);
-
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_BLOCK_BEGIN);
@@ -74,7 +71,7 @@ void Extruder::on_module_loaded() {
     THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
 
     // Stepper motor object for the extruder
-    this->stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&step_pin, &dir_pin, &en_pin) );
+    this->stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(step_pin, dir_pin, en_pin) );
     this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
 
 }
@@ -107,9 +104,6 @@ void Extruder::on_config_reload(void* argument){
         this->en_pin.from_string(           THEKERNEL->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
 
     }
-
-    // disable by default
-    this->en_pin.set(1);
 
 }
 

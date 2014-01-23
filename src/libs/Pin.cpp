@@ -5,6 +5,14 @@
 Pin::Pin(){
     this->inverting= false;
 }
+/*
+Pin::Pin(Pin& tocopy)
+{
+    port = tocopy.port;
+    inverting = tocopy.inverting;
+    port_number = tocopy.port_number;
+    pin = tocopy.pin;
+}*/
 
 // Make a new pin object from a string
 Pin* Pin::from_string(std::string value){

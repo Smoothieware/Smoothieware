@@ -10,6 +10,7 @@
 class Pin {
     public:
         Pin();
+//         Pin(Pin&);
 
         Pin* from_string(std::string value);
 

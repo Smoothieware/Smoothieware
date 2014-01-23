@@ -16,9 +16,14 @@ class StepTicker;
 class StepperMotor {
     public:
         StepperMotor();
-        StepperMotor(Pin* step, Pin* dir, Pin* en);
+        StepperMotor(Pin& step, Pin& dir, Pin& en);
         void tick();
         void step();
+        void unstep();
+
+        void enable(bool);
+
+
         void move_finished();
         void move( bool direction, unsigned int steps );
         void signal_move_finished();
@@ -51,9 +56,9 @@ class StepperMotor {
         uint32_t signal_step_number;
 
         StepTicker* step_ticker;
-        Pin* step_pin;
-        Pin* dir_pin;
-        Pin* en_pin;
+        Pin step_pin;
+        Pin dir_pin;
+        Pin en_pin;
 
         float steps_per_second;
 
@@ -72,6 +77,7 @@ class StepperMotor {
         uint32_t stepped;
         uint32_t fx_counter;
         uint32_t fx_ticks_per_step;
+        bool     direction;
 
         //bool exit_tick;
         bool remove_from_active_list_next_reset;
@@ -91,6 +97,15 @@ inline void StepperMotor::tick(){
 
 }
 
+inline void StepperMotor::unstep()
+{
+    step_pin.set(0);
+}
+
+inline void StepperMotor::enable(bool state)
+{
+    en_pin.set(!state);
+}
 
 
 #endif

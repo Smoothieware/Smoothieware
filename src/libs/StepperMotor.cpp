@@ -28,7 +28,7 @@ StepperMotor::StepperMotor(){
     last_milestone_mm    = 0.0F;
 }
 
-StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
+StepperMotor::StepperMotor(Pin& step, Pin& dir, Pin& en) : step_pin(step), dir_pin(dir), en_pin(en) {
     this->moving = false;
     this->paused = false;
     this->fx_counter = 0;
@@ -40,7 +40,8 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->signal_step = false;
     this->step_signal_hook = new Hook();
 
-    set_high_on_debug(en->port_number, en->pin);
+    enable(false);
+    set_high_on_debug(en.port_number, en.pin);
 
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
@@ -51,7 +52,7 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
 void StepperMotor::step(){
 
     // output to pins 37t
-    this->step_pin->set( 1                   );
+    this->step_pin.set( 1                   );
     this->step_ticker->reset_step_pins = true;
 
     // move counter back 11t
@@ -112,7 +113,8 @@ inline void StepperMotor::update_exit_tick(){
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps ){
     // We do not set the direction directly, we will set the pin just before the step pin on the next tick
-    this->dir_pin->set(direction);
+    this->dir_pin.set(direction);
+    this->direction = direction;
 
     // How many steps we have to move until the move is done
     this->steps_to_move = steps;
