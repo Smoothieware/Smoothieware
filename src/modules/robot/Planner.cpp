@@ -60,6 +60,10 @@ void Planner::append_block( float actuator_pos[], float feed_rate, float distanc
         if (steps < 0)
             block->direction_bits |= (1<<i);
 
+        // Update current position
+        THEKERNEL->robot->actuators[i]->last_milestone_steps = steps;
+        THEKERNEL->robot->actuators[i]->last_milestone_mm = actuator_pos[i];
+
         block->steps[i] = labs(steps);
     }
 
@@ -152,10 +156,6 @@ void Planner::append_block( float actuator_pos[], float feed_rate, float distanc
 
     // Update previous path unit_vector and nominal speed
     memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
-
-    // Update current position
-    for (int i = 0; i < 3; i++)
-        THEKERNEL->robot->actuators[i]->change_last_milestone(actuator_pos[i]);
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();

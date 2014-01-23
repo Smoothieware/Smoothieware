@@ -177,6 +177,6 @@ void StepperMotor::change_last_milestone(float new_milestone)
 
 int  StepperMotor::steps_to_target(float target)
 {
-    int target_steps = target * steps_per_mm;
+    int target_steps = lround(target * steps_per_mm);
     return target_steps - last_milestone_steps;
 }
