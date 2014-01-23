@@ -1,14 +1,14 @@
 #include "CartesianSolution.h"
 #include <math.h>
 
-void CartesianSolution::cartesian_to_actuator( float millimeters[], float steps[] ){
-    steps[ALPHA_STEPPER] = millimeters[X_AXIS];
-    steps[BETA_STEPPER ] = millimeters[Y_AXIS];
-    steps[GAMMA_STEPPER] = millimeters[Z_AXIS];
+void CartesianSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] ){
+    actuator_mm[ALPHA_STEPPER] = cartesian_mm[X_AXIS];
+    actuator_mm[BETA_STEPPER ] = cartesian_mm[Y_AXIS];
+    actuator_mm[GAMMA_STEPPER] = cartesian_mm[Z_AXIS];
 }
 
-void CartesianSolution::actuator_to_cartesian( float steps[], float millimeters[] ){
-    millimeters[ALPHA_STEPPER] = steps[X_AXIS];
-    millimeters[BETA_STEPPER ] = steps[Y_AXIS];
-    millimeters[GAMMA_STEPPER] = steps[Z_AXIS];
+void CartesianSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] ){
+    cartesian_mm[ALPHA_STEPPER] = actuator_mm[X_AXIS];
+    cartesian_mm[BETA_STEPPER ] = actuator_mm[Y_AXIS];
+    cartesian_mm[GAMMA_STEPPER] = actuator_mm[Z_AXIS];
 }

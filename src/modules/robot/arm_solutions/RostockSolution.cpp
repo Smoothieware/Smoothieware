@@ -23,31 +23,31 @@ RostockSolution::RostockSolution(Config* config)
     arm_length_squared = powf(arm_length, 2);
 }
 
-void RostockSolution::cartesian_to_actuator( float millimeters[], float steps[] ){
+void RostockSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] ){
     float alpha_rotated[3], rotated[3];
     
     if( sin_alpha == 0 && cos_alpha == 1){
-        alpha_rotated[0] = millimeters[0];
-        alpha_rotated[1] = millimeters[1];
-        alpha_rotated[2] = millimeters[2];
+        alpha_rotated[0] = cartesian_mm[0];
+        alpha_rotated[1] = cartesian_mm[1];
+        alpha_rotated[2] = cartesian_mm[2];
     }else{
-        rotate( millimeters, alpha_rotated, sin_alpha, cos_alpha );
+        rotate( cartesian_mm, alpha_rotated, sin_alpha, cos_alpha );
     }
-    steps[ALPHA_STEPPER] = solve_arm( alpha_rotated );
+    actuator_mm[ALPHA_STEPPER] = solve_arm( alpha_rotated );
 
     rotate( alpha_rotated, rotated, sin_beta, cos_beta );
-    steps[BETA_STEPPER ] = solve_arm( rotated );
+    actuator_mm[BETA_STEPPER ] = solve_arm( rotated );
 
     rotate( alpha_rotated, rotated, sin_gamma, cos_gamma );
-    steps[GAMMA_STEPPER] = solve_arm( rotated );
+    actuator_mm[GAMMA_STEPPER] = solve_arm( rotated );
 }
 
-void RostockSolution::actuator_to_cartesian( float steps[], float millimeters[] ){
+void RostockSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] ){
     // unimplemented
 }
 
-float RostockSolution::solve_arm( float millimeters[]) {
-    return sqrtf(arm_length_squared - powf(millimeters[X_AXIS] - arm_radius, 2) - powf(millimeters[Y_AXIS], 2)) + millimeters[Z_AXIS];
+float RostockSolution::solve_arm( float cartesian_mm[]) {
+    return sqrtf(arm_length_squared - powf(cartesian_mm[X_AXIS] - arm_radius, 2) - powf(cartesian_mm[Y_AXIS], 2)) + cartesian_mm[Z_AXIS];
 }
 
 void RostockSolution::rotate(float in[], float out[], float sin, float cos ){

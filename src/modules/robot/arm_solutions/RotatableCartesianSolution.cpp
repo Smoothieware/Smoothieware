@@ -10,12 +10,12 @@ RotatableCartesianSolution::RotatableCartesianSolution(Config* config) {
     cos_alpha          = cosf(alpha_angle);
 }
 
-void RotatableCartesianSolution::cartesian_to_actuator( float millimeters[], float steps[] ){
-    rotate( millimeters, steps, sin_alpha, cos_alpha );
+void RotatableCartesianSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] ){
+    rotate( cartesian_mm, actuator_mm, sin_alpha, cos_alpha );
 }
 
-void RotatableCartesianSolution::actuator_to_cartesian( float steps[], float millimeters[] ){
-    rotate( steps, millimeters, - sin_alpha, cos_alpha );
+void RotatableCartesianSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] ){
+    rotate( actuator_mm, cartesian_mm, - sin_alpha, cos_alpha );
 }
 
 void RotatableCartesianSolution::rotate(float in[], float out[], float sin, float cos ){

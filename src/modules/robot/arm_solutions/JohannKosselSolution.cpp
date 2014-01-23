@@ -32,23 +32,23 @@ void JohannKosselSolution::init() {
     DELTA_TOWER3_Y = DELTA_RADIUS;
 }
 
-void JohannKosselSolution::cartesian_to_actuator( float millimeters[], float steps[] ){
+void JohannKosselSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] ){
 
-    steps[ALPHA_STEPPER] = sqrtf(this->arm_length_squared
-                                - SQ(DELTA_TOWER1_X - millimeters[0])
-                                - SQ(DELTA_TOWER1_Y - millimeters[1])
-                                ) + millimeters[2];
-    steps[BETA_STEPPER ] = sqrtf(this->arm_length_squared
-                                - SQ(DELTA_TOWER2_X - millimeters[0])
-                                - SQ(DELTA_TOWER2_Y - millimeters[1])
-                                ) + millimeters[2];
-    steps[GAMMA_STEPPER] = sqrtf(this->arm_length_squared
-                                - SQ(DELTA_TOWER3_X - millimeters[0])
-                                - SQ(DELTA_TOWER3_Y - millimeters[1])
-                                ) + millimeters[2];
+    actuator_mm[ALPHA_STEPPER] = sqrtf(this->arm_length_squared
+                                - SQ(DELTA_TOWER1_X - cartesian_mm[0])
+                                - SQ(DELTA_TOWER1_Y - cartesian_mm[1])
+                                ) + cartesian_mm[2];
+    actuator_mm[BETA_STEPPER ] = sqrtf(this->arm_length_squared
+                                - SQ(DELTA_TOWER2_X - cartesian_mm[0])
+                                - SQ(DELTA_TOWER2_Y - cartesian_mm[1])
+                                ) + cartesian_mm[2];
+    actuator_mm[GAMMA_STEPPER] = sqrtf(this->arm_length_squared
+                                - SQ(DELTA_TOWER3_X - cartesian_mm[0])
+                                - SQ(DELTA_TOWER3_Y - cartesian_mm[1])
+                                ) + cartesian_mm[2];
 }
 
-void JohannKosselSolution::actuator_to_cartesian( float steps[], float millimeters[] ){
+void JohannKosselSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] ){
     // unimplemented
 }
 
