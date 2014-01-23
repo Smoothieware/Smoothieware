@@ -61,7 +61,7 @@ void Planner::append_block( float actuator_pos[], float feed_rate, float distanc
             block->direction_bits |= (1<<i);
 
         // Update current position
-        THEKERNEL->robot->actuators[i]->last_milestone_steps = steps;
+        THEKERNEL->robot->actuators[i]->last_milestone_steps += steps;
         THEKERNEL->robot->actuators[i]->last_milestone_mm = actuator_pos[i];
 
         block->steps[i] = labs(steps);
