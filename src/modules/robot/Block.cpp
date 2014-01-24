@@ -98,13 +98,13 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
         return;
 
     // The planner passes us factors, we need to transform them in rates
-    this->initial_rate = ceil(this->nominal_rate * entryspeed / this->nominal_speed);   // (step/min)
-    this->final_rate   = ceil(this->nominal_rate * exitspeed  / this->nominal_speed);   // (step/min)
+    this->initial_rate = ceil(this->nominal_rate * entryspeed / this->nominal_speed);   // (step/s)
+    this->final_rate   = ceil(this->nominal_rate * exitspeed  / this->nominal_speed);   // (step/s)
 
     // How many steps to accelerate and decelerate
-    float acceleration_per_minute = this->rate_delta * THEKERNEL->stepper->acceleration_ticks_per_second * 60.0; // ( step/min^2)
-    int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_minute ) );
-    int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_minute ) );
+    float acceleration_per_second = this->rate_delta * THEKERNEL->stepper->acceleration_ticks_per_second; // ( step/s^2)
+    int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_second ) );
+    int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_second ) );
 
     // Calculate the size of Plateau of Nominal Rate ( during which we don't accelerate nor decelerate, but just cruise )
     int plateau_steps = this->steps_event_count - accelerate_steps - decelerate_steps;
@@ -113,7 +113,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // have to use intersection_distance() to calculate when to abort acceleration and start braking
     // in order to reach the final_rate exactly at the end of this block.
     if (plateau_steps < 0) {
-        accelerate_steps = ceil(this->intersection_distance(this->initial_rate, this->final_rate, acceleration_per_minute, this->steps_event_count));
+        accelerate_steps = ceil(this->intersection_distance(this->initial_rate, this->final_rate, acceleration_per_second, this->steps_event_count));
         accelerate_steps = max( accelerate_steps, 0 ); // Check limits due to numerical round-off
         accelerate_steps = min( accelerate_steps, int(this->steps_event_count) );
         plateau_steps = 0;

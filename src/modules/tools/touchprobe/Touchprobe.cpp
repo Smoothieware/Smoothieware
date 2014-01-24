@@ -110,7 +110,7 @@ void Touchprobe::on_gcode_received(void* argument)
                 }
             }
             if( gcode->has_letter('F') )            {
-                this->probe_rate = robot->to_millimeters( gcode->get_value('F') ) / 60.0;
+                this->probe_rate = robot->to_millimeters( gcode->get_value('F') ) / robot->seconds_per_minute;
             }
             robot->arm_solution->cartesian_to_actuator(tmp, mm);
             for (int c = 0; c < 3; c++)

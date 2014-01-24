@@ -30,7 +30,7 @@ class Stepper : public Module {
         void on_pause(void* argument);
         uint32_t main_interrupt(uint32_t dummy);
         void trapezoid_generator_reset();
-        void set_step_events_per_minute(float steps_per_minute);
+        void set_step_events_per_second(float);
         uint32_t trapezoid_generator_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
         int config_step_timer( int cycles );
@@ -53,7 +53,7 @@ class Stepper : public Module {
         bool trapezoid_generator_busy;
         int microseconds_per_step_pulse;
         int acceleration_ticks_per_second;
-        unsigned int minimum_steps_per_minute;
+        unsigned int minimum_steps_per_second;
         int base_stepping_frequency;
         unsigned short step_bits[3];
         int counter_increment;

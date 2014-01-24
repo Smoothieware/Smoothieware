@@ -92,7 +92,7 @@ Robot::Robot(){
     clear_vector(this->current_position);
     clear_vector(this->last_milestone);
     this->arm_solution = NULL;
-    seconds_per_minute = 60.0;
+    seconds_per_minute = 60.0F;
 }
 
 //Called when the module has just been loaded
@@ -139,16 +139,16 @@ void Robot::on_config_reload(void* argument){
     }
 
 
-    this->feed_rate           = THEKERNEL->config->value(default_feed_rate_checksum   )->by_default(100    )->as_number() / 60;
-    this->seek_rate           = THEKERNEL->config->value(default_seek_rate_checksum   )->by_default(100    )->as_number() / 60;
-    this->mm_per_line_segment = THEKERNEL->config->value(mm_per_line_segment_checksum )->by_default(0.0f   )->as_number();
+    this->feed_rate           = THEKERNEL->config->value(default_feed_rate_checksum   )->by_default(  100.0F)->as_number();
+    this->seek_rate           = THEKERNEL->config->value(default_seek_rate_checksum   )->by_default(  100.0F)->as_number();
+    this->mm_per_line_segment = THEKERNEL->config->value(mm_per_line_segment_checksum )->by_default(    0.0F)->as_number();
     this->delta_segments_per_second = THEKERNEL->config->value(delta_segments_per_second_checksum )->by_default(0.0f   )->as_number();
-    this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(0.5f   )->as_number();
-    this->arc_correction      = THEKERNEL->config->value(arc_correction_checksum      )->by_default(5      )->as_number();
+    this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(    0.5f)->as_number();
+    this->arc_correction      = THEKERNEL->config->value(arc_correction_checksum      )->by_default(    5   )->as_number();
 
-    this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000  )->as_number();
-    this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000  )->as_number();
-    this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(300    )->as_number();
+    this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number();
+    this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number();
+    this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number();
 
     Pin alpha_step_pin;
     Pin alpha_dir_pin;
@@ -203,7 +203,7 @@ void Robot::on_get_public_data(void* argument){
 
     if(pdr->second_element_is(speed_override_percent_checksum)) {
         static float return_data;
-        return_data= 100*this->seconds_per_minute/60;
+        return_data = 100.0F * 60.0F / seconds_per_minute;
         pdr->set_data_ptr(&return_data);
         pdr->set_taken();
 
@@ -227,9 +227,9 @@ void Robot::on_set_public_data(void* argument){
         // NOTE do not use this while printing!
         float t= *static_cast<float*>(pdr->get_data_ptr());
         // enforce minimum 10% speed
-        if (t < 10.0) t= 10.0;
+        if (t < 10.0F) t= 10.0F;
 
-        this->seconds_per_minute= t * 0.6;
+        this->seconds_per_minute = t / 0.6F; // t * 60 / 100
         pdr->set_taken();
     }
 }
@@ -308,10 +308,10 @@ void Robot::on_gcode_received(void * argument){
                 gcode->mark_as_taken();
                 if (gcode->has_letter('S'))
                 {
-                    float acc= gcode->get_value('S') * 60 * 60; // mm/min^2
+                    float acc= gcode->get_value('S'); // mm/s^2
                     // enforce minimum
-                    if (acc < 1.0)
-                        acc = 1.0;
+                    if (acc < 1.0F)
+                        acc = 1.0F;
                     THEKERNEL->planner->acceleration= acc;
                 }
                 break;
@@ -342,9 +342,13 @@ void Robot::on_gcode_received(void * argument){
                 {
                     float factor = gcode->get_value('S');
                     // enforce minimum 10% speed
-                    if (factor < 10.0)
-                        factor = 10.0;
-                    seconds_per_minute = factor * 0.6;
+                    if (factor < 10.0F)
+                        factor = 10.0F;
+                    // enforce maximum 10x speed
+                    if (factor > 1000.0F)
+                        factor = 1000.0F;
+
+                    seconds_per_minute = 6000.0F / factor;
                 }
                 break;
 
@@ -356,7 +360,7 @@ void Robot::on_gcode_received(void * argument){
             case 500: // M500 saves some volatile settings to config override file
             case 503: // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
-                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration/3600);
+                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration);
                 gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->mark_as_taken();
                 break;
@@ -405,9 +409,9 @@ void Robot::on_gcode_received(void * argument){
     if( gcode->has_letter('F') )
     {
         if( this->motion_mode == MOTION_MODE_SEEK )
-            this->seek_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0F;
+            this->seek_rate = this->to_millimeters( gcode->get_value('F') );
         else
-            this->feed_rate = this->to_millimeters( gcode->get_value('F') ) / 60.0F;
+            this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
 
     //Perform any physical actions
@@ -415,8 +419,8 @@ void Robot::on_gcode_received(void * argument){
         case NEXT_ACTION_DEFAULT:
             switch(this->motion_mode){
                 case MOTION_MODE_CANCEL: break;
-                case MOTION_MODE_SEEK  : this->append_line(gcode, target, this->seek_rate ); break;
-                case MOTION_MODE_LINEAR: this->append_line(gcode, target, this->feed_rate ); break;
+                case MOTION_MODE_SEEK  : this->append_line(gcode, target, this->seek_rate / seconds_per_minute ); break;
+                case MOTION_MODE_LINEAR: this->append_line(gcode, target, this->feed_rate / seconds_per_minute ); break;
                 case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, target ); break;
             }
             break;
@@ -451,7 +455,7 @@ void Robot::reset_axis_position(float position, int axis) {
 
 
 // Convert target from millimeters to steps, and append this to the planner
-void Robot::append_milestone( float target[], float rate )
+void Robot::append_milestone( float target[], float rate_mm_s )
 {
     float deltas[3];
     float unit_vec[3];
@@ -474,10 +478,10 @@ void Robot::append_milestone( float target[], float rate )
     {
         if ( max_speeds[axis] > 0 )
         {
-            float axis_speed = fabs(unit_vec[axis] * rate) * seconds_per_minute;
+            float axis_speed = fabs(unit_vec[axis] * rate_mm_s);
 
             if (axis_speed > max_speeds[axis])
-                rate = rate * ( max_speeds[axis] / axis_speed );
+                rate_mm_s *= ( max_speeds[axis] / axis_speed );
         }
     }
 
@@ -487,14 +491,14 @@ void Robot::append_milestone( float target[], float rate )
     // check per-actuator speed limits
     for (int actuator = 0; actuator <= 2; actuator++)
     {
-        float actuator_rate  = fabs(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * rate / millimeters_of_travel;
+        float actuator_rate  = fabs(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * rate_mm_s / millimeters_of_travel;
 
         if (actuator_rate > actuators[actuator]->max_rate)
-            rate *= (actuators[actuator]->max_rate / actuator_rate);
+            rate_mm_s *= (actuators[actuator]->max_rate / actuator_rate);
     }
 
     // Append the block to the planner
-    THEKERNEL->planner->append_block( actuator_pos, rate * seconds_per_minute, millimeters_of_travel, unit_vec );
+    THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
 
     // Update the last_milestone to the current target for the next time we use last_milestone
     memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
@@ -502,7 +506,7 @@ void Robot::append_milestone( float target[], float rate )
 }
 
 // Append a move to the queue ( cutting it into segments if needed )
-void Robot::append_line(Gcode* gcode, float target[], float rate ){
+void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
 
     // Find out the distance for this gcode
     gcode->millimeters_of_travel = sqrtf( pow( target[X_AXIS]-this->current_position[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->current_position[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->current_position[Z_AXIS], 2 ) );
@@ -525,7 +529,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate ){
         // segment based on current speed and requested segments per second
         // the faster the travel speed the fewer segments needed
         // NOTE rate is mm/sec and we take into account any speed override
-        float seconds = 60.0/seconds_per_minute * gcode->millimeters_of_travel / rate;
+        float seconds = gcode->millimeters_of_travel / rate_mm_s;
         segments= max(1, ceil(this->delta_segments_per_second * seconds));
         // TODO if we are only moving in Z on a delta we don't really need to segment at all
 
@@ -546,11 +550,11 @@ void Robot::append_line(Gcode* gcode, float target[], float rate ){
     for( int i=0; i<segments-1; i++ ){
         for(int axis=X_AXIS; axis <= Z_AXIS; axis++ ){ temp_target[axis] += ( target[axis]-this->current_position[axis] )/segments; }
         // Append the end of this segment to the queue
-        this->append_milestone(temp_target, rate);
+        this->append_milestone(temp_target, rate_mm_s);
     }
 
     // Append the end of this full move to the queue
-    this->append_milestone(target, rate);
+    this->append_milestone(target, rate_mm_s);
 
     // if adding these blocks didn't start executing, do that now
     THEKERNEL->conveyor->ensure_running();
@@ -650,12 +654,12 @@ void Robot::append_arc(Gcode* gcode, float target[], float offset[], float radiu
         arc_target[this->plane_axis_2] += linear_per_segment;
 
         // Append this segment to the queue
-        this->append_milestone(arc_target, this->feed_rate);
+        this->append_milestone(arc_target, this->feed_rate / seconds_per_minute);
 
     }
 
     // Ensure last segment arrives at target location.
-    this->append_milestone(target, this->feed_rate);
+    this->append_milestone(target, this->feed_rate / seconds_per_minute);
 }
 
 // Do the math for an arc and add it to the queue

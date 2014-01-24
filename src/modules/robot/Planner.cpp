@@ -39,15 +39,15 @@ void Planner::on_module_loaded(){
 
 // Configure acceleration
 void Planner::on_config_reload(void* argument){
-    this->acceleration =       THEKERNEL->config->value(acceleration_checksum       )->by_default(100  )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
-    this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum )->by_default(0.05f)->as_number();
+    this->acceleration =       THEKERNEL->config->value(acceleration_checksum       )->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
+    this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum )->by_default(  0.05F)->as_number();
     this->minimum_planner_speed = THEKERNEL->config->value(minimum_planner_speed_checksum )->by_default(0.0f)->as_number();
 }
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( float actuator_pos[], float feed_rate, float distance, float unit_vec[] ){
-
+void Planner::append_block( float actuator_pos[], float rate_mm_s, float distance, float unit_vec[] )
+{
     // Create ( recycle ) a new block
     Block* block = THEKERNEL->conveyor->queue.head_ref();
 
@@ -75,8 +75,8 @@ void Planner::append_block( float actuator_pos[], float feed_rate, float distanc
     // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
     if( distance > 0.0F ){
-        block->nominal_speed = feed_rate;           // (mm/min) Always > 0
-        block->nominal_rate = ceil(block->steps_event_count * feed_rate / distance); // (step/min) Always > 0
+        block->nominal_speed = rate_mm_s;           // (mm/s) Always > 0
+        block->nominal_rate = ceil(block->steps_event_count * rate_mm_s / distance); // (step/s) Always > 0
     }else{
         block->nominal_speed = 0.0F;
         block->nominal_rate  = 0;
@@ -89,7 +89,7 @@ void Planner::append_block( float actuator_pos[], float feed_rate, float distanc
     // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
     // specifically for each line to compensate for this phenomenon:
     // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = (block->steps_event_count * acceleration) / (distance * (THEKERNEL->stepper->acceleration_ticks_per_second * 60)); // (step/min/acceleration_tick)
+    block->rate_delta = (block->steps_event_count * acceleration) / (distance * THEKERNEL->stepper->acceleration_ticks_per_second); // (step/min/acceleration_tick)
 
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction
@@ -128,7 +128,7 @@ void Planner::append_block( float actuator_pos[], float feed_rate, float distanc
     block->max_entry_speed = vmax_junction;
 
     // Initialize block entry speed. Compute based on deceleration to user-defined minimum_planner_speed.
-    float v_allowable = this->max_allowable_speed(-this->acceleration,minimum_planner_speed,block->millimeters); //TODO: Get from config
+    float v_allowable = max_allowable_speed(-acceleration, minimum_planner_speed, block->millimeters); //TODO: Get from config
     block->entry_speed = min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags
