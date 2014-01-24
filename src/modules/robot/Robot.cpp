@@ -303,11 +303,34 @@ void Robot::on_gcode_received(void * argument){
                 gcode->mark_as_taken();
                 return;
 
-            // TODO I'm not sure if the following is safe to do here, or should it go on the block queue?
+            case 203: // M203 Set maximum feedrates in mm/sec
+                if (gcode->has_letter('X'))
+                    this->max_speeds[X_AXIS]= gcode->get_value('X');
+                if (gcode->has_letter('Y'))
+                    this->max_speeds[Y_AXIS]= gcode->get_value('Y');
+                if (gcode->has_letter('Z'))
+                    this->max_speeds[Z_AXIS]= gcode->get_value('Z');
+                if (gcode->has_letter('A'))
+                    alpha_stepper_motor->max_rate= gcode->get_value('A');
+                if (gcode->has_letter('B'))
+                    beta_stepper_motor->max_rate= gcode->get_value('B');
+                if (gcode->has_letter('C'))
+                    gamma_stepper_motor->max_rate= gcode->get_value('C');
+
+                gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
+                    this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
+                    alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
+                gcode->add_nl = true;
+                gcode->mark_as_taken();
+                break;
+
             case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
                 gcode->mark_as_taken();
+
                 if (gcode->has_letter('S'))
                 {
+                    // TODO for safety so it applies only to following gcodes, maybe a better way to do this?
+                    THEKERNEL->conveyor->wait_for_empty_queue();
                     float acc= gcode->get_value('S'); // mm/s^2
                     // enforce minimum
                     if (acc < 1.0F)
@@ -362,6 +385,9 @@ void Robot::on_gcode_received(void * argument){
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration);
                 gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
+                gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
+                    this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
+                    alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
                 gcode->mark_as_taken();
                 break;
 
