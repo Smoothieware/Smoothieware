@@ -23,9 +23,15 @@ StepperMotor::StepperMotor(){
     this->is_move_finished = false;
     this->signal_step = false;
     this->step_signal_hook = new Hook();
+
+    steps_per_mm         = 1.0F;
+    max_rate             = 50.0F;
+
+    last_milestone_steps = 0;
+    last_milestone_mm    = 0.0F;
 }
 
-StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
+StepperMotor::StepperMotor(Pin& step, Pin& dir, Pin& en) : step_pin(step), dir_pin(dir), en_pin(en) {
     this->moving = false;
     this->paused = false;
     this->fx_counter = 0;
@@ -37,7 +43,14 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->signal_step = false;
     this->step_signal_hook = new Hook();
 
-    set_high_on_debug(en->port_number, en->pin);
+    enable(false);
+    set_high_on_debug(en.port_number, en.pin);
+
+    steps_per_mm         = 1.0F;
+    max_rate             = 50.0F;
+
+    last_milestone_steps = 0;
+    last_milestone_mm    = 0.0F;
 }
 
 // This is called ( see the .h file, we had to put a part of things there for obscure inline reasons ) when a step has to be generated
@@ -45,7 +58,7 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
 void StepperMotor::step(){
 
     // output to pins 37t
-    this->step_pin->set( 1                   );
+    this->step_pin.set( 1                   );
     this->step_ticker->reset_step_pins = true;
 
     // move counter back 11t
@@ -106,7 +119,8 @@ inline void StepperMotor::update_exit_tick(){
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps ){
     // We do not set the direction directly, we will set the pin just before the step pin on the next tick
-    this->dir_pin->set(direction);
+    this->dir_pin.set(direction);
+    this->direction = direction;
 
     // How many steps we have to move until the move is done
     this->steps_to_move = steps;
@@ -157,3 +171,20 @@ void StepperMotor::unpause(){
 }
 
 
+void StepperMotor::change_steps_per_mm(float new_steps)
+{
+    steps_per_mm = new_steps;
+    last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+}
+
+void StepperMotor::change_last_milestone(float new_milestone)
+{
+    last_milestone_mm = new_milestone;
+    last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+}
+
+int  StepperMotor::steps_to_target(float target)
+{
+    int target_steps = lround(target * steps_per_mm);
+    return target_steps - last_milestone_steps;
+}

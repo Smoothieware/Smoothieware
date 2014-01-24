@@ -28,7 +28,6 @@ using namespace std;
 // It goes over the list in both direction, every time a block is added, re-doing the math to make sure everything is optimal
 
 Planner::Planner(){
-    clear_vector(this->position);
     clear_vector_float(this->previous_unit_vec);
     this->has_deleted_block = false;
 }
@@ -40,43 +39,47 @@ void Planner::on_module_loaded(){
 
 // Configure acceleration
 void Planner::on_config_reload(void* argument){
-    this->acceleration =       THEKERNEL->config->value(acceleration_checksum       )->by_default(100  )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
-    this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum )->by_default(0.05f)->as_number();
+    this->acceleration =       THEKERNEL->config->value(acceleration_checksum       )->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
+    this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum )->by_default(  0.05F)->as_number();
     this->minimum_planner_speed = THEKERNEL->config->value(minimum_planner_speed_checksum )->by_default(0.0f)->as_number();
 }
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( int target[], float feed_rate, float distance, float deltas[] ){
-
+void Planner::append_block( float actuator_pos[], float rate_mm_s, float distance, float unit_vec[] )
+{
     // Create ( recycle ) a new block
     Block* block = THEKERNEL->conveyor->queue.head_ref();
 
     // Direction bits
     block->direction_bits = 0;
-    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){
-        if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<stepper); }
-    }
+    for (int i = 0; i < 3; i++)
+    {
+        int steps = THEKERNEL->robot->actuators[i]->steps_to_target(actuator_pos[i]);
 
-    // Number of steps for each stepper
-    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); }
+        if (steps < 0)
+            block->direction_bits |= (1<<i);
+
+        // Update current position
+        THEKERNEL->robot->actuators[i]->last_milestone_steps += steps;
+        THEKERNEL->robot->actuators[i]->last_milestone_mm = actuator_pos[i];
+
+        block->steps[i] = labs(steps);
+    }
 
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
 
     block->millimeters = distance;
-    float inverse_millimeters = 0.0F;
-    if( distance > 0 ){ inverse_millimeters = 1.0F/distance; }
 
     // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
-    float inverse_minute = feed_rate * inverse_millimeters;
-    if( distance > 0 ){
-        block->nominal_speed = block->millimeters * inverse_minute;           // (mm/min) Always > 0
-        block->nominal_rate = ceil(block->steps_event_count * inverse_minute); // (step/min) Always > 0
+    if( distance > 0.0F ){
+        block->nominal_speed = rate_mm_s;           // (mm/s) Always > 0
+        block->nominal_rate = ceil(block->steps_event_count * rate_mm_s / distance); // (step/s) Always > 0
     }else{
-        block->nominal_speed = 0;
-        block->nominal_rate = 0;
+        block->nominal_speed = 0.0F;
+        block->nominal_rate  = 0;
     }
 
     // Compute the acceleration rate for the trapezoid generator. Depending on the slope of the line
@@ -86,13 +89,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
     // specifically for each line to compensate for this phenomenon:
     // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = (float)( ( block->steps_event_count*inverse_millimeters * this->acceleration ) / ( THEKERNEL->stepper->acceleration_ticks_per_second * 60 ) ); // (step/min/acceleration_tick)
-
-    // Compute path unit vector
-    float unit_vec[3];
-    unit_vec[X_AXIS] = deltas[X_AXIS]*inverse_millimeters;
-    unit_vec[Y_AXIS] = deltas[Y_AXIS]*inverse_millimeters;
-    unit_vec[Z_AXIS] = deltas[Z_AXIS]*inverse_millimeters;
+    block->rate_delta = (block->steps_event_count * acceleration) / (distance * THEKERNEL->stepper->acceleration_ticks_per_second); // (step/min/acceleration_tick)
 
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction
@@ -131,7 +128,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     block->max_entry_speed = vmax_junction;
 
     // Initialize block entry speed. Compute based on deceleration to user-defined minimum_planner_speed.
-    float v_allowable = this->max_allowable_speed(-this->acceleration,minimum_planner_speed,block->millimeters); //TODO: Get from config
+    float v_allowable = max_allowable_speed(-acceleration, minimum_planner_speed, block->millimeters); //TODO: Get from config
     block->entry_speed = min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags
@@ -149,10 +146,7 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     block->recalculate_flag = true;
 
     // Update previous path unit_vector and nominal speed
-    memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
-
-    // Update current position
-    memcpy(this->position, target, sizeof(int)*3);
+    memcpy(this->previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();

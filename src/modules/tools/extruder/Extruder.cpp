@@ -49,9 +49,6 @@ void Extruder::on_module_loaded() {
     // Settings
     this->on_config_reload(this);
 
-    // We start with the enable pin off
-    this->en_pin.set(1);
-
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_BLOCK_BEGIN);
@@ -74,7 +71,7 @@ void Extruder::on_module_loaded() {
     THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
 
     // Stepper motor object for the extruder
-    this->stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(&step_pin, &dir_pin, &en_pin) );
+    this->stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(step_pin, dir_pin, en_pin) );
     this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
 
 }
@@ -107,9 +104,6 @@ void Extruder::on_config_reload(void* argument){
         this->en_pin.from_string(           THEKERNEL->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
 
     }
-
-    // disable by default
-    this->en_pin.set(1);
 
 }
 
@@ -235,10 +229,9 @@ void Extruder::on_gcode_execute(void* argument){
             }
             if (gcode->has_letter('F'))
             {
-                this->feed_rate = gcode->get_value('F');
-                if (this->feed_rate > (this->max_speed * THEKERNEL->robot->seconds_per_minute))
-                    this->feed_rate = this->max_speed * THEKERNEL->robot->seconds_per_minute;
-                feed_rate /= THEKERNEL->robot->seconds_per_minute;
+                feed_rate = gcode->get_value('F') / THEKERNEL->robot->seconds_per_minute;
+                if (feed_rate > max_speed)
+                    feed_rate = max_speed;
             }
         }else if( gcode->g == 90 ){ this->absolute_mode = true;
         }else if( gcode->g == 91 ){ this->absolute_mode = false;
@@ -331,7 +324,7 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy){
     if( current_rate > target_rate ){ current_rate = target_rate; }
 
     // steps per second
-    this->stepper_motor->set_speed(max(current_rate, THEKERNEL->stepper->minimum_steps_per_minute/60));
+    this->stepper_motor->set_speed(max(current_rate, THEKERNEL->stepper->minimum_steps_per_second));
 
     return 0;
 }
@@ -343,15 +336,15 @@ void Extruder::on_speed_change( void* argument ){
     if( this->current_block == NULL ||  this->paused || this->mode != FOLLOW || this->stepper_motor->moving != true ){ return; }
 
     /*
-    * nominal block duration = current block's steps / ( current block's nominal rate / 60 )
+    * nominal block duration = current block's steps / ( current block's nominal rate )
     * nominal extruder rate = extruder steps / nominal block duration
-    * actual extruder rate = nominal extruder rate * ( ( stepper's steps per minute / 60 ) / ( current block's nominal rate / 60 ) )
-    * or actual extruder rate = ( ( extruder steps * ( current block's nominal_rate / 60 ) ) / current block's steps ) * ( ( stepper's steps per minute / 60 ) / ( current block's nominal rate / 60 ) )
-    * or simplified : extruder steps * ( stepper's steps per minute / 60 ) ) / current block's steps
-    * or even : ( stepper steps per minute / 60 ) * ( extruder steps / current block's steps )
+    * actual extruder rate = nominal extruder rate * ( ( stepper's steps per minute ) / ( current block's nominal rate ) )
+    * or actual extruder rate = ( ( extruder steps * ( current block's nominal_rate ) ) / current block's steps ) * ( ( stepper's steps per second ) / ( current block's nominal rate ) )
+    * or simplified : extruder steps * ( stepper's steps per second ) ) / current block's steps
+    * or even : ( stepper steps per second ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->trapezoid_adjusted_rate /60.0) * ( (float)this->stepper_motor->steps_to_move / (float)this->current_block->steps_event_count ), THEKERNEL->stepper->minimum_steps_per_minute/60.0 ) );
+    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->trapezoid_adjusted_rate) * ( (float)this->stepper_motor->steps_to_move / (float)this->current_block->steps_event_count ), THEKERNEL->stepper->minimum_steps_per_second ) );
 
 }
 

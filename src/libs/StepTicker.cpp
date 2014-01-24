@@ -125,7 +125,7 @@ inline void StepTicker::reset_tick(){
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
     {
         if (this->active_motor_bm & bm)
-            this->active_motors[i]->step_pin->set(0);
+            this->active_motors[i]->unstep();
     }
 
     _isr_context = false;

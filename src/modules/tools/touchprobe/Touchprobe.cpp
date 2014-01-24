@@ -60,7 +60,7 @@ void Touchprobe::wait_for_touch(int distance[]){
                     distance[i] = 0;
                     if ( this->steppers[i]->moving ){
                         distance[i] =  this->steppers[i]->stepped;
-                        distance[i] *= this->steppers[i]->dir_pin->get() ? -1 : 1;
+                        distance[i] *= this->steppers[i]->direction ? -1 : 1;
                         this->steppers[i]->move(0,0);
                     }
                 }
@@ -96,8 +96,8 @@ void Touchprobe::on_gcode_received(void* argument)
 
     if( gcode->has_g) {
         if( gcode->g == 31 ) {
-            float tmp[3], pos[3];
-            int steps[3], distance[3];
+            float tmp[3], pos[3], mm[3];
+            int steps[3];
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
@@ -110,10 +110,11 @@ void Touchprobe::on_gcode_received(void* argument)
                 }
             }
             if( gcode->has_letter('F') )            {
-                this->probe_rate = robot->to_millimeters( gcode->get_value('F') ) / 60.0;
+                this->probe_rate = robot->to_millimeters( gcode->get_value('F') ) / robot->seconds_per_minute;
             }
-            robot->arm_solution->millimeters_to_steps(tmp,steps);
-            robot->arm_solution->millimeters_to_steps(tmp,distance); //default to full move
+            robot->arm_solution->cartesian_to_actuator(tmp, mm);
+            for (int c = 0; c < 3; c++)
+                steps[c] = mm[c] * robot->actuators[c]->steps_per_mm;
 
             if( ((abs(steps[0]) > 0 ? 1:0) + (abs(steps[1]) > 0 ? 1:0) + (abs(steps[2]) > 0 ? 1:0)) != 1 ){
                 return; //TODO coordinated movement not supported yet
@@ -122,21 +123,21 @@ void Touchprobe::on_gcode_received(void* argument)
             // Enable the motors
             THEKERNEL->stepper->turn_enable_pins_on();
             // move
-            robot->arm_solution->get_steps_per_millimeter(tmp);
             for(char c='X'; c<='Z'; c++){
+                tmp[c - 'X'] = robot->actuators[c - 'X']->steps_per_mm;
                 if( steps[c-'X'] == 0 ){
                     continue;
                 }
                 bool dir = steps[c-'X'] < 0;
                 // tmp is steps/mm, probe_rate in mm/s -> speed needs steps/s
-                this->steppers[c-'X']->set_speed(this->probe_rate * tmp[c-'X']);
+                this->steppers[c-'X']->set_speed(this->probe_rate * robot->actuators[c]->steps_per_mm);
                 this->steppers[c-'X']->move(dir,abs(steps[c-'X']));
             }
 
-            wait_for_touch(distance);
+            wait_for_touch(steps);
             // calculate new position
             for(char c='X'; c<='Z'; c++){
-                robot->reset_axis_position(pos[c-'X']+distance[c-'X']/tmp[c-'X'], c-'X');
+                robot->reset_axis_position(pos[c-'X'] + mm[c-'X'], c-'X');
             }
 
             if( this->should_log ){
