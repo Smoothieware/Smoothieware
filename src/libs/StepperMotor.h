@@ -66,17 +66,16 @@ class StepperMotor {
         bool paused;
 
         float steps_per_mm;
+        float max_rate;
 
         int32_t last_milestone_steps;
         float   last_milestone_mm;
-
-        //bool direction_bit;
-        //bool step_bit;
 
         uint32_t steps_to_move;
         uint32_t stepped;
         uint32_t fx_counter;
         uint32_t fx_ticks_per_step;
+
         bool     direction;
 
         //bool exit_tick;

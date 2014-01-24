@@ -60,6 +60,11 @@ using std::string;
 #define  beta_steps_per_mm_checksum          CHECKSUM("beta_steps_per_mm")
 #define  gamma_steps_per_mm_checksum         CHECKSUM("gamma_steps_per_mm")
 
+#define  alpha_max_rate_checksum             CHECKSUM("alpha_max_rate")
+#define  beta_max_rate_checksum              CHECKSUM("beta_max_rate")
+#define  gamma_max_rate_checksum             CHECKSUM("gamma_max_rate")
+
+
 // new-style actuator stuff
 #define  actuator_checksum                   CHEKCSUM("actuator")
 
@@ -68,6 +73,7 @@ using std::string;
 #define  en_pin_checksum                     CHECKSUM("en_pin")
 
 #define  steps_per_mm_checksum               CHECKSUM("steps_per_mm")
+#define  max_rate_checksum                   CHECKSUM("max_rate")
 
 #define  alpha_checksum                      CHECKSUM("alpha")
 #define  beta_checksum                       CHECKSUM("beta")
@@ -179,6 +185,10 @@ void Robot::on_config_reload(void* argument){
     alpha_stepper_motor->change_steps_per_mm(steps_per_mm[0]);
     beta_stepper_motor->change_steps_per_mm(steps_per_mm[1]);
     gamma_stepper_motor->change_steps_per_mm(steps_per_mm[2]);
+
+    alpha_stepper_motor->max_rate = THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
+    beta_stepper_motor->max_rate  = THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F;
+    gamma_stepper_motor->max_rate = THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
 
     actuators.clear();
     actuators.push_back(alpha_stepper_motor);
@@ -436,26 +446,46 @@ void Robot::reset_axis_position(float position, int axis) {
 
 
 // Convert target from millimeters to steps, and append this to the planner
-void Robot::append_milestone( float target[], float rate ){
-    float actuator_pos[3]; //Holds the result of the conversion
-
-    // We use an arm solution object so exotic arm solutions can be used and neatly abstracted
-    this->arm_solution->cartesian_to_actuator( target, actuator_pos );
-
+void Robot::append_milestone( float target[], float rate )
+{
     float deltas[3];
-    for(int axis=X_AXIS;axis<=Z_AXIS;axis++){deltas[axis]=target[axis]-this->last_milestone[axis];}
+    float unit_vec[3];
+    float actuator_pos[3];
+    float millimeters_of_travel;
+
+    // find distance moved by each axis
+    for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
+        deltas[axis] = target[axis] - last_milestone[axis];
 
     // Compute how long this move moves, so we can attach it to the block for later use
-    float millimeters_of_travel = sqrtf( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
+    millimeters_of_travel = sqrtf( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
 
-    // Do not move faster than the configured limits
-    for(int axis=X_AXIS;axis<=Z_AXIS;axis++){
-        if( this->max_speeds[axis] > 0 ){
-            float axis_speed = ( fabs(deltas[axis]) / ( millimeters_of_travel / rate )) * seconds_per_minute;
-            if( axis_speed > this->max_speeds[axis] ){
-                rate = rate * ( this->max_speeds[axis] / axis_speed );
-            }
+    // find distance unit vector
+    for (int i = 0; i < 3; i++)
+        unit_vec[i] = deltas[i] / millimeters_of_travel;
+
+    // Do not move faster than the configured cartesian limits
+    for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
+    {
+        if ( max_speeds[axis] > 0 )
+        {
+            float axis_speed = fabs(unit_vec[axis] * rate) * seconds_per_minute;
+
+            if (axis_speed > max_speeds[axis])
+                rate = rate * ( max_speeds[axis] / axis_speed );
         }
+    }
+
+    // find actuator position given cartesian position
+    arm_solution->cartesian_to_actuator( target, actuator_pos );
+
+    // check per-actuator speed limits
+    for (int actuator = 0; actuator <= 2; actuator++)
+    {
+        float actuator_rate  = fabs(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * rate / millimeters_of_travel;
+
+        if (actuator_rate > actuators[actuator]->max_rate)
+            rate *= (actuators[actuator]->max_rate / actuator_rate);
     }
 
     // Append the block to the planner
