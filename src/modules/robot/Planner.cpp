@@ -146,7 +146,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     block->recalculate_flag = true;
 
     // Update previous path unit_vector and nominal speed
-    memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
+    memcpy(this->previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();
