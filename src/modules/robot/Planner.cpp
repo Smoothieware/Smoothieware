@@ -72,7 +72,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
 
     block->millimeters = distance;
 
-    // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
+    // Calculate speed in mm/sec for each axis. No divide by zero due to previous checks.
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
     if( distance > 0.0F ){
         block->nominal_speed = rate_mm_s;           // (mm/s) Always > 0
