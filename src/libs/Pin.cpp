@@ -30,7 +30,7 @@ Pin* Pin::from_string(std::string value){
             this->pin = strtol(cs, &cn, 10);
 
             // if strtol read some numbers, cn will point to the first non-digit
-            if ((cn > cs) & (pin < 32)){
+            if ((cn > cs) && (pin < 32)){
                 this->port->FIOMASK &= ~(1 << this->pin);
 
                 // now check for modifiers:-
@@ -40,8 +40,7 @@ Pin* Pin::from_string(std::string value){
                 // v = set pin to pull down
                 // - = set pin to no pull up or down
                 // @ = set pin to repeater mode
-                bool done= false;
-                while(!done) {
+                for (;*cn;cn++) {
                     switch(*cn) {
                         case '!':
                             this->inverting = true;
@@ -64,13 +63,9 @@ Pin* Pin::from_string(std::string value){
                         default:
                             // skip any whitespace following the pin index
                             if (!is_whitespace(*cn))
-                                done = true;
+                                return this;
                     }
-                    if (!done)
-                        cn++;
                 }
-
-
                 return this;
             }
         }
