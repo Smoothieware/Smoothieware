@@ -46,7 +46,7 @@ void Planner::on_config_reload(void* argument){
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( float actuator_pos[], float feed_rate, float distance, float deltas[] ){
+void Planner::append_block( float actuator_pos[], float feed_rate, float distance, float unit_vec[] ){
 
     // Create ( recycle ) a new block
     Block* block = THEKERNEL->conveyor->queue.head_ref();
@@ -71,18 +71,15 @@ void Planner::append_block( float actuator_pos[], float feed_rate, float distanc
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
 
     block->millimeters = distance;
-    float inverse_millimeters = 0.0F;
-    if( distance > 0 ){ inverse_millimeters = 1.0F/distance; }
 
     // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
-    float inverse_minute = feed_rate * inverse_millimeters;
-    if( distance > 0 ){
-        block->nominal_speed = block->millimeters * inverse_minute;           // (mm/min) Always > 0
-        block->nominal_rate = ceil(block->steps_event_count * inverse_minute); // (step/min) Always > 0
+    if( distance > 0.0F ){
+        block->nominal_speed = feed_rate;           // (mm/min) Always > 0
+        block->nominal_rate = ceil(block->steps_event_count * feed_rate / distance); // (step/min) Always > 0
     }else{
-        block->nominal_speed = 0;
-        block->nominal_rate = 0;
+        block->nominal_speed = 0.0F;
+        block->nominal_rate  = 0;
     }
 
     // Compute the acceleration rate for the trapezoid generator. Depending on the slope of the line
@@ -92,13 +89,7 @@ void Planner::append_block( float actuator_pos[], float feed_rate, float distanc
     // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
     // specifically for each line to compensate for this phenomenon:
     // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = (float)( ( block->steps_event_count*inverse_millimeters * this->acceleration ) / ( THEKERNEL->stepper->acceleration_ticks_per_second * 60 ) ); // (step/min/acceleration_tick)
-
-    // Compute path unit vector
-    float unit_vec[3];
-    unit_vec[X_AXIS] = deltas[X_AXIS]*inverse_millimeters;
-    unit_vec[Y_AXIS] = deltas[Y_AXIS]*inverse_millimeters;
-    unit_vec[Z_AXIS] = deltas[Z_AXIS]*inverse_millimeters;
+    block->rate_delta = (block->steps_event_count * acceleration) / (distance * (THEKERNEL->stepper->acceleration_ticks_per_second * 60)); // (step/min/acceleration_tick)
 
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction

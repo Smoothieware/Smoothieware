@@ -18,7 +18,7 @@ using namespace std;
 class Planner : public Module {
     public:
         Planner();
-        void append_block( float target[], float feed_rate, float distance, float deltas[] );
+        void append_block( float target[], float feed_rate, float distance, float unit_vec[] );
         float max_allowable_speed( float acceleration, float target_velocity, float distance);
         void recalculate();
         Block* get_current_block();

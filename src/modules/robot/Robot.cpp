@@ -459,7 +459,7 @@ void Robot::append_milestone( float target[], float rate ){
     }
 
     // Append the block to the planner
-    THEKERNEL->planner->append_block( actuator_pos, rate * seconds_per_minute, millimeters_of_travel, deltas );
+    THEKERNEL->planner->append_block( actuator_pos, rate * seconds_per_minute, millimeters_of_travel, unit_vec );
 
     // Update the last_milestone to the current target for the next time we use last_milestone
     memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
