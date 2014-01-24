@@ -441,7 +441,12 @@ void Robot::distance_in_gcode_is_known(Gcode* gcode){
 // Reset the position for all axes ( used in homing and G92 stuff )
 void Robot::reset_axis_position(float position, int axis) {
     this->last_milestone[axis] = this->current_position[axis] = position;
-    actuators[axis]->change_last_milestone(position);
+
+    float actuator_pos[3];
+    arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
+
+    for (int i = 0; i < 3; i++)
+        actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
 
