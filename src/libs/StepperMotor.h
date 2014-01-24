@@ -17,12 +17,21 @@ class StepperMotor {
     public:
         StepperMotor();
         StepperMotor(Pin& step, Pin& dir, Pin& en);
-        void tick();
+
+        // Called a great many times per second, to step if we have to now
+        inline void tick() {
+            // increase the ( fixed point ) counter by one tick 11t
+            fx_counter += (uint32_t)(1<<16);
+
+            // if we are to step now 10t
+            if (fx_counter >= fx_ticks_per_step)
+                step();
+        };
+
         void step();
-        void unstep();
+        inline void unstep() { step_pin.set(0); };
 
-        void enable(bool);
-
+        inline void enable(bool state) { en_pin.set(!state); };
 
         void move_finished();
         void move( bool direction, unsigned int steps );
@@ -83,29 +92,6 @@ class StepperMotor {
 
         bool is_move_finished; // Whether the move just finished
 };
-
-
-// Called a great many times per second, to step if we have to now
-inline void StepperMotor::tick(){
-
-    // increase the ( fixed point ) counter by one tick 11t
-    this->fx_counter += (uint32_t)(1<<16);
-
-    // if we are to step now 10t
-    if( this->fx_counter >= this->fx_ticks_per_step ){ this->step(); }
-
-}
-
-inline void StepperMotor::unstep()
-{
-    step_pin.set(0);
-}
-
-inline void StepperMotor::enable(bool state)
-{
-    en_pin.set(!state);
-}
-
 
 #endif
 
