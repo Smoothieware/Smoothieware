@@ -60,7 +60,7 @@ void Stepper::on_module_loaded(){
 void Stepper::on_config_reload(void* argument){
 
     this->acceleration_ticks_per_second =  THEKERNEL->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
-    this->minimum_steps_per_second      =  THEKERNEL->config->value(minimum_steps_per_minute_checksum     )->by_default(3000  )->as_number() / 60;
+    this->minimum_steps_per_second      =  THEKERNEL->config->value(minimum_steps_per_minute_checksum     )->by_default(3000  )->as_number() / 60.0F;
 
     // Steppers start off by default
     this->turn_enable_pins_off();
@@ -253,7 +253,7 @@ inline void Stepper::trapezoid_generator_reset(){
 void Stepper::set_step_events_per_second( float steps_per_second )
 {
     // We do not step slower than this
-    //steps_per_minute = max(steps_per_minute, this->minimum_steps_per_minute);
+    //steps_per_second = max(steps_per_second, this->minimum_steps_per_second);
     if( steps_per_second < this->minimum_steps_per_second ){
         steps_per_second = this->minimum_steps_per_second;
     }
@@ -269,7 +269,7 @@ void Stepper::set_step_events_per_second( float steps_per_second )
 }
 
 // This function has the role of making sure acceleration and deceleration curves have their
-// rythm synchronized. The accel/decel must start at the same moment as the speed update routine
+// rhythm synchronized. The accel/decel must start at the same moment as the speed update routine
 // This is caller in "step just occured" or "block just began" ( step Timer ) context, so we need to be fast.
 // All we do is reset the other timer so that it does what we want
 uint32_t Stepper::synchronize_acceleration(uint32_t dummy){

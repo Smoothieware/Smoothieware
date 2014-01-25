@@ -338,7 +338,7 @@ void Extruder::on_speed_change( void* argument ){
     /*
     * nominal block duration = current block's steps / ( current block's nominal rate )
     * nominal extruder rate = extruder steps / nominal block duration
-    * actual extruder rate = nominal extruder rate * ( ( stepper's steps per minute ) / ( current block's nominal rate ) )
+    * actual extruder rate = nominal extruder rate * ( ( stepper's steps per second ) / ( current block's nominal rate ) )
     * or actual extruder rate = ( ( extruder steps * ( current block's nominal_rate ) ) / current block's steps ) * ( ( stepper's steps per second ) / ( current block's nominal rate ) )
     * or simplified : extruder steps * ( stepper's steps per second ) ) / current block's steps
     * or even : ( stepper steps per second ) * ( extruder steps / current block's steps )
