@@ -12,6 +12,7 @@
 #include "Pin.h"
 
 class StepTicker;
+class Endstop;
 class Hook;
 
 class StepperMotor {
@@ -69,6 +70,10 @@ class StepperMotor {
         Pin step_pin;
         Pin dir_pin;
         Pin en_pin;
+
+        bool check_endstops;
+        Endstop* max_stop;
+        Endstop* min_stop;
 
         float steps_per_second;
 

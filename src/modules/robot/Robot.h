@@ -34,6 +34,7 @@ using std::string;
 #define SPINDLE_DIRECTION_CW 0
 #define SPINDLE_DIRECTION_CCW 1
 
+class Endstop;
 class Gcode;
 class BaseSolution;
 class StepperMotor;
@@ -94,6 +95,13 @@ class Robot : public Module {
         StepperMotor* gamma_stepper_motor;
 
         std::vector<StepperMotor*> actuators;
+
+        Endstop* x_min;
+        Endstop* x_max;
+        Endstop* y_min;
+        Endstop* y_max;
+        Endstop* z_min;
+        Endstop* z_max;
 
         float seconds_per_minute;                            // for realtime speed change
 };

@@ -9,41 +9,28 @@
 #define ENDSTOPS_MODULE_H
 
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "modules/communication/utils/Gcode.h"
-#include "libs/StepperMotor.h"
-#include "libs/Pin.h"
+#include "Endstop.h"
 
+#include <vector>
 
-class Endstops : public Module{
+class Endstop;
+
+class Endstops : public Module
+{
     public:
         Endstops();
         void on_module_loaded();
-        void on_gcode_received(void* argument);
-        void on_config_reload(void* argument);
+        void on_gcode_received(void*);
 
-    private:
-        void do_homing(char axes_to_move);
-        void do_homing_corexy(char axes_to_move);
-        void wait_for_homed(char axes_to_move);
-        void wait_for_homed_corexy(int axis);
-        void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
-        void trim2mm(float * mm);
+        Endstop* find_endstop_by_name(uint16_t);
 
-        float steps_per_mm[3];
-        float homing_position[3];
-        float home_offset[3];
-        bool home_direction[3];
-        unsigned int  debounce_count;
-        unsigned int  retract_steps[3];
-        int  trim[3];
-        float  fast_rates[3];
-        float  slow_rates[3];
-        Pin           pins[6];
-        StepperMotor* steppers[3];
-        char status;
-        bool is_corexy;
-        bool is_delta;
+        bool find_endstops_by_type(std::vector<Endstop*> &, Endstop_Types_e);
+
+        uint32_t poll(uint32_t);
+
+        std::vector<Endstop*> endstops;
+
+        static Endstops* instance;
 };
 
 #endif

@@ -20,6 +20,7 @@
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
+#include "modules/utils/homer/Homer.h"
 #include "libs/Network/uip/Network.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
@@ -108,6 +109,7 @@ int main() {
     kernel->add_module( new Player() );
     kernel->add_module( new Panel() );
     kernel->add_module( new Touchprobe() );
+    kernel->add_module( new Homer() );
 #ifndef NONETWORK
     kernel->add_module( new Network() );
 #endif

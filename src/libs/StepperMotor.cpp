@@ -7,6 +7,7 @@
 #include "StepperMotor.h"
 
 #include "Kernel.h"
+#include "Endstop.h"
 #include "MRI_Hooks.h"
 
 // A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
@@ -29,6 +30,10 @@ StepperMotor::StepperMotor(){
 
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
+
+    max_stop = NULL;
+    min_stop = NULL;
+    check_endstops = false;
 }
 
 StepperMotor::StepperMotor(Pin& step, Pin& dir, Pin& en) : step_pin(step), dir_pin(dir), en_pin(en) {
@@ -51,6 +56,10 @@ StepperMotor::StepperMotor(Pin& step, Pin& dir, Pin& en) : step_pin(step), dir_p
 
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
+
+    max_stop = NULL;
+    min_stop = NULL;
+    check_endstops = false;
 }
 
 // This is called ( see the .h file, we had to put a part of things there for obscure inline reasons ) when a step has to be generated
@@ -72,6 +81,13 @@ void StepperMotor::step(){
         this->step_signal_hook->call();
     }
 
+    if (check_endstops)
+    {
+        if ((max_stop && (!dir_pin.get()) && max_stop->asserted()) ||
+            (min_stop && ( dir_pin.get()) && min_stop->asserted()))
+            is_move_finished = step_ticker->moves_finished = true;
+    }
+
     // Is this move finished ?
     if( this->stepped == this->steps_to_move ){
         // Mark it as finished, then StepTicker will call signal_mode_finished() 
@@ -84,21 +100,21 @@ void StepperMotor::step(){
 
 
 // If the move is finished, the StepTicker will call this ( because we asked it to in tick() )
-void StepperMotor::signal_move_finished(){
+void StepperMotor::signal_move_finished()
+{
+    // work is done ! 8t
+    this->moving = false;
+    this->steps_to_move = 0;
 
-            // work is done ! 8t
-            this->moving = false;
-            this->steps_to_move = 0;
+    // signal it to whatever cares 41t 411t
+    this->end_hook->call();
 
-            // signal it to whatever cares 41t 411t
-            this->end_hook->call();
+    // We only need to do this if we were not instructed to move
+    if( this->moving == false ){
+        this->update_exit_tick();
+    }
 
-            // We only need to do this if we were not instructed to move
-            if( this->moving == false ){
-                this->update_exit_tick();
-            }
-
-            this->is_move_finished = false;
+    this->is_move_finished = false;
 }
 
 // This is just a way not to check for ( !this->moving || this->paused || this->fx_ticks_per_step == 0 ) at every tick()
