@@ -27,8 +27,10 @@ class DeltaCalibrate : public Module{
         void calibrate_zprobe_offset(StreamOutput*);
         uint32_t wait_for_ztouch();
         uint32_t do_probe(bool);
+        bool probe_towers(uint32_t[]);
         void wait_for_moves();
         void move_all(bool, bool, unsigned int);
+        void move_all(bool, int[]);
         void trim2mm(float * mm);
 
         float steps_per_mm;

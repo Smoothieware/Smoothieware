@@ -11,7 +11,7 @@
 #include "DeltaCalibrate.h"
 #include "libs/Pin.h"
 #include "libs/StepperMotor.h"
-
+#include <cmath>
 
 #define UP false
 #define DOWN true
@@ -213,28 +213,125 @@ void DeltaCalibrate::move_all(bool direction, bool speed, unsigned int steps){
     }
 }
 
+void DeltaCalibrate::move_all(bool speed, int steps[]){
+    bool inverted_dir;
+    for ( int i = 0; i < 3; i++ ) {
+        if ( steps[i] != 0 ) {
+            inverted_dir = !this->home_direction[i];
+            // move up or down depending on sign of trim
+            if (steps[i] < 0) inverted_dir = !inverted_dir;
+            if(speed){
+                this->steppers[i]->set_speed(this->fast_rates);
+            } else {
+                this->steppers[i]->set_speed(this->slow_rates);
+            }
+            this->steppers[i]->move(inverted_dir, abs(steps[i]));
+        }
+    }
+}
+
+
+
+bool DeltaCalibrate::probe_towers(uint32_t tower[]){
+    //returns false if there is a probe retaction problem, 
+    char buf[32];
+    int buffered_length = 0;
+    string g;
+
+    float targetX = 0;
+    float targetY = 0;
+
+    targetY = calibrate_radius * cos(240 * DEG_TO_RAD);
+    targetX = calibrate_radius * sin(240 * DEG_TO_RAD);
+    
+    buffered_length = snprintf(buf, sizeof(buf), "G0 X%.4f Y%.4f", targetX,targetY);
+    g.assign(buf, buffered_length);
+    send_gcode(g);
+    THEKERNEL->conveyor->wait_for_empty_queue();
+
+    // check probe retraction
+    if( probe_pin.get() ){
+        return(false);
+    }
+
+    //probe tower 1 
+    tower[0] = do_probe(true);
+
+    targetY = calibrate_radius * cos(120 * DEG_TO_RAD);
+    targetX = calibrate_radius * sin(120 * DEG_TO_RAD);
+    
+    buffered_length = snprintf(buf, sizeof(buf), "G0 X%.4f Y%.4f", targetX,targetY);
+    g.assign(buf, buffered_length);
+    send_gcode(g);
+    THEKERNEL->conveyor->wait_for_empty_queue();
+
+    // check probe retraction
+    if( probe_pin.get() ){
+        return(false);
+    }   
+
+    //probe tower 2
+    tower[1] = do_probe(true);
+
+    targetY = calibrate_radius * cos(0 * DEG_TO_RAD);
+    targetX = calibrate_radius * sin(0 * DEG_TO_RAD);
+    
+    buffered_length = snprintf(buf, sizeof(buf), "G0 X%.4f Y%.4f", targetX, targetY);
+    g.assign(buf, buffered_length);
+    send_gcode(g);
+    THEKERNEL->conveyor->wait_for_empty_queue();    
+
+    // check probe retraction
+    if( probe_pin.get() ){
+        return(false);
+    }
+
+    //probe tower 3 
+    tower[2] = do_probe(true);
+    return(true);
+}
+
 // auto calibration routine for delta bots
 void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
 
     uint32_t current_z_steps = 0;
-    uint32_t probe_steps = 0;
 
     uint32_t originHeight = 0;
-    long tower1Height = 0;
-    long tower2Height = 0;
-    long tower3Height = 0;
-    float targetX = 0;
-    float targetY = 0;
+    uint32_t tower_height[3];
+
+    uint32_t best_total_offset = 0;
+    uint32_t total_offset = 0;
+
+    float best_delta_rad_offset = 0;
+    float delta_rad_offset = 0;
+    float best_delta_rad = 0;
+    float best_trim_mm[3];
 
     char buf[32];
     int buffered_length = 0;
     string g;
 
     float arm_radius = 0;
+    float original_arm_radius = 0;
+    int steps[3];
+
+    int passes = 5;
+    unsigned int calibrate_margin = 3;
+    float corrective_multiplier = 1;
+    float delta_multiplier = 1;
+
+    bool tuning_trims = true;
+    bool tuning_delta_rad = true;
+    /**
+    *   Setup machine and pre-feed historical variables
+    */
+    for (int i=0; i<3; i++) {
+        best_trim_mm[i] = trim[i]/steps_per_mm;
+    }
 
     // update machine geometry incase it has been modified since startup
     THEKERNEL->robot->arm_solution->get_optional('R', &arm_radius);
-
+    original_arm_radius = arm_radius;
     // First wait for the queue to be empty
     THEKERNEL->conveyor->wait_for_empty_queue();
     // Enable the motors
@@ -252,6 +349,10 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     buffered_length = snprintf(buf, sizeof(buf), "G90");
     g.assign(buf, buffered_length);
     send_gcode(g);
+
+    /**
+    *   Probe bed center
+    */
 
     //TODO auto-deploy probe
 
@@ -274,111 +375,211 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     // update planner position so we can make coordinated moves
     THEKERNEL->robot->reset_axis_position( homing_position_z - (current_z_steps / steps_per_mm) , 2);
 
-    targetY = calibrate_radius * cos(240 * DEG_TO_RAD);
-    targetX = calibrate_radius * sin(240 * DEG_TO_RAD);
-    
-    buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX,targetY);
-    g.assign(buf, buffered_length);
-    send_gcode(g);
-    THEKERNEL->conveyor->wait_for_empty_queue();
-
-
-    // check probe retraction
-    if( probe_pin.get() ){
-        //probe not deployed - abort
+    /**
+    *   Initial probe pass of towers
+    */
+    if(!probe_towers(tower_height)){
         stream->printf("Z-Probe not deployed, aborting!\r\n");
         return;
     }
 
-    //probe tower 1 
-    probe_steps = do_probe(true);
-    tower1Height = current_z_steps + probe_steps;
-
-    targetY = calibrate_radius * cos(120 * DEG_TO_RAD);
-    targetX = calibrate_radius * sin(120 * DEG_TO_RAD);
-    
-    buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX,targetY);
+    buffered_length = snprintf(buf, sizeof(buf), "G0 X0 Y0");
     g.assign(buf, buffered_length);
     send_gcode(g);
     THEKERNEL->conveyor->wait_for_empty_queue();
-
-    // check probe retraction
-    if( probe_pin.get() ){
-        //probe not deployed - abort
-        stream->printf("Z-Probe not deployed, aborting!\r\n");
-        return;
-    }    
-
-    //probe tower 2
-    probe_steps = do_probe(true);
-    tower2Height = current_z_steps + probe_steps; 
-
-    targetY = calibrate_radius * cos(0 * DEG_TO_RAD);
-    targetX = calibrate_radius * sin(0 * DEG_TO_RAD);
-    
-    buffered_length = snprintf(buf, sizeof(buf), "G0 X%f Y%f", targetX, targetY);
-    g.assign(buf, buffered_length);
-    send_gcode(g);
-    THEKERNEL->conveyor->wait_for_empty_queue();    
-
-    // check probe retraction
-    if( this->probe_pin.get() ){
-        //probe not deployed - abort
-        stream->printf("Z-Probe not deployed, aborting!\r\n");
-        return;
-    }  
-
-    //probe tower 3 
-    probe_steps = do_probe(true);
-    tower3Height = current_z_steps + probe_steps; 
-
     //TODO auto-retract probe
 
-    //calculate 3 tower trim levels
-    float centerAverage = (tower1Height + tower2Height + tower3Height)/3;
-    long lowestTower = min(tower1Height,min(tower2Height,tower3Height));
+    /**
+    *   process measured offsets
+    */
+    
+    for (int i=0; i<3; i++) { // add our total offset to the short tower probes
+        tower_height[i]+=current_z_steps;
+    }
 
-    float multiplier =  (1.83606 *log(arm_radius*2)-9.76413)/(1.83606 *log(arm_radius+calibrate_radius)-9.76413);
-    float t1Trim = ((tower1Height-lowestTower) / steps_per_mm) * multiplier;
-    float t2Trim = ((tower2Height-lowestTower) / steps_per_mm) * multiplier;
-    float t3Trim = ((tower3Height-lowestTower) / steps_per_mm) * multiplier;
+    //calculate 3 tower trim levels
+    float centerAverage = (tower_height[0] + tower_height[1] + tower_height[2])/3;
+    uint32_t lowestTower = min(tower_height[0],min(tower_height[1],tower_height[2]));
+    best_total_offset = (tower_height[0]-lowestTower) +(tower_height[1]-lowestTower) +(tower_height[2]-lowestTower) ;
+    best_delta_rad_offset = (centerAverage - originHeight)/steps_per_mm;
+    best_delta_rad = arm_radius;
+    float multiplier = 1;//(1.83606 *log(arm_radius*2)-9.76413)/(1.83606 *log(arm_radius+calibrate_radius)-9.76413);
+    float new_trim[3];
+    float trim_delta[3];
+
+    for (int i=0; i<3; i++) { // calculate corrective trim value from current positions
+        new_trim[i] = ((tower_height[i]-lowestTower) / steps_per_mm) * multiplier;
+    }
 
     if ( (delta_calibrate_flags & (CALIBRATE_SILENT|CALIBRATE_QUIET) ) == 0 ){
         stream->printf("Probed Points:\r\n");
-        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -tower1Height/steps_per_mm, -tower2Height/steps_per_mm, -tower3Height/steps_per_mm); 
+        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f O:%5.3f \r\n", -(tower_height[0]/steps_per_mm), -(tower_height[1]/steps_per_mm), -(tower_height[2]/steps_per_mm), -(originHeight/steps_per_mm)); 
         stream->printf("Detected offsets:\r\n");
         stream->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm); 
-        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -new_trim[0], -new_trim[1], -new_trim[2]); 
     }
 
-    t1Trim += trim[0]/steps_per_mm;
-    t2Trim += trim[1]/steps_per_mm;
-    t3Trim += trim[2]/steps_per_mm;
-    float minTrim = min(t1Trim,min(t2Trim,t3Trim));
-    t1Trim -= minTrim;
-    t2Trim -= minTrim;
-    t3Trim -= minTrim;
-    float newDeltaRadius = arm_radius - ((centerAverage - originHeight)/steps_per_mm)/0.15;
+    //normalize trim values so that they don't drift
+    for (int i=0; i<3; i++) { 
+        new_trim[i] += best_trim_mm[i];
+    }
+    float minTrim = min(new_trim[0],min(new_trim[1],new_trim[2]));
+    for (int i=0; i<3; i++) {
+        new_trim[i] -= minTrim;
+    }
+    for (int i=0; i<3; i++) { // find trim delta to get us to the new trim settings from the current trim settings
+        trim_delta[i] = best_trim_mm[i] - new_trim[i];
+    }
+
+    float delta_tweak = ((centerAverage - originHeight)/steps_per_mm);
+    float newDeltaRadius = original_arm_radius - delta_tweak*delta_multiplier;
+
+
+    /**
+    *   Begin the incremental refinement passes
+    */
+    for (int p = 0; p < passes; ++p)
+    {
+        //apply trim deltas to the live position
+        stream->printf("Trying Radius:%5.3f X:%5.3f Y:%5.3f Z:%5.3f \r\n",newDeltaRadius, new_trim[0], new_trim[1], new_trim[2]); 
+
+        for (int i=0; i<3; i++) {
+            steps[i] = trim_delta[i] * steps_per_mm * -1;
+        }
+        move_all(SLOW,steps);
+        wait_for_moves();
+        buffered_length = snprintf(buf, sizeof(buf), "M665 R%.3f", newDeltaRadius );
+        g.assign(buf, buffered_length);
+        send_gcode(g);
+
+      // update planner position so we can make coordinated moves
+        THEKERNEL->robot->reset_axis_position( homing_position_z - (current_z_steps / steps_per_mm) , 2);
+  
+            //re-probe towers
+       if( probe_pin.get() ){
+            //probe not deployed - abort
+            stream->printf("Z-Probe not deployed, aborting!\r\n");
+            return;
+        }
+
+        if(tuning_trims&tuning_delta_rad){
+           originHeight = do_probe(true) + current_z_steps; // reprobe the origin to make sure we haven't drifted
+        }
+
+        if(!probe_towers(tower_height)){
+            stream->printf("Z-Probe not deployed, aborting!\r\n");
+            return;
+        }
+
+        buffered_length = snprintf(buf, sizeof(buf), "G0 X0 Y0");
+        g.assign(buf, buffered_length);
+        send_gcode(g);
+        THEKERNEL->conveyor->wait_for_empty_queue();
+
+        for (int i=0; i<3; i++) {
+            tower_height[i]+=current_z_steps;
+        }
+        centerAverage = (tower_height[0] + tower_height[1] + tower_height[2])/3;
+        lowestTower = min(tower_height[0],min(tower_height[1],tower_height[2]));
+        total_offset = (tower_height[0]-lowestTower) +(tower_height[1]-lowestTower) +(tower_height[2]-lowestTower) ;
+        delta_rad_offset = (centerAverage - originHeight)/steps_per_mm;
+        stream->printf("Pass:%d of %d.  Multiplier: %.4f\r\n",p+1,passes,corrective_multiplier); 
+        stream->printf("Total Offset:%lu  Best:%lu\r\n",total_offset, best_total_offset); 
+        stream->printf("Origin Offset: %5.3f \r\n", delta_rad_offset); 
+        stream->printf("Probed Points:\r\n");
+        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f O:%5.3f \r\n", -(tower_height[0]/steps_per_mm), -(tower_height[1]/steps_per_mm), -(tower_height[2]/steps_per_mm), -(originHeight/steps_per_mm)); 
+
+        /**
+        *   Trims incrementing
+        */
+        if( total_offset > calibrate_margin){
+            tuning_trims = true;
+            if( total_offset > best_total_offset) { //we overshot, reset and try with reduced values
+                // step the head back
+                for (int i=0; i<3; i++) {
+                    steps[i] = trim_delta[i] * steps_per_mm;
+                }
+                move_all(SLOW,steps);
+                wait_for_moves();
+
+                // reduce our delta by the ratio we were off
+                corrective_multiplier = corrective_multiplier*(best_total_offset/total_offset);
+                for (int i=0; i<3; i++) {
+                    trim_delta[i] = trim_delta[i] * corrective_multiplier;
+                }
+                //generate new absolute trim values
+                for (int i=0; i<3; i++) {
+                    new_trim[i] = best_trim_mm[i] + trim_delta[i];
+                }
+            } else { //we improved our score, do another fresh calculation
+                for (int i=0; i<3; i++) { // update our best ever benchmark
+                    best_trim_mm[i] = new_trim[i];
+                }
+                best_total_offset=total_offset;
+
+                corrective_multiplier = corrective_multiplier*(total_offset/best_total_offset);
+                for (int i=0; i<3; i++) { // calculate new values, multiply estimated move up by the ratio that we were off
+                    new_trim[i] = ((tower_height[i]-lowestTower) / steps_per_mm) * multiplier * corrective_multiplier ;
+                }
+
+                //normalize trim values so that they don't drift
+                for (int i=0; i<3; i++) {
+                    new_trim[i] += best_trim_mm[i];
+                }
+                minTrim = min(new_trim[0],min(new_trim[1],new_trim[2]));
+                for (int i=0; i<3; i++) {
+                    new_trim[i] -= minTrim;
+                }
+                for (int i=0; i<3; i++) {// find trim delta to get us to the new trim settings from the current trim settings
+                    trim_delta[i] = best_trim_mm[i] - new_trim[i];
+                }
+            }
+        } else {
+            tuning_trims = false;
+        }
+
+        /**
+        *   Delta Radius incrementing
+        */
+        if(abs(centerAverage - originHeight) > calibrate_margin){
+
+            tuning_delta_rad = true;
+            delta_multiplier *= best_delta_rad_offset / (best_delta_rad_offset-delta_rad_offset); //margin check ensures we don't dev by 0
+            newDeltaRadius = original_arm_radius - delta_tweak*delta_multiplier;
+                    stream->printf("new mult:%5.3f by:%5.3f\r\n",delta_multiplier, delta_rad_offset / (centerAverage - originHeight)/steps_per_mm); 
+
+        } else {
+            tuning_delta_rad = false;
+        }
+
+        if(!tuning_trims && !tuning_delta_rad){ // if all stages are happy then break the cycles early.
+            break;
+        }
+
+    }
 
     if ( (delta_calibrate_flags & CALIBRATE_SILENT) == 0 ) {
         stream->printf("Calibrated Values:\r\n");
         stream->printf("Origin Height:%5.3f\r\n",  (originHeight/steps_per_mm) + calibrate_probe_offset); 
         stream->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
-        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -t1Trim, -t2Trim, -t3Trim); 
+        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -new_trim[0], -new_trim[1], -new_trim[2]); 
     }
-
     // apply values
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
 
-        buffered_length = snprintf(buf, sizeof(buf), "M666 X%5.3f Y%5.3f Z%5.3f", -t1Trim, -t2Trim, -t3Trim );
+        buffered_length = snprintf(buf, sizeof(buf), "M666 X%.3f Y%.3f Z%.3f", -new_trim[0], -new_trim[1], -new_trim[2] );
         g.assign(buf, buffered_length);
         send_gcode(g);
 
-        buffered_length = snprintf(buf, sizeof(buf), "M665 R%5.3f Z%5.3f", newDeltaRadius, (( originHeight/steps_per_mm) + calibrate_probe_offset) );
+        buffered_length = snprintf(buf, sizeof(buf), "M665 R%.3f Z%.3f", newDeltaRadius, (( originHeight/steps_per_mm) + calibrate_probe_offset) );
         g.assign(buf, buffered_length);
         send_gcode(g);
 
         stream->printf("Calibration values have been changed in memory, but your config file has not been modified.\r\n");
+    } else {
+        buffered_length = snprintf(buf, sizeof(buf), "M665 R%.3f", original_arm_radius);
+        g.assign(buf, buffered_length);
+        send_gcode(g);
     }
 }
 
