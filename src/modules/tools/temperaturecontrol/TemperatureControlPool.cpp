@@ -27,7 +27,7 @@ void TemperatureControlPool::on_module_loaded(){
             TemperatureControl* controller = new TemperatureControl(modules[i]);
             controller->pool = this;
             controllers.push_back( controller );
-            controller->pool_index = controllers.size();
+            controller->pool_index = controllers.size() - 1;
             THEKERNEL->add_module(controller);
         }
     }
