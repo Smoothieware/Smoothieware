@@ -11,12 +11,6 @@
 #include <string>
 using std::string;
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "../communication/utils/Gcode.h"
-#include "arm_solutions/BaseSolution.h"
-#include "Planner.h"
-#include "libs/Pin.h"
-#include "libs/StepperMotor.h"
 #include "RobotPublicAccess.h"
 
 #define NEXT_ACTION_DEFAULT 0
@@ -40,7 +34,9 @@ using std::string;
 #define SPINDLE_DIRECTION_CW 0
 #define SPINDLE_DIRECTION_CCW 1
 
-
+class Gcode;
+class BaseSolution;
+class StepperMotor;
 
 class Robot : public Module {
     public:

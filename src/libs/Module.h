@@ -38,7 +38,6 @@ class Module {
         #define EVENT(name, func) virtual void func (void*);
         #include "Event.h"
         #undef EVENT
-        Kernel * kernel;
 };
 
 #endif

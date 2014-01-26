@@ -21,6 +21,7 @@
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
+#include "mri.h"
 #include <array>
 
 #define THEKERNEL Kernel::instance

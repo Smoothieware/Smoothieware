@@ -12,10 +12,10 @@
 
 using namespace std;
 #include <vector>
-#include "libs/nuts_bolts.h"
+
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "libs/StepperMotor.h"
+
+class StepperMotor;
 
 class StepTicker{
     public:

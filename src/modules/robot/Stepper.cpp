@@ -5,15 +5,20 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "Stepper.h"
+
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "Stepper.h"
 #include "Planner.h"
 #include "Conveyor.h"
+#include "StepperMotor.h"
+
 #include <vector>
 using namespace std;
+
 #include "libs/nuts_bolts.h"
 #include "libs/Hook.h"
+
 #include <mri.h>
 
 

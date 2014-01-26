@@ -7,6 +7,8 @@
 
 #include "Touchprobe.h"
 
+#include "BaseSolution.h"
+
 void Touchprobe::on_module_loaded() {
     // if the module is disabled -> do nothing
     this->enabled = THEKERNEL->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();

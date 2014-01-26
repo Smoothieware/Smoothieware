@@ -5,11 +5,15 @@
     You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "Extruder.h"
+
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+
 #include "modules/robot/Conveyor.h"
 #include "modules/robot/Block.h"
-#include "modules/tools/extruder/Extruder.h"
+#include "StepperMotor.h"
+
 #include <mri.h>
 
 #define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
