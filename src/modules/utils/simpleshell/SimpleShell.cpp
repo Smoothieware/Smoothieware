@@ -207,13 +207,35 @@ void SimpleShell::on_console_line_received( void *argument )
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
 string SimpleShell::absolute_from_relative( string path )
 {
-    if ( path[0] == '/' ) {
+    string cwd = this->current_path;
+	
+    if ( path.empty() ) {
+	    return this->current_path;
+	}	
+	
+	if ( path[0] == '/' ) {
         return path;
     }
-    if ( path[0] == '.' ) {
-        return this->current_path;
+	
+	string match = "../" ;
+    while ( path.substr(0,3) == match ) {
+		path = path.substr(3);
+		unsigned found = cwd.find_last_of("/");
+		cwd = cwd.substr(0,found);
     }
-    return this->current_path + path;
+
+	match = ".." ;
+	if ( path.substr(0,2) == match ) {
+		path = path.substr(2);
+		unsigned found = cwd.find_last_of("/");
+		cwd = cwd.substr(0,found);
+	}	
+	
+    if ( cwd[cwd.length() - 1] == '/' ) {
+         return cwd + path; 
+    }
+
+	return cwd + '/' + path;
 }
 
 // Act upon an ls command
@@ -246,9 +268,7 @@ void SimpleShell::rm_command( string parameters, StreamOutput *stream )
 void SimpleShell::cd_command( string parameters, StreamOutput *stream )
 {
     string folder = this->absolute_from_relative( parameters );
-    if ( folder[folder.length() - 1] != '/' ) {
-        folder += "/";
-    }
+
     DIR *d;
     d = opendir(folder.c_str());
     if (d == NULL) {
