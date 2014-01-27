@@ -140,3 +140,36 @@ void system_reset( bool dfu ){
     }
 }
 
+// Convert a path indication ( absolute or relative ) into a path ( absolute )
+string absolute_from_relative( string path )
+{
+    string cwd = THEKERNEL->current_path;
+
+    if ( path.empty() ) {
+        return THEKERNEL->current_path;
+    }
+
+    if ( path[0] == '/' ) {
+        return path;
+    }
+
+    string match = "../" ;
+    while ( path.substr(0,3) == match ) {
+        path = path.substr(3);
+        unsigned found = cwd.find_last_of("/");
+        cwd = cwd.substr(0,found);
+    }
+
+    match = ".." ;
+    if ( path.substr(0,2) == match ) {
+        path = path.substr(2);
+        unsigned found = cwd.find_last_of("/");
+        cwd = cwd.substr(0,found);
+    }
+
+    if ( cwd[cwd.length() - 1] == '/' ) {
+         return cwd + path;
+    }
+
+    return cwd + '/' + path;
+}

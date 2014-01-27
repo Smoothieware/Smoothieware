@@ -120,7 +120,6 @@ static uint32_t heapWalk(StreamOutput *stream, bool verbose)
 
 void SimpleShell::on_module_loaded()
 {
-    this->current_path = "/";
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
 	this->register_for_event(ON_GCODE_RECEIVED);
 	this->register_for_event(ON_SECOND_TICK);
@@ -204,45 +203,11 @@ void SimpleShell::on_console_line_received( void *argument )
     parse_command(check_sum, get_arguments(possible_command), new_message.stream);
 }
 
-// Convert a path indication ( absolute or relative ) into a path ( absolute )
-string SimpleShell::absolute_from_relative( string path )
-{
-    string cwd = this->current_path;
-	
-    if ( path.empty() ) {
-	    return this->current_path;
-	}	
-	
-	if ( path[0] == '/' ) {
-        return path;
-    }
-	
-	string match = "../" ;
-    while ( path.substr(0,3) == match ) {
-		path = path.substr(3);
-		unsigned found = cwd.find_last_of("/");
-		cwd = cwd.substr(0,found);
-    }
-
-	match = ".." ;
-	if ( path.substr(0,2) == match ) {
-		path = path.substr(2);
-		unsigned found = cwd.find_last_of("/");
-		cwd = cwd.substr(0,found);
-	}	
-	
-    if ( cwd[cwd.length() - 1] == '/' ) {
-         return cwd + path; 
-    }
-
-	return cwd + '/' + path;
-}
-
 // Act upon an ls command
 // Convert the first parameter into an absolute path, then list the files in that path
 void SimpleShell::ls_command( string parameters, StreamOutput *stream )
 {
-    string folder = this->absolute_from_relative( parameters );
+    string folder = absolute_from_relative( parameters );
     DIR *d;
     struct dirent *p;
     d = opendir(folder.c_str());
@@ -259,7 +224,7 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
 // Delete a file
 void SimpleShell::rm_command( string parameters, StreamOutput *stream )
 {
-    const char *fn= this->absolute_from_relative(shift_parameter( parameters )).c_str();
+    const char *fn= absolute_from_relative(shift_parameter( parameters )).c_str();
     int s = remove(fn);
     if (s != 0) stream->printf("Could not delete %s \r\n", fn);
 }
@@ -267,14 +232,14 @@ void SimpleShell::rm_command( string parameters, StreamOutput *stream )
 // Change current absolute path to provided path
 void SimpleShell::cd_command( string parameters, StreamOutput *stream )
 {
-    string folder = this->absolute_from_relative( parameters );
+    string folder = absolute_from_relative( parameters );
 
     DIR *d;
     d = opendir(folder.c_str());
     if (d == NULL) {
         stream->printf("Could not open directory %s \r\n", folder.c_str() );
     } else {
-        this->current_path = folder;
+        THEKERNEL->current_path = folder;
         closedir(d);
     }
 }
@@ -282,14 +247,14 @@ void SimpleShell::cd_command( string parameters, StreamOutput *stream )
 // Responds with the present working directory
 void SimpleShell::pwd_command( string parameters, StreamOutput *stream )
 {
-    stream->printf("%s\r\n", this->current_path.c_str());
+    stream->printf("%s\r\n", THEKERNEL->current_path.c_str());
 }
 
 // Output the contents of a file, first parameter is the filename, second is the limit ( in number of lines to output )
 void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 {
     // Get parameters ( filename and line limit )
-    string filename          = this->absolute_from_relative(shift_parameter( parameters ));
+    string filename          = absolute_from_relative(shift_parameter( parameters ));
     string limit_paramater   = shift_parameter( parameters );
     int limit = -1;
     if ( limit_paramater != "" ) {
@@ -330,7 +295,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 void SimpleShell::load_command( string parameters, StreamOutput *stream )
 {
     // Get parameters ( filename )
-    string filename = this->absolute_from_relative(parameters);
+    string filename = absolute_from_relative(parameters);
     if(filename == "/") {
         filename = THEKERNEL->config_override_filename();
     }
@@ -357,7 +322,7 @@ void SimpleShell::load_command( string parameters, StreamOutput *stream )
 void SimpleShell::save_command( string parameters, StreamOutput *stream )
 {
     // Get parameters ( filename )
-    string filename = this->absolute_from_relative(parameters);
+    string filename = absolute_from_relative(parameters);
     if(filename == "/") {
         filename = THEKERNEL->config_override_filename();
     }

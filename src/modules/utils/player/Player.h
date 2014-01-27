@@ -14,12 +14,6 @@
 #include "libs/utils.h"
 #include "libs/StreamOutput.h"
 
-#define play_command_checksum           CHECKSUM("play")
-#define progress_command_checksum       CHECKSUM("progress")
-#define abort_command_checksum          CHECKSUM("abort")
-#define cd_command_checksum             CHECKSUM("cd")
-#define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
-#define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
 
 class Player : public Module {
     public:
@@ -32,14 +26,12 @@ class Player : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_gcode_received(void *argument);
-        string absolute_from_relative( string path );
-        void cd_command(   string parameters, StreamOutput* stream );
+
+    private:
         void play_command( string parameters, StreamOutput* stream );
         void progress_command( string parameters, StreamOutput* stream );
         void abort_command( string parameters, StreamOutput* stream );
 
-    private:
-        string current_path;
         string filename;
 
         bool on_boot_gcode_enable;

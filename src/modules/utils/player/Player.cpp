@@ -17,6 +17,12 @@
 #include "PublicDataRequest.h"
 #include "PlayerPublicAccess.h"
 
+#define play_command_checksum           CHECKSUM("play")
+#define progress_command_checksum       CHECKSUM("progress")
+#define abort_command_checksum          CHECKSUM("abort")
+#define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
+#define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
+
 void Player::on_module_loaded(){
     this->playing_file = false;
     this->booted = false;
@@ -48,7 +54,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 23) { // select file
             gcode->mark_as_taken();
             // Get filename
-            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + absolute_from_relative(shift_parameter( args ));
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
@@ -123,7 +129,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 32) { // select file and start print
             gcode->mark_as_taken();
             // Get filename
-            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + absolute_from_relative(shift_parameter( args ));
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
@@ -163,15 +169,13 @@ void Player::on_console_line_received( void* argument ){
         this->progress_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == abort_command_checksum)
         this->abort_command(get_arguments(possible_command),new_message.stream );
-    else if (check_sum == cd_command_checksum)
-        this->cd_command(  get_arguments(possible_command), new_message.stream );
 }
 
 // Play a gcode file by considering each line as if it was received on the serial console
 void Player::play_command( string parameters, StreamOutput* stream ){
 
     // Get filename
-    this->filename          = this->absolute_from_relative(shift_parameter( parameters ));
+    this->filename          = absolute_from_relative(shift_parameter( parameters ));
     string options          = shift_parameter( parameters );
 
     this->current_file_handler = fopen( this->filename.c_str(), "r");
@@ -253,27 +257,6 @@ void Player::abort_command( string parameters, StreamOutput* stream ){
     this->current_stream= NULL;
     fclose(current_file_handler);
     stream->printf("Aborted playing file\r\n");
-}
-
-// Convert a path indication ( absolute or relative ) into a path ( absolute )
-string Player::absolute_from_relative( string path ){
-    if( path[0] == '/' ){ return path; }
-    if( path[0] == '.' ){ return this->current_path; }
-    return this->current_path + path;
-}
-
-// Change current absolute path to provided path
-void Player::cd_command( string parameters, StreamOutput* stream ){
-    string folder = this->absolute_from_relative( parameters );
-    if( folder[folder.length()-1] != '/' ){ folder += "/"; }
-    DIR *d;
-    d = opendir(folder.c_str());
-    if(d == NULL) {
-//        stream->printf("Could not open directory %s \r\n", folder.c_str() );
-    }else{
-        this->current_path = folder;
-        closedir(d);
-    }
 }
 
 void Player::on_main_loop(void* argument){
