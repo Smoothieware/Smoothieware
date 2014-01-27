@@ -25,7 +25,6 @@ public:
     void on_second_tick(void *);
 
 private:
-    string absolute_from_relative( string path );
     void ls_command(string parameters, StreamOutput *stream );
     void cd_command(string parameters, StreamOutput *stream );
     void delete_file_command(string parameters, StreamOutput *stream );
@@ -55,7 +54,6 @@ private:
     } ptentry_t;
 
     static ptentry_t commands_table[];
-    string current_path;
     int reset_delay_secs;
 };
 

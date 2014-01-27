@@ -24,8 +24,6 @@
 #include "modules/tools/endstops/Endstops.h"
 #include <malloc.h>
 
-
-
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
 
@@ -40,6 +38,8 @@ Kernel::Kernel(){
 
     // Serial second, because the other modules might want to say something
     this->streams        = new StreamOutputPool();
+
+    this->current_path   = "/";
 
     // Configure UART depending on MRI config
     // Match up the SerialConsole to MRI UART. This makes it easy to use only one UART for both debug and actual commands.

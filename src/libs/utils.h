@@ -32,7 +32,7 @@ bool file_exists( const string file_name );
 
 void system_reset( bool dfu= false );
 
-
+string absolute_from_relative( string path );
 
 
 #endif
