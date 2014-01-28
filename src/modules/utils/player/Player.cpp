@@ -54,7 +54,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 23) { // select file
             gcode->mark_as_taken();
             // Get filename
-            this->filename= "/sd/" + absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + shift_parameter( args );
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
@@ -62,22 +62,24 @@ void Player::on_gcode_received(void *argument) {
                 fclose(this->current_file_handler);
             }
             this->current_file_handler = fopen( this->filename.c_str(), "r");
-            // get size of file
-            int result = fseek(this->current_file_handler, 0, SEEK_END);
-            if (0 != result){
-                    gcode->stream->printf("WARNING - Could not get file size\r\n");
-                    file_size= -1;
-            }else{
-                    file_size= ftell(this->current_file_handler);
-                    fseek(this->current_file_handler, 0, SEEK_SET);
-            }
 
             if(this->current_file_handler == NULL){
                 gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
+                return;
+
             }else{
-                gcode->stream->printf("File opened:%s Size:%ld\r\n", this->filename.c_str(),file_size);
+                // get size of file
+                int result = fseek(this->current_file_handler, 0, SEEK_END);
+                if (0 != result){
+                        this->file_size= 0;
+                }else{
+                        this->file_size= ftell(this->current_file_handler);
+                        fseek(this->current_file_handler, 0, SEEK_SET);
+                }
+                gcode->stream->printf("File opened:%s Size:%ld\r\n", this->filename.c_str(), this->file_size);
                 gcode->stream->printf("File selected\r\n");
             }
+
 
             this->played_cnt= 0;
             this->elapsed_secs= 0;
@@ -99,25 +101,25 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 26) { // Reset print. Slightly different than M26 in Marlin and the rest
             gcode->mark_as_taken();
             if(this->current_file_handler != NULL){
+                string currentfn= this->filename.c_str();
+                unsigned long old_size= this->file_size;
+
                 // abort the print
                 abort_command("", gcode->stream);
 
-                // reload the last file opened
-                this->current_file_handler = fopen( this->filename.c_str(), "r");
+                if(!currentfn.empty()) {
+                    // reload the last file opened
+                    this->current_file_handler = fopen(currentfn.c_str() , "r");
 
-                if(this->current_file_handler == NULL){
-                    gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
-                }else{
-                    // get size of file
-                    int result = fseek(this->current_file_handler, 0, SEEK_END);
-                    if (0 != result){
-                            gcode->stream->printf("WARNING - Could not get file size\r\n");
-                            file_size= 0;
+                    if(this->current_file_handler == NULL){
+                        gcode->stream->printf("file.open failed: %s\r\n", currentfn.c_str());
                     }else{
-                            file_size= ftell(this->current_file_handler);
-                            fseek(this->current_file_handler, 0, SEEK_SET);
+                        this->filename= currentfn;
+                        this->file_size= old_size;
+                        this->current_stream = &(StreamOutput::NullStream);
                     }
                 }
+
             }else{
                 gcode->stream->printf("No file loaded\r\n");
             }
@@ -129,7 +131,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 32) { // select file and start print
             gcode->mark_as_taken();
             // Get filename
-            this->filename= "/sd/" + absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + shift_parameter( args );
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
