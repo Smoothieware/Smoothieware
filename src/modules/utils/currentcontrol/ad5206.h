@@ -20,14 +20,15 @@ class AD5206 : public DigipotBase {
 
         void set_current( int channel, float current )
         {
-            current = min( max( current, 0.0L ), 2.0L );
-
-
-            char adresses[6] = { 0x05, 0x03, 0x01, 0x00, 0x02, 0x04 };
-            cs.set(0);
-            spi->write((int)adresses[channel]);
-            spi->write((int)current_to_wiper(current));
-            cs.set(1);
+			if(channel<6){
+				current = min( max( current, 0.0L ), 2.0L );
+				char adresses[6] = { 0x05, 0x03, 0x01, 0x00, 0x02, 0x04 };
+				currents[channel] = current;
+				cs.set(0);
+				spi->write((int)adresses[channel]);
+				spi->write((int)current_to_wiper(current));
+				cs.set(1);
+			}
         }
 
 
