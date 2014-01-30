@@ -41,6 +41,8 @@ class DeltaCalibrate : public Module{
         unsigned int lift_steps;
         float calibrate_radius;
         float calibrate_probe_offset;
+        unsigned int max_passes;
+        unsigned int calibrate_margin;
         
 
         int  trim[3];

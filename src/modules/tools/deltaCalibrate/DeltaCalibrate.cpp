@@ -37,6 +37,8 @@
 #define calibrate_lift_checksum          CHECKSUM("calibrate_lift")
 #define calibrate_radius_checksum        CHECKSUM("calibrate_radius")
 #define calibrate_probe_offset_checksum  CHECKSUM("calibrate_probe_offset")
+#define calibrate_max_passes_checksum    CHECKSUM("calibrate_max_passes")
+#define calibrate_margin_checksum        CHECKSUM("calibrate_margin")
 
 // these values are in steps and should be deprecated
 #define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
@@ -115,6 +117,8 @@ void DeltaCalibrate::on_config_reload(void *argument)
     this->lift_steps = THEKERNEL->config->value(calibrate_lift_checksum )->by_default(10)->as_number() * steps_per_mm;
     this->calibrate_radius = THEKERNEL->config->value(calibrate_radius_checksum )->by_default(50)->as_number();
     this->calibrate_probe_offset = THEKERNEL->config->value(calibrate_probe_offset_checksum )->by_default(0)->as_number();
+    this->max_passes = THEKERNEL->config->value(calibrate_max_passes_checksum )->by_default(5)->as_number();
+    this->calibrate_margin = THEKERNEL->config->value(calibrate_margin_checksum )->by_default(3)->as_number();
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
@@ -304,7 +308,6 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
 
     float best_delta_rad_offset = 0;
     float delta_rad_offset = 0;
-    float best_delta_rad = 0;
     float best_trim_mm[3];
 
     char buf[32];
@@ -315,18 +318,26 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     float original_arm_radius = 0;
     int steps[3];
 
-    int passes = 5;
-    unsigned int calibrate_margin = 3;
     float corrective_multiplier = 1;
     float delta_multiplier = 1;
 
     bool tuning_trims = true;
     bool tuning_delta_rad = true;
+
+    float centerAverage = 0;
+    uint32_t lowestTower = 0;
+    float multiplier = 1;
+    float new_trim[3];
+    float trim_delta[3];
+    float delta_tweak = 0;
+    float newDeltaRadius = 0;
+    float minTrim = 0;
     /**
     *   Setup machine and pre-feed historical variables
     */
     for (int i=0; i<3; i++) {
         best_trim_mm[i] = trim[i]/steps_per_mm;
+        new_trim[i]= best_trim_mm[i];
     }
 
     // update machine geometry incase it has been modified since startup
@@ -350,121 +361,46 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
     g.assign(buf, buffered_length);
     send_gcode(g);
 
-    /**
-    *   Probe bed center
-    */
-
-    //TODO auto-deploy probe
-
-    // deploy probe, check or abort
-    if( probe_pin.get() ){
-        //probe not deployed - abort
-        stream->printf("Z-Probe not deployed, aborting!\r\n");
-        return;
-    }
-
-    //probe min z height at 0,0
-    current_z_steps = do_probe(false);
-    originHeight = current_z_steps;
-
-    //lift and reposition
-    move_all(UP,FAST,lift_steps); //alpha tower retract distance for all
-    wait_for_moves();
-    current_z_steps -= lift_steps;
-
-    // update planner position so we can make coordinated moves
-    THEKERNEL->robot->reset_axis_position( homing_position_z - (current_z_steps / steps_per_mm) , 2);
-
-    /**
-    *   Initial probe pass of towers
-    */
-    if(!probe_towers(tower_height)){
-        stream->printf("Z-Probe not deployed, aborting!\r\n");
-        return;
-    }
-
-    buffered_length = snprintf(buf, sizeof(buf), "G0 X0 Y0");
-    g.assign(buf, buffered_length);
-    send_gcode(g);
-    THEKERNEL->conveyor->wait_for_empty_queue();
-    //TODO auto-retract probe
-
-    /**
-    *   process measured offsets
-    */
-    
-    for (int i=0; i<3; i++) { // add our total offset to the short tower probes
-        tower_height[i]+=current_z_steps;
-    }
-
-    //calculate 3 tower trim levels
-    float centerAverage = (tower_height[0] + tower_height[1] + tower_height[2])/3;
-    uint32_t lowestTower = min(tower_height[0],min(tower_height[1],tower_height[2]));
-    best_total_offset = (tower_height[0]-lowestTower) +(tower_height[1]-lowestTower) +(tower_height[2]-lowestTower) ;
-    best_delta_rad_offset = (centerAverage - originHeight)/steps_per_mm;
-    best_delta_rad = arm_radius;
-    float multiplier = 1;//(1.83606 *log(arm_radius*2)-9.76413)/(1.83606 *log(arm_radius+calibrate_radius)-9.76413);
-    float new_trim[3];
-    float trim_delta[3];
-
-    for (int i=0; i<3; i++) { // calculate corrective trim value from current positions
-        new_trim[i] = ((tower_height[i]-lowestTower) / steps_per_mm) * multiplier;
-    }
-
-    if ( (delta_calibrate_flags & (CALIBRATE_SILENT|CALIBRATE_QUIET) ) == 0 ){
-        stream->printf("Probed Points:\r\n");
-        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f O:%5.3f \r\n", -(tower_height[0]/steps_per_mm), -(tower_height[1]/steps_per_mm), -(tower_height[2]/steps_per_mm), -(originHeight/steps_per_mm)); 
-        stream->printf("Detected offsets:\r\n");
-        stream->printf("Origin Offset: %5.3f\r\n", (centerAverage - originHeight)/steps_per_mm); 
-        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -new_trim[0], -new_trim[1], -new_trim[2]); 
-    }
-
-    //normalize trim values so that they don't drift
-    for (int i=0; i<3; i++) { 
-        new_trim[i] += best_trim_mm[i];
-    }
-    float minTrim = min(new_trim[0],min(new_trim[1],new_trim[2]));
-    for (int i=0; i<3; i++) {
-        new_trim[i] -= minTrim;
-    }
-    for (int i=0; i<3; i++) { // find trim delta to get us to the new trim settings from the current trim settings
-        trim_delta[i] = best_trim_mm[i] - new_trim[i];
-    }
-
-    float delta_tweak = ((centerAverage - originHeight)/steps_per_mm);
-    float newDeltaRadius = original_arm_radius - delta_tweak*delta_multiplier;
-
 
     /**
     *   Begin the incremental refinement passes
     */
-    for (int p = 0; p < passes; ++p)
+    for (unsigned int p = 0; p < max_passes; ++p)
     {
-        //apply trim deltas to the live position
-        stream->printf("Trying Radius:%5.3f X:%5.3f Y:%5.3f Z:%5.3f \r\n",newDeltaRadius, new_trim[0], new_trim[1], new_trim[2]); 
+        if(p > 0){
+            //apply trim deltas to the live position if we've done at least one measurement pass
+            stream->printf("Trying Radius:%5.3f X:%5.3f Y:%5.3f Z:%5.3f \r\n",newDeltaRadius, new_trim[0], new_trim[1], new_trim[2]); 
 
-        for (int i=0; i<3; i++) {
-            steps[i] = trim_delta[i] * steps_per_mm * -1;
+            for (int i=0; i<3; i++) {
+                steps[i] = trim_delta[i] * steps_per_mm * -1;
+            }
+            move_all(SLOW,steps);
+            wait_for_moves();
+            buffered_length = snprintf(buf, sizeof(buf), "M665 R%.3f", newDeltaRadius );
+            g.assign(buf, buffered_length);
+            send_gcode(g);
         }
-        move_all(SLOW,steps);
-        wait_for_moves();
-        buffered_length = snprintf(buf, sizeof(buf), "M665 R%.3f", newDeltaRadius );
-        g.assign(buf, buffered_length);
-        send_gcode(g);
 
-      // update planner position so we can make coordinated moves
-        THEKERNEL->robot->reset_axis_position( homing_position_z - (current_z_steps / steps_per_mm) , 2);
-  
-            //re-probe towers
        if( probe_pin.get() ){
             //probe not deployed - abort
             stream->printf("Z-Probe not deployed, aborting!\r\n");
             return;
         }
 
-        if(tuning_trims&tuning_delta_rad){
+        if(current_z_steps==0){ // if we haven't established probing height do an initial  origin probe
+            current_z_steps = do_probe(false);
+            originHeight = current_z_steps;
+            //lift and reposition
+            move_all(UP,FAST,lift_steps);
+            wait_for_moves();
+            current_z_steps -= lift_steps;
+        }  else if (tuning_trims&tuning_delta_rad) { // if we have established probing height already check if we need to reprobe origin anyway
            originHeight = do_probe(true) + current_z_steps; // reprobe the origin to make sure we haven't drifted
         }
+
+        // update planner position so we can make coordinated moves
+        THEKERNEL->robot->reset_axis_position( homing_position_z - (current_z_steps / steps_per_mm) , 2);
+
 
         if(!probe_towers(tower_height)){
             stream->printf("Z-Probe not deployed, aborting!\r\n");
@@ -476,18 +412,28 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
         send_gcode(g);
         THEKERNEL->conveyor->wait_for_empty_queue();
 
-        for (int i=0; i<3; i++) {
+        for (int i=0; i<3; i++) {// add our total offset to the short tower probes
             tower_height[i]+=current_z_steps;
         }
+
+
         centerAverage = (tower_height[0] + tower_height[1] + tower_height[2])/3;
         lowestTower = min(tower_height[0],min(tower_height[1],tower_height[2]));
         total_offset = (tower_height[0]-lowestTower) +(tower_height[1]-lowestTower) +(tower_height[2]-lowestTower) ;
         delta_rad_offset = (centerAverage - originHeight)/steps_per_mm;
-        stream->printf("Pass:%d of %d.  Multiplier: %.4f\r\n",p+1,passes,corrective_multiplier); 
+
+        if(p==0){// preload historical values on the first pass
+            best_total_offset = total_offset;
+            best_delta_rad_offset = delta_rad_offset;
+            delta_tweak = ((centerAverage - originHeight)/steps_per_mm);
+            newDeltaRadius = original_arm_radius - delta_tweak*delta_multiplier;
+        }
+
+        stream->printf("#####"); 
+        stream->printf("Pass:%d of %d.  Multiplier: %.4f\r\n",p+1,max_passes,corrective_multiplier); 
         stream->printf("Total Offset:%lu  Best:%lu\r\n",total_offset, best_total_offset); 
-        stream->printf("Origin Offset: %5.3f \r\n", delta_rad_offset); 
-        stream->printf("Probed Points:\r\n");
-        stream->printf("X:%5.3f Y:%5.3f Z:%5.3f O:%5.3f \r\n", -(tower_height[0]/steps_per_mm), -(tower_height[1]/steps_per_mm), -(tower_height[2]/steps_per_mm), -(originHeight/steps_per_mm)); 
+        stream->printf("Offsets X:%5.3f Y:%5.3f Z:%5.3f O:%5.3f\r\n", -((tower_height[0]-lowestTower)/steps_per_mm), -((tower_height[1]-lowestTower)/steps_per_mm), -((tower_height[2]-lowestTower)/steps_per_mm), delta_rad_offset); 
+        stream->printf("Raw Measurements X:%5.3f Y:%5.3f Z:%5.3f O:%5.3f \r\n", -(tower_height[0]/steps_per_mm), -(tower_height[1]/steps_per_mm), -(tower_height[2]/steps_per_mm), -(originHeight/steps_per_mm)); 
 
         /**
         *   Trims incrementing
@@ -544,7 +490,9 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
         if(abs(centerAverage - originHeight) > calibrate_margin){
 
             tuning_delta_rad = true;
-            delta_multiplier *= best_delta_rad_offset / (best_delta_rad_offset-delta_rad_offset); //margin check ensures we don't dev by 0
+            if ( (best_delta_rad_offset-delta_rad_offset)>0){ //ensure no divide by 0
+                delta_multiplier *= best_delta_rad_offset / (best_delta_rad_offset-delta_rad_offset);
+            }
             newDeltaRadius = original_arm_radius - delta_tweak*delta_multiplier;
                     stream->printf("new mult:%5.3f by:%5.3f\r\n",delta_multiplier, delta_rad_offset / (centerAverage - originHeight)/steps_per_mm); 
 
@@ -564,7 +512,10 @@ void DeltaCalibrate::calibrate_delta(StreamOutput *stream){
         stream->printf("Delta Radius:%5.3f\r\n",newDeltaRadius); 
         stream->printf("X:%5.3f Y:%5.3f Z:%5.3f \r\n", -new_trim[0], -new_trim[1], -new_trim[2]); 
     }
-    // apply values
+
+    /**
+    *   Apply updated calibration to machine
+    */
     if ( (delta_calibrate_flags & CALIBRATE_AUTOSET) > 0 ){
 
         buffered_length = snprintf(buf, sizeof(buf), "M666 X%.3f Y%.3f Z%.3f", -new_trim[0], -new_trim[1], -new_trim[2] );
@@ -646,6 +597,12 @@ void DeltaCalibrate::on_gcode_received(void *argument)
                 }
                 if (gcode->has_letter('S')) {
                     delta_calibrate_flags |= CALIBRATE_SILENT;
+                }
+                if (gcode->has_letter('P')) {
+                    max_passes = gcode->get_value('P');
+                }
+                if (gcode->has_letter('I')) {
+                    calibrate_margin = gcode->get_value('I');
                 }
                 if (gcode->has_letter('D')) {
                     //disable auto-apply values
