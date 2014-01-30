@@ -36,7 +36,7 @@ void Laser::on_module_loaded() {
         if( dummy_pin->pin == 5 ){ this->laser_pin = new mbed::PwmOut(p21); }
     }
 
-    this->laser_pin->period_us(20);
+    this->laser_pin->period_us(THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number());
     this->laser_pin->write(0);
 
     this->laser_max_power =    THEKERNEL->config->value(laser_module_max_power_checksum   )->by_default(0.8f)->as_number() ;
