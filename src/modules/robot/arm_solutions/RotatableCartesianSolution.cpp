@@ -19,7 +19,7 @@ void RotatableCartesianSolution::actuator_to_cartesian( float actuator_mm[], flo
 }
 
 void RotatableCartesianSolution::rotate(float in[], float out[], float sin, float cos ){
-    out[X_AXIS] = cos * in[X_AXIS] - sin * in[Y_AXIS];
-    out[Y_AXIS] = sin * in[X_AXIS] + cos * in[Y_AXIS];
-    out[Z_AXIS] = in[Z_AXIS];
+    out[ALPHA_STEPPER] = cos * in[X_AXIS] - sin * in[Y_AXIS];
+    out[BETA_STEPPER ] = sin * in[X_AXIS] + cos * in[Y_AXIS];
+    out[GAMMA_STEPPER] =       in[Z_AXIS];
 }

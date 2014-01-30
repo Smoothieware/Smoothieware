@@ -35,17 +35,17 @@ void JohannKosselSolution::init() {
 void JohannKosselSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] ){
 
     actuator_mm[ALPHA_STEPPER] = sqrtf(this->arm_length_squared
-                                - SQ(DELTA_TOWER1_X - cartesian_mm[0])
-                                - SQ(DELTA_TOWER1_Y - cartesian_mm[1])
-                                ) + cartesian_mm[2];
+                                - SQ(DELTA_TOWER1_X - cartesian_mm[X_AXIS])
+                                - SQ(DELTA_TOWER1_Y - cartesian_mm[Y_AXIS])
+                                ) + cartesian_mm[Z_AXIS];
     actuator_mm[BETA_STEPPER ] = sqrtf(this->arm_length_squared
-                                - SQ(DELTA_TOWER2_X - cartesian_mm[0])
-                                - SQ(DELTA_TOWER2_Y - cartesian_mm[1])
-                                ) + cartesian_mm[2];
+                                - SQ(DELTA_TOWER2_X - cartesian_mm[X_AXIS])
+                                - SQ(DELTA_TOWER2_Y - cartesian_mm[Y_AXIS])
+                                ) + cartesian_mm[Z_AXIS];
     actuator_mm[GAMMA_STEPPER] = sqrtf(this->arm_length_squared
-                                - SQ(DELTA_TOWER3_X - cartesian_mm[0])
-                                - SQ(DELTA_TOWER3_Y - cartesian_mm[1])
-                                ) + cartesian_mm[2];
+                                - SQ(DELTA_TOWER3_X - cartesian_mm[X_AXIS])
+                                - SQ(DELTA_TOWER3_Y - cartesian_mm[Y_AXIS])
+                                ) + cartesian_mm[Z_AXIS];
 }
 
 void JohannKosselSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] ){

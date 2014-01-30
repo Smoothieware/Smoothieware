@@ -27,9 +27,9 @@ void RostockSolution::cartesian_to_actuator( float cartesian_mm[], float actuato
     float alpha_rotated[3], rotated[3];
     
     if( sin_alpha == 0 && cos_alpha == 1){
-        alpha_rotated[0] = cartesian_mm[0];
-        alpha_rotated[1] = cartesian_mm[1];
-        alpha_rotated[2] = cartesian_mm[2];
+        alpha_rotated[X_AXIS] = cartesian_mm[X_AXIS];
+        alpha_rotated[Y_AXIS] = cartesian_mm[Y_AXIS];
+        alpha_rotated[Z_AXIS] = cartesian_mm[Z_AXIS];
     }else{
         rotate( cartesian_mm, alpha_rotated, sin_alpha, cos_alpha );
     }
