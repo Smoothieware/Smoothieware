@@ -7,16 +7,18 @@
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+
+#include <math.h>
 #include <string>
 using std::string;
-#include <math.h>
+
 #include "Planner.h"
 #include "Conveyor.h"
 #include "Robot.h"
-#include "libs/nuts_bolts.h"
-#include "libs/Pin.h"
-#include "libs/StepperMotor.h"
-#include "../communication/utils/Gcode.h"
+#include "nuts_bolts.h"
+#include "Pin.h"
+#include "StepperMotor.h"
+#include "Gcode.h"
 #include "PublicDataRequest.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"

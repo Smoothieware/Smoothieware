@@ -7,10 +7,12 @@
 
 #ifndef STEPPER_H
 #define STEPPER_H
+
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "Planner.h"
-#include "Block.h"
+
+class Block;
+class Hook;
+class StepperMotor;
 
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
 #define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")

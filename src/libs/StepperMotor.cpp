@@ -4,9 +4,9 @@
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
-#include "mri.h"
-#include "libs/Kernel.h"
 #include "StepperMotor.h"
+
+#include "Kernel.h"
 #include "MRI_Hooks.h"
 
 // A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed

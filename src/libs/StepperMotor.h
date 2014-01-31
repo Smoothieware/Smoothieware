@@ -8,10 +8,11 @@
 #ifndef STEPPERMOTOR_H
 #define STEPPERMOTOR_H
 
-#include "libs/Kernel.h"
 #include "libs/Hook.h"
+#include "Pin.h"
 
 class StepTicker;
+class Hook;
 
 class StepperMotor {
     public:

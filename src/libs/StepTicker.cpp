@@ -6,13 +6,16 @@
 */
 
 
+#include "StepTicker.h"
 
 using namespace std;
 #include <vector>
+
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "StepTicker.h"
+#include "StepperMotor.h"
+
 #include "system_LPC17xx.h" // mbed.h lib
 
 #include <mri.h>

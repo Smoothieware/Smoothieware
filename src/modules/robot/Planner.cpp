@@ -17,6 +17,7 @@ using namespace std;
 #include "Block.h"
 #include "Planner.h"
 #include "Conveyor.h"
+#include "StepperMotor.h"
 
 #define acceleration_checksum          CHECKSUM("acceleration")
 #define max_jerk_checksum              CHECKSUM("max_jerk")
