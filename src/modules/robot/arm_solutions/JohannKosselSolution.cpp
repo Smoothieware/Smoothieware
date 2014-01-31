@@ -59,15 +59,11 @@ void JohannKosselSolution::actuator_to_cartesian( float actuator_mm[], float car
     Vector3 tower2( DELTA_TOWER2_X, DELTA_TOWER2_Y, actuator_mm[1] );
     Vector3 tower3( DELTA_TOWER3_X, DELTA_TOWER3_Y, actuator_mm[2] );
 
-    Vector3 s12, s23, s13;
+    Vector3 s12 = tower1.sub(tower2);
+    Vector3 s23 = tower2.sub(tower3);
+    Vector3 s13 = tower1.sub(tower3);
 
-    tower1.sub(tower2, &s12);
-    tower2.sub(tower3, &s23);
-    tower1.sub(tower3, &s13);
-
-    Vector3 normal;
-
-    s12.cross(s23, &normal);
+    Vector3 normal = s12.cross(s23);
 
     float magsq_s12 = s12.magsq();
     float magsq_s23 = s23.magsq();
@@ -80,18 +76,14 @@ void JohannKosselSolution::actuator_to_cartesian( float actuator_mm[], float car
     float b = q * magsq_s13 * s12.dot(s23) * -1.0F; // negate because we use s12 instead of s21
     float c = q * magsq_s12 * s13.dot(s23);
 
-    Vector3 pc( DELTA_TOWER1_X * a + DELTA_TOWER2_X * b + DELTA_TOWER3_X * c,
-                DELTA_TOWER1_Y * a + DELTA_TOWER2_Y * b + DELTA_TOWER3_Y * c,
-                actuator_mm[0] * a + actuator_mm[1] * b + actuator_mm[2] * c );
+    Vector3 circumcenter( DELTA_TOWER1_X * a + DELTA_TOWER2_X * b + DELTA_TOWER3_X * c,
+                          DELTA_TOWER1_Y * a + DELTA_TOWER2_Y * b + DELTA_TOWER3_Y * c,
+                          actuator_mm[0] * a + actuator_mm[1] * b + actuator_mm[2] * c );
 
     float r_sq = 0.5F * q * magsq_s12 * magsq_s23 * magsq_s13;
     float dist = sqrtf(inv_nmag_sq * (arm_length_squared - r_sq));
 
-    Vector3 distvec;
-    normal.mul(dist, &distvec);
-
-    Vector3 cartesian;
-    pc.sub(distvec, &cartesian);
+    Vector3 cartesian = circumcenter.sub(normal.mul(dist));
 
     cartesian_mm[0] = ROUND(cartesian[0], 4);
     cartesian_mm[1] = ROUND(cartesian[1], 4);
