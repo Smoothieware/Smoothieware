@@ -10,11 +10,12 @@
 
 #include "libs/Hook.h"
 #include "Pin.h"
+#include "Actuator.h"
 
 class StepTicker;
 class Hook;
 
-class StepperMotor {
+class StepperMotor : public Actuator {
     public:
         StepperMotor();
         StepperMotor(Pin& step, Pin& dir, Pin& en);
@@ -76,10 +77,8 @@ class StepperMotor {
         bool paused;
 
         float steps_per_mm;
-        float max_rate;
 
         int32_t last_milestone_steps;
-        float   last_milestone_mm;
 
         uint32_t steps_to_move;
         uint32_t stepped;
