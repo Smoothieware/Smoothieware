@@ -9,7 +9,7 @@
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
-#include "modules/tools/endstops/Endstops.h"
+#include "modules/tools/homer/Homer.h"
 #include "modules/tools/touchprobe/Touchprobe.h"
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/robot/Conveyor.h"
@@ -104,7 +104,7 @@ int main() {
     kernel->add_module( new SwitchPool() );
     kernel->add_module( new PauseButton() );
     kernel->add_module( new PlayLed() );
-    kernel->add_module( new Endstops() );
+    kernel->add_module( new Homer() );
     kernel->add_module( new Player() );
     kernel->add_module( new Panel() );
     kernel->add_module( new Touchprobe() );

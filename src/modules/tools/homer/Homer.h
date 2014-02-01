@@ -5,8 +5,8 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef ENDSTOPS_MODULE_H
-#define ENDSTOPS_MODULE_H
+#ifndef _HOMER_H
+#define _HOMER_H
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
@@ -14,10 +14,11 @@
 #include "libs/StepperMotor.h"
 #include "libs/Pin.h"
 
+#include <vector>
 
-class Endstops : public Module{
+class Homer : public Module{
     public:
-        Endstops();
+        Homer();
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
@@ -40,10 +41,9 @@ class Endstops : public Module{
         float  fast_rates[3];
         float  slow_rates[3];
         Pin           pins[6];
-        StepperMotor* steppers[3];
         char status;
         bool is_corexy;
         bool is_delta;
 };
 
-#endif
+#endif /* _HOMER_H */

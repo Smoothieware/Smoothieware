@@ -9,7 +9,7 @@
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
 #include "modules/robot/Conveyor.h"
-#include "Endstops.h"
+#include "Homer.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Pin.h"
 #include "libs/StepperMotor.h"
@@ -89,13 +89,13 @@
 #define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
 #define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
 
-Endstops::Endstops()
+Homer::Homer()
 {
     this->status = NOT_HOMING;
     home_offset[0] = home_offset[1] = home_offset[2] = 0.0F;
 }
 
-void Endstops::on_module_loaded()
+void Homer::on_module_loaded()
 {
     // Do not do anything if not enabled
     if ( THEKERNEL->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ) {
@@ -105,18 +105,13 @@ void Endstops::on_module_loaded()
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
 
-    // Take StepperMotor objects from Robot and keep them here
-    this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
-    this->steppers[1] = THEKERNEL->robot->beta_stepper_motor;
-    this->steppers[2] = THEKERNEL->robot->gamma_stepper_motor;
-
     // Settings
     this->on_config_reload(this);
 
 }
 
 // Get config
-void Endstops::on_config_reload(void *argument)
+void Homer::on_config_reload(void *argument)
 {
     this->pins[0].from_string(         THEKERNEL->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
     this->pins[1].from_string(         THEKERNEL->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
@@ -181,7 +176,7 @@ void Endstops::on_config_reload(void *argument)
     this->trim[2] = THEKERNEL->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * steps_per_mm[2] * dirz;
 }
 
-void Endstops::wait_for_homed(char axes_to_move)
+void Homer::wait_for_homed(char axes_to_move)
 {
     bool running = true;
     unsigned int debounce[3] = {0, 0, 0};
@@ -194,8 +189,8 @@ void Endstops::wait_for_homed(char axes_to_move)
                     if ( debounce[c - 'X'] < debounce_count ) {
                         debounce[c - 'X'] ++;
                         running = true;
-                    } else if ( this->steppers[c - 'X']->moving ) {
-                        this->steppers[c - 'X']->move(0, 0);
+                    } else if ( THEKERNEL->robot->actuators[c - 'X']->moving ) {
+                        THEKERNEL->robot->actuators[c - 'X']->move(0, 0);
                     }
                 } else {
                     // The endstop was not hit yet
@@ -208,14 +203,14 @@ void Endstops::wait_for_homed(char axes_to_move)
 }
 
 // this homing works for cartesian and delta printers, not for HBots/CoreXY
-void Endstops::do_homing(char axes_to_move)
+void Homer::do_homing(char axes_to_move)
 {
     // Start moving the axes to the origin
     this->status = MOVING_TO_ORIGIN_FAST;
     for ( char c = 'X'; c <= 'Z'; c++ ) {
         if ( ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-            this->steppers[c - 'X']->set_speed(this->fast_rates[c - 'X']);
-            this->steppers[c - 'X']->move(this->home_direction[c - 'X'], 10000000);
+            THEKERNEL->robot->actuators[c - 'X']->set_speed(this->fast_rates[c - 'X']);
+            THEKERNEL->robot->actuators[c - 'X']->move(this->home_direction[c - 'X'], 10000000);
         }
     }
 
@@ -228,15 +223,15 @@ void Endstops::do_homing(char axes_to_move)
     for ( char c = 'X'; c <= 'Z'; c++ ) {
         if ( ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
             inverted_dir = !this->home_direction[c - 'X'];
-            this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-            this->steppers[c - 'X']->move(inverted_dir, this->retract_steps[c - 'X']);
+            THEKERNEL->robot->actuators[c - 'X']->set_speed(this->slow_rates[c - 'X']);
+            THEKERNEL->robot->actuators[c - 'X']->move(inverted_dir, this->retract_steps[c - 'X']);
         }
     }
 
     // Wait for moves to be done
     for ( char c = 'X'; c <= 'Z'; c++ ) {
         if (  ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-            while ( this->steppers[c - 'X']->moving ) {
+            while ( THEKERNEL->robot->actuators[c - 'X']->moving ) {
                 THEKERNEL->call_event(ON_IDLE);
             }
         }
@@ -246,8 +241,8 @@ void Endstops::do_homing(char axes_to_move)
     this->status = MOVING_TO_ORIGIN_SLOW;
     for ( char c = 'X'; c <= 'Z'; c++ ) {
         if ( ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
-            this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-            this->steppers[c - 'X']->move(this->home_direction[c - 'X'], 10000000);
+            THEKERNEL->robot->actuators[c - 'X']->set_speed(this->slow_rates[c - 'X']);
+            THEKERNEL->robot->actuators[c - 'X']->move(this->home_direction[c - 'X'], 10000000);
         }
     }
 
@@ -262,8 +257,8 @@ void Endstops::do_homing(char axes_to_move)
                 inverted_dir = !this->home_direction[c - 'X'];
                 // move up or down depending on sign of trim
                 if (this->trim[c - 'X'] < 0) inverted_dir = !inverted_dir;
-                this->steppers[c - 'X']->set_speed(this->slow_rates[c - 'X']);
-                this->steppers[c - 'X']->move(inverted_dir, this->trim[c - 'X']);
+                THEKERNEL->robot->actuators[c - 'X']->set_speed(this->slow_rates[c - 'X']);
+                THEKERNEL->robot->actuators[c - 'X']->move(inverted_dir, this->trim[c - 'X']);
             }
         }
 
@@ -271,7 +266,7 @@ void Endstops::do_homing(char axes_to_move)
         for ( char c = 'X'; c <= 'Z'; c++ ) {
             if (  ( axes_to_move >> ( c - 'X' ) ) & 1 ) {
                 //THEKERNEL->streams->printf("axis %c \r\n", c );
-                while ( this->steppers[c - 'X']->moving ) {
+                while ( THEKERNEL->robot->actuators[c - 'X']->moving ) {
                     THEKERNEL->call_event(ON_IDLE);
                 }
             }
@@ -282,7 +277,7 @@ void Endstops::do_homing(char axes_to_move)
     this->status = NOT_HOMING;
 }
 
-void Endstops::wait_for_homed_corexy(int axis)
+void Homer::wait_for_homed_corexy(int axis)
 {
     bool running = true;
     unsigned int debounce[3] = {0, 0, 0};
@@ -295,8 +290,8 @@ void Endstops::wait_for_homed_corexy(int axis)
                 running = true;
             } else {
                 // turn both off if running
-                if (this->steppers[X_AXIS]->moving) this->steppers[X_AXIS]->move(0, 0);
-                if (this->steppers[Y_AXIS]->moving) this->steppers[Y_AXIS]->move(0, 0);
+                if (THEKERNEL->robot->actuators[X_AXIS]->moving) THEKERNEL->robot->actuators[X_AXIS]->move(0, 0);
+                if (THEKERNEL->robot->actuators[Y_AXIS]->moving) THEKERNEL->robot->actuators[Y_AXIS]->move(0, 0);
             }
         } else {
             // The endstop was not hit yet
@@ -306,42 +301,42 @@ void Endstops::wait_for_homed_corexy(int axis)
     }
 }
 
-void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps)
+void Homer::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps)
 {
     this->status = MOVING_TO_ORIGIN_FAST;
-    this->steppers[X_AXIS]->set_speed(fast_rate);
-    this->steppers[X_AXIS]->move(dirx, 10000000);
-    this->steppers[Y_AXIS]->set_speed(fast_rate);
-    this->steppers[Y_AXIS]->move(diry, 10000000);
+    THEKERNEL->robot->actuators[X_AXIS]->set_speed(fast_rate);
+    THEKERNEL->robot->actuators[X_AXIS]->move(dirx, 10000000);
+    THEKERNEL->robot->actuators[Y_AXIS]->set_speed(fast_rate);
+    THEKERNEL->robot->actuators[Y_AXIS]->move(diry, 10000000);
 
     // wait for primary axis
     this->wait_for_homed_corexy(home_axis);
 
     // Move back a small distance
     this->status = MOVING_BACK;
-    this->steppers[X_AXIS]->set_speed(slow_rate);
-    this->steppers[X_AXIS]->move(!dirx, retract_steps);
-    this->steppers[Y_AXIS]->set_speed(slow_rate);
-    this->steppers[Y_AXIS]->move(!diry, retract_steps);
+    THEKERNEL->robot->actuators[X_AXIS]->set_speed(slow_rate);
+    THEKERNEL->robot->actuators[X_AXIS]->move(!dirx, retract_steps);
+    THEKERNEL->robot->actuators[Y_AXIS]->set_speed(slow_rate);
+    THEKERNEL->robot->actuators[Y_AXIS]->move(!diry, retract_steps);
 
     // wait until done
-    while ( this->steppers[X_AXIS]->moving || this->steppers[Y_AXIS]->moving) {
+    while ( THEKERNEL->robot->actuators[X_AXIS]->moving || THEKERNEL->robot->actuators[Y_AXIS]->moving) {
         THEKERNEL->call_event(ON_IDLE);
     }
 
     // Start moving the axes to the origin slowly
     this->status = MOVING_TO_ORIGIN_SLOW;
-    this->steppers[X_AXIS]->set_speed(slow_rate);
-    this->steppers[X_AXIS]->move(dirx, 10000000);
-    this->steppers[Y_AXIS]->set_speed(slow_rate);
-    this->steppers[Y_AXIS]->move(diry, 10000000);
+    THEKERNEL->robot->actuators[X_AXIS]->set_speed(slow_rate);
+    THEKERNEL->robot->actuators[X_AXIS]->move(dirx, 10000000);
+    THEKERNEL->robot->actuators[Y_AXIS]->set_speed(slow_rate);
+    THEKERNEL->robot->actuators[Y_AXIS]->move(diry, 10000000);
 
     // wait for primary axis
     this->wait_for_homed_corexy(home_axis);
 }
 
 // this homing works for HBots/CoreXY
-void Endstops::do_homing_corexy(char axes_to_move)
+void Homer::do_homing_corexy(char axes_to_move)
 {
     // TODO should really make order configurable, and select whether to allow XY to home at the same time, diagonally
     // To move XY at the same time only one motor needs to turn, determine which motor and which direction based on min or max directions
@@ -370,8 +365,8 @@ void Endstops::do_homing_corexy(char axes_to_move)
 
         // then move both X and Y until one hits the endstop
         this->status = MOVING_TO_ORIGIN_FAST;
-        this->steppers[motor]->set_speed(this->fast_rates[motor]*1.4142); // need to allow for more ground covered when moving diagonally
-        this->steppers[motor]->move(dir, 10000000);
+        THEKERNEL->robot->actuators[motor]->set_speed(this->fast_rates[motor]*1.4142); // need to allow for more ground covered when moving diagonally
+        THEKERNEL->robot->actuators[motor]->move(dir, 10000000);
         // wait until either X or Y hits the endstop
         bool running= true;
         while (running) {
@@ -379,7 +374,7 @@ void Endstops::do_homing_corexy(char axes_to_move)
             for(int m=X_AXIS;m<=Y_AXIS;m++) {
                 if(this->pins[m + (this->home_direction[m] ? 0 : 3)].get()) {
                     // turn off motor
-                    if(this->steppers[motor]->moving) this->steppers[motor]->move(0, 0);
+                    if(THEKERNEL->robot->actuators[motor]->moving) THEKERNEL->robot->actuators[motor]->move(0, 0);
                     running= false;
                     break;
                 }
@@ -407,7 +402,7 @@ void Endstops::do_homing_corexy(char axes_to_move)
 }
 
 // Start homing sequences by response to GCode commands
-void Endstops::on_gcode_received(void *argument)
+void Homer::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
     if ( gcode->has_g) {
@@ -520,18 +515,18 @@ void Endstops::on_gcode_received(void *argument)
                 if (gcode->has_letter('F')) f = gcode->get_value('F');
                 if (gcode->has_letter('X')) {
                     x = gcode->get_value('X');
-                    this->steppers[X_AXIS]->set_speed(f);
-                    this->steppers[X_AXIS]->move(x<0, abs(x));
+                    THEKERNEL->robot->actuators[X_AXIS]->set_speed(f);
+                    THEKERNEL->robot->actuators[X_AXIS]->move(x<0, abs(x));
                 }
                 if (gcode->has_letter('Y')) {
                     y = gcode->get_value('Y');
-                    this->steppers[Y_AXIS]->set_speed(f);
-                    this->steppers[Y_AXIS]->move(y<0, abs(y));
+                    THEKERNEL->robot->actuators[Y_AXIS]->set_speed(f);
+                    THEKERNEL->robot->actuators[Y_AXIS]->move(y<0, abs(y));
                 }
                 if (gcode->has_letter('Z')) {
                     z = gcode->get_value('Z');
-                    this->steppers[Z_AXIS]->set_speed(f);
-                    this->steppers[Z_AXIS]->move(z<0, abs(z));
+                    THEKERNEL->robot->actuators[Z_AXIS]->set_speed(f);
+                    THEKERNEL->robot->actuators[Z_AXIS]->move(z<0, abs(z));
                 }
                 gcode->stream->printf("Moved X %d Y %d Z %d F %d steps\n", x, y, z, f);
                 gcode->mark_as_taken();
@@ -541,7 +536,7 @@ void Endstops::on_gcode_received(void *argument)
     }
 }
 
-void Endstops::trim2mm(float *mm)
+void Homer::trim2mm(float *mm)
 {
     int dirx = (this->home_direction[0] ? 1 : -1);
     int diry = (this->home_direction[1] ? 1 : -1);
