@@ -12,6 +12,7 @@
 using std::string;
 #include "libs/Module.h"
 #include "RobotPublicAccess.h"
+#include "CartesianAxis.h"
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
@@ -55,6 +56,8 @@ class Robot : public Module {
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
 
+        CartesianAxis axes[3];
+
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
         void append_milestone( float target[], float rate_mm_s);
@@ -68,7 +71,6 @@ class Robot : public Module {
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
 
-        float last_milestone[3];                             // Last position, in millimeters
         bool  inch_mode;                                       // true for inch mode, false for millimeter mode ( default )
         int8_t motion_mode;                                   // Motion mode for the current received Gcode
         float seek_rate;                                     // Current rate for seeking moves ( mm/s )
@@ -84,7 +86,6 @@ class Robot : public Module {
         // of grbl, and should be on the order or greater than the size of the buffer to help with the
         // computational efficiency of generating arcs.
         int arc_correction;                                   // Setting : how often to rectify arc computation
-        float max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
 
     // Used by Stepper
     public:
@@ -105,7 +106,8 @@ inline float Robot::from_millimeters( float value){
     return this->inch_mode ? value/25.4 : value;
 }
 inline void Robot::get_axis_position(float position[]){
-    memcpy(position, this->last_milestone, sizeof(float)*3 );
+    for (int i = 0; i < 3; i++)
+        position[i] = axes[i].last_milestone;
 }
 
 #endif

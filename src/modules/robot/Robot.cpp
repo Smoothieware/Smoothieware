@@ -91,7 +91,6 @@ Robot::Robot(){
     this->absolute_mode = true;
     this->motion_mode =  MOTION_MODE_SEEK;
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
-    clear_vector(this->last_milestone);
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
 }
@@ -147,9 +146,9 @@ void Robot::on_config_reload(void* argument){
     this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(    0.5f)->as_number();
     this->arc_correction      = THEKERNEL->config->value(arc_correction_checksum      )->by_default(    5   )->as_number();
 
-    this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
-    this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
-    this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
+    axes[X_AXIS].max_speed    = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
+    axes[Y_AXIS].max_speed    = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
+    axes[Z_AXIS].max_speed    = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
 
     Pin alpha_step_pin;
     Pin alpha_dir_pin;
@@ -210,9 +209,9 @@ void Robot::on_get_public_data(void* argument){
 
     }else if(pdr->second_element_is(current_position_checksum)) {
         static float return_data[3];
-        return_data[0]= from_millimeters(this->last_milestone[0]);
-        return_data[1]= from_millimeters(this->last_milestone[1]);
-        return_data[2]= from_millimeters(this->last_milestone[2]);
+        return_data[0]= from_millimeters(axes[X_AXIS].last_milestone);
+        return_data[1]= from_millimeters(axes[Y_AXIS].last_milestone);
+        return_data[2]= from_millimeters(axes[Z_AXIS].last_milestone);
 
         pdr->set_data_ptr(&return_data);
         pdr->set_taken();
@@ -260,16 +259,20 @@ void Robot::on_gcode_received(void * argument){
             case 91: this->absolute_mode = false; gcode->mark_as_taken();  break;
             case 92: {
                 if(gcode->get_num_args() == 0){
-                    clear_vector(this->last_milestone);
+                    for (int i = 0; i < 3; i++)
+                        axes[i].last_milestone = 0.0F;
                 }else{
                     for (char letter = 'X'; letter <= 'Z'; letter++){
                         if ( gcode->has_letter(letter) )
-                            this->last_milestone[letter-'X'] = this->to_millimeters(gcode->get_value(letter));
+                            axes[letter-'X'].last_milestone = this->to_millimeters(gcode->get_value(letter));
                     }
                 }
 
                 // TODO: handle any number of actuators
+                float last_milestone[3];
                 float actuator_pos[3];
+                for (int i = 0; i < 3; i++)
+                    last_milestone[i] = axes[i].last_milestone;
                 arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
 
                 for (int i = 0; i < 3; i++)
@@ -296,20 +299,20 @@ void Robot::on_gcode_received(void * argument){
                 gcode->mark_as_taken();
                 return;
             case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
-                                                 from_millimeters(this->last_milestone[0]),
-                                                 from_millimeters(this->last_milestone[1]),
-                                                 from_millimeters(this->last_milestone[2]));
+                                                 from_millimeters(axes[X_AXIS].last_milestone),
+                                                 from_millimeters(axes[Y_AXIS].last_milestone),
+                                                 from_millimeters(axes[Z_AXIS].last_milestone));
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
 
             case 203: // M203 Set maximum feedrates in mm/sec
                 if (gcode->has_letter('X'))
-                    this->max_speeds[X_AXIS]= gcode->get_value('X');
+                    axes[X_AXIS].max_speed = gcode->get_value('X');
                 if (gcode->has_letter('Y'))
-                    this->max_speeds[Y_AXIS]= gcode->get_value('Y');
+                    axes[Y_AXIS].max_speed = gcode->get_value('Y');
                 if (gcode->has_letter('Z'))
-                    this->max_speeds[Z_AXIS]= gcode->get_value('Z');
+                    axes[Z_AXIS].max_speed = gcode->get_value('Z');
                 if (gcode->has_letter('A'))
                     alpha_stepper_motor->max_rate= gcode->get_value('A');
                 if (gcode->has_letter('B'))
@@ -318,7 +321,7 @@ void Robot::on_gcode_received(void * argument){
                     gamma_stepper_motor->max_rate= gcode->get_value('C');
 
                 gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
-                    this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
+                    axes[X_AXIS].max_speed, axes[Y_AXIS].max_speed, axes[Z_AXIS].max_speed,
                     alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
@@ -386,7 +389,7 @@ void Robot::on_gcode_received(void * argument){
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration);
                 gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
-                    this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
+                    axes[X_AXIS].max_speed, axes[Y_AXIS].max_speed, axes[Z_AXIS].max_speed,
                     alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
                 gcode->mark_as_taken();
                 break;
@@ -419,7 +422,8 @@ void Robot::on_gcode_received(void * argument){
     float target[3], offset[3];
     clear_vector(offset);
 
-    memcpy(target, this->last_milestone, sizeof(target));    //default to last target
+    for (int i = 0; i < 3; i++)
+        target[i] = axes[i].last_milestone;
 
     for(char letter = 'I'; letter <= 'K'; letter++){
         if( gcode->has_letter(letter) ){
@@ -455,7 +459,8 @@ void Robot::on_gcode_received(void * argument){
     // As far as the parser is concerned, the position is now == target. In reality the
     // motion control system might still be processing the action and the real tool position
     // in any intermediate location.
-    memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->position[] = target[];
+    for (int i = 0; i < 3; i++)
+        axes[i].last_milestone = target[i];
 
 }
 
@@ -470,9 +475,12 @@ void Robot::distance_in_gcode_is_known(Gcode* gcode){
 
 // Reset the position for all axes ( used in homing and G92 stuff )
 void Robot::reset_axis_position(float position, int axis) {
-    this->last_milestone[axis] = position;
+    axes[axis].last_milestone = position;
 
+    float last_milestone[3];
     float actuator_pos[3];
+    for (int i = 0; i < 3; i++)
+        last_milestone[i] = axes[i].last_milestone;
     arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
 
     for (int i = 0; i < 3; i++)
@@ -490,7 +498,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
 
     // find distance moved by each axis
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
-        deltas[axis] = target[axis] - last_milestone[axis];
+        deltas[axis] = target[axis] - axes[axis].last_milestone;
 
     // Compute how long this move moves, so we can attach it to the block for later use
     millimeters_of_travel = sqrtf( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
@@ -502,12 +510,12 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     // Do not move faster than the configured cartesian limits
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
     {
-        if ( max_speeds[axis] > 0 )
+        if ( axes[axis].max_speed > 0 )
         {
             float axis_speed = fabs(unit_vec[axis] * rate_mm_s);
 
-            if (axis_speed > max_speeds[axis])
-                rate_mm_s *= ( max_speeds[axis] / axis_speed );
+            if (axis_speed > axes[axis].max_speed)
+                rate_mm_s *= ( axes[axis].max_speed / axis_speed );
         }
     }
 
@@ -527,7 +535,8 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
 
     // Update the last_milestone to the current target for the next time we use last_milestone
-    memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
+    for (int i = 0; i < 3; i++)
+        axes[i].last_milestone = target[i];
 
 }
 
@@ -535,7 +544,9 @@ void Robot::append_milestone( float target[], float rate_mm_s )
 void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
 
     // Find out the distance for this gcode
-    gcode->millimeters_of_travel = pow( target[X_AXIS]-this->last_milestone[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->last_milestone[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->last_milestone[Z_AXIS], 2 );
+    gcode->millimeters_of_travel = pow(target[X_AXIS] - axes[X_AXIS].last_milestone, 2)
+                                +  pow(target[Y_AXIS] - axes[Y_AXIS].last_milestone, 2)
+                                +  pow(target[Z_AXIS] - axes[Z_AXIS].last_milestone, 2);
 
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
     if( gcode->millimeters_of_travel < 0.0001F ){
@@ -577,13 +588,13 @@ void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
 
         // How far do we move each segment?
         for (int i = X_AXIS; i < Z_AXIS; i++)
-            segment_delta[i] = (target[i] - last_milestone[i]) / segments;
+            segment_delta[i] = (target[i] - axes[i].last_milestone) / segments;
 
         //For each segment
         for (int i = 1; i < segments; i++)
         {
             for(int axis=X_AXIS; axis <= Z_AXIS; axis++ )
-                segment_end[axis] = last_milestone[axis] + segment_delta[axis];
+                segment_end[axis] = axes[axis].last_milestone + segment_delta[axis];
 
             // Append the end of this segment to the queue
             this->append_milestone(segment_end, rate_mm_s);
@@ -602,9 +613,9 @@ void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
 void Robot::append_arc(Gcode* gcode, float target[], float offset[], float radius, bool is_clockwise ){
 
     // Scary math
-    float center_axis0 = this->last_milestone[this->plane_axis_0] + offset[this->plane_axis_0];
-    float center_axis1 = this->last_milestone[this->plane_axis_1] + offset[this->plane_axis_1];
-    float linear_travel = target[this->plane_axis_2] - this->last_milestone[this->plane_axis_2];
+    float center_axis0  = axes[plane_axis_0].last_milestone + offset[plane_axis_0];
+    float center_axis1  = axes[plane_axis_1].last_milestone + offset[plane_axis_1];
+    float linear_travel = target[plane_axis_2] - axes[plane_axis_2].last_milestone;
     float r_axis0 = -offset[this->plane_axis_0]; // Radius vector from center to current location
     float r_axis1 = -offset[this->plane_axis_1];
     float rt_axis0 = target[this->plane_axis_0] - center_axis0;
@@ -665,7 +676,7 @@ void Robot::append_arc(Gcode* gcode, float target[], float offset[], float radiu
     int8_t count = 0;
 
     // Initialize the linear axis
-    arc_target[this->plane_axis_2] = this->last_milestone[this->plane_axis_2];
+    arc_target[this->plane_axis_2] = axes[this->plane_axis_2].last_milestone;
 
     for (i = 1; i<segments; i++) { // Increment (segments-1)
 
