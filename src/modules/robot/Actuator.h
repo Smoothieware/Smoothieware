@@ -14,6 +14,8 @@ public:
         name_checksum  = 0;
         max_speed      = 100.0F;
         accel          = 100.0F;
+        min_stop       = NULL;
+        max_stop       = NULL;
         soft_min       = NAN;
         soft_max       = NAN;
         last_milestone = 0.0F;
@@ -23,6 +25,9 @@ public:
 
     float max_speed;
     float accel;
+
+    Endstop* min_stop;
+    Endstop* max_stop;
 
     float soft_min;
     float soft_max;
