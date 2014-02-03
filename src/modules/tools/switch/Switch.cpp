@@ -15,6 +15,19 @@
 
 #include "MRI_Hooks.h"
 
+#define    switch_checksum              CHECKSUM("switch")
+#define    startup_state_checksum       CHECKSUM("startup_state")
+#define    startup_value_checksum       CHECKSUM("startup_value")
+#define    input_pin_checksum           CHECKSUM("input_pin")
+#define    input_pin_behavior_checksum  CHECKSUM("input_pin_behavior")
+#define    toggle_checksum              CHECKSUM("toggle")
+#define    momentary_checksum           CHECKSUM("momentary")
+#define    input_on_command_checksum    CHECKSUM("input_on_command")
+#define    input_off_command_checksum   CHECKSUM("input_off_command")
+#define    output_pin_checksum          CHECKSUM("output_pin")
+#define    output_on_command_checksum   CHECKSUM("output_on_command")
+#define    output_off_command_checksum  CHECKSUM("output_off_command")
+
 Switch::Switch(){}
 
 Switch::Switch(uint16_t name){
@@ -45,30 +58,63 @@ void Switch::on_module_loaded(){
 
 // Get config
 void Switch::on_config_reload(void* argument){
-    this->input_pin.from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum    )->by_default("nc")->as_string())->as_input();
-    this->input_pin_behavior     = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum     )->by_default(momentary_checksum)->as_number();
-    this->input_on_command     = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum     )->by_default("")->as_string();
-    this->input_off_command    = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum    )->by_default("")->as_string();
-    this->output_pin.from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum    )->by_default("nc")->as_string())->as_output();
-    this->output_on_command     = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum     )->by_default("")->as_string();
-    this->output_off_command    = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum    )->by_default("")->as_string();
-    this->switch_state         = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    this->switch_value         = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
+    this->input_pin.from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
+    this->input_pin_behavior =   THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default(momentary_checksum)->as_number();
+    std::string input_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
+    std::string input_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
+    this->output_pin.from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
+    this->output_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
+    this->output_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
+    this->switch_state =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
+    this->switch_value =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
     if(this->switch_state)
         this->output_pin.set(this->switch_value);
     else
         this->output_pin.set(0);
 
     set_low_on_debug(output_pin.port_number, output_pin.pin);
+
+    // Set the on/off command codes, Use GCode to do the parsing
+    input_on_command_letter= 0;
+    input_off_command_letter= 0;
+
+    if(!input_on_command.empty()) {
+        Gcode gc(input_on_command, NULL);
+        if(gc.has_g){
+            input_on_command_letter= 'G';
+            input_on_command_code= gc.g;
+        } else if(gc.has_m) {
+            input_on_command_letter= 'M';
+            input_on_command_code= gc.m;
+        }
+    }
+    if(!input_off_command.empty()) {
+        Gcode gc(input_off_command, NULL);
+        if(gc.has_g){
+            input_off_command_letter= 'G';
+            input_off_command_code= gc.g;
+        } else if(gc.has_m) {
+            input_off_command_letter= 'M';
+            input_off_command_code= gc.m;
+        }
+    }
+
 }
 
+bool Switch::match_input_gcode(const Gcode* gcode) const {
+    return ((input_on_command_letter  == 'M' && gcode->has_m && gcode->m == input_on_command_code) ||
+           (input_on_command_letter  == 'G' && gcode->has_g && gcode->g == input_on_command_code));
+}
+
+bool Switch::match_output_gcode(const Gcode* gcode) const {
+    return ((input_off_command_letter == 'M' && gcode->has_m && gcode->m == input_off_command_code) ||
+            (input_off_command_letter == 'G' && gcode->has_g && gcode->g == input_off_command_code));
+}
 
 void Switch::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
-    if (( input_on_command.length() > 0 && ! gcode->command.compare(0, input_on_command.length(), input_on_command) ) ||
-        ( input_off_command.length() > 0 && ! gcode->command.compare(0, input_off_command.length(), input_off_command) ) )
-    {
+    if (match_input_gcode(gcode) || match_output_gcode(gcode)) {
         THEKERNEL->conveyor->append_gcode(gcode);
     }
 }
@@ -76,7 +122,8 @@ void Switch::on_gcode_received(void* argument){
 // Turn pin on and off
 void Switch::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
-    if(! gcode->command.compare(0, input_on_command.length(), input_on_command)){
+
+    if(match_input_gcode(gcode)) {
         if (gcode->has_letter('S'))
         {
             int v = gcode->get_value('S') * output_pin.max_pwm() / 256.0;
@@ -89,15 +136,14 @@ void Switch::on_gcode_execute(void* argument){
                 this->output_pin.set(0);
                 this->switch_state = false;
             }
-        }
-        else
-        {
+
+        } else {
             // Turn pin on
             this->output_pin.pwm(this->switch_value);
             this->switch_state = true;
         }
-    }
-    else if(! gcode->command.compare(0, input_off_command.length(), input_off_command)){
+
+    } else if(match_output_gcode(gcode)) {
         // Turn pin off
         this->output_pin.set(0);
         this->switch_state = false;
@@ -105,7 +151,7 @@ void Switch::on_gcode_execute(void* argument){
 }
 
 void Switch::on_main_loop(void* argument){
-    if(this->switch_changed){  
+    if(this->switch_changed){
         if(this->switch_state){
             this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
             this->output_pin.pwm(this->switch_value);
@@ -113,7 +159,7 @@ void Switch::on_main_loop(void* argument){
             this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
             this->output_pin.set(0);
         }
-        this->switch_changed=false;      
+        this->switch_changed=false;
     }
 }
 

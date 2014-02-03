@@ -13,6 +13,8 @@ using namespace std;
 #include "SwitchPool.h"
 #include "Switch.h"
 
+#define    switch_checksum              CHECKSUM("switch")
+
 SwitchPool::SwitchPool(){}
 
 void SwitchPool::on_module_loaded(){
