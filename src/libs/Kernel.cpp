@@ -22,6 +22,7 @@
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
 #include "modules/tools/endstops/Endstops.h"
+#include "modules/utils/logger/Logger.h"
 #include <malloc.h>
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
@@ -107,7 +108,8 @@ Kernel::Kernel(){
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
     this->add_module( this->public_data    = new PublicData()    );
-    this->add_module( this->toolsmanager   = new ToolsManager()    );
+    this->add_module( this->toolsmanager   = new ToolsManager()  );
+    this->add_module( this->logger         = new Logger()        );
 
 }
 
