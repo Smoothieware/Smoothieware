@@ -8,6 +8,7 @@
 
 #include "Kernel.h"
 #include "MRI_Hooks.h"
+#include "Endstop.h"
 
 // A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
 // TODO : Abstract this into Actuator
@@ -55,8 +56,8 @@ StepperMotor::StepperMotor(Pin& step, Pin& dir, Pin& en) : step_pin(step), dir_p
 
 // This is called ( see the .h file, we had to put a part of things there for obscure inline reasons ) when a step has to be generated
 // we also here check if the move is finished etc ...
-void StepperMotor::step(){
-
+void StepperMotor::step()
+{
     // output to pins 37t
     this->step_pin.set( 1                   );
     this->step_ticker->reset_step_pins = true;
@@ -66,6 +67,17 @@ void StepperMotor::step(){
 
     // we have moved a step 9t
     this->stepped++;
+
+    // check endstop
+    if (stop && stop->check && stop->asserted())
+    {
+        // TODO: decelerate instead of stopping dead
+        if (signal_step)
+            step_signal_hook->call();
+        is_move_finished = true;
+        step_ticker->moves_finished = true;
+        return;
+    }
 
     // Do we need to signal this step
     if( this->stepped == this->signal_step_number && this->signal_step ){
@@ -121,6 +133,11 @@ void StepperMotor::move( bool direction, unsigned int steps ){
     // We do not set the direction directly, we will set the pin just before the step pin on the next tick
     this->dir_pin.set(direction);
     this->direction = direction;
+
+    if (direction)
+        stop = max_stop;
+    else
+        stop = min_stop;
 
     // How many steps we have to move until the move is done
     this->steps_to_move = steps;

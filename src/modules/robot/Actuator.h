@@ -28,6 +28,7 @@ public:
 
     Endstop* min_stop;
     Endstop* max_stop;
+    Endstop* stop;
 
     float soft_min;
     float soft_max;
