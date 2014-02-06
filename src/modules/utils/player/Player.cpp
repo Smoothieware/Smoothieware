@@ -17,6 +17,12 @@
 #include "PublicDataRequest.h"
 #include "PlayerPublicAccess.h"
 
+#define play_command_checksum           CHECKSUM("play")
+#define progress_command_checksum       CHECKSUM("progress")
+#define abort_command_checksum          CHECKSUM("abort")
+#define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
+#define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
+
 void Player::on_module_loaded(){
     this->playing_file = false;
     this->booted = false;
@@ -27,14 +33,14 @@ void Player::on_module_loaded(){
     this->register_for_event(ON_SET_PUBLIC_DATA);
     this->register_for_event(ON_GCODE_RECEIVED);
 
-    this->on_boot_gcode = this->kernel->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
-    this->on_boot_gcode_enable = this->kernel->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
+    this->on_boot_gcode = THEKERNEL->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
+    this->on_boot_gcode_enable = THEKERNEL->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs= 0;
     this->reply_stream= NULL;
 }
 
 void Player::on_second_tick(void*) {
-     if (!kernel->pauser->paused()) this->elapsed_secs++;
+     if (!THEKERNEL->pauser->paused()) this->elapsed_secs++;
 }
 
 void Player::on_gcode_received(void *argument) {
@@ -48,7 +54,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 23) { // select file
             gcode->mark_as_taken();
             // Get filename
-            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + shift_parameter( args );
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
@@ -56,22 +62,24 @@ void Player::on_gcode_received(void *argument) {
                 fclose(this->current_file_handler);
             }
             this->current_file_handler = fopen( this->filename.c_str(), "r");
-            // get size of file
-            int result = fseek(this->current_file_handler, 0, SEEK_END);
-            if (0 != result){
-                    gcode->stream->printf("WARNING - Could not get file size\r\n");
-                    file_size= -1;
-            }else{
-                    file_size= ftell(this->current_file_handler);
-                    fseek(this->current_file_handler, 0, SEEK_SET);
-            }
 
             if(this->current_file_handler == NULL){
                 gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
+                return;
+
             }else{
-                gcode->stream->printf("File opened:%s Size:%ld\r\n", this->filename.c_str(),file_size);
+                // get size of file
+                int result = fseek(this->current_file_handler, 0, SEEK_END);
+                if (0 != result){
+                        this->file_size= 0;
+                }else{
+                        this->file_size= ftell(this->current_file_handler);
+                        fseek(this->current_file_handler, 0, SEEK_SET);
+                }
+                gcode->stream->printf("File opened:%s Size:%ld\r\n", this->filename.c_str(), this->file_size);
                 gcode->stream->printf("File selected\r\n");
             }
+
 
             this->played_cnt= 0;
             this->elapsed_secs= 0;
@@ -80,8 +88,10 @@ void Player::on_gcode_received(void *argument) {
             gcode->mark_as_taken();
             if (this->current_file_handler != NULL) {
                 this->playing_file = true;
-                // FIXME this is a problem if the stream goes away before the file has finished
-                this->reply_stream= gcode->stream;
+                // this would be a problem if the stream goes away before the file has finished,
+                // so we attach it to the kernel stream, however network connections from pronterface
+                // do not connect to the kernel streams so won't see this FIXME
+                this->reply_stream= THEKERNEL->streams;
             }
 
         }else if (gcode->m == 25) { // pause print
@@ -91,25 +101,25 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 26) { // Reset print. Slightly different than M26 in Marlin and the rest
             gcode->mark_as_taken();
             if(this->current_file_handler != NULL){
+                string currentfn= this->filename.c_str();
+                unsigned long old_size= this->file_size;
+
                 // abort the print
                 abort_command("", gcode->stream);
 
-                // reload the last file opened
-                this->current_file_handler = fopen( this->filename.c_str(), "r");
+                if(!currentfn.empty()) {
+                    // reload the last file opened
+                    this->current_file_handler = fopen(currentfn.c_str() , "r");
 
-                if(this->current_file_handler == NULL){
-                    gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
-                }else{
-                    // get size of file
-                    int result = fseek(this->current_file_handler, 0, SEEK_END);
-                    if (0 != result){
-                            gcode->stream->printf("WARNING - Could not get file size\r\n");
-                            file_size= 0;
+                    if(this->current_file_handler == NULL){
+                        gcode->stream->printf("file.open failed: %s\r\n", currentfn.c_str());
                     }else{
-                            file_size= ftell(this->current_file_handler);
-                            fseek(this->current_file_handler, 0, SEEK_SET);
+                        this->filename= currentfn;
+                        this->file_size= old_size;
+                        this->current_stream = &(StreamOutput::NullStream);
                     }
                 }
+
             }else{
                 gcode->stream->printf("No file loaded\r\n");
             }
@@ -121,7 +131,7 @@ void Player::on_gcode_received(void *argument) {
         }else if (gcode->m == 32) { // select file and start print
             gcode->mark_as_taken();
             // Get filename
-            this->filename= "/sd/" + this->absolute_from_relative(shift_parameter( args ));
+            this->filename= "/sd/" + shift_parameter( args );
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
@@ -161,15 +171,13 @@ void Player::on_console_line_received( void* argument ){
         this->progress_command(get_arguments(possible_command),new_message.stream );
     else if (check_sum == abort_command_checksum)
         this->abort_command(get_arguments(possible_command),new_message.stream );
-    else if (check_sum == cd_command_checksum)
-        this->cd_command(  get_arguments(possible_command), new_message.stream );
 }
 
 // Play a gcode file by considering each line as if it was received on the serial console
 void Player::play_command( string parameters, StreamOutput* stream ){
 
     // Get filename
-    this->filename          = this->absolute_from_relative(shift_parameter( parameters ));
+    this->filename          = absolute_from_relative(shift_parameter( parameters ));
     string options          = shift_parameter( parameters );
 
     this->current_file_handler = fopen( this->filename.c_str(), "r");
@@ -186,7 +194,8 @@ void Player::play_command( string parameters, StreamOutput* stream ){
     if( options.find_first_of("Vv") == string::npos ){
         this->current_stream = &(StreamOutput::NullStream);
     }else{
-        this->current_stream = stream;
+        // we send to the kernels stream as it cannot go away
+        this->current_stream = THEKERNEL->streams;
     }
 
     // get size of file
@@ -247,58 +256,50 @@ void Player::abort_command( string parameters, StreamOutput* stream ){
     played_cnt= 0;
     file_size= 0;
     this->filename= "";
+    this->current_stream= NULL;
     fclose(current_file_handler);
     stream->printf("Aborted playing file\r\n");
-}
-
-// Convert a path indication ( absolute or relative ) into a path ( absolute )
-string Player::absolute_from_relative( string path ){
-    if( path[0] == '/' ){ return path; }
-    if( path[0] == '.' ){ return this->current_path; }
-    return this->current_path + path;
-}
-
-// Change current absolute path to provided path
-void Player::cd_command( string parameters, StreamOutput* stream ){
-    string folder = this->absolute_from_relative( parameters );
-    if( folder[folder.length()-1] != '/' ){ folder += "/"; }
-    DIR *d;
-    d = opendir(folder.c_str());
-    if(d == NULL) {
-//        stream->printf("Could not open directory %s \r\n", folder.c_str() );
-    }else{
-        this->current_path = folder;
-        closedir(d);
-    }
 }
 
 void Player::on_main_loop(void* argument){
     if( !this->booted ) {
         this->booted = true;
         if( this->on_boot_gcode_enable ){
-            this->play_command(this->on_boot_gcode, this->kernel->serial);
+            this->play_command(this->on_boot_gcode, THEKERNEL->serial);
         }else{
-            //this->kernel->serial->printf("On boot gcode disabled! skipping...\n");
+            //THEKERNEL->serial->printf("On boot gcode disabled! skipping...\n");
         }
     }
 
     if( this->playing_file ){
         string buffer;
+        bool discard= false;
         int c;
         buffer.reserve(20);
         // Print each line of the file
         while ((c = fgetc(this->current_file_handler)) != EOF){
             if (c == '\n'){
+                if(discard) {
+                    // we hit a long line and discarded it
+                    discard= false;
+                    buffer.clear();
+                    this->current_stream->printf("Warning: Discarded long line\n");
+                    return;
+                }
                 this->current_stream->printf("%s\n", buffer.c_str());
                 struct SerialMessage message;
                 message.message = buffer;
-                message.stream = this->current_stream;
+                message.stream = &(StreamOutput::NullStream); // we don't really need to see the ok
                 // wait for the queue to have enough room that a serial message could still be received before sending
-                this->kernel->conveyor->wait_for_queue(2);
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
                 played_cnt += buffer.size();
                 buffer.clear();
                 return;
+
+            }else if(buffer.size() > 128) {
+                // discard rest of line
+                discard= true;
+
             }else{
                 buffer += c;
             }
@@ -309,6 +310,7 @@ void Player::on_main_loop(void* argument){
         played_cnt= 0;
         file_size= 0;
         fclose(this->current_file_handler);
+        this->current_stream= NULL;
 
         if(this->reply_stream != NULL) {
             // if we were printing from an M command from pronterface we need to send this back
@@ -351,40 +353,3 @@ void Player::on_set_public_data(void* argument) {
         pdr->set_taken();
     }
 }
-
-
-
-
-
-/*
-void Player::on_main_loop(void* argument){
-    if( !this->on_booted ){
-        this->play_command(this->on_boot_file_name, new StreamOutput());
-        this->on_booted = true;
-    }
-    if( this->playing_file ){
-        string buffer;
-        int c;
-        // Print each line of the file
-        while ((c = fgetc(this->current_file_handler)) != EOF){
-            if (c == '\n'){
-                this->current_stream->printf("%s\n", buffer.c_str());
-                struct SerialMessage message;
-                message.message = buffer;
-                message.stream = this->current_stream;
-                // wait for the queue to have enough room that a serial message could still be received before sending
-                this->kernel->conveyor->wait_for_queue(2);
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-                buffer.clear();
-                return;
-            }else{
-                buffer += c;
-            }
-        };
-
-        fclose(this->current_file_handler);
-        this->playing_file = false;
-    }
-}
-*/
-

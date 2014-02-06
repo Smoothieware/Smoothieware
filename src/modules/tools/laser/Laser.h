@@ -17,6 +17,7 @@
 
 #define laser_module_enable_checksum        CHECKSUM("laser_module_enable")
 #define laser_module_pin_checksum           CHECKSUM("laser_module_pin")
+#define laser_module_pwm_period_checksum    CHECKSUM("laser_module_pwm_period")
 #define laser_module_max_power_checksum     CHECKSUM("laser_module_max_power")
 #define laser_module_tickle_power_checksum  CHECKSUM("laser_module_tickle_power")
 
@@ -35,6 +36,7 @@ class Laser : public Module{
 
         mbed::PwmOut*    laser_pin;    // PWM output to regulate the laser power
         bool             laser_on;     // Laser status
+        bool             laser_inverting; // stores whether the pwm period should be inverted
         float            laser_max_power; // maximum allowed laser power to be output on the pwm pin
         float            laser_tickle_power; // value used to tickle the laser on moves
 };

@@ -112,20 +112,20 @@ void ControlScreen::enter_menu_control()
     this->panel->enter_menu_mode();
 }
 
-void ControlScreen::get_current_pos(double *cp)
+void ControlScreen::get_current_pos(float *cp)
 {
     void *returned_data;
 
     bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
     if (ok) {
-        double *p = static_cast<double *>(returned_data);
+        float *p = static_cast<float *>(returned_data);
         cp[0] = p[0];
         cp[1] = p[1];
         cp[2] = p[2];
     }
 }
 
-void ControlScreen::set_current_pos(char axis, double p)
+void ControlScreen::set_current_pos(char axis, float p)
 {
     // change pos by issuing a G0 Xnnn
     char buf[32];

@@ -20,6 +20,7 @@
 #include <cmsis.h>
 #include "mpu.h"
 
+#include "platform_memory.h"
 
 unsigned int g_maximumHeapAddress;
 
@@ -36,10 +37,9 @@ extern unsigned int     __bss_end__;
 extern unsigned int     __StackTop;
 extern "C" unsigned int __end__;
 
-
 extern "C" int  main(void);
 extern "C" void __libc_init_array(void);
-extern "C" void exit(int ErrorCode);
+// extern "C" void exit(int ErrorCode);
 extern "C" void _start(void)
 {
     int bssSize = (int)&__bss_end__ - (int)&__bss_start__;
@@ -64,6 +64,20 @@ extern "C" void _start(void)
         if (MRI_BREAK_ON_INIT)
             __debugbreak();
     }
+
+    // MemoryPool stuff - needs to be initialised before __libc_init_array
+    // so static ctors can use them
+        extern uint8_t __AHB0_dyn_start;
+        extern uint8_t __AHB0_end;
+        extern uint8_t __AHB1_dyn_start;
+        extern uint8_t __AHB1_end;
+
+        MemoryPool _AHB0_stack(&__AHB0_dyn_start, &__AHB0_end - &__AHB0_dyn_start);
+        MemoryPool _AHB1_stack(&__AHB1_dyn_start, &__AHB1_end - &__AHB1_dyn_start);
+
+        _AHB0 = &_AHB0_stack;
+        _AHB1 = &_AHB1_stack;
+    // MemoryPool init done
 
     __libc_init_array();
     mainReturnValue = main();

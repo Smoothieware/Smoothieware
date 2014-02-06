@@ -27,7 +27,7 @@
 
 #include "Kernel.h"
 
-#include "ahbmalloc.h"
+#include "platform_memory.h"
 
 #define DISK_OK         0x00
 #define NO_INIT         0x01
@@ -70,7 +70,7 @@
 // max packet size
 #define MAX_PACKET  MAX_PACKET_SIZE_EPBULK
 
-// #define iprintf(...) kernel->streams->printf(__VA_ARGS__)
+// #define iprintf(...) THEKERNEL->streams->printf(__VA_ARGS__)
 #define iprintf(...) do { } while (0)
 
 // CSW Status
@@ -170,6 +170,8 @@ bool USBMSD::USBEvent_RequestComplete(CONTROL_TRANSFER &transfer, uint8_t *buf, 
 
 bool USBMSD::connect()
 {
+    BlockCount = 0;
+
     //disk initialization
     if (disk->disk_status() & NO_INIT) {
         if (disk->disk_initialize()) {
@@ -185,7 +187,7 @@ bool USBMSD::connect()
     BlockSize = disk->disk_blocksize();
 
     if ((BlockCount > 0) && (BlockSize != 0)) {
-        page = (uint8_t *) ahbmalloc(BlockSize, AHB_BANK_0);
+        page = (uint8_t*) AHB0.alloc(BlockSize);
         if (page == NULL)
             return false;
     } else {
@@ -369,11 +371,15 @@ void USBMSD::memoryVerify (uint8_t * buf, uint16_t size) {
 
 bool USBMSD::inquiryRequest (void) {
     uint8_t inquiry[] = { 0x00, 0x80, 0x00, 0x01,
-                          36 - 4, 0x80, 0x00, 0x00,
+                          36 - 4, 0x00, 0x00, 0x01,
                           'M', 'B', 'E', 'D', '.', 'O', 'R', 'G',
                           'M', 'B', 'E', 'D', ' ', 'U', 'S', 'B', ' ', 'D', 'I', 'S', 'K', ' ', ' ', ' ',
                           '1', '.', '0', ' ',
                         };
+
+    if (BlockCount == 0)
+        inquiry[0] = 0x20; // PERIPHERAL_QUALIFIER = 1 : "A peripheral device is not connected, however usually we do support this type of peripheral"
+
     if (!write(inquiry, sizeof(inquiry))) {
         return false;
     }
@@ -478,6 +484,13 @@ bool USBMSD::requestSense (void) {
         0x00,
         0x00,
     };
+
+    if (BlockCount == 0)
+    {
+        request_sense[ 2] = 0x02; // Not Ready
+        request_sense[12] = 0x3A; // Medium not present
+        request_sense[13] = 0x00; // No known reason
+    }
 
     if (!write(request_sense, sizeof(request_sense))) {
         return false;
@@ -611,7 +624,11 @@ void USBMSD::testUnitReady (void) {
         }
     }
 
-    csw.Status = CSW_PASSED;
+    if (BlockCount > 0)
+        csw.Status = CSW_PASSED;
+    else
+        csw.Status = CSW_ERROR;
+
     sendCSW();
 }
 

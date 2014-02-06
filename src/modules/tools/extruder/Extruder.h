@@ -39,17 +39,17 @@ class Extruder : public Module, public Tool {
         Pin             dir_pin;                      // Dir pin for the stepper driver
         Pin             en_pin;
 
-        double          target_position;              // End point ( in mm ) for the current move
-        double          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
-        double          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
+        float          target_position;              // End point ( in mm ) for the current move
+        float          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
+        float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
         Block*          current_block;                // Current block we are stepping, same as Stepper's one
-        double          steps_per_millimeter;         // Steps to travel one millimeter
-        double          feed_rate;                    //
-        double          acceleration;                 //
-        double          max_speed;
+        float          steps_per_millimeter;         // Steps to travel one millimeter
+        float          feed_rate;                    //
+        float          acceleration;                 //
+        float          max_speed;
 
-        double          travel_ratio;
-        double          travel_distance;
+        float          travel_ratio;
+        float          travel_distance;
         bool            absolute_mode;                // absolute/relative coordinate mode switch
 
         char mode;                                    // extruder motion mode,  OFF, SOLO, or FOLLOW

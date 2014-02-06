@@ -21,6 +21,8 @@
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
+#include "modules/utils/logger/Logger.h"
+#include "mri.h"
 #include <array>
 
 #define THEKERNEL Kernel::instance
@@ -30,6 +32,8 @@ class Config;
 class Module;
 class Conveyor;
 class SlowTicker;
+class Pauser;
+
 class Kernel {
     public:
         Kernel();
@@ -53,6 +57,7 @@ class Kernel {
         Conveyor*         conveyor;
         Pauser*           pauser;
         ToolsManager*     toolsmanager;
+        Logger*           logger;
 
         int debug;
         SlowTicker*       slow_ticker;
@@ -60,6 +65,7 @@ class Kernel {
         Adc*              adc;
         PublicData*       public_data;
         bool              use_leds;
+        string            current_path;
 
     private:
         std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

@@ -8,7 +8,7 @@
 #include "ST7565.h"
 #include "ST7565/glcdfont.h"
 #include "Kernel.h"
-#include "ahbmalloc.h"
+#include "platform_memory.h"
 
 //definitions for lcd
 #define LCDWIDTH 128
@@ -77,14 +77,15 @@ ST7565::ST7565() {
     // reverse display
     this->reversed= THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(false)->as_bool();
 
-    framebuffer= (uint8_t *)ahbmalloc(FB_SIZE, AHB_BANK_0); // grab some memoery from USB_RAM
+    framebuffer= (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memoery from USB_RAM
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
     }
 }
 
 ST7565::~ST7565() {
-	//delete this->spi;
+	delete this->spi;
+    AHB0.dealloc(framebuffer);
 }
 
 //send commands to lcd

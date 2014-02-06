@@ -14,7 +14,9 @@
 #include "libs/utils.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
+#include "modules/robot/Conveyor.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
+#include "NetworkPublicAccess.h"
 
 #include <string>
 using namespace std;
@@ -46,6 +48,7 @@ WatchScreen::WatchScreen()
 {
     speed_changed = false;
     issue_change_speed = false;
+    ipstr = NULL;
 }
 
 void WatchScreen::on_enter()
@@ -171,25 +174,25 @@ void WatchScreen::get_temp_data()
 }
 
 // fetch the data we are displaying
-double WatchScreen::get_current_speed()
+float WatchScreen::get_current_speed()
 {
     void *returned_data;
 
     bool ok = THEKERNEL->public_data->get_value( robot_checksum, speed_override_percent_checksum, &returned_data );
     if (ok) {
-        double cs = *static_cast<double *>(returned_data);
+        float cs = *static_cast<float *>(returned_data);
         return cs;
     }
     return 0.0;
 }
 
-void WatchScreen::get_current_pos(double *cp)
+void WatchScreen::get_current_pos(float *cp)
 {
     void *returned_data;
 
     bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
     if (ok) {
-        double *p = static_cast<double *>(returned_data);
+        float *p = static_cast<float *>(returned_data);
         cp[0] = p[0];
         cp[1] = p[1];
         cp[2] = p[2];
@@ -235,7 +238,16 @@ const char *WatchScreen::get_status()
     if (panel->is_playing())
         return panel->get_playing_file();
 
-    return "Smoothie ready";
+    if (!THEKERNEL->conveyor->queue.is_empty()) {
+        return "Printing";
+    }
+
+    const char *ip = get_network();
+    if (ip == NULL) {
+        return "Smoothie ready";
+    } else {
+        return ip;
+    }
 }
 
 void WatchScreen::set_speed()
@@ -245,4 +257,25 @@ void WatchScreen::set_speed()
     int n = snprintf(buf, sizeof(buf), "M220 S%d", this->current_speed);
     string g(buf, n);
     send_gcode(g);
+}
+
+const char *WatchScreen::get_network()
+{
+    void *returned_data;
+
+    bool ok = THEKERNEL->public_data->get_value( network_checksum, get_ip_checksum, &returned_data );
+    if (ok) {
+        uint8_t *ipaddr = (uint8_t *)returned_data;
+        char buf[20];
+        int n = snprintf(buf, sizeof(buf), "IP %d.%d.%d.%d", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+        buf[n] = 0;
+        if (this->ipstr == NULL) {
+            this->ipstr = (char *)malloc(n + 1);
+        }
+        strcpy(this->ipstr, buf);
+
+        return this->ipstr;
+    }
+
+    return NULL;
 }

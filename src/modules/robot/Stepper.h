@@ -7,25 +7,17 @@
 
 #ifndef STEPPER_H
 #define STEPPER_H
+
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "Planner.h"
-#include "Block.h"
+
+class Block;
+class Hook;
+class StepperMotor;
 
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
 #define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
 #define minimum_steps_per_minute_checksum           CHECKSUM("minimum_steps_per_minute")
 #define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
-#define alpha_step_pin_checksum                     CHECKSUM("alpha_step_pin")
-#define beta_step_pin_checksum                      CHECKSUM("beta_step_pin")
-#define gamma_step_pin_checksum                     CHECKSUM("gamma_step_pin")
-#define alpha_dir_pin_checksum                      CHECKSUM("alpha_dir_pin")
-#define beta_dir_pin_checksum                       CHECKSUM("beta_dir_pin")
-#define gamma_dir_pin_checksum                      CHECKSUM("gamma_dir_pin")
-#define alpha_en_pin_checksum                       CHECKSUM("alpha_en_pin")
-#define beta_en_pin_checksum                        CHECKSUM("beta_en_pin")
-#define gamma_en_pin_checksum                       CHECKSUM("gamma_en_pin")
-
 
 class Stepper : public Module {
     public:
@@ -40,7 +32,7 @@ class Stepper : public Module {
         void on_pause(void* argument);
         uint32_t main_interrupt(uint32_t dummy);
         void trapezoid_generator_reset();
-        void set_step_events_per_minute(double steps_per_minute);
+        void set_step_events_per_second(float);
         uint32_t trapezoid_generator_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
         int config_step_timer( int cycles );
@@ -57,13 +49,13 @@ class Stepper : public Module {
         float counter_gamma;
         //int step_events_completed;
         unsigned int out_bits;
-        double trapezoid_adjusted_rate;
+        float trapezoid_adjusted_rate;
         int trapezoid_tick_cycle_counter;
         int cycles_per_step_event;
         bool trapezoid_generator_busy;
         int microseconds_per_step_pulse;
         int acceleration_ticks_per_second;
-        unsigned int minimum_steps_per_minute;
+        unsigned int minimum_steps_per_second;
         int base_stepping_frequency;
         unsigned short step_bits[3];
         int counter_increment;

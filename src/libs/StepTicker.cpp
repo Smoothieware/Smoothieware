@@ -6,13 +6,16 @@
 */
 
 
+#include "StepTicker.h"
 
 using namespace std;
 #include <vector>
+
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "StepTicker.h"
+#include "StepperMotor.h"
+
 #include "system_LPC17xx.h" // mbed.h lib
 
 #include <mri.h>
@@ -54,7 +57,7 @@ StepTicker::StepTicker(){
 }
 
 // Set the base stepping frequency
-void StepTicker::set_frequency( double frequency ){
+void StepTicker::set_frequency( float frequency ){
     this->frequency = frequency;
     this->period = int(floor((SystemCoreClock/4)/frequency));  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM0->MR0 = this->period;
@@ -65,8 +68,8 @@ void StepTicker::set_frequency( double frequency ){
 }
 
 // Set the reset delay
-void StepTicker::set_reset_delay( double seconds ){
-    this->delay = int(floor(double(SystemCoreClock/4)*( seconds )));  // SystemCoreClock/4 = Timer increments in a second
+void StepTicker::set_reset_delay( float seconds ){
+    this->delay = int(floor(float(SystemCoreClock/4)*( seconds )));  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM1->MR0 = this->delay;
 }
 
@@ -125,7 +128,7 @@ inline void StepTicker::reset_tick(){
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
     {
         if (this->active_motor_bm & bm)
-            this->active_motors[i]->step_pin->set(0);
+            this->active_motors[i]->unstep();
     }
 
     _isr_context = false;

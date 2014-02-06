@@ -42,7 +42,7 @@ bool FirmConfigSource::is_named( uint16_t check_sum ){
 
 // Write a config setting to the file *** FirmConfigSource is read only ***
 void FirmConfigSource::write( string setting, string value ){
-    //this->kernel->streams->printf("ERROR: FirmConfigSource is read only\r\n");
+    //THEKERNEL->streams->printf("ERROR: FirmConfigSource is read only\r\n");
 }
 
 // Return the value for a specific checksum

@@ -67,7 +67,7 @@ void Configurator::config_get_command( string parameters, StreamOutput* stream )
         source = "";
         uint16_t setting_checksums[3];
         get_checksums(setting_checksums, setting );
-        ConfigValue* cv = this->kernel->config->value(setting_checksums);
+        ConfigValue* cv = THEKERNEL->config->value(setting_checksums);
         string value = "";
         if(cv->found){ value = cv->as_string(); }
         stream->printf( "live: %s is set to %s\r\n", setting.c_str(), value.c_str() );
@@ -75,9 +75,9 @@ void Configurator::config_get_command( string parameters, StreamOutput* stream )
         uint16_t source_checksum = get_checksum( source );
         uint16_t setting_checksums[3];
         get_checksums(setting_checksums, setting );
-        for(unsigned int i=0; i < this->kernel->config->config_sources.size(); i++){
-            if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
-                string value = this->kernel->config->config_sources[i]->read(setting_checksums);
+        for(unsigned int i=0; i < THEKERNEL->config->config_sources.size(); i++){
+            if( THEKERNEL->config->config_sources[i]->is_named(source_checksum) ){
+                string value = THEKERNEL->config->config_sources[i]->read(setting_checksums);
                 stream->printf( "%s: %s is set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
                 break;
             }
@@ -94,13 +94,13 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
         value = setting;
         setting = source;
         source = "";
-        this->kernel->config->set_string(setting, value);
+        THEKERNEL->config->set_string(setting, value);
         stream->printf( "live: %s has been set to %s\r\n", setting.c_str(), value.c_str() );
     } else {
         uint16_t source_checksum = get_checksum(source);
-        for(unsigned int i=0; i < this->kernel->config->config_sources.size(); i++){
-            if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
-                this->kernel->config->config_sources[i]->write(setting, value);
+        for(unsigned int i=0; i < THEKERNEL->config->config_sources.size(); i++){
+            if( THEKERNEL->config->config_sources[i]->is_named(source_checksum) ){
+                THEKERNEL->config->config_sources[i]->write(setting, value);
                 stream->printf( "%s: %s has been set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
                 break;
             }
@@ -112,20 +112,20 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
 void Configurator::config_load_command( string parameters, StreamOutput* stream ){
     string source = shift_parameter(parameters);
     if(source == ""){
-        this->kernel->config->config_cache_load();
-        this->kernel->call_event(ON_CONFIG_RELOAD);
+        THEKERNEL->config->config_cache_load();
+        THEKERNEL->call_event(ON_CONFIG_RELOAD);
         stream->printf( "Reloaded settings\r\n" );
     } else if(file_exists(source)){
         FileConfigSource fcs(source);
-        fcs.transfer_values_to_cache(&this->kernel->config->config_cache);
-        this->kernel->call_event(ON_CONFIG_RELOAD);
+        fcs.transfer_values_to_cache(&THEKERNEL->config->config_cache);
+        THEKERNEL->call_event(ON_CONFIG_RELOAD);
         stream->printf( "Loaded settings from %s\r\n", source.c_str() );
     } else {
         uint16_t source_checksum = get_checksum(source);
-        for(unsigned int i=0; i < this->kernel->config->config_sources.size(); i++){
-            if( this->kernel->config->config_sources[i]->is_named(source_checksum) ){
-                this->kernel->config->config_sources[i]->transfer_values_to_cache(&this->kernel->config->config_cache);
-                this->kernel->call_event(ON_CONFIG_RELOAD);
+        for(unsigned int i=0; i < THEKERNEL->config->config_sources.size(); i++){
+            if( THEKERNEL->config->config_sources[i]->is_named(source_checksum) ){
+                THEKERNEL->config->config_sources[i]->transfer_values_to_cache(&THEKERNEL->config->config_cache);
+                THEKERNEL->call_event(ON_CONFIG_RELOAD);
                 stream->printf( "Loaded settings from %s\r\n", source.c_str() );
                 break;
             }
