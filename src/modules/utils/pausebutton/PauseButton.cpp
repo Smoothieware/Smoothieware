@@ -27,7 +27,6 @@ uint32_t PauseButton::button_tick(uint32_t dummy){
         this->button_state = newstate;
         // If button pressed
         if( this->button_state ){
-            THEKERNEL->logger->logError("Push Button");
             if( this->play_state ){
                 this->play_state = false;
                 THEKERNEL->pauser->take();
