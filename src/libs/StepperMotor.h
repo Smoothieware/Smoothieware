@@ -73,7 +73,6 @@ class StepperMotor : public Actuator {
 
         float steps_per_second;
 
-        volatile bool moving;
         bool paused;
 
         float steps_per_mm;

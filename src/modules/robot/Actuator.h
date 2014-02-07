@@ -33,6 +33,9 @@ public:
     float soft_min;
     float soft_max;
 
+    volatile bool moving;
+
+    virtual void change_last_milestone(float) = 0;
     float last_milestone;
 };
 

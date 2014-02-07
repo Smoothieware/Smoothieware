@@ -12,6 +12,11 @@ public:
     };
 
     bool named_in_gcode;
+
+    void change_last_milestone(float milestone)
+    {
+        last_milestone = milestone;
+    };
 };
 
 #endif /* _CARTESIANAXIS_H */
