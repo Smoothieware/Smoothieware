@@ -576,7 +576,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
         float segment_end[3];
 
         // How far do we move each segment?
-        for (int i = X_AXIS; i < Z_AXIS; i++)
+        for (int i = X_AXIS; i <= Z_AXIS; i++)
             segment_delta[i] = (target[i] - last_milestone[i]) / segments;
 
         //For each segment
