@@ -95,22 +95,34 @@ int main() {
     bool sdok= (sd.disk_initialize() == 0);
 
     // Create and add main modules
-    kernel->add_module( new Laser() );
-    kernel->add_module( new ExtruderMaker() );
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
     kernel->add_module( new CurrentControl() );
-    kernel->add_module( new TemperatureControlPool() );
     kernel->add_module( new SwitchPool() );
     kernel->add_module( new PauseButton() );
     kernel->add_module( new PlayLed() );
     kernel->add_module( new Endstops() );
     kernel->add_module( new Player() );
+
+    // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
+    #ifndef NO_TOOLS_TEMPERATURECONTROL
+    kernel->add_module( new TemperatureControlPool() );
+    #endif
+    #ifndef NO_TOOLS_EXTRUDER
+    kernel->add_module( new ExtruderMaker() );
+    #endif
+    #ifndef NO_TOOLS_LASER
+    kernel->add_module( new Laser() );
+    #endif
+    #ifndef NO_UTILS_PANEL
     kernel->add_module( new Panel() );
+    #endif
+    #ifndef NO_TOOLS_TOUCHPROBE
     kernel->add_module( new Touchprobe() );
-#ifndef NONETWORK
+    #endif
+    #ifndef NONETWORK
     kernel->add_module( new Network() );
-#endif
+    #endif
 
     // Create and initialize USB stuff
     u.init();
