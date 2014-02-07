@@ -13,6 +13,7 @@ class HBotSolution : public BaseSolution {
         HBotSolution(Config*){};
         void cartesian_to_actuator( float[], float[] );
         void actuator_to_cartesian( float[], float[] );
+        bool confirm_homing_set(uint8_t actuators[]);
 };
 
 

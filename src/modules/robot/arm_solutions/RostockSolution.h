@@ -20,6 +20,8 @@ class RostockSolution : public BaseSolution {
         void cartesian_to_actuator( float[], float[] );
         void actuator_to_cartesian( float[], float[] );
 
+        bool confirm_homing_set(uint8_t actuators[]);
+
         float solve_arm( float millimeters[] );
         void rotate( float in[], float out[], float sin, float cos );
 

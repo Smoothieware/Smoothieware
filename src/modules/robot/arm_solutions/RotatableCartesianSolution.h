@@ -15,6 +15,8 @@ class RotatableCartesianSolution : public BaseSolution {
         void cartesian_to_actuator( float[], float[] );
         void actuator_to_cartesian( float[], float[] );
 
+        bool confirm_homing_set(uint8_t actuators[]) { return true; }
+
         void rotate( float in[], float out[], float sin, float cos );
 
         float sin_alpha;

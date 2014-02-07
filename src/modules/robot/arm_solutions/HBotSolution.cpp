@@ -12,3 +12,15 @@ void HBotSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_m
     cartesian_mm[Y_AXIS] = 0.5F * (actuator_mm[ALPHA_STEPPER] - actuator_mm[BETA_STEPPER]);
     cartesian_mm[Z_AXIS] = actuator_mm[GAMMA_STEPPER];
 }
+
+bool HBotSolution::confirm_homing_set(uint8_t actuators[])
+{
+    // can only home A and B together
+    if ((actuators[0] != 0) && (actuators[1] == 0))
+        return false;
+    if ((actuators[0] == 0) && (actuators[1] != 0))
+        return false;
+
+    // can home C by itself, no need to check further
+    return true;
+}

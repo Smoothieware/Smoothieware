@@ -19,6 +19,8 @@ class JohannKosselSolution : public BaseSolution {
         bool set_optional(char parameter, float value);
         bool get_optional(char parameter, float *value);
 
+        bool confirm_homing_set(uint8_t actuators[]);
+
     private:
         void init();
 

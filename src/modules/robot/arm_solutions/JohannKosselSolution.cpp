@@ -122,3 +122,23 @@ bool JohannKosselSolution::get_optional(char parameter, float *value) {
 
     return true;
 };
+
+bool JohannKosselSolution::confirm_homing_set(uint8_t actuators[])
+{
+    uint8_t homing_type = 0;
+
+    // assemble bitmask of proposed homing directions
+    for (int i = 0; i < 3; i++)
+        homing_type |= 1 << actuators[i];
+
+    // all actuators must home together - all to max, all to min, or all nohome
+    switch (homing_type)
+    {
+        case 1: // all no home
+        case 2: // all home to min
+        case 4: // all home to max
+            return true;
+        default:
+            return false;
+    }
+}
