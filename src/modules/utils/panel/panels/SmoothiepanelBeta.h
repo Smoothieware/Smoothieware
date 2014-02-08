@@ -12,12 +12,12 @@ Much of this was copied from LiquidTWI2
    logic gleaned from Adafruit RGB LCD Shield library
 */
 
-#ifndef SMOOTHIEPANEL_H
-#define SMOOTHIEPANEL_H
+#ifndef SMOOTHIEPANELBETA_H
+#define SMOOTHIEPANELBETA_H
 #include "LcdBase.h"
 #include "libs/Pin.h"
 #include "Button.h"
-#include "smoothiepanel/Wiichuck.h"
+#include "smoothiepanelbeta/Wiichuck.h"
 
 
 // Smoothiepanel specific settings
@@ -49,10 +49,10 @@ Much of this was copied from LiquidTWI2
 #define play_led_brightness_checksum CHECKSUM("play_led_brightness")
 #define back_led_brightness_checksum CHECKSUM("back_led_brightness")
 
-class Smoothiepanel : public LcdBase {
+class SmoothiepanelBeta : public LcdBase {
     public:
-        Smoothiepanel();
-        ~Smoothiepanel();
+        SmoothiepanelBeta();
+        ~SmoothiepanelBeta();
 
         void home();
         void clear();
@@ -123,4 +123,4 @@ class Smoothiepanel : public LcdBase {
         bool encoder_changed;
 };
 
-#endif // SMOOTHIEPANEL_H
+#endif // SMOOTHIEPANELBETA_H

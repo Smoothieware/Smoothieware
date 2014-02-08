@@ -19,7 +19,8 @@
 
 #include "panels/I2CLCD.h"
 #include "panels/VikiLCD.h"
-#include "panels/Smoothiepanel.h"
+//#include "panels/Smoothiepanel.h"
+#include "panels/SmoothiepanelBeta.h"
 #include "panels/ReprapDiscountGLCD.h"
 #include "panels/ST7565.h"
 #include "version.h"
@@ -29,7 +30,8 @@
 #define lcd_checksum               CHECKSUM("lcd")
 #define i2c_lcd_checksum           CHECKSUM("i2c_lcd")
 #define viki_lcd_checksum          CHECKSUM("viki_lcd")
-#define smoothiepanel_checksum     CHECKSUM("smoothiepanel")
+#define smoothiepanel_checksum     CHUCKSUM("smoothiepanel")
+#define smoothiepanelbeta_checksum CHECKSUM("smoothiepanelbeta")
 #define panelolu2_checksum         CHECKSUM("panelolu2")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
@@ -83,8 +85,8 @@ void Panel::on_module_loaded()
     } else if (lcd_cksm == panelolu2_checksum) {
         this->lcd = new VikiLCD();
         this->lcd->set_variant(1);
-    } else if (lcd_cksm == smoothiepanel_checksum) {
-        this->lcd = new Smoothiepanel();
+    } else if (lcd_cksm == smoothiepanelbeta_checksum) {
+        this->lcd = new SmoothiepanelBeta();
     } else if (lcd_cksm == rrd_glcd_checksum) {
         this->lcd = new ReprapDiscountGLCD();
     } else if (lcd_cksm == st7565_glcd_checksum) {

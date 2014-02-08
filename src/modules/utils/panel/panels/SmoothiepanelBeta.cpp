@@ -4,10 +4,10 @@ Smoothie is free software: you can redistribute it and/or modify it under the te
 Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
-#include "Smoothiepanel.h"
-#include "smoothiepanel/LCDBang.h"
+#include "SmoothiepanelBeta.h"
+#include "smoothiepanelbeta/LCDBang.h"
 
-#include "smoothiepanel/Colors.h"
+#include "smoothiepanelbeta/Colors.h"
 
 // commands
 #define LCD_CLEARDISPLAY 0x01
@@ -56,7 +56,7 @@ You should have received a copy of the GNU General Public License along with Smo
 #define LCD_READ        0x01
 #define LCD_ACK         0x01
 
-Smoothiepanel::Smoothiepanel() {
+SmoothiepanelBeta::SmoothiepanelBeta() {
     // Default values
     this->backlightval     = 0x00;
     this->displaycontrol   = 0x00;
@@ -97,7 +97,7 @@ Smoothiepanel::Smoothiepanel() {
     this->encoder_hue   = THEKERNEL->config->value(panel_checksum, encoder_led_hue_checksum)->by_default(220)->as_number();
 }
 
-Smoothiepanel::~Smoothiepanel() {
+SmoothiepanelBeta::~SmoothiepanelBeta() {
     delete this->wii;
     delete this->i2c;
 }
@@ -148,7 +148,7 @@ char pca9505_read(I2C *i2c, int address, char reg){
     return cmd[0];
 }
 
-void Smoothiepanel::init(){
+void SmoothiepanelBeta::init(){
     // init lcd and buzzer
     lcdbang_init(*this->i2c);
 //    lcdbang_print(*this->i2c, " Smoothiepanel Beta - design by Logxen -");
@@ -166,7 +166,7 @@ void Smoothiepanel::init(){
 //    this->clear();
 }
 
-void Smoothiepanel::setLed(int led, bool on){
+void SmoothiepanelBeta::setLed(int led, bool on){
     // LED turns on when bit is cleared
     char saved = pca9505_read(this->i2c, this->i2c_address, 0x08);
     if(on) {
@@ -184,7 +184,7 @@ void Smoothiepanel::setLed(int led, bool on){
     }
 }
 
-void Smoothiepanel::setLedBrightness(int led, int val){
+void SmoothiepanelBeta::setLedBrightness(int led, int val){
     switch(led){
 //        case LED_FAN_ON: this->backlight_green = val; break; // on
 //        case LED_HOTEND_ON: this->backlight_red = val; break; // on
@@ -193,7 +193,7 @@ void Smoothiepanel::setLedBrightness(int led, int val){
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
-void Smoothiepanel::buzz(long duration, uint16_t freq) {
+void SmoothiepanelBeta::buzz(long duration, uint16_t freq) {
     const int expander = PCA9505_ADDRESS | this->i2c_address;
     char cmd[2];
     char saved;
@@ -213,7 +213,7 @@ void Smoothiepanel::buzz(long duration, uint16_t freq) {
     this->i2c->write(expander, cmd, 2);
 }
 
-uint8_t Smoothiepanel::readButtons(void) {
+uint8_t SmoothiepanelBeta::readButtons(void) {
     const int expander = PCA9505_ADDRESS | this->i2c_address;
     uint8_t button_bits = 0x00;
     char cmd[1];
@@ -271,7 +271,7 @@ uint8_t Smoothiepanel::readButtons(void) {
 	return button_bits;
 }
 
-int Smoothiepanel::readEncoderDelta() {
+int SmoothiepanelBeta::readEncoderDelta() {
 	static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
 	static uint8_t old_AB = 0;
     int8_t state;
@@ -285,7 +285,7 @@ int Smoothiepanel::readEncoderDelta() {
 	return state;
 }
 
-void Smoothiepanel::clear()
+void SmoothiepanelBeta::clear()
 {
     command(LCD_CLEARDISPLAY);  // clear display, set cursor position to zero
 //#ifndef USE_FASTMODE
@@ -293,7 +293,7 @@ void Smoothiepanel::clear()
 //#endif
 }
 
-void Smoothiepanel::home()
+void SmoothiepanelBeta::home()
 {
     command(LCD_RETURNHOME);  // set cursor position to zero
 //#ifndef USE_FASTMODE
@@ -301,7 +301,7 @@ void Smoothiepanel::home()
 //#endif
 }
 
-void Smoothiepanel::setCursor(uint8_t col, uint8_t row)
+void SmoothiepanelBeta::setCursor(uint8_t col, uint8_t row)
 {
     int row_offsets[] = { 0x00, 0x40, 0x14, 0x54 };
     if ( row > _numlines ) row = _numlines - 1;    // we count rows starting w/0
@@ -309,81 +309,81 @@ void Smoothiepanel::setCursor(uint8_t col, uint8_t row)
 }
 
 // Turn the display on/off (quickly)
-void Smoothiepanel::noDisplay() {
+void SmoothiepanelBeta::noDisplay() {
     displaycontrol &= ~LCD_DISPLAYON;
     command(LCD_DISPLAYCONTROL | displaycontrol);
 }
 
-void Smoothiepanel::display() {
+void SmoothiepanelBeta::display() {
     displaycontrol |= LCD_DISPLAYON;
     command(LCD_DISPLAYCONTROL | displaycontrol);
 }
 
 // Turns the underline cursor on/off
-void Smoothiepanel::noCursor() {
+void SmoothiepanelBeta::noCursor() {
     displaycontrol &= ~LCD_CURSORON;
     command(LCD_DISPLAYCONTROL | displaycontrol);
 }
-void Smoothiepanel::cursor() {
+void SmoothiepanelBeta::cursor() {
     displaycontrol |= LCD_CURSORON;
     command(LCD_DISPLAYCONTROL | displaycontrol);
 }
 
 // Turn on and off the blinking cursor
-void Smoothiepanel::noBlink() {
+void SmoothiepanelBeta::noBlink() {
     displaycontrol &= ~LCD_BLINKON;
     command(LCD_DISPLAYCONTROL | displaycontrol);
 }
-void Smoothiepanel::blink() {
+void SmoothiepanelBeta::blink() {
     displaycontrol |= LCD_BLINKON;
     command(LCD_DISPLAYCONTROL | displaycontrol);
 }
 
 // These commands scroll the display without changing the RAM
-void Smoothiepanel::scrollDisplayLeft(void) {
+void SmoothiepanelBeta::scrollDisplayLeft(void) {
     command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVELEFT);
 }
-void Smoothiepanel::scrollDisplayRight(void) {
+void SmoothiepanelBeta::scrollDisplayRight(void) {
     command(LCD_CURSORSHIFT | LCD_DISPLAYMOVE | LCD_MOVERIGHT);
 }
 
 // This is for text that flows Left to Right
-void Smoothiepanel::leftToRight(void) {
+void SmoothiepanelBeta::leftToRight(void) {
     displaymode |= LCD_ENTRYLEFT;
     command(LCD_ENTRYMODESET | displaymode);
 }
 
 // This is for text that flows Right to Left
-void Smoothiepanel::rightToLeft(void) {
+void SmoothiepanelBeta::rightToLeft(void) {
     displaymode &= ~LCD_ENTRYLEFT;
     command(LCD_ENTRYMODESET | displaymode);
 }
 
 // This will 'right justify' text from the cursor
-void Smoothiepanel::autoscroll(void) {
+void SmoothiepanelBeta::autoscroll(void) {
     displaymode |= LCD_ENTRYSHIFTINCREMENT;
     command(LCD_ENTRYMODESET | displaymode);
 }
 
 // This will 'left justify' text from the cursor
-void Smoothiepanel::noAutoscroll(void) {
+void SmoothiepanelBeta::noAutoscroll(void) {
     displaymode &= ~LCD_ENTRYSHIFTINCREMENT;
     command(LCD_ENTRYMODESET | displaymode);
 }
 
-void Smoothiepanel::command(uint8_t value) {
+void SmoothiepanelBeta::command(uint8_t value) {
     lcdbang_write(*this->i2c, value>>4, true);
     lcdbang_write(*this->i2c, value, true);
 }
 
-void Smoothiepanel::write(const char* line, int len) {
+void SmoothiepanelBeta::write(const char* line, int len) {
     for (int i = 0; i < len; ++i) {
         lcdbang_write(*this->i2c, *line++);
     }
 }
 
 // Allows to set the backlight, if the LCD backpack is used
-void Smoothiepanel::setBacklight(uint8_t status) {
+void SmoothiepanelBeta::setBacklight(uint8_t status) {
 /*	// LED turns on when bit is cleared
 	_backlightBits = M17_BIT_LB|M17_BIT_LG|M17_BIT_LR; // all off
 	if (status & LED_RED) _backlightBits &= ~M17_BIT_LR; // red on
@@ -394,7 +394,7 @@ void Smoothiepanel::setBacklight(uint8_t status) {
 */
 }
 
-void Smoothiepanel::setBacklightColor(uint8_t r, uint8_t g, uint8_t b) {
+void SmoothiepanelBeta::setBacklightColor(uint8_t r, uint8_t g, uint8_t b) {
     const int leds = PCA9634_ADDRESS | this->i2c_address;
     char cmd[2];
 
@@ -409,13 +409,13 @@ void Smoothiepanel::setBacklightColor(uint8_t r, uint8_t g, uint8_t b) {
     this->i2c->write(leds, cmd, 2);
 }
 
-void Smoothiepanel::setBacklightByHue(int h) {
+void SmoothiepanelBeta::setBacklightByHue(int h) {
     float r, g, b;
     HSVtoRGB(&r, &g, &b, h, 1.0, 1.0);
     setBacklightColor(r*0xFF, g*0xFF, b*0xFF);
 }
 
-void Smoothiepanel::setEncoderLED(uint8_t r, uint8_t g, uint8_t b) {
+void SmoothiepanelBeta::setEncoderLED(uint8_t r, uint8_t g, uint8_t b) {
     const int leds = PCA9634_ADDRESS | this->i2c_address;
     char cmd[2];
 
@@ -430,13 +430,13 @@ void Smoothiepanel::setEncoderLED(uint8_t r, uint8_t g, uint8_t b) {
     this->i2c->write(leds, cmd, 2);
 }
 
-void Smoothiepanel::setEncoderByHue(int h) {
+void SmoothiepanelBeta::setEncoderByHue(int h) {
     float r, g, b;
     HSVtoRGB(&r, &g, &b, h, 1.0, 1.0);
     setEncoderLED(r*0xFF, g*0xFF, b*0xFF);
 }
 
-void Smoothiepanel::setPlayLED(uint8_t v) {
+void SmoothiepanelBeta::setPlayLED(uint8_t v) {
     const int leds = PCA9634_ADDRESS | this->i2c_address;
     char cmd[2];
 
@@ -445,7 +445,7 @@ void Smoothiepanel::setPlayLED(uint8_t v) {
     this->i2c->write(leds, cmd, 2);
 }
 
-void Smoothiepanel::setBackLED(uint8_t v) {
+void SmoothiepanelBeta::setBackLED(uint8_t v) {
     const int leds = PCA9634_ADDRESS | this->i2c_address;
     char cmd[2];
 
@@ -456,7 +456,7 @@ void Smoothiepanel::setBackLED(uint8_t v) {
 
 /*
 // write either command or data, burst it to the expander over I2C.
-void Smoothiepanel::send(uint8_t value, uint8_t mode) {
+void SmoothiepanelBeta::send(uint8_t value, uint8_t mode) {
 #ifdef USE_FASTMODE
 	// polls for ready. not sure on I2C this is any faster
 
@@ -530,7 +530,7 @@ void Smoothiepanel::send(uint8_t value, uint8_t mode) {
 }
 
 // We pause the system
-uint32_t Smoothiepanel::on_pause_release(uint32_t dummy){
+uint32_t SmoothiepanelBeta::on_pause_release(uint32_t dummy){
 	if(!paused) {
 		THEKERNEL->pauser->take();
 		paused= true;
