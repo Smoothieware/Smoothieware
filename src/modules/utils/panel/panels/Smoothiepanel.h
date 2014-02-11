@@ -29,20 +29,27 @@ Much of this was copied from LiquidTWI2
 
 // config settings for Smoothiepanel
 #define panel_checksum             CHECKSUM("panel")
-#define i2c_pins_checksum          CHECKSUM("i2c_pins")
-#define i2c_address_checksum       CHECKSUM("i2c_address")
-#define i2c_frequency_checksum     CHECKSUM("i2c_frequency")
-#define i2c_interrupt_pin_checksum CHECKSUM("i2c_interrupt_pin")
+#define spi_pins_checksum          CHECKSUM("spi_pins")
+#define spi_ssel_pin_checksum      CHECKSUM("spi_ssel_pin")
+#define spi_frequency_checksum     CHECKSUM("spi_frequency")
 
+#define lcd_type_checksum          CHECKSUM("lcd_type")
 #define lcd_contrast_checksum      CHECKSUM("lcd_contrast")
 #define lcd_led_checksum           CHECKSUM("lcd_led")
 #define lcd_led_red_checksum       CHECKSUM("lcd_led_red")
 #define lcd_led_green_checksum     CHECKSUM("lcd_led_green")
 #define lcd_led_blue_checksum      CHECKSUM("lcd_led_blue")
 
-#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
-#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
-#define encoder_led_hue_checksum   CHECKSUM("encoder_led_hue")
+#define wing1_checksum             CHECKSUM("wing1")
+#define wing2_checksum             CHECKSUM("wing2")
+#define button_wing_checksum       CHECKSUM("button_wing")
+#define encoder_wing_checksum      CHECKSUM("encoder_wing")
+
+//#define encoder_a_pin_checksum     CHECKSUM("encoder_a_pin")
+//#define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
+#define encoder_led_red_checksum   CHECKSUM("encoder_red_red")
+#define encoder_led_green_checksum   CHECKSUM("encoder_green_red")
+#define encoder_led_blue_checksum   CHECKSUM("encoder_blue_red")
 
 #define play_led_brightness_checksum CHECKSUM("play_led_brightness")
 #define back_led_brightness_checksum CHECKSUM("back_led_brightness")
@@ -57,6 +64,7 @@ class Smoothiepanel : public LcdBase {
         void display();
         void setCursor(uint8_t col, uint8_t row);
         void init();
+        int send(int c);
         void write(const char* line, int len);
 
         void setBacklight(uint8_t status);
@@ -70,6 +78,7 @@ class Smoothiepanel : public LcdBase {
         uint8_t readButtons();
         int readEncoderDelta();
         int getEncoderResolution() { return 4; }
+        bool hasExternalEncoder() { return true; }
 
         void setLed(int led, bool on);
         void setLedBrightness(int led, int val);
@@ -96,13 +105,15 @@ class Smoothiepanel : public LcdBase {
         void burstBits16(uint16_t);
         void burstBits8b(uint8_t);
 */
+        uint16_t wing1_type;
+        uint16_t wing2_type;
         char displaymode;
         char displayfunction;
         char displaycontrol;
-        char i2c_address;
-        int i2c_frequency;
+//        char i2c_address;
+//        int i2c_frequency;
         int lcd_contrast;
-        int encoder_hue;
+//        int encoder_hue;
         char backlight_red;
         char backlight_green;
         char backlight_blue;
@@ -112,11 +123,13 @@ class Smoothiepanel : public LcdBase {
         uint8_t _numlines,_currline;
 //        uint16_t _backlightBits; // only for MCP23017
 //        mbed::I2C* i2c;
+        mbed::SPI* spi;
 
-        Pin interrupt_pin;
-        Pin encoder_a_pin;
-        Pin encoder_b_pin;
-        bool encoder_changed;
+        Pin spi_ssel_pin;
+//        Pin interrupt_pin;
+//        Pin encoder_a_pin;
+//        Pin encoder_b_pin;
+//        bool encoder_changed;
 };
 
 #endif // SMOOTHIEPANEL_H

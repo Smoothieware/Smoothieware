@@ -47,6 +47,10 @@ class LcdBase {
         // increment, this varies depending on encoder type usually 1,2 or 4
         virtual int getEncoderResolution()= 0;
 
+        // directly connected encoders need fast interrupt polling, but external
+        // encoders like Smoothiepanel need to happen outside interupt context
+        virtual bool hasExternalEncoder() { return false; }
+
         // optional
         virtual void setLed(int led, bool onoff){};
         virtual void setLedBrightness(int led, int val){};

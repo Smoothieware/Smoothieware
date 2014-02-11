@@ -19,7 +19,7 @@
 
 #include "panels/I2CLCD.h"
 #include "panels/VikiLCD.h"
-//#include "panels/Smoothiepanel.h"
+#include "panels/Smoothiepanel.h"
 #include "panels/SmoothiepanelBeta.h"
 #include "panels/ReprapDiscountGLCD.h"
 #include "panels/ST7565.h"
@@ -30,7 +30,7 @@
 #define lcd_checksum               CHECKSUM("lcd")
 #define i2c_lcd_checksum           CHECKSUM("i2c_lcd")
 #define viki_lcd_checksum          CHECKSUM("viki_lcd")
-#define smoothiepanel_checksum     CHUCKSUM("smoothiepanel")
+#define smoothiepanel_checksum     CHECKSUM("smoothiepanel")
 #define smoothiepanelbeta_checksum CHECKSUM("smoothiepanelbeta")
 #define panelolu2_checksum         CHECKSUM("panelolu2")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
@@ -85,6 +85,8 @@ void Panel::on_module_loaded()
     } else if (lcd_cksm == panelolu2_checksum) {
         this->lcd = new VikiLCD();
         this->lcd->set_variant(1);
+    } else if (lcd_cksm == smoothiepanel_checksum) {
+        this->lcd = new Smoothiepanel();
     } else if (lcd_cksm == smoothiepanelbeta_checksum) {
         this->lcd = new SmoothiepanelBeta();
     } else if (lcd_cksm == rrd_glcd_checksum) {
@@ -167,18 +169,20 @@ uint32_t Panel::refresh_tick(uint32_t dummy)
 // Encoder pins changed in interrupt
 uint32_t Panel::encoder_check(uint32_t dummy)
 {
-    // TODO if encoder reads go through i2c like on smoothie panel this needs to be
-    // optionally done in idle loop, however when reading encoder directly it needs to be done
-    // frequently, smoothie panel will return an actual delta count so won't miss any if polled slowly
-    // NOTE this code will not work if change is not -1,0,-1 anything greater (as in above case) will not work properly
-    static int encoder_counter = 0;
-    int change = lcd->readEncoderDelta();
-    encoder_counter += change;
+    if (!lcd->hasExternalEncoder()) {
+        // if encoder reads go through i2c like on smoothie panel this needs to be
+        // optionally done in idle loop, however when reading encoder directly it needs to be done
+        // frequently, smoothie panel will return an actual delta count so won't miss any if polled slowly
+        // NOTE this code will not work if change is not -1,0,-1 anything greater (as in above case) will not work properly
+        static int encoder_counter = 0;
+        int change = lcd->readEncoderDelta();
+        encoder_counter += change;
 
-    if ( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ) {
-        this->counter_changed = true;
-        (*this->counter) += change;
-        this->idle_time = 0;
+        if ( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ) {
+            this->counter_changed = true;
+            (*this->counter) += change;
+            this->idle_time = 0;
+        }
     }
     return 0;
 }
@@ -295,6 +299,20 @@ void Panel::on_idle(void *argument)
         this->back_button.check_signal(but & BUTTON_LEFT);
         this->click_button.check_signal(but & BUTTON_SELECT);
         this->pause_button.check_signal(but & BUTTON_PAUSE);
+    }
+
+    if ( lcd->hasExternalEncoder() ) {
+        // reading an encoder over spi (like on Smoothiepanel) must happen outside
+        // interupt context
+        static int encoder_counter = 0;
+        int change = lcd->readEncoderDelta();
+        encoder_counter += change;
+
+        if ( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ) {
+            this->counter_changed = true;
+            (*this->counter) += encoder_counter / this->encoder_click_resolution;
+            this->idle_time = 0;
+        }
     }
 
     // If we are in menu mode and the position has changed
