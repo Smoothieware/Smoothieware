@@ -49,8 +49,9 @@ void Pauser::release(){
         THEKERNEL->call_event(ON_PLAY, &this->counter);
         if (paused_block)
         {
-            paused_block->release();
+            Block* tmp = paused_block;
             paused_block = NULL;
+            tmp->release();
         }
     }
 }
