@@ -18,6 +18,7 @@
 #include "version.h"
 #include "PublicDataRequest.h"
 #include "FileStream.h"
+#include "mbed.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
@@ -57,6 +58,7 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {CHECKSUM("net"),      &SimpleShell::net_command},
     {CHECKSUM("load"),     &SimpleShell::load_command},
     {CHECKSUM("save"),     &SimpleShell::save_command},
+    {CHECKSUM("spi"),      &SimpleShell::spi_command},
 
     // unknown command
     {0, NULL}
@@ -467,6 +469,28 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
         stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
     } else {
         stream->printf("%s is not a known temperature device\r\n", type.c_str());
+    }
+}
+
+// used to test out spi peripherals
+void SimpleShell::spi_command( string parameters, StreamOutput *stream)
+{
+    string command = shift_parameter( parameters );
+    string data = shift_parameter( parameters );
+    if(!data.empty()) {
+        uint8_t c, d;
+        SPI spi(P0_18, P0_17, P0_15);
+        DigitalOut ssel(P0_16);
+        ssel = 1;
+        spi.frequency(100000);
+        spi.format(16,0);
+        wait_us(1);
+        c = atoi(command.c_str());
+        d = atoi(data.c_str());
+        ssel = 0;
+        int r = spi.write((c<<8) + d);
+        ssel = 1;
+        stream->printf("Received: 0x%x 0x%x\r\n", (r>>8)&0xFF, r&0xFF);
     }
 }
 

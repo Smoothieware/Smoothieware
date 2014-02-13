@@ -247,6 +247,8 @@ void Panel::on_idle(void *argument)
         this->lcd->setCursor(0, 2); this->lcd->printf("%s", date.substr(0, 20).c_str());
         this->lcd->setCursor(0, 3); this->lcd->printf("Please wait....");
 
+//        wait(4);
+
         if (this->lcd->hasGraphics()) {
             this->lcd->bltGlyph(24, 40, ohw_logo_antipixel_width, ohw_logo_antipixel_height, ohw_logo_antipixel_bits);
         }

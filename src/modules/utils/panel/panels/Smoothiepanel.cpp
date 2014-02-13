@@ -25,8 +25,8 @@ You should have received a copy of the GNU General Public License along with Smo
 #define CMD_WING1_CLEAR             0x4300
 #define CMD_WING1_NOT               0x4400
 #define CMD_WING1_DIR               0x4500
-#define CMD_WING1_MWRITE            0x4600  # not implemented
-#define CMD_WING1_MASK              0x4700  # not implemented
+#define CMD_WING1_MWRITE            0x4600  // not implemented
+#define CMD_WING1_MASK              0x4700  // not implemented
 #define CMD_WING1_0_CON             0x4800
 #define CMD_WING1_1_CON             0x4900
 #define CMD_WING1_2_CON             0x4A00
@@ -42,8 +42,8 @@ You should have received a copy of the GNU General Public License along with Smo
 #define CMD_WING2_CLEAR             0x5300
 #define CMD_WING2_NOT               0x5400
 #define CMD_WING2_DIR               0x5500
-#define CMD_WING2_MWRITE            0x5600  # not implemented
-#define CMD_WING2_MASK              0x5700  # not implemented
+#define CMD_WING2_MWRITE            0x5600  // not implemented
+#define CMD_WING2_MASK              0x5700  // not implemented
 #define CMD_WING2_0_CON             0x5800
 #define CMD_WING2_1_CON             0x5900
 #define CMD_WING2_2_CON             0x5A00
@@ -59,8 +59,8 @@ You should have received a copy of the GNU General Public License along with Smo
 #define CMD_EXT_CLEAR               0x6300
 #define CMD_EXT_NOT                 0x6400
 #define CMD_EXT_DIR                 0x6500
-#define CMD_EXT_MWRITE              0x6600  # not implemented
-#define CMD_EXT_MASK                0x6700  # not implemented
+#define CMD_EXT_MWRITE              0x6600  // not implemented
+#define CMD_EXT_MASK                0x6700  // not implemented
 #define CMD_EXT_0_CON               0x6800
 #define CMD_EXT_1_CON               0x6900
 #define CMD_EXT_2_CON               0x6A00
@@ -148,13 +148,14 @@ Smoothiepanel::Smoothiepanel() {
     this->_numlines        = 4;
 
     // SPI Comms
-    int spi_pins = THEKERNEL->config->value(panel_checksum, spi_pins_checksum)->by_default(3)->as_number();
+    int spi_pins = THEKERNEL->config->value(panel_checksum, spi_pins_checksum)->by_default(0)->as_number();
     if(spi_pins == 1){
         this->spi = new mbed::SPI(P0_9, P0_8, P0_7); // mosi miso sck
     }else{ // default: spi_pins == 0
         this->spi = new mbed::SPI(P0_18, P0_17, P0_15); // mosi miso sck
     }
-    this->spi->frequency(THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(1000000)->as_number());
+    this->spi->format(16, 0);
+    this->spi->frequency(THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(100000)->as_number());
     this->spi_ssel_pin.from_string(THEKERNEL->config->value(panel_checksum, spi_ssel_pin_checksum)->by_default("0.16")->as_string())->as_output();
     this->spi_ssel_pin.set(1);
 
@@ -166,8 +167,8 @@ Smoothiepanel::Smoothiepanel() {
     this->playledval      = THEKERNEL->config->value(panel_checksum, play_led_brightness_checksum)->by_default(255)->as_number();
     this->backledval      = THEKERNEL->config->value(panel_checksum, back_led_brightness_checksum)->by_default(255)->as_number();
 
-    this->wing1_type      = THEKERNEL->config->value(panel_checksum, wing1_checksum)->by_default(0)->as_number();
-    this->wing2_type      = THEKERNEL->config->value(panel_checksum, wing2_checksum)->by_default(0)->as_number();
+    this->wing1_type      = get_checksum(THEKERNEL->config->value(panel_checksum, wing1_checksum)->by_default("NC")->as_string());
+    this->wing2_type      = get_checksum(THEKERNEL->config->value(panel_checksum, wing2_checksum)->by_default("NC")->as_string());
 }
 
 Smoothiepanel::~Smoothiepanel() {
@@ -175,21 +176,26 @@ Smoothiepanel::~Smoothiepanel() {
 }
 
 int Smoothiepanel::send(int c) {
+    this->spi_ssel_pin.set(1);
+    wait_us(1);
     this->spi_ssel_pin.set(0);
     int r = this->spi->write(c);
     this->spi_ssel_pin.set(1);
-    wait_us(1);
     return r;
 }
 
 // initialize basic settings
 void Smoothiepanel::init(){
-    this->send(CMD_NUNCHUCK_INIT + 0); // init nunchuck for manual polling
-
+//    this->send(CMD_NUNCHUCK_INIT + 0); // init nunchuck for manual polling
+    wait_us(100000);
     this->send(CMD_PWM_INIT + 0x70); // enable pwm for lcd led pins
-    this->send(CMD_PWM4_WRITE + this->backlight_red);
-    this->send(CMD_PWM5_WRITE + this->backlight_green);
-    this->send(CMD_PWM6_WRITE + this->backlight_blue);
+    wait_us(1000);
+    this->send(CMD_PWM4_WRITE + 255 - this->backlight_red);
+    wait_us(1000);
+    this->send(CMD_PWM5_WRITE + 255 - this->backlight_green);
+    wait_us(1000);
+    this->send(CMD_PWM6_WRITE + 255 - this->backlight_blue);
+    wait_us(1000);
 
     // init wings
     if(this->wing1_type == button_wing_checksum) {
@@ -208,6 +214,7 @@ void Smoothiepanel::init(){
 }
 
 void Smoothiepanel::setLed(int led, bool on){
+/*
     // LED turns on when bit is cleared
     if(this->wing1_type == button_wing_checksum) {
         on ? this->send(CMD_WING1_CLEAR + (1<<(led*2))) : this->send(CMD_WING1_SET + (1<<(led*2)));
@@ -217,6 +224,7 @@ void Smoothiepanel::setLed(int led, bool on){
         on ? this->send(CMD_WING2_CLEAR + (1<<(led*2))) : this->send(CMD_WING2_SET + (1<<(led*2)));
     }else if(this->wing2_type == encoder_wing_checksum) {
     }
+*/
 }
 
 void Smoothiepanel::setLedBrightness(int led, int val){
@@ -253,6 +261,7 @@ void Smoothiepanel::buzz(long duration, uint16_t freq) {
 uint8_t Smoothiepanel::readButtons(void) {
     uint8_t button_bits = 0x00;
     // read and process wings
+/*
     if(this->wing1_type == button_wing_checksum) {
         this->send(CMD_WING1_READ);
         int t = this->send(CMD_NOP);
@@ -352,13 +361,16 @@ uint8_t Smoothiepanel::readButtons(void) {
             if(!BB) button_bits |= BUTTON_LEFT;
         }
     }
-
+*/
 	return button_bits;
 }
 
 int Smoothiepanel::readEncoderDelta() {
+/*
     this->send(CMD_ENCODER_READ + 0x01);
     return this->send(CMD_NOP);
+*/
+return 0;
 /*
     int8_t state;
 	static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
@@ -461,13 +473,25 @@ void Smoothiepanel::noAutoscroll(void) {
 }
 
 void Smoothiepanel::command(uint8_t value) {
+    this->send(CMD_LCD_CMD_READ);
+    int r = this->send(CMD_LCD_CMD_READ);
+    while((r&0x80) == 0x80) {
+        wait_us(4);
+        r = this->send(CMD_LCD_CMD_READ);
+    }
+    wait_us(4);
     this->send(CMD_LCD_CMD_WRITE + value);
-//    lcdbang_write(*this->i2c, value>>4, true);
-//    lcdbang_write(*this->i2c, value, true);
 }
 
 void Smoothiepanel::write(const char* line, int len) {
     for (int i = 0; i < len; ++i) {
+        this->send(CMD_LCD_CMD_READ);
+        int r = this->send(CMD_LCD_CMD_READ);
+        while((r&0x80) == 0x80) {
+            wait_us(4);
+            r = this->send(CMD_LCD_CMD_READ);
+        }
+        wait_us(4);
         this->send(CMD_LCD_DATA_WRITE + line[i]);
     }
 }
@@ -485,12 +509,14 @@ void Smoothiepanel::setBacklight(uint8_t status) {
 }
 
 void Smoothiepanel::setBacklightColor(uint8_t r, uint8_t g, uint8_t b) {
+/*
     this->backlight_red = r;
     this->backlight_green = g;
     this->backlight_blue = b;
     this->send(CMD_PWM4_WRITE + this->backlight_red);
     this->send(CMD_PWM5_WRITE + this->backlight_green);
     this->send(CMD_PWM6_WRITE + this->backlight_blue);
+*/
 }
 
 void Smoothiepanel::setEncoderLED(uint8_t r, uint8_t g, uint8_t b) {
