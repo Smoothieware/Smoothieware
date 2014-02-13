@@ -538,7 +538,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
     gcode->millimeters_of_travel = pow( target[X_AXIS]-this->last_milestone[X_AXIS], 2 ) +  pow( target[Y_AXIS]-this->last_milestone[Y_AXIS], 2 ) +  pow( target[Z_AXIS]-this->last_milestone[Z_AXIS], 2 );
 
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
-    if( gcode->millimeters_of_travel < 0.0001F ){
+    if( gcode->millimeters_of_travel < 1e-8F ){
         return;
     }
 
