@@ -39,6 +39,7 @@
 #define jog_x_feedrate_checksum     CHECKSUM("alpha_jog_feedrate")
 #define jog_y_feedrate_checksum     CHECKSUM("beta_jog_feedrate")
 #define jog_z_feedrate_checksum     CHECKSUM("gamma_jog_feedrate")
+#define	longpress_delay_checksum	CHECKSUM("longpress_delay")
 
 #define hotend_temp_checksum CHECKSUM("hotend_temperature")
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
@@ -125,6 +126,16 @@ void Panel::on_module_loaded()
     this->back_button.up_attach(  this, &Panel::on_back );
     this->pause_button.up_attach( this, &Panel::on_pause );
 
+	
+	//setting longpress_delay
+	int longpress_delay =  THEKERNEL->config->value( panel_checksum, longpress_delay_checksum )->by_default(0)->as_number();
+	this->up_button.set_longpress_delay(longpress_delay);
+    this->down_button.set_longpress_delay(longpress_delay);
+    this->click_button.set_longpress_delay(longpress_delay);
+    this->back_button.set_longpress_delay(longpress_delay);
+    this->pause_button.set_longpress_delay(longpress_delay);
+	
+	
     THEKERNEL->slow_ticker->attach( 100,  this, &Panel::button_tick );
     THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
 
