@@ -18,15 +18,10 @@ using namespace std;
 class Planner;
 class Conveyor;
 
-float max_allowable_speed( float acceleration, float target_velocity, float distance);
-
 class Block {
     public:
         Block();
-        void calculate_trapezoid( float entry_speed, float exit_speed );
-        float estimate_acceleration_distance( float initial_rate, float target_rate, float acceleration );
-        float intersection_distance(float initial_rate, float final_rate, float acceleration, float distance);
-        float get_duration_left(unsigned int already_taken_steps);
+        void  calculate_trapezoid( float entry_speed, float exit_speed );
 
         float reverse_pass(float exit_speed);
         float forward_pass(float next_entry_speed);

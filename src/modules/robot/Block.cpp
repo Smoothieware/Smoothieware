@@ -20,6 +20,48 @@
 using std::string;
 #include <vector>
 
+/*
+ * Utility Functions
+ */
+
+// Calculates the distance (not time) it takes to accelerate from initial_rate to target_rate using the
+// given acceleration:
+static float estimate_acceleration_distance(float initialrate, float targetrate, float acceleration)
+{
+    return( ((targetrate * targetrate) - (initialrate * initialrate)) / (2.0F * acceleration));
+}
+
+// This function gives you the point at which you must start braking (at the rate of -acceleration) if
+// you started at speed initial_rate and accelerated until this point and want to end at the final_rate after
+// a total travel of distance. This can be used to compute the intersection point between acceleration and
+// deceleration in the cases where the trapezoid has no plateau (i.e. never reaches maximum speed)
+//
+/*                          + <- some maximum rate we don't care about
+ *                           /|\
+ *                          / | \
+ *                         /  |  + <- final_rate
+ *                        /   |  |
+ *       initial_rate -> +----+--+
+ *                            ^ ^
+ *                            | |
+ *        intersection_distance distance */
+static float intersection_distance(float initialrate, float finalrate, float acceleration, float distance)
+{
+    return((2 * acceleration * distance - initialrate * initialrate + finalrate * finalrate) / (4.0F * acceleration));
+}
+
+// Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
+// acceleration within the allotted distance.
+static inline float max_allowable_speed(float acceleration, float target_velocity, float distance)
+{
+    return sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance);
+}
+
+/*
+ * Block definitions
+ */
+
+
 // A block represents a movement, it's length for each stepper motor, and the corresponding acceleration curves.
 // It's stacked on a queue, and that queue is then executed in order, to move the motors.
 // Most of the accel math is also done in this class
@@ -107,8 +149,8 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 
     // How many steps to accelerate and decelerate
     float acceleration_per_second = this->rate_delta * THEKERNEL->stepper->acceleration_ticks_per_second; // ( step/s^2)
-    int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_second ) );
-    int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_second ) );
+    int accelerate_steps = ceil( estimate_acceleration_distance(this->initial_rate, this->nominal_rate, acceleration_per_second));
+    int decelerate_steps = floor(estimate_acceleration_distance(this->nominal_rate, this->final_rate,  -acceleration_per_second));
 
     // Calculate the size of Plateau of Nominal Rate ( during which we don't accelerate nor decelerate, but just cruise )
     int plateau_steps = this->steps_event_count - accelerate_steps - decelerate_steps;
@@ -117,7 +159,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // have to use intersection_distance() to calculate when to abort acceleration and start braking
     // in order to reach the final_rate exactly at the end of this block.
     if (plateau_steps < 0) {
-        accelerate_steps = ceil(this->intersection_distance(this->initial_rate, this->final_rate, acceleration_per_second, this->steps_event_count));
+        accelerate_steps = ceil(intersection_distance(this->initial_rate, this->final_rate, acceleration_per_second, this->steps_event_count));
         accelerate_steps = max( accelerate_steps, 0 ); // Check limits due to numerical round-off
         accelerate_steps = min( accelerate_steps, int(this->steps_event_count) );
         plateau_steps = 0;
@@ -128,38 +170,6 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     this->exit_speed = exitspeed;
 }
 
-// Calculates the distance (not time) it takes to accelerate from initial_rate to target_rate using the
-// given acceleration:
-float Block::estimate_acceleration_distance(float initialrate, float targetrate, float acceleration)
-{
-    return( ((targetrate * targetrate) - (initialrate * initialrate)) / (2.0F * acceleration));
-}
-
-// This function gives you the point at which you must start braking (at the rate of -acceleration) if
-// you started at speed initial_rate and accelerated until this point and want to end at the final_rate after
-// a total travel of distance. This can be used to compute the intersection point between acceleration and
-// deceleration in the cases where the trapezoid has no plateau (i.e. never reaches maximum speed)
-//
-/*                          + <- some maximum rate we don't care about
-                           /|\
-                          / | \
-                         /  |  + <- final_rate
-                        /   |  |
-       initial_rate -> +----+--+
-                            ^ ^
-                            | |
-        intersection_distance distance */
-float Block::intersection_distance(float initialrate, float finalrate, float acceleration, float distance)
-{
-    return((2 * acceleration * distance - initialrate * initialrate + finalrate * finalrate) / (4 * acceleration));
-}
-
-// Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
-// acceleration within the allotted distance.
-inline float max_allowable_speed(float acceleration, float target_velocity, float distance)
-{
-    return sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance);
-}
 
 
 // Called by Planner::recalculate() when scanning the plan from last to first entry.
