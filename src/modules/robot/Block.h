@@ -58,22 +58,23 @@ class Block {
         float          entry_speed;
         float          exit_speed;
         float          rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
+        float          max_entry_speed;
         unsigned int   initial_rate;       // Initial speed in steps per second
         unsigned int   final_rate;         // Final speed in steps per second
         unsigned int   accelerate_until;   // Stop accelerating after this number of steps
         unsigned int   decelerate_after;   // Start decelerating after this number of steps
-        unsigned int   direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
+        int8_t         times_taken; // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
 
-        bool recalculate_flag;             // Planner flag to recalculate trapezoids on entry junction
-        bool nominal_length_flag;          // Planner flag for nominal speed always reached
-
-        float max_entry_speed;
-
-        bool is_ready;
-
-        short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
-
+        union {
+            uint8_t       flags;
+            struct {
+                uint8_t direction_bits      :5; // Direction for each axis in bit form, relative to the direction port's mask
+                bool    recalculate_flag    :1; // Planner flag to recalculate trapezoids on entry junction
+                bool    nominal_length_flag :1; // Planner flag for nominal speed always reached
+                bool    is_ready            :1;
+            };
+        };
 };
 
 
