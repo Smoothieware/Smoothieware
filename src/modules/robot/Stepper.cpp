@@ -189,53 +189,54 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy){
 // This is called ACCELERATION_TICKS_PER_SECOND times per second by the step_event
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
-uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy ) {
-
+uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
+{
     // Do not do the accel math for nothing
-    if(this->current_block && !this->paused && this->main_stepper->moving ) {
+    if (current_block && !paused && main_stepper->moving )
+    {
 
         // Store this here because we use it a lot down there
-        uint32_t current_steps_completed = this->main_stepper->stepped;
+        uint32_t current_steps_completed = main_stepper->stepped;
 
         // Do not accel, just set the value
-        if( this->force_speed_update ){
-          this->force_speed_update = false;
-          this->set_step_events_per_second(this->trapezoid_adjusted_rate);
+        if (force_speed_update)
+        {
+          force_speed_update = false;
+          set_step_events_per_second(trapezoid_adjusted_rate);
           return 0;
         }
 
         // If we are accelerating
-        if(current_steps_completed <= this->current_block->accelerate_until + 1) {
+        if (current_steps_completed <= current_block->accelerate_until + 1)
+        {
             // Increase speed
-            this->trapezoid_adjusted_rate += this->current_block->rate_delta;
-              if (this->trapezoid_adjusted_rate > this->current_block->nominal_rate ) {
-                  this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
-              }
-              this->set_step_events_per_second(this->trapezoid_adjusted_rate);
+            trapezoid_adjusted_rate += current_block->rate_delta;
+            if (trapezoid_adjusted_rate > current_block->nominal_rate)
+                trapezoid_adjusted_rate = current_block->nominal_rate;
 
+            set_step_events_per_second(trapezoid_adjusted_rate);
+        }
         // If we are decelerating
-        }else if (current_steps_completed > this->current_block->decelerate_after) {
-             // Reduce speed
-             // NOTE: We will only reduce speed if the result will be > 0. This catches small
-              // rounding errors that might leave steps hanging after the last trapezoid tick.
-              if(this->trapezoid_adjusted_rate > this->current_block->rate_delta * 1.5F) {
-                  this->trapezoid_adjusted_rate -= this->current_block->rate_delta;
-              }else{
-                  this->trapezoid_adjusted_rate = this->current_block->rate_delta * 1.5F;
-              }
-              if(this->trapezoid_adjusted_rate < this->current_block->final_rate ) {
-                  this->trapezoid_adjusted_rate = this->current_block->final_rate;
-              }
-              this->set_step_events_per_second(this->trapezoid_adjusted_rate);
+        else if (current_block->finish_early || (current_steps_completed > current_block->decelerate_after))
+        {
+            // Reduce speed
+            // NOTE: We will only reduce speed if the result will be > 0. This catches small
+            // rounding errors that might leave steps hanging after the last trapezoid tick.
+            if (trapezoid_adjusted_rate > current_block->rate_delta * 1.5F)
+                trapezoid_adjusted_rate -= current_block->rate_delta;
+            else
+                trapezoid_adjusted_rate = current_block->rate_delta * 1.5F;
 
+            if (trapezoid_adjusted_rate < current_block->final_rate )
+                trapezoid_adjusted_rate = current_block->final_rate;
+            set_step_events_per_second(trapezoid_adjusted_rate);
+        }
         // If we are cruising
-        }else {
-              // Make sure we cruise at exactly nominal rate
-              if (this->trapezoid_adjusted_rate != this->current_block->nominal_rate) {
-                  this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
-                  this->set_step_events_per_second(this->trapezoid_adjusted_rate);
-              }
-          }
+        else if (trapezoid_adjusted_rate != current_block->nominal_rate)
+        {
+            trapezoid_adjusted_rate = current_block->nominal_rate;
+            set_step_events_per_second(trapezoid_adjusted_rate);
+        }
     }
 
     return 0;

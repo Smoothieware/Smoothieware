@@ -46,25 +46,26 @@ class Block {
 
         void begin();
 
-        //vector<std::string> commands;
-        //vector<float> travel_distances;
         vector<Gcode> gcodes;
 
         unsigned int   steps[3];           // Number of steps for each axis for this block
+
         unsigned int   steps_event_count;  // Steps for the longest axis
-        unsigned int   nominal_rate;       // Nominal rate in steps per second
-        float          nominal_speed;      // Nominal speed in mm per second
-        float          millimeters;        // Distance for this move
-        float          entry_speed;
-        float          exit_speed;
-        float          rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
-        float          max_entry_speed;
-        unsigned int   initial_rate;       // Initial speed in steps per second
-        unsigned int   final_rate;         // Final speed in steps per second
         unsigned int   accelerate_until;   // Stop accelerating after this number of steps
         unsigned int   decelerate_after;   // Start decelerating after this number of steps
 
-        int8_t         times_taken; // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
+        unsigned int   initial_rate;       // Initial speed in steps per second
+        unsigned int   nominal_rate;       // Nominal speed in steps per second
+        unsigned int   final_rate;         // Final   speed in steps per second
+
+        float          nominal_speed;      // Nominal speed in mm per second
+        float          millimeters;        // Distance for this move (mm)
+        float          entry_speed;        // entry speed (mm/s)
+        float          exit_speed;         // exit speed (mm/s) - stores the exit speed that the trapezoid generator is targeting when a block is currently active
+        float          rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
+        float          max_entry_speed;    // highest allowable entry speed given deceleration profile and permissible exit speed
+
+        int8_t         times_taken;        // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
 
         union {
             uint8_t       flags;
@@ -77,6 +78,5 @@ class Block {
             };
         };
 };
-
 
 #endif

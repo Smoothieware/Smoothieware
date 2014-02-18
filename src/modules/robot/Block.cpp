@@ -38,17 +38,20 @@ void Block::clear()
     clear_vector(this->steps);
 
     steps_event_count   = 0;
+    accelerate_until    = 0;
+    decelerate_after    = 0;
+
+    initial_rate        = -1;
     nominal_rate        = 0;
+    final_rate          = -1;
+
     nominal_speed       = 0.0F;
     millimeters         = 0.0F;
     entry_speed         = 0.0F;
     exit_speed          = 0.0F;
     rate_delta          = 0.0F;
     max_entry_speed     = 0.0F;
-    initial_rate        = -1;
-    final_rate          = -1;
-    accelerate_until    = 0;
-    decelerate_after    = 0;
+
     times_taken         = 0;
     direction_bits      = 0;
     recalculate_flag    = false;
@@ -98,7 +101,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     if (times_taken)
         return;
 
-    // The planner passes us factors, we need to transform them in rates
+    // The planner passes us speeds in mm/s, we need to transform them to rates in steps/s
     this->initial_rate = ceil(this->nominal_rate * entryspeed / this->nominal_speed);   // (step/s)
     this->final_rate   = ceil(this->nominal_rate * exitspeed  / this->nominal_speed);   // (step/s)
 
