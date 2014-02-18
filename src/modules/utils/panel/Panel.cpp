@@ -126,14 +126,14 @@ void Panel::on_module_loaded()
     this->back_button.up_attach(  this, &Panel::on_back );
     this->pause_button.up_attach( this, &Panel::on_pause );
 
-	
-	//setting longpress_delay
-	int longpress_delay =  THEKERNEL->config->value( panel_checksum, longpress_delay_checksum )->by_default(0)->as_number();
-	this->up_button.set_longpress_delay(longpress_delay);
+
+    //setting longpress_delay
+    int longpress_delay =  THEKERNEL->config->value( panel_checksum, longpress_delay_checksum )->by_default(0)->as_number();
+    this->up_button.set_longpress_delay(longpress_delay);
     this->down_button.set_longpress_delay(longpress_delay);
-    this->click_button.set_longpress_delay(longpress_delay);
-    this->back_button.set_longpress_delay(longpress_delay);
-    this->pause_button.set_longpress_delay(longpress_delay);
+//    this->click_button.set_longpress_delay(longpress_delay);
+//    this->back_button.set_longpress_delay(longpress_delay);
+//    this->pause_button.set_longpress_delay(longpress_delay);
 	
 	
     THEKERNEL->slow_ticker->attach( 100,  this, &Panel::button_tick );
