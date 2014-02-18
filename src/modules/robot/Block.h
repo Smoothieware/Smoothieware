@@ -69,10 +69,11 @@ class Block {
         union {
             uint8_t       flags;
             struct {
-                uint8_t direction_bits      :5; // Direction for each axis in bit form, relative to the direction port's mask
+                uint8_t direction_bits      :3; // Direction for each axis in bit form, relative to the direction port's mask
                 bool    recalculate_flag    :1; // Planner flag to recalculate trapezoids on entry junction
                 bool    nominal_length_flag :1; // Planner flag for nominal speed always reached
                 bool    is_ready            :1;
+                bool    finish_early        :1; // assert if we want the block to end NOW rather than finish all steps
             };
         };
 };

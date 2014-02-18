@@ -44,16 +44,17 @@ void Block::clear()
     entry_speed         = 0.0F;
     exit_speed          = 0.0F;
     rate_delta          = 0.0F;
+    max_entry_speed     = 0.0F;
     initial_rate        = -1;
     final_rate          = -1;
     accelerate_until    = 0;
     decelerate_after    = 0;
+    times_taken         = 0;
     direction_bits      = 0;
     recalculate_flag    = false;
     nominal_length_flag = false;
-    max_entry_speed     = 0.0F;
     is_ready            = false;
-    times_taken         = 0;
+    finish_early        = false;
 }
 
 void Block::debug()
