@@ -16,8 +16,41 @@
 #include "libs/Median.h"
 #include "modules/robot/Conveyor.h"
 #include "PublicDataRequest.h"
+#include "TemperatureControlPublicAccess.h"
 
 #include "MRI_Hooks.h"
+
+#define UNDEFINED -1
+
+#define thermistor_checksum                CHECKSUM("thermistor")
+#define r0_checksum                        CHECKSUM("r0")
+#define readings_per_second_checksum       CHECKSUM("readings_per_second")
+#define max_pwm_checksum                   CHECKSUM("max_pwm")
+#define pwm_frequency_checksum             CHECKSUM("pwm_frequency")
+#define t0_checksum                        CHECKSUM("t0")
+#define beta_checksum                      CHECKSUM("beta")
+#define vadc_checksum                      CHECKSUM("vadc")
+#define vcc_checksum                       CHECKSUM("vcc")
+#define r1_checksum                        CHECKSUM("r1")
+#define r2_checksum                        CHECKSUM("r2")
+#define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
+#define heater_pin_checksum                CHECKSUM("heater_pin")
+
+#define get_m_code_checksum                CHECKSUM("get_m_code")
+#define set_m_code_checksum                CHECKSUM("set_m_code")
+#define set_and_wait_m_code_checksum       CHECKSUM("set_and_wait_m_code")
+
+#define designator_checksum                CHECKSUM("designator")
+
+#define p_factor_checksum                  CHECKSUM("p_factor")
+#define i_factor_checksum                  CHECKSUM("i_factor")
+#define d_factor_checksum                  CHECKSUM("d_factor")
+
+#define i_max_checksum                     CHECKSUM("i_max")
+
+#define preset1_checksum                   CHECKSUM("preset1")
+#define preset2_checksum                   CHECKSUM("preset2")
+
 
 TemperatureControl::TemperatureControl(uint16_t name) :
   name_checksum(name), waiting(false), min_temp_violated(false) {}
