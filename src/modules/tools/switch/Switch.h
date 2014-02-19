@@ -11,9 +11,6 @@
 #include "libs/Pin.h"
 #include <math.h>
 
-#include "SwitchPublicAccess.h"
-
-
 class Switch : public Module {
     public:
         Switch();
