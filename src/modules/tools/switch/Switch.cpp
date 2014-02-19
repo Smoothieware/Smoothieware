@@ -12,10 +12,12 @@
 #include "Switch.h"
 #include "libs/Pin.h"
 #include "modules/robot/Conveyor.h"
+#include "PublicDataRequest.h"
+#include "SwitchPublicAccess.h"
+
 
 #include "MRI_Hooks.h"
 
-#define    switch_checksum              CHECKSUM("switch")
 #define    startup_state_checksum       CHECKSUM("startup_state")
 #define    startup_value_checksum       CHECKSUM("startup_value")
 #define    input_pin_checksum           CHECKSUM("input_pin")
@@ -44,6 +46,8 @@ void Switch::on_module_loaded(){
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_MAIN_LOOP);
+    this->register_for_event(ON_GET_PUBLIC_DATA);
+    this->register_for_event(ON_SET_PUBLIC_DATA);
 
     // Settings
     this->on_config_reload(this);
@@ -147,6 +151,44 @@ void Switch::on_gcode_execute(void* argument){
         // Turn pin off
         this->output_pin.set(0);
         this->switch_state = false;
+    }
+}
+
+void Switch::on_get_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(switch_checksum)) return;
+
+    if(!pdr->second_element_is(this->name_checksum)) return; // likely fan, but could be anything
+
+    // ok this is targeted at us, so send back the requested data
+    // this must be static as it will be accessed long after we have returned
+    static struct pad_switch pad;
+    pad.name= this->name_checksum;
+    pad.state= this->switch_state;
+    pad.value= this->switch_value;
+
+    pdr->set_data_ptr(&pad);
+    pdr->set_taken();
+}
+
+void Switch::on_set_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(switch_checksum)) return;
+
+    if(!pdr->second_element_is(this->name_checksum)) return; // likely fan, but could be anything
+
+    // ok this is targeted at us, so set the value
+    if(pdr->third_element_is(state_checksum)) {
+        bool t= *static_cast<bool*>(pdr->get_data_ptr());
+        this->switch_state = t;
+        pdr->set_taken();
+    }
+    else if(pdr->third_element_is(value_checksum)) {
+        float t= *static_cast<float*>(pdr->get_data_ptr());
+        this->switch_value = t;
+        pdr->set_taken();
     }
 }
 
