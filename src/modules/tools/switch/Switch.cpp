@@ -13,10 +13,11 @@
 #include "libs/Pin.h"
 #include "modules/robot/Conveyor.h"
 #include "PublicDataRequest.h"
+#include "SwitchPublicAccess.h"
+
 
 #include "MRI_Hooks.h"
 
-#define    switch_checksum              CHECKSUM("switch")
 #define    startup_state_checksum       CHECKSUM("startup_state")
 #define    startup_value_checksum       CHECKSUM("startup_value")
 #define    input_pin_checksum           CHECKSUM("input_pin")
