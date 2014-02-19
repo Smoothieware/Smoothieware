@@ -109,10 +109,10 @@ void Homer::home_actuators(Gcode* gcode)
         // set all active endstops to be checked
         for (int i = 0; i < 3; i++)
         {
-            if (THEKERNEL->robot->actuators[i]->stop)
+            if (THEKERNEL->robot->actuators[i]->active_stop)
             {
-                check[i] = THEKERNEL->robot->actuators[i]->stop->check;
-                THEKERNEL->robot->actuators[i]->stop->check = true;
+                check[i] = THEKERNEL->robot->actuators[i]->active_stop->check;
+                THEKERNEL->robot->actuators[i]->active_stop->check = true;
             }
         }
 
@@ -122,11 +122,11 @@ void Homer::home_actuators(Gcode* gcode)
         // update actuator positions
         for (int i = 0; i < 3; i++)
         {
-            if (THEKERNEL->robot->actuators[i]->stop)
+            if (THEKERNEL->robot->actuators[i]->active_stop)
             {
-                THEKERNEL->robot->actuators[i]->stop->check = check[i];
+                THEKERNEL->robot->actuators[i]->active_stop->check = check[i];
                 // TODO: cache or report endstop trigger position
-                THEKERNEL->robot->actuators[i]->change_last_milestone(THEKERNEL->robot->actuators[i]->stop->position);
+                THEKERNEL->robot->actuators[i]->change_last_milestone(THEKERNEL->robot->actuators[i]->active_stop->position);
             }
         }
     }
@@ -227,9 +227,9 @@ void Homer::home_axes(Gcode* gcode)
             {
                 Actuator* axis = &THEKERNEL->robot->axes[i];
                 if (axes[i] == HOME_TO_MAX)
-                    axis->stop = axis->max_stop;
+                    axis->active_stop = axis->max_stop;
                 else if (axes[i] == HOME_TO_MIN)
-                    axis->stop = axis->min_stop;
+                    axis->active_stop = axis->min_stop;
             }
 
             // wait for move to complete
@@ -239,7 +239,7 @@ void Homer::home_axes(Gcode* gcode)
                 for (int i = 0; i < 3; i++)
                 {
                     Actuator* axis = &THEKERNEL->robot->axes[i];
-                    if ((axes[i] != NO_HOME) && axis->stop && axis->stop->asserted())
+                    if ((axes[i] != NO_HOME) && axis->active_stop && axis->active_stop->asserted())
                     {
                         // endstop triggered!
                         triggered = i;
@@ -259,8 +259,8 @@ void Homer::home_axes(Gcode* gcode)
 
                     THEKERNEL->conveyor->wait_for_empty_queue();
 
-                    axis->change_last_milestone(axis->stop->position);
-                    axis->stop = NULL;
+                    axis->change_last_milestone(axis->active_stop->position);
+                    axis->active_stop = NULL;
                 }
             }
         }

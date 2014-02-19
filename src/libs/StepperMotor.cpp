@@ -69,7 +69,7 @@ void StepperMotor::step()
     this->stepped++;
 
     // check endstop
-    if (stop && stop->check && stop->asserted())
+    if (active_stop && active_stop->check && active_stop->asserted())
     {
         // TODO: decelerate instead of stopping dead
         if (signal_step)
@@ -135,9 +135,9 @@ void StepperMotor::move( bool direction, unsigned int steps ){
     this->direction = direction;
 
     if (direction)
-        stop = max_stop;
+        active_stop = max_stop;
     else
-        stop = min_stop;
+        active_stop = min_stop;
 
     // How many steps we have to move until the move is done
     this->steps_to_move = steps;
@@ -157,6 +157,15 @@ void StepperMotor::move( bool direction, unsigned int steps ){
     }
     this->update_exit_tick();
 
+}
+
+void StepperMotor::stop()
+{
+    if (moving)
+    {
+        if (steps_to_move > stepped)
+            steps_to_move = stepped + 1;
+    }
 }
 
 // Set the speed at which this steper moves

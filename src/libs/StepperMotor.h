@@ -36,7 +36,10 @@ class StepperMotor : public Actuator {
         inline void enable(bool state) { en_pin.set(!state); };
 
         void move_finished();
+
         void move( bool direction, unsigned int steps );
+        void stop(void);
+
         void signal_move_finished();
         void set_speed( float speed );
         void update_exit_tick();
