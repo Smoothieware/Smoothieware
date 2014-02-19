@@ -11,6 +11,8 @@
 #include "libs/Pin.h"
 #include <math.h>
 
+#include "SwitchPublicAccess.h"
+
 
 class Switch : public Module {
     public:
@@ -22,6 +24,8 @@ class Switch : public Module {
         void on_gcode_received(void* argument);
         void on_gcode_execute(void* argument);
         void on_main_loop(void* argument);
+        void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
         uint32_t pinpoll_tick(uint32_t dummy);
 
     private:
