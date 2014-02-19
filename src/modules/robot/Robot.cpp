@@ -536,7 +536,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
 
     // Update the last_milestone to the current target for the next time we use last_milestone
     for (int i = 0; i < 3; i++)
-        axes[i].last_milestone = target[i];
+        axes[i].change_last_milestone(target[i]);
 
 }
 
