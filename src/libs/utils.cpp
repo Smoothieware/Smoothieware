@@ -91,7 +91,7 @@ string lc(string str){
 
 // Remove non-number characters
 string remove_non_number( string str ){
-    string number_mask = "0123456789-.";
+    string number_mask = "0123456789-.abcdefpxABCDEFPX";
     size_t found=str.find_first_not_of(number_mask);
     while (found!=string::npos){
         //str[found]='*';
