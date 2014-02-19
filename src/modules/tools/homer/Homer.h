@@ -10,22 +10,29 @@
 
 #include "libs/Module.h"
 
+#include <string>
+
 #define HOME_TO_MAX 2
 #define HOME_TO_MIN 1
 #define NO_HOME     0
 
 class Gcode;
 
+using std::string;
+
 class Homer : public Module
 {
 public:
     Homer();
     void on_module_loaded();
-    void on_gcode_received(void* argument);
+    void on_gcode_received(void*);
+    void on_config_reload( void*);
 
 private:
-    void home_actuators(Gcode* gcode);
-    void home_axes(Gcode* gcode);
+    string assemble_set_from_gcode(Gcode*);
+    void home_set(string);
+
+    string homing_order;
 };
 
 #endif /* _HOMER_H */
