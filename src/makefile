@@ -46,6 +46,9 @@ else
 DEFINES += -D__GITVERSIONSTRING__=\"placeholder\"
 endif
 
+# use c++11 features for the checksums
+DEFINES += -DCHECKSUM_USE_CPP
+
 # add any modules that you do not want included in the build
 export EXCLUDED_MODULES = tools/touchprobe
 # e.g for a CNC machine
