@@ -146,6 +146,10 @@ void Robot::on_config_reload(void* argument){
     this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(    0.5f)->as_number();
     this->arc_correction      = THEKERNEL->config->value(arc_correction_checksum      )->by_default(    5   )->as_number();
 
+    axes[X_AXIS].designator   = 'X';
+    axes[Y_AXIS].designator   = 'Y';
+    axes[Z_AXIS].designator   = 'Z';
+
     axes[X_AXIS].max_speed    = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     axes[Y_AXIS].max_speed    = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     axes[Z_AXIS].max_speed    = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
@@ -189,6 +193,10 @@ void Robot::on_config_reload(void* argument){
     alpha_stepper_motor->max_speed = THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
     beta_stepper_motor->max_speed  = THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F;
     gamma_stepper_motor->max_speed = THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
+
+    alpha_stepper_motor->designator = 'A';
+    beta_stepper_motor->designator  = 'B';
+    gamma_stepper_motor->designator = 'C';
 
     actuators.clear();
     actuators.push_back(alpha_stepper_motor);

@@ -19,9 +19,12 @@ public:
         soft_min       = NAN;
         soft_max       = NAN;
         last_milestone = 0.0F;
+        designator     = '?';
     };
 
     uint16_t name_checksum;
+
+    uint8_t  designator;
 
     float max_speed;
     float accel;
