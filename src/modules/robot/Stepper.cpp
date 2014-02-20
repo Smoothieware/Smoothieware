@@ -206,8 +206,30 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
           return 0;
         }
 
+        if (THEKERNEL->conveyor->flush)
+        {
+            if (trapezoid_adjusted_rate > current_block->rate_delta * 1.5F)
+            {
+                trapezoid_adjusted_rate -= current_block->rate_delta;
+            }
+            else if (trapezoid_adjusted_rate == 0.0F)
+            {
+                for (auto i = THEKERNEL->robot->actuators.begin(); i != THEKERNEL->robot->actuators.end(); i++)
+                    (*i)->move(0, 0);
+
+                if (current_block)
+                    current_block->release();
+
+                return 0;
+            }
+            else
+            {
+                trapezoid_adjusted_rate = current_block->rate_delta * 0.5F;
+            }
+            set_step_events_per_second(trapezoid_adjusted_rate);
+        }
         // If we are accelerating
-        if (current_steps_completed <= current_block->accelerate_until + 1)
+        else if (current_steps_completed <= current_block->accelerate_until + 1)
         {
             // Increase speed
             trapezoid_adjusted_rate += current_block->rate_delta;
@@ -217,7 +239,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
             set_step_events_per_second(trapezoid_adjusted_rate);
         }
         // If we are decelerating
-        else if (current_block->finish_early || (current_steps_completed > current_block->decelerate_after))
+        else if (current_steps_completed > current_block->decelerate_after)
         {
             // Reduce speed
             // NOTE: We will only reduce speed if the result will be > 0. This catches small

@@ -99,7 +99,6 @@ void Block::clear()
     recalculate_flag    = false;
     nominal_length_flag = false;
     is_ready            = false;
-    finish_early        = false;
 }
 
 void Block::debug()
