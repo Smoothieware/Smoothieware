@@ -29,7 +29,6 @@ using namespace std;
 // It goes over the list in both direction, every time a block is added, re-doing the math to make sure everything is optimal
 
 Planner::Planner(){
-    clear_vector_float(this->previous_unit_vec);
     this->has_deleted_block = false;
 }
 
@@ -47,7 +46,7 @@ void Planner::on_config_reload(void* argument){
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( float actuator_pos[], float rate_mm_s, float distance, float unit_vec[] )
+void Planner::append_block( float actuator_pos[], float rate_mm_s, float distance, float cos_theta )
 {
     // Create ( recycle ) a new block
     Block* block = THEKERNEL->conveyor->queue.head_ref();
@@ -106,23 +105,14 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     if (!THEKERNEL->conveyor->queue.is_empty())
     {
         float previous_nominal_speed = THEKERNEL->conveyor->queue.item_ref(THEKERNEL->conveyor->queue.prev(THEKERNEL->conveyor->queue.head_i))->nominal_speed;
-
-        if (previous_nominal_speed > 0.0F) {
-            // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
-            // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
-            float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
-                                - this->previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
-                                - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
-
-            // Skip and use default max junction speed for 0 degree acute junction.
-            if (cos_theta < 0.95F) {
-                vmax_junction = min(previous_nominal_speed, block->nominal_speed);
-                // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
-                if (cos_theta > -0.95F) {
-                    // Compute maximum junction velocity based on maximum acceleration and junction deviation
-                    float sin_theta_d2 = sqrtf(0.5F * (1.0F - cos_theta)); // Trig half angle identity. Always positive.
-                    vmax_junction = min(vmax_junction, sqrtf(this->acceleration * this->junction_deviation * sin_theta_d2 / (1.0F - sin_theta_d2)));
-                }
+        // Skip and use default max junction speed for 0 degree acute junction.
+        if (cos_theta < 0.95F) {
+            vmax_junction = min(previous_nominal_speed, block->nominal_speed);
+            // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
+            if (cos_theta > -0.95F) {
+                // Compute maximum junction velocity based on maximum acceleration and junction deviation
+                float sin_theta_d2 = sqrtf(0.5F * (1.0F - cos_theta)); // Trig half angle identity. Always positive.
+                vmax_junction = min(vmax_junction, sqrtf(this->acceleration * this->junction_deviation * sin_theta_d2 / (1.0F - sin_theta_d2)));
             }
         }
     }
@@ -145,9 +135,6 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
 
     // Always calculate trapezoid for new block
     block->recalculate_flag = true;
-
-    // Update previous path unit_vector and nominal speed
-    memcpy(this->previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();

@@ -93,6 +93,7 @@ Robot::Robot(){
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
+    clear_vector_float(prev_unit_vec);
 }
 
 //Called when the module has just been loaded
@@ -515,6 +516,21 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     for (int i = 0; i < 3; i++)
         unit_vec[i] = deltas[i] / millimeters_of_travel;
 
+    float cos_theta = 1.0F;
+
+    if (THEKERNEL->conveyor->queue.is_empty())
+    {
+        clear_vector_float(prev_unit_vec);
+    }
+    else
+    {
+        cos_theta = - prev_unit_vec[X_AXIS] * unit_vec[X_AXIS]
+                    - prev_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
+                    - prev_unit_vec[Z_AXIS] * unit_vec[Z_AXIS];
+
+        memcpy(prev_unit_vec, unit_vec, sizeof(prev_unit_vec));
+    }
+
     // Do not move faster than the configured cartesian limits
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
     {
@@ -530,14 +546,14 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     // find actuator position given cartesian position
     arm_solution->cartesian_to_actuator( target, actuator_pos );
 
-    append_actuator_milestone(actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec);
+    append_actuator_milestone(actuator_pos, rate_mm_s, millimeters_of_travel, cos_theta);
 
     // Update the last_milestone to the current target for the next time we use last_milestone
     for (int i = 0; i < 3; i++)
         axes[i].change_last_milestone(target[i]);
 }
 
-void Robot::append_actuator_milestone( float* actuator_pos, float rate_mm_s, float cartesian_distance, float* unit_vec)
+void Robot::append_actuator_milestone( float* actuator_pos, float rate_mm_s, float cartesian_distance, float cos_theta)
 {
     // check per-actuator speed limits
     for (int actuator = 0; actuator <= 2; actuator++)
@@ -549,7 +565,7 @@ void Robot::append_actuator_milestone( float* actuator_pos, float rate_mm_s, flo
     }
 
     // Append the block to the planner
-    THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, cartesian_distance, unit_vec );
+    THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, cartesian_distance, cos_theta );
 
     // actuator milestones are updated inside Planner::append_block in a way that does not experience drift due to use of floats
 }

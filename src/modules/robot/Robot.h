@@ -61,7 +61,7 @@ class Robot : public Module {
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
         void append_milestone( float target[], float rate_mm_s);
-        void append_actuator_milestone( float target[], float rate_mm_s, float cartesian_distance, float* unit_vec);
+        void append_actuator_milestone( float target[], float rate_mm_s, float cartesian_distance, float cos_theta);
         void append_line( Gcode* gcode, float target[], float rate_mm_s);
         //void append_arc(float theta_start, float angular_travel, float radius, float depth, float rate);
         void append_arc( Gcode* gcode, float target[], float offset[], float radius, bool is_clockwise );
@@ -80,6 +80,7 @@ class Robot : public Module {
         float mm_per_line_segment;                           // Setting : Used to split lines into segments
         float mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
+        float prev_unit_vec[3];
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
