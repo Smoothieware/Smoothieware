@@ -268,11 +268,11 @@ void Robot::on_gcode_received(void * argument){
             case 92: {
                 if(gcode->get_num_args() == 0){
                     for (int i = 0; i < 3; i++)
-                        axes[i].last_milestone = 0.0F;
+                        axes[i].change_last_milestone(0.0F);
                 }else{
                     for (char letter = 'X'; letter <= 'Z'; letter++){
                         if ( gcode->has_letter(letter) )
-                            axes[letter-'X'].last_milestone = this->to_millimeters(gcode->get_value(letter));
+                            axes[letter-'X'].change_last_milestone(to_millimeters(gcode->get_value(letter)));
                     }
                 }
 
@@ -468,7 +468,7 @@ void Robot::on_gcode_received(void * argument){
     // motion control system might still be processing the action and the real tool position
     // in any intermediate location.
     for (int i = 0; i < 3; i++)
-        axes[i].last_milestone = target[i];
+        axes[i].change_last_milestone(target[i]);
 
 }
 
@@ -483,7 +483,7 @@ void Robot::distance_in_gcode_is_known(Gcode* gcode){
 
 // Reset the position for all axes ( used in homing and G92 stuff )
 void Robot::reset_axis_position(float position, int axis) {
-    axes[axis].last_milestone = position;
+    axes[axis].change_last_milestone(position);
 
     float last_milestone[3];
     float actuator_pos[3];
@@ -530,22 +530,28 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     // find actuator position given cartesian position
     arm_solution->cartesian_to_actuator( target, actuator_pos );
 
+    append_actuator_milestone(actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec);
+
+    // Update the last_milestone to the current target for the next time we use last_milestone
+    for (int i = 0; i < 3; i++)
+        axes[i].change_last_milestone(target[i]);
+}
+
+void Robot::append_actuator_milestone( float* actuator_pos, float rate_mm_s, float cartesian_distance, float* unit_vec)
+{
     // check per-actuator speed limits
     for (int actuator = 0; actuator <= 2; actuator++)
     {
-        float actuator_rate  = fabs(actuator_pos[actuator] - actuators[actuator]->last_milestone) * rate_mm_s / millimeters_of_travel;
+        float actuator_rate  = fabs(actuator_pos[actuator] - actuators[actuator]->last_milestone) * rate_mm_s / cartesian_distance;
 
         if (actuator_rate > actuators[actuator]->max_speed)
             rate_mm_s *= (actuators[actuator]->max_speed / actuator_rate);
     }
 
     // Append the block to the planner
-    THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
+    THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, cartesian_distance, unit_vec );
 
-    // Update the last_milestone to the current target for the next time we use last_milestone
-    for (int i = 0; i < 3; i++)
-        axes[i].change_last_milestone(target[i]);
-
+    // actuator milestones are updated inside Planner::append_block in a way that does not experience drift due to use of floats
 }
 
 // Append a move to the queue ( cutting it into segments if needed )
