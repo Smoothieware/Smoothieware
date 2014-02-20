@@ -47,8 +47,10 @@ public:
 
     Queue_t queue;  // Queue of Blocks
 
-    volatile bool running;
-    volatile bool flush;
+    struct {
+        volatile bool running :1;
+        volatile bool flush   :1;
+    };
 
     volatile unsigned int gc_pending;
 };
