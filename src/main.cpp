@@ -21,6 +21,7 @@
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
 #include "libs/Network/uip/Network.h"
+#include "Endstops.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/Config.h"
@@ -103,6 +104,7 @@ int main() {
     kernel->add_module( new PlayLed() );
     kernel->add_module( new Homer() );
     kernel->add_module( new Player() );
+    kernel->add_module( new Endstops() );
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
     #ifndef NO_TOOLS_TEMPERATURECONTROL
