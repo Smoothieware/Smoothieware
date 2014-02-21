@@ -129,11 +129,30 @@ void Homer::home_set(string set)
         else if (*i == ',')
         {
             // TODO: home this set
-
-            THEKERNEL->serial->printf("Homing Set:\n");
-            for (auto j = actuators.begin(); j != actuators.end(); j++)
+            for (auto i = actuators.begin(); i != actuators.end();)
             {
-                THEKERNEL->serial->printf("\t%p: %c to %s\n", j->actuator, j->actuator->designator, j->home_to_max?"MAX":"MIN");
+                if ((i->actuator->max_stop == NULL) && (i->actuator->min_stop == NULL))
+                {
+                    actuators.erase(i);
+                    i = actuators.begin();
+                    continue;
+                }
+
+                if (i->home_to_max && (i->actuator->max_stop == NULL) && (i->actuator->min_stop))
+                    i->home_to_max = false;
+                else if ((i->home_to_max == false) && (i->actuator->max_stop) && (i->actuator->min_stop == NULL))
+                    i->home_to_max = true;
+
+                i++;
+            }
+
+            if (actuators.size())
+            {
+                THEKERNEL->serial->printf("Homing Set:\n");
+                for (auto j = actuators.begin(); j != actuators.end(); j++)
+                {
+                    THEKERNEL->serial->printf("\t%p: %c to %s\n", j->actuator, j->actuator->designator, j->home_to_max?"MAX":"MIN");
+                }
             }
 
             actuators.clear();
