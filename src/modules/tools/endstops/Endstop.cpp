@@ -52,8 +52,6 @@ void Endstop::on_module_loaded()
     register_for_event(ON_CONFIG_RELOAD);
 
     on_config_reload(this);
-
-    THEKERNEL->serial->printf("E %u %s\n", name_checksum, name);
 }
 
 void Endstop::on_config_reload(void*)
