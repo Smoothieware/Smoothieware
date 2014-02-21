@@ -516,20 +516,11 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     for (int i = 0; i < 3; i++)
         unit_vec[i] = deltas[i] / millimeters_of_travel;
 
-    float cos_theta = 1.0F;
+    float cos_theta = - prev_unit_vec[X_AXIS] * unit_vec[X_AXIS]
+                      - prev_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
+                      - prev_unit_vec[Z_AXIS] * unit_vec[Z_AXIS];
 
-    if (THEKERNEL->conveyor->queue.is_empty())
-    {
-        clear_vector_float(prev_unit_vec);
-    }
-    else
-    {
-        cos_theta = - prev_unit_vec[X_AXIS] * unit_vec[X_AXIS]
-                    - prev_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
-                    - prev_unit_vec[Z_AXIS] * unit_vec[Z_AXIS];
-
-        memcpy(prev_unit_vec, unit_vec, sizeof(prev_unit_vec));
-    }
+    memcpy(prev_unit_vec, unit_vec, sizeof(prev_unit_vec));
 
     // Do not move faster than the configured cartesian limits
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
