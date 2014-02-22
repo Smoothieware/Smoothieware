@@ -20,6 +20,10 @@
 
 #define homing_order_checksum CHECKSUM("homing_order")
 
+#include <map>
+
+using std::map;
+
 Homer::Homer()
 {
 }
@@ -50,7 +54,7 @@ void Homer::on_gcode_received(void *argument)
         // wait for the queue to be empty
         THEKERNEL->conveyor->wait_for_empty_queue();
 
-        home_set(assemble_set_from_gcode(gcode));
+        confirm_set(assemble_set_from_gcode(gcode));
     }
 }
 
@@ -93,19 +97,9 @@ string Homer::assemble_set_from_gcode(Gcode* gcode)
     return set;
 }
 
-void Homer::home_set(string set)
+void Homer::confirm_set(string set)
 {
-    struct homing_info
-    {
-        Actuator* actuator;
-
-        struct {
-            bool home_to_max :1;
-            bool is_axis     :1;
-        };
-    };
-
-    std::vector<struct homing_info> actuators;
+    vector<struct homing_info> actuators;
     actuators.reserve(3);
 
     for (auto i = set.begin(); i != set.end(); i++)
@@ -148,14 +142,151 @@ void Homer::home_set(string set)
 
             if (actuators.size())
             {
-                THEKERNEL->serial->printf("Homing Set:\n");
-                for (auto j = actuators.begin(); j != actuators.end(); j++)
-                {
-                    THEKERNEL->serial->printf("\t%p: %c to %s\n", j->actuator, j->actuator->designator, j->home_to_max?"MAX":"MIN");
-                }
+                home_set(actuators);
             }
 
             actuators.clear();
+        }
+    }
+}
+
+void Homer::home_set(vector<struct homing_info>& actuators)
+{
+    map<homing_info*, float> motion_vector;
+
+    THEKERNEL->serial->printf("Homing Set:\n");
+
+    for (homing_info& a : actuators)
+    {
+        a.state = HOMING_STATE_FAST_HOME;
+        motion_vector[&a] = INFINITY;
+
+        THEKERNEL->serial->printf("\t%p: %c to %s\n", a.actuator, a.actuator->designator, a.home_to_max?"MAX":"MIN");
+    }
+
+    while (actuators.size())
+    {
+        for (homing_info& a : actuators)
+        {
+            float vec = 0.0F;
+            enum homing_states new_state = a.state;
+
+            switch (a.state)
+            {
+                /*
+                 * STATE ACTIONS
+                 */
+                case HOMING_STATE_FAST_HOME:
+                {
+                    vec = 1.0F;
+                    if (a.actuator->active_stop->asserted())
+                        new_state = HOMING_STATE_FAST_DEASSERT_ENDSTOP;
+                    break;
+                }
+                case HOMING_STATE_FAST_DEASSERT_ENDSTOP:
+                {
+                    vec = -1.0F;
+                    if (a.actuator->active_stop->asserted())
+                        new_state = HOMING_STATE_FAST_RETRACT;
+                    break;
+                }
+                case HOMING_STATE_FAST_RETRACT:
+                {
+                    vec = -1.0F;
+                    // TODO: stop when we've moved far enough
+                    break;
+                }
+
+                case HOMING_STATE_SLOW_HOME:
+                {
+                    vec = 0.1F;
+                    if (a.actuator->active_stop->asserted())
+                        new_state = HOMING_STATE_SLOW_DEASSERT_ENDSTOP;
+                    break;
+                }
+                case HOMING_STATE_SLOW_DEASSERT_ENDSTOP:
+                {
+                    vec = -0.1F;
+                    if (a.actuator->active_stop->asserted())
+                        new_state = HOMING_STATE_SLOW_RETRACT;
+                    break;
+                }
+                case HOMING_STATE_SLOW_RETRACT:
+                {
+                    vec = -0.1F;
+                    // TODO: stop when we've moved far enough
+                    break;
+                }
+
+                case HOMING_STATE_POST_HOME_MOVE:
+                {
+                    // TODO
+                    vec = 0.0F;
+                    break;
+                }
+                case HOMING_STATE_DONE:
+                {
+                    vec = 0.0F;
+                    break;
+                }
+
+                default:
+                    new_state = HOMING_STATE_DONE;
+                    break;
+            }
+
+            if (vec != motion_vector[&a])
+            {
+                // TODO: update continuous motion vector in Robot or Stepper
+                if (a.home_to_max)
+                    vec = -vec;
+
+                // sanity check
+                if (isinf(vec))
+                {
+                    a.state = HOMING_STATE_DONE;
+                    motion_vector[&a] = 0.0F;
+                }
+                else
+                    motion_vector[&a] = vec;
+            }
+
+            if (new_state != a.state)
+            {
+                /*
+                 * STATE TRANSITIONS
+                 */
+                switch (new_state)
+                {
+                    case HOMING_STATE_FAST_DEASSERT_ENDSTOP:
+                    case HOMING_STATE_SLOW_DEASSERT_ENDSTOP:
+                    {
+                        // select appropriate endstop- StepperMotor will choose the wrong one since we're moving away from it
+                        a.actuator->active_stop = (a.home_to_max) ? a.actuator->max_stop : a.actuator->min_stop;
+                        break;
+                    }
+                    case HOMING_STATE_POST_HOME_MOVE:
+                    {
+                        // TODO: flush queue, insert a regular move, wait for it to complete then continue homing
+                        THEKERNEL->conveyor->flush_queue();
+
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
+                a.state = new_state;
+            }
+        }
+
+        for (auto a = actuators.begin(); a != actuators.end(); a++)
+        {
+            if (a->state == HOMING_STATE_DONE)
+            {
+                actuators.erase(a);
+                a = actuators.begin();
+            }
         }
     }
 }

@@ -9,8 +9,10 @@
 #define _HOMER_H
 
 #include "libs/Module.h"
+#include "Actuator.h"
 
 #include <string>
+#include <vector>
 
 #define HOME_TO_MAX 2
 #define HOME_TO_MIN 1
@@ -19,6 +21,21 @@
 class Gcode;
 
 using std::string;
+using std::vector;
+
+enum homing_states {
+    HOMING_STATE_FAST_HOME,
+    HOMING_STATE_FAST_DEASSERT_ENDSTOP,
+    HOMING_STATE_FAST_RETRACT,
+
+    HOMING_STATE_SLOW_HOME,
+    HOMING_STATE_SLOW_DEASSERT_ENDSTOP,
+    HOMING_STATE_SLOW_RETRACT,
+
+    HOMING_STATE_POST_HOME_MOVE,
+
+    HOMING_STATE_DONE
+};
 
 class Homer : public Module
 {
@@ -29,8 +46,21 @@ public:
     void on_config_reload( void*);
 
 private:
+    struct homing_info
+    {
+        Actuator* actuator;
+
+        struct {
+            bool home_to_max :1;
+            bool is_axis     :1;
+
+            enum homing_states state :6;
+        };
+    };
+
     string assemble_set_from_gcode(Gcode*);
-    void home_set(string);
+    void confirm_set(string);
+    void home_set(vector<struct homing_info>& actuators);
 
     string homing_order;
 };
