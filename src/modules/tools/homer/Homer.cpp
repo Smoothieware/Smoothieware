@@ -288,5 +288,8 @@ void Homer::home_set(vector<struct homing_info>& actuators)
                 a = actuators.begin();
             }
         }
+
+        // call idle event so other modules can do stuff while we home
+        THEKERNEL->call_event(ON_IDLE);
     }
 }
