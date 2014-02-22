@@ -53,6 +53,9 @@ class Robot : public Module {
         float to_millimeters(float value);
         float from_millimeters(float value);
 
+        void append_line( Gcode* gcode, float target[], float rate_mm_s);
+        void append_actuator_milestone( float target[], float rate_mm_s, float cartesian_distance, float cos_theta);
+
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
 
@@ -61,8 +64,6 @@ class Robot : public Module {
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
         void append_milestone( float target[], float rate_mm_s);
-        void append_actuator_milestone( float target[], float rate_mm_s, float cartesian_distance, float cos_theta);
-        void append_line( Gcode* gcode, float target[], float rate_mm_s);
         //void append_arc(float theta_start, float angular_travel, float radius, float depth, float rate);
         void append_arc( Gcode* gcode, float target[], float offset[], float radius, bool is_clockwise );
 

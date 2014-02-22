@@ -565,19 +565,23 @@ void Robot::append_actuator_milestone( float* actuator_pos, float rate_mm_s, flo
 void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
 
     // Find out the distance for this gcode
-    gcode->millimeters_of_travel = pow(target[X_AXIS] - axes[X_AXIS].last_milestone, 2)
+    float millimeters_of_travel = pow(target[X_AXIS] - axes[X_AXIS].last_milestone, 2)
                                 +  pow(target[Y_AXIS] - axes[Y_AXIS].last_milestone, 2)
                                 +  pow(target[Z_AXIS] - axes[Z_AXIS].last_milestone, 2);
 
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
-    if( gcode->millimeters_of_travel < 1e-8F ){
+    if( millimeters_of_travel < 1e-8F ){
         return;
     }
 
-    gcode->millimeters_of_travel = sqrtf(gcode->millimeters_of_travel);
+    millimeters_of_travel = sqrtf(millimeters_of_travel);
 
-    // Mark the gcode as having a known distance
-    this->distance_in_gcode_is_known( gcode );
+    if (gcode)
+    {
+        gcode->millimeters_of_travel = millimeters_of_travel;
+        // Mark the gcode as having a known distance
+        this->distance_in_gcode_is_known( gcode );
+    }
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
@@ -589,7 +593,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
         // segment based on current speed and requested segments per second
         // the faster the travel speed the fewer segments needed
         // NOTE rate is mm/sec and we take into account any speed override
-        float seconds = gcode->millimeters_of_travel / rate_mm_s;
+        float seconds = millimeters_of_travel / rate_mm_s;
         segments= max(1, ceil(this->delta_segments_per_second * seconds));
         // TODO if we are only moving in Z on a delta we don't really need to segment at all
 
@@ -597,7 +601,7 @@ void Robot::append_line(Gcode* gcode, float target[], float rate_mm_s ){
         if(this->mm_per_line_segment == 0.0F){
             segments= 1; // don't split it up
         }else{
-            segments = ceil( gcode->millimeters_of_travel/ this->mm_per_line_segment);
+            segments = ceil( millimeters_of_travel/ this->mm_per_line_segment);
         }
     }
 
