@@ -37,6 +37,7 @@ public:
     float soft_max;
 
     volatile bool moving;
+    float rate_ratio;
 
     virtual void change_last_milestone(float) = 0;
     float last_milestone;

@@ -158,6 +158,10 @@ void Stepper::on_block_begin(void* argument){
     if( THEKERNEL->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = THEKERNEL->robot->beta_stepper_motor; }
     if( THEKERNEL->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ){ this->main_stepper = THEKERNEL->robot->gamma_stepper_motor; }
 
+    // set rate ratio for each actuator - ie how fast each actuator moves compared to the movement of the head in cartesian space
+    for (int i = 0; i < 3; i++)
+        THEKERNEL->robot->actuators[i]->rate_ratio = ( (float) block->steps[i] / (float) block->steps_event_count );
+
     // Set the initial speed for this move
     this->trapezoid_generator_tick(0);
 
@@ -287,9 +291,9 @@ void Stepper::set_step_events_per_second( float steps_per_second )
     }
 
     // Instruct the stepper motors
-    if( THEKERNEL->robot->alpha_stepper_motor->moving ){ THEKERNEL->robot->alpha_stepper_motor->set_speed( steps_per_second * ( (float)this->current_block->steps[ALPHA_STEPPER] / (float)this->current_block->steps_event_count ) ); }
-    if( THEKERNEL->robot->beta_stepper_motor->moving  ){ THEKERNEL->robot->beta_stepper_motor->set_speed(  steps_per_second * ( (float)this->current_block->steps[BETA_STEPPER ] / (float)this->current_block->steps_event_count ) ); }
-    if( THEKERNEL->robot->gamma_stepper_motor->moving ){ THEKERNEL->robot->gamma_stepper_motor->set_speed( steps_per_second * ( (float)this->current_block->steps[GAMMA_STEPPER] / (float)this->current_block->steps_event_count ) ); }
+    for (StepperMotor* a : THEKERNEL->robot->actuators)
+        if (a->moving)
+            a->set_speed(steps_per_second * a->rate_ratio);
 
     // Other modules might want to know the speed changed
     THEKERNEL->call_event(ON_SPEED_CHANGE, this);
