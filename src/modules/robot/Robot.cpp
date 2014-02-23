@@ -203,6 +203,14 @@ void Robot::on_config_reload(void* argument){
     actuators.push_back(alpha_stepper_motor);
     actuators.push_back(beta_stepper_motor);
     actuators.push_back(gamma_stepper_motor);
+
+    // initialise actuator positions to current cartesian position (X0 Y0 Z0)
+    // so the first move can be correct if homing is not performed
+    float actuator_pos[3];
+    float cartesian_pos[3] = { axes[0].last_milestone, axes[1].last_milestone, axes[2].last_milestone };
+    arm_solution->cartesian_to_actuator(cartesian_pos, actuator_pos);
+    for (int i = 0; i < 3; i++)
+        actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
 void Robot::on_get_public_data(void* argument){

@@ -31,20 +31,20 @@ class Switch : public Module {
         bool match_output_gcode(const Gcode* gcode) const;
         bool match_input_gcode(const Gcode* gcode) const;
 
-        uint16_t name_checksum;
-        Pin      input_pin;
-        uint16_t input_pin_behavior;
-        bool     input_pin_state;
-        char     input_on_command_letter;
-        char     input_off_command_letter;
-        uint8_t  input_on_command_code;
-        uint8_t  input_off_command_code;
-        bool     switch_state;
-        float    switch_value;
-        bool     switch_changed;
-        Pwm      output_pin;
-        string   output_on_command;
-        string   output_off_command;
+        uint16_t  name_checksum;
+        Pin       input_pin;
+        uint16_t  input_pin_behavior;
+        bool      input_pin_state;
+        char      input_on_command_letter;
+        char      input_off_command_letter;
+        uint16_t  input_on_command_code;
+        uint16_t  input_off_command_code;
+        bool      switch_state;
+        float     switch_value;
+        bool      switch_changed;
+        Pwm       output_pin;
+        string    output_on_command;
+        string    output_off_command;
 };
 
 #endif // SWITCH_H
