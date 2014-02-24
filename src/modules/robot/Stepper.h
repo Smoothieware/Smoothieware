@@ -17,7 +17,6 @@ class StepperMotor;
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
 #define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
 #define minimum_steps_per_minute_checksum           CHECKSUM("minimum_steps_per_minute")
-#define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
 
 class Stepper : public Module {
     public:
@@ -46,42 +45,21 @@ class Stepper : public Module {
 
         uint32_t synchronize_acceleration(uint32_t dummy);
 
-
-
         Block* current_block;
-
-        int counters[3];
-        int stepped[3];
-        int offsets[3];
-
-        float counter_alpha;
-        float counter_beta;
-        float counter_gamma;
-
-        //int step_events_completed;
-        unsigned int out_bits;
 
         float trapezoid_adjusted_rate;
 
-        int trapezoid_tick_cycle_counter;
-        int cycles_per_step_event;
-
-        bool trapezoid_generator_busy;
-
-        int microseconds_per_step_pulse;
         int acceleration_ticks_per_second;
 
         unsigned int minimum_steps_per_second;
 
-        int base_stepping_frequency;
-
         unsigned short step_bits[3];
 
-        int counter_increment;
-
-        bool paused;
-        bool force_speed_update;
-        bool enable_pins_status;
+        struct {
+            bool paused             :1;
+            bool force_speed_update :1;
+            bool enable_pins_status :1;
+        };
 
         Hook* acceleration_tick_hook;
 

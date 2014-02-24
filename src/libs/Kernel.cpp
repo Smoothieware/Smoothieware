@@ -25,6 +25,7 @@
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
+#define base_stepping_frequency_checksum CHECKSUM("base_stepping_frequency")
 
 Kernel* Kernel::instance;
 
