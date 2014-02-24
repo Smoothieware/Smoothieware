@@ -66,7 +66,6 @@ class StepperMotor : public Actuator {
         Hook* end_hook;
         Hook* step_signal_hook;
 
-        bool signal_step;
         uint32_t signal_step_number;
 
         StepTicker* step_ticker;
@@ -75,8 +74,6 @@ class StepperMotor : public Actuator {
         Pin en_pin;
 
         float steps_per_second;
-
-        bool paused;
 
         float steps_per_mm;
 
@@ -87,13 +84,13 @@ class StepperMotor : public Actuator {
         uint32_t fx_counter;
         uint32_t fx_ticks_per_step;
 
-        bool     direction;
-
-        //bool exit_tick;
-        bool remove_from_active_list_next_reset;
-
-        bool is_move_finished; // Whether the move just finished
+        struct {
+            bool direction                           :1;
+            bool signal_step                         :1;
+            bool paused                              :1;
+            bool remove_from_active_list_next_reset  :1;
+            bool is_move_finished                    :1;
+        };
 };
 
 #endif
-
