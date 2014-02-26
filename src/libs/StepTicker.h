@@ -28,6 +28,7 @@ class StepTicker{
         void reset_tick();
         void add_motor_to_active_list(StepperMotor* motor);
         void remove_motor_from_active_list(StepperMotor* motor);
+        void timer_match(void);
 
         float frequency;
         vector<StepperMotor*> stepper_motors;
