@@ -45,9 +45,6 @@ StepTicker::StepTicker(){
     this->set_frequency(0.001);
     this->set_reset_delay(100);
     this->last_duration = 0;
-    for (int i = 0; i < 12; i++){
-        this->active_motors[i] = NULL;
-    }
     this->active_motor_bm = 0;
 
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
@@ -85,7 +82,7 @@ inline void StepTicker::tick(){
     // We iterate over each active motor 
     for (i = 0; i < 12; i++, bm <<= 1){
         if (this->active_motor_bm & bm){
-            this->active_motors[i]->tick();
+            this->stepper_motors[i]->tick();
         }
     }
     _isr_context = false;
@@ -99,9 +96,9 @@ void StepTicker::signal_moves_finished(){
     uint16_t bitmask = 1;
     for ( uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
         if (this->active_motor_bm & bitmask){
-            if(this->active_motors[motor]->is_move_finished){
-                this->active_motors[motor]->signal_move_finished();
-                if(this->active_motors[motor]->moving == false){
+            if(this->stepper_motors[motor]->is_move_finished){
+                this->stepper_motors[motor]->signal_move_finished();
+                if(this->stepper_motors[motor]->moving == false){
                     if (motor > 0){
                         motor--;
                         bitmask >>= 1;
@@ -124,7 +121,7 @@ inline void StepTicker::reset_tick(){
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
     {
         if (this->active_motor_bm & bm)
-            this->active_motors[i]->unstep();
+            this->stepper_motors[i]->unstep();
     }
 
     _isr_context = false;
@@ -145,7 +142,7 @@ extern "C" void TIMER0_IRQHandler (void){
     uint16_t bitmask = 1;
     for (uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
         if (global_step_ticker->active_motor_bm & bitmask){
-            global_step_ticker->active_motors[motor]->tick();
+            global_step_ticker->stepper_motors[motor]->tick();
         }
     }
 
@@ -189,7 +186,7 @@ extern "C" void TIMER0_IRQHandler (void){
                 if (global_step_ticker->active_motor_bm & bm)
                     ticks_we_actually_can_skip =
                         min(ticks_we_actually_can_skip,
-                            (uint32_t)((uint64_t)( (uint64_t)global_step_ticker->active_motors[i]->fx_ticks_per_step - (uint64_t)global_step_ticker->active_motors[i]->fx_counter ) >> 32)
+                            (uint32_t)((uint64_t)( (uint64_t)global_step_ticker->stepper_motors[i]->fx_ticks_per_step - (uint64_t)global_step_ticker->stepper_motors[i]->fx_counter ) >> 32)
                             );
             }
 
@@ -197,7 +194,7 @@ extern "C" void TIMER0_IRQHandler (void){
             for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
             {
                 if (global_step_ticker->active_motor_bm & bm)
-                    global_step_ticker->active_motors[i]->fx_counter += (uint64_t)((uint64_t)(ticks_we_actually_can_skip)<<32);
+                    global_step_ticker->stepper_motors[i]->fx_counter += (uint64_t)((uint64_t)(ticks_we_actually_can_skip)<<32);
             }
 
             // When must we have our next MR0 ? ( +1 is here to account that we are actually doing a legit MR0 match here too, not only overtime )
@@ -227,17 +224,8 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
     int i;
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
     {
-        if (this->active_motors[i] == motor)
+        if (this->stepper_motors[i] == motor)
         {
-            this->active_motor_bm |= bm;
-            if( this->active_motor_bm != 0 ){
-                LPC_TIM0->TCR = 1;               // Enable interrupt
-            }
-            return;
-        }
-        if (this->active_motors[i] == NULL)
-        {
-            this->active_motors[i] = motor;
             this->active_motor_bm |= bm;
             if( this->active_motor_bm != 0 ){
                 LPC_TIM0->TCR = 1;               // Enable interrupt
@@ -254,7 +242,7 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
     uint32_t bm; int i;
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
     {
-        if (this->active_motors[i] == motor)
+        if (this->stepper_motors[i] == motor)
         {
             this->active_motor_bm &= ~bm;
             // If we have no motor to work on, disable the whole interrupt
