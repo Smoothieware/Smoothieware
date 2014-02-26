@@ -49,7 +49,7 @@ void Stepper::on_module_loaded()
     acceleration_tick_hook = THEKERNEL->slow_ticker->attach( acceleration_ticks_per_second, this, &Stepper::trapezoid_generator_tick );
 
     // Attach to the end_of_move stepper event
-    for (StepperMotor* a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         a->attach(this, &Stepper::stepper_motor_finished_move);
 }
 
@@ -67,7 +67,7 @@ void Stepper::on_config_reload(void* argument)
 void Stepper::on_pause(void* argument)
 {
     paused = true;
-    for (StepperMotor* a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         a->pause();
 }
 
@@ -76,7 +76,7 @@ void Stepper::on_play(void* argument)
 {
     // TODO: Re-compute the whole queue for a cold-start
     paused = false;
-    for (StepperMotor* a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         a->unpause();
 }
 
@@ -105,7 +105,7 @@ void Stepper::on_gcode_execute(void* argument)
 // Enable steppers
 void Stepper::turn_enable_pins_on()
 {
-    for (StepperMotor* a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         a->enable(true);
     enable_pins_status = true;
 }
@@ -113,7 +113,7 @@ void Stepper::turn_enable_pins_on()
 // Disable steppers
 void Stepper::turn_enable_pins_off()
 {
-    for (StepperMotor* a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         a->enable(false);
     enable_pins_status = false;
 }
@@ -137,11 +137,6 @@ void Stepper::on_block_begin(void* argument)
     if (enable_pins_status == false)
         turn_enable_pins_on();
 
-    // Setup : instruct stepper motors to move
-    for (int i = 0; i < 3; i++)
-        if (block->steps[i])
-            THEKERNEL->robot->actuators[i]->move( (block->direction_bits >> i) & 1, block->steps[i]);
-
     current_block = block;
 
     // Setup acceleration for this block
@@ -149,13 +144,22 @@ void Stepper::on_block_begin(void* argument)
 
     // Find the stepper with the more steps, it's the one the speed calculations will want to follow
     main_stepper = NULL;
-    for (StepperMotor* a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         if ((main_stepper == NULL) || (a->steps_to_move > main_stepper->steps_to_move))
             main_stepper = a;
 
-    // set rate ratio for each actuator - ie how fast each actuator moves compared to the movement of the head in cartesian space
+    // TODO: use auto a : THEKERNEL->robot->actuators, and move block->steps to a per-Actuator ActionData
     for (int i = 0; i < 3; i++)
-        THEKERNEL->robot->actuators[i]->rate_ratio = ( (float) block->steps[i] / (float) block->steps_event_count );
+    {
+        if (block->steps[i])
+        {
+            // Setup : instruct stepper motors to move
+            THEKERNEL->robot->actuators[i]->move( (block->direction_bits >> i) & 1, block->steps[i]);
+
+            // set rate ratio for each actuator - ie how fast each actuator moves compared to the movement of the head in cartesian space
+            THEKERNEL->robot->actuators[i]->rate_ratio = ( (float) block->steps[i] / (float) block->steps_event_count );
+        }
+    }
 
     // Set the initial speed for this move
     trapezoid_generator_tick(0);
@@ -174,7 +178,7 @@ void Stepper::on_block_end(void* argument)
 uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
 {
     // We care only if none is still moving
-    for (StepperMotor* a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         if (a->moving)
             return 0;
 
@@ -192,9 +196,8 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
 uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
 {
     // Do not do the accel math for nothing
-    if (current_block && !paused && main_stepper->moving )
+    if (current_block && !paused && THEKERNEL->step_ticker->active_motor_bm)
     {
-
         // Store this here because we use it a lot down there
         uint32_t current_steps_completed = main_stepper->stepped;
 
@@ -210,10 +213,10 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
             {
                 trapezoid_adjusted_rate -= current_block->rate_delta;
             }
-            else if (trapezoid_adjusted_rate == 0.0F)
+            else if (trapezoid_adjusted_rate == current_block->rate_delta * 0.5F)
             {
-                for (auto i = THEKERNEL->robot->actuators.begin(); i != THEKERNEL->robot->actuators.end(); i++)
-                    (*i)->move(0, 0);
+                for (auto i : THEKERNEL->robot->actuators)
+                    i->move(i->direction, 0);
 
                 if (current_block)
                     current_block->release();
@@ -242,7 +245,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
             if (trapezoid_adjusted_rate > current_block->rate_delta * 1.5F)
                 trapezoid_adjusted_rate -= current_block->rate_delta;
             else
-                trapezoid_adjusted_rate = current_block->rate_delta * 1.5F;
+                trapezoid_adjusted_rate = current_block->rate_delta * 0.5F;
 
             if (trapezoid_adjusted_rate < current_block->final_rate )
                 trapezoid_adjusted_rate = current_block->final_rate;
@@ -278,7 +281,7 @@ void Stepper::set_step_events_per_second( float steps_per_second )
         steps_per_second = minimum_steps_per_second;
 
     // Instruct the stepper motors
-    for (StepperMotor* a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         if (a->moving)
             a->set_speed(steps_per_second * a->rate_ratio);
 
