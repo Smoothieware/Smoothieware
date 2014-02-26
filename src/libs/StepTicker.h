@@ -31,11 +31,8 @@ class StepTicker{
 
         float frequency;
         vector<StepperMotor*> stepper_motors;
-        uint32_t delay;
         uint32_t period;
-        uint32_t debug;
         uint32_t last_duration;
-        bool has_axes;
 
         bool moves_finished;
         bool reset_step_pins;

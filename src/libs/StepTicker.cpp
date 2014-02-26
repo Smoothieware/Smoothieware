@@ -42,8 +42,6 @@ StepTicker::StepTicker(){
     // Default start values
     this->moves_finished = false;
     this->reset_step_pins = false;
-    this->debug = 0;
-    this->has_axes = 0;
     this->set_frequency(0.001);
     this->set_reset_delay(100);
     this->last_duration = 0;
@@ -69,15 +67,13 @@ void StepTicker::set_frequency( float frequency ){
 
 // Set the reset delay
 void StepTicker::set_reset_delay( float seconds ){
-    this->delay = int(floor(float(SystemCoreClock/4)*( seconds )));  // SystemCoreClock/4 = Timer increments in a second
-    LPC_TIM1->MR0 = this->delay;
+    LPC_TIM1->MR0 = int(floor(float(SystemCoreClock/4)*( seconds )));  // SystemCoreClock/4 = Timer increments in a second
 }
 
 // Add a stepper motor object to our list of steppers we must take care of
 StepperMotor* StepTicker::add_stepper_motor(StepperMotor* stepper_motor){
     this->stepper_motors.push_back(stepper_motor);
     stepper_motor->step_ticker = this;
-    this->has_axes = true;
     return stepper_motor;
 }
 
