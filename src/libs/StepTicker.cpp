@@ -20,6 +20,27 @@ using namespace std;
 
 #include <mri.h>
 
+/*
+ * Flags for LPC17xx timer
+ */
+// interrupt on match 0
+#define MCR_MR0I (1<<0)
+// reset on match 0
+#define MCR_MR0R (1<<1)
+// stop timer on match 0
+#define MCR_MR0S (1<<2)
+// interrupt on match 1
+#define MCR_MR1I (1<<3)
+// reset on match 1
+#define MCR_MR1R (1<<4)
+// stop on match 1
+#define MCR_MR1S (1<<5)
+
+// timer enable
+#define TCR_ENABLE (1<<0)
+// timer reset
+#define TCR_RESET  (1<<1)
+
 // StepTicker handles the base frequency ticking for the Stepper Motors / Actuators
 // It has a list of those, and calls their tick() functions at regular intervals
 // They then do Bresenham stuff themselves
@@ -32,7 +53,7 @@ StepTicker::StepTicker(){
     LPC_SC->PCONP |= (1 << 1);      // Timer0 ON
     // Configure the timer
     LPC_TIM0->MR0 = 10000000;       // Initial dummy value for Match Register
-    LPC_TIM0->MCR = 3;              // Match on MR0, reset on MR0, match on MR1
+    LPC_TIM0->MCR = MCR_MR0I | MCR_MR0R; // Match on MR0, reset on MR0
     LPC_TIM0->TCR = 0;              // Disable interrupt
 
     // Default start values
@@ -53,8 +74,8 @@ void StepTicker::set_frequency( float frequency ){
     this->period = int(floor((SystemCoreClock/4)/frequency));  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM0->MR0 = this->period;
     if( LPC_TIM0->TC > LPC_TIM0->MR0 ){
-        LPC_TIM0->TCR = 3;  // Reset
-        LPC_TIM0->TCR = 1;  // Reset
+        LPC_TIM0->TCR = TCR_ENABLE | TCR_RESET;  // Reset
+        LPC_TIM0->TCR = TCR_ENABLE;  // Reset
     }
 }
 
@@ -131,7 +152,7 @@ extern "C" void TIMER0_IRQHandler (void){
     if (LPC_TIM0->IR & (1<<1))
     {
         LPC_TIM0->IR = (1<<1);
-        LPC_TIM0->MCR &= ~(1<<3);
+        LPC_TIM0->MCR &= ~MCR_MR1I;
 
         global_step_ticker->reset_tick();
     }
@@ -151,7 +172,7 @@ extern "C" void TIMER0_IRQHandler (void){
 
         // We may have set a pin on in this tick, now we start the timer to set it off
         if( global_step_ticker->reset_step_pins ){
-            LPC_TIM0->MCR |= (1<<3);
+            LPC_TIM0->MCR |= MCR_MR1I;
             global_step_ticker->reset_step_pins = false;
         }else{
             // Nothing happened, nothing after this really matters
@@ -233,9 +254,9 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
 
             if (reinit)
             {
-                LPC_TIM0->MCR &= ~((1<<4) | (1<<5));
-                LPC_TIM0->TCR = 3;
-                LPC_TIM0->TCR = 1;
+                LPC_TIM0->MCR &= ~(MCR_MR1R | MCR_MR1S);
+                LPC_TIM0->TCR = TCR_ENABLE | TCR_RESET;
+                LPC_TIM0->TCR = TCR_ENABLE;
             }
 
             return;
@@ -255,7 +276,7 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
             this->active_motor_bm &= ~bm;
             // If we have no motor to work on, disable the whole interrupt
             if (this->active_motor_bm == 0)
-                LPC_TIM0->MCR |= (1<<4) | (1<<5); // Disable & reset timer on reset_tick
+                LPC_TIM0->MCR |= MCR_MR1R | MCR_MR1S; // Disable & reset timer on reset_tick
             return;
         }
     }
