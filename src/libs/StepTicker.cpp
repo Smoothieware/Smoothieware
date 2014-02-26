@@ -165,83 +165,83 @@ extern "C" void TIMER0_IRQHandler (void){
 
 void StepTicker::timer_match()
 {
-        // Reset interrupt register
-        LPC_TIM0->IR = (1<<0);
+    // Reset interrupt register
+    LPC_TIM0->IR = (1<<0);
 
-        // Step pins
-        uint16_t bitmask = 1;
-        for (uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
-            if (active_motor_bm & bitmask){
-                stepper_motors[motor]->tick();
-            }
+    // Step pins
+    uint16_t bitmask = 1;
+    for (uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
+        if (active_motor_bm & bitmask){
+            stepper_motors[motor]->tick();
         }
+    }
 
-        // We may have set a pin on in this tick, now we start the timer to set it off
-        if( reset_step_pins ){
-            LPC_TIM0->MCR |= MCR_MR1I;
-            reset_step_pins = false;
+    // We may have set a pin on in this tick, now we start the timer to set it off
+    if( reset_step_pins ){
+        LPC_TIM0->MCR |= MCR_MR1I;
+        reset_step_pins = false;
+    }else{
+        // Nothing happened, nothing after this really matters
+        // TODO : This could be a problem when we use Actuators instead of StepperMotors, because this flag is specific to step generation
+        LPC_TIM0->MR0 = period;
+        return;
+    }
+
+    // If a move finished in this tick, we have to tell the actuator to act accordingly
+    if( moves_finished ){
+
+        // Do not get out of here before everything is nice and tidy
+        LPC_TIM0->MR0 = ~0U;
+
+        signal_moves_finished();
+
+        // If we went over the duration an interrupt is supposed to last, we have a problem
+        // That can happen tipically when we change blocks, where more than usual computation is done
+        // This can be OK, if we take notice of it, which we do now
+        if( LPC_TIM0->TC > period ){ // TODO: remove the size condition
+
+            uint32_t start_tc = LPC_TIM0->TC;
+
+            // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
+            uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + last_duration ) / period );
+
+            // Next step is now to reduce this to how many steps we can *actually* skip
+            uint32_t ticks_we_actually_can_skip = ticks_to_skip;
+
+            int i;
+            uint32_t bm;
+            for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
+            {
+                if (active_motor_bm & bm)
+                    ticks_we_actually_can_skip =
+                        min(ticks_we_actually_can_skip,
+                            (uint32_t)((uint64_t)( (uint64_t)stepper_motors[i]->fx_ticks_per_step - (uint64_t)stepper_motors[i]->fx_counter ) >> 32)
+                            );
+            }
+
+            // Adding to MR0 for this time is not enough, we must also increment the counters ourself artificially
+            for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
+            {
+                if (active_motor_bm & bm)
+                    stepper_motors[i]->fx_counter += (uint64_t)((uint64_t)(ticks_we_actually_can_skip)<<32);
+            }
+
+            // When must we have our next MR0 ? ( +1 is here to account that we are actually doing a legit MR0 match here too, not only overtime )
+            LPC_TIM0->MR0 = ( ticks_to_skip + 1 ) * period;
+
+            // This is so that we know how long this computation takes, and we can take it into account next time
+            int difference = (int)(LPC_TIM0->TC) - (int)(start_tc);
+            if( difference > 0 ){ last_duration = (uint32_t)difference; }
+
         }else{
-            // Nothing happened, nothing after this really matters
-            // TODO : This could be a problem when we use Actuators instead of StepperMotors, because this flag is specific to step generation
             LPC_TIM0->MR0 = period;
-            return;
         }
 
-        // If a move finished in this tick, we have to tell the actuator to act accordingly
-        if( moves_finished ){
-
-            // Do not get out of here before everything is nice and tidy
-            LPC_TIM0->MR0 = ~0U;
-
-            signal_moves_finished();
-
-            // If we went over the duration an interrupt is supposed to last, we have a problem
-            // That can happen tipically when we change blocks, where more than usual computation is done
-            // This can be OK, if we take notice of it, which we do now
-            if( LPC_TIM0->TC > period ){ // TODO: remove the size condition
-
-                uint32_t start_tc = LPC_TIM0->TC;
-
-                // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
-                uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + last_duration ) / period );
-
-                // Next step is now to reduce this to how many steps we can *actually* skip
-                uint32_t ticks_we_actually_can_skip = ticks_to_skip;
-
-                int i;
-                uint32_t bm;
-                for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
-                {
-                    if (active_motor_bm & bm)
-                        ticks_we_actually_can_skip =
-                            min(ticks_we_actually_can_skip,
-                                (uint32_t)((uint64_t)( (uint64_t)stepper_motors[i]->fx_ticks_per_step - (uint64_t)stepper_motors[i]->fx_counter ) >> 32)
-                                );
-                }
-
-                // Adding to MR0 for this time is not enough, we must also increment the counters ourself artificially
-                for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
-                {
-                    if (active_motor_bm & bm)
-                        stepper_motors[i]->fx_counter += (uint64_t)((uint64_t)(ticks_we_actually_can_skip)<<32);
-                }
-
-                // When must we have our next MR0 ? ( +1 is here to account that we are actually doing a legit MR0 match here too, not only overtime )
-                LPC_TIM0->MR0 = ( ticks_to_skip + 1 ) * period;
-
-                // This is so that we know how long this computation takes, and we can take it into account next time
-                int difference = (int)(LPC_TIM0->TC) - (int)(start_tc);
-                if( difference > 0 ){ last_duration = (uint32_t)difference; }
-
-            }else{
-                LPC_TIM0->MR0 = period;
-            }
-
-            while( LPC_TIM0->TC > LPC_TIM0->MR0 ){
-                LPC_TIM0->MR0 += period;
-            }
-
+        while( LPC_TIM0->TC > LPC_TIM0->MR0 ){
+            LPC_TIM0->MR0 += period;
         }
+
+    }
 }
 
 
