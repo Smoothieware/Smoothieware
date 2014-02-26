@@ -53,8 +53,6 @@ class Stepper : public Module {
 
         unsigned int minimum_steps_per_second;
 
-        unsigned short step_bits[3];
-
         struct {
             bool paused             :1;
             bool force_speed_update :1;
