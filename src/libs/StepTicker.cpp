@@ -29,15 +29,11 @@ StepTicker* global_step_ticker;
 StepTicker::StepTicker(){
     global_step_ticker = this;
 
+    LPC_SC->PCONP |= (1 << 1);      // Timer0 ON
     // Configure the timer
     LPC_TIM0->MR0 = 10000000;       // Initial dummy value for Match Register
     LPC_TIM0->MCR = 3;              // Match on MR0, reset on MR0, match on MR1
     LPC_TIM0->TCR = 0;              // Disable interrupt
-
-    LPC_SC->PCONP |= (1 << 2);      // Power Ticker ON
-    LPC_TIM1->MR0 = 1000000;
-    LPC_TIM1->MCR = 1;
-    LPC_TIM1->TCR = 1;              // Enable interrupt
 
     // Default start values
     this->moves_finished = false;
@@ -64,7 +60,7 @@ void StepTicker::set_frequency( float frequency ){
 
 // Set the reset delay
 void StepTicker::set_reset_delay( float seconds ){
-    LPC_TIM1->MR0 = int(floor(float(SystemCoreClock/4)*( seconds )));  // SystemCoreClock/4 = Timer increments in a second
+    LPC_TIM0->MR1 = int(floor(float(SystemCoreClock/4)*( seconds )));  // SystemCoreClock/4 = Timer increments in a second
 }
 
 // Add a stepper motor object to our list of steppers we must take care of
@@ -127,16 +123,23 @@ inline void StepTicker::reset_tick(){
     _isr_context = false;
 }
 
-extern "C" void TIMER1_IRQHandler (void){
-    LPC_TIM1->IR |= 1 << 0;
-    global_step_ticker->reset_tick();
-}
-
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void){
 
+    // MR1 match
+    // we do this first so that if we overflow our interrupt time and both flags are asserted, we unstep before we step again
+    if (LPC_TIM0->IR & (1<<1))
+    {
+        LPC_TIM0->IR = (1<<1);
+        LPC_TIM0->MCR &= ~(1<<3);
+
+        global_step_ticker->reset_tick();
+    }
+    // MR0 match
+    if (LPC_TIM0->IR & (1<<0))
+    {
     // Reset interrupt register
-    LPC_TIM0->IR |= 1 << 0;
+    LPC_TIM0->IR = (1<<0);
 
     // Step pins
     uint16_t bitmask = 1;
@@ -148,8 +151,7 @@ extern "C" void TIMER0_IRQHandler (void){
 
     // We may have set a pin on in this tick, now we start the timer to set it off
     if( global_step_ticker->reset_step_pins ){
-        LPC_TIM1->TCR = 3;
-        LPC_TIM1->TCR = 1;
+        LPC_TIM0->MCR |= (1<<3);
         global_step_ticker->reset_step_pins = false;
     }else{
         // Nothing happened, nothing after this really matters
@@ -157,13 +159,13 @@ extern "C" void TIMER0_IRQHandler (void){
         LPC_TIM0->MR0 = global_step_ticker->period;
         return;
     }
-    
+
     // If a move finished in this tick, we have to tell the actuator to act accordingly
-    if( global_step_ticker->moves_finished ){ 
- 
+    if( global_step_ticker->moves_finished ){
+
         // Do not get out of here before everything is nice and tidy
-        LPC_TIM0->MR0 = 20000000;
-        
+        LPC_TIM0->MR0 = ~0U;
+
         global_step_ticker->signal_moves_finished();
 
         // If we went over the duration an interrupt is supposed to last, we have a problem
@@ -213,13 +215,14 @@ extern "C" void TIMER0_IRQHandler (void){
         }
 
     }
-
+    }
 }
 
 
 // We make a list of steppers that want to be called so that we don't call them for nothing
 void StepTicker::add_motor_to_active_list(StepperMotor* motor)
 {
+    bool reinit = (active_motor_bm == 0);
     uint32_t bm;
     int i;
     for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
@@ -227,9 +230,14 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
         if (this->stepper_motors[i] == motor)
         {
             this->active_motor_bm |= bm;
-            if( this->active_motor_bm != 0 ){
-                LPC_TIM0->TCR = 1;               // Enable interrupt
+
+            if (reinit)
+            {
+                LPC_TIM0->MCR &= ~((1<<4) | (1<<5));
+                LPC_TIM0->TCR = 3;
+                LPC_TIM0->TCR = 1;
             }
+
             return;
         }
     }
@@ -246,9 +254,8 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
         {
             this->active_motor_bm &= ~bm;
             // If we have no motor to work on, disable the whole interrupt
-            if( this->active_motor_bm == 0 ){
-                LPC_TIM0->TCR = 0;               // Disable interrupt
-            }
+            if (this->active_motor_bm == 0)
+                LPC_TIM0->MCR |= (1<<4) | (1<<5); // Disable & reset timer on reset_tick
             return;
         }
     }
