@@ -43,6 +43,7 @@
 
 Extruder::Extruder( uint16_t config_identifier ) {
     this->absolute_mode = true;
+    this->enabled       = false;
     this->paused        = false;
     this->single_config = false;
     this->identifier    = config_identifier;
@@ -95,6 +96,8 @@ void Extruder::on_config_reload(void* argument){
         this->dir_pin.from_string(          THEKERNEL->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
         this->en_pin.from_string(           THEKERNEL->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
 
+        this->enabled = true;
+
     }else{
     // If this module was created with the new multi extruder configuration style
 
@@ -126,6 +129,7 @@ void Extruder::on_play(void* argument){
 
 
 void Extruder::on_gcode_received(void *argument){
+    if(!this->enabled) return;
     Gcode *gcode = static_cast<Gcode*>(argument);
 
     // Gcodes to execute immediately
@@ -368,3 +372,10 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy){
 
 }
 
+void Extruder::enable(){
+    this->enabled = true;
+}
+
+void Extruder::disable(){
+    this->enabled = false;
+}

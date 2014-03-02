@@ -35,6 +35,9 @@ class Extruder : public Module, public Tool {
         uint32_t stepper_motor_finished_move(uint32_t dummy);
         Block*   append_empty_block();
 
+        void    enable();
+        void    disable();
+
         Pin             step_pin;                     // Step pin for the stepper driver
         Pin             dir_pin;                      // Dir pin for the stepper driver
         Pin             en_pin;
@@ -50,10 +53,10 @@ class Extruder : public Module, public Tool {
 
         float          travel_ratio;
         float          travel_distance;
-        bool            absolute_mode;                // absolute/relative coordinate mode switch
 
         char mode;                                    // extruder motion mode,  OFF, SOLO, or FOLLOW
-
+        bool absolute_mode;                           // absolute/relative coordinate mode switch
+        bool enabled;                                 // true when this tool is selected
         bool paused;
         bool single_config;
 

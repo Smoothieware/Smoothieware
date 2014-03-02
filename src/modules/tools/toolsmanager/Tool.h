@@ -11,6 +11,9 @@
 class Tool {
     public:
         Tool(){};
+
+        virtual void enable();
+        virtual void disable();
 };
 
 
