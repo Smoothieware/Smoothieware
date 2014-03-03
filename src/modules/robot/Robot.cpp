@@ -240,6 +240,19 @@ void Robot::on_set_public_data(void* argument){
         this->seconds_per_minute = t / 0.6F; // t * 60 / 100
         pdr->set_taken();
     }
+    else if(pdr->second_element_is(current_position_checksum)) {
+        float *t= static_cast<float*>(pdr->get_data_ptr());
+        for (int i = 0; i < 3; i++){
+            this->last_milestone[i] = this->to_millimeters(t[i]);
+        }
+
+        float actuator_pos[3];
+        arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
+        for (int i = 0; i < 3; i++)
+            actuators[i]->change_last_milestone(actuator_pos[i]);
+
+        pdr->set_taken();
+    }
 }
 
 //A GCode has been received

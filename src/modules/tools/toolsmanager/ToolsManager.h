@@ -18,9 +18,13 @@ class ToolsManager : public Module {
         ToolsManager();
 
         void on_module_loaded();
+        void on_gcode_received(void*);
+        void on_gcode_execute(void* argument);
         void add_tool(Tool* tool_to_add);
 
         vector<Tool*> tools;
+
+        int active_tool;
 };
 
 

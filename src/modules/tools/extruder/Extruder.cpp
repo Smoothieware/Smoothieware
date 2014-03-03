@@ -33,6 +33,13 @@
 #define dir_pin_checksum                     CHECKSUM("dir_pin")
 #define en_pin_checksum                      CHECKSUM("en_pin")
 #define max_speed_checksum                   CHECKSUM("max_speed")
+#define x_offset_checksum                    CHECKSUM("x_offset")
+#define y_offset_checksum                    CHECKSUM("y_offset")
+#define z_offset_checksum                    CHECKSUM("z_offset")
+
+#define X_AXIS      0
+#define Y_AXIS      1
+#define Z_AXIS      2
 
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
@@ -47,6 +54,10 @@ Extruder::Extruder( uint16_t config_identifier ) {
     this->paused        = false;
     this->single_config = false;
     this->identifier    = config_identifier;
+
+    for(int i=0;i<3;i++){
+        this->offset[i] = 0;
+    }
 }
 
 void Extruder::on_module_loaded() {
@@ -96,6 +107,10 @@ void Extruder::on_config_reload(void* argument){
         this->dir_pin.from_string(          THEKERNEL->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
         this->en_pin.from_string(           THEKERNEL->config->value(extruder_en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
 
+        for(int i=0;i<3;i++){
+            this->offset[i] = 0;
+        }
+
         this->enabled = true;
 
     }else{
@@ -109,6 +124,10 @@ void Extruder::on_config_reload(void* argument){
         this->step_pin.from_string(         THEKERNEL->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
         this->dir_pin.from_string(          THEKERNEL->config->value(extruder_checksum, this->identifier, dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
         this->en_pin.from_string(           THEKERNEL->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+
+        this->offset[X_AXIS]              = THEKERNEL->config->value(extruder_checksum, this->identifier, x_offset_checksum          )->by_default(0)->as_number();
+        this->offset[Y_AXIS]              = THEKERNEL->config->value(extruder_checksum, this->identifier, y_offset_checksum          )->by_default(0)->as_number();
+        this->offset[Z_AXIS]              = THEKERNEL->config->value(extruder_checksum, this->identifier, z_offset_checksum          )->by_default(0)->as_number();
 
     }
 
@@ -235,15 +254,16 @@ void Extruder::on_gcode_execute(void* argument){
 
                 this->en_pin.set(0);
             }
-            if (gcode->has_letter('F'))
-            {
-                feed_rate = gcode->get_value('F') / THEKERNEL->robot->seconds_per_minute;
-                if (feed_rate > max_speed)
-                    feed_rate = max_speed;
-            }
         }else if( gcode->g == 90 ){ this->absolute_mode = true;
         }else if( gcode->g == 91 ){ this->absolute_mode = false;
         }
+    }
+
+    if (gcode->has_letter('F'))
+    {
+        feed_rate = gcode->get_value('F') / THEKERNEL->robot->seconds_per_minute;
+        if (feed_rate > max_speed)
+            feed_rate = max_speed;
     }
 }
 
@@ -379,3 +399,8 @@ void Extruder::enable(){
 void Extruder::disable(){
     this->enabled = false;
 }
+
+float* Extruder::get_offset(){
+    return this->offset;
+}
+
