@@ -68,7 +68,7 @@ void ToolManager::on_gcode_received(void *argument){
 
                         if(make_move){
                             //move to old position
-                            snprintf(buf, 25, "G0 X%g Y%g Z%g", current_pos[X_AXIS], current_pos[Y_AXIS], current_pos[Z_AXIS]);
+                            snprintf(buf, 31, "G0 X%g Y%g Z%g", current_pos[X_AXIS], current_pos[Y_AXIS], current_pos[Z_AXIS]);
                             s = buf;
                             g = new Gcode(s, gcode->stream);
                             THEKERNEL->call_event(ON_GCODE_RECEIVED, g);
