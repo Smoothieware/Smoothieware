@@ -30,7 +30,7 @@ void ExtruderMaker::on_module_loaded(){
         THEKERNEL->add_module( extruder ); 
   
         // Add the module to the ToolsManager
-        THEKERNEL->toolsmanager->add_tool( extruder );        
+        THEKERNEL->toolmanager->add_tool( extruder );        
 
     }
 
@@ -51,7 +51,7 @@ void ExtruderMaker::on_module_loaded(){
             THEKERNEL->add_module( extruder ); 
       
             // Add the module to the ToolsManager
-            THEKERNEL->toolsmanager->add_tool( extruder );        
+            THEKERNEL->toolmanager->add_tool( extruder );        
 
         }
 

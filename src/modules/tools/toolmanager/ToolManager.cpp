@@ -13,16 +13,16 @@ using namespace std;
 #include "ToolManager.h"
 #include "Conveyor.h"
 
-ToolsManager::ToolsManager(){
+ToolManager::ToolManager(){
     active_tool = 0;
 }
 
-void ToolsManager::on_module_loaded(){
+void ToolManager::on_module_loaded(){
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
 }
 
-void ToolsManager::on_gcode_received(void *argument){
+void ToolManager::on_gcode_received(void *argument){
     Gcode *gcode = static_cast<Gcode*>(argument);
 
     if( gcode->has_letter('T') ){
@@ -39,7 +39,7 @@ void ToolsManager::on_gcode_received(void *argument){
 }
 
 // Compute extrusion speed based on parameters and gcode distance of travel
-void ToolsManager::on_gcode_execute(void* argument){
+void ToolManager::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
 
     if( gcode->has_letter('T') ){
@@ -77,7 +77,7 @@ void ToolsManager::on_gcode_execute(void* argument){
 }
 
 // Add a tool to the tool list
-void ToolsManager::add_tool(Tool* tool_to_add){
+void ToolManager::add_tool(Tool* tool_to_add){
     this->tools.push_back( tool_to_add );
 }
 
