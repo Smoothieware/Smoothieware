@@ -19,11 +19,13 @@ class ToolManager : public Module {
 
         void on_module_loaded();
         void on_gcode_received(void*);
+        void on_config_reload(void*);
         void add_tool(Tool* tool_to_add);
 
         vector<Tool*> tools;
 
         int active_tool;
+        bool return_error_on_unhandled_gcode;
 };
 
 

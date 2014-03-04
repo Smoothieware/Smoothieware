@@ -13,12 +13,21 @@ using namespace std;
 #include "ToolManager.h"
 #include "Conveyor.h"
 
+#define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+
 ToolManager::ToolManager(){
     active_tool = 0;
 }
 
 void ToolManager::on_module_loaded(){
+    this->on_config_reload(this);
+
+    this->register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
+}
+
+void ToolManager::on_config_reload(void *argument){
+    return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
 }
 
 void ToolManager::on_gcode_received(void *argument){
@@ -33,8 +42,11 @@ void ToolManager::on_gcode_received(void *argument){
         gcode->mark_as_taken();
         if(new_tool >= (int)this->tools.size() || new_tool < 0){
             // invalid tool
-            // TODO: report invalid selection
-            gcode->stream->printf(";;T%d invalid tool\r\n", new_tool);
+            if( return_error_on_unhandled_gcode ) {
+                char buf[32]; // should be big enough for any status
+                int n= snprintf(buf, sizeof(buf), "T%d invalid tool ", new_tool);
+                gcode->txt_after_ok.append(buf, n);
+            }
         } else {
             if(new_tool != this->active_tool){
                 void *returned_data;
