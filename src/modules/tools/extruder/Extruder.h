@@ -13,7 +13,7 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/robot/Block.h"
-#include "modules/tools/toolsmanager/Tool.h"
+#include "modules/tools/toolmanager/Tool.h"
 
 #define OFF 0
 #define SOLO 1
