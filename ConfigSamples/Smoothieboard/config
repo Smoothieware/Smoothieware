@@ -53,39 +53,39 @@ second_usb_serial_enable                     false            # This enables a s
 
 
 # Extruder module configuration
-extruder.one.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
-extruder.one.steps_per_mm                    140              # Steps per mm for extruder stepper
-extruder.one.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
-extruder.one.acceleration                    50               # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
-extruder.one.max_speed                       1000             # mm^3/s
+extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
+extruder.hotend.steps_per_mm                    140              # Steps per mm for extruder stepper
+extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
+extruder.hotend.acceleration                    50               # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+extruder.hotend.max_speed                       1000             # mm^3/s
 
-extruder.one.step_pin                        2.3              # Pin for extruder step signal
-extruder.one.dir_pin                         0.22             # Pin for extruder dir signal
-extruder.one.en_pin                          0.21             # Pin for extruder enable signal
+extruder.hotend.step_pin                        2.3              # Pin for extruder step signal
+extruder.hotend.dir_pin                         0.22             # Pin for extruder dir signal
+extruder.hotend.en_pin                          0.21             # Pin for extruder enable signal
 
 # for now the first extruder's offsets should be left at 0 or homing will get confused
-extruder.one.x_offset                        0                # x offset from first tool in mm
-extruder.one.y_offset                        0                # y offset from first tool in mm
-extruder.one.z_offset                        0                # z offset from first tool in mm
+extruder.hotend.x_offset                        0                # x offset from first tool in mm
+extruder.hotend.y_offset                        0                # y offset from first tool in mm
+extruder.hotend.z_offset                        0                # z offset from first tool in mm
 
 delta_current                                1.5              # First extruder stepper motor current
 
 # Second extruder module configuration
-#extruder.two.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
-#extruder.two.steps_per_mm                    140              # Steps per mm for extruder stepper
-#extruder.two.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
-#extruder.two.acceleration                    50               # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
-#extruder.two.max_speed                       1000             # mm^3/s
+#extruder.hotend2.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
+#extruder.hotend2.steps_per_mm                    140              # Steps per mm for extruder stepper
+#extruder.hotend2.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
+#extruder.hotend2.acceleration                    50               # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+#extruder.hotend2.max_speed                       1000             # mm^3/s
 
-#extruder.two.step_pin                        2.8              # Pin for extruder step signal
-#extruder.two.dir_pin                         2.13             # Pin for extruder dir signal
-#extruder.two.en_pin                          4.29             # Pin for extruder enable signal
+#extruder.hotend2.step_pin                        2.8              # Pin for extruder step signal
+#extruder.hotend2.dir_pin                         2.13             # Pin for extruder dir signal
+#extruder.hotend2.en_pin                          4.29             # Pin for extruder enable signal
 
-#extruder.two.x_offset                        50               # x offset from first tool in mm
-#extruder.two.y_offset                        0                # y offset from first tool in mm
-#extruder.two.z_offset                        0                # z offset from first tool in mm
+#extruder.hotend2.x_offset                        50               # x offset from first tool in mm
+#extruder.hotend2.y_offset                        0                # y offset from first tool in mm
+#extruder.hotend2.z_offset                        0                # z offset from first tool in mm
 
-#epsilon_current                              1.5              # First extruder stepper motor current
+#epsilon_current                              1.5              # Second extruder stepper motor current
 
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is ignored if false.

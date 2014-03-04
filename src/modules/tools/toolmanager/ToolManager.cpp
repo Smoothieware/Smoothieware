@@ -31,49 +31,47 @@ void ToolManager::on_gcode_received(void *argument){
             make_move = true;
         }
         gcode->mark_as_taken();
-        if(new_tool > (int)this->tools.size() || new_tool < 0){
+        if(new_tool >= (int)this->tools.size() || new_tool < 0){
             // invalid tool
+            // TODO: report invalid selection
             gcode->stream->printf(";;T%d invalid tool\r\n", new_tool);
         } else {
-            if( gcode->has_letter('T') ){
-                int new_tool = gcode->get_value('T');
-                if(new_tool != this->active_tool){
-                    void *returned_data;
-                    bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
-                    if(ok){
-                        // save current position to return to after applying extruder offset
-                        float *pos = static_cast<float *>(returned_data);
-                        float current_pos[3];
-                        for(int i=0;i<3;i++){
-                            current_pos[i] = pos[i];
-                        }
-                        // update virtual tool position to the offset of the new tool and select it as active
-                        float new_pos[3];
-                        float *active_tool_offset = tools[this->active_tool]->get_offset();
-                        float *new_tool_offset = tools[new_tool]->get_offset();
-                        for(int i=0;i<3;i++){
-                            new_pos[i] = current_pos[i] - active_tool_offset[i] + new_tool_offset[i];
-                        }
+            if(new_tool != this->active_tool){
+                void *returned_data;
+                bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+                if(ok){
+                    // save current position to return to after applying extruder offset
+                    float *pos = static_cast<float *>(returned_data);
+                    float current_pos[3];
+                    for(int i=0;i<3;i++){
+                        current_pos[i] = pos[i];
+                    }
+                    // update virtual tool position to the offset of the new tool and select it as active
+                    float new_pos[3];
+                    float *active_tool_offset = tools[this->active_tool]->get_offset();
+                    float *new_tool_offset = tools[new_tool]->get_offset();
+                    for(int i=0;i<3;i++){
+                        new_pos[i] = current_pos[i] - active_tool_offset[i] + new_tool_offset[i];
+                    }
 
-                        this->tools[active_tool]->disable();
-                        this->active_tool = new_tool;
-                        this->tools[active_tool]->enable();
+                    this->tools[active_tool]->disable();
+                    this->active_tool = new_tool;
+                    this->tools[active_tool]->enable();
 
-                        char buf[32];
-                        snprintf(buf, 31, "G92 X%g Y%g Z%g", new_pos[X_AXIS], new_pos[Y_AXIS], new_pos[Z_AXIS]);
-                        string s = buf;
-                        Gcode *g = new Gcode(s, gcode->stream);
+                    char buf[32];
+                    snprintf(buf, 31, "G92 X%g Y%g Z%g", new_pos[X_AXIS], new_pos[Y_AXIS], new_pos[Z_AXIS]);
+                    string s = buf;
+                    Gcode *g = new Gcode(s, gcode->stream);
+                    THEKERNEL->call_event(ON_GCODE_RECEIVED, g);
+                    delete g;
+
+                    if(make_move){
+                        //move to old position
+                        snprintf(buf, 31, "G0 X%g Y%g Z%g", current_pos[X_AXIS], current_pos[Y_AXIS], current_pos[Z_AXIS]);
+                        s = buf;
+                        g = new Gcode(s, gcode->stream);
                         THEKERNEL->call_event(ON_GCODE_RECEIVED, g);
                         delete g;
-
-                        if(make_move){
-                            //move to old position
-                            snprintf(buf, 31, "G0 X%g Y%g Z%g", current_pos[X_AXIS], current_pos[Y_AXIS], current_pos[Z_AXIS]);
-                            s = buf;
-                            g = new Gcode(s, gcode->stream);
-                            THEKERNEL->call_event(ON_GCODE_RECEIVED, g);
-                            delete g;
-                        }
                     }
                 }
             }
@@ -83,6 +81,11 @@ void ToolManager::on_gcode_received(void *argument){
 
 // Add a tool to the tool list
 void ToolManager::add_tool(Tool* tool_to_add){
+    if(this->tools.size() == 0){
+        tool_to_add->enable();
+    } else {
+        tool_to_add->disable();
+    }
     this->tools.push_back( tool_to_add );
 }
 

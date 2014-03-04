@@ -193,6 +193,7 @@ void Extruder::on_gcode_received(void *argument){
 
 // Compute extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void* argument){
+    if(!this->enabled) return;
     Gcode* gcode = static_cast<Gcode*>(argument);
 
     // Absolute/relative mode
@@ -269,6 +270,7 @@ void Extruder::on_gcode_execute(void* argument){
 
 // When a new block begins, either follow the robot, or step by ourselves ( or stay back and do nothing )
 void Extruder::on_block_begin(void* argument){
+    if(!this->enabled) return;
     Block* block = static_cast<Block*>(argument);
 
 
@@ -333,11 +335,13 @@ void Extruder::on_block_begin(void* argument){
 
 // When a block ends, pause the stepping interrupt
 void Extruder::on_block_end(void* argument){
+    if(!this->enabled) return;
     this->current_block = NULL;
 }
 
 // Called periodically to change the speed to match acceleration or to match the speed of the robot
 uint32_t Extruder::acceleration_tick(uint32_t dummy){
+    if(!this->enabled) return 0;
 
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
     if( this->current_block == NULL ||  this->paused || this->mode != SOLO ){ return 0; }
@@ -359,6 +363,7 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy){
 
 // Speed has been updated for the robot's stepper, we must update accordingly
 void Extruder::on_speed_change( void* argument ){
+    if(!this->enabled) return;
 
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
     if( this->current_block == NULL ||  this->paused || this->mode != FOLLOW || this->stepper_motor->moving != true ){ return; }
@@ -380,6 +385,7 @@ void Extruder::on_speed_change( void* argument ){
 
 // When the stepper has finished it's move
 uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy){
+    if(!this->enabled) return 0;
 
     //printf("extruder releasing\r\n");
 
