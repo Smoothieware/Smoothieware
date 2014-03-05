@@ -21,6 +21,7 @@
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
+#include "modules/utils/logger/Logger.h"
 #include "mri.h"
 #include <array>
 
@@ -56,6 +57,7 @@ class Kernel {
         Conveyor*         conveyor;
         Pauser*           pauser;
         ToolsManager*     toolsmanager;
+        Logger*           logger;
 
         int debug;
         SlowTicker*       slow_ticker;
