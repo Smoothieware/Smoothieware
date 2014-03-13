@@ -13,39 +13,32 @@
 // A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
 // TODO : Abstract this into Actuator
 
-StepperMotor::StepperMotor(){
-    this->moving = false;
-    this->paused = false;
-    this->fx_counter = 0;
-    this->stepped = 0;
-    this->fx_ticks_per_step = 0;
-    this->steps_to_move = 0;
-    this->remove_from_active_list_next_reset = false;
-    this->is_move_finished = false;
-    this->signal_step = false;
-    this->step_signal_hook = new Hook();
-
-    steps_per_mm         = 1.0F;
-    max_speed            = 50.0F;
-
-    last_milestone_steps = 0;
-    last_milestone       = 0.0F;
+StepperMotor::StepperMotor()
+{
+    init();
 }
 
-StepperMotor::StepperMotor(Pin& step, Pin& dir, Pin& en) : step_pin(step), dir_pin(dir), en_pin(en) {
-    this->moving = false;
-    this->paused = false;
-    this->fx_counter = 0;
-    this->stepped = 0;
-    this->fx_ticks_per_step = 0;
-    this->steps_to_move = 0;
-    this->remove_from_active_list_next_reset = false;
-    this->is_move_finished = false;
-    this->signal_step = false;
-    this->step_signal_hook = new Hook();
+StepperMotor::StepperMotor(Pin& step, Pin& dir, Pin& en)
+    : step_pin(step), dir_pin(dir), en_pin(en)
+{
+    init();
 
     enable(false);
     set_high_on_debug(en.port_number, en.pin);
+}
+
+void StepperMotor::init()
+{
+    moving = false;
+    paused = false;
+    fx_counter = 0;
+    stepped = 0;
+    fx_ticks_per_step = 0;
+    steps_to_move = 0;
+    remove_from_active_list_next_reset = false;
+    is_move_finished = false;
+    signal_step = false;
+    step_signal_hook = new Hook();
 
     steps_per_mm         = 1.0F;
     max_speed            = 50.0F;

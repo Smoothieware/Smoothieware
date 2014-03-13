@@ -19,6 +19,7 @@ class StepperMotor : public Actuator {
     public:
         StepperMotor();
         StepperMotor(Pin& step, Pin& dir, Pin& en);
+        void init(); // because C++11 ctor delegation hates us
 
         // Called a great many times per second, to step if we have to now
         inline void tick() {
