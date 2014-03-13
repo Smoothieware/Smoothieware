@@ -166,8 +166,9 @@ void Homer::home_set(vector<struct homing_info>& actuators)
 
     while (actuators.size())
     {
-        for (homing_info& a : actuators)
+        for (auto i = actuators.begin(); i != actuators.end();)
         {
+            homing_info& a = *i;
             float vec = 0.0F;
             enum homing_states new_state = a.state;
 
@@ -278,15 +279,11 @@ void Homer::home_set(vector<struct homing_info>& actuators)
 
                 a.state = new_state;
             }
-        }
 
-        for (auto a = actuators.begin(); a != actuators.end(); a++)
-        {
-            if (a->state == HOMING_STATE_DONE)
-            {
-                actuators.erase(a);
-                a = actuators.begin();
-            }
+            if (a.state == HOMING_STATE_DONE)
+                actuators.erase(i);
+            else
+                i++;
         }
 
         // call idle event so other modules can do stuff while we home
