@@ -89,21 +89,20 @@ void StepperMotor::step()
 
 
 // If the move is finished, the StepTicker will call this ( because we asked it to in tick() )
-void StepperMotor::signal_move_finished(){
+void StepperMotor::signal_move_finished()
+{
+    // work is done ! 8t
+    moving = false;
+    steps_to_move = 0;
 
-            // work is done ! 8t
-            this->moving = false;
-            this->steps_to_move = 0;
+    // signal it to whatever cares 41t 411t
+    end_hook->call();
 
-            // signal it to whatever cares 41t 411t
-            this->end_hook->call();
+    // We only need to do this if we were not instructed to move
+    if (moving == false)
+        update_exit_tick();
 
-            // We only need to do this if we were not instructed to move
-            if( this->moving == false ){
-                this->update_exit_tick();
-            }
-
-            this->is_move_finished = false;
+    is_move_finished = false;
 }
 
 // This is just a way not to check for ( !this->moving || this->paused || this->fx_ticks_per_step == 0 ) at every tick()
