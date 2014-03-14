@@ -59,6 +59,9 @@ void Conveyor::on_module_loaded(){
     register_for_event(ON_MAIN_LOOP);
     register_for_event(ON_CONFIG_RELOAD);
 
+    // we DO NOT register for ON_BLOCK_END, as Block::release() calls Conveyor::on_block_end() explicitly.
+    // This is necessary to ensure that Conveyor::on_block_end() gets called last, after all other on_block_end handlers have completed.
+
     on_config_reload(this);
 }
 
@@ -67,6 +70,8 @@ void Conveyor::on_module_loaded(){
 void Conveyor::on_idle(void* argument){
     if (queue.tail_i != gc_pending)
     {
+        // if our intermediate tail isn't between the queue's head and tail, something is seriously wrong
+        // the simplest check for this is to ensure that head == tail == gc_pending when the queue is empty
         if (queue.is_empty())
             __debugbreak();
         else
@@ -107,6 +112,8 @@ void Conveyor::on_main_loop(void*)
     {
         if (queue.head_ref()->gcodes.size())
         {
+            // If the queue is empty but there are gcodes in the head block, execute that block now.
+            // this occurs when we receive a single queueable but non-blocking gcode (eg M104 S100) while the queue is empty
             queue_head_block();
             ensure_running();
         }
@@ -130,6 +137,8 @@ void Conveyor::append_gcode(Gcode* gcode)
 // Process a new block in the queue
 void Conveyor::on_block_end(void* block)
 {
+    // if the block that just ended isn't in the queue, something is seriously wrong
+    // sanity check to ensure we don't accidentally run the queue twice
     if (queue.is_empty())
         __debugbreak();
 
