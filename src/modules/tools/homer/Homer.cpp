@@ -170,6 +170,7 @@ void Homer::home_set(vector<struct homing_info>& actuators)
         {
             homing_info& a = *i;
             float vec = 0.0F;
+            float dist = 0.0F;
             enum homing_states new_state = a.state;
 
             switch (a.state)
@@ -180,6 +181,7 @@ void Homer::home_set(vector<struct homing_info>& actuators)
                 case HOMING_STATE_FAST_HOME:
                 {
                     vec = 1.0F;
+                    dist = 500.0F;
                     if (a.actuator->active_stop->asserted())
                         new_state = HOMING_STATE_FAST_DEASSERT_ENDSTOP;
                     break;
@@ -194,6 +196,7 @@ void Homer::home_set(vector<struct homing_info>& actuators)
                 case HOMING_STATE_FAST_RETRACT:
                 {
                     vec = -1.0F;
+                    dist = 10.0F
                     // TODO: stop when we've moved far enough
                     break;
                 }
@@ -215,6 +218,7 @@ void Homer::home_set(vector<struct homing_info>& actuators)
                 case HOMING_STATE_SLOW_RETRACT:
                 {
                     vec = -0.1F;
+                    dist = 10.0F;
                     // TODO: stop when we've moved far enough
                     break;
                 }
@@ -254,6 +258,9 @@ void Homer::home_set(vector<struct homing_info>& actuators)
 
             if (new_state != a.state)
             {
+                // if we change state, then all blocks become invalid and we flush them
+                THEKERNEL->conveyor->flush_queue();
+
                 /*
                  * STATE TRANSITIONS
                  */
@@ -269,7 +276,6 @@ void Homer::home_set(vector<struct homing_info>& actuators)
                     case HOMING_STATE_POST_HOME_MOVE:
                     {
                         // TODO: flush queue, insert a regular move, wait for it to complete then continue homing
-                        THEKERNEL->conveyor->flush_queue();
 
                         break;
                     }
