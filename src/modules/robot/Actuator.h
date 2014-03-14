@@ -16,6 +16,7 @@ public:
         accel          = 100.0F;
         min_stop       = NULL;
         max_stop       = NULL;
+        active_stop    = NULL;
         soft_min       = NAN;
         soft_max       = NAN;
         last_milestone = 0.0F;
