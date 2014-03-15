@@ -46,6 +46,7 @@ class ReprapDiscountGLCD : public LcdBase {
         Pin encoder_b_pin;
         Pin click_pin;
         Pin pause_pin;
+        Pin back_pin;
         Pin buzz_pin;
 };
 
