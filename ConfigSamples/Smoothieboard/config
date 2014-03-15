@@ -66,7 +66,7 @@ delta_current                                1.5              # Extruder stepper
 
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is ignored if false.
-#laser_module_pin                             2.7              # this pin will be PWMed to control the laser
+#laser_module_pin                             2.5              # this pin will be PWMed to control the laser. Only P2.0 - P2.5 can be used since laser requires hardware PWM
 #laser_module_max_power                       0.8              # this is the maximum duty cycle that will be applied to the laser
 #laser_module_tickle_power                    0.0              # this duty cycle will be used for travel moves to keep the laser active without actually burning
 #laser_module_pwm_period                      20               # this sets the pwm frequency, the value is the period in microseconds
@@ -146,8 +146,8 @@ pause_button_enable                          true             #
 # Panel
 panel.enable                                 false             # set to true to enable the panel code
 panel.lcd                                    smoothiepanel     # set type of panel also viki_lcd, i2c_lcd is a generic i2c panel, panelolu2
-panel.encoder_a_pin                          1.22!^            # encoder pin
-panel.encoder_b_pin                          1.23!^            # encoder pin
+panel.encoder_a_pin                          3.25!^            # encoder pin
+panel.encoder_b_pin                          3.26!^            # encoder pin
 
 # Example for reprap discount GLCD
 # on glcd EXP1 is to left and EXP2 is to right, pin 1 is bottom left, pin 2 is top left etc.
@@ -155,8 +155,8 @@ panel.encoder_b_pin                          1.23!^            # encoder pin
 #panel.lcd                                   reprap_discount_glcd     #
 #panel.spi_channel                           0                 # spi channel to use  ; GLCD EXP1 Pins 3,5 (MOSI, SCLK)
 #panel.spi_cs_pin                            0.16              # spi chip select     ; GLCD EXP1 Pin 4
-#panel.encoder_a_pin                         1.22!^            # encoder pin         ; GLCD EXP2 Pin 3
-#panel.encoder_b_pin                         1.23!^            # encoder pin         ; GLCD EXP2 Pin 5
+#panel.encoder_a_pin                         3.25!^            # encoder pin         ; GLCD EXP2 Pin 3
+#panel.encoder_b_pin                         3.26!^            # encoder pin         ; GLCD EXP2 Pin 5
 #panel.click_button_pin                      1.30!^            # click button        ; GLCD EXP1 Pin 2
 #panel.buzz_pin                              1.31              # pin for buzzer      ; GLCD EXP1 Pin 1
 #panel.button_pause_pin                      2.11^             # kill/pause          ; GLCD EXP2 Pin 8 either
