@@ -17,6 +17,16 @@ These are the quick steps to get Smoothie dependencies installed on your compute
 ==Building Smoothie
 From a shell, switch into the root Smoothie project directory and run:
 {{{
-make clean all
-make flash
+make clean
+make all
 }}}
+
+To upload you can do 
+
+{{{
+make upload
+}}}
+
+if you havbe dfu-utils installed.
+
+Alternatively copy the file LPC1768/main.bin to the sdcard calling it firmware.bin and reset.
