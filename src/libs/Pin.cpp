@@ -147,3 +147,26 @@ Pin* Pin::pull_down(){
     if( this->port_number == 4 && this->pin >= 16 ){ LPC_PINCON->PINMODE9 |= (3<<((this->pin-16)*2)); }
     return this;
 }
+
+// Test if rising edge has been seen (interrupt-capable pins only)
+bool Pin::rising_edge_seen(){
+    if (this->pin >= 32) return false;
+    if ( this->port_number == 0 ){ return ( LPC_GPIOINT->IO0IntStatR >> this->pin ) & 1; }
+    if ( this->port_number == 2 ){ return ( LPC_GPIOINT->IO2IntStatR >> this->pin ) & 1; }
+    return false;
+}
+
+// Test if falling edge has been seen (interrupt-capable pins only)
+bool Pin::falling_edge_seen(){
+    if (this->pin >= 32) return false;
+    if ( this->port_number == 0 ){ return ( LPC_GPIOINT->IO0IntStatF >> this->pin ) & 1; }
+    if ( this->port_number == 2 ){ return ( LPC_GPIOINT->IO2IntStatF >> this->pin ) & 1; }
+    return false;
+}
+
+// Clear edge detect flags (interrupt-capable pins only)
+void Pin::clear_interrupt(){
+    if (this->pin >= 32) return;
+    if ( this->port_number == 0 ){ LPC_GPIOINT->IO0IntClr |= 1 << this->pin; }
+    if ( this->port_number == 2 ){ LPC_GPIOINT->IO2IntClr |= 1 << this->pin; }
+}

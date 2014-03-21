@@ -16,6 +16,10 @@ class Pin {
         inline bool connected(){
             return this->pin < 32;
         }
+        
+        inline bool supports_interrupt(){
+            return this->pin < 32 && (this->port_number == 0 || this->port_number == 2);
+        }
 
         inline Pin* as_output(){
             if (this->pin < 32)
@@ -53,6 +57,12 @@ class Pin {
             else
                 this->port->FIOCLR = 1 << this->pin;
         }
+        
+        bool rising_edge_seen();
+        
+        bool falling_edge_seen();
+        
+        void clear_interrupt();
 
         LPC_GPIO_TypeDef* port;
         bool inverting;

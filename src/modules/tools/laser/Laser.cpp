@@ -56,6 +56,19 @@ void Laser::on_module_loaded() {
 
     this->laser_max_power =    THEKERNEL->config->value(laser_module_max_power_checksum   )->by_default(0.8f)->as_number() ;
     this->laser_tickle_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0   )->as_number() ;
+    
+    this->laser_coolant_pin->from_string( THEKERNEL->config->value(laser_coolant_sensor_pin)->by_default("nc")->as_string() )->as_input();
+    this->laser_coolant_freq = THEKERNEL->config->value(laser_coolant_sensor_frequency)->by_default(1)->as_int();
+    if ( this->laser_coolant_pin->connected() ){
+        if ( !this->laser_coolant_pin->supports_interrupt() ){
+            // Note: this check should be after the laser pin pwm is initialized, so that we don't leave the laser stuck on!
+            THEKERNEL->streams->printf("Error: Laser coolant flow sensor must be on port 0 or 2, not P%d. "
+                "Laser module disabled.\n", dummy_pin->port_number);
+            delete this;
+            return;
+        }
+        // init timer
+    }
 
     //register for events
     this->register_for_event(ON_GCODE_EXECUTE);

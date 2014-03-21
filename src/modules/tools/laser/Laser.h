@@ -20,6 +20,8 @@
 #define laser_module_pwm_period_checksum    CHECKSUM("laser_module_pwm_period")
 #define laser_module_max_power_checksum     CHECKSUM("laser_module_max_power")
 #define laser_module_tickle_power_checksum  CHECKSUM("laser_module_tickle_power")
+#define laser_coolant_sensor_pin            CHECKSUM("laser_coolant_sensor_pin")
+#define laser_coolant_sensor_frequency      CHECKSUM("laser_coolant_sensor_frequency")
 
 class Laser : public Module{
     public:
@@ -39,6 +41,8 @@ class Laser : public Module{
         bool             laser_inverting; // stores whether the pwm period should be inverted
         float            laser_max_power; // maximum allowed laser power to be output on the pwm pin
         float            laser_tickle_power; // value used to tickle the laser on moves
+        Pin*             laser_coolant_pin;  // pin for missing pulse detector
+        int              laser_coolant_freq; // missing pulse detector frequency, in Hz
 };
 
 #endif
