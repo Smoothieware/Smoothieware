@@ -57,17 +57,20 @@ void Laser::on_module_loaded() {
     this->laser_max_power =    THEKERNEL->config->value(laser_module_max_power_checksum   )->by_default(0.8f)->as_number() ;
     this->laser_tickle_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0   )->as_number() ;
     
-    this->laser_coolant_pin->from_string( THEKERNEL->config->value(laser_coolant_sensor_pin)->by_default("nc")->as_string() )->as_input();
+    this->coolant_good = 1;
+    this->coolant_paused = this->coolant_msg_state = false;
+    this->laser_coolant_pin.from_string( THEKERNEL->config->value(laser_coolant_sensor_pin)->by_default("nc")->as_string() )->as_input()->rising_interrupt();
     this->laser_coolant_freq = THEKERNEL->config->value(laser_coolant_sensor_frequency)->by_default(1)->as_int();
-    if ( this->laser_coolant_pin->connected() ){
-        if ( !this->laser_coolant_pin->supports_interrupt() ){
+    if ( this->laser_coolant_pin.connected() && this->laser_coolant_freq > 0 ){
+        if ( !this->laser_coolant_pin.supports_interrupt() ){
             // Note: this check should be after the laser pin pwm is initialized, so that we don't leave the laser stuck on!
             THEKERNEL->streams->printf("Error: Laser coolant flow sensor must be on port 0 or 2, not P%d. "
-                "Laser module disabled.\n", dummy_pin->port_number);
+                "Laser module disabled.\n", this->laser_coolant_pin.port_number);
             delete this;
             return;
         }
-        // init timer
+        
+        THEKERNEL->slow_ticker->attach( this->laser_coolant_freq, this, &Laser::coolant_check );
     }
 
     //register for events
@@ -77,6 +80,19 @@ void Laser::on_module_loaded() {
     this->register_for_event(ON_PAUSE);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
+    this->register_for_event(ON_MAIN_LOOP);
+}
+
+// Send coolant-related messages here, since they are actually generated in an interrupt context that can't print
+void Laser::on_main_loop(void* argument){
+    if ( this->coolant_paused != this->coolant_msg_state ) {
+        if ( this->coolant_paused ){
+            THEKERNEL->streams->printf("Error: coolant flow failure! Will restart after 15 seconds of good flow.\n");
+        } else {
+            THEKERNEL->streams->printf("Coolant flow has resumed, continuing.\n");
+        }
+        this->coolant_msg_state = this->coolant_paused;
+    }
 }
 
 // Turn laser off laser at the end of a move
@@ -132,4 +148,23 @@ void Laser::set_proportional_power(){
         float proportional_power = float(float(this->laser_max_power) * float(THEKERNEL->stepper->trapezoid_adjusted_rate) / float(THEKERNEL->stepper->current_block->nominal_rate));
         this->laser_pin->write(this->laser_inverting ? 1 - proportional_power : proportional_power);
     }
+}
+
+uint32_t Laser::coolant_check(uint32_t dummy){
+    if ( this->laser_coolant_pin.rising_edge_seen() ){
+        this->laser_coolant_pin.clear_interrupt();
+        this->coolant_good += (this->coolant_good < 0xFFFFFFFF);     // increment without wraparound
+        if ( this->coolant_paused && (this->coolant_good >= 15 * this->laser_coolant_freq) ){
+            THEKERNEL->pauser->release();
+            this->coolant_paused = false;
+        }
+    } else {
+        this->coolant_good = 0;
+        if ( !this->coolant_paused ){
+            THEKERNEL->pauser->take();
+            this->coolant_paused = true;
+            this->laser_pin->write(this->laser_inverting ? 1 : 0);
+        }
+    }
+    return 0;
 }

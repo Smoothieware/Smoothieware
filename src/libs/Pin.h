@@ -42,6 +42,17 @@ class Pin {
         Pin* pull_down(void);
 
         Pin* pull_none(void);
+        
+        Pin* rising_interrupt();
+        Pin* falling_interrupt();
+        
+        inline Pin* leading_interrupt(){
+            return this->inverting ? this->falling_interrupt() : this->rising_interrupt();
+        }
+
+        inline Pin* trailing_interrupt(){
+            return this->inverting ? this->rising_interrupt() : this->falling_interrupt();
+        }
 
         inline bool get(){
 
@@ -61,6 +72,14 @@ class Pin {
         bool rising_edge_seen();
         
         bool falling_edge_seen();
+        
+        inline bool leading_edge_seen(){
+            return this->inverting ? this->falling_edge_seen() : this->rising_edge_seen();
+        }
+        
+        inline bool trailing_edge_seen(){
+            return this->inverting ? this->rising_edge_seen() : this->falling_edge_seen();
+        }
         
         void clear_interrupt();
 

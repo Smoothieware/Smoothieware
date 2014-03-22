@@ -485,7 +485,6 @@ void SimpleShell::gpio_command( string parameters, StreamOutput *stream)
     if ( pin.supports_interrupt() ){
         if ( pin.rising_edge_seen() ){ stream->printf("/"); }
         if ( pin.falling_edge_seen() ){ stream->printf("\\"); }
-        pin.clear_interrupt();
     }
     stream->printf("\r\n");
 }
@@ -514,7 +513,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("get pos\r\n");
     stream->printf("gpio pin [0|1] - get [or set] a pin state\r\n");
     stream->printf("net\r\n");
-    stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
+    stream->printf("load [file] - loads a configuration override file from specified name or config-override\r\n");
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
 }
 

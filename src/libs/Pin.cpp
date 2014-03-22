@@ -148,6 +148,21 @@ Pin* Pin::pull_down(){
     return this;
 }
 
+// Set interrupt enable for a capable pin
+Pin* Pin::rising_interrupt(){
+    if (!this->supports_interrupt()) return this;
+    if ( this->port_number == 0 ){ LPC_GPIOINT->IO0IntEnR |= (1 << this->pin); }
+    if ( this->port_number == 2 ){ LPC_GPIOINT->IO2IntEnR |= (1 << this->pin); }
+    return this;
+}
+
+Pin* Pin::falling_interrupt(){
+    if (!this->supports_interrupt()) return this;
+    if ( this->port_number == 0 ){ LPC_GPIOINT->IO0IntEnF |= (1 << this->pin); }
+    if ( this->port_number == 2 ){ LPC_GPIOINT->IO2IntEnF |= (1 << this->pin); }
+    return this;
+}
+
 // Test if rising edge has been seen (interrupt-capable pins only)
 bool Pin::rising_edge_seen(){
     if (this->pin >= 32) return false;
@@ -167,6 +182,6 @@ bool Pin::falling_edge_seen(){
 // Clear edge detect flags (interrupt-capable pins only)
 void Pin::clear_interrupt(){
     if (this->pin >= 32) return;
-    if ( this->port_number == 0 ){ LPC_GPIOINT->IO0IntClr |= 1 << this->pin; }
-    if ( this->port_number == 2 ){ LPC_GPIOINT->IO2IntClr |= 1 << this->pin; }
+    if ( this->port_number == 0 ){ LPC_GPIOINT->IO0IntClr = (1 << this->pin); }
+    if ( this->port_number == 2 ){ LPC_GPIOINT->IO2IntClr = (1 << this->pin); }
 }
