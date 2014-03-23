@@ -10,22 +10,20 @@
   var zbutton_ydistances = [7, 30, 55, 83];
   var zcenter = [30, 118];
 
-function runCommand(cmd, show) {
+function runCommand(cmd) {
   // Get some values from elements on the page:
   var $form = $( "#commandForm" );
   cmd += "\n";
   url = "/command_silent"; // $form.attr( "action" );
   // Send the data using post
   var posting = $.post( url, cmd );
-  if (show) {
-    // Put the results in a div
-    posting.done(function( data ) {
-      $( "#result" ).empty();
-      $.each(data.split('\n'), function(index) {
-        $( "#result" ).append( this + '<br/>' );
-      });
-    });
-  }
+  // Put the results in a div
+  // posting.done(function( data ) {
+  //   $( "#result" ).empty();
+  //   $.each(data.split('\n'), function(index) {
+  //     $( "#result" ).append( this + '<br/>' );
+  //   });
+  // });
 }
 
 function lookupConcentric(radius){
@@ -63,9 +61,9 @@ function clickXY(event){
     var ydir = [0, 1, 0, -1, 0, 0][quadrant];
     var magnitude = Math.pow(10, concentric - 2);
     if (xdir != 0) {
-      command = "G0 X" + (magnitude * xdir) + " F" + document.getElementById("xy_velocity").value;
+      command = "G1 X" + (magnitude * xdir) + " F" + document.getElementById("xy_velocity").value;
     } else {
-      command = "G0 Y" + (magnitude * ydir) + " F" + document.getElementById("xy_velocity").value;
+      command = "G1 Y" + (magnitude * ydir) + " F" + document.getElementById("xy_velocity").value;
     }
     runCommand("G91 " + command + " G90");
   } else { // home button pressed
@@ -96,7 +94,7 @@ function clickZ(event){
   var range = lookupRange(Math.abs(ydelta));
   var direction = (ydelta > 0)?1:-1;
   if (range < 4) {
-    runCommand("G91 G0 Z" + (Math.pow(10,range-2) * direction) + " F" + document.getElementById("z_velocity").value + " G90");
+    runCommand("G91 G1 Z" + (Math.pow(10,range-2) * direction) + " F" + document.getElementById("z_velocity").value + " G90");
   }
 }
 
@@ -104,7 +102,7 @@ function extrude(event,a,b) {
   var length = document.getElementById("extrude_length").value;
   var velocity = document.getElementById("extrude_velocity").value;
   var direction = (event.currentTarget.id=='extrude')?1:-1;
-  runCommand("G91 G0 E" + (length * direction) + " F" + velocity + " G90");
+  runCommand("G91 G1 E" + (length * direction) + " F" + velocity + " G90");
 }
 
 function motorsOff(event) {
@@ -151,7 +149,7 @@ Z:<input type=text id=z_velocity size=3 value=200 style=width:40px>
 </tr>
 </table>
 </td><td valign=top>
-<button id=get_temperature onclick=runCommand("M105",1)>Get Temperature</button>
+<button id=get_temperature onclick=runCommand("M105")>Get Temperature</button>
 </td></tr></table>
 <br>
 <button id=extrude onclick=extrude(event)>Extrude</button>
