@@ -12,6 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/Pin.h"
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
@@ -54,6 +55,7 @@ SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {CHECKSUM("mem"),      &SimpleShell::mem_command},
     {CHECKSUM("get"),      &SimpleShell::get_command},
     {CHECKSUM("set_temp"), &SimpleShell::set_temp_command},
+    {CHECKSUM("gpio"),     &SimpleShell::gpio_command},
     {CHECKSUM("net"),      &SimpleShell::net_command},
     {CHECKSUM("load"),     &SimpleShell::load_command},
     {CHECKSUM("save"),     &SimpleShell::save_command},
@@ -470,6 +472,23 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     }
 }
 
+// used to get/set a pin state, for debugging
+// note that the pin direction is not changed, to minimize the possible damage, but other pinmode changes are possible
+void SimpleShell::gpio_command( string parameters, StreamOutput *stream)
+{
+    Pin pin;
+    pin.from_string( shift_parameter( parameters ));
+    string value = shift_parameter( parameters );
+    if ( !value.compare("0") ){ pin.set(false); }
+    else if ( !value.compare("1") ){ pin.set(true); }
+    stream->printf("P%d.%d = %d", pin.port_number, pin.pin, pin.get());
+    if ( pin.supports_interrupt() ){
+        if ( pin.rising_edge_seen() ){ stream->printf("/"); }
+        if ( pin.falling_edge_seen() ){ stream->printf("\\"); }
+    }
+    stream->printf("\r\n");
+}
+
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
 {
     stream->printf("Commands:\r\n");
@@ -492,8 +511,9 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("get pos\r\n");
+    stream->printf("gpio pin [0|1] - get [or set] a pin state\r\n");
     stream->printf("net\r\n");
-    stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
+    stream->printf("load [file] - loads a configuration override file from specified name or config-override\r\n");
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
 }
 

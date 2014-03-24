@@ -39,6 +39,7 @@ private:
     void get_command(string parameters, StreamOutput *stream );
     void set_temp_command(string parameters, StreamOutput *stream );
     void mem_command(string parameters, StreamOutput *stream );
+    void gpio_command(string parameters, StreamOutput *stream );
 
     void net_command( string parameters, StreamOutput *stream);
 
