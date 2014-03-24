@@ -408,7 +408,7 @@ static char has_newdata(struct httpd_state *s)
 }
 
 /*
- * handle trhe uploaded data, as there may be part of that buffer still in the last packet buffer
+ * handle the uploaded data, as there may be part of that buffer still in the last packet buffer
  * write that first from the buf/len parameters
  */
 static PT_THREAD(handle_uploaded_data(struct httpd_state *s, uint8_t *buf, int len))
