@@ -12,13 +12,13 @@
 
 <button id="motors_off" onclick="motorsOff(event)">Motors Off</button>
 
-XY:<input type="text" id="xy_velocity" size=4 value=3000 style="width:50px">mm/min
+XY:<input type="text" id="xy_velocity" size=4 value=3000 style="width:50px" />mm/min
 
-Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
+Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px" />
 <br/>
 
-<img id="control_xy" src="img/control_xy.png" onclick="clickXY(event)">
-<img id="control_z" src="img/control_z.png" onclick="clickZ(event)">
+<img id="control_xy" src="img/control_xy.png" onclick="clickXY(event)"/>
+<img id="control_z" src="img/control_z.png" onclick="clickZ(event)"/>
 <br/>
 
 <table>
@@ -34,7 +34,7 @@ Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
       <tr>
         <td style="text-align:right">Bed:</td>
         <td><button id="bed_off" onclick="heatOff(event)">Off</button></td>
-        <td><input type="text" id="bed_value" size=3 style="width:40px" value=0></td>
+        <td><input type="text" id="bed_value" size=3 style="width:40px" value=0/></td>
         <td><button id="bed_set" onclick="heatSet(event)">Set</button></td>
       </tr>
     </table>
@@ -48,15 +48,15 @@ Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
 
 <button id="extrude" onclick="extrude(event)">Extrude</button>
 <button id="reverse" onclick="extrude(event)">Reverse</button><br>
-<input type="text" id="extrude_length" value=5 size=3 style="width:35px">
+<input type="text" id="extrude_length" value=5 size=3 style="width:35px"/>
 mm @
-<input type="text" id="extrude_velocity" value=100 size=3 style="width:40px">
+<input type="text" id="extrude_velocity" value=100 size=3 style="width:40px"/>
 mm/min
 
 <h2>Commands</h2>
 <form action="/command" id="commandForm">
-		<input type="text" name="commandText" placeholder="Send Command...">
-		<input type="submit" value="Send">
+		<input type="text" name="commandText" placeholder="Send Command..."/>
+		<input type="submit" value="Send"/>
 </form>
 <!-- the result of the command will be rendered inside this div -->
 <div id="result"></div>
@@ -83,7 +83,7 @@ mm/min
 </script>
 
 <h2> Upload File </h2>
-<input type="file" id="files" name="files[]" onchange="upload();">
+<input type="file" id="files" name="files[]" onchange="upload();" />
 
 <h3>Uploading file(s)</h3>
 <output id="list"></output>
