@@ -1,7 +1,7 @@
 <!doctype html>
 <head>
 	<meta charset="utf-8">
-	<title>Single Command</title>
+	<title>Smoothie Web</title>
 	<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
 	<script type=text/javascript language=JavaScript>
   var concentric_circle_radii = [11, 45, 69, 94, 115];
@@ -10,20 +10,22 @@
   var zbutton_ydistances = [7, 30, 55, 83];
   var zcenter = [30, 118];
 
-function runCommand(cmd) {
+function runCommand(cmd, silent) {
   // Get some values from elements on the page:
   var $form = $( "#commandForm" );
   cmd += "\n";
-  url = "/command_silent"; // $form.attr( "action" );
+  url = silent ? "/command_silent" : "/command"; // $form.attr( "action" );
   // Send the data using post
   var posting = $.post( url, cmd );
   // Put the results in a div
-  // posting.done(function( data ) {
-  //   $( "#result" ).empty();
-  //   $.each(data.split('\n'), function(index) {
-  //     $( "#result" ).append( this + '<br/>' );
-  //   });
-  // });
+  if(!silent) {
+    posting.done(function( data ) {
+      $( "#result" ).empty();
+      $.each(data.split('\n'), function(index) {
+        $( "#result" ).append( this + '<br/>' );
+      });
+    });
+  }
 }
 
 function lookupConcentric(radius){
@@ -61,11 +63,11 @@ function clickXY(event){
     var ydir = [0, 1, 0, -1, 0, 0][quadrant];
     var magnitude = Math.pow(10, concentric - 2);
     if (xdir != 0) {
-      command = "G1 X" + (magnitude * xdir) + " F" + document.getElementById("xy_velocity").value;
+      command = "G0 X" + (magnitude * xdir) + " F" + document.getElementById("xy_velocity").value;
     } else {
-      command = "G1 Y" + (magnitude * ydir) + " F" + document.getElementById("xy_velocity").value;
+      command = "G0 Y" + (magnitude * ydir) + " F" + document.getElementById("xy_velocity").value;
     }
-    runCommand("G91 " + command + " G90");
+    runCommand("G91 " + command + " G90", true);
   } else { // home button pressed
     if (pos_x < 49 && pos_y < 49) { // home x button
       command = "G28 X0";
@@ -76,7 +78,7 @@ function clickXY(event){
     } else { // home z button
       command = "G28 Z0";
     }
-    runCommand(command);
+    runCommand(command, true);
   }
 }
 
@@ -94,7 +96,7 @@ function clickZ(event){
   var range = lookupRange(Math.abs(ydelta));
   var direction = (ydelta > 0)?1:-1;
   if (range < 4) {
-    runCommand("G91 G1 Z" + (Math.pow(10,range-2) * direction) + " F" + document.getElementById("z_velocity").value + " G90");
+    runCommand("G91 G0 Z" + (Math.pow(10,range-2) * direction) + " F" + document.getElementById("z_velocity").value + " G90", true);
   }
 }
 
@@ -102,24 +104,26 @@ function extrude(event,a,b) {
   var length = document.getElementById("extrude_length").value;
   var velocity = document.getElementById("extrude_velocity").value;
   var direction = (event.currentTarget.id=='extrude')?1:-1;
-  runCommand("G91 G1 E" + (length * direction) + " F" + velocity + " G90");
+  runCommand("G91 G0 E" + (length * direction) + " F" + velocity + " G90", true);
 }
 
 function motorsOff(event) {
-  runCommand("M18");
+  runCommand("M18", true);
 }
 
 function heatSet(event) {
   var type = (event.currentTarget.id=='heat_set')?104:140;
   var temperature = (type==104)?document.getElementById("heat_value").value:document.getElementById("bed_value").value;
-  runCommand("M" + type + " S" + temperature);
+  runCommand("M" + type + " S" + temperature, true);
 }
 
 function heatOff(event) {
   var type = (event.currentTarget.id=='heat_off')?104:140;
-  runCommand("M" + type + " S0");
+  runCommand("M" + type + " S0", true);
 }
-
+function getTemperature () {
+  runCommand("M105", false);
+}
 </script>
 </head>
 
@@ -149,7 +153,7 @@ Z:<input type=text id=z_velocity size=3 value=200 style=width:40px>
 </tr>
 </table>
 </td><td valign=top>
-<button id=get_temperature onclick=runCommand("M105")>Get Temperature</button>
+<button id=get_temperature onclick=getTemperature()>Get Temperature</button>
 </td></tr></table>
 <br>
 <button id=extrude onclick=extrude(event)>Extrude</button>
@@ -214,6 +218,9 @@ mm/min
 
 
 	function upload() {
+        $( "#progress" ).empty();
+        $( "#uploadresult" ).empty();
+
         // take the file from the input
         var file = document.getElementById('files').files[0];
         var reader = new FileReader();
