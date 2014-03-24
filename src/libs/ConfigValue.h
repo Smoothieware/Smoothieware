@@ -45,8 +45,9 @@ class ConfigValue{
                 return this->default_double;
             }else{
                 char* endptr = NULL;
-                float result = strtof(remove_non_number(this->value).c_str(), &endptr);
-                if( endptr <= remove_non_number(this->value).c_str() ){
+                string str = remove_non_number(this->value);
+                float result = strtof(str.c_str(), &endptr);
+                if( endptr <= str.c_str() ){
                     error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
                 }
                 return result;
@@ -59,8 +60,9 @@ class ConfigValue{
                 return this->default_int;
             }else{
                 char* endptr = NULL;
-                int result = strtol(remove_non_number(this->value).c_str(), &endptr, 10);
-                if( endptr <= remove_non_number(this->value).c_str() ){
+                string str = remove_non_number(this->value);
+                int result = strtol(str.c_str(), &endptr, 10);
+                if( endptr <= str.c_str() ){
                     error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
                 }
                 return result;
