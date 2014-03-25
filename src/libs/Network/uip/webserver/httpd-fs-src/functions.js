@@ -21,6 +21,12 @@ function runCommandSilent(cmd) {
   runCommand(cmd, true);
 }
 
+function runCommandCallback(cmd,callback) {
+    var url = "/command";
+    cmd += "\n";
+    var posting = $.post( url, cmd, callback);
+}
+
 function jogXYClick (cmd) {
   runCommand("G91 G0 " + cmd + " F" + document.getElementById("xy_velocity").value + " G90", true)
 }
@@ -134,4 +140,27 @@ function upload() {
         // start sending
         xhr.mySendAsBinary(evt.target.result);
     };
+}
+
+function playFile(filename) {
+  runCommandSilent("play /sd/"+filename);
+}
+
+function refreshFiles() {
+  document.getElementById('fileList').innerHTML = '';
+  runCommandCallback("M20", function(data){
+    $.each(data.split('\n'), function(index) {
+      var item = this.trim();
+        if (item.match(/\.g(code)?$/)) {
+          var table = document.getElementById('fileList');
+          var row = table.insertRow(-1);
+          var cell = row.insertCell(0);
+          var text = document.createTextNode(item);
+          cell.appendChild(text);
+          cell = row.insertCell(1);
+          cell.innerHTML = "[<a href='javascript:void(0);' onclick='playFile(\""+item+"\");'>Play</a>]";
+        }
+        //$( "#result" ).append( this + '<br/>' );
+      });
+  });
 }

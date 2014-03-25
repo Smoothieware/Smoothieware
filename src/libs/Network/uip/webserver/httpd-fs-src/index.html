@@ -370,10 +370,16 @@ mm/min
 <output id="list"></output>
 <div id="progress"></div>
 <div id="uploadresult"></div>
-
 <script>
   document.getElementById('files').addEventListener('change', handleFileSelect, false);
 </script>
+
+<h2>Printable File list <button id="refreshFiles" onclick="refreshFiles()">Refresh</button> </h2>
+<br/>
+<table id="fileList">
+</table>
+<button id="progress" onclick="runCommand('progress', false)">Progress</button>
+<button id="abort" onclick="runCommand('abort', false)">Abort</button>
 
 </body>
 </html>
