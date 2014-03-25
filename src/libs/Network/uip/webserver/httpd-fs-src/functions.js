@@ -1,8 +1,3 @@
-var concentric_circle_radii = [11, 45, 69, 94, 115];
-var center = [124, 121];
-var spacer = 7;
-var zbutton_ydistances = [7, 30, 55, 83];
-var zcenter = [30, 118];
 
 function runCommand(cmd, silent) {
   // Get some values from elements on the page:
@@ -22,77 +17,16 @@ function runCommand(cmd, silent) {
   }
 }
 
-function lookupConcentric(radius){
-  var length = concentric_circle_radii.length;
-  for (i=0;i<=length;i++) {
-    if (radius < concentric_circle_radii[i]) return(i);
-  }
-  return(length);
+function runCommandSilent(cmd) {
+  runCommand(cmd, true);
 }
 
-function getQuadrantConcentricFromPosition(x,y) {
-  var rel_x = x - center[0]
-  var rel_y = y - center[1]
-  var radius = Math.sqrt(Math.pow(Math.abs(rel_x),2) + Math.pow(Math.abs(rel_y),2))
-  if (rel_x > rel_y && rel_x > -rel_y) {
-    quadrant = 0; // Right
-  } else if (rel_x <= rel_y && rel_x > -rel_y) {
-    quadrant = 3; // Down
-  } else if (rel_x > rel_y && rel_x < -rel_y) {
-    quadrant = 1; // Up
-  } else {
-    quadrant = 2; // Left
-  }
-  var idx = lookupConcentric(radius);
-  return [quadrant, idx]
+function jogXYClick (cmd) {
+  runCommand("G91 G0 " + cmd + " F" + document.getElementById("xy_velocity").value + " G90", true)
 }
 
-function clickXY(event){
-  var pos_x = event.offsetX?(event.offsetX):event.pageX-document.getElementById("control_xy").offsetLeft;
-  var pos_y = event.offsetY?(event.offsetY):event.pageY-document.getElementById("control_xy").offsetTop;
-  var codes = getQuadrantConcentricFromPosition(pos_x,pos_y);
-  var quadrant = codes[0], concentric = codes[1];
-  if (concentric < 5) { // movement button pressed
-    var xdir = [1, 0, -1, 0, 0, 0][quadrant];
-    var ydir = [0, 1, 0, -1, 0, 0][quadrant];
-    var magnitude = Math.pow(10, concentric - 2);
-    if (xdir != 0) {
-      command = "G0 X" + (magnitude * xdir) + " F" + document.getElementById("xy_velocity").value;
-    } else {
-      command = "G0 Y" + (magnitude * ydir) + " F" + document.getElementById("xy_velocity").value;
-    }
-    runCommand("G91 " + command + " G90", true);
-
-  } else { // home button pressed
-    if (pos_x < 49 && pos_y < 49) { // home x button
-      command = "G28 X0";
-    } else if (pos_x > 200 && pos_y < 49) { //home y button
-      command = "G28 Y0";
-    } else if (pos_x < 49 && pos_y > 200) { // home all button
-      command = "G28";
-    } else { // home z button
-      command = "G28 Z0";
-    }
-    runCommand(command, true);
-  }
-}
-
-function lookupRange(ydist) {
-  var length = zbutton_ydistances.length;
-  for (i=0;i<length;i++) {
-    if (ydist < zbutton_ydistances[i]) return i;
-  }
-}
-
-function clickZ(event){
-  //var pos_x = event.offsetX?(event.offsetX):event.pageX-document.getElementById("control_z").offsetLeft;
-  var pos_y = event.offsetY?(event.offsetY):event.pageY-document.getElementById("control_z").offsetTop;
-  var ydelta = zcenter[1] - pos_y;
-  var range = lookupRange(Math.abs(ydelta));
-  var direction = (ydelta > 0)?1:-1;
-  if (range < 4) {
-    runCommand("G91 G0 Z" + (Math.pow(10,range-2) * direction) + " F" + document.getElementById("z_velocity").value + " G90", true);
-  }
+function jogZClick (cmd) {
+  runCommand("G91 G0 " + cmd + " F" + document.getElementById("z_velocity").value + " G90", true)
 }
 
 function extrude(event,a,b) {
