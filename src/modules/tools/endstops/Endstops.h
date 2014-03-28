@@ -21,6 +21,7 @@ class Endstops : public Module{
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
+        uint32_t acceleration_tick(uint32_t dummy);
 
     private:
         void do_homing(char axes_to_move);
@@ -39,6 +40,7 @@ class Endstops : public Module{
         int  trim[3];
         float  fast_rates[3];
         float  slow_rates[3];
+        float  feed_rate[3];
         Pin           pins[6];
         StepperMotor* steppers[3];
         char status;
