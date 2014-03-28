@@ -398,10 +398,11 @@ void Robot::on_gcode_received(void * argument){
                 gcode->mark_as_taken();
                 break;
 
-            case 665: // M665 set optional arm solution variables based on arm solution
+            case 665: // M665 set optional arm solution variables based on arm solution. NOTE these are not saved with M500
                 gcode->mark_as_taken();
-                // the parameter args could be any letter so try each one
+                // the parameter args could be any letter except S so try each one
                 for(char c='A';c<='Z';c++) {
+                    if(c == 'S') continue; // used for segments per second
                     float v;
                     bool supported= arm_solution->get_optional(c, &v); // retrieve current value if supported
 
@@ -414,8 +415,11 @@ void Robot::on_gcode_received(void * argument){
                         gcode->add_nl = true;
                     }
                 }
+                // set delta segments per second
+                if(gcode->has_letter('S')) {
+                    this->delta_segments_per_second= gcode->get_value('S');
+                }
                 break;
-
         }
     }
 
