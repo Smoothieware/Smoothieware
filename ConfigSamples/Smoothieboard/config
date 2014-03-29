@@ -94,6 +94,9 @@ temperature_control.bed.set_m_code           140              #
 temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #
 
+#temperature_control.bed.bang_bang            false            # set to true to use bang bang control rather than PID
+#temperature_control.bed.hysteresis           2.0              # set to the temperature in degrees C to use as hysteresis when using bang bang
+
 # Switch module for fan control
 switch.fan.enable                            true             #
 switch.fan.input_on_command                  M106             #
@@ -196,7 +199,7 @@ network.enable                               false            # enable the ether
 network.webserver.enable                     true             # enable the webserver
 network.telnet.enable                        true             # enable the telnet server
 network.ip_address                           auto             # use dhcp to get ip address
-# uncomment the 3 below to manually setup ip address 
+# uncomment the 3 below to manually setup ip address
 #network.ip_address                           192.168.3.222    # the IP address
 #network.ip_mask                              255.255.255.0    # the ip mask
 #network.ip_gateway                           192.168.3.1      # the gateway address

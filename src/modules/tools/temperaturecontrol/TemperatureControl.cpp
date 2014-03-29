@@ -27,6 +27,8 @@
 #define readings_per_second_checksum       CHECKSUM("readings_per_second")
 #define max_pwm_checksum                   CHECKSUM("max_pwm")
 #define pwm_frequency_checksum             CHECKSUM("pwm_frequency")
+#define bang_bang_checksum                 CHECKSUM("bang_bang")
+#define hysteresis_checksum                CHECKSUM("hysteresis")
 #define t0_checksum                        CHECKSUM("t0")
 #define beta_checksum                      CHECKSUM("beta")
 #define vadc_checksum                      CHECKSUM("vadc")
@@ -134,7 +136,13 @@ void TemperatureControl::on_config_reload(void* argument){
     // Heater pin
     this->heater_pin.from_string(    THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_string())->as_output();
     this->heater_pin.max_pwm(        THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
+
     this->heater_pin.set(0);
+    this->heater_on= false;
+
+    // used to enable bang bang control of heater
+    this->use_bangbang= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, bang_bang_checksum)->by_default(false)->as_bool();
+    this->hysteresis= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, hysteresis_checksum)->by_default(2)->as_number();
 
     set_low_on_debug(heater_pin.port_number, heater_pin.pin);
 
@@ -336,8 +344,31 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
  */
 void TemperatureControl::pid_process(float temperature)
 {
-    float error = target_temperature - temperature;
+    if(use_bangbang) {
+        // bang bang if very simple, if temp is < target - hysteresis turn on full else if  temp is > target + hysteresis turn heater off
+        // good for relays
+        if(temperature > target_temperature+hysteresis && heater_on) {
+            heater_pin.set(false);
+            heater_on= false;
+            this->o= 0; // for display purposes only
 
+        }else if(temperature < target_temperature-hysteresis && !heater_on) {
+            if(heater_pin.max_pwm() >= 255) {
+                // turn on full
+                this->heater_pin.set(true);
+                this->o= 255; // for display purposes only
+            }else{
+                // only to whatever max pwm is configured
+                this->heater_pin.pwm(heater_pin.max_pwm());
+                this->o= heater_pin.max_pwm(); // for display purposes only
+            }
+            heater_on= true;
+        }
+        return;
+    }
+
+    // regular PID control
+    float error = target_temperature - temperature;
     this->iTerm += (error * this->i_factor);
     if (this->iTerm > this->i_max) this->iTerm = this->i_max;
     else if (this->iTerm < 0.0) this->iTerm = 0.0;

@@ -80,6 +80,8 @@ class TemperatureControl : public Module {
         Pin  thermistor_pin;
         Pwm  heater_pin;
 
+        bool use_bangbang;
+        bool heater_on;
         bool waiting;
         bool min_temp_violated;
 
@@ -94,6 +96,7 @@ class TemperatureControl : public Module {
         void setPIDi(float i);
         void setPIDd(float d);
 
+        float hysteresis;
         float iTerm;
         float lastInput;
         // PID settings
