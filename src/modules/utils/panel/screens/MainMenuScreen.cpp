@@ -16,7 +16,8 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
-
+#include "PublicData.h"
+#include "checksumm.h"
 
 #include <string>
 using namespace std;

@@ -9,20 +9,6 @@
 #define TOUCHPROBE_H_
 
 #include "libs/Module.h"
-#include "libs/SDFAT.h"
-#include "modules/robot/Conveyor.h"
-#include "libs/Kernel.h"
-#include "modules/communication/utils/Gcode.h"
-#include "libs/StepperMotor.h"
-#include "libs/Pin.h"
-
-#define touchprobe_enable_checksum           CHECKSUM("touchprobe_enable")
-#define touchprobe_log_enable_checksum       CHECKSUM("touchprobe_log_enable")
-#define touchprobe_logfile_name_checksum     CHECKSUM("touchprobe_logfile_name")
-#define touchprobe_log_rotate_mcode_checksum CHECKSUM("touchprobe_log_rotate_mcode")
-#define touchprobe_pin_checksum              CHECKSUM("touchprobe_pin")
-#define touchprobe_debounce_count_checksum   CHECKSUM("touchprobe_debounce_count")
-
 
 class Touchprobe: public Module {
     private:

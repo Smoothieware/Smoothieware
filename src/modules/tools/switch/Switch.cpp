@@ -14,6 +14,9 @@
 #include "modules/robot/Conveyor.h"
 #include "PublicDataRequest.h"
 #include "SwitchPublicAccess.h"
+#include "SlowTicker.h"
+#include "Config.h"
+#include "Gcode.h"
 
 
 #include "MRI_Hooks.h"

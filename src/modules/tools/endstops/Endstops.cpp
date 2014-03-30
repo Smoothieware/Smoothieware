@@ -14,6 +14,12 @@
 #include "libs/Pin.h"
 #include "libs/StepperMotor.h"
 #include "wait_api.h" // mbed.h lib
+#include "Robot.h"
+#include "Stepper.h"
+#include "Config.h"
+#include "SlowTicker.h"
+#include "Planner.h"
+
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1

@@ -7,6 +7,8 @@ You should have received a copy of the GNU General Public License along with Smo
 #include "VikiLCD.h"
 
 #include "Button.h"
+#include "Config.h"
+#include "checksumm.h"
 
 // config settings for Viki LCD
 #define panel_checksum             CHECKSUM("panel")

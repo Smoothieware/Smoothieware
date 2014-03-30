@@ -8,10 +8,13 @@
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include "system_LPC17xx.h"
+#include "LPC17xx.h"
+#include "utils.h"
 using namespace std;
 #include <string>
 using std::string;
 #include <cstring>
+#include <stdio.h>
 
 volatile bool _isr_context = false;
 

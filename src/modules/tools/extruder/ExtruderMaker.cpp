@@ -12,6 +12,10 @@ using namespace std;
 #include <vector>
 #include "ExtruderMaker.h"
 #include "Extruder.h"
+#include "Config.h"
+#include "ToolsManager.h"
+
+
 
 ExtruderMaker::ExtruderMaker(){}
 
@@ -19,39 +23,39 @@ void ExtruderMaker::on_module_loaded(){
 
     // If there is a "single" extruder configured ( old config syntax from when there was only one extruder module, no pool/maker
     if( THEKERNEL->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() == true ){
-   
+
         // Make a new extruder module
-        Extruder* extruder = new Extruder(0); 
+        Extruder* extruder = new Extruder(0);
 
         // Signal the extruder it will have to read config as an alone extruder
-        extruder->single_config = true; 
-  
+        extruder->single_config = true;
+
         // Add the module to the kernel
-        THEKERNEL->add_module( extruder ); 
-  
+        THEKERNEL->add_module( extruder );
+
         // Add the module to the ToolsManager
-        THEKERNEL->toolsmanager->add_tool( extruder );        
+        THEKERNEL->toolsmanager->add_tool( extruder );
 
     }
 
     // Get every "declared" extruder module ( new, multiextruder syntax )
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, extruder_checksum );
-    
-    // For every extruder found 
+
+    // For every extruder found
     for( unsigned int i = 0; i < modules.size(); i++ ){
 
         // If module is enabled
         if( THEKERNEL->config->value(extruder_checksum, modules[i], enable_checksum )->as_bool() == true ){
-       
+
             // Make a new extruder module
-            Extruder* extruder = new Extruder(modules[i]); 
+            Extruder* extruder = new Extruder(modules[i]);
 
             // Add the module to the kernel
-            THEKERNEL->add_module( extruder ); 
-      
+            THEKERNEL->add_module( extruder );
+
             // Add the module to the ToolsManager
-            THEKERNEL->toolsmanager->add_tool( extruder );        
+            THEKERNEL->toolsmanager->add_tool( extruder );
 
         }
 

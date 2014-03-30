@@ -4,6 +4,7 @@
 #include "libs/utils.h"
 
 #include "Gcode.h"
+#include "Config.h"
 
 // add new digipot chips here
 #include "mcp4451.h"

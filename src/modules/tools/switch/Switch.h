@@ -10,6 +10,10 @@
 
 #include "libs/Pin.h"
 #include <math.h>
+#include "Pwm.h"
+
+class Gcode;
+class StreamOutput;
 
 class Switch : public Module {
     public:

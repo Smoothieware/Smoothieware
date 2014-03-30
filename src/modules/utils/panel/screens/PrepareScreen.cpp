@@ -14,6 +14,8 @@
 #include "libs/utils.h"
 #include "PublicDataRequest.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
+#include "PublicData.h"
+#include "checksumm.h"
 
 #include <string>
 using namespace std;

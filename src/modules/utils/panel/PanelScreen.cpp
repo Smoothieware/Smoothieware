@@ -11,6 +11,8 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
+#include "Gcode.h"
+
 #include <string>
 #include <vector>
 

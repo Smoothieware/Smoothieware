@@ -17,6 +17,7 @@ using namespace std;
 #include <vector>
 
 class Gcode;
+class Block;
 
 class Conveyor : public Module
 {

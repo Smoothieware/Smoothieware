@@ -11,6 +11,7 @@
 #include "ConfigValue.h"
 #include "ConfigSource.h"
 #include "ConfigCache.h"
+#include "checksumm.h"
 
 using namespace std;
 #include <string>

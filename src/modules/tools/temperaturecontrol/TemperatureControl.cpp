@@ -17,6 +17,13 @@
 #include "modules/robot/Conveyor.h"
 #include "PublicDataRequest.h"
 #include "TemperatureControlPublicAccess.h"
+#include "StreamOutputPool.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "Gcode.h"
+#include "Adc.h"
+#include "SlowTicker.h"
+#include "Pauser.h"
 
 #include "MRI_Hooks.h"
 

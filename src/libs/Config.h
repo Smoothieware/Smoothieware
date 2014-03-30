@@ -10,7 +10,6 @@
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"
-#include "ConfigValue.h"
 #include "ConfigCache.h"
 #include "ConfigSource.h"
 #include "libs/ConfigSources/FileConfigSource.h"
@@ -26,6 +25,7 @@ using namespace std;
 #define LOCAL_CONFIGSOURCE_CHECKSUM     13581
 #define SD_CONFIGSOURCE_CHECKSUM        19415
 
+class ConfigValue;
 
 class Config : public Module {
     public:

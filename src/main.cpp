@@ -6,6 +6,7 @@
 */
 
 #include "libs/Kernel.h"
+\
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
@@ -21,9 +22,9 @@
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
 #include "libs/Network/uip/Network.h"
+#include "Config.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
-#include "libs/Config.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 
@@ -36,10 +37,12 @@
 #include "libs/USBDevice/USBSerial/USBSerial.h"
 #include "libs/USBDevice/DFU.h"
 #include "libs/SDFAT.h"
+#include "StreamOutputPool.h"
 
 #include "libs/Watchdog.h"
 
 #include "version.h"
+#include "system_LPC17xx.h"
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")

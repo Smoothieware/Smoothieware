@@ -8,6 +8,8 @@ You should have received a copy of the GNU General Public License along with Smo
 #include "smoothiepanel/LCDBang.h"
 
 #include "smoothiepanel/Colors.h"
+#include "Config.h"
+#include "checksumm.h"
 
 // commands
 #define LCD_CLEARDISPLAY 0x01

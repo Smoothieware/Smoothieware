@@ -12,6 +12,10 @@
 #include "Planner.h"
 #include "Conveyor.h"
 #include "StepperMotor.h"
+#include "Robot.h"
+#include "checksumm.h"
+#include "SlowTicker.h"
+#include "Config.h"
 
 #include <vector>
 using namespace std;

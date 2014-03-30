@@ -16,6 +16,7 @@ using std::string;
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "libs/FileStream.h"
+#include "Config.h"
 
 GcodeDispatch::GcodeDispatch() {}
 
