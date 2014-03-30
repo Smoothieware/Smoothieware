@@ -13,6 +13,8 @@ using namespace std;
 #include "TemperatureControlPool.h"
 #include "TemperatureControl.h"
 #include "PID_Autotuner.h"
+#include "Config.h"
+#include "checksumm.h"
 
 TemperatureControlPool::TemperatureControlPool(){}
 

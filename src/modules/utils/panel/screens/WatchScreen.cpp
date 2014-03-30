@@ -17,8 +17,14 @@
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "NetworkPublicAccess.h"
+#include "PublicData.h"
+#include "checksumm.h"
+#include "Pauser.h"
 
+#include <math.h>
+#include <string.h>
 #include <string>
+
 using namespace std;
 static const uint8_t icons[] = { // 115x19 - 3 bytes each: he1, he2, he3, bed, fan
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xE0,

@@ -9,6 +9,9 @@
 
 #include "PauseButton.h"
 #include "modules/robot/Conveyor.h"
+#include "SlowTicker.h"
+#include "Config.h"
+#include "Pauser.h"
 
 PlayLed::PlayLed(){}
 

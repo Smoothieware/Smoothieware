@@ -15,6 +15,11 @@
 #include "libs/utils.h"
 #include <string>
 #include "modules/robot/RobotPublicAccess.h"
+#include "PublicData.h"
+#include "checksumm.h"
+
+#include <math.h>
+
 using namespace std;
 
 ControlScreen::ControlScreen()

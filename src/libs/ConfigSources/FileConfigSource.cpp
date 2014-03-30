@@ -9,12 +9,14 @@
 #include "ConfigValue.h"
 #include "FileConfigSource.h"
 #include "ConfigCache.h"
+#include "utils.h"
 #include <malloc.h>
 
 
 using namespace std;
 #include <string>
 
+#include <stdio.h>
 
 FileConfigSource::FileConfigSource(string config_file, uint16_t name_checksum){
     this->name_checksum = name_checksum;

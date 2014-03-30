@@ -15,11 +15,19 @@
 #include "libs/StreamOutputPool.h"
 #include <mri.h>
 
+
+#include "libs/StepTicker.h"
+#include "libs/PublicData.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
+#include "modules/tools/toolsmanager/ToolsManager.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
+#include <array>
+
+
+
 #include "modules/robot/Conveyor.h"
 #include "modules/tools/endstops/Endstops.h"
 #include <malloc.h>

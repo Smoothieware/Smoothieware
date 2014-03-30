@@ -9,14 +9,13 @@
 #define BLOCK_H
 #include "libs/Module.h"
 #include "libs/Kernel.h"
+#include "Gcode.h"
+
 using namespace std;
 #include <string>
 #include <vector>
 
-#include "../communication/utils/Gcode.h"
-#include "Planner.h"
-class Planner;
-class Conveyor;
+
 
 float max_allowable_speed( float acceleration, float target_velocity, float distance);
 

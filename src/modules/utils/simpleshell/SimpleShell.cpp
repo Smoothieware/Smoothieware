@@ -18,11 +18,19 @@
 #include "version.h"
 #include "PublicDataRequest.h"
 #include "FileStream.h"
+#include "checksumm.h"
+#include "PublicData.h"
+#include "Gcode.h"
+
+#include "SimpleShell.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
+
+#include "system_LPC17xx.h"
+#include "LPC17xx.h"
 
 extern unsigned int g_maximumHeapAddress;
 

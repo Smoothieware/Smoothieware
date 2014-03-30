@@ -16,6 +16,10 @@
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "screens/CustomScreen.h"
 #include "screens/MainMenuScreen.h"
+#include "SlowTicker.h"
+#include "Gcode.h"
+#include "Pauser.h"
+#include "PublicData.h"
 
 #include "panels/I2CLCD.h"
 #include "panels/VikiLCD.h"
@@ -134,8 +138,8 @@ void Panel::on_module_loaded()
 //    this->click_button.set_longpress_delay(longpress_delay);
 //    this->back_button.set_longpress_delay(longpress_delay);
 //    this->pause_button.set_longpress_delay(longpress_delay);
-	
-	
+
+
     THEKERNEL->slow_ticker->attach( 100,  this, &Panel::button_tick );
     THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
 

@@ -5,6 +5,8 @@
 #include "CommandQueue.h"
 
 #include "Kernel.h"
+#include "Config.h"
+#include "SlowTicker.h"
 
 #include "Network.h"
 #include "PublicDataRequest.h"

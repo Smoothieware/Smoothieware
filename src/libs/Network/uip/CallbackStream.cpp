@@ -1,7 +1,8 @@
 #include "CallbackStream.h"
 #include "Kernel.h"
+#include <stdio.h>
 
-#define DEBUG_PRINTF std::printf
+#define DEBUG_PRINTF printf
 
 CallbackStream::CallbackStream(cb_t cb, void *u)
 {

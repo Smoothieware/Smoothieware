@@ -7,24 +7,12 @@
 
 #ifndef KERNEL_H
 #define KERNEL_H
-#include "libs/Module.h"
-#include "libs/Config.h"
-#include "libs/SlowTicker.h"
-#include "libs/StreamOutputPool.h"
-#include "libs/StepTicker.h"
-#include "libs/Adc.h"
-#include "libs/Pauser.h"
-#include "libs/PublicData.h"
-#include "modules/communication/SerialConsole.h"
-#include "modules/communication/GcodeDispatch.h"
-#include "modules/tools/toolsmanager/ToolsManager.h"
-#include "modules/robot/Planner.h"
-#include "modules/robot/Robot.h"
-#include "modules/robot/Stepper.h"
-#include "mri.h"
-#include <array>
 
 #define THEKERNEL Kernel::instance
+
+#include "Module.h"
+#include <array>
+#include <vector>
 
 //Module manager
 class Config;
@@ -32,6 +20,16 @@ class Module;
 class Conveyor;
 class SlowTicker;
 class Pauser;
+class SerialConsole;
+class StreamOutputPool;
+class GcodeDispatch;
+class Robot;
+class Stepper;
+class Planner;
+class ToolsManager;
+class StepTicker;
+class Adc;
+class PublicData;
 
 class Kernel {
     public:
