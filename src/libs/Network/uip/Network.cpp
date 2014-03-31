@@ -14,6 +14,7 @@
 #include "net_util.h"
 #include "uip_arp.h"
 #include "clock-arch.h"
+#include "NetworkPublicAccess.h"
 
 #include "uip.h"
 #include "telnetd.h"
@@ -25,6 +26,14 @@
 #include <mri.h>
 
 #define BUF ((struct uip_eth_hdr *)&uip_buf[0])
+
+#define network_enable_checksum CHECKSUM("enable")
+#define network_webserver_checksum CHECKSUM("webserver")
+#define network_telnet_checksum CHECKSUM("telnet")
+#define network_mac_override_checksum CHECKSUM("mac_override")
+#define network_ip_address_checksum CHECKSUM("ip_address")
+#define network_ip_gateway_checksum CHECKSUM("ip_gateway")
+#define network_ip_mask_checksum CHECKSUM("ip_mask")
 
 extern "C" void uip_log(char *m)
 {

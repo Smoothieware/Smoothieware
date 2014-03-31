@@ -44,7 +44,7 @@
 #include "telnetd.h"
 #include "CallbackStream.h"
 #include "StreamOutputPool.h"
-
+#include "CommandQueue.h"
 
 //#define DEBUG_PRINTF(...)
 #define DEBUG_PRINTF printf
