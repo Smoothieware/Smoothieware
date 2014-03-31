@@ -8,8 +8,6 @@
 #ifndef CONFIGVALUE_H
 #define CONFIGVALUE_H
 
-#include "libs/Kernel.h"
-
 using namespace std;
 #include <string>
 

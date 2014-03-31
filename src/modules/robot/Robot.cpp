@@ -27,6 +27,8 @@ using std::string;
 #include "arm_solutions/JohannKosselSolution.h"
 #include "arm_solutions/HBotSolution.h"
 #include "StepTicker.h"
+#include "checksumm.h"
+#include "utils.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")

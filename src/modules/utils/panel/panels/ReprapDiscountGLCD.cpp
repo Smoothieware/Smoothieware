@@ -7,6 +7,9 @@
 #include "ReprapDiscountGLCD.h"
 
 #include "Kernel.h"
+#include "checksumm.h"
+#include "libs/Config.h"
+#include "rrdglcd/RrdGlcd.h"
 
 // config settings
 #define panel_checksum             CHECKSUM("panel")

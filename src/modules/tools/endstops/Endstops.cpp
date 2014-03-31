@@ -19,7 +19,8 @@
 #include "Config.h"
 #include "SlowTicker.h"
 #include "Planner.h"
-
+#include "checksumm.h"
+#include "utils.h"
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1

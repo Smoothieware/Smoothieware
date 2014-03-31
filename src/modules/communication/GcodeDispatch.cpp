@@ -17,6 +17,7 @@ using std::string;
 #include "libs/StreamOutput.h"
 #include "libs/FileStream.h"
 #include "Config.h"
+#include "checksumm.h"
 
 GcodeDispatch::GcodeDispatch() {}
 

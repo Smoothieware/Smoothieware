@@ -6,6 +6,7 @@ You should have received a copy of the GNU General Public License along with Smo
 */
 #include "VikiLCD.h"
 
+#include "Kernel.h"
 #include "Button.h"
 #include "Config.h"
 #include "checksumm.h"

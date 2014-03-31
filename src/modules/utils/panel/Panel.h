@@ -8,15 +8,14 @@
 #ifndef PANEL_H
 #define PANEL_H
 
-#include "Kernel.h"
-#include "PanelScreen.h"
-#include "panels/LcdBase.h"
 #include "Button.h"
 
 #define MENU_MODE                  0
 #define CONTROL_MODE               1
 
+class LcdBase;
 class PanelScreen;
+
 class Panel : public Module {
     public:
         Panel();

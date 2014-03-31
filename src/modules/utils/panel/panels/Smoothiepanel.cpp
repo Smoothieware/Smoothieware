@@ -5,6 +5,8 @@ Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARR
 You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "Smoothiepanel.h"
+#include "Kernel.h"
+
 #include "smoothiepanel/LCDBang.h"
 
 #include "smoothiepanel/Colors.h"

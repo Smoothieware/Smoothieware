@@ -5,6 +5,7 @@
 
 #include "Gcode.h"
 #include "Config.h"
+#include "checksumm.h"
 
 // add new digipot chips here
 #include "mcp4451.h"

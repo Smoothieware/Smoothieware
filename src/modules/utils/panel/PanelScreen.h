@@ -8,7 +8,7 @@
 #ifndef PANELSCREEN_H
 #define PANELSCREEN_H
 
-#include "Panel.h"
+#include <string>
 
 class Panel;
 class PanelScreen
