@@ -2,7 +2,8 @@
 #include "Kernel.h"
 #include <stdio.h>
 
-#define DEBUG_PRINTF printf
+#include "SerialConsole.h"
+#define DEBUG_PRINTF THEKERNEL->serial->printf
 
 CallbackStream::CallbackStream(cb_t cb, void *u)
 {
