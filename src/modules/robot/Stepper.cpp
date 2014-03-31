@@ -17,6 +17,7 @@
 #include "SlowTicker.h"
 #include "Config.h"
 #include "ConfigValue.h"
+#include "Gcode.h"
 
 #include <vector>
 using namespace std;

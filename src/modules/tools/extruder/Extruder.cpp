@@ -21,6 +21,7 @@
 #include "Robot.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "Gcode.h"
 
 #include <mri.h>
 

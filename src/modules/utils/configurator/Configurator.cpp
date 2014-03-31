@@ -17,6 +17,7 @@
 #include "Gcode.h"
 #include "ConfigSource.h"
 #include "FileConfigSource.h"
+#include "ConfigValue.h"
 
 void Configurator::on_module_loaded(){
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);

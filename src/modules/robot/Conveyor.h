@@ -9,7 +9,6 @@
 #define CONVEYOR_H
 
 #include "libs/Module.h"
-#include "libs/Kernel.h"
 #include "HeapRing.h"
 
 using namespace std;

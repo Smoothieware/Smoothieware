@@ -25,6 +25,8 @@
 #include "SlowTicker.h"
 #include "Pauser.h"
 #include "ConfigValue.h"
+#include "TemperatureControl.h"
+#include "PID_Autotuner.h"
 
 #include "MRI_Hooks.h"
 
