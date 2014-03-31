@@ -1,6 +1,7 @@
 #include "RostockSolution.h"
 #include <fastmath.h>
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 #define PIOVER180       0.01745329251994329576923690768489F
 

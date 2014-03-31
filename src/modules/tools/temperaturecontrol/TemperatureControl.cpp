@@ -24,6 +24,7 @@
 #include "Adc.h"
 #include "SlowTicker.h"
 #include "Pauser.h"
+#include "ConfigValue.h"
 
 #include "MRI_Hooks.h"
 

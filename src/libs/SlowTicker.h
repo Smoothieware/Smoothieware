@@ -10,6 +10,8 @@
 #ifndef SLOWTICKER_H
 #define SLOWTICKER_H
 
+#include "Module.h"
+
 using namespace std;
 #include <vector>
 

@@ -21,6 +21,7 @@
 #include "Planner.h"
 #include "checksumm.h"
 #include "utils.h"
+#include "ConfigValue.h"
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1

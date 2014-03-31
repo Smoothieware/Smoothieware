@@ -1,5 +1,8 @@
 #include "utils.h"
 #include "ConfigSource.h"
+#include "ConfigValue.h"
+#include "ConfigCache.h"
+
 #include "stdio.h"
 
 string ConfigSource::process_char_from_ascii_config(int c, ConfigCache *cache)

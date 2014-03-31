@@ -18,6 +18,7 @@
 #include "checksumm.h"
 #include "Pauser.h"
 #include "Config.h"
+#include "ConfigValue.h"
 
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"

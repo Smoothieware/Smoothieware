@@ -13,6 +13,7 @@
 #include "wait_api.h" // mbed.h lib
 #include "libs/Config.h"
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 using namespace std;
 #include <vector>

@@ -21,6 +21,7 @@ using namespace std;
 #include "checksumm.h"
 #include "Config.h"
 #include "libs/StreamOutputPool.h"
+#include "ConfigValue.h"
 
 #define planner_queue_size_checksum CHECKSUM("planner_queue_size")
 

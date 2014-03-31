@@ -12,6 +12,7 @@
 #include "Config.h"
 #include "ToolsManager.h"
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 #include <math.h>
 using namespace std;

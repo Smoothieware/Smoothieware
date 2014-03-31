@@ -1,8 +1,9 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
-#include "libs/Pin.h"
 #include "libs/Hook.h"
+
+class Pin;
 
 class Button
 {

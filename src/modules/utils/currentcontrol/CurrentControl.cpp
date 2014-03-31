@@ -2,6 +2,7 @@
 #include "CurrentControl.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+#include "ConfigValue.h"
 
 #include "Gcode.h"
 #include "Config.h"

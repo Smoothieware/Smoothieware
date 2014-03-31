@@ -12,6 +12,7 @@ You should have received a copy of the GNU General Public License along with Smo
 #include "smoothiepanel/Colors.h"
 #include "Config.h"
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 // commands
 #define LCD_CLEARDISPLAY 0x01

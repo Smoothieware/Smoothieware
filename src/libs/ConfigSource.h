@@ -11,10 +11,9 @@
 using namespace std;
 #include <vector>
 #include <string>
-#include "ConfigValue.h"
-#include "ConfigCache.h"
 
 class ConfigValue;
+class ConfigCache;
 
 class ConfigSource {
     public:

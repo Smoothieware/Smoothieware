@@ -29,6 +29,7 @@ using std::string;
 #include "StepTicker.h"
 #include "checksumm.h"
 #include "utils.h"
+#include "ConfigValue.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")

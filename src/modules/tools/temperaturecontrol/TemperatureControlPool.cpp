@@ -15,6 +15,7 @@ using namespace std;
 #include "PID_Autotuner.h"
 #include "Config.h"
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 TemperatureControlPool::TemperatureControlPool(){}
 

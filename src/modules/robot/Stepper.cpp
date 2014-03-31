@@ -16,6 +16,7 @@
 #include "checksumm.h"
 #include "SlowTicker.h"
 #include "Config.h"
+#include "ConfigValue.h"
 
 #include <vector>
 using namespace std;

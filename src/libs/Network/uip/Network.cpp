@@ -16,6 +16,7 @@
 #include "clock-arch.h"
 #include "NetworkPublicAccess.h"
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 #include "uip.h"
 #include "telnetd.h"

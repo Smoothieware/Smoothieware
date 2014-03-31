@@ -10,6 +10,7 @@
 #include "checksumm.h"
 #include "libs/Config.h"
 #include "rrdglcd/RrdGlcd.h"
+#include "ConfigValue.h"
 
 // config settings
 #define panel_checksum             CHECKSUM("panel")

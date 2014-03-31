@@ -15,6 +15,7 @@
 #include "libs/StreamOutputPool.h"
 #include <mri.h>
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 #include "libs/StepTicker.h"
 #include "libs/PublicData.h"

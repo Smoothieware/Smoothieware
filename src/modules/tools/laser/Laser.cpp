@@ -15,6 +15,7 @@
 #include "StreamOutputPool.h"
 #include "Block.h"
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 Laser::Laser(){
 }

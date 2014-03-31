@@ -13,6 +13,7 @@
 #include "Config.h"
 #include "Pauser.h"
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 PlayLed::PlayLed(){}
 

@@ -1,9 +1,7 @@
 #ifndef PAUSER_H
 #define PAUSER_H
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
+#include "Module.h"
 
 class Block;
 
