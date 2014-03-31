@@ -10,6 +10,8 @@ Pwm::Pwm()
 {
     _max = PID_PWM_MAX - 1;
     _pwm = -1;
+    _sd_direction= false;
+    _sd_accumulator= 0;
 }
 
 void Pwm::pwm(int new_pwm)
