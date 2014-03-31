@@ -8,10 +8,10 @@
 #ifndef FIRMCONFIGSOURCE_H
 #define FIRMCONFIGSOURCE_H
 
-#include "ConfigValue.h"
 #include "ConfigSource.h"
-#include "ConfigCache.h"
 #include "checksumm.h"
+
+class ConfigCache;
 
 using namespace std;
 #include <string>

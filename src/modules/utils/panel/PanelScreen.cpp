@@ -12,6 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "Gcode.h"
+#include "LcdBase.h"
 
 #include <string>
 #include <vector>

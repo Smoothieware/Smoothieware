@@ -8,9 +8,9 @@
 #ifndef FILECONFIGSOURCE_H
 #define FILECONFIGSOURCE_H
 
-#include "ConfigValue.h"
 #include "ConfigSource.h"
-#include "ConfigCache.h"
+
+class ConfigCache;
 
 using namespace std;
 #include <string>

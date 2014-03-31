@@ -17,7 +17,8 @@
 #include "SlowTicker.h"
 #include "Config.h"
 #include "Gcode.h"
-
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 #include "MRI_Hooks.h"
 

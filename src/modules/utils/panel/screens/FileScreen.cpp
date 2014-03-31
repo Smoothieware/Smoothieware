@@ -14,7 +14,7 @@
 #include "libs/utils.h"
 #include <string>
 #include "libs/SerialMessage.h"
-
+#include "StreamOutput.h"
 #include "DirHandle.h"
 #include "mri.h"
 

@@ -23,6 +23,8 @@
 #include "modules/utils/panel/Panel.h"
 #include "libs/Network/uip/Network.h"
 #include "Config.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/nuts_bolts.h"

@@ -20,6 +20,7 @@ using std::string;
 #include "StepperMotor.h"
 #include "Gcode.h"
 #include "PublicDataRequest.h"
+#include "RobotPublicAccess.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
@@ -27,6 +28,9 @@ using std::string;
 #include "arm_solutions/JohannKosselSolution.h"
 #include "arm_solutions/HBotSolution.h"
 #include "StepTicker.h"
+#include "checksumm.h"
+#include "utils.h"
+#include "ConfigValue.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")

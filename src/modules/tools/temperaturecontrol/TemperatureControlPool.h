@@ -8,11 +8,12 @@
 #ifndef TEMPERATURECONTROLPOOL_H
 #define TEMPERATURECONTROLPOOL_H
 
-#include "TemperatureControl.h"
-#include "PID_Autotuner.h"
 #include <math.h>
 using namespace std;
 #include <vector>
+
+class TemperatureControl;
+class PID_Autotuner;
 
 #define temperature_control_checksum CHECKSUM("temperature_control")
 #define enable_checksum              CHECKSUM("enable")

@@ -35,7 +35,6 @@
 #ifndef __TELNETD_H__
 #define __TELNETD_H__
 
-#include "shell.h"
 #include "stdint.h"
 
 class Shell;

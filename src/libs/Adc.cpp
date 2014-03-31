@@ -5,15 +5,16 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-using namespace std;
-#include <vector>
-#include "libs/nuts_bolts.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
 #include "Adc.h"
+#include "libs/nuts_bolts.h"
+#include "libs/Kernel.h"
+#include "libs/Pin.h"
 #include "libs/ADC/adc.h"
 #include "libs/Pin.h"
 
+
+using namespace std;
+#include <vector>
 // This is an interface to the mbed.org ADC library you can find in libs/ADC/adc.h
 // TODO : Having the same name is confusing, should change that
 

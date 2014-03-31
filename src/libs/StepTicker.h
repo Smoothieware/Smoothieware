@@ -12,8 +12,7 @@
 
 using namespace std;
 #include <vector>
-
-#include "libs/Module.h"
+#include <stdint.h>
 
 class StepperMotor;
 

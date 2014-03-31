@@ -8,9 +8,9 @@
 #define RRDGLCD_H
 
 #include "LcdBase.h"
+#include "Pin.h"
 
-#include "libs/Config.h"
-#include "rrdglcd/RrdGlcd.h"
+class RrdGlcd;
 
 class ReprapDiscountGLCD : public LcdBase {
     public:

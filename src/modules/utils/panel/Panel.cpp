@@ -27,6 +27,8 @@
 #include "panels/ReprapDiscountGLCD.h"
 #include "panels/ST7565.h"
 #include "version.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 #define panel_checksum             CHECKSUM("panel")
 #define enable_checksum            CHECKSUM("enable")

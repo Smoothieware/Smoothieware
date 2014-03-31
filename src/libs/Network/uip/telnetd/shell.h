@@ -45,10 +45,8 @@
 #ifndef __SHELL_H__
 #define __SHELL_H__
 
-#include "telnetd.h"
-#include "CommandQueue.h"
-
 class Telnetd;
+class StreamOutput;
 
 class Shell
 {

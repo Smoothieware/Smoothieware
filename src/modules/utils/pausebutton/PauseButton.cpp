@@ -5,6 +5,8 @@
 #include "Config.h"
 #include "SlowTicker.h"
 #include "Pauser.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 #include <string>
 using namespace std;

@@ -1,5 +1,7 @@
 #include "JohannKosselSolution.h"
 #include <fastmath.h>
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 #include "Vector3.h"
 

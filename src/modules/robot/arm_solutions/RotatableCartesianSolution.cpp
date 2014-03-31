@@ -1,5 +1,7 @@
 #include "RotatableCartesianSolution.h"
 #include <math.h>
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 // degrees * (pi / 180) = radians
 #define DEG2RAD       0.01745329251994329576923690768489

@@ -11,7 +11,8 @@
 #include <string>
 using std::string;
 #include "libs/Module.h"
-#include "RobotPublicAccess.h"
+
+#include <string.h>
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1

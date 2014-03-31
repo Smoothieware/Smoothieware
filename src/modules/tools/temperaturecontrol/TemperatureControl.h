@@ -8,7 +8,6 @@
 #ifndef temperaturecontrol_h
 #define temperaturecontrol_h
 
-#include "libs/Pin.h"
 #include "Pwm.h"
 #include <math.h>
 

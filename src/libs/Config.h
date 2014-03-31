@@ -7,25 +7,18 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
-#include "libs/Kernel.h"
-#include "libs/utils.h"
-#include "libs/Pin.h"
-#include "ConfigCache.h"
-#include "ConfigSource.h"
-#include "libs/ConfigSources/FileConfigSource.h"
-#include "checksumm.h"
 
-#define error(...) (fprintf(stderr, __VA_ARGS__), exit(1))
+#include "ConfigCache.h"
 
 using namespace std;
 #include <vector>
 #include <string>
-#include <stdio.h>
 
 #define LOCAL_CONFIGSOURCE_CHECKSUM     13581
 #define SD_CONFIGSOURCE_CHECKSUM        19415
 
 class ConfigValue;
+class ConfigSource;
 
 class Config : public Module {
     public:

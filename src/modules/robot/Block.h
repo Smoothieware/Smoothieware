@@ -7,15 +7,12 @@
 
 #ifndef BLOCK_H
 #define BLOCK_H
-#include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "Gcode.h"
 
 using namespace std;
 #include <string>
 #include <vector>
 
-
+class Gcode;
 
 float max_allowable_speed( float acceleration, float target_velocity, float distance);
 
