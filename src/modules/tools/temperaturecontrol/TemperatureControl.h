@@ -80,7 +80,6 @@ class TemperatureControl : public Module {
         Pwm  heater_pin;
 
         bool use_bangbang;
-        bool heater_on;
         bool waiting;
         bool min_temp_violated;
 

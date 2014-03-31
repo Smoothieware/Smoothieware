@@ -137,7 +137,7 @@ void TemperatureControl::on_config_reload(void* argument){
     k = (1.0 / (t0 + 273.15));
 
     // sigma-delta output modulation
-    o = 0;
+    this->o = 0;
 
     // Thermistor pin for ADC readings
     this->thermistor_pin.from_string(THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_string());
@@ -148,7 +148,6 @@ void TemperatureControl::on_config_reload(void* argument){
     this->heater_pin.max_pwm(        THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
 
     this->heater_pin.set(0);
-    this->heater_on= false;
 
     // used to enable bang bang control of heater
     this->use_bangbang= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, bang_bang_checksum)->by_default(false)->as_bool();
@@ -243,7 +242,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
             if (v == 0.0)
             {
                 this->target_temperature = UNDEFINED;
-                this->heater_pin.set(0);
+                this->heater_pin.set((this->o=0));
             }
             else
             {
@@ -301,7 +300,7 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
 
     target_temperature = desired_temperature;
     if (desired_temperature == 0.0)
-        heater_pin.set((o = 0));
+        heater_pin.set((this->o = 0));
 }
 
 float TemperatureControl::get_temperature(){
@@ -329,7 +328,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
         {
             this->min_temp_violated = true;
             target_temperature = UNDEFINED;
-            heater_pin.set(0);
+            heater_pin.set((this->o=0));
         }
         else
         {
@@ -343,7 +342,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     }
     else
     {
-        heater_pin.set((o = 0));
+        heater_pin.set((this->o = 0));
     }
     last_reading = temperature;
     return 0;
@@ -355,14 +354,13 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
 void TemperatureControl::pid_process(float temperature)
 {
     if(use_bangbang) {
-        // bang bang if very simple, if temp is < target - hysteresis turn on full else if  temp is > target + hysteresis turn heater off
+        // bang bang is very simple, if temp is < target - hysteresis turn on full else if  temp is > target + hysteresis turn heater off
         // good for relays
-        if(temperature > target_temperature+hysteresis && heater_on) {
+        if(temperature > (target_temperature+hysteresis) && this->o > 0) {
             heater_pin.set(false);
-            heater_on= false;
             this->o= 0; // for display purposes only
 
-        }else if(temperature < target_temperature-hysteresis && !heater_on) {
+        }else if(temperature < (target_temperature-hysteresis) && this->o <= 0) {
             if(heater_pin.max_pwm() >= 255) {
                 // turn on full
                 this->heater_pin.set(true);
@@ -372,7 +370,6 @@ void TemperatureControl::pid_process(float temperature)
                 this->heater_pin.pwm(heater_pin.max_pwm());
                 this->o= heater_pin.max_pwm(); // for display purposes only
             }
-            heater_on= true;
         }
         return;
     }
