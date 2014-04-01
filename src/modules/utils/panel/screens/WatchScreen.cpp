@@ -18,6 +18,7 @@
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "PublicData.h"
+#include "SwitchPublicAccess.h"
 #include "checksumm.h"
 #include "Pauser.h"
 
@@ -130,8 +131,8 @@ void WatchScreen::on_refresh()
             if (this->bedtarget > 0)
                 this->panel->lcd->bltGlyph(32, 38, 23, 19, icons, 15, 64, 0);
 
-            // fan appears always on for now
-            this->panel->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
+            if(this->fan_state)
+                this->panel->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
         }
     }
 }
@@ -176,6 +177,16 @@ void WatchScreen::get_temp_data()
         // temp probably disabled
         this->hotendtemp = -1;
         this->hotendtarget = -1;
+    }
+
+    // get fan status
+    ok = THEKERNEL->public_data->get_value( switch_checksum, fan_checksum, 0, &returned_data );
+    if (ok) {
+        struct pad_switch s = *static_cast<struct pad_switch *>(returned_data);
+        this->fan_state = s.state;
+    } else {
+        // fan probably disabled
+        this->fan_state = false;
     }
 }
 
