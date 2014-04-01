@@ -103,6 +103,7 @@ switch.fan.input_on_command                  M106             #
 switch.fan.input_off_command                 M107             #
 switch.fan.output_pin                        2.6              #
 switch.fan.pwm_output                        true             # pwm output settable with S parameter in the input_on_comand
+#switch.fan.max_pwm                           255              # set max pwm for the pin default is 255
 
 #switch.misc.enable                           true             #
 #switch.misc.input_on_command                 M42              #

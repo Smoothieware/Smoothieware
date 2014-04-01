@@ -32,6 +32,7 @@
 #define    input_off_command_checksum   CHECKSUM("input_off_command")
 #define    output_pin_checksum          CHECKSUM("output_pin")
 #define    pwm_output_checksum          CHECKSUM("pwm_output")
+#define    max_pwm_checksum             CHECKSUM("max_pwm")
 #define    output_on_command_checksum   CHECKSUM("output_on_command")
 #define    output_off_command_checksum  CHECKSUM("output_off_command")
 
@@ -70,14 +71,18 @@ void Switch::on_config_reload(void *argument)
     this->output_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
     this->output_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
     this->switch_state =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    this->switch_value =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
     this->pwm_output =           THEKERNEL->config->value(switch_checksum, this->name_checksum, pwm_output_checksum )->by_default(true)->as_bool();
+    if(this->output_pin.connected()) {
+        if(this->pwm_output) {
+            this->output_pin.max_pwm(THEKERNEL->config->value(switch_checksum, this->name_checksum, max_pwm_checksum )->by_default(255)->as_number());
+            this->output_pin.pwm(this->switch_state ? 255 : 0); // will be truncated to max_pwm
 
-    if(this->pwm_output) {
-        this->output_pin.pwm(this->switch_state ? this->switch_value : 0);
-    } else {
-        this->output_pin.set(this->switch_state);
+        } else {
+            this->output_pin.set(this->switch_state);
+        }
     }
+
+    this->switch_value =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
 
     set_low_on_debug(output_pin.port_number, output_pin.pin);
 
@@ -113,7 +118,7 @@ void Switch::on_config_reload(void *argument)
         THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
     }
 
-    if(this->pwm_output) {
+    if(this->pwm_output && this->output_pin.connected()) {
         // PWM
         THEKERNEL->slow_ticker->attach(1000, &this->output_pin, &Pwm::on_tick);
     }
@@ -141,7 +146,6 @@ void Switch::on_gcode_received(void *argument)
 }
 
 // Turn pin on and off
-// FIXME the PWM stuff does not really work as expected and needs to be fixed
 void Switch::on_gcode_execute(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
@@ -150,7 +154,7 @@ void Switch::on_gcode_execute(void *argument)
         if (this->pwm_output) {
             // PWM output pin
             if(gcode->has_letter('S')) {
-                int v = gcode->get_value('S') * output_pin.max_pwm() / 255.0;
+                int v = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // scale by max_pwm so input of 255 and max+pwm of 128 would set value to 128
                 if (v > 0) {
                     this->output_pin.pwm(v);
                     this->switch_value = v;
@@ -161,9 +165,8 @@ void Switch::on_gcode_execute(void *argument)
                 }
 
             } else {
-                // Turn pin full on or to last value
-                // TODO this is wrong should turn full on or to output pins max_pwm
-                this->output_pin.pwm(this->switch_value);
+                // Turn pin full on
+                this->output_pin.pwm(255); // will be truncated to max_pwm if set
                 this->switch_state = true;
             }
 
@@ -233,7 +236,7 @@ void Switch::on_main_loop(void *argument)
             if(!this->output_on_command.empty()) this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
             if(this->output_pin.connected()) {
                 if(this->pwm_output)
-                    this->output_pin.pwm(this->switch_value);
+                    this->output_pin.pwm(this->switch_value); // this requires the value has been set otherwise it swicthes on to whatever it last was
                 else
                     this->output_pin.set(true);
             }
