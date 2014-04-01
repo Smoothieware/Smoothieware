@@ -162,6 +162,7 @@ void Switch::on_gcode_execute(void *argument)
 
             } else {
                 // Turn pin full on or to last value
+                // TODO this is wrong should turn full on or to output pins max_pwm
                 this->output_pin.pwm(this->switch_value);
                 this->switch_state = true;
             }
