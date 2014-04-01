@@ -45,8 +45,6 @@ Switch::Switch(uint16_t name)
 
 void Switch::on_module_loaded()
 {
-    this->input_pin_state = true;
-    this->switch_state = true;
     this->switch_changed = false;
 
     register_for_event(ON_CONFIG_RELOAD);
@@ -109,6 +107,8 @@ void Switch::on_config_reload(void *argument)
     }
 
     if(input_pin.connected()) {
+        // set to initial state
+        this->input_pin_state = this->input_pin.get();
         // input pin polling
         THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
     }
@@ -252,7 +252,6 @@ void Switch::on_main_loop(void *argument)
 }
 
 // TODO Make this use InterruptIn
-// FIXME This logic is broken especially for momentary and toggle
 // Check the state of the button and act accordingly
 uint32_t Switch::pinpoll_tick(uint32_t dummy)
 {
@@ -274,7 +273,7 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
             // else if button released
         } else {
             // if switch is momentary
-            if( !this->input_pin_behavior == toggle_checksum ) {
+            if( this->input_pin_behavior == momentary_checksum ) {
                 this->flip();
             }
         }
