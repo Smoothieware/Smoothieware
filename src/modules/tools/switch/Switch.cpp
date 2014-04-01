@@ -31,7 +31,7 @@
 #define    input_on_command_checksum    CHECKSUM("input_on_command")
 #define    input_off_command_checksum   CHECKSUM("input_off_command")
 #define    output_pin_checksum          CHECKSUM("output_pin")
-#define    pwm_output_checksum          CHECKSUM("pwm_output")
+#define    output_type_checksum         CHECKSUM("output_type")
 #define    max_pwm_checksum             CHECKSUM("max_pwm")
 #define    output_on_command_checksum   CHECKSUM("output_on_command")
 #define    output_off_command_checksum  CHECKSUM("output_off_command")
@@ -71,9 +71,14 @@ void Switch::on_config_reload(void *argument)
     this->output_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
     this->output_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
     this->switch_state =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    this->pwm_output =           THEKERNEL->config->value(switch_checksum, this->name_checksum, pwm_output_checksum )->by_default(true)->as_bool();
+    string type =                THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
+
+    if(type == "pwm") this->output_type= PWM;
+    else if(type == "digital") this->output_type= DIGITAL;
+    else this->output_type= PWM; // unkown type default to pwm
+
     if(this->output_pin.connected()) {
-        if(this->pwm_output) {
+        if(this->output_type == PWM) {
             this->output_pin.max_pwm(THEKERNEL->config->value(switch_checksum, this->name_checksum, max_pwm_checksum )->by_default(255)->as_number());
             this->output_pin.pwm(this->switch_state ? 255 : 0); // will be truncated to max_pwm
 
@@ -118,7 +123,7 @@ void Switch::on_config_reload(void *argument)
         THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
     }
 
-    if(this->pwm_output && this->output_pin.connected()) {
+    if(this->output_type == PWM && this->output_pin.connected()) {
         // PWM
         THEKERNEL->slow_ticker->attach(1000, &this->output_pin, &Pwm::on_tick);
     }
@@ -151,10 +156,10 @@ void Switch::on_gcode_execute(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     if(match_input_on_gcode(gcode)) {
-        if (this->pwm_output) {
+        if (this->output_type == PWM) {
             // PWM output pin
             if(gcode->has_letter('S')) {
-                int v = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // scale by max_pwm so input of 255 and max+pwm of 128 would set value to 128
+                int v = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
                 if (v > 0) {
                     this->output_pin.pwm(v);
                     this->switch_value = v;
@@ -176,7 +181,7 @@ void Switch::on_gcode_execute(void *argument)
         }
 
     } else if(match_input_off_gcode(gcode)) {
-        if (this->pwm_output) {
+        if (this->output_type == PWM) {
             // PWM output pin
             this->output_pin.pwm(0);
             this->switch_state = false;
@@ -235,7 +240,7 @@ void Switch::on_main_loop(void *argument)
         if(this->switch_state) {
             if(!this->output_on_command.empty()) this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
             if(this->output_pin.connected()) {
-                if(this->pwm_output)
+                if(this->output_type == PWM)
                     this->output_pin.pwm(this->switch_value); // this requires the value has been set otherwise it swicthes on to whatever it last was
                 else
                     this->output_pin.set(true);
@@ -244,7 +249,7 @@ void Switch::on_main_loop(void *argument)
         } else {
             if(!this->output_off_command.empty()) this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
             if(this->output_pin.connected()) {
-                if(this->pwm_output)
+                if(this->output_type == PWM)
                     this->output_pin.pwm(0);
                 else
                     this->output_pin.set(false);

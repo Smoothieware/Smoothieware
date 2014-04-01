@@ -102,14 +102,14 @@ switch.fan.enable                            true             #
 switch.fan.input_on_command                  M106             #
 switch.fan.input_off_command                 M107             #
 switch.fan.output_pin                        2.6              #
-switch.fan.pwm_output                        true             # pwm output settable with S parameter in the input_on_comand
+switch.fan.output_type                       pwm              # pwm output settable with S parameter in the input_on_comand
 #switch.fan.max_pwm                           255              # set max pwm for the pin default is 255
 
 #switch.misc.enable                           true             #
 #switch.misc.input_on_command                 M42              #
 #switch.misc.input_off_command                M43              #
 #switch.misc.output_pin                       2.4              #
-#switch.misc.pwm_output                       false            # just an on or off pin
+#switch.misc.output_type                      digital          # just an on or off pin
 
 # Switch module for spindle control
 #switch.spindle.enable                        false            #
