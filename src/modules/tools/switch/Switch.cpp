@@ -45,8 +45,6 @@ Switch::Switch(uint16_t name)
 
 void Switch::on_module_loaded()
 {
-    this->input_pin_state = true;
-    this->switch_state = true;
     this->switch_changed = false;
 
     register_for_event(ON_CONFIG_RELOAD);
@@ -109,6 +107,8 @@ void Switch::on_config_reload(void *argument)
     }
 
     if(input_pin.connected()) {
+        // set to initial state
+        this->input_pin_state = this->input_pin.get();
         // input pin polling
         THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
     }
@@ -122,7 +122,7 @@ void Switch::on_config_reload(void *argument)
 bool Switch::match_input_on_gcode(const Gcode *gcode) const
 {
     return ((input_on_command_letter == 'M' && gcode->has_m && gcode->m == input_on_command_code) ||
-            (input_on_command_letter  == 'G' && gcode->has_g && gcode->g == input_on_command_code));
+            (input_on_command_letter == 'G' && gcode->has_g && gcode->g == input_on_command_code));
 }
 
 bool Switch::match_input_off_gcode(const Gcode *gcode) const
@@ -217,6 +217,8 @@ void Switch::on_set_public_data(void *argument)
         bool t = *static_cast<bool *>(pdr->get_data_ptr());
         this->switch_state = t;
         pdr->set_taken();
+        this->switch_changed= true;
+
     } else if(pdr->third_element_is(value_checksum)) {
         float t = *static_cast<float *>(pdr->get_data_ptr());
         this->switch_value = t;
@@ -228,18 +230,28 @@ void Switch::on_main_loop(void *argument)
 {
     if(this->switch_changed) {
         if(this->switch_state) {
-            this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
-            this->output_pin.pwm(this->switch_value);
+            if(!this->output_on_command.empty()) this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
+            if(this->output_pin.connected()) {
+                if(this->pwm_output)
+                    this->output_pin.pwm(this->switch_value);
+                else
+                    this->output_pin.set(true);
+            }
+
         } else {
-            this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
-            this->output_pin.set(0);
+            if(!this->output_off_command.empty()) this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
+            if(this->output_pin.connected()) {
+                if(this->pwm_output)
+                    this->output_pin.pwm(0);
+                else
+                    this->output_pin.set(false);
+            }
         }
         this->switch_changed = false;
     }
 }
 
 // TODO Make this use InterruptIn
-// FIXME This logic is broken especially for momentary and toggle
 // Check the state of the button and act accordingly
 uint32_t Switch::pinpoll_tick(uint32_t dummy)
 {
@@ -261,7 +273,7 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
             // else if button released
         } else {
             // if switch is momentary
-            if( !this->input_pin_behavior == toggle_checksum ) {
+            if( this->input_pin_behavior == momentary_checksum ) {
                 this->flip();
             }
         }
