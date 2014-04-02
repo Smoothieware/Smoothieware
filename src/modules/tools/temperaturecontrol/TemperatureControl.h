@@ -8,6 +8,7 @@
 #ifndef temperaturecontrol_h
 #define temperaturecontrol_h
 
+#include "Module.h"
 #include "Pwm.h"
 #include <math.h>
 
@@ -15,7 +16,6 @@
 
 #define QUEUE_LEN 8
 
-class Module;
 class TemperatureControlPool;
 
 class TemperatureControl : public Module {
