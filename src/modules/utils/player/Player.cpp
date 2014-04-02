@@ -5,9 +5,9 @@
     You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "Player.h"
 
 #include "libs/Kernel.h"
-#include "Player.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "SerialConsole.h"
@@ -280,36 +280,32 @@ void Player::on_main_loop(void* argument){
     }
 
     if( this->playing_file ){
-        string buffer;
+        char buf[130]; // lines upto 128 characters are allowed, anything longer is discarded
         bool discard= false;
-        int c;
-        buffer.reserve(20);
-        // Print each line of the file
-        while ((c = fgetc(this->current_file_handler)) != EOF){
-            if (c == '\n'){
-                if(discard) {
-                    // we hit a long line and discarded it
+
+        while(fgets(buf, sizeof(buf), this->current_file_handler) != NULL) {
+            int len= strlen(buf);
+            if(len == 0) continue; // empty line? should not be possible
+            if(buf[len-1] == '\n') {
+                if(discard) { // we are discarding a long line
                     discard= false;
-                    buffer.clear();
-                    this->current_stream->printf("Warning: Discarded long line\n");
-                    return;
+                    continue;
                 }
-                this->current_stream->printf("%s\n", buffer.c_str());
+                if(len == 1) continue; // empty line
+
+                this->current_stream->printf("%s", buf);
                 struct SerialMessage message;
-                message.message = buffer;
+                message.message = buf;
                 message.stream = &(StreamOutput::NullStream); // we don't really need to see the ok
                 // wait for the queue to have enough room that a serial message could still be received before sending
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-                played_cnt += buffer.size();
-                buffer.clear();
-                return;
-
-            }else if(buffer.size() > 128) {
-                // discard rest of line
-                discard= true;
+                played_cnt += len;
+                return; // we feed one line per main loop
 
             }else{
-                buffer += c;
+                // discard long line
+                this->current_stream->printf("Warning: Discarded long line\n");
+                discard= true;
             }
         }
 

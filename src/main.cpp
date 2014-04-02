@@ -6,7 +6,6 @@
 */
 
 #include "libs/Kernel.h"
-\
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"

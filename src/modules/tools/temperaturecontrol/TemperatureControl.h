@@ -15,6 +15,7 @@
 
 #define QUEUE_LEN 8
 
+class Module;
 class TemperatureControlPool;
 
 class TemperatureControl : public Module {
