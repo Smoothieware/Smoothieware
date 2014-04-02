@@ -6,8 +6,8 @@
 */
 
 
-#include "libs/Kernel.h"
 #include "SimpleShell.h"
+#include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
@@ -21,8 +21,6 @@
 #include "checksumm.h"
 #include "PublicData.h"
 #include "Gcode.h"
-
-#include "SimpleShell.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"

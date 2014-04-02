@@ -1,10 +1,13 @@
 #include "PID_Autotuner.h"
 #include "Kernel.h"
-#include <cmath>        // std::abs
 #include "SlowTicker.h"
 #include "Gcode.h"
+#include "TemperatureControl.h"
 
-#define DEBUG_PRINTF s->printf
+#include <cmath>        // std::abs
+
+//#define DEBUG_PRINTF s->printf
+#define DEBUG_PRINTF(...)
 
 PID_Autotuner::PID_Autotuner()
 {

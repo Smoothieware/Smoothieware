@@ -276,7 +276,7 @@ void Endstops::do_homing(char axes_to_move)
                 if (this->trim[c - 'X'] < 0) inverted_dir = !inverted_dir;
                 this->feed_rate[c - 'X']= this->slow_rates[c - 'X'];
                 this->steppers[c - 'X']->set_speed(0);
-                this->steppers[c - 'X']->move(inverted_dir, this->trim[c - 'X']);
+                this->steppers[c - 'X']->move(inverted_dir, abs(this->trim[c - 'X']));
             }
         }
 
@@ -513,7 +513,7 @@ void Endstops::on_gcode_received(void *argument)
             break;
 
 
-            case 666: { // M666 - set trim for each axis in mm
+            case 666: { // M666 - set trim for each axis in mm, NB negative mm and positive steps trim is down
                 float mm[3];
                 trim2mm(mm);
 
