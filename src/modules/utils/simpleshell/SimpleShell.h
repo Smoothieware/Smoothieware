@@ -9,10 +9,12 @@
 #ifndef simpleshell_h
 #define simpleshell_h
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/StreamOutput.h"
+#include "Module.h"
+
+#include <string>
+using std::string;
+
+class StreamOutput;
 
 class SimpleShell : public Module
 {
