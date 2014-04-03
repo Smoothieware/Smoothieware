@@ -240,9 +240,13 @@ void Player::progress_command( string parameters, StreamOutput *stream )
 
     // get options
     string options = shift_parameter( parameters );
+    bool sdprinting= options.find_first_of("Bb") != string::npos;
 
     if(!playing_file && current_file_handler != NULL) {
-        stream->printf("SD print is paused at %lu/%lu\r\n", played_cnt, file_size);
+        if(sdprinting)
+            stream->printf("SD printing byte %lu/%lu\r\n", played_cnt, file_size);
+        else
+            stream->printf("SD print is paused at %lu/%lu\r\n", played_cnt, file_size);
         return;
 
     } else if(!playing_file) {
@@ -260,7 +264,7 @@ void Player::progress_command( string parameters, StreamOutput *stream )
 
         unsigned int pcnt = (file_size - (file_size - played_cnt)) * 100 / file_size;
         // If -b or -B is passed, report in the format used by Marlin and the others.
-        if ( options.find_first_of("Bb") == string::npos ) {
+        if (!sdprinting) {
             stream->printf("%u %% complete, elapsed time: %lu s", pcnt, this->elapsed_secs);
             if(est > 0) {
                 stream->printf(", est time: %lu s",  est);
