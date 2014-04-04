@@ -140,7 +140,7 @@ panel.enable                                 false             # set to true to 
 # on glcd EXP1 is to left and EXP2 is to right, pin 1 is bottom left, pin 2 is top left etc.
 # +5v is EXP1 pin 10, Gnd is EXP1 pin 9
 #panel.lcd                                   reprap_discount_glcd     #
-#panel.spi_channel                           0                 # spi channel to use  ; GLCD EXP1 Pins 3,5 (MOSI, SCLK)
+#panel.spi_channel                           0                 # pins 0.18, 0.15     ; GLCD EXP1 Pins 3,5 (MOSI, SCLK)
 #panel.spi_cs_pin                            0.16              # spi chip select     ; GLCD EXP1 Pin 4
 #panel.encoder_a_pin                         3.25!^            # encoder pin         ; GLCD EXP2 Pin 3
 #panel.encoder_b_pin                         3.26!^            # encoder pin         ; GLCD EXP2 Pin 5
