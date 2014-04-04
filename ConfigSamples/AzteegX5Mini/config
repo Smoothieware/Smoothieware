@@ -134,13 +134,22 @@ gamma_homing_retract_mm                      1                # "
 pause_button_enable                          true             #
 
 # Panel
-panel.enable                                 false               # set to true to enable the panel code
-panel.lcd                                    viki_lcd       # set type of panel also viki_lcd, i2c_lcd is a generic i2c panel, panelolu2
-panel.encoder_a_pin                          3.25!^            # encoder pin
-panel.encoder_b_pin                          3.26!^            # encoder pin
-panel.i2c_pins                               3                 # set i2c channel to use
+panel.enable                                 false             # set to true to enable the panel code
 
-panel.menu_offset                            1                 # some panels will need 1 here
+# Example for reprap discount GLCD
+# on glcd EXP1 is to left and EXP2 is to right, pin 1 is bottom left, pin 2 is top left etc.
+# +5v is EXP1 pin 10, Gnd is EXP1 pin 9
+#panel.lcd                                   reprap_discount_glcd     #
+#panel.spi_channel                           0                 # spi channel to use  ; GLCD EXP1 Pins 3,5 (MOSI, SCLK)
+#panel.spi_cs_pin                            0.16              # spi chip select     ; GLCD EXP1 Pin 4
+#panel.encoder_a_pin                         3.25!^            # encoder pin         ; GLCD EXP2 Pin 3
+#panel.encoder_b_pin                         3.26!^            # encoder pin         ; GLCD EXP2 Pin 5
+#panel.click_button_pin                      2.11!^            # click button        ; GLCD EXP1 Pin 2
+#panel.buzz_pin                              1.31              # pin for buzzer      ; GLCD EXP1 Pin 1
+#panel.button_pause_pin                      4.29^             # kill/pause          ; GLCD EXP2 Pin 8 either
+#panel.back_button_pin                       4.29!^            # back button         ; GLCD EXP2 Pin 8 or
+
+panel.menu_offset                            0                 # some panels will need 1 here
 
 panel.alpha_jog_feedrate                     6000              # x jogging feedrate in mm/min
 panel.beta_jog_feedrate                      6000              # y jogging feedrate in mm/min
@@ -148,6 +157,16 @@ panel.gamma_jog_feedrate                     200               # z jogging feedr
 
 panel.hotend_temperature                     185               # temp to set hotend when preheat is selected
 panel.bed_temperature                        60                # temp to set bed when preheat is selected
+
+# Example of a custom menu entry, which will show up in the Custom entry.
+# NOTE _ gets converted to space in the menu and commands, | is used to separate multiple commands
+custom_menu.power_on.enable                true              #
+custom_menu.power_on.name                  Power_on          #
+custom_menu.power_on.command               M80               #
+
+custom_menu.power_off.enable               true              #
+custom_menu.power_off.name                 Power_off         #
+custom_menu.power_off.command              M81               #
 
 # Only needed on a smoothieboard
 currentcontrol_module_enable                 true            #
