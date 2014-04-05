@@ -164,3 +164,55 @@ function refreshFiles() {
       });
   });
 }
+
+if (!String.prototype.startsWith) {
+  Object.defineProperty(String.prototype, 'startsWith', {
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: function (searchString, position) {
+      position = position || 0;
+      return this.indexOf(searchString, position) === position;
+    }
+  });
+}
+
+var config = {}
+function config_each(re, fn) {
+    $.each(config, function(key, value) {
+        var res = re.exec(key);
+        if (res) fn.apply(value, res);
+    });
+}
+
+$(function() {
+    function gotconfig(data) {
+        var lines = data.split(/[\r\n]+/);
+        for (var i = 0; i < lines.length; ++i) {
+            var line = lines[i];
+            if (!line.startsWith("#")) {
+                var pieces = line.split(/\s+/, 3);
+                if (pieces.length < 2) continue;
+                config[pieces[0]] = pieces[1];
+            }
+        }
+        if (config["webui.title"]) document.title = config["webui.title"].replace(/_/g, " ");
+        config_each(/^webui\.hide\.(.+)/, function(match, cls) {
+            if (this == "true") $("." + cls).css("display", "none");
+        });
+        config_each(/^(custom_menu\..+)\.enable/, function(match, name) {
+            if (this == "true") {
+                $("#custom").append('<button onclick=\'runCommand("' + config[name + ".command"].replace(/_/g, " ") +
+                    '")\';>' + config[name + ".name"].replace(/_/g, " ") + '</button>');                
+            }
+        });
+    }
+    
+    var opts = {type: "GET", mimeType: "text/plain", dataType: "text"};
+    $.ajax("sd/config", opts)
+        .done(gotconfig)
+        .fail(function() {
+            $.ajax("sd/config.txt", opts)
+                .done(gotconfig);
+        });
+});

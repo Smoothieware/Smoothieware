@@ -4,6 +4,16 @@
 	<title>Smoothie Web</title>
 	<script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
   <script type="text/javascript" src="functions.js"></script>
+<style>
+.shown { display: none; }
+.showit:hover + .shown, .shown:hover {
+    position: absolute;
+    display: block;
+    border: 1px solid black;
+    background: white;
+    padding: 5px;
+}
+</style>
 </head>
 
 <body>
@@ -14,7 +24,7 @@
 
 XY:<input type="text" id="xy_velocity" size=4 value=3000 style="width:50px" />mm/min
 
-Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
+<span class="Z">Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px"></span>
 <br/>
 
   <svg width="320" height="260" xmlns="http://www.w3.org/2000/svg" version="1.1">
@@ -87,8 +97,9 @@ Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
             <path class="home" d="M0,10 l10-8.5 l10,8.5" stroke-width="1.5" fill="none"/>
             <path class="home" d="M15,3 v2.8 l1,.8 v-3.6 z"/>
         </symbol>
+    </defs>
 
-        <symbol id="JogRose" viewBox="20 -10 260 260">
+        <g id="JogRose" transform="translate(10,10)">
             <g id="HomeAll" onmouseup="runCommandSilent('G28')">
                 <path class="std" d="M10 182.5 h-10 v57.5 h57.5 v-10 a 125,125 0 0,1 -47.5 -47.5 Z" fill="#f0f0f0">
                     <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
@@ -111,7 +122,7 @@ Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
                 <text x="202" y="20" class="home"> Y </text>
             </g>
 
-            <g id="HomeZ" onmouseup="runCommandSilent('G28 Z0')">
+            <g id="HomeZ" class="Z" onmouseup="runCommandSilent('G28 Z0')">
                 <path class="std" d="M230 182.5 h10 v57.5 h-57.5 v-10 a 125,125 0 0,0 47.5 -47.5 z" fill="DarkSeaGreen">
                     <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
                 </path>
@@ -235,9 +246,9 @@ Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
                 <text x="196" y="124"> +X </text>
             </g>
 
-        </symbol>
+        </g>
 
-        <symbol id="JogBar" viewBox="20 -10 260 260">
+        <g id="JogBar" class="Z" transform="translate(270,10)">
             <desc>JogBar - Z jogging bar</desc>
             <g id="+Z" fill="#b0b0b0">
                 <path class="std" d=" M5,0 h30 a5,5 0 0,1 5,5 v27 h-40 v-27 a5,5 0 0,1 5,-5 z"/>
@@ -288,31 +299,21 @@ Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
             <g id="ZSpace" fill="#000000">
                 <rect class="std" x="0" y="112" width="40" height="16"/>
             </g>
-        </symbol>
-
-        <symbol id="PrinterCtl">
-            <use x="0" y="0" xlink:href="#JogRose"/>
-            <use x="260" y="0" xlink:href="#JogBar"/>
-        </symbol>
-
-    </defs>
-
-    <use x="0" y="0" xlink:href="#PrinterCtl"/>
-
+        </g>
   </svg>
 
 <br />
-<table>
+<table class="temperature">
 <tr>
   <td>
     <table>
-      <tr>
+      <tr class="hotend">
         <td style="text-align:right">Heat:</td>
         <td><button id="heat_off" onclick="heatOff(event)">Off</button></td>
         <td><input type="text" id="heat_value" size=3 style="width:40px" value=0></td>
         <td><button id="heat_set" onclick="heatSet(event)">Set</button></td>
       </tr>
-      <tr>
+      <tr class="bed">
         <td style="text-align:right">Bed:</td>
         <td><button id="bed_off" onclick="heatOff(event)">Off</button></td>
         <td><input type="text" id="bed_value" size=3 style="width:40px" value=0></td>
@@ -327,14 +328,29 @@ Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
 </table>
 <br/>
 
+<div class="E">
 <button id="extrude" onclick="extrude(event)">Extrude</button>
 <button id="reverse" onclick="extrude(event)">Reverse</button><br>
 <input type="text" id="extrude_length" value=5 size=3 style="width:35px">
 mm @
 <input type="text" id="extrude_velocity" value=100 size=3 style="width:40px">
 mm/min
+</div>
 
 <h2>Commands</h2>
+<div id="custom">
+    <small class="showit">?</small>
+    <div class="shown">To add custom buttons, add lines to your config file like this:
+        <pre>
+custom_menu.<i>cmdName</i>.enable   true
+custom_menu.<i>cmdName</i>.name     <i>button_title</i>
+custom_menu.<i>cmdName</i>.command  <i>command_to_send</i></pre>
+        To hide elements that aren't relevant to your machine, add lines like this:
+        <pre>
+webui.hide.<b>Z</b>        true</pre>
+        (other possible elements are <b>temperature</b>, <b>hotend</b>, <b>bed</b>, <b>E</b>)
+    </div>
+</div>
 <form action="/command" id="commandForm">
 		<input type="text" name="commandText" placeholder="Send Command...">
 		<input type="submit" value="Send">
