@@ -177,6 +177,13 @@ if (!String.prototype.startsWith) {
   });
 }
 
+
+try {
+    "localStorage" in window && window["localStorage"] !== null;
+} catch(e) {
+    window.localStorage = {};
+}
+
 var config = {}
 function config_each(re, fn) {
     $.each(config, function(key, value) {
@@ -187,6 +194,7 @@ function config_each(re, fn) {
 
 $(function() {
     function gotconfig(data) {
+        if (!data) return;
         var lines = data.split(/[\r\n]+/);
         for (var i = 0; i < lines.length; ++i) {
             var line = lines[i];
@@ -206,6 +214,7 @@ $(function() {
                     '")\';>' + config[name + ".name"].replace(/_/g, " ") + '</button>');                
             }
         });
+        localStorage["config"] = data;
     }
     
     var opts = {type: "GET", mimeType: "text/plain", dataType: "text"};
@@ -213,6 +222,9 @@ $(function() {
         .done(gotconfig)
         .fail(function() {
             $.ajax("sd/config.txt", opts)
-                .done(gotconfig);
+                .done(gotconfig)
+                .fail(function() {
+                    gotconfig(localStorage["config"]);
+                });
         });
 });
