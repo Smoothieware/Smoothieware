@@ -26,6 +26,8 @@
 #include "panels/Smoothiepanel.h"
 #include "panels/ReprapDiscountGLCD.h"
 #include "panels/ST7565.h"
+#include "panels/UniversalAdapter.h"
+
 #include "version.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
@@ -39,6 +41,7 @@
 #define panelolu2_checksum         CHECKSUM("panelolu2")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
+#define universal_adapter_checksum CHECKSUM("universal_adapter")
 
 #define menu_offset_checksum        CHECKSUM("menu_offset")
 #define encoder_resolution_checksum CHECKSUM("encoder_resolution")
@@ -96,6 +99,8 @@ void Panel::on_module_loaded()
         this->lcd = new ReprapDiscountGLCD();
     } else if (lcd_cksm == st7565_glcd_checksum) {
         this->lcd = new ST7565();
+    } else if (lcd_cksm == universal_adapter_checksum) {
+        this->lcd = new UniversalAdapter();
     } else {
         // no lcd type defined
         return;
