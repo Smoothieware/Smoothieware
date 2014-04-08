@@ -17,6 +17,7 @@
 #define spi_channel_checksum       CHECKSUM("spi_channel")
 #define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
 #define spi_frequency_checksum     CHECKSUM("spi_frequency")
+#define busy_pin_checksum          CHECKSUM("busy_pin")
 
 // commands to Universal Adapter
 #define READ_BUTTONS 1<<5
@@ -25,12 +26,14 @@
 #define LCD_CLEAR    4<<5
 #define SET_LEDS     5<<5
 #define BUZZ         6<<5
-#define INIT         7<<5
 
 UniversalAdapter::UniversalAdapter() {
     // configure the pins to use
     this->cs_pin= new Pin();
     this->cs_pin->from_string(THEKERNEL->config->value( panel_checksum, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
+
+    this->busy_pin= new Pin();
+    this->busy_pin->from_string(THEKERNEL->config->value( panel_checksum, busy_pin_checksum)->by_default("nc")->as_string())->as_input();
 
     // select which SPI channel to use
     int spi_channel = THEKERNEL->config->value(panel_checksum, spi_channel_checksum)->by_default(0)->as_number();
@@ -46,7 +49,7 @@ UniversalAdapter::UniversalAdapter() {
     }
 
     this->spi= new mbed::SPI(mosi, miso, sclk);
-    // chip select
+    // chip select not selected
     this->cs_pin->set(1);
 
     int spi_frequency = THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(100000)->as_number();
@@ -57,16 +60,20 @@ UniversalAdapter::UniversalAdapter() {
 UniversalAdapter::~UniversalAdapter() {
     this->cs_pin->set(1);
     delete cs_pin;
+    delete busy_pin;
     delete this->spi;
+}
+
+void UniversalAdapter::wait_until_ready()
+{
+    while(this->busy_pin->get() != 0) ; // wait until ready
 }
 
 uint8_t UniversalAdapter::sendReadCmd(uint8_t cmd) {
     this->spi->write(cmd);
-    wait_us(50);
-    uint8_t n= this->spi->write(0);
-    wait_us(50);
-    return n;
+    return this->spi->write(0);
 }
+
 uint8_t UniversalAdapter::readButtons() {
     return sendReadCmd(READ_BUTTONS);
 }
@@ -81,11 +88,12 @@ int UniversalAdapter::readEncoderDelta() {
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
 void UniversalAdapter::buzz(long duration, uint16_t freq) {
+    wait_until_ready();
     this->spi->write(BUZZ);
-    wait_ms(100);
 }
 
 void UniversalAdapter::write(const char* line, int len) {
+    wait_until_ready();
     uint8_t cmd= LCD_WRITE | ((len+1)&0x1F);
     uint8_t rc= (this->row << 5) | (this->col&0x1F);
     this->spi->write(cmd);
@@ -94,7 +102,6 @@ void UniversalAdapter::write(const char* line, int len) {
         this->spi->write(*line++);
     }
     this->col+=len;
-    wait_us(len*2000);
 }
 
 // Sets the indicator leds
@@ -113,9 +120,9 @@ void UniversalAdapter::setLed(int led, bool onoff) {
         }
     }
     uint8_t cmd= SET_LEDS | 1;
+    wait_until_ready();
     this->spi->write(cmd);
     this->spi->write(ledBits);
-    wait_ms(1);
 }
 
 void UniversalAdapter::home(){
@@ -124,10 +131,10 @@ void UniversalAdapter::home(){
 }
 
 void UniversalAdapter::clear(){
+    wait_until_ready();
     this->spi->write(LCD_CLEAR);
     this->col= 0;
     this->row= 0;
-    wait_ms(1);
 }
 
 void UniversalAdapter::display() {
@@ -142,7 +149,7 @@ void UniversalAdapter::setCursor(uint8_t col, uint8_t row){
 void UniversalAdapter::init(){
     // send an init toggle CS
     this->cs_pin->set(1);
-    wait_ms(5);
+    wait_ms(10);
     this->cs_pin->set(0);
-    wait_ms(5);
+    wait_ms(50);
 }

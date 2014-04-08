@@ -36,10 +36,12 @@ class UniversalAdapter : public LcdBase {
         void buzz(long,uint16_t);
 
     private:
+        void wait_until_ready();
         uint8_t sendReadCmd(uint8_t cmd);
         uint16_t ledBits;
         mbed::SPI* spi;
         Pin *cs_pin;
+        Pin *busy_pin;
         int col;
         int row;
 };

@@ -148,10 +148,10 @@ void Panel::on_module_loaded()
 //    this->pause_button.set_longpress_delay(longpress_delay);
 
 
-    THEKERNEL->slow_ticker->attach( 100,  this, &Panel::button_tick );
+    THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
     if(lcd->encoderReturnsDelta()) {
         // panel handles encoder pins and returns a delta
-        THEKERNEL->slow_ticker->attach( 100, this, &Panel::encoder_tick );
+        THEKERNEL->slow_ticker->attach( 50, this, &Panel::encoder_tick );
     }else{
         // read encoder pins
         THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
