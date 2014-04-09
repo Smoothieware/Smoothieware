@@ -36,6 +36,7 @@ class UniversalAdapter : public LcdBase {
         void buzz(long,uint16_t);
 
     private:
+        uint8_t writeSPI(uint8_t b);
         void wait_until_ready();
         uint8_t sendReadCmd(uint8_t cmd);
         uint16_t ledBits;

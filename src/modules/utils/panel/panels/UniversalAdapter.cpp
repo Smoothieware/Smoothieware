@@ -27,12 +27,13 @@
 #define SET_LEDS     5<<5
 #define BUZZ         6<<5
 
-UniversalAdapter::UniversalAdapter() {
+UniversalAdapter::UniversalAdapter()
+{
     // configure the pins to use
-    this->cs_pin= new Pin();
+    this->cs_pin = new Pin();
     this->cs_pin->from_string(THEKERNEL->config->value( panel_checksum, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
 
-    this->busy_pin= new Pin();
+    this->busy_pin = new Pin();
     this->busy_pin->from_string(THEKERNEL->config->value( panel_checksum, busy_pin_checksum)->by_default("nc")->as_string())->as_input();
 
     // select which SPI channel to use
@@ -40,46 +41,62 @@ UniversalAdapter::UniversalAdapter() {
     PinName mosi;
     PinName miso;
     PinName sclk;
-    if(spi_channel == 0){
-        mosi= P0_18; miso= P0_17; sclk= P0_15;
-    }else if(spi_channel == 1){
-        mosi= P0_9; miso= P0_8; sclk= P0_7;
-    }else{
-        mosi= P0_18; miso= P0_17; sclk= P0_15;
+    if(spi_channel == 0) {
+        mosi = P0_18; miso = P0_17; sclk = P0_15;
+    } else if(spi_channel == 1) {
+        mosi = P0_9; miso = P0_8; sclk = P0_7;
+    } else {
+        mosi = P0_18; miso = P0_17; sclk = P0_15;
     }
 
-    this->spi= new mbed::SPI(mosi, miso, sclk);
+    this->spi = new mbed::SPI(mosi, miso, sclk);
     // chip select not selected
     this->cs_pin->set(1);
 
     int spi_frequency = THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(100000)->as_number();
     this->spi->frequency(spi_frequency);
-    ledBits= 0;
+    ledBits = 0;
 }
 
-UniversalAdapter::~UniversalAdapter() {
+UniversalAdapter::~UniversalAdapter()
+{
     this->cs_pin->set(1);
     delete cs_pin;
     delete busy_pin;
     delete this->spi;
 }
 
+
+uint8_t UniversalAdapter::writeSPI(uint8_t b)
+{
+    uint8_t r= this->spi->write(b);
+    wait_us(50); // need some delay here for arduino to catch up
+    return r;
+}
+
 void UniversalAdapter::wait_until_ready()
 {
-    while(this->busy_pin->get() != 0) ; // wait until ready
+    while(this->busy_pin->get() != 0) {
+        // poll adapter for more room
+        wait_ms(100);
+        writeSPI(0xFF);
+    }
 }
 
-uint8_t UniversalAdapter::sendReadCmd(uint8_t cmd) {
-    this->spi->write(cmd);
-    return this->spi->write(0);
+uint8_t UniversalAdapter::sendReadCmd(uint8_t cmd)
+{
+    writeSPI(cmd);
+    return writeSPI(0);
 }
 
-uint8_t UniversalAdapter::readButtons() {
+uint8_t UniversalAdapter::readButtons()
+{
     return sendReadCmd(READ_BUTTONS);
 }
 
-int UniversalAdapter::readEncoderDelta() {
-    int e= sendReadCmd(READ_ENCODER);
+int UniversalAdapter::readEncoderDelta()
+{
+    int e = sendReadCmd(READ_ENCODER);
     // hack around we seem to be getting absolute values
     if(e > 0 && e < 128) return 1;
     else if(e > 128) return -1;
@@ -87,66 +104,78 @@ int UniversalAdapter::readEncoderDelta() {
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
-void UniversalAdapter::buzz(long duration, uint16_t freq) {
+void UniversalAdapter::buzz(long duration, uint16_t freq)
+{
     wait_until_ready();
-    this->spi->write(BUZZ);
+    writeSPI(BUZZ);
 }
 
-void UniversalAdapter::write(const char* line, int len) {
+void UniversalAdapter::write(const char *line, int len)
+{
     wait_until_ready();
-    uint8_t cmd= LCD_WRITE | ((len+1)&0x1F);
-    uint8_t rc= (this->row << 5) | (this->col&0x1F);
-    this->spi->write(cmd);
-    this->spi->write(rc);
-    for (int i = 0; i < len; ++i) {
-        this->spi->write(*line++);
+    if(len > 30) {
+        // this is the limit the UPA can handle in one frame (32 bytes)
+        len= 30;
     }
-    this->col+=len;
+    uint8_t cmd = LCD_WRITE | ((len + 1) & 0x1F);
+    uint8_t rc = (this->row << 5) | (this->col & 0x1F);
+    writeSPI(cmd);
+    writeSPI(rc);
+    for (int i = 0; i < len; ++i) {
+        writeSPI(*line++);
+    }
+    this->col += len;
 }
 
 // Sets the indicator leds
-void UniversalAdapter::setLed(int led, bool onoff) {
+void UniversalAdapter::setLed(int led, bool onoff)
+{
     if(onoff) {
         switch(led) {
             case LED_FAN_ON: ledBits    |= 1; break; // on
             case LED_HOTEND_ON: ledBits |= 2; break; // on
             case LED_BED_ON: ledBits    |= 4; break; // on
         }
-    }else{
+    } else {
         switch(led) {
             case LED_FAN_ON: ledBits    &= ~1; break; // off
             case LED_HOTEND_ON: ledBits &= ~2; break; // off
             case LED_BED_ON: ledBits    &= ~4; break; // off
         }
     }
-    uint8_t cmd= SET_LEDS | 1;
+    uint8_t cmd = SET_LEDS | 1;
     wait_until_ready();
-    this->spi->write(cmd);
-    this->spi->write(ledBits);
+    writeSPI(cmd);
+    writeSPI(ledBits);
 }
 
-void UniversalAdapter::home(){
-    this->col= 0;
-    this->row= 0;
+void UniversalAdapter::home()
+{
+    this->col = 0;
+    this->row = 0;
 }
 
-void UniversalAdapter::clear(){
+void UniversalAdapter::clear()
+{
     wait_until_ready();
-    this->spi->write(LCD_CLEAR);
-    this->col= 0;
-    this->row= 0;
+    writeSPI(LCD_CLEAR);
+    this->col = 0;
+    this->row = 0;
 }
 
-void UniversalAdapter::display() {
+void UniversalAdapter::display()
+{
     // it is always on
 }
 
-void UniversalAdapter::setCursor(uint8_t col, uint8_t row){
-    this->col= col;
-    this->row= row;
+void UniversalAdapter::setCursor(uint8_t col, uint8_t row)
+{
+    this->col = col;
+    this->row = row;
 }
 
-void UniversalAdapter::init(){
+void UniversalAdapter::init()
+{
     // send an init toggle CS
     this->cs_pin->set(1);
     wait_ms(10);
