@@ -53,7 +53,7 @@ UniversalAdapter::UniversalAdapter()
     // chip select not selected
     this->cs_pin->set(1);
 
-    int spi_frequency = THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(100000)->as_number();
+    int spi_frequency = THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(500000)->as_number();
     this->spi->frequency(spi_frequency);
     ledBits = 0;
 }
@@ -65,7 +65,6 @@ UniversalAdapter::~UniversalAdapter()
     delete busy_pin;
     delete this->spi;
 }
-
 
 uint8_t UniversalAdapter::writeSPI(uint8_t b)
 {
@@ -91,16 +90,18 @@ uint8_t UniversalAdapter::sendReadCmd(uint8_t cmd)
 
 uint8_t UniversalAdapter::readButtons()
 {
-    return sendReadCmd(READ_BUTTONS);
+    return sendReadCmd(READ_BUTTONS) & ~BUTTON_PAUSE; // clear pause for now in case of noise
 }
 
 int UniversalAdapter::readEncoderDelta()
 {
-    int e = sendReadCmd(READ_ENCODER);
-    // hack around we seem to be getting absolute values
-    if(e > 0 && e < 128) return 1;
-    else if(e > 128) return -1;
-    return 0;
+    uint8_t e = sendReadCmd(READ_ENCODER);
+    // this is actually a signed number +/-127, so convert to int
+    int d= e < 128 ? e : -(256-e);
+    // as upper layer expects only deltas of1 we hack it here for now
+    if(d < 0) d= -1;
+    else if(d > 0) d= 1;
+    return d;
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
