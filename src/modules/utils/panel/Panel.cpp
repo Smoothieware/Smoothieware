@@ -151,7 +151,7 @@ void Panel::on_module_loaded()
     THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
     if(lcd->encoderReturnsDelta()) {
         // panel handles encoder pins and returns a delta
-        THEKERNEL->slow_ticker->attach( 50, this, &Panel::encoder_tick );
+        THEKERNEL->slow_ticker->attach( 20, this, &Panel::encoder_tick );
     }else{
         // read encoder pins
         THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
@@ -191,14 +191,14 @@ uint32_t Panel::refresh_tick(uint32_t dummy)
     return 0;
 }
 
-// Encoder pins changed in interrupt
+// Encoder pins changed in interrupt or call from on_idle
 uint32_t Panel::encoder_check(uint32_t dummy)
 {
     // if encoder reads go through SPI like on universal panel adapter this needs to be
     // done in idle loop, this is indicated by lcd->encoderReturnsDelta()
     // however when reading encoder directly it needs to be done
     // frequently, universal panel adapter will return an actual delta count so won't miss any if polled slowly
-    // NOTE FIXME this code will not work if change is not -1,0,-1 anything greater (as in above case) will not work properly
+    // NOTE FIXME (WHY is it in menu only?) this code will not work if change is not 1,0,-1 anything greater (as in above case) will not work properly
     static int encoder_counter = 0;
     int change = lcd->readEncoderDelta();
     encoder_counter += change;

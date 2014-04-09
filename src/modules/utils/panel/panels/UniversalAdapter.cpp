@@ -98,7 +98,7 @@ int UniversalAdapter::readEncoderDelta()
     uint8_t e = sendReadCmd(READ_ENCODER);
     // this is actually a signed number +/-127, so convert to int
     int d= e < 128 ? e : -(256-e);
-    // as upper layer expects only deltas of1 we hack it here for now
+    // as upper layer expects only deltas of 1 we hack it here for now
     if(d < 0) d= -1;
     else if(d > 0) d= 1;
     return d;
