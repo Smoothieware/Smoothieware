@@ -151,7 +151,7 @@ void Panel::on_module_loaded()
     THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
     if(lcd->encoderReturnsDelta()) {
         // panel handles encoder pins and returns a delta
-        THEKERNEL->slow_ticker->attach( 20, this, &Panel::encoder_tick );
+        THEKERNEL->slow_ticker->attach( 50, this, &Panel::encoder_tick );
     }else{
         // read encoder pins
         THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
