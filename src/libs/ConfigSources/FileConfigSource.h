@@ -14,6 +14,7 @@ class ConfigCache;
 
 using namespace std;
 #include <string>
+#include <stdio.h>
 
 class FileConfigSource : public ConfigSource
 {
@@ -28,6 +29,7 @@ public:
     string get_config_file();
 
 private:
+    bool readLine(string& line, FILE *fp);
     string config_file;         // Path to the config file
     bool   config_file_found;   // Wether or not the config file's location is known
 };

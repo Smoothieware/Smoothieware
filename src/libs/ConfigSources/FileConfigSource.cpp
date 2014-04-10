@@ -14,8 +14,7 @@
 
 using namespace std;
 #include <string>
-#include <fstream>
-#include <stdio.h>
+#include <string.h>
 
 FileConfigSource::FileConfigSource(string config_file, const char *name)
 {
@@ -24,22 +23,42 @@ FileConfigSource::FileConfigSource(string config_file, const char *name)
     this->config_file_found = false;
 }
 
+bool FileConfigSource::readLine(string& line, FILE *fp)
+{
+    char buf[132];
+    char *l= fgets(buf, sizeof(buf)-1, fp);
+    if(l != NULL) {
+        if(buf[strlen(l)-1] != '\n') {
+            // truncate long lines
+            printf("Truncated long line in: %s\n", config_file.c_str());
+            // read until the next \n or eof
+            int c;
+            while((c=fgetc(fp)) != '\n' && c != EOF) /* discard */;
+        }
+        line.assign(buf);
+        return true;
+    }
+
+    return false;
+}
+
 // Transfer all values found in the file to the passed cache
 void FileConfigSource::transfer_values_to_cache( ConfigCache *cache )
 {
-
     if( !this->has_config_file() ) {
         return;
     }
     // Open the config file ( find it if we haven't already found it )
-    std::ifstream ifs(this->get_config_file().c_str(), std::ifstream::in);
+    FILE *lp = fopen(this->get_config_file().c_str(), "r");
+
     // For each line
-    string line;
-    while(ifs.good()) {
-        std::getline(ifs, line);
-        process_line_from_ascii_config(line, cache);
+    while(!feof(lp)) {
+        string line;
+        if(readLine(line, lp)) {
+            process_line_from_ascii_config(line, cache);
+        }else break;
     }
-    ifs.close();
+    fclose(lp);
 }
 
 // Return true if the check_sums match
@@ -111,15 +130,16 @@ string FileConfigSource::read( uint16_t check_sums[3] )
     }
 
     // Open the config file ( find it if we haven't already found it )
-    std::ifstream ifs(this->get_config_file().c_str(), std::ifstream::in);
+    FILE *lp = fopen(this->get_config_file().c_str(), "r");
     // For each line
-    string line;
-    while(ifs.good()) {
-        std::getline(ifs, line);
-        value = process_line_from_ascii_config(line, check_sums);
-        if(!value.empty()) break; // found it
+    while(!feof(lp)) {
+        string line;
+         if(readLine(line, lp)) {
+            value = process_line_from_ascii_config(line, check_sums);
+            if(!value.empty()) break; // found it
+        }else break;
     }
-    ifs.close();
+    fclose(lp);
 
     return value;
 }

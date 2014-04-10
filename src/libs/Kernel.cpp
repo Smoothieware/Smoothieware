@@ -43,11 +43,12 @@ Kernel::Kernel(){
     instance= this; // setup the Singleton instance of the kernel
 
     // serial first at fixed baud rate (MRI_BAUD) so config can report errors to serial
-    this->serial = new SerialConsole(USBTX, USBRX, 115200); // TODO set to whatver MRI is
+    this->serial = new SerialConsole(USBTX, USBRX, 115200); // TODO set to whatever MRI is
 
     // Config next, but does not load cache yet
     this->config         = new Config();
-    // Pre-load the config cache, do after ssetting up serial so we can report errors to serial
+
+    // Pre-load the config cache, do after setting up serial so we can report errors to serial
     this->config->config_cache_load();
 
     // now config is loaded we can do normal setup for serial and the rest
