@@ -14,24 +14,24 @@ class ConfigCache;
 
 using namespace std;
 #include <string>
+#include <stdio.h>
 
-#define FILE_CONFIGSOURCE_CHECKSUM    5281      // "file"
+class FileConfigSource : public ConfigSource
+{
+public:
+    FileConfigSource(string config_file, const char *name);
+    void transfer_values_to_cache( ConfigCache *cache );
+    bool is_named( uint16_t check_sum );
+    void write( string setting, string value );
+    string read( uint16_t check_sums[3] );
+    bool has_config_file();
+    void try_config_file(string candidate);
+    string get_config_file();
 
-class FileConfigSource : public ConfigSource {
-    public:
-        FileConfigSource(string config_file = "/sd/config", uint16_t name_checksum = FILE_CONFIGSOURCE_CHECKSUM);
-        void transfer_values_to_cache( ConfigCache* cache );
-        bool is_named( uint16_t check_sum );
-        void write( string setting, string value );
-        string read( uint16_t check_sums[3] );
-        bool has_config_file();
-        void try_config_file(string candidate);
-        string get_config_file();
-
-        string config_file;         // Path to the config file
-        bool   config_file_found;   // Wether or not the config file's location is known
-
-
+private:
+    bool readLine(string& line, FILE *fp);
+    string config_file;         // Path to the config file
+    bool   config_file_found;   // Wether or not the config file's location is known
 };
 
 

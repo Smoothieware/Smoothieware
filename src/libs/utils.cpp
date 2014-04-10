@@ -42,7 +42,7 @@ void get_checksums(uint16_t check_sums[], const string key){
     check_sums[2] = 0x0000;
     size_t begin_key = 0;
     unsigned int counter = 0;
-    while( begin_key < key.size()-1 ){
+    while( begin_key < key.size()-1 && counter < 3 ){
         const size_t end_key =  k.find_first_of(" .", begin_key);
         const string key_node = k.substr(begin_key, end_key - begin_key);
         check_sums[counter] = get_checksum(key_node);

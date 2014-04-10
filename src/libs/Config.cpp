@@ -22,41 +22,39 @@ using namespace std;
 
 // Add various config sources. Config can be fetched from several places.
 // All values are read into a cache, that is then used by modules to read their configuration
-Config::Config(){
+Config::Config()
+{
     this->config_cache_loaded = false;
 
     // Config source for firm config found in src/config.default
-    this->config_sources.push_back( new FirmConfigSource() );
+    this->config_sources.push_back( new FirmConfigSource("firm") );
 
     // Config source for */config files
-    FileConfigSource* fcs = NULL;
+    FileConfigSource *fcs = NULL;
     if( file_exists("/local/config") )
-        fcs = new FileConfigSource("/local/config", LOCAL_CONFIGSOURCE_CHECKSUM);
+        fcs = new FileConfigSource("/local/config", "local");
     else if( file_exists("/local/config.txt") )
-        fcs = new FileConfigSource("/local/config.txt", LOCAL_CONFIGSOURCE_CHECKSUM);
-    if( fcs != NULL ){
+        fcs = new FileConfigSource("/local/config.txt", "local");
+    if( fcs != NULL ) {
         this->config_sources.push_back( fcs );
         fcs = NULL;
     }
     if( file_exists("/sd/config") )
-       fcs = new FileConfigSource("/sd/config",    SD_CONFIGSOURCE_CHECKSUM   );
+        fcs = new FileConfigSource("/sd/config", "sd");
     else if( file_exists("/sd/config.txt") )
-       fcs = new FileConfigSource("/sd/config.txt",    SD_CONFIGSOURCE_CHECKSUM   );
+        fcs = new FileConfigSource("/sd/config.txt", "sd");
     if( fcs != NULL )
         this->config_sources.push_back( fcs );
-
-    // Pre-load the config cache
-    this->config_cache_load();
-
 }
 
-void Config::on_module_loaded(){}
+void Config::on_module_loaded() {}
 
-void Config::on_console_line_received( void* argument ){}
+void Config::on_console_line_received( void *argument ) {}
 
 // Set a value in the config cache, but not in any config source
-void Config::set_string( string setting, string value ){
-    ConfigValue* cv = new ConfigValue;
+void Config::set_string( string setting, string value )
+{
+    ConfigValue *cv = new ConfigValue;
     cv->found = true;
     get_checksums(cv->check_sums, setting);
     cv->value = value;
@@ -67,11 +65,12 @@ void Config::set_string( string setting, string value ){
 }
 
 // Get a list of modules, used by module "pools" that look for the "enable" keyboard to find things like "moduletype.modulename.enable" as the marker of a new instance of a module
-void Config::get_module_list(vector<uint16_t>* list, uint16_t family){
-    for( unsigned int i=1; i<this->config_cache.size(); i++){
-        ConfigValue* value = this->config_cache.at(i);
+void Config::get_module_list(vector<uint16_t> *list, uint16_t family)
+{
+    for( unsigned int i = 1; i < this->config_cache.size(); i++) {
+        ConfigValue *value = this->config_cache.at(i);
         //if( value->check_sums.size() == 3 && value->check_sums.at(2) == CHECKSUM("enable") && value->check_sums.at(0) == family ){
-        if( value->check_sums[2] == CHECKSUM("enable") && value->check_sums[0] == family ){
+        if( value->check_sums[2] == CHECKSUM("enable") && value->check_sums[0] == family ) {
             // We found a module enable for this family, add it's number
             list->push_back(value->check_sums[1]);
         }
@@ -80,18 +79,18 @@ void Config::get_module_list(vector<uint16_t>* list, uint16_t family){
 
 
 // Command to load config cache into buffer for multiple reads during init
-void Config::config_cache_load(){
+void Config::config_cache_load()
+{
 
     // First clear the cache
     this->config_cache_clear();
 
     // First element is a special empty ConfigValue for values not found
-    ConfigValue* result = new ConfigValue;
+    ConfigValue *result = new ConfigValue;
     this->config_cache.push_back(result);
 
     // For each ConfigSource in our stack
-    for( unsigned int i = 0; i < this->config_sources.size(); i++ ){
-        ConfigSource* source = this->config_sources[i];
+    for( ConfigSource *source : this->config_sources ) {
         source->transfer_values_to_cache(&this->config_cache);
     }
 
@@ -99,16 +98,20 @@ void Config::config_cache_load(){
 }
 
 // Command to clear the config cache after init
-void Config::config_cache_clear(){
-    while( ! this->config_cache.empty() ){
-        delete this->config_cache.back();
-        this->config_cache.pop_back();
+void Config::config_cache_clear()
+{
+    for (ConfigValue *i : this->config_cache)  {
+        delete i;
     }
+
+    //this->config_cache.clear(); // does not release vector memory
+    ConfigCache().swap(this->config_cache);   //  makes sure the vector releases its memory
     this->config_cache_loaded = false;
 }
 
 // Three ways to read a value from the config, depending on adress length
-ConfigValue* Config::value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t check_sum_c ){
+ConfigValue *Config::value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t check_sum_c )
+{
     uint16_t check_sums[3];
     check_sums[0] = check_sum_a;
     check_sums[1] = check_sum_b;
@@ -116,7 +119,8 @@ ConfigValue* Config::value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t 
     return this->value(check_sums);
 }
 
-ConfigValue* Config::value(uint16_t check_sum_a, uint16_t check_sum_b){
+ConfigValue *Config::value(uint16_t check_sum_a, uint16_t check_sum_b)
+{
     uint16_t check_sums[3];
     check_sums[0] = check_sum_a;
     check_sums[1] = check_sum_b;
@@ -124,7 +128,8 @@ ConfigValue* Config::value(uint16_t check_sum_a, uint16_t check_sum_b){
     return this->value(check_sums);
 }
 
-ConfigValue* Config::value(uint16_t check_sum){
+ConfigValue *Config::value(uint16_t check_sum)
+{
     uint16_t check_sums[3];
     check_sums[0] = check_sum;
     check_sums[1] = 0x0000;
@@ -135,30 +140,33 @@ ConfigValue* Config::value(uint16_t check_sum){
 // Get a value from the configuration as a string
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
-ConfigValue* Config::value(uint16_t check_sums[]){
-    ConfigValue* result = this->config_cache[0];
+ConfigValue *Config::value(uint16_t check_sums[])
+{
     bool cache_preloaded = this->config_cache_loaded;
-    if( !cache_preloaded ){ this->config_cache_load(); }
+    if( !cache_preloaded ) {
+        this->config_cache_load();
+    }
+    ConfigValue *result = this->config_cache[0];
 
-    for( unsigned int i=1; i<this->config_cache.size(); i++){
+    for( unsigned int i = 1; i < this->config_cache.size(); i++) {
         // If this line matches the checksum
         bool match = true;
         unsigned int counter = 0;
-        while(check_sums[counter] != 0x0000 && counter <= 2 ){
-             if(this->config_cache[i]->check_sums[counter] != check_sums[counter] ){
+        while(check_sums[counter] != 0x0000 && counter <= 2 ) {
+            if(this->config_cache[i]->check_sums[counter] != check_sums[counter] ) {
                 match = false;
                 break;
             }
             counter++;
         }
-        if( match == false ){
+        if( match == false ) {
             continue;
         }
         result = this->config_cache[i];
         break;
     }
 
-    if( !cache_preloaded ){
+    if( !cache_preloaded ) {
         this->config_cache_clear();
     }
     return result;
