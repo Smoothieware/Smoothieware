@@ -14,9 +14,6 @@ using namespace std;
 #include <vector>
 #include <string>
 
-#define LOCAL_CONFIGSOURCE_CHECKSUM     13581
-#define SD_CONFIGSOURCE_CHECKSUM        19415
-
 class ConfigValue;
 class ConfigSource;
 

@@ -28,8 +28,11 @@ class ConfigSource {
         uint16_t name_checksum;
 
     protected:
-        virtual string process_char_from_ascii_config(int c, ConfigCache* cache);
-        virtual string process_char_from_ascii_config(int c, uint16_t line_checksums[3]);
+        virtual string process_line_from_ascii_config(const string& line, ConfigCache* cache);
+        virtual string process_line_from_ascii_config(const string& line, uint16_t line_checksums[3]);
+
+    private:
+        ConfigValue* process_line(const string &buffer);
 };
 
 
