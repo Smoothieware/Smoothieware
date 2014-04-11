@@ -67,57 +67,59 @@ bool FileConfigSource::is_named( uint16_t check_sum )
     return check_sum == this->name_checksum;
 }
 
-// Write a config setting to the file
-void FileConfigSource::write( string setting, string value )
+// OverWrite or append a config setting to the file
+bool FileConfigSource::write( string setting, string value )
 {
+    if( !this->has_config_file() ) {
+        return false;
+    }
+
+    uint16_t setting_checksums[3];
+    get_checksums(setting_checksums, setting );
+
     // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r+");
-    string buffer;
-    int c;
-    // For each line
-    do {
-        c = fgetc (lp);
-        if (c == '\n' || c == EOF) {
-            // We have a new line
-            if( buffer[0] == '#' ) {
-                buffer.clear();    // Ignore comments
-                continue;
-            }
-            if( buffer.length() < 3 ) {
-                buffer.clear();    //Ignore empty lines
-                continue;
-            }
-            size_t begin_key = buffer.find_first_not_of(" \t");
-            size_t begin_value = buffer.find_first_not_of(" \t", buffer.find_first_of(" \t", begin_key));
-            // If this line matches the checksum
-            string candidate = buffer.substr(begin_key,  buffer.find_first_of(" \t", begin_key) - begin_key);
-            if( candidate.compare(setting) != 0 ) {
-                buffer.clear();
-                continue;
-            }
-            int free_space = int(int(buffer.find_first_of("\r\n#", begin_value + 1)) - begin_value);
-            if( int(value.length()) >= free_space ) {
-                //THEKERNEL->streams->printf("ERROR: Not enough room for value\r\n");
+
+    // search each line for a match
+    while(!feof(lp)) {
+        string line;
+        fpos_t bol, eol;
+        fgetpos( lp, &bol ); // get start of line
+        if(readLine(line, lp)) {
+            fgetpos( lp, &eol ); // get end of line
+            if(!process_line_from_ascii_config(line, setting_checksums).empty()) {
+                // found it
+                unsigned int free_space = eol - bol - 4; // length of line
+                // check we have enough space for this insertion
+                if( (setting.length() + value.length() + 3) > free_space ) {
+                    //THEKERNEL->streams->printf("ERROR: Not enough room for value\r\n");
+                    fclose(lp);
+                    return false;
+                }
+
+                // Update line, leaves whatever was at end of line there just overwrites the key and value
+                fseek(lp, bol, SEEK_SET);
+                fputs(setting.c_str(), lp);
+                fputs(" ", lp);
+                fputs(value.c_str(), lp);
+                fputs(" #", lp);
                 fclose(lp);
-                return;
+                return true;
             }
-            // Update value
-            for( int i = value.length(); i < free_space; i++) {
-                value += " ";
-            }
-            fpos_t pos;
-            fgetpos( lp, &pos );
-            int start = pos - buffer.length() + begin_value - 1;
-            fseek(lp, start, SEEK_SET);
-            fputs(value.c_str(), lp);
-            fclose(lp);
-            return;
-        } else {
-            buffer += c;
-        }
-    } while (c != EOF);
+        }else break;
+    }
+
+    // not found so append the new value
     fclose(lp);
-    //THEKERNEL->streams->printf("ERROR: configuration key not found\r\n");
+    lp = fopen(this->get_config_file().c_str(), "a");
+    fputs("\n", lp);
+    fputs(setting.c_str(), lp);
+    fputs("         ", lp);
+    fputs(value.c_str(), lp);
+    fputs("         # added\n", lp);
+    fclose(lp);
+
+    return true;
 }
 
 // Return the value for a specific checksum
