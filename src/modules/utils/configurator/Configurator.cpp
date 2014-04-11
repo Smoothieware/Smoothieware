@@ -113,22 +113,36 @@ void Configurator::config_set_command( string parameters, StreamOutput* stream )
     string source = shift_parameter(parameters);
     string setting = shift_parameter(parameters);
     string value = shift_parameter(parameters);
-    if (value == "") {
-        value = setting;
-        setting = source;
-        source = "";
-        THEKERNEL->config->set_string(setting, value);
-        stream->printf( "live: %s has been set to %s\r\n", setting.c_str(), value.c_str() );
-    } else {
-        uint16_t source_checksum = get_checksum(source);
-        for(unsigned int i=0; i < THEKERNEL->config->config_sources.size(); i++){
-            if( THEKERNEL->config->config_sources[i]->is_named(source_checksum) ){
-                THEKERNEL->config->config_sources[i]->write(setting, value);
+    if(source.empty() || setting.empty()|| value.empty()) {
+        stream->printf( "Usage: config-set source setting value # where source is sd, setting is the key and value is the new value\r\n" );
+        return;
+    }
+
+    uint16_t source_checksum = get_checksum(source);
+    for(unsigned int i=0; i < THEKERNEL->config->config_sources.size(); i++){
+        if( THEKERNEL->config->config_sources[i]->is_named(source_checksum) ){
+            if(THEKERNEL->config->config_sources[i]->write(setting, value)) {
                 stream->printf( "%s: %s has been set to %s\r\n", source.c_str(), setting.c_str(), value.c_str() );
-                break;
+            }else{
+                stream->printf( "%s: %s not enough space to overwrite existing key/value\r\n", source.c_str(), setting.c_str() );
             }
+            return;
         }
     }
+    stream->printf( "%s source does not exist\r\n", source.c_str());
+
+    /* Live setting not really supported anymore as the cache is never left loaded
+        if (value == "") {
+            if(!THEKERNEL->config->config_cache_loaded) {
+                stream->printf( "live: setting not allowed as config cache is not loaded\r\n" );
+                return;
+            }
+            value = setting;
+            setting = source;
+            source = "";
+            THEKERNEL->config->set_string(setting, value);
+            stream->printf( "live: %s has been set to %s\r\n", setting.c_str(), value.c_str() );
+    */
 }
 
 // Reload config values from the specified ConfigSource

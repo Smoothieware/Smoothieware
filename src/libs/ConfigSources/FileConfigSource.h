@@ -22,7 +22,7 @@ public:
     FileConfigSource(string config_file, const char *name);
     void transfer_values_to_cache( ConfigCache *cache );
     bool is_named( uint16_t check_sum );
-    void write( string setting, string value );
+    bool write( string setting, string value );
     string read( uint16_t check_sums[3] );
     bool has_config_file();
     void try_config_file(string candidate);

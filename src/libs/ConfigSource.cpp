@@ -29,7 +29,7 @@ ConfigValue* ConfigSource::process_line(const string &buffer)
         return NULL;
     }
 
-    string key= buffer.substr(begin_key,  end_key - begin_key).append(" ");
+    string key= buffer.substr(begin_key,  end_key - begin_key);
     uint16_t check_sums[3];
     get_checksums(check_sums, key);
 
