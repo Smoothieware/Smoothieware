@@ -10,16 +10,33 @@
 
 using namespace std;
 #include <vector>
+#include <stdint.h>
 
 class ConfigValue;
+class StreamOutput;
 
-class ConfigCache : public std::vector<ConfigValue*> {
+class ConfigCache {
     public:
-        ConfigCache(){}
+        ConfigCache();
+        ~ConfigCache();
+        void clear();
+
+        void add(ConfigValue* v) { store.push_back(v); }
+
+        // lookup and return the entru that matches the check sums,return NULL if not found
+        ConfigValue *lookup(const uint16_t *check_sums) const;
+
+        // collect enabled checksums of the given family
+        void collect(uint16_t family, uint16_t cs, vector<uint16_t> *list);
 
         // If we find an existing value, replace it, otherwise, push it at the back of the list
         void replace_or_push_back(ConfigValue* new_value);
 
+        // used for debugging, dumps the cache to a stream
+        void dump(StreamOutput *stream);
+
+    private:
+        vector<ConfigValue*> store;
 };
 
 

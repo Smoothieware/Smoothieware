@@ -45,6 +45,8 @@
 #include "version.h"
 #include "system_LPC17xx.h"
 
+#include "mbed.h"
+
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
 #define disable_leds_checksum  CHECKSUM("leds_disable")
@@ -78,6 +80,11 @@ int main() {
         leds[i].output();
         leds[i]= 0;
     }
+
+    Timer timer;
+    timer.start();
+    float begin, end;
+    begin = timer.read();
 
     Kernel* kernel = new Kernel();
 
@@ -173,6 +180,9 @@ int main() {
             fclose(fp);
         }
     }
+
+    end = timer.read();
+    kernel->streams->printf("boot time= %f\n", end-begin);
 
     uint16_t cnt= 0;
     // Main loop
