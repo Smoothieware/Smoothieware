@@ -45,6 +45,8 @@
 #include "version.h"
 #include "system_LPC17xx.h"
 
+#include "mbed.h"
+
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
 #define disable_leds_checksum  CHECKSUM("leds_disable")

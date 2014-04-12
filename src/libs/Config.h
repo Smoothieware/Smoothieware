@@ -8,7 +8,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "ConfigCache.h"
 
 using namespace std;
 #include <vector>
@@ -16,6 +15,7 @@ using namespace std;
 
 class ConfigValue;
 class ConfigSource;
+class ConfigCache;
 
 class Config : public Module {
     public:
@@ -23,22 +23,23 @@ class Config : public Module {
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
-        void config_cache_load();
+        void config_cache_load(bool parse= true);
         void config_cache_clear();
         void set_string( string setting , string value);
 
-        ConfigValue* value(uint16_t check_sum);
-        ConfigValue* value(uint16_t check_sum_a, uint16_t check_sum_b);
-        ConfigValue* value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t check_sum_c );
+        ConfigValue* value(uint16_t check_sum_a, uint16_t check_sum_b= 0, uint16_t check_sum_c= 0 );
         ConfigValue* value(uint16_t check_sums[3] );
 
         void get_module_list(vector<uint16_t>* list, uint16_t family);
+        bool is_config_cache_loaded() { return config_cache != NULL; };    // Whether or not the cache is currently popluated
 
+        friend class  Configurator;
+
+    private:
         bool   has_characters(uint16_t check_sum, string str );
 
-        ConfigCache config_cache;             // A cache in which ConfigValues are kept
+        ConfigCache* config_cache;            // A cache in which ConfigValues are kept
         vector<ConfigSource*> config_sources; // A list of all possible coniguration sources
-        bool   config_cache_loaded;           // Whether or not the cache is currently popluated
 };
 
 #endif
