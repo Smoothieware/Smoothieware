@@ -114,12 +114,12 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // Preset values for various common types of thermistors
     ConfigValue* thermistor = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, thermistor_checksum);
-    if(       thermistor->value.compare("EPCOS100K"    ) == 0 ){ // Default
-    }else if( thermistor->value.compare("RRRF100K"     ) == 0 ){ this->beta = 3960;
-    }else if( thermistor->value.compare("RRRF10K"      ) == 0 ){ this->beta = 3964; this->r0 = 10000; this->r1 = 680; this->r2 = 1600;
-    }else if( thermistor->value.compare("Honeywell100K") == 0 ){ this->beta = 3974;
-    }else if( thermistor->value.compare("Semitec"      ) == 0 ){ this->beta = 4267;
-    }else if( thermistor->value.compare("HT100K"       ) == 0 ){ this->beta = 3990; }
+    if(       thermistor->as_string().compare("EPCOS100K"    ) == 0 ){ // Default
+    }else if( thermistor->as_string().compare("RRRF100K"     ) == 0 ){ this->beta = 3960;
+    }else if( thermistor->as_string().compare("RRRF10K"      ) == 0 ){ this->beta = 3964; this->r0 = 10000; this->r1 = 680; this->r2 = 1600;
+    }else if( thermistor->as_string().compare("Honeywell100K") == 0 ){ this->beta = 3974;
+    }else if( thermistor->as_string().compare("Semitec"      ) == 0 ){ this->beta = 4267;
+    }else if( thermistor->as_string().compare("HT100K"       ) == 0 ){ this->beta = 3990; }
 
     // Preset values are overriden by specified values
     this->r0 =                  THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, r0_checksum  )->by_default(this->r0  )->as_number();               // Stated resistance eg. 100K

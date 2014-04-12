@@ -8,29 +8,39 @@
 #ifndef CONFIGVALUE_H
 #define CONFIGVALUE_H
 
-using namespace std;
 #include <string>
+using std::string;
 
 class ConfigValue{
     public:
         ConfigValue();
-
+        ConfigValue(uint16_t *check_sums);
+        ConfigValue(const ConfigValue& to_copy);
+        ConfigValue& operator= (const ConfigValue& to_copy);
+        void clear();
         ConfigValue* required();
         float as_number();
         int as_int();
-        string as_string();
         bool as_bool();
+        string as_string();
 
         ConfigValue* by_default(float val);
         ConfigValue* by_default(string val);
         ConfigValue* by_default(int val);
-        bool has_characters( string mask );
         bool is_inverted();
 
+
+        friend class ConfigCache;
+        friend class Config;
+        friend class ConfigSource;
+        friend class Configurator;
+
+    private:
+        bool has_characters( const char* mask );
+        string value;
         int default_int;
         float default_double;
         uint16_t check_sums[3];
-        string value;
         bool found;
         bool default_set;
 };
