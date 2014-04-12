@@ -117,7 +117,7 @@ void WatchScreen::on_refresh()
         // TODO should be enabled and disabled and settable from config
         this->panel->lcd->setLed(LED_BED_ON, this->bedtarget > 0);
         this->panel->lcd->setLed(LED_HOTEND_ON, this->hotendtarget > 0);
-        //this->panel->lcd->setLed(LED_FAN_ON, this->fanon);
+        this->panel->lcd->setLed(LED_FAN_ON, this->fan_state);
 
         if (this->panel->lcd->hasGraphics()) {
             // display the graphical icons below the status are

@@ -52,6 +52,8 @@ class LcdBase {
         virtual void setLedBrightness(int led, int val){};
         virtual void buzz(long,uint16_t){};
         virtual bool hasGraphics() { return false; }
+        virtual bool encoderReturnsDelta() { return false; } // set to true if the panel handles encoder clicks and returns a delta
+
         // on graphics panels, the input bitmap is in X windows XBM format but
         // with the bits in a byte reversed so bit7 is left most and bit0 is
         // right most. x_offset must by byte aligned if used

@@ -23,6 +23,7 @@ class Panel : public Module {
 
         void on_module_loaded();
         uint32_t button_tick(uint32_t dummy);
+        uint32_t encoder_tick(uint32_t dummy);
         void on_idle(void* argument);
         void on_main_loop(void* argument);
         void on_gcode_received(void* argument);
@@ -103,6 +104,7 @@ class Panel : public Module {
         volatile bool click_changed;
         volatile bool refresh_flag;
         volatile bool do_buttons;
+        volatile bool do_encoder;
         bool paused;
         int idle_time;
         bool start_up;
