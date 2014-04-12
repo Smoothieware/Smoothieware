@@ -105,6 +105,8 @@ ConfigValue *Config::value(uint16_t check_sum_a, uint16_t check_sum_b, uint16_t 
     return this->value(check_sums);
 }
 
+static ConfigValue dummyValue;
+
 // Get a value from the configuration as a string
 // Because we don't like to waste space in Flash with lengthy config parameter names, we take a checksum instead so that the name does not have to be stored
 // See get_checksum
@@ -120,8 +122,10 @@ ConfigValue *Config::value(uint16_t check_sums[])
 
     if(result == NULL) {
         // create a dummy value for this to play with, each call requires it's own value not a shared one
-        result= new ConfigValue(check_sums);
-        config_cache->add(result);
+        // result= new ConfigValue(check_sums);
+        // config_cache->add(result);
+        dummyValue.clear();
+        result = &dummyValue;
     }
 
     return result;

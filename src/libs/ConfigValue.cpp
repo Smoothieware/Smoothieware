@@ -14,6 +14,11 @@
 
 ConfigValue::ConfigValue()
 {
+    clear();
+}
+
+void ConfigValue:: clear()
+{
     this->found = false;
     this->default_set = false;
     this->check_sums[0] = 0x0000;

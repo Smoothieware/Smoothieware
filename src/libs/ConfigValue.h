@@ -17,7 +17,7 @@ class ConfigValue{
         ConfigValue(uint16_t *check_sums);
         ConfigValue(const ConfigValue& to_copy);
         ConfigValue& operator= (const ConfigValue& to_copy);
-
+        void clear();
         ConfigValue* required();
         float as_number();
         int as_int();

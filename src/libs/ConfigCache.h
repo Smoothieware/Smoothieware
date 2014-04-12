@@ -11,6 +11,7 @@
 using namespace std;
 #include <vector>
 #include <stdint.h>
+#include <map>
 
 class ConfigValue;
 class StreamOutput;
@@ -21,7 +22,7 @@ class ConfigCache {
         ~ConfigCache();
         void clear();
 
-        void add(ConfigValue* v) { store.push_back(v); }
+        void add(ConfigValue* v);
 
         // lookup and return the entru that matches the check sums,return NULL if not found
         ConfigValue *lookup(const uint16_t *check_sums) const;
@@ -36,7 +37,8 @@ class ConfigCache {
         void dump(StreamOutput *stream);
 
     private:
-        vector<ConfigValue*> store;
+        typedef map<uint32_t, ConfigValue*> storage_t;
+        storage_t store;
 };
 
 
