@@ -81,11 +81,6 @@ int main() {
         leds[i]= 0;
     }
 
-    Timer timer;
-    timer.start();
-    float begin, end;
-    begin = timer.read();
-
     Kernel* kernel = new Kernel();
 
     kernel->streams->printf("Smoothie Running @%ldMHz\r\n", SystemCoreClock / 1000000);
@@ -180,9 +175,6 @@ int main() {
             fclose(fp);
         }
     }
-
-    end = timer.read();
-    kernel->streams->printf("boot time= %f\n", end-begin);
 
     uint16_t cnt= 0;
     // Main loop

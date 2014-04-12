@@ -158,7 +158,7 @@ void Configurator::config_load_command( string parameters, StreamOutput *stream 
     string source = shift_parameter(parameters);
     if(source == "load") {
         THEKERNEL->config->config_cache_load();
-        stream->printf( "config cache loaded\r\n" );
+        stream->printf( "config cache loaded\r\n");
 
     } else if(source == "unload") {
         THEKERNEL->config->config_cache_clear();

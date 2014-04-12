@@ -37,7 +37,7 @@ class ConfigCache {
         void dump(StreamOutput *stream);
 
     private:
-        typedef map<uint32_t, ConfigValue*> storage_t;
+        typedef vector<ConfigValue*> storage_t;
         storage_t store;
 };
 
