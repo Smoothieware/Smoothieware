@@ -11,6 +11,7 @@
 #include "libs/Config.h"
 #include "ConfigValue.h"
 #include "libs/Pin.h"
+#include "StreamOutputPool.h"
 
 // config settings
 #define panel_checksum             CHECKSUM("panel")
@@ -53,7 +54,7 @@ UniversalAdapter::UniversalAdapter()
     // chip select not selected
     this->cs_pin->set(1);
 
-    int spi_frequency = THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(500000)->as_number();
+    int spi_frequency = THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(500000)->as_int();
     this->spi->frequency(spi_frequency);
     ledBits = 0;
 }
@@ -69,7 +70,7 @@ UniversalAdapter::~UniversalAdapter()
 uint8_t UniversalAdapter::writeSPI(uint8_t b)
 {
     uint8_t r= this->spi->write(b);
-    wait_us(50); // need some delay here for arduino to catch up
+    wait_us(20); // need some delay here for arduino to catch up
     return r;
 }
 
@@ -90,17 +91,21 @@ uint8_t UniversalAdapter::sendReadCmd(uint8_t cmd)
 
 uint8_t UniversalAdapter::readButtons()
 {
-    return sendReadCmd(READ_BUTTONS) & ~BUTTON_PAUSE; // clear pause for now in case of noise
+    uint8_t b= sendReadCmd(READ_BUTTONS);
+    return b & ~BUTTON_PAUSE; // clear pause for now in case of noise
 }
 
 int UniversalAdapter::readEncoderDelta()
 {
     uint8_t e = sendReadCmd(READ_ENCODER);
+    //if(e == 0x40) return 0; // HACK as sometime SPI returns the command not the value
+    //if(e != 0) THEKERNEL->streams->printf("e: %02X\n", e);
+
     // this is actually a signed number +/-127, so convert to int
     int d= e < 128 ? e : -(256-e);
     // as upper layer expects only deltas of 1 we hack it here for now
-    if(d < 0) d= -1;
-    else if(d > 0) d= 1;
+    // if(d < 0) d= -1;
+    // else if(d > 0) d= 1;
     return d;
 }
 

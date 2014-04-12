@@ -151,7 +151,7 @@ void Panel::on_module_loaded()
     THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
     if(lcd->encoderReturnsDelta()) {
         // panel handles encoder pins and returns a delta
-        THEKERNEL->slow_ticker->attach( 50, this, &Panel::encoder_tick );
+        THEKERNEL->slow_ticker->attach( 10, this, &Panel::encoder_tick );
     }else{
         // read encoder pins
         THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
@@ -199,13 +199,17 @@ uint32_t Panel::encoder_check(uint32_t dummy)
     // however when reading encoder directly it needs to be done
     // frequently, universal panel adapter will return an actual delta count so won't miss any if polled slowly
     // NOTE FIXME (WHY is it in menu only?) this code will not work if change is not 1,0,-1 anything greater (as in above case) will not work properly
-    static int encoder_counter = 0;
+    static int encoder_counter = 0; // keeps track of absolute encoder position
+    static int last_encoder_click= 0; // last readfing of divided encoder count
     int change = lcd->readEncoderDelta();
     encoder_counter += change;
+    int clicks= encoder_counter/this->encoder_click_resolution;
+    int delta= clicks - last_encoder_click; // the number of clicks this time
+    last_encoder_click= clicks;
 
-    if ( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ) {
+    if ( delta != 0 ) {
         this->counter_changed = true;
-        (*this->counter) += change;
+        (*this->counter) += delta;
         this->idle_time = 0;
     }
     return 0;
