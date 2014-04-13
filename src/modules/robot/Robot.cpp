@@ -307,12 +307,16 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
-            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
-                                                 from_millimeters(this->last_milestone[0]),
-                                                 from_millimeters(this->last_milestone[1]),
-                                                 from_millimeters(this->last_milestone[2]));
-                gcode->add_nl = true;
-                gcode->mark_as_taken();
+            case 114:
+                {
+                    char buf[32];
+                    int n= snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f",
+                                                from_millimeters(this->last_milestone[0]),
+                                                from_millimeters(this->last_milestone[1]),
+                                                from_millimeters(this->last_milestone[2]));
+                    gcode->txt_after_ok.append(buf, n);
+                    gcode->mark_as_taken();
+                }
                 return;
 
             case 203: // M203 Set maximum feedrates in mm/sec
