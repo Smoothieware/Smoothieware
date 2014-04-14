@@ -291,7 +291,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
 
     if (target_temperature > 0)
     {
-        if ((temperature <= 1) || (temperature >= 500))
+        if (isinf(temperature))
         {
             this->min_temp_violated = true;
             target_temperature = UNDEFINED;

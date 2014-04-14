@@ -80,7 +80,7 @@ float Thermistor::get_temperature()
 float Thermistor::adc_value_to_temperature(int adc_value)
 {
     if ((adc_value == 4095) || (adc_value == 0))
-        return INFINITY;
+        return infinityf();
     float r = r2 / ((4095.0 / adc_value) - 1.0);
     if (r1 > 0)
         r = (r1 * r) / (r1 - r);

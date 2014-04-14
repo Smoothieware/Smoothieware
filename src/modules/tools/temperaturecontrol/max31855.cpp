@@ -70,8 +70,8 @@ float Max31855::get_temperature()
     //Process temp
     if (data & 0x0001)
 	{
-		// Error flag. Set an absurd temperature.
-        temperature = 10000.f;
+		// Error flag.
+        temperature = infinityf();
 		// Todo: Interpret data2 for more diagnostics.
 	}
     else

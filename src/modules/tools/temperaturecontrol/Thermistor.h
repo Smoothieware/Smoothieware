@@ -41,7 +41,6 @@ class Thermistor : public TempSensor
 
         RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
         uint16_t median_buffer[QUEUE_LEN];
-        int running_total;		
 		
 };
 
