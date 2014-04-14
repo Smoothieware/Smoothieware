@@ -49,8 +49,8 @@ void Max31855::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 
 	spi.reset(new SPI(mosi, miso, sclk));
 
-	this->spi->format(32);
-    this->spi->frequency(1000000);
+	// Spi settings: 1MHz (default), 16 bits, mode 0 (default)
+	spi->format(16);
 }
 
 float Max31855::get_temperature()
@@ -58,33 +58,31 @@ float Max31855::get_temperature()
 	this->spi_cs_pin.set(false);
 	wait_us(1); // Must wait for first bit valid
 
-	// Read 32 bits
-/*	uint32_t data = spi->write(0);
-	data = data<<8;
-	data |= spi->write(0);
-	data = data<<8;
-	data |= spi->write(0);
-	data = data<<8;
-	data |= spi->write(0);
-*/
-	uint32_t data = uint32_t(spi->write(0));
-	
+	// Read 16 bits (writing something as well is required by the api)
+	uint16_t data = spi->write(0);
+//	Read next 16 bits (diagnostics)
+//	uint16_t data2 = spi->write(0);
+
 	this->spi_cs_pin.set(true);
 	
 	float temperature;
 
     //Process temp
-    if (data & 0x00010000)
-        temperature = 1000.f; //Some form of error.
+    if (data & 0x0001)
+	{
+		// Error flag. Set an absurd temperature.
+        temperature = 10000.f;
+		// Todo: Interpret data2 for more diagnostics.
+	}
     else
     {
-        data = data >> 18;
-        temperature = (data & 0x00001FFF) / 4.f;
+        data = data >> 2;
+        temperature = (data & 0x1FFF) / 4.f;
 
-        if (data & 0x00002000)
+        if (data & 0x2000)
         {
             data = ~data;
-            temperature = ((data & 0x00001FFF) + 1) / -4.f;
+            temperature = ((data & 0x1FFF) + 1) / -4.f;
         }
     }
     return temperature;	
