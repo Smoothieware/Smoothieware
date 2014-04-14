@@ -36,6 +36,15 @@ class UniversalAdapter : public LcdBase {
         void buzz(long,uint16_t);
 
     private:
+        // this is a C++ way to do something on entry of a class and something else on exit of scope
+        class SPIFrame {
+        public:
+            SPIFrame(UniversalAdapter *pu);
+            ~SPIFrame();
+        private:
+            UniversalAdapter *u;
+        };
+
         uint8_t writeSPI(uint8_t b);
         void wait_until_ready();
         uint8_t sendReadCmd(uint8_t cmd);

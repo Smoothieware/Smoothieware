@@ -27,6 +27,18 @@
 #define LCD_CLEAR    4<<5
 #define SET_LEDS     5<<5
 #define BUZZ         6<<5
+#define INIT_ADAPTER 7<<5
+
+// helper class to assert and deassert chip select
+UniversalAdapter::SPIFrame::SPIFrame(UniversalAdapter *pu)
+{
+    this->u= pu;
+    u->cs_pin->set(0);
+}
+UniversalAdapter::SPIFrame::~SPIFrame()
+{
+    u->cs_pin->set(1);
+}
 
 UniversalAdapter::UniversalAdapter()
 {
@@ -70,7 +82,7 @@ UniversalAdapter::~UniversalAdapter()
 uint8_t UniversalAdapter::writeSPI(uint8_t b)
 {
     uint8_t r= this->spi->write(b);
-    wait_us(20); // need some delay here for arduino to catch up
+    wait_us(40); // need some delay here for arduino to catch up
     return r;
 }
 
@@ -91,33 +103,33 @@ uint8_t UniversalAdapter::sendReadCmd(uint8_t cmd)
 
 uint8_t UniversalAdapter::readButtons()
 {
+    SPIFrame sf(this); // asserts cs on entry and deasserts on exit
     uint8_t b= sendReadCmd(READ_BUTTONS);
     return b & ~BUTTON_PAUSE; // clear pause for now in case of noise
 }
 
 int UniversalAdapter::readEncoderDelta()
 {
+    SPIFrame sf(this); // asserts cs on entry and deasserts on exit
     uint8_t e = sendReadCmd(READ_ENCODER);
-    //if(e == 0x40) return 0; // HACK as sometime SPI returns the command not the value
     //if(e != 0) THEKERNEL->streams->printf("e: %02X\n", e);
 
     // this is actually a signed number +/-127, so convert to int
     int d= e < 128 ? e : -(256-e);
-    // as upper layer expects only deltas of 1 we hack it here for now
-    // if(d < 0) d= -1;
-    // else if(d > 0) d= 1;
     return d;
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
 void UniversalAdapter::buzz(long duration, uint16_t freq)
 {
+    SPIFrame sf(this); // asserts cs on entry and deasserts on exit
     wait_until_ready();
     writeSPI(BUZZ);
 }
 
 void UniversalAdapter::write(const char *line, int len)
 {
+    SPIFrame sf(this); // asserts cs on entry and deasserts on exit
     wait_until_ready();
     if(len > 30) {
         // this is the limit the UPA can handle in one frame (32 bytes)
@@ -136,6 +148,7 @@ void UniversalAdapter::write(const char *line, int len)
 // Sets the indicator leds
 void UniversalAdapter::setLed(int led, bool onoff)
 {
+    SPIFrame sf(this); // asserts cs on entry and deasserts on exit
     if(onoff) {
         switch(led) {
             case LED_FAN_ON: ledBits    |= 1; break; // on
@@ -163,6 +176,7 @@ void UniversalAdapter::home()
 
 void UniversalAdapter::clear()
 {
+    SPIFrame sf(this); // asserts cs on entry and deasserts on exit
     wait_until_ready();
     writeSPI(LCD_CLEAR);
     this->col = 0;
@@ -182,9 +196,11 @@ void UniversalAdapter::setCursor(uint8_t col, uint8_t row)
 
 void UniversalAdapter::init()
 {
-    // send an init toggle CS
-    this->cs_pin->set(1);
-    wait_ms(10);
-    this->cs_pin->set(0);
-    wait_ms(50);
+    {
+        SPIFrame sf(this); // asserts cs on entry and deasserts on exit
+        // send an init command
+        writeSPI(INIT_ADAPTER);
+    }
+    // give adapter time to init
+    wait_ms(100);
 }
