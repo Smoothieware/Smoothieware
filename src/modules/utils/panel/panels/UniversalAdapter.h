@@ -24,6 +24,7 @@ class UniversalAdapter : public LcdBase {
         void init();
         void write(const char* line, int len);
         bool encoderReturnsDelta() { return true; }
+        //void on_refresh(bool now);
 
         void setLed(int led, bool onoff);
 
@@ -52,8 +53,6 @@ class UniversalAdapter : public LcdBase {
         mbed::SPI* spi;
         Pin *cs_pin;
         Pin *busy_pin;
-        int col;
-        int row;
 };
 
 
