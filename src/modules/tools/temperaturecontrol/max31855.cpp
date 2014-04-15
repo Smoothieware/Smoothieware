@@ -16,7 +16,7 @@
 
 #include "MRI_Hooks.h"
 
-#define chip_select_checksum CHECKSUM("chip_select")
+#define chip_select_checksum CHECKSUM("chip_select_pin")
 #define spi_channel_checksum CHECKSUM("spi_channel")
 
 Max31855::Max31855()
@@ -31,8 +31,9 @@ Max31855::~Max31855()
 void Max31855::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 {
 	// Chip select
-    this->spi_cs_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, chip_select_checksum)->by_default("nc")->as_string())->as_output();
+    this->spi_cs_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, chip_select_checksum)->by_default("0.16")->as_string());
 	this->spi_cs_pin.set(true);
+	this->spi_cs_pin.as_output();
 	
     // select which SPI channel to use
     int spi_channel = THEKERNEL->config->value(module_checksum, name_checksum, spi_channel_checksum)->by_default(0)->as_number();
