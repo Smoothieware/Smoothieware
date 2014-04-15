@@ -20,19 +20,23 @@
 #define spi_frequency_checksum     CHECKSUM("spi_frequency")
 #define busy_pin_checksum          CHECKSUM("busy_pin")
 
-// commands to Universal Adapter
-#define READ_BUTTONS 1<<5
-#define READ_ENCODER 2<<5
+// commands to Universal Adapter protocol version >= 0.97
+#define GET_STATUS   1<<5
+#define SET_CURSOR   2<<5
 #define LCD_WRITE    3<<5
 #define LCD_CLEAR    4<<5
 #define SET_LEDS     5<<5
 #define BUZZ         6<<5
-#define INIT_ADAPTER 7<<5
+
+#define READ_BUTTONS (GET_STATUS|0)
+#define READ_ENCODER (GET_STATUS|1)
+#define INIT_ADAPTER 0xFE
+#define POLL         0xFF
 
 // helper class to assert and deassert chip select
 UniversalAdapter::SPIFrame::SPIFrame(UniversalAdapter *pu)
 {
-    this->u= pu;
+    this->u = pu;
     u->cs_pin->set(0);
 }
 UniversalAdapter::SPIFrame::~SPIFrame()
@@ -79,9 +83,18 @@ UniversalAdapter::~UniversalAdapter()
     delete this->spi;
 }
 
+// void UniversalAdapter::on_refresh(bool now)
+// {
+//     SPIFrame sf(this); // asserts cs on entry and deasserts on exit
+//     uint8_t b = sendReadCmd(GET_STATUS|2);
+//     uint8_t cmd = SET_LEDS | 1;
+//     writeSPI(cmd);
+//     writeSPI(b);
+// }
+
 uint8_t UniversalAdapter::writeSPI(uint8_t b)
 {
-    uint8_t r= this->spi->write(b);
+    uint8_t r = this->spi->write(b);
     wait_us(40); // need some delay here for arduino to catch up
     return r;
 }
@@ -91,7 +104,7 @@ void UniversalAdapter::wait_until_ready()
     while(this->busy_pin->get() != 0) {
         // poll adapter for more room
         wait_ms(100);
-        writeSPI(0xFF);
+        writeSPI(POLL);
     }
 }
 
@@ -104,7 +117,7 @@ uint8_t UniversalAdapter::sendReadCmd(uint8_t cmd)
 uint8_t UniversalAdapter::readButtons()
 {
     SPIFrame sf(this); // asserts cs on entry and deasserts on exit
-    uint8_t b= sendReadCmd(READ_BUTTONS);
+    uint8_t b = sendReadCmd(READ_BUTTONS);
     return b & ~BUTTON_PAUSE; // clear pause for now in case of noise
 }
 
@@ -115,7 +128,7 @@ int UniversalAdapter::readEncoderDelta()
     //if(e != 0) THEKERNEL->streams->printf("e: %02X\n", e);
 
     // this is actually a signed number +/-127, so convert to int
-    int d= e < 128 ? e : -(256-e);
+    int d = e < 128 ? e : -(256 - e);
     return d;
 }
 
@@ -131,18 +144,15 @@ void UniversalAdapter::write(const char *line, int len)
 {
     SPIFrame sf(this); // asserts cs on entry and deasserts on exit
     wait_until_ready();
-    if(len > 30) {
-        // this is the limit the UPA can handle in one frame (32 bytes)
-        len= 30;
+    if(len > 31) {
+        // this is the limit the UPA can handle in one frame (31 bytes)
+        len = 31;
     }
-    uint8_t cmd = LCD_WRITE | ((len + 1) & 0x1F);
-    uint8_t rc = (this->row << 5) | (this->col & 0x1F);
+    uint8_t cmd = LCD_WRITE | (len & 0x1F);
     writeSPI(cmd);
-    writeSPI(rc);
     for (int i = 0; i < len; ++i) {
         writeSPI(*line++);
     }
-    this->col += len;
 }
 
 // Sets the indicator leds
@@ -168,19 +178,11 @@ void UniversalAdapter::setLed(int led, bool onoff)
     writeSPI(ledBits);
 }
 
-void UniversalAdapter::home()
-{
-    this->col = 0;
-    this->row = 0;
-}
-
 void UniversalAdapter::clear()
 {
     SPIFrame sf(this); // asserts cs on entry and deasserts on exit
     wait_until_ready();
     writeSPI(LCD_CLEAR);
-    this->col = 0;
-    this->row = 0;
 }
 
 void UniversalAdapter::display()
@@ -190,8 +192,17 @@ void UniversalAdapter::display()
 
 void UniversalAdapter::setCursor(uint8_t col, uint8_t row)
 {
-    this->col = col;
-    this->row = row;
+    SPIFrame sf(this); // asserts cs on entry and deasserts on exit
+    wait_until_ready();
+    uint8_t cmd = SET_CURSOR | 1;
+    uint8_t rc = (row << 5) | (col & 0x1F);
+    writeSPI(cmd);
+    writeSPI(rc);
+}
+
+void UniversalAdapter::home()
+{
+    setCursor(0, 0);
 }
 
 void UniversalAdapter::init()
