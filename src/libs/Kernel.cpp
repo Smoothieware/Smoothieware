@@ -43,7 +43,8 @@ Kernel::Kernel(){
     instance= this; // setup the Singleton instance of the kernel
 
     // serial first at fixed baud rate (MRI_BAUD) so config can report errors to serial
-    this->serial = new SerialConsole(USBTX, USBRX, 115200); // TODO set to whatever MRI is
+	// Set to UART0, this will be changed to use the same UART as MRI if it's enabled
+    this->serial = new SerialConsole(USBTX, USBRX, 115200); 
 
     // Config next, but does not load cache yet
     this->config         = new Config();
@@ -60,22 +61,23 @@ Kernel::Kernel(){
 
     // Configure UART depending on MRI config
     // Match up the SerialConsole to MRI UART. This makes it easy to use only one UART for both debug and actual commands.
-    // FIXME this requires MRI which is not present in a Release build
     NVIC_SetPriorityGrouping(0);
-    switch( __mriPlatform_CommUartIndex() ) {
-        case 0:
-            this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-            break;
-        case 1:
-            this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-            break;
-        case 2:
-            this->serial = new SerialConsole(  p28,   p27, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-            break;
-        case 3:
-            this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-            break;
-    }
+	if( MRI_ENABLE ) {
+		switch( __mriPlatform_CommUartIndex() ) {
+			case 0:
+				this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+				break;
+			case 1:
+				this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+				break;
+			case 2:
+				this->serial = new SerialConsole(  p28,   p27, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+				break;
+			case 3:
+				this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+				break;
+		}
+	}
 
     this->add_module( this->config );
     this->add_module( this->serial );
