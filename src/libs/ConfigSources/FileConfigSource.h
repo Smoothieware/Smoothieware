@@ -29,7 +29,7 @@ public:
     string get_config_file();
 
 private:
-    bool readLine(string& line, FILE *fp);
+    bool readLine(string& line, int lineno, FILE *fp);
     string config_file;         // Path to the config file
     bool   config_file_found;   // Wether or not the config file's location is known
 };

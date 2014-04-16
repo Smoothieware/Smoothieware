@@ -27,6 +27,10 @@ STACK_SIZE=3072
 # 0 if you don't want to break into GDB at startup.
 ENABLE_DEBUG_MONITOR?=0
 
+# this is the default UART baud rate used if it is not set in config
+# it is also the baud rate used to report any errors found while parsing the config file
+DEFAULT_SERIAL_BAUD_RATE?=9600
+
 ifeq "$(ENABLE_DEBUG_MONITOR)" "1"
 # Can add MRI_UART_BAUD=115200 to next line if GDB fails to connect to MRI.
 # Tends to happen on some Linux distros but not Windows and OS X.
@@ -46,8 +50,8 @@ else
 DEFINES += -D__GITVERSIONSTRING__=\"placeholder\"
 endif
 
-# use c++11 features for the checksums
-DEFINES += -DCHECKSUM_USE_CPP
+# use c++11 features for the checksums and set default baud rate for serial uart
+DEFINES += -DCHECKSUM_USE_CPP -DDEFAULT_SERIAL_BAUD_RATE=$(DEFAULT_SERIAL_BAUD_RATE)
 
 # add any modules that you do not want included in the build
 export EXCLUDED_MODULES = tools/touchprobe

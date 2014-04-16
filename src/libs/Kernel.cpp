@@ -42,9 +42,9 @@ Kernel* Kernel::instance;
 Kernel::Kernel(){
     instance= this; // setup the Singleton instance of the kernel
 
-    // serial first at fixed baud rate (MRI_BAUD) so config can report errors to serial
+    // serial first at fixed baud rate (DEFAULT_SERIAL_BAUD_RATE) so config can report errors to serial
 	// Set to UART0, this will be changed to use the same UART as MRI if it's enabled
-    this->serial = new SerialConsole(USBTX, USBRX, 115200);
+    this->serial = new SerialConsole(USBTX, USBRX, DEFAULT_SERIAL_BAUD_RATE);
 
     // Config next, but does not load cache yet
     this->config         = new Config();
@@ -52,7 +52,7 @@ Kernel::Kernel(){
     // Pre-load the config cache, do after setting up serial so we can report errors to serial
     this->config->config_cache_load();
 
-    // now config is loaded we can do normal setup for serial and the rest
+    // now config is loaded we can do normal setup for serial based on config
     delete this->serial;
     this->serial= NULL;
 
@@ -63,25 +63,26 @@ Kernel::Kernel(){
     // Configure UART depending on MRI config
     // Match up the SerialConsole to MRI UART. This makes it easy to use only one UART for both debug and actual commands.
     NVIC_SetPriorityGrouping(0);
-    if( MRI_ENABLE ) {
-        switch( __mriPlatform_CommUartIndex() ) {
-            case 0:
-                this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-                break;
-            case 1:
-                this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-                break;
-            case 2:
-                this->serial = new SerialConsole(  p28,   p27, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-                break;
-            case 3:
-                this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-                break;
-        }
-    }
 
+#if MRI_ENABLE != 0
+    switch( __mriPlatform_CommUartIndex() ) {
+        case 0:
+            this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
+            break;
+        case 1:
+            this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
+            break;
+        case 2:
+            this->serial = new SerialConsole(  p28,   p27, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
+            break;
+        case 3:
+            this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
+            break;
+    }
+#endif
+    // default
     if(this->serial == NULL) {
-        this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+        this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
     }
 
     this->add_module( this->config );
