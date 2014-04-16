@@ -23,14 +23,18 @@ FileConfigSource::FileConfigSource(string config_file, const char *name)
     this->config_file_found = false;
 }
 
-bool FileConfigSource::readLine(string& line, FILE *fp)
+bool FileConfigSource::readLine(string& line, int lineno, FILE *fp)
 {
     char buf[132];
     char *l= fgets(buf, sizeof(buf)-1, fp);
     if(l != NULL) {
         if(buf[strlen(l)-1] != '\n') {
             // truncate long lines
-            printf("Truncated long line in: %s\n", config_file.c_str());
+            if(lineno != 0) {
+                // report if it is not truncating a comment
+                if(strchr(buf, '#') == NULL)
+                    printf("Truncated long line %d in: %s\n", lineno, config_file.c_str());
+            }
             // read until the next \n or eof
             int c;
             while((c=fgetc(fp)) != '\n' && c != EOF) /* discard */;
@@ -51,10 +55,11 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache *cache )
     // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
 
+    int ln= 1;
     // For each line
     while(!feof(lp)) {
         string line;
-        if(readLine(line, lp)) {
+        if(readLine(line, ln++, lp)) {
             process_line_from_ascii_config(line, cache);
         }else break;
     }
@@ -85,7 +90,7 @@ bool FileConfigSource::write( string setting, string value )
         string line;
         fpos_t bol, eol;
         fgetpos( lp, &bol ); // get start of line
-        if(readLine(line, lp)) {
+        if(readLine(line, 0, lp)) {
             fgetpos( lp, &eol ); // get end of line
             if(!process_line_from_ascii_config(line, setting_checksums).empty()) {
                 // found it
@@ -136,7 +141,7 @@ string FileConfigSource::read( uint16_t check_sums[3] )
     // For each line
     while(!feof(lp)) {
         string line;
-         if(readLine(line, lp)) {
+         if(readLine(line, 0, lp)) {
             value = process_line_from_ascii_config(line, check_sums);
             if(!value.empty()) break; // found it
         }else break;
