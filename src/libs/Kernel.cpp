@@ -44,7 +44,7 @@ Kernel::Kernel(){
 
     // serial first at fixed baud rate (MRI_BAUD) so config can report errors to serial
 	// Set to UART0, this will be changed to use the same UART as MRI if it's enabled
-    this->serial = new SerialConsole(USBTX, USBRX, 115200); 
+    this->serial = new SerialConsole(USBTX, USBRX, 115200);
 
     // Config next, but does not load cache yet
     this->config         = new Config();
@@ -54,6 +54,7 @@ Kernel::Kernel(){
 
     // now config is loaded we can do normal setup for serial and the rest
     delete this->serial;
+    this->serial= NULL;
 
     this->streams        = new StreamOutputPool();
 
@@ -77,6 +78,10 @@ Kernel::Kernel(){
                 this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
                 break;
         }
+    }
+
+    if(this->serial == NULL) {
+        this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
     }
 
     this->add_module( this->config );
