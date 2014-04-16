@@ -62,22 +62,22 @@ Kernel::Kernel(){
     // Configure UART depending on MRI config
     // Match up the SerialConsole to MRI UART. This makes it easy to use only one UART for both debug and actual commands.
     NVIC_SetPriorityGrouping(0);
-	if( MRI_ENABLE ) {
-		switch( __mriPlatform_CommUartIndex() ) {
-			case 0:
-				this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-				break;
-			case 1:
-				this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-				break;
-			case 2:
-				this->serial = new SerialConsole(  p28,   p27, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-				break;
-			case 3:
-				this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
-				break;
-		}
-	}
+    if( MRI_ENABLE ) {
+        switch( __mriPlatform_CommUartIndex() ) {
+            case 0:
+                this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+                break;
+            case 1:
+                this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+                break;
+            case 2:
+                this->serial = new SerialConsole(  p28,   p27, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+                break;
+            case 3:
+                this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+                break;
+        }
+    }
 
     this->add_module( this->config );
     this->add_module( this->serial );
