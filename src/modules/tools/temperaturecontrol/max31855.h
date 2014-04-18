@@ -12,19 +12,21 @@
 #include <string>
 #include <libs/Pin.h>
 #include <mbed.h>
-#include <memory>
+#include "RingBuffer.h"
 
 class Max31855 : public TempSensor
 {
 public:
-	Max31855();
-	~Max31855();
-	void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
-	float get_temperature();
+    Max31855();
+    ~Max31855();
+    void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
+    float get_temperature();
 
 private:
-	Pin spi_cs_pin;
-	std::auto_ptr<mbed::SPI> spi;
+	float read_temp();
+    Pin spi_cs_pin;
+    mbed::SPI *spi;
+    RingBuffer<float,16> readings;
 };
 
 #endif

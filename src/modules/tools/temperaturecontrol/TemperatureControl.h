@@ -11,7 +11,6 @@
 #include "Module.h"
 #include "Pwm.h"
 #include "TempSensor.h"
-#include <memory> // for auto_ptr
 
 class TemperatureControlPool;
 
@@ -19,6 +18,7 @@ class TemperatureControl : public Module {
 
     public:
         TemperatureControl(uint16_t name);
+        ~TemperatureControl();
 
         void on_module_loaded();
         void on_main_loop(void* argument);
@@ -35,9 +35,9 @@ class TemperatureControl : public Module {
         TemperatureControlPool *pool;
         friend class PID_Autotuner;
 
-		float get_temperature();
+        float get_temperature();
     private:
-		uint32_t thermistor_read_tick(uint32_t dummy);
+        uint32_t thermistor_read_tick(uint32_t dummy);
         void pid_process(float);
 
         float target_temperature;
@@ -45,8 +45,8 @@ class TemperatureControl : public Module {
         float preset1;
         float preset2;
 
-		std::auto_ptr<TempSensor> sensor;
-		
+        TempSensor *sensor;
+        
         // PID runtime
         float i_max;
 
@@ -54,7 +54,6 @@ class TemperatureControl : public Module {
 
         float last_reading;
 
-        float acceleration_factor;
         float readings_per_second;
 
         uint16_t name_checksum;

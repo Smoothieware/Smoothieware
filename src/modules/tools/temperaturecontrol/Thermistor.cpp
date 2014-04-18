@@ -74,7 +74,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 
 float Thermistor::get_temperature()
 {
-	return adc_value_to_temperature(new_thermistor_reading());
+    return adc_value_to_temperature(new_thermistor_reading());
 }
 
 float Thermistor::adc_value_to_temperature(int adc_value)

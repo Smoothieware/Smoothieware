@@ -17,15 +17,15 @@
 class Thermistor : public TempSensor
 {
     public:
-		Thermistor();
-		~Thermistor();
-		
-		// TempSensor interface.
-		void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
+        Thermistor();
+        ~Thermistor();
+        
+        // TempSensor interface.
+        void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
         float get_temperature();
-		
+        
     private:
-		int new_thermistor_reading();
+        int new_thermistor_reading();
         float adc_value_to_temperature(int adc_value);
 
         // Thermistor computation settings
@@ -41,7 +41,7 @@ class Thermistor : public TempSensor
 
         RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
         uint16_t median_buffer[QUEUE_LEN];
-		
+        
 };
 
 #endif

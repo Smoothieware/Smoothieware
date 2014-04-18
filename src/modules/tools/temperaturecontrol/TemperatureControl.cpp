@@ -60,8 +60,15 @@
 
 
 TemperatureControl::TemperatureControl(uint16_t name) :
-  name_checksum(name), waiting(false), min_temp_violated(false) {}
+  sensor(nullptr), name_checksum(name), waiting(false), min_temp_violated(false)
+{
+}
 
+TemperatureControl::~TemperatureControl()
+{
+    delete sensor;
+}
+  
 void TemperatureControl::on_module_loaded(){
 
     // We start not desiring any temp
@@ -69,8 +76,6 @@ void TemperatureControl::on_module_loaded(){
 
     // Settings
     this->on_config_reload(this);
-
-    this->acceleration_factor = 10;
 
     // Register for events
     register_for_event(ON_CONFIG_RELOAD);
@@ -100,21 +105,26 @@ void TemperatureControl::on_config_reload(void* argument){
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
-	// For backward compatibility, default to a thermistor sensor.
-	std::string sensor_type = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, sensor_checksum)->by_default("thermistor")->as_string();
+    // For backward compatibility, default to a thermistor sensor.
+    std::string sensor_type = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, sensor_checksum)->by_default("thermistor")->as_string();
 
-	// Instantiate correct sensor (TBD: TempSensor factory?)
-	if(sensor_type.compare("thermistor") == 0)
-	{
-		sensor.reset(new Thermistor());
-	}
-	else if(sensor_type.compare("max31855") == 0)
-	{
-		sensor.reset(new Max31855());
-	}
-
-	sensor->UpdateConfig(temperature_control_checksum, this->name_checksum);
-	
+    // Instantiate correct sensor (TBD: TempSensor factory?)
+    delete sensor;
+    sensor = nullptr; // In case we fail to create a new sensor.
+    if(sensor_type.compare("thermistor") == 0)
+    {
+        sensor = new Thermistor();
+    }
+    else if(sensor_type.compare("max31855") == 0)
+    {
+        sensor = new Max31855();
+    }
+    else
+    {
+        sensor = new TempSensor(); // A dummy implementation
+    }
+    sensor->UpdateConfig(temperature_control_checksum, this->name_checksum);
+    
     this->preset1 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
     this->preset2 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
 

@@ -11,14 +11,14 @@
 class TempSensor
 {
 public:
-		// Load config parameters using provided "base" names.
-		virtual void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum) = 0;
+    // Load config parameters using provided "base" names.
+    virtual void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum) {};
 
-		// Return temperature in degrees Celsius.
-        virtual float get_temperature() = 0;
+    // Return temperature in degrees Celsius.
+    virtual float get_temperature() { return -1.f; };
 
-		// Make sure the interface provides a destructor.
-		virtual ~TempSensor() {}
+    // Make sure the interface provides a destructor.
+    virtual ~TempSensor() {}
 };
 
 #endif
