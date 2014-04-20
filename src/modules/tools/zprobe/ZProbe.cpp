@@ -135,6 +135,7 @@ void ZProbe::on_gcode_received(void *argument)
     if( gcode->has_g) {
         // G code processing
         if( gcode->g == 30 ) {
+            gcode->mark_as_taken();
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
@@ -144,16 +145,34 @@ void ZProbe::on_gcode_received(void *argument)
             }
             int steps[3];
             if(run_probe(steps)){
-                THEKERNEL->streams->printf("Z:%1.4f C:%d\n", steps[2]/this->steps_per_mm[Z_AXIS], steps[Z_AXIS]);
+                gcode->stream->printf("Z:%1.4f C:%d\n", steps[2]/this->steps_per_mm[Z_AXIS], steps[Z_AXIS]);
+                // move back to where it started, unless a Z is specified
+                if(gcode->has_letter('Z')) {
+                    // set Z to the specified value, and leave probe where it is
+                    THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+                }else{
+                    // move probe back to where it was
+                    this->steppers[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
+                    this->steppers[Z_AXIS]->move(false, steps[Z_AXIS]);
+                    this->running= true;
+                    while(this->steppers[Z_AXIS]->moving) { // wait for it to complete
+                        THEKERNEL->call_event(ON_IDLE);
+                    }
+                    this->running= true;
+                }
             }else{
-                THEKERNEL->streams->printf("ZProbe not triggered\n");
+                gcode->stream->printf("ZProbe not triggered\n");
             }
-            THEKERNEL->robot->reset_axis_position(0, Z_AXIS);
         }
 
     } else if(gcode->has_m) {
         // M code processing here
-
+        if(gcode->m == 119) {
+            int c= this->pin.get();
+            gcode->stream->printf(" Probe: %d", c);
+            gcode->add_nl = true;
+            gcode->mark_as_taken();
+        }
     }
 }
 
