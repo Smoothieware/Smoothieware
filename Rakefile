@@ -71,6 +71,15 @@ SIZE = "#{TOOLSBIN}size"
 # include a defaults file if present
 load 'rakefile.defaults' if File.exists?('rakefile.defaults')
 
+# Set build type
+BUILDTYPE= ENV['BUILDTYPE'] || 'Checked' unless defined? BUILDTYPE
+puts "#{BUILDTYPE} build"
+
+ENABLE_DEBUG_MONITOR = ENV['ENABLE_DEBUG_MONITOR'] || '0' unless defined? ENABLE_DEBUG_MONITOR
+
+# set default baud rate
+DEFAULT_SERIAL_BAUD_RATE= ENV['BAUDRATE'] || '115200' unless defined? DEFAULT_SERIAL_BAUD_RATE
+
 # set to true to eliminate all the network code
 NONETWORK= false unless defined? NONETWORK
 
@@ -114,28 +123,56 @@ MBED_INCLUDE_DIRS = %W(#{MBED_DIR}/ #{MBED_DIR}/LPC1768/)
 
 INCLUDE = (INCLUDE_DIRS+MBED_INCLUDE_DIRS).collect { |d| "-I#{d}" }.join(" ")
 
-MRI_ENABLE = true # set to false to disable MRI
-MRI_LIB = MRI_ENABLE ? './mri/mri.ar' : ''
+if ENABLE_DEBUG_MONITOR == '1'
+  # Can add MRI_UART_BAUD=115200 to next line if GDB fails to connect to MRI.
+  # Tends to happen on some Linux distros but not Windows and OS X.
+  MRI_UART = 'MRI_UART_0'
+  MRI_BREAK_ON_INIT = 1 unless defined? MRI_BREAK_ON_INIT
+else
+  MRI_UART = 'MRI_UART_0 MRI_UART_SHARE'
+  MRI_BREAK_ON_INIT = 0 unless defined? MRI_BREAK_ON_INIT
+end
+
+# Configure MRI variables based on BUILD_TYPE build type variable.
+case BUILDTYPE.downcase
+when 'release'
+  OPTIMIZATION = 2
+  MRI_ENABLE = 0
+  MRI_SEMIHOST_STDIO = 0 unless defined? MRI_SEMIHOST_STDIO
+when 'debug'
+  OPTIMIZATION = 0
+  MRI_ENABLE = 1
+  MRI_SEMIHOST_STDIO = 1 unless defined? MRI_SEMIHOST_STDIO
+when 'checked'
+  OPTIMIZATION = 2
+  MRI_ENABLE = 1
+  MRI_SEMIHOST_STDIO = 1 unless defined? MRI_SEMIHOST_STDIO
+end
+
+MRI_ENABLE = 1  unless defined? MRI_ENABLE # set to 0 to disable MRI
+MRI_LIB = MRI_ENABLE == 1 ? './mri/mri.ar' : ''
 MBED_LIB = "#{MBED_DIR}/LPC1768/GCC_ARM/libmbed.a"
+
 SYS_LIBS = '-lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys'
 LIBS = [MBED_LIB, SYS_LIBS, MRI_LIB].join(' ')
 
-MRI_DEFINES = MRI_ENABLE ? %w(-DMRI_ENABLE=1 -DMRI_INIT_PARAMETERS='"MRI_UART_0 MRI_UART_SHARE"' -DMRI_BREAK_ON_INIT=0 -DMRI_SEMIHOST_STDIO=0) : %w(-DMRI_ENABLE=0)
+MRI_DEFINES = %W(-DMRI_ENABLE=#{MRI_ENABLE} -DMRI_INIT_PARAMETERS='"#{MRI_UART}"' -DMRI_BREAK_ON_INIT=#{MRI_BREAK_ON_INIT} -DMRI_SEMIHOST_STDIO=#{MRI_SEMIHOST_STDIO})
 
 defines = %w(-DCHECKSUM_USE_CPP -D__LPC17XX__  -DTARGET_LPC1768 -DWRITE_BUFFER_DISABLE=0 -DSTACK_SIZE=3072 -DCHECKSUM_USE_CPP)
 defines += exclude_defines.collect{|d| "-DNO_#{d}"}
 defines += MRI_DEFINES
-
+defines << "-DDEFAULT_SERIAL_BAUD_RATE=#{DEFAULT_SERIAL_BAUD_RATE}"
+defines << '-DDEBUG' if OPTIMIZATION == 0
 defines << '-DNONETWORK' if nonetwork
 
 DEFINES= defines.join(' ')
 
 # Compiler flags used to enable creation of header dependencies.
 DEPFLAGS = '-MMD '
-CFLAGS = DEPFLAGS + '-Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wredundant-decls -Wcast-qual -Wcast-align -O2 -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork -ffunction-sections -fdata-sections  -fno-exceptions -fno-delete-null-pointer-checks'
+CFLAGS = DEPFLAGS + "-Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wredundant-decls -Wcast-qual -Wcast-align -O#{OPTIMIZATION} -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork -ffunction-sections -fdata-sections  -fno-exceptions -fno-delete-null-pointer-checks"
 CPPFLAGS = CFLAGS + ' -fno-rtti -std=gnu++11'
 
-MRI_WRAPS = MRI_ENABLE ? ',--wrap=_read,--wrap=_write,--wrap=semihost_connected' : ''
+MRI_WRAPS = MRI_ENABLE == 1 ? ',--wrap=_read,--wrap=_write,--wrap=semihost_connected' : ''
 
 # Linker script to be used.  Indicates what code should be placed where in memory.
 LSCRIPT = "#{MBED_DIR}/LPC1768/GCC_ARM/LPC1768.ld"

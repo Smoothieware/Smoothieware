@@ -6,12 +6,15 @@
 */
 
 #include "libs/Kernel.h"
+
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
 #include "modules/tools/touchprobe/Touchprobe.h"
+#include "modules/tools/zprobe/ZProbe.h"
 #include "modules/tools/switch/SwitchPool.h"
+
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/configurator/Configurator.h"
@@ -125,6 +128,9 @@ int main() {
     #endif
     #ifndef NO_TOOLS_TOUCHPROBE
     kernel->add_module( new Touchprobe() );
+    #endif
+    #ifndef NO_TOOLS_ZPROBE
+    kernel->add_module( new ZProbe() );
     #endif
     #ifndef NONETWORK
     kernel->add_module( new Network() );
