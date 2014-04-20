@@ -476,7 +476,8 @@ void Endstops::on_gcode_received(void *argument)
                 const char *my = this->home_direction[1] ? "min" : "max";
                 const char *mz = this->home_direction[2] ? "min" : "max";
 
-                gcode->stream->printf("X %s:%d Y %s:%d Z %s:%d\n", mx, this->pins[px].get(), my, this->pins[py].get(), mz, this->pins[pz].get());
+                gcode->stream->printf("X %s:%d Y %s:%d Z %s:%d", mx, this->pins[px].get(), my, this->pins[py].get(), mz, this->pins[pz].get());
+                gcode->add_nl= true;
                 gcode->mark_as_taken();
             }
             break;
