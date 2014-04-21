@@ -36,6 +36,7 @@ private:
     Pin            pin;
     unsigned int   debounce_count;
     bool           running;
+    bool           is_delta;
 };
 
 #endif /* ZPROBE_H_ */
