@@ -397,38 +397,52 @@ void Robot::on_gcode_received(void * argument){
                 break;
 
             case 500: // M500 saves some volatile settings to config override file
-            case 503: // M503 just prints the settings
+            case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration);
                 gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
                     this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
                     alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
+
+                // get or save any arm solution specific optional values
+                BaseSolution::arm_options_t options;
+                if(arm_solution->get_optional(options) && !options.empty()) {
+                    gcode->stream->printf(";Optional arm solution specific settings:\nM665");
+                    for(auto& i : options) {
+                        gcode->stream->printf(" %c%1.4f", i.first, i.second);
+                    }
+                    gcode->stream->printf("\n");
+                }
                 gcode->mark_as_taken();
                 break;
+            }
 
-            case 665: // M665 set optional arm solution variables based on arm solution. NOTE these are not saved with M500
+            case 665: { // M665 set optional arm solution variables based on arm solution.
                 gcode->mark_as_taken();
-                // the parameter args could be any letter except S so try each one
-                for(char c='A';c<='Z';c++) {
-                    if(c == 'S') continue; // used for segments per second
-                    float v;
-                    bool supported= arm_solution->get_optional(c, &v); // retrieve current value if supported
-
-                    if(supported && gcode->has_letter(c)) { // set new value if supported
-                        v= gcode->get_value(c);
-                        arm_solution->set_optional(c, v);
-                    }
-                    if(supported) { // print all current values of supported options
-                        gcode->stream->printf("%c %8.3f ", c, v);
+                // the parameter args could be any letter except S so ask solution what options it supports
+                BaseSolution::arm_options_t options;
+                if(arm_solution->get_optional(options)) {
+                    for(auto& i : options) {
+                        // foreach optional value
+                        char c= i.first;
+                        if(gcode->has_letter(c)) { // set new value
+                            i.second= gcode->get_value(c);
+                        }
+                        // print all current values of supported options
+                        gcode->stream->printf("%c: %8.4f ", i.first, i.second);
                         gcode->add_nl = true;
                     }
+                    // set the new options
+                    arm_solution->set_optional(options);
                 }
-                // set delta segments per second
+
+                // set delta segments per second, not saved by M500
                 if(gcode->has_letter('S')) {
                     this->delta_segments_per_second= gcode->get_value('S');
                 }
                 break;
+            }
         }
     }
 

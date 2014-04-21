@@ -2,6 +2,7 @@
 #ifndef BASESOLUTION_H
 #define BASESOLUTION_H
 
+#include <map>
 class Config;
 
 class BaseSolution {
@@ -11,9 +12,9 @@ class BaseSolution {
         virtual ~BaseSolution() {};
         virtual void cartesian_to_actuator( float[], float[] ) = 0;
         virtual void actuator_to_cartesian( float[], float[] ) = 0;
-
-        virtual bool set_optional(char parameter, float  value) { return false; };
-        virtual bool get_optional(char parameter, float *value) { return false; };
+        typedef std::map<char, float> arm_options_t;
+        virtual bool set_optional(const arm_options_t& options) { return false; };
+        virtual bool get_optional(arm_options_t& options) { return false; };
 };
 
 #endif

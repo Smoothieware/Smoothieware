@@ -27,6 +27,8 @@
 #define debounce_count_checksum  CHECKSUM("debounce_count")
 #define feedrate_checksum        CHECKSUM("feedrate")
 
+#define delta_homing_checksum    CHECKSUM("delta_homing")
+
 #define alpha_steps_per_mm_checksum      CHECKSUM("alpha_steps_per_mm")
 #define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
 #define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
@@ -71,6 +73,10 @@ void ZProbe::on_config_reload(void *argument)
     this->steps_per_mm[2] =  THEKERNEL->config->value(gamma_steps_per_mm_checksum)->as_number();
 
     this->feedrate = THEKERNEL->config->value(zprobe_checksum, feedrate_checksum)->by_default(5)->as_number()*this->steps_per_mm[Z_AXIS]; // feedrate in steps/sec
+
+    // see what type of arm solution we need to use
+    this->is_delta =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
+
 }
 
 bool ZProbe::wait_for_probe(int steps[])
@@ -118,10 +124,17 @@ bool ZProbe::run_probe(int *steps)
     THEKERNEL->stepper->turn_enable_pins_on();
 
     // move Z down
-    // TODO for delta need to move all three actuators
     this->running= true;
     this->steppers[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
     this->steppers[Z_AXIS]->move(true, 100*this->steps_per_mm[Z_AXIS]); // always probes down, no more than 100mm
+    if(this->is_delta) {
+        // for delta need to move all three actuators
+        this->steppers[X_AXIS]->set_speed(0);
+        this->steppers[X_AXIS]->move(true, 100*this->steps_per_mm[X_AXIS]);
+        this->steppers[Y_AXIS]->set_speed(0);
+        this->steppers[Y_AXIS]->move(true, 100*this->steps_per_mm[Y_AXIS]);
+    }
+
     bool r= wait_for_probe(steps);
     this->running= false;
     return r;
@@ -152,13 +165,21 @@ void ZProbe::on_gcode_received(void *argument)
                     THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
                 }else{
                     // move probe back to where it was
+                    this->running= true;
                     this->steppers[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
                     this->steppers[Z_AXIS]->move(false, steps[Z_AXIS]);
-                    this->running= true;
-                    while(this->steppers[Z_AXIS]->moving) { // wait for it to complete
+                    if(this->is_delta) {
+                        this->steppers[X_AXIS]->set_speed(0);
+                        this->steppers[X_AXIS]->move(false, steps[X_AXIS]);
+                        this->steppers[Y_AXIS]->set_speed(0);
+                        this->steppers[Y_AXIS]->move(false, steps[Y_AXIS]);
+                    }
+                    while(this->steppers[X_AXIS]->moving || this->steppers[Y_AXIS]->moving || this->steppers[Z_AXIS]->moving) {
+                        // wait for it to complete
                         THEKERNEL->call_event(ON_IDLE);
                     }
-                    this->running= true;
+
+                    this->running= false;
                 }
             }else{
                 gcode->stream->printf("ZProbe not triggered\n");
@@ -183,7 +204,7 @@ uint32_t ZProbe::acceleration_tick(uint32_t dummy)
     if(!this->running) return(0); // nothing to do
 
     // foreach stepper that is moving
-    for ( int c = 0; c <= 2; c++ ) {
+    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if( !this->steppers[c]->moving ) continue;
 
         uint32_t current_rate = this->steppers[c]->steps_per_second;

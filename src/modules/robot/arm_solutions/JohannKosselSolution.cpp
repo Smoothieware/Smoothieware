@@ -92,35 +92,25 @@ void JohannKosselSolution::actuator_to_cartesian( float actuator_mm[], float car
     cartesian_mm[2] = ROUND(cartesian[2], 4);
 }
 
-bool JohannKosselSolution::set_optional(char parameter, float value) {
+bool JohannKosselSolution::set_optional(const arm_options_t& options) {
 
-    switch(parameter) {
-        case 'L': // sets arm_length
-            arm_length= value;
-            break;
-        case 'R': // sets arm_radius
-            arm_radius= value;
-            break;
-        default:
-            return false;
+    arm_options_t::const_iterator i;
+
+    i= options.find('L');
+    if(i != options.end()) {
+        arm_length= i->second;
+
+    }
+    i= options.find('R');
+    if(i != options.end()) {
+        arm_radius= i->second;
     }
     init();
     return true;
 }
 
-bool JohannKosselSolution::get_optional(char parameter, float *value) {
-    if(value == NULL) return false;
-
-    switch(parameter) {
-        case 'L': // get arm_length
-            *value= this->arm_length;
-            break;
-        case 'R': // get arm_radius
-            *value= this->arm_radius;
-            break;
-        default:
-            return false;
-    }
-
+bool JohannKosselSolution::get_optional(arm_options_t& options) {
+    options['L']= this->arm_length;
+    options['R']= this->arm_radius;
     return true;
 };
