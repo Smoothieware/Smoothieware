@@ -10,11 +10,7 @@
 
 #include "Module.h"
 #include "Pwm.h"
-#include <math.h>
-
-#include "RingBuffer.h"
-
-#define QUEUE_LEN 8
+#include "TempSensor.h"
 
 class TemperatureControlPool;
 
@@ -22,6 +18,7 @@ class TemperatureControl : public Module {
 
     public:
         TemperatureControl(uint16_t name);
+        ~TemperatureControl();
 
         void on_module_loaded();
         void on_main_loop(void* argument);
@@ -33,17 +30,14 @@ class TemperatureControl : public Module {
         void on_set_public_data(void* argument);
 
         void set_desired_temperature(float desired_temperature);
-        float get_temperature();
-        float adc_value_to_temperature(int adc_value);
-        uint32_t thermistor_read_tick(uint32_t dummy);
-        int new_thermistor_reading();
-
 
         int pool_index;
         TemperatureControlPool *pool;
         friend class PID_Autotuner;
 
+        float get_temperature();
     private:
+        uint32_t thermistor_read_tick(uint32_t dummy);
         void pid_process(float);
 
         float target_temperature;
@@ -51,16 +45,8 @@ class TemperatureControl : public Module {
         float preset1;
         float preset2;
 
-        // Thermistor computation settings
-        float r0;
-        float t0;
-        int r1;
-        int r2;
-        float beta;
-        float j;
-        float k;
-
-
+        TempSensor *sensor;
+        
         // PID runtime
         float i_max;
 
@@ -68,16 +54,10 @@ class TemperatureControl : public Module {
 
         float last_reading;
 
-        float acceleration_factor;
         float readings_per_second;
-
-        RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
-        uint16_t median_buffer[QUEUE_LEN];
-        int running_total;
 
         uint16_t name_checksum;
 
-        Pin  thermistor_pin;
         Pwm  heater_pin;
 
         bool use_bangbang;
@@ -89,7 +69,6 @@ class TemperatureControl : public Module {
         uint16_t get_m_code;
 
         string designator;
-
 
         void setPIDp(float p);
         void setPIDi(float i);
