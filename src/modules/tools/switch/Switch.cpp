@@ -19,6 +19,7 @@
 #include "Gcode.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "libs/StreamOutput.h"
 
 #include "MRI_Hooks.h"
 

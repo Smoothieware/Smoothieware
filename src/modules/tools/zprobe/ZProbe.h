@@ -12,6 +12,7 @@
 #include "Pin.h"
 
 class StepperMotor;
+class Gcode;
 
 class ZProbe: public Module
 {
@@ -27,6 +28,7 @@ public:
 private:
     bool wait_for_probe(int distance[]);
     bool run_probe(int *steps);
+    bool calibrate_delta(Gcode *gcode);
 
     float          feedrate;
     float          steps_per_mm[3];

@@ -3,6 +3,7 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "ConfigValue.h"
+#include "libs/StreamOutput.h"
 
 #include "Gcode.h"
 #include "Config.h"

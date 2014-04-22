@@ -140,6 +140,25 @@ bool ZProbe::run_probe(int *steps)
     return r;
 }
 
+/* Run a calibration routine for a delta
+    1. Home
+    2. probe for z bed
+    3. move to base of each tower at 5mm above bed
+    4. probe down to bed
+    5. probe next tower
+    6. calculate trim offsets and apply them
+    7. Home
+    8. Probe center
+    9. calculate delta radius and apply it
+    10. check level
+*/
+
+bool ZProbe::calibrate_delta(Gcode *gcode)
+{
+
+    return true;
+}
+
 void ZProbe::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
@@ -183,6 +202,14 @@ void ZProbe::on_gcode_received(void *argument)
                 }
             }else{
                 gcode->stream->printf("ZProbe not triggered\n");
+            }
+
+        }else if( gcode->g == 32 ) {
+            gcode->mark_as_taken();
+            if(is_delta) {
+                calibrate_delta(gcode);
+            }else{
+                 gcode->stream->printf("Not supported yet\n");
             }
         }
 
