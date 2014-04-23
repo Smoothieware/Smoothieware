@@ -1,5 +1,7 @@
 #include "RostockSolution.h"
 #include <fastmath.h>
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 #define PIOVER180       0.01745329251994329576923690768489F
 
@@ -25,7 +27,7 @@ RostockSolution::RostockSolution(Config* config)
 
 void RostockSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] ){
     float alpha_rotated[3], rotated[3];
-    
+
     if( sin_alpha == 0 && cos_alpha == 1){
         alpha_rotated[X_AXIS] = cartesian_mm[X_AXIS];
         alpha_rotated[Y_AXIS] = cartesian_mm[Y_AXIS];

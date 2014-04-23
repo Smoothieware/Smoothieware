@@ -21,9 +21,6 @@ along with Grbl. If not, see <http://www.gnu.org/licenses/>.
 #ifndef nuts_bolts_h
 #define nuts_bolts_h
 
-#include <string>
-using std::string;
-
 #define X_AXIS 0
 #define Y_AXIS 1
 #define Z_AXIS 2

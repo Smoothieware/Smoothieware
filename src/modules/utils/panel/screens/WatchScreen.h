@@ -30,6 +30,7 @@ private:
 
     bool speed_changed;
     bool issue_change_speed;
+    bool fan_state;
     int hotendtemp;
     int hotendtarget;
     int bedtemp;

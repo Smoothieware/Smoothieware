@@ -17,8 +17,15 @@
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "NetworkPublicAccess.h"
+#include "PublicData.h"
+#include "SwitchPublicAccess.h"
+#include "checksumm.h"
+#include "Pauser.h"
 
+#include <math.h>
+#include <string.h>
 #include <string>
+
 using namespace std;
 static const uint8_t icons[] = { // 115x19 - 3 bytes each: he1, he2, he3, bed, fan
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xE0,
@@ -110,7 +117,7 @@ void WatchScreen::on_refresh()
         // TODO should be enabled and disabled and settable from config
         this->panel->lcd->setLed(LED_BED_ON, this->bedtarget > 0);
         this->panel->lcd->setLed(LED_HOTEND_ON, this->hotendtarget > 0);
-        //this->panel->lcd->setLed(LED_FAN_ON, this->fanon);
+        this->panel->lcd->setLed(LED_FAN_ON, this->fan_state);
 
         if (this->panel->lcd->hasGraphics()) {
             // display the graphical icons below the status are
@@ -124,8 +131,8 @@ void WatchScreen::on_refresh()
             if (this->bedtarget > 0)
                 this->panel->lcd->bltGlyph(32, 38, 23, 19, icons, 15, 64, 0);
 
-            // fan appears always on for now
-            this->panel->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
+            if(this->fan_state)
+                this->panel->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
         }
     }
 }
@@ -170,6 +177,16 @@ void WatchScreen::get_temp_data()
         // temp probably disabled
         this->hotendtemp = -1;
         this->hotendtarget = -1;
+    }
+
+    // get fan status
+    ok = THEKERNEL->public_data->get_value( switch_checksum, fan_checksum, 0, &returned_data );
+    if (ok) {
+        struct pad_switch s = *static_cast<struct pad_switch *>(returned_data);
+        this->fan_state = s.state;
+    } else {
+        // fan probably disabled
+        this->fan_state = false;
     }
 }
 

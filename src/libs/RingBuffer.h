@@ -100,7 +100,7 @@ template<class kind, int length> kind* RingBuffer<kind, length>::get_ref(int ind
     }
     // TODO : this checks wether we are asked a value out of range
     if (k == this->head){
-        return NULL;
+        return 0;
     }
     return &(this->buffer[k]);
 }

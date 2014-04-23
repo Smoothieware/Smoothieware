@@ -2,6 +2,12 @@
 #include "PauseButton.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+#include "Config.h"
+#include "SlowTicker.h"
+#include "Pauser.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
+
 #include <string>
 using namespace std;
 

@@ -18,6 +18,13 @@ using namespace std;
 #include "Planner.h"
 #include "Conveyor.h"
 #include "StepperMotor.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "Robot.h"
+#include "Stepper.h"
+#include "ConfigValue.h"
+
+#include <math.h>
 
 #define acceleration_checksum          CHECKSUM("acceleration")
 #define max_jerk_checksum              CHECKSUM("max_jerk")

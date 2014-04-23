@@ -16,8 +16,8 @@ class JohannKosselSolution : public BaseSolution {
         void cartesian_to_actuator( float[], float[] );
         void actuator_to_cartesian( float[], float[] );
 
-        bool set_optional(char parameter, float value);
-        bool get_optional(char parameter, float *value);
+        bool set_optional(const arm_options_t& options);
+        bool get_optional(arm_options_t& options);
 
     private:
         void init();

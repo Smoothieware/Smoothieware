@@ -13,6 +13,15 @@
 #include "modules/robot/Conveyor.h"
 #include "modules/robot/Block.h"
 #include "StepperMotor.h"
+#include "SlowTicker.h"
+#include "Stepper.h"
+#include "StepTicker.h"
+#include "Config.h"
+#include "StepperMotor.h"
+#include "Robot.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
+#include "Gcode.h"
 
 #include <mri.h>
 
@@ -154,8 +163,9 @@ void Extruder::on_gcode_received(void *argument){
     // Gcodes to execute immediately
     if (gcode->has_m){
         if (gcode->m == 114){
-            gcode->stream->printf("E:%4.1f ", this->current_position);
-            gcode->add_nl = true;
+            char buf[16];
+            int n= snprintf(buf, sizeof(buf), " E:%1.3f ", this->current_position);
+            gcode->txt_after_ok.append(buf, n);
             gcode->mark_as_taken();
 
         }else if (gcode->m == 92 ){

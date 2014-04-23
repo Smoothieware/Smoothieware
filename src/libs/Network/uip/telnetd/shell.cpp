@@ -32,6 +32,7 @@
 *
 */
 
+#include "Kernel.h"
 #include "stdlib.h"
 #include "shell.h"
 #include "uip.h"
@@ -42,7 +43,8 @@
 #include "stdlib.h"
 #include "telnetd.h"
 #include "CallbackStream.h"
-#include "Kernel.h"
+#include "StreamOutputPool.h"
+#include "CommandQueue.h"
 
 //#define DEBUG_PRINTF(...)
 #define DEBUG_PRINTF printf

@@ -6,6 +6,13 @@
 */
 #include "CustomScreen.h"
 #include "libs/Kernel.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "LcdBase.h"
+#include "Panel.h"
+#include "ConfigValue.h"
+
+#include <string.h>
 
 #include <algorithm>
 

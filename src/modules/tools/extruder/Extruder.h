@@ -14,6 +14,9 @@
 #include "libs/Kernel.h"
 #include "modules/robot/Block.h"
 #include "modules/tools/toolmanager/Tool.h"
+#include "Pin.h"
+
+class StepperMotor;
 
 #define OFF 0
 #define SOLO 1

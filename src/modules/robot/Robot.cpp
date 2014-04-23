@@ -20,12 +20,17 @@ using std::string;
 #include "StepperMotor.h"
 #include "Gcode.h"
 #include "PublicDataRequest.h"
+#include "RobotPublicAccess.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/RostockSolution.h"
 #include "arm_solutions/JohannKosselSolution.h"
 #include "arm_solutions/HBotSolution.h"
+#include "StepTicker.h"
+#include "checksumm.h"
+#include "utils.h"
+#include "ConfigValue.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
@@ -315,12 +320,16 @@ void Robot::on_gcode_received(void * argument){
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 return;
-            case 114: gcode->stream->printf("C: X:%1.3f Y:%1.3f Z:%1.3f ",
-                                                 from_millimeters(this->last_milestone[0]),
-                                                 from_millimeters(this->last_milestone[1]),
-                                                 from_millimeters(this->last_milestone[2]));
-                gcode->add_nl = true;
-                gcode->mark_as_taken();
+            case 114:
+                {
+                    char buf[32];
+                    int n= snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f",
+                                                from_millimeters(this->last_milestone[0]),
+                                                from_millimeters(this->last_milestone[1]),
+                                                from_millimeters(this->last_milestone[2]));
+                    gcode->txt_after_ok.append(buf, n);
+                    gcode->mark_as_taken();
+                }
                 return;
 
             case 203: // M203 Set maximum feedrates in mm/sec
@@ -401,34 +410,52 @@ void Robot::on_gcode_received(void * argument){
                 break;
 
             case 500: // M500 saves some volatile settings to config override file
-            case 503: // M503 just prints the settings
+            case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration);
                 gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
                     this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
                     alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
+
+                // get or save any arm solution specific optional values
+                BaseSolution::arm_options_t options;
+                if(arm_solution->get_optional(options) && !options.empty()) {
+                    gcode->stream->printf(";Optional arm solution specific settings:\nM665");
+                    for(auto& i : options) {
+                        gcode->stream->printf(" %c%1.4f", i.first, i.second);
+                    }
+                    gcode->stream->printf("\n");
+                }
                 gcode->mark_as_taken();
                 break;
+            }
 
-            case 665: // M665 set optional arm solution variables based on arm solution
+            case 665: { // M665 set optional arm solution variables based on arm solution.
                 gcode->mark_as_taken();
-                // the parameter args could be any letter so try each one
-                for(char c='A';c<='Z';c++) {
-                    float v;
-                    bool supported= arm_solution->get_optional(c, &v); // retrieve current value if supported
-
-                    if(supported && gcode->has_letter(c)) { // set new value if supported
-                        v= gcode->get_value(c);
-                        arm_solution->set_optional(c, v);
-                    }
-                    if(supported) { // print all current values of supported options
-                        gcode->stream->printf("%c %8.3f ", c, v);
+                // the parameter args could be any letter except S so ask solution what options it supports
+                BaseSolution::arm_options_t options;
+                if(arm_solution->get_optional(options)) {
+                    for(auto& i : options) {
+                        // foreach optional value
+                        char c= i.first;
+                        if(gcode->has_letter(c)) { // set new value
+                            i.second= gcode->get_value(c);
+                        }
+                        // print all current values of supported options
+                        gcode->stream->printf("%c: %8.4f ", i.first, i.second);
                         gcode->add_nl = true;
                     }
+                    // set the new options
+                    arm_solution->set_optional(options);
+                }
+
+                // set delta segments per second, not saved by M500
+                if(gcode->has_letter('S')) {
+                    this->delta_segments_per_second= gcode->get_value('S');
                 }
                 break;
-
+            }
         }
     }
 

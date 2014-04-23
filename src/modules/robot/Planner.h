@@ -8,12 +8,11 @@
 #ifndef PLANNER_H
 #define PLANNER_H
 
-#include <vector>
-#include "libs/RingBuffer.h"
-#include "../communication/utils/Gcode.h"
 #include "Block.h"
 
 using namespace std;
+
+class Block;
 
 class Planner : public Module {
     public:

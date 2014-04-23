@@ -14,6 +14,8 @@
 #include "Planner.h"
 #include "Conveyor.h"
 #include "Gcode.h"
+#include "libs/StreamOutputPool.h"
+#include "Stepper.h"
 
 #include "mri.h"
 

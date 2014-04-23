@@ -15,6 +15,7 @@ using std::string;
 #include "libs/RingBuffer.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/StreamOutputPool.h"
 
 // Serial reading module
 // Treats every received line as a command and passes it ( via event call ) to the command dispatcher.

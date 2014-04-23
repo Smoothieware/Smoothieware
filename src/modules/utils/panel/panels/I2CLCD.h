@@ -1,8 +1,8 @@
-/*  
+/*
       This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
       Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>. 
+      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef I2CLCD_H
 #define I2CLCD_H
@@ -12,6 +12,8 @@
 #include "I2C.h" // mbed.h lib
 #include "wait_api.h" // mbed.h lib
 #include "libs/Config.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 using namespace std;
 #include <vector>
@@ -84,8 +86,8 @@ class I2CLCD : public LcdBase {
             this->displaymode      = 0x00;
 
             // I2C com
-            this->i2c = new mbed::I2C(P0_27, P0_28);   
-        
+            this->i2c = new mbed::I2C(P0_27, P0_28);
+
             // configure the pins to use
             this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
             this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input()->pull_up();
@@ -101,7 +103,7 @@ class I2CLCD : public LcdBase {
         int getEncoderResolution() {
             return 1;
         }
-        
+
         uint8_t readButtons() {
             uint8_t state= 0;
             state |= (this->click_pin.get() ? BUTTON_SELECT : 0);
@@ -110,17 +112,17 @@ class I2CLCD : public LcdBase {
             return state;
         }
 
-        int readEncoderDelta() { 
+        int readEncoderDelta() {
             static int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
             static uint8_t old_AB = 0;
             old_AB <<= 2;                   //remember previous state
-            old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state 
+            old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state
             return  enc_states[(old_AB&0x0f)];
         }
 
         void expanderWrite(char data){
             this->i2c->start();
-            this->i2c->write(this->i2c_address<<1); 
+            this->i2c->write(this->i2c_address<<1);
             this->i2c->write((char)((char)data | (char)backlightval));
             this->i2c->stop();
         }
@@ -130,7 +132,7 @@ class I2CLCD : public LcdBase {
             wait_us(1);                          // enable pulse must be >450ns
             this->expanderWrite(data & ~En);     // En low
             wait_us(50);                         // commands need > 37us to settle
-        } 
+        }
 
         void write4bits(char value) {
             this->expanderWrite(value);
@@ -141,7 +143,7 @@ class I2CLCD : public LcdBase {
             uint8_t highnib=value&0xf0;
             uint8_t lownib=(value<<4)&0xf0;
             this->write4bits((highnib)|mode);
-            this->write4bits((lownib)|mode); 
+            this->write4bits((lownib)|mode);
         }
 
         void command(char value) {
@@ -152,8 +154,8 @@ class I2CLCD : public LcdBase {
             for (int i = 0; i < len; ++i) {
                 this->send(*line++, Rs);
             }
-        }      
-        
+        }
+
         void home(){
             this->command(LCD_RETURNHOME);  // set cursor position to zero
             wait_us(2000);            // this command takes a long time!
@@ -181,37 +183,37 @@ class I2CLCD : public LcdBase {
             // Setup
             this->displayfunction = LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS;
             this->backlightval = LCD_NOBACKLIGHT;
-            
+
             // Now we pull both RS and R/W low to begin commands
             wait_ms(50);
             this->expanderWrite(this->backlightval);
             wait_ms(1000);
-            
+
             // we start in 8bit mode, try to set 4 bit mode
-            for( char i=0;i<3;i++){ 
+            for( char i=0;i<3;i++){
                 this->write4bits(0x03 << 4);
                 wait_us(4500);
-            }  
-            
+            }
+
             // finally, set to 4-bit interface
-            this->write4bits(0x02 << 4); 
-            
+            this->write4bits(0x02 << 4);
+
             // set # lines, font size, etc.
-            this->command(LCD_FUNCTIONSET | this->displayfunction);  
-            
+            this->command(LCD_FUNCTIONSET | this->displayfunction);
+
             // turn the display on with no cursor or blinking default
             this->displaycontrol = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
             this->display();
-            
+
             // clear it off
             this->clear();
-            
+
             // Initialize to default text direction (for roman languages)
             this->displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
-            
+
             // set the entry mode
             this->command(LCD_ENTRYMODESET | displaymode);
-            
+
             this->home();
             wait(0.1);
 
@@ -230,7 +232,7 @@ class I2CLCD : public LcdBase {
         mbed::I2C* i2c;
 
         Pin encoder_a_pin;
-        Pin encoder_b_pin;    
+        Pin encoder_b_pin;
         Pin click_pin;
         Pin up_pin;
         Pin down_pin;

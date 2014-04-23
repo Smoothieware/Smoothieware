@@ -13,27 +13,34 @@
 #include "TemperatureControl.h"
 #include "TemperatureControlPool.h"
 #include "libs/Pin.h"
-#include "libs/Median.h"
 #include "modules/robot/Conveyor.h"
 #include "PublicDataRequest.h"
 #include "TemperatureControlPublicAccess.h"
+#include "StreamOutputPool.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "Gcode.h"
+#include "SlowTicker.h"
+#include "Pauser.h"
+#include "ConfigValue.h"
+#include "TemperatureControl.h"
+#include "PID_Autotuner.h"
+
+// Temp sensor implementations:
+#include "Thermistor.h"
+#include "max31855.h" 
 
 #include "MRI_Hooks.h"
 
 #define UNDEFINED -1
 
-#define thermistor_checksum                CHECKSUM("thermistor")
-#define r0_checksum                        CHECKSUM("r0")
+#define sensor_checksum                    CHECKSUM("sensor")
+
 #define readings_per_second_checksum       CHECKSUM("readings_per_second")
 #define max_pwm_checksum                   CHECKSUM("max_pwm")
 #define pwm_frequency_checksum             CHECKSUM("pwm_frequency")
-#define t0_checksum                        CHECKSUM("t0")
-#define beta_checksum                      CHECKSUM("beta")
-#define vadc_checksum                      CHECKSUM("vadc")
-#define vcc_checksum                       CHECKSUM("vcc")
-#define r1_checksum                        CHECKSUM("r1")
-#define r2_checksum                        CHECKSUM("r2")
-#define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
+#define bang_bang_checksum                 CHECKSUM("bang_bang")
+#define hysteresis_checksum                CHECKSUM("hysteresis")
 #define heater_pin_checksum                CHECKSUM("heater_pin")
 
 #define get_m_code_checksum                CHECKSUM("get_m_code")
@@ -53,8 +60,15 @@
 
 
 TemperatureControl::TemperatureControl(uint16_t name) :
-  name_checksum(name), waiting(false), min_temp_violated(false) {}
+  sensor(nullptr), name_checksum(name), waiting(false), min_temp_violated(false)
+{
+}
 
+TemperatureControl::~TemperatureControl()
+{
+    delete sensor;
+}
+  
 void TemperatureControl::on_module_loaded(){
 
     // We start not desiring any temp
@@ -62,8 +76,6 @@ void TemperatureControl::on_module_loaded(){
 
     // Settings
     this->on_config_reload(this);
-
-    this->acceleration_factor = 10;
 
     // Register for events
     register_for_event(ON_CONFIG_RELOAD);
@@ -77,7 +89,7 @@ void TemperatureControl::on_module_loaded(){
 
 void TemperatureControl::on_main_loop(void* argument){
     if (this->min_temp_violated) {
-        THEKERNEL->streams->printf("Error: MINTEMP triggered on P%d.%d! check your thermistors!\n", this->thermistor_pin.port_number, this->thermistor_pin.pin);
+        THEKERNEL->streams->printf("Error: MINTEMP triggered. Check your temperature sensors!\n");
         this->min_temp_violated = false;
     }
 }
@@ -93,48 +105,42 @@ void TemperatureControl::on_config_reload(void* argument){
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
-    // Values are here : http://reprap.org/wiki/Thermistor
-    this->r0   = 100000;
-    this->t0   = 25;
-    this->beta = 4066;
-    this->r1   = 0;
-    this->r2   = 4700;
+    // For backward compatibility, default to a thermistor sensor.
+    std::string sensor_type = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, sensor_checksum)->by_default("thermistor")->as_string();
 
-    // Preset values for various common types of thermistors
-    ConfigValue* thermistor = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, thermistor_checksum);
-    if(       thermistor->value.compare("EPCOS100K"    ) == 0 ){ // Default
-    }else if( thermistor->value.compare("RRRF100K"     ) == 0 ){ this->beta = 3960;
-    }else if( thermistor->value.compare("RRRF10K"      ) == 0 ){ this->beta = 3964; this->r0 = 10000; this->r1 = 680; this->r2 = 1600;
-    }else if( thermistor->value.compare("Honeywell100K") == 0 ){ this->beta = 3974;
-    }else if( thermistor->value.compare("Semitec"      ) == 0 ){ this->beta = 4267;
-    }else if( thermistor->value.compare("HT100K"       ) == 0 ){ this->beta = 3990; }
-
-    // Preset values are overriden by specified values
-    this->r0 =                  THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, r0_checksum  )->by_default(this->r0  )->as_number();               // Stated resistance eg. 100K
-    this->t0 =                  THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, t0_checksum  )->by_default(this->t0  )->as_number();               // Temperature at stated resistance, eg. 25C
-    this->beta =                THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, beta_checksum)->by_default(this->beta)->as_number();               // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
-    this->r1 =                  THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
-    this->r2 =                  THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
-
+    // Instantiate correct sensor (TBD: TempSensor factory?)
+    delete sensor;
+    sensor = nullptr; // In case we fail to create a new sensor.
+    if(sensor_type.compare("thermistor") == 0)
+    {
+        sensor = new Thermistor();
+    }
+    else if(sensor_type.compare("max31855") == 0)
+    {
+        sensor = new Max31855();
+    }
+    else
+    {
+        sensor = new TempSensor(); // A dummy implementation
+    }
+    sensor->UpdateConfig(temperature_control_checksum, this->name_checksum);
+    
     this->preset1 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
     this->preset2 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
 
 
-    // Thermistor math
-    j = (1.0 / beta);
-    k = (1.0 / (t0 + 273.15));
-
     // sigma-delta output modulation
-    o = 0;
-
-    // Thermistor pin for ADC readings
-    this->thermistor_pin.from_string(THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, thermistor_pin_checksum )->required()->as_string());
-    THEKERNEL->adc->enable_pin(&thermistor_pin);
+    this->o = 0;
 
     // Heater pin
     this->heater_pin.from_string(    THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_string())->as_output();
     this->heater_pin.max_pwm(        THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
+
     this->heater_pin.set(0);
+
+    // used to enable bang bang control of heater
+    this->use_bangbang= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, bang_bang_checksum)->by_default(false)->as_bool();
+    this->hysteresis= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, hysteresis_checksum)->by_default(2)->as_number();
 
     set_low_on_debug(heater_pin.port_number, heater_pin.pin);
 
@@ -225,7 +231,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
             if (v == 0.0)
             {
                 this->target_temperature = UNDEFINED;
-                this->heater_pin.set(0);
+                this->heater_pin.set((this->o=0));
             }
             else
             {
@@ -283,35 +289,23 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
 
     target_temperature = desired_temperature;
     if (desired_temperature == 0.0)
-        heater_pin.set((o = 0));
+        heater_pin.set((this->o = 0));
 }
 
 float TemperatureControl::get_temperature(){
     return last_reading;
 }
 
-float TemperatureControl::adc_value_to_temperature(int adc_value)
-{
-    if ((adc_value == 4095) || (adc_value == 0))
-        return INFINITY;
-    float r = r2 / ((4095.0 / adc_value) - 1.0);
-    if (r1 > 0)
-        r = (r1 * r) / (r1 - r);
-    return (1.0 / (k + (j * log(r / r0)))) - 273.15;
-}
-
 uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
-    int r = new_thermistor_reading();
-
-    float temperature = adc_value_to_temperature(r);
+    float temperature = sensor->get_temperature();
 
     if (target_temperature > 0)
     {
-        if ((r <= 1) || (r >= 4094))
+        if (isinf(temperature))
         {
             this->min_temp_violated = true;
             target_temperature = UNDEFINED;
-            heater_pin.set(0);
+            heater_pin.set((this->o=0));
         }
         else
         {
@@ -325,7 +319,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
     }
     else
     {
-        heater_pin.set((o = 0));
+        heater_pin.set((this->o = 0));
     }
     last_reading = temperature;
     return 0;
@@ -336,8 +330,29 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
  */
 void TemperatureControl::pid_process(float temperature)
 {
-    float error = target_temperature - temperature;
+    if(use_bangbang) {
+        // bang bang is very simple, if temp is < target - hysteresis turn on full else if  temp is > target + hysteresis turn heater off
+        // good for relays
+        if(temperature > (target_temperature+hysteresis) && this->o > 0) {
+            heater_pin.set(false);
+            this->o= 0; // for display purposes only
 
+        }else if(temperature < (target_temperature-hysteresis) && this->o <= 0) {
+            if(heater_pin.max_pwm() >= 255) {
+                // turn on full
+                this->heater_pin.set(true);
+                this->o= 255; // for display purposes only
+            }else{
+                // only to whatever max pwm is configured
+                this->heater_pin.pwm(heater_pin.max_pwm());
+                this->o= heater_pin.max_pwm(); // for display purposes only
+            }
+        }
+        return;
+    }
+
+    // regular PID control
+    float error = target_temperature - temperature;
     this->iTerm += (error * this->i_factor);
     if (this->iTerm > this->i_max) this->iTerm = this->i_max;
     else if (this->iTerm < 0.0) this->iTerm = 0.0;
@@ -356,21 +371,6 @@ void TemperatureControl::pid_process(float temperature)
 
     this->heater_pin.pwm(this->o);
     this->lastInput= temperature;
-}
-
-int TemperatureControl::new_thermistor_reading()
-{
-    int last_raw = THEKERNEL->adc->read(&thermistor_pin);
-    if (queue.size() >= queue.capacity()) {
-        uint16_t l;
-        queue.pop_front(l);
-    }
-    uint16_t r = last_raw;
-    queue.push_back(r);
-    for (int i=0; i<queue.size(); i++)
-      median_buffer[i] = *queue.get_ref(i);
-    uint16_t m = median_buffer[quick_median(median_buffer, queue.size())];
-    return m;
 }
 
 void TemperatureControl::on_second_tick(void* argument)

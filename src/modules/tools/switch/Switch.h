@@ -8,8 +8,12 @@
 #ifndef SWITCH_H
 #define SWITCH_H
 
-#include "libs/Pin.h"
+#include "Pin.h"
+#include "Pwm.h"
 #include <math.h>
+
+class Gcode;
+class StreamOutput;
 
 class Switch : public Module {
     public:
@@ -24,12 +28,12 @@ class Switch : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         uint32_t pinpoll_tick(uint32_t dummy);
-
+        enum OUTPUT_TYPE {PWM, DIGITAL};
     private:
         void flip();
         void send_gcode(string msg, StreamOutput* stream);
-        bool match_output_gcode(const Gcode* gcode) const;
-        bool match_input_gcode(const Gcode* gcode) const;
+        bool match_input_on_gcode(const Gcode* gcode) const;
+        bool match_input_off_gcode(const Gcode* gcode) const;
 
         uint16_t  name_checksum;
         Pin       input_pin;
@@ -42,6 +46,7 @@ class Switch : public Module {
         bool      switch_state;
         float     switch_value;
         bool      switch_changed;
+        OUTPUT_TYPE output_type;
         Pwm       output_pin;
         string    output_on_command;
         string    output_off_command;

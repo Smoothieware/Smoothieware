@@ -8,6 +8,9 @@
 
 #include "Kernel.h"
 #include "MRI_Hooks.h"
+#include "StepTicker.h"
+
+#include <math.h>
 
 // A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
 // TODO : Abstract this into Actuator
@@ -74,7 +77,7 @@ void StepperMotor::step(){
 
     // Is this move finished ?
     if( this->stepped == this->steps_to_move ){
-        // Mark it as finished, then StepTicker will call signal_mode_finished() 
+        // Mark it as finished, then StepTicker will call signal_mode_finished()
         // This is so we don't call that before all the steps have been generated for this tick()
         this->is_move_finished = true;
         this->step_ticker->moves_finished = true;

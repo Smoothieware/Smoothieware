@@ -10,45 +10,35 @@
 
 using namespace std;
 #include <vector>
+#include <stdint.h>
+#include <map>
 
-#include "ConfigValue.h"
+class ConfigValue;
+class StreamOutput;
 
-class ConfigCache : public std::vector<ConfigValue*> {
+class ConfigCache {
     public:
-        ConfigCache(){}
-        
+        ConfigCache();
+        ~ConfigCache();
+        void clear();
+
+        void add(ConfigValue* v);
+
+        // lookup and return the entru that matches the check sums,return NULL if not found
+        ConfigValue *lookup(const uint16_t *check_sums) const;
+
+        // collect enabled checksums of the given family
+        void collect(uint16_t family, uint16_t cs, vector<uint16_t> *list);
+
         // If we find an existing value, replace it, otherwise, push it at the back of the list
-        void replace_or_push_back(ConfigValue* new_value){
-       
-           bool value_exists = false;
-            // For each already existing element
-            for( unsigned int i=1; i<this->size(); i++){
-                // If this configvalue matches the checksum
-                bool match = true;
-                unsigned int counter = 0;
-                while( counter < 3 && new_value->check_sums[counter] != 0x0000 ){
-                    if(this->at(i)->check_sums[counter] != new_value->check_sums[counter]  ){
-                        match = false;
-                        break;
-                    }
-                    counter++;
-                }
-                if( match == false ){ continue; }
-                value_exists = true;
-                
-                // Replace with the provided value
-                delete this->at(i);
-                this->at(i) = new_value;
-                break;
-            }
+        void replace_or_push_back(ConfigValue* new_value);
 
-            // Value does not already exists, add to the list
-            if( value_exists == false ){
-                this->push_back(new_value);
-            }
+        // used for debugging, dumps the cache to a stream
+        void dump(StreamOutput *stream);
 
-        }
-
+    private:
+        typedef vector<ConfigValue*> storage_t;
+        storage_t store;
 };
 
 

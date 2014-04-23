@@ -8,8 +8,9 @@
 #include <stdint.h>
 
 #include "Module.h"
-#include "TemperatureControl.h"
-#include "StreamOutput.h"
+
+class TemperatureControl;
+class StreamOutput;
 
 class PID_Autotuner : public Module
 {
