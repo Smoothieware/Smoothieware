@@ -10,7 +10,7 @@
 #include "ExtruderMaker.h"
 #include "Extruder.h"
 #include "Config.h"
-#include "ToolsManager.h"
+#include "ToolManager.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
 
@@ -35,8 +35,8 @@ void ExtruderMaker::on_module_loaded(){
         // Add the module to the kernel
         THEKERNEL->add_module( extruder );
 
-        // Add the module to the ToolsManager
-        THEKERNEL->toolsmanager->add_tool( extruder );
+        // Add the module to the ToolManager
+        THEKERNEL->toolmanager->add_tool( extruder );
 
     }
 
@@ -57,7 +57,7 @@ void ExtruderMaker::on_module_loaded(){
             THEKERNEL->add_module( extruder );
 
             // Add the module to the ToolsManager
-            THEKERNEL->toolsmanager->add_tool( extruder );
+            THEKERNEL->toolmanager->add_tool( extruder );
 
         }
 

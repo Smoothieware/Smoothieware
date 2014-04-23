@@ -26,7 +26,7 @@ class GcodeDispatch;
 class Robot;
 class Stepper;
 class Planner;
-class ToolsManager;
+class ToolManager;
 class StepTicker;
 class Adc;
 class PublicData;

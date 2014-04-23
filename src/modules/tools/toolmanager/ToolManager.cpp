@@ -11,9 +11,20 @@
 using namespace std;
 #include <vector>
 #include "ToolManager.h"
+#include "Config.h"
+#include "ConfigValue.h"
 #include "Conveyor.h"
+#include "checksumm.h"
+#include "PublicData.h"
+#include "Gcode.h"
+
+#include "modules/robot/RobotPublicAccess.h"
 
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+
+#define X_AXIS      0
+#define Y_AXIS      1
+#define Z_AXIS      2
 
 ToolManager::ToolManager(){
     active_tool = 0;
@@ -50,6 +61,7 @@ void ToolManager::on_gcode_received(void *argument){
         } else {
             if(new_tool != this->active_tool){
                 void *returned_data;
+                THEKERNEL->conveyor->wait_for_empty_queue();
                 bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
                 if(ok){
                     // save current position to return to after applying extruder offset

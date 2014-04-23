@@ -157,18 +157,17 @@ void Extruder::on_play(void* argument){
 
 
 void Extruder::on_gcode_received(void *argument){
-    if(!this->enabled) return;
     Gcode *gcode = static_cast<Gcode*>(argument);
 
     // Gcodes to execute immediately
     if (gcode->has_m){
-        if (gcode->m == 114){
+        if (gcode->m == 114 && this->enabled){
             char buf[16];
             int n= snprintf(buf, sizeof(buf), " E:%1.3f ", this->current_position);
             gcode->txt_after_ok.append(buf, n);
             gcode->mark_as_taken();
 
-        }else if (gcode->m == 92 ){
+        }else if (gcode->m == 92 && this->enabled ){
             float spm = this->steps_per_millimeter;
             if (gcode->has_letter('E'))
                 spm = gcode->get_value('E');
@@ -189,7 +188,7 @@ void Extruder::on_gcode_received(void *argument){
     }
 
     // Add to the queue for on_gcode_execute to process
-    if( gcode->has_g && gcode->g < 4 && gcode->has_letter('E') ){
+    if( gcode->has_g && gcode->g < 4 && gcode->has_letter('E') && this->enabled ){
         if( !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ){
             THEKERNEL->conveyor->append_gcode(gcode);
             // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
@@ -203,7 +202,6 @@ void Extruder::on_gcode_received(void *argument){
 
 // Compute extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void* argument){
-    if(!this->enabled) return;
     Gcode* gcode = static_cast<Gcode*>(argument);
 
     // Absolute/relative mode
@@ -225,7 +223,7 @@ void Extruder::on_gcode_execute(void* argument){
 
     if( gcode->has_g ){
         // G92: Reset extruder position
-        if( gcode->g == 92 ){
+        if( gcode->g == 92 && this->enabled ){
             gcode->mark_as_taken();
             if( gcode->has_letter('E') ){
                 this->current_position = gcode->get_value('E');
@@ -236,7 +234,7 @@ void Extruder::on_gcode_execute(void* argument){
                 this->target_position = this->current_position;
                 this->unstepped_distance = 0;
             }
-        }else if ((gcode->g == 0) || (gcode->g == 1)){
+        }else if (((gcode->g == 0) || (gcode->g == 1)) && this->enabled){
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )){
                 // Get relative extrusion distance depending on mode ( in absolute mode we must substract target_position )
@@ -270,7 +268,7 @@ void Extruder::on_gcode_execute(void* argument){
         }
     }
 
-    if (gcode->has_letter('F'))
+    if (gcode->has_letter('F') && this->enabled)
     {
         feed_rate = gcode->get_value('F') / THEKERNEL->robot->seconds_per_minute;
         if (feed_rate > max_speed)
