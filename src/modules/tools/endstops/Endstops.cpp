@@ -22,6 +22,7 @@
 #include "checksumm.h"
 #include "utils.h"
 #include "ConfigValue.h"
+#include "libs/StreamOutput.h"
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1

@@ -31,6 +31,7 @@ using std::string;
 #include "checksumm.h"
 #include "utils.h"
 #include "ConfigValue.h"
+#include "libs/StreamOutput.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
