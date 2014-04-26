@@ -2,8 +2,16 @@
 #include <fastmath.h>
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "libs/Kernel.h"
 
+#include "libs/nuts_bolts.h"
+
+#include "libs/Config.h"
 #include "Vector3.h"
+
+#define arm_length_checksum         CHECKSUM("arm_length")
+#define arm_radius_checksum         CHECKSUM("arm_radius")
+
 
 #define SQ(x) powf(x, 2)
 #define ROUND(x, y) (roundf(x * 1e ## y) / 1e ## y)

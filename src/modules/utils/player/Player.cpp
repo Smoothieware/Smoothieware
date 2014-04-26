@@ -323,7 +323,7 @@ void Player::on_main_loop(void *argument)
                 this->current_stream->printf("%s", buf);
                 struct SerialMessage message;
                 message.message = buf;
-                message.stream = &(StreamOutput::NullStream); // we don't really need to see the ok
+                message.stream = this->current_stream;
 
                 // waits for the queue to have enough room
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
