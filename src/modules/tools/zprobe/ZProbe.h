@@ -31,12 +31,12 @@ private:
     bool run_probe(int& steps, bool fast= false);
     bool probe_delta_tower(int& steps, float x, float y);
     bool return_probe(int steps);
-    bool calibrate_delta(Gcode *gcode);
-    void coordinated_move(float x, float y, float z, float feedrate);
+    bool calibrate_delta_endstops(Gcode *gcode);
+    bool calibrate_delta_radius(Gcode *gcode);
+    void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();
     void set_trim(float x, float y, float z, StreamOutput *stream);
 
-    float          endstop_radius;
     float          probe_radius;
     float          probe_height;
     float          current_feedrate;
