@@ -161,7 +161,7 @@ void Endstops::on_config_reload(void *argument)
     this->retract_steps[1] = THEKERNEL->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_steps[1] / steps_per_mm[1])->as_number() * steps_per_mm[1];
     this->retract_steps[2] = THEKERNEL->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_steps[2] / steps_per_mm[2])->as_number() * steps_per_mm[2];
 
-    this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(0)->as_number();
+    this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
 
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
