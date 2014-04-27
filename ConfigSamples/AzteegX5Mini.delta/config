@@ -143,6 +143,16 @@ alpha_trim                                   0                 # software trim f
 beta_trim                                    0                 # software trim for beta stepper endstop (in mm)
 gamma_trim                                   0                 # software trim for gamma stepper endstop (in mm)
 
+# optional Z probe
+zprobe.enable                                false           # set to true to enable a zprobe
+zprobe.probe_pin                             1.29!^          # pin probe is attached to if NC remove the !
+zprobe.slow_feedrate                         5               # mm/sec probe feed rate
+#zprobe.debounce_count                       100             # set if noisy
+zprobe.fast_feedrate                         100             # move feedrate
+zprobe.probe_radius                          100             # where to probe
+zprobe.probe_height                          5               # how much above bed to start probe
+
+
 # Pause button
 pause_button_enable                          true             #
 
