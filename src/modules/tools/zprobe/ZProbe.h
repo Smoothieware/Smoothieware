@@ -42,12 +42,9 @@ private:
     float          current_feedrate;
     float          slow_feedrate;
     float          fast_feedrate;
-    float          steps_per_mm[3];
-    unsigned int   mcode;
-    bool           enabled;
     StepperMotor  *steppers[3];
     Pin            pin;
-    unsigned int   debounce_count;
+    uint8_t        debounce_count;
     bool           running;
     bool           is_delta;
 };

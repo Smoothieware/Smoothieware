@@ -46,11 +46,13 @@
 #define Y_AXIS 1
 #define Z_AXIS 2
 
+#define STEPS_PER_MM(a) (this->steppers[a]->steps_per_mm)
+#define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
+
 void ZProbe::on_module_loaded()
 {
     // if the module is disabled -> do nothing
-    this->enabled = THEKERNEL->config->value( zprobe_checksum, enable_checksum )->by_default(false)->as_bool();
-    if( !(this->enabled) ) {
+    if(!THEKERNEL->config->value( zprobe_checksum, enable_checksum )->by_default(false)->as_bool()) {
         // as this module is not needed free up the resource
         delete this;
         return;
@@ -84,12 +86,6 @@ void ZProbe::on_config_reload(void *argument)
     this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
     this->steppers[1] = THEKERNEL->robot->beta_stepper_motor;
     this->steppers[2] = THEKERNEL->robot->gamma_stepper_motor;
-
-    // we need to know steps per mm
-    // FIXME we need to get this after config loaded from robot as the config settings can be overriden or trap M92
-    this->steps_per_mm[0] = THEKERNEL->config->value(alpha_steps_per_mm_checksum)->as_number();
-    this->steps_per_mm[1] = THEKERNEL->config->value(beta_steps_per_mm_checksum)->as_number();
-    this->steps_per_mm[2] = THEKERNEL->config->value(gamma_steps_per_mm_checksum)->as_number();
 
     this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(5)->as_number(); // feedrate in mm/sec
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
@@ -138,23 +134,23 @@ bool ZProbe::run_probe(int& steps, bool fast)
 {
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
-    this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * this->steps_per_mm[Z_AXIS]; // steps/sec
+    this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
 
     // move Z down
     this->running = true;
     this->steppers[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
-    this->steppers[Z_AXIS]->move(true, 1000 * this->steps_per_mm[Z_AXIS]); // always probes down, no more than 1000mm TODO should be 2*maxz
+    this->steppers[Z_AXIS]->move(true, 1000 * Z_STEPS_PER_MM); // always probes down, no more than 1000mm TODO should be 2*maxz
     if(this->is_delta) {
         // for delta need to move all three actuators
         this->steppers[X_AXIS]->set_speed(0);
-        this->steppers[X_AXIS]->move(true, 1000 * this->steps_per_mm[X_AXIS]);
+        this->steppers[X_AXIS]->move(true, 1000 * STEPS_PER_MM(X_AXIS));
         this->steppers[Y_AXIS]->set_speed(0);
-        this->steppers[Y_AXIS]->move(true, 1000 * this->steps_per_mm[Y_AXIS]);
+        this->steppers[Y_AXIS]->move(true, 1000 * STEPS_PER_MM(Y_AXIS));
     }
 
     int s[3];
     bool r = wait_for_probe(s);
-    steps= s[2]; // only need z
+    steps= s[Z_AXIS]; // only need z
     this->running = false;
     return r;
 }
@@ -162,7 +158,7 @@ bool ZProbe::run_probe(int& steps, bool fast)
 bool ZProbe::return_probe(int steps)
 {
     // move probe back to where it was
-    this->current_feedrate = this->fast_feedrate * this->steps_per_mm[Z_AXIS]; // feedrate in steps/sec
+    this->current_feedrate = this->fast_feedrate * Z_STEPS_PER_MM; // feedrate in steps/sec
     bool dir= steps < 0;
     steps= abs(steps);
 
@@ -229,6 +225,8 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     float t1x, t1y, t2x, t2y, t3x, t3y;
     std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
 
+    // TODO get current trim, and continue from that if requested
+
     // zero trim values
     set_trim(0, 0, 0, &(StreamOutput::NullStream));
 
@@ -240,30 +238,28 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     if(!run_probe(s, true)) return false;
 
     // how far to move down from home before probe
-    int probestart = s - (this->probe_height*this->steps_per_mm[Z_AXIS]);
-    gcode->stream->printf("Probe start ht is %f mm\n", probestart/this->steps_per_mm[Z_AXIS]);
-
+    int probestart = s - (this->probe_height*Z_STEPS_PER_MM);
+    gcode->stream->printf("Probe start ht is %f mm\n", probestart/Z_STEPS_PER_MM);
 
     // move to start position
     home();
     return_probe(-probestart);
 
-
     gcode->stream->printf("Calibrating Endstops\n");
     // get initial probes
     // probe the base of the X tower
     if(!probe_delta_tower(s, t1x, t1y)) return false;
-    float t1z= s / this->steps_per_mm[Z_AXIS];
+    float t1z= s / Z_STEPS_PER_MM;
     gcode->stream->printf("T1-1 Z:%1.4f C:%d\n", t1z, s);
 
     // probe the base of the Y tower
     if(!probe_delta_tower(s, t2x, t2y)) return false;
-    float t2z= s / this->steps_per_mm[Z_AXIS];
+    float t2z= s / Z_STEPS_PER_MM;
     gcode->stream->printf("T2-1 Z:%1.4f C:%d\n", t2z, s);
 
     // probe the base of the Z tower
     if(!probe_delta_tower(s, t3x, t3y)) return false;
-    float t3z= s / this->steps_per_mm[Z_AXIS];
+    float t3z= s / Z_STEPS_PER_MM;
     gcode->stream->printf("T3-1 Z:%1.4f C:%d\n", t3z, s);
 
     float trimscale= 1.2522F; // empirically determined
@@ -275,28 +271,31 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     // set initial trim
     set_trim(trimx, trimy, trimz, gcode->stream);
 
-    for (int i = 1; i <= 4; ++i) {
+    float target= 0.03F;
+    if(gcode->has_letter('I')) target= gcode->get_value('I'); // override default target
+
+    for (int i = 1; i <= 10; ++i) {
         // home and move probe to start position just above the bed
         home();
         return_probe(-probestart);
 
         // probe the base of the X tower
         if(!probe_delta_tower(s, t1x, t1y)) return false;
-        t1z= s / this->steps_per_mm[Z_AXIS];
+        t1z= s / Z_STEPS_PER_MM;
         gcode->stream->printf("T1-2-%d Z:%1.4f C:%d\n", i, t1z, s);
 
         // probe the base of the Y tower
         if(!probe_delta_tower(s, t2x, t2y)) return false;
-        t2z= s / this->steps_per_mm[Z_AXIS];
+        t2z= s / Z_STEPS_PER_MM;
         gcode->stream->printf("T2-2-%d Z:%1.4f C:%d\n", i, t2z, s);
 
         // probe the base of the Z tower
         if(!probe_delta_tower(s, t3x, t3y)) return false;
-        t3z= s / this->steps_per_mm[Z_AXIS];
+        t3z= s / Z_STEPS_PER_MM;
         gcode->stream->printf("T3-2-%d Z:%1.4f C:%d\n", i, t3z, s);
 
         auto mm= std::minmax({t1z, t2z, t3z});
-        if((mm.second-mm.first) < 0.03F) break; // probably as good as it gets, TODO set 0.02 as config value
+        if((mm.second-mm.first) <= target) break; // probably as good as it gets
 
         // set new trim values based on min difference
         min= mm.first;
@@ -318,15 +317,15 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     // probe the base of the three towers again to see if we are level
     int dx= 0, dy= 0, dz= 0;
     if(!probe_delta_tower(dx, t1x, t1y)) return false;
-    gcode->stream->printf("T1-final Z:%1.4f C:%d\n", dx / this->steps_per_mm[Z_AXIS], dx);
+    gcode->stream->printf("T1-final Z:%1.4f C:%d\n", dx / Z_STEPS_PER_MM, dx);
     if(!probe_delta_tower(dy, t2x, t2y)) return false;
-    gcode->stream->printf("T2-final Z:%1.4f C:%d\n", dy / this->steps_per_mm[Z_AXIS], dy);
+    gcode->stream->printf("T2-final Z:%1.4f C:%d\n", dy / Z_STEPS_PER_MM, dy);
     if(!probe_delta_tower(dz, t3x, t3y)) return false;
-    gcode->stream->printf("T3-final Z:%1.4f C:%d\n", dz / this->steps_per_mm[Z_AXIS], dz);
+    gcode->stream->printf("T3-final Z:%1.4f C:%d\n", dz / Z_STEPS_PER_MM, dz);
 
     // compare the three and report
     auto mm= std::minmax({dx, dy, dz});
-    gcode->stream->printf("max endstop delta= %f\n", (mm.second-mm.first)/this->steps_per_mm[Z_AXIS]);
+    gcode->stream->printf("max endstop delta= %1.4f\n", (mm.second-mm.first)/Z_STEPS_PER_MM);
 
     return true;
 }
@@ -343,7 +342,7 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
     // find bed, then move to a point 5mm above it
     int s;
     if(!run_probe(s, true)) return false;
-    float bedht= s/this->steps_per_mm[Z_AXIS] - this->probe_height; // distance to move from home to 5mm above bed
+    float bedht= s/Z_STEPS_PER_MM - this->probe_height; // distance to move from home to 5mm above bed
     gcode->stream->printf("Bed ht is %f mm\n", bedht);
 
     home();
@@ -352,15 +351,25 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
     // probe the base of the three towers to get reference point at this Z height
     int dx= 0, dy= 0, dz= 0, dc= 0;
     if(!probe_delta_tower(dx, t1x, t1y)) return false;
-    gcode->stream->printf("T1 Z:%1.3f C:%d\n", dx / this->steps_per_mm[Z_AXIS], dx);
+    gcode->stream->printf("T1 Z:%1.3f C:%d\n", dx / Z_STEPS_PER_MM, dx);
     if(!probe_delta_tower(dy, t2x, t2y)) return false;
-    gcode->stream->printf("T2 Z:%1.3f C:%d\n", dy / this->steps_per_mm[Z_AXIS], dy);
+    gcode->stream->printf("T2 Z:%1.3f C:%d\n", dy / Z_STEPS_PER_MM, dy);
     if(!probe_delta_tower(dz, t3x, t3y)) return false;
-    gcode->stream->printf("T3 Z:%1.3f C:%d\n", dz / this->steps_per_mm[Z_AXIS], dz);
+    gcode->stream->printf("T3 Z:%1.3f C:%d\n", dz / Z_STEPS_PER_MM, dz);
     if(!probe_delta_tower(dc, 0, 0)) return false;
-    gcode->stream->printf("CT Z:%1.3f C:%d\n", dc / this->steps_per_mm[Z_AXIS], dc);
+    gcode->stream->printf("CT Z:%1.3f C:%d\n", dc / Z_STEPS_PER_MM, dc);
 
-    float cmm= dc / this->steps_per_mm[Z_AXIS];
+    float target= 0.03F;
+    if(gcode->has_letter('I')) target= gcode->get_value('I'); // override default target
+
+    // See if we are already in range and skip calibration if not needed
+    float cmm= dc / Z_STEPS_PER_MM;
+    float m= dx / Z_STEPS_PER_MM;
+    float d= cmm-m;
+    if(abs(d) <= target) {
+        gcode->stream->printf("Delta Radius already in range: %1.3f\n", d);
+        return true;
+    }
 
     // get current delta radius
     float delta_radius= 0.0F;
@@ -387,10 +396,10 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
         if(!probe_delta_tower(dx, t1x, t1y)) return false;
 
         // now look at the difference and reduce it by adjusting delta radius
-        float m= dx / this->steps_per_mm[Z_AXIS];
-        float d= cmm-m;
+        m= dx / Z_STEPS_PER_MM;
+        d= cmm-m;
         gcode->stream->printf("T1-%d Z:%1.4f C:%d delta: %1.3f\n", i, m, dx, d);
-        if(abs(d) < 0.03F) break; // resolution of success TODO should be in config
+        if(abs(d) <= target) break; // resolution of success
         // increase delta radius to adjust for low center
         // decrease delta radius to adjust for high center
         delta_radius += (d*drinc);
@@ -411,7 +420,7 @@ void ZProbe::on_gcode_received(void *argument)
 
             int steps;
             if(run_probe(steps)) {
-                gcode->stream->printf("Z:%1.4f C:%d\n", steps / this->steps_per_mm[Z_AXIS], steps);
+                gcode->stream->printf("Z:%1.4f C:%d\n", steps / Z_STEPS_PER_MM, steps);
                 // move back to where it started, unless a Z is specified
                 if(gcode->has_letter('Z')) {
                     // set Z to the specified value, and leave probe where it is
@@ -474,7 +483,7 @@ uint32_t ZProbe::acceleration_tick(uint32_t dummy)
         uint32_t target_rate = int(floor(this->current_feedrate));
 
         if( current_rate < target_rate ) {
-            uint32_t rate_increase = int(floor((THEKERNEL->planner->acceleration / THEKERNEL->stepper->acceleration_ticks_per_second) * this->steps_per_mm[c]));
+            uint32_t rate_increase = int(floor((THEKERNEL->planner->acceleration / THEKERNEL->stepper->acceleration_ticks_per_second) * STEPS_PER_MM(c)));
             current_rate = min( target_rate, current_rate + rate_increase );
         }
         if( current_rate > target_rate ) {
