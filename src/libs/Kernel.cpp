@@ -25,13 +25,10 @@
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
-#include <array>
-
-
-
 #include "modules/robot/Conveyor.h"
-#include "modules/tools/endstops/Endstops.h"
+
 #include <malloc.h>
+#include <array>
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
