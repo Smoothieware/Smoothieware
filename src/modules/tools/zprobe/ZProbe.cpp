@@ -36,11 +36,6 @@
 
 // from endstop section
 #define delta_homing_checksum    CHECKSUM("delta_homing")
-#define arm_radius_checksum      CHECKSUM("arm_radius")
-
-#define alpha_steps_per_mm_checksum      CHECKSUM("alpha_steps_per_mm")
-#define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
-#define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
 
 #define X_AXIS 0
 #define Y_AXIS 1
@@ -225,6 +220,8 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     float t1x, t1y, t2x, t2y, t3x, t3y;
     std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
 
+    gcode->stream->printf("Calibrating Endstops\n");
+
     // TODO get current trim, and continue from that if requested
 
     // zero trim values
@@ -237,15 +234,13 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     int s;
     if(!run_probe(s, true)) return false;
 
-    // how far to move down from home before probe
-    int probestart = s - (this->probe_height*Z_STEPS_PER_MM);
-    gcode->stream->printf("Probe start ht is %f mm\n", probestart/Z_STEPS_PER_MM);
+    float bedht= s/Z_STEPS_PER_MM - this->probe_height; // distance to move from home to 5mm above bed
+    gcode->stream->printf("Bed ht is %f mm\n", bedht);
 
     // move to start position
     home();
-    return_probe(-probestart);
+    coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // do a relative move from home to the point above the bed
 
-    gcode->stream->printf("Calibrating Endstops\n");
     // get initial probes
     // probe the base of the X tower
     if(!probe_delta_tower(s, t1x, t1y)) return false;
@@ -277,7 +272,7 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     for (int i = 1; i <= 10; ++i) {
         // home and move probe to start position just above the bed
         home();
-        return_probe(-probestart);
+        coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // do a relative move from home to the point above the bed
 
         // probe the base of the X tower
         if(!probe_delta_tower(s, t1x, t1y)) return false;
@@ -304,6 +299,7 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
         trimz += (min-t3z)*trimscale;
 
         // set trim
+        gcode->stream->printf("Set Trim: ");
         set_trim(trimx, trimy, trimz, gcode->stream);
 
         // flush the output
@@ -312,7 +308,7 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
 
     // move probe to start position just above the bed
     home();
-    return_probe(-probestart);
+    coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // do a relative move from home to the point above the bed
 
     // probe the base of the three towers again to see if we are level
     int dx= 0, dy= 0, dz= 0;

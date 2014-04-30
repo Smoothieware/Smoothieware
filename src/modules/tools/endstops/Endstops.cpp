@@ -94,10 +94,6 @@
 #define beta_max_checksum                CHECKSUM("beta_max")
 #define gamma_max_checksum               CHECKSUM("gamma_max")
 
-#define alpha_steps_per_mm_checksum      CHECKSUM("alpha_steps_per_mm")
-#define beta_steps_per_mm_checksum       CHECKSUM("beta_steps_per_mm")
-#define gamma_steps_per_mm_checksum      CHECKSUM("gamma_steps_per_mm")
-
 #define STEPS_PER_MM(a) (this->steppers[a]->steps_per_mm)
 
 Endstops::Endstops()
