@@ -520,6 +520,9 @@ void Endstops::on_gcode_received(void *argument)
 
             // NOTE this is to test accuracy of lead screws etc.
             case 910: { // M910 - move specific number of raw steps
+                // Enable the motors
+                THEKERNEL->stepper->turn_enable_pins_on();
+
                 int x= 0, y=0 , z= 0, f= 200*16;
                 if (gcode->has_letter('F')) f = gcode->get_value('F');
                 if (gcode->has_letter('X')) {
