@@ -73,8 +73,8 @@ extruder_module_enable                       true             # Whether to activ
                                                               # is ignored if false
 extruder_steps_per_mm                        140              # Steps per mm for extruder stepper
 extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
-extruder_acceleration                        50               # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
-extruder_max_speed                           1000             # mm/sec NOTE
+extruder_acceleration                        500              # Acceleration in mm/sec^2 only used for retracts
+extruder_max_speed                           25               # mm/sec NOTE only used for retracts
 
 extruder_step_pin                            2.3              # Pin for extruder step signal
 extruder_dir_pin                             0.22             # Pin for extruder dir signal
