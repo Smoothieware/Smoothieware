@@ -23,6 +23,8 @@
 #include "utils.h"
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
+#include "PublicDataRequest.h"
+#include "EndstopsPublicAccess.h"
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1
@@ -110,7 +112,8 @@ void Endstops::on_module_loaded()
     }
 
     register_for_event(ON_CONFIG_RELOAD);
-    this->register_for_event(ON_GCODE_RECEIVED);
+    register_for_event(ON_GCODE_RECEIVED);
+    register_for_event(ON_GET_PUBLIC_DATA);
 
     // Take StepperMotor objects from Robot and keep them here
     this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
@@ -520,6 +523,9 @@ void Endstops::on_gcode_received(void *argument)
 
             // NOTE this is to test accuracy of lead screws etc.
             case 910: { // M910 - move specific number of raw steps
+                // Enable the motors
+                THEKERNEL->stepper->turn_enable_pins_on();
+
                 int x= 0, y=0 , z= 0, f= 200*16;
                 if (gcode->has_letter('F')) f = gcode->get_value('F');
                 if (gcode->has_letter('X')) {
@@ -569,4 +575,20 @@ uint32_t Endstops::acceleration_tick(uint32_t dummy)
     }
 
     return 0;
+}
+
+void Endstops::on_get_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(endstops_checksum)) return;
+
+    if(pdr->second_element_is(trim_checksum)) {
+        static float return_data[3];
+        return_data[0]= this->trim_mm[0];
+        return_data[1]= this->trim_mm[1];
+        return_data[2]= this->trim_mm[2];
+
+        pdr->set_data_ptr(&return_data);
+        pdr->set_taken();
+    }
 }

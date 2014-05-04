@@ -21,6 +21,9 @@
 #include "SlowTicker.h"
 #include "Planner.h"
 #include "SerialMessage.h"
+#include "PublicDataRequest.h"
+#include "EndstopsPublicAccess.h"
+#include "PublicData.h"
 
 #include <tuple>
 #include <algorithm>
@@ -208,24 +211,46 @@ bool ZProbe::probe_delta_tower(int& steps, float x, float y)
     4. set initial trims such that trims will be minimal negative values
     5. home, probe three towers again
     6. calculate trim offset and apply to all trims
-    7. repeat 5, 6 4 times to converge on a solution
-    8. home, Probe center
-    9. calculate delta radius and apply it
-    10. check level
+    7. repeat 5, 6 until it converges on a solution
 */
 
 bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
 {
+    float target= 0.03F;
+    if(gcode->has_letter('I')) target= gcode->get_value('I'); // override default target
+    if(gcode->has_letter('J')) this->probe_radius= gcode->get_value('J'); // override default probe radius
+
+    bool keep= false;
+    if(gcode->has_letter('K')) keep= true; // keep current settings
+
+    gcode->stream->printf("Calibrating Endstops: target %fmm, radius %fmm\n", target, this->probe_radius);
+
     // get probe points
     float t1x, t1y, t2x, t2y, t3x, t3y;
     std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
 
-    gcode->stream->printf("Calibrating Endstops\n");
+    float trimx= 0.0F, trimy= 0.0F, trimz= 0.0F;
+    if(!keep) {
+        // zero trim values
+        set_trim(0, 0, 0, &(StreamOutput::NullStream));
 
-    // TODO get current trim, and continue from that if requested
+    }else{
+        // get current trim, and continue from that
+        void *returned_data;
+        bool ok = THEKERNEL->public_data->get_value( endstops_checksum, trim_checksum, &returned_data );
 
-    // zero trim values
-    set_trim(0, 0, 0, &(StreamOutput::NullStream));
+        if (ok) {
+            float *trim = static_cast<float *>(returned_data);
+            gcode->stream->printf("Current Trim X: %f, Y: %f, Z: %f\r\n", trim[0], trim[1], trim[2]);
+            trimx= trim[0];
+            trimy= trim[1];
+            trimz= trim[2];
+
+        } else {
+            gcode->stream->printf("Could not get current trim, are endstops enabled?\n");
+            return false;
+        }
+    }
 
     // home
     home();
@@ -245,31 +270,36 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     // probe the base of the X tower
     if(!probe_delta_tower(s, t1x, t1y)) return false;
     float t1z= s / Z_STEPS_PER_MM;
-    gcode->stream->printf("T1-1 Z:%1.4f C:%d\n", t1z, s);
+    gcode->stream->printf("T1-0 Z:%1.4f C:%d\n", t1z, s);
 
     // probe the base of the Y tower
     if(!probe_delta_tower(s, t2x, t2y)) return false;
     float t2z= s / Z_STEPS_PER_MM;
-    gcode->stream->printf("T2-1 Z:%1.4f C:%d\n", t2z, s);
+    gcode->stream->printf("T2-0 Z:%1.4f C:%d\n", t2z, s);
 
     // probe the base of the Z tower
     if(!probe_delta_tower(s, t3x, t3y)) return false;
     float t3z= s / Z_STEPS_PER_MM;
-    gcode->stream->printf("T3-1 Z:%1.4f C:%d\n", t3z, s);
+    gcode->stream->printf("T3-0 Z:%1.4f C:%d\n", t3z, s);
 
     float trimscale= 1.2522F; // empirically determined
 
-    // set initial trims to worst case so we always have a negative trim
-    float min= std::min({t1z, t2z, t3z});
-    float trimx= (min-t1z)*trimscale, trimy= (min-t2z)*trimscale, trimz= (min-t3z)*trimscale;
+    auto mm= std::minmax({t1z, t2z, t3z});
+    if((mm.second-mm.first) <= target) {
+        gcode->stream->printf("trim already set within required parameters: delta %f\n", mm.second-mm.first);
+        return true;
+    }
 
-    // set initial trim
-    set_trim(trimx, trimy, trimz, gcode->stream);
-
-    float target= 0.03F;
-    if(gcode->has_letter('I')) target= gcode->get_value('I'); // override default target
+    // set trims to worst case so we always have a negative trim
+    trimx += (mm.first-t1z)*trimscale;
+    trimy += (mm.first-t2z)*trimscale;
+    trimz += (mm.first-t3z)*trimscale;
 
     for (int i = 1; i <= 10; ++i) {
+        // set trim
+        gcode->stream->printf("Set Trim:\n");
+        set_trim(trimx, trimy, trimz, gcode->stream);
+
         // home and move probe to start position just above the bed
         home();
         coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // do a relative move from home to the point above the bed
@@ -277,58 +307,52 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
         // probe the base of the X tower
         if(!probe_delta_tower(s, t1x, t1y)) return false;
         t1z= s / Z_STEPS_PER_MM;
-        gcode->stream->printf("T1-2-%d Z:%1.4f C:%d\n", i, t1z, s);
+        gcode->stream->printf("T1-%d Z:%1.4f C:%d\n", i, t1z, s);
 
         // probe the base of the Y tower
         if(!probe_delta_tower(s, t2x, t2y)) return false;
         t2z= s / Z_STEPS_PER_MM;
-        gcode->stream->printf("T2-2-%d Z:%1.4f C:%d\n", i, t2z, s);
+        gcode->stream->printf("T2-%d Z:%1.4f C:%d\n", i, t2z, s);
 
         // probe the base of the Z tower
         if(!probe_delta_tower(s, t3x, t3y)) return false;
         t3z= s / Z_STEPS_PER_MM;
-        gcode->stream->printf("T3-2-%d Z:%1.4f C:%d\n", i, t3z, s);
+        gcode->stream->printf("T3-%d Z:%1.4f C:%d\n", i, t3z, s);
 
-        auto mm= std::minmax({t1z, t2z, t3z});
-        if((mm.second-mm.first) <= target) break; // probably as good as it gets
+        mm= std::minmax({t1z, t2z, t3z});
+        if((mm.second-mm.first) <= target) {
+            gcode->stream->printf("trim set to within required parameters: delta %f\n", mm.second-mm.first);
+            break;
+        }
 
         // set new trim values based on min difference
-        min= mm.first;
-        trimx += (min-t1z)*trimscale;
-        trimy += (min-t2z)*trimscale;
-        trimz += (min-t3z)*trimscale;
-
-        // set trim
-        gcode->stream->printf("Set Trim: ");
-        set_trim(trimx, trimy, trimz, gcode->stream);
+        trimx += (mm.first-t1z)*trimscale;
+        trimy += (mm.first-t2z)*trimscale;
+        trimz += (mm.first-t3z)*trimscale;
 
         // flush the output
         THEKERNEL->call_event(ON_IDLE);
     }
 
-    // move probe to start position just above the bed
-    home();
-    coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // do a relative move from home to the point above the bed
-
-    // probe the base of the three towers again to see if we are level
-    int dx= 0, dy= 0, dz= 0;
-    if(!probe_delta_tower(dx, t1x, t1y)) return false;
-    gcode->stream->printf("T1-final Z:%1.4f C:%d\n", dx / Z_STEPS_PER_MM, dx);
-    if(!probe_delta_tower(dy, t2x, t2y)) return false;
-    gcode->stream->printf("T2-final Z:%1.4f C:%d\n", dy / Z_STEPS_PER_MM, dy);
-    if(!probe_delta_tower(dz, t3x, t3y)) return false;
-    gcode->stream->printf("T3-final Z:%1.4f C:%d\n", dz / Z_STEPS_PER_MM, dz);
-
-    // compare the three and report
-    auto mm= std::minmax({dx, dy, dz});
-    gcode->stream->printf("max endstop delta= %1.4f\n", (mm.second-mm.first)/Z_STEPS_PER_MM);
+    if((mm.second-mm.first) > target) {
+        gcode->stream->printf("WARNING: trim did not resolve to within required parameters: delta %f\n", mm.second-mm.first);
+    }
 
     return true;
 }
 
+/*
+    probe edges to get outer positions, then probe center
+    modify the delta radius until center and X converge
+*/
+
 bool ZProbe::calibrate_delta_radius(Gcode *gcode)
 {
-    gcode->stream->printf("Calibrating delta radius\n");
+    float target= 0.03F;
+    if(gcode->has_letter('I')) target= gcode->get_value('I'); // override default target
+    if(gcode->has_letter('J')) this->probe_radius= gcode->get_value('J'); // override default probe radius
+
+    gcode->stream->printf("Calibrating delta radius: target %f, radius %f\n", target, this->probe_radius);
 
     // get probe points
     float t1x, t1y, t2x, t2y, t3x, t3y;
@@ -355,8 +379,6 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
     if(!probe_delta_tower(dc, 0, 0)) return false;
     gcode->stream->printf("CT Z:%1.3f C:%d\n", dc / Z_STEPS_PER_MM, dc);
 
-    float target= 0.03F;
-    if(gcode->has_letter('I')) target= gcode->get_value('I'); // override default target
 
     // See if we are already in range and skip calibration if not needed
     float cmm= dc / Z_STEPS_PER_MM;
