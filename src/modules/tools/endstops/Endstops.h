@@ -9,11 +9,9 @@
 #define ENDSTOPS_MODULE_H
 
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "modules/communication/utils/Gcode.h"
-#include "libs/StepperMotor.h"
 #include "libs/Pin.h"
 
+class StepperMotor;
 
 class Endstops : public Module{
     public:
@@ -29,6 +27,7 @@ class Endstops : public Module{
         void wait_for_homed(char axes_to_move);
         void wait_for_homed_corexy(int axis);
         void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
+        void on_get_public_data(void* argument);
 
         float homing_position[3];
         float home_offset[3];
