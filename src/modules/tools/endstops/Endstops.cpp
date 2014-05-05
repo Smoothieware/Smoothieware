@@ -178,14 +178,11 @@ void Endstops::on_config_reload(void *argument)
     this->is_corexy                 =  THEKERNEL->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
     this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
 
-    // endstop trim used by deltas to do soft adjusting, in mm, negate depending on homing direction
-    // eg on a delta homing to max, a negative trim value will move the carriage down, and a positive will move it up
-    int dirx = (this->home_direction[0] ? -1 : 1);
-    int diry = (this->home_direction[1] ? -1 : 1);
-    int dirz = (this->home_direction[2] ? -1 : 1);
-    this->trim_mm[0] = THEKERNEL->config->value(alpha_trim_checksum )->by_default(0  )->as_number() * dirx;
-    this->trim_mm[1] = THEKERNEL->config->value(beta_trim_checksum  )->by_default(0  )->as_number() * diry;
-    this->trim_mm[2] = THEKERNEL->config->value(gamma_trim_checksum )->by_default(0  )->as_number() * dirz;
+    // endstop trim used by deltas to do soft adjusting
+    // on a delta homing to max, a negative trim value will move the carriage down, and a positive will move it up
+    this->trim_mm[0] = THEKERNEL->config->value(alpha_trim_checksum )->by_default(0  )->as_number();
+    this->trim_mm[1] = THEKERNEL->config->value(beta_trim_checksum  )->by_default(0  )->as_number();
+    this->trim_mm[2] = THEKERNEL->config->value(gamma_trim_checksum )->by_default(0  )->as_number();
 }
 
 void Endstops::wait_for_homed(char axes_to_move)
