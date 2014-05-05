@@ -236,7 +236,7 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     float trimx= 0.0F, trimy= 0.0F, trimz= 0.0F;
     if(!keep) {
         // zero trim values
-        if(!set_trim(0, 0, 0, &(StreamOutput::NullStream))) return false;
+        if(!set_trim(0, 0, 0, gcode->stream)) return false;
 
     }else{
         // get current trim, and continue from that
