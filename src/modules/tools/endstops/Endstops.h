@@ -11,6 +11,8 @@
 #include "libs/Module.h"
 #include "libs/Pin.h"
 
+#include <bitset>
+
 class StepperMotor;
 
 class Endstops : public Module{
@@ -28,10 +30,11 @@ class Endstops : public Module{
         void wait_for_homed_corexy(int axis);
         void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
         void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
 
         float homing_position[3];
         float home_offset[3];
-        bool home_direction[3];
+        std::bitset<3> home_direction;
         unsigned int  debounce_count;
         float  retract_mm[3];
         float  trim_mm[3];
@@ -41,8 +44,10 @@ class Endstops : public Module{
         Pin    pins[6];
         StepperMotor* steppers[3];
         char status;
-        bool is_corexy;
-        bool is_delta;
+        struct {
+            bool is_corexy:1;
+            bool is_delta:1;
+        };
 };
 
 #endif

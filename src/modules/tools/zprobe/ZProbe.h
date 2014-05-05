@@ -35,7 +35,8 @@ private:
     bool calibrate_delta_radius(Gcode *gcode);
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();
-    void set_trim(float x, float y, float z, StreamOutput *stream);
+    bool set_trim(float x, float y, float z, StreamOutput *stream);
+    bool get_trim(float& x, float& y, float& z);
 
     float          probe_radius;
     float          probe_height;
@@ -45,8 +46,10 @@ private:
     StepperMotor  *steppers[3];
     Pin            pin;
     uint8_t        debounce_count;
-    bool           running;
-    bool           is_delta;
+    struct {
+        bool           running:1;
+        bool           is_delta:1;
+    };
 };
 
 #endif /* ZPROBE_H_ */

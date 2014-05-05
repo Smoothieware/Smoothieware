@@ -47,6 +47,8 @@
 #define STEPS_PER_MM(a) (this->steppers[a]->steps_per_mm)
 #define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
 
+#define abs(a) ((a<0) ? -a : a)
+
 void ZProbe::on_module_loaded()
 {
     // if the module is disabled -> do nothing
@@ -135,7 +137,6 @@ bool ZProbe::run_probe(int& steps, bool fast)
     this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
 
     // move Z down
-    this->running = true;
     this->steppers[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
     this->steppers[Z_AXIS]->move(true, 1000 * Z_STEPS_PER_MM); // always probes down, no more than 1000mm TODO should be 2*maxz
     if(this->is_delta) {
@@ -145,6 +146,8 @@ bool ZProbe::run_probe(int& steps, bool fast)
         this->steppers[Y_AXIS]->set_speed(0);
         this->steppers[Y_AXIS]->move(true, 1000 * STEPS_PER_MM(Y_AXIS));
     }
+
+    this->running = true;
 
     int s[3];
     bool r = wait_for_probe(s);
@@ -160,7 +163,6 @@ bool ZProbe::return_probe(int steps)
     bool dir= steps < 0;
     steps= abs(steps);
 
-    this->running = true;
     this->steppers[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
     this->steppers[Z_AXIS]->move(dir, steps);
     if(this->is_delta) {
@@ -169,6 +171,8 @@ bool ZProbe::return_probe(int steps)
         this->steppers[Y_AXIS]->set_speed(0);
         this->steppers[Y_AXIS]->move(dir, steps);
     }
+
+    this->running = true;
     while(this->steppers[X_AXIS]->moving || this->steppers[Y_AXIS]->moving || this->steppers[Z_AXIS]->moving) {
         // wait for it to complete
         THEKERNEL->call_event(ON_IDLE);
@@ -232,19 +236,12 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
     float trimx= 0.0F, trimy= 0.0F, trimz= 0.0F;
     if(!keep) {
         // zero trim values
-        set_trim(0, 0, 0, &(StreamOutput::NullStream));
+        if(!set_trim(0, 0, 0, &(StreamOutput::NullStream))) return false;
 
     }else{
         // get current trim, and continue from that
-        void *returned_data;
-        bool ok = THEKERNEL->public_data->get_value( endstops_checksum, trim_checksum, &returned_data );
-
-        if (ok) {
-            float *trim = static_cast<float *>(returned_data);
-            gcode->stream->printf("Current Trim X: %f, Y: %f, Z: %f\r\n", trim[0], trim[1], trim[2]);
-            trimx= trim[0];
-            trimy= trim[1];
-            trimz= trim[2];
+        if (get_trim(trimx, trimy, trimz)) {
+            gcode->stream->printf("Current Trim X: %f, Y: %f, Z: %f\r\n", trimx, trimy, trimz);
 
         } else {
             gcode->stream->printf("Could not get current trim, are endstops enabled?\n");
@@ -297,8 +294,7 @@ bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
 
     for (int i = 1; i <= 10; ++i) {
         // set trim
-        gcode->stream->printf("Set Trim:\n");
-        set_trim(trimx, trimy, trimz, gcode->stream);
+        if(!set_trim(trimx, trimy, trimz, gcode->stream)) return false;
 
         // home and move probe to start position just above the bed
         home();
@@ -368,26 +364,11 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
     home();
     coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // do a relative move from home to the point above the bed
 
-    // probe the base of the three towers to get reference point at this Z height
-    int dx= 0, dy= 0, dz= 0, dc= 0;
-    if(!probe_delta_tower(dx, t1x, t1y)) return false;
-    gcode->stream->printf("T1 Z:%1.3f C:%d\n", dx / Z_STEPS_PER_MM, dx);
-    if(!probe_delta_tower(dy, t2x, t2y)) return false;
-    gcode->stream->printf("T2 Z:%1.3f C:%d\n", dy / Z_STEPS_PER_MM, dy);
-    if(!probe_delta_tower(dz, t3x, t3y)) return false;
-    gcode->stream->printf("T3 Z:%1.3f C:%d\n", dz / Z_STEPS_PER_MM, dz);
+    // probe center to get reference point at this Z height
+    int dc;
     if(!probe_delta_tower(dc, 0, 0)) return false;
     gcode->stream->printf("CT Z:%1.3f C:%d\n", dc / Z_STEPS_PER_MM, dc);
-
-
-    // See if we are already in range and skip calibration if not needed
     float cmm= dc / Z_STEPS_PER_MM;
-    float m= dx / Z_STEPS_PER_MM;
-    float d= cmm-m;
-    if(abs(d) <= target) {
-        gcode->stream->printf("Delta Radius already in range: %1.3f\n", d);
-        return true;
-    }
 
     // get current delta radius
     float delta_radius= 0.0F;
@@ -401,9 +382,28 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
     }
     options.clear();
 
-    // probe t1, but use coordinated moves, probing center won't change
     float drinc= 2.5F; // approx
     for (int i = 1; i <= 10; ++i) {
+        // probe t1, t2, t3 and get average, but use coordinated moves, probing center won't change
+        int dx, dy, dz;
+        if(!probe_delta_tower(dx, t1x, t1y)) return false;
+        gcode->stream->printf("T1-%d Z:%1.3f C:%d\n", i, dx / Z_STEPS_PER_MM, dx);
+        if(!probe_delta_tower(dy, t2x, t2y)) return false;
+        gcode->stream->printf("T2-%d Z:%1.3f C:%d\n", i, dy / Z_STEPS_PER_MM, dy);
+        if(!probe_delta_tower(dz, t3x, t3y)) return false;
+        gcode->stream->printf("T3-%d Z:%1.3f C:%d\n", i, dz / Z_STEPS_PER_MM, dz);
+
+        // now look at the difference and reduce it by adjusting delta radius
+        float m= ((dx+dy+dz)/3.0F) / Z_STEPS_PER_MM;
+        float d= cmm-m;
+        gcode->stream->printf("C-%d Z-ave:%1.4f delta: %1.3f\n", i, m, d);
+
+        if(abs(d) <= target) break; // resolution of success
+
+        // increase delta radius to adjust for low center
+        // decrease delta radius to adjust for high center
+        delta_radius += (d*drinc);
+
         // set the new delta radius
         options['R']= delta_radius;
         THEKERNEL->robot->arm_solution->set_optional(options);
@@ -411,16 +411,9 @@ bool ZProbe::calibrate_delta_radius(Gcode *gcode)
 
         home();
         coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // needs to be a relative coordinated move
-        if(!probe_delta_tower(dx, t1x, t1y)) return false;
 
-        // now look at the difference and reduce it by adjusting delta radius
-        m= dx / Z_STEPS_PER_MM;
-        d= cmm-m;
-        gcode->stream->printf("T1-%d Z:%1.4f C:%d delta: %1.3f\n", i, m, dx, d);
-        if(abs(d) <= target) break; // resolution of success
-        // increase delta radius to adjust for low center
-        // decrease delta radius to adjust for high center
-        delta_radius += (d*drinc);
+        // flush the output
+        THEKERNEL->call_event(ON_IDLE);
     }
     return true;
 }
@@ -483,6 +476,10 @@ void ZProbe::on_gcode_received(void *argument)
             gcode->add_nl = true;
             gcode->mark_as_taken();
 
+        } else if (gcode->m == 557) { // P0 Xxxx Yyyy sets probe points for G32
+            // TODO will override the automatically calculated probe points for a delta, required for a cartesian
+
+            gcode->mark_as_taken();
         }
     }
 }
@@ -560,10 +557,31 @@ void ZProbe::home()
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 }
 
-void ZProbe::set_trim(float x, float y, float z, StreamOutput *stream)
+bool ZProbe::set_trim(float x, float y, float z, StreamOutput *stream)
 {
-    char buf[40];
-    int n = snprintf(buf, sizeof(buf), "M666 X%1.8f Y%1.8f Z%1.8f", x, y, z);
-    Gcode gc(string(buf, n), stream);
-    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+    float t[3]{x, y, z};
+    bool ok= THEKERNEL->public_data->set_value( endstops_checksum, trim_checksum, t);
+
+    if (ok) {
+        stream->printf("set trim to X:%f Y:%f Z:%f\n", x, y, z);
+    } else {
+        stream->printf("unable to set trim, is endstops enabled?\n");
+    }
+
+    return ok;
+}
+
+bool ZProbe::get_trim(float& x, float& y, float& z)
+{
+    void *returned_data;
+    bool ok = THEKERNEL->public_data->get_value( endstops_checksum, trim_checksum, &returned_data );
+
+    if (ok) {
+        float *trim = static_cast<float *>(returned_data);
+        x= trim[0];
+        y= trim[1];
+        z= trim[2];
+        return true;
+    }
+    return false;
 }
