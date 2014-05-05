@@ -114,6 +114,7 @@ void Endstops::on_module_loaded()
     register_for_event(ON_CONFIG_RELOAD);
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GET_PUBLIC_DATA);
+    register_for_event(ON_SET_PUBLIC_DATA);
 
     // Take StepperMotor objects from Robot and keep them here
     this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
@@ -589,6 +590,20 @@ void Endstops::on_get_public_data(void* argument){
         return_data[2]= this->trim_mm[2];
 
         pdr->set_data_ptr(&return_data);
+        pdr->set_taken();
+    }
+}
+
+void Endstops::on_set_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(endstops_checksum)) return;
+
+    if(pdr->second_element_is(trim_checksum)) {
+        float *t= static_cast<float*>(pdr->get_data_ptr());
+        this->trim_mm[0]= t[0];
+        this->trim_mm[1]= t[1];
+        this->trim_mm[2]= t[2];
         pdr->set_taken();
     }
 }
