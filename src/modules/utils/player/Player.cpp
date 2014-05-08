@@ -313,7 +313,7 @@ void Player::on_main_loop(void *argument)
         while(fgets(buf, sizeof(buf), this->current_file_handler) != NULL) {
             int len = strlen(buf);
             if(len == 0) continue; // empty line? should not be possible
-            if(buf[len - 1] == '\n') {
+            if(buf[len - 1] == '\n' || feof(this->current_file_handler)) {
                 if(discard) { // we are discarding a long line
                     discard = false;
                     continue;
