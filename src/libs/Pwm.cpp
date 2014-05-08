@@ -39,11 +39,14 @@ void Pwm::set(bool value)
 
 uint32_t Pwm::on_tick(uint32_t dummy)
 {
-    if (_pwm <= 0) {
+    if ((_pwm < 0) || _pwm >= PID_PWM_MAX) {
+        return dummy;
+    }
+    else if (_pwm == 0) {
         Pin::set(false);
         return dummy;
     }
-    else if (_pwm >= PID_PWM_MAX - 1) {
+    else if (_pwm == PID_PWM_MAX - 1) {
         Pin::set(true);
         return dummy;
     }
