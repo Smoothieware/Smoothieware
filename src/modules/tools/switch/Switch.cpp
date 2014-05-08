@@ -81,14 +81,16 @@ void Switch::on_config_reload(void *argument)
     if(this->output_pin.connected()) {
         if(this->output_type == PWM) {
             this->output_pin.max_pwm(THEKERNEL->config->value(switch_checksum, this->name_checksum, max_pwm_checksum )->by_default(255)->as_number());
-            this->output_pin.pwm(this->switch_state ? 255 : 0); // will be truncated to max_pwm
-
+            this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
+            if(this->switch_state) {
+                this->output_pin.pwm(this->switch_value); // will be truncated to max_pwm
+            } else {
+                this->output_pin.set(false);
+            }
         } else {
             this->output_pin.set(this->switch_state);
         }
     }
-
-    this->switch_value =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
 
     set_low_on_debug(output_pin.port_number, output_pin.pin);
 
@@ -157,39 +159,25 @@ void Switch::on_gcode_execute(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     if(match_input_on_gcode(gcode)) {
+        this->switch_state = true;
+        if(gcode->has_letter('S')) {
+            this->switch_value = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
+        }
         if (this->output_type == PWM) {
-            // PWM output pin
-            if(gcode->has_letter('S')) {
-                int v = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
-                if (v > 0) {
-                    this->output_pin.pwm(v);
-                    this->switch_value = v;
-                    this->switch_state = true;
-                } else {
-                    this->output_pin.pwm(0);
-                    this->switch_state = false;
-                }
-
-            } else {
-                // Turn pin full on
-                this->output_pin.pwm(255); // will be truncated to max_pwm if set
-                this->switch_state = true;
-            }
-
+            // PWM output pin turn on
+            this->output_pin.pwm(this->switch_value);
         } else {
             // logic pin turn on
             this->output_pin.set(true);
         }
-
     } else if(match_input_off_gcode(gcode)) {
+        this->switch_state = false;
         if (this->output_type == PWM) {
             // PWM output pin
-            this->output_pin.pwm(0);
-            this->switch_state = false;
+            this->output_pin.set(false);
         } else {
             // logic pin turn off
             this->output_pin.set(false);
-            this->switch_state = false;
         }
     }
 }
@@ -251,7 +239,7 @@ void Switch::on_main_loop(void *argument)
             if(!this->output_off_command.empty()) this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
             if(this->output_pin.connected()) {
                 if(this->output_type == PWM)
-                    this->output_pin.pwm(0);
+                    this->output_pin.set(false);
                 else
                     this->output_pin.set(false);
             }
