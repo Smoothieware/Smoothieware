@@ -64,6 +64,13 @@ void ToolManager::on_gcode_received(void *argument){
                 gcode->txt_after_ok.append(buf, n);
             }
         } else {
+        
+            //send new_tool_offsets to robot
+            float new_pos[3];
+            float *active_tool_offset = tools[this->active_tool]->get_offset();
+            float *new_tool_offset = tools[new_tool]->get_offset();
+            THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
+        
             if(new_tool != this->active_tool){
                 void *returned_data;
                 THEKERNEL->conveyor->wait_for_empty_queue();
@@ -76,9 +83,7 @@ void ToolManager::on_gcode_received(void *argument){
                         current_pos[i] = pos[i];
                     }
                     // update virtual tool position to the offset of the new tool and select it as active
-                    float new_pos[3];
-                    float *active_tool_offset = tools[this->active_tool]->get_offset();
-                    float *new_tool_offset = tools[new_tool]->get_offset();
+
                     for(int i=0;i<3;i++){
                         new_pos[i] = current_pos[i] - active_tool_offset[i] + new_tool_offset[i];
                     }
@@ -86,8 +91,6 @@ void ToolManager::on_gcode_received(void *argument){
                     this->tools[active_tool]->disable();
                     this->active_tool = new_tool;
                     this->tools[active_tool]->enable();
-
-                    THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
 
                     if(make_move){
                         //move to old position
@@ -99,6 +102,7 @@ void ToolManager::on_gcode_received(void *argument){
                         g = new Gcode(s, gcode->stream);
                         THEKERNEL->call_event(ON_GCODE_RECEIVED, g);
                         delete g;
+                    }
                 }
             }
         }
