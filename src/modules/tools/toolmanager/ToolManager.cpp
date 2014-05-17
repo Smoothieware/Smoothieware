@@ -11,6 +11,8 @@
 using namespace std;
 #include <vector>
 #include "ToolManager.h"
+#include "PublicDataRequest.h"
+#include "ToolManagerPublicAccess.h"
 #include "Config.h"
 #include "Robot.h"
 #include "ConfigValue.h"
@@ -33,6 +35,7 @@ using namespace std;
 
 ToolManager::ToolManager(){
     active_tool = 0;
+    current_tool_name = CHECKSUM("hotend");
 }
 
 void ToolManager::on_module_loaded(){
@@ -40,6 +43,8 @@ void ToolManager::on_module_loaded(){
 
     this->register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
+    this->register_for_event(ON_GET_PUBLIC_DATA);
+    this->register_for_event(ON_SET_PUBLIC_DATA);
 }
 
 void ToolManager::on_config_reload(void *argument){
@@ -90,6 +95,7 @@ void ToolManager::on_gcode_received(void *argument){
 
                     this->tools[active_tool]->disable();
                     this->active_tool = new_tool;
+                    this->current_tool_name = this->tools[active_tool]->get_name();
                     this->tools[active_tool]->enable();
 
                     if(make_move){
@@ -107,6 +113,31 @@ void ToolManager::on_gcode_received(void *argument){
             }
         }
     }
+}
+
+void ToolManager::on_get_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(tool_manager_checksum)) return;
+
+    // ok this is targeted at us, so send back the requested data
+    // this must be static as it will be accessed long after we have returned
+    static struct pad_toolmanager tool_return;
+    tool_return.current_tool_name= this->current_tool_name;
+
+    pdr->set_data_ptr(&tool_return);
+    pdr->set_taken();
+}
+
+void ToolManager::on_set_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(tool_manager_checksum)) return;
+
+    // ok this is targeted at us, so change tools
+    uint16_t tool_name= *static_cast<float*>(pdr->get_data_ptr());
+    // TODO: fire a tool change gcode
+    pdr->set_taken();
 }
 
 // Add a tool to the tool list

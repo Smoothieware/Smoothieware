@@ -15,6 +15,7 @@ class Tool {
         virtual void enable();
         virtual void disable();
         virtual float* get_offset();
+        virtual uint16_t get_name();
 };
 
 

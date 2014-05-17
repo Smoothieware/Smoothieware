@@ -16,6 +16,8 @@
 #include "modules/robot/Conveyor.h"
 #include "PublicDataRequest.h"
 #include "TemperatureControlPublicAccess.h"
+#include "PublicData.h"
+#include "ToolManagerPublicAccess.h"
 #include "StreamOutputPool.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -58,6 +60,7 @@
 #define preset1_checksum                   CHECKSUM("preset1")
 #define preset2_checksum                   CHECKSUM("preset2")
 
+#define link_to_tool_checksum              CHECKSUM("link_to_tool")
 
 TemperatureControl::TemperatureControl(uint16_t name) :
   sensor(nullptr), name_checksum(name), waiting(false), min_temp_violated(false)
@@ -104,6 +107,8 @@ void TemperatureControl::on_config_reload(void* argument){
     this->readings_per_second = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
+
+    this->link_to_tool        = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, link_to_tool_checksum)->by_default(false)->as_bool();
 
     // For backward compatibility, default to a thermistor sensor.
     std::string sensor_type = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, sensor_checksum)->by_default("thermistor")->as_string();
@@ -166,7 +171,19 @@ void TemperatureControl::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if (gcode->has_m) {
         // Get temperature
-        if( gcode->m == this->get_m_code ){
+        bool active = true;
+        if( this->link_to_tool ) {
+            void* returned_data;
+            bool ok = THEKERNEL->public_data->get_value( tool_manager_checksum, &returned_data );
+
+            if (ok) {
+                struct pad_toolmanager toolmanager =  *static_cast<struct pad_toolmanager *>(returned_data);
+                active = toolmanager.current_tool_name == this->name_checksum;
+            } else {
+//                stream->printf("TemperatureControl %s has link_to_tool set to true and the ToolManager module was not found\r\n", type.c_str());
+            }
+        }
+        if( (gcode->m == this->get_m_code) && active ){
             char buf[32]; // should be big enough for any status
             int n= snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);

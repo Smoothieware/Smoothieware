@@ -41,6 +41,7 @@ class Extruder : public Module, public Tool {
         void    enable();
         void    disable();
         float*  get_offset();
+        uint16_t get_name();
 
         Pin             step_pin;                     // Step pin for the stepper driver
         Pin             dir_pin;                      // Dir pin for the stepper driver

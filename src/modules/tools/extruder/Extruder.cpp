@@ -418,3 +418,7 @@ float* Extruder::get_offset(){
     return this->offset;
 }
 
+uint16_t Extruder::get_name(){
+    return this->identifier;
+}
+
