@@ -87,12 +87,13 @@ void ToolManager::on_gcode_received(void *argument){
                     this->active_tool = new_tool;
                     this->tools[active_tool]->enable();
 
-                    char buf[32];
-
                     THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
 
                     if(make_move){
                         //move to old position
+                        char buf[32];
+                        string s = buf;
+                        Gcode *g = new Gcode(s, gcode->stream);
                         snprintf(buf, 31, "G0 X%g Y%g Z%g", current_pos[X_AXIS], current_pos[Y_AXIS], current_pos[Z_AXIS]);
                         s = buf;
                         g = new Gcode(s, gcode->stream);
