@@ -88,24 +88,16 @@ void ToolManager::on_gcode_received(void *argument){
                     this->tools[active_tool]->enable();
 
                     char buf[32];
-                    //snprintf(buf, 31, "G92 X%g Y%g Z%g", new_pos[X_AXIS], new_pos[Y_AXIS], new_pos[Z_AXIS]);
-                    //string s = buf;
-                    //Gcode *g = new Gcode(s, gcode->stream);
-                    //THEKERNEL->call_event(ON_GCODE_RECEIVED, g);
-                    //delete g;
-					THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
+
+                    THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
 
                     if(make_move){
-						stream->printf("BX Offset is:  %1.3f\n", new_tool_offset[0]);
-						bool ok = THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
-
                         //move to old position
                         snprintf(buf, 31, "G0 X%g Y%g Z%g", current_pos[X_AXIS], current_pos[Y_AXIS], current_pos[Z_AXIS]);
                         s = buf;
                         g = new Gcode(s, gcode->stream);
                         THEKERNEL->call_event(ON_GCODE_RECEIVED, g);
                         delete g;
-                    }
                 }
             }
         }
