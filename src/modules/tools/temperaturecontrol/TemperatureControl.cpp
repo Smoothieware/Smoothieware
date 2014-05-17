@@ -171,19 +171,17 @@ void TemperatureControl::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if (gcode->has_m) {
         // Get temperature
-        bool active = true;
+        this->active = true;
         if( this->link_to_tool ) {
             void* returned_data;
             bool ok = THEKERNEL->public_data->get_value( tool_manager_checksum, &returned_data );
 
             if (ok) {
                 struct pad_toolmanager toolmanager =  *static_cast<struct pad_toolmanager *>(returned_data);
-                active = toolmanager.current_tool_name == this->name_checksum;
-            } else {
-//                stream->printf("TemperatureControl %s has link_to_tool set to true and the ToolManager module was not found\r\n", type.c_str());
+                this->active = toolmanager.current_tool_name == this->name_checksum;
             }
         }
-        if( (gcode->m == this->get_m_code) && active ){
+        if( (gcode->m == this->get_m_code) && this->active ){
             char buf[32]; // should be big enough for any status
             int n= snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);
@@ -225,7 +223,7 @@ void TemperatureControl::on_gcode_received(void* argument){
             gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f\n", this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt);
             gcode->mark_as_taken();
 
-        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') && active ) {
+        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') && this->active ) {
             // Attach gcodes to the last block for on_gcode_execute
             THEKERNEL->conveyor->append_gcode(gcode);
 
@@ -241,7 +239,7 @@ void TemperatureControl::on_gcode_execute(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     if( gcode->has_m){
         if (((gcode->m == this->set_m_code) || (gcode->m == this->set_and_wait_m_code))
-            && gcode->has_letter('S'))
+            && gcode->has_letter('S') && this->active)
         {
             float v = gcode->get_value('S');
 

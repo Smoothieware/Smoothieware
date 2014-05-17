@@ -64,6 +64,7 @@ class TemperatureControl : public Module {
         bool waiting;
         bool min_temp_violated;
         bool link_to_tool;
+        bool active;
 
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;

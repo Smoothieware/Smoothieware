@@ -56,10 +56,6 @@ void ToolManager::on_gcode_received(void *argument){
 
     if( gcode->has_letter('T') ){
         int new_tool = gcode->get_value('T');
-        bool make_move = false;
-        if ( gcode->has_letter('F') ){
-            make_move = true;
-        }
         gcode->mark_as_taken();
         if(new_tool >= (int)this->tools.size() || new_tool < 0){
             // invalid tool
@@ -69,47 +65,16 @@ void ToolManager::on_gcode_received(void *argument){
                 gcode->txt_after_ok.append(buf, n);
             }
         } else {
-        
-            //send new_tool_offsets to robot
-            float new_pos[3];
-            float *active_tool_offset = tools[this->active_tool]->get_offset();
-            float *new_tool_offset = tools[new_tool]->get_offset();
-            THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
-        
             if(new_tool != this->active_tool){
-                void *returned_data;
-                THEKERNEL->conveyor->wait_for_empty_queue();
-                bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
-                if(ok){
-                    // save current position to return to after applying extruder offset
-                    float *pos = static_cast<float *>(returned_data);
-                    float current_pos[3];
-                    for(int i=0;i<3;i++){
-                        current_pos[i] = pos[i];
-                    }
-                    // update virtual tool position to the offset of the new tool and select it as active
+                this->tools[active_tool]->disable();
+                this->active_tool = new_tool;
+                this->current_tool_name = this->tools[active_tool]->get_name();
+                this->tools[active_tool]->enable();
 
-                    for(int i=0;i<3;i++){
-                        new_pos[i] = current_pos[i] - active_tool_offset[i] + new_tool_offset[i];
-                    }
-
-                    this->tools[active_tool]->disable();
-                    this->active_tool = new_tool;
-                    this->current_tool_name = this->tools[active_tool]->get_name();
-                    this->tools[active_tool]->enable();
-
-                    if(make_move){
-                        //move to old position
-                        char buf[32];
-                        string s = buf;
-                        Gcode *g = new Gcode(s, gcode->stream);
-                        snprintf(buf, 31, "G0 X%g Y%g Z%g", current_pos[X_AXIS], current_pos[Y_AXIS], current_pos[Z_AXIS]);
-                        s = buf;
-                        g = new Gcode(s, gcode->stream);
-                        THEKERNEL->call_event(ON_GCODE_RECEIVED, g);
-                        delete g;
-                    }
-                }
+                //send new_tool_offsets to robot
+                float *active_tool_offset = tools[this->active_tool]->get_offset();
+                float *new_tool_offset = tools[new_tool]->get_offset();
+                THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
             }
         }
     }
