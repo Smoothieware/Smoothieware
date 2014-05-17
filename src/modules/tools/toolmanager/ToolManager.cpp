@@ -72,7 +72,6 @@ void ToolManager::on_gcode_received(void *argument){
                 this->tools[active_tool]->enable();
 
                 //send new_tool_offsets to robot
-                float *active_tool_offset = tools[this->active_tool]->get_offset();
                 float *new_tool_offset = tools[new_tool]->get_offset();
                 THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
             }
