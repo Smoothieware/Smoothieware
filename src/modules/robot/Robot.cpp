@@ -287,7 +287,7 @@ void Robot::on_gcode_received(void * argument){
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;
             case 20: this->inch_mode = true; gcode->mark_as_taken();  break;
             case 21: this->inch_mode = false; gcode->mark_as_taken();  break;
-			//case 28: this->clearToolOffset(); break;
+            case 28: this->clearToolOffset(); break;
             case 90: this->absolute_mode = true; gcode->mark_as_taken();  break;
             case 91: this->absolute_mode = false; gcode->mark_as_taken();  break;
             case 92: {
