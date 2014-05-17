@@ -90,7 +90,7 @@ delta_current                                1.5              # First extruder s
 #extruder.hotend2.en_pin                          4.29             # Pin for extruder enable signal
 
 #extruder.hotend2.x_offset                        0                # x offset from origin in mm
-#extruder.hotend2.y_offset                        -12.50           # y offset from origin in mm
+#extruder.hotend2.y_offset                        12.50           # y offset from origin in mm
 #extruder.hotend2.z_offset                        0                # z offset from origin in mm
 #epsilon_current                              1.5              # Second extruder stepper motor current
 
