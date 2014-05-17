@@ -782,11 +782,9 @@ void Robot::select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2){
 }
 
 void Robot::setToolOffset(float offsetx, float offsety, float offsetz) {
-	THEKERNEL->streams->printf("SETTOOLOFFSET CALLED WITH:  %1.3f %1.3f %1.3f\n", this->toolOffset[0], this->toolOffset[1], this->toolOffset[2]);
-	this->toolOffset[0] = offsetx;
+        this->toolOffset[0] = offsetx;
 	this->toolOffset[1] = offsety;
 	this->toolOffset[2] = offsetz;
-	THEKERNEL->streams->printf("SETTOOLOFFSET CALLED WITH:  %1.3f %1.3f %1.3f\n", this->toolOffset[0], this->toolOffset[1], this->toolOffset[2]);
 }
 
 void Robot::clearToolOffset() {
