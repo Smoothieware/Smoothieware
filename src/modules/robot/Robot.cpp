@@ -31,6 +31,9 @@ using std::string;
 #include "checksumm.h"
 #include "utils.h"
 #include "ConfigValue.h"
+#include "libs/StreamOutput.h"
+#include "libs/StreamOutputPool.h"
+#include "libs/SerialMessage.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
@@ -99,6 +102,7 @@ Robot::Robot(){
     clear_vector(this->last_milestone);
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
+	this->clearToolOffset();
 }
 
 //Called when the module has just been loaded
@@ -207,6 +211,8 @@ void Robot::on_config_reload(void* argument){
     arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
     for (int i = 0; i < 3; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
+
+    //this->clearToolOffset();
 }
 
 void Robot::on_get_public_data(void* argument){
@@ -281,6 +287,7 @@ void Robot::on_gcode_received(void * argument){
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;
             case 20: this->inch_mode = true; gcode->mark_as_taken();  break;
             case 21: this->inch_mode = false; gcode->mark_as_taken();  break;
+			//case 28: this->clearToolOffset(); break;
             case 90: this->absolute_mode = true; gcode->mark_as_taken();  break;
             case 91: this->absolute_mode = false; gcode->mark_as_taken();  break;
             case 92: {
@@ -475,7 +482,7 @@ void Robot::on_gcode_received(void * argument){
     }
     for(char letter = 'X'; letter <= 'Z'; letter++){
         if( gcode->has_letter(letter) ){
-            target[letter-'X'] = this->to_millimeters(gcode->get_value(letter)) + ( this->absolute_mode ? 0 : target[letter-'X']);
+            target[letter - 'X'] = this->to_millimeters(gcode->get_value(letter)) + (this->absolute_mode ? 0 : target[letter - 'X']) + this->toolOffset[letter - 'X'];	
         }
     }
 
@@ -774,4 +781,17 @@ void Robot::select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2){
     this->plane_axis_2 = axis_2;
 }
 
+void Robot::setToolOffset(float offsetx, float offsety, float offsetz) {
+	THEKERNEL->streams->printf("SETTOOLOFFSET CALLED WITH:  %1.3f %1.3f %1.3f\n", this->toolOffset[0], this->toolOffset[1], this->toolOffset[2]);
+	this->toolOffset[0] = offsetx;
+	this->toolOffset[1] = offsety;
+	this->toolOffset[2] = offsetz;
+	THEKERNEL->streams->printf("SETTOOLOFFSET CALLED WITH:  %1.3f %1.3f %1.3f\n", this->toolOffset[0], this->toolOffset[1], this->toolOffset[2]);
+}
+
+void Robot::clearToolOffset() {
+	this->toolOffset[0] = 0.0f;
+	this->toolOffset[1] = 0.0f;
+	this->toolOffset[2] = 0.0f;
+}
 
