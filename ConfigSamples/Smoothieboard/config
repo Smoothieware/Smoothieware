@@ -72,9 +72,9 @@ extruder.hotend.dir_pin                         0.22             # Pin for extru
 extruder.hotend.en_pin                          0.21             # Pin for extruder enable signal
 
 # for now the first extruder's offsets should be left at 0 or homing will get confused
-extruder.hotend.x_offset                        0                # x offset from first tool in mm
-extruder.hotend.y_offset                        0                # y offset from first tool in mm
-extruder.hotend.z_offset                        0                # z offset from first tool in mm
+extruder.hotend.x_offset                        0                # x offset from origin in mm
+extruder.hotend.y_offset                        -12.50           # y offset from origin in mm
+extruder.hotend.z_offset                        0                # z offset from origin in mm
 
 delta_current                                1.5              # First extruder stepper motor current
 
@@ -89,10 +89,9 @@ delta_current                                1.5              # First extruder s
 #extruder.hotend2.dir_pin                         2.13             # Pin for extruder dir signal
 #extruder.hotend2.en_pin                          4.29             # Pin for extruder enable signal
 
-#extruder.hotend2.x_offset                        50               # x offset from first tool in mm
-#extruder.hotend2.y_offset                        0                # y offset from first tool in mm
-#extruder.hotend2.z_offset                        0                # z offset from first tool in mm
-
+#extruder.hotend2.x_offset                        0                # x offset from origin in mm
+#extruder.hotend2.y_offset                        12.50           # y offset from origin in mm
+#extruder.hotend2.z_offset                        0                # z offset from origin in mm
 #epsilon_current                              1.5              # Second extruder stepper motor current
 
 # Laser module configuration
@@ -105,20 +104,37 @@ laser_module_enable                          false            # Whether to activ
                                                               # active without actually burning
 #laser_module_pwm_period                      20              # this sets the pwm frequency as the period in microseconds
 
-# Hotend temperature control configuration
+# Hotend1 temperature control configuration
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all. 
                                                               # All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.23             # Pin for the thermistor to read
-temperature_control.hotend.heater_pin        2.7              # Pin that controls the heater
+temperature_control.hotend.heater_pin        2.5              # Pin that controls the heater
 temperature_control.hotend.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64
                                                               # for a list of valid thermistor names
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
-temperature_control.hotend.designator        T                #
+temperature_control.hotend.designator        H0               #
 
-#temperature_control.hotend.p_factor         13.7             # permanenetly set the PID values after an auto pid
-#temperature_control.hotend.i_factor         0.097            #
-#temperature_control.hotend.d_factor         24               #
+temperature_control.hotend.p_factor         27.200           # permanently set the PID values after an auto pid
+temperature_control.hotend.i_factor          2.304           #
+temperature_control.hotend.d_factor         81.000           #
+
+#temperature_control.hotend.max_pwm          64               # max pwm, 64 is a good value if driving a 12v resistor with 24v.
+
+# Hotend2 temperature control configuration
+#temperature_control.hotend2.enable            true             # Whether to activate this ( "hotend" ) module at all. 
+                                                              # All configuration is ignored if false.
+#temperature_control.hotend2.thermistor_pin    0.25             # Pin for the thermistor to read
+#temperature_control.hotend2.heater_pin        1.23              # Pin that controls the heater
+#temperature_control.hotend2.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64
+                                                              # for a list of valid thermistor names
+#temperature_control.hotend2.set_m_code        884              #
+#temperature_control.hotend2.set_and_wait_m_code 889            #
+#temperature_control.hotend2.designator        H1               #
+
+#temperature_control.hotend2.p_factor         27.200           # permanently set the PID values after an auto pid
+#temperature_control.hotend2.i_factor          2.304           #
+#temperature_control.hotend2.d_factor         81.000           #
 
 #temperature_control.hotend.max_pwm          64               # max pwm, 64 is a good value if driving a 12v resistor with 24v.
 

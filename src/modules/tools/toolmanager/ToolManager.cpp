@@ -12,11 +12,16 @@ using namespace std;
 #include <vector>
 #include "ToolManager.h"
 #include "Config.h"
+#include "Robot.h"
 #include "ConfigValue.h"
 #include "Conveyor.h"
 #include "checksumm.h"
 #include "PublicData.h"
 #include "Gcode.h"
+
+#include "libs/SerialMessage.h"
+#include "libs/StreamOutput.h"
+#include "FileStream.h"
 
 #include "modules/robot/RobotPublicAccess.h"
 
@@ -59,6 +64,13 @@ void ToolManager::on_gcode_received(void *argument){
                 gcode->txt_after_ok.append(buf, n);
             }
         } else {
+        
+            //send new_tool_offsets to robot
+            float new_pos[3];
+            float *active_tool_offset = tools[this->active_tool]->get_offset();
+            float *new_tool_offset = tools[new_tool]->get_offset();
+            THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
+        
             if(new_tool != this->active_tool){
                 void *returned_data;
                 THEKERNEL->conveyor->wait_for_empty_queue();
@@ -71,9 +83,7 @@ void ToolManager::on_gcode_received(void *argument){
                         current_pos[i] = pos[i];
                     }
                     // update virtual tool position to the offset of the new tool and select it as active
-                    float new_pos[3];
-                    float *active_tool_offset = tools[this->active_tool]->get_offset();
-                    float *new_tool_offset = tools[new_tool]->get_offset();
+
                     for(int i=0;i<3;i++){
                         new_pos[i] = current_pos[i] - active_tool_offset[i] + new_tool_offset[i];
                     }
@@ -82,15 +92,11 @@ void ToolManager::on_gcode_received(void *argument){
                     this->active_tool = new_tool;
                     this->tools[active_tool]->enable();
 
-                    char buf[32];
-                    snprintf(buf, 31, "G92 X%g Y%g Z%g", new_pos[X_AXIS], new_pos[Y_AXIS], new_pos[Z_AXIS]);
-                    string s = buf;
-                    Gcode *g = new Gcode(s, gcode->stream);
-                    THEKERNEL->call_event(ON_GCODE_RECEIVED, g);
-                    delete g;
-
                     if(make_move){
                         //move to old position
+                        char buf[32];
+                        string s = buf;
+                        Gcode *g = new Gcode(s, gcode->stream);
                         snprintf(buf, 31, "G0 X%g Y%g Z%g", current_pos[X_AXIS], current_pos[Y_AXIS], current_pos[Z_AXIS]);
                         s = buf;
                         g = new Gcode(s, gcode->stream);
