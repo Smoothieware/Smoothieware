@@ -11,6 +11,7 @@
 using namespace std;
 #include <vector>
 #include "ToolManager.h"
+#include "Tool.h"
 #include "PublicDataRequest.h"
 #include "ToolManagerPublicAccess.h"
 #include "Config.h"

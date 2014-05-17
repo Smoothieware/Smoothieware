@@ -11,7 +11,7 @@
 using namespace std;
 #include <vector>
 
-#include "Tool.h"
+class Tool;
 
 class ToolManager : public Module {
     public:
