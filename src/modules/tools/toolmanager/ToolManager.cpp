@@ -144,6 +144,7 @@ void ToolManager::on_set_public_data(void* argument){
 void ToolManager::add_tool(Tool* tool_to_add){
     if(this->tools.size() == 0){
         tool_to_add->enable();
+        this->current_tool_name = tool_to_add->get_name();
     } else {
         tool_to_add->disable();
     }
