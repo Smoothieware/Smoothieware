@@ -3,6 +3,7 @@
 #include "SlowTicker.h"
 #include "Gcode.h"
 #include "TemperatureControl.h"
+#include "libs/StreamOutput.h"
 
 #include <cmath>        // std::abs
 

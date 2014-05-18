@@ -21,12 +21,12 @@ make clean
 make all
 }}}
 
-To upload you can do 
+To upload you can do
 
 {{{
 make upload
 }}}
 
-if you havbe dfu-utils installed.
+if you have dfu-util installed.
 
 Alternatively copy the file LPC1768/main.bin to the sdcard calling it firmware.bin and reset.

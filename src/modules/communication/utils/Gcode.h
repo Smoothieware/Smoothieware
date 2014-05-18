@@ -10,16 +10,17 @@
 #define GCODE_H
 #include <string>
 using std::string;
-#include "libs/StreamOutput.h"
-// Object to represent a Gcode command
 #include <stdlib.h>
 
+class StreamOutput;
+
+// Object to represent a Gcode command
 class Gcode {
     public:
         Gcode(const string&, StreamOutput*);
-        Gcode(const Gcode& to_copy); 
+        Gcode(const Gcode& to_copy);
         Gcode& operator= (const Gcode& to_copy);
-        
+
         bool   has_letter ( char letter );
 
         float get_value  ( char letter );

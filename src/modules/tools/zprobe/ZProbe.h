@@ -12,6 +12,8 @@
 #include "Pin.h"
 
 class StepperMotor;
+class Gcode;
+class StreamOutput;
 
 class ZProbe: public Module
 {
@@ -25,18 +27,29 @@ public:
 
 
 private:
-    bool wait_for_probe(int distance[]);
-    bool run_probe(int *steps);
+    bool wait_for_probe(int steps[3]);
+    bool run_probe(int& steps, bool fast= false);
+    bool probe_delta_tower(int& steps, float x, float y);
+    bool return_probe(int steps);
+    bool calibrate_delta_endstops(Gcode *gcode);
+    bool calibrate_delta_radius(Gcode *gcode);
+    void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
+    void home();
+    bool set_trim(float x, float y, float z, StreamOutput *stream);
+    bool get_trim(float& x, float& y, float& z);
 
-    float          feedrate;
-    float          steps_per_mm[3];
-    unsigned int   mcode;
-    bool           enabled;
+    float          probe_radius;
+    float          probe_height;
+    float          current_feedrate;
+    float          slow_feedrate;
+    float          fast_feedrate;
     StepperMotor  *steppers[3];
     Pin            pin;
-    unsigned int   debounce_count;
-    bool           running;
-    bool           is_delta;
+    uint8_t        debounce_count;
+    struct {
+        bool           running:1;
+        bool           is_delta:1;
+    };
 };
 
 #endif /* ZPROBE_H_ */

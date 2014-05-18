@@ -313,7 +313,7 @@ void Player::on_main_loop(void *argument)
         while(fgets(buf, sizeof(buf), this->current_file_handler) != NULL) {
             int len = strlen(buf);
             if(len == 0) continue; // empty line? should not be possible
-            if(buf[len - 1] == '\n') {
+            if(buf[len - 1] == '\n' || feof(this->current_file_handler)) {
                 if(discard) { // we are discarding a long line
                     discard = false;
                     continue;
@@ -323,7 +323,7 @@ void Player::on_main_loop(void *argument)
                 this->current_stream->printf("%s", buf);
                 struct SerialMessage message;
                 message.message = buf;
-                message.stream = &(StreamOutput::NullStream); // we don't really need to see the ok
+                message.stream = this->current_stream;
 
                 // waits for the queue to have enough room
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);

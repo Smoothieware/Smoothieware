@@ -7,21 +7,22 @@ public:
     Vector3();
     Vector3(float, float, float);
 
-    float&   operator[](int);
+    float    operator[](int) const;
 
-    Vector3  cross(const Vector3);
+    Vector3  cross(const Vector3&) const;
 
-    float    dot(const Vector3);
+    float    dot(const Vector3&) const;
 
-    float    magsq();
-    float    mag();
+    float    magsq() const;
+    float    mag() const;
 
-    Vector3  add(const Vector3);
-    Vector3  sub(const Vector3);
+    Vector3  add(const Vector3&) const;
+    Vector3  sub(const Vector3&) const;
 
-    Vector3  mul(float);
+    Vector3  mul(float) const;
+    Vector3  mul(const Vector3& v) const;
 
-    Vector3  unit(void);
+    Vector3  unit(void) const;
 
 private:
     float  elem[3];

@@ -59,7 +59,7 @@ gamma_step_pin                               2.2              # Pin for gamma st
 gamma_dir_pin                                0.20             # Pin for gamma stepper direction
 gamma_en_pin                                 0.19             # Pin for gamma enable
 gamma_current                                1.5              # Z stepper motor current
-gamma_max_rate                               3000.0           # mm/min
+gamma_max_rate                               30000.0          # mm/min
 
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
@@ -73,8 +73,8 @@ extruder_module_enable                       true             # Whether to activ
                                                               # is ignored if false
 extruder_steps_per_mm                        140              # Steps per mm for extruder stepper
 extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
-extruder_acceleration                        50               # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
-extruder_max_speed                           1000             # mm/sec NOTE
+extruder_acceleration                        500              # Acceleration in mm/sec^2 only used for retracts
+extruder_max_speed                           25               # mm/sec NOTE only used for retracts
 
 extruder_step_pin                            2.3              # Pin for extruder step signal
 extruder_dir_pin                             0.22             # Pin for extruder dir signal
@@ -171,6 +171,16 @@ beta_trim                                    0                 # software trim f
 gamma_trim                                   0                 # software trim for gamma stepper endstop (in mm)
 
 #endstop_debounce_count                       100              # uncomment if you get noise on your endstops
+
+# optional Z probe
+zprobe.enable                                false           # set to true to enable a zprobe
+zprobe.probe_pin                             1.28!^          # pin probe is attached to if NC remove the !
+zprobe.slow_feedrate                         5               # mm/sec probe feed rate
+#zprobe.debounce_count                       100             # set if noisy
+zprobe.fast_feedrate                         100             # move feedrate mm/sec
+zprobe.probe_radius                          100             # where to probe
+zprobe.probe_height                          5               # how much above bed to start probe
+#gamma_min_endstop                           nc              # normally 1.28. Change to nc to prevent conflict,
 
 # Pause button
 pause_button_enable                          true             #

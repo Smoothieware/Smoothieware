@@ -22,6 +22,7 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "Gcode.h"
+#include "libs/StreamOutput.h"
 
 #include <mri.h>
 
