@@ -477,7 +477,7 @@ void Robot::on_gcode_received(void *argument)
     }
     for(char letter = 'X'; letter <= 'Z'; letter++) {
         if( gcode->has_letter(letter) ) {
-            target[letter - 'X'] = this->to_millimeters(gcode->get_value(letter)) + (this->absolute_mode ? 0 : target[letter - 'X']);
+            target[letter - 'X'] = this->to_millimeters(gcode->get_value(letter)) + (this->absolute_mode ? this->toolOffset[letter - 'X'] : target[letter - 'X']);
         }
     }
 
@@ -794,12 +794,6 @@ void Robot::clearToolOffset()
 
 void Robot::setToolOffset(const float offset[3])
 {
-    // this is ugly, but it is basically how Marlin does it...
-    // we remove the last tooloffset from last_milestone, and add the new one in
-    // this has the effect of offseting all future moves, but in effect lying about the last_milestone before the next move
-    for (int i = X_AXIS; i <= Z_AXIS; ++i) {
-        this->last_milestone[i]= this->last_milestone[i] - this->toolOffset[i] + offset[i];
-    }
     memcpy(this->toolOffset, offset, sizeof(this->toolOffset));
 }
 
