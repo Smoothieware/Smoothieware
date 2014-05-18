@@ -67,6 +67,7 @@ void ToolManager::on_gcode_received(void *argument){
             }
         } else {
             if(new_tool != this->active_tool){
+                THEKERNEL->conveyor->wait_for_empty_queue();
                 this->tools[active_tool]->disable();
                 this->active_tool = new_tool;
                 this->current_tool_name = this->tools[active_tool]->get_name();
