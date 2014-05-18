@@ -184,9 +184,9 @@ void Extruder::on_gcode_received(void *argument)
             gcode->mark_as_taken();
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
-            if( this->single_config ){
+            if( this->single_config ) {
                 gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter);
-            }else{
+            } else {
                 gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", this->steps_per_millimeter, this->identifier);
             }
             gcode->mark_as_taken();
