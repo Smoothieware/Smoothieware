@@ -72,7 +72,7 @@ void ToolManager::on_gcode_received(void *argument){
 
                 //send new_tool_offsets to robot
                 const float *new_tool_offset = tools[new_tool]->get_offset();
-                THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
+                THEKERNEL->robot->setToolOffset(new_tool_offset);
             }
         }
     }
@@ -110,7 +110,7 @@ void ToolManager::add_tool(Tool* tool_to_add){
         this->current_tool_name = tool_to_add->get_name();
         //send new_tool_offsets to robot
         const float *new_tool_offset = tool_to_add->get_offset();
-        THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
+        THEKERNEL->robot->setToolOffset(new_tool_offset);
     } else {
         tool_to_add->disable();
     }

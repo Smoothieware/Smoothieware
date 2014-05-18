@@ -101,7 +101,7 @@ Robot::Robot()
     clear_vector(this->last_milestone);
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
-    this->setToolOffset(0.0F, 0.0F, 0.0F);
+    this->clearToolOffset();
 }
 
 //Called when the module has just been loaded
@@ -274,8 +274,6 @@ void Robot::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
 
-    //Temp variables, constant properties are stored in the object
-    uint8_t next_action = NEXT_ACTION_DEFAULT;
     this->motion_mode = -1;
 
     //G-letter Gcodes are mostly what the Robot module is interrested in, other modules also catch the gcode event and do stuff accordingly
@@ -483,12 +481,6 @@ void Robot::on_gcode_received(void *argument)
         }
     }
 
-    // add in the tooloffset to target, we do not want this set to last milestone though
-    float offset_target[3];
-    for (int i = X_AXIS; i <= Z_AXIS; ++i) {
-        offset_target[i]= target[i] + toolOffset[i];
-    }
-
     if( gcode->has_letter('F') ) {
         if( this->motion_mode == MOTION_MODE_SEEK )
             this->seek_rate = this->to_millimeters( gcode->get_value('F') );
@@ -497,21 +489,15 @@ void Robot::on_gcode_received(void *argument)
     }
 
     //Perform any physical actions
-    switch( next_action ) {
-        case NEXT_ACTION_DEFAULT:
-            switch(this->motion_mode) {
-                case MOTION_MODE_CANCEL: break;
-                case MOTION_MODE_SEEK  : this->append_line(gcode, offset_target, this->seek_rate / seconds_per_minute ); break;
-                case MOTION_MODE_LINEAR: this->append_line(gcode, offset_target, this->feed_rate / seconds_per_minute ); break;
-                case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, offset_target ); break;
-            }
-            break;
+    switch(this->motion_mode) {
+        case MOTION_MODE_CANCEL: break;
+        case MOTION_MODE_SEEK  : this->append_line(gcode, target, this->seek_rate / seconds_per_minute ); break;
+        case MOTION_MODE_LINEAR: this->append_line(gcode, target, this->feed_rate / seconds_per_minute ); break;
+        case MOTION_MODE_CW_ARC:
+        case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, target ); break;
     }
 
-    // As far as the parser is concerned, the position is now == target. In reality the
-    // motion control system might still be processing the action and the real tool position
-    // in any intermediate location.
-    memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->position[] = target[];
+    // last_milestone was set to target in append_milestone, no need to do it again
 
 }
 
@@ -801,10 +787,19 @@ void Robot::select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2)
     this->plane_axis_2 = axis_2;
 }
 
-void Robot::setToolOffset(float offsetx, float offsety, float offsetz)
+void Robot::clearToolOffset()
 {
-    this->toolOffset[0] = offsetx;
-    this->toolOffset[1] = offsety;
-    this->toolOffset[2] = offsetz;
+    memset(this->toolOffset, 0, sizeof(this->toolOffset));
+}
+
+void Robot::setToolOffset(const float offset[3])
+{
+    // this is ugly, but it is basically how Marlin does it...
+    // we remove the last tooloffset from last_milestone, and add the new one in
+    // this has the effect of offseting all future moves, but in effect lying about the last_milestone before the next move
+    for (int i = X_AXIS; i <= Z_AXIS; ++i) {
+        this->last_milestone[i]= this->last_milestone[i] - this->toolOffset[i] + offset[i];
+    }
+    memcpy(this->toolOffset, offset, sizeof(this->toolOffset));
 }
 

@@ -55,7 +55,7 @@ class Robot : public Module {
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
-		void setToolOffset(float offsetx, float offsety, float offsetz);
+		void setToolOffset(const float offset[3]);
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
@@ -89,7 +89,7 @@ class Robot : public Module {
         float max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
 
 		float toolOffset[3];
-		//void clearToolOffset();
+		void clearToolOffset();
 
     // Used by Stepper
     public:
