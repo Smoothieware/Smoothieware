@@ -177,8 +177,11 @@ void Extruder::on_gcode_received(void *argument)
 
         } else if (gcode->m == 92 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier) ) ) {
             float spm = this->steps_per_millimeter;
-            if (gcode->has_letter('E'))
+            if (gcode->has_letter('E')){
                 spm = gcode->get_value('E');
+                this->steps_per_millimeter = spm;
+            }
+
             gcode->stream->printf("E:%g ", spm);
             gcode->add_nl = true;
             gcode->mark_as_taken();
@@ -195,7 +198,7 @@ void Extruder::on_gcode_received(void *argument)
     }
 
     // Gcodes to pass along to on_gcode_execute
-    if( ( gcode->has_m && (gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 || gcode->m == 92 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ) {
+    if( ( gcode->has_m && (gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ) {
         THEKERNEL->conveyor->append_gcode(gcode);
     }
 
@@ -233,11 +236,6 @@ void Extruder::on_gcode_execute(void *argument)
         }
         if( gcode->m == 84 ) {
             this->en_pin.set(1);
-        }
-        if (gcode->m == 92 ) {
-            if (gcode->has_letter('E')) {
-                this->steps_per_millimeter = gcode->get_value('E');
-            }
         }
     }
 

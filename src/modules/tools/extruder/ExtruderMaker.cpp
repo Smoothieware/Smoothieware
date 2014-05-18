@@ -13,6 +13,7 @@
 #include "ToolManager.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "StreamOutputPool.h"
 
 #include <math.h>
 using namespace std;
@@ -26,6 +27,7 @@ void ExtruderMaker::on_module_loaded(){
 
     // If there is a "single" extruder configured ( old config syntax from when there was only one extruder module, no pool/maker
     if( THEKERNEL->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() ){
+        THEKERNEL->streams->printf("NOTE: Old Extruder config used\n");
 
         // Make a new extruder module
         Extruder* extruder = new Extruder(0, true);
@@ -42,6 +44,7 @@ void ExtruderMaker::on_module_loaded(){
     THEKERNEL->config->get_module_list( &modules, extruder_checksum );
 
     if(modules.size() == 0) {
+        THEKERNEL->streams->printf("NOTE: No extruders configured\n");
         // no extruders
         delete this;
         return;
@@ -51,11 +54,16 @@ void ExtruderMaker::on_module_loaded(){
         // only one extruder so no tool manager required
         // If module is enabled
         if( THEKERNEL->config->value(extruder_checksum, modules[0], enable_checksum )->as_bool() ){
+            THEKERNEL->streams->printf("NOTE: One extruder configured\n");
             // Make a new extruder module
             Extruder* extruder = new Extruder(modules[0]);
             // Add the module to the kernel
             THEKERNEL->add_module( extruder );
             extruder->enable();
+
+        }else{
+            THEKERNEL->streams->printf("NOTE: No extruders enabled\n");
+            delete this;
         }
         return;
     }
@@ -65,8 +73,8 @@ void ExtruderMaker::on_module_loaded(){
     THEKERNEL->add_module( toolmanager );
 
     // For every extruder found
+    int cnt= 0;
     for( unsigned int i = 0; i < modules.size(); i++ ){
-
         // If module is enabled
         if( THEKERNEL->config->value(extruder_checksum, modules[i], enable_checksum )->as_bool() ){
 
@@ -78,10 +86,12 @@ void ExtruderMaker::on_module_loaded(){
 
             // Add the module to the ToolsManager
             toolmanager->add_tool( extruder );
+
+            cnt++;
         }
 
     }
-
+    THEKERNEL->streams->printf("NOTE: %d extruders enabled out of %d\n", cnt, modules.size());
 }
 
 
