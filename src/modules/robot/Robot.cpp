@@ -102,7 +102,7 @@ Robot::Robot(){
     clear_vector(this->last_milestone);
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
-	this->clearToolOffset();
+	this->setToolOffset(0.0, 0.0, 0.0);
 }
 
 //Called when the module has just been loaded
@@ -287,7 +287,6 @@ void Robot::on_gcode_received(void * argument){
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;
             case 20: this->inch_mode = true; gcode->mark_as_taken();  break;
             case 21: this->inch_mode = false; gcode->mark_as_taken();  break;
-            case 28: this->clearToolOffset(); break;
             case 90: this->absolute_mode = true; gcode->mark_as_taken();  break;
             case 91: this->absolute_mode = false; gcode->mark_as_taken();  break;
             case 92: {
@@ -785,11 +784,5 @@ void Robot::setToolOffset(float offsetx, float offsety, float offsetz) {
         this->toolOffset[0] = offsetx;
 	this->toolOffset[1] = offsety;
 	this->toolOffset[2] = offsetz;
-}
-
-void Robot::clearToolOffset() {
-	this->toolOffset[0] = 0.0f;
-	this->toolOffset[1] = 0.0f;
-	this->toolOffset[2] = 0.0f;
 }
 
