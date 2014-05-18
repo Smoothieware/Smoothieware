@@ -70,7 +70,7 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     this->single_config = single;
     this->identifier    = config_identifier;
 
-    memset(this->offset, sizeof(this->offset), 0);
+    memset(this->offset, 0, sizeof(this->offset));
 }
 
 void Extruder::on_module_loaded()

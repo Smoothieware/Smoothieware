@@ -89,7 +89,7 @@ class Robot : public Module {
         float max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
 
 		float toolOffset[3];
-		void clearToolOffset();
+		//void clearToolOffset();
 
     // Used by Stepper
     public:

@@ -101,7 +101,7 @@ Robot::Robot()
     clear_vector(this->last_milestone);
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
-    this->setToolOffset(0.0, 0.0, 0.0);
+    this->setToolOffset(0.0F, 0.0F, 0.0F);
 }
 
 //Called when the module has just been loaded
@@ -479,8 +479,14 @@ void Robot::on_gcode_received(void *argument)
     }
     for(char letter = 'X'; letter <= 'Z'; letter++) {
         if( gcode->has_letter(letter) ) {
-            target[letter - 'X'] = this->to_millimeters(gcode->get_value(letter)) + (this->absolute_mode ? 0 : target[letter - 'X']) + this->toolOffset[letter - 'X'];
+            target[letter - 'X'] = this->to_millimeters(gcode->get_value(letter)) + (this->absolute_mode ? 0 : target[letter - 'X']);
         }
+    }
+
+    // add in the tooloffset to target, we do not want this set to last milestone though
+    float offset_target[3];
+    for (int i = X_AXIS; i <= Z_AXIS; ++i) {
+        offset_target[i]= target[i] + toolOffset[i];
     }
 
     if( gcode->has_letter('F') ) {
@@ -495,9 +501,9 @@ void Robot::on_gcode_received(void *argument)
         case NEXT_ACTION_DEFAULT:
             switch(this->motion_mode) {
                 case MOTION_MODE_CANCEL: break;
-                case MOTION_MODE_SEEK  : this->append_line(gcode, target, this->seek_rate / seconds_per_minute ); break;
-                case MOTION_MODE_LINEAR: this->append_line(gcode, target, this->feed_rate / seconds_per_minute ); break;
-                case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, target ); break;
+                case MOTION_MODE_SEEK  : this->append_line(gcode, offset_target, this->seek_rate / seconds_per_minute ); break;
+                case MOTION_MODE_LINEAR: this->append_line(gcode, offset_target, this->feed_rate / seconds_per_minute ); break;
+                case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, offset_target ); break;
             }
             break;
     }
