@@ -18,37 +18,57 @@
 using namespace std;
 #include <vector>
 
-
-ExtruderMaker::ExtruderMaker(){}
+#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
+#define extruder_checksum                    CHECKSUM("extruder")
+#define enable_checksum                      CHECKSUM("enable")
 
 void ExtruderMaker::on_module_loaded(){
 
     // If there is a "single" extruder configured ( old config syntax from when there was only one extruder module, no pool/maker
-    if( THEKERNEL->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() == true ){
+    if( THEKERNEL->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() ){
 
         // Make a new extruder module
-        Extruder* extruder = new Extruder(0);
-
-        // Signal the extruder it will have to read config as an alone extruder
-        extruder->single_config = true;
+        Extruder* extruder = new Extruder(0, true);
 
         // Add the module to the kernel
         THEKERNEL->add_module( extruder );
 
-        // Add the module to the ToolManager
-        THEKERNEL->toolmanager->add_tool( extruder );
-
+        // no toolmanager required so do not create one
+        return;
     }
 
     // Get every "declared" extruder module ( new, multiextruder syntax )
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, extruder_checksum );
 
+    if(modules.size() == 0) {
+        // no extruders
+        delete this;
+        return;
+    }
+
+    if(modules.size() == 1) {
+        // only one extruder so no tool manager required
+        // If module is enabled
+        if( THEKERNEL->config->value(extruder_checksum, modules[0], enable_checksum )->as_bool() ){
+            // Make a new extruder module
+            Extruder* extruder = new Extruder(modules[0]);
+            // Add the module to the kernel
+            THEKERNEL->add_module( extruder );
+            extruder->enable();
+        }
+        return;
+    }
+
+    // ONLY do this if multitool enabled and more than one tool is defined
+    ToolManager *toolmanager= new ToolManager();
+    THEKERNEL->add_module( toolmanager );
+
     // For every extruder found
     for( unsigned int i = 0; i < modules.size(); i++ ){
 
         // If module is enabled
-        if( THEKERNEL->config->value(extruder_checksum, modules[i], enable_checksum )->as_bool() == true ){
+        if( THEKERNEL->config->value(extruder_checksum, modules[i], enable_checksum )->as_bool() ){
 
             // Make a new extruder module
             Extruder* extruder = new Extruder(modules[i]);
@@ -57,8 +77,7 @@ void ExtruderMaker::on_module_loaded(){
             THEKERNEL->add_module( extruder );
 
             // Add the module to the ToolsManager
-            THEKERNEL->toolmanager->add_tool( extruder );
-
+            toolmanager->add_tool( extruder );
         }
 
     }

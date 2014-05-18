@@ -30,10 +30,6 @@ using namespace std;
 
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
 
-#define X_AXIS      0
-#define Y_AXIS      1
-#define Z_AXIS      2
-
 ToolManager::ToolManager(){
     active_tool = 0;
     current_tool_name = CHECKSUM("hotend");
@@ -67,6 +63,7 @@ void ToolManager::on_gcode_received(void *argument){
             }
         } else {
             if(new_tool != this->active_tool){
+                // We must wait for an empty queue before we can disable the current extruder
                 THEKERNEL->conveyor->wait_for_empty_queue();
                 this->tools[active_tool]->disable();
                 this->active_tool = new_tool;
@@ -74,7 +71,7 @@ void ToolManager::on_gcode_received(void *argument){
                 this->tools[active_tool]->enable();
 
                 //send new_tool_offsets to robot
-                float *new_tool_offset = tools[new_tool]->get_offset();
+                const float *new_tool_offset = tools[new_tool]->get_offset();
                 THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
             }
         }
@@ -101,7 +98,7 @@ void ToolManager::on_set_public_data(void* argument){
     if(!pdr->starts_with(tool_manager_checksum)) return;
 
     // ok this is targeted at us, so change tools
-    uint16_t tool_name= *static_cast<float*>(pdr->get_data_ptr());
+    //uint16_t tool_name= *static_cast<float*>(pdr->get_data_ptr());
     // TODO: fire a tool change gcode
     pdr->set_taken();
 }
@@ -112,7 +109,7 @@ void ToolManager::add_tool(Tool* tool_to_add){
         tool_to_add->enable();
         this->current_tool_name = tool_to_add->get_name();
         //send new_tool_offsets to robot
-        float *new_tool_offset = tool_to_add->get_offset();
+        const float *new_tool_offset = tool_to_add->get_offset();
         THEKERNEL->robot->setToolOffset(new_tool_offset[0], new_tool_offset[1], new_tool_offset[2]);
     } else {
         tool_to_add->disable();
