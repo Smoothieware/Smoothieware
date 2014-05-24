@@ -107,7 +107,6 @@ laser_module_enable                          false            # Whether to activ
 # Hotend temperature control configuration
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all.
                                                               # All configuration is ignored if false.
-temperature_control.hotend.link_to_tool      true             # This tells smoothie to enable and disable control of this hotend at the same time as the extruder of the same name
 temperature_control.hotend.thermistor_pin    0.23             # Pin for the thermistor to read
 temperature_control.hotend.heater_pin        2.7              # Pin that controls the heater
 temperature_control.hotend.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64
@@ -125,7 +124,7 @@ temperature_control.hotend.designator        T                #
 # Hotend2 temperature control configuration
 #temperature_control.hotend2.enable            true             # Whether to activate this ( "hotend" ) module at all.
                                                               # All configuration is ignored if false.
-#temperature_control.hotend2.link_to_tool      true            # This tells smoothie to enable and disable control of this hotend at the same time as the extruder of the same name
+
 #temperature_control.hotend2.thermistor_pin    0.25             # Pin for the thermistor to read
 #temperature_control.hotend2.heater_pin        1.23              # Pin that controls the heater
 #temperature_control.hotend2.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64
@@ -138,7 +137,7 @@ temperature_control.hotend.designator        T                #
 #temperature_control.hotend2.i_factor          0.097          #
 #temperature_control.hotend2.d_factor          24             #
 
-#temperature_control.hotend.max_pwm          64               # max pwm, 64 is a good value if driving a 12v resistor with 24v.
+#temperature_control.hotend2.max_pwm          64               # max pwm, 64 is a good value if driving a 12v resistor with 24v.
 
 temperature_control.bed.enable               true             #
 temperature_control.bed.thermistor_pin       0.24             #
