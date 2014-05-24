@@ -96,7 +96,7 @@ try_again:
             }
 
             while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GMT", possible_command.find_first_of("GMT") + 1);
+                size_t nextcmd = possible_command.find_first_of("GM", possible_command.find_first_of("GMT") + 1);
                 string single_command;
                 if(nextcmd == string::npos) {
                     single_command = possible_command;

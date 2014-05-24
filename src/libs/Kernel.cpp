@@ -21,7 +21,6 @@
 #include "libs/PublicData.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
-#include "modules/tools/toolsmanager/ToolsManager.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
@@ -130,8 +129,6 @@ Kernel::Kernel(){
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
     this->add_module( this->public_data    = new PublicData()    );
-    this->add_module( this->toolsmanager   = new ToolsManager()    );
-
 }
 
 // Add a module to Kernel. We don't actually hold a list of modules, we just tell it where Kernel is

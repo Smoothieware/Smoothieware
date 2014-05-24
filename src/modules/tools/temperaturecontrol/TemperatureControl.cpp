@@ -16,6 +16,8 @@
 #include "modules/robot/Conveyor.h"
 #include "PublicDataRequest.h"
 #include "TemperatureControlPublicAccess.h"
+#include "PublicData.h"
+#include "ToolManagerPublicAccess.h"
 #include "StreamOutputPool.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -28,7 +30,7 @@
 
 // Temp sensor implementations:
 #include "Thermistor.h"
-#include "max31855.h" 
+#include "max31855.h"
 
 #include "MRI_Hooks.h"
 
@@ -58,9 +60,10 @@
 #define preset1_checksum                   CHECKSUM("preset1")
 #define preset2_checksum                   CHECKSUM("preset2")
 
+#define link_to_tool_checksum              CHECKSUM("link_to_tool")
 
 TemperatureControl::TemperatureControl(uint16_t name) :
-  sensor(nullptr), name_checksum(name), waiting(false), min_temp_violated(false)
+    sensor(nullptr), name_checksum(name), waiting(false), min_temp_violated(false)
 {
 }
 
@@ -68,8 +71,9 @@ TemperatureControl::~TemperatureControl()
 {
     delete sensor;
 }
-  
-void TemperatureControl::on_module_loaded(){
+
+void TemperatureControl::on_module_loaded()
+{
 
     // We start not desiring any temp
     this->target_temperature = UNDEFINED;
@@ -87,7 +91,8 @@ void TemperatureControl::on_module_loaded(){
     this->register_for_event(ON_SET_PUBLIC_DATA);
 }
 
-void TemperatureControl::on_main_loop(void* argument){
+void TemperatureControl::on_main_loop(void *argument)
+{
     if (this->min_temp_violated) {
         THEKERNEL->streams->printf("Error: MINTEMP triggered. Check your temperature sensors!\n");
         this->min_temp_violated = false;
@@ -95,7 +100,8 @@ void TemperatureControl::on_main_loop(void* argument){
 }
 
 // Get configuration from the config file
-void TemperatureControl::on_config_reload(void* argument){
+void TemperatureControl::on_config_reload(void *argument)
+{
 
     // General config
     this->set_m_code          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, set_m_code_checksum)->by_default(104)->as_number();
@@ -105,26 +111,23 @@ void TemperatureControl::on_config_reload(void* argument){
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
+    this->link_to_tool        = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, link_to_tool_checksum)->by_default(false)->as_bool();
+
     // For backward compatibility, default to a thermistor sensor.
     std::string sensor_type = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, sensor_checksum)->by_default("thermistor")->as_string();
 
     // Instantiate correct sensor (TBD: TempSensor factory?)
     delete sensor;
     sensor = nullptr; // In case we fail to create a new sensor.
-    if(sensor_type.compare("thermistor") == 0)
-    {
+    if(sensor_type.compare("thermistor") == 0) {
         sensor = new Thermistor();
-    }
-    else if(sensor_type.compare("max31855") == 0)
-    {
+    } else if(sensor_type.compare("max31855") == 0) {
         sensor = new Max31855();
-    }
-    else
-    {
+    } else {
         sensor = new TempSensor(); // A dummy implementation
     }
     sensor->UpdateConfig(temperature_control_checksum, this->name_checksum);
-    
+
     this->preset1 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
     this->preset2 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
 
@@ -139,8 +142,8 @@ void TemperatureControl::on_config_reload(void* argument){
     this->heater_pin.set(0);
 
     // used to enable bang bang control of heater
-    this->use_bangbang= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, bang_bang_checksum)->by_default(false)->as_bool();
-    this->hysteresis= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, hysteresis_checksum)->by_default(2)->as_number();
+    this->use_bangbang = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, bang_bang_checksum)->by_default(false)->as_bool();
+    this->hysteresis = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, hysteresis_checksum)->by_default(2)->as_number();
 
     set_low_on_debug(heater_pin.port_number, heater_pin.pin);
 
@@ -149,7 +152,7 @@ void TemperatureControl::on_config_reload(void* argument){
 
     // reading tick
     THEKERNEL->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
-    this->PIDdt= 1.0 / this->readings_per_second;
+    this->PIDdt = 1.0 / this->readings_per_second;
 
     // PID
     setPIDp( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number() );
@@ -158,24 +161,34 @@ void TemperatureControl::on_config_reload(void* argument){
     // set to the same as max_pwm by default
     this->i_max = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
     this->iTerm = 0.0;
-    this->lastInput= -1.0;
+    this->lastInput = -1.0;
     this->last_reading = 0.0;
 }
 
-void TemperatureControl::on_gcode_received(void* argument){
-    Gcode* gcode = static_cast<Gcode*>(argument);
+void TemperatureControl::on_gcode_received(void *argument)
+{
+    Gcode *gcode = static_cast<Gcode *>(argument);
     if (gcode->has_m) {
         // Get temperature
-        if( gcode->m == this->get_m_code ){
+        this->active = true;
+        if( this->link_to_tool ) {
+            void *returned_data;
+            bool ok = THEKERNEL->public_data->get_value( tool_manager_checksum, &returned_data );
+
+            if (ok) {
+                struct pad_toolmanager toolmanager =  *static_cast<struct pad_toolmanager *>(returned_data);
+                this->active = toolmanager.current_tool_name == this->name_checksum;
+            }
+        }
+        if( gcode->m == this->get_m_code ) {
             char buf[32]; // should be big enough for any status
-            int n= snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), this->o);
+            int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED) ? 0.0 : target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);
             gcode->mark_as_taken();
 
         } else if (gcode->m == 301) {
             gcode->mark_as_taken();
-            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index))
-            {
+            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
                 if (gcode->has_letter('P'))
                     setPIDp( gcode->get_value('P') );
                 if (gcode->has_letter('I'))
@@ -186,7 +199,7 @@ void TemperatureControl::on_gcode_received(void* argument){
                     this->i_max    = gcode->get_value('X');
             }
             //gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, this->p, this->i, this->d, o);
-            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, o);
+            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, o);
 
         } else if (gcode->m == 303) {
             if (gcode->has_letter('E') && (gcode->get_value('E') == this->pool_index)) {
@@ -196,19 +209,19 @@ void TemperatureControl::on_gcode_received(void* argument){
                     target = gcode->get_value('S');
                     gcode->stream->printf("Target: %5.1f\n", target);
                 }
-                int ncycles= 8;
+                int ncycles = 8;
                 if (gcode->has_letter('C')) {
-                    ncycles= gcode->get_value('C');
+                    ncycles = gcode->get_value('C');
                 }
                 gcode->stream->printf("Start PID tune, command is %s\n", gcode->command.c_str());
                 this->pool->PIDtuner->begin(this, target, gcode->stream, ncycles);
             }
 
-        } else if (gcode->m == 500 || gcode->m == 503){// M500 saves some volatile settings to config override file, M503 just prints the settings
-            gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f\n", this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt);
+        } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
+            gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt);
             gcode->mark_as_taken();
 
-        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') ) {
+        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') && this->active ) {
             // Attach gcodes to the last block for on_gcode_execute
             THEKERNEL->conveyor->append_gcode(gcode);
 
@@ -220,25 +233,21 @@ void TemperatureControl::on_gcode_received(void* argument){
     }
 }
 
-void TemperatureControl::on_gcode_execute(void* argument){
-    Gcode* gcode = static_cast<Gcode*>(argument);
-    if( gcode->has_m){
+void TemperatureControl::on_gcode_execute(void *argument)
+{
+    Gcode *gcode = static_cast<Gcode *>(argument);
+    if( gcode->has_m) {
         if (((gcode->m == this->set_m_code) || (gcode->m == this->set_and_wait_m_code))
-            && gcode->has_letter('S'))
-        {
+            && gcode->has_letter('S') && this->active) {
             float v = gcode->get_value('S');
 
-            if (v == 0.0)
-            {
+            if (v == 0.0) {
                 this->target_temperature = UNDEFINED;
-                this->heater_pin.set((this->o=0));
-            }
-            else
-            {
+                this->heater_pin.set((this->o = 0));
+            } else {
                 this->set_desired_temperature(v);
 
-                if( gcode->m == this->set_and_wait_m_code)
-                {
+                if( gcode->m == this->set_and_wait_m_code) {
                     THEKERNEL->pauser->take();
                     this->waiting = true;
                 }
@@ -247,8 +256,9 @@ void TemperatureControl::on_gcode_execute(void* argument){
     }
 }
 
-void TemperatureControl::on_get_public_data(void* argument){
-    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+void TemperatureControl::on_get_public_data(void *argument)
+{
+    PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
 
     if(!pdr->starts_with(temperature_control_checksum)) return;
 
@@ -258,24 +268,25 @@ void TemperatureControl::on_get_public_data(void* argument){
     if(pdr->third_element_is(current_temperature_checksum)) {
         // this must be static as it will be accessed long after we have returned
         static struct pad_temperature temp_return;
-        temp_return.current_temperature= this->get_temperature();
-        temp_return.target_temperature= (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
-        temp_return.pwm= this->o;
+        temp_return.current_temperature = this->get_temperature();
+        temp_return.target_temperature = (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
+        temp_return.pwm = this->o;
 
         pdr->set_data_ptr(&temp_return);
         pdr->set_taken();
     }
 }
 
-void TemperatureControl::on_set_public_data(void* argument){
-    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+void TemperatureControl::on_set_public_data(void *argument)
+{
+    PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
 
     if(!pdr->starts_with(temperature_control_checksum)) return;
 
     if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
 
     // ok this is targeted at us, so set the temp
-    float t= *static_cast<float*>(pdr->get_data_ptr());
+    float t = *static_cast<float *>(pdr->get_data_ptr());
     this->set_desired_temperature(t);
     pdr->set_taken();
 }
@@ -292,33 +303,28 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
         heater_pin.set((this->o = 0));
 }
 
-float TemperatureControl::get_temperature(){
+float TemperatureControl::get_temperature()
+{
     return last_reading;
 }
 
-uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy){
+uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
+{
     float temperature = sensor->get_temperature();
 
-    if (target_temperature > 0)
-    {
-        if (isinf(temperature))
-        {
+    if (target_temperature > 0) {
+        if (isinf(temperature)) {
             this->min_temp_violated = true;
             target_temperature = UNDEFINED;
-            heater_pin.set((this->o=0));
-        }
-        else
-        {
+            heater_pin.set((this->o = 0));
+        } else {
             pid_process(temperature);
-            if ((temperature > target_temperature) && waiting)
-            {
+            if ((temperature > target_temperature) && waiting) {
                 THEKERNEL->pauser->release();
                 waiting = false;
             }
         }
-    }
-    else
-    {
+    } else {
         heater_pin.set((this->o = 0));
     }
     last_reading = temperature;
@@ -333,19 +339,19 @@ void TemperatureControl::pid_process(float temperature)
     if(use_bangbang) {
         // bang bang is very simple, if temp is < target - hysteresis turn on full else if  temp is > target + hysteresis turn heater off
         // good for relays
-        if(temperature > (target_temperature+hysteresis) && this->o > 0) {
+        if(temperature > (target_temperature + hysteresis) && this->o > 0) {
             heater_pin.set(false);
-            this->o= 0; // for display purposes only
+            this->o = 0; // for display purposes only
 
-        }else if(temperature < (target_temperature-hysteresis) && this->o <= 0) {
+        } else if(temperature < (target_temperature - hysteresis) && this->o <= 0) {
             if(heater_pin.max_pwm() >= 255) {
                 // turn on full
                 this->heater_pin.set(true);
-                this->o= 255; // for display purposes only
-            }else{
+                this->o = 255; // for display purposes only
+            } else {
                 // only to whatever max pwm is configured
                 this->heater_pin.pwm(heater_pin.max_pwm());
-                this->o= heater_pin.max_pwm(); // for display purposes only
+                this->o = heater_pin.max_pwm(); // for display purposes only
             }
         }
         return;
@@ -357,12 +363,12 @@ void TemperatureControl::pid_process(float temperature)
     if (this->iTerm > this->i_max) this->iTerm = this->i_max;
     else if (this->iTerm < 0.0) this->iTerm = 0.0;
 
-    if(this->lastInput < 0.0) this->lastInput= temperature; // set first time
-    float d= (temperature - this->lastInput);
+    if(this->lastInput < 0.0) this->lastInput = temperature; // set first time
+    float d = (temperature - this->lastInput);
 
     // calculate the PID output
     // TODO does this need to be scaled by max_pwm/256? I think not as p_factor already does that
-    this->o = (this->p_factor*error) + this->iTerm - (this->d_factor*d);
+    this->o = (this->p_factor * error) + this->iTerm - (this->d_factor * d);
 
     if (this->o >= heater_pin.max_pwm())
         this->o = heater_pin.max_pwm();
@@ -370,23 +376,26 @@ void TemperatureControl::pid_process(float temperature)
         this->o = 0;
 
     this->heater_pin.pwm(this->o);
-    this->lastInput= temperature;
+    this->lastInput = temperature;
 }
 
-void TemperatureControl::on_second_tick(void* argument)
+void TemperatureControl::on_second_tick(void *argument)
 {
     if (waiting)
-        THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED)?0.0:target_temperature), o);
+        THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED) ? 0.0 : target_temperature), o);
 }
 
-void TemperatureControl::setPIDp(float p) {
-    this->p_factor= p;
+void TemperatureControl::setPIDp(float p)
+{
+    this->p_factor = p;
 }
 
-void TemperatureControl::setPIDi(float i) {
-    this->i_factor= i*this->PIDdt;
+void TemperatureControl::setPIDi(float i)
+{
+    this->i_factor = i * this->PIDdt;
 }
 
-void TemperatureControl::setPIDd(float d) {
-    this->d_factor= d/this->PIDdt;
+void TemperatureControl::setPIDd(float d)
+{
+    this->d_factor = d / this->PIDdt;
 }

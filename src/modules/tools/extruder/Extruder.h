@@ -10,21 +10,18 @@
 #ifndef EXTURDER_MODULE_H
 #define EXTRUDER_MODULE_H
 
-#include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "modules/robot/Block.h"
-#include "modules/tools/toolsmanager/Tool.h"
+#include "Tool.h"
 #include "Pin.h"
 
 class StepperMotor;
+class Block;
 
-#define OFF 0
-#define SOLO 1
-#define FOLLOW 2
-
-class Extruder : public Module, public Tool {
+// NOTE Tool is also a module, no need for multiple inheritance here
+class Extruder : public Tool {
     public:
-        Extruder(uint16_t config_identifier);
+        Extruder(uint16_t config_identifier, bool single= false);
+        virtual ~Extruder() {}
+
         void     on_module_loaded();
         void     on_config_reload(void* argument);
         void     on_gcode_received(void*);
@@ -37,6 +34,8 @@ class Extruder : public Module, public Tool {
         uint32_t acceleration_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
         Block*   append_empty_block();
+
+    private:
 
         Pin             step_pin;                     // Step pin for the stepper driver
         Pin             dir_pin;                      // Dir pin for the stepper driver
@@ -53,14 +52,11 @@ class Extruder : public Module, public Tool {
 
         float          travel_ratio;
         float          travel_distance;
-        bool            absolute_mode;                // absolute/relative coordinate mode switch
 
         char mode;                                    // extruder motion mode,  OFF, SOLO, or FOLLOW
-
+        bool absolute_mode;                           // absolute/relative coordinate mode switch
         bool paused;
         bool single_config;
-
-        uint16_t identifier;
 
         StepperMotor* stepper_motor;
 

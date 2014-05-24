@@ -26,7 +26,6 @@ class GcodeDispatch;
 class Robot;
 class Stepper;
 class Planner;
-class ToolsManager;
 class StepTicker;
 class Adc;
 class PublicData;
@@ -53,7 +52,6 @@ class Kernel {
         Config*           config;
         Conveyor*         conveyor;
         Pauser*           pauser;
-        ToolsManager*     toolsmanager;
 
         int debug;
         SlowTicker*       slow_ticker;

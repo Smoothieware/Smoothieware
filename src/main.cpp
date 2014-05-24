@@ -42,6 +42,7 @@
 #include "libs/USBDevice/DFU.h"
 #include "libs/SDFAT.h"
 #include "StreamOutputPool.h"
+#include "ToolManager.h"
 
 #include "libs/Watchdog.h"
 
@@ -114,11 +115,12 @@ int main() {
     kernel->add_module( new Player() );
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
-    #ifndef NO_TOOLS_TEMPERATURECONTROL
-    kernel->add_module( new TemperatureControlPool() );
-    #endif
     #ifndef NO_TOOLS_EXTRUDER
     kernel->add_module( new ExtruderMaker() );
+    #endif
+    #ifndef NO_TOOLS_TEMPERATURECONTROL
+    // Note order is important here must be after extruder
+    kernel->add_module( new TemperatureControlPool() );
     #endif
     #ifndef NO_TOOLS_LASER
     kernel->add_module( new Laser() );

@@ -8,19 +8,13 @@
 #ifndef EXTRUDERMAKER_H
 #define EXTRUDERMAKER_H
 
-#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
-#define extruder_checksum                    CHECKSUM("extruder")
-#define enable_checksum                      CHECKSUM("enable")
-
 using namespace std;
 #include <vector>
 
 class ExtruderMaker : public Module {
     public:
-        ExtruderMaker();
-
+        ExtruderMaker(){}
         void on_module_loaded();
-
 };
 
 
