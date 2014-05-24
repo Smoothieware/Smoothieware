@@ -27,26 +27,21 @@ using namespace std;
 
 #include <mri.h>
 
+#define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
+#define minimum_steps_per_minute_checksum           CHECKSUM("minimum_steps_per_minute")
 
 // The stepper reacts to blocks that have XYZ movement to transform them into actual stepper motor moves
 // TODO: This does accel, accel should be in StepperMotor
-
-Stepper* stepper;
-uint32_t previous_step_count;
-uint32_t skipped_speed_updates;
-uint32_t speed_ticks_counter;
 
 Stepper::Stepper(){
     this->current_block = NULL;
     this->paused = false;
     this->trapezoid_generator_busy = false;
     this->force_speed_update = false;
-    skipped_speed_updates = 0;
 }
 
 //Called when the module has just been loaded
 void Stepper::on_module_loaded(){
-    stepper = this;
     register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
@@ -255,9 +250,6 @@ inline void Stepper::trapezoid_generator_reset(){
     this->trapezoid_adjusted_rate = this->current_block->initial_rate;
     this->force_speed_update = true;
     this->trapezoid_tick_cycle_counter = 0;
-    previous_step_count = 0;
-    skipped_speed_updates = 0;
-    speed_ticks_counter = 0;
 }
 
 // Update the speed for all steppers
