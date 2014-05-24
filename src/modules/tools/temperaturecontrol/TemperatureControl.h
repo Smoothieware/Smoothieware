@@ -8,46 +8,9 @@
 #ifndef temperaturecontrol_h
 #define temperaturecontrol_h
 
-#include "libs/Pin.h"
+#include "Module.h"
 #include "Pwm.h"
-#include <math.h>
-
-#include "RingBuffer.h"
-
-#define UNDEFINED -1
-
-#include "TemperatureControlPublicAccess.h"
-#define thermistor_checksum                CHECKSUM("thermistor")
-#define r0_checksum                        CHECKSUM("r0")
-#define readings_per_second_checksum       CHECKSUM("readings_per_second")
-#define max_pwm_checksum                   CHECKSUM("max_pwm")
-#define pwm_frequency_checksum             CHECKSUM("pwm_frequency")
-#define t0_checksum                        CHECKSUM("t0")
-#define beta_checksum                      CHECKSUM("beta")
-#define vadc_checksum                      CHECKSUM("vadc")
-#define vcc_checksum                       CHECKSUM("vcc")
-#define r1_checksum                        CHECKSUM("r1")
-#define r2_checksum                        CHECKSUM("r2")
-#define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
-#define heater_pin_checksum                CHECKSUM("heater_pin")
-
-#define get_m_code_checksum                CHECKSUM("get_m_code")
-#define set_m_code_checksum                CHECKSUM("set_m_code")
-#define set_and_wait_m_code_checksum       CHECKSUM("set_and_wait_m_code")
-
-#define designator_checksum                CHECKSUM("designator")
-
-#define p_factor_checksum                  CHECKSUM("p_factor")
-#define i_factor_checksum                  CHECKSUM("i_factor")
-#define d_factor_checksum                  CHECKSUM("d_factor")
-
-#define i_max_checksum                     CHECKSUM("i_max")
-
-#define preset1_checksum                   CHECKSUM("preset1")
-#define preset2_checksum                   CHECKSUM("preset2")
-
-
-#define QUEUE_LEN 8
+#include "TempSensor.h"
 
 class TemperatureControlPool;
 
@@ -55,6 +18,7 @@ class TemperatureControl : public Module {
 
     public:
         TemperatureControl(uint16_t name);
+        ~TemperatureControl();
 
         void on_module_loaded();
         void on_main_loop(void* argument);
@@ -65,54 +29,38 @@ class TemperatureControl : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
 
-        void set_desired_temperature(double desired_temperature);
-        double get_temperature();
-        double adc_value_to_temperature(int adc_value);
-        uint32_t thermistor_read_tick(uint32_t dummy);
-        int new_thermistor_reading();
-
+        void set_desired_temperature(float desired_temperature);
 
         int pool_index;
         TemperatureControlPool *pool;
         friend class PID_Autotuner;
 
+        float get_temperature();
     private:
-        void pid_process(double);
+        uint32_t thermistor_read_tick(uint32_t dummy);
+        void pid_process(float);
 
-        double target_temperature;
+        float target_temperature;
 
-        double preset1;
-        double preset2;
+        float preset1;
+        float preset2;
 
-        // Thermistor computation settings
-        double r0;
-        double t0;
-        int r1;
-        int r2;
-        double beta;
-        double j;
-        double k;
-
-
+        TempSensor *sensor;
+        
         // PID runtime
-        double i_max;
+        float i_max;
 
         int o;
 
-        double last_reading;
+        float last_reading;
 
-        double acceleration_factor;
-        double readings_per_second;
-
-        RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
-        uint16_t median_buffer[QUEUE_LEN];
-        int running_total;
+        float readings_per_second;
 
         uint16_t name_checksum;
 
-        Pin  thermistor_pin;
         Pwm  heater_pin;
 
+        bool use_bangbang;
         bool waiting;
         bool min_temp_violated;
 
@@ -122,18 +70,18 @@ class TemperatureControl : public Module {
 
         string designator;
 
+        void setPIDp(float p);
+        void setPIDi(float i);
+        void setPIDd(float d);
 
-        void setPIDp(double p);
-        void setPIDi(double i);
-        void setPIDd(double d);
-
-        double iTerm;
-        double lastInput;
+        float hysteresis;
+        float iTerm;
+        float lastInput;
         // PID settings
-        double p_factor;
-        double i_factor;
-        double d_factor;
-        double PIDdt;
+        float p_factor;
+        float i_factor;
+        float d_factor;
+        float PIDdt;
 };
 
 #endif

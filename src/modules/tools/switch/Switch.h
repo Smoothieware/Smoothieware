@@ -8,21 +8,12 @@
 #ifndef SWITCH_H
 #define SWITCH_H
 
-#include "libs/Pin.h"
+#include "Pin.h"
+#include "Pwm.h"
 #include <math.h>
 
-#define    switch_checksum              CHECKSUM("switch")
-#define    startup_state_checksum       CHECKSUM("startup_state")
-#define    startup_value_checksum       CHECKSUM("startup_value")
-#define    input_pin_checksum           CHECKSUM("input_pin")
-#define    input_pin_behavior_checksum  CHECKSUM("input_pin_behavior")
-#define    toggle_checksum              CHECKSUM("toggle")
-#define    momentary_checksum           CHECKSUM("momentary")
-#define    input_on_command_checksum    CHECKSUM("input_on_command")
-#define    input_off_command_checksum   CHECKSUM("input_off_command")
-#define    output_pin_checksum          CHECKSUM("output_pin")
-#define    output_on_command_checksum   CHECKSUM("output_on_command")
-#define    output_off_command_checksum  CHECKSUM("output_off_command")
+class Gcode;
+class StreamOutput;
 
 class Switch : public Module {
     public:
@@ -34,20 +25,28 @@ class Switch : public Module {
         void on_gcode_received(void* argument);
         void on_gcode_execute(void* argument);
         void on_main_loop(void* argument);
+        void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
         uint32_t pinpoll_tick(uint32_t dummy);
-
+        enum OUTPUT_TYPE {PWM, DIGITAL};
+    private:
         void flip();
         void send_gcode(string msg, StreamOutput* stream);
+        bool match_input_on_gcode(const Gcode* gcode) const;
+        bool match_input_off_gcode(const Gcode* gcode) const;
 
-        uint16_t name_checksum;
+        uint16_t  name_checksum;
         Pin       input_pin;
-        uint16_t input_pin_behavior;
+        uint16_t  input_pin_behavior;
         bool      input_pin_state;
-        string    input_on_command;
-        string    input_off_command;
+        char      input_on_command_letter;
+        char      input_off_command_letter;
+        uint16_t  input_on_command_code;
+        uint16_t  input_off_command_code;
         bool      switch_state;
         float     switch_value;
         bool      switch_changed;
+        OUTPUT_TYPE output_type;
         Pwm       output_pin;
         string    output_on_command;
         string    output_off_command;

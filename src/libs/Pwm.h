@@ -19,6 +19,7 @@ public:
     void     pwm(int);
     void     set(bool);
 
+private:
     int  _max;
     int  _pwm;
     int  _sd_accumulator;

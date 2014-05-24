@@ -10,13 +10,12 @@
 #ifndef SLOWTICKER_H
 #define SLOWTICKER_H
 
+#include "Module.h"
+
 using namespace std;
 #include <vector>
-#include "libs/nuts_bolts.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "libs/Hook.h"
 
+#include "libs/Hook.h"
 #include "libs/Pin.h"
 
 #include "system_LPC17xx.h" // for SystemCoreClock

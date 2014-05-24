@@ -4,10 +4,13 @@
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
-#include "mri.h"
-#include "libs/Kernel.h"
 #include "StepperMotor.h"
+
+#include "Kernel.h"
 #include "MRI_Hooks.h"
+#include "StepTicker.h"
+
+#include <math.h>
 
 // A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
 // TODO : Abstract this into Actuator
@@ -23,9 +26,15 @@ StepperMotor::StepperMotor(){
     this->is_move_finished = false;
     this->signal_step = false;
     this->step_signal_hook = new Hook();
+
+    steps_per_mm         = 1.0F;
+    max_rate             = 50.0F;
+
+    last_milestone_steps = 0;
+    last_milestone_mm    = 0.0F;
 }
 
-StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
+StepperMotor::StepperMotor(Pin& step, Pin& dir, Pin& en) : step_pin(step), dir_pin(dir), en_pin(en) {
     this->moving = false;
     this->paused = false;
     this->fx_counter = 0;
@@ -37,7 +46,14 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
     this->signal_step = false;
     this->step_signal_hook = new Hook();
 
-    set_high_on_debug(en->port_number, en->pin);
+    enable(false);
+    set_high_on_debug(en.port_number, en.pin);
+
+    steps_per_mm         = 1.0F;
+    max_rate             = 50.0F;
+
+    last_milestone_steps = 0;
+    last_milestone_mm    = 0.0F;
 }
 
 // This is called ( see the .h file, we had to put a part of things there for obscure inline reasons ) when a step has to be generated
@@ -45,7 +61,7 @@ StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_p
 void StepperMotor::step(){
 
     // output to pins 37t
-    this->step_pin->set( 1                   );
+    this->step_pin.set( 1                   );
     this->step_ticker->reset_step_pins = true;
 
     // move counter back 11t
@@ -61,7 +77,7 @@ void StepperMotor::step(){
 
     // Is this move finished ?
     if( this->stepped == this->steps_to_move ){
-        // Mark it as finished, then StepTicker will call signal_mode_finished() 
+        // Mark it as finished, then StepTicker will call signal_mode_finished()
         // This is so we don't call that before all the steps have been generated for this tick()
         this->is_move_finished = true;
         this->step_ticker->moves_finished = true;
@@ -106,7 +122,8 @@ inline void StepperMotor::update_exit_tick(){
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps ){
     // We do not set the direction directly, we will set the pin just before the step pin on the next tick
-    this->dir_pin->set(direction);
+    this->dir_pin.set(direction);
+    this->direction = direction;
 
     // How many steps we have to move until the move is done
     this->steps_to_move = steps;
@@ -129,7 +146,7 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 }
 
 // Set the speed at which this steper moves
-void StepperMotor::set_speed( double speed ){
+void StepperMotor::set_speed( float speed ){
 
     if (speed < 20.0)
         speed = 20.0;
@@ -138,8 +155,8 @@ void StepperMotor::set_speed( double speed ){
     this->steps_per_second = speed;
 
     // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64
-    double ticks_per_step = (double)( (double)this->step_ticker->frequency / speed );
-    double double_fx_ticks_per_step = (double)(1<<8) * ( (double)(1<<8) * ticks_per_step ); // 8x8 because we had to do 16x16 because 32 did not work
+    float ticks_per_step = (float)( (float)this->step_ticker->frequency / speed );
+    float double_fx_ticks_per_step = (float)(1<<8) * ( (float)(1<<8) * ticks_per_step ); // 8x8 because we had to do 16x16 because 32 did not work
     this->fx_ticks_per_step = (uint32_t)( floor(double_fx_ticks_per_step) );
 
 }
@@ -157,3 +174,20 @@ void StepperMotor::unpause(){
 }
 
 
+void StepperMotor::change_steps_per_mm(float new_steps)
+{
+    steps_per_mm = new_steps;
+    last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+}
+
+void StepperMotor::change_last_milestone(float new_milestone)
+{
+    last_milestone_mm = new_milestone;
+    last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+}
+
+int  StepperMotor::steps_to_target(float target)
+{
+    int target_steps = lround(target * steps_per_mm);
+    return target_steps - last_milestone_steps;
+}

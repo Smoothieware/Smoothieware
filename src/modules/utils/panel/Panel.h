@@ -8,15 +8,14 @@
 #ifndef PANEL_H
 #define PANEL_H
 
-#include "Kernel.h"
-#include "PanelScreen.h"
-#include "panels/LcdBase.h"
 #include "Button.h"
 
 #define MENU_MODE                  0
 #define CONTROL_MODE               1
 
+class LcdBase;
 class PanelScreen;
+
 class Panel : public Module {
     public:
         Panel();
@@ -24,6 +23,7 @@ class Panel : public Module {
 
         void on_module_loaded();
         uint32_t button_tick(uint32_t dummy);
+        uint32_t encoder_tick(uint32_t dummy);
         void on_idle(void* argument);
         void on_main_loop(void* argument);
         void on_gcode_received(void* argument);
@@ -52,14 +52,14 @@ class Panel : public Module {
         uint16_t get_menu_current_line() { return menu_current_line; }
 
         // Control
-        bool enter_control_mode(double passed_normal_increment, double passed_pressed_increment);
-        void set_control_value(double value);
-        double get_control_value();
+        bool enter_control_mode(float passed_normal_increment, float passed_pressed_increment);
+        void set_control_value(float value);
+        float get_control_value();
         bool control_value_change();
         void control_value_update();
-        double get_jogging_speed(char axis) { return jogging_speed_mm_min[axis-'X']; }
-        double get_default_hotend_temp() { return default_hotend_temperature; }
-        double get_default_bed_temp() { return default_bed_temperature; }
+        float get_jogging_speed(char axis) { return jogging_speed_mm_min[axis-'X']; }
+        float get_default_hotend_temp() { return default_hotend_temperature; }
+        float get_default_bed_temp() { return default_bed_temperature; }
 
         // file playing from sd
         bool is_playing() const;
@@ -89,9 +89,9 @@ class Panel : public Module {
         uint16_t menu_current_line;
 
         // Control
-        double normal_increment;
+        float normal_increment;
         int control_normal_counter;
-        double control_base_value;
+        float control_base_value;
 
         Button up_button;
         Button down_button;
@@ -104,6 +104,7 @@ class Panel : public Module {
         volatile bool click_changed;
         volatile bool refresh_flag;
         volatile bool do_buttons;
+        volatile bool do_encoder;
         bool paused;
         int idle_time;
         bool start_up;
@@ -114,9 +115,9 @@ class Panel : public Module {
         PanelScreen* top_screen;
         PanelScreen* current_screen;
 
-        double jogging_speed_mm_min[3];
-        double default_hotend_temperature;
-        double default_bed_temperature;
+        float jogging_speed_mm_min[3];
+        float default_hotend_temperature;
+        float default_bed_temperature;
 
         char playing_file[20];
         string message;

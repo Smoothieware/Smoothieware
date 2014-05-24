@@ -23,24 +23,7 @@ class StreamOutput {
         StreamOutput(){}
         virtual ~StreamOutput(){}
 
-        virtual int printf(const char* format, ...) __attribute__ ((format(printf, 2, 3))) {
-            char *buffer;
-            // Make the message
-            va_list args;
-            va_start(args, format);
-
-            int size = vsnprintf(NULL, 0, format, args)
-                + 1; // we add one to take into account space for the terminating \0
-
-            buffer = new char[size];
-            vsnprintf(buffer, size, format, args);
-            va_end(args);
-
-            puts(buffer);
-
-            delete[] buffer;
-            return size - 1;
-        }
+        virtual int printf(const char *format, ...) __attribute__ ((format(printf, 2, 3)));
         virtual int _putc(int c) { return 1; }
         virtual int _getc(void) { return 0; }
         virtual int puts(const char* str) = 0;

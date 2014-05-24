@@ -9,10 +9,12 @@
 #ifndef simpleshell_h
 #define simpleshell_h
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/StreamOutput.h"
+#include "Module.h"
+
+#include <string>
+using std::string;
+
+class StreamOutput;
 
 class SimpleShell : public Module
 {
@@ -25,7 +27,6 @@ public:
     void on_second_tick(void *);
 
 private:
-    string absolute_from_relative( string path );
     void ls_command(string parameters, StreamOutput *stream );
     void cd_command(string parameters, StreamOutput *stream );
     void delete_file_command(string parameters, StreamOutput *stream );
@@ -40,7 +41,11 @@ private:
     void get_command(string parameters, StreamOutput *stream );
     void set_temp_command(string parameters, StreamOutput *stream );
     void mem_command(string parameters, StreamOutput *stream );
-    void test_command(string parameters, StreamOutput *stream );
+
+    void net_command( string parameters, StreamOutput *stream);
+
+    void load_command( string parameters, StreamOutput *stream);
+    void save_command( string parameters, StreamOutput *stream);
 
     bool parse_command(unsigned short cs, string args, StreamOutput *stream);
 
@@ -51,7 +56,6 @@ private:
     } ptentry_t;
 
     static ptentry_t commands_table[];
-    string current_path;
     int reset_delay_secs;
 };
 

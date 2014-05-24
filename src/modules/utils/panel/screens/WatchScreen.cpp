@@ -14,9 +14,18 @@
 #include "libs/utils.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
+#include "modules/robot/Conveyor.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
+#include "NetworkPublicAccess.h"
+#include "PublicData.h"
+#include "SwitchPublicAccess.h"
+#include "checksumm.h"
+#include "Pauser.h"
 
+#include <math.h>
+#include <string.h>
 #include <string>
+
 using namespace std;
 static const uint8_t icons[] = { // 115x19 - 3 bytes each: he1, he2, he3, bed, fan
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xE0,
@@ -46,6 +55,7 @@ WatchScreen::WatchScreen()
 {
     speed_changed = false;
     issue_change_speed = false;
+    ipstr = NULL;
 }
 
 void WatchScreen::on_enter()
@@ -107,7 +117,7 @@ void WatchScreen::on_refresh()
         // TODO should be enabled and disabled and settable from config
         this->panel->lcd->setLed(LED_BED_ON, this->bedtarget > 0);
         this->panel->lcd->setLed(LED_HOTEND_ON, this->hotendtarget > 0);
-        //this->panel->lcd->setLed(LED_FAN_ON, this->fanon);
+        this->panel->lcd->setLed(LED_FAN_ON, this->fan_state);
 
         if (this->panel->lcd->hasGraphics()) {
             // display the graphical icons below the status are
@@ -121,8 +131,8 @@ void WatchScreen::on_refresh()
             if (this->bedtarget > 0)
                 this->panel->lcd->bltGlyph(32, 38, 23, 19, icons, 15, 64, 0);
 
-            // fan appears always on for now
-            this->panel->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
+            if(this->fan_state)
+                this->panel->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
         }
     }
 }
@@ -168,28 +178,38 @@ void WatchScreen::get_temp_data()
         this->hotendtemp = -1;
         this->hotendtarget = -1;
     }
+
+    // get fan status
+    ok = THEKERNEL->public_data->get_value( switch_checksum, fan_checksum, 0, &returned_data );
+    if (ok) {
+        struct pad_switch s = *static_cast<struct pad_switch *>(returned_data);
+        this->fan_state = s.state;
+    } else {
+        // fan probably disabled
+        this->fan_state = false;
+    }
 }
 
 // fetch the data we are displaying
-double WatchScreen::get_current_speed()
+float WatchScreen::get_current_speed()
 {
     void *returned_data;
 
     bool ok = THEKERNEL->public_data->get_value( robot_checksum, speed_override_percent_checksum, &returned_data );
     if (ok) {
-        double cs = *static_cast<double *>(returned_data);
+        float cs = *static_cast<float *>(returned_data);
         return cs;
     }
     return 0.0;
 }
 
-void WatchScreen::get_current_pos(double *cp)
+void WatchScreen::get_current_pos(float *cp)
 {
     void *returned_data;
 
     bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
     if (ok) {
-        double *p = static_cast<double *>(returned_data);
+        float *p = static_cast<float *>(returned_data);
         cp[0] = p[0];
         cp[1] = p[1];
         cp[2] = p[2];
@@ -235,7 +255,16 @@ const char *WatchScreen::get_status()
     if (panel->is_playing())
         return panel->get_playing_file();
 
-    return "Smoothie ready";
+    if (!THEKERNEL->conveyor->queue.is_empty()) {
+        return "Printing";
+    }
+
+    const char *ip = get_network();
+    if (ip == NULL) {
+        return "Smoothie ready";
+    } else {
+        return ip;
+    }
 }
 
 void WatchScreen::set_speed()
@@ -245,4 +274,25 @@ void WatchScreen::set_speed()
     int n = snprintf(buf, sizeof(buf), "M220 S%d", this->current_speed);
     string g(buf, n);
     send_gcode(g);
+}
+
+const char *WatchScreen::get_network()
+{
+    void *returned_data;
+
+    bool ok = THEKERNEL->public_data->get_value( network_checksum, get_ip_checksum, &returned_data );
+    if (ok) {
+        uint8_t *ipaddr = (uint8_t *)returned_data;
+        char buf[20];
+        int n = snprintf(buf, sizeof(buf), "IP %d.%d.%d.%d", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
+        buf[n] = 0;
+        if (this->ipstr == NULL) {
+            this->ipstr = (char *)malloc(n + 1);
+        }
+        strcpy(this->ipstr, buf);
+
+        return this->ipstr;
+    }
+
+    return NULL;
 }

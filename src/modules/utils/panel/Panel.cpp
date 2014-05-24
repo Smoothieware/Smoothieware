@@ -16,13 +16,21 @@
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "screens/CustomScreen.h"
 #include "screens/MainMenuScreen.h"
+#include "SlowTicker.h"
+#include "Gcode.h"
+#include "Pauser.h"
+#include "PublicData.h"
 
 #include "panels/I2CLCD.h"
 #include "panels/VikiLCD.h"
 #include "panels/Smoothiepanel.h"
 #include "panels/ReprapDiscountGLCD.h"
 #include "panels/ST7565.h"
+#include "panels/UniversalAdapter.h"
+
 #include "version.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 #define panel_checksum             CHECKSUM("panel")
 #define enable_checksum            CHECKSUM("enable")
@@ -33,12 +41,14 @@
 #define panelolu2_checksum         CHECKSUM("panelolu2")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
+#define universal_adapter_checksum CHECKSUM("universal_adapter")
 
 #define menu_offset_checksum        CHECKSUM("menu_offset")
 #define encoder_resolution_checksum CHECKSUM("encoder_resolution")
 #define jog_x_feedrate_checksum     CHECKSUM("alpha_jog_feedrate")
 #define jog_y_feedrate_checksum     CHECKSUM("beta_jog_feedrate")
 #define jog_z_feedrate_checksum     CHECKSUM("gamma_jog_feedrate")
+#define	longpress_delay_checksum	CHECKSUM("longpress_delay")
 
 #define hotend_temp_checksum CHECKSUM("hotend_temperature")
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
@@ -51,6 +61,7 @@ Panel::Panel()
     this->enter_menu_mode();
     this->lcd = NULL;
     this->do_buttons = false;
+    this->do_encoder = false;
     this->idle_time = 0;
     this->start_up = true;
     this->current_screen = NULL;
@@ -65,14 +76,14 @@ Panel::~Panel()
 void Panel::on_module_loaded()
 {
     // Exit if this module is not enabled
-    if ( !this->kernel->config->value( panel_checksum, enable_checksum )->by_default(false)->as_bool() ) {
+    if ( !THEKERNEL->config->value( panel_checksum, enable_checksum )->by_default(false)->as_bool() ) {
         delete this;
         return;
     }
 
     // Initialise the LCD, see which LCD to use
     if (this->lcd != NULL) delete this->lcd;
-    int lcd_cksm = get_checksum(this->kernel->config->value(panel_checksum, lcd_checksum)->by_default("i2c")->as_string());
+    int lcd_cksm = get_checksum(THEKERNEL->config->value(panel_checksum, lcd_checksum)->by_default("i2c")->as_string());
 
     // Note checksums are not const expressions when in debug mode, so don't use switch
     if (lcd_cksm == i2c_lcd_checksum) {
@@ -89,6 +100,8 @@ void Panel::on_module_loaded()
         this->lcd = new ReprapDiscountGLCD();
     } else if (lcd_cksm == st7565_glcd_checksum) {
         this->lcd = new ST7565();
+    } else if (lcd_cksm == universal_adapter_checksum) {
+        this->lcd = new UniversalAdapter();
     } else {
         // no lcd type defined
         return;
@@ -104,19 +117,19 @@ void Panel::on_module_loaded()
 
     // some encoders may need more clicks to move menu, this is a divisor and is in config as it is
     // an end user usability issue
-    this->menu_offset = this->kernel->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
+    this->menu_offset = THEKERNEL->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
 
     // override default encoder resolution if needed
-    this->encoder_click_resolution = this->kernel->config->value( panel_checksum, encoder_resolution_checksum )->by_default(this->lcd->getEncoderResolution())->as_number();
+    this->encoder_click_resolution = THEKERNEL->config->value( panel_checksum, encoder_resolution_checksum )->by_default(this->lcd->getEncoderResolution())->as_number();
 
     // load jogging feedrates in mm/min
-    jogging_speed_mm_min[0] = this->kernel->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0)->as_number();
-    jogging_speed_mm_min[1] = this->kernel->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0)->as_number();
-    jogging_speed_mm_min[2] = this->kernel->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0)->as_number();
+    jogging_speed_mm_min[0] = THEKERNEL->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0f)->as_number();
+    jogging_speed_mm_min[1] = THEKERNEL->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0f)->as_number();
+    jogging_speed_mm_min[2] = THEKERNEL->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0f )->as_number();
 
     // load the default preset temeratures
-    default_hotend_temperature = this->kernel->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0)->as_number();
-    default_bed_temperature = this->kernel->config->value( panel_checksum, bed_temp_checksum )->by_default(60.0)->as_number();
+    default_hotend_temperature = THEKERNEL->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0f )->as_number();
+    default_bed_temperature    = THEKERNEL->config->value( panel_checksum, bed_temp_checksum    )->by_default(60.0f  )->as_number();
 
 
     this->up_button.up_attach(    this, &Panel::on_up );
@@ -125,8 +138,24 @@ void Panel::on_module_loaded()
     this->back_button.up_attach(  this, &Panel::on_back );
     this->pause_button.up_attach( this, &Panel::on_pause );
 
-    this->kernel->slow_ticker->attach( 100,  this, &Panel::button_tick );
-    this->kernel->slow_ticker->attach( 1000, this, &Panel::encoder_check );
+
+    //setting longpress_delay
+    int longpress_delay =  THEKERNEL->config->value( panel_checksum, longpress_delay_checksum )->by_default(0)->as_number();
+    this->up_button.set_longpress_delay(longpress_delay);
+    this->down_button.set_longpress_delay(longpress_delay);
+//    this->click_button.set_longpress_delay(longpress_delay);
+//    this->back_button.set_longpress_delay(longpress_delay);
+//    this->pause_button.set_longpress_delay(longpress_delay);
+
+
+    THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
+    if(lcd->encoderReturnsDelta()) {
+        // panel handles encoder pins and returns a delta
+        THEKERNEL->slow_ticker->attach( 10, this, &Panel::encoder_tick );
+    }else{
+        // read encoder pins
+        THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
+    }
 
     // Register for events
     this->register_for_event(ON_IDLE);
@@ -134,7 +163,7 @@ void Panel::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
 
     // Refresh timer
-    this->kernel->slow_ticker->attach( 20, this, &Panel::refresh_tick );
+    THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
 }
 
 // Enter a screen, we only care about it now
@@ -162,20 +191,25 @@ uint32_t Panel::refresh_tick(uint32_t dummy)
     return 0;
 }
 
-// Encoder pins changed in interrupt
+// Encoder pins changed in interrupt or call from on_idle
 uint32_t Panel::encoder_check(uint32_t dummy)
 {
-    // TODO if encoder reads go through i2c like on smoothie panel this needs to be
-    // optionally done in idle loop, however when reading encoder directly it needs to be done
-    // frequently, smoothie panel will return an actual delta count so won't miss any if polled slowly
-    // NOTE this code will not work if change is not -1,0,-1 anything greater (as in above case) will not work properly
-    static int encoder_counter = 0;
+    // if encoder reads go through SPI like on universal panel adapter this needs to be
+    // done in idle loop, this is indicated by lcd->encoderReturnsDelta()
+    // however when reading encoder directly it needs to be done
+    // frequently, universal panel adapter will return an actual delta count so won't miss any if polled slowly
+    // NOTE FIXME (WHY is it in menu only?) this code will not work if change is not 1,0,-1 anything greater (as in above case) will not work properly
+    static int encoder_counter = 0; // keeps track of absolute encoder position
+    static int last_encoder_click= 0; // last readfing of divided encoder count
     int change = lcd->readEncoderDelta();
     encoder_counter += change;
+    int clicks= encoder_counter/this->encoder_click_resolution;
+    int delta= clicks - last_encoder_click; // the number of clicks this time
+    last_encoder_click= clicks;
 
-    if ( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ) {
+    if ( delta != 0 ) {
         this->counter_changed = true;
-        (*this->counter) += change;
+        (*this->counter) += delta;
         this->idle_time = 0;
     }
     return 0;
@@ -185,6 +219,13 @@ uint32_t Panel::encoder_check(uint32_t dummy)
 uint32_t Panel::button_tick(uint32_t dummy)
 {
     this->do_buttons = true;
+    return 0;
+}
+
+// Read and update encoder
+uint32_t Panel::encoder_tick(uint32_t dummy)
+{
+    this->do_encoder = true;
     return 0;
 }
 
@@ -272,8 +313,13 @@ void Panel::on_idle(void *argument)
         return;
     }
 
+    if(this->do_encoder) {
+        this->do_encoder= false;
+        encoder_check(0);
+    }
+
     if (this->do_buttons) {
-        // we don't want to do I2C in interrupt mode
+        // we don't want to do SPI in interrupt mode
         this->do_buttons = false;
 
         // read the actual buttons
@@ -481,7 +527,7 @@ bool Panel::control_value_change()
     }
 }
 
-bool Panel::enter_control_mode(double passed_normal_increment, double passed_pressed_increment)
+bool Panel::enter_control_mode(float passed_normal_increment, float passed_pressed_increment)
 {
     this->mode = CONTROL_MODE;
     this->normal_increment  = passed_normal_increment;
@@ -497,12 +543,12 @@ void Panel::control_value_update()
     this->control_value_changed = true;
 }
 
-void Panel::set_control_value(double value)
+void Panel::set_control_value(float value)
 {
     this->control_base_value = value;
 }
 
-double Panel::get_control_value()
+float Panel::get_control_value()
 {
     return this->control_base_value + (this->control_normal_counter * this->normal_increment);
 }

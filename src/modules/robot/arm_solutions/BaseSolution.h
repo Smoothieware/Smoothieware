@@ -2,18 +2,19 @@
 #ifndef BASESOLUTION_H
 #define BASESOLUTION_H
 
+#include <map>
+class Config;
+
 class BaseSolution {
     public:
-        BaseSolution();
+        BaseSolution(){};
+        BaseSolution(Config*){};
         virtual ~BaseSolution() {};
-        virtual void millimeters_to_steps( double millimeters[], int steps[] ) = 0;
-        virtual void steps_to_millimeters( int steps[], double millimeters[] ) = 0;
-
-        virtual void set_steps_per_millimeter( double steps[] ) = 0;
-        virtual void get_steps_per_millimeter( double steps[] ) = 0;
-
-        virtual bool set_optional(char parameter, double value) { return false; };
-        virtual bool get_optional(char parameter, double *value) { return false; };
+        virtual void cartesian_to_actuator( float[], float[] ) = 0;
+        virtual void actuator_to_cartesian( float[], float[] ) = 0;
+        typedef std::map<char, float> arm_options_t;
+        virtual bool set_optional(const arm_options_t& options) { return false; };
+        virtual bool get_optional(arm_options_t& options) { return false; };
 };
 
 #endif

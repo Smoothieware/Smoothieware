@@ -3,6 +3,8 @@ Smoothie is a free, opensource, high performance G-code interpreter and CNC cont
 
 Documentation can be found here : [[http://smoothieware.org/]]
 
+NOTE it is not necessary to build Smoothie yourself unless you want to. prebuilt binaries are availble here http://builds.smoothieware.org/
+
 ==Quick Start
 These are the quick steps to get Smoothie dependencies installed on your computer:
 * Pull down a clone of the Smoothie github project to your local machine.
@@ -15,6 +17,16 @@ These are the quick steps to get Smoothie dependencies installed on your compute
 ==Building Smoothie
 From a shell, switch into the root Smoothie project directory and run:
 {{{
-make clean all
-make flash
+make clean
+make all
 }}}
+
+To upload you can do
+
+{{{
+make upload
+}}}
+
+if you have dfu-util installed.
+
+Alternatively copy the file LPC1768/main.bin to the sdcard calling it firmware.bin and reset.

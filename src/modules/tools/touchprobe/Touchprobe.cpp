@@ -7,9 +7,26 @@
 
 #include "Touchprobe.h"
 
+#include "BaseSolution.h"
+
+#define touchprobe_enable_checksum           CHECKSUM("touchprobe_enable")
+#define touchprobe_log_enable_checksum       CHECKSUM("touchprobe_log_enable")
+#define touchprobe_logfile_name_checksum     CHECKSUM("touchprobe_logfile_name")
+#define touchprobe_log_rotate_mcode_checksum CHECKSUM("touchprobe_log_rotate_mcode")
+#define touchprobe_pin_checksum              CHECKSUM("touchprobe_pin")
+#define touchprobe_debounce_count_checksum   CHECKSUM("touchprobe_debounce_count")
+
+#define touchprobe_enable_checksum           CHECKSUM("touchprobe_enable")
+#define touchprobe_log_enable_checksum       CHECKSUM("touchprobe_log_enable")
+#define touchprobe_logfile_name_checksum     CHECKSUM("touchprobe_logfile_name")
+#define touchprobe_log_rotate_mcode_checksum CHECKSUM("touchprobe_log_rotate_mcode")
+#define touchprobe_pin_checksum              CHECKSUM("touchprobe_pin")
+#define touchprobe_debounce_count_checksum   CHECKSUM("touchprobe_debounce_count")
+
+
 void Touchprobe::on_module_loaded() {
     // if the module is disabled -> do nothing
-    this->enabled = this->kernel->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
+    this->enabled = THEKERNEL->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
     if( !(this->enabled) ){
         // as this module is not needed free up the resource
         delete this;
@@ -25,17 +42,17 @@ void Touchprobe::on_module_loaded() {
 }
 
 void Touchprobe::on_config_reload(void* argument){
-    this->pin.from_string(  this->kernel->config->value(touchprobe_pin_checksum)->by_default("nc" )->as_string())->as_input();
-    this->debounce_count =  this->kernel->config->value(touchprobe_debounce_count_checksum)->by_default(100  )->as_number();
+    this->pin.from_string(  THEKERNEL->config->value(touchprobe_pin_checksum)->by_default("nc" )->as_string())->as_input();
+    this->debounce_count =  THEKERNEL->config->value(touchprobe_debounce_count_checksum)->by_default(100  )->as_number();
 
-    this->steppers[0] = this->kernel->robot->alpha_stepper_motor;
-    this->steppers[1] = this->kernel->robot->beta_stepper_motor;
-    this->steppers[2] = this->kernel->robot->gamma_stepper_motor;
+    this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
+    this->steppers[1] = THEKERNEL->robot->beta_stepper_motor;
+    this->steppers[2] = THEKERNEL->robot->gamma_stepper_motor;
 
-    this->should_log = this->enabled = this->kernel->config->value( touchprobe_log_enable_checksum )->by_default(false)->as_bool();
+    this->should_log = this->enabled = THEKERNEL->config->value( touchprobe_log_enable_checksum )->by_default(false)->as_bool();
     if( this->should_log){
-        this->filename = this->kernel->config->value(touchprobe_logfile_name_checksum)->by_default("/sd/probe_log.csv")->as_string();
-        this->mcode = this->kernel->config->value(touchprobe_log_rotate_mcode_checksum)->by_default(0)->as_int();
+        this->filename = THEKERNEL->config->value(touchprobe_logfile_name_checksum)->by_default("/sd/probe_log.csv")->as_string();
+        this->mcode = THEKERNEL->config->value(touchprobe_log_rotate_mcode_checksum)->by_default(0)->as_int();
         this->logfile = NULL;
     }
 }
@@ -43,7 +60,7 @@ void Touchprobe::on_config_reload(void* argument){
 void Touchprobe::wait_for_touch(int distance[]){
     unsigned int debounce = 0;
     while(true){
-        this->kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_IDLE);
         // if no stepper is moving, moves are finished and there was no touch
         if( ((this->steppers[0]->moving ? 0:1 ) + (this->steppers[1]->moving ? 0:1 ) + (this->steppers[2]->moving ? 0:1 )) == 3 ){
             return;
@@ -60,7 +77,7 @@ void Touchprobe::wait_for_touch(int distance[]){
                     distance[i] = 0;
                     if ( this->steppers[i]->moving ){
                         distance[i] =  this->steppers[i]->stepped;
-                        distance[i] *= this->steppers[i]->dir_pin->get() ? -1 : 1;
+                        distance[i] *= this->steppers[i]->direction ? -1 : 1;
                         this->steppers[i]->move(0,0);
                     }
                 }
@@ -92,14 +109,14 @@ void Touchprobe::on_idle(void* argument){
 void Touchprobe::on_gcode_received(void* argument)
 {
     Gcode* gcode = static_cast<Gcode*>(argument);
-    Robot* robot = this->kernel->robot;
+    Robot* robot = THEKERNEL->robot;
 
     if( gcode->has_g) {
         if( gcode->g == 31 ) {
-            double tmp[3], pos[3];
-            int steps[3], distance[3];
+            float tmp[3], pos[3], mm[3];
+            int steps[3];
             // first wait for an empty queue i.e. no moves left
-            this->kernel->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_empty_queue();
 
             robot->get_axis_position(pos);
             for(char c = 'X'; c <= 'Z'; c++){
@@ -110,33 +127,34 @@ void Touchprobe::on_gcode_received(void* argument)
                 }
             }
             if( gcode->has_letter('F') )            {
-                this->probe_rate = robot->to_millimeters( gcode->get_value('F') ) / 60.0;
+                this->probe_rate = robot->to_millimeters( gcode->get_value('F') ) / robot->seconds_per_minute;
             }
-            robot->arm_solution->millimeters_to_steps(tmp,steps);
-            robot->arm_solution->millimeters_to_steps(tmp,distance); //default to full move
+            robot->arm_solution->cartesian_to_actuator(tmp, mm);
+            for (int c = 0; c < 3; c++)
+                steps[c] = mm[c] * robot->actuators[c]->steps_per_mm;
 
             if( ((abs(steps[0]) > 0 ? 1:0) + (abs(steps[1]) > 0 ? 1:0) + (abs(steps[2]) > 0 ? 1:0)) != 1 ){
                 return; //TODO coordinated movement not supported yet
             }
 
             // Enable the motors
-            this->kernel->stepper->turn_enable_pins_on();
+            THEKERNEL->stepper->turn_enable_pins_on();
             // move
-            robot->arm_solution->get_steps_per_millimeter(tmp);
             for(char c='X'; c<='Z'; c++){
+                tmp[c - 'X'] = robot->actuators[c - 'X']->steps_per_mm;
                 if( steps[c-'X'] == 0 ){
                     continue;
                 }
                 bool dir = steps[c-'X'] < 0;
                 // tmp is steps/mm, probe_rate in mm/s -> speed needs steps/s
-                this->steppers[c-'X']->set_speed(this->probe_rate * tmp[c-'X']);
+                this->steppers[c-'X']->set_speed(this->probe_rate * robot->actuators[c]->steps_per_mm);
                 this->steppers[c-'X']->move(dir,abs(steps[c-'X']));
             }
 
-            wait_for_touch(distance);
+            wait_for_touch(steps);
             // calculate new position
             for(char c='X'; c<='Z'; c++){
-                robot->reset_axis_position(pos[c-'X']+distance[c-'X']/tmp[c-'X'], c-'X');
+                robot->reset_axis_position(pos[c-'X'] + mm[c-'X'], c-'X');
             }
 
             if( this->should_log ){

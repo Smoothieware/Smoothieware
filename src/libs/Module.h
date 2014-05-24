@@ -28,7 +28,6 @@ extern const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS];
 
 // Module base class
 // All modules must extend this class, see http://smoothieware.org/moduleexample
-class Kernel;
 class Module {
     public:
         Module();
@@ -38,7 +37,6 @@ class Module {
         #define EVENT(name, func) virtual void func (void*);
         #include "Event.h"
         #undef EVENT
-        Kernel * kernel;
 };
 
 #endif

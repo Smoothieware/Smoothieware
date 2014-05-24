@@ -13,6 +13,8 @@ using namespace std;
 #include "SlowTicker.h"
 #include "libs/Hook.h"
 #include "modules/robot/Conveyor.h"
+#include "Pauser.h"
+#include "Gcode.h"
 
 #include <mri.h>
 
@@ -124,7 +126,7 @@ extern GPIO leds[];
 void SlowTicker::on_idle(void*)
 {
     static uint16_t ledcnt= 0;
-    if(kernel->use_leds) {
+    if(THEKERNEL->use_leds) {
         // flash led 3 to show we are alive
         leds[2]= (ledcnt++ & 0x1000) ? 1 : 0;
     }
@@ -132,13 +134,13 @@ void SlowTicker::on_idle(void*)
     // if interrupt has set the 1 second flag
     if (flag_1s())
         // fire the on_second_tick event
-        kernel->call_event(ON_SECOND_TICK);
+        THEKERNEL->call_event(ON_SECOND_TICK);
 
     // if G4 has finished, release our pause
     if (g4_pause && (g4_ticks == 0))
     {
         g4_pause = false;
-        kernel->pauser->release();
+        THEKERNEL->pauser->release();
     }
 }
 
@@ -147,12 +149,9 @@ void SlowTicker::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
     if( gcode->has_g && gcode->g == 4 ){
-        if( this->kernel->conveyor->queue.size() == 0 ){
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-        }else{
-            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-            block->append_gcode(gcode);
-        }
+        THEKERNEL->conveyor->append_gcode(gcode);
+        // ensure that no subsequent gcodes get executed along with our G4
+        THEKERNEL->conveyor->queue_head_block();
     }
 }
 
@@ -177,7 +176,7 @@ void SlowTicker::on_gcode_execute(void* argument){
                 // at 120MHz core clock, the longest possible delay is (2^32 / (120MHz / 4)) = 143 seconds
                 if (!g4_pause){
                     g4_pause = true;
-                    kernel->pauser->take();
+                    THEKERNEL->pauser->take();
                 }
             }
         }

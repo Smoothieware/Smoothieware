@@ -1,38 +1,14 @@
 #include "HBotSolution.h"
 #include <math.h>
 
-HBotSolution::HBotSolution(Config* passed_config) : config(passed_config){
-    this->alpha_steps_per_mm = this->config->value(alpha_steps_per_mm_checksum)->as_number();
-    this->beta_steps_per_mm  = this->config->value( beta_steps_per_mm_checksum)->as_number();
-    this->gamma_steps_per_mm = this->config->value(gamma_steps_per_mm_checksum)->as_number();
+void HBotSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] ){
+    actuator_mm[ALPHA_STEPPER] = cartesian_mm[X_AXIS] + cartesian_mm[Y_AXIS];
+    actuator_mm[BETA_STEPPER ] = cartesian_mm[X_AXIS] - cartesian_mm[Y_AXIS];
+    actuator_mm[GAMMA_STEPPER] = cartesian_mm[Z_AXIS];
 }
 
-void HBotSolution::millimeters_to_steps( double millimeters[], int steps[] ){
-    double delta_x = millimeters[X_AXIS] * this->alpha_steps_per_mm;
-    double delta_y = millimeters[Y_AXIS] * this->beta_steps_per_mm;
-    steps[ALPHA_STEPPER] = lround(delta_x + delta_y);
-    steps[BETA_STEPPER ] = lround(delta_x - delta_y);
-    steps[GAMMA_STEPPER] = lround( millimeters[Z_AXIS] * this->gamma_steps_per_mm );
-}
-
-void HBotSolution::steps_to_millimeters( int steps[], double millimeters[] ){
-    double delta_alpha = steps[X_AXIS] / this->alpha_steps_per_mm;
-    double delta_beta = steps[Y_AXIS] / this->beta_steps_per_mm;
-    millimeters[ALPHA_STEPPER] = 0.5*(delta_alpha + delta_beta);
-    millimeters[BETA_STEPPER ] = 0.5*(delta_alpha - delta_beta);
-    millimeters[GAMMA_STEPPER] = steps[Z_AXIS] / this->gamma_steps_per_mm;
-}
-
-void HBotSolution::set_steps_per_millimeter( double steps[] )
-{
-    this->alpha_steps_per_mm = steps[0];
-    this->beta_steps_per_mm  = steps[1];
-    this->gamma_steps_per_mm = steps[2];
-}
-
-void HBotSolution::get_steps_per_millimeter( double steps[] )
-{
-    steps[0] = this->alpha_steps_per_mm;
-    steps[1] = this->beta_steps_per_mm;
-    steps[2] = this->gamma_steps_per_mm;
+void HBotSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] ){
+    cartesian_mm[X_AXIS] = 0.5F * (actuator_mm[ALPHA_STEPPER] + actuator_mm[BETA_STEPPER]);
+    cartesian_mm[Y_AXIS] = 0.5F * (actuator_mm[ALPHA_STEPPER] - actuator_mm[BETA_STEPPER]);
+    cartesian_mm[Z_AXIS] = actuator_mm[GAMMA_STEPPER];
 }

@@ -16,16 +16,20 @@ using std::string;
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "libs/FileStream.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 GcodeDispatch::GcodeDispatch() {}
 
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded()
 {
-    return_error_on_unhandled_gcode = this->kernel->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
+    return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     currentline = -1;
     uploading = false;
+    last_g= 255;
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -34,9 +38,13 @@ void GcodeDispatch::on_console_line_received(void *line)
     SerialMessage new_message = *static_cast<SerialMessage *>(line);
     string possible_command = new_message.message;
 
-    char first_char = possible_command[0];
     int ln = 0;
     int cs = 0;
+
+try_again:
+
+    char first_char = possible_command[0];
+    unsigned int n;
     if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'N' ) {
 
         //Get linenumber
@@ -101,8 +109,10 @@ void GcodeDispatch::on_console_line_received(void *line)
                 if(!uploading) {
                     //Prepare gcode for dispatch
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
-                    gcode->prepare_cached_values();
 
+                    if(gcode->has_g) {
+                        last_g= gcode->g;
+                    }
                     if(gcode->has_m) {
                         switch (gcode->m) {
                             case 28: // start upload command
@@ -121,40 +131,38 @@ void GcodeDispatch::on_console_line_received(void *line)
                                 continue;
 
                             case 500: // M500 save volatile settings to config-override
-                                // delete the existing file
-                                remove(kernel->config_override_filename());
                                 // replace stream with one that writes to config-override file
-                                gcode->stream = new FileStream(kernel->config_override_filename());
+                                gcode->stream = new FileStream(THEKERNEL->config_override_filename());
                                 // dispatch the M500 here so we can free up the stream when done
-                                this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                                THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
                                 delete gcode->stream;
                                 delete gcode;
-                                new_message.stream->printf("Settings Stored to %s\r\nok\r\n", kernel->config_override_filename());
+                                new_message.stream->printf("Settings Stored to %s\r\nok\r\n", THEKERNEL->config_override_filename());
                                 continue;
 
-                            case 501: // M501 deletes config-override so everything defaults to what is in config
-                                remove(kernel->config_override_filename());
-                                new_message.stream->printf("config override file deleted %s, reboot needed\r\nok\r\n", kernel->config_override_filename());
+                            case 502: // M502 deletes config-override so everything defaults to what is in config
+                                remove(THEKERNEL->config_override_filename());
+                                new_message.stream->printf("config override file deleted %s, reboot needed\r\nok\r\n", THEKERNEL->config_override_filename());
                                 delete gcode;
                                 continue;
 
                             case 503: { // M503 display live settings and indicates if there is an override file
-                                FILE *fd = fopen(kernel->config_override_filename(), "r");
+                                FILE *fd = fopen(THEKERNEL->config_override_filename(), "r");
                                 if(fd != NULL) {
                                     fclose(fd);
-                                    new_message.stream->printf("; config override present: %s\n",  kernel->config_override_filename());
+                                    new_message.stream->printf("; config override present: %s\n",  THEKERNEL->config_override_filename());
 
                                 } else {
                                     new_message.stream->printf("; No config override\n");
                                 }
-                                break; // fal through to process by modules
+                                break; // fall through to process by modules
                             }
                         }
                     }
 
                     //printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
                     //Dispatch message!
-                    this->kernel->call_event(ON_GCODE_RECEIVED, gcode );
+                    THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
                     if(gcode->add_nl)
                         new_message.stream->printf("\r\n");
 
@@ -213,6 +221,18 @@ void GcodeDispatch::on_console_line_received(void *line)
             //Request resend
             new_message.stream->printf("rs N%d\r\n", nextline);
         }
+
+    } else if( (n=possible_command.find_first_of("XYZF")) == 0 || (first_char == ' ' && n != string::npos) ) {
+        // handle pycam syntax, use last G0 or G1 and resubmit if an X Y Z or F is found on its own line
+        if(last_g != 0 && last_g != 1) {
+            //if no last G1 or G0 ignore
+            //THEKERNEL->streams->printf("ignored: %s\r\n", possible_command.c_str());
+            return;
+        }
+        char buf[6];
+        snprintf(buf, sizeof(buf), "G%d ", last_g);
+        possible_command.insert(0, buf);
+        goto try_again;
 
         // Ignore comments and blank lines
     } else if ( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ) {

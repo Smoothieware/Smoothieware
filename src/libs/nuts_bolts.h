@@ -21,9 +21,6 @@ along with Grbl. If not, see <http://www.gnu.org/licenses/>.
 #ifndef nuts_bolts_h
 #define nuts_bolts_h
 
-#include <string>
-using std::string;
-
 #define X_AXIS 0
 #define Y_AXIS 1
 #define Z_AXIS 2
@@ -33,7 +30,7 @@ using std::string;
 #define GAMMA_STEPPER 2
 
 #define clear_vector(a) memset(a, 0, sizeof(a))
-#define clear_vector_double(a) memset(a, 0.0, sizeof(a))
+#define clear_vector_float(a) memset(a, 0.0F, sizeof(a))
 
 #define confine(value, min, max) (((value) < (min))?(min):(((value) > (max))?(max):(value)))
 

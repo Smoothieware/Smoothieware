@@ -15,6 +15,7 @@ using std::string;
 #include "libs/RingBuffer.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/StreamOutputPool.h"
 
 // Serial reading module
 // Treats every received line as a command and passes it ( via event call ) to the command dispatcher.
@@ -33,7 +34,7 @@ void SerialConsole::on_module_loaded() {
     this->register_for_event(ON_MAIN_LOOP);
 
     // Add to the pack of streams kernel can call to, for example for broadcasting
-    this->kernel->streams->append_stream(this);
+    THEKERNEL->streams->append_stream(this);
 }
 
 // Called on Serial::RxIrq interrupt, meaning we have received a char
@@ -58,7 +59,7 @@ void SerialConsole::on_main_loop(void * argument){
                 struct SerialMessage message;
                 message.message = received;
                 message.stream = this;
-                this->kernel->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
                 return;
             }else{
                 received += c;
@@ -85,8 +86,8 @@ int SerialConsole::_getc()
 
 // Does the queue have a given char ?
 bool SerialConsole::has_char(char letter){
-    int index = this->buffer.head;
-    while( index != this->buffer.tail ){
+    int index = this->buffer.tail;
+    while( index != this->buffer.head ){
         if( this->buffer.buffer[index] == letter ){
             return true;
         }

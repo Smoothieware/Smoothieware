@@ -10,14 +10,11 @@
 #ifndef ADC_H
 #define ADC_H
 
-using namespace std;
-#include <vector>
-#include "libs/nuts_bolts.h"
 #include "libs/Module.h"
-#include "libs/Kernel.h"
 #include "PinNames.h" // mbed.h lib
 #include "libs/ADC/adc.h"
-#include "libs/Pin.h"
+
+class Pin;
 
 class Adc : public Module{
     public:

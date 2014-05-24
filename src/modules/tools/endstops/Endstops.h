@@ -9,11 +9,11 @@
 #define ENDSTOPS_MODULE_H
 
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "modules/communication/utils/Gcode.h"
-#include "libs/StepperMotor.h"
 #include "libs/Pin.h"
 
+#include <bitset>
+
+class StepperMotor;
 
 class Endstops : public Module{
     public:
@@ -21,29 +21,33 @@ class Endstops : public Module{
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
+        uint32_t acceleration_tick(uint32_t dummy);
 
     private:
         void do_homing(char axes_to_move);
         void do_homing_corexy(char axes_to_move);
         void wait_for_homed(char axes_to_move);
         void wait_for_homed_corexy(int axis);
-        void corexy_home(int home_axis, bool dirx, bool diry, double fast_rate, double slow_rate, unsigned int retract_steps);
-        void trim2mm(double * mm);
+        void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
+        void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
 
-        double steps_per_mm[3];
-        double homing_position[3];
+        float homing_position[3];
         float home_offset[3];
-        bool home_direction[3];
+        std::bitset<3> home_direction;
         unsigned int  debounce_count;
-        unsigned int  retract_steps[3];
-        int  trim[3];
-        double  fast_rates[3];
-        double  slow_rates[3];
-        Pin           pins[6];
+        float  retract_mm[3];
+        float  trim_mm[3];
+        float  fast_rates[3];
+        float  slow_rates[3];
+        float  feed_rate[3];
+        Pin    pins[6];
         StepperMotor* steppers[3];
         char status;
-        bool is_corexy;
-        bool is_delta;
+        struct {
+            bool is_corexy:1;
+            bool is_delta:1;
+        };
 };
 
 #endif

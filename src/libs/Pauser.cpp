@@ -1,7 +1,10 @@
-#include "libs/Kernel.h"
 #include "Pauser.h"
+
+#include "libs/Kernel.h"
+#include "Block.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+
 #include <string>
 using namespace std;
 
@@ -9,27 +12,47 @@ using namespace std;
 // ( think both the user with a button, and the temperature control because a temperature is not reached ). To do that, modules call the take() methode, 
 // a pause event is called, and the pause does not end before all modules have called the release() method. 
 // Please note : Modules should keep track of their pause status themselves
-Pauser::Pauser(){}
+Pauser::Pauser(){
+    paused_block = NULL;
+}
 
 void Pauser::on_module_loaded(){
     this->counter = 0;
+    register_for_event(ON_BLOCK_BEGIN);
+}
+
+void Pauser::on_block_begin(void* argument)
+{
+    Block* block = static_cast<Block*>(argument);
+
+    if (counter)
+    {
+        block->take();
+        paused_block = block;
+    }
 }
 
 // Pause smoothie if nobody else is currently doing so
 void Pauser::take(){
     this->counter++;
-    //this->kernel->streams->printf("take: %u \r\n", this->counter );
+    //THEKERNEL->streams->printf("take: %u \r\n", this->counter );
     if( this->counter == 1 ){
-        this->kernel->call_event(ON_PAUSE, &this->counter);
+        THEKERNEL->call_event(ON_PAUSE, &this->counter);
     }
 }
 
 // Unpause smoothie unless something else is pausing it too
 void Pauser::release(){
     this->counter--;
-    //this->kernel->streams->printf("release: %u \r\n", this->counter );
+    //THEKERNEL->streams->printf("release: %u \r\n", this->counter );
     if( this->counter == 0 ){
-        this->kernel->call_event(ON_PLAY, &this->counter);
+        THEKERNEL->call_event(ON_PLAY, &this->counter);
+        if (paused_block)
+        {
+            Block* tmp = paused_block;
+            paused_block = NULL;
+            tmp->release();
+        }
     }
 }
 
