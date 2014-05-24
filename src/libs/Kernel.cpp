@@ -32,6 +32,9 @@
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
 
+#define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
+#define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
+
 Kernel* Kernel::instance;
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls

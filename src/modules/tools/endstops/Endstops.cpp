@@ -120,7 +120,7 @@ void Endstops::on_module_loaded()
     this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
     this->steppers[1] = THEKERNEL->robot->beta_stepper_motor;
     this->steppers[2] = THEKERNEL->robot->gamma_stepper_motor;
-    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->acceleration_ticks_per_second , this, &Endstops::acceleration_tick );
+    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &Endstops::acceleration_tick );
 
     // Settings
     this->on_config_reload(this);
@@ -563,13 +563,13 @@ uint32_t Endstops::acceleration_tick(uint32_t dummy)
         uint32_t target_rate = int(floor(this->feed_rate[c]*STEPS_PER_MM(c)));
 
         if( current_rate < target_rate ){
-            uint32_t rate_increase = int(floor((THEKERNEL->planner->acceleration/THEKERNEL->stepper->acceleration_ticks_per_second)*STEPS_PER_MM(c)));
+            uint32_t rate_increase = int(floor((THEKERNEL->planner->get_acceleration()/THEKERNEL->stepper->get_acceleration_ticks_per_second())*STEPS_PER_MM(c)));
             current_rate = min( target_rate, current_rate + rate_increase );
         }
         if( current_rate > target_rate ){ current_rate = target_rate; }
 
         // steps per second
-        this->steppers[c]->set_speed(max(current_rate, THEKERNEL->stepper->minimum_steps_per_second));
+        this->steppers[c]->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
     }
 
     return 0;

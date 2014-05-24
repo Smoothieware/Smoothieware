@@ -10,30 +10,9 @@
 
 #include <string>
 using std::string;
-#include "libs/Module.h"
-
 #include <string.h>
 
-#define NEXT_ACTION_DEFAULT 0
-#define NEXT_ACTION_DWELL 1
-#define NEXT_ACTION_GO_HOME 2
-
-#define MOTION_MODE_SEEK 0 // G0
-#define MOTION_MODE_LINEAR 1 // G1
-#define MOTION_MODE_CW_ARC 2 // G2
-#define MOTION_MODE_CCW_ARC 3 // G3
-#define MOTION_MODE_CANCEL 4 // G80
-
-#define PATH_CONTROL_MODE_EXACT_PATH 0
-#define PATH_CONTROL_MODE_EXACT_STOP 1
-#define PATH_CONTROL_MODE_CONTINOUS 2
-
-#define PROGRAM_FLOW_RUNNING 0
-#define PROGRAM_FLOW_PAUSED 1
-#define PROGRAM_FLOW_COMPLETED 2
-
-#define SPINDLE_DIRECTION_CW 0
-#define SPINDLE_DIRECTION_CCW 1
+#include "libs/Module.h"
 
 class Gcode;
 class BaseSolution;
