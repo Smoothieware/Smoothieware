@@ -255,7 +255,7 @@ const char *WatchScreen::get_status()
     if (panel->is_playing())
         return panel->get_playing_file();
 
-    if (!THEKERNEL->conveyor->queue.is_empty()) {
+    if (!THEKERNEL->conveyor->is_queue_empty()) {
         return "Printing";
     }
 

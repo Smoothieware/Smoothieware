@@ -60,7 +60,7 @@ uint32_t PlayLed::half_second_tick(uint32_t)
 {
     if (THEKERNEL->pauser->paused())
         led.set(!led.get());
-    else led.set(!THEKERNEL->conveyor->queue.is_empty());
+    else led.set(!THEKERNEL->conveyor->is_queue_empty());
 
     return 0;
 }

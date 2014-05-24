@@ -66,7 +66,7 @@ void ZProbe::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_IDLE);
 
-    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->acceleration_ticks_per_second , this, &ZProbe::acceleration_tick );
+    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &ZProbe::acceleration_tick );
 }
 
 void ZProbe::on_config_reload(void *argument)
@@ -498,7 +498,7 @@ uint32_t ZProbe::acceleration_tick(uint32_t dummy)
         uint32_t target_rate = int(floor(this->current_feedrate));
 
         if( current_rate < target_rate ) {
-            uint32_t rate_increase = int(floor((THEKERNEL->planner->acceleration / THEKERNEL->stepper->acceleration_ticks_per_second) * STEPS_PER_MM(c)));
+            uint32_t rate_increase = int(floor((THEKERNEL->planner->get_acceleration() / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c)));
             current_rate = min( target_rate, current_rate + rate_increase );
         }
         if( current_rate > target_rate ) {
@@ -506,7 +506,7 @@ uint32_t ZProbe::acceleration_tick(uint32_t dummy)
         }
 
         // steps per second
-        this->steppers[c]->set_speed(max(current_rate, THEKERNEL->stepper->minimum_steps_per_second));
+        this->steppers[c]->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
     }
 
     return 0;

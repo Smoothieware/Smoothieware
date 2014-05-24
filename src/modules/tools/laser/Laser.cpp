@@ -119,9 +119,9 @@ void Laser::on_speed_change(void* argument){
 }
 
 void Laser::set_proportional_power(){
-    if( this->laser_on && THEKERNEL->stepper->current_block ){
+    if( this->laser_on && THEKERNEL->stepper->get_current_block() ){
         // adjust power to maximum power and actual velocity
-        float proportional_power = float(float(this->laser_max_power) * float(THEKERNEL->stepper->trapezoid_adjusted_rate) / float(THEKERNEL->stepper->current_block->nominal_rate));
+        float proportional_power = float(float(this->laser_max_power) * float(THEKERNEL->stepper->get_trapezoid_adjusted_rate()) / float(THEKERNEL->stepper->get_current_block()->nominal_rate));
         this->laser_pin->write(this->laser_inverting ? 1 - proportional_power : proportional_power);
     }
 }

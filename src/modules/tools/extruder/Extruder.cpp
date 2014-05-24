@@ -98,7 +98,7 @@ void Extruder::on_module_loaded()
 
     // Update speed every *acceleration_ticks_per_second*
     // TODO: Make this an independent setting
-    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->acceleration_ticks_per_second , this, &Extruder::acceleration_tick );
+    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &Extruder::acceleration_tick );
 
     // Stepper motor object for the extruder
     this->stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(step_pin, dir_pin, en_pin) );
@@ -382,7 +382,7 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy)
     uint32_t target_rate = int(floor(this->feed_rate * this->steps_per_millimeter));
 
     if( current_rate < target_rate ) {
-        uint32_t rate_increase = int(floor((this->acceleration / THEKERNEL->stepper->acceleration_ticks_per_second) * this->steps_per_millimeter));
+        uint32_t rate_increase = int(floor((this->acceleration / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * this->steps_per_millimeter));
         current_rate = min( target_rate, current_rate + rate_increase );
     }
     if( current_rate > target_rate ) {
@@ -390,7 +390,7 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy)
     }
 
     // steps per second
-    this->stepper_motor->set_speed(max(current_rate, THEKERNEL->stepper->minimum_steps_per_second));
+    this->stepper_motor->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
 
     return 0;
 }
@@ -414,7 +414,7 @@ void Extruder::on_speed_change( void *argument )
     * or even : ( stepper steps per second ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->trapezoid_adjusted_rate) * ( (float)this->stepper_motor->steps_to_move / (float)this->current_block->steps_event_count ), THEKERNEL->stepper->minimum_steps_per_second ) );
+    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->get_trapezoid_adjusted_rate()) * ( (float)this->stepper_motor->steps_to_move / (float)this->current_block->steps_event_count ), THEKERNEL->stepper->get_minimum_steps_per_second() ) );
 
 }
 
