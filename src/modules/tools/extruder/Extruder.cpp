@@ -177,7 +177,7 @@ void Extruder::on_gcode_received(void *argument)
 
         } else if (gcode->m == 92 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier) ) ) {
             float spm = this->steps_per_millimeter;
-            if (gcode->has_letter('E')){
+            if (gcode->has_letter('E')) {
                 spm = gcode->get_value('E');
                 this->steps_per_millimeter = spm;
             }
@@ -255,6 +255,7 @@ void Extruder::on_gcode_execute(void *argument)
                 this->target_position = this->current_position;
                 this->unstepped_distance = 0;
             }
+
         } else if (((gcode->g == 0) || (gcode->g == 1)) && this->enabled) {
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )) {
@@ -281,18 +282,21 @@ void Extruder::on_gcode_execute(void *argument)
 
                 this->en_pin.set(0);
             }
+
+            if (gcode->has_letter('F')) {
+                feed_rate = gcode->get_value('F') / THEKERNEL->robot->seconds_per_minute;
+                if (feed_rate > max_speed)
+                    feed_rate = max_speed;
+            }
+
         } else if( gcode->g == 90 ) {
             this->absolute_mode = true;
+
         } else if( gcode->g == 91 ) {
             this->absolute_mode = false;
         }
     }
 
-    if (gcode->has_letter('F') && this->enabled) {
-        feed_rate = gcode->get_value('F') / THEKERNEL->robot->seconds_per_minute;
-        if (feed_rate > max_speed)
-            feed_rate = max_speed;
-    }
 }
 
 // When a new block begins, either follow the robot, or step by ourselves ( or stay back and do nothing )
