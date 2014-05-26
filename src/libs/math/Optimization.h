@@ -8,7 +8,7 @@
 class CLeastSquareProblem {
   public:
     // optimizes the least squares problem with the levenberg-marquard optimization method
-    float	  optimizeLevMar(float* Parameter, int MaxIterations, float MaxError = 0.0);
+    float         optimizeLevMar(float* Parameter, int MaxIterations, float MaxError = 0.0);
 
     // returns number of system parameter
     virtual int	  getParameterCount() = 0;
