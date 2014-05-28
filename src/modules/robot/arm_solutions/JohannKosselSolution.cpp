@@ -7,7 +7,7 @@
 #include "libs/nuts_bolts.h"
 
 #include "libs/Config.h"
-#include "libs/math/Vector3.h"
+#include "Vector3.h"
 
 #define arm_length_checksum         CHECKSUM("arm_length")
 #define arm_radius_checksum         CHECKSUM("arm_radius")
