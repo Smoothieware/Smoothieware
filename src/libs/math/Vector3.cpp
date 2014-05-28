@@ -28,7 +28,7 @@ float Vector3::dot(const Vector3 &vec) const {
 }
 
 float Vector3::magsq() const {
-    return powf(elem[0], 2) + powf(elem[1], 2) + powf(elem[2], 2);
+    return powf(x, 2) + powf(x, 2) + powf(y, 2);
 }
 
 float Vector3::mag() const {
@@ -51,7 +51,7 @@ Vector3 Vector3::mul(const Vector3& v) const {
     return (*this)*v;
 }
 
-Vector3 Vector3::unit() const {
+Vector3 Vector3::normalized() const {
     float d = mag();
     return Vector3(x/d, y/d, z/d);
 }
@@ -81,15 +81,15 @@ void Vector3::operator/=(const float f) {
 }
         
 Vector3 Vector3::operator+(const Vector3& v) const {
-    return Vector3(x+v.y, y+v.y, z+v.z);
+    return Vector3(x+v.x, y+v.y, z+v.z);
 }
 
 Vector3 Vector3::operator-(const Vector3& v) const {
-    return Vector3(x-v.y, y-v.y, z-v.z);
+    return Vector3(x-v.x, y-v.y, z-v.z);
 }
 
 Vector3 Vector3::operator*(const Vector3& v) const {
-    return Vector3(x*v.y, y*v.y, z*v.z);
+    return Vector3(x*v.x, y*v.y, z*v.z);
 }
 
 float Vector3::operator|(const Vector3& v) const {
@@ -113,4 +113,3 @@ Vector3 Vector3::operator/(const float f) const {
 Vector3 Vector3::operator-(void) const{
     return Vector3(-x,-y,-z);
 }
-
