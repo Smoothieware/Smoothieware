@@ -16,12 +16,14 @@ class Vector3 {
         Vector3  sub(const Vector3&) const;         // subtraction
         Vector3  mul(float) const;                  // scalar multiplication
         Vector3  mul(const Vector3& v) const;       // component wise multiplication
-        Vector3  unit(void) const;                  // returns normalized vector
+        Vector3  normalized(void) const;            // returns normalized vector
         void     normalize(void);                   // normalizes the vector
         
         Vector3& operator=(const Vector3& v);       // assignment
         void     operator*=(const float f);         // multiply assign
         void     operator/=(const float f);         // division assign
+        void     operator+=(const Vector3& v);      // addition assign
+        void     operator-=(const Vector3& v);      // subtraction assign
         
         Vector3  operator+(const Vector3& v) const; // addition
         Vector3  operator-(const Vector3& v) const; // subtraction
@@ -46,4 +48,4 @@ class Vector3 {
         static float nan;
 };
 
-#endif /* _VECTOR3_H */
+#endif
