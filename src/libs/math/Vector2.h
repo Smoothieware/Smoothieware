@@ -21,7 +21,9 @@ class Vector2 {
         Vector2& operator=(const Vector2& v);       // assignment
         void     operator*=(const float f);         // multiply assign
         void     operator/=(const float f);         // division assign
-        
+        void     operator+=(const Vector2& v);      // addition assign
+        void     operator-=(const Vector2& v);      // subtraction assign
+      
         Vector2  operator+(const Vector2& v) const; // addition
         Vector2  operator-(const Vector2& v) const; // subtraction
         Vector2  operator*(const Vector2& v) const; // component wise multiplication
@@ -43,4 +45,4 @@ class Vector2 {
         static float nan;
 };
 
-#endif /* _Vector2_H */
+#endif
