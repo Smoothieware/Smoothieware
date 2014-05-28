@@ -203,7 +203,7 @@ void Network::on_idle(void *argument)
 {
     if (!ethernet->isUp()) return;
 
-    int len;
+    int len= sizeof(uip_buf); // set maximum size
     if (ethernet->_receive_frame(uip_buf, &len)) {
         uip_len = len;
         this->handlePacket();
