@@ -380,8 +380,15 @@ bool LPC17XX_Ethernet::_receive_frame(void *packet, int *size)
     {
         int i = LPC_EMAC->RxConsumeIndex;
         RX_Stat* stat = &(rxbuf.rxstat[i]);
-        *size = stat->Info & EMAC_RINFO_SIZE;
-        memcpy(packet, rxbuf.buf[i], *size);
+        int len = stat->Info & EMAC_RINFO_SIZE;
+        if(len <= *size) {
+            memcpy(packet, rxbuf.buf[i], len);
+            *size= len;
+        }else{
+            // discard frame that is too big for input buffer
+            printf("WARNING: Discarded ethernet frame that is too big: %d - %d\n", len, *size);
+            *size= 0;
+        }
 
         //printf("Received %d byte Ethernet frame %lu/%lu\n", *size, LPC_EMAC->RxProduceIndex, LPC_EMAC->RxConsumeIndex);
 
@@ -390,7 +397,7 @@ bool LPC17XX_Ethernet::_receive_frame(void *packet, int *size)
             r = 0;
         LPC_EMAC->RxConsumeIndex = r;
 
-        return true;
+        return *size > 0;
     }
 
     return false;
