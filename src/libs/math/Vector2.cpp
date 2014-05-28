@@ -72,7 +72,17 @@ void Vector2::operator/=(const float f) {
     x /= f;
     y /= f;
 }
-        
+
+void Vector2::operator+=(const Vector2& v) {
+    x += v.x;
+    y += v.y;
+}
+
+void Vector2::operator-=(const Vector2& v) {
+    x -= v.x;
+    y -= v.y;
+}      
+   
 Vector2 Vector2::operator+(const Vector2& v) const {
     return Vector2(x+v.x, y+v.y);
 }
