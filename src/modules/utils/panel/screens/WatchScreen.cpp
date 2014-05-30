@@ -269,11 +269,7 @@ const char *WatchScreen::get_status()
 
 void WatchScreen::set_speed()
 {
-    // change pos by issuing a M220 Snnn
-    char buf[32];
-    int n = snprintf(buf, sizeof(buf), "M220 S%d", this->current_speed);
-    string g(buf, n);
-    send_gcode(g);
+    send_gcode("M220", 'S', this->current_speed);
 }
 
 const char *WatchScreen::get_network()

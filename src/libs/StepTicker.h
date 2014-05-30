@@ -18,6 +18,9 @@ class StepperMotor;
 
 class StepTicker{
     public:
+        friend class StepperMotor;
+        static StepTicker* global_step_ticker;
+
         StepTicker();
         void set_frequency( float frequency );
         void tick();
@@ -27,7 +30,9 @@ class StepTicker{
         void reset_tick();
         void add_motor_to_active_list(StepperMotor* motor);
         void remove_motor_from_active_list(StepperMotor* motor);
+        void TIMER0_IRQHandler (void);
 
+    private:
         float frequency;
         vector<StepperMotor*> stepper_motors;
         uint32_t delay;

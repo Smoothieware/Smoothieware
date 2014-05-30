@@ -96,7 +96,7 @@
 #define beta_max_checksum                CHECKSUM("beta_max")
 #define gamma_max_checksum               CHECKSUM("gamma_max")
 
-#define STEPS_PER_MM(a) (this->steppers[a]->steps_per_mm)
+#define STEPS_PER_MM(a) (this->steppers[a]->get_steps_per_mm())
 
 Endstops::Endstops()
 {
@@ -198,7 +198,7 @@ void Endstops::wait_for_homed(char axes_to_move)
                     if ( debounce[c] < debounce_count ) {
                         debounce[c]++;
                         running = true;
-                    } else if ( this->steppers[c]->moving ) {
+                    } else if ( this->steppers[c]->is_moving() ) {
                         this->steppers[c]->move(0, 0);
                     }
                 } else {
@@ -242,7 +242,7 @@ void Endstops::do_homing(char axes_to_move)
     // Wait for moves to be done
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if (  ( axes_to_move >> c ) & 1 ) {
-            while ( this->steppers[c]->moving ) {
+            while ( this->steppers[c]->is_moving() ) {
                 THEKERNEL->call_event(ON_IDLE);
             }
         }
@@ -279,7 +279,7 @@ void Endstops::do_homing(char axes_to_move)
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
             if (  ( axes_to_move >> c ) & 1 ) {
                 //THEKERNEL->streams->printf("axis %c \r\n", c );
-                while ( this->steppers[c]->moving ) {
+                while ( this->steppers[c]->is_moving() ) {
                     THEKERNEL->call_event(ON_IDLE);
                 }
             }
@@ -303,8 +303,8 @@ void Endstops::wait_for_homed_corexy(int axis)
                 running = true;
             } else {
                 // turn both off if running
-                if (this->steppers[X_AXIS]->moving) this->steppers[X_AXIS]->move(0, 0);
-                if (this->steppers[Y_AXIS]->moving) this->steppers[Y_AXIS]->move(0, 0);
+                if (this->steppers[X_AXIS]->is_moving()) this->steppers[X_AXIS]->move(0, 0);
+                if (this->steppers[Y_AXIS]->is_moving()) this->steppers[Y_AXIS]->move(0, 0);
             }
         } else {
             // The endstop was not hit yet
@@ -337,7 +337,7 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate,
     this->steppers[Y_AXIS]->move(!diry, retract_steps);
 
     // wait until done
-    while ( this->steppers[X_AXIS]->moving || this->steppers[Y_AXIS]->moving) {
+    while ( this->steppers[X_AXIS]->is_moving() || this->steppers[Y_AXIS]->is_moving()) {
         THEKERNEL->call_event(ON_IDLE);
     }
 
@@ -394,7 +394,7 @@ void Endstops::do_homing_corexy(char axes_to_move)
             for(int m=X_AXIS;m<=Y_AXIS;m++) {
                 if(this->pins[m + (this->home_direction[m] ? 0 : 3)].get()) {
                     // turn off motor
-                    if(this->steppers[motor]->moving) this->steppers[motor]->move(0, 0);
+                    if(this->steppers[motor]->is_moving()) this->steppers[motor]->move(0, 0);
                     running= false;
                     break;
                 }
@@ -557,9 +557,9 @@ uint32_t Endstops::acceleration_tick(uint32_t dummy)
 
     // foreach stepper that is moving
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if( !this->steppers[c]->moving ) continue;
+        if( !this->steppers[c]->is_moving() ) continue;
 
-        uint32_t current_rate = this->steppers[c]->steps_per_second;
+        uint32_t current_rate = this->steppers[c]->get_steps_per_second();
         uint32_t target_rate = int(floor(this->feed_rate[c]*STEPS_PER_MM(c)));
 
         if( current_rate < target_rate ){

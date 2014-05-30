@@ -32,6 +32,7 @@ public:
 
 protected:
     void send_gcode(std::string g);
+    void send_gcode(const char *gm_code, char parameter, float value);
     void send_command(const char *gcstr);
 };
 

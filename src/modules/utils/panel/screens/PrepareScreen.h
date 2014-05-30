@@ -30,7 +30,7 @@ public:
 
 private:
     PanelScreen *extruder_screen;
-    PanelScreen *temp_screen;
+    PanelScreen *temperature_screen;
     void preheat();
     void cooldown();
 

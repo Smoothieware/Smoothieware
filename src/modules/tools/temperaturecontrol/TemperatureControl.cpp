@@ -15,7 +15,7 @@
 #include "libs/Pin.h"
 #include "modules/robot/Conveyor.h"
 #include "PublicDataRequest.h"
-#include "TemperatureControlPublicAccess.h"
+
 #include "PublicData.h"
 #include "ToolManagerPublicAccess.h"
 #include "StreamOutputPool.h"
@@ -262,13 +262,11 @@ void TemperatureControl::on_get_public_data(void *argument)
 
     // ok this is targeted at us, so send back the requested data
     if(pdr->third_element_is(current_temperature_checksum)) {
-        // this must be static as it will be accessed long after we have returned
-        static struct pad_temperature temp_return;
-        temp_return.current_temperature = this->get_temperature();
-        temp_return.target_temperature = (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
-        temp_return.pwm = this->o;
-
-        pdr->set_data_ptr(&temp_return);
+        this->public_data_return.current_temperature = this->get_temperature();
+        this->public_data_return.target_temperature = (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
+        this->public_data_return.pwm = this->o;
+        this->public_data_return.designator= this->designator;
+        pdr->set_data_ptr(&this->public_data_return);
         pdr->set_taken();
     }
 }

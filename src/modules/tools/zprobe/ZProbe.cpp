@@ -44,7 +44,7 @@
 #define Y_AXIS 1
 #define Z_AXIS 2
 
-#define STEPS_PER_MM(a) (this->steppers[a]->steps_per_mm)
+#define STEPS_PER_MM(a) (this->steppers[a]->get_steps_per_mm())
 #define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
 
 #define abs(a) ((a<0) ? -a : a)
@@ -97,7 +97,7 @@ bool ZProbe::wait_for_probe(int steps[3])
     while(true) {
         THEKERNEL->call_event(ON_IDLE);
         // if no stepper is moving, moves are finished and there was no touch
-        if( !this->steppers[X_AXIS]->moving && !this->steppers[Y_AXIS]->moving && !this->steppers[Z_AXIS]->moving ) {
+        if( !this->steppers[X_AXIS]->is_moving() && !this->steppers[Y_AXIS]->is_moving() && !this->steppers[Z_AXIS]->is_moving() ) {
             return false;
         }
 
@@ -111,8 +111,8 @@ bool ZProbe::wait_for_probe(int steps[3])
                 // ...otherwise stop the steppers, return its remaining steps
                 for( int i = X_AXIS; i <= Z_AXIS; i++ ) {
                     steps[i] = 0;
-                    if ( this->steppers[i]->moving ) {
-                        steps[i] =  this->steppers[i]->stepped;
+                    if ( this->steppers[i]->is_moving() ) {
+                        steps[i] =  this->steppers[i]->get_stepped();
                         this->steppers[i]->move(0, 0);
                     }
                 }
@@ -173,7 +173,7 @@ bool ZProbe::return_probe(int steps)
     }
 
     this->running = true;
-    while(this->steppers[X_AXIS]->moving || this->steppers[Y_AXIS]->moving || this->steppers[Z_AXIS]->moving) {
+    while(this->steppers[X_AXIS]->is_moving() || this->steppers[Y_AXIS]->is_moving() || this->steppers[Z_AXIS]->is_moving()) {
         // wait for it to complete
         THEKERNEL->call_event(ON_IDLE);
     }
@@ -492,9 +492,9 @@ uint32_t ZProbe::acceleration_tick(uint32_t dummy)
 
     // foreach stepper that is moving
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if( !this->steppers[c]->moving ) continue;
+        if( !this->steppers[c]->is_moving() ) continue;
 
-        uint32_t current_rate = this->steppers[c]->steps_per_second;
+        uint32_t current_rate = this->steppers[c]->get_steps_per_second();
         uint32_t target_rate = int(floor(this->current_feedrate));
 
         if( current_rate < target_rate ) {

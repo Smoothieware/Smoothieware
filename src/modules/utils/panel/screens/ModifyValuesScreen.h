@@ -5,39 +5,41 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef CONTROLSCREEN_H
-#define CONTROLSCREEN_H
+#ifndef MODIFYVALUESSCREEN_H
+#define MODIFYVALUESSCREEN_H
 
 #include "PanelScreen.h"
 
-class ControlScreen : public PanelScreen
+#include <string>
+#include <vector>
+#include <tuple>
+#include <functional>
+#include <cmath>
+
+class ModifyValuesScreen : public PanelScreen
 {
 public:
-    ControlScreen();
-    void on_main_loop();
+    ModifyValuesScreen();
+
     void on_refresh();
     void on_enter();
+    void on_main_loop();
     void display_menu_line(uint16_t line);
-    void set_jog_increment(float i) { jog_increment = i;}
-    int idle_timeout_secs() { return 120; }
+    void clicked_menu_entry(uint16_t line);
+    int idle_timeout_secs(){ return 60; }
+
+    typedef std::tuple<const char *, std::function<float()>, std::function<void(float)>, float, float, float> MenuItemType;
+    void addMenuItem(const MenuItemType& item);
+    void addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc= 1.0F, float min= NAN, float max= NAN);
+
 
 private:
-    void clicked_menu_entry(uint16_t line);
-    void display_axis_line(char axis);
-    void enter_axis_control(char axis);
-    void enter_menu_control();
-    void get_current_pos(float *p);
-    void set_current_pos(char axis, float p);
+    int execute_function;
+    float new_value, min_value, max_value;
     char control_mode;
-    char controlled_axis;
-    float pos[3];
-    bool pos_changed;
-    float jog_increment;
+    int selected_item;
+    // name, getter function, setter function, increment
+    std::vector<MenuItemType> menu_items;
 };
-
-
-
-
-
 
 #endif

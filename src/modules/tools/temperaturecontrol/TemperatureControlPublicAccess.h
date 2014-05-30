@@ -13,5 +13,6 @@ struct pad_temperature {
     float current_temperature;
     float target_temperature;
     int pwm;
+    string designator;
 };
 #endif

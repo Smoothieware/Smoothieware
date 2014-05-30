@@ -16,21 +16,53 @@
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "PublicData.h"
 #include "checksumm.h"
+#include "ModifyValuesScreen.h"
 
 #include <string>
 using namespace std;
+
+static float getTargetTemperature(uint16_t heater_cs)
+{
+    void *returned_data;
+    bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
+
+    if (ok) {
+        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
+        return temp.target_temperature;
+    }
+
+    return 0.0F;
+}
+
+static void setTargetTemperature(uint16_t heater_cs, float temp)
+{
+    THEKERNEL->public_data->set_value( temperature_control_checksum, heater_cs, &temp );
+}
 
 PrepareScreen::PrepareScreen()
 {
     // Children screens
     this->extruder_screen = (new ExtruderScreen()  )->set_parent(this);
-    //    this->temp_screen     = (new TempScreen()      )->set_parent(this);
+    // setup temperature screen
+    auto mvs= new ModifyValuesScreen();
+    this->temperature_screen= mvs;
+    this->temperature_screen->set_parent(this);
+
+    // TODO need to enumerate hotends
+    mvs->addMenuItem("Hotend1", // menu name
+        []() -> float { return getTargetTemperature(get_checksum("hotend")); }, // getter
+        [](float t) { setTargetTemperature(get_checksum("hotend"), t); }, // setter
+        1.0F, // increment
+        0.0F, // Min
+        500.0F // Max
+        );
+    mvs->addMenuItem("Bed", []() -> float { return getTargetTemperature(get_checksum("bed")); }, [](float t) { setTargetTemperature(get_checksum("bed"), t); }, 1.0F, 0.0F, 500.0F);
 }
 
 void PrepareScreen::on_enter()
 {
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(8);
+    this->panel->setup_menu(9);
     this->refresh_menu();
 }
 
@@ -55,7 +87,7 @@ void PrepareScreen::display_menu_line(uint16_t line)
         case 5: this->panel->lcd->printf("Cool Down"      ); break;
         case 6: this->panel->lcd->printf("Extrude"        ); break;
         case 7: this->panel->lcd->printf("Motors off"     ); break;
-            //case 8: this->panel->lcd->printf("Set Temperature"); break;
+        case 8: this->panel->lcd->printf("Set Temperature"); break;
     }
 }
 
@@ -70,7 +102,7 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
         case 5: this->cooldown(); break;
         case 6: this->panel->enter_screen(this->extruder_screen); break;
         case 7: command = "M84"; break;
-            //case 8: this->panel->enter_screen(this->temp_screen      ); break;
+        case 8: this->panel->enter_screen(this->temperature_screen); break;
     }
 }
 
@@ -97,3 +129,4 @@ void PrepareScreen::on_main_loop()
     send_command(this->command.c_str());
     this->command.clear();
 }
+

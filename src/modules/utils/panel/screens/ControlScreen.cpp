@@ -22,6 +22,10 @@
 
 using namespace std;
 
+#define NULL_CONTROL_MODE        0
+#define AXIS_CONTROL_MODE        1
+#define INCREMENT_SELECTION_MODE 2
+
 ControlScreen::ControlScreen()
 {
     this->control_mode = NULL_CONTROL_MODE;

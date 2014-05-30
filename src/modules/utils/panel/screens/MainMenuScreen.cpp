@@ -18,6 +18,10 @@
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "PublicData.h"
 #include "checksumm.h"
+#include "ModifyValuesScreen.h"
+#include "Robot.h"
+#include "Planner.h"
+#include "StepperMotor.h"
 
 #include <string>
 using namespace std;
@@ -29,13 +33,55 @@ MainMenuScreen::MainMenuScreen()
     this->watch_screen   = (new WatchScreen()   )->set_parent(this);
     this->file_screen    = (new FileScreen()    )->set_parent(this);
     this->prepare_screen = (new PrepareScreen() )->set_parent(this);
+    this->configure_screen = setupConfigureScreen();
+
     this->set_parent(this->watch_screen);
+}
+
+// setup things here that can be configured
+PanelScreen* MainMenuScreen::setupConfigureScreen()
+{
+    auto mvs= new ModifyValuesScreen();
+    mvs->set_parent(this);
+
+    // acceleration
+    mvs->addMenuItem("Accelertn", // menu name
+        []() -> float { return THEKERNEL->planner->get_acceleration(); }, // getter
+        [this](float acc) { send_gcode("M204", 'S', acc); }, // setter
+        10.0F, // increment
+        1.0F, // Min
+        10000.0F // Max
+        );
+
+    // steps/mm
+    mvs->addMenuItem("X steps/mm",
+        []() -> float { return THEKERNEL->robot->actuators[0]->get_steps_per_mm(); },
+        [](float v) { THEKERNEL->robot->actuators[0]->change_steps_per_mm(v); },
+        0.1F,
+        1.0F
+        );
+
+    mvs->addMenuItem("Y steps/mm",
+        []() -> float { return THEKERNEL->robot->actuators[1]->get_steps_per_mm(); },
+        [](float v) { THEKERNEL->robot->actuators[1]->change_steps_per_mm(v); },
+        0.1F,
+        1.0F
+        );
+
+    mvs->addMenuItem("Z steps/mm",
+        []() -> float { return THEKERNEL->robot->actuators[2]->get_steps_per_mm(); },
+        [](float v) { THEKERNEL->robot->actuators[2]->change_steps_per_mm(v); },
+        0.1F,
+        1.0F
+        );
+
+    return mvs;
 }
 
 void MainMenuScreen::on_enter()
 {
     this->panel->enter_menu_mode();
-    this->panel->setup_menu(5);
+    this->panel->setup_menu(6);
     this->refresh_menu();
 }
 
@@ -57,7 +103,7 @@ void MainMenuScreen::display_menu_line(uint16_t line)
         case 2: this->panel->lcd->printf("Jog"); break;
         case 3: this->panel->lcd->printf("Prepare"); break;
         case 4: this->panel->lcd->printf("Custom"); break;
-            //case 4: this->panel->lcd->printf("Configure"); break;
+        case 5: this->panel->lcd->printf("Configure"); break;
             //case 5: this->panel->lcd->printf("Tune"); break;
     }
 }
@@ -70,6 +116,7 @@ void MainMenuScreen::clicked_menu_entry(uint16_t line)
         case 2: this->panel->enter_screen(this->jog_screen     ); break;
         case 3: this->panel->enter_screen(this->prepare_screen ); break;
         case 4: this->panel->enter_screen(this->panel->custom_screen ); break;
+        case 5: this->panel->enter_screen(this->configure_screen ); break;
     }
 }
 
