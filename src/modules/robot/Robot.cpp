@@ -552,7 +552,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
         deltas[axis] = target[axis] - last_milestone[axis];
 
     // Compute how long this move moves, so we can attach it to the block for later use
-    millimeters_of_travel = sqrtf( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
+    millimeters_of_travel = sqrtf( powf( deltas[X_AXIS], 2 ) +  powf( deltas[Y_AXIS], 2 ) +  powf( deltas[Z_AXIS], 2 ) );
 
     // find distance unit vector
     for (int i = 0; i < 3; i++)
@@ -592,7 +592,7 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
 {
 
     // Find out the distance for this gcode
-    gcode->millimeters_of_travel = pow( target[X_AXIS] - this->last_milestone[X_AXIS], 2 ) +  pow( target[Y_AXIS] - this->last_milestone[Y_AXIS], 2 ) +  pow( target[Z_AXIS] - this->last_milestone[Z_AXIS], 2 );
+    gcode->millimeters_of_travel = powf( target[X_AXIS] - this->last_milestone[X_AXIS], 2 ) +  powf( target[Y_AXIS] - this->last_milestone[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - this->last_milestone[Z_AXIS], 2 );
 
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
     if( gcode->millimeters_of_travel < 1e-8F ) {
