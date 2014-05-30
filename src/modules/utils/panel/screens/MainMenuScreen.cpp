@@ -26,6 +26,8 @@
 #include <string>
 using namespace std;
 
+#define extruder_checksum CHECKSUM("extruder")
+
 MainMenuScreen::MainMenuScreen()
 {
     // Children screens
@@ -45,7 +47,7 @@ PanelScreen* MainMenuScreen::setupConfigureScreen()
     mvs->set_parent(this);
 
     // acceleration
-    mvs->addMenuItem("Accelertn", // menu name
+    mvs->addMenuItem("Acceleration", // menu name
         []() -> float { return THEKERNEL->planner->get_acceleration(); }, // getter
         [this](float acc) { send_gcode("M204", 'S', acc); }, // setter
         10.0F, // increment
@@ -71,6 +73,14 @@ PanelScreen* MainMenuScreen::setupConfigureScreen()
     mvs->addMenuItem("Z steps/mm",
         []() -> float { return THEKERNEL->robot->actuators[2]->get_steps_per_mm(); },
         [](float v) { THEKERNEL->robot->actuators[2]->change_steps_per_mm(v); },
+        0.1F,
+        1.0F
+        );
+
+    mvs->addMenuItem("E steps/mm",
+        // gets steps/mm for currently active extruder
+        []() -> float { void *rd; THEKERNEL->public_data->get_value( extruder_checksum, &rd ); return rd==nullptr ? 0.0F : *((float*)rd); },
+        [this](float v) { send_gcode("M92", 'E', v); },
         0.1F,
         1.0F
         );

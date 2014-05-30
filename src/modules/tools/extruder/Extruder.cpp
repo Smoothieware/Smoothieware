@@ -23,6 +23,7 @@
 #include "ConfigValue.h"
 #include "Gcode.h"
 #include "libs/StreamOutput.h"
+#include "PublicDataRequest.h"
 
 #include <mri.h>
 
@@ -88,6 +89,7 @@ void Extruder::on_module_loaded()
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
     this->register_for_event(ON_SPEED_CHANGE);
+    this->register_for_event(ON_GET_PUBLIC_DATA);
 
     // Start values
     this->target_position = 0;
@@ -147,6 +149,18 @@ void Extruder::on_config_reload(void *argument)
 
 }
 
+void Extruder::on_get_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(extruder_checksum)) return;
+
+    if(this->enabled) {
+        static float return_data;
+        return_data= this->steps_per_millimeter;
+        pdr->set_data_ptr(&return_data);
+        pdr->set_taken();
+    }
+}
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Extruder::on_pause(void *argument)
@@ -161,7 +175,6 @@ void Extruder::on_play(void *argument)
     this->paused = false;
     this->stepper_motor->unpause();
 }
-
 
 void Extruder::on_gcode_received(void *argument)
 {
