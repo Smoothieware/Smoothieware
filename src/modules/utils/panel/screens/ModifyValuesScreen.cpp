@@ -46,8 +46,7 @@ void ModifyValuesScreen::on_refresh()
             // done changing value
             execute_function= selected_item; // this causes on_main_loop to change the value
             this->control_mode = MENU_CONTROL_MODE;
-            this->panel->enter_menu_mode();
-            this->refresh_menu();
+            this->panel->enter_menu_mode(true);
 
         } else if (this->panel->control_value_change()) {
             this->new_value = this->panel->get_control_value();

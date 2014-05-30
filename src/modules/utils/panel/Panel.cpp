@@ -432,11 +432,11 @@ bool Panel::click()
 
 
 // Enter menu mode
-void Panel::enter_menu_mode()
+void Panel::enter_menu_mode(bool force)
 {
     this->mode = MENU_MODE;
     this->counter = &this->menu_selected_line;
-    this->menu_changed = false;
+    this->menu_changed = force;
 }
 
 void Panel::setup_menu(uint16_t rows)

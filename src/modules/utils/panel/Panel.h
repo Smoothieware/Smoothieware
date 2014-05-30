@@ -43,7 +43,7 @@ class Panel : public Module {
         int get_encoder_resolution() const { return encoder_click_resolution; }
 
         // Menu
-        void enter_menu_mode();
+        void enter_menu_mode(bool force= false);
         void setup_menu(uint16_t rows, uint16_t lines);
         void setup_menu(uint16_t rows);
         void menu_update();
