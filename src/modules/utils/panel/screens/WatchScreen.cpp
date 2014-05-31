@@ -60,32 +60,32 @@ WatchScreen::WatchScreen()
 
 void WatchScreen::on_enter()
 {
-    this->panel->lcd->clear();
-    this->panel->setup_menu(4);
+    THEPANEL->lcd->clear();
+    THEPANEL->setup_menu(4);
     get_temp_data();
     get_current_pos(this->pos);
     get_sd_play_info();
     this->current_speed = lround(get_current_speed());
     this->refresh_screen(false);
-    this->panel->enter_control_mode(1, 0.5);
-    this->panel->set_control_value(this->current_speed);
+    THEPANEL->enter_control_mode(1, 0.5);
+    THEPANEL->set_control_value(this->current_speed);
 }
 
 void WatchScreen::on_refresh()
 {
     // Exit if the button is clicked
-    if ( this->panel->click() ) {
-        this->panel->enter_screen(this->parent);
+    if ( THEPANEL->click() ) {
+        THEPANEL->enter_screen(this->parent);
         return;
     }
 
     // see if speed is being changed
-    if (this->panel->control_value_change()) {
-        this->current_speed = this->panel->get_control_value();
+    if (THEPANEL->control_value_change()) {
+        this->current_speed = THEPANEL->get_control_value();
         if (this->current_speed < 10) {
             this->current_speed = 10;
-            this->panel->set_control_value(this->current_speed);
-            this->panel->reset_counter();
+            THEPANEL->set_control_value(this->current_speed);
+            THEPANEL->reset_counter();
         } else {
             // flag the update to change the speed, we don't want to issue hundreds of M220s
             // but we do want to display the change we are going to make
@@ -107,32 +107,32 @@ void WatchScreen::on_refresh()
         } else if (!this->issue_change_speed) { // change still queued
             // read it in case it was changed via M220
             this->current_speed = lround(get_current_speed());
-            this->panel->set_control_value(this->current_speed);
-            this->panel->reset_counter();
+            THEPANEL->set_control_value(this->current_speed);
+            THEPANEL->reset_counter();
         }
 
-        this->refresh_screen(this->panel->lcd->hasGraphics() ? true : false); // graphics screens should be cleared
+        this->refresh_screen(THEPANEL->lcd->hasGraphics() ? true : false); // graphics screens should be cleared
 
         // for LCDs with leds set them according to heater status
         // TODO should be enabled and disabled and settable from config
-        this->panel->lcd->setLed(LED_BED_ON, this->bedtarget > 0);
-        this->panel->lcd->setLed(LED_HOTEND_ON, this->hotendtarget > 0);
-        this->panel->lcd->setLed(LED_FAN_ON, this->fan_state);
+        THEPANEL->lcd->setLed(LED_BED_ON, this->bedtarget > 0);
+        THEPANEL->lcd->setLed(LED_HOTEND_ON, this->hotendtarget > 0);
+        THEPANEL->lcd->setLed(LED_FAN_ON, this->fan_state);
 
-        if (this->panel->lcd->hasGraphics()) {
+        if (THEPANEL->lcd->hasGraphics()) {
             // display the graphical icons below the status are
-            //this->panel->lcd->bltGlyph(0, 34, 115, 19, icons);
+            //THEPANEL->lcd->bltGlyph(0, 34, 115, 19, icons);
             // for (int i = 0; i < 5; ++i) {
-            //     this->panel->lcd->bltGlyph(i*24, 38, 23, 19, icons, 15, i*24, 0);
+            //     THEPANEL->lcd->bltGlyph(i*24, 38, 23, 19, icons, 15, i*24, 0);
             // }
             if (this->hotendtarget > 0)
-                this->panel->lcd->bltGlyph(8, 38, 20, 19, icons, 15, 0, 0);
+                THEPANEL->lcd->bltGlyph(8, 38, 20, 19, icons, 15, 0, 0);
 
             if (this->bedtarget > 0)
-                this->panel->lcd->bltGlyph(32, 38, 23, 19, icons, 15, 64, 0);
+                THEPANEL->lcd->bltGlyph(32, 38, 23, 19, icons, 15, 64, 0);
 
             if(this->fan_state)
-                this->panel->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
+                THEPANEL->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
         }
     }
 }
@@ -224,7 +224,7 @@ void WatchScreen::get_sd_play_info()
         struct pad_progress p =  *static_cast<struct pad_progress *>(returned_data);
         this->elapsed_time = p.elapsed_secs;
         this->sd_pcnt_played = p.percent_complete;
-        this->panel->set_playing_file(p.filename);
+        THEPANEL->set_playing_file(p.filename);
 
     } else {
         this->elapsed_time = 0;
@@ -236,24 +236,24 @@ void WatchScreen::display_menu_line(uint16_t line)
 {
     // in menu mode
     switch ( line ) {
-        case 0: this->panel->lcd->printf("H%03d/%03dc B%03d/%03dc", this->hotendtemp, this->hotendtarget, this->bedtemp, this->bedtarget); break;
-        case 1: this->panel->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]); break;
-        case 2: this->panel->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
-        case 3: this->panel->lcd->printf("%19s", this->get_status()); break;
+        case 0: THEPANEL->lcd->printf("H%03d/%03dc B%03d/%03dc", this->hotendtemp, this->hotendtarget, this->bedtemp, this->bedtarget); break;
+        case 1: THEPANEL->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]); break;
+        case 2: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
+        case 3: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
 }
 
 const char *WatchScreen::get_status()
 {
-    if (panel->hasMessage()) {
-        return panel->getMessage().c_str();
+    if (THEPANEL->hasMessage()) {
+        return THEPANEL->getMessage().c_str();
     }
 
     if (THEKERNEL->pauser->paused())
         return "Paused";
 
-    if (panel->is_playing())
-        return panel->get_playing_file();
+    if (THEPANEL->is_playing())
+        return THEPANEL->get_playing_file();
 
     if (!THEKERNEL->conveyor->is_queue_empty()) {
         return "Printing";
@@ -269,11 +269,7 @@ const char *WatchScreen::get_status()
 
 void WatchScreen::set_speed()
 {
-    // change pos by issuing a M220 Snnn
-    char buf[32];
-    int n = snprintf(buf, sizeof(buf), "M220 S%d", this->current_speed);
-    string g(buf, n);
-    send_gcode(g);
+    send_gcode("M220", 'S', this->current_speed);
 }
 
 const char *WatchScreen::get_network()

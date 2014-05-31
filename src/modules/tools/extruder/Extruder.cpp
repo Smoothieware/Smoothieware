@@ -23,6 +23,7 @@
 #include "ConfigValue.h"
 #include "Gcode.h"
 #include "libs/StreamOutput.h"
+#include "PublicDataRequest.h"
 
 #include <mri.h>
 
@@ -88,6 +89,7 @@ void Extruder::on_module_loaded()
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
     this->register_for_event(ON_SPEED_CHANGE);
+    this->register_for_event(ON_GET_PUBLIC_DATA);
 
     // Start values
     this->target_position = 0;
@@ -147,6 +149,18 @@ void Extruder::on_config_reload(void *argument)
 
 }
 
+void Extruder::on_get_public_data(void* argument){
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(extruder_checksum)) return;
+
+    if(this->enabled) {
+        static float return_data;
+        return_data= this->steps_per_millimeter;
+        pdr->set_data_ptr(&return_data);
+        pdr->set_taken();
+    }
+}
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Extruder::on_pause(void *argument)
@@ -161,7 +175,6 @@ void Extruder::on_play(void *argument)
     this->paused = false;
     this->stepper_motor->unpause();
 }
-
 
 void Extruder::on_gcode_received(void *argument)
 {
@@ -325,7 +338,7 @@ void Extruder::on_block_begin(void *argument)
             block->take();
             this->current_block = block;
 
-            this->stepper_motor->steps_per_second = 0;
+            this->stepper_motor->set_steps_per_second(0);
             this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
 
         } else {
@@ -382,7 +395,7 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy)
         return 0;
     }
 
-    uint32_t current_rate = this->stepper_motor->steps_per_second;
+    uint32_t current_rate = this->stepper_motor->get_steps_per_second();
     uint32_t target_rate = int(floor(this->feed_rate * this->steps_per_millimeter));
 
     if( current_rate < target_rate ) {
@@ -405,7 +418,7 @@ void Extruder::on_speed_change( void *argument )
     if(!this->enabled) return;
 
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if( this->current_block == NULL ||  this->paused || this->mode != FOLLOW || this->stepper_motor->moving != true ) {
+    if( this->current_block == NULL ||  this->paused || this->mode != FOLLOW || this->stepper_motor->is_moving() != true ) {
         return;
     }
 
@@ -418,7 +431,7 @@ void Extruder::on_speed_change( void *argument )
     * or even : ( stepper steps per second ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->get_trapezoid_adjusted_rate()) * ( (float)this->stepper_motor->steps_to_move / (float)this->current_block->steps_event_count ), THEKERNEL->stepper->get_minimum_steps_per_second() ) );
+    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->get_trapezoid_adjusted_rate()) * ( (float)this->stepper_motor->get_steps_to_move() / (float)this->current_block->steps_event_count ), THEKERNEL->stepper->get_minimum_steps_per_second() ) );
 
 }
 

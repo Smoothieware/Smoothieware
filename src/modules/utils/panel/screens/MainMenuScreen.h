@@ -30,10 +30,11 @@ class MainMenuScreen : public PanelScreen {
         PanelScreen* file_screen;
         PanelScreen* jog_screen;
         PanelScreen* prepare_screen;
+        PanelScreen* configure_screen;
 
     private:
         void abort_playing();
-
+        PanelScreen* setupConfigureScreen();
 };
 
 

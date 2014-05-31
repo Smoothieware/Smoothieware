@@ -19,6 +19,9 @@
 #include "SlowTicker.h"
 #include "Gcode.h"
 #include "Pauser.h"
+#include "TemperatureControlPublicAccess.h"
+#include "ModifyValuesScreen.h"
+#include "PublicDataRequest.h"
 #include "PublicData.h"
 
 #include "panels/I2CLCD.h"
@@ -53,8 +56,11 @@
 #define hotend_temp_checksum CHECKSUM("hotend_temperature")
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
 
+Panel* Panel::instance= nullptr;
+
 Panel::Panel()
 {
+    instance= this;
     this->counter_changed = false;
     this->click_changed = false;
     this->refresh_flag = false;
@@ -107,7 +113,9 @@ void Panel::on_module_loaded()
         return;
     }
 
-    this->custom_screen= new CustomScreen(); // this needs to be called here as it needs the config cache loaded
+    // these need to be called here as they need the config cache loaded as they enumerate modules
+    this->custom_screen= new CustomScreen();
+    setup_temperature_screen();
 
     // some panels may need access to this global info
     this->lcd->setPanel(this);
@@ -169,7 +177,6 @@ void Panel::on_module_loaded()
 // Enter a screen, we only care about it now
 void Panel::enter_screen(PanelScreen *screen)
 {
-    screen->panel = this;
     this->current_screen = screen;
     this->reset_counter();
     this->current_screen->on_enter();
@@ -290,7 +297,6 @@ void Panel::on_idle(void *argument)
 
         // Default top screen
         this->top_screen= new MainMenuScreen();
-        this->top_screen->set_panel(this);
         this->custom_screen->set_parent(this->top_screen);
         this->start_up = false;
         return;
@@ -432,11 +438,11 @@ bool Panel::click()
 
 
 // Enter menu mode
-void Panel::enter_menu_mode()
+void Panel::enter_menu_mode(bool force)
 {
     this->mode = MENU_MODE;
     this->counter = &this->menu_selected_line;
-    this->menu_changed = false;
+    this->menu_changed = force;
 }
 
 void Panel::setup_menu(uint16_t rows)
@@ -572,4 +578,51 @@ void  Panel::set_playing_file(string f)
     if (n == string::npos) n = 0;
     strncpy(playing_file, f.substr(n + 1, 19).c_str(), sizeof(playing_file));
     playing_file[sizeof(playing_file) - 1] = 0;
+}
+
+static float getTargetTemperature(uint16_t heater_cs)
+{
+    void *returned_data;
+    bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
+
+    if (ok) {
+        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
+        return temp.target_temperature;
+    }
+
+    return 0.0F;
+}
+
+void Panel::setup_temperature_screen()
+{
+    // setup temperature screen
+    auto mvs= new ModifyValuesScreen();
+    this->temperature_screen= mvs;
+
+    // enumerate heaters and add a menu item for each one
+    vector<uint16_t> modules;
+    THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
+
+    for(auto i : modules) {
+        if (!THEKERNEL->config->value(temperature_control_checksum, i, enable_checksum )->as_bool()) continue;
+        void *returned_data;
+        bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, i, current_temperature_checksum, &returned_data );
+        if (!ok) continue;
+
+        struct pad_temperature t =  *static_cast<struct pad_temperature *>(returned_data);
+
+        // rename if two of the known types
+        const char *name;
+        if(t.designator == "T") name= "Hotend";
+        else if(t.designator == "B") name= "Bed";
+        else name= t.designator.c_str();
+
+        mvs->addMenuItem(name, // menu name
+            [i]() -> float { return getTargetTemperature(i); }, // getter
+            [i](float t) { THEKERNEL->public_data->set_value( temperature_control_checksum, i, &t ); }, // setter
+            1.0F, // increment
+            0.0F, // Min
+            500.0F // Max
+            );
+    }
 }

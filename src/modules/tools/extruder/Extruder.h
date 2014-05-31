@@ -36,6 +36,7 @@ class Extruder : public Tool {
         Block*   append_empty_block();
 
     private:
+        void on_get_public_data(void* argument);
 
         Pin             step_pin;                     // Step pin for the stepper driver
         Pin             dir_pin;                      // Dir pin for the stepper driver
@@ -44,7 +45,7 @@ class Extruder : public Tool {
         float          target_position;              // End point ( in mm ) for the current move
         float          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
         float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
-        Block*          current_block;                // Current block we are stepping, same as Stepper's one
+        Block*         current_block;                // Current block we are stepping, same as Stepper's one
         float          steps_per_millimeter;         // Steps to travel one millimeter
         float          feed_rate;                    //
         float          acceleration;                 //

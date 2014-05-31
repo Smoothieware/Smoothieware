@@ -11,9 +11,9 @@
 #include "Module.h"
 #include "Pwm.h"
 #include "TempSensor.h"
+#include "TemperatureControlPublicAccess.h"
 
 class TemperatureControlPool;
-
 class TemperatureControl : public Module {
 
     public:
@@ -46,7 +46,7 @@ class TemperatureControl : public Module {
         float preset2;
 
         TempSensor *sensor;
-        
+
         // PID runtime
         float i_max;
 
@@ -69,6 +69,7 @@ class TemperatureControl : public Module {
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;
         uint16_t get_m_code;
+        struct pad_temperature public_data_return;
 
         string designator;
 
