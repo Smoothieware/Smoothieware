@@ -36,7 +36,7 @@ MainMenuScreen::MainMenuScreen()
     this->watch_screen   = (new WatchScreen()   )->set_parent(this);
     this->file_screen    = (new FileScreen()    )->set_parent(this);
     this->prepare_screen = (new PrepareScreen() )->set_parent(this);
-    this->configure_screen = setupConfigureScreen();
+    this->configure_screen = nullptr; // lazy load this the first time it is used
 
     this->set_parent(this->watch_screen);
 }
@@ -97,49 +97,51 @@ PanelScreen* MainMenuScreen::setupConfigureScreen()
 
 void MainMenuScreen::on_enter()
 {
-    this->panel->enter_menu_mode();
-    this->panel->setup_menu(6);
+    THEPANEL->enter_menu_mode();
+    THEPANEL->setup_menu(6);
     this->refresh_menu();
 }
 
 void MainMenuScreen::on_refresh()
 {
-    if ( this->panel->menu_change() ) {
+    if ( THEPANEL->menu_change() ) {
         this->refresh_menu();
     }
-    if ( this->panel->click() ) {
-        this->clicked_menu_entry(this->panel->get_menu_current_line());
+    if ( THEPANEL->click() ) {
+        this->clicked_menu_entry(THEPANEL->get_menu_current_line());
     }
 }
 
 void MainMenuScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
-        case 0: this->panel->lcd->printf("Watch"); break;
-        case 1: this->panel->lcd->printf(panel->is_playing() ? "Abort" : "Play"); break;
-        case 2: this->panel->lcd->printf("Jog"); break;
-        case 3: this->panel->lcd->printf("Prepare"); break;
-        case 4: this->panel->lcd->printf("Custom"); break;
-        case 5: this->panel->lcd->printf("Configure"); break;
-            //case 5: this->panel->lcd->printf("Tune"); break;
+        case 0: THEPANEL->lcd->printf("Watch"); break;
+        case 1: THEPANEL->lcd->printf(THEPANEL->is_playing() ? "Abort" : "Play"); break;
+        case 2: THEPANEL->lcd->printf("Jog"); break;
+        case 3: THEPANEL->lcd->printf("Prepare"); break;
+        case 4: THEPANEL->lcd->printf("Custom"); break;
+        case 5: THEPANEL->lcd->printf("Configure"); break;
+            //case 5: THEPANEL->lcd->printf("Tune"); break;
     }
 }
 
 void MainMenuScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
-        case 0: this->panel->enter_screen(this->watch_screen   ); break;
-        case 1: this->panel->is_playing() ? abort_playing() : this->panel->enter_screen(this->file_screen); break;
-        case 2: this->panel->enter_screen(this->jog_screen     ); break;
-        case 3: this->panel->enter_screen(this->prepare_screen ); break;
-        case 4: this->panel->enter_screen(this->panel->custom_screen ); break;
-        case 5: this->panel->enter_screen(this->configure_screen ); break;
+        case 0: THEPANEL->enter_screen(this->watch_screen   ); break;
+        case 1: THEPANEL->is_playing() ? abort_playing() : THEPANEL->enter_screen(this->file_screen); break;
+        case 2: THEPANEL->enter_screen(this->jog_screen     ); break;
+        case 3: THEPANEL->enter_screen(this->prepare_screen ); break;
+        case 4: THEPANEL->enter_screen(THEPANEL->custom_screen ); break;
+        case 5: if(this->configure_screen == nullptr) this->configure_screen= setupConfigureScreen();
+                THEPANEL->enter_screen(this->configure_screen );
+                break;
     }
 }
 
 void MainMenuScreen::abort_playing()
 {
     THEKERNEL->public_data->set_value(player_checksum, abort_play_checksum, NULL);
-    this->panel->enter_screen(this->watch_screen);
+    THEPANEL->enter_screen(this->watch_screen);
 }
 

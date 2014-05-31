@@ -15,16 +15,15 @@ using namespace std;
 class TemperatureControl;
 class PID_Autotuner;
 
-#define temperature_control_checksum CHECKSUM("temperature_control")
-#define enable_checksum              CHECKSUM("enable")
-
 class TemperatureControlPool : public Module {
     public:
         TemperatureControlPool();
 
         void on_module_loaded();
+        friend class TemperatureControl;
 
-        vector<TemperatureControl*> controllers;
+    private:
+        //vector<TemperatureControl*> controllers;
         PID_Autotuner* PIDtuner;
 };
 

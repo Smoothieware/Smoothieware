@@ -20,6 +20,7 @@ class ModifyValuesScreen : public PanelScreen
 {
 public:
     ModifyValuesScreen();
+    virtual ~ModifyValuesScreen();
 
     void on_refresh();
     void on_enter();
@@ -28,7 +29,7 @@ public:
     void clicked_menu_entry(uint16_t line);
     int idle_timeout_secs(){ return 60; }
 
-    typedef std::tuple<const char *, std::function<float()>, std::function<void(float)>, float, float, float> MenuItemType;
+    typedef std::tuple<char *, std::function<float()>, std::function<void(float)>, float, float, float> MenuItemType;
     void addMenuItem(const MenuItemType& item);
     void addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc= 1.0F, float min= NAN, float max= NAN);
 
