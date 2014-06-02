@@ -24,8 +24,7 @@ using std::string;
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
-#include "arm_solutions/RostockSolution.h"
-#include "arm_solutions/JohannKosselSolution.h"
+#include "arm_solutions/LinearDeltaSolution.h"
 #include "arm_solutions/HBotSolution.h"
 #include "StepTicker.h"
 #include "checksumm.h"
@@ -49,6 +48,7 @@ using std::string;
 #define  cartesian_checksum                  CHECKSUM("cartesian")
 #define  rotatable_cartesian_checksum        CHECKSUM("rotatable_cartesian")
 #define  rostock_checksum                    CHECKSUM("rostock")
+#define  linear_delta_checksum               CHECKSUM("linear_delta")
 #define  delta_checksum                      CHECKSUM("delta")
 #define  hbot_checksum                       CHECKSUM("hbot")
 #define  corexy_checksum                     CHECKSUM("corexy")
@@ -151,15 +151,8 @@ void Robot::on_config_reload(void *argument)
     if(solution_checksum == hbot_checksum || solution_checksum == corexy_checksum) {
         this->arm_solution = new HBotSolution(THEKERNEL->config);
 
-    } else if(solution_checksum == rostock_checksum) {
-        this->arm_solution = new RostockSolution(THEKERNEL->config);
-
-    } else if(solution_checksum == kossel_checksum) {
-        this->arm_solution = new JohannKosselSolution(THEKERNEL->config);
-
-    } else if(solution_checksum ==  delta_checksum) {
-        // place holder for now
-        this->arm_solution = new RostockSolution(THEKERNEL->config);
+    } else if(solution_checksum == rostock_checksum || solution_checksum == kossel_checksum || solution_checksum == delta_checksum || solution_checksum ==  linear_delta_checksum) {
+        this->arm_solution = new LinearDeltaSolution(THEKERNEL->config);
 
     } else if(solution_checksum == rotatable_cartesian_checksum) {
         this->arm_solution = new RotatableCartesianSolution(THEKERNEL->config);
