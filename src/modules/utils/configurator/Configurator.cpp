@@ -45,11 +45,11 @@ void Configurator::on_console_line_received( void *argument )
     string cmd = shift_parameter(possible_command);
 
     // Act depending on command
-    if (cmd == "config_get"){
+    if (cmd == "config-get"){
         this->config_get_command(  possible_command, new_message.stream );
-    } else if (cmd == "config_set"){
+    } else if (cmd == "config-set"){
         this->config_set_command(  possible_command, new_message.stream );
-    } else if (cmd == "config_load"){
+    } else if (cmd == "config-load"){
         this->config_load_command(  possible_command, new_message.stream );
     }
 }
