@@ -25,10 +25,6 @@
 #define CONF_SD         2
 #define CONF_EEPROM     3
 
-#define config_get_command_checksum        CHECKSUM("config-get")
-#define config_set_command_checksum        CHECKSUM("config-set")
-#define config_load_command_checksum       CHECKSUM("config-load")
-
 void Configurator::on_module_loaded()
 {
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
@@ -41,21 +37,21 @@ void Configurator::on_console_line_received( void *argument )
 {
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
 
-    // ignore comments
-    if(new_message.message[0] == ';') return;
+    // ignore comments and blank lines and if this is a G code then also ignore it
+    char first_char = new_message.message[0];
+    if(strchr(";( \n\rGMTN", first_char) != NULL) return;
 
     string possible_command = new_message.message;
-
-    // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
-    uint16_t check_sum = get_checksum( possible_command.substr(0, possible_command.find_first_of(" \r\n")) ); // todo: put this method somewhere more convenient
+    string cmd = shift_parameter(possible_command);
 
     // Act depending on command
-    if (check_sum == config_get_command_checksum)
-        this->config_get_command(  get_arguments(possible_command), new_message.stream );
-    else if (check_sum == config_set_command_checksum)
-        this->config_set_command(  get_arguments(possible_command), new_message.stream );
-    else if (check_sum == config_load_command_checksum)
-        this->config_load_command(  get_arguments(possible_command), new_message.stream );
+    if (cmd == "config-get"){
+        this->config_get_command(  possible_command, new_message.stream );
+    } else if (cmd == "config-set"){
+        this->config_set_command(  possible_command, new_message.stream );
+    } else if (cmd == "config-load"){
+        this->config_load_command(  possible_command, new_message.stream );
+    }
 }
 
 // Process and respond to eeprom gcodes (M50x)
