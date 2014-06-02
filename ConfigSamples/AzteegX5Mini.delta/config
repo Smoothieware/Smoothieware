@@ -1,6 +1,6 @@
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 
-arm_solution                                 kossel           # delta selection
+arm_solution                                 linear_delta     # delta selection
 arm_length                                   370.00           # this is the length of an arm from hinge to hinge
 arm_radius                                   203.00           # this is the horiontal distance from hinge to hinge when the effector is centered
 

@@ -1,13 +1,13 @@
-#ifndef JOHANNKOSSELSOLUTION_H
-#define ROSTOCKSOLUTION_H
+#ifndef LINEARDELTASOLUTION_H
+#define LINEARDELTASOLUTION_H
 #include "libs/Module.h"
 #include "BaseSolution.h"
 
 class Config;
 
-class JohannKosselSolution : public BaseSolution {
+class LinearDeltaSolution : public BaseSolution {
     public:
-        JohannKosselSolution(Config*);
+        LinearDeltaSolution(Config*);
         void cartesian_to_actuator( float[], float[] );
         void actuator_to_cartesian( float[], float[] );
 
@@ -28,4 +28,4 @@ class JohannKosselSolution : public BaseSolution {
         float DELTA_TOWER3_X;
         float DELTA_TOWER3_Y;
 };
-#endif // JOHANNKOSSELSOLUTION_H
+#endif // LINEARDELTASOLUTION_H

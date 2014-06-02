@@ -12,7 +12,7 @@ delta_segments_per_second                    100              # for deltas only 
 
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
-arm_solution                                 kossel           # selects the kossel arm solution
+arm_solution                                 linear_delta     # selects the delta arm solution
 alpha_steps_per_mm                           100              # Steps per mm for alpha stepper
 beta_steps_per_mm                            100              # Steps per mm for beta stepper
 gamma_steps_per_mm                           100              # Steps per mm for gamma stepper
