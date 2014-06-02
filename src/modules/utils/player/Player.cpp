@@ -25,9 +25,6 @@
 #include "PublicDataRequest.h"
 #include "PlayerPublicAccess.h"
 
-#define play_command_checksum           CHECKSUM("play")
-#define progress_command_checksum       CHECKSUM("progress")
-#define abort_command_checksum          CHECKSUM("abort")
 #define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
 #define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
 
@@ -161,29 +158,27 @@ void Player::on_gcode_received(void *argument)
     }
 }
 
-
 // When a new line is received, check if it is a command, and if it is, act upon it
 void Player::on_console_line_received( void *argument )
 {
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
 
-    // ignore comments
-    if(new_message.message[0] == ';') return;
+    // ignore comments and blank lines and if this is a G code then also ignore it
+    char first_char = new_message.message[0];
+    if(strchr(";( \n\rGMTN", first_char) != NULL) return;
 
     string possible_command = new_message.message;
+    string cmd = shift_parameter(possible_command);
 
     //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
 
-    // We don't compare to a string but to a checksum of that string, this saves some space in flash memory
-    unsigned short check_sum = get_checksum( possible_command.substr(0, possible_command.find_first_of(" \r\n")) ); // todo: put this method somewhere more convenient
-
     // Act depending on command
-    if (check_sum == play_command_checksum)
-        this->play_command(  get_arguments(possible_command), new_message.stream );
-    else if (check_sum == progress_command_checksum)
-        this->progress_command(get_arguments(possible_command), new_message.stream );
-    else if (check_sum == abort_command_checksum)
-        this->abort_command(get_arguments(possible_command), new_message.stream );
+    if (cmd == "play"){
+        this->play_command( possible_command, new_message.stream );
+    }else if (cmd == "progress"){
+        this->progress_command( possible_command, new_message.stream );
+    }else if (cmd == "abort")
+        this->abort_command( possible_command, new_message.stream );
 }
 
 // Play a gcode file by considering each line as if it was received on the serial console
