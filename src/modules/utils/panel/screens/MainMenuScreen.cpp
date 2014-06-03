@@ -86,7 +86,7 @@ PanelScreen* MainMenuScreen::setupConfigureScreen()
         1.0F
         );
 
-    mvs->addMenuItem("Z Home Off",
+    mvs->addMenuItem("Z Home Ofs",
         []() -> float { void *rd; THEKERNEL->public_data->get_value( endstops_checksum, home_offset_checksum, &rd ); return rd==nullptr ? 0.0F : ((float*)rd)[2]; },
         [this](float v) { send_gcode("M206", 'Z', v); },
         0.1F
