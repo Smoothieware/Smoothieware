@@ -6,7 +6,7 @@ class Vector2 {
         Vector2();
         Vector2(float, float);
 
-        float    operator[](int) const;
+        float&   operator[](int);
 
         float    dot(const Vector2&) const;         // dot product
         float    magsq() const;                     // squared vector length
