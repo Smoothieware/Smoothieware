@@ -6,7 +6,7 @@ class Vector3 {
         Vector3();
         Vector3(float, float, float);
 
-        float    operator[](int) const;
+        float&   operator[](int);
 
         Vector3  cross(const Vector3&) const;       // cross product
         float    dot(const Vector3&) const;         // dot product
