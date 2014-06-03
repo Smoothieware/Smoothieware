@@ -13,7 +13,7 @@ Vector3::Vector3(float a, float b, float c) {
     x = a; y = b; z = c;
 }
 
-float Vector3::operator[](int i) const {
+float& Vector3::operator[](int i) {
     if (i >= 0 && i <= 2)
         return elem[i];
     return nan;
