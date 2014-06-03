@@ -85,7 +85,7 @@ void ModifyValuesScreen::display_menu_line(uint16_t line)
         line--;
         const char *name = std::get<0>(menu_items[line]);
         float value = std::get<1>(menu_items[line])();
-        THEPANEL->lcd->printf("%-12s %8.3f", name, value);
+        THEPANEL->lcd->printf("%-10s %7.2f", name, value);
     }
 }
 
@@ -128,5 +128,9 @@ void ModifyValuesScreen::on_main_loop()
 
 void ModifyValuesScreen::addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc, float  min, float max)
 {
-    menu_items.push_back(make_tuple(strdup(name), getter, setter, inc, min, max));
+    string n(name);
+    if(n.size() > 10) {
+        n= n.substr(0, 10);
+    }
+    menu_items.push_back(make_tuple(strdup(n.c_str()), getter, setter, inc, min, max));
 }
