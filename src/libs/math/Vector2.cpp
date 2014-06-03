@@ -13,7 +13,7 @@ Vector2::Vector2(float a, float b) {
     x = a; y = b;
 }
 
-float Vector2::operator[](int i) const {
+float& Vector2::operator[](int i) {
     if (i >= 0 && i <= 1)
         return elem[i];
     return nan;
