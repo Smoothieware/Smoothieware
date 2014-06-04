@@ -28,7 +28,7 @@ float Vector3::dot(const Vector3 &vec) const {
 }
 
 float Vector3::magsq() const {
-    return powf(x, 2) + powf(x, 2) + powf(y, 2);
+    return powf(x, 2) + powf(y, 2) + powf(z, 2);
 }
 
 float Vector3::mag() const {
