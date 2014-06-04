@@ -9,8 +9,11 @@ class Matrix4x4 {
         
         void    buildUnit();                                
         void    buildFromBasisVectors(const Vector3& DirX, const Vector3& DirY, const Vector3& DirZ, const Vector3& Translation);      
-        Vector3 transformPoint(const Vector3& p) const;  //< rotation and translation
-        Vector3 rotateVector(const Vector3& v) const;    //< rotation only
+        void    setTranslation(const Vector3& v);
+        bool    invert();
+        
+        Vector3 transformPoint(const Vector3& p) const;                 //< rotation and translation
+        Vector3 rotateVector(const Vector3& v) const;                   //< rotation only
         
         union {
             struct {
