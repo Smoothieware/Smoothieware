@@ -52,22 +52,23 @@ void ModifyValuesScreen::on_refresh()
 
         if ( THEPANEL->click() ) {
             // done changing value
+            this->new_value = THEPANEL->get_control_value();
             execute_function= selected_item; // this causes on_main_loop to change the value
             this->control_mode = MENU_CONTROL_MODE;
             THEPANEL->enter_menu_mode(true);
 
         } else if (THEPANEL->control_value_change()) {
-            this->new_value = THEPANEL->get_control_value();
-            if(!isnan(this->min_value) && this->new_value < this->min_value) {
-                THEPANEL->set_control_value((this->new_value = this->min_value));
+            float value = THEPANEL->get_control_value();
+            if(!isnan(this->min_value) && value < this->min_value) {
+                THEPANEL->set_control_value((value = this->min_value));
                 THEPANEL->reset_counter();
             }
-            if(!isnan(this->max_value) && this->new_value > this->max_value) {
-                THEPANEL->set_control_value((this->new_value = this->max_value));
+            if(!isnan(this->max_value) && value > this->max_value) {
+                THEPANEL->set_control_value((value = this->max_value));
                 THEPANEL->reset_counter();
             }
             THEPANEL->lcd->setCursor(0, 2);
-            THEPANEL->lcd->printf("%10.3f    ", this->new_value);
+            THEPANEL->lcd->printf("%10.3f    ", value);
         }
 
     } else {
@@ -122,7 +123,7 @@ void ModifyValuesScreen::on_main_loop()
     if (execute_function == -1) return;
 
     // execute the setter function for the specified menu item
-    std::get<2>(menu_items[execute_function])(new_value);
+    std::get<2>(menu_items[execute_function])(this->new_value);
     execute_function = -1;
 }
 
