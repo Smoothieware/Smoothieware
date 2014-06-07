@@ -8,23 +8,16 @@
 #ifndef TEMPERATURECONTROLPOOL_H
 #define TEMPERATURECONTROLPOOL_H
 
-#include <math.h>
-using namespace std;
-#include <vector>
-
 class TemperatureControl;
-class PID_Autotuner;
 
 class TemperatureControlPool : public Module {
     public:
         TemperatureControlPool();
 
         void on_module_loaded();
-        friend class TemperatureControl;
 
     private:
         //vector<TemperatureControl*> controllers;
-        PID_Autotuner* PIDtuner;
 };
 
 
