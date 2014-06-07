@@ -188,6 +188,26 @@ gamma_homing_direction                       home_to_min      #
 gamma_min                                    0                #
 gamma_max                                    200              #
 
+# the following block will enable a system that will stop the machine if any endstop is hit during a print
+#switch.endstop_alphamin.enable              true             # 
+#switch.endstop_alphamin.input_pin           1.24^            # 
+#switch.endstop_alphamin.output_on_command   pause            # 
+#switch.endstop_alphamax.enable              true             # 
+#switch.endstop_alphamax.input_pin           1.25^            # 
+#switch.endstop_alphamax.output_on_command   pause            # 
+#switch.endstop_betamin.enable               true             # 
+#switch.endstop_betamin.input_pin            1.26^            # 
+#switch.endstop_betamin.output_on_command    pause            # 
+#switch.endstop_betamax.enable               true             # 
+#switch.endstop_betamax.input_pin            1.27^            # 
+#switch.endstop_betamax.output_on_command    pause            # 
+#switch.endstop_gammamin.enable              true             # 
+#switch.endstop_gammamin.input_pin           1.28^            # 
+#switch.endstop_gammamin.output_on_command   pause            # 
+#switch.endstop_gammamax.enable              true             # 
+#switch.endstop_gammamax.input_pin           1.29^            # 
+#switch.endstop_gammamax.output_on_command   pause            # 
+
 alpha_fast_homing_rate_mm_s                  50               # feedrates in mm/second
 beta_fast_homing_rate_mm_s                   50               # "
 gamma_fast_homing_rate_mm_s                  4                # "

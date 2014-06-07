@@ -24,6 +24,7 @@
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
+#include "modules/robot/Pauser.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
 
@@ -55,6 +56,8 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"?",        SimpleShell::help_command},
     {"version",  SimpleShell::version_command},
     {"mem",      SimpleShell::mem_command},
+    {"pause",    SimpleShell::pause_command},
+    {"resume",   SimpleShell::resume_command},
     {"get",      SimpleShell::get_command},
     {"set_temp", SimpleShell::set_temp_command},
     {"net",      SimpleShell::net_command},
@@ -363,6 +366,22 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
     {
         AHB0.debug(stream);
         AHB1.debug(stream);
+    }
+}
+
+// pause the machine
+void SimpleShell::pause_command( string parameters, StreamOutput *stream)
+{
+    if( ! THEKERNEL->pauser->paused() ){
+        THEKERNEL->pauser->take();
+    }
+}
+
+// release pause system
+void SimpleShell::resume_command( string parameters, StreamOutput *stream)
+{
+    if( THEKERNEL->pauser->paused() ){
+        THEKERNEL->pauser->release();
     }
 }
 
