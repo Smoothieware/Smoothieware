@@ -13,11 +13,10 @@
 #include "TempSensor.h"
 #include "TemperatureControlPublicAccess.h"
 
-class TemperatureControlPool;
 class TemperatureControl : public Module {
 
     public:
-        TemperatureControl(uint16_t name);
+        TemperatureControl(uint16_t name, int index);
         ~TemperatureControl();
 
         void on_module_loaded();
@@ -31,14 +30,15 @@ class TemperatureControl : public Module {
 
         void set_desired_temperature(float desired_temperature);
 
-        int pool_index;
-        TemperatureControlPool *pool;
+        float get_temperature();
+
         friend class PID_Autotuner;
 
-        float get_temperature();
     private:
         uint32_t thermistor_read_tick(uint32_t dummy);
         void pid_process(float);
+
+        int pool_index;
 
         float target_temperature;
 

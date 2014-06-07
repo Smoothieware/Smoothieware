@@ -82,13 +82,26 @@ void ToolManager::on_get_public_data(void* argument){
     PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
 
     if(!pdr->starts_with(tool_manager_checksum)) return;
+    if(!pdr->second_element_is(is_active_tool_checksum)) return;
 
-    // ok this is targeted at us, so send back the requested data
+    // check that we control the given tool
+    bool managed= false;
+    for(auto t : tools) {
+        uint16_t n= t->get_name();
+        if(pdr->third_element_is(n)){
+            managed= true;
+            break;
+        }
+    }
+
+    // we are not managing this tool so do not answer
+    if(!managed) return;
+
     // this must be static as it will be accessed long after we have returned
-    static struct pad_toolmanager tool_return;
-    tool_return.current_tool_name= this->current_tool_name;
+    static uint16_t tool_name;
+    tool_name= this->current_tool_name;
 
-    pdr->set_data_ptr(&tool_return);
+    pdr->set_data_ptr(&tool_name);
     pdr->set_taken();
 }
 
@@ -100,7 +113,7 @@ void ToolManager::on_set_public_data(void* argument){
     // ok this is targeted at us, so change tools
     //uint16_t tool_name= *static_cast<float*>(pdr->get_data_ptr());
     // TODO: fire a tool change gcode
-    pdr->set_taken();
+    //pdr->set_taken();
 }
 
 // Add a tool to the tool list
