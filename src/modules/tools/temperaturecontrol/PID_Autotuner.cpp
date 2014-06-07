@@ -109,7 +109,7 @@ void PID_Autotuner::on_gcode_received(void *argument)
             bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, pool_index_checksum, pool_index, &returned_data );
 
             if (ok) {
-                this->temp_control =  static_cast<TemperatureControl *>(returned_data);
+                this->temp_control =  *static_cast<TemperatureControl **>(returned_data);
 
             } else {
                 gcode->stream->printf("No temperature control with index %d found\r\n", pool_index);
@@ -125,7 +125,7 @@ void PID_Autotuner::on_gcode_received(void *argument)
             if (gcode->has_letter('C')) {
                 ncycles = gcode->get_value('C');
             }
-            gcode->stream->printf("Start PID tune for E%d\n", pool_index);
+            gcode->stream->printf("Start PID tune for index E%d, designator: %s\n", pool_index, this->temp_control->designator.c_str());
             this->begin(target, gcode->stream, ncycles);
         }
     }
