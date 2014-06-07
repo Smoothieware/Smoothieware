@@ -90,6 +90,10 @@ void ExtruderMaker::on_module_loaded(){
             if(toolmanager != nullptr) {
                 // Add the extruder module to the ToolsManager if it was created
                 toolmanager->add_tool( extruder );
+
+            }else{
+                // if not managed by toolmanager we need to enable the one extruder
+                extruder->enable();
             }
         }
 
