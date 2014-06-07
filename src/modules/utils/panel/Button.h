@@ -1,72 +1,21 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
-#include "libs/Kernel.h"
-#include "libs/utils.h"
-#include "libs/Pin.h"
 #include "libs/Hook.h"
 
+class Pin;
 
 class Button
 {
 public:
-    Button()
-    {
-        this->counter = 0;
-        this->value = false;
-        this->up_hook = NULL;
-        this->down_hook = NULL;
-        this->button_pin = NULL;
-    }
+    Button();
 
-    Button *pin(Pin *passed_pin)
-    {
-        this->button_pin = passed_pin;
-        return this;
-    }
+    Button *pin(Pin *passed_pin);
 
-    void check_signal()
-    {
-        check_signal(this->button_pin->get() ? 1 : 0);
-    }
-
-    void check_signal(int val)
-    {
-        bool start_value = this->value;
-        if ( val ) {
-            if ( this->counter < 5  ) {
-                this->counter++;
-            }
-            if ( this->counter == 5 ) {
-                this->value = true;
-            }
-        } else {
-            if ( this->counter > 0  ) {
-                this->counter--;
-            }
-            if ( this->counter == 0 ) {
-                this->value = false;
-            }
-        }
-
-        if ( start_value != this->value ) {
-            if ( this->value ) {
-                if ( this->up_hook != NULL ) {
-                    this->up_hook->call();
-                }
-            } else {
-                if ( this->down_hook != NULL ) {
-                    this->down_hook->call();
-                }
-            }
-        }
-
-    }
-
-    bool get()
-    {
-        return this->value;
-    }
+    void check_signal();
+    void check_signal(int val);
+	void set_longpress_delay(int delay);
+    bool get();
 
 
     template<typename T> Button *up_attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) )
@@ -90,6 +39,10 @@ private:
     char counter;
     Pin *button_pin;
 
+	int longpress_delay;
+	int first_timer;	//delay before starting to repeat
+	int second_timer;	//time beetwen repeats
+	bool repeat;
 };
 
 

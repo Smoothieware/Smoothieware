@@ -10,6 +10,8 @@ Pwm::Pwm()
 {
     _max = PID_PWM_MAX - 1;
     _pwm = -1;
+    _sd_direction= false;
+    _sd_accumulator= 0;
 }
 
 void Pwm::pwm(int new_pwm)
@@ -37,8 +39,17 @@ void Pwm::set(bool value)
 
 uint32_t Pwm::on_tick(uint32_t dummy)
 {
-    if ((_pwm < 0) || (_pwm >= PID_PWM_MAX))
+    if ((_pwm < 0) || _pwm >= PID_PWM_MAX) {
         return dummy;
+    }
+    else if (_pwm == 0) {
+        Pin::set(false);
+        return dummy;
+    }
+    else if (_pwm == PID_PWM_MAX - 1) {
+        Pin::set(true);
+        return dummy;
+    }
 
     /*
      * Sigma-Delta PWM algorithm

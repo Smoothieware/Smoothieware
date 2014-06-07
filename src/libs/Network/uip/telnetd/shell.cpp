@@ -32,6 +32,7 @@
 *
 */
 
+#include "Kernel.h"
 #include "stdlib.h"
 #include "shell.h"
 #include "uip.h"
@@ -42,31 +43,32 @@
 #include "stdlib.h"
 #include "telnetd.h"
 #include "CallbackStream.h"
-#include "Kernel.h"
+#include "StreamOutputPool.h"
+#include "CommandQueue.h"
 
 //#define DEBUG_PRINTF(...)
 #define DEBUG_PRINTF printf
 
 struct ptentry {
-    uint16_t command_cs;
+    const char *command;
     void (* pfunc)(char *str, Shell *sh);
 };
 
 #define SHELL_PROMPT "> "
 
 /*---------------------------------------------------------------------------*/
-bool Shell::parse(register char *str, struct ptentry *t)
+bool Shell::parse(register char *str, const struct ptentry *t)
 {
-    struct ptentry *p;
-    for (p = t; p->command_cs != 0; ++p) {
-        if (get_checksum(str) == p->command_cs) {
+    const struct ptentry *p;
+    for (p = t; p->command != 0; ++p) {
+        if (strncasecmp(str, p->command, strlen(p->command)) == 0) {
             break;
         }
     }
 
     p->pfunc(str, this);
 
-    return p->command_cs != 0;
+    return p->command != 0;
 }
 /*---------------------------------------------------------------------------*/
 static void help(char *str, Shell *sh)
@@ -184,12 +186,12 @@ static void unknown(char *str, Shell *sh)
     }
 }
 /*---------------------------------------------------------------------------*/
-static struct ptentry parsetab[] = {
-    {CHECKSUM("netstat"), connections},
-    {CHECKSUM("exit"), quit},
-    {CHECKSUM("quit"), quit},
-    {CHECKSUM("test"), test},
-    {CHECKSUM("?"), help},
+static const struct ptentry parsetab[] = {
+    {"netstat", connections},
+    {"exit", quit},
+    {"quit", quit},
+    {"test", test},
+    {"?", help},
 
     /* Default action */
     {0, unknown}

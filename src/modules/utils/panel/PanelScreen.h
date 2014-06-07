@@ -8,16 +8,16 @@
 #ifndef PANELSCREEN_H
 #define PANELSCREEN_H
 
-#include "Panel.h"
+#include <string>
 
 class Panel;
+
 class PanelScreen
 {
 public:
     PanelScreen();
     virtual void on_refresh();
     virtual void on_main_loop();
-    PanelScreen *set_panel(Panel *parent);
     PanelScreen *set_parent(PanelScreen *passed_parent);
     virtual void on_enter();
     // if you completely rewrite the screen do not clear it, this avoids flicker
@@ -27,12 +27,14 @@ public:
     virtual void display_menu_line(uint16_t line) = 0;
     // default idle timeout for a screen, each screen can override this
     virtual int idle_timeout_secs(){ return 10; }
-    Panel *panel;
-    PanelScreen *parent;
 
+    friend class Panel;
 protected:
     void send_gcode(std::string g);
+    void send_gcode(const char *gm_code, char parameter, float value);
     void send_command(const char *gcstr);
+
+    PanelScreen *parent;
 };
 
 #endif

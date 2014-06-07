@@ -23,6 +23,7 @@
 
 #include "libs/Kernel.h"
 #include "libs/SerialMessage.h"
+#include "StreamOutputPool.h"
 
 // extern void setled(int, bool);
 #define setled(a, b) do {} while (0)

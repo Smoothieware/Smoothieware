@@ -9,11 +9,13 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/StreamOutput.h"
+#include "Module.h"
 
+#include <stdio.h>
+#include <string>
+using std::string;
+
+class StreamOutput;
 
 class Player : public Module {
     public:

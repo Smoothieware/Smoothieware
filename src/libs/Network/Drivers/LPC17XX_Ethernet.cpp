@@ -12,6 +12,8 @@
 
 // #include "netcore.h"
 
+#define DEBUG_PRINTF printf
+
 static const uint8_t EMAC_clkdiv[] = { 4, 6, 8, 10, 14, 20, 28 };
 
 /*--------------------------- write_PHY -------------------------------------*/
@@ -37,7 +39,7 @@ static int32_t write_PHY (uint32_t PhyReg, uint16_t Value)
             return (0);
         }
     }
-    printf("write PHY %lu %04X failed!\n", PhyReg, Value);
+    DEBUG_PRINTF("write PHY %lu %04X failed!\n", PhyReg, Value);
     // Time out!
     return (-1);
 }
@@ -66,7 +68,7 @@ static int32_t read_PHY (uint32_t PhyReg)
             return (LPC_EMAC->MRDD);
         }
     }
-    printf("read PHY %lu failed!\n", PhyReg);
+    DEBUG_PRINTF("read PHY %lu failed!\n", PhyReg);
     // Time out!
     return (-1);
 }
@@ -142,7 +144,7 @@ int32_t emac_SetPHYMode(uint32_t ulPHYMode)
     }
     // It's not correct module ID
     else {
-        printf("PHY reports id %04lX %04lX - not an SMSC 8720A\n", id1, id2);
+        DEBUG_PRINTF("PHY reports id %04lX %04lX - not an SMSC 8720A\n", id1, id2);
         return (-1);
     }
 
@@ -202,9 +204,9 @@ void LPC17XX_Ethernet::on_module_loaded()
     LPC_PINCON->PINSEL3 &= (2 << 0) | (2 << 2);
     LPC_PINCON->PINSEL3 |= (1 << 0) | (1 << 2);
 
-    printf("EMAC_INIT\n");
+    DEBUG_PRINTF("EMAC_INIT\n");
     emac_init();
-    printf("INIT OK\n");
+    DEBUG_PRINTF("INIT OK\n");
 
     //register_for_event(ON_IDLE);
     register_for_event(ON_SECOND_TICK);
@@ -233,42 +235,42 @@ void LPC17XX_Ethernet::check_interface()
         up = true;
 //         net->set_interface_status(this, up);
         uint32_t scsr = read_PHY(EMAC_PHY_REG_SCSR);
-        printf("%s: link up: ", interface_name);
+        DEBUG_PRINTF("%s: link up: ", interface_name);
         switch ((scsr >> 2) & 0x7)
         {
             case 1:
-                printf("10MBit Half Duplex\n");
+                DEBUG_PRINTF("10MBit Half Duplex\n");
                 break;
             case 5:
-                printf("10MBit Full Duplex\n");
+                DEBUG_PRINTF("10MBit Full Duplex\n");
                 break;
             case 2:
-                printf("100MBit Half Duplex\n");
+                DEBUG_PRINTF("100MBit Half Duplex\n");
                 break;
             case 6:
-                printf("100MBit Full Duplex\n");
+                DEBUG_PRINTF("100MBit Full Duplex\n");
                 break;
             default:
-                printf("Unknown speed: SCSR = 0x%04lX\n", scsr);
+                DEBUG_PRINTF("Unknown speed: SCSR = 0x%04lX\n", scsr);
                 break;
         }
-        printf("MAC Address: %02lX:%02lX:%02lX:%02lX:%02lX:%02lX\n", (LPC_EMAC->SA2) & 0xFF, (LPC_EMAC->SA2 >> 8) & 0xFF, (LPC_EMAC->SA1) & 0xFF, (LPC_EMAC->SA1 >> 8) & 0xFF, (LPC_EMAC->SA0) & 0xFF, (LPC_EMAC->SA0 >> 8) & 0xFF);
+        DEBUG_PRINTF("MAC Address: %02lX:%02lX:%02lX:%02lX:%02lX:%02lX\n", (LPC_EMAC->SA2) & 0xFF, (LPC_EMAC->SA2 >> 8) & 0xFF, (LPC_EMAC->SA1) & 0xFF, (LPC_EMAC->SA1 >> 8) & 0xFF, (LPC_EMAC->SA0) & 0xFF, (LPC_EMAC->SA0 >> 8) & 0xFF);
     }
     else if (((st & EMAC_PHY_BMSR_LINK_ESTABLISHED) == 0) && up)
     {
         // TODO: link down event
         up = false;
 //         net->set_interface_status(this, up);
-        printf("%s: link down\n", interface_name);
+        DEBUG_PRINTF("%s: link down\n", interface_name);
     }
 
-    //printf("PHY: id:%04lX %04lX st:%04lX\n", id1, id2, st);
-    // printf("ETH: Rx:%lu/%lu Tx:%lu/%lu\n", LPC_EMAC->RxConsumeIndex, LPC_EMAC->RxProduceIndex, LPC_EMAC->TxProduceIndex, LPC_EMAC->TxConsumeIndex);
-    // printf("MII: 0x%1lX\n", LPC_EMAC->MIND);
-    // printf("Command: 0x%03lX Status: 0x%1lX\n", LPC_EMAC->Command, LPC_EMAC->Status);
-    // printf("RxN: %lu TxN: %lu\n", LPC_EMAC->RxDescriptorNumber, LPC_EMAC->TxDescriptorNumber);
-    // printf("MAC1: 0x%04lX MAC2: 0x%04lX\n", LPC_EMAC->MAC1, LPC_EMAC->MAC2);
-    // printf("MAC Address: %02lX:%02lX:%02lX:%02lX:%02lX:%02lX\n", (LPC_EMAC->SA2) & 0xFF, (LPC_EMAC->SA2 >> 8) & 0xFF, (LPC_EMAC->SA1) & 0xFF, (LPC_EMAC->SA1 >> 8) & 0xFF, (LPC_EMAC->SA0) & 0xFF, (LPC_EMAC->SA0 >> 8) & 0xFF);
+    //DEBUG_PRINTF("PHY: id:%04lX %04lX st:%04lX\n", id1, id2, st);
+    // DEBUG_PRINTF("ETH: Rx:%lu/%lu Tx:%lu/%lu\n", LPC_EMAC->RxConsumeIndex, LPC_EMAC->RxProduceIndex, LPC_EMAC->TxProduceIndex, LPC_EMAC->TxConsumeIndex);
+    // DEBUG_PRINTF("MII: 0x%1lX\n", LPC_EMAC->MIND);
+    // DEBUG_PRINTF("Command: 0x%03lX Status: 0x%1lX\n", LPC_EMAC->Command, LPC_EMAC->Status);
+    // DEBUG_PRINTF("RxN: %lu TxN: %lu\n", LPC_EMAC->RxDescriptorNumber, LPC_EMAC->TxDescriptorNumber);
+    // DEBUG_PRINTF("MAC1: 0x%04lX MAC2: 0x%04lX\n", LPC_EMAC->MAC1, LPC_EMAC->MAC2);
+    // DEBUG_PRINTF("MAC Address: %02lX:%02lX:%02lX:%02lX:%02lX:%02lX\n", (LPC_EMAC->SA2) & 0xFF, (LPC_EMAC->SA2 >> 8) & 0xFF, (LPC_EMAC->SA1) & 0xFF, (LPC_EMAC->SA1 >> 8) & 0xFF, (LPC_EMAC->SA0) & 0xFF, (LPC_EMAC->SA0 >> 8) & 0xFF);
 }
 
 void LPC17XX_Ethernet::emac_init()
@@ -329,14 +331,14 @@ void LPC17XX_Ethernet::emac_init()
         }
         if (tout == 0){
             // Time out, return ERROR
-            printf("ETH: PHY TIMEOUT\n");
+            DEBUG_PRINTF("ETH: PHY TIMEOUT\n");
             return;
         }
     }
 
     // Set PHY mode
 //     if (emac_SetPHYMode(EMAC_MODE_AUTO) < 0){
-//         printf("ETH: Error Setting Mode\n");
+//         DEBUG_PRINTF("ETH: Error Setting Mode\n");
 //         return;
 //     }
     write_PHY (EMAC_PHY_REG_BMCR, EMAC_PHY_AUTO_NEG);
@@ -366,7 +368,7 @@ void LPC17XX_Ethernet::emac_init()
     LPC_EMAC->Command  = EMAC_CR_RX_EN | EMAC_CR_TX_EN | EMAC_CR_RMII | EMAC_CR_FULL_DUP | EMAC_CR_PASS_RUNT_FRM;
     LPC_EMAC->MAC1     |= EMAC_MAC1_REC_EN;
 
-    printf("ETH:EMAC INITIALISED\n");
+    DEBUG_PRINTF("ETH:EMAC INITIALISED\n");
 }
 
 void LPC17XX_Ethernet::set_mac(uint8_t* newmac)
@@ -374,23 +376,31 @@ void LPC17XX_Ethernet::set_mac(uint8_t* newmac)
     memcpy(mac_address, newmac, 6);
 }
 
+// size must be preloaded with max size of packet buffer
 bool LPC17XX_Ethernet::_receive_frame(void *packet, int *size)
 {
     if (can_read_packet() && can_write_packet())
     {
         int i = LPC_EMAC->RxConsumeIndex;
         RX_Stat* stat = &(rxbuf.rxstat[i]);
-        *size = stat->Info & EMAC_RINFO_SIZE;
-        memcpy(packet, rxbuf.buf[i], *size);
+        int len = (stat->Info & EMAC_RINFO_SIZE) + 1; //this is the index so add one to get the size
+        if(len <= *size) { // check against recieving buffer length
+            memcpy(packet, rxbuf.buf[i], len);
+            *size= len;
+        }else{
+            // discard frame that is too big for input buffer
+            DEBUG_PRINTF("WARNING: Discarded ethernet frame that is too big: %08lX, %d - %d\n", stat->Info, len, *size);
+            *size= 0;
+        }
 
-        //printf("Received %d byte Ethernet frame %lu/%lu\n", *size, LPC_EMAC->RxProduceIndex, LPC_EMAC->RxConsumeIndex);
+        //DEBUG_PRINTF("Received %d byte Ethernet frame %lu/%lu\n", *size, LPC_EMAC->RxProduceIndex, LPC_EMAC->RxConsumeIndex);
 
         uint32_t r = LPC_EMAC->RxConsumeIndex + 1;
         if (r > LPC_EMAC->RxDescriptorNumber)
             r = 0;
         LPC_EMAC->RxConsumeIndex = r;
 
-        return true;
+        return *size > 0;
     }
 
     return false;

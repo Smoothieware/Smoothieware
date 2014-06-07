@@ -1,5 +1,7 @@
 #include "MemoryPool.h"
 
+#include "StreamOutput.h"
+
 #include <mri.h>
 #include <cstdio>
 

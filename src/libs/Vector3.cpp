@@ -17,14 +17,14 @@ Vector3::Vector3(float a, float b, float c)
     elem[2] = c;
 }
 
-float& Vector3::operator[](int i)
+float Vector3::operator[](int i) const
 {
     if (i >= 0 && i <= 2)
         return elem[i];
     return nan;
 }
 
-Vector3 Vector3::cross(const Vector3 vec)
+Vector3 Vector3::cross(const Vector3 &vec) const
 {
     Vector3 out;
 
@@ -35,26 +35,26 @@ Vector3 Vector3::cross(const Vector3 vec)
     return out;
 }
 
-float Vector3::dot(const Vector3 vec)
+float Vector3::dot(const Vector3 &vec) const
 {
     return  elem[0] * vec.elem[0] +
-    elem[1] * vec.elem[1] +
-    elem[2] * vec.elem[2];
+            elem[1] * vec.elem[1] +
+            elem[2] * vec.elem[2];
 }
 
-float Vector3::magsq()
+float Vector3::magsq() const
 {
     return  powf(elem[0], 2) +
-    powf(elem[1], 2) +
-    powf(elem[2], 2);
+            powf(elem[1], 2) +
+            powf(elem[2], 2);
 }
 
-float Vector3::mag()
+float Vector3::mag() const
 {
     return sqrtf(magsq());
 }
 
-Vector3 Vector3::add(const Vector3 vec)
+Vector3 Vector3::add(const Vector3 &vec) const
 {
     Vector3 out;
 
@@ -65,7 +65,7 @@ Vector3 Vector3::add(const Vector3 vec)
     return out;
 }
 
-Vector3 Vector3::sub(const Vector3 vec)
+Vector3 Vector3::sub(const Vector3 &vec) const
 {
     Vector3 out;
 
@@ -76,7 +76,7 @@ Vector3 Vector3::sub(const Vector3 vec)
     return out;
 }
 
-Vector3 Vector3::mul(float scalar)
+Vector3 Vector3::mul(float scalar) const
 {
     Vector3 out;
 
@@ -87,7 +87,18 @@ Vector3 Vector3::mul(float scalar)
     return out;
 }
 
-Vector3 Vector3::unit()
+Vector3 Vector3::mul(const Vector3& v) const
+{
+    Vector3 out;
+
+    out.elem[0] = elem[0] * v[0];
+    out.elem[1] = elem[1] * v[1];
+    out.elem[2] = elem[2] * v[2];
+
+    return out;
+}
+
+Vector3 Vector3::unit() const
 {
     Vector3 out;
 

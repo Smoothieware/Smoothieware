@@ -8,7 +8,7 @@
 #ifndef PUBLICDATA_H
 #define PUBLICDATA_H
 
-#include "libs/Kernel.h"
+#include "Module.h"
 
 class PublicData : public Module {
     public:
@@ -16,7 +16,7 @@ class PublicData : public Module {
         bool get_value(uint16_t csa, uint16_t csb, void **data) { return get_value(csa, csb, 0, data); }
         bool get_value(uint16_t cs[3], void **data) { return get_value(cs[0], cs[1], cs[2], data); };
         bool get_value(uint16_t csa, uint16_t csb, uint16_t csc, void **data);
-        
+
         bool set_value(uint16_t csa, void *data) { return set_value(csa, 0, 0, data); }
         bool set_value(uint16_t csa, uint16_t csb, void *data) { return set_value(csa, csb, 0, data); }
         bool set_value(uint16_t cs[3], void *data) { return set_value(cs[0], cs[1], cs[2], data); }

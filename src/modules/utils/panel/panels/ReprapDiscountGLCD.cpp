@@ -7,6 +7,10 @@
 #include "ReprapDiscountGLCD.h"
 
 #include "Kernel.h"
+#include "checksumm.h"
+#include "libs/Config.h"
+#include "rrdglcd/RrdGlcd.h"
+#include "ConfigValue.h"
 
 // config settings
 #define panel_checksum             CHECKSUM("panel")
@@ -14,6 +18,7 @@
 #define encoder_b_pin_checksum     CHECKSUM("encoder_b_pin")
 #define click_button_pin_checksum  CHECKSUM("click_button_pin")
 #define pause_button_pin_checksum  CHECKSUM("pause_button_pin")
+#define back_button_pin_checksum   CHECKSUM("back_button_pin")
 #define buzz_pin_checksum          CHECKSUM("buzz_pin")
 #define spi_channel_checksum       CHECKSUM("spi_channel")
 #define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
@@ -25,6 +30,7 @@ ReprapDiscountGLCD::ReprapDiscountGLCD() {
     this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->click_pin.from_string(THEKERNEL->config->value( panel_checksum, click_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->pause_pin.from_string(THEKERNEL->config->value( panel_checksum, pause_button_pin_checksum)->by_default("nc")->as_string())->as_input();
+    this->back_pin.from_string(THEKERNEL->config->value( panel_checksum, back_button_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->buzz_pin.from_string(THEKERNEL->config->value( panel_checksum, buzz_pin_checksum)->by_default("nc")->as_string())->as_output();
     this->spi_cs_pin.from_string(THEKERNEL->config->value( panel_checksum, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
 
@@ -55,6 +61,7 @@ uint8_t ReprapDiscountGLCD::readButtons() {
     state |= (this->click_pin.get() ? BUTTON_SELECT : 0);
     // check the pause button
     if(this->pause_pin.connected() && this->pause_pin.get()) state |= BUTTON_PAUSE;
+    if(this->back_pin.connected() && this->back_pin.get()) state |= BUTTON_LEFT;
     return state;
 }
 

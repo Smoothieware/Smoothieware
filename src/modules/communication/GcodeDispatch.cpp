@@ -16,6 +16,9 @@ using std::string;
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "libs/FileStream.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 GcodeDispatch::GcodeDispatch() {}
 
@@ -93,7 +96,7 @@ try_again:
             }
 
             while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GMT", possible_command.find_first_of("GMT") + 1);
+                size_t nextcmd = possible_command.find_first_of("GM", possible_command.find_first_of("GMT") + 1);
                 string single_command;
                 if(nextcmd == string::npos) {
                     single_command = possible_command;

@@ -14,7 +14,7 @@
 #include "libs/utils.h"
 #include <string>
 #include "libs/SerialMessage.h"
-
+#include "StreamOutput.h"
 #include "DirHandle.h"
 #include "mri.h"
 
@@ -29,7 +29,7 @@ FileScreen::FileScreen()
 // When entering this screen
 void FileScreen::on_enter()
 {
-    this->panel->lcd->clear();
+    THEPANEL->lcd->clear();
 
     // Default folder to enter
     if ( this->current_folder.compare("") == 0 ) {
@@ -42,11 +42,11 @@ void FileScreen::on_enter()
 // For every ( potential ) refresh of the screen
 void FileScreen::on_refresh()
 {
-    if ( this->panel->menu_change() ) {
+    if ( THEPANEL->menu_change() ) {
         this->refresh_menu();
     }
-    if ( this->panel->click() ) {
-        this->clicked_line(this->panel->get_menu_current_line());
+    if ( THEPANEL->click() ) {
+        this->clicked_line(THEPANEL->get_menu_current_line());
     }
 }
 
@@ -61,8 +61,8 @@ void FileScreen::enter_folder(std::string folder)
     uint16_t number_of_files_in_folder = this->count_folder_content(this->current_folder);
 
     // Setup menu
-    this->panel->setup_menu(number_of_files_in_folder + 1); // same number of files as menu items
-    this->panel->enter_menu_mode();
+    THEPANEL->setup_menu(number_of_files_in_folder + 1); // same number of files as menu items
+    THEPANEL->enter_menu_mode();
 
     // Display menu
     this->refresh_menu();
@@ -72,9 +72,9 @@ void FileScreen::enter_folder(std::string folder)
 void FileScreen::display_menu_line(uint16_t line)
 {
     if ( line == 0 ) {
-        this->panel->lcd->printf("..");
+        THEPANEL->lcd->printf("..");
     } else {
-        this->panel->lcd->printf("%s", (this->file_at(line - 1).substr(0, 18)).c_str());
+        THEPANEL->lcd->printf("%s", (this->file_at(line - 1).substr(0, 18)).c_str());
     }
 }
 
@@ -84,7 +84,7 @@ void FileScreen::clicked_line(uint16_t line)
     if ( line == 0 ) {
         if ( this->current_folder.compare("/") == 0 ) {
             // Exit file navigation
-            this->panel->enter_screen(this->parent);
+            THEPANEL->enter_screen(this->parent);
         } else {
             // Go up one folder
             this->current_folder = this->current_folder.substr(0, this->current_folder.find_last_of('/') + 1);
@@ -176,9 +176,9 @@ void FileScreen::on_main_loop()
 {
     if (this->start_play) {
         this->start_play = false;
-        this->panel->set_playing_file(this->play_path);
+        THEPANEL->set_playing_file(this->play_path);
         this->play(this->play_path);
-        this->panel->enter_screen(this->parent);
+        THEPANEL->enter_screen(this->parent);
         return;
     }
 }

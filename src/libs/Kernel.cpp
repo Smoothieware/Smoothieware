@@ -14,18 +14,26 @@
 #include "libs/Pauser.h"
 #include "libs/StreamOutputPool.h"
 #include <mri.h>
+#include "checksumm.h"
+#include "ConfigValue.h"
 
+#include "libs/StepTicker.h"
+#include "libs/PublicData.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
-#include "modules/tools/endstops/Endstops.h"
+
 #include <malloc.h>
+#include <array>
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
+
+#define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
+#define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
 
 Kernel* Kernel::instance;
 
@@ -33,10 +41,20 @@ Kernel* Kernel::instance;
 Kernel::Kernel(){
     instance= this; // setup the Singleton instance of the kernel
 
-    // Config first, because we need the baud_rate setting before we start serial
+    // serial first at fixed baud rate (DEFAULT_SERIAL_BAUD_RATE) so config can report errors to serial
+	// Set to UART0, this will be changed to use the same UART as MRI if it's enabled
+    this->serial = new SerialConsole(USBTX, USBRX, DEFAULT_SERIAL_BAUD_RATE);
+
+    // Config next, but does not load cache yet
     this->config         = new Config();
 
-    // Serial second, because the other modules might want to say something
+    // Pre-load the config cache, do after setting up serial so we can report errors to serial
+    this->config->config_cache_load();
+
+    // now config is loaded we can do normal setup for serial based on config
+    delete this->serial;
+    this->serial= NULL;
+
     this->streams        = new StreamOutputPool();
 
     this->current_path   = "/";
@@ -44,19 +62,26 @@ Kernel::Kernel(){
     // Configure UART depending on MRI config
     // Match up the SerialConsole to MRI UART. This makes it easy to use only one UART for both debug and actual commands.
     NVIC_SetPriorityGrouping(0);
+
+#if MRI_ENABLE != 0
     switch( __mriPlatform_CommUartIndex() ) {
         case 0:
-            this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+            this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
             break;
         case 1:
-            this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+            this->serial = new SerialConsole(  p13,   p14, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
             break;
         case 2:
-            this->serial = new SerialConsole(  p28,   p27, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+            this->serial = new SerialConsole(  p28,   p27, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
             break;
         case 3:
-            this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(9600)->as_number());
+            this->serial = new SerialConsole(   p9,   p10, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
             break;
+    }
+#endif
+    // default
+    if(this->serial == NULL) {
+        this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
     }
 
     this->add_module( this->config );
@@ -107,8 +132,6 @@ Kernel::Kernel(){
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
     this->add_module( this->public_data    = new PublicData()    );
-    this->add_module( this->toolsmanager   = new ToolsManager()    );
-
 }
 
 // Add a module to Kernel. We don't actually hold a list of modules, we just tell it where Kernel is

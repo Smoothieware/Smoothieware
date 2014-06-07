@@ -6,12 +6,15 @@
 */
 
 #include "libs/Kernel.h"
+
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
 #include "modules/tools/touchprobe/Touchprobe.h"
+#include "modules/tools/zprobe/ZProbe.h"
 #include "modules/tools/switch/SwitchPool.h"
+
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/configurator/Configurator.h"
@@ -21,9 +24,11 @@
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
 #include "libs/Network/uip/Network.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
-#include "libs/Config.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 
@@ -36,10 +41,15 @@
 #include "libs/USBDevice/USBSerial/USBSerial.h"
 #include "libs/USBDevice/DFU.h"
 #include "libs/SDFAT.h"
+#include "StreamOutputPool.h"
+#include "ToolManager.h"
 
 #include "libs/Watchdog.h"
 
 #include "version.h"
+#include "system_LPC17xx.h"
+
+#include "mbed.h"
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
@@ -77,7 +87,7 @@ int main() {
 
     Kernel* kernel = new Kernel();
 
-    kernel->streams->printf("Smoothie ( grbl port ) version 0.7.2 with new accel @%ldMHz\r\n", SystemCoreClock / 1000000);
+    kernel->streams->printf("Smoothie Running @%ldMHz\r\n", SystemCoreClock / 1000000);
     Version version;
     kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
 
@@ -105,11 +115,12 @@ int main() {
     kernel->add_module( new Player() );
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
-    #ifndef NO_TOOLS_TEMPERATURECONTROL
-    kernel->add_module( new TemperatureControlPool() );
-    #endif
     #ifndef NO_TOOLS_EXTRUDER
     kernel->add_module( new ExtruderMaker() );
+    #endif
+    #ifndef NO_TOOLS_TEMPERATURECONTROL
+    // Note order is important here must be after extruder
+    kernel->add_module( new TemperatureControlPool() );
     #endif
     #ifndef NO_TOOLS_LASER
     kernel->add_module( new Laser() );
@@ -119,6 +130,9 @@ int main() {
     #endif
     #ifndef NO_TOOLS_TOUCHPROBE
     kernel->add_module( new Touchprobe() );
+    #endif
+    #ifndef NO_TOOLS_ZPROBE
+    kernel->add_module( new ZProbe() );
     #endif
     #ifndef NONETWORK
     kernel->add_module( new Network() );

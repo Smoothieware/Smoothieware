@@ -10,29 +10,9 @@
 
 #include <string>
 using std::string;
+#include <string.h>
+
 #include "libs/Module.h"
-#include "RobotPublicAccess.h"
-
-#define NEXT_ACTION_DEFAULT 0
-#define NEXT_ACTION_DWELL 1
-#define NEXT_ACTION_GO_HOME 2
-
-#define MOTION_MODE_SEEK 0 // G0
-#define MOTION_MODE_LINEAR 1 // G1
-#define MOTION_MODE_CW_ARC 2 // G2
-#define MOTION_MODE_CCW_ARC 3 // G3
-#define MOTION_MODE_CANCEL 4 // G80
-
-#define PATH_CONTROL_MODE_EXACT_PATH 0
-#define PATH_CONTROL_MODE_EXACT_STOP 1
-#define PATH_CONTROL_MODE_CONTINOUS 2
-
-#define PROGRAM_FLOW_RUNNING 0
-#define PROGRAM_FLOW_PAUSED 1
-#define PROGRAM_FLOW_COMPLETED 2
-
-#define SPINDLE_DIRECTION_CW 0
-#define SPINDLE_DIRECTION_CCW 1
 
 class Gcode;
 class BaseSolution;
@@ -54,6 +34,7 @@ class Robot : public Module {
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
+		void setToolOffset(const float offset[3]);
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
@@ -67,6 +48,7 @@ class Robot : public Module {
 
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
+		void clearToolOffset();
 
         float last_milestone[3];                             // Last position, in millimeters
         bool  inch_mode;                                       // true for inch mode, false for millimeter mode ( default )
@@ -85,6 +67,8 @@ class Robot : public Module {
         // computational efficiency of generating arcs.
         int arc_correction;                                   // Setting : how often to rectify arc computation
         float max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
+
+        float toolOffset[3];
 
     // Used by Stepper
     public:

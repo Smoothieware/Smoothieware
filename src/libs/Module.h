@@ -28,7 +28,6 @@ extern const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS];
 
 // Module base class
 // All modules must extend this class, see http://smoothieware.org/moduleexample
-class Kernel;
 class Module {
     public:
         Module();

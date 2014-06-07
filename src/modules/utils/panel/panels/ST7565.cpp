@@ -9,6 +9,10 @@
 #include "ST7565/glcdfont.h"
 #include "Kernel.h"
 #include "platform_memory.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "StreamOutputPool.h"
+#include "ConfigValue.h"
 
 //definitions for lcd
 #define LCDWIDTH 128

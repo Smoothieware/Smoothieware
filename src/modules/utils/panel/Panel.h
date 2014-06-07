@@ -8,22 +8,25 @@
 #ifndef PANEL_H
 #define PANEL_H
 
-#include "Kernel.h"
-#include "PanelScreen.h"
-#include "panels/LcdBase.h"
 #include "Button.h"
 
 #define MENU_MODE                  0
 #define CONTROL_MODE               1
 
+#define THEPANEL Panel::instance
+
+class LcdBase;
 class PanelScreen;
+
 class Panel : public Module {
     public:
         Panel();
         virtual ~Panel();
+        static Panel* instance;
 
         void on_module_loaded();
         uint32_t button_tick(uint32_t dummy);
+        uint32_t encoder_tick(uint32_t dummy);
         void on_idle(void* argument);
         void on_main_loop(void* argument);
         void on_gcode_received(void* argument);
@@ -43,7 +46,7 @@ class Panel : public Module {
         int get_encoder_resolution() const { return encoder_click_resolution; }
 
         // Menu
-        void enter_menu_mode();
+        void enter_menu_mode(bool force= false);
         void setup_menu(uint16_t rows, uint16_t lines);
         void setup_menu(uint16_t rows);
         void menu_update();
@@ -73,11 +76,14 @@ class Panel : public Module {
         // TODO pass lcd into ctor of each sub screen
         LcdBase* lcd;
         PanelScreen* custom_screen;
+        PanelScreen* temperature_screen;
 
         // as panelscreen accesses private fields in Panel
         friend class PanelScreen;
 
     private:
+        void setup_temperature_screen();
+
         // Menu
         char menu_offset;
         int menu_selected_line;
@@ -104,6 +110,7 @@ class Panel : public Module {
         volatile bool click_changed;
         volatile bool refresh_flag;
         volatile bool do_buttons;
+        volatile bool do_encoder;
         bool paused;
         int idle_time;
         bool start_up;

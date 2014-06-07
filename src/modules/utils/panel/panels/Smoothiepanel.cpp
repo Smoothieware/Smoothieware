@@ -6,6 +6,13 @@ You should have received a copy of the GNU General Public License along with Smo
 */
 #include "Smoothiepanel.h"
 
+#include "utils.h"
+#include "Kernel.h"
+#include "Button.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
+
 //#include "smoothiepanelbeta/Colors.h"
 
 // smoothiepanel commands

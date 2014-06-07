@@ -5,9 +5,9 @@
     You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-#include "libs/Kernel.h"
+#include "mbed.h"
 #include "SimpleShell.h"
+#include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
@@ -18,12 +18,17 @@
 #include "version.h"
 #include "PublicDataRequest.h"
 #include "FileStream.h"
-#include "mbed.h"
+#include "checksumm.h"
+#include "PublicData.h"
+#include "Gcode.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
+
+#include "system_LPC17xx.h"
+#include "LPC17xx.h"
 
 extern unsigned int g_maximumHeapAddress;
 
@@ -36,33 +41,32 @@ extern "C" uint32_t  __end__;
 extern "C" uint32_t  __malloc_free_list;
 extern "C" uint32_t  _sbrk(int size);
 
-#define get_temp_command_checksum CHECKSUM("temp")
-#define get_pos_command_checksum  CHECKSUM("pos")
-
 // command lookup table
-SimpleShell::ptentry_t SimpleShell::commands_table[] = {
-    {CHECKSUM("ls"),       &SimpleShell::ls_command},
-    {CHECKSUM("cd"),       &SimpleShell::cd_command},
-    {CHECKSUM("pwd"),      &SimpleShell::pwd_command},
-    {CHECKSUM("cat"),      &SimpleShell::cat_command},
-    {CHECKSUM("rm"),       &SimpleShell::rm_command},
-    {CHECKSUM("reset"),    &SimpleShell::reset_command},
-    {CHECKSUM("dfu"),      &SimpleShell::dfu_command},
-    {CHECKSUM("break"),    &SimpleShell::break_command},
-    {CHECKSUM("help"),     &SimpleShell::help_command},
-    {CHECKSUM("?"),        &SimpleShell::help_command},
-    {CHECKSUM("version"),  &SimpleShell::version_command},
-    {CHECKSUM("mem"),      &SimpleShell::mem_command},
-    {CHECKSUM("get"),      &SimpleShell::get_command},
-    {CHECKSUM("set_temp"), &SimpleShell::set_temp_command},
-    {CHECKSUM("net"),      &SimpleShell::net_command},
-    {CHECKSUM("load"),     &SimpleShell::load_command},
-    {CHECKSUM("save"),     &SimpleShell::save_command},
-    {CHECKSUM("spi"),      &SimpleShell::spi_command},
+const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
+    {"ls",       SimpleShell::ls_command},
+    {"cd",       SimpleShell::cd_command},
+    {"pwd",      SimpleShell::pwd_command},
+    {"cat",      SimpleShell::cat_command},
+    {"rm",       SimpleShell::rm_command},
+    {"reset",    SimpleShell::reset_command},
+    {"dfu",      SimpleShell::dfu_command},
+    {"break",    SimpleShell::break_command},
+    {"help",     SimpleShell::help_command},
+    {"?",        SimpleShell::help_command},
+    {"version",  SimpleShell::version_command},
+    {"mem",      SimpleShell::mem_command},
+    {"get",      SimpleShell::get_command},
+    {"set_temp", SimpleShell::set_temp_command},
+    {"net",      SimpleShell::net_command},
+    {"spi",      SimpleShell::spi_command},
+    {"load",     SimpleShell::load_command},
+    {"save",     SimpleShell::save_command},
 
     // unknown command
-    {0, NULL}
+    {NULL, NULL}
 };
+
+int SimpleShell::reset_delay_secs= 0;
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
 static uint32_t heapWalk(StreamOutput *stream, bool verbose)
@@ -126,14 +130,14 @@ void SimpleShell::on_module_loaded()
 	this->register_for_event(ON_GCODE_RECEIVED);
 	this->register_for_event(ON_SECOND_TICK);
 
-    this->reset_delay_secs = 0;
+    reset_delay_secs = 0;
 }
 
 void SimpleShell::on_second_tick(void *)
 {
     // we are timing out for the reset
-    if (this->reset_delay_secs > 0) {
-        if (--this->reset_delay_secs == 0) {
+    if (reset_delay_secs > 0) {
+        if (--reset_delay_secs == 0) {
             system_reset(false);
         }
     }
@@ -174,12 +178,11 @@ void SimpleShell::on_gcode_received(void *argument)
     }
 }
 
-bool SimpleShell::parse_command(unsigned short cs, string args, StreamOutput *stream)
+bool SimpleShell::parse_command(const char *cmd, string args, StreamOutput *stream)
 {
-    for (ptentry_t *p = commands_table; p->pfunc != NULL; ++p) {
-        if (cs == p->command_cs) {
-            PFUNC fnc= p->pfunc;
-            (this->*fnc)(args, stream);
+    for (const ptentry_t *p = commands_table; p->command != NULL; ++p) {
+        if (strncasecmp(cmd, p->command, strlen(p->command)) == 0) {
+            p->func(args, stream);
             return true;
         }
     }
@@ -192,17 +195,17 @@ void SimpleShell::on_console_line_received( void *argument )
 {
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
 
-    // ignore comments
-    if (new_message.message[0] == ';') return;
+    // ignore comments and blank lines and if this is a G code then also ignore it
+    char first_char = new_message.message[0];
+    if(strchr(";( \n\rGMTN", first_char) != NULL) return;
 
     string possible_command = new_message.message;
 
     //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
-
-    unsigned short check_sum = get_checksum( possible_command.substr(0, possible_command.find_first_of(" \r\n")) ); // todo: put this method somewhere more convenient
+    string cmd = shift_parameter(possible_command);
 
     // find command and execute it
-    parse_command(check_sum, get_arguments(possible_command), new_message.stream);
+    parse_command(cmd.c_str(), possible_command, new_message.stream);
 }
 
 // Act upon an ls command
@@ -410,7 +413,7 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
 void SimpleShell::reset_command( string parameters, StreamOutput *stream)
 {
     stream->printf("Smoothie out. Peace. Rebooting in 5 seconds...\r\n");
-    this->reset_delay_secs = 5; // reboot in 5 seconds
+    reset_delay_secs = 5; // reboot in 5 seconds
 }
 
 // go into dfu boot mode
@@ -430,10 +433,10 @@ void SimpleShell::break_command( string parameters, StreamOutput *stream)
 // used to test out the get public data events
 void SimpleShell::get_command( string parameters, StreamOutput *stream)
 {
-    int what = get_checksum(shift_parameter( parameters ));
+    string what = shift_parameter( parameters );
     void *returned_data;
 
-    if (what == get_temp_command_checksum) {
+    if (what == "temp") {
         string type = shift_parameter( parameters );
         bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
 
@@ -444,7 +447,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             stream->printf("%s is not a known temperature device\r\n", type.c_str());
         }
 
-    } else if (what == get_pos_command_checksum) {
+    } else if (what == "pos") {
         bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
 
         if (ok) {

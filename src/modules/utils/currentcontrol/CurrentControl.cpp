@@ -2,8 +2,12 @@
 #include "CurrentControl.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
+#include "ConfigValue.h"
+#include "libs/StreamOutput.h"
 
 #include "Gcode.h"
+#include "Config.h"
+#include "checksumm.h"
 
 // add new digipot chips here
 #include "mcp4451.h"

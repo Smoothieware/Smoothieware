@@ -9,6 +9,11 @@
 
 #include "PauseButton.h"
 #include "modules/robot/Conveyor.h"
+#include "SlowTicker.h"
+#include "Config.h"
+#include "Pauser.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 PlayLed::PlayLed(){}
 
@@ -55,7 +60,7 @@ uint32_t PlayLed::half_second_tick(uint32_t)
 {
     if (THEKERNEL->pauser->paused())
         led.set(!led.get());
-    else led.set(!THEKERNEL->conveyor->queue.is_empty());
+    else led.set(!THEKERNEL->conveyor->is_queue_empty());
 
     return 0;
 }

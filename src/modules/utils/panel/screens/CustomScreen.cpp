@@ -6,6 +6,13 @@
 */
 #include "CustomScreen.h"
 #include "libs/Kernel.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "LcdBase.h"
+#include "Panel.h"
+#include "ConfigValue.h"
+
+#include <string.h>
 
 #include <algorithm>
 
@@ -43,34 +50,34 @@ CustomScreen::CustomScreen()
 
 void CustomScreen::on_enter()
 {
-    this->panel->enter_menu_mode();
-    this->panel->setup_menu(menu_items.size() + 1);
+    THEPANEL->enter_menu_mode();
+    THEPANEL->setup_menu(menu_items.size() + 1);
     this->refresh_menu();
 }
 
 void CustomScreen::on_refresh()
 {
-    if ( this->panel->menu_change() ) {
+    if ( THEPANEL->menu_change() ) {
         this->refresh_menu();
     }
-    if ( this->panel->click() ) {
-        this->clicked_menu_entry(this->panel->get_menu_current_line());
+    if ( THEPANEL->click() ) {
+        this->clicked_menu_entry(THEPANEL->get_menu_current_line());
     }
 }
 
 void CustomScreen::display_menu_line(uint16_t line)
 {
     if (line == 0) {
-        this->panel->lcd->printf("Back");
+        THEPANEL->lcd->printf("Back");
     } else {
-        this->panel->lcd->printf(std::get<0>(menu_items[line-1]));
+        THEPANEL->lcd->printf(std::get<0>(menu_items[line-1]));
     }
 }
 
 void CustomScreen::clicked_menu_entry(uint16_t line)
 {
     if (line == 0) {
-        this->panel->enter_screen(this->parent);
+        THEPANEL->enter_screen(this->parent);
     } else {
         command = std::get<1>(menu_items[line-1]);
     }

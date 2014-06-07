@@ -9,6 +9,21 @@
 
 #include "BaseSolution.h"
 
+#define touchprobe_enable_checksum           CHECKSUM("touchprobe_enable")
+#define touchprobe_log_enable_checksum       CHECKSUM("touchprobe_log_enable")
+#define touchprobe_logfile_name_checksum     CHECKSUM("touchprobe_logfile_name")
+#define touchprobe_log_rotate_mcode_checksum CHECKSUM("touchprobe_log_rotate_mcode")
+#define touchprobe_pin_checksum              CHECKSUM("touchprobe_pin")
+#define touchprobe_debounce_count_checksum   CHECKSUM("touchprobe_debounce_count")
+
+#define touchprobe_enable_checksum           CHECKSUM("touchprobe_enable")
+#define touchprobe_log_enable_checksum       CHECKSUM("touchprobe_log_enable")
+#define touchprobe_logfile_name_checksum     CHECKSUM("touchprobe_logfile_name")
+#define touchprobe_log_rotate_mcode_checksum CHECKSUM("touchprobe_log_rotate_mcode")
+#define touchprobe_pin_checksum              CHECKSUM("touchprobe_pin")
+#define touchprobe_debounce_count_checksum   CHECKSUM("touchprobe_debounce_count")
+
+
 void Touchprobe::on_module_loaded() {
     // if the module is disabled -> do nothing
     this->enabled = THEKERNEL->config->value( touchprobe_enable_checksum )->by_default(false)->as_bool();
