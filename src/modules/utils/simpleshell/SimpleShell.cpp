@@ -56,8 +56,8 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"?",        SimpleShell::help_command},
     {"version",  SimpleShell::version_command},
     {"mem",      SimpleShell::mem_command},
-    {"pause",    SimpleShell::pause_command},
-    {"resume",   SimpleShell::resume_command},
+    {"freeze",   SimpleShell::freeze_command},
+    {"unfreeze", SimpleShell::unfreeze_command},
     {"get",      SimpleShell::get_command},
     {"set_temp", SimpleShell::set_temp_command},
     {"net",      SimpleShell::net_command},
@@ -370,7 +370,7 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
 }
 
 // pause the machine
-void SimpleShell::pause_command( string parameters, StreamOutput *stream)
+void SimpleShell::freeze_command( string parameters, StreamOutput *stream)
 {
     if( ! THEKERNEL->pauser->paused() ){
         THEKERNEL->pauser->take();
@@ -378,7 +378,7 @@ void SimpleShell::pause_command( string parameters, StreamOutput *stream)
 }
 
 // release pause system
-void SimpleShell::resume_command( string parameters, StreamOutput *stream)
+void SimpleShell::unfreeze_command( string parameters, StreamOutput *stream)
 {
     if( THEKERNEL->pauser->paused() ){
         THEKERNEL->pauser->release();
