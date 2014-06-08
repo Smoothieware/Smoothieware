@@ -70,7 +70,6 @@
 Extruder::Extruder( uint16_t config_identifier, bool single )
 {
     this->absolute_mode = true;
-    this->volumetric_mode = false;
     this->enabled       = false;
     this->paused        = false;
     this->single_config = single;

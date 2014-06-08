@@ -56,7 +56,6 @@ class Extruder : public Tool {
 
         char mode;                                    // extruder motion mode,  OFF, SOLO, or FOLLOW
         bool absolute_mode;                           // absolute/relative coordinate mode switch
-        bool volumetric_mode;                         // volumetric(mm3)/linear(mm) E units
         bool paused;
         bool single_config;
 
