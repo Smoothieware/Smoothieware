@@ -467,7 +467,7 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy)
 }
 
 void Extruder::update_steps_per_millimeter() {
-    if(this->filament_diameter > 0) {
+    if(this->filament_diameter > 0.01) {
         this->steps_per_millimeter = this->steps_per_millimeter_setting / (powf(this->filament_diameter / 2, 2) * PI);
     } else {
         this->steps_per_millimeter = this->steps_per_millimeter_setting;
