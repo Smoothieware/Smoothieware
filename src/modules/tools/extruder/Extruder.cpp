@@ -29,6 +29,7 @@
 
 #define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
 #define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
+#define extruder_filament_diameter_checksum  CHECKSUM("extruder_filament_diameter")
 #define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
 #define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
 #define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
@@ -39,6 +40,7 @@
 
 #define default_feed_rate_checksum           CHECKSUM("default_feed_rate")
 #define steps_per_mm_checksum                CHECKSUM("steps_per_mm")
+#define filament_diameter_checksum           CHECKSUM("filament_diameter")
 #define acceleration_checksum                CHECKSUM("acceleration")
 #define step_pin_checksum                    CHECKSUM("step_pin")
 #define dir_pin_checksum                     CHECKSUM("dir_pin")
@@ -56,6 +58,8 @@
 #define SOLO 1
 #define FOLLOW 2
 
+#define PI 3.14159265358979
+
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
 /* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
@@ -66,6 +70,7 @@
 Extruder::Extruder( uint16_t config_identifier, bool single )
 {
     this->absolute_mode = true;
+    this->volumetric_mode = false;
     this->enabled       = false;
     this->paused        = false;
     this->single_config = single;
@@ -111,11 +116,12 @@ void Extruder::on_module_loaded()
 // Get config
 void Extruder::on_config_reload(void *argument)
 {
-
+    float filament_diameter;
     if( this->single_config ) {
         // If this module uses the old "single extruder" configuration style
 
         this->steps_per_millimeter        = THEKERNEL->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
+        filament_diameter                 = THEKERNEL->config->value(extruder_filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration                = THEKERNEL->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
         this->max_speed                   = THEKERNEL->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
         this->feed_rate                   = THEKERNEL->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
@@ -134,6 +140,7 @@ void Extruder::on_config_reload(void *argument)
         // If this module was created with the new multi extruder configuration style
 
         this->steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
+        filament_diameter          = THEKERNEL->config->value(extruder_checksum, this->identifier, filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
         this->max_speed            = THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum         )->by_default(1000)->as_number();
         this->feed_rate            = THEKERNEL->config->value(                                     default_feed_rate_checksum )->by_default(1000)->as_number();
@@ -147,6 +154,9 @@ void Extruder::on_config_reload(void *argument)
         this->offset[Z_AXIS] = THEKERNEL->config->value(extruder_checksum, this->identifier, z_offset_checksum          )->by_default(0)->as_number();
     }
 
+    if(filament_diameter > 0) {
+        this->steps_per_millimeter = (double)this->steps_per_millimeter / ((filament_diameter / 2) * (filament_diameter / 2) * PI);
+    }
 }
 
 void Extruder::on_get_public_data(void* argument){
