@@ -35,8 +35,10 @@ class Laser : public Module{
         void set_proportional_power();
 
         mbed::PwmOut*    laser_pin;    // PWM output to regulate the laser power
-        bool             laser_on;     // Laser status
-        bool             laser_inverting; // stores whether the pwm period should be inverted
+        struct {
+            bool laser_on:1;     // Laser status
+            bool laser_inverting:1; // stores whether the pwm period should be inverted
+        };
         float            laser_max_power; // maximum allowed laser power to be output on the pwm pin
         float            laser_tickle_power; // value used to tickle the laser on moves
 };
