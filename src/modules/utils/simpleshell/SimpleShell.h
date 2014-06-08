@@ -42,8 +42,6 @@ private:
     static void get_command(string parameters, StreamOutput *stream );
     static void set_temp_command(string parameters, StreamOutput *stream );
     static void mem_command(string parameters, StreamOutput *stream );
-    static void freeze_command(string parameters, StreamOutput *stream );
-    static void unfreeze_command(string parameters, StreamOutput *stream );
 
     static void net_command( string parameters, StreamOutput *stream);
 
