@@ -58,16 +58,16 @@
 // Watchdog wd(5000000, WDT_MRI);
 
 // USB Stuff
-SDCard sd(P0_9, P0_8, P0_7, P0_6);      // this selects SPI1 as the sdcard as it is on Smoothieboard
+SDCard sd  __attribute__ ((section ("AHBSRAM0"))) (P0_9, P0_8, P0_7, P0_6);      // this selects SPI1 as the sdcard as it is on Smoothieboard
 //SDCard sd(P0_18, P0_17, P0_15, P0_16);  // this selects SPI0 as the sdcard
 
-USB u;
-USBSerial usbserial(&u);
-USBMSD msc(&u, &sd);
+USB u __attribute__ ((section ("AHBSRAM0")));
+USBSerial usbserial __attribute__ ((section ("AHBSRAM0"))) (&u);
+USBMSD msc __attribute__ ((section ("AHBSRAM0"))) (&u, &sd);
 //USBMSD *msc= NULL;
-DFU dfu(&u);
+DFU dfu __attribute__ ((section ("AHBSRAM0"))) (&u);
 
-SDFAT mounter("sd", &sd);
+SDFAT mounter __attribute__ ((section ("AHBSRAM0"))) ("sd", &sd);
 
 GPIO leds[5] = {
     GPIO(P1_18),

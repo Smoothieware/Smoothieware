@@ -171,7 +171,7 @@ struct fwcache_entry {
  * A cache of packet header fields which are used for
  * identifying duplicate packets.
  */
-static struct fwcache_entry fwcache[FWCACHE_SIZE];
+static struct fwcache_entry fwcache[FWCACHE_SIZE] __attribute__ ((section ("AHBSRAM1")));
 
 /**
  * \internal
