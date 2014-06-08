@@ -116,10 +116,11 @@ void Extruder::on_module_loaded()
 void Extruder::on_config_reload(void *argument)
 {
     float filament_diameter;
+
     if( this->single_config ) {
         // If this module uses the old "single extruder" configuration style
 
-        this->steps_per_millimeter        = THEKERNEL->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->steps_per_millimeter_setting = THEKERNEL->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
         filament_diameter                 = THEKERNEL->config->value(extruder_filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration                = THEKERNEL->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
         this->max_speed                   = THEKERNEL->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
@@ -138,7 +139,7 @@ void Extruder::on_config_reload(void *argument)
     } else {
         // If this module was created with the new multi extruder configuration style
 
-        this->steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->steps_per_millimeter_setting = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
         filament_diameter          = THEKERNEL->config->value(extruder_checksum, this->identifier, filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
         this->max_speed            = THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum         )->by_default(1000)->as_number();
@@ -154,7 +155,9 @@ void Extruder::on_config_reload(void *argument)
     }
 
     if(filament_diameter > 0) {
-        this->steps_per_millimeter = (double)this->steps_per_millimeter / ((filament_diameter / 2) * (filament_diameter / 2) * PI);
+        this->steps_per_millimeter = this->steps_per_millimeter_setting / (pow(filament_diameter / 2, 2) * PI);
+    } else {
+        this->steps_per_millimeter = this->steps_per_millimeter_setting;
     }
 }
 
@@ -208,6 +211,15 @@ void Extruder::on_gcode_received(void *argument)
             gcode->add_nl = true;
             gcode->mark_as_taken();
 
+        } else if (gcode->m == 200 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
+            if (gcode->has_letter('D')) {
+                float filament_diameter = gcode->get_value('D');
+                if(filament_diameter > 0) {
+                    this->steps_per_millimeter = this->steps_per_millimeter_setting / (pow(filament_diameter / 2, 2) * PI);
+                } else {
+                    this->steps_per_millimeter = this->steps_per_millimeter_setting;
+                }
+            }
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             if( this->single_config ) {
                 gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter);

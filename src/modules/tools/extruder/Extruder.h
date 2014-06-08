@@ -47,6 +47,7 @@ class Extruder : public Tool {
         float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
         Block*         current_block;                // Current block we are stepping, same as Stepper's one
         float          steps_per_millimeter;         // Steps to travel one millimeter
+        float          steps_per_millimeter_setting; // original steps to travel one millimeter saved while in volumetric mode
         float          feed_rate;                    //
         float          acceleration;                 //
         float          max_speed;
