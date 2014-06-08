@@ -175,7 +175,7 @@ panel.gamma_jog_feedrate                     200               # z jogging feedr
 panel.hotend_temperature                     185               # temp to set hotend when preheat is selected
 panel.bed_temperature                        60                # temp to set bed when preheat is selected
 
-# Only needed on a smoothieboard
+# Azteeg specific settings do not change
 currentcontrol_module_enable                 true            #
 digipot_max_current                          2.4             # max current
 digipot_factor                               106.0           # factor for converting current to digipot value
