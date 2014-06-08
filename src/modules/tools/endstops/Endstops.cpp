@@ -577,24 +577,15 @@ uint32_t Endstops::acceleration_tick(uint32_t dummy)
 
 void Endstops::on_get_public_data(void* argument){
     PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
-    static float return_data[3];
 
     if(!pdr->starts_with(endstops_checksum)) return;
 
     if(pdr->second_element_is(trim_checksum)) {
-        return_data[0]= this->trim_mm[0];
-        return_data[1]= this->trim_mm[1];
-        return_data[2]= this->trim_mm[2];
-
-        pdr->set_data_ptr(&return_data);
+        pdr->set_data_ptr(&this->trim_mm);
         pdr->set_taken();
 
     }else if(pdr->second_element_is(home_offset_checksum)) {
-        return_data[0]= this->home_offset[0];
-        return_data[1]= this->home_offset[1];
-        return_data[2]= this->home_offset[2];
-
-        pdr->set_data_ptr(&return_data);
+        pdr->set_data_ptr(&this->home_offset);
         pdr->set_taken();
     }
 }

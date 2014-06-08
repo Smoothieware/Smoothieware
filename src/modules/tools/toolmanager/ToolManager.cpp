@@ -97,11 +97,7 @@ void ToolManager::on_get_public_data(void* argument){
     // we are not managing this tool so do not answer
     if(!managed) return;
 
-    // this must be static as it will be accessed long after we have returned
-    static uint16_t tool_name;
-    tool_name= this->current_tool_name;
-
-    pdr->set_data_ptr(&tool_name);
+    pdr->set_data_ptr(&this->current_tool_name);
     pdr->set_taken();
 }
 
