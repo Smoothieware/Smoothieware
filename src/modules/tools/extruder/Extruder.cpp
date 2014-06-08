@@ -58,7 +58,7 @@
 #define SOLO 1
 #define FOLLOW 2
 
-#define PI 3.14159265358979f
+#define PI 3.14159265358979F
 
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
@@ -161,9 +161,8 @@ void Extruder::on_get_public_data(void* argument){
     if(!pdr->starts_with(extruder_checksum)) return;
 
     if(this->enabled) {
-        static float return_data;
-        return_data= this->steps_per_millimeter;
-        pdr->set_data_ptr(&return_data);
+        // Note this is allowing both step/mm and filament diameter to be exposed via public data
+        pdr->set_data_ptr(&this->steps_per_millimeter_setting);
         pdr->set_taken();
     }
 }
@@ -212,12 +211,13 @@ void Extruder::on_gcode_received(void *argument)
                 this->update_steps_per_millimeter();
             }
             gcode->mark_as_taken();
+
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             if( this->single_config ) {
-                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter);
+                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter_setting);
                 gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f\n", this->filament_diameter);
             } else {
-                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", this->steps_per_millimeter, this->identifier);
+                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", this->steps_per_millimeter_setting, this->identifier);
                 gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f P%d\n", this->filament_diameter, this->identifier);
             }
             gcode->mark_as_taken();
