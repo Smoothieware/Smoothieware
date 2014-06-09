@@ -123,12 +123,19 @@ bool SlowTicker::flag_1s(){
 
 #include "gpio.h"
 extern GPIO leds[];
+static uint16_t gcodecnt= 0;
 void SlowTicker::on_idle(void*)
 {
     static uint16_t ledcnt= 0;
     if(THEKERNEL->use_leds) {
-        // flash led 3 to show we are alive
-        leds[2]= (ledcnt++ & 0x1000) ? 1 : 0;
+        leds[2]= (ledcnt++ & 0x03F0) ? 0 : 1;
+        if(gcodecnt>0)
+          gcodecnt++;
+        if(gcodecnt>0x0200)
+          {
+          gcodecnt=0;
+          leds[0]=0;
+          }
     }
 
     // if interrupt has set the 1 second flag
@@ -146,6 +153,10 @@ void SlowTicker::on_idle(void*)
 
 // When a G4-type gcode is received, add it to the queue so we can execute it in time
 void SlowTicker::on_gcode_received(void* argument){
+    if(THEKERNEL->use_leds) {
+        gcodecnt=1;
+        leds[0]=1;
+    }
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
     if( gcode->has_g && gcode->g == 4 ){
