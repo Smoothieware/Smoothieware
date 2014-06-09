@@ -11,7 +11,6 @@
 #include "libs/nuts_bolts.h"
 #include "libs/SlowTicker.h"
 #include "libs/Adc.h"
-#include "libs/Pauser.h"
 #include "libs/StreamOutputPool.h"
 #include <mri.h>
 #include "checksumm.h"
@@ -25,6 +24,7 @@
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
+#include "modules/robot/Pauser.h"
 
 #include <malloc.h>
 #include <array>
