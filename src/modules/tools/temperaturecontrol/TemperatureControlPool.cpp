@@ -16,8 +16,8 @@ using namespace std;
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "TemperatureControlPublicAccess.h"
 
-#define temperature_control_checksum CHECKSUM("temperature_control")
 #define enable_checksum              CHECKSUM("enable")
 
 TemperatureControlPool::TemperatureControlPool(){}
@@ -27,19 +27,20 @@ void TemperatureControlPool::on_module_loaded(){
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
     int cnt= 0;
-    for( unsigned int i = 0; i < modules.size(); i++ ){
+    for( auto cs : modules ){
         // If module is enabled
-        if( THEKERNEL->config->value(temperature_control_checksum, modules[i], enable_checksum )->as_bool() == true ){
-            TemperatureControl* controller = new TemperatureControl(modules[i]);
-            controller->pool = this;
+        if( THEKERNEL->config->value(temperature_control_checksum, cs, enable_checksum )->as_bool() ){
+            TemperatureControl* controller = new TemperatureControl(cs, cnt++);
             //controllers.push_back( controller );
-            //controller->pool_index = controllers.size() - 1;
-            controller->pool_index = cnt++;
             THEKERNEL->add_module(controller);
         }
     }
 
-    THEKERNEL->add_module( this->PIDtuner = new PID_Autotuner() );
+    // no need to create one of these if no heaters defined
+    if(cnt > 0) {
+      PID_Autotuner* pidtuner = new PID_Autotuner();
+      THEKERNEL->add_module( pidtuner );
+    }
 }
 
 

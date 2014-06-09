@@ -60,9 +60,13 @@
 #define preset1_checksum                   CHECKSUM("preset1")
 #define preset2_checksum                   CHECKSUM("preset2")
 
-TemperatureControl::TemperatureControl(uint16_t name) :
-    sensor(nullptr), name_checksum(name), waiting(false), min_temp_violated(false)
+TemperatureControl::TemperatureControl(uint16_t name, int index)
 {
+    name_checksum= name;
+    pool_index= index;
+    waiting= false;
+    min_temp_violated= false;
+    sensor= nullptr;
 }
 
 TemperatureControl::~TemperatureControl()
@@ -165,16 +169,6 @@ void TemperatureControl::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
     if (gcode->has_m) {
-        // Get temperature
-        this->active = true;
-
-        // this is safe as old configs the toolmanager will not be running anyway as well as in single extruder configs
-        void *returned_data;
-        bool ok = THEKERNEL->public_data->get_value( tool_manager_checksum, &returned_data );
-        if (ok) {
-            struct pad_toolmanager toolmanager =  *static_cast<struct pad_toolmanager *>(returned_data);
-            this->active = toolmanager.current_tool_name == this->name_checksum;
-        }
 
         if( gcode->m == this->get_m_code ) {
             char buf[32]; // should be big enough for any status
@@ -197,34 +191,33 @@ void TemperatureControl::on_gcode_received(void *argument)
             //gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, this->p, this->i, this->d, o);
             gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, o);
 
-        } else if (gcode->m == 303) {
-            if (gcode->has_letter('E') && (gcode->get_value('E') == this->pool_index)) {
-                gcode->mark_as_taken();
-                float target = 150.0;
-                if (gcode->has_letter('S')) {
-                    target = gcode->get_value('S');
-                    gcode->stream->printf("Target: %5.1f\n", target);
-                }
-                int ncycles = 8;
-                if (gcode->has_letter('C')) {
-                    ncycles = gcode->get_value('C');
-                }
-                gcode->stream->printf("Start PID tune, command is %s\n", gcode->command.c_str());
-                this->pool->PIDtuner->begin(this, target, gcode->stream, ncycles);
-            }
-
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt);
             gcode->mark_as_taken();
 
-        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') && this->active ) {
-            // Attach gcodes to the last block for on_gcode_execute
-            THEKERNEL->conveyor->append_gcode(gcode);
+        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S')) {
+            // this only gets handled if it is not controlle dby the tool manager or is active in the toolmanager
+            this->active = true;
 
-            // push an empty block if we have to wait, so the Planner can get things right, and we can prevent subsequent non-move gcodes from executing
-            if (gcode->m == this->set_and_wait_m_code)
-                // ensure that no subsequent gcodes get executed with our M109 or similar
-                THEKERNEL->conveyor->queue_head_block();
+            // this is safe as old configs as well as single extruder configs the toolmanager will not be running so will return false
+            // this will also ignore anything that the tool manager is not controlling and return false, otherwise it returns the active tool
+            void *returned_data;
+            bool ok = THEKERNEL->public_data->get_value( tool_manager_checksum, is_active_tool_checksum, this->name_checksum, &returned_data );
+            if (ok) {
+                uint16_t active_tool_name =  *static_cast<uint16_t *>(returned_data);
+                this->active = (active_tool_name == this->name_checksum);
+            }
+
+            if(this->active) {
+                // Attach gcodes to the last block for on_gcode_execute
+                THEKERNEL->conveyor->append_gcode(gcode);
+
+                // push an empty block if we have to wait, so the Planner can get things right, and we can prevent subsequent non-move gcodes from executing
+                if (gcode->m == this->set_and_wait_m_code) {
+                    // ensure that no subsequent gcodes get executed with our M109 or similar
+                    THEKERNEL->conveyor->queue_head_block();
+                }
+            }
         }
     }
 }
@@ -258,7 +251,17 @@ void TemperatureControl::on_get_public_data(void *argument)
 
     if(!pdr->starts_with(temperature_control_checksum)) return;
 
-    if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
+    if(pdr->second_element_is(pool_index_checksum)) {
+        // asking for our instance pointer if we have this pool_index
+        if(pdr->third_element_is(this->pool_index)) {
+            static void *return_data;
+            return_data = this;
+            pdr->set_data_ptr(&return_data);
+            pdr->set_taken();
+        }
+        return;
+
+    }else if(!pdr->second_element_is(this->name_checksum)) return;
 
     // ok this is targeted at us, so send back the requested data
     if(pdr->third_element_is(current_temperature_checksum)) {
@@ -269,6 +272,7 @@ void TemperatureControl::on_get_public_data(void *argument)
         pdr->set_data_ptr(&this->public_data_return);
         pdr->set_taken();
     }
+
 }
 
 void TemperatureControl::on_set_public_data(void *argument)
@@ -277,7 +281,7 @@ void TemperatureControl::on_set_public_data(void *argument)
 
     if(!pdr->starts_with(temperature_control_checksum)) return;
 
-    if(!pdr->second_element_is(this->name_checksum)) return; // will be bed or hotend
+    if(!pdr->second_element_is(this->name_checksum)) return;
 
     // ok this is targeted at us, so set the temp
     float t = *static_cast<float *>(pdr->get_data_ptr());
