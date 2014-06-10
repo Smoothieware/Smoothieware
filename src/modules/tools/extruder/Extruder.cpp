@@ -339,12 +339,12 @@ void Extruder::on_block_begin(void *argument)
 
         this->current_position += this->travel_distance ;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) )));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter_setting * (this->travel_distance + this->unstepped_distance) )));
 
         if ( this->travel_distance > 0 ) {
-            this->unstepped_distance += this->travel_distance - (steps_to_step / this->steps_per_millimeter); //catch any overflow
+            this->unstepped_distance += this->travel_distance - (steps_to_step / this->steps_per_millimeter_setting); //catch any overflow
         }   else {
-            this->unstepped_distance += this->travel_distance + (steps_to_step / this->steps_per_millimeter); //catch any overflow
+            this->unstepped_distance += this->travel_distance + (steps_to_step / this->steps_per_millimeter_setting); //catch any overflow
         }
 
         if( steps_to_step != 0 ) {
@@ -411,10 +411,10 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy)
     }
 
     uint32_t current_rate = this->stepper_motor->get_steps_per_second();
-    uint32_t target_rate = int(floor(this->feed_rate * this->steps_per_millimeter));
+    uint32_t target_rate = int(floor(this->feed_rate * this->steps_per_millimeter_setting)); // NOTE we use real steps here not the volumetric ones
 
     if( current_rate < target_rate ) {
-        uint32_t rate_increase = int(floor((this->acceleration / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * this->steps_per_millimeter));
+        uint32_t rate_increase = int(floor((this->acceleration / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * this->steps_per_millimeter_setting));
         current_rate = min( target_rate, current_rate + rate_increase );
     }
     if( current_rate > target_rate ) {
