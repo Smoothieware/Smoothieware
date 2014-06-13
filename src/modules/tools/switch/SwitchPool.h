@@ -13,15 +13,14 @@
 using namespace std;
 #include <vector>
 
-#define enable_checksum            CHECKSUM("enable")
-
 class SwitchPool : public Module {
     public:
         SwitchPool();
 
         void on_module_loaded();
 
-        vector<Switch*> controllers;
+    private:
+        //vector<Switch*> controllers;
 };
 
 
