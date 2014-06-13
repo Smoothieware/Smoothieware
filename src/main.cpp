@@ -23,6 +23,7 @@
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
+#include "modules/utils/idleleds/IdleLeds.h"
 #include "libs/Network/uip/Network.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -107,6 +108,9 @@ int main() {
     // Create and add main modules
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
+    if(kernel->use_leds)
+      kernel->add_module( new IdleLeds() );     // must be added early
+
     kernel->add_module( new CurrentControl() );
     kernel->add_module( new SwitchPool() );
     kernel->add_module( new PauseButton() );
@@ -184,13 +188,8 @@ int main() {
         }
     }
 
-    uint16_t cnt= 0;
     // Main loop
     while(1){
-        if(kernel->use_leds) {
-            // flash led 2 to show we are alive
-            leds[1]= (cnt++ & 0x1000) ? 1 : 0;
-        }
         kernel->call_event(ON_MAIN_LOOP);
         kernel->call_event(ON_IDLE);
     }
