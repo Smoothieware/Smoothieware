@@ -1,4 +1,17 @@
 # NOTE Lines must not exceed 132 characters
+# switch off unused modules, saves memory and may save cpu load
+use_module_pausebutton                       true
+use_module_playled                           true
+use_module_endstops                          true
+use_module_player                            true
+use_module_extrudermaker                     true
+use_module_temperaturecontrolpool            true
+use_module_laser                             false
+use_module_panel                             true
+use_module_touchprobe                        true
+use_module_zprobe                            true
+use_module_network                           true
+
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
