@@ -77,6 +77,7 @@ GPIO leds[5] = {
     GPIO(P4_28)
 };
 
+
 int main() {
 
     // Default pins to low status
@@ -104,38 +105,44 @@ int main() {
 
     bool sdok= (sd.disk_initialize() == 0);
 
+    #define FORCE_MODULE(clazz)         kernel->add_module( new clazz() );
+    #define USE_MODULE(name,clazz) \
+        if( ! kernel->config->value(CHECKSUM("use_module_" name))->by_default(true)->as_bool()) \
+            FORCE_MODULE(clazz)
+
     // Create and add main modules
-    kernel->add_module( new SimpleShell() );
-    kernel->add_module( new Configurator() );
-    kernel->add_module( new CurrentControl() );
-    kernel->add_module( new SwitchPool() );
-    kernel->add_module( new PauseButton() );
-    kernel->add_module( new PlayLed() );
-    kernel->add_module( new Endstops() );
-    kernel->add_module( new Player() );
+    FORCE_MODULE(SimpleShell)
+    FORCE_MODULE(Configurator)
+    FORCE_MODULE(CurrentControl)
+    FORCE_MODULE(SwitchPool)
+
+    USE_MODULE("pausebutton",   PauseButton)
+    USE_MODULE("playled",       PlayLed)
+    USE_MODULE("endstops",      Endstops)
+    USE_MODULE("player",        Player)
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
     #ifndef NO_TOOLS_EXTRUDER
-    kernel->add_module( new ExtruderMaker() );
+    USE_MODULE("extrudermaker", ExtruderMaker)
     #endif
     #ifndef NO_TOOLS_TEMPERATURECONTROL
     // Note order is important here must be after extruder
-    kernel->add_module( new TemperatureControlPool() );
+    USE_MODULE("temperaturecontrolpool", TemperatureControlPool)
     #endif
     #ifndef NO_TOOLS_LASER
-    kernel->add_module( new Laser() );
+    USE_MODULE("laser",         Laser)
     #endif
     #ifndef NO_UTILS_PANEL
-    kernel->add_module( new Panel() );
+    USE_MODULE("panel",         Panel)
     #endif
     #ifndef NO_TOOLS_TOUCHPROBE
-    kernel->add_module( new Touchprobe() );
+    USE_MODULE("touchprobe",    Touchprobe)
     #endif
     #ifndef NO_TOOLS_ZPROBE
-    kernel->add_module( new ZProbe() );
+    USE_MODULE("zprobe",        ZProbe)
     #endif
     #ifndef NONETWORK
-    kernel->add_module( new Network() );
+    USE_MODULE("network",       Network)
     #endif
 
     // Create and initialize USB stuff
