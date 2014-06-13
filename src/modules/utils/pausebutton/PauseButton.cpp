@@ -10,8 +10,12 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 
-#include <string>
 using namespace std;
+
+#define pause_button_enable_checksum CHECKSUM("pause_button_enable")
+#define pause_button_pin_checksum    CHECKSUM("pause_button_pin")
+#define freeze_command_checksum      CHECKSUM("freeze")
+#define unfreeze_command_checksum    CHECKSUM("unfreeze")
 
 PauseButton::PauseButton(){}
 
@@ -23,7 +27,8 @@ void PauseButton::on_module_loaded(){
     this->button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input();
 
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    THEKERNEL->slow_ticker->attach( 100, this, &PauseButton::button_tick );
+
+    if(this->enable) THEKERNEL->slow_ticker->attach( 100, this, &PauseButton::button_tick );
 }
 
 //TODO: Make this use InterruptIn
