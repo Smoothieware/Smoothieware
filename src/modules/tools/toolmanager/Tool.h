@@ -10,6 +10,8 @@
 
 #include "Module.h"
 
+#include <stdint.h>
+
 class Tool : public Module
 {
 public:

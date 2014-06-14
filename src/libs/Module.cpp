@@ -8,24 +8,30 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 
-// Events are the basic building blocks of Smoothie. They register for events, and then do stuff when those events are called.
-// You add things to Smoothie by making a new class that inherits the Module class. See http://smoothieware.org/moduleexample for a crude introduction
-
-const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
-    #define EVENT(name, func) &Module::func ,
-    #include "Event.h"
-    #undef EVENT
-};
-
 Module::Module(){}
 Module::~Module(){}
 
-void Module::on_module_loaded(){}
-
 void Module::register_for_event(_EVENT_ENUM event_id){
-    THEKERNEL->register_for_event(event_id, this);
+    // Events are the basic building blocks of Smoothie. They register for events, and then do stuff when those events are called.
+    // You add things to Smoothie by making a new class that inherits the Module class. See http://smoothieware.org/moduleexample for a crude introduction
+    using std::placeholders::_1;
+    switch(event_id) {
+        case ON_MAIN_LOOP:              THEKERNEL->register_for_event(event_id, std::bind(&Module::on_main_loop,             this, _1)); break;
+        case ON_CONSOLE_LINE_RECEIVED:  THEKERNEL->register_for_event(event_id, std::bind(&Module::on_console_line_received, this, _1)); break;
+        case ON_GCODE_RECEIVED:         THEKERNEL->register_for_event(event_id, std::bind(&Module::on_gcode_received,        this, _1)); break;
+        case ON_GCODE_EXECUTE:          THEKERNEL->register_for_event(event_id, std::bind(&Module::on_gcode_execute,         this, _1)); break;
+        case ON_SPEED_CHANGE:           THEKERNEL->register_for_event(event_id, std::bind(&Module::on_speed_change,          this, _1)); break;
+        case ON_BLOCK_BEGIN:            THEKERNEL->register_for_event(event_id, std::bind(&Module::on_block_begin,           this, _1)); break;
+        case ON_BLOCK_END:              THEKERNEL->register_for_event(event_id, std::bind(&Module::on_block_end,             this, _1)); break;
+        case ON_CONFIG_RELOAD:          THEKERNEL->register_for_event(event_id, std::bind(&Module::on_config_reload,         this, _1)); break;
+        case ON_PLAY:                   THEKERNEL->register_for_event(event_id, std::bind(&Module::on_play,                  this, _1)); break;
+        case ON_PAUSE:                  THEKERNEL->register_for_event(event_id, std::bind(&Module::on_pause,                 this, _1)); break;
+        case ON_IDLE:                   THEKERNEL->register_for_event(event_id, std::bind(&Module::on_idle,                  this, _1)); break;
+        case ON_CONFIG_VALUE:           THEKERNEL->register_for_event(event_id, std::bind(&Module::on_config_value,          this, _1)); break;
+        case ON_CONFIG_COMPLETE:        THEKERNEL->register_for_event(event_id, std::bind(&Module::on_config_complete,       this, _1)); break;
+        case ON_SECOND_TICK:            THEKERNEL->register_for_event(event_id, std::bind(&Module::on_second_tick,           this, _1)); break;
+        case ON_GET_PUBLIC_DATA:        THEKERNEL->register_for_event(event_id, std::bind(&Module::on_get_public_data,       this, _1)); break;
+        case ON_SET_PUBLIC_DATA:        THEKERNEL->register_for_event(event_id, std::bind(&Module::on_set_public_data,       this, _1)); break;
+        case NUMBER_OF_DEFINED_EVENTS: break; // STFU
+    }
 }
-
-#define EVENT(name, func) void Module::func (void*) {}
-#include "Event.h"
-#undef EVENT
