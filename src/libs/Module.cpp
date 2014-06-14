@@ -11,6 +11,8 @@
 Module::Module(){}
 Module::~Module(){}
 
+// this is used to callback the specific method in the Module instance
+// NOTE this is stored in Flash so takes up no RAM
 const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
     &Module::on_main_loop,
     &Module::on_console_line_received,
