@@ -152,7 +152,7 @@ void WatchScreen::get_temp_data()
     void *returned_data;
     bool ok;
 
-    ok = THEKERNEL->public_data->get_value( temperature_control_checksum, bed_checksum, current_temperature_checksum, &returned_data );
+    ok = PublicData::get_value( temperature_control_checksum, bed_checksum, current_temperature_checksum, &returned_data );
     if (ok) {
         struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
         this->bedtemp = round(temp.current_temperature);
@@ -166,7 +166,7 @@ void WatchScreen::get_temp_data()
     }
 
 
-    ok = THEKERNEL->public_data->get_value( temperature_control_checksum, hotend_checksum, current_temperature_checksum, &returned_data );
+    ok = PublicData::get_value( temperature_control_checksum, hotend_checksum, current_temperature_checksum, &returned_data );
     if (ok) {
         struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
         this->hotendtemp = round(temp.current_temperature);
@@ -180,7 +180,7 @@ void WatchScreen::get_temp_data()
     }
 
     // get fan status
-    ok = THEKERNEL->public_data->get_value( switch_checksum, fan_checksum, 0, &returned_data );
+    ok = PublicData::get_value( switch_checksum, fan_checksum, 0, &returned_data );
     if (ok) {
         struct pad_switch s = *static_cast<struct pad_switch *>(returned_data);
         this->fan_state = s.state;
@@ -195,7 +195,7 @@ float WatchScreen::get_current_speed()
 {
     void *returned_data;
 
-    bool ok = THEKERNEL->public_data->get_value( robot_checksum, speed_override_percent_checksum, &returned_data );
+    bool ok = PublicData::get_value( robot_checksum, speed_override_percent_checksum, &returned_data );
     if (ok) {
         float cs = *static_cast<float *>(returned_data);
         return cs;
@@ -207,7 +207,7 @@ void WatchScreen::get_current_pos(float *cp)
 {
     void *returned_data;
 
-    bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+    bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &returned_data );
     if (ok) {
         float *p = static_cast<float *>(returned_data);
         cp[0] = p[0];
@@ -219,7 +219,7 @@ void WatchScreen::get_current_pos(float *cp)
 void WatchScreen::get_sd_play_info()
 {
     void *returned_data;
-    bool ok = THEKERNEL->public_data->get_value( player_checksum, get_progress_checksum, &returned_data );
+    bool ok = PublicData::get_value( player_checksum, get_progress_checksum, &returned_data );
     if (ok) {
         struct pad_progress p =  *static_cast<struct pad_progress *>(returned_data);
         this->elapsed_time = p.elapsed_secs;
@@ -276,7 +276,7 @@ const char *WatchScreen::get_network()
 {
     void *returned_data;
 
-    bool ok = THEKERNEL->public_data->get_value( network_checksum, get_ip_checksum, &returned_data );
+    bool ok = PublicData::get_value( network_checksum, get_ip_checksum, &returned_data );
     if (ok) {
         uint8_t *ipaddr = (uint8_t *)returned_data;
         char buf[20];

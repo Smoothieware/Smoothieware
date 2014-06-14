@@ -202,7 +202,7 @@ void TemperatureControl::on_gcode_received(void *argument)
             // this is safe as old configs as well as single extruder configs the toolmanager will not be running so will return false
             // this will also ignore anything that the tool manager is not controlling and return false, otherwise it returns the active tool
             void *returned_data;
-            bool ok = THEKERNEL->public_data->get_value( tool_manager_checksum, is_active_tool_checksum, this->name_checksum, &returned_data );
+            bool ok = PublicData::get_value( tool_manager_checksum, is_active_tool_checksum, this->name_checksum, &returned_data );
             if (ok) {
                 uint16_t active_tool_name =  *static_cast<uint16_t *>(returned_data);
                 this->active = (active_tool_name == this->name_checksum);
