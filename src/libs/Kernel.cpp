@@ -147,13 +147,13 @@ void Kernel::register_for_event(_EVENT_ENUM id_event, Module *mod){
 // Call a specific event without arguments
 void Kernel::call_event(_EVENT_ENUM id_event){
     for (auto m : hooks[id_event]) {
-        m->call_event(id_event, this);
+        (m->*kernel_callback_functions[id_event])(this);
     }
 }
 
 // Call a specific event with an argument
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
     for (auto m : hooks[id_event]) {
-        m->call_event(id_event, argument);
+        (m->*kernel_callback_functions[id_event])(argument);
     }
 }
