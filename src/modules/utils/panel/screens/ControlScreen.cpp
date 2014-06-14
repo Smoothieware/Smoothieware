@@ -125,7 +125,7 @@ void ControlScreen::get_current_pos(float *cp)
 {
     void *returned_data;
 
-    bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+    bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &returned_data );
     if (ok) {
         float *p = static_cast<float *>(returned_data);
         cp[0] = p[0];

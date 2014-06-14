@@ -58,7 +58,6 @@ class Kernel {
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
-        PublicData*       public_data;
         bool              use_leds;
         std::string       current_path;
 

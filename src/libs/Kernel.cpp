@@ -131,7 +131,6 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
-    this->add_module( this->public_data    = new PublicData()    );
 }
 
 // Add a module to Kernel. We don't actually hold a list of modules, we just tell it where Kernel is

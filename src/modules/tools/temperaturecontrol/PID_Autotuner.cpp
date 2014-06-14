@@ -106,7 +106,7 @@ void PID_Autotuner::on_gcode_received(void *argument)
 
             // get the temperature control instance with this pool index
             void *returned_data;
-            bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, pool_index_checksum, pool_index, &returned_data );
+            bool ok = PublicData::get_value( temperature_control_checksum, pool_index_checksum, pool_index, &returned_data );
 
             if (ok) {
                 this->temp_control =  *static_cast<TemperatureControl **>(returned_data);

@@ -388,7 +388,7 @@ static uint32_t getDeviceType()
 void SimpleShell::net_command( string parameters, StreamOutput *stream)
 {
     void *returned_data;
-    bool ok= THEKERNEL->public_data->get_value( network_checksum, get_ipconfig_checksum, &returned_data );
+    bool ok= PublicData::get_value( network_checksum, get_ipconfig_checksum, &returned_data );
     if(ok) {
         char *str= (char *)returned_data;
         stream->printf("%s\r\n", str);
@@ -437,7 +437,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     if (what == "temp") {
         string type = shift_parameter( parameters );
-        bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
+        bool ok = PublicData::get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
 
         if (ok) {
             struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
@@ -447,7 +447,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
     } else if (what == "pos") {
-        bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+        bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &returned_data );
 
         if (ok) {
             float *pos = static_cast<float *>(returned_data);
@@ -465,7 +465,7 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     string type = shift_parameter( parameters );
     string temp = shift_parameter( parameters );
     float t = temp.empty() ? 0.0 : strtof(temp.c_str(), NULL);
-    bool ok = THEKERNEL->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
+    bool ok = PublicData::set_value( temperature_control_checksum, get_checksum(type), &t );
 
     if (ok) {
         stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
