@@ -12,6 +12,9 @@
 #include "Pwm.h"
 #include <math.h>
 
+#include <string>
+using std::string;
+
 class Gcode;
 class StreamOutput;
 

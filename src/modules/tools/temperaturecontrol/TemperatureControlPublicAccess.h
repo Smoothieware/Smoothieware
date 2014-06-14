@@ -3,6 +3,8 @@
 
 #include "checksumm.h"
 
+#include <string>
+
 // addresses used for public data access
 #define temperature_control_checksum      CHECKSUM("temperature_control")
 #define hotend_checksum                   CHECKSUM("hotend")
@@ -16,6 +18,6 @@ struct pad_temperature {
     float current_temperature;
     float target_temperature;
     int pwm;
-    string designator;
+    std::string designator;
 };
 #endif
