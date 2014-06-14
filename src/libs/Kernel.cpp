@@ -131,7 +131,6 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
-    this->add_module( this->public_data    = new PublicData()    );
 }
 
 // Add a module to Kernel. We don't actually hold a list of modules, we just tell it where Kernel is
@@ -140,20 +139,20 @@ void Kernel::add_module(Module* module){
 }
 
 // Adds a hook for a given module and event
-void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
-    this->hooks[id_event].push_back(module);
+void Kernel::register_for_event(_EVENT_ENUM id_event, Module *mod){
+    this->hooks[id_event].push_back(mod);
 }
 
 // Call a specific event without arguments
 void Kernel::call_event(_EVENT_ENUM id_event){
-    for (Module* current : hooks[id_event]) {
-        (current->*kernel_callback_functions[id_event])(this);
+    for (auto m : hooks[id_event]) {
+        (m->*kernel_callback_functions[id_event])(this);
     }
 }
 
 // Call a specific event with an argument
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
-    for (Module* current : hooks[id_event]) {
-        (current->*kernel_callback_functions[id_event])(argument);
+    for (auto m : hooks[id_event]) {
+        (m->*kernel_callback_functions[id_event])(argument);
     }
 }

@@ -73,7 +73,7 @@ class TemperatureControl : public Module {
         uint16_t get_m_code;
         struct pad_temperature public_data_return;
 
-        string designator;
+        std::string designator;
 
         void setPIDp(float p);
         void setPIDi(float i);

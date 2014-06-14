@@ -41,6 +41,9 @@ void TemperatureControlPool::on_module_loaded(){
       PID_Autotuner* pidtuner = new PID_Autotuner();
       THEKERNEL->add_module( pidtuner );
     }
+
+    // no need to keep this around once it is done
+    delete this;
 }
 
 

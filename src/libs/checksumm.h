@@ -22,11 +22,11 @@
 /* There are two compile time checksumming approaches in this file.  One uses
    the C preprocessor and the other uses new C++11 features.  They should both
    do the same thing but my current compiler, GCC 4.7, doesn't always do the
-   constant folding for the C++ approach and this causes code bloat.  The C 
-   preprocessor approach can currently generate the exact same code in 
-   Checked/Release builds as the old method of pre-calculating checksums by 
+   constant folding for the C++ approach and this causes code bloat.  The C
+   preprocessor approach can currently generate the exact same code in
+   Checked/Release builds as the old method of pre-calculating checksums by
    hand and pasting them into the code.
-   
+
    Keeping both versions here: the active C version and the C++ version
    that we should switch to later if newer compilers do the required constant
    folding (maybe there are optimization flags to help here.)
@@ -34,6 +34,8 @@
 #ifdef CHECKSUM_USE_CPP
 
 #include <type_traits>
+#include <stdint.h>
+#include <stddef.h>
 
 /* Cool C++11 approach contributed by bgamari on #smoothieware IRC channel.
  * Unfortunately this will have to wait until after we switch to GCC 4.7.

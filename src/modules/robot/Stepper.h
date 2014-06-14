@@ -9,6 +9,7 @@
 #define STEPPER_H
 
 #include "libs/Module.h"
+#include <stdint.h>
 
 class Block;
 class Hook;

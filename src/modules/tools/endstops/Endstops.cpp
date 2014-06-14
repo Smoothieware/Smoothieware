@@ -108,6 +108,7 @@ void Endstops::on_module_loaded()
 {
     // Do not do anything if not enabled
     if ( THEKERNEL->config->value( endstops_module_enable_checksum )->by_default(true)->as_bool() == false ) {
+        delete this;
         return;
     }
 
