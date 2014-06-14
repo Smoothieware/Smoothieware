@@ -161,8 +161,12 @@ int main() {
     kernel->config->config_cache_clear();
 
     if(kernel->use_leds) {
-        // set some leds to indicate status... led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok
-        leds[0]= 1; // indicate we are done with init
+        // set some leds to indicate status...
+        //   led1 (flash) gcode received
+        //   led2 (on) init done (dimmed) mainloop running
+        //   led3 (dimmed) idle loop running
+        //   led4 (on) sdcard ok
+        leds[1]= 1; // indicate we are done with init
         leds[3]= sdok?1:0; // 4th led inidicates sdcard is available (TODO maye should indicate config was found)
     }
 
@@ -188,8 +192,7 @@ int main() {
     // Main loop
     while(1){
         if(kernel->use_leds) {
-            // flash led 2 to show we are alive
-            leds[1]= (cnt++ & 0x1000) ? 1 : 0;
+            leds[1]= (cnt++ & 0x03F0) ? 0 : 1;
         }
         kernel->call_event(ON_MAIN_LOOP);
         kernel->call_event(ON_IDLE);
