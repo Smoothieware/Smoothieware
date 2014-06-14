@@ -37,11 +37,13 @@ public:
     Module();
     virtual ~Module();
     virtual void on_module_loaded(){};
+    virtual void call_event(_EVENT_ENUM event_id, void *arg);
 
 protected:
     void register_for_event(_EVENT_ENUM event_id);
 
     // event callbacks, not every module will implement all of these
+    // there should be one for each _EVENT_ENUM
     virtual void on_main_loop(void*){};
     virtual void on_console_line_received(void*){};
     virtual void on_gcode_received(void*){};

@@ -14,7 +14,6 @@
 #include <array>
 #include <vector>
 #include <string>
-#include <functional>
 
 //Module manager
 class Config;
@@ -39,7 +38,7 @@ class Kernel {
         const char* config_override_filename(){ return "/sd/config-override"; }
 
         void add_module(Module* module);
-        void register_for_event(_EVENT_ENUM id_event, std::function<void(void*)>);
+        void register_for_event(_EVENT_ENUM id_event, Module *module);
         void call_event(_EVENT_ENUM id_event);
         void call_event(_EVENT_ENUM id_event, void * argument);
 
@@ -65,7 +64,7 @@ class Kernel {
 
     private:
         // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
-        std::array<std::vector<std::function<void(void*)>>, NUMBER_OF_DEFINED_EVENTS> hooks;
+        std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks;
 
 };
 
