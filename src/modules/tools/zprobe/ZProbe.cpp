@@ -429,6 +429,12 @@ void ZProbe::on_gcode_received(void *argument)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
+            // make sure the probe is not already triggered before moving motors
+            if(this->pin.get()) {
+                gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+                return;
+            }
+
             int steps;
             if(run_probe(steps)) {
                 gcode->stream->printf("Z:%1.4f C:%d\n", steps / Z_STEPS_PER_MM, steps);
@@ -447,6 +453,13 @@ void ZProbe::on_gcode_received(void *argument)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
             gcode->mark_as_taken();
+
+            // make sure the probe is not already triggered before moving motors
+            if(this->pin.get()) {
+                gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+                return;
+            } 
+            
             if(is_delta) {
                 if(!gcode->has_letter('R')){
                     if(!calibrate_delta_endstops(gcode)) {
