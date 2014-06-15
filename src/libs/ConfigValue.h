@@ -34,6 +34,7 @@ class ConfigValue{
         friend class Config;
         friend class ConfigSource;
         friend class Configurator;
+        friend class FileConfigSource;
 
     private:
         bool has_characters( const char* mask );
