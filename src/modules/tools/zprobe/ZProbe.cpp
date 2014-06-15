@@ -183,23 +183,6 @@ bool ZProbe::return_probe(int steps)
     return true;
 }
 
-// check if the probe is currently triggered
-bool ZProbe::check_probe()
-{
-    // if the zprobe pin is set more than half the time during the
-    // debounce window, we'll call it triggered.
-    unsigned int debounce = 0;
-    unsigned int triggered = 0;
-
-    do {
-        THEKERNEL->call_event(ON_IDLE);
-        if( this->pin.get() ) {
-            triggered++;
-        } 
-    } while (debounce++ < debounce_count);
-    return triggered > debounce / 2;
-}
-
 // calculate the X and Y positions for the three towers given the radius from the center
 static std::tuple<float, float, float, float, float, float> getCoordinates(float radius)
 {
@@ -447,7 +430,7 @@ void ZProbe::on_gcode_received(void *argument)
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             // make sure the probe is not already triggered before moving motors
-            if(check_probe()) {
+            if(this->pin.get()) {
                 gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
                 return;
             }
@@ -472,7 +455,7 @@ void ZProbe::on_gcode_received(void *argument)
             gcode->mark_as_taken();
 
             // make sure the probe is not already triggered before moving motors
-            if(check_probe()) {
+            if(this->pin.get()) {
                 gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
                 return;
             } 
