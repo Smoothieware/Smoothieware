@@ -43,7 +43,6 @@ private:
     float          current_feedrate;
     float          slow_feedrate;
     float          fast_feedrate;
-    StepperMotor  *steppers[3];
     Pin            pin;
     uint8_t        debounce_count;
     struct {

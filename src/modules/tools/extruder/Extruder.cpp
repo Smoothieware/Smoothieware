@@ -312,7 +312,7 @@ void Extruder::on_gcode_execute(void *argument)
             }
 
             if (gcode->has_letter('F')) {
-                feed_rate = gcode->get_value('F') / THEKERNEL->robot->seconds_per_minute;
+                feed_rate = gcode->get_value('F') / THEKERNEL->robot->get_seconds_per_minute();
                 if (feed_rate > max_speed)
                     feed_rate = max_speed;
             }

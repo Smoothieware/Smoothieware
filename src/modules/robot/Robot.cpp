@@ -31,7 +31,7 @@ using std::string;
 #include "utils.h"
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
-
+#include "StreamOutputPool.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
@@ -215,11 +215,13 @@ void Robot::on_config_reload(void *argument)
     alpha_stepper_motor->max_rate = THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
     beta_stepper_motor->max_rate  = THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F;
     gamma_stepper_motor->max_rate = THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
+    check_max_actuator_speeds(); // check the configs are sane
 
     actuators.clear();
     actuators.push_back(alpha_stepper_motor);
     actuators.push_back(beta_stepper_motor);
     actuators.push_back(gamma_stepper_motor);
+
 
     // initialise actuator positions to current cartesian position (X0 Y0 Z0)
     // so the first move can be correct if homing is not performed
@@ -229,6 +231,29 @@ void Robot::on_config_reload(void *argument)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 
     //this->clearToolOffset();
+}
+
+// this does a sanity check that actuator speeds do not exceed steps rate capability
+// we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
+void Robot::check_max_actuator_speeds()
+{
+    float step_freq= alpha_stepper_motor->max_rate * alpha_stepper_motor->get_steps_per_mm();
+    if(step_freq > THEKERNEL->base_stepping_frequency) {
+        alpha_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / alpha_stepper_motor->get_steps_per_mm());
+        THEKERNEL->streams->printf("WARNING: alpha_max_rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", step_freq, alpha_stepper_motor->max_rate);
+    }
+
+    step_freq= beta_stepper_motor->max_rate * beta_stepper_motor->get_steps_per_mm();
+    if(step_freq > THEKERNEL->base_stepping_frequency) {
+        beta_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / beta_stepper_motor->get_steps_per_mm());
+        THEKERNEL->streams->printf("WARNING: beta_max_rate exceeds base_stepping_frequency * beta_steps_per_mm: %f, setting to %f\n", step_freq, beta_stepper_motor->max_rate);
+    }
+
+    step_freq= gamma_stepper_motor->max_rate * gamma_stepper_motor->get_steps_per_mm();
+    if(step_freq > THEKERNEL->base_stepping_frequency) {
+        gamma_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / gamma_stepper_motor->get_steps_per_mm());
+        THEKERNEL->streams->printf("WARNING: gamma_max_rate exceeds base_stepping_frequency * gamma_steps_per_mm: %f, setting to %f\n", step_freq, gamma_stepper_motor->max_rate);
+    }
 }
 
 void Robot::on_get_public_data(void *argument)
@@ -341,6 +366,7 @@ void Robot::on_gcode_received(void *argument)
                 gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm, seconds_per_minute);
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
+                check_max_actuator_speeds();
                 return;
             case 114: {
                 char buf[32];
@@ -366,6 +392,8 @@ void Robot::on_gcode_received(void *argument)
                     beta_stepper_motor->max_rate = gcode->get_value('B');
                 if (gcode->has_letter('C'))
                     gamma_stepper_motor->max_rate = gcode->get_value('C');
+
+                check_max_actuator_speeds();
 
                 gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
