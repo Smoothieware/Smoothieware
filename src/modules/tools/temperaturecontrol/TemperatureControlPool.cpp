@@ -20,9 +20,7 @@ using namespace std;
 
 #define enable_checksum              CHECKSUM("enable")
 
-TemperatureControlPool::TemperatureControlPool(){}
-
-void TemperatureControlPool::on_module_loaded(){
+void TemperatureControlPool::load_tools(){
 
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
@@ -41,9 +39,6 @@ void TemperatureControlPool::on_module_loaded(){
       PID_Autotuner* pidtuner = new PID_Autotuner();
       THEKERNEL->add_module( pidtuner );
     }
-
-    // no need to keep this around once it is done
-    delete this;
 }
 
 

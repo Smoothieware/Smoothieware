@@ -8,16 +8,9 @@
 #ifndef TEMPERATURECONTROLPOOL_H
 #define TEMPERATURECONTROLPOOL_H
 
-class TemperatureControl;
-
-class TemperatureControlPool : public Module {
+class TemperatureControlPool {
     public:
-        TemperatureControlPool();
-
-        void on_module_loaded();
-
-    private:
-        //vector<TemperatureControl*> controllers;
+        void load_tools();
 };
 
 

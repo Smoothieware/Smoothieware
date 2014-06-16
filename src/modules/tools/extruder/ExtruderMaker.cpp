@@ -5,9 +5,9 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "ExtruderMaker.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "ExtruderMaker.h"
 #include "Extruder.h"
 #include "Config.h"
 #include "ToolManager.h"
@@ -23,7 +23,7 @@ using namespace std;
 #define extruder_checksum                    CHECKSUM("extruder")
 #define enable_checksum                      CHECKSUM("enable")
 
-void ExtruderMaker::on_module_loaded(){
+void ExtruderMaker::load_tools(){
 
     // If there is a "single" extruder configured ( old config syntax from when there was only one extruder module, no pool/maker
     if( THEKERNEL->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() ){
@@ -45,8 +45,6 @@ void ExtruderMaker::on_module_loaded(){
 
     if(modules.size() == 0) {
         THEKERNEL->streams->printf("NOTE: No extruders configured\n");
-        // no extruders
-        delete this;
         return;
     }
 
@@ -60,7 +58,6 @@ void ExtruderMaker::on_module_loaded(){
 
     if(cnt == 0) {
         THEKERNEL->streams->printf("NOTE: No extruders enabled\n");
-        delete this;
         return;
     }
 
