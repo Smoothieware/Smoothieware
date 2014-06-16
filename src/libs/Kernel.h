@@ -60,6 +60,7 @@ class Kernel {
         Adc*              adc;
         bool              use_leds;
         std::string       current_path;
+        int               base_stepping_frequency;
 
     private:
         // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

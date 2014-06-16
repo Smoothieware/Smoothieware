@@ -117,12 +117,12 @@ Kernel::Kernel(){
     }
 
     // Configure the step ticker
-    int base_stepping_frequency          =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
+    this->base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
     float microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
 
     // Configure the step ticker ( TODO : shouldnt this go into stepticker's code ? )
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
-    this->step_ticker->set_frequency(   base_stepping_frequency );
+    this->step_ticker->set_frequency( this->base_stepping_frequency );
 
     // Core modules
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );

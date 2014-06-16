@@ -42,7 +42,7 @@ class Endstops : public Module{
         float  slow_rates[3];
         float  feed_rate[3];
         Pin    pins[6];
-        StepperMotor* steppers[3];
+        //StepperMotor* steppers[3];
         char status;
         struct {
             bool is_corexy:1;

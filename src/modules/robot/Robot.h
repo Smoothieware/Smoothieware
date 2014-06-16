@@ -31,10 +31,14 @@ class Robot : public Module {
         void get_axis_position(float position[]);
         float to_millimeters(float value);
         float from_millimeters(float value);
+        float get_seconds_per_minute() const { return seconds_per_minute; }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
-		void setToolOffset(const float offset[3]);
+        void setToolOffset(const float offset[3]);
+
+        // gets accessed by Panel, Endstops, ZProbe
+        std::vector<StepperMotor*> actuators;
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
@@ -48,7 +52,8 @@ class Robot : public Module {
 
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
-		void clearToolOffset();
+        void clearToolOffset();
+        void check_max_actuator_speeds();
 
         float last_milestone[3];                             // Last position, in millimeters
         bool  inch_mode;                                       // true for inch mode, false for millimeter mode ( default )
@@ -59,6 +64,7 @@ class Robot : public Module {
         float mm_per_line_segment;                           // Setting : Used to split lines into segments
         float mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
+        float seconds_per_minute;                            // for realtime speed change
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
@@ -70,15 +76,13 @@ class Robot : public Module {
 
         float toolOffset[3];
 
-    // Used by Stepper
-    public:
+        // Used by Stepper, Planner
+        friend class Planner;
+        friend class Stepper;
+
         StepperMotor* alpha_stepper_motor;
         StepperMotor* beta_stepper_motor;
         StepperMotor* gamma_stepper_motor;
-
-        std::vector<StepperMotor*> actuators;
-
-        float seconds_per_minute;                            // for realtime speed change
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed

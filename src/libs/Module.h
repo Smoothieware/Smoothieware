@@ -21,8 +21,6 @@ enum _EVENT_ENUM {
     ON_PLAY,
     ON_PAUSE,
     ON_IDLE,
-    ON_CONFIG_VALUE,
-    ON_CONFIG_COMPLETE,
     ON_SECOND_TICK,
     ON_GET_PUBLIC_DATA,
     ON_SET_PUBLIC_DATA,
@@ -57,8 +55,6 @@ public:
     virtual void on_play(void*){};
     virtual void on_pause(void*){};
     virtual void on_idle(void*){};
-    virtual void on_config_value(void*){};
-    virtual void on_config_complete(void*){};
     virtual void on_second_tick(void*){};
     virtual void on_get_public_data(void*){};
     virtual void on_set_public_data(void*){};

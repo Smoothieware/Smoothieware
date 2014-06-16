@@ -96,7 +96,8 @@
 #define beta_max_checksum                CHECKSUM("beta_max")
 #define gamma_max_checksum               CHECKSUM("gamma_max")
 
-#define STEPS_PER_MM(a) (this->steppers[a]->get_steps_per_mm())
+#define STEPPER THEKERNEL->robot->actuators
+#define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
 
 Endstops::Endstops()
 {
@@ -117,10 +118,6 @@ void Endstops::on_module_loaded()
     register_for_event(ON_GET_PUBLIC_DATA);
     register_for_event(ON_SET_PUBLIC_DATA);
 
-    // Take StepperMotor objects from Robot and keep them here
-    this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
-    this->steppers[1] = THEKERNEL->robot->beta_stepper_motor;
-    this->steppers[2] = THEKERNEL->robot->gamma_stepper_motor;
     THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &Endstops::acceleration_tick );
 
     // Settings
@@ -199,8 +196,8 @@ void Endstops::wait_for_homed(char axes_to_move)
                     if ( debounce[c] < debounce_count ) {
                         debounce[c]++;
                         running = true;
-                    } else if ( this->steppers[c]->is_moving() ) {
-                        this->steppers[c]->move(0, 0);
+                    } else if ( STEPPER[c]->is_moving() ) {
+                        STEPPER[c]->move(0, 0);
                     }
                 } else {
                     // The endstop was not hit yet
@@ -220,8 +217,8 @@ void Endstops::do_homing(char axes_to_move)
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if ( ( axes_to_move >> c) & 1 ) {
             this->feed_rate[c]= this->fast_rates[c];
-            this->steppers[c]->set_speed(0);
-            this->steppers[c]->move(this->home_direction[c], 10000000);
+            STEPPER[c]->set_speed(0);
+            STEPPER[c]->move(this->home_direction[c], 10000000);
         }
     }
 
@@ -235,15 +232,15 @@ void Endstops::do_homing(char axes_to_move)
         if ( ( axes_to_move >> c ) & 1 ) {
             inverted_dir = !this->home_direction[c];
             this->feed_rate[c]= this->slow_rates[c];
-            this->steppers[c]->set_speed(0);
-            this->steppers[c]->move(inverted_dir, this->retract_mm[c]*STEPS_PER_MM(c));
+            STEPPER[c]->set_speed(0);
+            STEPPER[c]->move(inverted_dir, this->retract_mm[c]*STEPS_PER_MM(c));
         }
     }
 
     // Wait for moves to be done
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if (  ( axes_to_move >> c ) & 1 ) {
-            while ( this->steppers[c]->is_moving() ) {
+            while ( STEPPER[c]->is_moving() ) {
                 THEKERNEL->call_event(ON_IDLE);
             }
         }
@@ -254,8 +251,8 @@ void Endstops::do_homing(char axes_to_move)
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if ( ( axes_to_move >> c ) & 1 ) {
             this->feed_rate[c]= this->slow_rates[c];
-            this->steppers[c]->set_speed(0);
-            this->steppers[c]->move(this->home_direction[c], 10000000);
+            STEPPER[c]->set_speed(0);
+            STEPPER[c]->move(this->home_direction[c], 10000000);
         }
     }
 
@@ -271,8 +268,8 @@ void Endstops::do_homing(char axes_to_move)
                 // move up or down depending on sign of trim, -ive is down away from home
                 if (this->trim_mm[c] < 0) inverted_dir = !inverted_dir;
                 this->feed_rate[c]= this->slow_rates[c];
-                this->steppers[c]->set_speed(0);
-                this->steppers[c]->move(inverted_dir, abs(round(this->trim_mm[c]*STEPS_PER_MM(c))));
+                STEPPER[c]->set_speed(0);
+                STEPPER[c]->move(inverted_dir, abs(round(this->trim_mm[c]*STEPS_PER_MM(c))));
             }
         }
 
@@ -280,7 +277,7 @@ void Endstops::do_homing(char axes_to_move)
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
             if (  ( axes_to_move >> c ) & 1 ) {
                 //THEKERNEL->streams->printf("axis %c \r\n", c );
-                while ( this->steppers[c]->is_moving() ) {
+                while ( STEPPER[c]->is_moving() ) {
                     THEKERNEL->call_event(ON_IDLE);
                 }
             }
@@ -304,8 +301,8 @@ void Endstops::wait_for_homed_corexy(int axis)
                 running = true;
             } else {
                 // turn both off if running
-                if (this->steppers[X_AXIS]->is_moving()) this->steppers[X_AXIS]->move(0, 0);
-                if (this->steppers[Y_AXIS]->is_moving()) this->steppers[Y_AXIS]->move(0, 0);
+                if (STEPPER[X_AXIS]->is_moving()) STEPPER[X_AXIS]->move(0, 0);
+                if (STEPPER[Y_AXIS]->is_moving()) STEPPER[Y_AXIS]->move(0, 0);
             }
         } else {
             // The endstop was not hit yet
@@ -319,11 +316,11 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate,
 {
     this->status = MOVING_TO_ORIGIN_FAST;
     this->feed_rate[X_AXIS]= fast_rate;
-    this->steppers[X_AXIS]->set_speed(0);
-    this->steppers[X_AXIS]->move(dirx, 10000000);
+    STEPPER[X_AXIS]->set_speed(0);
+    STEPPER[X_AXIS]->move(dirx, 10000000);
     this->feed_rate[Y_AXIS]= fast_rate;
-    this->steppers[Y_AXIS]->set_speed(0);
-    this->steppers[Y_AXIS]->move(diry, 10000000);
+    STEPPER[Y_AXIS]->set_speed(0);
+    STEPPER[Y_AXIS]->move(diry, 10000000);
 
     // wait for primary axis
     this->wait_for_homed_corexy(home_axis);
@@ -331,25 +328,25 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate,
     // Move back a small distance
     this->status = MOVING_BACK;
     this->feed_rate[X_AXIS]= slow_rate;
-    this->steppers[X_AXIS]->set_speed(0);
-    this->steppers[X_AXIS]->move(!dirx, retract_steps);
+    STEPPER[X_AXIS]->set_speed(0);
+    STEPPER[X_AXIS]->move(!dirx, retract_steps);
     this->feed_rate[Y_AXIS]= slow_rate;
-    this->steppers[Y_AXIS]->set_speed(0);
-    this->steppers[Y_AXIS]->move(!diry, retract_steps);
+    STEPPER[Y_AXIS]->set_speed(0);
+    STEPPER[Y_AXIS]->move(!diry, retract_steps);
 
     // wait until done
-    while ( this->steppers[X_AXIS]->is_moving() || this->steppers[Y_AXIS]->is_moving()) {
+    while ( STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving()) {
         THEKERNEL->call_event(ON_IDLE);
     }
 
     // Start moving the axes to the origin slowly
     this->status = MOVING_TO_ORIGIN_SLOW;
     this->feed_rate[X_AXIS]= slow_rate;
-    this->steppers[X_AXIS]->set_speed(0);
-    this->steppers[X_AXIS]->move(dirx, 10000000);
+    STEPPER[X_AXIS]->set_speed(0);
+    STEPPER[X_AXIS]->move(dirx, 10000000);
     this->feed_rate[Y_AXIS]= slow_rate;
-    this->steppers[Y_AXIS]->set_speed(0);
-    this->steppers[Y_AXIS]->move(diry, 10000000);
+    STEPPER[Y_AXIS]->set_speed(0);
+    STEPPER[Y_AXIS]->move(diry, 10000000);
 
     // wait for primary axis
     this->wait_for_homed_corexy(home_axis);
@@ -386,8 +383,8 @@ void Endstops::do_homing_corexy(char axes_to_move)
         // then move both X and Y until one hits the endstop
         this->status = MOVING_TO_ORIGIN_FAST;
         this->feed_rate[motor]= this->fast_rates[motor]*1.4142;
-        this->steppers[motor]->set_speed(0); // need to allow for more ground covered when moving diagonally
-        this->steppers[motor]->move(dir, 10000000);
+        STEPPER[motor]->set_speed(0); // need to allow for more ground covered when moving diagonally
+        STEPPER[motor]->move(dir, 10000000);
         // wait until either X or Y hits the endstop
         bool running= true;
         while (running) {
@@ -395,7 +392,7 @@ void Endstops::do_homing_corexy(char axes_to_move)
             for(int m=X_AXIS;m<=Y_AXIS;m++) {
                 if(this->pins[m + (this->home_direction[m] ? 0 : 3)].get()) {
                     // turn off motor
-                    if(this->steppers[motor]->is_moving()) this->steppers[motor]->move(0, 0);
+                    if(STEPPER[motor]->is_moving()) STEPPER[motor]->move(0, 0);
                     running= false;
                     break;
                 }
@@ -529,18 +526,18 @@ void Endstops::on_gcode_received(void *argument)
                 if (gcode->has_letter('F')) f = gcode->get_value('F');
                 if (gcode->has_letter('X')) {
                     x = gcode->get_value('X');
-                    this->steppers[X_AXIS]->set_speed(f);
-                    this->steppers[X_AXIS]->move(x<0, abs(x));
+                    STEPPER[X_AXIS]->set_speed(f);
+                    STEPPER[X_AXIS]->move(x<0, abs(x));
                 }
                 if (gcode->has_letter('Y')) {
                     y = gcode->get_value('Y');
-                    this->steppers[Y_AXIS]->set_speed(f);
-                    this->steppers[Y_AXIS]->move(y<0, abs(y));
+                    STEPPER[Y_AXIS]->set_speed(f);
+                    STEPPER[Y_AXIS]->move(y<0, abs(y));
                 }
                 if (gcode->has_letter('Z')) {
                     z = gcode->get_value('Z');
-                    this->steppers[Z_AXIS]->set_speed(f);
-                    this->steppers[Z_AXIS]->move(z<0, abs(z));
+                    STEPPER[Z_AXIS]->set_speed(f);
+                    STEPPER[Z_AXIS]->move(z<0, abs(z));
                 }
                 gcode->stream->printf("Moved X %d Y %d Z %d F %d steps\n", x, y, z, f);
                 gcode->mark_as_taken();
@@ -558,9 +555,9 @@ uint32_t Endstops::acceleration_tick(uint32_t dummy)
 
     // foreach stepper that is moving
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if( !this->steppers[c]->is_moving() ) continue;
+        if( !STEPPER[c]->is_moving() ) continue;
 
-        uint32_t current_rate = this->steppers[c]->get_steps_per_second();
+        uint32_t current_rate = STEPPER[c]->get_steps_per_second();
         uint32_t target_rate = int(floor(this->feed_rate[c]*STEPS_PER_MM(c)));
 
         if( current_rate < target_rate ){
@@ -570,7 +567,7 @@ uint32_t Endstops::acceleration_tick(uint32_t dummy)
         if( current_rate > target_rate ){ current_rate = target_rate; }
 
         // steps per second
-        this->steppers[c]->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
+        STEPPER[c]->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
     }
 
     return 0;
