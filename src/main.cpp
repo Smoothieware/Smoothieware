@@ -77,7 +77,7 @@ GPIO leds[5] = {
     GPIO(P4_28)
 };
 
-int main() {
+void init() {
 
     // Default pins to low status
     for (int i = 0; i < 5; i++){
@@ -192,15 +192,20 @@ int main() {
             fclose(fp);
         }
     }
+}
+
+int main()
+{
+    init();
 
     uint16_t cnt= 0;
     // Main loop
     while(1){
-        if(kernel->use_leds) {
+        if(THEKERNEL->use_leds) {
             // flash led 2 to show we are alive
             leds[1]= (cnt++ & 0x1000) ? 1 : 0;
         }
-        kernel->call_event(ON_MAIN_LOOP);
-        kernel->call_event(ON_IDLE);
+        THEKERNEL->call_event(ON_MAIN_LOOP);
+        THEKERNEL->call_event(ON_IDLE);
     }
 }
