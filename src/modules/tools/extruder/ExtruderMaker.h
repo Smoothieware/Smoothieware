@@ -8,10 +8,9 @@
 #ifndef EXTRUDERMAKER_H
 #define EXTRUDERMAKER_H
 
-class ExtruderMaker : public Module {
+class ExtruderMaker {
     public:
-        ExtruderMaker(){}
-        void on_module_loaded();
+        void load_tools();
 };
 
 

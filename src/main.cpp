@@ -108,19 +108,28 @@ int main() {
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
     kernel->add_module( new CurrentControl() );
-    kernel->add_module( new SwitchPool() );
     kernel->add_module( new PauseButton() );
     kernel->add_module( new PlayLed() );
     kernel->add_module( new Endstops() );
     kernel->add_module( new Player() );
 
+
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
+    #ifndef NO_TOOLS_SWITCH
+    SwitchPool *sp= new SwitchPool();
+    sp->load_tools();
+    delete sp;
+    #endif
     #ifndef NO_TOOLS_EXTRUDER
-    kernel->add_module( new ExtruderMaker() );
+    ExtruderMaker *em= new ExtruderMaker();
+    em->load_tools();
+    delete em;
     #endif
     #ifndef NO_TOOLS_TEMPERATURECONTROL
     // Note order is important here must be after extruder
-    kernel->add_module( new TemperatureControlPool() );
+    TemperatureControlPool *tp= new TemperatureControlPool();
+    tp->load_tools();
+    delete tp;
     #endif
     #ifndef NO_TOOLS_LASER
     kernel->add_module( new Laser() );
