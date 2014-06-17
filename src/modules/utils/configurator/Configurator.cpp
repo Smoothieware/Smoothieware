@@ -147,8 +147,7 @@ void Configurator::config_set_command( string parameters, StreamOutput *stream )
     */
 }
 
-// Reload config values from the specified ConfigSource, NOTE this probably does not work anymore
-// also used for debugging by dumping the config-cache
+// Reload config values from the specified ConfigSource, NOTE used for debugging by dumping the config-cache
 void Configurator::config_load_command( string parameters, StreamOutput *stream )
 {
     string source = shift_parameter(parameters);
@@ -171,9 +170,8 @@ void Configurator::config_load_command( string parameters, StreamOutput *stream 
         get_checksums(cs, key);
         stream->printf( "checksum of %s = %02X %02X %02X\n", key.c_str(), cs[0], cs[1], cs[2]);
 
-
     } else {
-        stream->printf( "unsupported option\n" );
+        stream->printf( "unsupported option: must be one of load|unload|dump|checksum\n" );
     }
 }
 
