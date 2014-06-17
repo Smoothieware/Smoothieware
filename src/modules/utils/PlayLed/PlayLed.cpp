@@ -29,8 +29,6 @@ void PlayLed::on_module_loaded()
         return;
     }
 
-    register_for_event(ON_CONFIG_RELOAD);
-
     //register_for_event(ON_PLAY);
     //TODO: these two events happen in interrupt context and it's extremely important they don't last long. This should be done by checking the size of the queue once a second or something
     //register_for_event(ON_BLOCK_BEGIN);
