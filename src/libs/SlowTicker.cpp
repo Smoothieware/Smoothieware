@@ -27,14 +27,8 @@ SlowTicker::SlowTicker(){
     max_frequency = 0;
     global_slow_ticker = this;
 
-    // Configure the actual timer
-    LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
-    LPC_TIM2->MR0 = 10000;          // Initial dummy value for Match Register
-    LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
-    LPC_TIM2->TCR = 1;              // Enable interrupt
-    NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
 
-    // ISP button
+    // ISP button FIXME: WHy is this here?
     ispbtn.from_string("2.10")->as_input()->pull_up();
 
     // TODO: What is this ??
@@ -43,6 +37,13 @@ SlowTicker::SlowTicker(){
 
     g4_ticks = 0;
     g4_pause = false;
+
+    // Configure the actual timer after setup to avoid race conditions
+    LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
+    LPC_TIM2->MR0 = 10000;          // Initial dummy value for Match Register
+    LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
+    LPC_TIM2->TCR = 1;              // Enable interrupt
+    NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
 }
 
 void SlowTicker::on_module_loaded(){
