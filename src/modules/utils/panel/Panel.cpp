@@ -241,7 +241,7 @@ void Panel::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
     if ( gcode->has_m) {
         if ( gcode->m == 117 ) { // set LCD message
-            this->message = get_arguments(gcode->command);
+            this->message = get_arguments(gcode->get_command());
             if (this->message.size() > 20) this->message = this->message.substr(0, 20);
             gcode->mark_as_taken();
         }

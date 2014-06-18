@@ -54,7 +54,7 @@ void Player::on_second_tick(void *)
 void Player::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
-    string args = get_arguments(gcode->command);
+    string args = get_arguments(gcode->get_command());
     if (gcode->has_m) {
         if (gcode->m == 21) { // Dummy code; makes Octoprint happy -- supposed to initialize SD card
             gcode->mark_as_taken();
