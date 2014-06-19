@@ -21,7 +21,6 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
     &Module::on_speed_change,
     &Module::on_block_begin,
     &Module::on_block_end,
-    &Module::on_config_reload,
     &Module::on_play,
     &Module::on_pause,
     &Module::on_idle,

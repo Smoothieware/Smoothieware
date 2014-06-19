@@ -63,7 +63,6 @@ void ZProbe::on_module_loaded()
     // load settings
     this->on_config_reload(this);
     // register event-handlers
-    register_for_event(ON_CONFIG_RELOAD);
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_IDLE);
 

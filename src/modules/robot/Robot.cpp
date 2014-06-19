@@ -129,7 +129,6 @@ Robot::Robot()
 //Called when the module has just been loaded
 void Robot::on_module_loaded()
 {
-    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);

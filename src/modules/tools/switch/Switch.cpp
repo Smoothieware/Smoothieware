@@ -49,7 +49,6 @@ void Switch::on_module_loaded()
 {
     this->switch_changed = false;
 
-    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_MAIN_LOOP);

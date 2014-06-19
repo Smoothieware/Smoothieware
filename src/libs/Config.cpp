@@ -52,21 +52,6 @@ void Config::on_module_loaded() {}
 
 void Config::on_console_line_received( void *argument ) {}
 
-// Set a value in the config cache, but not in any config source
-void Config::set_string( string setting, string value )
-{
-    if(!is_config_cache_loaded()) return;
-
-    ConfigValue *cv = new ConfigValue;
-    cv->found = true;
-    get_checksums(cv->check_sums, setting);
-    cv->value = value;
-
-    this->config_cache->replace_or_push_back(cv);
-
-    THEKERNEL->call_event(ON_CONFIG_RELOAD);
-}
-
 // Get a list of modules, used by module "pools" that look for the "enable" keyboard to find things like "moduletype.modulename.enable" as the marker of a new instance of a module
 void Config::get_module_list(vector<uint16_t> *list, uint16_t family)
 {
