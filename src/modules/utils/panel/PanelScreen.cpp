@@ -66,8 +66,6 @@ void PanelScreen::send_gcode(const char *gm_code, char parameter, float value)
     int n = snprintf(buf, sizeof(buf), "%s %c%f", gm_code, parameter, value);
     string g(buf, n);
     send_gcode(g);
-    Gcode gcode(g, &(StreamOutput::NullStream));
-    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
 }
 
 // Helper to send commands, must be called from mainloop
