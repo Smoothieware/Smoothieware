@@ -37,6 +37,8 @@ void Block::clear()
     //commands.clear();
     //travel_distances.clear();
     gcodes.clear();
+    std::vector<Gcode>().swap(gcodes); // this resizes the vector releasing its memory
+
     clear_vector(this->steps);
 
     steps_event_count   = 0;
