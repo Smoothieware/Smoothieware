@@ -23,12 +23,11 @@ class Gcode {
 
         const char* get_command() const { return command; }
         bool has_letter ( char letter ) const;
-        float get_value  ( char letter ) const;
-        float get_double ( char letter ) const;
-        int get_int    ( char letter ) const;
+        float get_value ( char letter, char **ptr= nullptr ) const;
+        int get_int ( char letter, char **ptr= nullptr ) const;
         int get_num_args() const;
-        void prepare_cached_values();
         void mark_as_taken();
+        void strip_parameters();
 
         // FIXME these should be private
         unsigned int m;
@@ -46,6 +45,7 @@ class Gcode {
         string txt_after_ok;
 
     private:
-        const char *command;
+        void prepare_cached_values();
+        char *command;
 };
 #endif

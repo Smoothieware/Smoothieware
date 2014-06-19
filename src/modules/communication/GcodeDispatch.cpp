@@ -54,8 +54,8 @@ try_again:
             int chksum = (int) full_line.get_value('*');
 
             //Catch message if it is M110: Set Current Line Number
-            if ( full_line.has_letter('M') ) {
-                if ( ((int) full_line.get_value('M')) == 110 ) {
+            if ( full_line.has_m ) {
+                if ( full_line.m == 110 ) {
                     currentline = ln;
                     new_message.stream->printf("ok\r\n");
                     return;

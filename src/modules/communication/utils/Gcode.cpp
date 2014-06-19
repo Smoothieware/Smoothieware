@@ -10,6 +10,7 @@
 #include "libs/StreamOutput.h"
 #include "utils.h"
 #include <stdlib.h>
+#include <algorithm>
 
 // This is a gcode object. It reprensents a GCode string/command, an caches some important values about that command for the sake of performance.
 // It gets passed around in events, and attached to the queue ( that'll change )
@@ -28,14 +29,14 @@ Gcode::Gcode(const string &command, StreamOutput *stream)
 Gcode::~Gcode()
 {
     if(command != nullptr) {
-        char *m= const_cast<char*>(command);
-        free(m);
+        // TODO we can reference count this so we share copies, may save more ram than the extra count we need to store
+        free(command);
     }
 }
 
 Gcode::Gcode(const Gcode &to_copy)
 {
-    this->command               = strdup(to_copy.command);
+    this->command               = strdup(to_copy.command); // TODO we can reference count this so we share copies, may save more ram than the extra count we need to store
     this->millimeters_of_travel = to_copy.millimeters_of_travel;
     this->has_m                 = to_copy.has_m;
     this->has_g                 = to_copy.has_g;
@@ -50,7 +51,7 @@ Gcode::Gcode(const Gcode &to_copy)
 Gcode &Gcode::operator= (const Gcode &to_copy)
 {
     if( this != &to_copy ) {
-        this->command               = strdup(to_copy.command);
+        this->command               = strdup(to_copy.command); // TODO we can reference count this so we share copies, may save more ram than the extra count we need to store
         this->millimeters_of_travel = to_copy.millimeters_of_travel;
         this->has_m                 = to_copy.has_m;
         this->has_g                 = to_copy.has_g;
@@ -77,25 +78,24 @@ bool Gcode::has_letter( char letter ) const
 }
 
 // Retrieve the value for a given letter
-// We don't use the high-level methods of std::string because they call malloc and it's very bad to do that inside of interrupts
-float Gcode::get_value( char letter ) const
+float Gcode::get_value( char letter, char **ptr ) const
 {
-    //__disable_irq();
     const char *cs = command;
     char *cn = NULL;
     for (; *cs; cs++) {
         if( letter == *cs ) {
             cs++;
             float r = strtof(cs, &cn);
+            if(ptr != nullptr) *ptr= cn;
             if (cn > cs)
                 return r;
         }
     }
-    //__enable_irq();
+    if(ptr != nullptr) *ptr= nullptr;
     return 0;
 }
 
-int Gcode::get_int( char letter ) const
+int Gcode::get_int( char letter, char **ptr ) const
 {
     const char *cs = command;
     char *cn = NULL;
@@ -103,10 +103,12 @@ int Gcode::get_int( char letter ) const
         if( letter == *cs ) {
             cs++;
             int r = strtol(cs, &cn, 10);
+            if(ptr != nullptr) *ptr= cn;
             if (cn > cs)
                 return r;
         }
     }
+    if(ptr != nullptr) *ptr= nullptr;
     return 0;
 }
 
@@ -124,21 +126,61 @@ int Gcode::get_num_args() const
 // Cache some of this command's properties, so we don't have to parse the string every time we want to look at them
 void Gcode::prepare_cached_values()
 {
+    char *p= nullptr;
     if( this->has_letter('G') ) {
         this->has_g = true;
-        this->g = this->get_int('G');
+        this->g = this->get_int('G', &p);
     } else {
         this->has_g = false;
     }
     if( this->has_letter('M') ) {
         this->has_m = true;
-        this->m = this->get_int('M');
+        this->m = this->get_int('M', &p);
     } else {
         this->has_m = false;
+    }
+
+    // remove the Gxxx or Mxxx from string
+    if (p != nullptr) {
+        char *n= strdup(p); // create new string starting at end of the numeric value
+        free(command);
+        command= n;
     }
 }
 
 void Gcode::mark_as_taken()
 {
     this->accepted_by_module = true;
+}
+
+// strip off X Y Z I J parameters if G0/1/2/3
+void Gcode::strip_parameters()
+{
+    if(has_g && g <= 4){
+        // strip the command of the XYZIJK parameters
+        string newcmd;
+        char *cn= command;
+        // find the start of each parameter
+        char *pch= strpbrk(cn, "XYZIJK");
+        while (pch != nullptr) {
+            if(pch > cn) {
+                // copy non parameters to new string
+                newcmd.append(cn, pch-cn);
+            }
+            // find the end of the parameter and its value
+            char *eos;
+            strtof(pch+1, &eos);
+            cn= eos; // point to end of last parameter
+            pch= strpbrk(cn, "XYZIJ"); // find next parameter
+        }
+        // append anything left on the line
+        newcmd.append(cn);
+        // strip whitespace to save even more
+        newcmd.erase(std::remove_if(newcmd.begin(), newcmd.end(), ::isspace), newcmd.end());
+
+        // release the old one
+        free(command);
+        // copy the new shortened one
+        command= strdup(newcmd.c_str());
+    }
 }
