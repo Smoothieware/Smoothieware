@@ -38,7 +38,6 @@ ToolManager::ToolManager(){
 void ToolManager::on_module_loaded(){
     this->on_config_reload(this);
 
-    this->register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);

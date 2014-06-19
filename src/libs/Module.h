@@ -17,7 +17,6 @@ enum _EVENT_ENUM {
     ON_SPEED_CHANGE,
     ON_BLOCK_BEGIN,
     ON_BLOCK_END,
-    ON_CONFIG_RELOAD,
     ON_PLAY,
     ON_PAUSE,
     ON_IDLE,
@@ -51,7 +50,6 @@ public:
     virtual void on_speed_change(void*){};
     virtual void on_block_begin(void*){};
     virtual void on_block_end(void*){};
-    virtual void on_config_reload(void*){};
     virtual void on_play(void*){};
     virtual void on_pause(void*){};
     virtual void on_idle(void*){};

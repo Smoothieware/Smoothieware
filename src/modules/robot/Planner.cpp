@@ -41,7 +41,6 @@ Planner::Planner(){
 }
 
 void Planner::on_module_loaded(){
-    register_for_event(ON_CONFIG_RELOAD);
     this->on_config_reload(this);
 }
 

@@ -84,7 +84,6 @@ void TemperatureControl::on_module_loaded()
     this->on_config_reload(this);
 
     // Register for events
-    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_MAIN_LOOP);
