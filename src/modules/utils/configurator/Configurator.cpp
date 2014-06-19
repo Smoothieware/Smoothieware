@@ -54,21 +54,6 @@ void Configurator::on_console_line_received( void *argument )
     }
 }
 
-// Process and respond to eeprom gcodes (M50x)
-void Configurator::on_gcode_received(void *argument)
-{
-    Gcode *gcode = static_cast<Gcode *>(argument);
-    if( gcode->has_letter('G') ) {
-        int code = gcode->get_value('G');
-        switch( code ) {
-        }
-    } else if( gcode->has_letter('M') ) {
-        int code = gcode->get_value('M');
-        switch( code ) {
-        }
-    }
-}
-
 void Configurator::on_main_loop(void *argument) {}
 
 // Output a ConfigValue from the specified ConfigSource to the stream
