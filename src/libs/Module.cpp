@@ -14,8 +14,6 @@ Module::~Module(){}
 // this is used to callback the specific method in the Module instance, there must be one for each _EVENT_ENUM and in the same order
 // NOTE this is stored in Flash so takes up no RAM
 const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
-    &Module::on_post,
-    &Module::on_sd_ok,
     &Module::on_main_loop,
     &Module::on_console_line_received,
     &Module::on_gcode_received,

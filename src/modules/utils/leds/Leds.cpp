@@ -2,6 +2,7 @@
 
 #include "Config.h"
 #include "ConfigValue.h"
+#include "PublicDataRequest.h"
 #include "checksumm.h"
 #include "utils.h"
 #include "SlowTicker.h"
@@ -73,7 +74,7 @@ static void flash(Pin& pin, char event, void* data) {
 
 static void config_pin(Pin& pin, uint16_t checksum, string default_pin_setup, string defaults, Leds_handler* handler = 0, int16_t* counter = 0) {
 
-    string config = THEKERNEL->config->value( leds_checksum, checksum  )->by_default(defaults)->as_string();
+    string config = THEKERNEL->config->value( leds_checksum, checksum )->by_default(defaults)->as_string();
 
     string pin_setup;
     while(config.size()) {
@@ -130,9 +131,8 @@ void Leds::on_module_loaded()
     // Settings
     this->on_config_reload(this);
 
-    // register events after initializing scheme
-    register_for_event(ON_POST);
-    register_for_event(ON_SD_OK);
+    // register events *after* configuration
+    register_for_event(ON_SET_PUBLIC_DATA);
     register_for_event(ON_MAIN_LOOP);
     register_for_event(ON_IDLE);
     register_for_event(ON_GCODE_RECEIVED);
@@ -143,36 +143,64 @@ void Leds::on_module_loaded()
 void Leds::on_config_reload(void* argument)
 {
     CONFIG_PIN__C( gcode, PIN_LED1, ""       );
-    CONFIG_PIN_HC( main,  PIN_LED2, "dimmed" );
-    CONFIG_PIN_HC( idle,  PIN_LED3, "dimmed" );
+    CONFIG_PIN_HC( main,  PIN_LED2, "blink"  );
+    CONFIG_PIN_HC( idle,  PIN_LED3, "blink"  );
     CONFIG_PIN___( sdok,  PIN_LED4, ""       );
     CONFIG_PIN___( play,  PIN_LED5, ""       );
+    pins_post = THEKERNEL->config
+                    ->value( leds_checksum, pins_post_checksum )
+                    ->by_default(PINS_POST_DEFAULT)
+                    ->as_string();
 }
 
-void Leds::on_post(void* argument)         {
-    if(argument) {
-        int post = *(int*)argument;
-        // scan comma separated config string for pin descriptions
-        // cpu time doesn't matter while booting
-        string pins_post = THEKERNEL->config
-                              ->value( leds_checksum, pins_post_checksum )
-                              ->by_default(PINS_POST_DEFAULT)
-                              ->as_string();
-        int16_t mask = 1;
-        while(pins_post.size()) {
-            Pin pin;
-            string pin_bit = shift_parameter(pins_post, ",");
-            pin.from_string(pin_bit)->as_output();
-            pin.set(post & mask);
-            mask = (mask << 1);
-        }
-    wait_ms(100);
+void Leds::show_post(int post) {
+    // scan comma separated config string for pin descriptions
+    // and set to masked bit of POST value
+    string pins = this->pins_post;
+    int16_t mask = 1;
+    while(pins.size()) {
+        Pin pin;
+        string pin_setup = shift_parameter(pins, ",");
+        pin.from_string(pin_setup)->as_output();
+        pin.set(post & mask);
+        mask = (mask << 1);
     }
 }
 
-void Leds::on_sd_ok(void* argument)             {
-    if(pin_sdok.connected())
-        pin_sdok.set(true);
+void Leds::on_set_public_data(void* argument) {
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(leds_checksum)) return;
+
+    if(pdr->second_element_is(post_checksum)) {
+        int post = *static_cast<int*>(pdr->get_data_ptr());
+
+        if(post < END_OF_POST) {
+
+            show_post(post);
+            wait_ms(100);
+
+        } else if(post == END_OF_POST) {
+
+            // show final POST value for some time
+            wait_ms(500);
+
+            const int on  = 100;
+            const int off =  10;
+
+            // blink all post leds when main init phase finished
+            for(int i = 0; i < 5; i++) {
+                show_post(0xFF);
+                wait_ms(on);
+                show_post(0x00);
+                wait_ms(off);
+            }
+            wait_ms(500);
+        }
+    } else if(pdr->second_element_is(sdok_checksum)) {
+        if(pin_sdok.connected())
+            pin_sdok.set(true);
+    }
 }
 
 void Leds::on_main_loop(void* argument)         {
