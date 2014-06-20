@@ -30,7 +30,7 @@
 #define PIN_LED4                "1.21"
 #define PIN_LED5                "4.28!"
 
-#define PINS_POST_DEFAULT       PIN_LED1 " " PIN_LED2 " " PIN_LED3 " " PIN_LED4 " " PIN_LED5
+#define PINS_POST_DEFAULT       PIN_LED1 "," PIN_LED2 "," PIN_LED3 "," PIN_LED4 "," PIN_LED5
 
 static void off(Pin& pin, char event, void* data) {
 }
