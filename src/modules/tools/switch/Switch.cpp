@@ -221,6 +221,7 @@ void Switch::on_set_public_data(void *argument)
     } else if(pdr->third_element_is(value_checksum)) {
         float t = *static_cast<float *>(pdr->get_data_ptr());
         this->switch_value = t;
+        this->switch_changed= true;
         pdr->set_taken();
     }
 }

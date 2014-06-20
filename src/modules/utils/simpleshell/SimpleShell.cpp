@@ -26,6 +26,7 @@
 #include "modules/robot/RobotPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
+#include "SwitchPublicAccess.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -57,6 +58,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"mem",      SimpleShell::mem_command},
     {"get",      SimpleShell::get_command},
     {"set_temp", SimpleShell::set_temp_command},
+    {"switch",   SimpleShell::switch_command},
     {"net",      SimpleShell::net_command},
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
@@ -471,6 +473,26 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
         stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
     } else {
         stream->printf("%s is not a known temperature device\r\n", type.c_str());
+    }
+}
+
+// used to test out the get public data events for switch
+void SimpleShell::switch_command( string parameters, StreamOutput *stream)
+{
+    string type = shift_parameter( parameters );
+    string value = shift_parameter( parameters );
+    bool ok= false;
+    if(value == "on" || value == "off") {
+        bool b= value == "on";
+        ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
+    }else{
+        float v = strtof(value.c_str(), NULL);
+        ok = PublicData::set_value( switch_checksum, get_checksum(type), value_checksum, &v );
+    }
+    if (ok) {
+        stream->printf("switch %s set to: %s\r\n", type.c_str(), value.c_str());
+    } else {
+        stream->printf("%s is not a known switch device\r\n", type.c_str());
     }
 }
 
