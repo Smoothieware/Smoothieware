@@ -10,6 +10,8 @@
 
 // See : http://smoothieware.org/listofevents
 enum _EVENT_ENUM {
+    ON_POST,
+    ON_SD_OK,
     ON_MAIN_LOOP,
     ON_CONSOLE_LINE_RECEIVED,
     ON_GCODE_RECEIVED,
@@ -43,6 +45,8 @@ public:
 
     // event callbacks, not every module will implement all of these
     // there should be one for each _EVENT_ENUM
+    virtual void on_post(void*){};
+    virtual void on_sd_ok(void*){};
     virtual void on_main_loop(void*){};
     virtual void on_console_line_received(void*){};
     virtual void on_gcode_received(void*){};

@@ -23,6 +23,7 @@
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
+#include "modules/utils/leds/Leds.h"
 #include "libs/Network/uip/Network.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -52,8 +53,7 @@
 #include "mbed.h"
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
-#define disable_msd_checksum  CHECKSUM("msd_disable")
-#define disable_leds_checksum  CHECKSUM("leds_disable")
+#define disable_msd_checksum               CHECKSUM("msd_disable")
 
 // Watchdog wd(5000000, WDT_MRI);
 
@@ -69,30 +69,13 @@ DFU dfu __attribute__ ((section ("AHBSRAM0"))) (&u);
 
 SDFAT mounter __attribute__ ((section ("AHBSRAM0"))) ("sd", &sd);
 
-GPIO leds[5] = {
-    GPIO(P1_18),
-    GPIO(P1_19),
-    GPIO(P1_20),
-    GPIO(P1_21),
-    GPIO(P4_28)
-};
-
 void init() {
-
-    // Default pins to low status
-    for (int i = 0; i < 5; i++){
-        leds[i].output();
-        leds[i]= 0;
-    }
 
     Kernel* kernel = new Kernel();
 
     kernel->streams->printf("Smoothie Running @%ldMHz\r\n", SystemCoreClock / 1000000);
     Version version;
     kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
-
-    //some boards don't have leds.. TOO BAD!
-    kernel->use_leds= !kernel->config->value( disable_leds_checksum )->by_default(false)->as_bool();
 
     // attempt to be able to disable msd in config
     // if(!kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
@@ -107,45 +90,9 @@ void init() {
     // Create and add main modules
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
-    kernel->add_module( new CurrentControl() );
-    kernel->add_module( new PauseButton() );
-    kernel->add_module( new PlayLed() );
-    kernel->add_module( new Endstops() );
-    kernel->add_module( new Player() );
 
 
-    // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
-    #ifndef NO_TOOLS_SWITCH
-    SwitchPool *sp= new SwitchPool();
-    sp->load_tools();
-    delete sp;
-    #endif
-    #ifndef NO_TOOLS_EXTRUDER
-    ExtruderMaker *em= new ExtruderMaker();
-    em->load_tools();
-    delete em;
-    #endif
-    #ifndef NO_TOOLS_TEMPERATURECONTROL
-    // Note order is important here must be after extruder
-    TemperatureControlPool *tp= new TemperatureControlPool();
-    tp->load_tools();
-    delete tp;
-    #endif
-    #ifndef NO_TOOLS_LASER
-    kernel->add_module( new Laser() );
-    #endif
-    #ifndef NO_UTILS_PANEL
-    kernel->add_module( new Panel() );
-    #endif
-    #ifndef NO_TOOLS_TOUCHPROBE
-    kernel->add_module( new Touchprobe() );
-    #endif
-    #ifndef NO_TOOLS_ZPROBE
-    kernel->add_module( new ZProbe() );
-    #endif
-    #ifndef NONETWORK
-    kernel->add_module( new Network() );
-    #endif
+    // initialize usb/dfu/etc. first to allow flashing when a module hangs
 
     // Create and initialize USB stuff
     u.init();
@@ -159,23 +106,101 @@ void init() {
     // }
 
     kernel->add_module( &msc );
+
     kernel->add_module( &usbserial );
     if( kernel->config->value( second_usb_serial_enable_checksum )->by_default(false)->as_bool() ){
         kernel->add_module( new USBSerial(&u) );
     }
+
     kernel->add_module( &dfu );
     kernel->add_module( &u );
+
+
+    kernel->add_module( new Leds() );   // must be added early
+
+
+    int post = 0;                       // after creating Leds module
+
+    kernel->call_event(ON_POST, &(post=1));
+    kernel->add_module( new CurrentControl() );
+
+    kernel->call_event(ON_POST, &(post=2));
+    kernel->add_module( new Endstops() );
+
+    kernel->call_event(ON_POST, &(post=3));
+    kernel->add_module( new Player() );
+
+    kernel->call_event(ON_POST, &(post=4));
+    kernel->add_module( new PauseButton() );
+
+    kernel->call_event(ON_POST, &(post=5));
+    kernel->add_module( new PlayLed() );
+
+    // post starts at 8 (leds 00100) for excludable modules
+
+    // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
+    #ifndef NO_TOOLS_SWITCH
+    kernel->call_event(ON_POST, &(post=8));
+    SwitchPool *sp= new SwitchPool();
+    sp->load_tools();
+    delete sp;
+    #endif
+    #ifndef NO_TOOLS_EXTRUDER
+    kernel->call_event(ON_POST, &(post=9));
+    ExtruderMaker *em= new ExtruderMaker();
+    em->load_tools();
+    delete em;
+    #endif
+    #ifndef NO_TOOLS_TEMPERATURECONTROL
+    kernel->call_event(ON_POST, &(post=10));
+    // Note order is important here must be after extruder
+    TemperatureControlPool *tp= new TemperatureControlPool();
+    tp->load_tools();
+    delete tp;
+    #endif
+    #ifndef NO_TOOLS_LASER
+    kernel->call_event(ON_POST, &(post=11));
+    kernel->add_module( new Laser() );
+    #endif
+    #ifndef NO_UTILS_PANEL
+    kernel->call_event(ON_POST, &(post=12));
+    kernel->add_module( new Panel() );
+    #endif
+    #ifndef NO_TOOLS_TOUCHPROBE
+    kernel->call_event(ON_POST, &(post=13));
+    kernel->add_module( new Touchprobe() );
+    #endif
+    #ifndef NO_TOOLS_ZPROBE
+    kernel->call_event(ON_POST, &(post=14));
+    kernel->add_module( new ZProbe() );
+    #endif
+    #ifndef NONETWORK
+    kernel->call_event(ON_POST, &(post=15));
+    kernel->add_module( new Network() );
+    #endif
+
+    const int on  = 100;
+    const int off =  10;
+    wait_ms(on);
+
+    // blink all post leds when main init phase finished
+    post = 0xFF;
+    int zero = 0;
+    for(int i = 0; i < 5; i++) {
+        kernel->call_event(ON_POST, &post);
+        wait_ms(on);
+        kernel->call_event(ON_POST, &zero);
+        wait_ms(off);
+    }
+    wait_ms(500);
 
     // clear up the config cache to save some memory
     kernel->config->config_cache_clear();
 
-    if(kernel->use_leds) {
-        // set some leds to indicate status... led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok
-        leds[0]= 1; // indicate we are done with init
-        leds[3]= sdok?1:0; // 4th led inidicates sdcard is available (TODO maye should indicate config was found)
-    }
-
     if(sdok) {
+        kernel->call_event(ON_SD_OK);
+        wait_ms(on);
+
         // load config override file if present
         // NOTE only Mxxx commands that set values should be put in this file. The file is generated by M500
         FILE *fp= fopen(kernel->config_override_filename(), "r");
@@ -198,13 +223,8 @@ int main()
 {
     init();
 
-    uint16_t cnt= 0;
     // Main loop
     while(1){
-        if(THEKERNEL->use_leds) {
-            // flash led 2 to show we are alive
-            leds[1]= (cnt++ & 0x1000) ? 1 : 0;
-        }
         THEKERNEL->call_event(ON_MAIN_LOOP);
         THEKERNEL->call_event(ON_IDLE);
     }
