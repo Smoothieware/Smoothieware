@@ -77,7 +77,7 @@ static void config_pin(Pin& pin, uint16_t checksum, string default_pin_setup, st
 
     string pin_setup;
     while(config.size()) {
-        string param = shift_parameter(config);
+        string param = shift_parameter(config, ",");
         if( ! param.size() )
             continue;
         if(handler && param == "off")
@@ -161,7 +161,7 @@ void Leds::on_post(void* argument)         {
         int16_t mask = 1;
         while(pins_post.size()) {
             Pin pin;
-            string pin_bit = shift_parameter(pins_post);
+            string pin_bit = shift_parameter(pins_post, ",");
             pin.from_string(pin_bit)->as_output();
             pin.set(post & mask);
             mask = (mask << 1);
