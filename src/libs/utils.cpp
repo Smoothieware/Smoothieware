@@ -111,8 +111,8 @@ string remove_non_number( string str ){
 }
 
 // Get the first parameter, and remove it from the original string
-string shift_parameter( string &parameters ){
-    size_t beginning = parameters.find_first_of(" ");
+string shift_parameter( string &parameters, string delimiters ){
+    size_t beginning = parameters.find_first_of(delimiters);
     if( beginning == string::npos ){ string temp = parameters; parameters = ""; return temp; }
     string temp = parameters.substr( 0, beginning );
     parameters = parameters.substr(beginning+1, parameters.size());
