@@ -58,6 +58,11 @@ void Config::get_module_list(vector<uint16_t> *list, uint16_t family)
     this->config_cache->collect(family, CHECKSUM("enable"), list);
 }
 
+void Config::get_checksums(vector<uint16_t>* list, uint16_t family)
+{
+    this->config_cache->collect(family, 0, list);
+}
+
 // Command to load config cache into buffer for multiple reads during init
 void Config::config_cache_load(bool parse)
 {
