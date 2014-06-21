@@ -34,6 +34,7 @@ class StepperMotor {
 
         inline void enable(bool state) { en_pin.set(!state); };
 
+        bool is_moving() { return moving; }
         void move_finished();
         void move( bool direction, unsigned int steps );
         void signal_move_finished();
@@ -42,10 +43,15 @@ class StepperMotor {
         void pause();
         void unpause();
 
+        float get_steps_per_second()  const { return steps_per_second; }
+        void set_steps_per_second(float ss) { steps_per_second= ss; }
+        float get_steps_per_mm()  const { return steps_per_mm; }
         void change_steps_per_mm(float);
         void change_last_milestone(float);
 
         int  steps_to_target(float);
+        uint32_t get_steps_to_move() const { return steps_to_move; }
+        uint32_t get_stepped() const { return stepped; }
 
         template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook();
@@ -59,6 +65,12 @@ class StepperMotor {
             this->signal_step = true;
         }
 
+        friend class StepTicker;
+        friend class Stepper;
+        friend class Planner;
+        friend class Robot;
+
+    private:
         Hook* end_hook;
         Hook* step_signal_hook;
 

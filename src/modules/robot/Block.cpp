@@ -37,6 +37,8 @@ void Block::clear()
     //commands.clear();
     //travel_distances.clear();
     gcodes.clear();
+    std::vector<Gcode>().swap(gcodes); // this resizes the vector releasing its memory
+
     clear_vector(this->steps);
 
     steps_event_count   = 0;
@@ -104,7 +106,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     this->final_rate   = ceil(this->nominal_rate * exitspeed  / this->nominal_speed);   // (step/s)
 
     // How many steps to accelerate and decelerate
-    float acceleration_per_second = this->rate_delta * THEKERNEL->stepper->acceleration_ticks_per_second; // ( step/s^2)
+    float acceleration_per_second = this->rate_delta * THEKERNEL->stepper->get_acceleration_ticks_per_second(); // ( step/s^2)
     int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_second ) );
     int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_second ) );
 
@@ -172,7 +174,7 @@ float Block::reverse_pass(float exit_speed)
         // for max allowable speed if block is decelerating and nominal length is false.
         if ((!this->nominal_length_flag) && (this->max_entry_speed > exit_speed))
         {
-            float max_entry_speed = max_allowable_speed(-THEKERNEL->planner->acceleration, exit_speed, this->millimeters);
+            float max_entry_speed = max_allowable_speed(-THEKERNEL->planner->get_acceleration(), exit_speed, this->millimeters);
 
             this->entry_speed = min(max_entry_speed, this->max_entry_speed);
 
@@ -229,7 +231,7 @@ float Block::max_exit_speed()
         return nominal_speed;
 
     // otherwise, we have to work out max exit speed based on entry and acceleration
-    float max = max_allowable_speed(-THEKERNEL->planner->acceleration, this->entry_speed, this->millimeters);
+    float max = max_allowable_speed(-THEKERNEL->planner->get_acceleration(), this->entry_speed, this->millimeters);
 
     return min(max, nominal_speed);
 }
@@ -238,6 +240,7 @@ float Block::max_exit_speed()
 void Block::append_gcode(Gcode* gcode)
 {
     Gcode new_gcode = *gcode;
+    new_gcode.strip_parameters(); // optimization to save memory we strip off the XYZIJ parameters from the saved command
     gcodes.push_back(new_gcode);
 }
 

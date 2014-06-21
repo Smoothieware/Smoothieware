@@ -168,7 +168,7 @@ custom_menu.power_off.enable               true              #
 custom_menu.power_off.name                 Power_off         #
 custom_menu.power_off.command              M81               #
 
-# Only needed on a smoothieboard
+# Azteeg specific settings do not change
 currentcontrol_module_enable                 true            #
 digipot_max_current                          2.4             # max current
 digipot_factor                               106.0           # factor for converting current to digipot value

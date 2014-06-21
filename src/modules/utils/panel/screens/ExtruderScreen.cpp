@@ -23,34 +23,34 @@ ExtruderScreen::ExtruderScreen()
 
 void ExtruderScreen::on_enter()
 {
-    this->panel->enter_menu_mode();
-    this->panel->setup_menu(3);
+    THEPANEL->enter_menu_mode();
+    THEPANEL->setup_menu(3);
     this->refresh_menu();
 }
 
 void ExtruderScreen::on_refresh()
 {
-    if ( this->panel->menu_change() ) {
+    if ( THEPANEL->menu_change() ) {
         this->refresh_menu();
     }
-    if ( this->panel->click() ) {
-        this->clicked_menu_entry(this->panel->get_menu_current_line());
+    if ( THEPANEL->click() ) {
+        this->clicked_menu_entry(THEPANEL->get_menu_current_line());
     }
 }
 
 void ExtruderScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
-        case 0: this->panel->lcd->printf("Back");  break;
-        case 1: this->panel->lcd->printf("Extrude 5mm"); break;
-        case 2: this->panel->lcd->printf("Retract 5mm");  break;
+        case 0: THEPANEL->lcd->printf("Back");  break;
+        case 1: THEPANEL->lcd->printf("Extrude 5mm"); break;
+        case 2: THEPANEL->lcd->printf("Retract 5mm");  break;
     }
 }
 
 void ExtruderScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
-        case 0: this->panel->enter_screen(this->parent); return;
+        case 0: THEPANEL->enter_screen(this->parent); return;
         case 1: command = "G91\nG1 E5 F100\nG90"; break;
         case 2: command = "G91\nG1 E-5 F100\nG90"; break;
     }

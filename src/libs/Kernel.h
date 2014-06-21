@@ -13,6 +13,7 @@
 #include "Module.h"
 #include <array>
 #include <vector>
+#include <string>
 
 //Module manager
 class Config;
@@ -26,7 +27,6 @@ class GcodeDispatch;
 class Robot;
 class Stepper;
 class Planner;
-class ToolsManager;
 class StepTicker;
 class Adc;
 class PublicData;
@@ -38,7 +38,7 @@ class Kernel {
         const char* config_override_filename(){ return "/sd/config-override"; }
 
         void add_module(Module* module);
-        void register_for_event(_EVENT_ENUM id_event, Module* module);
+        void register_for_event(_EVENT_ENUM id_event, Module *module);
         void call_event(_EVENT_ENUM id_event);
         void call_event(_EVENT_ENUM id_event, void * argument);
 
@@ -53,18 +53,18 @@ class Kernel {
         Config*           config;
         Conveyor*         conveyor;
         Pauser*           pauser;
-        ToolsManager*     toolsmanager;
 
         int debug;
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
-        PublicData*       public_data;
         bool              use_leds;
-        string            current_path;
+        std::string       current_path;
+        int               base_stepping_frequency;
 
     private:
-        std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
+        // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
+        std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks;
 
 };
 

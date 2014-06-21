@@ -9,12 +9,15 @@
 #include "ConfigValue.h"
 #include "FileConfigSource.h"
 #include "ConfigCache.h"
+#include "checksumm.h"
 #include "utils.h"
 #include <malloc.h>
 
 using namespace std;
 #include <string>
 #include <string.h>
+
+#define include_checksum     CHECKSUM("include")
 
 FileConfigSource::FileConfigSource(string config_file, const char *name)
 {
@@ -52,15 +55,55 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache *cache )
     if( !this->has_config_file() ) {
         return;
     }
+    transfer_values_to_cache( cache, this->get_config_file().c_str());
+}
+
+void FileConfigSource::transfer_values_to_cache( ConfigCache *cache, const char * file_name )
+{
+    if( !file_exists(file_name) ) {
+        return;
+    }
+
     // Open the config file ( find it if we haven't already found it )
-    FILE *lp = fopen(this->get_config_file().c_str(), "r");
+    FILE *lp = fopen(file_name, "r");
 
     int ln= 1;
     // For each line
     while(!feof(lp)) {
         string line;
         if(readLine(line, ln++, lp)) {
-            process_line_from_ascii_config(line, cache);
+            // process the config line and store the value in cache
+            ConfigValue* cv = process_line_from_ascii_config(line, cache);
+
+            // if this line is an include directive then attempt to read the included file
+            if(cv->check_sums[0] == include_checksum) {
+                string inc_file_name = cv->value.c_str();
+                if(!file_exists(inc_file_name)) {
+                    // if the file is not found at the location entered then look around for it a bit
+                    if(inc_file_name[0] != '/') inc_file_name = "/" + inc_file_name;
+                    string path(file_name);
+                    path = path.substr(0,path.find_last_of('/'));
+
+                    // first check the path of the current config file
+                    if(file_exists(path + inc_file_name)) inc_file_name = path + inc_file_name;
+                    // then check root locations
+                    else if(file_exists("/sd" + inc_file_name)) inc_file_name = "/sd" + inc_file_name;
+                    else if(file_exists("/local" + inc_file_name)) inc_file_name = "/local" + inc_file_name;
+                }
+                if(file_exists(inc_file_name)) {
+                    // save position in current config file
+                    fpos_t pos;
+                    fgetpos(lp, &pos);
+
+                    // open and read the included file
+                    freopen(inc_file_name.c_str(), "r", lp);
+                    this->transfer_values_to_cache(cache, inc_file_name.c_str());
+
+                    // reopen the current config file and restore position
+                    freopen(file_name, "r", lp);
+                    fsetpos(lp, &pos);
+                }
+            }
         }else break;
     }
     fclose(lp);
