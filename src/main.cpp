@@ -147,9 +147,9 @@ void init() {
     #ifndef NONETWORK
     kernel->add_module( new Network() );
     #endif
-	#ifndef NO_TOOLS_TEMPERATURESWITCH
-	kernel->add_module( new TemperatureSwitch() );
-	#endif
+    #ifndef NO_TOOLS_TEMPERATURESWITCH
+    kernel->add_module( new TemperatureSwitch() );
+    #endif
 
     // Create and initialize USB stuff
     u.init();

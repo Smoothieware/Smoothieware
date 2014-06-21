@@ -22,14 +22,6 @@ using namespace std;
 #include <string>
 #include <vector>
 
-#define temperatureswitch_module_enable_checksum      CHECKSUM("temperatureswitch_module_enable")
-#define temperatureswitch_checksum                    CHECKSUM("temperatureswitch")
-#define temperatureswitch_hotend_checksum             CHECKSUM("hotend")
-#define temperatureswitch_threshold_temp_checksum     CHECKSUM("threshold_temp")
-#define temperatureswitch_type_checksum               CHECKSUM("type")
-#define temperatureswitch_heatup_poll_checksum        CHECKSUM("heatup_poll")
-#define temperatureswitch_cooldown_poll_checksum      CHECKSUM("cooldown_poll")
-
 class TemperatureSwitch : public Module
 {
     public:

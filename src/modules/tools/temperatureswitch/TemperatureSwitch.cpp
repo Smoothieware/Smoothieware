@@ -27,6 +27,14 @@ Author: Michael Hackney, mhackney@eclecticangler.com
 #include "PublicData.h"
 #include "StreamOutputPool.h"
 
+#define temperatureswitch_checksum                    CHECKSUM("temperatureswitch")
+#define temperatureswitch_enable_checksum             CHECKSUM("enable")
+#define temperatureswitch_hotend_checksum             CHECKSUM("hotend")
+#define temperatureswitch_threshold_temp_checksum     CHECKSUM("threshold_temp")
+#define temperatureswitch_type_checksum               CHECKSUM("type")
+#define temperatureswitch_heatup_poll_checksum        CHECKSUM("heatup_poll")
+#define temperatureswitch_cooldown_poll_checksum      CHECKSUM("cooldown_poll")
+
 TemperatureSwitch::TemperatureSwitch()
 {
 }
@@ -35,7 +43,7 @@ TemperatureSwitch::TemperatureSwitch()
 void TemperatureSwitch::on_module_loaded()
 {
     // free up space if not loaded
-    if (!THEKERNEL->config->value(temperatureswitch_module_enable_checksum)->by_default(false)->as_bool()) {
+    if (!THEKERNEL->config->value(temperatureswitch_checksum, temperatureswitch_hotend_checksum, temperatureswitch_enable_checksum)->by_default(false)->as_bool()) {
         delete this;
         return;
     }
@@ -52,6 +60,10 @@ void TemperatureSwitch::on_config_reload(void *argument)
 {
     // save the list of temperature controllers
     THEKERNEL->config->get_module_list(&temp_controllers, temperature_control_checksum);
+    if (temp_controllers.empty()) {
+        delete this;
+        return;
+    }
     
     // load settings from config file
     this->temperatureswitch_state = false;
