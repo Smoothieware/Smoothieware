@@ -59,7 +59,7 @@ void Config::set_string( string setting, string value )
 
     ConfigValue *cv = new ConfigValue;
     cv->found = true;
-    get_checksums(cv->check_sums, setting);
+    ::get_checksums(cv->check_sums, setting);
     cv->value = value;
 
     this->config_cache->replace_or_push_back(cv);
@@ -71,6 +71,11 @@ void Config::set_string( string setting, string value )
 void Config::get_module_list(vector<uint16_t> *list, uint16_t family)
 {
     this->config_cache->collect(family, CHECKSUM("enable"), list);
+}
+
+void Config::get_checksums(vector<uint16_t>* list, uint16_t family)
+{
+    this->config_cache->collect(family, 0, list);
 }
 
 // Command to load config cache into buffer for multiple reads during init

@@ -31,6 +31,7 @@ class Config : public Module {
         ConfigValue* value(uint16_t check_sums[3] );
 
         void get_module_list(vector<uint16_t>* list, uint16_t family);
+        void get_checksums(vector<uint16_t>* list, uint16_t family);
         bool is_config_cache_loaded() { return config_cache != NULL; };    // Whether or not the cache is currently popluated
 
         friend class  Configurator;

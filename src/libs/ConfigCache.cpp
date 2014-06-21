@@ -57,7 +57,7 @@ ConfigValue *ConfigCache::lookup(const uint16_t *check_sums) const
 void ConfigCache::collect(uint16_t family, uint16_t cs, vector<uint16_t> *list)
 {
     for( auto &kv : store ) {
-        if( kv->check_sums[2] == cs && kv->check_sums[0] == family ) {
+        if( (cs && (kv->check_sums[2] == cs)) && (kv->check_sums[0] == family) ) {
             // We found a module enable for this family, add it's number
             list->push_back(kv->check_sums[1]);
         }
