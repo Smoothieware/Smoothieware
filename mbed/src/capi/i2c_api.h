@@ -29,12 +29,13 @@ typedef struct i2c_s i2c_t;
 void i2c_init         (i2c_t *obj, PinName sda, PinName scl);
 void i2c_frequency    (i2c_t *obj, int hz);
 int  i2c_start        (i2c_t *obj);
-void i2c_stop         (i2c_t *obj);
+int  i2c_stop         (i2c_t *obj);
 int  i2c_read         (i2c_t *obj, int address, char *data, int length, int stop);
 int  i2c_write        (i2c_t *obj, int address, const char *data, int length, int stop);
 void i2c_reset        (i2c_t *obj);
 int  i2c_byte_read    (i2c_t *obj, int last);
 int  i2c_byte_write   (i2c_t *obj, int data);
+int  i2c_is_timed_out ();
 
 #if DEVICE_I2CSLAVE
 void i2c_slave_mode   (i2c_t *obj, int enable_slave);

@@ -13,25 +13,18 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/robot/Block.h"
+#include "modules/tools/toolsmanager/Tool.h"
+#include "Pin.h"
 
-#define microseconds_per_step_pulse_checksum CHECKSUM("microseconds_per_step_pulse")
-#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
-#define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
-#define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
-#define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
-#define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
-#define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
-#define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
-
-// default_feed_rate_checksum defined by Robot.h
+class StepperMotor;
 
 #define OFF 0
 #define SOLO 1
 #define FOLLOW 2
 
-class Extruder : public Module{
+class Extruder : public Module, public Tool {
     public:
-        Extruder();
+        Extruder(uint16_t config_identifier);
         void     on_module_loaded();
         void     on_config_reload(void* argument);
         void     on_gcode_received(void*);
@@ -49,30 +42,25 @@ class Extruder : public Module{
         Pin             dir_pin;                      // Dir pin for the stepper driver
         Pin             en_pin;
 
-        double          target_position;              // End point ( in steps ) for the current move
-        double          current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed
-        int             current_steps;
+        float          target_position;              // End point ( in mm ) for the current move
+        float          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
+        float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
         Block*          current_block;                // Current block we are stepping, same as Stepper's one
-        int             microseconds_per_step_pulse;  // Pulse duration for step pulses
-        double          steps_per_millimeter;         // Steps to travel one millimeter
-        double          feed_rate;                    //
-        double          acceleration;                 //
-        double          max_speed;
+        float          steps_per_millimeter;         // Steps to travel one millimeter
+        float          feed_rate;                    //
+        float          acceleration;                 //
+        float          max_speed;
 
-        int             counter_increment;
-        int             step_counter;
+        float          travel_ratio;
+        float          travel_distance;
+        bool            absolute_mode;                // absolute/relative coordinate mode switch
 
-        bool            solo_mode;
-        double          travel_ratio;
-        double          travel_distance;
-        bool            absolute_mode;
-
-        bool            debug;
-        int debug_count;
-
-        char mode;
+        char mode;                                    // extruder motion mode,  OFF, SOLO, or FOLLOW
 
         bool paused;
+        bool single_config;
+
+        uint16_t identifier;
 
         StepperMotor* stepper_motor;
 

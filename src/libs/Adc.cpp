@@ -5,19 +5,24 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-using namespace std;
-#include <vector>
-#include "libs/nuts_bolts.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
 #include "Adc.h"
+#include "libs/nuts_bolts.h"
+#include "libs/Kernel.h"
+#include "libs/Pin.h"
 #include "libs/ADC/adc.h"
 #include "libs/Pin.h"
+
+
+using namespace std;
+#include <vector>
+// This is an interface to the mbed.org ADC library you can find in libs/ADC/adc.h
+// TODO : Having the same name is confusing, should change that
 
 Adc::Adc(){
     this->adc = new ADC(1000, 1);
 }
 
+// Enables ADC on a given pin
 void Adc::enable_pin(Pin* pin){
     PinName pin_name = this->_pin_to_pinname(pin);
     this->adc->burst(1);
@@ -25,10 +30,12 @@ void Adc::enable_pin(Pin* pin){
     this->adc->interrupt_state(pin_name,1);
 }
 
+// Read the last value ( burst mode ) on a given pin
 unsigned int Adc::read(Pin* pin){
     return this->adc->read(this->_pin_to_pinname(pin));
 }
 
+// Convert a smoothie Pin into a mBed Pin
 PinName Adc::_pin_to_pinname(Pin* pin){
     if( pin->port == LPC_GPIO0 && pin->pin == 23 ){
         return p15;

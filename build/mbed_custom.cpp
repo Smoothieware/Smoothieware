@@ -20,8 +20,9 @@
 #include <cmsis.h>
 #include "mpu.h"
 
+#include "platform_memory.h"
 
-static unsigned int g_maximumHeapAddress;
+unsigned int g_maximumHeapAddress;
 
 static void fillUnusedRAM(void);
 static void configureStackSizeLimit(unsigned int stackSizeLimit);
@@ -36,18 +37,17 @@ extern unsigned int     __bss_end__;
 extern unsigned int     __StackTop;
 extern "C" unsigned int __end__;
 
-
 extern "C" int  main(void);
 extern "C" void __libc_init_array(void);
-extern "C" void exit(int ErrorCode);
+// extern "C" void exit(int ErrorCode);
 extern "C" void _start(void)
 {
     int bssSize = (int)&__bss_end__ - (int)&__bss_start__;
     int mainReturnValue;
-    
+
     memset(&__bss_start__, 0, bssSize);
     fillUnusedRAM();
-    
+
     if (STACK_SIZE)
     {
         configureStackSizeLimit(STACK_SIZE);
@@ -55,7 +55,7 @@ extern "C" void _start(void)
     if (WRITE_BUFFER_DISABLE)
     {
         disableMPU();
-        configureMpuRegionToAccessAllMemoryWithNoCaching();    
+        configureMpuRegionToAccessAllMemoryWithNoCaching();
         enableMPU();
     }
     if (MRI_ENABLE)
@@ -64,6 +64,20 @@ extern "C" void _start(void)
         if (MRI_BREAK_ON_INIT)
             __debugbreak();
     }
+
+    // MemoryPool stuff - needs to be initialised before __libc_init_array
+    // so static ctors can use them
+        extern uint8_t __AHB0_dyn_start;
+        extern uint8_t __AHB0_end;
+        extern uint8_t __AHB1_dyn_start;
+        extern uint8_t __AHB1_end;
+
+        MemoryPool _AHB0_stack(&__AHB0_dyn_start, &__AHB0_end - &__AHB0_dyn_start);
+        MemoryPool _AHB1_stack(&__AHB1_dyn_start, &__AHB1_end - &__AHB1_dyn_start);
+
+        _AHB0 = &_AHB0_stack;
+        _AHB1 = &_AHB1_stack;
+    // MemoryPool init done
 
     __libc_init_array();
     mainReturnValue = main();
@@ -106,7 +120,7 @@ static unsigned int alignTo32Bytes(unsigned int value)
 static void configureMpuToCatchStackOverflowIntoHeap(unsigned int maximumHeapAddress)
 {
     #define MPU_REGION_SIZE_OF_32_BYTES ((5-1) << MPU_RASR_SIZE_SHIFT)  // 2^5 = 32 bytes.
-    
+
     prepareToAccessMPURegion(getHighestMPUDataRegionIndex());
     setMPURegionAddress(maximumHeapAddress);
     setMPURegionAttributeAndSize(MPU_REGION_SIZE_OF_32_BYTES | MPU_RASR_ENABLE);
@@ -121,7 +135,7 @@ static void configureMpuRegionToAccessAllMemoryWithNoCaching(void)
     static const uint32_t regionEnable    = MPU_RASR_ENABLE;
     static const uint32_t regionSizeAndAttributes = regionReadWrite | regionSizeAt4GB | regionEnable;
     uint32_t regionIndex = STACK_SIZE ? getHighestMPUDataRegionIndex() - 1 : getHighestMPUDataRegionIndex();
-    
+
     prepareToAccessMPURegion(regionIndex);
     setMPURegionAddress(regionToStartAtAddress0);
     setMPURegionAttributeAndSize(regionSizeAndAttributes);
@@ -170,7 +184,7 @@ extern "C" void abort(void)
 {
     if (MRI_ENABLE)
         __debugbreak();
-        
+
     exit(1);
 }
 
@@ -200,18 +214,18 @@ extern int errno;
 static int doesHeapCollideWithStack(unsigned int newHeap);
 
 /* Dynamic memory allocation related syscalls. */
-extern "C" caddr_t _sbrk(int incr) 
+extern "C" caddr_t _sbrk(int incr)
 {
     static unsigned char* heap = (unsigned char*)&__end__;
     unsigned char*        prev_heap = heap;
     unsigned char*        new_heap = heap + incr;
 
-    if (doesHeapCollideWithStack((unsigned int)new_heap)) 
+    if (doesHeapCollideWithStack((unsigned int)new_heap))
     {
         errno = ENOMEM;
         return (caddr_t)-1;
     }
-    
+
     heap = new_heap;
     return (caddr_t) prev_heap;
 }

@@ -60,6 +60,7 @@ public:
      *  @param sclk SPI Clock pin
      */
     SPI(PinName mosi, PinName miso, PinName sclk);
+    virtual ~SPI() {};
 
     /** Configure the data transmission format
      *

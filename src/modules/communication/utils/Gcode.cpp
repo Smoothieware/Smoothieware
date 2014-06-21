@@ -14,10 +14,12 @@ using std::string;
 
 #include <stdlib.h>
 
-
+// This is a gcode object. It reprensents a GCode string/command, an caches some important values about that command for the sake of performance.
+// It gets passed around in events, and attached to the queue ( that'll change )
 Gcode::Gcode(const string& command, StreamOutput* stream) : command(command), m(0), g(0), add_nl(false), stream(stream) {
     prepare_cached_values();
-    this->millimeters_of_travel = 0L;
+    this->millimeters_of_travel = 0.0F;
+    this->accepted_by_module=false;
 }
 
 Gcode::Gcode(const Gcode& to_copy){
@@ -29,6 +31,8 @@ Gcode::Gcode(const Gcode& to_copy){
     this->g                     = to_copy.g;
     this->add_nl                = to_copy.add_nl;
     this->stream                = to_copy.stream;
+    this->accepted_by_module=false;
+    this->txt_after_ok.assign( to_copy.txt_after_ok );
 }
 
 Gcode& Gcode::operator= (const Gcode& to_copy){
@@ -41,7 +45,9 @@ Gcode& Gcode::operator= (const Gcode& to_copy){
         this->g                     = to_copy.g;
         this->add_nl                = to_copy.add_nl;
         this->stream                = to_copy.stream;
+        this->txt_after_ok.assign( to_copy.txt_after_ok );
     }
+    this->accepted_by_module=false;
     return *this;
 }
 
@@ -59,14 +65,14 @@ bool Gcode::has_letter( char letter ){
 
 // Retrieve the value for a given letter
 // We don't use the high-level methods of std::string because they call malloc and it's very bad to do that inside of interrupts
-double Gcode::get_value( char letter ){
+float Gcode::get_value( char letter ){
     //__disable_irq();
     const char* cs = command.c_str();
     char* cn = NULL;
     for (; *cs; cs++){
          if( letter == *cs ){
              cs++;
-             double r = strtod(cs, &cn);
+             float r = strtof(cs, &cn);
              if (cn > cs)
                  return r;
          }
@@ -100,6 +106,7 @@ int Gcode::get_num_args(){
     return count;
 }
 
+// Cache some of this command's properties, so we don't have to parse the string every time we want to look at them
 void Gcode::prepare_cached_values(){
     if( this->has_letter('G') ){
         this->has_g = true;
@@ -113,4 +120,8 @@ void Gcode::prepare_cached_values(){
     }else{
         this->has_m = false;
     }
+}
+
+void Gcode::mark_as_taken(){
+    this->accepted_by_module = true;
 }

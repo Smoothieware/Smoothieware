@@ -7,28 +7,36 @@
 
 #ifndef KERNEL_H
 #define KERNEL_H
-#include "libs/Module.h"
-#include "libs/Config.h"
-#include "libs/SlowTicker.h"
-#include "libs/StreamOutputPool.h"
-#include "libs/StepTicker.h"
-#include "libs/Adc.h"
-#include "libs/Pauser.h"
-#include "modules/communication/SerialConsole.h"
-#include "modules/communication/GcodeDispatch.h"
-#include "modules/robot/Planner.h"
-#include "modules/robot/Robot.h"
-#include "modules/robot/Stepper.h"
-#include "modules/tools/endstops/Endstops.h"
+
+#define THEKERNEL Kernel::instance
+
+#include "Module.h"
 #include <array>
+#include <vector>
 
 //Module manager
+class Config;
 class Module;
 class Conveyor;
 class SlowTicker;
+class Pauser;
+class SerialConsole;
+class StreamOutputPool;
+class GcodeDispatch;
+class Robot;
+class Stepper;
+class Planner;
+class ToolsManager;
+class StepTicker;
+class Adc;
+class PublicData;
+
 class Kernel {
     public:
         Kernel();
+        static Kernel* instance; // the Singleton instance of Kernel usable anywhere
+        const char* config_override_filename(){ return "/sd/config-override"; }
+
         void add_module(Module* module);
         void register_for_event(_EVENT_ENUM id_event, Module* module);
         void call_event(_EVENT_ENUM id_event);
@@ -45,11 +53,15 @@ class Kernel {
         Config*           config;
         Conveyor*         conveyor;
         Pauser*           pauser;
+        ToolsManager*     toolsmanager;
 
         int debug;
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
+        PublicData*       public_data;
+        bool              use_leds;
+        string            current_path;
 
     private:
         std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks; // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

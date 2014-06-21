@@ -10,28 +10,30 @@
 #define GCODE_H
 #include <string>
 using std::string;
-#include "libs/StreamOutput.h"
-// Object to represent a Gcode command
 #include <stdlib.h>
 
+class StreamOutput;
+
+// Object to represent a Gcode command
 class Gcode {
     public:
         Gcode(const string&, StreamOutput*);
-        Gcode(const Gcode& to_copy); 
+        Gcode(const Gcode& to_copy);
         Gcode& operator= (const Gcode& to_copy);
-        
+
         bool   has_letter ( char letter );
 
-        double get_value  ( char letter );
+        float get_value  ( char letter );
 
-        double get_double ( char letter );
+        float get_double ( char letter );
         int    get_int    ( char letter );
 
         int    get_num_args();
         void   prepare_cached_values();
+        void   mark_as_taken();
 
         string command;
-        double millimeters_of_travel;
+        float millimeters_of_travel;
 
         bool has_m;
         bool has_g;
@@ -41,6 +43,8 @@ class Gcode {
         bool add_nl;
         StreamOutput* stream;
 
+        string txt_after_ok;
+        bool accepted_by_module;
 
 };
 #endif

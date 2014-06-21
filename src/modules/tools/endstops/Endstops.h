@@ -9,89 +9,45 @@
 #define ENDSTOPS_MODULE_H
 
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "modules/communication/utils/Gcode.h"
-#include "libs/StepperMotor.h"
 #include "libs/Pin.h"
 
-#define ALPHA_AXIS 0
-#define BETA_AXIS  1
-#define GAMMA_AXIS 2
+#include <bitset>
 
-#define NOT_HOMING 0
-#define MOVING_TO_ORIGIN_FAST 1
-#define MOVING_BACK 2
-#define MOVING_TO_ORIGIN_SLOW 3
-
-#define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
-#define beta_min_endstop_checksum        CHECKSUM("beta_min_endstop")
-#define gamma_min_endstop_checksum       CHECKSUM("gamma_min_endstop")
-
-#define alpha_max_endstop_checksum       CHECKSUM("alpha_max_endstop")
-#define beta_max_endstop_checksum        CHECKSUM("beta_max_endstop")
-#define gamma_max_endstop_checksum       CHECKSUM("gamma_max_endstop")
-
-#define alpha_fast_homing_rate_checksum  CHECKSUM("alpha_fast_homing_rate")
-#define beta_fast_homing_rate_checksum   CHECKSUM("beta_fast_homing_rate")
-#define gamma_fast_homing_rate_checksum  CHECKSUM("gamma_fast_homing_rate")
-
-#define alpha_slow_homing_rate_checksum  CHECKSUM("alpha_slow_homing_rate")
-#define beta_slow_homing_rate_checksum   CHECKSUM("beta_slow_homing_rate")
-#define gamma_slow_homing_rate_checksum  CHECKSUM("gamma_slow_homing_rate")
-
-#define alpha_homing_retract_checksum    CHECKSUM("alpha_homing_retract")
-#define beta_homing_retract_checksum     CHECKSUM("beta_homing_retract")
-#define gamma_homing_retract_checksum    CHECKSUM("gamma_homing_retract")
-#define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
-
-#define alpha_homing_direction_checksum  CHECKSUM("alpha_homing_direction")
-#define beta_homing_direction_checksum   CHECKSUM("beta_homing_direction")
-#define gamma_homing_direction_checksum  CHECKSUM("gamma_homing_direction")
-
-#define alpha_min_checksum               CHECKSUM("alpha_min")
-#define beta_min_checksum                CHECKSUM("beta_min")
-#define gamma_min_checksum               CHECKSUM("gamma_min")
-
-#define alpha_max_checksum               CHECKSUM("alpha_max")
-#define beta_max_checksum                CHECKSUM("beta_max")
-#define gamma_max_checksum               CHECKSUM("gamma_max")
-
+class StepperMotor;
 
 class Endstops : public Module{
-    private:
-        void wait_for_homed(char axes_to_move);
-
     public:
         Endstops();
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
+        uint32_t acceleration_tick(uint32_t dummy);
 
-        StepperMotor* steppers[3];
-        Pin           pins[6];
-        double  slow_rates[3];
-        double  fast_rates[3];
-        unsigned int  retract_steps[3];
+    private:
+        void do_homing(char axes_to_move);
+        void do_homing_corexy(char axes_to_move);
+        void wait_for_homed(char axes_to_move);
+        void wait_for_homed_corexy(int axis);
+        void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
+        void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
+
+        float homing_position[3];
+        float home_offset[3];
+        std::bitset<3> home_direction;
         unsigned int  debounce_count;
-        int direction[3];
-        double homing_position[3];
+        float  retract_mm[3];
+        float  trim_mm[3];
+        float  fast_rates[3];
+        float  slow_rates[3];
+        float  feed_rate[3];
+        Pin    pins[6];
+        StepperMotor* steppers[3];
         char status;
+        struct {
+            bool is_corexy:1;
+            bool is_delta:1;
+        };
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #endif

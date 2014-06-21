@@ -129,6 +129,8 @@ public:
      */
     void stop(void);
 
+    bool is_timed_out();
+    
 protected:
     void aquire();
 

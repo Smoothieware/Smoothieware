@@ -13,26 +13,29 @@ using namespace std;
 #include "TemperatureControlPool.h"
 #include "TemperatureControl.h"
 #include "PID_Autotuner.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
 
 TemperatureControlPool::TemperatureControlPool(){}
 
 void TemperatureControlPool::on_module_loaded(){
 
     vector<uint16_t> modules;
-    this->kernel->config->get_module_list( &modules, temperature_control_checksum );
+    THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
 
     for( unsigned int i = 0; i < modules.size(); i++ ){
         // If module is enabled
-        if( this->kernel->config->value(temperature_control_checksum, modules[i], enable_checksum )->as_bool() == true ){
+        if( THEKERNEL->config->value(temperature_control_checksum, modules[i], enable_checksum )->as_bool() == true ){
             TemperatureControl* controller = new TemperatureControl(modules[i]);
             controller->pool = this;
-            controller->pool_index = i;
-            this->kernel->add_module(controller);
-            this->controllers.push_back( controller );
+            controllers.push_back( controller );
+            controller->pool_index = controllers.size() - 1;
+            THEKERNEL->add_module(controller);
         }
     }
 
-    this->kernel->add_module( this->PIDtuner = new PID_Autotuner() );
+    THEKERNEL->add_module( this->PIDtuner = new PID_Autotuner() );
 }
 
 

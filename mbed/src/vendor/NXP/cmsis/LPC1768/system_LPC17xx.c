@@ -295,21 +295,13 @@
 #define CLOCK_SETUP           1
 #define SCS_Val               0x00000020
 #define CLKSRCSEL_Val         0x00000001
-#define PLL0_SETUP            1
+#define PLL0_SETUP            1              // WARNING: NOT USED, see SystemInit() below
 
-#ifdef MCB1700
-#    define PLL0CFG_Val           0x00050063
-#    define PLL1_SETUP            1
-#    define PLL1CFG_Val           0x00000023
-#    define CCLKCFG_Val           0x00000003
-#    define USBCLKCFG_Val         0x00000000
-#else
-#    define PLL0CFG_Val           0x0000000B
-#    define PLL1_SETUP            0
-#    define PLL1CFG_Val           0x00000000
-#    define CCLKCFG_Val           0x00000002
-#    define USBCLKCFG_Val         0x00000005
-#endif
+#    define PLL0CFG_Val           0x0000000B // WARNING: NOT USED, see SystemInit() below
+#    define PLL1_SETUP            0          // WARNING: NOT USED, see SystemInit() below
+#    define PLL1CFG_Val           0x00000000 // WARNING: NOT USED, see SystemInit() below
+#    define CCLKCFG_Val           0x00000002 // WARNING: NOT USED, see SystemInit() below
+#    define USBCLKCFG_Val         0x00000005 // WARNING: NOT USED, see SystemInit() below
 
 #define PCLKSEL0_Val          0x00000000
 #define PCLKSEL1_Val          0x00000000
@@ -463,7 +455,9 @@ uint32_t SystemCoreClock = __CORE_CLK;/*!< System Clock Frequency (Core Clock)*/
  *
  * @brief  Updates the SystemCoreClock with current core Clock
  *         retrieved from cpu registers.
- */void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
+ */
+
+void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
 {
   /* Determine clock frequency according to clock register values             */
   if (((LPC_SC->PLL0STAT >> 24) & 3) == 3) { /* If PLL0 enabled and connected */
@@ -505,6 +499,21 @@ uint32_t SystemCoreClock = __CORE_CLK;/*!< System Clock Frequency (Core Clock)*/
 
 }
 
+// detect 17x[4-8] (100MHz) or 17x9 (120MHz)
+static int can_120MHz() {
+    #define IAP_LOCATION 0x1FFF1FF1
+    uint32_t command[1];
+    uint32_t result[5];
+    typedef void (*IAP)(uint32_t*, uint32_t*);
+    IAP iap = (IAP) IAP_LOCATION;
+
+    command[0] = 54;
+    iap(command, result);
+
+    return result[1] & 0x00100000;
+}
+
+
 // Make sure we are pulling in the retargeting module at link time
 extern int stdio_retargeting_module;
 
@@ -521,23 +530,49 @@ void SystemInit (void)
 {
 #if (CLOCK_SETUP)                       /* Clock Setup                        */
   LPC_SC->SCS       = SCS_Val;
-  if (LPC_SC->SCS & (1 << 5)) {             /* If Main Oscillator is enabled  */
+  if (LPC_SC->SCS & (1 << 5)) {         /* If Main Oscillator is enabled      */
     while ((LPC_SC->SCS & (1<<6)) == 0);/* Wait for Oscillator to be ready    */
   }
 
-  LPC_SC->CCLKCFG   = CCLKCFG_Val;      /* Setup Clock Divider                */
   /* Periphral clock must be selected before PLL0 enabling and connecting
    * - according errata.lpc1768-16.March.2010 -
    */
   LPC_SC->PCLKSEL0  = PCLKSEL0_Val;     /* Peripheral Clock Selection         */
   LPC_SC->PCLKSEL1  = PCLKSEL1_Val;
 
-#if (PLL0_SETUP)
+  /*
+   * PLL0 MUST be 275 - 550MHz
+   *
+   * PLL0 = Fin * M * 2 / N
+   *
+   * Fcpu = PLL0 / D
+   *
+   * PLL0CFG = (M - 1) + ((N - 1) << 16)
+   * CCLKCFG = D - 1
+   *
+   * Common combinations (assuming 12MHz crystal):
+   *
+   * |   Fcpu |--|   Fin |  M | N |   PLL0 | D | PLL0CFG | CCLKCFG |
+   *    96MHz :2*  12MHz * 12 / 1 = 288MHz / 3   0x0000B       0x2
+   *   100MHz :2*  12MHz * 25 / 2 = 300MHz / 3   0x10018       0x2
+   *   120MHz :2*  12MHz * 15 / 1 = 360MHz / 3   0x0000E       0x2
+   *
+   */
+
   LPC_SC->CLKSRCSEL = CLKSRCSEL_Val;    /* Select Clock Source for PLL0       */
 
-  LPC_SC->PLL0CFG   = PLL0CFG_Val;      /* configure PLL0                     */
-  LPC_SC->PLL0FEED  = 0xAA;
-  LPC_SC->PLL0FEED  = 0x55;
+  LPC_SC->CCLKCFG   = 0x00000002;       /* Setup CPU Clock Divider            */
+
+  if(can_120MHz()) {
+    LPC_SC->PLL0CFG   = 0x0000000E;     /* configure PLL0                     */
+    LPC_SC->PLL0FEED  = 0xAA;
+    LPC_SC->PLL0FEED  = 0x55;
+  } else {
+//     LPC_SC->PLL0CFG   = 0x0000000B;  // 96MHz
+    LPC_SC->PLL0CFG   = 0x00010018;     // 100MHz
+    LPC_SC->PLL0FEED  = 0xAA;
+    LPC_SC->PLL0FEED  = 0x55;
+  }
 
   LPC_SC->PLL0CON   = 0x01;             /* PLL0 Enable                        */
   LPC_SC->PLL0FEED  = 0xAA;
@@ -548,10 +583,22 @@ void SystemInit (void)
   LPC_SC->PLL0FEED  = 0xAA;
   LPC_SC->PLL0FEED  = 0x55;
   while (!(LPC_SC->PLL0STAT & ((1<<25) | (1<<24))));/* Wait for PLLC0_STAT & PLLE0_STAT */
-#endif
 
-#if (PLL1_SETUP)
-  LPC_SC->PLL1CFG   = PLL1CFG_Val;
+  /*
+   * USBCLK = Fin * M, where M is (1..32)
+   *
+   * we need a USBCLK of 48MHz, so given a 12MHz crystal, M must be 4
+   *
+   * PLL1 = USBCLK * 2 * P, where P is one of (1, 2, 4, 8)
+   *
+   * PLL1 MUST be 156 to 320MHz.
+   * P=2 gives 192MHz, the only valid value within range
+   *
+   * PLL1CFG = (log2(P) << 5) + (M - 1)
+   *         = (1 << 5) + 3
+   *         = 0x23 for a 12MHz crystal
+   */
+  LPC_SC->PLL1CFG   = 0x00000023;
   LPC_SC->PLL1FEED  = 0xAA;
   LPC_SC->PLL1FEED  = 0x55;
 
@@ -564,9 +611,9 @@ void SystemInit (void)
   LPC_SC->PLL1FEED  = 0xAA;
   LPC_SC->PLL1FEED  = 0x55;
   while (!(LPC_SC->PLL1STAT & ((1<< 9) | (1<< 8))));/* Wait for PLLC1_STAT & PLLE1_STAT */
-#else
-  LPC_SC->USBCLKCFG = USBCLKCFG_Val;    /* Setup USB Clock Divider            */
-#endif
+
+  // this sets up {global uint32 SystemCoreClock} with the new speed
+  SystemCoreClockUpdate();
 
   LPC_SC->PCONP     = PCONP_Val;        /* Power Control for Peripherals      */
 
@@ -576,7 +623,7 @@ void SystemInit (void)
 #if (FLASH_SETUP == 1)                  /* Flash Accelerator Setup            */
   LPC_SC->FLASHCFG  = (LPC_SC->FLASHCFG & ~0x0000F000) | FLASHCFG_Val;
 #endif
-  
+
   stdio_retargeting_module = 1;
 }
 
