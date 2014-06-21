@@ -105,11 +105,6 @@ float TemperatureSwitch::get_highest_temperature()
             // check if this controller's temp is the highest and save it if so
             if (temp.current_temperature > high_temp && temp.designator.substr(0, 1) == "T") {
                 high_temp = temp.current_temperature;
-                // TODO - for testing, remove
-                THEKERNEL->streams->printf("designator: %s\r\n", temp.designator.c_str());
-            } else {
-                // TODO - for testing, remove
-                THEKERNEL->streams->printf("what's this designator: %s\r\n", temp.designator.c_str());
             }
         }
     }
