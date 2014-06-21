@@ -14,6 +14,7 @@
 #include "modules/tools/touchprobe/Touchprobe.h"
 #include "modules/tools/zprobe/ZProbe.h"
 #include "modules/tools/switch/SwitchPool.h"
+#include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -146,6 +147,9 @@ void init() {
     #ifndef NONETWORK
     kernel->add_module( new Network() );
     #endif
+	#ifndef NO_TOOLS_TEMPERATURESWITCH
+	kernel->add_module( new TemperatureSwitch() );
+	#endif
 
     // Create and initialize USB stuff
     u.init();
