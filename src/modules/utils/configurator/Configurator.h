@@ -9,33 +9,25 @@
 #ifndef configurator_h
 #define configurator_h
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/StreamOutput.h"
+#include "Module.h"
 
+#include <string>
+using std::string;
 
-#define CONF_NONE       0
-#define CONF_ROM        1
-#define CONF_SD         2
-#define CONF_EEPROM     3
+class StreamOutput;
 
-#define config_get_command_checksum        CHECKSUM("config-get")
-#define config_set_command_checksum        CHECKSUM("config-set")
-#define config_load_command_checksum       CHECKSUM("config-load")
+class Configurator : public Module
+{
+public:
+    Configurator() {}
 
-class Configurator : public Module {
-    public:
-        Configurator(){}
+    void on_module_loaded();
+    void on_console_line_received( void *argument );
+    void on_main_loop( void *argument );
 
-        void on_module_loaded();
-        void on_console_line_received( void* argument );
-        void on_gcode_received( void* argument );
-        void on_main_loop( void* argument );
-
-        void config_get_command( string parameters, StreamOutput* stream );
-        void config_set_command( string parameters, StreamOutput* stream );
-        void config_load_command(string parameters, StreamOutput* stream );
+    void config_get_command( string parameters, StreamOutput *stream );
+    void config_set_command( string parameters, StreamOutput *stream );
+    void config_load_command(string parameters, StreamOutput *stream );
 };
 
 

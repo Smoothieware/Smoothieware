@@ -13,6 +13,8 @@ using namespace std;
 #include "SlowTicker.h"
 #include "libs/Hook.h"
 #include "modules/robot/Conveyor.h"
+#include "Pauser.h"
+#include "Gcode.h"
 
 #include <mri.h>
 
@@ -25,22 +27,23 @@ SlowTicker::SlowTicker(){
     max_frequency = 0;
     global_slow_ticker = this;
 
-    // Configure the actual timer
+
+    // ISP button FIXME: WHy is this here?
+    ispbtn.from_string("2.10")->as_input()->pull_up();
+
+    // TODO: What is this ??
+    flag_1s_flag = 0;
+    flag_1s_count = SystemCoreClock>>2;
+
+    g4_ticks = 0;
+    g4_pause = false;
+
+    // Configure the actual timer after setup to avoid race conditions
     LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
     LPC_TIM2->MR0 = 10000;          // Initial dummy value for Match Register
     LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
     LPC_TIM2->TCR = 1;              // Enable interrupt
     NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
-
-    // ISP button
-    ispbtn.from_string("2.10")->as_input()->pull_up();
-
-    // TODO: What is this ??
-    flag_1s_flag = 0;
-    flag_1s_count = SystemCoreClock;
-
-    g4_ticks = 0;
-    g4_pause = false;
 }
 
 void SlowTicker::on_module_loaded(){
@@ -55,6 +58,7 @@ void SlowTicker::set_frequency( int frequency ){
     LPC_TIM2->MR0 = this->interval;
     LPC_TIM2->TCR = 3;  // Reset
     LPC_TIM2->TCR = 1;  // Reset
+    flag_1s_count= SystemCoreClock>>2;
 }
 
 // The actual interrupt being called by the timer, this is where work is done
@@ -92,8 +96,8 @@ void SlowTicker::tick(){
             g4_ticks = 0;
     }
 
-    // Enter MRI mode if the ISP button is pressed
-    // TODO : This should have it's own module
+    // Enter MRI mode if the ISP button is pressed
+    // TODO: This should have it's own module
     if (ispbtn.get() == 0)
         __debugbreak();
 
@@ -118,18 +122,26 @@ bool SlowTicker::flag_1s(){
     return false;
 }
 
+#include "gpio.h"
+extern GPIO leds[];
 void SlowTicker::on_idle(void*)
 {
+    static uint16_t ledcnt= 0;
+    if(THEKERNEL->use_leds) {
+        // flash led 3 to show we are alive
+        leds[2]= (ledcnt++ & 0x1000) ? 1 : 0;
+    }
+
     // if interrupt has set the 1 second flag
     if (flag_1s())
         // fire the on_second_tick event
-        kernel->call_event(ON_SECOND_TICK);
+        THEKERNEL->call_event(ON_SECOND_TICK);
 
     // if G4 has finished, release our pause
     if (g4_pause && (g4_ticks == 0))
     {
         g4_pause = false;
-        kernel->pauser->release();
+        THEKERNEL->pauser->release();
     }
 }
 
@@ -138,12 +150,9 @@ void SlowTicker::on_gcode_received(void* argument){
     Gcode* gcode = static_cast<Gcode*>(argument);
     // Add the gcode to the queue ourselves if we need it
     if( gcode->has_g && gcode->g == 4 ){
-        if( this->kernel->conveyor->queue.size() == 0 ){
-            this->kernel->call_event(ON_GCODE_EXECUTE, gcode );
-        }else{
-            Block* block = this->kernel->conveyor->queue.get_ref( this->kernel->conveyor->queue.size() - 1 );
-            block->append_gcode(gcode);
-        }
+        THEKERNEL->conveyor->append_gcode(gcode);
+        // ensure that no subsequent gcodes get executed along with our G4
+        THEKERNEL->conveyor->queue_head_block();
     }
 }
 
@@ -153,6 +162,7 @@ void SlowTicker::on_gcode_execute(void* argument){
 
     if (gcode->has_g){
         if (gcode->g == 4){
+            gcode->mark_as_taken();
             bool updated = false;
             if (gcode->has_letter('P')) {
                 updated = true;
@@ -167,7 +177,7 @@ void SlowTicker::on_gcode_execute(void* argument){
                 // at 120MHz core clock, the longest possible delay is (2^32 / (120MHz / 4)) = 143 seconds
                 if (!g4_pause){
                     g4_pause = true;
-                    kernel->pauser->take();
+                    THEKERNEL->pauser->take();
                 }
             }
         }

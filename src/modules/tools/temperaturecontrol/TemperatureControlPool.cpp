@@ -13,26 +13,32 @@ using namespace std;
 #include "TemperatureControlPool.h"
 #include "TemperatureControl.h"
 #include "PID_Autotuner.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
+#include "TemperatureControlPublicAccess.h"
 
-TemperatureControlPool::TemperatureControlPool(){}
+#define enable_checksum              CHECKSUM("enable")
 
-void TemperatureControlPool::on_module_loaded(){
+void TemperatureControlPool::load_tools(){
 
     vector<uint16_t> modules;
-    this->kernel->config->get_module_list( &modules, temperature_control_checksum );
-
-    for( unsigned int i = 0; i < modules.size(); i++ ){
+    THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
+    int cnt= 0;
+    for( auto cs : modules ){
         // If module is enabled
-        if( this->kernel->config->value(temperature_control_checksum, modules[i], enable_checksum )->as_bool() == true ){
-            TemperatureControl* controller = new TemperatureControl(modules[i]);
-            controller->pool = this;
-            controller->pool_index = i;
-            this->kernel->add_module(controller);
-            this->controllers.push_back( controller );
+        if( THEKERNEL->config->value(temperature_control_checksum, cs, enable_checksum )->as_bool() ){
+            TemperatureControl* controller = new TemperatureControl(cs, cnt++);
+            //controllers.push_back( controller );
+            THEKERNEL->add_module(controller);
         }
     }
 
-    this->kernel->add_module( this->PIDtuner = new PID_Autotuner() );
+    // no need to create one of these if no heaters defined
+    if(cnt > 0) {
+      PID_Autotuner* pidtuner = new PID_Autotuner();
+      THEKERNEL->add_module( pidtuner );
+    }
 }
 
 

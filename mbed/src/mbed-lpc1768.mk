@@ -27,5 +27,10 @@ DEVICE=LPC1768
 DEVICE_C_FLAGS =-mcpu=cortex-m3 -mthumb -mthumb-interwork
 DEVICE_AS_FLAGS=-mcpu=cortex-m3 -mthumb
 
+# If compiling for newer smoothie boards set clock to 120MHz
+SMOOTHIEBETA?=1
+ifeq "$(SMOOTHIEBETA)" "0"
+DEVICE_C_FLAGS += -DUSE120MHZ
+endif
 
 include arm-common.mk

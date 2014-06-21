@@ -20,8 +20,9 @@
 #include <cmsis.h>
 #include "mpu.h"
 
+#include "platform_memory.h"
 
-static unsigned int g_maximumHeapAddress;
+unsigned int g_maximumHeapAddress;
 
 static void fillUnusedRAM(void);
 static void configureStackSizeLimit(unsigned int stackSizeLimit);
@@ -36,34 +37,52 @@ extern unsigned int     __bss_end__;
 extern unsigned int     __StackTop;
 extern "C" unsigned int __end__;
 
-
 extern "C" int  main(void);
 extern "C" void __libc_init_array(void);
-extern "C" void exit(int ErrorCode);
+// extern "C" void exit(int ErrorCode);
 extern "C" void _start(void)
 {
     int bssSize = (int)&__bss_end__ - (int)&__bss_start__;
     int mainReturnValue;
-    
+
     memset(&__bss_start__, 0, bssSize);
     fillUnusedRAM();
-    
-    if (STACK_SIZE)
-    {
+
+    if (STACK_SIZE) {
         configureStackSizeLimit(STACK_SIZE);
     }
-    if (WRITE_BUFFER_DISABLE)
-    {
+    if (WRITE_BUFFER_DISABLE) {
         disableMPU();
-        configureMpuRegionToAccessAllMemoryWithNoCaching();    
+        configureMpuRegionToAccessAllMemoryWithNoCaching();
         enableMPU();
     }
-    if (MRI_ENABLE)
-    {
+    if (MRI_ENABLE) {
         __mriInit(MRI_INIT_PARAMETERS);
         if (MRI_BREAK_ON_INIT)
             __debugbreak();
     }
+
+
+    // MemoryPool stuff - needs to be initialised before __libc_init_array
+    // so static ctors can use them
+    extern uint8_t __AHB0_block_start;
+    extern uint8_t __AHB0_dyn_start;
+    extern uint8_t __AHB0_end;
+    extern uint8_t __AHB1_block_start;
+    extern uint8_t __AHB1_dyn_start;
+    extern uint8_t __AHB1_end;
+
+    // zero the data sections in AHB0 and AHB1
+    memset(&__AHB0_block_start, 0, &__AHB0_dyn_start - &__AHB0_block_start);
+    memset(&__AHB1_block_start, 0, &__AHB1_dyn_start - &__AHB1_block_start);
+
+    MemoryPool _AHB0_stack(&__AHB0_dyn_start, &__AHB0_end - &__AHB0_dyn_start);
+    MemoryPool _AHB1_stack(&__AHB1_dyn_start, &__AHB1_end - &__AHB1_dyn_start);
+
+
+    _AHB0 = &_AHB0_stack;
+    _AHB1 = &_AHB1_stack;
+    // MemoryPool init done
 
     __libc_init_array();
     mainReturnValue = main();
@@ -105,8 +124,8 @@ static unsigned int alignTo32Bytes(unsigned int value)
 
 static void configureMpuToCatchStackOverflowIntoHeap(unsigned int maximumHeapAddress)
 {
-    #define MPU_REGION_SIZE_OF_32_BYTES ((5-1) << MPU_RASR_SIZE_SHIFT)  // 2^5 = 32 bytes.
-    
+#define MPU_REGION_SIZE_OF_32_BYTES ((5-1) << MPU_RASR_SIZE_SHIFT)  // 2^5 = 32 bytes.
+
     prepareToAccessMPURegion(getHighestMPUDataRegionIndex());
     setMPURegionAddress(maximumHeapAddress);
     setMPURegionAttributeAndSize(MPU_REGION_SIZE_OF_32_BYTES | MPU_RASR_ENABLE);
@@ -121,7 +140,7 @@ static void configureMpuRegionToAccessAllMemoryWithNoCaching(void)
     static const uint32_t regionEnable    = MPU_RASR_ENABLE;
     static const uint32_t regionSizeAndAttributes = regionReadWrite | regionSizeAt4GB | regionEnable;
     uint32_t regionIndex = STACK_SIZE ? getHighestMPUDataRegionIndex() - 1 : getHighestMPUDataRegionIndex();
-    
+
     prepareToAccessMPURegion(regionIndex);
     setMPURegionAddress(regionToStartAtAddress0);
     setMPURegionAttributeAndSize(regionSizeAndAttributes);
@@ -133,7 +152,7 @@ extern "C" int __wrap__read(int file, char *ptr, int len)
 {
     if (MRI_SEMIHOST_STDIO && file < 3)
         return __mriNewlib_SemihostRead(file, ptr, len);
-     return __real__read(file, ptr, len);
+    return __real__read(file, ptr, len);
 }
 
 
@@ -170,7 +189,7 @@ extern "C" void abort(void)
 {
     if (MRI_ENABLE)
         __debugbreak();
-        
+
     exit(1);
 }
 
@@ -200,18 +219,17 @@ extern int errno;
 static int doesHeapCollideWithStack(unsigned int newHeap);
 
 /* Dynamic memory allocation related syscalls. */
-extern "C" caddr_t _sbrk(int incr) 
+extern "C" caddr_t _sbrk(int incr)
 {
-    static unsigned char* heap = (unsigned char*)&__end__;
-    unsigned char*        prev_heap = heap;
-    unsigned char*        new_heap = heap + incr;
+    static unsigned char *heap = (unsigned char *)&__end__;
+    unsigned char        *prev_heap = heap;
+    unsigned char        *new_heap = heap + incr;
 
-    if (doesHeapCollideWithStack((unsigned int)new_heap)) 
-    {
+    if (doesHeapCollideWithStack((unsigned int)new_heap)) {
         errno = ENOMEM;
-        return (caddr_t)-1;
+        return (caddr_t) - 1;
     }
-    
+
     heap = new_heap;
     return (caddr_t) prev_heap;
 }
@@ -226,17 +244,17 @@ static int doesHeapCollideWithStack(unsigned int newHeap)
 /* Optional functionality which will tag each heap allocation with the caller's return address. */
 #ifdef HEAP_TAGS
 
-const unsigned int* __smoothieHeapBase = &__end__;
+const unsigned int *__smoothieHeapBase = &__end__;
 
-extern "C" void* __real_malloc(size_t size);
-extern "C" void* __real_realloc(void* ptr, size_t size);
-extern "C" void  __real_free(void* ptr);
+extern "C" void *__real_malloc(size_t size);
+extern "C" void *__real_realloc(void *ptr, size_t size);
+extern "C" void  __real_free(void *ptr);
 
-static void setTag(void* pv, unsigned int tag);
-static unsigned int* footerForChunk(void* pv);
-static unsigned int* headerForChunk(void* pv);
-static unsigned int sizeOfChunk(unsigned int* pHeader);
-static int isChunkInUse(void* pv);
+static void setTag(void *pv, unsigned int tag);
+static unsigned int *footerForChunk(void *pv);
+static unsigned int *headerForChunk(void *pv);
+static unsigned int sizeOfChunk(unsigned int *pHeader);
+static int isChunkInUse(void *pv);
 
 extern "C" __attribute__((naked)) void __wrap_malloc(size_t size)
 {
@@ -248,42 +266,42 @@ extern "C" __attribute__((naked)) void __wrap_malloc(size_t size)
     );
 }
 
-extern "C" void* mallocWithTag(size_t size, unsigned int tag)
+extern "C" void *mallocWithTag(size_t size, unsigned int tag)
 {
-    void* p = __real_malloc(size + sizeof(tag));
+    void *p = __real_malloc(size + sizeof(tag));
     if (!p && __smoothieHeapBase)
         return p;
     setTag(p, tag);
     return p;
 }
 
-static void setTag(void* pv, unsigned int tag)
+static void setTag(void *pv, unsigned int tag)
 {
-    unsigned int* pFooter = footerForChunk(pv);
+    unsigned int *pFooter = footerForChunk(pv);
     *pFooter = tag;
 }
 
-static unsigned int* footerForChunk(void* pv)
+static unsigned int *footerForChunk(void *pv)
 {
-    unsigned int* pHeader = headerForChunk(pv);
+    unsigned int *pHeader = headerForChunk(pv);
     unsigned int  size = sizeOfChunk(pHeader);
-    return (unsigned int*)(void*)((char*)pHeader + size);
+    return (unsigned int *)(void *)((char *)pHeader + size);
 }
 
-static unsigned int* headerForChunk(void* pv)
+static unsigned int *headerForChunk(void *pv)
 {
     // Header is allocated two words (8 bytes) before the publicly returned allocation chunk address.
-    unsigned int* p = (unsigned int*)pv;
+    unsigned int *p = (unsigned int *)pv;
     return &p[-2];
 }
 
-static unsigned int sizeOfChunk(unsigned int* pHeader)
+static unsigned int sizeOfChunk(unsigned int *pHeader)
 {
     /* Remove previous chunk in use flag. */
     return pHeader[1] & ~1;
 }
 
-extern "C" __attribute__((naked)) void __wrap_realloc(void* ptr, size_t size)
+extern "C" __attribute__((naked)) void __wrap_realloc(void *ptr, size_t size)
 {
     __asm (
         ".syntax unified\n"
@@ -293,29 +311,29 @@ extern "C" __attribute__((naked)) void __wrap_realloc(void* ptr, size_t size)
     );
 }
 
-extern "C" void* reallocWithTag(void* ptr, size_t size, unsigned int tag)
+extern "C" void *reallocWithTag(void *ptr, size_t size, unsigned int tag)
 {
-    void* p = __real_realloc(ptr, size + sizeof(tag));
+    void *p = __real_realloc(ptr, size + sizeof(tag));
     if (!p)
         return p;
     setTag(p, tag);
     return p;
 }
 
-extern "C" void __wrap_free(void* ptr)
+extern "C" void __wrap_free(void *ptr)
 {
     if (!isChunkInUse(ptr))
         __debugbreak();
     __real_free(ptr);
 }
 
-static int isChunkInUse(void* pv)
+static int isChunkInUse(void *pv)
 {
-    unsigned int* pFooter = footerForChunk(pv);
+    unsigned int *pFooter = footerForChunk(pv);
     return pFooter[1] & 1;
 }
 
-__attribute__((naked)) void* operator new(size_t size)
+__attribute__((naked)) void *operator new(size_t size)
 {
     __asm (
         ".syntax unified\n"
@@ -329,7 +347,7 @@ __attribute__((naked)) void* operator new(size_t size)
         "pop {r4,pc}\n"
     );
     // This line never executes but silences no return value warning from compiler.
-    return (void*)1;
+    return (void *)1;
 }
 
 #else
@@ -341,24 +359,24 @@ static void breakOnHeapOpFromInterruptHandler(void)
         __debugbreak();
 }
 
-extern "C" void* __real_malloc(size_t size);
-extern "C" void* __wrap_malloc(size_t size)
+extern "C" void *__real_malloc(size_t size);
+extern "C" void *__wrap_malloc(size_t size)
 {
     breakOnHeapOpFromInterruptHandler();
     return __real_malloc(size);
 }
 
 
-extern "C" void* __real_realloc(void* ptr, size_t size);
-extern "C" void* __wrap_realloc(void* ptr, size_t size)
+extern "C" void *__real_realloc(void *ptr, size_t size);
+extern "C" void *__wrap_realloc(void *ptr, size_t size)
 {
     breakOnHeapOpFromInterruptHandler();
     return __real_realloc(ptr, size);
 }
 
 
-extern "C" void __real_free(void* ptr);
-extern "C" void __wrap_free(void* ptr)
+extern "C" void __real_free(void *ptr);
+extern "C" void __wrap_free(void *ptr)
 {
     breakOnHeapOpFromInterruptHandler();
     __real_free(ptr);

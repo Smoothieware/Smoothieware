@@ -12,24 +12,28 @@
 
 using namespace std;
 #include <vector>
-#include "libs/nuts_bolts.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "libs/StepperMotor.h"
+#include <stdint.h>
+
+class StepperMotor;
 
 class StepTicker{
     public:
+        friend class StepperMotor;
+        static StepTicker* global_step_ticker;
+
         StepTicker();
-        void set_frequency( double frequency );
+        void set_frequency( float frequency );
         void tick();
         void signal_moves_finished();
         StepperMotor* add_stepper_motor(StepperMotor* stepper_motor);
-        void set_reset_delay( double seconds );
+        void set_reset_delay( float seconds );
         void reset_tick();
         void add_motor_to_active_list(StepperMotor* motor);
         void remove_motor_from_active_list(StepperMotor* motor);
+        void TIMER0_IRQHandler (void);
 
-        double frequency;
+    private:
+        float frequency;
         vector<StepperMotor*> stepper_motors;
         uint32_t delay;
         uint32_t period;

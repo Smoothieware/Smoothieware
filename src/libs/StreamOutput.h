@@ -8,9 +8,9 @@
 #ifndef STREAMOUTPUT_H
 #define STREAMOUTPUT_H
 
-#include <Stream.h>
 #include <cstdarg>
 #include <cstring>
+#include <stdio.h>
 
 // This is a base class for all StreamOutput objects.
 // StreamOutputs are basically "things you can sent strings to". They are passed along with gcodes for example so modules can answer to those gcodes.
@@ -18,28 +18,12 @@
 
 class NullStreamOutput;
 
-class StreamOutput : public mbed::Stream {
+class StreamOutput {
     public:
         StreamOutput(){}
-//         virtual int puts(const char *str) = 0;
-        virtual int printf(const char* format, ...) __attribute__ ((format(printf, 2, 3))) {
-            char *buffer;
-            // Make the message
-            va_list args;
-            va_start(args, format);
+        virtual ~StreamOutput(){}
 
-            int size = vsnprintf(NULL, 0, format, args)
-                + 1; // we add one to take into account space for the terminating \0
-
-            buffer = new char[size];
-            vsnprintf(buffer, size, format, args);
-            va_end(args);
-
-            puts(buffer);
-
-            delete[] buffer;
-            return size - 1;
-        }
+        virtual int printf(const char *format, ...) __attribute__ ((format(printf, 2, 3)));
         virtual int _putc(int c) { return 1; }
         virtual int _getc(void) { return 0; }
         virtual int puts(const char* str) = 0;

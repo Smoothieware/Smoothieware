@@ -1,0 +1,385 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Smoothie Web</title>
+	<script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+  <script type="text/javascript" src="functions.js"></script>
+</head>
+
+<body>
+
+<h1>Welcome to Smoothie</h1>
+
+<button id="motors_off" onclick="motorsOff(event)">Motors Off</button>
+
+XY:<input type="text" id="xy_velocity" size=4 value=3000 style="width:50px" />mm/min
+
+Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
+<br/>
+
+  <svg width="320" height="260" xmlns="http://www.w3.org/2000/svg" version="1.1">
+
+    <defs>
+
+        <style type="text/css"><![CDATA[
+
+    text {
+        font-family: helvetica;
+        stroke: black;
+        stroke-width: 1;
+        fill: black;
+    }
+
+    text.home {
+        font-family: helvetica;
+        stroke: black;
+        stroke-width: 1;
+        fill: black;
+        font-weight: 900;
+        font-size: 16;
+        pointer-events: none;
+    }
+
+    text.scl {
+        font-family: helvetica;
+        stroke: white;
+        stroke-width: 1;
+        fill: white;
+        pointer-events: none;
+        }
+
+    circle.scl {
+        fill: black;
+        fill-opacity: 0.5;
+        stroke: red;
+        stroke-width: 3;
+        filter: url(#f1);
+        pointer-events: none;
+   }
+
+    path.home {
+        stroke: black;
+        }
+
+    path.std {
+        stroke: black;
+        stroke-width: 1;
+        filter: url(#f1);
+        }
+
+    rect.std {
+        stroke: black;
+        stroke-width: 1;
+        filter: url(#f1);
+        }
+
+  ]]></style>
+
+        <filter id="f1" x="-1" y="-1" width="300%" height="300%">
+            <feOffset result="offOut" in="SourceAlpha" dx="3" dy="3"/>
+            <feGaussianBlur result="blurOut" in="offOut" stdDeviation="4"/>
+            <feBlend in="SourceGraphic" in2="blurOut" mode="normal"/>
+        </filter>
+
+        <symbol id="HomeIcon" viewBox="0 0 20 18" pointer-events="none">
+            <desc>HomeIcon - house</desc>
+            <path class="home" d="M3,18 v-8 l7,-6 l7,6 v8 h-5 v-6 h-4 v6 z" fill="black"/>
+            <path class="home" d="M0,10 l10-8.5 l10,8.5" stroke-width="1.5" fill="none"/>
+            <path class="home" d="M15,3 v2.8 l1,.8 v-3.6 z"/>
+        </symbol>
+
+        <symbol id="JogRose" viewBox="20 -10 260 260">
+            <g id="HomeAll" onmouseup="runCommandSilent('G28')">
+                <path class="std" d="M10 182.5 h-10 v57.5 h57.5 v-10 a 125,125 0 0,1 -47.5 -47.5 Z" fill="#f0f0f0">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </path>
+                <use x="3" y="217" width="20" height="18" xlink:href="#HomeIcon"/>
+            </g>
+
+            <g id="HomeX" onmouseup="runCommandSilent('G28 X0')">
+                <path class="std" d="M10 57.50 h-10 v-57.5 h57.5 v10 a 125,125 0 0,0 -47.5 47.5 Z" fill="Khaki">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </path>
+                <use x="3" y="5" width="20" height="18" xlink:href="#HomeIcon"/>
+                <text x="25" y="20" class="home"> X </text>
+            </g>
+            <g id="HomeY" onmouseup="runCommandSilent('G28 Y0')">
+                <path class="std" d="M230 57.50 h10 v-57.5 h-57.5 v10 a 125,125 0 0,1 47.5 47.5 z" fill="SteelBlue">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </path>
+                <use x="217" y="5" width="20" height="18" xlink:href="#HomeIcon"/>
+                <text x="202" y="20" class="home"> Y </text>
+            </g>
+
+            <g id="HomeZ" onmouseup="runCommandSilent('G28 Z0')">
+                <path class="std" d="M230 182.5 h10 v57.5 h-57.5 v-10 a 125,125 0 0,0 47.5 -47.5 z" fill="DarkSeaGreen">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </path>
+                <use x="217" y="217" width="20" height="18" xlink:href="#HomeIcon"/>
+                <text x="202" y="232" class="home"> Z </text>
+            </g>
+
+            <g id="Jog100" fill="#c0c0c0" class="std">
+                <g id="Y+100" onmouseup="jogXYClick('Y100')" transform="translate(120 120)">
+                    <path class="std" d="M-60 -67.07 L-75.93,-83 A112.5,112.5 0 0,1 75,-83 L60,-67.07 A90,90 0 0,0 -60.00,-67.07 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout" />
+                    </path>
+                </g>
+                <g id="X+100" onmouseup="jogXYClick('X100')" transform="translate(120 120)">
+                    <path class="std" d="M67.07,-60 L83,-75.93 A112.5,112.5 0 0,1 83,75.93 L67.07,60 A90,90 0 0,0 67.07,-60">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="Y-100" onmouseup="jogXYClick('Y-100')" transform="translate(120 120)">
+                    <path class="std" d="M-60,67.07 L-75.93,83 A112.5,112.5 0 0,0 75,83 L60,67.07 A90,90 0 0,1 -60.00,67.07 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="X-100" onmouseup="jogXYClick('X-100')" transform="translate(120 120)">
+                    <path class="std" d="M-67.07,-60 L-83,-75.93 A112.5,112.5 0 0,0 -83,75.93 L-67.07,60 A90,90 0 0,1 -67.07,-60 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+            </g>
+            <g id="Jog10" fill="#d0d0d0">
+
+                <g id="Y+10" onmouseup="jogXYClick('Y10')" transform="translate(120 120)">
+                    <path class="std" d="M-44.06 -51.13 L-60,-67.07 A90,90 0 0,1 60,-67 L44.06,-51.13 A67.5,67.5 0 0,0 -44.06,-51.13 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="X+10" onmouseup="jogXYClick('X10')" transform="translate(120 120)">
+                    <path class="std" d="M51.13 44.06 L67.07,60 A90,90 0 0,0 67.07,-60 L51.13,-44.06 A67.5,67.5 0 0,1 51.13,44.06 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="Y-10" onmouseup="jogXYClick('Y-10')" transform="translate(120 120)">
+                    <path class="std" d="M-44.06 51.13 L-60,67.07 A90,90 0 0,0 60,67 L44.06,51.13 A67.5,67.5 0 0,1 -44.06,51.13 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="X-10" onmouseup="jogXYClick('X-10')" transform="translate(120 120)">
+                    <path class="std" d="M-51.13 44.06 L-67.07,60 A90,90 0 0,1 -67.07,-60 L-51.13,-44.06 A67.5,67.5 0 0,0 -51.13,44.06 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+            </g>
+
+            <g id="Jog1" fill="#e0e0e0">
+                <g id="Y+1" onmouseup="jogXYClick('Y1')" transform="translate(120 120)">
+                    <path class="std" d="M-28.09 -35.16 L-44.06,-51.13 A67.5,67.5 0 0,1 44.06,-51.13 L28.09,-35.16 A45,45 0 0,0 -28.09,-35.16 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="X+1" onmouseup="jogXYClick('X1')" transform="translate(120 120)">
+                    <path class="std" d="M35.16 -28.09 L51.13,-44.06 A67.5,67.05 0 0,1 51.13,44.06 L35.16,28.09 A45,45 0 0,0 35.16,-28.09 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="Y-1" onmouseup="jogXYClick('Y-1')" transform="translate(120 120)">
+                    <path class="std" d="M-28.09 35.16 L-44.06,51.13 A67.5,67.5 0 0,0 44.06,51.13 L28.09,35.16 A45,45 0 0,1 -28.09,35.16 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="X-1" onmouseup="jogXYClick('X-1')" transform="translate(120 120)">
+                    <path class="std" d="M-35.16 -28.09 L-51.13,-44.06 A67.5,67.05 0 0,0 -51.13,44.06 L-35.16,28.09 A45,45 0 0,1 -35.16,-28.09 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+            </g>
+
+            <g id="Jog0_1" fill="#f0f0f0">
+                <g id="Y+0.1" onmouseup="jogXYClick('Y0.1')" transform="translate(120 120)">
+                    <path class="std" d="M-28.09 -35.16 A45,45 0 0,1 29.09,-35.16 L0,-7.07 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="X+0_1" onmouseup="jogXYClick('X0.1')" transform="translate(120 120)">
+                    <path class="std" d="M35.16 -28.09 A45,45 0 0,1 35.16,28.09 L7.07,0 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="Y-0_1" onmouseup="jogXYClick('Y-0.1')" transform="translate(120 120)">
+                    <path class="std" d="M-28.09 35.16 A45,45 0 0,0 29.09,35.16 L0,7.07 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+                <g id="X-0_1" onmouseup="jogXYClick('X-0.1')" transform="translate(120 120)">
+                    <path class="std" d="M-35.16 -28.09 A45,45 0 0,0 -35.16,28.09 L-7.07,0 z">
+                        <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                    </path>
+                </g>
+            </g>
+
+            <g id="RoseScale">
+                <g>
+                    <circle class="scl" cx="144" cy="96" r="9.5"/>
+                    <circle class="scl" cx="159.5" cy="80.5" r="10.5"/>
+                    <circle class="scl" cx="175" cy="65" r="12"/>
+                    <circle class="scl" cx="195" cy="45" r="15"/>
+                    <text class="scl" x="137" y="99" font-size="10"> 0.1 </text>
+                    <text class="scl" x="155" y="85" font-size="14"> 1  </text>
+                    <text class="scl" x="166" y="70" font-size="15"> 10 </text>
+                    <text class="scl" x="182" y="50" font-size="15"> 100 </text>
+                </g>
+            </g>
+            <g id="Decoration" pointer-events="none"
+                font-weight="900" font-size="11" fill-opacity=".6">
+                <path class="std" d="M120,20 l17,17 h-10 v11 h-14 v-11 h-10 z" fill="SteelBlue"/>   <!-- y pos arrow -->
+                <path class="std" d="M120,220 l17,-17 h-10 v-11 h-14 v11 h-10 z" fill="SteelBlue"/> <!-- y neg arrow -->
+                <path class="std" d="M20,120 l17,17 v-10 h11 v-14 h-11 v-10 z" fill="Khaki"/> <!-- x neg arrow -->
+                <path class="std" d="M220,120 l-17,-17 v10 h-11 v14 h11 v10 z" fill="Khaki"/> <!-- x pos arrow -->
+                <text x="113" y="37" > +Y </text>
+                <text x="113" y="212"> -Y </text>
+                <text x="27" y="124"> -X </text>
+                <text x="196" y="124"> +X </text>
+            </g>
+
+        </symbol>
+
+        <symbol id="JogBar" viewBox="20 -10 260 260">
+            <desc>JogBar - Z jogging bar</desc>
+            <g id="+Z" fill="#b0b0b0">
+                <path class="std" d=" M5,0 h30 a5,5 0 0,1 5,5 v27 h-40 v-27 a5,5 0 0,1 5,-5 z"/>
+                <path class="std" d="M20,2 l17,17 h-10 v11 h-14 v-11 h-10 z" fill="DarkSeaGreen"/>
+                <text x="11" y="18" font-size="12"> +Z </text>
+            </g>
+            <g id="-Z" fill="#b0b0b0">
+                <path class="std" d=" M0,208 h40 v27 a5,5 0 0,1 -5,5 h-30 a5,5 0 0,1 -5,-5 z"/>
+                <path class="std" d="M20,238 l-17,-17 h10 v-11 h14 v11 h10 z" fill="DarkSeaGreen"/>
+                <text x="13" y="230" font-size="12"> -Z </text>
+            </g>
+            <g id="Z+10" fill="#d0d0d0" onmouseup="jogZClick('Z10')">
+                <rect class="std" x="0" y="32" width="40" height="30">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </rect>
+                <circle class="scl" cx="20" cy="47" r="13"/>
+                <text class="scl" x="9" y="53" font-size="18"> 10 </text>
+            </g>
+            <g id="Z+1" fill="#e0e0e0" onmouseup="jogZClick('Z1')">
+                <rect class="std" x="0" y="62" width="40" height="26">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </rect>
+                <circle class="scl" cx="20" cy="75" r="11"/>
+                <text class="scl" x="15" y="81.5" font-size="18"> 1 </text>
+            </g>
+            <g id="Z+0.1" fill="#f0f0f0" onmouseup="jogZClick('Z0.1')">
+                <rect class="std" x="0" y="88" width="40" height="24">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </rect>
+                <circle class="scl" cx="20" cy="100" r="9.5"/>
+                <text class="scl" x="13" y="103.5" font-size="10"> 0.1 </text>
+            </g>
+            <g id="Z-10" fill="#d0d0d0" onmouseup="jogZClick('Z-10')">
+                <rect class="std" x="0" y="178" width="40" height="30">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </rect>
+            </g>
+            <g id="Z-1" fill="#e0e0e0" onmouseup="jogZClick('Z-1')">
+                <rect class="std" x="0" y="152" width="40" height="26">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </rect>
+            </g>
+            <g id="Z-0_1" fill="#f0f0f0" onmouseup="jogZClick('Z-0.1')">
+                <rect class="std" x="0" y="128" width="40" height="24">
+                    <set attributeName="fill" to="orange" begin="mouseover" end="mouseout"/>
+                </rect>
+            </g>
+            <g id="ZSpace" fill="#000000">
+                <rect class="std" x="0" y="112" width="40" height="16"/>
+            </g>
+        </symbol>
+
+        <symbol id="PrinterCtl">
+            <use x="0" y="0" xlink:href="#JogRose"/>
+            <use x="260" y="0" xlink:href="#JogBar"/>
+        </symbol>
+
+    </defs>
+
+    <use x="0" y="0" xlink:href="#PrinterCtl"/>
+
+  </svg>
+
+<br />
+<table>
+<tr>
+  <td>
+    <table>
+      <tr>
+        <td style="text-align:right">Heat:</td>
+        <td><button id="heat_off" onclick="heatOff(event)">Off</button></td>
+        <td><input type="text" id="heat_value" size=3 style="width:40px" value=0></td>
+        <td><button id="heat_set" onclick="heatSet(event)">Set</button></td>
+      </tr>
+      <tr>
+        <td style="text-align:right">Bed:</td>
+        <td><button id="bed_off" onclick="heatOff(event)">Off</button></td>
+        <td><input type="text" id="bed_value" size=3 style="width:40px" value=0></td>
+        <td><button id="bed_set" onclick="heatSet(event)">Set</button></td>
+      </tr>
+    </table>
+  </td>
+  <td valign="top">
+    <button id="get_temperature" onclick="getTemperature()">Get Temperature</button>
+  </td>
+</tr>
+</table>
+<br/>
+
+<button id="extrude" onclick="extrude(event)">Extrude</button>
+<button id="reverse" onclick="extrude(event)">Reverse</button><br>
+<input type="text" id="extrude_length" value=5 size=3 style="width:35px">
+mm @
+<input type="text" id="extrude_velocity" value=100 size=3 style="width:40px">
+mm/min
+
+<h2>Commands</h2>
+<form action="/command" id="commandForm">
+		<input type="text" name="commandText" placeholder="Send Command...">
+		<input type="submit" value="Send">
+</form>
+<!-- the result of the command will be rendered inside this div -->
+<div id="result"></div>
+<script>
+	// Attach a submit handler to the form
+	$( "#commandForm" ).submit(function( event ) {
+		// Stop form from submitting normally
+		event.preventDefault();
+		// Get some values from elements on the page:
+		var $form = $( this );
+		command = $form.find( "input[name='commandText']" ).val();
+		command += "\n";
+		url = $form.attr( "action" );
+		// Send the data using post
+		var posting = $.post( url, command );
+		// Put the results in a div
+		posting.done(function( data ) {
+			$( "#result" ).empty();
+              $.each(data.split('\n'), function(index) {
+                  $( "#result" ).append( this + '<br/>' );
+              });
+		});
+	});
+</script>
+
+<h2> Upload File </h2>
+<input type="file" id="files" name="files[]" onchange="upload();">
+
+<h3>Uploading file(s)</h3>
+<output id="list"></output>
+<div id="progress"></div>
+<div id="uploadresult"></div>
+<script>
+  document.getElementById('files').addEventListener('change', handleFileSelect, false);
+</script>
+
+<h2>Printable File list <button id="refreshFiles" onclick="refreshFiles()">Refresh</button> </h2>
+<br/>
+<table id="fileList">
+</table>
+<button id="progress" onclick="runCommand('progress', false)">Progress</button>
+<button id="abort" onclick="runCommand('abort', false)">Abort</button>
+
+</body>
+</html>

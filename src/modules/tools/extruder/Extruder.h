@@ -10,28 +10,18 @@
 #ifndef EXTURDER_MODULE_H
 #define EXTRUDER_MODULE_H
 
-#include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "modules/robot/Block.h"
+#include "Tool.h"
+#include "Pin.h"
 
-#define microseconds_per_step_pulse_checksum CHECKSUM("microseconds_per_step_pulse")
-#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
-#define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
-#define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
-#define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
-#define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
-#define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
-#define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
+class StepperMotor;
+class Block;
 
-// default_feed_rate_checksum defined by Robot.h
-
-#define OFF 0
-#define SOLO 1
-#define FOLLOW 2
-
-class Extruder : public Module{
+// NOTE Tool is also a module, no need for multiple inheritance here
+class Extruder : public Tool {
     public:
-        Extruder();
+        Extruder(uint16_t config_identifier, bool single= false);
+        virtual ~Extruder() {}
+
         void     on_module_loaded();
         void     on_config_reload(void* argument);
         void     on_gcode_received(void*);
@@ -45,34 +35,40 @@ class Extruder : public Module{
         uint32_t stepper_motor_finished_move(uint32_t dummy);
         Block*   append_empty_block();
 
+    private:
+        void on_get_public_data(void* argument);
+        void update_steps_per_millimeter();
+
         Pin             step_pin;                     // Step pin for the stepper driver
         Pin             dir_pin;                      // Dir pin for the stepper driver
         Pin             en_pin;
 
-        double          target_position;              // End point ( in steps ) for the current move
-        double          current_position;             // Current point ( in steps ) for the current move, incremented every time a step is outputed
-        int             current_steps;
-        Block*          current_block;                // Current block we are stepping, same as Stepper's one
-        int             microseconds_per_step_pulse;  // Pulse duration for step pulses
-        double          steps_per_millimeter;         // Steps to travel one millimeter
-        double          feed_rate;                    //
-        double          acceleration;                 //
-        double          max_speed;
+        float          target_position;              // End point ( in mm ) for the current move
+        float          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
+        float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
+        Block*         current_block;                // Current block we are stepping, same as Stepper's one
 
-        int             counter_increment;
-        int             step_counter;
+        float          steps_per_millimeter;         // Steps to travel one millimeter
 
-        bool            solo_mode;
-        double          travel_ratio;
-        double          travel_distance;
-        bool            absolute_mode;
+        // kept together so they can be passed as public data
+        struct {
+            float          steps_per_millimeter_setting; // original steps to travel one millimeter as set in config, saved while in volumetric mode
+            float          filament_diameter;            // filament diameter
+        };
 
-        bool            debug;
-        int debug_count;
+        float          feed_rate;                    //
+        float          acceleration;                 //
+        float          max_speed;
 
-        char mode;
+        float          travel_ratio;
+        float          travel_distance;
 
-        bool paused;
+        char mode;        // extruder motion mode,  OFF, SOLO, or FOLLOW
+        struct {
+            bool absolute_mode:1; // absolute/relative coordinate mode switch
+            bool paused:1;
+            bool single_config:1;
+        };
 
         StepperMotor* stepper_motor;
 
