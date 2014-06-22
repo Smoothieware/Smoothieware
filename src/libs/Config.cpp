@@ -1,9 +1,9 @@
 /*
-      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
-      Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-      Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
-*/
+ This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
+ Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 using namespace std;
 #include <vector>
@@ -26,10 +26,10 @@ using namespace std;
 Config::Config()
 {
     this->config_cache = NULL;
-
+    
     // Config source for firm config found in src/config.default
     this->config_sources.push_back( new FirmConfigSource("firm") );
-
+    
     // Config source for */config files
     FileConfigSource *fcs = NULL;
     if( file_exists("/local/config") )
@@ -58,12 +58,17 @@ void Config::get_module_list(vector<uint16_t> *list, uint16_t family)
     this->config_cache->collect(family, CHECKSUM("enable"), list);
 }
 
+void Config::get_checksums(vector<uint16_t>* list, uint16_t family)
+{
+    this->config_cache->collect(family, 0, list);
+}
+
 // Command to load config cache into buffer for multiple reads during init
 void Config::config_cache_load(bool parse)
 {
     // First clear the cache
     this->config_cache_clear();
-
+    
     this->config_cache= new ConfigCache;
     if(parse) {
         // For each ConfigSource in our stack
@@ -102,9 +107,9 @@ ConfigValue *Config::value(uint16_t check_sums[])
         // note this will cause whatever called it to blow up!
         return NULL;
     }
-
+    
     ConfigValue *result = this->config_cache->lookup(check_sums);
-
+    
     if(result == NULL) {
         // create a dummy value for this to play with, each call requires it's own value not a shared one
         // result= new ConfigValue(check_sums);
@@ -112,7 +117,7 @@ ConfigValue *Config::value(uint16_t check_sums[])
         dummyValue.clear();
         result = &dummyValue;
     }
-
+    
     return result;
 }
 

@@ -39,7 +39,7 @@ void ConfigCache::replace_or_push_back(ConfigValue *new_value)
             return;
         }
     }
-
+    
     // Value does not already exists, add to the list
     store.push_back(new_value);
 }
@@ -50,14 +50,14 @@ ConfigValue *ConfigCache::lookup(const uint16_t *check_sums) const
         if(memcmp(check_sums, cv->check_sums, sizeof(cv->check_sums)) == 0)
             return cv;
     }
-
+    
     return NULL;
 }
 
 void ConfigCache::collect(uint16_t family, uint16_t cs, vector<uint16_t> *list)
 {
     for( auto &kv : store ) {
-        if( kv->check_sums[2] == cs && kv->check_sums[0] == family ) {
+        if( (!cs || (kv->check_sums[2] == cs)) && (kv->check_sums[0] == family) ) {
             // We found a module enable for this family, add it's number
             list->push_back(kv->check_sums[1]);
         }
