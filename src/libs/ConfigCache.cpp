@@ -39,7 +39,7 @@ void ConfigCache::replace_or_push_back(ConfigValue *new_value)
             return;
         }
     }
-    
+
     // Value does not already exists, add to the list
     store.push_back(new_value);
 }
@@ -50,7 +50,7 @@ ConfigValue *ConfigCache::lookup(const uint16_t *check_sums) const
         if(memcmp(check_sums, cv->check_sums, sizeof(cv->check_sums)) == 0)
             return cv;
     }
-    
+
     return NULL;
 }
 
