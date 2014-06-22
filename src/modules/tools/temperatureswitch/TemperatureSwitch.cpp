@@ -48,22 +48,34 @@ void TemperatureSwitch::on_module_loaded()
         return;
     }
 
-    // Settings
+    // settings
     this->on_config_reload(this);
-    
-    // Register for events
-    this->register_for_event(ON_SECOND_TICK);
 }
 
 // Get config
 void TemperatureSwitch::on_config_reload(void *argument)
 {
-    // save the list of temperature controllers
-    THEKERNEL->config->get_module_list(&temp_controllers, temperature_control_checksum);
+    // get the list of temperature controllers and remove any that fon't have designator == "T"
+    vector<uint16_t> controller_list;  
+    THEKERNEL->config->get_module_list(&controller_list, temperature_control_checksum);
+    
+    void *returned_temp;
+    for (auto controller : controller_list) {
+        bool temp_ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &returned_temp);
+        if (temp_ok) {
+            struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_temp);
+            // if the controller is a hotend (designator == "T") then keep it
+            if (temp.designator.substr(0, 1) == "T") {
+                temp_controllers.push_back(controller);
+            }
+        }
+    }
+    
+    // if we don't have any controllers, free up space
     if (temp_controllers.empty()) {
         delete this;
         return;
-    }
+    }   
     
     // load settings from config file
     this->temperatureswitch_state = false;
@@ -76,6 +88,9 @@ void TemperatureSwitch::on_config_reload(void *argument)
 
     second_counter = 0;
     current_delay = this->temperatureswitch_heatup_poll;
+
+    // Register for events
+    this->register_for_event(ON_SECOND_TICK);
 }
 
 // Called once a second but we only need to service on the cooldown and heatup poll intervals
