@@ -49,7 +49,7 @@ try_again:
 
         //Get linenumber
         if ( first_char == 'N' ) {
-            Gcode full_line = Gcode(possible_command, new_message.stream);
+            Gcode full_line = Gcode(possible_command, new_message.stream, false);
             ln = (int) full_line.get_value('N');
             int chksum = (int) full_line.get_value('*');
 
