@@ -14,7 +14,7 @@
 
 // This is a gcode object. It reprensents a GCode string/command, an caches some important values about that command for the sake of performance.
 // It gets passed around in events, and attached to the queue ( that'll change )
-Gcode::Gcode(const string &command, StreamOutput *stream)
+Gcode::Gcode(const string &command, StreamOutput *stream, bool strip)
 {
     this->command= strdup(command.c_str());
     this->m= 0;
@@ -23,7 +23,7 @@ Gcode::Gcode(const string &command, StreamOutput *stream)
     this->stream= stream;
     this->millimeters_of_travel = 0.0F;
     this->accepted_by_module = false;
-    prepare_cached_values();
+    prepare_cached_values(strip);
 }
 
 Gcode::~Gcode()
@@ -124,7 +124,7 @@ int Gcode::get_num_args() const
 }
 
 // Cache some of this command's properties, so we don't have to parse the string every time we want to look at them
-void Gcode::prepare_cached_values()
+void Gcode::prepare_cached_values(bool strip)
 {
     char *p= nullptr;
     if( this->has_letter('G') ) {
@@ -139,6 +139,8 @@ void Gcode::prepare_cached_values()
     } else {
         this->has_m = false;
     }
+
+    if(!strip) return;
 
     // remove the Gxxx or Mxxx from string
     if (p != nullptr) {
