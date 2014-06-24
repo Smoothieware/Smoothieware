@@ -240,7 +240,7 @@ float Block::max_exit_speed()
 void Block::append_gcode(Gcode* gcode)
 {
     Gcode new_gcode = *gcode;
-    new_gcode.strip_parameters(); // optimization to save memory we strip off the XYZIJ parameters from the saved command
+    new_gcode.strip_parameters(); // optimization to save memory we strip off the XYZIJK parameters from the saved command
     gcodes.push_back(new_gcode);
 }
 
