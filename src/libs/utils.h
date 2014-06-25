@@ -24,7 +24,7 @@ uint16_t get_checksum(const char* to_check);
 
 void get_checksums(uint16_t check_sums[], const string& key);
 
-string shift_parameter( string &parameters );
+string shift_parameter( string &parameters, string delimiters = " " );
 
 string get_arguments( string possible_command );
 

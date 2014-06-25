@@ -38,7 +38,7 @@ class Kernel {
         const char* config_override_filename(){ return "/sd/config-override"; }
 
         void add_module(Module* module);
-        void register_for_event(_EVENT_ENUM id_event, Module *module);
+        void register_for_event(_EVENT_ENUM id_event, Module* module);
         void call_event(_EVENT_ENUM id_event);
         void call_event(_EVENT_ENUM id_event, void * argument);
 
@@ -58,7 +58,6 @@ class Kernel {
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
-        bool              use_leds;
         std::string       current_path;
         int               base_stepping_frequency;
 
