@@ -4,6 +4,9 @@
 #include "Gcode.h"
 #include "TemperatureControl.h"
 #include "libs/StreamOutput.h"
+#include "TemperatureControlPublicAccess.h"
+#include "PublicDataRequest.h"
+#include "PublicData.h"
 
 #include <cmath>        // std::abs
 
@@ -12,12 +15,12 @@
 
 PID_Autotuner::PID_Autotuner()
 {
-    t = NULL;
+    temp_control = NULL;
     s = NULL;
     lastInputs = NULL;
     peaks = NULL;
     tick = false;
-    tickCnt= 0;
+    tickCnt = 0;
 }
 
 void PID_Autotuner::on_module_loaded()
@@ -28,21 +31,21 @@ void PID_Autotuner::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
 }
 
-void PID_Autotuner::begin(TemperatureControl *temp, float target, StreamOutput *stream, int ncycles)
+void PID_Autotuner::begin(float target, StreamOutput *stream, int ncycles)
 {
     noiseBand = 0.5;
-    oStep = temp->heater_pin.max_pwm(); // use max pwm to cycle temp
+    oStep = temp_control->heater_pin.max_pwm(); // use max pwm to cycle temp
     nLookBack = 5 * 20; // 5 seconds of lookback
-    lookBackCnt= 0;
-    tickCnt= 0;
+    lookBackCnt = 0;
+    tickCnt = 0;
 
     if (lastInputs != NULL) delete[] lastInputs;
-    lastInputs = new float[nLookBack+1];
-    t = temp;
+    lastInputs = new float[nLookBack + 1];
+
     s = stream;
 
-    t->heater_pin.set(0);
-    t->target_temperature = 0.0;
+    temp_control->heater_pin.set(0);
+    temp_control->target_temperature = 0.0;
 
     target_temperature = target;
     requested_cycles = ncycles;
@@ -58,23 +61,23 @@ void PID_Autotuner::begin(TemperatureControl *temp, float target, StreamOutput *
     peakCount = 0;
     justchanged = false;
 
-    float refVal = t->get_temperature();
+    float refVal = temp_control->get_temperature();
     absMax = refVal;
     absMin = refVal;
-    output= oStep;
-    t->heater_pin.pwm(oStep); // turn on to start heating
+    output = oStep;
+    temp_control->heater_pin.pwm(oStep); // turn on to start heating
 
-    s->printf("%s: Starting PID Autotune, %d max cycles, M304 aborts\n", t->designator.c_str(), ncycles);
+    s->printf("%s: Starting PID Autotune, %d max cycles, M304 aborts\n", temp_control->designator.c_str(), ncycles);
 }
 
 void PID_Autotuner::abort()
 {
-    if (!t)
+    if (temp_control == NULL)
         return;
 
-    t->target_temperature = 0;
-    t->heater_pin.set(0);
-    t = NULL;
+    temp_control->target_temperature = 0;
+    temp_control->heater_pin.set(0);
+    temp_control = NULL;
 
     if (s)
         s->printf("PID Autotune Aborted\n");
@@ -92,15 +95,48 @@ void PID_Autotuner::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
 
-    if ((gcode->has_m) && (gcode->m == 304))
-        abort();
+    if(gcode->has_m) {
+        if(gcode->m == 304) {
+            gcode->mark_as_taken();
+            abort();
+
+        } else if (gcode->m == 303 && gcode->has_letter('E')) {
+            gcode->mark_as_taken();
+            int pool_index = gcode->get_value('E');
+
+            // get the temperature control instance with this pool index
+            void *returned_data;
+            bool ok = PublicData::get_value( temperature_control_checksum, pool_index_checksum, pool_index, &returned_data );
+
+            if (ok) {
+                this->temp_control =  *static_cast<TemperatureControl **>(returned_data);
+
+            } else {
+                gcode->stream->printf("No temperature control with index %d found\r\n", pool_index);
+                return;
+            }
+
+            float target = 150.0;
+            if (gcode->has_letter('S')) {
+                target = gcode->get_value('S');
+                gcode->stream->printf("Target: %5.1f\n", target);
+            }
+            int ncycles = 8;
+            if (gcode->has_letter('C')) {
+                ncycles = gcode->get_value('C');
+            }
+            gcode->stream->printf("Start PID tune for index E%d, designator: %s\n", pool_index, this->temp_control->designator.c_str());
+            this->begin(target, gcode->stream, ncycles);
+        }
+    }
 }
 
 uint32_t PID_Autotuner::on_tick(uint32_t dummy)
 {
-    if (t)
+    if (temp_control != NULL)
         tick = true;
-    tickCnt += 1000/20; // millisecond tick count
+
+    tickCnt += 1000 / 20; // millisecond tick count
     return 0;
 }
 
@@ -114,7 +150,7 @@ void PID_Autotuner::on_idle(void *)
 
     tick = false;
 
-    if (t == NULL)
+    if (temp_control == NULL)
         return;
 
     if(peakCount >= requested_cycles) {
@@ -122,19 +158,19 @@ void PID_Autotuner::on_idle(void *)
         return;
     }
 
-    float refVal = t->get_temperature();
+    float refVal = temp_control->get_temperature();
 
     if (refVal > absMax) absMax = refVal;
     if (refVal < absMin) absMin = refVal;
 
     // oscillate the output base on the input's relation to the setpoint
-    if (refVal > target_temperature + noiseBand){
-        output= 0;
-        //t->heater_pin.pwm(output);
-        t->heater_pin.set(0);
+    if (refVal > target_temperature + noiseBand) {
+        output = 0;
+        //temp_control->heater_pin.pwm(output);
+        temp_control->heater_pin.set(0);
     } else if (refVal < target_temperature - noiseBand) {
-        output= oStep;
-        t->heater_pin.pwm(output);
+        output = oStep;
+        temp_control->heater_pin.pwm(output);
     }
 
     bool isMax = true, isMin = true;
@@ -180,7 +216,7 @@ void PID_Autotuner::on_idle(void *)
 
     if (justchanged && peakCount > 2) {
         if(peakCount == 3) { // reset min to new min
-            absMin= refVal;
+            absMin = refVal;
         }
         //we've transitioned. check if we can autotune based on the last peaks
         float avgSeparation = (std::abs(peaks[peakCount - 1] - peaks[peakCount - 2]) + std::abs(peaks[peakCount - 2] - peaks[peakCount - 3])) / 2;
@@ -195,7 +231,7 @@ void PID_Autotuner::on_idle(void *)
     justchanged = false;
 
     if ((tickCnt % 1000) == 0) {
-        s->printf("%s: %5.1f/%5.1f @%d %d/%d\n", t->designator.c_str(), t->get_temperature(), target_temperature, output, peakCount, requested_cycles);
+        s->printf("%s: %5.1f/%5.1f @%d %d/%d\n", temp_control->designator.c_str(), temp_control->get_temperature(), target_temperature, output, peakCount, requested_cycles);
         DEBUG_PRINTF("lookBackCnt= %d, peakCount= %d, absmax= %g, absmin= %g, peak1= %lu, peak2= %lu\n", lookBackCnt, peakCount, absMax, absMin, peak1, peak2);
     }
 }
@@ -204,8 +240,8 @@ void PID_Autotuner::on_idle(void *)
 void PID_Autotuner::finishUp()
 {
     //we can generate tuning parameters!
-    float Ku = 4*(2*oStep)/((absMax-absMin)*3.14159);
-    float Pu = (float)(peak1-peak2) / 1000;
+    float Ku = 4 * (2 * oStep) / ((absMax - absMin) * 3.14159);
+    float Pu = (float)(peak1 - peak2) / 1000;
     s->printf("\tKu: %g, Pu: %g\n", Ku, Pu);
 
     float kp = 0.6 * Ku;
@@ -214,17 +250,17 @@ void PID_Autotuner::finishUp()
 
     s->printf("\tTrying:\n\tKp: %5.1f\n\tKi: %5.3f\n\tKd: %5.0f\n", kp, ki, kd);
 
-    t->setPIDp(kp);
-    t->setPIDi(ki);
-    t->setPIDd(kd);
+    temp_control->setPIDp(kp);
+    temp_control->setPIDi(ki);
+    temp_control->setPIDd(kd);
 
     s->printf("PID Autotune Complete! The settings above have been loaded into memory, but not written to your config file.\n");
 
 
     // and clean up
-    t->target_temperature = 0;
-    t->heater_pin.set(0);
-    t = NULL;
+    temp_control->target_temperature = 0;
+    temp_control->heater_pin.set(0);
+    temp_control = NULL;
     s = NULL;
 
     if (peaks != NULL)

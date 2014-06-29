@@ -2,17 +2,17 @@
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
-mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for 
-                                                              # these segments.  Smaller values mean more resolution, 
+mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for
+                                                              # these segments.  Smaller values mean more resolution,
                                                               # higher values mean faster computation
 #mm_per_line_segment                         0.5              # Lines can be cut into segments ( not usefull with cartesian
                                                               # coordinates robots ).
 delta_segments_per_second                    100              # for deltas only same as in Marlin/Delta, set to 0 to disable
                                                               # and use mm_per_line_segment
-                                                             
+
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
-arm_solution                                 kossel           # selects the kossel arm solution
+arm_solution                                 linear_delta     # selects the delta arm solution
 alpha_steps_per_mm                           100              # Steps per mm for alpha stepper
 beta_steps_per_mm                            100              # Steps per mm for beta stepper
 gamma_steps_per_mm                           100              # Steps per mm for gamma stepper
@@ -25,7 +25,7 @@ arm_radius                                   124.0            # this is the hori
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING
 acceleration                                 3000             # Acceleration in mm/second/second.
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
-junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, 
+junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters,
                                                               # see https://github.com/grbl/grbl/blob/master/planner.c#L409
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8
                                                               # Lower values mean being more careful, higher values means being
@@ -63,36 +63,56 @@ gamma_max_rate                               30000.0          # mm/min
 
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
-second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface 
+second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface
                                                               # and a terminal connected)
 #leds_disable                                true             # disable using leds after config loaded
 
-
 # Extruder module configuration
-extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration
-                                                              # is ignored if false
-extruder_steps_per_mm                        140              # Steps per mm for extruder stepper
-extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
-extruder_acceleration                        500              # Acceleration in mm/sec^2 only used for retracts
-extruder_max_speed                           25               # mm/sec NOTE only used for retracts
+extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
+extruder.hotend.steps_per_mm                    140              # Steps per mm for extruder stepper
+extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
+extruder.hotend.acceleration                    500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+extruder.hotend.max_speed                       50               # mm/s
 
-extruder_step_pin                            2.3              # Pin for extruder step signal
-extruder_dir_pin                             0.22             # Pin for extruder dir signal
-extruder_en_pin                              0.21             # Pin for extruder enable signal
-delta_current                                1.5              # Extruder stepper motor current
+extruder.hotend.step_pin                        2.3              # Pin for extruder step signal
+extruder.hotend.dir_pin                         0.22             # Pin for extruder dir signal
+extruder.hotend.en_pin                          0.21             # Pin for extruder enable signal
+
+# for now the first extruder's offsets should be left at 0 or homing will get confused
+#extruder.hotend.x_offset                        0                # x offset from origin in mm
+#extruder.hotend.y_offset                        0                # y offset from origin in mm
+#extruder.hotend.z_offset                        0                # z offset from origin in mm
+
+delta_current                                1.5              # First extruder stepper motor current
+
+# Second extruder module configuration example
+#extruder.hotend2.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
+#extruder.hotend2.steps_per_mm                    140              # Steps per mm for extruder stepper
+#extruder.hotend2.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
+#extruder.hotend2.acceleration                    500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+#extruder.hotend2.max_speed                       50               # mm/s
+
+#extruder.hotend2.step_pin                        2.8              # Pin for extruder step signal
+#extruder.hotend2.dir_pin                         2.13             # Pin for extruder dir signal
+#extruder.hotend2.en_pin                          4.29             # Pin for extruder enable signal
+
+#extruder.hotend2.x_offset                        0                # x offset from origin in mm
+#extruder.hotend2.y_offset                        25.0             # y offset from origin in mm
+#extruder.hotend2.z_offset                        0                # z offset from origin in mm
+#epsilon_current                              1.5              # Second extruder stepper motor current
 
 # Laser module configuration
-laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is 
+laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is
                                                               # ignored if false.
-#laser_module_pin                             2.5             # this pin will be PWMed to control the laser. Only P2.0 - P2.5 
+#laser_module_pin                             2.5             # this pin will be PWMed to control the laser. Only P2.0 - P2.5
                                                               # can be used since laser requires hardware PWM
 #laser_module_max_power                       0.8             # this is the maximum duty cycle that will be applied to the laser
-#laser_module_tickle_power                    0.0             # this duty cycle will be used for travel moves to keep the laser 
+#laser_module_tickle_power                    0.0             # this duty cycle will be used for travel moves to keep the laser
                                                               # active without actually burning
 #laser_module_pwm_period                      20              # this sets the pwm frequency as the period in microseconds
 
 # Hotend temperature control configuration
-temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all. 
+temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all.
                                                               # All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.23             # Pin for the thermistor to read
 temperature_control.hotend.heater_pin        2.7              # Pin that controls the heater
@@ -102,11 +122,29 @@ temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
 
-#temperature_control.hotend.p_factor         13.7             # permanenetly set the PID values after an auto pid
+#temperature_control.hotend.p_factor         13.7             # permanently set the PID values after an auto pid
 #temperature_control.hotend.i_factor         0.097            #
 #temperature_control.hotend.d_factor         24               #
 
 #temperature_control.hotend.max_pwm          64               # max pwm, 64 is a good value if driving a 12v resistor with 24v.
+
+# Hotend2 temperature control configuration
+#temperature_control.hotend2.enable            true             # Whether to activate this ( "hotend" ) module at all.
+                                                              # All configuration is ignored if false.
+
+#temperature_control.hotend2.thermistor_pin    0.25             # Pin for the thermistor to read
+#temperature_control.hotend2.heater_pin        1.23              # Pin that controls the heater
+#temperature_control.hotend2.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64
+                                                              # for a list of valid thermistor names
+#temperature_control.hotend2.set_m_code        884              #
+#temperature_control.hotend2.set_and_wait_m_code 889            #
+#temperature_control.hotend2.designator        T1               #
+
+#temperature_control.hotend2.p_factor          13.7           # permanently set the PID values after an auto pid
+#temperature_control.hotend2.i_factor          0.097          #
+#temperature_control.hotend2.d_factor          24             #
+
+#temperature_control.hotend2.max_pwm          64               # max pwm, 64 is a good value if driving a 12v resistor with 24v.
 
 temperature_control.bed.enable               true             #
 temperature_control.bed.thermistor_pin       0.24             #
@@ -135,12 +173,20 @@ switch.fan.output_type                       pwm              # pwm output setta
 #switch.misc.output_pin                       2.4              #
 #switch.misc.output_type                      digital          # just an on or off pin
 
+# automatically toggle a switch at a specified temperature
+# useful to turn on a fan or water pump to cool the hotend
+#temperatureswitch.hotend.enable	          true             #
+#temperatureswitch.hotend.type                misc             # select which MOSFET to use, fan or misc (small MOSFETs)
+#temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
+#temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
+#temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
+
 # Switch module for spindle control
 #switch.spindle.enable                        false            #
 
 # Endstops
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
-delta_homing                                 true             # forces all three axis to home a the same time regardless of 
+delta_homing                                 true             # forces all three axis to home a the same time regardless of
                                                               # what is specified in G28
 alpha_min_endstop                            nc               #
 alpha_max_endstop                            1.25^            # add ! to invert pullup if switch is NO to ground
@@ -187,7 +233,7 @@ pause_button_enable                          true             #
 
 # Panel
 panel.enable                                 false             # set to true to enable the panel code
-panel.lcd                                    smoothiepanel     # set type of panel 
+panel.lcd                                    smoothiepanel     # set type of panel
 panel.encoder_a_pin                          3.25!^            # encoder pin
 panel.encoder_b_pin                          3.26!^            # encoder pin
 

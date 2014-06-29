@@ -41,7 +41,6 @@ Planner::Planner(){
 }
 
 void Planner::on_module_loaded(){
-    register_for_event(ON_CONFIG_RELOAD);
     this->on_config_reload(this);
 }
 
@@ -97,7 +96,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
     // specifically for each line to compensate for this phenomenon:
     // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = (block->steps_event_count * acceleration) / (distance * THEKERNEL->stepper->acceleration_ticks_per_second); // (step/min/acceleration_tick)
+    block->rate_delta = (block->steps_event_count * acceleration) / (distance * THEKERNEL->stepper->get_acceleration_ticks_per_second()); // (step/min/acceleration_tick)
 
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction
@@ -110,7 +109,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     // nonlinearities of both the junction angle and junction velocity.
     float vmax_junction = minimum_planner_speed; // Set default max junction speed
 
-    if (!THEKERNEL->conveyor->queue.is_empty())
+    if (!THEKERNEL->conveyor->is_queue_empty())
     {
         float previous_nominal_speed = THEKERNEL->conveyor->queue.item_ref(THEKERNEL->conveyor->queue.prev(THEKERNEL->conveyor->queue.head_i))->nominal_speed;
 

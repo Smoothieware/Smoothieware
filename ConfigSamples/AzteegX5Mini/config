@@ -94,6 +94,14 @@ switch.misc.input_on_command                 M42              #
 switch.misc.input_off_command                M43              #
 switch.misc.output_pin                       2.4              #
 
+# automatically toggle a switch at a specified temperature
+# useful to turn on a fan or water pump to cool the hotend
+#temperatureswitch.hotend.enable	          true             #
+#temperatureswitch.hotend.type                misc             # select which MOSFET to use, fan or misc (small MOSFETs)
+#temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
+#temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
+#temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
+
 # Switch module for spindle control
 #switch.spindle.enable                        false            #
 
@@ -168,7 +176,7 @@ custom_menu.power_off.enable               true              #
 custom_menu.power_off.name                 Power_off         #
 custom_menu.power_off.command              M81               #
 
-# Only needed on a smoothieboard
+# Azteeg specific settings do not change
 currentcontrol_module_enable                 true            #
 digipot_max_current                          2.4             # max current
 digipot_factor                               106.0           # factor for converting current to digipot value

@@ -11,6 +11,7 @@
 
 #include "Module.h"
 
+#include <functional>
 #include <string>
 using std::string;
 
@@ -27,36 +28,37 @@ public:
     void on_second_tick(void *);
 
 private:
-    void ls_command(string parameters, StreamOutput *stream );
-    void cd_command(string parameters, StreamOutput *stream );
-    void delete_file_command(string parameters, StreamOutput *stream );
-    void pwd_command(string parameters, StreamOutput *stream );
-    void cat_command(string parameters, StreamOutput *stream );
-    void rm_command(string parameters, StreamOutput *stream );
-    void break_command(string parameters, StreamOutput *stream );
-    void reset_command(string parameters, StreamOutput *stream );
-    void dfu_command(string parameters, StreamOutput *stream );
-    void help_command(string parameters, StreamOutput *stream );
-    void version_command(string parameters, StreamOutput *stream );
-    void get_command(string parameters, StreamOutput *stream );
-    void set_temp_command(string parameters, StreamOutput *stream );
-    void mem_command(string parameters, StreamOutput *stream );
+    static void ls_command(string parameters, StreamOutput *stream );
+    static void cd_command(string parameters, StreamOutput *stream );
+    static void delete_file_command(string parameters, StreamOutput *stream );
+    static void pwd_command(string parameters, StreamOutput *stream );
+    static void cat_command(string parameters, StreamOutput *stream );
+    static void rm_command(string parameters, StreamOutput *stream );
+    static void break_command(string parameters, StreamOutput *stream );
+    static void reset_command(string parameters, StreamOutput *stream );
+    static void dfu_command(string parameters, StreamOutput *stream );
+    static void help_command(string parameters, StreamOutput *stream );
+    static void version_command(string parameters, StreamOutput *stream );
+    static void get_command(string parameters, StreamOutput *stream );
+    static void set_temp_command(string parameters, StreamOutput *stream );
+    static void switch_command(string parameters, StreamOutput *stream );
+    static void mem_command(string parameters, StreamOutput *stream );
 
-    void net_command( string parameters, StreamOutput *stream);
+    static void net_command( string parameters, StreamOutput *stream);
 
-    void load_command( string parameters, StreamOutput *stream);
-    void save_command( string parameters, StreamOutput *stream);
+    static void load_command( string parameters, StreamOutput *stream);
+    static void save_command( string parameters, StreamOutput *stream);
 
-    bool parse_command(unsigned short cs, string args, StreamOutput *stream);
+    bool parse_command(const char *cmd, string args, StreamOutput *stream);
 
-    typedef void (SimpleShell::*PFUNC)(string parameters, StreamOutput *stream);
+    typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {
-        unsigned short command_cs;
-        PFUNC pfunc;
-    } ptentry_t;
+        const char *command;
+        const PFUNC func;
+    } const ptentry_t;
 
-    static ptentry_t commands_table[];
-    int reset_delay_secs;
+    static const ptentry_t commands_table[];
+    static int reset_delay_secs;
 };
 
 

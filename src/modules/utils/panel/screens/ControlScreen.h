@@ -10,10 +10,6 @@
 
 #include "PanelScreen.h"
 
-#define NULL_CONTROL_MODE        0
-#define AXIS_CONTROL_MODE        1
-#define INCREMENT_SELECTION_MODE 2
-
 class ControlScreen : public PanelScreen
 {
 public:

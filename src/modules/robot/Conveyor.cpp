@@ -60,7 +60,6 @@ Conveyor::Conveyor(){
 void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
     register_for_event(ON_MAIN_LOOP);
-    register_for_event(ON_CONFIG_RELOAD);
 
     on_config_reload(this);
 }

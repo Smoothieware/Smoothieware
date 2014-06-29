@@ -11,7 +11,6 @@
 #include "libs/nuts_bolts.h"
 #include "libs/SlowTicker.h"
 #include "libs/Adc.h"
-#include "libs/Pauser.h"
 #include "libs/StreamOutputPool.h"
 #include <mri.h>
 #include "checksumm.h"
@@ -21,17 +20,20 @@
 #include "libs/PublicData.h"
 #include "modules/communication/SerialConsole.h"
 #include "modules/communication/GcodeDispatch.h"
-#include "modules/tools/toolsmanager/ToolsManager.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
+#include "modules/robot/Pauser.h"
 
 #include <malloc.h>
 #include <array>
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
+
+#define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
+#define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
 
 Kernel* Kernel::instance;
 
@@ -115,12 +117,12 @@ Kernel::Kernel(){
     }
 
     // Configure the step ticker
-    int base_stepping_frequency          =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
+    this->base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
     float microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
 
     // Configure the step ticker ( TODO : shouldnt this go into stepticker's code ? )
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
-    this->step_ticker->set_frequency(   base_stepping_frequency );
+    this->step_ticker->set_frequency( this->base_stepping_frequency );
 
     // Core modules
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
@@ -129,9 +131,6 @@ Kernel::Kernel(){
     this->add_module( this->planner        = new Planner()       );
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
-    this->add_module( this->public_data    = new PublicData()    );
-    this->add_module( this->toolsmanager   = new ToolsManager()    );
-
 }
 
 // Add a module to Kernel. We don't actually hold a list of modules, we just tell it where Kernel is
@@ -140,20 +139,20 @@ void Kernel::add_module(Module* module){
 }
 
 // Adds a hook for a given module and event
-void Kernel::register_for_event(_EVENT_ENUM id_event, Module* module){
-    this->hooks[id_event].push_back(module);
+void Kernel::register_for_event(_EVENT_ENUM id_event, Module *mod){
+    this->hooks[id_event].push_back(mod);
 }
 
 // Call a specific event without arguments
 void Kernel::call_event(_EVENT_ENUM id_event){
-    for (Module* current : hooks[id_event]) {
-        (current->*kernel_callback_functions[id_event])(this);
+    for (auto m : hooks[id_event]) {
+        (m->*kernel_callback_functions[id_event])(this);
     }
 }
 
 // Call a specific event with an argument
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
-    for (Module* current : hooks[id_event]) {
-        (current->*kernel_callback_functions[id_event])(argument);
+    for (auto m : hooks[id_event]) {
+        (m->*kernel_callback_functions[id_event])(argument);
     }
 }

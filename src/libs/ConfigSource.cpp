@@ -48,15 +48,15 @@ ConfigValue* ConfigSource::process_line(const string &buffer)
     return result;
 }
 
-string ConfigSource::process_line_from_ascii_config(const string &buffer, ConfigCache *cache)
+ConfigValue* ConfigSource::process_line_from_ascii_config(const string &buffer, ConfigCache *cache)
 {
     ConfigValue *result = process_line(buffer);
     if(result != NULL) {
         // Append the newly found value to the cache we were passed
         cache->replace_or_push_back(result);
-        return result->value;
+        return result;
     }
-    return "";
+    return NULL;
 }
 
 string ConfigSource::process_line_from_ascii_config(const string &buffer, uint16_t line_checksums[3])

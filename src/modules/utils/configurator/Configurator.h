@@ -16,18 +16,18 @@ using std::string;
 
 class StreamOutput;
 
-class Configurator : public Module {
-    public:
-        Configurator(){}
+class Configurator : public Module
+{
+public:
+    Configurator() {}
 
-        void on_module_loaded();
-        void on_console_line_received( void* argument );
-        void on_gcode_received( void* argument );
-        void on_main_loop( void* argument );
+    void on_module_loaded();
+    void on_console_line_received( void *argument );
+    void on_main_loop( void *argument );
 
-        void config_get_command( string parameters, StreamOutput* stream );
-        void config_set_command( string parameters, StreamOutput* stream );
-        void config_load_command(string parameters, StreamOutput* stream );
+    void config_get_command( string parameters, StreamOutput *stream );
+    void config_set_command( string parameters, StreamOutput *stream );
+    void config_load_command(string parameters, StreamOutput *stream );
 };
 
 

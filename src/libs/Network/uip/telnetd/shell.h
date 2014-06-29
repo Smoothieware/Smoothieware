@@ -93,7 +93,7 @@ public:
     void setConsole();
 
 private:
-    bool parse(register char *str, struct ptentry *t);
+    bool parse(register char *str, const struct ptentry *t);
     Telnetd *telnet; // telnet instance we are connected to
     StreamOutput *pstream;
     bool isConsole;

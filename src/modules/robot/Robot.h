@@ -10,30 +10,9 @@
 
 #include <string>
 using std::string;
-#include "libs/Module.h"
-
 #include <string.h>
 
-#define NEXT_ACTION_DEFAULT 0
-#define NEXT_ACTION_DWELL 1
-#define NEXT_ACTION_GO_HOME 2
-
-#define MOTION_MODE_SEEK 0 // G0
-#define MOTION_MODE_LINEAR 1 // G1
-#define MOTION_MODE_CW_ARC 2 // G2
-#define MOTION_MODE_CCW_ARC 3 // G3
-#define MOTION_MODE_CANCEL 4 // G80
-
-#define PATH_CONTROL_MODE_EXACT_PATH 0
-#define PATH_CONTROL_MODE_EXACT_STOP 1
-#define PATH_CONTROL_MODE_CONTINOUS 2
-
-#define PROGRAM_FLOW_RUNNING 0
-#define PROGRAM_FLOW_PAUSED 1
-#define PROGRAM_FLOW_COMPLETED 2
-
-#define SPINDLE_DIRECTION_CW 0
-#define SPINDLE_DIRECTION_CCW 1
+#include "libs/Module.h"
 
 class Gcode;
 class BaseSolution;
@@ -52,9 +31,14 @@ class Robot : public Module {
         void get_axis_position(float position[]);
         float to_millimeters(float value);
         float from_millimeters(float value);
+        float get_seconds_per_minute() const { return seconds_per_minute; }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
+        void setToolOffset(const float offset[3]);
+
+        // gets accessed by Panel, Endstops, ZProbe
+        std::vector<StepperMotor*> actuators;
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
@@ -68,6 +52,8 @@ class Robot : public Module {
 
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
+        void clearToolOffset();
+        void check_max_actuator_speeds();
 
         float last_milestone[3];                             // Last position, in millimeters
         bool  inch_mode;                                       // true for inch mode, false for millimeter mode ( default )
@@ -78,6 +64,7 @@ class Robot : public Module {
         float mm_per_line_segment;                           // Setting : Used to split lines into segments
         float mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
+        float seconds_per_minute;                            // for realtime speed change
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
@@ -87,15 +74,15 @@ class Robot : public Module {
         int arc_correction;                                   // Setting : how often to rectify arc computation
         float max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
 
-    // Used by Stepper
-    public:
+        float toolOffset[3];
+
+        // Used by Stepper, Planner
+        friend class Planner;
+        friend class Stepper;
+
         StepperMotor* alpha_stepper_motor;
         StepperMotor* beta_stepper_motor;
         StepperMotor* gamma_stepper_motor;
-
-        std::vector<StepperMotor*> actuators;
-
-        float seconds_per_minute;                            // for realtime speed change
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed
