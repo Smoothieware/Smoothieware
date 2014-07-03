@@ -5,7 +5,7 @@ default_seek_rate                            4000             # Default rate ( m
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for
                                                               # these segments.  Smaller values mean more resolution,
                                                               # higher values mean faster computation
-#mm_per_line_segment                         0.5              # Lines can be cut into segments ( not usefull with cartesian
+#mm_per_line_segment                         0.5              # Lines can be cut into segments ( not useful with cartesian
                                                               # coordinates robots ).
 delta_segments_per_second                    100              # for deltas only same as in Marlin/Delta, set to 0 to disable
                                                               # and use mm_per_line_segment
@@ -18,7 +18,7 @@ beta_steps_per_mm                            100              # Steps per mm for
 gamma_steps_per_mm                           100              # Steps per mm for gamma stepper
 
 arm_length                                   250.0            # this is the length of an arm from hinge to hinge
-arm_radius                                   124.0            # this is the horiontal distance from hinge to hinge
+arm_radius                                   124.0            # this is the horizontal distance from hinge to hinge
                                                               # when the effector is centered
 
 # Planner module configuration : Look-ahead and acceleration configuration
