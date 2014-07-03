@@ -5,7 +5,7 @@ default_seek_rate                            4000             # Default rate ( m
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for
                                                               # these segments.  Smaller values mean more resolution,
                                                               # higher values mean faster computation
-#mm_per_line_segment                         0.5              # Lines can be cut into segments ( not usefull with cartesian
+#mm_per_line_segment                         0.5              # Lines can be cut into segments ( not useful with cartesian
                                                               # coordinates robots ).
 delta_segments_per_second                    100              # for deltas only same as in Marlin/Delta, set to 0 to disable
                                                               # and use mm_per_line_segment
@@ -18,7 +18,7 @@ beta_steps_per_mm                            100              # Steps per mm for
 gamma_steps_per_mm                           100              # Steps per mm for gamma stepper
 
 arm_length                                   250.0            # this is the length of an arm from hinge to hinge
-arm_radius                                   124.0            # this is the horiontal distance from hinge to hinge
+arm_radius                                   124.0            # this is the horizontal distance from hinge to hinge
                                                               # when the effector is centered
 
 # Planner module configuration : Look-ahead and acceleration configuration
@@ -172,6 +172,14 @@ switch.fan.output_type                       pwm              # pwm output setta
 #switch.misc.input_off_command                M43              #
 #switch.misc.output_pin                       2.4              #
 #switch.misc.output_type                      digital          # just an on or off pin
+
+# automatically toggle a switch at a specified temperature
+# useful to turn on a fan or water pump to cool the hotend
+#temperatureswitch.hotend.enable	          true             #
+#temperatureswitch.hotend.type                misc             # select which MOSFET to use, fan or misc (small MOSFETs)
+#temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
+#temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
+#temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
 
 # Switch module for spindle control
 #switch.spindle.enable                        false            #

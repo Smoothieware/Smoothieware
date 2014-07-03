@@ -15,11 +15,19 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 
-PlayLed::PlayLed(){}
+
+#define pause_led_pin_checksum      CHECKSUM("pause_led_pin")
+#define play_led_pin_checksum       CHECKSUM("play_led_pin")
+#define play_led_disable_checksum   CHECKSUM("play_led_disable")
+
+PlayLed::PlayLed() {}
 
 void PlayLed::on_module_loaded()
 {
-    register_for_event(ON_CONFIG_RELOAD);
+    if(THEKERNEL->config->value( play_led_disable_checksum )->by_default(false)->as_bool()) {
+        delete this;
+        return;
+    }
 
     //register_for_event(ON_PLAY);
     //TODO: these two events happen in interrupt context and it's extremely important they don't last long. This should be done by checking the size of the queue once a second or something
@@ -31,7 +39,7 @@ void PlayLed::on_module_loaded()
     THEKERNEL->slow_ticker->attach(4, this, &PlayLed::half_second_tick);
 }
 
-void PlayLed::on_config_reload(void* argument)
+void PlayLed::on_config_reload(void *argument)
 {
     string ledpin = "4.28!";
 
@@ -41,17 +49,17 @@ void PlayLed::on_config_reload(void* argument)
     led.from_string(ledpin)->as_output()->set(false);
 }
 
-void PlayLed::on_block_begin(void* argument)
+void PlayLed::on_block_begin(void *argument)
 {
     //led.set(true);
 }
 
-void PlayLed::on_block_end(void* argument)
+void PlayLed::on_block_end(void *argument)
 {
     //led.set(false);
 }
 
-void PlayLed::on_play(void* argument)
+void PlayLed::on_play(void *argument)
 {
     led.set(false);
 }

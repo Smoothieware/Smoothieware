@@ -49,13 +49,13 @@ try_again:
 
         //Get linenumber
         if ( first_char == 'N' ) {
-            Gcode full_line = Gcode(possible_command, new_message.stream);
+            Gcode full_line = Gcode(possible_command, new_message.stream, false);
             ln = (int) full_line.get_value('N');
             int chksum = (int) full_line.get_value('*');
 
             //Catch message if it is M110: Set Current Line Number
-            if ( full_line.has_letter('M') ) {
-                if ( ((int) full_line.get_value('M')) == 110 ) {
+            if ( full_line.has_m ) {
+                if ( full_line.m == 110 ) {
                     currentline = ln;
                     new_message.stream->printf("ok\r\n");
                     return;
@@ -96,7 +96,7 @@ try_again:
             }
 
             while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GM", possible_command.find_first_of("GMT") + 1);
+                size_t nextcmd = possible_command.find_first_of("GM", possible_command.find_first_of("GM") + 1);
                 string single_command;
                 if(nextcmd == string::npos) {
                     single_command = possible_command;

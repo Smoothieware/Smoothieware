@@ -9,6 +9,8 @@
 #define PANEL_H
 
 #include "Button.h"
+#include <string>
+using std::string;
 
 #define MENU_MODE                  0
 #define CONTROL_MODE               1

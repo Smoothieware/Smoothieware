@@ -8,13 +8,9 @@
 #ifndef EXTRUDERMAKER_H
 #define EXTRUDERMAKER_H
 
-using namespace std;
-#include <vector>
-
-class ExtruderMaker : public Module {
+class ExtruderMaker {
     public:
-        ExtruderMaker(){}
-        void on_module_loaded();
+        void load_tools();
 };
 
 

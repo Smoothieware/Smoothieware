@@ -38,7 +38,6 @@ ToolManager::ToolManager(){
 void ToolManager::on_module_loaded(){
     this->on_config_reload(this);
 
-    this->register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
@@ -82,13 +81,22 @@ void ToolManager::on_get_public_data(void* argument){
     PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
 
     if(!pdr->starts_with(tool_manager_checksum)) return;
+    if(!pdr->second_element_is(is_active_tool_checksum)) return;
 
-    // ok this is targeted at us, so send back the requested data
-    // this must be static as it will be accessed long after we have returned
-    static struct pad_toolmanager tool_return;
-    tool_return.current_tool_name= this->current_tool_name;
+    // check that we control the given tool
+    bool managed= false;
+    for(auto t : tools) {
+        uint16_t n= t->get_name();
+        if(pdr->third_element_is(n)){
+            managed= true;
+            break;
+        }
+    }
 
-    pdr->set_data_ptr(&tool_return);
+    // we are not managing this tool so do not answer
+    if(!managed) return;
+
+    pdr->set_data_ptr(&this->current_tool_name);
     pdr->set_taken();
 }
 
@@ -100,7 +108,7 @@ void ToolManager::on_set_public_data(void* argument){
     // ok this is targeted at us, so change tools
     //uint16_t tool_name= *static_cast<float*>(pdr->get_data_ptr());
     // TODO: fire a tool change gcode
-    pdr->set_taken();
+    //pdr->set_taken();
 }
 
 // Add a tool to the tool list

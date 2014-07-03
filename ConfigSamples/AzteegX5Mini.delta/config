@@ -11,12 +11,12 @@ mm_per_arc_segment                           0.5              # Arcs are cut int
 delta_segments_per_second                    100               # segments per second used for deltas
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
-alpha_steps_per_mm                           110.02           # Steps per mm for alpha stepper
-beta_steps_per_mm                            110.02           # Steps per mm for beta stepper
-gamma_steps_per_mm                           110.02          # Steps per mm for gamma stepper
+alpha_steps_per_mm                           100             # Steps per mm for alpha stepper
+beta_steps_per_mm                            100             # Steps per mm for beta stepper
+gamma_steps_per_mm                           100             # Steps per mm for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
-planner_queue_size                           32               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
+planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOUR ARE DOING
 acceleration                                 1000             # Acceleration in mm/second/second.
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409
@@ -104,6 +104,14 @@ switch.fan.input_on_command                  M106             #
 switch.fan.input_off_command                 M107             #
 switch.fan.output_pin                        2.4              #
 
+# automatically toggle a switch at a specified temperature
+# useful to turn on a fan or water pump to cool the hotend
+#temperatureswitch.hotend.enable	          true             #
+#temperatureswitch.hotend.type                misc             # select which MOSFET to use, fan or misc (small MOSFETs)
+#temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
+#temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
+#temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
+
 # switch.psu.enable                            true             # turn atx on/off
 # switch.psu.input_on_command                  M80              #
 # switch.psu.input_off_command                 M81              #
@@ -146,7 +154,7 @@ alpha_trim                                   0                 # software trim f
 beta_trim                                    0                 # software trim for beta stepper endstop (in mm)
 gamma_trim                                   0                 # software trim for gamma stepper endstop (in mm)
 
-# optional Z probe
+# optional Z probe http://smoothieware.org/zprobe
 zprobe.enable                                false           # set to true to enable a zprobe
 zprobe.probe_pin                             1.29!^          # pin probe is attached to if NC remove the !
 zprobe.slow_feedrate                         5               # mm/sec probe feed rate
@@ -159,7 +167,7 @@ zprobe.probe_height                          5               # how much above be
 # Pause button
 pause_button_enable                          true             #
 
-# Panel
+# Panel http://smoothieware.org/panel
 panel.enable                                 false               # set to true to enable the panel code
 panel.lcd                                    viki_lcd       # set type of panel also viki_lcd, i2c_lcd is a generic i2c panel, panelolu2
 panel.encoder_a_pin                          3.25!^            # encoder pin
@@ -175,7 +183,7 @@ panel.gamma_jog_feedrate                     200               # z jogging feedr
 panel.hotend_temperature                     185               # temp to set hotend when preheat is selected
 panel.bed_temperature                        60                # temp to set bed when preheat is selected
 
-# Only needed on a smoothieboard
+# Azteeg specific settings do not change
 currentcontrol_module_enable                 true            #
 digipot_max_current                          2.4             # max current
 digipot_factor                               106.0           # factor for converting current to digipot value

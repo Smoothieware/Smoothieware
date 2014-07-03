@@ -31,7 +31,7 @@ using std::string;
 #include "utils.h"
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
-
+#include "StreamOutputPool.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
@@ -129,7 +129,6 @@ Robot::Robot()
 //Called when the module has just been loaded
 void Robot::on_module_loaded()
 {
-    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
@@ -215,11 +214,13 @@ void Robot::on_config_reload(void *argument)
     alpha_stepper_motor->max_rate = THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
     beta_stepper_motor->max_rate  = THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F;
     gamma_stepper_motor->max_rate = THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
+    check_max_actuator_speeds(); // check the configs are sane
 
     actuators.clear();
     actuators.push_back(alpha_stepper_motor);
     actuators.push_back(beta_stepper_motor);
     actuators.push_back(gamma_stepper_motor);
+
 
     // initialise actuator positions to current cartesian position (X0 Y0 Z0)
     // so the first move can be correct if homing is not performed
@@ -229,6 +230,29 @@ void Robot::on_config_reload(void *argument)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 
     //this->clearToolOffset();
+}
+
+// this does a sanity check that actuator speeds do not exceed steps rate capability
+// we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
+void Robot::check_max_actuator_speeds()
+{
+    float step_freq= alpha_stepper_motor->max_rate * alpha_stepper_motor->get_steps_per_mm();
+    if(step_freq > THEKERNEL->base_stepping_frequency) {
+        alpha_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / alpha_stepper_motor->get_steps_per_mm());
+        THEKERNEL->streams->printf("WARNING: alpha_max_rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", step_freq, alpha_stepper_motor->max_rate);
+    }
+
+    step_freq= beta_stepper_motor->max_rate * beta_stepper_motor->get_steps_per_mm();
+    if(step_freq > THEKERNEL->base_stepping_frequency) {
+        beta_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / beta_stepper_motor->get_steps_per_mm());
+        THEKERNEL->streams->printf("WARNING: beta_max_rate exceeds base_stepping_frequency * beta_steps_per_mm: %f, setting to %f\n", step_freq, beta_stepper_motor->max_rate);
+    }
+
+    step_freq= gamma_stepper_motor->max_rate * gamma_stepper_motor->get_steps_per_mm();
+    if(step_freq > THEKERNEL->base_stepping_frequency) {
+        gamma_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / gamma_stepper_motor->get_steps_per_mm());
+        THEKERNEL->streams->printf("WARNING: gamma_max_rate exceeds base_stepping_frequency * gamma_steps_per_mm: %f, setting to %f\n", step_freq, gamma_stepper_motor->max_rate);
+    }
 }
 
 void Robot::on_get_public_data(void *argument)
@@ -341,6 +365,7 @@ void Robot::on_gcode_received(void *argument)
                 gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm, seconds_per_minute);
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
+                check_max_actuator_speeds();
                 return;
             case 114: {
                 char buf[32];
@@ -366,6 +391,8 @@ void Robot::on_gcode_received(void *argument)
                     beta_stepper_motor->max_rate = gcode->get_value('B');
                 if (gcode->has_letter('C'))
                     gamma_stepper_motor->max_rate = gcode->get_value('C');
+
+                check_max_actuator_speeds();
 
                 gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
@@ -552,7 +579,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
         deltas[axis] = target[axis] - last_milestone[axis];
 
     // Compute how long this move moves, so we can attach it to the block for later use
-    millimeters_of_travel = sqrtf( pow( deltas[X_AXIS], 2 ) +  pow( deltas[Y_AXIS], 2 ) +  pow( deltas[Z_AXIS], 2 ) );
+    millimeters_of_travel = sqrtf( powf( deltas[X_AXIS], 2 ) +  powf( deltas[Y_AXIS], 2 ) +  powf( deltas[Z_AXIS], 2 ) );
 
     // find distance unit vector
     for (int i = 0; i < 3; i++)
@@ -592,7 +619,7 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
 {
 
     // Find out the distance for this gcode
-    gcode->millimeters_of_travel = pow( target[X_AXIS] - this->last_milestone[X_AXIS], 2 ) +  pow( target[Y_AXIS] - this->last_milestone[Y_AXIS], 2 ) +  pow( target[Z_AXIS] - this->last_milestone[Z_AXIS], 2 );
+    gcode->millimeters_of_travel = powf( target[X_AXIS] - this->last_milestone[X_AXIS], 2 ) +  powf( target[Y_AXIS] - this->last_milestone[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - this->last_milestone[Z_AXIS], 2 );
 
     // We ignore non-moves ( for example, extruder moves are not XYZ moves )
     if( gcode->millimeters_of_travel < 1e-8F ) {

@@ -54,21 +54,6 @@ void Configurator::on_console_line_received( void *argument )
     }
 }
 
-// Process and respond to eeprom gcodes (M50x)
-void Configurator::on_gcode_received(void *argument)
-{
-    Gcode *gcode = static_cast<Gcode *>(argument);
-    if( gcode->has_letter('G') ) {
-        int code = gcode->get_value('G');
-        switch( code ) {
-        }
-    } else if( gcode->has_letter('M') ) {
-        int code = gcode->get_value('M');
-        switch( code ) {
-        }
-    }
-}
-
 void Configurator::on_main_loop(void *argument) {}
 
 // Output a ConfigValue from the specified ConfigSource to the stream
@@ -147,8 +132,7 @@ void Configurator::config_set_command( string parameters, StreamOutput *stream )
     */
 }
 
-// Reload config values from the specified ConfigSource, NOTE this probably does not work anymore
-// also used for debugging by dumping the config-cache
+// Reload config values from the specified ConfigSource, NOTE used for debugging by dumping the config-cache
 void Configurator::config_load_command( string parameters, StreamOutput *stream )
 {
     string source = shift_parameter(parameters);
@@ -171,32 +155,8 @@ void Configurator::config_load_command( string parameters, StreamOutput *stream 
         get_checksums(cs, key);
         stream->printf( "checksum of %s = %02X %02X %02X\n", key.c_str(), cs[0], cs[1], cs[2]);
 
-    } else if(source == "") {
-        THEKERNEL->config->config_cache_load();
-        THEKERNEL->call_event(ON_CONFIG_RELOAD);
-        stream->printf( "Reloaded settings\r\n" );
-        THEKERNEL->config->config_cache_clear();
-
-    } else if(file_exists(source)) {
-        FileConfigSource fcs(source, "userfile");
-        THEKERNEL->config->config_cache_load(false);
-        fcs.transfer_values_to_cache(THEKERNEL->config->config_cache);
-        THEKERNEL->call_event(ON_CONFIG_RELOAD);
-        stream->printf( "Loaded settings from %s\r\n", source.c_str() );
-        THEKERNEL->config->config_cache_clear();
-
     } else {
-        uint16_t source_checksum = get_checksum(source);
-        for(unsigned int i = 0; i < THEKERNEL->config->config_sources.size(); i++) {
-            if( THEKERNEL->config->config_sources[i]->is_named(source_checksum) ) {
-                THEKERNEL->config->config_cache_load(false);
-                THEKERNEL->config->config_sources[i]->transfer_values_to_cache(THEKERNEL->config->config_cache);
-                THEKERNEL->call_event(ON_CONFIG_RELOAD);
-                stream->printf( "Loaded settings from %s\r\n", source.c_str() );
-                THEKERNEL->config->config_cache_clear();
-                break;
-            }
-        }
+        stream->printf( "unsupported option: must be one of load|unload|dump|checksum\n" );
     }
 }
 

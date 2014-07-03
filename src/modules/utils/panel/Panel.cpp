@@ -241,7 +241,7 @@ void Panel::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
     if ( gcode->has_m) {
         if ( gcode->m == 117 ) { // set LCD message
-            this->message = get_arguments(gcode->command);
+            this->message = get_arguments(gcode->get_command());
             if (this->message.size() > 20) this->message = this->message.substr(0, 20);
             gcode->mark_as_taken();
         }
@@ -563,7 +563,7 @@ bool Panel::is_playing() const
 {
     void *returned_data;
 
-    bool ok = THEKERNEL->public_data->get_value( player_checksum, is_playing_checksum, &returned_data );
+    bool ok = PublicData::get_value( player_checksum, is_playing_checksum, &returned_data );
     if (ok) {
         bool b = *static_cast<bool *>(returned_data);
         return b;
@@ -583,7 +583,7 @@ void  Panel::set_playing_file(string f)
 static float getTargetTemperature(uint16_t heater_cs)
 {
     void *returned_data;
-    bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
+    bool ok = PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
 
     if (ok) {
         struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
@@ -606,7 +606,7 @@ void Panel::setup_temperature_screen()
     for(auto i : modules) {
         if (!THEKERNEL->config->value(temperature_control_checksum, i, enable_checksum )->as_bool()) continue;
         void *returned_data;
-        bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, i, current_temperature_checksum, &returned_data );
+        bool ok = PublicData::get_value( temperature_control_checksum, i, current_temperature_checksum, &returned_data );
         if (!ok) continue;
 
         struct pad_temperature t =  *static_cast<struct pad_temperature *>(returned_data);
@@ -619,7 +619,7 @@ void Panel::setup_temperature_screen()
 
         mvs->addMenuItem(name, // menu name
             [i]() -> float { return getTargetTemperature(i); }, // getter
-            [i](float t) { THEKERNEL->public_data->set_value( temperature_control_checksum, i, &t ); }, // setter
+            [i](float t) { PublicData::set_value( temperature_control_checksum, i, &t ); }, // setter
             1.0F, // increment
             0.0F, // Min
             500.0F // Max

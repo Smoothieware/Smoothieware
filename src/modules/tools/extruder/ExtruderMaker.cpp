@@ -5,9 +5,9 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "ExtruderMaker.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "ExtruderMaker.h"
 #include "Extruder.h"
 #include "Config.h"
 #include "ToolManager.h"
@@ -23,7 +23,7 @@ using namespace std;
 #define extruder_checksum                    CHECKSUM("extruder")
 #define enable_checksum                      CHECKSUM("enable")
 
-void ExtruderMaker::on_module_loaded(){
+void ExtruderMaker::load_tools(){
 
     // If there is a "single" extruder configured ( old config syntax from when there was only one extruder module, no pool/maker
     if( THEKERNEL->config->value( extruder_module_enable_checksum )->by_default(false)->as_bool() ){
@@ -45,52 +45,57 @@ void ExtruderMaker::on_module_loaded(){
 
     if(modules.size() == 0) {
         THEKERNEL->streams->printf("NOTE: No extruders configured\n");
-        // no extruders
-        delete this;
         return;
     }
 
-    if(modules.size() == 1) {
-        // only one extruder so no tool manager required
-        // If module is enabled
-        if( THEKERNEL->config->value(extruder_checksum, modules[0], enable_checksum )->as_bool() ){
-            THEKERNEL->streams->printf("NOTE: One extruder configured\n");
-            // Make a new extruder module
-            Extruder* extruder = new Extruder(modules[0]);
-            // Add the module to the kernel
-            THEKERNEL->add_module( extruder );
-            extruder->enable();
-
-        }else{
-            THEKERNEL->streams->printf("NOTE: No extruders enabled\n");
-            delete this;
-        }
-        return;
-    }
-
-    // ONLY do this if multitool enabled and more than one tool is defined
-    ToolManager *toolmanager= new ToolManager();
-    THEKERNEL->add_module( toolmanager );
-
-    // For every extruder found
+    // count number of enabled extruders
     int cnt= 0;
-    for( unsigned int i = 0; i < modules.size(); i++ ){
-        // If module is enabled
-        if( THEKERNEL->config->value(extruder_checksum, modules[i], enable_checksum )->as_bool() ){
-
-            // Make a new extruder module
-            Extruder* extruder = new Extruder(modules[i]);
-
-            // Add the module to the kernel
-            THEKERNEL->add_module( extruder );
-
-            // Add the module to the ToolsManager
-            toolmanager->add_tool( extruder );
-
+    for(auto cs : modules) {
+        if( THEKERNEL->config->value(extruder_checksum, cs, enable_checksum )->as_bool() ){
             cnt++;
         }
+    }
+
+    if(cnt == 0) {
+        THEKERNEL->streams->printf("NOTE: No extruders enabled\n");
+        return;
+    }
+
+    ToolManager *toolmanager= nullptr;
+    if(cnt > 1) {
+        // ONLY do this if multitool enabled and more than one tool is defined
+        toolmanager= new ToolManager();
+        THEKERNEL->add_module( toolmanager );
+
+    }else{
+        // only one extruder so no tool manager required
+        THEKERNEL->streams->printf("NOTE: One extruder configured and enabled\n");
+    }
+
+
+    // For every extruder found, setup the enabled ones
+    for(auto cs : modules){
+        // If module is enabled
+        if( THEKERNEL->config->value(extruder_checksum, cs, enable_checksum )->as_bool() ){
+
+            // Make a new extruder module
+            Extruder* extruder = new Extruder(cs);
+
+            // Add the Extruder module to the kernel
+            THEKERNEL->add_module( extruder );
+
+            if(toolmanager != nullptr) {
+                // Add the extruder module to the ToolsManager if it was created
+                toolmanager->add_tool( extruder );
+
+            }else{
+                // if not managed by toolmanager we need to enable the one extruder
+                extruder->enable();
+            }
+        }
 
     }
+
     THEKERNEL->streams->printf("NOTE: %d extruders enabled out of %d\n", cnt, modules.size());
 }
 

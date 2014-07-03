@@ -49,7 +49,6 @@ void Switch::on_module_loaded()
 {
     this->switch_changed = false;
 
-    register_for_event(ON_CONFIG_RELOAD);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_MAIN_LOOP);
@@ -222,6 +221,7 @@ void Switch::on_set_public_data(void *argument)
     } else if(pdr->third_element_is(value_checksum)) {
         float t = *static_cast<float *>(pdr->get_data_ptr());
         this->switch_value = t;
+        this->switch_changed= true;
         pdr->set_taken();
     }
 }

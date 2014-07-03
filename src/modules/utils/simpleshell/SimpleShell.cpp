@@ -26,6 +26,7 @@
 #include "modules/robot/RobotPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
+#include "SwitchPublicAccess.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -57,6 +58,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"mem",      SimpleShell::mem_command},
     {"get",      SimpleShell::get_command},
     {"set_temp", SimpleShell::set_temp_command},
+    {"switch",   SimpleShell::switch_command},
     {"net",      SimpleShell::net_command},
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
@@ -145,7 +147,7 @@ void SimpleShell::on_second_tick(void *)
 void SimpleShell::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
-    string args= get_arguments(gcode->command);
+    string args= get_arguments(gcode->get_command());
 
     if (gcode->has_m) {
         if (gcode->m == 20) { // list sd card
@@ -388,7 +390,7 @@ static uint32_t getDeviceType()
 void SimpleShell::net_command( string parameters, StreamOutput *stream)
 {
     void *returned_data;
-    bool ok= THEKERNEL->public_data->get_value( network_checksum, get_ipconfig_checksum, &returned_data );
+    bool ok= PublicData::get_value( network_checksum, get_ipconfig_checksum, &returned_data );
     if(ok) {
         char *str= (char *)returned_data;
         stream->printf("%s\r\n", str);
@@ -437,7 +439,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     if (what == "temp") {
         string type = shift_parameter( parameters );
-        bool ok = THEKERNEL->public_data->get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
+        bool ok = PublicData::get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
 
         if (ok) {
             struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
@@ -447,7 +449,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
     } else if (what == "pos") {
-        bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
+        bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &returned_data );
 
         if (ok) {
             float *pos = static_cast<float *>(returned_data);
@@ -465,12 +467,32 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     string type = shift_parameter( parameters );
     string temp = shift_parameter( parameters );
     float t = temp.empty() ? 0.0 : strtof(temp.c_str(), NULL);
-    bool ok = THEKERNEL->public_data->set_value( temperature_control_checksum, get_checksum(type), &t );
+    bool ok = PublicData::set_value( temperature_control_checksum, get_checksum(type), &t );
 
     if (ok) {
         stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
     } else {
         stream->printf("%s is not a known temperature device\r\n", type.c_str());
+    }
+}
+
+// used to test out the get public data events for switch
+void SimpleShell::switch_command( string parameters, StreamOutput *stream)
+{
+    string type = shift_parameter( parameters );
+    string value = shift_parameter( parameters );
+    bool ok= false;
+    if(value == "on" || value == "off") {
+        bool b= value == "on";
+        ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
+    }else{
+        float v = strtof(value.c_str(), NULL);
+        ok = PublicData::set_value( switch_checksum, get_checksum(type), value_checksum, &v );
+    }
+    if (ok) {
+        stream->printf("switch %s set to: %s\r\n", type.c_str(), value.c_str());
+    } else {
+        stream->printf("%s is not a known switch device\r\n", type.c_str());
     }
 }
 
@@ -492,7 +514,6 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("break - break into debugger\r\n");
     stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
-    stream->printf("config-load [<file_name>]\r\n");
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("get pos\r\n");

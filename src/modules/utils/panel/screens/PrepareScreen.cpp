@@ -78,16 +78,16 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
 void PrepareScreen::preheat()
 {
     float t = THEPANEL->get_default_hotend_temp();
-    THEKERNEL->public_data->set_value( temperature_control_checksum, hotend_checksum, &t );
+    PublicData::set_value( temperature_control_checksum, hotend_checksum, &t );
     t = THEPANEL->get_default_bed_temp();
-    THEKERNEL->public_data->set_value( temperature_control_checksum, bed_checksum, &t );
+    PublicData::set_value( temperature_control_checksum, bed_checksum, &t );
 }
 
 void PrepareScreen::cooldown()
 {
     float t = 0;
-    THEKERNEL->public_data->set_value( temperature_control_checksum, hotend_checksum, &t );
-    THEKERNEL->public_data->set_value( temperature_control_checksum, bed_checksum, &t );
+    PublicData::set_value( temperature_control_checksum, hotend_checksum, &t );
+    PublicData::set_value( temperature_control_checksum, bed_checksum, &t );
 }
 
 // queuing commands needs to be done from main loop
