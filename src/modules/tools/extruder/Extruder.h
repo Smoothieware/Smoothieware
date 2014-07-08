@@ -68,6 +68,8 @@ class Extruder : public Tool {
         float          retract_length;
         float          retract_recover_feedrate;
         float          retract_recover_length;
+        float          retract_zlift_length;
+        float          retract_zlift_feedrate;
 
         char mode;        // extruder motion mode,  OFF, SOLO, or FOLLOW
         struct {

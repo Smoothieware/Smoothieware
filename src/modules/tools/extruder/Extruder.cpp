@@ -56,6 +56,8 @@
 #define retract_feedrate_checksum            CHECKSUM("retract_feedrate")
 #define retract_recover_length_checksum      CHECKSUM("retract_recover_length")
 #define retract_recover_feedrate_checksum    CHECKSUM("retract_recover_feedrate")
+#define retract_zlift_length_checksum        CHECKSUM("retract_zlift_length")
+#define retract_zlift_feedrate_checksum      CHECKSUM("retract_zlift_feedrate")
 
 #define X_AXIS      0
 #define Y_AXIS      1
@@ -164,6 +166,8 @@ void Extruder::on_config_reload(void *argument)
     this->retract_feedrate         = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_feedrate_checksum)->by_default(45)->as_number();
     this->retract_recover_length   = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_recover_length_checksum)->by_default(0)->as_number();
     this->retract_recover_feedrate = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_recover_feedrate_checksum)->by_default(8)->as_number();
+    this->retract_zlift_length     = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_length_checksum)->by_default(0)->as_number();
+    this->retract_zlift_feedrate   = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_feedrate_checksum)->by_default(100)->as_number();
 
     this->update_steps_per_millimeter();
 }
@@ -265,10 +269,43 @@ void Extruder::on_gcode_received(void *argument)
         gcode->mark_as_taken();
 
     }else if( this->enabled && gcode->has_g && (gcode->g == 10 || gcode->g == 11) ) { // FW retract command
+        gcode->mark_as_taken();
+        // check we are in the correct state of retract or unretract
+        if(gcode->g == 10 && !retracted)
+            retracted= true;
+        else if(gcode->g == 11 && retracted)
+            retracted= false;
+        else
+            return; // ignore duplicates
+
+        // now we do a special hack to add zlift if needed, this should go in Robot but if it did the zlift would be executed before retract which is bad
+        // this way zlift will happen after retract, (or before for unretract) NOTE we call the robot->on_gcode_receive directly to avoid recursion
+        if(retract_zlift_length > 0 && gcode->g == 11) {
+            // reverse zlift happens before unretract
+            char buf[32];
+            int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4F", retract_zlift_length, retract_zlift_feedrate);
+            string cmd(buf, n);
+            Gcode gcode(cmd, &(StreamOutput::NullStream));
+            bool oldmode= THEKERNEL->robot->absolute_mode;
+            THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+            THEKERNEL->robot->on_gcode_received(&gcode); // send to robot directly
+            THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+        }
+
         // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
         THEKERNEL->conveyor->append_gcode(gcode);
         THEKERNEL->conveyor->queue_head_block();
-        gcode->mark_as_taken();
+
+        if(retract_zlift_length > 0 && gcode->g == 10) {
+            char buf[32];
+            int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4F", -retract_zlift_length, retract_zlift_feedrate);
+            string cmd(buf, n);
+            Gcode gcode(cmd, &(StreamOutput::NullStream));
+            bool oldmode= THEKERNEL->robot->absolute_mode;
+            THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+            THEKERNEL->robot->on_gcode_received(&gcode); // send to robot directly
+            THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+        }
     }
 }
 
@@ -312,18 +349,16 @@ void Extruder::on_gcode_execute(void *argument)
                 this->unstepped_distance = 0;
             }
 
-        } else if (gcode->g == 10 && this->enabled && !retracted) {
+        } else if (gcode->g == 10 && this->enabled) {
             // FW retract command
-            retracted= true;
             feed_rate= retract_feedrate; // mm/sec
             this->mode = SOLO;
             this->travel_distance = -retract_length;
             this->target_position += retract_length;
             this->en_pin.set(0);
 
-        } else if (gcode->g == 11 && this->enabled && retracted) {
+        } else if (gcode->g == 11 && this->enabled) {
             // un retract command
-            retracted= false;
             feed_rate= retract_recover_feedrate; // mm/sec
             this->mode = SOLO;
             this->travel_distance = (retract_length+retract_recover_length);
