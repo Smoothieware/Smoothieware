@@ -285,10 +285,10 @@ void Extruder::on_gcode_received(void *argument)
             char buf[32];
             int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4F", retract_zlift_length, retract_zlift_feedrate);
             string cmd(buf, n);
-            Gcode gcode(cmd, &(StreamOutput::NullStream));
+            Gcode gc(cmd, &(StreamOutput::NullStream));
             bool oldmode= THEKERNEL->robot->absolute_mode;
             THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
-            THEKERNEL->robot->on_gcode_received(&gcode); // send to robot directly
+            THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
             THEKERNEL->robot->absolute_mode= oldmode; // restore mode
         }
 
@@ -300,10 +300,10 @@ void Extruder::on_gcode_received(void *argument)
             char buf[32];
             int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4F", -retract_zlift_length, retract_zlift_feedrate);
             string cmd(buf, n);
-            Gcode gcode(cmd, &(StreamOutput::NullStream));
+            Gcode gc(cmd, &(StreamOutput::NullStream));
             bool oldmode= THEKERNEL->robot->absolute_mode;
             THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
-            THEKERNEL->robot->on_gcode_received(&gcode); // send to robot directly
+            THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
             THEKERNEL->robot->absolute_mode= oldmode; // restore mode
         }
     }
