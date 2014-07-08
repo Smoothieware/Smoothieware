@@ -63,11 +63,18 @@ class Extruder : public Tool {
         float          travel_ratio;
         float          travel_distance;
 
+        // for firmware retract
+        float          retract_feedrate;
+        float          retract_length;
+        float          retract_recover_feedrate;
+        float          retract_recover_length;
+
         char mode;        // extruder motion mode,  OFF, SOLO, or FOLLOW
         struct {
             bool absolute_mode:1; // absolute/relative coordinate mode switch
             bool paused:1;
             bool single_config:1;
+            bool retracted:1;
         };
 
         StepperMotor* stepper_motor;

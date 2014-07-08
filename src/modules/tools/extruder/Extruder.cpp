@@ -27,6 +27,7 @@
 
 #include <mri.h>
 
+// OLD config names for backwards compatibility, NOTE new configs will not be added here
 #define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
 #define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
 #define extruder_filament_diameter_checksum  CHECKSUM("extruder_filament_diameter")
@@ -36,6 +37,7 @@
 #define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
 #define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
 
+// NEW config names
 #define extruder_checksum                    CHECKSUM("extruder")
 
 #define default_feed_rate_checksum           CHECKSUM("default_feed_rate")
@@ -49,6 +51,11 @@
 #define x_offset_checksum                    CHECKSUM("x_offset")
 #define y_offset_checksum                    CHECKSUM("y_offset")
 #define z_offset_checksum                    CHECKSUM("z_offset")
+
+#define retract_length_checksum              CHECKSUM("retract_length")
+#define retract_feedrate_checksum            CHECKSUM("retract_feedrate")
+#define retract_recover_length_checksum      CHECKSUM("retract_recover_length")
+#define retract_recover_feedrate_checksum    CHECKSUM("retract_recover_feedrate")
 
 #define X_AXIS      0
 #define Y_AXIS      1
@@ -74,6 +81,7 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     this->paused        = false;
     this->single_config = single;
     this->identifier    = config_identifier;
+    this->retracted     = false;
 
     memset(this->offset, 0, sizeof(this->offset));
 }
@@ -108,7 +116,6 @@ void Extruder::on_module_loaded()
     // Stepper motor object for the extruder
     this->stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(step_pin, dir_pin, en_pin) );
     this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
-
 }
 
 // Get config
@@ -149,7 +156,14 @@ void Extruder::on_config_reload(void *argument)
         this->offset[X_AXIS] = THEKERNEL->config->value(extruder_checksum, this->identifier, x_offset_checksum          )->by_default(0)->as_number();
         this->offset[Y_AXIS] = THEKERNEL->config->value(extruder_checksum, this->identifier, y_offset_checksum          )->by_default(0)->as_number();
         this->offset[Z_AXIS] = THEKERNEL->config->value(extruder_checksum, this->identifier, z_offset_checksum          )->by_default(0)->as_number();
+
     }
+
+    // these are only supported in the new syntax, no need to be backward compatible as they did not exist before the change
+    this->retract_length           = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_length_checksum)->by_default(3)->as_number();
+    this->retract_feedrate         = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_feedrate_checksum)->by_default(45)->as_number();
+    this->retract_recover_length   = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_recover_length_checksum)->by_default(0)->as_number();
+    this->retract_recover_feedrate = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_recover_feedrate_checksum)->by_default(8)->as_number();
 
     this->update_steps_per_millimeter();
 }
@@ -211,34 +225,50 @@ void Extruder::on_gcode_received(void *argument)
             }
             gcode->mark_as_taken();
 
+        } else if (gcode->m == 207 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
+            // M207 - set retract length S[positive mm] F[feedrate mm/min]
+            if(gcode->has_letter('S')) retract_length = gcode->get_value('S');
+            if(gcode->has_letter('F')) retract_feedrate = gcode->get_value('F')/60.0F; // specified in mm/min converted to mm/sec
+            gcode->mark_as_taken();
+
+        } else if (gcode->m == 208 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
+            // M208 - set retract recover length S[positive mm surplus to the M207 S*] F[feedrate mm/min]
+            if(gcode->has_letter('S')) retract_recover_length = gcode->get_value('S');
+            if(gcode->has_letter('F')) retract_recover_feedrate = gcode->get_value('F')/60.0F; // specified in mm/min converted to mm/sec
+            gcode->mark_as_taken();
+
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             if( this->single_config ) {
                 gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter_setting);
                 gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f\n", this->filament_diameter);
+                gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4F\n", this->retract_length, this->retract_feedrate*60.0F);
+                gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4F\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F);
+
             } else {
                 gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", this->steps_per_millimeter_setting, this->identifier);
                 gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f P%d\n", this->filament_diameter, this->identifier);
+                gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4F P%d\n", this->retract_length, this->retract_feedrate*60.0F, this->identifier);
+                gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4F P%d\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F, this->identifier);
             }
             gcode->mark_as_taken();
-            return;
         }
-    }
 
     // Gcodes to pass along to on_gcode_execute
-    if( ( gcode->has_m && (gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ) {
+    }else if( ( gcode->has_m && (gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ) {
         THEKERNEL->conveyor->append_gcode(gcode);
-    }
+        gcode->mark_as_taken();
 
-    // Add to the queue for on_gcode_execute to process
-    if( gcode->has_g && gcode->g < 4 && gcode->has_letter('E') && this->enabled ) {
-        if( !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ) {
-            THEKERNEL->conveyor->append_gcode(gcode);
-            // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
-            THEKERNEL->conveyor->queue_head_block();
-        }
-    } else {
-        // This is for follow move
+    }else if( this->enabled && gcode->has_g && gcode->g < 4 && gcode->has_letter('E') && !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ) {
+        // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
+        THEKERNEL->conveyor->append_gcode(gcode);
+        THEKERNEL->conveyor->queue_head_block();
+        gcode->mark_as_taken();
 
+    }else if( this->enabled && gcode->has_g && (gcode->g == 10 || gcode->g == 11) ) { // FW retract command
+        // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
+        THEKERNEL->conveyor->append_gcode(gcode);
+        THEKERNEL->conveyor->queue_head_block();
+        gcode->mark_as_taken();
     }
 }
 
@@ -282,6 +312,24 @@ void Extruder::on_gcode_execute(void *argument)
                 this->unstepped_distance = 0;
             }
 
+        } else if (gcode->g == 10 && this->enabled && !retracted) {
+            // FW retract command
+            retracted= true;
+            feed_rate= retract_feedrate; // mm/sec
+            this->mode = SOLO;
+            this->travel_distance = -retract_length;
+            this->target_position += retract_length;
+            this->en_pin.set(0);
+
+        } else if (gcode->g == 11 && this->enabled && retracted) {
+            // un retract command
+            retracted= false;
+            feed_rate= retract_recover_feedrate; // mm/sec
+            this->mode = SOLO;
+            this->travel_distance = (retract_length+retract_recover_length);
+            this->target_position += this->travel_distance;
+            this->en_pin.set(0);
+
         } else if (((gcode->g == 0) || (gcode->g == 1)) && this->enabled) {
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )) {
@@ -296,7 +344,7 @@ void Extruder::on_gcode_execute(void *argument)
                 }
 
                 // If the robot is moving, we follow it's movement, otherwise, we move alone
-                if( fabs(gcode->millimeters_of_travel) < 0.0001 ) { // With floating numbers, we can have 0 != 0 ... beeeh. For more info see : http://upload.wikimedia.org/wikipedia/commons/0/0a/Cain_Henri_Vidal_Tuileries.jpg
+                if( fabs(gcode->millimeters_of_travel) < 0.0001F ) { // With floating numbers, we can have 0 != 0 ... beeeh. For more info see : http://upload.wikimedia.org/wikipedia/commons/0/0a/Cain_Henri_Vidal_Tuileries.jpg
                     this->mode = SOLO;
                     this->travel_distance = relative_extrusion_distance;
                 } else {
