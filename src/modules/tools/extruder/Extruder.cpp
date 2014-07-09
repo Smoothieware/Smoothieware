@@ -230,9 +230,11 @@ void Extruder::on_gcode_received(void *argument)
             gcode->mark_as_taken();
 
         } else if (gcode->m == 207 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
-            // M207 - set retract length S[positive mm] F[feedrate mm/min]
+            // M207 - set retract length S[positive mm] F[feedrate mm/min] Z[additional zlift/hop] Q[zlift feedrate mm/min]
             if(gcode->has_letter('S')) retract_length = gcode->get_value('S');
             if(gcode->has_letter('F')) retract_feedrate = gcode->get_value('F')/60.0F; // specified in mm/min converted to mm/sec
+            if(gcode->has_letter('Z')) retract_zlift_length = gcode->get_value('Z');
+            if(gcode->has_letter('Q')) retract_zlift_feedrate = gcode->get_value('Q');
             gcode->mark_as_taken();
 
         } else if (gcode->m == 208 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
@@ -245,14 +247,14 @@ void Extruder::on_gcode_received(void *argument)
             if( this->single_config ) {
                 gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter_setting);
                 gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f\n", this->filament_diameter);
-                gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4F\n", this->retract_length, this->retract_feedrate*60.0F);
-                gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4F\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F);
+                gcode->stream->printf(";E retract length, feedrate, zlift length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f\n", this->retract_length, this->retract_feedrate*60.0F, this->retract_zlift_length, this->retract_zlift_feedrate);
+                gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F);
 
             } else {
                 gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", this->steps_per_millimeter_setting, this->identifier);
                 gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f P%d\n", this->filament_diameter, this->identifier);
-                gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4F P%d\n", this->retract_length, this->retract_feedrate*60.0F, this->identifier);
-                gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4F P%d\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F, this->identifier);
+                gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f P%d\n", this->retract_length, this->retract_feedrate*60.0F, this->retract_zlift_length, this->retract_zlift_feedrate, this->identifier);
+                gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f P%d\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F, this->identifier);
             }
             gcode->mark_as_taken();
         }
@@ -283,7 +285,7 @@ void Extruder::on_gcode_received(void *argument)
         if(retract_zlift_length > 0 && gcode->g == 11) {
             // reverse zlift happens before unretract
             char buf[32];
-            int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4F", retract_zlift_length, retract_zlift_feedrate);
+            int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", -retract_zlift_length, retract_zlift_feedrate);
             string cmd(buf, n);
             Gcode gc(cmd, &(StreamOutput::NullStream));
             bool oldmode= THEKERNEL->robot->absolute_mode;
@@ -298,7 +300,7 @@ void Extruder::on_gcode_received(void *argument)
 
         if(retract_zlift_length > 0 && gcode->g == 10) {
             char buf[32];
-            int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4F", -retract_zlift_length, retract_zlift_feedrate);
+            int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", retract_zlift_length, retract_zlift_feedrate);
             string cmd(buf, n);
             Gcode gc(cmd, &(StreamOutput::NullStream));
             bool oldmode= THEKERNEL->robot->absolute_mode;

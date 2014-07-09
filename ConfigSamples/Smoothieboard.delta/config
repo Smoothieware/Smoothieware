@@ -78,10 +78,18 @@ extruder.hotend.step_pin                        2.3              # Pin for extru
 extruder.hotend.dir_pin                         0.22             # Pin for extruder dir signal
 extruder.hotend.en_pin                          0.21             # Pin for extruder enable signal
 
-# for now the first extruder's offsets should be left at 0 or homing will get confused
+# extruder offset
 #extruder.hotend.x_offset                        0                # x offset from origin in mm
 #extruder.hotend.y_offset                        0                # y offset from origin in mm
 #extruder.hotend.z_offset                        0                # z offset from origin in mm
+
+# firmware retract settings when using G10/G11, these are the defaults if not defined, must be defined for each extruder if not using the defaults
+#extruder.hotend.retract_length                  3               # retract length in mm (or mm^3 if in volumetric mode)
+#extruder.hotend.retract_feedrate                45              # retract feedrate in mm/sec
+#extruder.hotend.retract_recover_length          0               # additional length for recover
+#extruder.hotend.retract_recover_feedrate        8               # recover feedrate in mm/sec (should be less than retract feedrate)
+#extruder.hotend.retract_zlift_length            0               # zlift on retract in mm, 0 disables
+#extruder.hotend.retract_zlift_feedrate          6000            # zlift feedrate in mm/min (Note mm/min NOT mm/sec)
 
 delta_current                                1.5              # First extruder stepper motor current
 
