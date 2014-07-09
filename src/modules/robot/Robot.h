@@ -32,6 +32,7 @@ class Robot : public Module {
         float to_millimeters(float value);
         float from_millimeters(float value);
         float get_seconds_per_minute() const { return seconds_per_minute; }
+        float get_z_maxfeedrate() const { return this->max_speeds[2]; }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
