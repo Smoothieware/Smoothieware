@@ -84,6 +84,7 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     this->single_config = single;
     this->identifier    = config_identifier;
     this->retracted     = false;
+    this->volumetric_multiplier= 1.0F;
 
     memset(this->offset, 0, sizeof(this->offset));
 }
@@ -126,7 +127,7 @@ void Extruder::on_config_reload(void *argument)
     if( this->single_config ) {
         // If this module uses the old "single extruder" configuration style
 
-        this->steps_per_millimeter_setting = THEKERNEL->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->steps_per_millimeter        = THEKERNEL->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
         this->filament_diameter           = THEKERNEL->config->value(extruder_filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration                = THEKERNEL->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
         this->max_speed                   = THEKERNEL->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
@@ -145,7 +146,7 @@ void Extruder::on_config_reload(void *argument)
     } else {
         // If this module was created with the new multi extruder configuration style
 
-        this->steps_per_millimeter_setting = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
+        this->steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
         this->filament_diameter    = THEKERNEL->config->value(extruder_checksum, this->identifier, filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
         this->max_speed            = THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum         )->by_default(1000)->as_number();
@@ -169,7 +170,9 @@ void Extruder::on_config_reload(void *argument)
     this->retract_zlift_length     = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_length_checksum)->by_default(0)->as_number();
     this->retract_zlift_feedrate   = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_feedrate_checksum)->by_default(100*60)->as_number(); // mm/min
 
-    this->update_steps_per_millimeter();
+    if(filament_diameter > 0.01) {
+        this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
+    }
 }
 
 void Extruder::on_get_public_data(void* argument){
@@ -179,7 +182,7 @@ void Extruder::on_get_public_data(void* argument){
 
     if(this->enabled) {
         // Note this is allowing both step/mm and filament diameter to be exposed via public data
-        pdr->set_data_ptr(&this->steps_per_millimeter_setting);
+        pdr->set_data_ptr(&this->steps_per_millimeter);
         pdr->set_taken();
     }
 }
@@ -214,8 +217,7 @@ void Extruder::on_gcode_received(void *argument)
             float spm = this->steps_per_millimeter;
             if (gcode->has_letter('E')) {
                 spm = gcode->get_value('E');
-                this->steps_per_millimeter_setting = spm;
-                this->update_steps_per_millimeter();
+                this->steps_per_millimeter = spm;
             }
 
             gcode->stream->printf("E:%g ", spm);
@@ -225,7 +227,11 @@ void Extruder::on_gcode_received(void *argument)
         } else if (gcode->m == 200 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             if (gcode->has_letter('D')) {
                 this->filament_diameter = gcode->get_value('D');
-                this->update_steps_per_millimeter();
+                if(filament_diameter > 0.01) {
+                    this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
+                }else{
+                    this->volumetric_multiplier = 1.0F;
+                }
             }
             gcode->mark_as_taken();
 
@@ -245,13 +251,13 @@ void Extruder::on_gcode_received(void *argument)
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             if( this->single_config ) {
-                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter_setting);
+                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter);
                 gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f\n", this->filament_diameter);
                 gcode->stream->printf(";E retract length, feedrate, zlift length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f\n", this->retract_length, this->retract_feedrate*60.0F, this->retract_zlift_length, this->retract_zlift_feedrate);
                 gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F);
 
             } else {
-                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", this->steps_per_millimeter_setting, this->identifier);
+                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", this->steps_per_millimeter, this->identifier);
                 gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f P%d\n", this->filament_diameter, this->identifier);
                 gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f P%d\n", this->retract_length, this->retract_feedrate*60.0F, this->retract_zlift_length, this->retract_zlift_feedrate, this->identifier);
                 gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f P%d\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F, this->identifier);
@@ -356,14 +362,14 @@ void Extruder::on_gcode_execute(void *argument)
             feed_rate= retract_feedrate; // mm/sec
             this->mode = SOLO;
             this->travel_distance = -retract_length;
-            this->target_position += retract_length;
+            this->target_position += this->travel_distance;
             this->en_pin.set(0);
 
         } else if (gcode->g == 11 && this->enabled) {
             // un retract command
             feed_rate= retract_recover_feedrate; // mm/sec
             this->mode = SOLO;
-            this->travel_distance = (retract_length+retract_recover_length);
+            this->travel_distance = (retract_length + retract_recover_length);
             this->target_position += this->travel_distance;
             this->en_pin.set(0);
 
@@ -387,7 +393,7 @@ void Extruder::on_gcode_execute(void *argument)
                 } else {
                     // We move proportionally to the robot's movement
                     this->mode = FOLLOW;
-                    this->travel_ratio = relative_extrusion_distance / gcode->millimeters_of_travel;
+                    this->travel_ratio = (relative_extrusion_distance * this->volumetric_multiplier) / gcode->millimeters_of_travel; // adjust for volumetric extrusion
                     // TODO: check resulting flowrate, limit robot speed if it exceeds max_speed
                 }
 
@@ -422,12 +428,12 @@ void Extruder::on_block_begin(void *argument)
 
         this->current_position += this->travel_distance ;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter_setting * (this->travel_distance + this->unstepped_distance) )));
+        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) )));
 
         if ( this->travel_distance > 0 ) {
-            this->unstepped_distance += this->travel_distance - (steps_to_step / this->steps_per_millimeter_setting); //catch any overflow
+            this->unstepped_distance += this->travel_distance - (steps_to_step / this->steps_per_millimeter); //catch any overflow
         }   else {
-            this->unstepped_distance += this->travel_distance + (steps_to_step / this->steps_per_millimeter_setting); //catch any overflow
+            this->unstepped_distance += this->travel_distance + (steps_to_step / this->steps_per_millimeter); //catch any overflow
         }
 
         if( steps_to_step != 0 ) {
@@ -494,10 +500,10 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy)
     }
 
     uint32_t current_rate = this->stepper_motor->get_steps_per_second();
-    uint32_t target_rate = int(floor(this->feed_rate * this->steps_per_millimeter_setting)); // NOTE we use real steps here not the volumetric ones
+    uint32_t target_rate = int(floor(this->feed_rate * this->steps_per_millimeter));
 
     if( current_rate < target_rate ) {
-        uint32_t rate_increase = int(floor((this->acceleration / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * this->steps_per_millimeter_setting));
+        uint32_t rate_increase = int(floor((this->acceleration / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * this->steps_per_millimeter));
         current_rate = min( target_rate, current_rate + rate_increase );
     }
     if( current_rate > target_rate ) {
@@ -548,12 +554,3 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy)
     return 0;
 
 }
-
-void Extruder::update_steps_per_millimeter() {
-    if(this->filament_diameter > 0.01) {
-        this->steps_per_millimeter = this->steps_per_millimeter_setting / (powf(this->filament_diameter / 2, 2) * PI);
-    } else {
-        this->steps_per_millimeter = this->steps_per_millimeter_setting;
-    }
-}
-
