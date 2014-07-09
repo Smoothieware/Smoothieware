@@ -377,7 +377,7 @@ void Extruder::on_gcode_execute(void *argument)
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )) {
                 // Get relative extrusion distance depending on mode ( in absolute mode we must substract target_position )
-                float extrusion_distance = gcode->get_value('E')*volumetric_multiplier; // adjust for volumetric extrusion
+                float extrusion_distance = gcode->get_value('E');
                 float relative_extrusion_distance = extrusion_distance;
                 if (this->absolute_mode) {
                     relative_extrusion_distance -= this->target_position;
@@ -393,7 +393,7 @@ void Extruder::on_gcode_execute(void *argument)
                 } else {
                     // We move proportionally to the robot's movement
                     this->mode = FOLLOW;
-                    this->travel_ratio = relative_extrusion_distance / gcode->millimeters_of_travel;
+                    this->travel_ratio = (relative_extrusion_distance * this->volumetric_multiplier) / gcode->millimeters_of_travel; // adjust for volumetric extrusion
                     // TODO: check resulting flowrate, limit robot speed if it exceeds max_speed
                 }
 
