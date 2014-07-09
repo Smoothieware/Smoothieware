@@ -318,6 +318,12 @@ Z:<input type="text" id="z_velocity" size=3 value=200 style="width:40px">
         <td><input type="text" id="bed_value" size=3 style="width:40px" value=0></td>
         <td><button id="bed_set" onclick="heatSet(event)">Set</button></td>
       </tr>
+	  <tr>
+        <td style="text-align:right">Fan:</td>
+        <td><button id="Fan_OFF" onclick="runCommandSilent(&#39;M106 S0&#39;)">Off</button></td>
+        <td><button id="Fan_ON" onclick="runCommandSilent(&#39;M106 S255&#39;)">On </button></td>
+        <td></td>
+      </tr>
     </table>
   </td>
   <td valign="top">
@@ -364,7 +370,8 @@ mm/min
 </script>
 
 <h2> Upload File </h2>
-<input type="file" id="files" name="files[]" onchange="upload();">
+<input type="file" id="files" name="files[]"><br>
+<button id="upload" onclick="upload()">Upload</button>
 
 <h3>Uploading file(s)</h3>
 <output id="list"></output>
