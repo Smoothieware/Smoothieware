@@ -226,6 +226,7 @@ void Extruder::on_gcode_received(void *argument)
 
         } else if (gcode->m == 200 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             if (gcode->has_letter('D')) {
+                THEKERNEL->conveyor->wait_for_empty_queue(); // only apply after the queue has emptied
                 this->filament_diameter = gcode->get_value('D');
                 if(filament_diameter > 0.01) {
                     this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
