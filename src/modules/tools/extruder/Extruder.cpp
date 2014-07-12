@@ -205,7 +205,7 @@ void Extruder::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
 
-    // Gcodes to execute immediately
+    // M codes most execute immediately, most only execute if enabled
     if (gcode->has_m) {
         if (gcode->m == 114 && this->enabled) {
             char buf[16];
@@ -264,56 +264,64 @@ void Extruder::on_gcode_received(void *argument)
                 gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f P%d\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F, this->identifier);
             }
             gcode->mark_as_taken();
+
+        } else if( gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 ) {
+            // Mcodes to pass along to on_gcode_execute
+            THEKERNEL->conveyor->append_gcode(gcode);
+            gcode->mark_as_taken();
         }
 
-    // Gcodes to pass along to on_gcode_execute
-    }else if( ( gcode->has_m && (gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 ) ) || ( gcode->has_g && gcode->g == 92 && gcode->has_letter('E') ) || ( gcode->has_g && ( gcode->g == 90 || gcode->g == 91 ) ) ) {
-        THEKERNEL->conveyor->append_gcode(gcode);
-        gcode->mark_as_taken();
+    }else if(gcode->has_g) {
+        // G codes, NOTE some are ignored if not enabled
+        if( (gcode->g == 92 && gcode->has_letter('E')) || (gcode->g == 90 || gcode->g == 91) ) {
+            // Gcodes to pass along to on_gcode_execute
+            THEKERNEL->conveyor->append_gcode(gcode);
+            gcode->mark_as_taken();
 
-    }else if( this->enabled && gcode->has_g && gcode->g < 4 && gcode->has_letter('E') && !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ) {
-        // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
-        THEKERNEL->conveyor->append_gcode(gcode);
-        THEKERNEL->conveyor->queue_head_block();
-        gcode->mark_as_taken();
+        }else if( this->enabled && gcode->g < 4 && gcode->has_letter('E') && !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ) {
+            // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
+            THEKERNEL->conveyor->append_gcode(gcode);
+            THEKERNEL->conveyor->queue_head_block();
+            gcode->mark_as_taken();
 
-    }else if( this->enabled && gcode->has_g && (gcode->g == 10 || gcode->g == 11) ) { // FW retract command
-        gcode->mark_as_taken();
-        // check we are in the correct state of retract or unretract
-        if(gcode->g == 10 && !retracted)
-            retracted= true;
-        else if(gcode->g == 11 && retracted)
-            retracted= false;
-        else
-            return; // ignore duplicates
+        }else if( this->enabled && (gcode->g == 10 || gcode->g == 11) ) { // firmware retract command
+            gcode->mark_as_taken();
+            // check we are in the correct state of retract or unretract
+            if(gcode->g == 10 && !retracted)
+                retracted= true;
+            else if(gcode->g == 11 && retracted)
+                retracted= false;
+            else
+                return; // ignore duplicates
 
-        // now we do a special hack to add zlift if needed, this should go in Robot but if it did the zlift would be executed before retract which is bad
-        // this way zlift will happen after retract, (or before for unretract) NOTE we call the robot->on_gcode_receive directly to avoid recursion
-        if(retract_zlift_length > 0 && gcode->g == 11) {
-            // reverse zlift happens before unretract
-            char buf[32];
-            int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", -retract_zlift_length, retract_zlift_feedrate);
-            string cmd(buf, n);
-            Gcode gc(cmd, &(StreamOutput::NullStream));
-            bool oldmode= THEKERNEL->robot->absolute_mode;
-            THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
-            THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-            THEKERNEL->robot->absolute_mode= oldmode; // restore mode
-        }
+            // now we do a special hack to add zlift if needed, this should go in Robot but if it did the zlift would be executed before retract which is bad
+            // this way zlift will happen after retract, (or before for unretract) NOTE we call the robot->on_gcode_receive directly to avoid recursion
+            if(retract_zlift_length > 0 && gcode->g == 11) {
+                // reverse zlift happens before unretract
+                char buf[32];
+                int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", -retract_zlift_length, retract_zlift_feedrate);
+                string cmd(buf, n);
+                Gcode gc(cmd, &(StreamOutput::NullStream));
+                bool oldmode= THEKERNEL->robot->absolute_mode;
+                THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+                THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+                THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+            }
 
-        // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
-        THEKERNEL->conveyor->append_gcode(gcode);
-        THEKERNEL->conveyor->queue_head_block();
+            // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
+            THEKERNEL->conveyor->append_gcode(gcode);
+            THEKERNEL->conveyor->queue_head_block();
 
-        if(retract_zlift_length > 0 && gcode->g == 10) {
-            char buf[32];
-            int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", retract_zlift_length, retract_zlift_feedrate);
-            string cmd(buf, n);
-            Gcode gc(cmd, &(StreamOutput::NullStream));
-            bool oldmode= THEKERNEL->robot->absolute_mode;
-            THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
-            THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-            THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+            if(retract_zlift_length > 0 && gcode->g == 10) {
+                char buf[32];
+                int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", retract_zlift_length, retract_zlift_feedrate);
+                string cmd(buf, n);
+                Gcode gc(cmd, &(StreamOutput::NullStream));
+                bool oldmode= THEKERNEL->robot->absolute_mode;
+                THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+                THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+                THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+            }
         }
     }
 }
@@ -323,31 +331,35 @@ void Extruder::on_gcode_execute(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
 
-    // Absolute/relative mode
-    if( gcode->has_m ) {
-        if( gcode->m == 17 ) {
-            this->en_pin.set(0);
-        }
-        if( gcode->m == 18 ) {
-            this->en_pin.set(1);
-        }
-        if( gcode->m == 82 ) {
-            this->absolute_mode = true;
-        }
-        if( gcode->m == 83 ) {
-            this->absolute_mode = false;
-        }
-        if( gcode->m == 84 ) {
-            this->en_pin.set(1);
-        }
-    }
-
     // The mode is OFF by default, and SOLO or FOLLOW only if we need to extrude
     this->mode = OFF;
 
-    if( gcode->has_g ) {
+    // Absolute/relative mode, globably modal affect all extruders whether enabled or not
+    if( gcode->has_m ) {
+        switch(gcode->m) {
+        case 17:
+            this->en_pin.set(0);
+            break;
+        case 18:
+            this->en_pin.set(1);
+            break;
+        case 82: case 90:
+            this->absolute_mode = true;
+            break;
+        case 83: case 91:
+            this->absolute_mode = false;
+            break;
+        case 84:
+            this->en_pin.set(1);
+            break;
+        }
+        return;
+    }
+
+
+    if( gcode->has_g && this->enabled ) {
         // G92: Reset extruder position
-        if( gcode->g == 92 && this->enabled ) {
+        if( gcode->g == 92 ) {
             if( gcode->has_letter('E') ) {
                 this->current_position = gcode->get_value('E');
                 this->target_position  = this->current_position;
@@ -358,7 +370,7 @@ void Extruder::on_gcode_execute(void *argument)
                 this->unstepped_distance = 0;
             }
 
-        } else if (gcode->g == 10 && this->enabled) {
+        } else if (gcode->g == 10) {
             // FW retract command
             feed_rate= retract_feedrate; // mm/sec
             this->mode = SOLO;
@@ -366,7 +378,7 @@ void Extruder::on_gcode_execute(void *argument)
             this->target_position += this->travel_distance;
             this->en_pin.set(0);
 
-        } else if (gcode->g == 11 && this->enabled) {
+        } else if (gcode->g == 11) {
             // un retract command
             feed_rate= retract_recover_feedrate; // mm/sec
             this->mode = SOLO;
@@ -374,7 +386,7 @@ void Extruder::on_gcode_execute(void *argument)
             this->target_position += this->travel_distance;
             this->en_pin.set(0);
 
-        } else if (((gcode->g == 0) || (gcode->g == 1)) && this->enabled) {
+        } else if (gcode->g == 0 || gcode->g == 1) {
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )) {
                 // Get relative extrusion distance depending on mode ( in absolute mode we must substract target_position )
@@ -406,12 +418,6 @@ void Extruder::on_gcode_execute(void *argument)
                 if (feed_rate > max_speed)
                     feed_rate = max_speed;
             }
-
-        } else if( gcode->g == 90 ) {
-            this->absolute_mode = true;
-
-        } else if( gcode->g == 91 ) {
-            this->absolute_mode = false;
         }
     }
 
