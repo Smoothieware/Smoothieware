@@ -343,16 +343,20 @@ void Extruder::on_gcode_execute(void *argument)
         case 18:
             this->en_pin.set(1);
             break;
-        case 82: case 90:
+        case 82:
             this->absolute_mode = true;
             break;
-        case 83: case 91:
+        case 83:
             this->absolute_mode = false;
             break;
         case 84:
             this->en_pin.set(1);
             break;
         }
+        return;
+
+    } else if( gcode->has_g && (gcode->g == 90 || gcode->g == 91) ) {
+        this->absolute_mode = (gcode->g == 90);
         return;
     }
 
