@@ -22,9 +22,9 @@
 #include "EndstopsPublicAccess.h"
 #include "PublicData.h"
 
-#define scara_checksum           CHECKSUM("scara")
-#define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
-#define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
+#define scaracal_checksum CHECKSUM("scaracal")
+#define enable_checksum CHECKSUM("enable")
+#define slow_feedrate_checksum CHECKSUM("slow_feedrate")
 
 #define X_AXIS 0
 #define Y_AXIS 1
@@ -32,12 +32,11 @@
 
 #define STEPPER THEKERNEL->robot->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
-#define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
 
 void SCARAcal::on_module_loaded()
 {
     // if the module is disabled -> do nothing
-    if(!THEKERNEL->config->value( scara_checksum )->by_default(false)->as_bool()) {
+    if(!THEKERNEL->config->value( scaracal_checksum, enable_checksum )->by_default(false)->as_bool()) {
         // as this module is not needed free up the resource
         delete this;
         return;
@@ -52,12 +51,8 @@ void SCARAcal::on_module_loaded()
 
 void SCARAcal::on_config_reload(void *argument)
 {
-    this->slow_rate = THEKERNEL->config->value(slow_feedrate_checksum)->by_default(5)->as_number(); // feedrate in mm/sec
+    this->slow_rate = THEKERNEL->config->value( scaracal_checksum, slow_feedrate_checksum )->by_default(5)->as_number(); // feedrate in mm/sec
 
-}
-
-void SCARAcal::on_idle(void *argument)
-{
 }
 
 
@@ -130,7 +125,7 @@ void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
     n = snprintf(buf, sizeof(buf), " F%1.1f", feedrate * 60); // feed rate is converted to mm/min
     strncat(cmd, buf, n);
 
-    THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
+    //THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
 
     // send as a command line as may have multiple G codes in it
     struct SerialMessage message;
@@ -159,8 +154,7 @@ void SCARAcal::on_gcode_received(void *argument)
 
                 int n = snprintf(buf, sizeof(buf), "A: Th:%1.3f Ps:%1.3f Th-St:%1.3f",
                                  actuators[0],
-                                 actuators[1],
-                                 actuators[0]/90*STEPS_PER_MM(X_AXIS));    // determine steps per mm when theta arm 90deg.
+                                 actuators[1]);    // display actuator angles Theta and Psi.
                 gcode->txt_after_ok.append(buf, n);
                 gcode->mark_as_taken();
 
@@ -204,8 +198,8 @@ void SCARAcal::on_gcode_received(void *argument)
                     THEKERNEL->robot->get_axis_position(cartesian);                                // get actual position from robot
                     THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators ); // translate to get actuator position
 
-                    THEKERNEL->robot->actuators[0]->change_steps_per_mm(actuators[0] / target[0] * THEKERNEL->robot->actuators[0]->get_steps_per_mm());
-                    THEKERNEL->robot->actuators[1]->change_steps_per_mm(THEKERNEL->robot->actuators[0]->get_steps_per_mm());
+                    STEPPER[0]->change_steps_per_mm(actuators[0] / target[0] * STEPPER[0]->get_steps_per_mm()); // Find angle difference
+                    STEPPER[1]->change_steps_per_mm(STEPPER[0]->get_steps_per_mm());  // and change steps_per_mm to ensure correct steps per *angle* 
                 } else {
                     this->home();                                                   // home - This time leave trims as adjusted.
                     SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F); // move to target
@@ -225,12 +219,11 @@ void SCARAcal::on_gcode_received(void *argument)
                           actuators[3],
                           S_delta[2];
 
-                    THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
-                    THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate to get actuator position
+                    THEKERNEL->robot->get_axis_position(cartesian);                                     // get actual position from robot
+                    THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate it to get actual actuator angles
 
-                    S_delta[1] = actuators[1] - target[1];
-
-                    set_trim(S_trim[0], S_delta[1], 0, gcode->stream);
+                    S_delta[1] = actuators[1] - target[1];                 // Find difference, and 
+                    set_trim(S_trim[0], S_delta[1], 0, gcode->stream);     // set trim to reflect the difference
                 } else {
                     set_trim(S_trim[0], 0, 0, gcode->stream);               // reset trim for calibration move
                     this->home();                                                   // home

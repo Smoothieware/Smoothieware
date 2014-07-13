@@ -23,7 +23,7 @@ public:
     void on_config_reload(void *argument);
 
     void on_gcode_received(void *argument);
-    void on_idle(void *argument);
+//    void on_idle(void *argument);
 
 
 private:
