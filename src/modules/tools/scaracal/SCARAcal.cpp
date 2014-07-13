@@ -46,7 +46,6 @@ void SCARAcal::on_module_loaded()
     this->on_config_reload(this);
     // register event-handlers
     register_for_event(ON_GCODE_RECEIVED);
-    register_for_event(ON_IDLE);
 }
 
 void SCARAcal::on_config_reload(void *argument)
@@ -152,7 +151,7 @@ void SCARAcal::on_gcode_received(void *argument)
                 THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
                 THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate to get actuator position
 
-                int n = snprintf(buf, sizeof(buf), "A: Th:%1.3f Ps:%1.3f Th-St:%1.3f",
+                int n = snprintf(buf, sizeof(buf), "A: Th:%1.3f Ps:%1.3f",
                                  actuators[0],
                                  actuators[1]);    // display actuator angles Theta and Psi.
                 gcode->txt_after_ok.append(buf, n);
