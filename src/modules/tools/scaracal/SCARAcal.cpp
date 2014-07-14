@@ -106,7 +106,7 @@ void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
     THEKERNEL->robot->arm_solution->actuator_to_cartesian( actuator, cartesian );
 
     // Assemble Gcode to add onto the queue
-    sprintf(cmd, "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", cartesian[0], cartesian[1], cartesian[2], feedrate * 60); // use specified feedrate (mm/sec)
+    snprintf(cmd, sizeof(cmd), "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", cartesian[0], cartesian[1], cartesian[2], feedrate * 60); // use specified feedrate (mm/sec)
 
     //THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
 
