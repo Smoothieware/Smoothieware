@@ -93,9 +93,7 @@ bool SCARAcal::get_trim(float& x, float& y, float& z)
 
 void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
 {
-    char buf[32];
     char cmd[64];
-    unsigned int n;
     float actuator[3],
           cartesian[3];
 
@@ -108,30 +106,12 @@ void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
     THEKERNEL->robot->arm_solution->actuator_to_cartesian( actuator, cartesian );
 
     // Assemble Gcode to add onto the queue
-    strcpy(cmd, "G0 ");
-
-    n = snprintf(buf, sizeof(buf), " X%1.3f", cartesian[0]);
-    strncat(cmd, buf, n);
-
-    n = snprintf(buf, sizeof(buf), " Y%1.3f", cartesian[1]);
-    strncat(cmd, buf, n);
-
-    n = snprintf(buf, sizeof(buf), " Z%1.3f", cartesian[2]);
-    strncat(cmd, buf, n);
-    
-
-    // use specified feedrate (mm/sec)
-    n = snprintf(buf, sizeof(buf), " F%1.1f", feedrate * 60); // feed rate is converted to mm/min
-    strncat(cmd, buf, n);
+    sprintf(cmd, "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", cartesian[0], cartesian[1], cartesian[2], feedrate * 60); // use specified feedrate (mm/sec)
 
     //THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
 
-    // send as a command line as may have multiple G codes in it
-    struct SerialMessage message;
-    message.message = cmd;
-    message.stream = &(StreamOutput::NullStream);
-    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-    THEKERNEL->conveyor->wait_for_empty_queue();
+    Gcode gc(cmd, &(StreamOutput::NullStream));
+    THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
 }
 
 //A GCode has been received
@@ -151,7 +131,7 @@ void SCARAcal::on_gcode_received(void *argument)
                 THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
                 THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate to get actuator position
 
-                int n = snprintf(buf, sizeof(buf), "A: Th:%1.3f Ps:%1.3f",
+                int n = snprintf(buf, sizeof(buf), "  A: Th:%1.3f Ps:%1.3f",
                                  actuators[0],
                                  actuators[1]);    // display actuator angles Theta and Psi.
                 gcode->txt_after_ok.append(buf, n);
