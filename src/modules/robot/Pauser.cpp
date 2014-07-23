@@ -8,10 +8,15 @@
 #include <string>
 using namespace std;
 
-// The Pauser module is the core of the pausing subsystem in smoothie. Basically we want several modules to be able to pause smoothie at the same time 
-// ( think both the user with a button, and the temperature control because a temperature is not reached ). To do that, modules call the take() methode, 
-// a pause event is called, and the pause does not end before all modules have called the release() method. 
-// Please note : Modules should keep track of their pause status themselves
+// The Pauser module is the core of the pausing subsystem in smoothie.
+// Basically we want several modules to be able to pause smoothie at the same
+// time  ( think both the user with a button, and the temperature control
+// because a temperature is not reached ). To do that, modules call the take()
+// methode,  a pause event is called, and the pause does not end before all
+// modules have called the release() method.
+// Please note : Modules should keep track of their pause status themselves...
+// or Not for instance it may be better for the play/pause button to be able
+// to unpause when something else causes a pause
 Pauser::Pauser(){
     paused_block = NULL;
 }
@@ -43,9 +48,8 @@ void Pauser::take(){
 
 // Unpause smoothie unless something else is pausing it too
 void Pauser::release(){
-    this->counter--;
-    //THEKERNEL->streams->printf("release: %u \r\n", this->counter );
-    if( this->counter == 0 ){
+    if( --this->counter <= 0 ){
+        this->counter= 0;
         THEKERNEL->call_event(ON_PLAY, &this->counter);
         if (paused_block)
         {

@@ -64,7 +64,6 @@ void ZProbe::on_module_loaded()
     this->on_config_reload(this);
     // register event-handlers
     register_for_event(ON_GCODE_RECEIVED);
-    register_for_event(ON_IDLE);
 
     THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &ZProbe::acceleration_tick );
 }
@@ -118,10 +117,6 @@ bool ZProbe::wait_for_probe(int steps[3])
             debounce = 0;
         }
     }
-}
-
-void ZProbe::on_idle(void *argument)
-{
 }
 
 // single probe and report amount moved

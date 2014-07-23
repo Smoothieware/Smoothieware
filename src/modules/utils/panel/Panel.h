@@ -113,7 +113,7 @@ class Panel : public Module {
         volatile bool refresh_flag;
         volatile bool do_buttons;
         volatile bool do_encoder;
-        bool paused;
+
         int idle_time;
         bool start_up;
         int encoder_click_resolution;

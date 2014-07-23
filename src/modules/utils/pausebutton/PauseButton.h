@@ -16,7 +16,6 @@ class PauseButton : public Module {
         struct {
             bool enable:1;
             bool button_state:1;
-            bool play_state:1;
         };
 };
 
