@@ -235,7 +235,7 @@ void TemperatureControl::on_gcode_execute(void *argument)
             } else {
                 this->set_desired_temperature(v);
 
-                if( gcode->m == this->set_and_wait_m_code) {
+                if( gcode->m == this->set_and_wait_m_code && !this->waiting) {
                     THEKERNEL->pauser->take();
                     this->waiting = true;
                 }
