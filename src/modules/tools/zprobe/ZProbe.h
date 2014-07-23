@@ -22,7 +22,6 @@ public:
     void on_module_loaded();
     void on_config_reload(void *argument);
     void on_gcode_received(void *argument);
-    void on_idle(void *argument);
     uint32_t acceleration_tick(uint32_t dummy);
 
 
