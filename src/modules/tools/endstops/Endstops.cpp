@@ -219,7 +219,7 @@ void Endstops::on_idle(void *argument)
                     if ( ++debounce >= debounce_count ) {
                         // endstop triggered
                         THEKERNEL->pauser->take();
-                        THEKERNEL->streams->printf("Limit switch %s was hit - reset required\n", endstop_names[n]);
+                        THEKERNEL->streams->printf("Limit switch %s was hit - reset or press play button\n", endstop_names[n]);
                         this->status= LIMIT_TRIGGERED;
                         return;
                     }
@@ -230,6 +230,7 @@ void Endstops::on_idle(void *argument)
 }
 
 // if limit switches are enabled, then we must move off of the endstop otherwise we won't be able to move
+// TODO should check if triggered and only back off if triggered
 void Endstops::back_off_home()
 {
     this->status = BACK_OFF_HOME;
@@ -526,6 +527,7 @@ void Endstops::on_gcode_received(void *argument)
             }
 
             // if limit switches are enabled we must back off endstop after setting home
+            // TODO should maybe be done before setting home so X0 does not retrigger?
             back_off_home();
         }
     } else if (gcode->has_m) {
