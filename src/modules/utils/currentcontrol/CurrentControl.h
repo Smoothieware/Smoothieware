@@ -32,16 +32,6 @@ class CurrentControl : public Module {
         void on_gcode_received(void *);
 
     private:
-        float alpha_current;
-        float beta_current;
-        float gamma_current;
-        float delta_current;
-        float epsilon_current;
-        float zeta_current;
-        float eta_current;
-        float theta_current;
-        float original_delta_current;
-
         DigipotBase* digipot;
 
 };
