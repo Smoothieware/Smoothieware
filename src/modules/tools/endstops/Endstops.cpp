@@ -533,15 +533,10 @@ void Endstops::on_gcode_received(void *argument)
     } else if (gcode->has_m) {
         switch (gcode->m) {
             case 119: {
-
-                int px = this->home_direction[0] ? 0 : 3;
-                int py = this->home_direction[1] ? 1 : 4;
-                int pz = this->home_direction[2] ? 2 : 5;
-                const char *mx = this->home_direction[0] ? "min" : "max";
-                const char *my = this->home_direction[1] ? "min" : "max";
-                const char *mz = this->home_direction[2] ? "min" : "max";
-
-                gcode->stream->printf("X %s:%d Y %s:%d Z %s:%d", mx, this->pins[px].get(), my, this->pins[py].get(), mz, this->pins[pz].get());
+                for (int i = 0; i < 6; ++i) {
+                    if(this->pins[i].connected())
+                        gcode->stream->printf("%s:%d ", endstop_names[i], this->pins[i].get());
+                }
                 gcode->add_nl= true;
                 gcode->mark_as_taken();
             }
