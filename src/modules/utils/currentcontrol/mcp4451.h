@@ -14,8 +14,7 @@ class MCP4451 : public DigipotBase {
             // I2C com
             this->i2c = new mbed::I2C(p9, p10);
             this->i2c->frequency(20000);
-            for (int i = 0; i < 8; i++)
-                currents[i] = 0.0;
+            for (int i = 0; i < 8; i++) currents[i] = -1;
         }
 
         ~MCP4451(){
@@ -24,6 +23,10 @@ class MCP4451 : public DigipotBase {
 
         void set_current( int channel, float current )
         {
+            if(current < 0) {
+                currents[channel]= -1;
+                return;
+            }
             current = min( (float) max( current, 0.0f ), this->max_current );
             currents[channel] = current;
             char addr = 0x58;

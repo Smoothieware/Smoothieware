@@ -16,11 +16,16 @@ class AD5206 : public DigipotBase {
             this->spi= new mbed::SPI(P0_9,P0_8,P0_7); //should be able to set those pins in config
             cs.from_string("4.29")->as_output(); //this also should be configurable
             cs.set(1);
+            for (int i = 0; i < 6; i++) currents[i] = -1;
         }
 
         void set_current( int channel, float current )
         {
 			if(channel<6){
+                if(current < 0) {
+                    currents[channel]= -1;
+                    return;
+                }
 				current = min( max( current, 0.0L ), 2.0L );
 				char adresses[6] = { 0x05, 0x03, 0x01, 0x00, 0x02, 0x04 };
 				currents[channel] = current;
@@ -41,7 +46,9 @@ class AD5206 : public DigipotBase {
 
         float get_current(int channel)
         {
-            return currents[channel];
+            if(channel < 6)
+                return currents[channel];
+            return -1;
         }
 
     private:
