@@ -59,6 +59,9 @@ void CurrentControl::on_module_loaded()
         digipot = new MCP4451();
     }
 
+    digipot->set_max_current( THEKERNEL->config->value(digipot_max_current )->by_default(2.0f)->as_number());
+    digipot->set_factor( THEKERNEL->config->value(digipot_factor )->by_default(113.33f)->as_number());
+
     // Get configuration
     this->digipot->set_current(0, THEKERNEL->config->value(alpha_current_checksum  )->by_default(0.8f)->as_number());
     this->digipot->set_current(1, THEKERNEL->config->value(beta_current_checksum   )->by_default(0.8f)->as_number());
@@ -69,8 +72,6 @@ void CurrentControl::on_module_loaded()
     this->digipot->set_current(6, THEKERNEL->config->value(eta_current_checksum    )->by_default(-1)->as_number());
     this->digipot->set_current(7, THEKERNEL->config->value(theta_current_checksum  )->by_default(-1)->as_number());
 
-    digipot->set_max_current( THEKERNEL->config->value(digipot_max_current )->by_default(2.0f)->as_number());
-    digipot->set_factor( THEKERNEL->config->value(digipot_factor )->by_default(113.33f)->as_number());
 
     this->register_for_event(ON_GCODE_RECEIVED);
 }
