@@ -14,6 +14,13 @@ using std::string;
 
 #include "libs/Module.h"
 
+typedef struct
+{
+    uint16_t numRows;
+    uint16_t numCols;
+    float *pData;
+} arm_bilinear_interp_instance;
+
 class Gcode;
 class BaseSolution;
 class StepperMotor;
@@ -33,6 +40,8 @@ class Robot : public Module {
         float from_millimeters(float value);
         float get_seconds_per_minute() const { return seconds_per_minute; }
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }
+
+        arm_bilinear_interp_instance bed_level_data;
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
@@ -55,6 +64,8 @@ class Robot : public Module {
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
         void clearToolOffset();
         void check_max_actuator_speeds();
+
+        float arm_bilinear_interp(float X, float Y);
 
         float last_milestone[3];                             // Last position, in millimeters
         bool  inch_mode;                                       // true for inch mode, false for millimeter mode ( default )

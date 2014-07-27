@@ -235,6 +235,53 @@ void Robot::on_config_reload(void *argument)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 
     //this->clearToolOffset();
+
+
+    // set dummy data in the bed leveling structure
+
+    this->bed_level_data.numRows = 5;
+    this->bed_level_data.numCols = 5;
+
+    this->bed_level_data.pData = (float*) malloc((this->bed_level_data.numRows) * this->bed_level_data.numCols *sizeof(float));
+
+    int i;
+    for (i=0; i<(this->bed_level_data.numRows * this->bed_level_data.numCols); i++){
+        this->bed_level_data.pData[i] = 0.0F;        // Clear the grid
+    }
+
+//4.20 3.20 2.60 2.50 2.70
+//4.30 3.40 2.80 2.70 3.00
+//4.90 4.00 3.40 3.30 3.60
+//5.70 4.80 4.40 4.30 4.50
+//6.70 5.90 5.50 5.40 5.60
+
+/*
+    this->bed_level_data.pData[0] = 4.20F;
+    this->bed_level_data.pData[1] = 4.30F;
+    this->bed_level_data.pData[2] = 4.90F;
+    this->bed_level_data.pData[3] = 5.70F;
+    this->bed_level_data.pData[4] = 6.70F;
+    this->bed_level_data.pData[5] = 3.20F;
+    this->bed_level_data.pData[6] = 3.40F;
+    this->bed_level_data.pData[7] = 4.00F;
+    this->bed_level_data.pData[8] = 4.80F;
+    this->bed_level_data.pData[9] = 5.90F;
+    this->bed_level_data.pData[10] = 2.60F;
+    this->bed_level_data.pData[11] = 2.80F;
+    this->bed_level_data.pData[12] = 3.40F;
+    this->bed_level_data.pData[13] = 4.40F;
+    this->bed_level_data.pData[14] = 5.50F;
+    this->bed_level_data.pData[15] = 2.50F;
+    this->bed_level_data.pData[16] = 2.70F;
+    this->bed_level_data.pData[17] = 3.30F;
+    this->bed_level_data.pData[18] = 4.30F;
+    this->bed_level_data.pData[19] = 5.40F;
+    this->bed_level_data.pData[20] = 2.70F;
+    this->bed_level_data.pData[21] = 3.30F;
+    this->bed_level_data.pData[22] = 3.60F;
+    this->bed_level_data.pData[23] = 4.50F;
+    this->bed_level_data.pData[24] = 5.60F;
+*/
 }
 
 // this does a sanity check that actuator speeds do not exceed steps rate capability
@@ -578,10 +625,21 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     float unit_vec[3];
     float actuator_pos[3];
     float millimeters_of_travel;
+    float target_zdelta;
+    float milestone_zdelta;
 
-    // find distance moved by each axis
-    for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
-        deltas[axis] = target[axis] - last_milestone[axis];
+    // find distance moved by each axis (X Y) 
+    for (int axis = X_AXIS; axis <= Y_AXIS; axis++)
+        deltas[axis] = (target[axis]  ) - (last_milestone[axis]  );
+
+    // calculate the corrected target Z endpoint for bed level
+    target_zdelta = this->arm_bilinear_interp(target[X_AXIS]/50.0F, target[Y_AXIS]/50.0F);
+    target[Z_AXIS] += target_zdelta;  // add zdelta to the target
+    milestone_zdelta = this->arm_bilinear_interp(last_milestone[X_AXIS]/50.0F, last_milestone[Y_AXIS]/50.0F);
+
+    // Find distance moved by Z including the bed leveling grid (This is transparent to the user and upper level firmware)
+    deltas[Z_AXIS] = (target[Z_AXIS] ) - // zdelta was already added...
+	           (last_milestone[Z_AXIS] + milestone_zdelta );
 
     // Compute how long this move moves, so we can attach it to the block for later use
     millimeters_of_travel = sqrtf( powf( deltas[X_AXIS], 2 ) +  powf( deltas[Y_AXIS], 2 ) +  powf( deltas[Z_AXIS], 2 ) );
@@ -600,7 +658,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
         }
     }
 
-    // find actuator position given cartesian position
+    // find new actuator position given cartesian position
     arm_solution->cartesian_to_actuator( target, actuator_pos );
 
     // check per-actuator speed limits
@@ -615,6 +673,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
 
     // Update the last_milestone to the current target for the next time we use last_milestone
+    target[Z_AXIS] -= target_zdelta;   // revert to actual Z for last_milestone assignment
     memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
 
 }
@@ -639,6 +698,18 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
     // In delta robots either mm_per_line_segment can be used OR delta_segments_per_second The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
+
+    // TODO When Grid Z level correction is implemented, the line must be sectioned in order to
+    // use the linear movement of the segmentation to our advantage.  This limits the amount of times
+    // we have to call the bilinear interpolation code.
+
+    //Bed is divided in sections of fixed sizes, starting at Bed center, working outwards.
+    // determine the sign of the X and Y vector in order to plan the sectioning of the line
+
+//    target[Z_AXIS] += this->arm_bilinear_interp( &this->bed_level_data, 26.0F, 50.5F);
+
+
+
     uint16_t segments;
 
     if(this->delta_segments_per_second > 1.0F) {
@@ -825,6 +896,45 @@ float Robot::theta(float x, float y)
             return(-M_PI - t);
         }
     }
+}
+
+float Robot::arm_bilinear_interp(float X,
+                                 float Y)
+{
+    int xIndex, yIndex, xIndex2, yIndex2;
+    float xdiff, ydiff;
+
+    float dCartX1, dCartX2;
+
+    xIndex = (int) X;                  // Get the current sector (X)
+    yIndex = (int) Y;                  // Get the current sector (Y)
+
+    // * Care taken for table outside boundary 
+    // * Returns zero output when values are outside table boundary 
+    if(xIndex < 0 || xIndex > (this->bed_level_data.numRows - 1) || yIndex < 0
+       || yIndex > (this->bed_level_data.numCols - 1))
+    {
+      return (0);
+    }
+
+    if (xIndex == (this->bed_level_data.numRows - 1))
+        xIndex2 = xIndex;
+    else
+        xIndex2 = xIndex+1;
+
+    if (yIndex == (this->bed_level_data.numCols - 1))
+        yIndex2 = yIndex;
+    else
+        yIndex2 = yIndex+1;
+  
+    xdiff = X - xIndex;                    // Find floating point
+    ydiff = Y - yIndex;                    // Find floating point
+
+    dCartX1 = (1-xdiff) * this->bed_level_data.pData[(xIndex*this->bed_level_data.numCols)+yIndex] + (xdiff) * this->bed_level_data.pData[(xIndex2)*this->bed_level_data.numCols+yIndex];
+    dCartX2 = (1-xdiff) * this->bed_level_data.pData[(xIndex*this->bed_level_data.numCols)+yIndex2] + (xdiff) * this->bed_level_data.pData[(xIndex2)*this->bed_level_data.numCols+yIndex2];
+
+    return ydiff * dCartX2 + (1-ydiff) * dCartX1;    // Calculated Z-delta  
+
 }
 
 void Robot::select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2)

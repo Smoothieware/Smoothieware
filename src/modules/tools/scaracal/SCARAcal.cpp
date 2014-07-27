@@ -21,6 +21,8 @@
 #include "SerialMessage.h"
 #include "EndstopsPublicAccess.h"
 #include "PublicData.h"
+//#include "mbed.h"
+//#include "IAP.h"
 
 #define scaracal_checksum CHECKSUM("scaracal")
 #define enable_checksum CHECKSUM("enable")
@@ -51,6 +53,13 @@ void SCARAcal::on_module_loaded()
 void SCARAcal::on_config_reload(void *argument)
 {
     this->slow_rate = THEKERNEL->config->value( scaracal_checksum, slow_feedrate_checksum )->by_default(5)->as_number(); // feedrate in mm/sec
+
+    // tracking calibration positions for manual calibration of bed level
+    // TODO - remove this when probing sectoin done and working
+    this->cal[0] = 0;
+    this->cal[1] = 0;
+    this->cal[2] = 10;       // Bed moves in to 10mm off the nozzle to prevent damage
+    this->in_cal = false;
 
 }
 
@@ -91,9 +100,19 @@ bool SCARAcal::get_trim(float& x, float& y, float& z)
     return false;
 }
 
-void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
+void SCARAcal::move(float *position, float feed)
 {
     char cmd[64];
+
+    // Assemble Gcode to add onto the queue
+    snprintf(cmd, sizeof(cmd), "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", position[0], position[1], position[2], feed * 60); // use specified feedrate (mm/sec)
+
+    Gcode gc(cmd, &(StreamOutput::NullStream));
+    THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+}
+
+void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
+{
     float actuator[3],
           cartesian[3];
 
@@ -105,13 +124,29 @@ void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
     // Calculate the physical position relating to the arm angles
     THEKERNEL->robot->arm_solution->actuator_to_cartesian( actuator, cartesian );
 
-    // Assemble Gcode to add onto the queue
-    snprintf(cmd, sizeof(cmd), "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", cartesian[0], cartesian[1], cartesian[2], feedrate * 60); // use specified feedrate (mm/sec)
+    this->move(cartesian, feedrate);
+}
 
-    //THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
-
-    Gcode gc(cmd, &(StreamOutput::NullStream));
-    THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+void SCARAcal::next_cal(void){
+    if (this->cal[X_AXIS] == 50 || this->cal[X_AXIS] == 150){
+        this->cal[Y_AXIS] -= 50;
+        if (this->cal[Y_AXIS] < 0){
+            this->cal[Y_AXIS] = 0;
+            this->cal[X_AXIS] += 50;
+        }
+    }
+    else {
+        this->cal[Y_AXIS] += 50;
+        if (this->cal[Y_AXIS] > 200){
+            this->cal[X_AXIS] += 50;
+            if (this->cal[X_AXIS] > 200){
+                this->cal[X_AXIS] = 0;
+                this->cal[Y_AXIS] = 0;
+            }
+            else
+                this->cal[Y_AXIS] = 200;
+        }
+    }
 }
 
 //A GCode has been received
@@ -162,7 +197,7 @@ void SCARAcal::on_gcode_received(void *argument)
                 } else {
                     set_trim(0, S_trim[1], 0, gcode->stream);               // reset trim for calibration move
                     this->home();                                                   // home
-                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F); // move to target
+                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate); // move to target
                 }
                 gcode->mark_as_taken();
             }
@@ -181,7 +216,7 @@ void SCARAcal::on_gcode_received(void *argument)
                     STEPPER[1]->change_steps_per_mm(STEPPER[0]->get_steps_per_mm());  // and change steps_per_mm to ensure correct steps per *angle* 
                 } else {
                     this->home();                                                   // home - This time leave trims as adjusted.
-                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F); // move to target
+                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate); // move to target
                 }
                 gcode->mark_as_taken();
             }
@@ -206,11 +241,98 @@ void SCARAcal::on_gcode_received(void *argument)
                 } else {
                     set_trim(S_trim[0], 0, 0, gcode->stream);               // reset trim for calibration move
                     this->home();                                                   // home
-                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F); // move to target
+                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate); // move to target
                 }
                 gcode->mark_as_taken();
             }
             return;
+
+            //Additional section for Morgan bed calbration: M370 - M375
+            // M370: Clear current grid for calibration, and move to first position
+            case 370: {
+                this->home();
+                for (int i=0; i<25; i++){
+                    THEKERNEL->robot->bed_level_data.pData[i] = 0.0F;        // Clear the grid
+                }
+
+                this->cal[X_AXIS] = 0;                                              // Clear calibration position
+                this->cal[Y_AXIS] = 0;
+                this->in_cal = true;                                         // In calbration mode
+
+            }
+            return;
+            // M372: save current position in grid, and move to next initial position
+            case 372: {
+                if (in_cal){
+                    float cartesian[3];
+                    int pindex = 0;
+
+                    THEKERNEL->robot->get_axis_position(cartesian);         // get actual position from robot
+                    pindex = (int) ((cartesian[X_AXIS]/10.0F)+(cartesian[Y_AXIS]/50.0F));
+
+                    this->move(this->cal, slow_rate);                       // move to the next position
+                    this->next_cal();                                       // to not cause damage to machine due to Z-offset
+
+                    THEKERNEL->robot->bed_level_data.pData[pindex] = 0.0F + cartesian[Z_AXIS];  // save the offset
+
+                }                   
+            }
+            return;
+            // M371: Move to next initial position
+            case 371: {
+                if (in_cal){
+                    this->move(this->cal, slow_rate);
+                    this->next_cal();
+                }
+
+            }
+            return;
+            // M373: finalize calibration  
+            case 373: {
+                 this->in_cal = false;
+
+            }
+            return;
+            // M374: manually inject calibration - Alphabetical grid assignment
+            case 374: {
+                int i=0,
+                    x=0;
+                
+                if(gcode->has_letter('X')) { // Column nr (X)
+                    x = gcode->get_value('X');
+                }
+                if (x<5){                    // Only for valid rows
+                    for (i=0; i<5; i++){
+                        if(gcode->has_letter('A'+i)) {
+                            THEKERNEL->robot->bed_level_data.pData[i+(x*5)] = gcode->get_value('A'+i);
+                        }
+                    }
+                }    
+            }
+            return;
+            // M375: Display grid data in terminal
+            case 375: {
+                
+            }
+            return;
+            case 500: // M500 saves some volatile settings to config override file
+            case 503:  // M503 just prints the settings
+
+                // Bed grid data as gcode: Still not working right...
+                gcode->stream->printf(";Bed Level settings:\n");
+                int x,y;
+                for (x=0; x<5; x++){
+                    gcode->stream->printf("M374 X%i",x);
+                    for (y=0; y<5; y++){
+                         gcode->stream->printf(" %c%1.2f", 'A'+y, THEKERNEL->robot->bed_level_data.pData[(x*5)+y]);
+                    }
+                    gcode->stream->printf("\n"); 
+                }  
+                gcode->mark_as_taken();
+                break;
+            
+            return;
+
         }
     }    
 }

@@ -33,7 +33,12 @@ private:
 
     void SCARA_ang_move(float theta, float psi, float z, float feedrate);
 
+    void move(float *position, float feed);
+    void next_cal(void);
+
     float slow_rate;
+    float cal[3];            // calibration positions for manual leveling: TODO - remove when auto is functional
+    bool in_cal;
 
     struct {
         bool           is_scara:1;
