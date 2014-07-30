@@ -3,7 +3,7 @@
 ###  << three hashes indicate an option that will most likely need to be adjusted for your printer
 #    << one hash indicates the option is one that will less likely need to be revised 
 
-arm_solution                                 linear_delta     ### delta selection
+arm_solution                                 linear_delta     # delta selection
 arm_length                                   370.00           ### this is the length of an arm from hinge to hinge
 arm_radius                                   203.00           ### this is the horiontal distance from hinge to hinge when the effector is centered
 
