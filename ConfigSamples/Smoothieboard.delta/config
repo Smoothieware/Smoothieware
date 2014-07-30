@@ -66,6 +66,7 @@ uart0.baud_rate                              115200           # Baud rate for th
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface
                                                               # and a terminal connected)
 #leds_disable                                true             # disable using leds after config loaded
+#msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
 
 # Extruder module configuration
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
