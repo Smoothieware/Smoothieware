@@ -1,6 +1,12 @@
+#ifndef _DELTALEVELINGSTRATEGY
+#define _DELTALEVELINGSTRATEGY
+
 #include "LevelingStrategy.h"
 
+#define delta_calibration_strategy_checksum CHECKSUM("delta-calibration")
+
 class StreamOutput;
+
 class DeltaCalibrationStrategy : public LevelingStrategy
 {
 public:
@@ -18,3 +24,5 @@ private:
 
     float probe_radius;
 };
+
+#endif

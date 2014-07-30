@@ -13,7 +13,9 @@
 
 #include <vector>
 
-#define zprobe_checksum          CHECKSUM("zprobe")
+// defined here as they are used in multiple files
+#define zprobe_checksum            CHECKSUM("zprobe")
+#define leveling_strategy_checksum CHECKSUM("leveling-strategy")
 
 class StepperMotor;
 class Gcode;

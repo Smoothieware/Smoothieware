@@ -3,6 +3,9 @@
  * examples are delta calibration, three point bed leveling, z height map
  */
 
+#ifndef _LEVELINGSTRATEGY
+#define _LEVELINGSTRATEGY
+
 class ZProbe;
 class Gcode;
 
@@ -18,3 +21,4 @@ protected:
     ZProbe *zprobe;
 
 };
+#endif

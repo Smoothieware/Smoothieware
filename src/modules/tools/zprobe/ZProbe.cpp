@@ -25,6 +25,7 @@
 #include "EndstopsPublicAccess.h"
 #include "PublicData.h"
 #include "LevelingStrategy.h"
+#include "DeltaCalibrationStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
@@ -70,11 +71,38 @@ void ZProbe::on_config_reload(void *argument)
     this->debounce_count = THEKERNEL->config->value(zprobe_checksum, debounce_count_checksum)->by_default(0  )->as_number();
 
     // get strategies to load
+    vector<uint16_t> modules;
+    THEKERNEL->config->get_module_list( &modules, leveling_strategy_checksum);
+    for( auto cs : modules ){
+        if( THEKERNEL->config->value(leveling_strategy_checksum, cs, enable_checksum )->as_bool() ){
+            bool found= false;
+            // check with each known strategy and load it if it matches
+            switch(cs) {
+                case delta_calibration_strategy_checksum:
+                    this->strategies.push_back(new DeltaCalibrationStrategy(this));
+                    found= true;
+                    break;
+                // add other strategies here
+                //case three_point_plane_checksum:
+                //     this->strategies.push_back(new TheePointPlaneStrategey(this));
+                //     found= true;
+                //     break;
+                //case zheight_map_strategy:
+                //     this->strategies.push_back(new ZHeightMapStratergy(this));
+                //     found= true;
+                //     break;
+            }
+            if(found) this->strategies.back()->handleConfig();
+        }
+    }
+
+    this->is_delta = THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
 
     // default for backwards compatibility add DeltaCalibrationStrategy if a delta
-    this->is_delta = THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
-    if(this->is_delta) {
-
+    // will be DEPRECATED
+    if(this->strategies.empty()) {
+        if(this->is_delta) this->strategies.push_back(new DeltaCalibrationStrategy(this));
+        this->strategies.back()->handleConfig();
     }
 
     this->probe_height =  THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number();
@@ -218,11 +246,6 @@ void ZProbe::on_gcode_received(void *argument)
             int c = this->pin.get();
             gcode->stream->printf(" Probe: %d", c);
             gcode->add_nl = true;
-            gcode->mark_as_taken();
-
-        } else if (gcode->m == 557) { // P0 Xxxx Yyyy sets probe points for G32
-            // TODO will override the automatically calculated probe points for a delta, required for a cartesian
-
             gcode->mark_as_taken();
 
         }else {
