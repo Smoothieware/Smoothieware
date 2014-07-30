@@ -17,6 +17,7 @@ These are the quick steps to get Smoothie dependencies installed on your compute
 ==Building Smoothie
 From a shell, switch into the root Smoothie project directory and run:
 {{{
+rake webui  /compiles the web page, may need to touch the index.html prior
 make clean
 make all
 }}}
