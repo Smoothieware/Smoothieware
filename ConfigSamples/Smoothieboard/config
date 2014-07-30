@@ -59,6 +59,7 @@ second_usb_serial_enable                     false            # This enables a s
                                                               # and a terminal connected)
 #leds_disable                                true             # disable using leds after config loaded
 #play_led_disable                            true             # disable the play led
+#msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
 
 # Extruder module configuration
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -71,10 +72,18 @@ extruder.hotend.step_pin                        2.3              # Pin for extru
 extruder.hotend.dir_pin                         0.22             # Pin for extruder dir signal
 extruder.hotend.en_pin                          0.21             # Pin for extruder enable signal
 
-# for now the first extruder's offsets should be left at 0 or homing will get confused
+# extruder offset
 #extruder.hotend.x_offset                        0                # x offset from origin in mm
 #extruder.hotend.y_offset                        0                # y offset from origin in mm
 #extruder.hotend.z_offset                        0                # z offset from origin in mm
+
+# firmware retract settings when using G10/G11, these are the defaults if not defined, must be defined for each extruder if not using the defaults
+#extruder.hotend.retract_length                  3               # retract length in mm
+#extruder.hotend.retract_feedrate                45              # retract feedrate in mm/sec
+#extruder.hotend.retract_recover_length          0               # additional length for recover
+#extruder.hotend.retract_recover_feedrate        8               # recover feedrate in mm/sec (should be less than retract feedrate)
+#extruder.hotend.retract_zlift_length            0               # zlift on retract in mm, 0 disables
+#extruder.hotend.retract_zlift_feedrate          6000            # zlift feedrate in mm/min (Note mm/min NOT mm/sec)
 
 delta_current                                1.5              # First extruder stepper motor current
 
@@ -93,6 +102,7 @@ delta_current                                1.5              # First extruder s
 #extruder.hotend2.y_offset                        25.0             # y offset from origin in mm
 #extruder.hotend2.z_offset                        0                # z offset from origin in mm
 #epsilon_current                              1.5              # Second extruder stepper motor current
+
 
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is
@@ -181,7 +191,7 @@ switch.fan.output_type                       pwm              # pwm output setta
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
 #corexy_homing                               false            # set to true if homing on a hbit or corexy
 alpha_min_endstop                            1.24^            # add a ! to invert if endstop is NO connected to ground
-alpha_max_endstop                            1.25^            #
+alpha_max_endstop                            1.25^            # NOTE set to nc if this is not installed
 alpha_homing_direction                       home_to_min      # or set to home_to_max and set alpha_max
 alpha_min                                    0                # this gets loaded after homing when home_to_min is set
 alpha_max                                    200              # this gets loaded after homing when home_to_max is set
@@ -195,6 +205,11 @@ gamma_max_endstop                            1.29^            #
 gamma_homing_direction                       home_to_min      #
 gamma_min                                    0                #
 gamma_max                                    200              #
+
+# optional enable limit switches, actions will stop if any enabled limit switch is triggered
+#alpha_limit_enable                          false            # set to true to enable X min and max limit switches
+#beta_limit_enable                           false            # set to true to enable Y min and max limit switches
+#gamma_limit_enable                          false            # set to true to enable Z min and max limit switches
 
 alpha_fast_homing_rate_mm_s                  50               # feedrates in mm/second
 beta_fast_homing_rate_mm_s                   50               # "

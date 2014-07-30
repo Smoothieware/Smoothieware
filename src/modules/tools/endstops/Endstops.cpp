@@ -25,6 +25,8 @@
 #include "libs/StreamOutput.h"
 #include "PublicDataRequest.h"
 #include "EndstopsPublicAccess.h"
+#include "StreamOutputPool.h"
+#include "Pauser.h"
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1
@@ -32,11 +34,6 @@
 #define X_AXIS 0
 #define Y_AXIS 1
 #define Z_AXIS 2
-
-#define NOT_HOMING 0
-#define MOVING_TO_ORIGIN_FAST 1
-#define MOVING_BACK 2
-#define MOVING_TO_ORIGIN_SLOW 3
 
 #define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
 #define corexy_homing_checksum                  CHECKSUM("corexy_homing")
@@ -96,8 +93,22 @@
 #define beta_max_checksum                CHECKSUM("beta_max")
 #define gamma_max_checksum               CHECKSUM("gamma_max")
 
+#define alpha_limit_enable_checksum      CHECKSUM("alpha_limit_enable")
+#define beta_limit_enable_checksum       CHECKSUM("beta_limit_enable")
+#define gamma_limit_enable_checksum      CHECKSUM("gamma_limit_enable")
+
 #define STEPPER THEKERNEL->robot->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
+
+// Homing States
+enum{
+    NOT_HOMING,
+    MOVING_TO_ORIGIN_FAST,
+    MOVING_BACK,
+    MOVING_TO_ORIGIN_SLOW,
+    BACK_OFF_HOME,
+    LIMIT_TRIGGERED
+};
 
 Endstops::Endstops()
 {
@@ -180,6 +191,64 @@ void Endstops::on_config_reload(void *argument)
     this->trim_mm[0] = THEKERNEL->config->value(alpha_trim_checksum )->by_default(0  )->as_number();
     this->trim_mm[1] = THEKERNEL->config->value(beta_trim_checksum  )->by_default(0  )->as_number();
     this->trim_mm[2] = THEKERNEL->config->value(gamma_trim_checksum )->by_default(0  )->as_number();
+
+    // limits enabled
+    this->limit_enable[X_AXIS]= THEKERNEL->config->value(alpha_limit_enable_checksum)->by_default(false)->as_bool();
+    this->limit_enable[Y_AXIS]= THEKERNEL->config->value(beta_limit_enable_checksum)->by_default(false)->as_bool();
+    this->limit_enable[Z_AXIS]= THEKERNEL->config->value(gamma_limit_enable_checksum)->by_default(false)->as_bool();
+
+    if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]){
+        register_for_event(ON_IDLE);
+    }
+}
+
+static const char *endstop_names[]= {"MIN_X", "MIN_Y", "MIN_Z", "MAX_X", "MAX_Y", "MAX_Z"};
+
+void Endstops::on_idle(void *argument)
+{
+    if(this->status != NOT_HOMING) return; // don't check while homing or if a LIMIT was triggered
+
+    for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        if(this->limit_enable[c] && STEPPER[c]->is_moving()) {
+            std::array<int, 2> minmax{{0, 3}};
+            // check min and max endstops
+            for (int i : minmax) {
+                int n= c+i;
+                uint8_t debounce= 0;
+                while(this->pins[n].get()) {
+                    if ( ++debounce >= debounce_count ) {
+                        // endstop triggered
+                        THEKERNEL->pauser->take();
+                        THEKERNEL->streams->printf("Limit switch %s was hit - reset or press play button\n", endstop_names[n]);
+                        this->status= LIMIT_TRIGGERED;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// if limit switches are enabled, then we must move off of the endstop otherwise we won't be able to move
+// TODO should check if triggered and only back off if triggered
+void Endstops::back_off_home()
+{
+    this->status = BACK_OFF_HOME;
+    for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        if(this->limit_enable[c]) {
+            // Move off of the endstop using a regular relative move
+            char buf[32];
+            snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->slow_rates[c]*60.0F);
+            Gcode gc(buf, &(StreamOutput::NullStream));
+            bool oldmode= THEKERNEL->robot->absolute_mode;
+            THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+            THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+            THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+        }
+    }
+    // Wait for above to finish
+    THEKERNEL->conveyor->wait_for_empty_queue();
+    this->status = NOT_HOMING;
 }
 
 void Endstops::wait_for_homed(char axes_to_move)
@@ -456,19 +525,18 @@ void Endstops::on_gcode_received(void *argument)
                     THEKERNEL->robot->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
                 }
             }
+
+            // if limit switches are enabled we must back off endstop after setting home
+            // TODO should maybe be done before setting home so X0 does not retrigger?
+            back_off_home();
         }
     } else if (gcode->has_m) {
         switch (gcode->m) {
             case 119: {
-
-                int px = this->home_direction[0] ? 0 : 3;
-                int py = this->home_direction[1] ? 1 : 4;
-                int pz = this->home_direction[2] ? 2 : 5;
-                const char *mx = this->home_direction[0] ? "min" : "max";
-                const char *my = this->home_direction[1] ? "min" : "max";
-                const char *mz = this->home_direction[2] ? "min" : "max";
-
-                gcode->stream->printf("X %s:%d Y %s:%d Z %s:%d", mx, this->pins[px].get(), my, this->pins[py].get(), mz, this->pins[pz].get());
+                for (int i = 0; i < 6; ++i) {
+                    if(this->pins[i].connected())
+                        gcode->stream->printf("%s:%d ", endstop_names[i], this->pins[i].get());
+                }
                 gcode->add_nl= true;
                 gcode->mark_as_taken();
             }

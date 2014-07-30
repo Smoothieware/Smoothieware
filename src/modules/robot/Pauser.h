@@ -16,6 +16,7 @@ class Pauser : public Module {
 
         bool paused();
 
+    private:
         Block* paused_block;
         unsigned short counter;
 };

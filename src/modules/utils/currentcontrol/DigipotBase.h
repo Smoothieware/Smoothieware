@@ -1,11 +1,6 @@
 #ifndef DIGIPOTBASE_H
 #define DIGIPOTBASE_H
 
-#include "libs/Kernel.h"
-#include "libs/utils.h"
-#include <string>
-#include <math.h>
-
 class DigipotBase {
     public:
         DigipotBase(){}

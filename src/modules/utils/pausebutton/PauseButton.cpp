@@ -21,7 +21,6 @@ PauseButton::PauseButton(){}
 
 void PauseButton::on_module_loaded(){
     this->button_state = true;
-    this->play_state   = true;
 
     this->enable     =  THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool();
     this->button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input();
@@ -32,7 +31,7 @@ void PauseButton::on_module_loaded(){
 }
 
 //TODO: Make this use InterruptIn
-//Check the state of the button and act accordingly
+//Check the state of the button and act accordingly based on current pause state
 uint32_t PauseButton::button_tick(uint32_t dummy){
     if(!this->enable) return 0;
     // If button changed
@@ -41,12 +40,10 @@ uint32_t PauseButton::button_tick(uint32_t dummy){
         this->button_state = newstate;
         // If button pressed
         if( this->button_state ){
-            if( this->play_state ){
-                this->play_state = false;
-                THEKERNEL->pauser->take();
-            }else{
-                this->play_state = true;
+            if( THEKERNEL->pauser->paused() ){
                 THEKERNEL->pauser->release();
+            }else{
+                THEKERNEL->pauser->take();
             }
         }
     }
@@ -65,14 +62,12 @@ void PauseButton::on_console_line_received( void *argument )
     int checksum = get_checksum(shift_parameter(new_message.message));
 
     if (checksum == freeze_command_checksum) {
-        if( this->play_state ){
-            this->play_state = false;
+        if( !THEKERNEL->pauser->paused() ){
             THEKERNEL->pauser->take();
         }
-    }
-    else if (checksum == unfreeze_command_checksum) {
-        if( ! this->play_state ){
-            this->play_state = true;
+
+    }else if (checksum == unfreeze_command_checksum) {
+        if( THEKERNEL->pauser->paused() ){
             THEKERNEL->pauser->release();
         }
     }

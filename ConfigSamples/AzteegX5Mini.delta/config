@@ -52,6 +52,7 @@ z_axis_max_speed                             30000.0          # mm/min
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface and a terminal connected)
+#msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
 
 # Extruder module configuration
 extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false

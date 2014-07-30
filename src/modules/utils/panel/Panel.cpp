@@ -407,12 +407,10 @@ uint32_t Panel::on_select(uint32_t dummy)
 
 uint32_t Panel::on_pause(uint32_t dummy)
 {
-    if (!paused) {
+    if (!THEKERNEL->pauser->paused()) {
         THEKERNEL->pauser->take();
-        paused = true;
     } else {
         THEKERNEL->pauser->release();
-        paused = false;
     }
     return 0;
 }
