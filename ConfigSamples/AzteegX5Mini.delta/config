@@ -1,19 +1,22 @@
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 
-arm_solution                                 linear_delta     # delta selection
-arm_length                                   370.00           # this is the length of an arm from hinge to hinge
-arm_radius                                   203.00           # this is the horiontal distance from hinge to hinge when the effector is centered
+###  << three hashes indicate an option that will most likely need to be adjusted for your printer
+#    << one hash indicates the option is one that will less likely need to be revised 
+
+arm_solution                                 linear_delta     ### delta selection
+arm_length                                   370.00           ### this is the length of an arm from hinge to hinge
+arm_radius                                   203.00           ### this is the horiontal distance from hinge to hinge when the effector is centered
 
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
-#mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
-delta_segments_per_second                    100               # segments per second used for deltas
+#mm_per_line_segment                         5                # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
+delta_segments_per_second                    100              # segments per second used for deltas
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
-alpha_steps_per_mm                           100             # Steps per mm for alpha stepper
-beta_steps_per_mm                            100             # Steps per mm for beta stepper
-gamma_steps_per_mm                           100             # Steps per mm for gamma stepper
+alpha_steps_per_mm                           100              ### Steps per mm for alpha stepper
+beta_steps_per_mm                            100              ### Steps per mm for beta stepper
+gamma_steps_per_mm                           100              ### Steps per mm for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOUR ARE DOING
@@ -31,21 +34,21 @@ base_stepping_frequency                      100000           # Base frequency f
 alpha_step_pin                               2.1              # Pin for alpha stepper step signal
 alpha_dir_pin                                0.11             # Pin for alpha stepper direction
 alpha_en_pin                                 0.10             # Pin for alpha enable pin
-alpha_current                                1.0              # X stepper motor current
+alpha_current                                1.0              ### X stepper motor current
 alpha_max_rate                               30000.0          # mm/min actuator max speed
 x_axis_max_speed                             30000.0          # mm/min cartesian max speed
 
 beta_step_pin                                2.2              # Pin for beta stepper step signal
 beta_dir_pin                                 0.20             # Pin for beta stepper direction
 beta_en_pin                                  0.19             # Pin for beta enable
-beta_current                                 1.0              # Y stepper motor current
+beta_current                                 1.0              ### Y stepper motor current
 beta_max_rate                                30000.0          # mm/min
 y_axis_max_speed                             30000.0          # mm/min
 
 gamma_step_pin                               2.3              # Pin for gamma stepper step signal
 gamma_dir_pin                                0.22             # Pin for gamma stepper direction
 gamma_en_pin                                 0.21             # Pin for gamma enable
-gamma_current                                1.0              # Z stepper motor current
+gamma_current                                1.0              ### Z stepper motor current
 gamma_max_rate                               30000.0          # mm/min
 z_axis_max_speed                             30000.0          # mm/min
 
@@ -56,7 +59,7 @@ second_usb_serial_enable                     false            # This enables a s
 
 # Extruder module configuration
 extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
-extruder_steps_per_mm                        710.00           # Steps per mm for extruder stepper
+extruder_steps_per_mm                        710.00           ### Steps per mm for extruder stepper
 extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
 extruder_acceleration                        500              # Acceleration in mm/sec^2 only used for retracts
 extruder_max_speed                           25               # mm/sec NOTE only used for retracts
@@ -68,15 +71,15 @@ delta_current                                0.7              # Extruder stepper
 
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is ignored if false.
-#laser_module_pin                             2.7              # this pin will be PWMed to control the laser
-#laser_module_max_power                       0.8              # this is the maximum duty cycle that will be applied to the laser
-#laser_module_tickle_power                    0.0              # this duty cycle will be used for travel moves to keep the laser active without actually burning
+#laser_module_pin                             2.7             # this pin will be PWMed to control the laser
+#laser_module_max_power                       0.8             # this is the maximum duty cycle that will be applied to the laser
+#laser_module_tickle_power                    0.0             # this duty cycle will be used for travel moves to keep the laser active without actually burning
 
 # Hotend temperature control configuration
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all. All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.24             # Pin for the thermistor to read
 temperature_control.hotend.heater_pin        2.5              # Pin that controls the heater
-temperature_control.hotend.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64 for a list of valid thermistor names
+temperature_control.hotend.thermistor        EPCOS100K        ### see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64 for a list of valid thermistor names
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
@@ -91,7 +94,7 @@ temperature_control.bed.enable               false            #
 temperature_control.bed.thermistor_pin       0.23             #
 temperature_control.bed.heater_pin           2.7              #
 temperature_control.bed.beta                 4036             #
-temperature_control.bed.thermistor           EPCOSB57540G0104F000     # B57891S0104F008 Digikey 495-2164-ND
+temperature_control.bed.thermistor           EPCOSB57540G0104F000     ### B57891S0104F008 Digikey 495-2164-ND
 temperature_control.bed.set_m_code           140              #
 temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #
@@ -135,7 +138,7 @@ beta_max                                     0                #
 gamma_max_endstop                            1.28^            #
 gamma_homing_direction                       home_to_max      #
 gamma_min                                    0                #
-gamma_max                                    430              # change to suit your height
+gamma_max                                    430              ### change to suit your height
 
 #probe endstop
 #probe_pin                                   1.29             # optional pin for probe
