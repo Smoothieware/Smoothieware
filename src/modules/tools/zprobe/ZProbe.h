@@ -11,9 +11,16 @@
 #include "Module.h"
 #include "Pin.h"
 
+#include <vector>
+
+// defined here as they are used in multiple files
+#define zprobe_checksum            CHECKSUM("zprobe")
+#define leveling_strategy_checksum CHECKSUM("leveling-strategy")
+
 class StepperMotor;
 class Gcode;
 class StreamOutput;
+class LevelingStrategy;
 
 class ZProbe: public Module
 {
@@ -24,30 +31,31 @@ public:
     void on_gcode_received(void *argument);
     uint32_t acceleration_tick(uint32_t dummy);
 
-
-private:
     bool wait_for_probe(int steps[3]);
     bool run_probe(int& steps, bool fast= false);
-    bool probe_delta_tower(int& steps, float x, float y);
     bool return_probe(int steps);
-    bool calibrate_delta_endstops(Gcode *gcode);
-    bool calibrate_delta_radius(Gcode *gcode);
+
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();
-    bool set_trim(float x, float y, float z, StreamOutput *stream);
-    bool get_trim(float& x, float& y, float& z);
 
-    float          probe_radius;
-    float          probe_height;
-    float          current_feedrate;
-    float          slow_feedrate;
-    float          fast_feedrate;
-    Pin            pin;
-    uint8_t        debounce_count;
+    float getSlowFeedrate() { return slow_feedrate; }
+    float getFastFeedrate() { return fast_feedrate; }
+    float getProbeHeight() { return probe_height; }
+    float zsteps_to_mm(float steps);
+
+private:
+    float current_feedrate;
+    float slow_feedrate;
+    float fast_feedrate;
+    float probe_height;
     struct {
-        bool           running:1;
-        bool           is_delta:1;
+        bool running:1;
+        bool is_delta:1;
     };
+
+    Pin pin;
+    uint8_t debounce_count;
+    std::vector<LevelingStrategy*> strategies;
 };
 
 #endif /* ZPROBE_H_ */
