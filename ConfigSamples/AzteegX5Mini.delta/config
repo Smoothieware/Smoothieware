@@ -1,3 +1,5 @@
+# Smoothieware / ConfigSamples / AzteegX5Mini.delta / config
+
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 
 ###  << three hashes indicate an option that will most likely need to be adjusted for your printer
