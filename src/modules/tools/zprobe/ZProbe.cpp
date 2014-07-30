@@ -96,13 +96,16 @@ void ZProbe::on_config_reload(void *argument)
         }
     }
 
+    // need to know if we need to use delta kinematics for homing
     this->is_delta = THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
 
     // default for backwards compatibility add DeltaCalibrationStrategy if a delta
-    // will be DEPRECATED
+    // will be deprecated
     if(this->strategies.empty()) {
-        if(this->is_delta) this->strategies.push_back(new DeltaCalibrationStrategy(this));
-        this->strategies.back()->handleConfig();
+        if(this->is_delta) {
+            this->strategies.push_back(new DeltaCalibrationStrategy(this));
+            this->strategies.back()->handleConfig();
+        }
     }
 
     this->probe_height =  THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number();
@@ -203,7 +206,7 @@ void ZProbe::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
 
-    if( gcode->has_g) {
+    if( gcode->has_g && gcode->g >= 29 && gcode->g <= 32) {
         // G code processing
         if( gcode->g == 30 ) { // simple Z probe
             gcode->mark_as_taken();
@@ -231,6 +234,7 @@ void ZProbe::on_gcode_received(void *argument)
             }
 
         } else {
+            // find a strategy to handle the gcode
             for(auto s : strategies){
                 if(s->handleGcode(gcode)) {
                     gcode->mark_as_taken();
@@ -255,7 +259,6 @@ void ZProbe::on_gcode_received(void *argument)
                     return;
                 }
             }
-            gcode->stream->printf("No strategy found to handle M%d\n", gcode->m);
         }
     }
 }
@@ -331,4 +334,9 @@ void ZProbe::home()
 {
     Gcode gc("G28", &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+}
+
+float ZProbe::zsteps_to_mm(float steps)
+{
+    return steps / Z_STEPS_PER_MM;
 }

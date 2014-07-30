@@ -41,6 +41,7 @@ public:
     float getSlowFeedrate() { return slow_feedrate; }
     float getFastFeedrate() { return fast_feedrate; }
     float getProbeHeight() { return probe_height; }
+    float zsteps_to_mm(float steps);
 
 private:
     float current_feedrate;

@@ -17,27 +17,24 @@
 #include <tuple>
 #include <algorithm>
 
-#define X_AXIS 0
-#define Y_AXIS 1
-#define Z_AXIS 2
-
-// TODO refactor out
-#define STEPPER THEKERNEL->robot->actuators
-#define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
-#define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
-
-#define radius_checksum    CHECKSUM("radius")
+#define radius_checksum       CHECKSUM("radius")
+// deprecated
+#define probe_radius_checksum CHECKSUM("probe_radius")
 
 bool DeltaCalibrationStrategy::handleConfig()
 {
     // default is probably wrong
-    this->probe_radius = THEKERNEL->config->value(leveling_strategy_checksum, delta_calibration_strategy_checksum, radius_checksum)->by_default(100.0F)->as_number();
+    float r= THEKERNEL->config->value(leveling_strategy_checksum, delta_calibration_strategy_checksum, radius_checksum)->by_default(-1)->as_number();
+    if(r == -1) {
+        // deprecated config syntax]
+        r =  THEKERNEL->config->value(zprobe_checksum, probe_radius_checksum)->by_default(100.0F)->as_number();
+    }
+    this->probe_radius= r;
     return true;
 }
 
 bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
 {
-
     if( gcode->has_g) {
         // G code processing
         if( gcode->g == 32 ) { // auto calibration for delta, Z bed mapping for cartesian
@@ -61,12 +58,7 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
         }
 
     } else if(gcode->has_m) {
-                if (gcode->m == 557) { // P0 Xxxx Yyyy sets probe points for G32
-            // TODO will override the automatically calculated probe points for a delta, required for a cartesian
-
-            gcode->mark_as_taken();
-        }
-
+        // handle mcodes
     }
 
     return false;
@@ -147,7 +139,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
     int s;
     if(!zprobe->run_probe(s, true)) return false;
 
-    float bedht = s / Z_STEPS_PER_MM - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
+    float bedht = zprobe->zsteps_to_mm(s) - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
     gcode->stream->printf("Bed ht is %f mm\n", bedht);
 
     // move to start position
@@ -157,17 +149,17 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
     // get initial probes
     // probe the base of the X tower
     if(!probe_delta_tower(s, t1x, t1y)) return false;
-    float t1z = s / Z_STEPS_PER_MM;
+    float t1z = zprobe->zsteps_to_mm(s);
     gcode->stream->printf("T1-0 Z:%1.4f C:%d\n", t1z, s);
 
     // probe the base of the Y tower
     if(!probe_delta_tower(s, t2x, t2y)) return false;
-    float t2z = s / Z_STEPS_PER_MM;
+    float t2z = zprobe->zsteps_to_mm(s);
     gcode->stream->printf("T2-0 Z:%1.4f C:%d\n", t2z, s);
 
     // probe the base of the Z tower
     if(!probe_delta_tower(s, t3x, t3y)) return false;
-    float t3z = s / Z_STEPS_PER_MM;
+    float t3z = zprobe->zsteps_to_mm(s);
     gcode->stream->printf("T3-0 Z:%1.4f C:%d\n", t3z, s);
 
     float trimscale = 1.2522F; // empirically determined
@@ -193,17 +185,17 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
 
         // probe the base of the X tower
         if(!probe_delta_tower(s, t1x, t1y)) return false;
-        t1z = s / Z_STEPS_PER_MM;
+        t1z = zprobe->zsteps_to_mm(s);
         gcode->stream->printf("T1-%d Z:%1.4f C:%d\n", i, t1z, s);
 
         // probe the base of the Y tower
         if(!probe_delta_tower(s, t2x, t2y)) return false;
-        t2z = s / Z_STEPS_PER_MM;
+        t2z = zprobe->zsteps_to_mm(s);
         gcode->stream->printf("T2-%d Z:%1.4f C:%d\n", i, t2z, s);
 
         // probe the base of the Z tower
         if(!probe_delta_tower(s, t3x, t3y)) return false;
-        t3z = s / Z_STEPS_PER_MM;
+        t3z = zprobe->zsteps_to_mm(s);
         gcode->stream->printf("T3-%d Z:%1.4f C:%d\n", i, t3z, s);
 
         mm = std::minmax({t1z, t2z, t3z});
@@ -249,7 +241,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
     // find bed, then move to a point 5mm above it
     int s;
     if(!zprobe->run_probe(s, true)) return false;
-    float bedht = s / Z_STEPS_PER_MM - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
+    float bedht = zprobe->zsteps_to_mm(s) - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
     gcode->stream->printf("Bed ht is %f mm\n", bedht);
 
     zprobe->home();
@@ -258,8 +250,8 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
     // probe center to get reference point at this Z height
     int dc;
     if(!probe_delta_tower(dc, 0, 0)) return false;
-    gcode->stream->printf("CT Z:%1.3f C:%d\n", dc / Z_STEPS_PER_MM, dc);
-    float cmm = dc / Z_STEPS_PER_MM;
+    gcode->stream->printf("CT Z:%1.3f C:%d\n", zprobe->zsteps_to_mm(dc), dc);
+    float cmm = zprobe->zsteps_to_mm(dc);
 
     // get current delta radius
     float delta_radius = 0.0F;
@@ -278,14 +270,14 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
         // probe t1, t2, t3 and get average, but use coordinated moves, probing center won't change
         int dx, dy, dz;
         if(!probe_delta_tower(dx, t1x, t1y)) return false;
-        gcode->stream->printf("T1-%d Z:%1.3f C:%d\n", i, dx / Z_STEPS_PER_MM, dx);
+        gcode->stream->printf("T1-%d Z:%1.3f C:%d\n", i, zprobe->zsteps_to_mm(dx), dx);
         if(!probe_delta_tower(dy, t2x, t2y)) return false;
-        gcode->stream->printf("T2-%d Z:%1.3f C:%d\n", i, dy / Z_STEPS_PER_MM, dy);
+        gcode->stream->printf("T2-%d Z:%1.3f C:%d\n", i, zprobe->zsteps_to_mm(dy), dy);
         if(!probe_delta_tower(dz, t3x, t3y)) return false;
-        gcode->stream->printf("T3-%d Z:%1.3f C:%d\n", i, dz / Z_STEPS_PER_MM, dz);
+        gcode->stream->printf("T3-%d Z:%1.3f C:%d\n", i, zprobe->zsteps_to_mm(dz), dz);
 
         // now look at the difference and reduce it by adjusting delta radius
-        float m = ((dx + dy + dz) / 3.0F) / Z_STEPS_PER_MM;
+        float m = zprobe->zsteps_to_mm((dx + dy + dz) / 3.0F);
         float d = cmm - m;
         gcode->stream->printf("C-%d Z-ave:%1.4f delta: %1.3f\n", i, m, d);
 
