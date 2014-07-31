@@ -201,6 +201,19 @@ bool ZProbe::return_probe(int steps)
     return true;
 }
 
+bool ZProbe::doProbeAt(int &steps, float x, float y)
+{
+    int s;
+    // move to xy
+    coordinated_move(x, y, NAN, getFastFeedrate());
+    if(!run_probe(s)) return false;
+
+    // return to original Z
+    return_probe(s);
+    steps = s;
+
+    return true;
+}
 
 void ZProbe::on_gcode_received(void *argument)
 {
