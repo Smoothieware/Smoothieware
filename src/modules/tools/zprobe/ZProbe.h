@@ -35,6 +35,7 @@ public:
     bool run_probe(int& steps, bool fast= false);
     bool return_probe(int steps);
     bool doProbeAt(int &steps, float x, float y);
+    float probeDistance(float x, float y);
 
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();

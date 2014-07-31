@@ -215,6 +215,13 @@ bool ZProbe::doProbeAt(int &steps, float x, float y)
     return true;
 }
 
+float ZProbe::probeDistance(float x, float y)
+{
+    int s;
+    if(!doProbeAt(s, x, y)) return NAN;
+    return zsteps_to_mm(s);
+}
+
 void ZProbe::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
