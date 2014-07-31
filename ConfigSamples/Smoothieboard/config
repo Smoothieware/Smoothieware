@@ -224,6 +224,22 @@ gamma_homing_retract_mm                      1                # "
 
 #endstop_debounce_count                       100              # uncomment if you get noise on your endstops
 
+# optional Z probe
+zprobe.enable                                false           # set to true to enable a zprobe
+zprobe.probe_pin                             1.28!^          # pin probe is attached to if NC remove the !
+zprobe.slow_feedrate                         5               # mm/sec probe feed rate
+#zprobe.debounce_count                       100             # set if noisy
+zprobe.fast_feedrate                         100             # move feedrate mm/sec
+zprobe.probe_height                          5               # how much above bed to start probe
+#gamma_min_endstop                           nc              # normally 1.28. Change to nc to prevent conflict,
+
+# associated with zprobe the leveling strategy to use
+#leveling-strategy.three-point-leveling.enable   true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
+#leveling-strategy.three-point-leveling.point1   100.0,0.0   # the first probe point (x,y) optional may be defined with M557
+#leveling-strategy.three-point-leveling.point2   200.0,200.0 # the second probe point (x,y)
+#leveling-strategy.three-point-leveling.point3   0.0,200.0   # the third probe point (x,y)
+
+
 # Pause button
 pause_button_enable                          true             #
 

@@ -10,25 +10,39 @@
 #include "PublicData.h"
 #include "Conveyor.h"
 #include "ZProbe.h"
+#include "Plane3D.h"
 
 #include <string>
 #include <algorithm>
 #include <cstdlib>
+#include <cmath>
 
 #define probe_point_1_checksum       CHECKSUM("point1")
 #define probe_point_2_checksum       CHECKSUM("point2")
 #define probe_point_3_checksum       CHECKSUM("point3")
 
+ThreePointStrategy::ThreePointStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
+{
+    for (int i = 0; i < 3; ++i) {
+        probe_points[i] = std::make_tuple(NAN, NAN);
+    }
+    plane = nullptr;
+}
+
+ThreePointStrategy::~ThreePointStrategy()
+{
+    delete plane;
+}
 
 bool ThreePointStrategy::handleConfig()
 {
     // format is xxx,yyy for the probe points
-    std::string p1= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, probe_point_1_checksum)->by_default("")->as_string();
-    std::string p2= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, probe_point_2_checksum)->by_default("")->as_string();
-    std::string p3= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, probe_point_3_checksum)->by_default("")->as_string();
-    if(!p1.empty()) probe_points[0]= parseXY(p1.c_str());
-    if(!p2.empty()) probe_points[1]= parseXY(p2.c_str());
-    if(!p3.empty()) probe_points[2]= parseXY(p3.c_str());
+    std::string p1 = THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, probe_point_1_checksum)->by_default("")->as_string();
+    std::string p2 = THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, probe_point_2_checksum)->by_default("")->as_string();
+    std::string p3 = THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, probe_point_3_checksum)->by_default("")->as_string();
+    if(!p1.empty()) probe_points[0] = parseXY(p1.c_str());
+    if(!p2.empty()) probe_points[1] = parseXY(p2.c_str());
+    if(!p3.empty()) probe_points[2] = parseXY(p3.c_str());
     return true;
 }
 
@@ -41,7 +55,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->conveyor->wait_for_empty_queue();
             if(!doProbing(gcode->stream)) {
                 gcode->stream->printf("Probe failed to complete, probe not triggered\n");
-            }else{
+            } else {
                 gcode->stream->printf("Probe completed, bed plane defined\n");
             }
             return true;
@@ -49,17 +63,17 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 
     } else if(gcode->has_m) {
         if(gcode->m == 557) { // M557 - set probe points eg M557 P0 X30 Y40.5  where P is 0,1,2
-            int idx= 0;
-            float x= NAN, y= NAN;
-            if(gcode->has_letter('P')) idx= gcode->get_value('P');
-            if(gcode->has_letter('X')) x= gcode->get_value('X');
-            if(gcode->has_letter('Y')) y= gcode->get_value('Y');
+            int idx = 0;
+            float x = NAN, y = NAN;
+            if(gcode->has_letter('P')) idx = gcode->get_value('P');
+            if(gcode->has_letter('X')) x = gcode->get_value('X');
+            if(gcode->has_letter('Y')) y = gcode->get_value('Y');
             if(idx >= 0 && idx <= 2) {
-                probe_points[idx]= std::make_tuple(x, y);
+                probe_points[idx] = std::make_tuple(x, y);
             }
             return true;
 
-        }else if(gcode->m == 503) {
+        } else if(gcode->m == 503) {
             gcode->stream->printf(";Probe points:\n");
             for (int i = 0; i < 3; ++i) {
                 float x, y;
@@ -80,8 +94,8 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     for (int i = 0; i < 3; ++i) {
         std::tie(x, y) = probe_points[i];
         if(isnan(x) || isnan(y)) {
-             stream->printf("Probe point P%d has not been defined, use M557 P%d Xnnn Ynnn to define it\n", i, i);
-             return false;
+            stream->printf("Probe point P%d has not been defined, use M557 P%d Xnnn Ynnn to define it\n", i, i);
+            return false;
         }
     }
 
@@ -95,7 +109,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     Vector3 v[3];
     for (int i = 0; i < 3; ++i) {
         std::tie(x, y) = probe_points[i];
-        float z= zprobe->probeDistance(x, y) - zprobe->getProbeHeight(); // relative distance between the probe points
+        float z = zprobe->probeDistance(x, y) - zprobe->getProbeHeight(); // relative distance between the probe points
         if(isnan(z)) return false; // probe failed
         stream->printf("DEBUG: P%d:%1.4f\n", i, z);
         v[i].set(x, y, z);
@@ -103,7 +117,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 
     // define the plane
     delete this->plane;
-    this->plane= new Plane3D(v[0], v[1], v[2]);
+    this->plane = new Plane3D(v[0], v[1], v[2]);
 
     stream->printf("DEBUG: plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
 
@@ -118,12 +132,13 @@ float ThreePointStrategy::getZOffset(float x, float y)
 }
 
 // parse a "X,Y" string return x,y
-std::tuple<float, float> ThreePointStrategy::parseXY(const char *str){
-    float x=NAN, y=NAN;
+std::tuple<float, float> ThreePointStrategy::parseXY(const char *str)
+{
+    float x = NAN, y = NAN;
     char *p;
-    x= strtof(str, &p);
-    if(p+1 < str+strlen(str)) {
-        y= strtof(p+1, nullptr);
+    x = strtof(str, &p);
+    if(p + 1 < str + strlen(str)) {
+        y = strtof(p + 1, nullptr);
     }
     return std::make_tuple(x, y);
 }

@@ -25,7 +25,10 @@
 #include "EndstopsPublicAccess.h"
 #include "PublicData.h"
 #include "LevelingStrategy.h"
+
+// strategies we know about
 #include "DeltaCalibrationStrategy.h"
+#include "ThreePointStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
@@ -82,13 +85,16 @@ void ZProbe::on_config_reload(void *argument)
                     this->strategies.push_back(new DeltaCalibrationStrategy(this));
                     found= true;
                     break;
+
+                case three_point_leveling_strategy_checksum:
+                    // NOTE this strategy is mutually exclusive with the delta calibration strategy
+                    this->strategies.push_back(new ThreePointStrategy(this));
+                    found= true;
+                    break;
+
                 // add other strategies here
-                //case three_point_plane_checksum:
-                //     this->strategies.push_back(new TheePointPlaneStrategey(this));
-                //     found= true;
-                //     break;
                 //case zheight_map_strategy:
-                //     this->strategies.push_back(new ZHeightMapStratergy(this));
+                //     this->strategies.push_back(new ZHeightMapStrategy(this));
                 //     found= true;
                 //     break;
             }

@@ -2,21 +2,20 @@
 #define _THREEPOINTSTRATEGY
 
 #include "LevelingStrategy.h"
-#include "Plane3D.h"
 
 #include <string.h>
 #include <tuple>
-#include <cmath>
 
 #define three_point_leveling_strategy_checksum CHECKSUM("three-point-leveling")
 
 class StreamOutput;
+class Plane3D;
 
 class ThreePointStrategy : public LevelingStrategy
 {
 public:
-    ThreePointStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe){ for (int i = 0; i < 3; ++i) {probe_points[i]= std::make_tuple(NAN,NAN);}; plane= nullptr; }
-    ~ThreePointStrategy(){ delete plane; }
+    ThreePointStrategy(ZProbe *zprobe);
+    ~ThreePointStrategy();
     bool handleGcode(Gcode* gcode);
     bool handleConfig();
     float getZOffset(float x, float y);
