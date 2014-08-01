@@ -29,7 +29,7 @@ class Endstops : public Module{
         void wait_for_homed(char axes_to_move);
         void wait_for_homed_corexy(int axis);
         void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
-        void back_off_home();
+        void back_off_home(char axes_to_move);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
