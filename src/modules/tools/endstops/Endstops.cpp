@@ -230,12 +230,15 @@ void Endstops::on_idle(void *argument)
 }
 
 // if limit switches are enabled, then we must move off of the endstop otherwise we won't be able to move
-// TODO should check if triggered and only back off if triggered
-void Endstops::back_off_home()
+// checks if triggered and only backs off if triggered
+void Endstops::back_off_home(char axes_to_move)
 {
     this->status = BACK_OFF_HOME;
     for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
         if(this->limit_enable[c]) {
+            if( !this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) continue; // if not triggered no need to move off
+
             // Move off of the endstop using a regular relative move
             char buf[32];
             snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->slow_rates[c]*60.0F);
@@ -528,7 +531,7 @@ void Endstops::on_gcode_received(void *argument)
 
             // if limit switches are enabled we must back off endstop after setting home
             // TODO should maybe be done before setting home so X0 does not retrigger?
-            back_off_home();
+            back_off_home(axes_to_move);
         }
     } else if (gcode->has_m) {
         switch (gcode->m) {
