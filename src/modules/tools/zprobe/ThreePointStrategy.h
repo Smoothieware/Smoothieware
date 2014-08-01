@@ -21,6 +21,7 @@ public:
     float getZOffset(float x, float y);
 
 private:
+    void homeXY();
     bool doProbing(StreamOutput *stream);
     std::tuple<float, float> parseXY(const char *str);
 

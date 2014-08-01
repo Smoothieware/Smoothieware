@@ -80,11 +80,18 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
                 std::tie(x, y) = probe_points[i];
                 gcode->stream->printf("M557 P%d X%1.5f Y%1.5f\n", i, x, y);
             }
+            // TODO encode plane if set and M500
             return true;
         }
     }
 
     return false;
+}
+
+void ThreePointStrategy::homeXY()
+{
+    Gcode gc("G28 X0 Y0", &(StreamOutput::NullStream));
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 }
 
 bool ThreePointStrategy::doProbing(StreamOutput *stream)
@@ -99,27 +106,47 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         }
     }
 
-    // home presuming a cartesian homing to 0,0,0
-    zprobe->home();
+    // home X & Y
+    homeXY();
 
-    // move to start position and probe from there
+    // move to the first probe point
+    std::tie(x, y) = probe_points[0];
+    zprobe->coordinated_move(x, y, NAN, zprobe->getFastFeedrate());
+
+    // for now we use probe to find bed and not the Z min endstop
+    // TODO this needs to be configurable to use min z or probe
+
+    // find bed via probe
+    int s;
+    if(!zprobe->run_probe(s, true)) return false;
+    // do we need to set set to Z == 0 here? as the rest is relative anyway
+
+    // move up to specified probe start position
     zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight(), zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
 
     // probe the three points
     Vector3 v[3];
     for (int i = 0; i < 3; ++i) {
         std::tie(x, y) = probe_points[i];
-        float z = zprobe->probeDistance(x, y) - zprobe->getProbeHeight(); // relative distance between the probe points
+        float z = zprobe->probeDistance(x, y);
         if(isnan(z)) return false; // probe failed
+        z -= zprobe->getProbeHeight(); // relative distance between the probe points
         stream->printf("DEBUG: P%d:%1.4f\n", i, z);
         v[i].set(x, y, z);
     }
 
     // define the plane
     delete this->plane;
-    this->plane = new Plane3D(v[0], v[1], v[2]);
-
-    stream->printf("DEBUG: plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
+    if(v[0][2] == v[1][2] && v[1][2] == v[2][2]) {
+        this->plane= nullptr; // plane is flat no need to do anything
+        stream->printf("DEBUG: flat plane\n");
+        // THEKERNEL->robot->adjustZfnc= nullptr;
+    }else{
+        this->plane = new Plane3D(v[0], v[1], v[2]);
+        stream->printf("DEBUG: plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
+        // TODO set the adjustZfnc in robot
+        // THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->getZOffset(x, y); }
+    }
 
     return true;
 }
@@ -127,8 +154,8 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 // find the Z offset for the point on the plane at x, y
 float ThreePointStrategy::getZOffset(float x, float y)
 {
-    if(plane == nullptr) return NAN;
-    return plane->getz(x, y);
+    if(this->plane == nullptr) return NAN;
+    return this->plane->getz(x, y);
 }
 
 // parse a "X,Y" string return x,y

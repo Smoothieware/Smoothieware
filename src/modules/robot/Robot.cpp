@@ -579,6 +579,10 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     float actuator_pos[3];
     float millimeters_of_travel;
 
+    // TODO check function pointer and call if set to adjust Z for bed leveling
+    // std::function<float(float,float)> adjustZfnc;
+    // if(adjustZfnc) { target[Z_AXIS] += adjustZfnc(target[X_AXIS], target[Y_AXIS]); }
+
     // find distance moved by each axis
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
         deltas[axis] = target[axis] - last_milestone[axis];
