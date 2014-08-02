@@ -53,9 +53,18 @@ bool ThreePointStrategy::handleConfig()
 
 bool ThreePointStrategy::handleGcode(Gcode *gcode)
 {
-    if( gcode->has_g) {
+    if(gcode->has_g) {
         // G code processing
-        if( gcode->g == 32 ) { // three point probe
+        if( gcode->g == 31 ) { // report status
+            if(this->plane == nullptr) {
+                 gcode->stream->printf("Bed leveling plane is not set\n");
+            }else{
+                 gcode->stream->printf("Bed leveling plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
+            }
+            gcode->stream->printf("Probe is %s\n", zprobe->getProbeStatus() ? "Triggered" : "Not triggered");
+            return true;
+
+        } else if( gcode->g == 32 ) { // three point probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
             if(!doProbing(gcode->stream)) {
@@ -78,6 +87,12 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             }else{
                  gcode->stream->printf("only 3 probe points allowed P0-P2\n");
             }
+            return true;
+
+        } else if(gcode->m == 561) { // M561: Set Identity Transform
+            delete this->plane;
+            this->plane= nullptr;
+            // TODO delete the adjustZfnc in robot
             return true;
 
         } else if(gcode->m == 503) {

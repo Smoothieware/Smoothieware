@@ -40,6 +40,7 @@ public:
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();
 
+    bool getProbeStatus() { return this->pin.get(); }
     float getSlowFeedrate() { return slow_feedrate; }
     float getFastFeedrate() { return fast_feedrate; }
     float getProbeHeight() { return probe_height; }
