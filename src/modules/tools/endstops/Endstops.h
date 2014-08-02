@@ -36,6 +36,7 @@ class Endstops : public Module{
 
         float homing_position[3];
         float home_offset[3];
+        uint8_t homing_order;
         std::bitset<3> home_direction;
         std::bitset<3> limit_enable;
 

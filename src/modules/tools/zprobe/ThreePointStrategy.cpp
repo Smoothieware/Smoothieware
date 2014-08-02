@@ -106,6 +106,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         }
     }
 
+    // TODO allow for manual homing
     // home X & Y
     homeXY();
 
@@ -135,8 +136,11 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         v[i].set(x, y, z);
     }
 
+    // TODO if first point is not within toloerance of of probe height report it.
+
     // define the plane
     delete this->plane;
+    // TODO set a tolerance level here default 0.03mm
     if(v[0][2] == v[1][2] && v[1][2] == v[2][2]) {
         this->plane= nullptr; // plane is flat no need to do anything
         stream->printf("DEBUG: flat plane\n");
