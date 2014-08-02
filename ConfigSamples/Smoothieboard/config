@@ -238,10 +238,11 @@ zprobe.probe_height                          5               # how much above be
 #gamma_min_endstop                           nc              # normally 1.28. Change to nc to prevent conflict,
 
 # associated with zprobe the leveling strategy to use
-#leveling-strategy.three-point-leveling.enable   true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
-#leveling-strategy.three-point-leveling.point1   100.0,0.0   # the first probe point (x,y) optional may be defined with M557
-#leveling-strategy.three-point-leveling.point2   200.0,200.0 # the second probe point (x,y)
-#leveling-strategy.three-point-leveling.point3   0.0,200.0   # the third probe point (x,y)
+#leveling-strategy.three-point-leveling.enable     true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
+#leveling-strategy.three-point-leveling.point1     100.0,0.0   # the first probe point (x,y) optional may be defined with M557
+#leveling-strategy.three-point-leveling.point2     200.0,200.0 # the second probe point (x,y)
+#leveling-strategy.three-point-leveling.point3     0.0,200.0   # the third probe point (x,y)
+#leveling-strategy.three-point-leveling.home_first true        # home the XY axis before probing
 
 
 # Pause button

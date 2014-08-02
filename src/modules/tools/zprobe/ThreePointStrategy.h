@@ -27,6 +27,10 @@ private:
 
     std::tuple<float, float> probe_points[3];
     Plane3D *plane;
+    struct {
+        bool home:1;
+    };
+    float tolerance;
 };
 
 #endif

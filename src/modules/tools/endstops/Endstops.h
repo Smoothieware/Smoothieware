@@ -47,7 +47,7 @@ class Endstops : public Module{
         float  slow_rates[3];
         float  feed_rate[3];
         Pin    pins[6];
-        char status;
+        volatile char status;
         struct {
             bool is_corexy:1;
             bool is_delta:1;

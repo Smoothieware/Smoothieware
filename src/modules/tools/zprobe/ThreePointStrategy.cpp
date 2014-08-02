@@ -20,6 +20,8 @@
 #define probe_point_1_checksum       CHECKSUM("point1")
 #define probe_point_2_checksum       CHECKSUM("point2")
 #define probe_point_3_checksum       CHECKSUM("point3")
+#define home_checksum                CHECKSUM("home_first")
+#define tolerance_checksum           CHECKSUM("tolerance")
 
 ThreePointStrategy::ThreePointStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
@@ -43,6 +45,9 @@ bool ThreePointStrategy::handleConfig()
     if(!p1.empty()) probe_points[0] = parseXY(p1.c_str());
     if(!p2.empty()) probe_points[1] = parseXY(p2.c_str());
     if(!p3.empty()) probe_points[2] = parseXY(p3.c_str());
+
+    this->home= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, home_checksum)->by_default(true)->as_bool();
+    this->tolerance= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     return true;
 }
 
@@ -82,6 +87,25 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             }
             // TODO encode plane if set and M500
             return true;
+
+        } else if(gcode->m == 999) {
+            // DEBUG run a test M999 A B C X Y set Z to A B C and test for point at X Y
+            Vector3 v[3];
+            float x, y, z, a= 0, b= 0, c= 0;
+            if(gcode->has_letter('A')) a = gcode->get_value('A');
+            if(gcode->has_letter('B')) b = gcode->get_value('B');
+            if(gcode->has_letter('C')) c = gcode->get_value('C');
+            std::tie(x, y) = probe_points[0]; v[0].set(x, y, a);
+            std::tie(x, y) = probe_points[1]; v[1].set(x, y, b);
+            std::tie(x, y) = probe_points[2]; v[2].set(x, y, c);
+            delete this->plane;
+            this->plane = new Plane3D(v[0], v[1], v[2]);
+            x= 0; y=0;
+            if(gcode->has_letter('X')) x = gcode->get_value('X');
+            if(gcode->has_letter('Y')) y = gcode->get_value('Y');
+            z= getZOffset(x, y);
+            gcode->stream->printf("z= %f\n", z);
+            return true;
         }
     }
 
@@ -106,9 +130,9 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         }
     }
 
-    // TODO allow for manual homing
-    // home X & Y
-    homeXY();
+    // optionally home XY axis first, but allow for manual homing
+    if(this->home)
+        homeXY();
 
     // move to the first probe point
     std::tie(x, y) = probe_points[0];
@@ -136,12 +160,16 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         v[i].set(x, y, z);
     }
 
-    // TODO if first point is not within toloerance of of probe height report it.
+    // if first point is not within tolerance of probe height report it.
+    if(abs(v[0][2] - zprobe->getProbeHeight()) > this->tolerance) {
+        stream->printf("WARNING: probe is not within tolerance\n");
+    }
 
     // define the plane
     delete this->plane;
-    // TODO set a tolerance level here default 0.03mm
-    if(v[0][2] == v[1][2] && v[1][2] == v[2][2]) {
+    // check tolerance level here default 0.03mm
+    auto mm = std::minmax({v[0][2], v[1][2], v[2][2]});
+    if((mm.second - mm.first) <= this->tolerance) {
         this->plane= nullptr; // plane is flat no need to do anything
         stream->printf("DEBUG: flat plane\n");
         // THEKERNEL->robot->adjustZfnc= nullptr;
