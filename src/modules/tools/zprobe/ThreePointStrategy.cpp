@@ -59,7 +59,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
             if(!doProbing(gcode->stream)) {
-                gcode->stream->printf("Probe failed to complete, probe not triggered\n");
+                gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
             } else {
                 gcode->stream->printf("Probe completed, bed plane defined\n");
             }
@@ -75,6 +75,8 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             if(gcode->has_letter('Y')) y = gcode->get_value('Y');
             if(idx >= 0 && idx <= 2) {
                 probe_points[idx] = std::make_tuple(x, y);
+            }else{
+                 gcode->stream->printf("only 3 probe points allowed P0-P2\n");
             }
             return true;
 
@@ -100,6 +102,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             std::tie(x, y) = probe_points[2]; v[2].set(x, y, c);
             delete this->plane;
             this->plane = new Plane3D(v[0], v[1], v[2]);
+            gcode->stream->printf("plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
             x= 0; y=0;
             if(gcode->has_letter('X')) x = gcode->get_value('X');
             if(gcode->has_letter('Y')) y = gcode->get_value('Y');

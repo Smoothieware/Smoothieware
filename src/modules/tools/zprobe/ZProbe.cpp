@@ -233,17 +233,20 @@ void ZProbe::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     if( gcode->has_g && gcode->g >= 29 && gcode->g <= 32) {
-        // G code processing
+        // make sure the probe is defined and not already triggered before moving motors
+       if(!this->pin.connected()) {
+            gcode->stream->printf("ZProbe not connected.\n");
+            return;
+        }
+        if(this->pin.get()) {
+            gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+            return;
+        }
+
         if( gcode->g == 30 ) { // simple Z probe
             gcode->mark_as_taken();
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
-
-            // make sure the probe is not already triggered before moving motors
-            if(this->pin.get()) {
-                gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
-                return;
-            }
 
             int steps;
             if(run_probe(steps)) {

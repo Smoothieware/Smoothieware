@@ -226,7 +226,7 @@ alpha_homing_retract_mm                      5                # distance in mm
 beta_homing_retract_mm                       5                # "
 gamma_homing_retract_mm                      1                # "
 
-#endstop_debounce_count                       100              # uncomment if you get noise on your endstops
+#endstop_debounce_count                       100              # uncomment if you get noise on your endstops, default is 100
 
 # optional Z probe
 zprobe.enable                                false           # set to true to enable a zprobe
@@ -243,6 +243,7 @@ zprobe.probe_height                          5               # how much above be
 #leveling-strategy.three-point-leveling.point2     200.0,200.0 # the second probe point (x,y)
 #leveling-strategy.three-point-leveling.point3     0.0,200.0   # the third probe point (x,y)
 #leveling-strategy.three-point-leveling.home_first true        # home the XY axis before probing
+#leveling-strategy.three-point-leveling.tolerance  0.03        # the probe tolerance in mm, anything less that this will be ignored, default is 0.03mm
 
 
 # Pause button
