@@ -300,14 +300,8 @@ void Endstops::wait_for_homed(char axes_to_move)
     }
 }
 
-void Endstops::do_homing(char axes_to_move)
+void Endstops::do_homing_cartesian(char axes_to_move)
 {
-    if (is_corexy){
-        // do corexy/HBot homing
-        do_homing_corexy(axes_to_move);
-        return;
-    }
-
     // this homing works for cartesian and delta printers
     // Start moving the axes to the origin
     this->status = MOVING_TO_ORIGIN_FAST;
@@ -509,11 +503,22 @@ void Endstops::do_homing_corexy(char axes_to_move)
     }
 
     if (axes_to_move & 0x04) { // move Z
-        do_homing(0x04); // just home normally for Z
+        do_homing_cartesian(0x04); // just home normally for Z
     }
 
     // Homing is done
     this->status = NOT_HOMING;
+}
+
+void Endstops::home(char axes_to_move)
+{
+    if (is_corexy){
+        // corexy/HBot homing
+        do_homing_corexy(axes_to_move);
+    }else{
+        // cartesian/delta homing
+        do_homing_cartesian(axes_to_move);
+    }
 }
 
 // Start homing sequences by response to GCode commands
@@ -550,11 +555,11 @@ void Endstops::on_gcode_received(void *argument)
                 for (uint8_t m = homing_order; m != 0; m >>= 2) {
                     int a= (1 << (m & 0x03)); // axis to move
                     if((a & axes_to_move) != 0)
-                        do_homing(a);
+                        home(a);
                 }
             }else {
                 // they all home at the same time
-                do_homing(axes_to_move);
+                home(axes_to_move);
             }
 
             // Zero the ax(i/e)s position, add in the home offset
@@ -568,6 +573,7 @@ void Endstops::on_gcode_received(void *argument)
             // TODO should maybe be done before setting home so X0 does not retrigger?
             back_off_home(axes_to_move);
         }
+
     } else if (gcode->has_m) {
         switch (gcode->m) {
             case 119: {
