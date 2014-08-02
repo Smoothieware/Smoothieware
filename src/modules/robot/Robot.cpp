@@ -126,6 +126,7 @@ Robot::Robot()
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
+    this->adjustZfnc= nullptr;
 }
 
 //Called when the module has just been loaded
@@ -579,9 +580,10 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     float actuator_pos[3];
     float millimeters_of_travel;
 
-    // TODO check function pointer and call if set to adjust Z for bed leveling
-    // std::function<float(float,float)> adjustZfnc;
-    // if(adjustZfnc) { target[Z_AXIS] += adjustZfnc(target[X_AXIS], target[Y_AXIS]); }
+    // check function pointer and call if set to adjust Z for bed leveling
+    if(adjustZfnc) {
+        target[Z_AXIS] += adjustZfnc(target[X_AXIS], target[Y_AXIS]);
+    }
 
     // find distance moved by each axis
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)

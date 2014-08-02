@@ -11,6 +11,7 @@
 #include <string>
 using std::string;
 #include <string.h>
+#include <functional>
 
 #include "libs/Module.h"
 
@@ -40,6 +41,9 @@ class Robot : public Module {
 
         // gets accessed by Panel, Endstops, ZProbe
         std::vector<StepperMotor*> actuators;
+
+        // set by a leveling strategy to adjust the endpoints of a move according to the current plan
+        std::function<float(float,float)> adjustZfnc;
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);

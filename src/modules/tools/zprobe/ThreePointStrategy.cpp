@@ -92,7 +92,8 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
         } else if(gcode->m == 561) { // M561: Set Identity Transform
             delete this->plane;
             this->plane= nullptr;
-            // TODO delete the adjustZfnc in robot
+            // delete the adjustZfnc in robot
+            THEKERNEL->robot->adjustZfnc= nullptr;
             return true;
 
         } else if(gcode->m == 503) {
@@ -123,6 +124,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             if(gcode->has_letter('Y')) y = gcode->get_value('Y');
             z= getZOffset(x, y);
             gcode->stream->printf("z= %f\n", z);
+            THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->plane->getz(x, y); };
             return true;
         }
     }
@@ -190,12 +192,13 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     if((mm.second - mm.first) <= this->tolerance) {
         this->plane= nullptr; // plane is flat no need to do anything
         stream->printf("DEBUG: flat plane\n");
-        // THEKERNEL->robot->adjustZfnc= nullptr;
+        THEKERNEL->robot->adjustZfnc= nullptr;
+
     }else{
         this->plane = new Plane3D(v[0], v[1], v[2]);
         stream->printf("DEBUG: plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
-        // TODO set the adjustZfnc in robot
-        // THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->getZOffset(x, y); }
+        // set the adjustZfnc in robot
+        THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->plane->getz(x, y); };
     }
 
     return true;
