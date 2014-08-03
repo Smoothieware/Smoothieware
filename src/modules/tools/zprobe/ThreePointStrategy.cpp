@@ -1,3 +1,55 @@
+/*
+    Author: Jim Morris (wolfmanjm@gmail.com)
+    License: GPL3 or better see <http://www.gnu.org/licenses/>
+
+    Summary
+    -------
+    Probes three user specified points on the bed and determines the plane of the bed relative to the probe.
+    as the head moves in X and Y it will adjust Z to keep the head tram with the bed.
+
+    Configuration
+    -------------
+    The strategy must be enabled in the cofnig as well as zprobe.
+
+    leveling-strategy.three-point-leveling.enable         true
+
+    Three probe points must be defined, these are best if they are the three points of an equilateral triangle, as far apart as possible.
+    They can be defined in the config file as:-
+
+    leveling-strategy.three-point-leveling.point1         100.0,0.0   # the first probe point (x,y)
+    leveling-strategy.three-point-leveling.point2         200.0,200.0 # the second probe point (x,y)
+    leveling-strategy.three-point-leveling.point3         0.0,200.0   # the third probe point (x,y)
+
+    or they may be defined (and saved with M500) using M557 P0 X30 Y40.5  where P is 0,1,2
+
+    probe offsets from the nozzle or tool head can be defined with
+
+    leveling-strategy.three-point-leveling.probe_offsets  0,0,0  # probe offsetrs x,y,z
+
+    they may also be set with M565 X0 Y0 Z0
+
+    To force homing in X and Y before G32 does the probe the following can be set in config, this is the default
+
+    leveling-strategy.three-point-leveling.home_first    true   # disable by setting to false
+
+    The probe tolerance can be set using the config line
+
+    leveling-strategy.three-point-leveling.tolerance   0.03    # the probe tolerance in mm, default is 0.03mm
+
+
+    Usage
+    -----
+    G32 probes the three probe points and defines the bed plane, this will remain in effect until reset or M561
+    G31 reports the status
+
+    M557 defines the probe points
+    M561 clears the plane and the bed leveling is disabled until G32 is run again
+    M565 defines the probe offsets from the nozzle or tool head
+
+    M500 saves the probe points and the probe offsets
+    M503 displays the current settings
+*/
+
 #include "ThreePointStrategy.h"
 #include "Kernel.h"
 #include "Config.h"
@@ -124,7 +176,9 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             // TODO encode plane if set and M500
             return true;
 
-        } else if(gcode->m == 999) {
+        }
+        #if 0
+         else if(gcode->m == 999) {
             // DEBUG run a test M999 A B C X Y set Z to A B C and test for point at X Y
             Vector3 v[3];
             float x, y, z, a= 0, b= 0, c= 0;
@@ -146,6 +200,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             setAdjustFunction(true);
             return true;
         }
+        #endif
     }
 
     return false;
