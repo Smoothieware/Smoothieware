@@ -562,10 +562,18 @@ void Endstops::on_gcode_received(void *argument)
                 home(axes_to_move);
             }
 
-            // Zero the ax(i/e)s position, add in the home offset
-            for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-                if ( (axes_to_move >> c)  & 1 ) {
-                    THEKERNEL->robot->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
+            if(home_all) {
+                // for deltas this may be important rather than setting each individually
+                THEKERNEL->robot->reset_axis_position(
+                    this->homing_position[X_AXIS] + this->home_offset[X_AXIS],
+                    this->homing_position[Y_AXIS] + this->home_offset[Y_AXIS],
+                    this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]);
+            }else{
+                // Zero the ax(i/e)s position, add in the home offset
+                for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+                    if ( (axes_to_move >> c)  & 1 ) {
+                        THEKERNEL->robot->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
+                    }
                 }
             }
 

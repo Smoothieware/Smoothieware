@@ -337,20 +337,17 @@ void Robot::on_gcode_received(void *argument)
             case 91: this->absolute_mode = false; gcode->mark_as_taken();  break;
             case 92: {
                 if(gcode->get_num_args() == 0) {
-                    clear_vector(this->last_milestone);
+                    for (int i = X_AXIS; i <= Z_AXIS; ++i) {
+                        reset_axis_position(0, i);
+                    }
+
                 } else {
                     for (char letter = 'X'; letter <= 'Z'; letter++) {
-                        if ( gcode->has_letter(letter) )
-                            this->last_milestone[letter - 'X'] = this->to_millimeters(gcode->get_value(letter));
+                        if ( gcode->has_letter(letter) ) {
+                            reset_axis_position(this->to_millimeters(gcode->get_value(letter)), letter - 'X');
+                        }
                     }
                 }
-
-                // TODO: handle any number of actuators
-                float actuator_pos[3];
-                arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
-
-                for (int i = 0; i < 3; i++)
-                    actuators[i]->change_last_milestone(actuator_pos[i]);
 
                 gcode->mark_as_taken();
                 return;
@@ -559,13 +556,26 @@ void Robot::distance_in_gcode_is_known(Gcode *gcode)
     THEKERNEL->conveyor->append_gcode(gcode);
 }
 
-// Reset the position for all axes ( used in homing and G92 stuff )
+// reset the position for all axis (used in homing for delta as last_milestone may be bogus)
+void Robot::reset_axis_position(float x, float y, float z)
+{
+    this->last_milestone[X_AXIS] = x;
+    this->last_milestone[Y_AXIS] = y;
+    this->last_milestone[Z_AXIS] = z;
+
+    float actuator_pos[3];
+    arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
+    for (int i = 0; i < 3; i++)
+        actuators[i]->change_last_milestone(actuator_pos[i]);
+}
+
+// Reset the position for an axis (used in homing and G92)
 void Robot::reset_axis_position(float position, int axis)
 {
     this->last_milestone[axis] = position;
 
     float actuator_pos[3];
-    arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
+    arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
 
     for (int i = 0; i < 3; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);

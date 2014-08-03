@@ -11,6 +11,7 @@
 #include "Conveyor.h"
 #include "ZProbe.h"
 #include "Plane3D.h"
+#include "nuts_bolts.h"
 
 #include <string>
 #include <algorithm>
@@ -20,6 +21,7 @@
 #define probe_point_1_checksum       CHECKSUM("point1")
 #define probe_point_2_checksum       CHECKSUM("point2")
 #define probe_point_3_checksum       CHECKSUM("point3")
+#define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define home_checksum                CHECKSUM("home_first")
 #define tolerance_checksum           CHECKSUM("tolerance")
 
@@ -45,6 +47,10 @@ bool ThreePointStrategy::handleConfig()
     if(!p1.empty()) probe_points[0] = parseXY(p1.c_str());
     if(!p2.empty()) probe_points[1] = parseXY(p2.c_str());
     if(!p3.empty()) probe_points[2] = parseXY(p3.c_str());
+
+    // Probe offsets xxx,yyy,zzz
+    std::string po = THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, probe_offsets_checksum)->by_default("0,0,0")->as_string();
+    this->probe_offsets= parseXYZ(po.c_str());
 
     this->home= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, home_checksum)->by_default(true)->as_bool();
     this->tolerance= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
@@ -96,13 +102,25 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->robot->adjustZfnc= nullptr;
             return true;
 
+        } else if(gcode->m == 565) { // M565: Set Z probe offsets
+            float x= 0, y= 0, z= 0;
+            if(gcode->has_letter('X')) x = gcode->get_value('X');
+            if(gcode->has_letter('Y')) y = gcode->get_value('Y');
+            if(gcode->has_letter('Z')) z = gcode->get_value('Z');
+            probe_offsets = std::make_tuple(x, y, z);
+            return true;
+
         } else if(gcode->m == 503) {
+            float x, y, z;
             gcode->stream->printf(";Probe points:\n");
             for (int i = 0; i < 3; ++i) {
-                float x, y;
                 std::tie(x, y) = probe_points[i];
                 gcode->stream->printf("M557 P%d X%1.5f Y%1.5f\n", i, x, y);
             }
+            gcode->stream->printf(";Probe offsets:\n");
+            std::tie(x, y, z) = probe_offsets;
+            gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
+
             // TODO encode plane if set and M500
             return true;
 
@@ -157,15 +175,21 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 
     // move to the first probe point
     std::tie(x, y) = probe_points[0];
+    // offset by the probe XY offset
+    x -= std::get<X_AXIS>(this->probe_offsets);
+    y -= std::get<Y_AXIS>(this->probe_offsets);
     zprobe->coordinated_move(x, y, NAN, zprobe->getFastFeedrate());
 
     // for now we use probe to find bed and not the Z min endstop
+    // the first probe point becomes Z == 0 effectively so if we home Z or manually set z after this, it needs to be at the first probe point
+
     // TODO this needs to be configurable to use min z or probe
+    // TODO if using probe then we probably need to set Z to 0 at first probe point, but take into account probe offset from head
+    THEKERNEL->robot->reset_axis_position(std::get<Z_AXIS>(this->probe_offsets), Z_AXIS);
 
     // find bed via probe
     int s;
     if(!zprobe->run_probe(s, true)) return false;
-    // do we need to set set to Z == 0 here? as the rest is relative anyway
 
     // move up to specified probe start position
     zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight(), zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
@@ -174,15 +198,16 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     Vector3 v[3];
     for (int i = 0; i < 3; ++i) {
         std::tie(x, y) = probe_points[i];
-        float z = zprobe->probeDistance(x, y);
+        // offset moves by the probe XY offset
+        float z = zprobe->probeDistance(x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets));
         if(isnan(z)) return false; // probe failed
-        z -= zprobe->getProbeHeight(); // relative distance between the probe points
+        z= zprobe->getProbeHeight() - z; // relative distance between the probe points, lower is negative z
         stream->printf("DEBUG: P%d:%1.4f\n", i, z);
         v[i].set(x, y, z);
     }
 
-    // if first point is not within tolerance of probe height report it.
-    if(abs(v[0][2] - zprobe->getProbeHeight()) > this->tolerance) {
+    // if first point is not within tolerance report it, it should ideally be 0
+    if(abs(v[0][2]) > this->tolerance) {
         stream->printf("WARNING: probe is not within tolerance\n");
     }
 
@@ -193,6 +218,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     if((mm.second - mm.first) <= this->tolerance) {
         this->plane= nullptr; // plane is flat no need to do anything
         stream->printf("DEBUG: flat plane\n");
+        // clear the adjustZfnc in robot
         THEKERNEL->robot->adjustZfnc= nullptr;
 
     }else{
@@ -222,4 +248,19 @@ std::tuple<float, float> ThreePointStrategy::parseXY(const char *str)
         y = strtof(p + 1, nullptr);
     }
     return std::make_tuple(x, y);
+}
+
+// parse a "X,Y,Z" string return x,y,z tuple
+std::tuple<float, float, float> ThreePointStrategy::parseXYZ(const char *str)
+{
+    float x = 0, y = 0, z= 0;
+    char *p;
+    x = strtof(str, &p);
+    if(p + 1 < str + strlen(str)) {
+        y = strtof(p + 1, &p);
+        if(p + 1 < str + strlen(str)) {
+            z = strtof(p + 1, nullptr);
+        }
+    }
+    return std::make_tuple(x, y, z);
 }

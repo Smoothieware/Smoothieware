@@ -24,7 +24,9 @@ private:
     void homeXY();
     bool doProbing(StreamOutput *stream);
     std::tuple<float, float> parseXY(const char *str);
+    std::tuple<float, float, float> parseXYZ(const char *str);
 
+    std::tuple<float, float, float> probe_offsets;
     std::tuple<float, float> probe_points[3];
     Plane3D *plane;
     struct {

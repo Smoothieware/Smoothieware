@@ -29,6 +29,7 @@ class Robot : public Module {
         void on_set_public_data(void* argument);
 
         void reset_axis_position(float position, int axis);
+        void reset_axis_position(float x, float y, float z);
         void get_axis_position(float position[]);
         float to_millimeters(float value);
         float from_millimeters(float value);
