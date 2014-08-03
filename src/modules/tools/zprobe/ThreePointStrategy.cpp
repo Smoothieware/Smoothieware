@@ -187,13 +187,13 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 
     // find bed via probe
     int s;
-    if(!zprobe->run_probe(s, true)) return false;
+    if(!zprobe->run_probe(s)) return false;
 
     // TODO if using probe then we probably need to set Z to 0 at first probe point, but take into account probe offset from head
     THEKERNEL->robot->reset_axis_position(std::get<Z_AXIS>(this->probe_offsets), Z_AXIS);
 
     // move up to specified probe start position
-    zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight(), zprobe->getFastFeedrate()); // move to probe start position
+    zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight(), zprobe->getSlowFeedrate()); // move to probe start position
 
     // probe the three points
     Vector3 v[3];
@@ -234,8 +234,8 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 void ThreePointStrategy::setAdjustFunction(bool on)
 {
     if(on) {
-        // set the adjustZfnc in robot, negate the z adjustment so Z axis moves in correct direction
-        THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return -this->plane->getz(x, y); };
+        // set the adjustZfnc in robot
+        THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->plane->getz(x, y); };
     }else{
         // clear it
         THEKERNEL->robot->adjustZfnc= nullptr;

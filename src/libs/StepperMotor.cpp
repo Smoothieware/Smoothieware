@@ -148,6 +148,8 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( float speed ){
 
+    // FIXME NOTE this can cause axis to run faster than expected thus making the line incorrect, or on a delta make the effector move wrong
+    // seems we can do...  minimum_speed = ceil(step_ticker->frequency/65536.0F), which would be 2 not 20 at 100Khz
     if (speed < 20.0F)
         speed = 20.0F;
 
