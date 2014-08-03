@@ -31,7 +31,7 @@ public:
     void on_gcode_received(void *argument);
     uint32_t acceleration_tick(uint32_t dummy);
 
-    bool wait_for_probe(int steps[3]);
+    bool wait_for_probe(int& steps);
     bool run_probe(int& steps, bool fast= false);
     bool return_probe(int steps);
     bool doProbeAt(int &steps, float x, float y);
@@ -47,12 +47,14 @@ public:
     float zsteps_to_mm(float steps);
 
 private:
-    float current_feedrate;
+    void accelerate(int c);
+
+    volatile float current_feedrate;
     float slow_feedrate;
     float fast_feedrate;
     float probe_height;
-    struct {
-        bool running:1;
+    volatile struct {
+        volatile bool running:1;
         bool is_delta:1;
     };
 
