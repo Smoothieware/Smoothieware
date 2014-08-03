@@ -124,6 +124,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             if(gcode->has_letter('Y')) y = gcode->get_value('Y');
             z= getZOffset(x, y);
             gcode->stream->printf("z= %f\n", z);
+            // tell robot to adjust z on each move
             THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->plane->getz(x, y); };
             return true;
         }

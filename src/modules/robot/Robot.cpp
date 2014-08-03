@@ -578,16 +578,19 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     float deltas[3];
     float unit_vec[3];
     float actuator_pos[3];
+    float adj_target[3]; // adjust target for bed leveling
     float millimeters_of_travel;
+
+    memcpy(adj_target, target, sizeof(adj_target));
 
     // check function pointer and call if set to adjust Z for bed leveling
     if(adjustZfnc) {
-        target[Z_AXIS] += adjustZfnc(target[X_AXIS], target[Y_AXIS]);
+        adj_target[Z_AXIS] += adjustZfnc(target[X_AXIS], target[Y_AXIS]);
     }
 
-    // find distance moved by each axis
+    // find distance moved by each axis, use actual adjusted target
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
-        deltas[axis] = target[axis] - last_milestone[axis];
+        deltas[axis] = adj_target[axis] - last_milestone[axis];
 
     // Compute how long this move moves, so we can attach it to the block for later use
     millimeters_of_travel = sqrtf( powf( deltas[X_AXIS], 2 ) +  powf( deltas[Y_AXIS], 2 ) +  powf( deltas[Z_AXIS], 2 ) );
@@ -606,8 +609,8 @@ void Robot::append_milestone( float target[], float rate_mm_s )
         }
     }
 
-    // find actuator position given cartesian position
-    arm_solution->cartesian_to_actuator( target, actuator_pos );
+    // find actuator position given cartesian position, use actual adjusted target
+    arm_solution->cartesian_to_actuator( adj_target, actuator_pos );
 
     // check per-actuator speed limits
     for (int actuator = 0; actuator <= 2; actuator++) {
@@ -620,7 +623,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     // Append the block to the planner
     THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
 
-    // Update the last_milestone to the current target for the next time we use last_milestone
+    // Update the last_milestone to the current target for the next time we use last_milestone, use the requested target not the adjusted one
     memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
 
 }
