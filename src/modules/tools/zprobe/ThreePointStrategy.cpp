@@ -99,7 +99,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             delete this->plane;
             this->plane= nullptr;
             // delete the adjustZfnc in robot
-            THEKERNEL->robot->adjustZfnc= nullptr;
+            setAdjustFunction(false);
             return true;
 
         } else if(gcode->m == 565) { // M565: Set Z probe offsets
@@ -143,7 +143,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             z= getZOffset(x, y);
             gcode->stream->printf("z= %f\n", z);
             // tell robot to adjust z on each move
-            THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->plane->getz(x, y); };
+            setAdjustFunction(true);
             return true;
         }
     }
@@ -184,15 +184,16 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     // the first probe point becomes Z == 0 effectively so if we home Z or manually set z after this, it needs to be at the first probe point
 
     // TODO this needs to be configurable to use min z or probe
-    // TODO if using probe then we probably need to set Z to 0 at first probe point, but take into account probe offset from head
-    THEKERNEL->robot->reset_axis_position(std::get<Z_AXIS>(this->probe_offsets), Z_AXIS);
 
     // find bed via probe
     int s;
     if(!zprobe->run_probe(s, true)) return false;
 
+    // TODO if using probe then we probably need to set Z to 0 at first probe point, but take into account probe offset from head
+    THEKERNEL->robot->reset_axis_position(std::get<Z_AXIS>(this->probe_offsets), Z_AXIS);
+
     // move up to specified probe start position
-    zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight(), zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
+    zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight(), zprobe->getFastFeedrate()); // move to probe start position
 
     // probe the three points
     Vector3 v[3];
@@ -208,7 +209,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 
     // if first point is not within tolerance report it, it should ideally be 0
     if(abs(v[0][2]) > this->tolerance) {
-        stream->printf("WARNING: probe is not within tolerance\n");
+        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", abs(v[0][2]), this->tolerance);
     }
 
     // define the plane
@@ -219,16 +220,26 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         this->plane= nullptr; // plane is flat no need to do anything
         stream->printf("DEBUG: flat plane\n");
         // clear the adjustZfnc in robot
-        THEKERNEL->robot->adjustZfnc= nullptr;
+        setAdjustFunction(false);
 
     }else{
         this->plane = new Plane3D(v[0], v[1], v[2]);
         stream->printf("DEBUG: plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
-        // set the adjustZfnc in robot
-        THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->plane->getz(x, y); };
+        setAdjustFunction(true);
     }
 
     return true;
+}
+
+void ThreePointStrategy::setAdjustFunction(bool on)
+{
+    if(on) {
+        // set the adjustZfnc in robot, negate the z adjustment so Z axis moves in correct direction
+        THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return -this->plane->getz(x, y); };
+    }else{
+        // clear it
+        THEKERNEL->robot->adjustZfnc= nullptr;
+    }
 }
 
 // find the Z offset for the point on the plane at x, y
