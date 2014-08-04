@@ -112,6 +112,23 @@ int Gcode::get_int( char letter, char **ptr ) const
     return 0;
 }
 
+uint32_t Gcode::get_uint( char letter, char **ptr ) const
+{
+    const char *cs = command;
+    char *cn = NULL;
+    for (; *cs; cs++) {
+        if( letter == *cs ) {
+            cs++;
+            int r = strtoul(cs, &cn, 10);
+            if(ptr != nullptr) *ptr= cn;
+            if (cn > cs)
+                return r;
+        }
+    }
+    if(ptr != nullptr) *ptr= nullptr;
+    return 0;
+}
+
 int Gcode::get_num_args() const
 {
     int count = 0;

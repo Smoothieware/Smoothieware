@@ -32,6 +32,7 @@ private:
     Plane3D *plane;
     struct {
         bool home:1;
+        bool save:1;
     };
     float tolerance;
 };

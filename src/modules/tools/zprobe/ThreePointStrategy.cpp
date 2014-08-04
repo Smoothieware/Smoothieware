@@ -76,6 +76,7 @@
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define home_checksum                CHECKSUM("home_first")
 #define tolerance_checksum           CHECKSUM("tolerance")
+#define save_plane_checksum          CHECKSUM("save_plane")
 
 ThreePointStrategy::ThreePointStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
@@ -106,6 +107,7 @@ bool ThreePointStrategy::handleConfig()
 
     this->home= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, home_checksum)->by_default(true)->as_bool();
     this->tolerance= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
+    this->save= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, save_plane_checksum)->by_default(false)->as_bool();
     return true;
 }
 
@@ -147,11 +149,23 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             }
             return true;
 
-        } else if(gcode->m == 561) { // M561: Set Identity Transform
+        } else if(gcode->m == 561) { // M561: Set Identity Transform with no parameters, set the saved plane if A B C D are given
             delete this->plane;
-            this->plane= nullptr;
-            // delete the adjustZfnc in robot
-            setAdjustFunction(false);
+            if(gcode->get_num_args() == 0) {
+                this->plane= nullptr;
+                // delete the adjustZfnc in robot
+                setAdjustFunction(false);
+            }else{
+                // smoothie specific way to restire a saved plane
+                uint32_t a,b,c,d;
+                a=b=c=d= 0;
+                if(gcode->has_letter('A')) a = gcode->get_uint('A');
+                if(gcode->has_letter('B')) b = gcode->get_uint('B');
+                if(gcode->has_letter('C')) c = gcode->get_uint('C');
+                if(gcode->has_letter('D')) d = gcode->get_uint('D');
+                this->plane= new Plane3D(a, b, c, d);
+
+            }
             return true;
 
         } else if(gcode->m == 565) { // M565: Set Z probe offsets
@@ -162,7 +176,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             probe_offsets = std::make_tuple(x, y, z);
             return true;
 
-        } else if(gcode->m == 503) {
+        } else if(gcode->m == 500 || gcode->m == 503) { // M500 save, M503 display
             float x, y, z;
             gcode->stream->printf(";Probe points:\n");
             for (int i = 0; i < 3; ++i) {
@@ -173,7 +187,12 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             std::tie(x, y, z) = probe_offsets;
             gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
 
-            // TODO encode plane if set and M500
+            // encode plane and save if set and M500 and enabled
+            if(this->save && this->plane != nullptr && gcode->m == 500) {
+                uint32_t a, b, c, d;
+                this->plane->encode(a, b, c, d);
+                gcode->stream->printf(";Saved bed plane:\nM561 A%lu B%lu C%lu D%lu \n", a, b, c, d);
+            }
             return true;
 
         }

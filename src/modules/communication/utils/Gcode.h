@@ -25,6 +25,7 @@ class Gcode {
         bool has_letter ( char letter ) const;
         float get_value ( char letter, char **ptr= nullptr ) const;
         int get_int ( char letter, char **ptr= nullptr ) const;
+        uint32_t get_uint ( char letter, char **ptr= nullptr ) const;
         int get_num_args() const;
         void mark_as_taken();
         void strip_parameters();
