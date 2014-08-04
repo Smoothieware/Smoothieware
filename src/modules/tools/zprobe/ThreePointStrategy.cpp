@@ -188,10 +188,14 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
 
             // encode plane and save if set and M500 and enabled
-            if(this->save && this->plane != nullptr && gcode->m == 500) {
-                uint32_t a, b, c, d;
-                this->plane->encode(a, b, c, d);
-                gcode->stream->printf(";Saved bed plane:\nM561 A%lu B%lu C%lu D%lu \n", a, b, c, d);
+            if(this->save && this->plane != nullptr) {
+                if(gcode->m == 500) {
+                    uint32_t a, b, c, d;
+                    this->plane->encode(a, b, c, d);
+                    gcode->stream->printf(";Saved bed plane:\nM561 A%lu B%lu C%lu D%lu \n", a, b, c, d);
+                }else{
+                    gcode->stream->printf(";The bed plane will be saved on M500\n");
+                }
             }
             return true;
 
