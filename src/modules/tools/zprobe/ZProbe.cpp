@@ -25,7 +25,10 @@
 #include "EndstopsPublicAccess.h"
 #include "PublicData.h"
 #include "LevelingStrategy.h"
+
+// strategies we know about
 #include "DeltaCalibrationStrategy.h"
+#include "ThreePointStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
@@ -82,13 +85,16 @@ void ZProbe::on_config_reload(void *argument)
                     this->strategies.push_back(new DeltaCalibrationStrategy(this));
                     found= true;
                     break;
+
+                case three_point_leveling_strategy_checksum:
+                    // NOTE this strategy is mutually exclusive with the delta calibration strategy
+                    this->strategies.push_back(new ThreePointStrategy(this));
+                    found= true;
+                    break;
+
                 // add other strategies here
-                //case three_point_plane_checksum:
-                //     this->strategies.push_back(new TheePointPlaneStrategey(this));
-                //     found= true;
-                //     break;
                 //case zheight_map_strategy:
-                //     this->strategies.push_back(new ZHeightMapStratergy(this));
+                //     this->strategies.push_back(new ZHeightMapStrategy(this));
                 //     found= true;
                 //     break;
             }
@@ -113,13 +119,13 @@ void ZProbe::on_config_reload(void *argument)
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
 }
 
-bool ZProbe::wait_for_probe(int steps[3])
+bool ZProbe::wait_for_probe(int& steps)
 {
     unsigned int debounce = 0;
     while(true) {
         THEKERNEL->call_event(ON_IDLE);
         // if no stepper is moving, moves are finished and there was no touch
-        if( !STEPPER[X_AXIS]->is_moving() && !STEPPER[Y_AXIS]->is_moving() && !STEPPER[Z_AXIS]->is_moving() ) {
+        if( !STEPPER[Z_AXIS]->is_moving() && (!is_delta || (!STEPPER[Y_AXIS]->is_moving() && !STEPPER[Z_AXIS]->is_moving())) ) {
             return false;
         }
 
@@ -131,11 +137,15 @@ bool ZProbe::wait_for_probe(int steps[3])
                 debounce++;
             } else {
                 // ...otherwise stop the steppers, return its remaining steps
-                for( int i = X_AXIS; i <= Z_AXIS; i++ ) {
-                    steps[i] = 0;
-                    if ( STEPPER[i]->is_moving() ) {
-                        steps[i] =  STEPPER[i]->get_stepped();
-                        STEPPER[i]->move(0, 0);
+                if(STEPPER[Z_AXIS]->is_moving()){
+                    steps= STEPPER[Z_AXIS]->get_stepped();
+                    STEPPER[Z_AXIS]->move(0, 0);
+                }
+                if(is_delta) {
+                    for( int i = X_AXIS; i <= Y_AXIS; i++ ) {
+                        if ( STEPPER[i]->is_moving() ) {
+                            STEPPER[i]->move(0, 0);
+                        }
                     }
                 }
                 return true;
@@ -165,11 +175,10 @@ bool ZProbe::run_probe(int& steps, bool fast)
         STEPPER[Y_AXIS]->move(true, 1000 * STEPS_PER_MM(Y_AXIS));
     }
 
+    // start acceration hrprocessing
     this->running = true;
 
-    int s[3];
-    bool r = wait_for_probe(s);
-    steps= s[Z_AXIS]; // only need z
+    bool r = wait_for_probe(steps);
     this->running = false;
     return r;
 }
@@ -177,7 +186,7 @@ bool ZProbe::run_probe(int& steps, bool fast)
 bool ZProbe::return_probe(int steps)
 {
     // move probe back to where it was
-    this->current_feedrate = this->fast_feedrate * Z_STEPS_PER_MM; // feedrate in steps/sec
+    this->current_feedrate = this->slow_feedrate*2 * Z_STEPS_PER_MM; // feedrate in steps/sec
     bool dir= steps < 0;
     steps= abs(steps);
 
@@ -191,7 +200,7 @@ bool ZProbe::return_probe(int steps)
     }
 
     this->running = true;
-    while(STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving() || STEPPER[Z_AXIS]->is_moving()) {
+    while(STEPPER[Z_AXIS]->is_moving() || (is_delta && (STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving())) ) {
         // wait for it to complete
         THEKERNEL->call_event(ON_IDLE);
     }
@@ -201,23 +210,46 @@ bool ZProbe::return_probe(int steps)
     return true;
 }
 
+bool ZProbe::doProbeAt(int &steps, float x, float y)
+{
+    int s;
+    // move to xy
+    coordinated_move(x, y, NAN, getFastFeedrate());
+    if(!run_probe(s)) return false;
+
+    // return to original Z
+    return_probe(s);
+    steps = s;
+
+    return true;
+}
+
+float ZProbe::probeDistance(float x, float y)
+{
+    int s;
+    if(!doProbeAt(s, x, y)) return NAN;
+    return zsteps_to_mm(s);
+}
 
 void ZProbe::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     if( gcode->has_g && gcode->g >= 29 && gcode->g <= 32) {
-        // G code processing
+        // make sure the probe is defined and not already triggered before moving motors
+       if(!this->pin.connected()) {
+            gcode->stream->printf("ZProbe not connected.\n");
+            return;
+        }
+        if(this->pin.get()) {
+            gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+            return;
+        }
+
         if( gcode->g == 30 ) { // simple Z probe
             gcode->mark_as_taken();
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
-
-            // make sure the probe is not already triggered before moving motors
-            if(this->pin.get()) {
-                gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
-                return;
-            }
 
             int steps;
             if(run_probe(steps)) {
@@ -268,27 +300,34 @@ void ZProbe::on_gcode_received(void *argument)
 uint32_t ZProbe::acceleration_tick(uint32_t dummy)
 {
     if(!this->running) return(0); // nothing to do
+    if(STEPPER[Z_AXIS]->is_moving()) accelerate(Z_AXIS);
 
-    // foreach stepper that is moving
-    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if( !STEPPER[c]->is_moving() ) continue;
-
-        uint32_t current_rate = STEPPER[c]->get_steps_per_second();
-        uint32_t target_rate = int(floor(this->current_feedrate));
-
-        if( current_rate < target_rate ) {
-            uint32_t rate_increase = int(floor((THEKERNEL->planner->get_acceleration() / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c)));
-            current_rate = min( target_rate, current_rate + rate_increase );
+    if(is_delta) {
+         // deltas needs to move all actuators
+        for ( int c = X_AXIS; c <= Y_AXIS; c++ ) {
+            if( !STEPPER[c]->is_moving() ) continue;
+            accelerate(c);
         }
-        if( current_rate > target_rate ) {
-            current_rate = target_rate;
-        }
-
-        // steps per second
-        STEPPER[c]->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
     }
 
     return 0;
+}
+
+void ZProbe::accelerate(int c)
+{   uint32_t current_rate = STEPPER[c]->get_steps_per_second();
+    uint32_t target_rate = int(floor(this->current_feedrate));
+
+    if( current_rate < target_rate ) {
+        uint32_t rate_increase = int(floor((THEKERNEL->planner->get_acceleration() / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c)));
+        current_rate = min( target_rate, current_rate + rate_increase );
+    }
+    if( current_rate > target_rate ) {
+        current_rate = target_rate;
+    }
+
+    // steps per second
+    STEPPER[c]->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
+\
 }
 
 // issue a coordinated move directly to robot, and return when done

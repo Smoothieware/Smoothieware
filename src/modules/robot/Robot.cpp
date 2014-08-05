@@ -126,6 +126,7 @@ Robot::Robot()
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
+    this->adjustZfnc= nullptr;
 }
 
 //Called when the module has just been loaded
@@ -336,20 +337,17 @@ void Robot::on_gcode_received(void *argument)
             case 91: this->absolute_mode = false; gcode->mark_as_taken();  break;
             case 92: {
                 if(gcode->get_num_args() == 0) {
-                    clear_vector(this->last_milestone);
+                    for (int i = X_AXIS; i <= Z_AXIS; ++i) {
+                        reset_axis_position(0, i);
+                    }
+
                 } else {
                     for (char letter = 'X'; letter <= 'Z'; letter++) {
-                        if ( gcode->has_letter(letter) )
-                            this->last_milestone[letter - 'X'] = this->to_millimeters(gcode->get_value(letter));
+                        if ( gcode->has_letter(letter) ) {
+                            reset_axis_position(this->to_millimeters(gcode->get_value(letter)), letter - 'X');
+                        }
                     }
                 }
-
-                // TODO: handle any number of actuators
-                float actuator_pos[3];
-                arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
-
-                for (int i = 0; i < 3; i++)
-                    actuators[i]->change_last_milestone(actuator_pos[i]);
 
                 gcode->mark_as_taken();
                 return;
@@ -558,13 +556,26 @@ void Robot::distance_in_gcode_is_known(Gcode *gcode)
     THEKERNEL->conveyor->append_gcode(gcode);
 }
 
-// Reset the position for all axes ( used in homing and G92 stuff )
+// reset the position for all axis (used in homing for delta as last_milestone may be bogus)
+void Robot::reset_axis_position(float x, float y, float z)
+{
+    this->last_milestone[X_AXIS] = x;
+    this->last_milestone[Y_AXIS] = y;
+    this->last_milestone[Z_AXIS] = z;
+
+    float actuator_pos[3];
+    arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
+    for (int i = 0; i < 3; i++)
+        actuators[i]->change_last_milestone(actuator_pos[i]);
+}
+
+// Reset the position for an axis (used in homing and G92)
 void Robot::reset_axis_position(float position, int axis)
 {
     this->last_milestone[axis] = position;
 
     float actuator_pos[3];
-    arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
+    arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
 
     for (int i = 0; i < 3; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
@@ -577,11 +588,19 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     float deltas[3];
     float unit_vec[3];
     float actuator_pos[3];
+    float adj_target[3]; // adjust target for bed leveling
     float millimeters_of_travel;
 
-    // find distance moved by each axis
+    memcpy(adj_target, target, sizeof(adj_target));
+
+    // check function pointer and call if set to adjust Z for bed leveling
+    if(adjustZfnc) {
+        adj_target[Z_AXIS] += adjustZfnc(target[X_AXIS], target[Y_AXIS]);
+    }
+
+    // find distance moved by each axis, use actual adjusted target
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
-        deltas[axis] = target[axis] - last_milestone[axis];
+        deltas[axis] = adj_target[axis] - last_milestone[axis];
 
     // Compute how long this move moves, so we can attach it to the block for later use
     millimeters_of_travel = sqrtf( powf( deltas[X_AXIS], 2 ) +  powf( deltas[Y_AXIS], 2 ) +  powf( deltas[Z_AXIS], 2 ) );
@@ -600,8 +619,8 @@ void Robot::append_milestone( float target[], float rate_mm_s )
         }
     }
 
-    // find actuator position given cartesian position
-    arm_solution->cartesian_to_actuator( target, actuator_pos );
+    // find actuator position given cartesian position, use actual adjusted target
+    arm_solution->cartesian_to_actuator( adj_target, actuator_pos );
 
     // check per-actuator speed limits
     for (int actuator = 0; actuator <= 2; actuator++) {
@@ -614,7 +633,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     // Append the block to the planner
     THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
 
-    // Update the last_milestone to the current target for the next time we use last_milestone
+    // Update the last_milestone to the current target for the next time we use last_milestone, use the requested target not the adjusted one
     memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
 
 }

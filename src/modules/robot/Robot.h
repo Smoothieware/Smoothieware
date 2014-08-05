@@ -11,6 +11,7 @@
 #include <string>
 using std::string;
 #include <string.h>
+#include <functional>
 
 #include "libs/Module.h"
 
@@ -28,6 +29,7 @@ class Robot : public Module {
         void on_set_public_data(void* argument);
 
         void reset_axis_position(float position, int axis);
+        void reset_axis_position(float x, float y, float z);
         void get_axis_position(float position[]);
         float to_millimeters(float value);
         float from_millimeters(float value);
@@ -40,6 +42,9 @@ class Robot : public Module {
 
         // gets accessed by Panel, Endstops, ZProbe
         std::vector<StepperMotor*> actuators;
+
+        // set by a leveling strategy to adjust the endpoints of a move according to the current plan
+        std::function<float(float,float)> adjustZfnc;
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);

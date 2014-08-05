@@ -254,7 +254,7 @@ inline void Stepper::trapezoid_generator_reset(){
 // Update the speed for all steppers
 void Stepper::set_step_events_per_second( float steps_per_second )
 {
-    // We do not step slower than this
+    // We do not step slower than this, FIXME shoul dbe calculated for the slowest axis not the fastest
     //steps_per_second = max(steps_per_second, this->minimum_steps_per_second);
     if( steps_per_second < this->minimum_steps_per_second ){
         steps_per_second = this->minimum_steps_per_second;

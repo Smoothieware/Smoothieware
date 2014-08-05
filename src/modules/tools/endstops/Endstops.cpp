@@ -28,6 +28,8 @@
 #include "StreamOutputPool.h"
 #include "Pauser.h"
 
+#include <ctype.h>
+
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1
 #define GAMMA_AXIS 2
@@ -96,6 +98,8 @@
 #define alpha_limit_enable_checksum      CHECKSUM("alpha_limit_enable")
 #define beta_limit_enable_checksum       CHECKSUM("beta_limit_enable")
 #define gamma_limit_enable_checksum      CHECKSUM("gamma_limit_enable")
+
+#define homing_order_checksum            CHECKSUM("homing_order")
 
 #define STEPPER THEKERNEL->robot->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
@@ -185,6 +189,22 @@ void Endstops::on_config_reload(void *argument)
 
     this->is_corexy                 =  THEKERNEL->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
     this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
+
+    // see if an order has been specified, must be three characters, XYZ or YXZ etc
+    string order= THEKERNEL->config->value(homing_order_checksum)->by_default("")->as_string();
+    this->homing_order= 0;
+    if(order.size() == 3 && !this->is_delta) {
+        int shift= 0;
+        for(auto c : order) {
+            uint8_t i= toupper(c) - 'X';
+            if(i > 2) { // bad value
+                this->homing_order= 0;
+                break;
+            }
+            homing_order |= (i << shift);
+            shift += 2;
+        }
+    }
 
     // endstop trim used by deltas to do soft adjusting
     // on a delta homing to max, a negative trim value will move the carriage down, and a positive will move it up
@@ -280,9 +300,9 @@ void Endstops::wait_for_homed(char axes_to_move)
     }
 }
 
-// this homing works for cartesian and delta printers, not for HBots/CoreXY
-void Endstops::do_homing(char axes_to_move)
+void Endstops::do_homing_cartesian(char axes_to_move)
 {
+    // this homing works for cartesian and delta printers
     // Start moving the axes to the origin
     this->status = MOVING_TO_ORIGIN_FAST;
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
@@ -483,11 +503,22 @@ void Endstops::do_homing_corexy(char axes_to_move)
     }
 
     if (axes_to_move & 0x04) { // move Z
-        do_homing(0x04); // just home normally for Z
+        do_homing_cartesian(0x04); // just home normally for Z
     }
 
     // Homing is done
     this->status = NOT_HOMING;
+}
+
+void Endstops::home(char axes_to_move)
+{
+    if (is_corexy){
+        // corexy/HBot homing
+        do_homing_corexy(axes_to_move);
+    }else{
+        // cartesian/delta homing
+        do_homing_cartesian(axes_to_move);
+    }
 }
 
 // Start homing sequences by response to GCode commands
@@ -517,15 +548,32 @@ void Endstops::on_gcode_received(void *argument)
             THEKERNEL->stepper->turn_enable_pins_on();
 
             // do the actual homing
-            if (is_corexy)
-                do_homing_corexy(axes_to_move);
-            else
-                do_homing(axes_to_move);
+            if(homing_order != 0){
+                // if an order has been specified do it in the specified order
+                // homing order is 0b00ccbbaa where aa is 0,1,2 to specify the first axis, bb is the second and cc is the third
+                // eg 0b00100001 would be Y X Z, 0b00100100 would be X Y Z
+                for (uint8_t m = homing_order; m != 0; m >>= 2) {
+                    int a= (1 << (m & 0x03)); // axis to move
+                    if((a & axes_to_move) != 0)
+                        home(a);
+                }
+            }else {
+                // they all home at the same time
+                home(axes_to_move);
+            }
 
-            // Zero the ax(i/e)s position, add in the home offset
-            for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-                if ( (axes_to_move >> c)  & 1 ) {
-                    THEKERNEL->robot->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
+            if(home_all) {
+                // for deltas this may be important rather than setting each individually
+                THEKERNEL->robot->reset_axis_position(
+                    this->homing_position[X_AXIS] + this->home_offset[X_AXIS],
+                    this->homing_position[Y_AXIS] + this->home_offset[Y_AXIS],
+                    this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]);
+            }else{
+                // Zero the ax(i/e)s position, add in the home offset
+                for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+                    if ( (axes_to_move >> c)  & 1 ) {
+                        THEKERNEL->robot->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
+                    }
                 }
             }
 
@@ -533,6 +581,7 @@ void Endstops::on_gcode_received(void *argument)
             // TODO should maybe be done before setting home so X0 does not retrigger?
             back_off_home(axes_to_move);
         }
+
     } else if (gcode->has_m) {
         switch (gcode->m) {
             case 119: {

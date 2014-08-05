@@ -12,7 +12,6 @@
 #include "Conveyor.h"
 #include "ZProbe.h"
 #include "BaseSolution.h"
-#include "StepperMotor.h"
 
 #include <tuple>
 #include <algorithm>
@@ -77,20 +76,6 @@ static std::tuple<float, float, float, float, float, float> getCoordinates(float
     return std::make_tuple(t1x, t1y, t2x, t2y, t3x, t3y);
 }
 
-bool DeltaCalibrationStrategy::probe_delta_tower(int &steps, float x, float y)
-{
-    int s;
-    // move to tower
-    zprobe->coordinated_move(x, y, NAN, zprobe->getFastFeedrate());
-    if(!zprobe->run_probe(s)) return false;
-
-    // return to original Z
-    zprobe->return_probe(s);
-    steps = s;
-
-    return true;
-}
-
 /* Run a calibration routine for a delta
     1. Home
     2. probe for z bed
@@ -148,17 +133,17 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
 
     // get initial probes
     // probe the base of the X tower
-    if(!probe_delta_tower(s, t1x, t1y)) return false;
+    if(!zprobe->doProbeAt(s, t1x, t1y)) return false;
     float t1z = zprobe->zsteps_to_mm(s);
     gcode->stream->printf("T1-0 Z:%1.4f C:%d\n", t1z, s);
 
     // probe the base of the Y tower
-    if(!probe_delta_tower(s, t2x, t2y)) return false;
+    if(!zprobe->doProbeAt(s, t2x, t2y)) return false;
     float t2z = zprobe->zsteps_to_mm(s);
     gcode->stream->printf("T2-0 Z:%1.4f C:%d\n", t2z, s);
 
     // probe the base of the Z tower
-    if(!probe_delta_tower(s, t3x, t3y)) return false;
+    if(!zprobe->doProbeAt(s, t3x, t3y)) return false;
     float t3z = zprobe->zsteps_to_mm(s);
     gcode->stream->printf("T3-0 Z:%1.4f C:%d\n", t3z, s);
 
@@ -184,17 +169,17 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
         zprobe->coordinated_move(NAN, NAN, -bedht, zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
 
         // probe the base of the X tower
-        if(!probe_delta_tower(s, t1x, t1y)) return false;
+        if(!zprobe->doProbeAt(s, t1x, t1y)) return false;
         t1z = zprobe->zsteps_to_mm(s);
         gcode->stream->printf("T1-%d Z:%1.4f C:%d\n", i, t1z, s);
 
         // probe the base of the Y tower
-        if(!probe_delta_tower(s, t2x, t2y)) return false;
+        if(!zprobe->doProbeAt(s, t2x, t2y)) return false;
         t2z = zprobe->zsteps_to_mm(s);
         gcode->stream->printf("T2-%d Z:%1.4f C:%d\n", i, t2z, s);
 
         // probe the base of the Z tower
-        if(!probe_delta_tower(s, t3x, t3y)) return false;
+        if(!zprobe->doProbeAt(s, t3x, t3y)) return false;
         t3z = zprobe->zsteps_to_mm(s);
         gcode->stream->printf("T3-%d Z:%1.4f C:%d\n", i, t3z, s);
 
@@ -249,7 +234,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
 
     // probe center to get reference point at this Z height
     int dc;
-    if(!probe_delta_tower(dc, 0, 0)) return false;
+    if(!zprobe->doProbeAt(dc, 0, 0)) return false;
     gcode->stream->printf("CT Z:%1.3f C:%d\n", zprobe->zsteps_to_mm(dc), dc);
     float cmm = zprobe->zsteps_to_mm(dc);
 
@@ -269,11 +254,11 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
     for (int i = 1; i <= 10; ++i) {
         // probe t1, t2, t3 and get average, but use coordinated moves, probing center won't change
         int dx, dy, dz;
-        if(!probe_delta_tower(dx, t1x, t1y)) return false;
+        if(!zprobe->doProbeAt(dx, t1x, t1y)) return false;
         gcode->stream->printf("T1-%d Z:%1.3f C:%d\n", i, zprobe->zsteps_to_mm(dx), dx);
-        if(!probe_delta_tower(dy, t2x, t2y)) return false;
+        if(!zprobe->doProbeAt(dy, t2x, t2y)) return false;
         gcode->stream->printf("T2-%d Z:%1.3f C:%d\n", i, zprobe->zsteps_to_mm(dy), dy);
-        if(!probe_delta_tower(dz, t3x, t3y)) return false;
+        if(!zprobe->doProbeAt(dz, t3x, t3y)) return false;
         gcode->stream->printf("T3-%d Z:%1.3f C:%d\n", i, zprobe->zsteps_to_mm(dz), dz);
 
         // now look at the difference and reduce it by adjusting delta radius
