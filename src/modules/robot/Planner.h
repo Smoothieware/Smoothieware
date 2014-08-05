@@ -26,6 +26,7 @@ public:
     void on_module_loaded();
     void on_config_reload(void *argument);
     float get_acceleration() const { return acceleration; }
+    float get_z_acceleration() const { return z_acceleration > 0.0F ? z_acceleration : acceleration; }
 
     friend class Robot; // for acceleration, junction deviation, minimum_planner_speed
 
@@ -35,6 +36,7 @@ private:
     bool has_deleted_block;       // Flag for above value
 
     float acceleration;          // Setting
+    float z_acceleration;        // Setting
     float junction_deviation;    // Setting
     float minimum_planner_speed; // Setting
 };
