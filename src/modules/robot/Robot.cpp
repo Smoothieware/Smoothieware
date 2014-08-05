@@ -404,7 +404,7 @@ void Robot::on_gcode_received(void *argument)
                 gcode->mark_as_taken();
                 break;
 
-            case 204: // M204 Snnn - set acceleration to nnn, NB only Snnn is currently supported
+            case 204: // M204 Snnn - set acceleration to nnn, Znnn sets z acceleration
                 gcode->mark_as_taken();
 
                 if (gcode->has_letter('S')) {
@@ -415,6 +415,15 @@ void Robot::on_gcode_received(void *argument)
                     if (acc < 1.0F)
                         acc = 1.0F;
                     THEKERNEL->planner->acceleration = acc;
+                }
+                if (gcode->has_letter('Z')) {
+                    // TODO for safety so it applies only to following gcodes, maybe a better way to do this?
+                    THEKERNEL->conveyor->wait_for_empty_queue();
+                    float acc = gcode->get_value('Z'); // mm/s^2
+                    // enforce positive
+                    if (acc < 0.0F)
+                        acc = 0.0F;
+                    THEKERNEL->planner->z_acceleration = acc;
                 }
                 break;
 
@@ -459,7 +468,7 @@ void Robot::on_gcode_received(void *argument)
             case 500: // M500 saves some volatile settings to config override file
             case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
-                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f\n", THEKERNEL->planner->acceleration);
+                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f Z%1.5f\n", THEKERNEL->planner->acceleration, THEKERNEL->planner->z_acceleration);
                 gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],

@@ -678,9 +678,9 @@ uint32_t Endstops::acceleration_tick(uint32_t dummy)
 
         uint32_t current_rate = STEPPER[c]->get_steps_per_second();
         uint32_t target_rate = int(floor(this->feed_rate[c]*STEPS_PER_MM(c)));
-
+        float acc= (c==Z_AXIS) ? THEKERNEL->planner->get_z_acceleration() : THEKERNEL->planner->get_acceleration();
         if( current_rate < target_rate ){
-            uint32_t rate_increase = int(floor((THEKERNEL->planner->get_acceleration()/THEKERNEL->stepper->get_acceleration_ticks_per_second())*STEPS_PER_MM(c)));
+            uint32_t rate_increase = int(floor((acc/THEKERNEL->stepper->get_acceleration_ticks_per_second())*STEPS_PER_MM(c)));
             current_rate = min( target_rate, current_rate + rate_increase );
         }
         if( current_rate > target_rate ){ current_rate = target_rate; }
