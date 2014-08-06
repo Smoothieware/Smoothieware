@@ -38,15 +38,11 @@ using namespace std;
 
 Planner::Planner(){
     clear_vector_float(this->previous_unit_vec);
-    this->has_deleted_block = false;
-}
-
-void Planner::on_module_loaded(){
-    this->on_config_reload(this);
+    config_load();
 }
 
 // Configure acceleration
-void Planner::on_config_reload(void* argument){
+void Planner::config_load(){
     this->acceleration = THEKERNEL->config->value(acceleration_checksum)->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2
     this->z_acceleration = THEKERNEL->config->value(z_acceleration_checksum)->by_default(0.0F )->as_number(); // disabled by default
 
@@ -65,13 +61,11 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
 
 
     // Direction bits
-    block->direction_bits = 0;
     for (int i = 0; i < 3; i++)
     {
         int steps = THEKERNEL->robot->actuators[i]->steps_to_target(actuator_pos[i]);
 
-        if (steps < 0)
-            block->direction_bits |= (1<<i);
+        block->direction_bits[i] = (steps < 0) ? 1 : 0;
 
         // Update current position
         THEKERNEL->robot->actuators[i]->last_milestone_steps += steps;
