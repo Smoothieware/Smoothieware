@@ -156,7 +156,7 @@ float Block::intersection_distance(float initialrate, float finalrate, float acc
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.
-inline float max_allowable_speed(float acceleration, float target_velocity, float distance)
+float Block::max_allowable_speed(float acceleration, float target_velocity, float distance)
 {
     return sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance);
 }

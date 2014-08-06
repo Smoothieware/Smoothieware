@@ -18,6 +18,7 @@
 #include "Config.h"
 #include "ConfigValue.h"
 #include "Gcode.h"
+#include "Block.h"
 
 #include <vector>
 using namespace std;
@@ -144,9 +145,9 @@ void Stepper::on_block_begin(void* argument){
     }
 
     // Setup : instruct stepper motors to move
-    if( block->steps[ALPHA_STEPPER] > 0 ){ THEKERNEL->robot->alpha_stepper_motor->move( ( block->direction_bits >> 0  ) & 1 , block->steps[ALPHA_STEPPER] ); }
-    if( block->steps[BETA_STEPPER ] > 0 ){ THEKERNEL->robot->beta_stepper_motor->move(  ( block->direction_bits >> 1  ) & 1 , block->steps[BETA_STEPPER ] ); }
-    if( block->steps[GAMMA_STEPPER] > 0 ){ THEKERNEL->robot->gamma_stepper_motor->move( ( block->direction_bits >> 2  ) & 1 , block->steps[GAMMA_STEPPER] ); }
+    if( block->steps[ALPHA_STEPPER] > 0 ){ THEKERNEL->robot->alpha_stepper_motor->move( block->direction_bits[ALPHA_STEPPER], block->steps[ALPHA_STEPPER] ); }
+    if( block->steps[BETA_STEPPER ] > 0 ){ THEKERNEL->robot->beta_stepper_motor->move(  block->direction_bits[BETA_STEPPER], block->steps[BETA_STEPPER ] ); }
+    if( block->steps[GAMMA_STEPPER] > 0 ){ THEKERNEL->robot->gamma_stepper_motor->move( block->direction_bits[GAMMA_STEPPER], block->steps[GAMMA_STEPPER] ); }
 
     this->current_block = block;
 
