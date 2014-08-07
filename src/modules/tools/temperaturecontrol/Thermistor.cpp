@@ -15,6 +15,9 @@
 #include "libs/Median.h"
 #include "Thermistor.h"
 
+// a const list of predefined thermistors
+#include "predefined_thermistors.h"
+
 #include "MRI_Hooks.h"
 
 #define UNDEFINED -1
@@ -47,14 +50,18 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     this->r1   = 0;
     this->r2   = 4700;
 
-    // Preset values for various common types of thermistors
-    ConfigValue* thermistor = THEKERNEL->config->value(module_checksum, name_checksum, thermistor_checksum);
-    if(       thermistor->as_string().compare("EPCOS100K"    ) == 0 ){ // Default
-    }else if( thermistor->as_string().compare("RRRF100K"     ) == 0 ){ this->beta = 3960;
-    }else if( thermistor->as_string().compare("RRRF10K"      ) == 0 ){ this->beta = 3964; this->r0 = 10000; this->r1 = 680; this->r2 = 1600;
-    }else if( thermistor->as_string().compare("Honeywell100K") == 0 ){ this->beta = 3974;
-    }else if( thermistor->as_string().compare("Semitec"      ) == 0 ){ this->beta = 4267;
-    }else if( thermistor->as_string().compare("HT100K"       ) == 0 ){ this->beta = 3990; }
+    // load a predefined thermistor name if found
+    string thermistor = THEKERNEL->config->value(module_checksum, name_checksum, thermistor_checksum)->as_string();
+    for (auto i : predefined_thermistors) {
+        if(thermistor.compare(i.name) == 0) {
+            this->beta = i.beta;
+            this->r0   = i.r0;
+            this->t0   = i.t0;
+            this->r1   = i.r1;
+            this->r2   = i.r2;
+            break;
+        }
+    }
 
     // Preset values are overriden by specified values
     this->r0 =                  THEKERNEL->config->value(module_checksum, name_checksum, r0_checksum  )->by_default(this->r0  )->as_number();               // Stated resistance eg. 100K
