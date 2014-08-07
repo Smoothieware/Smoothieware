@@ -100,9 +100,13 @@
 #define gamma_limit_enable_checksum      CHECKSUM("gamma_limit_enable")
 
 #define homing_order_checksum            CHECKSUM("homing_order")
+#define move_to_zero_checksum            CHECKSUM("move_to_zero_after_home")
 
 #define STEPPER THEKERNEL->robot->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
+
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#define min(a,b) (((a) <= (b)) ? (a) : (b))
 
 // Homing States
 enum{
@@ -111,6 +115,7 @@ enum{
     MOVING_BACK,
     MOVING_TO_ORIGIN_SLOW,
     BACK_OFF_HOME,
+    MOVE_TO_ZERO,
     LIMIT_TRIGGERED
 };
 
@@ -217,6 +222,8 @@ void Endstops::on_config_reload(void *argument)
     this->limit_enable[Y_AXIS]= THEKERNEL->config->value(beta_limit_enable_checksum)->by_default(false)->as_bool();
     this->limit_enable[Z_AXIS]= THEKERNEL->config->value(gamma_limit_enable_checksum)->by_default(false)->as_bool();
 
+    this->move_to_zero_after_home= THEKERNEL->config->value(move_to_zero_checksum)->by_default(false)->as_bool();
+
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]){
         register_for_event(ON_IDLE);
     }
@@ -261,7 +268,7 @@ void Endstops::back_off_home(char axes_to_move)
 
             // Move off of the endstop using a regular relative move
             char buf[32];
-            snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->slow_rates[c]*60.0F);
+            snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->fast_rates[c]*60.0F);
             Gcode gc(buf, &(StreamOutput::NullStream));
             bool oldmode= THEKERNEL->robot->absolute_mode;
             THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
@@ -269,6 +276,24 @@ void Endstops::back_off_home(char axes_to_move)
             THEKERNEL->robot->absolute_mode= oldmode; // restore mode
         }
     }
+    // Wait for above to finish
+    THEKERNEL->conveyor->wait_for_empty_queue();
+    this->status = NOT_HOMING;
+}
+
+// If enabled will move the head to 0,0 after homing, but only if X and Y were set to home
+void Endstops::move_to_zero(char axes_to_move)
+{
+    if( (axes_to_move&0x03) != 3 ) return; // ignore if X and Y not homing
+
+    this->status = MOVE_TO_ZERO;
+    // Move to center using a regular move, use slower of X and Y fast rate
+    float rate= min(this->fast_rates[0], this->fast_rates[1])*60.0F;
+    char buf[32];
+    snprintf(buf, sizeof(buf), "G0 X0 Y0 F%1.4f", rate);
+    Gcode gc(buf, &(StreamOutput::NullStream));
+    THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+
     // Wait for above to finish
     THEKERNEL->conveyor->wait_for_empty_queue();
     this->status = NOT_HOMING;
@@ -577,8 +602,12 @@ void Endstops::on_gcode_received(void *argument)
                 }
             }
 
+            // on some systems where 0,0 is bed center it is noce to have home goto 0,0 after homing
+            // default is off
+            if(this->move_to_zero_after_home)
+                move_to_zero(axes_to_move);
+
             // if limit switches are enabled we must back off endstop after setting home
-            // TODO should maybe be done before setting home so X0 does not retrigger?
             back_off_home(axes_to_move);
         }
 
@@ -666,7 +695,6 @@ void Endstops::on_gcode_received(void *argument)
     }
 }
 
-#define max(a,b) (((a) > (b)) ? (a) : (b))
 // Called periodically to change the speed to match acceleration
 uint32_t Endstops::acceleration_tick(uint32_t dummy)
 {
