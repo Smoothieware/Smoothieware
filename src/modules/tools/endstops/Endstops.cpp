@@ -110,10 +110,10 @@
 
 // Homing States
 enum{
-    NOT_HOMING,
     MOVING_TO_ORIGIN_FAST,
     MOVING_BACK,
     MOVING_TO_ORIGIN_SLOW,
+    NOT_HOMING,
     BACK_OFF_HOME,
     MOVE_TO_ZERO,
     LIMIT_TRIGGERED
@@ -285,6 +285,9 @@ void Endstops::back_off_home(char axes_to_move)
 void Endstops::move_to_zero(char axes_to_move)
 {
     if( (axes_to_move&0x03) != 3 ) return; // ignore if X and Y not homing
+
+    // Do we need to check if we are already at 0,0? probably not as the G0 will not do anything if we are
+    // float pos[3]; THEKERNEL->robot->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
 
     this->status = MOVE_TO_ZERO;
     // Move to center using a regular move, use slower of X and Y fast rate
@@ -698,7 +701,7 @@ void Endstops::on_gcode_received(void *argument)
 // Called periodically to change the speed to match acceleration
 uint32_t Endstops::acceleration_tick(uint32_t dummy)
 {
-    if(this->status == NOT_HOMING) return(0); // nothing to do
+    if(this->status >= NOT_HOMING) return(0); // nothing to do, only do this when moving for homing sequence
 
     // foreach stepper that is moving
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
