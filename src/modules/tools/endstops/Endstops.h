@@ -31,7 +31,7 @@ class Endstops : public Module{
         void wait_for_homed_corexy(int axis);
         void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
         void back_off_home(char axes_to_move);
-        void move_to_zero(char);
+        void move_to_origin(char);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
@@ -53,7 +53,7 @@ class Endstops : public Module{
         struct {
             bool is_corexy:1;
             bool is_delta:1;
-            bool move_to_zero_after_home:1;
+            bool move_to_origin_after_home:1;
         };
 };
 
