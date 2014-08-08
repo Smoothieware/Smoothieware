@@ -79,12 +79,13 @@
 Extruder::Extruder( uint16_t config_identifier, bool single )
 {
     this->absolute_mode = true;
-    this->enabled       = false;
-    this->paused        = false;
+    this->enabled = false;
+    this->paused = false;
     this->single_config = single;
-    this->identifier    = config_identifier;
-    this->retracted     = false;
-    this->volumetric_multiplier= 1.0F;
+    this->identifier = config_identifier;
+    this->retracted = false;
+    this->volumetric_multiplier = 1.0F;
+    this->extruder_multiplier = 1.0F;
 
     memset(this->offset, 0, sizeof(this->offset));
 }
@@ -250,6 +251,10 @@ void Extruder::on_gcode_received(void *argument)
             if(gcode->has_letter('F')) retract_recover_feedrate = gcode->get_value('F')/60.0F; // specified in mm/min converted to mm/sec
             gcode->mark_as_taken();
 
+        } else if (gcode->m == 221 && this->enabled) { // M221 S100 change flow rate by percentage
+            if(gcode->has_letter('S')) this->extruder_multiplier= gcode->get_value('S')/100.0F;
+            gcode->mark_as_taken();
+
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             if( this->single_config ) {
                 gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter);
@@ -264,7 +269,6 @@ void Extruder::on_gcode_received(void *argument)
                 gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f P%d\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F, this->identifier);
             }
             gcode->mark_as_taken();
-
         } else if( gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 ) {
             // Mcodes to pass along to on_gcode_execute
             THEKERNEL->conveyor->append_gcode(gcode);
@@ -410,7 +414,7 @@ void Extruder::on_gcode_execute(void *argument)
                 } else {
                     // We move proportionally to the robot's movement
                     this->mode = FOLLOW;
-                    this->travel_ratio = (relative_extrusion_distance * this->volumetric_multiplier) / gcode->millimeters_of_travel; // adjust for volumetric extrusion
+                    this->travel_ratio = (relative_extrusion_distance * this->volumetric_multiplier * this->extruder_multiplier) / gcode->millimeters_of_travel; // adjust for volumetric extrusion and extruder multiplier
                     // TODO: check resulting flowrate, limit robot speed if it exceeds max_speed
                 }
 

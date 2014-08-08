@@ -54,6 +54,7 @@ class Extruder : public Tool {
         };
 
         float          volumetric_multiplier;
+        float          extruder_multiplier;
         float          feed_rate;                    //
         float          acceleration;                 //
         float          max_speed;
