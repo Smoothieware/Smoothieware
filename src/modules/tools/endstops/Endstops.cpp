@@ -100,17 +100,22 @@
 #define gamma_limit_enable_checksum      CHECKSUM("gamma_limit_enable")
 
 #define homing_order_checksum            CHECKSUM("homing_order")
+#define move_to_origin_checksum          CHECKSUM("move_to_origin_after_home")
 
 #define STEPPER THEKERNEL->robot->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
 
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#define min(a,b) (((a) <= (b)) ? (a) : (b))
+
 // Homing States
 enum{
+    MOVING_TO_ENDSTOP_FAST, // homing move
+    MOVING_BACK,            // homing move
+    MOVING_TO_ENDSTOP_SLOW, // homing move
     NOT_HOMING,
-    MOVING_TO_ORIGIN_FAST,
-    MOVING_BACK,
-    MOVING_TO_ORIGIN_SLOW,
     BACK_OFF_HOME,
+    MOVE_TO_ORIGIN,
     LIMIT_TRIGGERED
 };
 
@@ -217,6 +222,8 @@ void Endstops::on_config_reload(void *argument)
     this->limit_enable[Y_AXIS]= THEKERNEL->config->value(beta_limit_enable_checksum)->by_default(false)->as_bool();
     this->limit_enable[Z_AXIS]= THEKERNEL->config->value(gamma_limit_enable_checksum)->by_default(false)->as_bool();
 
+    this->move_to_origin_after_home= THEKERNEL->config->value(move_to_origin_checksum)->by_default(false)->as_bool();
+
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]){
         register_for_event(ON_IDLE);
     }
@@ -261,7 +268,7 @@ void Endstops::back_off_home(char axes_to_move)
 
             // Move off of the endstop using a regular relative move
             char buf[32];
-            snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->slow_rates[c]*60.0F);
+            snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->fast_rates[c]*60.0F);
             Gcode gc(buf, &(StreamOutput::NullStream));
             bool oldmode= THEKERNEL->robot->absolute_mode;
             THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
@@ -269,6 +276,27 @@ void Endstops::back_off_home(char axes_to_move)
             THEKERNEL->robot->absolute_mode= oldmode; // restore mode
         }
     }
+    // Wait for above to finish
+    THEKERNEL->conveyor->wait_for_empty_queue();
+    this->status = NOT_HOMING;
+}
+
+// If enabled will move the head to 0,0 after homing, but only if X and Y were set to home
+void Endstops::move_to_origin(char axes_to_move)
+{
+    if( (axes_to_move&0x03) != 3 ) return; // ignore if X and Y not homing
+
+    // Do we need to check if we are already at 0,0? probably not as the G0 will not do anything if we are
+    // float pos[3]; THEKERNEL->robot->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
+
+    this->status = MOVE_TO_ORIGIN;
+    // Move to center using a regular move, use slower of X and Y fast rate
+    float rate= min(this->fast_rates[0], this->fast_rates[1])*60.0F;
+    char buf[32];
+    snprintf(buf, sizeof(buf), "G0 X0 Y0 F%1.4f", rate);
+    Gcode gc(buf, &(StreamOutput::NullStream));
+    THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+
     // Wait for above to finish
     THEKERNEL->conveyor->wait_for_empty_queue();
     this->status = NOT_HOMING;
@@ -304,7 +332,7 @@ void Endstops::do_homing_cartesian(char axes_to_move)
 {
     // this homing works for cartesian and delta printers
     // Start moving the axes to the origin
-    this->status = MOVING_TO_ORIGIN_FAST;
+    this->status = MOVING_TO_ENDSTOP_FAST;
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if ( ( axes_to_move >> c) & 1 ) {
             this->feed_rate[c]= this->fast_rates[c];
@@ -338,7 +366,7 @@ void Endstops::do_homing_cartesian(char axes_to_move)
     }
 
     // Start moving the axes to the origin slowly
-    this->status = MOVING_TO_ORIGIN_SLOW;
+    this->status = MOVING_TO_ENDSTOP_SLOW;
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if ( ( axes_to_move >> c ) & 1 ) {
             this->feed_rate[c]= this->slow_rates[c];
@@ -405,7 +433,7 @@ void Endstops::wait_for_homed_corexy(int axis)
 
 void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps)
 {
-    this->status = MOVING_TO_ORIGIN_FAST;
+    this->status = MOVING_TO_ENDSTOP_FAST;
     this->feed_rate[X_AXIS]= fast_rate;
     STEPPER[X_AXIS]->set_speed(0);
     STEPPER[X_AXIS]->move(dirx, 10000000);
@@ -431,7 +459,7 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate,
     }
 
     // Start moving the axes to the origin slowly
-    this->status = MOVING_TO_ORIGIN_SLOW;
+    this->status = MOVING_TO_ENDSTOP_SLOW;
     this->feed_rate[X_AXIS]= slow_rate;
     STEPPER[X_AXIS]->set_speed(0);
     STEPPER[X_AXIS]->move(dirx, 10000000);
@@ -472,7 +500,7 @@ void Endstops::do_homing_corexy(char axes_to_move)
         }
 
         // then move both X and Y until one hits the endstop
-        this->status = MOVING_TO_ORIGIN_FAST;
+        this->status = MOVING_TO_ENDSTOP_FAST;
         this->feed_rate[motor]= this->fast_rates[motor]*1.4142;
         STEPPER[motor]->set_speed(0); // need to allow for more ground covered when moving diagonally
         STEPPER[motor]->move(dir, 10000000);
@@ -577,8 +605,12 @@ void Endstops::on_gcode_received(void *argument)
                 }
             }
 
+            // on some systems where 0,0 is bed center it is noce to have home goto 0,0 after homing
+            // default is off
+            if(this->move_to_origin_after_home)
+                move_to_origin(axes_to_move);
+
             // if limit switches are enabled we must back off endstop after setting home
-            // TODO should maybe be done before setting home so X0 does not retrigger?
             back_off_home(axes_to_move);
         }
 
@@ -666,11 +698,10 @@ void Endstops::on_gcode_received(void *argument)
     }
 }
 
-#define max(a,b) (((a) > (b)) ? (a) : (b))
 // Called periodically to change the speed to match acceleration
 uint32_t Endstops::acceleration_tick(uint32_t dummy)
 {
-    if(this->status == NOT_HOMING) return(0); // nothing to do
+    if(this->status >= NOT_HOMING) return(0); // nothing to do, only do this when moving for homing sequence
 
     // foreach stepper that is moving
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
