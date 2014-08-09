@@ -89,6 +89,15 @@ void TemperatureControl::on_module_loaded()
     this->register_for_event(ON_SECOND_TICK);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
+    this->register_for_event(ON_HALT);
+}
+
+void TemperatureControl::on_halt(void *arg)
+{
+    // turn off heater
+    this->o = 0;
+    this->heater_pin.set(0);
+    this->target_temperature = UNDEFINED;
 }
 
 void TemperatureControl::on_main_loop(void *argument)

@@ -27,6 +27,7 @@ class TemperatureControl : public Module {
         void on_second_tick(void* argument);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
+        void on_halt(void* argument);
 
         void set_desired_temperature(float desired_temperature);
 

@@ -49,6 +49,7 @@ void Stepper::on_module_loaded(){
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
+    this->register_for_event(ON_HALT);
 
     // Get onfiguration
     this->on_config_reload(this);
@@ -87,6 +88,11 @@ void Stepper::on_play(void* argument){
     THEKERNEL->robot->alpha_stepper_motor->unpause();
     THEKERNEL->robot->beta_stepper_motor->unpause();
     THEKERNEL->robot->gamma_stepper_motor->unpause();
+}
+
+void Stepper::on_halt(void* argument)
+{
+    this->turn_enable_pins_off();
 }
 
 void Stepper::on_gcode_received(void* argument){
