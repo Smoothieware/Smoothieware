@@ -246,8 +246,10 @@ void Endstops::on_idle(void *argument)
                     if ( ++debounce >= debounce_count ) {
                         // endstop triggered
                         THEKERNEL->pauser->take();
-                        THEKERNEL->streams->printf("Limit switch %s was hit - reset or press play button\n", endstop_names[n]);
+                        THEKERNEL->streams->printf("Limit switch %s was hit - reset required\n", endstop_names[n]);
                         this->status= LIMIT_TRIGGERED;
+                        // disables heaters and motors
+                        THEKERNEL->call_event(ON_HALT);
                         return;
                     }
                 }

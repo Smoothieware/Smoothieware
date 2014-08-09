@@ -90,6 +90,13 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     memset(this->offset, 0, sizeof(this->offset));
 }
 
+void Extruder::on_halt(void *arg)
+{
+    // turn off motor
+    this->enabled= false;
+    this->en_pin.set(1);
+}
+
 void Extruder::on_module_loaded()
 {
 
@@ -103,6 +110,7 @@ void Extruder::on_module_loaded()
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
+    this->register_for_event(ON_HALT);
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_GET_PUBLIC_DATA);
 

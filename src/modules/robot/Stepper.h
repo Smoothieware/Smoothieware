@@ -27,6 +27,7 @@ public:
     void on_gcode_execute(void *argument);
     void on_play(void *argument);
     void on_pause(void *argument);
+    void on_halt(void *argument);
     uint32_t main_interrupt(uint32_t dummy);
     void trapezoid_generator_reset();
     void set_step_events_per_second(float);
