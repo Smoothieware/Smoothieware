@@ -25,6 +25,8 @@ using namespace std;
 
 CustomScreen::CustomScreen()
 {
+    this->command = nullptr;
+
     //printf("Setting up CustomScreen\n");
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, custom_menu_checksum );
