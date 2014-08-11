@@ -48,57 +48,53 @@ PanelScreen* MainMenuScreen::setupConfigureScreen()
     mvs->set_parent(this);
 
     // acceleration
+    static const float accel_inc_min_max[3] = {10.0F, 1.0F, 10000.0F};
     mvs->addMenuItem("Acceleration", // menu name
         []() -> float { return THEKERNEL->planner->get_acceleration(); }, // getter
         [this](float acc) { send_gcode("M204", 'S', acc); }, // setter
-        10.0F, // increment
-        1.0F, // Min
-        10000.0F // Max
+        &accel_inc_min_max
         );
 
     // steps/mm
+    static const float stepsmm_inc_min_max[3] = {0.1F, 1.0F, NAN};
     mvs->addMenuItem("X steps/mm",
         []() -> float { return THEKERNEL->robot->actuators[0]->get_steps_per_mm(); },
         [](float v) { THEKERNEL->robot->actuators[0]->change_steps_per_mm(v); },
-        0.1F,
-        1.0F
+        &stepsmm_inc_min_max
         );
 
     mvs->addMenuItem("Y steps/mm",
         []() -> float { return THEKERNEL->robot->actuators[1]->get_steps_per_mm(); },
         [](float v) { THEKERNEL->robot->actuators[1]->change_steps_per_mm(v); },
-        0.1F,
-        1.0F
+        &stepsmm_inc_min_max
         );
 
     mvs->addMenuItem("Z steps/mm",
         []() -> float { return THEKERNEL->robot->actuators[2]->get_steps_per_mm(); },
         [](float v) { THEKERNEL->robot->actuators[2]->change_steps_per_mm(v); },
-        0.1F,
-        1.0F
+        &stepsmm_inc_min_max
         );
 
     mvs->addMenuItem("E steps/mm",
         // gets steps/mm for currently active extruder
         []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *rd; else return 0.0F; },
         [this](float v) { send_gcode("M92", 'E', v); },
-        0.1F,
-        1.0F
+        &stepsmm_inc_min_max
         );
 
+    static const float filadia_inc_min_max[3] = {0.01F, 0.0F, 4.0F};
     mvs->addMenuItem("Filament diameter",
         // gets filament diameter for currently active extruder
         []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *(rd+1); else return 0.0F; },
         [this](float v) { send_gcode("M200", 'D', v); },
-        0.01F,
-        0.0F,
-        4.0F
+        &filadia_inc_min_max
         );
 
+    static const float zhomeoffs_inc_min_max[3] = {0.1, NAN, NAN};
     mvs->addMenuItem("Z Home Ofs",
         []() -> float { void *rd; PublicData::get_value( endstops_checksum, home_offset_checksum, &rd ); return rd==nullptr ? 0.0F : ((float*)rd)[2]; },
         [this](float v) { send_gcode("M206", 'Z', v); },
-        0.1F
+        &zhomeoffs_inc_min_max
         );
 
     return mvs;

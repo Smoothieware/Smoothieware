@@ -29,9 +29,12 @@ public:
     void clicked_menu_entry(uint16_t line);
     int idle_timeout_secs(){ return 60; }
 
-    typedef std::tuple<char *, std::function<float()>, std::function<void(float)>, float, float, float> MenuItemType;
-    void addMenuItem(const MenuItemType& item);
-    void addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc= 1.0F, float min= NAN, float max= NAN);
+    typedef std::tuple<char *, std::function<float()>, std::function<void(float)>, const float (*)[3]> MenuItemType;
+    // declare inc_min_max in the line in front of addMenuItem call as follows:
+    // static const float my_imm[3] = {1.0F, NAN, NAN};
+    // an allocated array won't be free'd!
+    // std_values of inc_min_max: inc = 1.0F, min = NAN, max = NAN
+    void addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, const float (*inc_min_max)[3]);
 
 
 private:
@@ -39,7 +42,7 @@ private:
     float new_value, min_value, max_value;
     char control_mode;
     int selected_item;
-    // name, getter function, setter function, increment
+    // name, getter function, setter function, increment_minimum_maximum
     std::vector<MenuItemType> menu_items;
 };
 

@@ -615,12 +615,11 @@ void Panel::setup_temperature_screen()
         else if(t.designator == "B") name= "Bed";
         else name= t.designator.c_str();
 
+        static const float temp_inc_min_max[3] = {1.0F, 0.0F, 500.0F};
         mvs->addMenuItem(name, // menu name
             [i]() -> float { return getTargetTemperature(i); }, // getter
             [i](float t) { PublicData::set_value( temperature_control_checksum, i, &t ); }, // setter
-            1.0F, // increment
-            0.0F, // Min
-            500.0F // Max
+            &temp_inc_min_max // increment / Min / Max
             );
     }
 }
