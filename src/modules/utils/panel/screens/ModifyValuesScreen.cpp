@@ -102,10 +102,11 @@ void ModifyValuesScreen::clicked_menu_entry(uint16_t line)
 
         const char *name = std::get<0>(menu_items[line]);
         float value = std::get<1>(menu_items[line])();
-        float inc= std::get<3>(menu_items[line]);
+        const float (*inc_min_max)[3] = std::get<3>(menu_items[line]);
+        float inc = *inc_min_max[0];
         THEPANEL->enter_control_mode(inc, inc / 10);
-        this->min_value= std::get<4>(menu_items[line]);
-        this->max_value= std::get<5>(menu_items[line]);
+        this->min_value = *inc_min_max[1];
+        this->max_value = *inc_min_max[2];
 
         THEPANEL->set_control_value(value);
         THEPANEL->lcd->clear();
@@ -127,11 +128,11 @@ void ModifyValuesScreen::on_main_loop()
     execute_function = -1;
 }
 
-void ModifyValuesScreen::addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc, float  min, float max)
+void ModifyValuesScreen::addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, const float (*inc_min_max)[3])
 {
     string n(name);
     if(n.size() > 10) {
         n= n.substr(0, 10);
     }
-    menu_items.push_back(make_tuple(strdup(n.c_str()), getter, setter, inc, min, max));
+    menu_items.push_back(make_tuple(strdup(n.c_str()), getter, setter, inc_min_max));
 }
