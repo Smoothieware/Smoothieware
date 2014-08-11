@@ -94,8 +94,8 @@ void PrepareScreen::cooldown()
 void PrepareScreen::on_main_loop()
 {
     // change actual axis value
-    if (this->command.empty()) return;
-    send_command(this->command.c_str());
-    this->command.clear();
+    if (this->command == nullptr) return;
+    send_command(this->command);
+    this->command = nullptr;
 }
 
