@@ -164,7 +164,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
                 if(gcode->has_letter('C')) c = gcode->get_uint('C');
                 if(gcode->has_letter('D')) d = gcode->get_uint('D');
                 this->plane= new Plane3D(a, b, c, d);
-
+                setAdjustFunction(true);
             }
             return true;
 
