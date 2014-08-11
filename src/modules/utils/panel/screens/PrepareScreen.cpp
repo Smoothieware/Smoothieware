@@ -23,6 +23,8 @@ using namespace std;
 
 PrepareScreen::PrepareScreen()
 {
+    this->command = nullptr;
+
     // Children screens
     this->extruder_screen = (new ExtruderScreen()  )->set_parent(this);
     THEPANEL->temperature_screen->set_parent(this);
