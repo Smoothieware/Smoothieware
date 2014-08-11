@@ -87,7 +87,7 @@ void CustomScreen::clicked_menu_entry(uint16_t line)
 void CustomScreen::on_main_loop()
 {
     // issue command
-    if (this->command.empty()) return;
-    send_command(this->command.c_str());
-    this->command.clear();
+    if (this->command == nullptr) return;
+    send_command(this->command);
+    this->command = nullptr;
 }
