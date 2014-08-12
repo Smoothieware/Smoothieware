@@ -30,11 +30,12 @@ public:
     int idle_timeout_secs(){ return 60; }
 
     typedef std::tuple<char *, std::function<float()>, std::function<void(float)>, float, float, float> MenuItemType;
-    void addMenuItem(const MenuItemType& item);
     void addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc= 1.0F, float min= NAN, float max= NAN);
 
 
 private:
+    void addMenuItem(const MenuItemType& item);
+
     int execute_function;
     float new_value, min_value, max_value;
     char control_mode;
