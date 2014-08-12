@@ -34,7 +34,7 @@ private:
     void preheat();
     void cooldown();
     void setup_temperature_screen();
-    string command;
+    const char *command;
 };
 
 #endif
