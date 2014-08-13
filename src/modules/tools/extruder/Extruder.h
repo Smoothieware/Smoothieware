@@ -39,9 +39,10 @@ class Extruder : public Tool {
     private:
         void on_get_public_data(void* argument);
 
-        Pin             step_pin;                     // Step pin for the stepper driver
-        Pin             dir_pin;                      // Dir pin for the stepper driver
-        Pin             en_pin;
+        StepperMotor*  stepper_motor;
+        Pin            step_pin;                     // Step pin for the stepper driver
+        Pin            dir_pin;                      // Dir pin for the stepper driver
+        Pin            en_pin;
 
         float          target_position;              // End point ( in mm ) for the current move
         float          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
@@ -52,12 +53,13 @@ class Extruder : public Tool {
         struct {
             float steps_per_millimeter;         // Steps to travel one millimeter
             float filament_diameter;            // filament diameter
+            float extruder_multiplier;          // flow rate 1.0 == 100%
+            float acceleration;                 // extruder accleration SOLO setting
+            float retract_length;               // firmware retract length
         };
 
         float          volumetric_multiplier;
-        float          extruder_multiplier;
         float          feed_rate;                    //
-        float          acceleration;                 //
         float          max_speed;
 
         float          travel_ratio;
@@ -65,7 +67,6 @@ class Extruder : public Tool {
 
         // for firmware retract
         float          retract_feedrate;
-        float          retract_length;
         float          retract_recover_feedrate;
         float          retract_recover_length;
         float          retract_zlift_length;
@@ -79,7 +80,6 @@ class Extruder : public Tool {
             bool retracted:1;
         };
 
-        StepperMotor* stepper_motor;
 
 };
 
