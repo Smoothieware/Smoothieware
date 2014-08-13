@@ -14,6 +14,7 @@ class WatchScreen : public PanelScreen
 {
 public:
     WatchScreen();
+    ~WatchScreen();
     void on_refresh();
     void on_enter();
     void on_main_loop();

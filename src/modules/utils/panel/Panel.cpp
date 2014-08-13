@@ -162,6 +162,9 @@ void Panel::on_module_loaded()
 // Enter a screen, we only care about it now
 void Panel::enter_screen(PanelScreen *screen)
 {
+    if(this->current_screen != nullptr)
+        this->current_screen->on_exit();
+
     this->current_screen = screen;
     this->reset_counter();
     this->current_screen->on_enter();
@@ -579,7 +582,7 @@ static float getTargetTemperature(uint16_t heater_cs)
 void Panel::setup_temperature_screen()
 {
     // setup temperature screen
-    auto mvs= new ModifyValuesScreen();
+    auto mvs= new ModifyValuesScreen(false); // does not delete itself on exit
     this->temperature_screen= mvs;
 
     // enumerate heaters and add a menu item for each one

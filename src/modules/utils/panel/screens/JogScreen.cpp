@@ -9,6 +9,7 @@
 #include "libs/SerialMessage.h"
 #include "Panel.h"
 #include "PanelScreen.h"
+#include "LcdBase.h"
 #include "MainMenuScreen.h"
 #include "JogScreen.h"
 #include "ControlScreen.h"

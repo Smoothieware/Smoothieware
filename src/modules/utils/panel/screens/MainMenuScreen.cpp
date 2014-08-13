@@ -8,9 +8,11 @@
 #include "libs/Kernel.h"
 #include "Panel.h"
 #include "PanelScreen.h"
+#include "LcdBase.h"
 #include "MainMenuScreen.h"
 #include "WatchScreen.h"
 #include "FileScreen.h"
+#include "JogScreen.h"
 #include "ControlScreen.h"
 #include "PrepareScreen.h"
 #include "libs/nuts_bolts.h"
@@ -36,15 +38,13 @@ MainMenuScreen::MainMenuScreen()
     this->watch_screen   = (new WatchScreen()   )->set_parent(this);
     this->file_screen    = (new FileScreen()    )->set_parent(this);
     this->prepare_screen = (new PrepareScreen() )->set_parent(this);
-    this->configure_screen = nullptr; // lazy load this the first time it is used
-
     this->set_parent(this->watch_screen);
 }
 
-// setup things here that can be configured
-PanelScreen* MainMenuScreen::setupConfigureScreen()
+// setup and enter the configure screen
+void MainMenuScreen::setupConfigureScreen()
 {
-    auto mvs= new ModifyValuesScreen();
+    auto mvs= new ModifyValuesScreen(true); // delete itself on exit
     mvs->set_parent(this);
 
     // acceleration
@@ -101,7 +101,7 @@ PanelScreen* MainMenuScreen::setupConfigureScreen()
         0.1F
         );
 
-    return mvs;
+    THEPANEL->enter_screen(mvs);
 }
 
 void MainMenuScreen::on_enter()
@@ -142,9 +142,7 @@ void MainMenuScreen::clicked_menu_entry(uint16_t line)
         case 2: THEPANEL->enter_screen(this->jog_screen     ); break;
         case 3: THEPANEL->enter_screen(this->prepare_screen ); break;
         case 4: THEPANEL->enter_screen(THEPANEL->custom_screen ); break;
-        case 5: if(this->configure_screen == nullptr) this->configure_screen= setupConfigureScreen();
-                THEPANEL->enter_screen(this->configure_screen );
-                break;
+        case 5: setupConfigureScreen(); break;
     }
 }
 

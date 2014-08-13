@@ -9,6 +9,7 @@
 #include "libs/SerialMessage.h"
 #include "Panel.h"
 #include "PanelScreen.h"
+#include "LcdBase.h"
 #include "ExtruderScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
@@ -25,7 +26,6 @@ using namespace std;
 ExtruderScreen::ExtruderScreen()
 {
     this->command= nullptr;
-    this->config_settings= nullptr;
 }
 
 void ExtruderScreen::on_enter()
@@ -61,8 +61,7 @@ void ExtruderScreen::clicked_menu_entry(uint16_t line)
         case 0: THEPANEL->enter_screen(this->parent); return;
         case 1: command = "G91\nG1 E5 F100\nG90"; break;
         case 2: command = "G91\nG1 E-5 F100\nG90"; break;
-        case 3: if(this->config_settings == nullptr) this->config_settings= setupConfigSettings(); // lazy load
-                THEPANEL->enter_screen(this->config_settings);
+        case 3: setupConfigSettings(); // lazy load
                 break;
     }
 }
@@ -75,9 +74,9 @@ void ExtruderScreen::on_main_loop()
     this->command= nullptr;
 }
 
-PanelScreen* ExtruderScreen::setupConfigSettings()
+void ExtruderScreen::setupConfigSettings()
 {
-    auto mvs= new ModifyValuesScreen();
+    auto mvs= new ModifyValuesScreen(true);  // self delete on exit
     mvs->set_parent(this);
 
     // flow rate
@@ -102,5 +101,5 @@ PanelScreen* ExtruderScreen::setupConfigSettings()
         0.0F  // Min
         );
 
-    return mvs;
+    THEPANEL->enter_screen(mvs);
 }

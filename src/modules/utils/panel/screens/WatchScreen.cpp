@@ -6,6 +6,7 @@
 */
 
 #include "libs/Kernel.h"
+#include "LcdBase.h"
 #include "Panel.h"
 #include "PanelScreen.h"
 #include "MainMenuScreen.h"
@@ -25,6 +26,7 @@
 #include <math.h>
 #include <string.h>
 #include <string>
+#include <stdio.h>
 
 using namespace std;
 static const uint8_t icons[] = { // 115x19 - 3 bytes each: he1, he2, he3, bed, fan
@@ -55,7 +57,12 @@ WatchScreen::WatchScreen()
 {
     speed_changed = false;
     issue_change_speed = false;
-    ipstr = NULL;
+    ipstr = nullptr;
+}
+
+WatchScreen::~WatchScreen()
+{
+    delete[] ipstr;
 }
 
 void WatchScreen::on_enter()
@@ -282,8 +289,8 @@ const char *WatchScreen::get_network()
         char buf[20];
         int n = snprintf(buf, sizeof(buf), "IP %d.%d.%d.%d", ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);
         buf[n] = 0;
-        if (this->ipstr == NULL) {
-            this->ipstr = (char *)malloc(n + 1);
+        if (this->ipstr == nullptr) {
+            this->ipstr = new char[n + 1];
         }
         strcpy(this->ipstr, buf);
 

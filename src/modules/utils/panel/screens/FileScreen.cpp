@@ -8,6 +8,7 @@
 #include "libs/Kernel.h"
 #include "Panel.h"
 #include "PanelScreen.h"
+#include "LcdBase.h"
 #include "MainMenuScreen.h"
 #include "FileScreen.h"
 #include "libs/nuts_bolts.h"

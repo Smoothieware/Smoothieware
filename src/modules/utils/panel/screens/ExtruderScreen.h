@@ -8,14 +8,7 @@
 #ifndef EXTRUDERSCREEN_H
 #define EXTRUDERSCREEN_H
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/Pin.h"
-#include "LcdBase.h"
-#include "Panel.h"
 #include "PanelScreen.h"
-
 
 class ExtruderScreen : public PanelScreen {
     public:
@@ -28,8 +21,7 @@ class ExtruderScreen : public PanelScreen {
         int idle_timeout_secs() { return 60; }
 
     private:
-      PanelScreen* setupConfigSettings();
-      PanelScreen *config_settings;
+      void setupConfigSettings();
       const char *command;
 };
 
