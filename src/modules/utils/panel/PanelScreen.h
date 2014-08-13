@@ -16,6 +16,8 @@ class PanelScreen
 {
 public:
     PanelScreen();
+    virtual ~PanelScreen();
+
     virtual void on_refresh();
     virtual void on_main_loop();
     PanelScreen *set_parent(PanelScreen *passed_parent);
