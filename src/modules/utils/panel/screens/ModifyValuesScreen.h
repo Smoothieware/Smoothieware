@@ -19,11 +19,12 @@
 class ModifyValuesScreen : public PanelScreen
 {
 public:
-    ModifyValuesScreen();
+    ModifyValuesScreen(bool delete_on_exit= false);
     virtual ~ModifyValuesScreen();
 
     void on_refresh();
     void on_enter();
+    void on_exit();
     void on_main_loop();
     void display_menu_line(uint16_t line);
     void clicked_menu_entry(uint16_t line);
@@ -38,10 +39,13 @@ private:
 
     int execute_function;
     float new_value, min_value, max_value;
-    char control_mode;
     int selected_item;
     // name, getter function, setter function, increment
     std::vector<MenuItemType> menu_items;
+
+    char control_mode;
+    bool delete_on_exit;
+
 };
 
 #endif
