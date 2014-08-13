@@ -29,7 +29,6 @@ public:
     int idle_timeout_secs() { return 60; }
 
 private:
-
     PanelScreen *extruder_screen;
     void preheat();
     void cooldown();

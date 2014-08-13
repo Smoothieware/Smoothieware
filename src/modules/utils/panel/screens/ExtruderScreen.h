@@ -28,7 +28,9 @@ class ExtruderScreen : public PanelScreen {
         int idle_timeout_secs() { return 60; }
 
     private:
-      string command;
+      PanelScreen* setupConfigSettings();
+      PanelScreen *config_settings;
+      const char *command;
 };
 
 #endif
