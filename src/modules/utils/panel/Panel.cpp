@@ -589,6 +589,7 @@ void Panel::setup_temperature_screen()
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
 
+    int cnt= 0;
     for(auto i : modules) {
         if (!THEKERNEL->config->value(temperature_control_checksum, i, enable_checksum )->as_bool()) continue;
         void *returned_data;
@@ -609,6 +610,13 @@ void Panel::setup_temperature_screen()
             1.0F, // increment
             0.0F, // Min
             500.0F // Max
-            );
+        );
+        cnt++;
+    }
+
+    if(cnt== 0) {
+        // no heaters and probably no extruders either
+        delete mvs;
+        this->temperature_screen= nullptr;
     }
 }

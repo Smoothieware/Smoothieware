@@ -78,23 +78,6 @@ void MainMenuScreen::setupConfigureScreen()
         1.0F
         );
 
-    mvs->addMenuItem("E steps/mm",
-        // gets steps/mm for currently active extruder
-        []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *rd; else return 0.0F; },
-        [this](float v) { send_gcode("M92", 'E', v); },
-        0.1F,
-        1.0F
-        );
-
-    mvs->addMenuItem("Filament diameter",
-        // gets filament diameter for currently active extruder
-        []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *(rd+1); else return 0.0F; },
-        [this](float v) { send_gcode("M200", 'D', v); },
-        0.01F,
-        0.0F,
-        4.0F
-        );
-
     mvs->addMenuItem("Z Home Ofs",
         []() -> float { void *rd; PublicData::get_value( endstops_checksum, home_offset_checksum, &rd ); return rd==nullptr ? 0.0F : ((float*)rd)[2]; },
         [this](float v) { send_gcode("M206", 'Z', v); },
