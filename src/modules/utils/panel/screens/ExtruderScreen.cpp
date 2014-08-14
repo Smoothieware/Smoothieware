@@ -61,8 +61,7 @@ void ExtruderScreen::clicked_menu_entry(uint16_t line)
         case 0: THEPANEL->enter_screen(this->parent); return;
         case 1: command = "G91\nG1 E5 F100\nG90"; break;
         case 2: command = "G91\nG1 E-5 F100\nG90"; break;
-        case 3: setupConfigSettings(); // lazy load
-                break;
+        case 3: setupConfigSettings(); break; // lazy load
     }
 }
 
@@ -78,6 +77,23 @@ void ExtruderScreen::setupConfigSettings()
 {
     auto mvs= new ModifyValuesScreen(true);  // self delete on exit
     mvs->set_parent(this);
+
+    mvs->addMenuItem("E steps/mm",
+        // gets steps/mm for currently active extruder
+        []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *rd; else return 0.0F; },
+        [this](float v) { send_gcode("M92", 'E', v); },
+        0.1F,
+        1.0F
+        );
+
+    mvs->addMenuItem("Filament diameter",
+        // gets filament diameter for currently active extruder
+        []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *(rd+1); else return 0.0F; },
+        [this](float v) { send_gcode("M200", 'D', v); },
+        0.01F,
+        0.0F,
+        4.0F
+        );
 
     // flow rate
     mvs->addMenuItem("Flow rate", // menu name
