@@ -159,18 +159,20 @@ void Switch::on_gcode_execute(void *argument)
 
     if(match_input_on_gcode(gcode)) {
         int v;
-        this->switch_state = true;
         if (this->output_type == PWM) {
-            // PWM output pin turn on
+            // PWM output pin turn on (or off if S0)
             if(gcode->has_letter('S')) {
                 v = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
                 this->output_pin.pwm(v);
+                this->switch_state= (v > 0);
             } else {
                 this->output_pin.pwm(this->switch_value);
+                this->switch_state= (this->switch_value > 0);
             }
         } else {
             // logic pin turn on
             this->output_pin.set(true);
+            this->switch_state = true;
         }
     } else if(match_input_off_gcode(gcode)) {
         this->switch_state = false;
@@ -233,7 +235,7 @@ void Switch::on_main_loop(void *argument)
             if(!this->output_on_command.empty()) this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
             if(this->output_pin.connected()) {
                 if(this->output_type == PWM)
-                    this->output_pin.pwm(this->switch_value); // this requires the value has been set otherwise it swicthes on to whatever it last was
+                    this->output_pin.pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
                 else
                     this->output_pin.set(true);
             }
