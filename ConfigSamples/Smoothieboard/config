@@ -309,3 +309,11 @@ network.ip_address                           auto             # use dhcp to get 
 #network.ip_mask                              255.255.255.0    # the ip mask
 #network.ip_gateway                           192.168.3.1      # the gateway address
 #network.mac_override                         xx.xx.xx.xx.xx.xx  # override the mac address, only do this if you have a conflict
+
+# web user interface settings (custom_menu entries also apply)
+#webui.title                My_CNC_Machine  # use this to distinguish multiple machines controlled from one computer
+#webui.hide.temperature     false           # hide all temp-related elements
+#webui.hide.hotend          false           # hide hotend settings only
+#webui.hide.bed             false           # hide heatbed settings only
+#webui.hide.E               false           # hide extruder controls
+#webui.hide.Z               false           # hide Z-axis jog & homing controls
