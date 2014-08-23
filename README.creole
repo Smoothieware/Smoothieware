@@ -14,18 +14,6 @@ These are the quick steps to get Smoothie dependencies installed on your compute
 ** Linux: linux_install
 * You can then run the BuildShell script which will be created during the install to properly configure the PATH environment variable to point to the required version of GCC for ARM which was just installed on your machine.  You may want to edit this script to further customize your development environment.
 
-=== Homebrew
-If you're a Mac OS X user who uses [[http://brew.sh/|Homebrew]] (and really, who doesn't?) you can skip the above steps and simply do
-
-NOTE you do this at your own risk please check the source
-
-{{{
-brew tap bfoz/embedded
-brew install --env=std gcc-arm-embbedded
-}}}
-
-After that finishes (it can take awhile) you'll be all set; no need to run mac_install or BuildShell. Enjoy!
-
 ==Building Smoothie
 From a shell, switch into the root Smoothie project directory and run:
 {{{
