@@ -49,7 +49,7 @@ void MainMenuScreen::setupConfigureScreen()
 
     // acceleration
     mvs->addMenuItem("Acceleration", // menu name
-        []() -> float { return THEKERNEL->planner->get_acceleration(); }, // getter
+        []() -> float { return Planner::get_acceleration(); }, // getter
         [this](float acc) { send_gcode("M204", 'S', acc); }, // setter
         10.0F, // increment
         1.0F, // Min

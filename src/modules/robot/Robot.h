@@ -83,7 +83,6 @@ class Robot : public Module {
         float toolOffset[3];
 
         // Used by Stepper, Planner
-        friend class Planner;
         friend class Stepper;
 
         StepperMotor* alpha_stepper_motor;

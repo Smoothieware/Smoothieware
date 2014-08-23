@@ -4,11 +4,13 @@
 template<class kind> class HeapRing {
 
     // smoothie-specific friend classes
-    friend class Planner;
     friend class Conveyor;
     friend class Block;
 
 public:
+    typedef unsigned    size_type;
+    typedef kind        value_type;
+
     HeapRing();
     HeapRing(unsigned int length);
 
@@ -72,8 +74,8 @@ protected:
      */
     unsigned int length;
 
-    volatile unsigned int head_i;
-    volatile unsigned int tail_i;
+    volatile size_type head_i;
+    volatile size_type tail_i;
 
 private:
     kind* ring;

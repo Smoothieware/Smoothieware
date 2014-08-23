@@ -26,7 +26,6 @@ class StreamOutputPool;
 class GcodeDispatch;
 class Robot;
 class Stepper;
-class Planner;
 class StepTicker;
 class Adc;
 class PublicData;
@@ -49,7 +48,6 @@ class Kernel {
         GcodeDispatch*    gcode_dispatch;
         Robot*            robot;
         Stepper*          stepper;
-        Planner*          planner;
         Config*           config;
         Conveyor*         conveyor;
         Pauser*           pauser;

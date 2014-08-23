@@ -56,9 +56,14 @@ class StepperMotor {
             this->signal_step = true;
         }
 
+        void update_last_milestone(int32_t steps, float mm)
+        {
+            last_milestone_steps += steps;
+            last_milestone_mm = mm;
+        }
+
         friend class StepTicker;
         friend class Stepper;
-        friend class Planner;
         friend class Robot;
 
     private:
