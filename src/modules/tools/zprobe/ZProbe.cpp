@@ -318,7 +318,7 @@ void ZProbe::accelerate(int c)
     uint32_t target_rate = int(floor(this->current_feedrate));
 
     // Z may have a different acceleration to X and Y
-    float acc= (c==Z_AXIS) ? THEKERNEL->planner->get_z_acceleration() : THEKERNEL->planner->get_acceleration();
+    float acc= (c==Z_AXIS) ? Planner::get_z_acceleration() : Planner::get_acceleration();
     if( current_rate < target_rate ) {
         uint32_t rate_increase = int(floor((acc / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c)));
         current_rate = min( target_rate, current_rate + rate_increase );

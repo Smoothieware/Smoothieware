@@ -414,7 +414,7 @@ void Robot::on_gcode_received(void *argument)
                     // enforce minimum
                     if (acc < 1.0F)
                         acc = 1.0F;
-                    THEKERNEL->planner->acceleration = acc;
+                    Planner::set_acceleration(acc);
                 }
                 if (gcode->has_letter('Z')) {
                     // TODO for safety so it applies only to following gcodes, maybe a better way to do this?
@@ -423,7 +423,7 @@ void Robot::on_gcode_received(void *argument)
                     // enforce positive
                     if (acc < 0.0F)
                         acc = 0.0F;
-                    THEKERNEL->planner->z_acceleration = acc;
+                    Planner::set_z_acceleration(acc);
                 }
                 break;
 
@@ -434,14 +434,14 @@ void Robot::on_gcode_received(void *argument)
                     // enforce minimum
                     if (jd < 0.0F)
                         jd = 0.0F;
-                    THEKERNEL->planner->junction_deviation = jd;
+                    Planner::set_junction_deviation(jd);
                 }
                 if (gcode->has_letter('S')) {
                     float mps = gcode->get_value('S');
                     // enforce minimum
                     if (mps < 0.0F)
                         mps = 0.0F;
-                    THEKERNEL->planner->minimum_planner_speed = mps;
+                    Planner::set_minimum_planner_speed(mps);
                 }
                 break;
 
@@ -468,8 +468,8 @@ void Robot::on_gcode_received(void *argument)
             case 500: // M500 saves some volatile settings to config override file
             case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
-                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f Z%1.5f\n", THEKERNEL->planner->acceleration, THEKERNEL->planner->z_acceleration);
-                gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
+                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f Z%1.5f\n", Planner::get_acceleration(), Planner::get_z_acceleration());
+                gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", Planner::get_junction_deviation(), Planner::get_minimum_planner_speed());
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
                                       alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
@@ -640,7 +640,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     }
 
     // Append the block to the planner
-    THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
+    Planner::append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
 
     // Update the last_milestone to the current target for the next time we use last_milestone, use the requested target not the adjusted one
     memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];

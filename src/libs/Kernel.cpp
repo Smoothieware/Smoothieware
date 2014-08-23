@@ -131,7 +131,7 @@ Kernel::Kernel(){
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->pauser         = new Pauser()        );
 
-    this->planner = new Planner();
+    Planner::init();
 
 }
 

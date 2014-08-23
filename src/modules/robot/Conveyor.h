@@ -20,7 +20,12 @@ class Block;
 
 class Conveyor : public Module
 {
+    typedef HeapRing<Block> Queue_t;
+
 public:
+    typedef Queue_t::size_type  size_type;
+    typedef Queue_t::value_type value_type;
+
     Conveyor();
 
     void on_module_loaded(void);
@@ -41,11 +46,15 @@ public:
 
     void dump_queue(void);
 
-    friend class Planner; // for queue
+    size_type   after(size_type i)  { return queue.next(i); }
+    value_type* at(unsigned i)      { return queue.item_ref(i); }
+    size_type   begin()             { return queue.head_i; }
+    size_type   before(size_type i) { return queue.prev(i); }
+    size_type   end()               { return queue.tail_i; }
+    value_type* front()             { return queue.head_ref(); }
+    value_type* previous()          { return at(queue.prev(queue.head_i)); }
 
 private:
-    typedef HeapRing<Block> Queue_t;
-
     Queue_t queue;  // Queue of Blocks
 
     volatile bool running;
