@@ -17,6 +17,8 @@ These are the quick steps to get Smoothie dependencies installed on your compute
 === Homebrew
 If you're a Mac OS X user who uses [[http://brew.sh/|Homebrew]] (and really, who doesn't?) you can skip the above steps and simply do
 
+NOTE you do this at your own risk please check the source
+
 {{{
 brew tap bfoz/embedded
 brew install --env=std gcc-arm-embbedded
