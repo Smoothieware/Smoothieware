@@ -44,7 +44,7 @@ struct dhcpc_state {
   u16_t ticks;
   const void *mac_addr;
   int mac_len;
-
+  char *hostname;
   u8_t serverid[4];
 
   uint32_t lease_time;
@@ -58,7 +58,7 @@ struct dhcpc_state {
 extern "C" {
 #endif
 
-void dhcpc_init(const void *mac_addr, int mac_len);
+void dhcpc_init(const void *mac_addr, int mac_len, char *hostname);
 void dhcpc_request(void);
 
 void dhcpc_appcall(void);

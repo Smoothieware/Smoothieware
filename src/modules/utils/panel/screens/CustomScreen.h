@@ -10,7 +10,6 @@
 
 #include "PanelScreen.h"
 
-#include <string>
 #include <vector>
 #include <tuple>
 
@@ -27,7 +26,7 @@ public:
     int idle_timeout_secs() { return 60; }
 
 private:
-    std::string command;
+    const char *command;
     std::vector<std::tuple<const char*,const char*> > menu_items;
 };
 

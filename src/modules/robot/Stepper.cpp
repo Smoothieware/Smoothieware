@@ -18,6 +18,7 @@
 #include "Config.h"
 #include "ConfigValue.h"
 #include "Gcode.h"
+#include "Block.h"
 
 #include <vector>
 using namespace std;
@@ -48,6 +49,7 @@ void Stepper::on_module_loaded(){
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
+    this->register_for_event(ON_HALT);
 
     // Get onfiguration
     this->on_config_reload(this);
@@ -86,6 +88,11 @@ void Stepper::on_play(void* argument){
     THEKERNEL->robot->alpha_stepper_motor->unpause();
     THEKERNEL->robot->beta_stepper_motor->unpause();
     THEKERNEL->robot->gamma_stepper_motor->unpause();
+}
+
+void Stepper::on_halt(void* argument)
+{
+    this->turn_enable_pins_off();
 }
 
 void Stepper::on_gcode_received(void* argument){
@@ -144,9 +151,9 @@ void Stepper::on_block_begin(void* argument){
     }
 
     // Setup : instruct stepper motors to move
-    if( block->steps[ALPHA_STEPPER] > 0 ){ THEKERNEL->robot->alpha_stepper_motor->move( ( block->direction_bits >> 0  ) & 1 , block->steps[ALPHA_STEPPER] ); }
-    if( block->steps[BETA_STEPPER ] > 0 ){ THEKERNEL->robot->beta_stepper_motor->move(  ( block->direction_bits >> 1  ) & 1 , block->steps[BETA_STEPPER ] ); }
-    if( block->steps[GAMMA_STEPPER] > 0 ){ THEKERNEL->robot->gamma_stepper_motor->move( ( block->direction_bits >> 2  ) & 1 , block->steps[GAMMA_STEPPER] ); }
+    if( block->steps[ALPHA_STEPPER] > 0 ){ THEKERNEL->robot->alpha_stepper_motor->move( block->direction_bits[ALPHA_STEPPER], block->steps[ALPHA_STEPPER] ); }
+    if( block->steps[BETA_STEPPER ] > 0 ){ THEKERNEL->robot->beta_stepper_motor->move(  block->direction_bits[BETA_STEPPER], block->steps[BETA_STEPPER ] ); }
+    if( block->steps[GAMMA_STEPPER] > 0 ){ THEKERNEL->robot->gamma_stepper_motor->move( block->direction_bits[GAMMA_STEPPER], block->steps[GAMMA_STEPPER] ); }
 
     this->current_block = block;
 
@@ -254,7 +261,7 @@ inline void Stepper::trapezoid_generator_reset(){
 // Update the speed for all steppers
 void Stepper::set_step_events_per_second( float steps_per_second )
 {
-    // We do not step slower than this
+    // We do not step slower than this, FIXME shoul dbe calculated for the slowest axis not the fastest
     //steps_per_second = max(steps_per_second, this->minimum_steps_per_second);
     if( steps_per_second < this->minimum_steps_per_second ){
         steps_per_second = this->minimum_steps_per_second;

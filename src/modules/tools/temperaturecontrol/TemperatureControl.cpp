@@ -25,7 +25,6 @@
 #include "SlowTicker.h"
 #include "Pauser.h"
 #include "ConfigValue.h"
-#include "TemperatureControl.h"
 #include "PID_Autotuner.h"
 
 // Temp sensor implementations:
@@ -90,6 +89,15 @@ void TemperatureControl::on_module_loaded()
     this->register_for_event(ON_SECOND_TICK);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
+    this->register_for_event(ON_HALT);
+}
+
+void TemperatureControl::on_halt(void *arg)
+{
+    // turn off heater
+    this->o = 0;
+    this->heater_pin.set(0);
+    this->target_temperature = UNDEFINED;
 }
 
 void TemperatureControl::on_main_loop(void *argument)
@@ -235,7 +243,7 @@ void TemperatureControl::on_gcode_execute(void *argument)
             } else {
                 this->set_desired_temperature(v);
 
-                if( gcode->m == this->set_and_wait_m_code) {
+                if( gcode->m == this->set_and_wait_m_code && !this->waiting) {
                     THEKERNEL->pauser->take();
                     this->waiting = true;
                 }

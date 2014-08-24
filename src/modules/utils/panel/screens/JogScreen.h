@@ -8,15 +8,9 @@
 #ifndef JOGSCREEN_H
 #define JOGSCREEN_H
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/Pin.h"
-#include "LcdBase.h"
-#include "Panel.h"
 #include "PanelScreen.h"
-#include "ControlScreen.h"
 
+class ControlScreen;
 
 class JogScreen : public PanelScreen {
     public:

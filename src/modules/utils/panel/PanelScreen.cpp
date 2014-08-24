@@ -21,6 +21,7 @@
 using namespace std;
 
 PanelScreen::PanelScreen() {}
+PanelScreen::~PanelScreen() {}
 
 void PanelScreen::on_refresh() {}
 void PanelScreen::on_main_loop() {}

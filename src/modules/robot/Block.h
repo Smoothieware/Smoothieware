@@ -8,13 +8,10 @@
 #ifndef BLOCK_H
 #define BLOCK_H
 
-using namespace std;
-#include <string>
 #include <vector>
+#include <bitset>
 
 class Gcode;
-
-float max_allowable_speed( float acceleration, float target_velocity, float distance);
 
 class Block {
     public:
@@ -23,6 +20,7 @@ class Block {
         float estimate_acceleration_distance( float initial_rate, float target_rate, float acceleration );
         float intersection_distance(float initial_rate, float final_rate, float acceleration, float distance);
         float get_duration_left(unsigned int already_taken_steps);
+        float max_allowable_speed( float acceleration, float target_velocity, float distance);
 
         float reverse_pass(float exit_speed);
         float forward_pass(float next_entry_speed);
@@ -42,9 +40,7 @@ class Block {
 
         void begin();
 
-        //vector<std::string> commands;
-        //vector<float> travel_distances;
-        vector<Gcode> gcodes;
+        std::vector<Gcode> gcodes;
 
         unsigned int   steps[3];           // Number of steps for each axis for this block
         unsigned int   steps_event_count;  // Steps for the longest axis
@@ -58,15 +54,15 @@ class Block {
         unsigned int   final_rate;         // Final speed in steps per second
         unsigned int   accelerate_until;   // Stop accelerating after this number of steps
         unsigned int   decelerate_after;   // Start decelerating after this number of steps
-        unsigned int   direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
+        std::bitset<3> direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
-
-        bool recalculate_flag;             // Planner flag to recalculate trapezoids on entry junction
-        bool nominal_length_flag;          // Planner flag for nominal speed always reached
+        struct {
+            bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
+            bool nominal_length_flag:1;          // Planner flag for nominal speed always reached
+            bool is_ready:1;
+        };
 
         float max_entry_speed;
-
-        bool is_ready;
 
         short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
 

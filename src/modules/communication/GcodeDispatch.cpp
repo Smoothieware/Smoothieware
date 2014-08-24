@@ -10,11 +10,13 @@ using std::string;
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
+#include "Pauser.h"
 #include "libs/nuts_bolts.h"
 #include "GcodeDispatch.h"
 #include "modules/robot/Conveyor.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/StreamOutputPool.h"
 #include "libs/FileStream.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -129,6 +131,15 @@ try_again:
                                 }
                                 //printf("Start Uploading file: %s, %p\n", upload_filename.c_str(), upload_fd);
                                 continue;
+
+                            case 112: // emergency stop, do the best we can with this
+                                // TODO this really needs to be handled out-of-band
+                                // stops block queue
+                                THEKERNEL->pauser->take();
+                                // disables heaters and motors
+                                THEKERNEL->call_event(ON_HALT);
+                                THEKERNEL->streams->printf("ok Emergency Stop Requested - reset required to continue\r\n");
+                                return;
 
                             case 500: // M500 save volatile settings to config-override
                                 // replace stream with one that writes to config-override file

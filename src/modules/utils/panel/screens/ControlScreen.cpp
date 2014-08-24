@@ -17,8 +17,10 @@
 #include "modules/robot/RobotPublicAccess.h"
 #include "PublicData.h"
 #include "checksumm.h"
+#include "LcdBase.h"
 
 #include <math.h>
+#include <stdio.h>
 
 using namespace std;
 

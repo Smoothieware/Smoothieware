@@ -65,8 +65,11 @@ SDCard sd  __attribute__ ((section ("AHBSRAM0"))) (P0_9, P0_8, P0_7, P0_6);     
 
 USB u __attribute__ ((section ("AHBSRAM0")));
 USBSerial usbserial __attribute__ ((section ("AHBSRAM0"))) (&u);
+#ifndef DISABLEMSD
 USBMSD msc __attribute__ ((section ("AHBSRAM0"))) (&u, &sd);
-//USBMSD *msc= NULL;
+#else
+USBMSD *msc= NULL;
+#endif
 DFU dfu __attribute__ ((section ("AHBSRAM0"))) (&u);
 
 SDFAT mounter __attribute__ ((section ("AHBSRAM0"))) ("sd", &sd);
@@ -96,13 +99,19 @@ void init() {
     //some boards don't have leds.. TOO BAD!
     kernel->use_leds= !kernel->config->value( disable_leds_checksum )->by_default(false)->as_bool();
 
+#ifdef DISABLEMSD
     // attempt to be able to disable msd in config
-    // if(!kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
-    //     msc= new USBMSD(&u, &sd);
-    // }else{
-    //     msc= NULL;
-    //     kernel->streams->printf("MSD is disabled\r\n");
-    // }
+    if(!kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
+        // HACK to zero the memory USBMSD uses as it and its objects seem to not initialize properly in the ctor
+        size_t n= sizeof(USBMSD);
+        void *v = AHB0.alloc(n);
+        memset(v, 0, n); // clear the allocated memory
+        msc= new(v) USBMSD(&u, &sd); // allocate object using zeroed memory
+    }else{
+        msc= NULL;
+        kernel->streams->printf("MSD is disabled\r\n");
+    }
+#endif
 
     bool sdok= (sd.disk_initialize() == 0);
 
@@ -158,16 +167,15 @@ void init() {
 
     // Create and initialize USB stuff
     u.init();
-    //if(sdok) { // only do this if there is an sd disk
-    //    msc= new USBMSD(&u, &sd);
-    //    kernel->add_module( msc );
-    //}
 
-    // if(msc != NULL){
-    //     kernel->add_module( msc );
-    // }
-
+#ifdef DISABLEMSD
+    if(sdok && msc != NULL){
+        kernel->add_module( msc );
+    }
+#else
     kernel->add_module( &msc );
+#endif
+
     kernel->add_module( &usbserial );
     if( kernel->config->value( second_usb_serial_enable_checksum )->by_default(false)->as_bool() ){
         kernel->add_module( new USBSerial(&u) );

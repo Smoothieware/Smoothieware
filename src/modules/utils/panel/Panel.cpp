@@ -24,9 +24,6 @@
 #include "PublicDataRequest.h"
 #include "PublicData.h"
 
-#include "panels/I2CLCD.h"
-#include "panels/VikiLCD.h"
-#include "panels/Smoothiepanel.h"
 #include "panels/ReprapDiscountGLCD.h"
 #include "panels/ST7565.h"
 #include "panels/UniversalAdapter.h"
@@ -34,14 +31,11 @@
 #include "version.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "Config.h"
 
 #define panel_checksum             CHECKSUM("panel")
 #define enable_checksum            CHECKSUM("enable")
 #define lcd_checksum               CHECKSUM("lcd")
-#define i2c_lcd_checksum           CHECKSUM("i2c_lcd")
-#define viki_lcd_checksum          CHECKSUM("viki_lcd")
-#define smoothiepanel_checksum     CHECKSUM("smoothiepanel")
-#define panelolu2_checksum         CHECKSUM("panelolu2")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
 #define universal_adapter_checksum CHECKSUM("universal_adapter")
@@ -89,27 +83,18 @@ void Panel::on_module_loaded()
 
     // Initialise the LCD, see which LCD to use
     if (this->lcd != NULL) delete this->lcd;
-    int lcd_cksm = get_checksum(THEKERNEL->config->value(panel_checksum, lcd_checksum)->by_default("i2c")->as_string());
+    int lcd_cksm = get_checksum(THEKERNEL->config->value(panel_checksum, lcd_checksum)->by_default("reprap_discount_glcd")->as_string());
 
     // Note checksums are not const expressions when in debug mode, so don't use switch
-    if (lcd_cksm == i2c_lcd_checksum) {
-        this->lcd = new I2CLCD();
-    } else if (lcd_cksm == viki_lcd_checksum) {
-        this->lcd = new VikiLCD();
-        this->lcd->set_variant(0);
-    } else if (lcd_cksm == panelolu2_checksum) {
-        this->lcd = new VikiLCD();
-        this->lcd->set_variant(1);
-    } else if (lcd_cksm == smoothiepanel_checksum) {
-        this->lcd = new Smoothiepanel();
-    } else if (lcd_cksm == rrd_glcd_checksum) {
+    if (lcd_cksm == rrd_glcd_checksum) {
         this->lcd = new ReprapDiscountGLCD();
     } else if (lcd_cksm == st7565_glcd_checksum) {
         this->lcd = new ST7565();
     } else if (lcd_cksm == universal_adapter_checksum) {
         this->lcd = new UniversalAdapter();
     } else {
-        // no lcd type defined
+        // no known lcd type defined
+        delete this;
         return;
     }
 
@@ -177,6 +162,9 @@ void Panel::on_module_loaded()
 // Enter a screen, we only care about it now
 void Panel::enter_screen(PanelScreen *screen)
 {
+    if(this->current_screen != nullptr)
+        this->current_screen->on_exit();
+
     this->current_screen = screen;
     this->reset_counter();
     this->current_screen->on_enter();
@@ -407,12 +395,10 @@ uint32_t Panel::on_select(uint32_t dummy)
 
 uint32_t Panel::on_pause(uint32_t dummy)
 {
-    if (!paused) {
+    if (!THEKERNEL->pauser->paused()) {
         THEKERNEL->pauser->take();
-        paused = true;
     } else {
         THEKERNEL->pauser->release();
-        paused = false;
     }
     return 0;
 }
@@ -596,13 +582,14 @@ static float getTargetTemperature(uint16_t heater_cs)
 void Panel::setup_temperature_screen()
 {
     // setup temperature screen
-    auto mvs= new ModifyValuesScreen();
+    auto mvs= new ModifyValuesScreen(false); // does not delete itself on exit
     this->temperature_screen= mvs;
 
     // enumerate heaters and add a menu item for each one
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
 
+    int cnt= 0;
     for(auto i : modules) {
         if (!THEKERNEL->config->value(temperature_control_checksum, i, enable_checksum )->as_bool()) continue;
         void *returned_data;
@@ -623,6 +610,13 @@ void Panel::setup_temperature_screen()
             1.0F, // increment
             0.0F, // Min
             500.0F // Max
-            );
+        );
+        cnt++;
+    }
+
+    if(cnt== 0) {
+        // no heaters and probably no extruders either
+        delete mvs;
+        this->temperature_screen= nullptr;
     }
 }
