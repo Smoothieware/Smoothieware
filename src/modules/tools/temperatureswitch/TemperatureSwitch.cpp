@@ -70,7 +70,7 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     char designator= 0;
     string s= THEKERNEL->config->value(temperatureswitch_checksum, modcs, designator_checksum)->by_default("")->as_string();
     if(s.empty()){
-        // for backward compatibility temperatureswitch.hotend will need designator 'T' by default
+        // for backward compatibility temperatureswitch.hotend will need designator 'T' by default @DEPRECATED
         if(modcs == temperatureswitch_hotend_checksum) designator= 'T';
 
     }else{

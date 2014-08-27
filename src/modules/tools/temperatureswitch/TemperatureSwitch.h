@@ -32,13 +32,14 @@ class TemperatureSwitch : public Module
     private:
         bool load_config(uint16_t modcs);
 
-        // turn the switch on or off
-        void set_switch(bool cooler_state);
-        // the set of temperature controllers that match the reuired designator prefix
-        vector<uint16_t> temp_controllers;
-
         // get the highest temperature from the set of configured temperature controllers
         float get_highest_temperature();
+
+        // turn the switch on or off
+        void set_switch(bool cooler_state);
+
+        // the set of temperature controllers that match the reuired designator prefix
+        vector<uint16_t> temp_controllers;
 
         // temperatureswitch.hotend.threshold_temp
         float temperatureswitch_threshold_temp;
