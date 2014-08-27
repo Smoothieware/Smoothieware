@@ -27,7 +27,6 @@ class TemperatureSwitch : public Module
     public:
         TemperatureSwitch();
         void on_module_loaded();
-        void on_config_reload(void *argument);
         void on_second_tick(void *argument);
 
     private:

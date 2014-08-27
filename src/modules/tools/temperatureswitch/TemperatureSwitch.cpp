@@ -42,20 +42,17 @@ TemperatureSwitch::TemperatureSwitch()
 // Load module
 void TemperatureSwitch::on_module_loaded()
 {
+    // TODO load multiple instances of temperature switch linked to different temp controls and switches
+
     // free up space if not loaded
     if (!THEKERNEL->config->value(temperatureswitch_checksum, temperatureswitch_hotend_checksum, temperatureswitch_enable_checksum)->by_default(false)->as_bool()) {
         delete this;
         return;
     }
 
-    // settings
-    this->on_config_reload(this);
-}
+    // load settings
 
-// Get config
-void TemperatureSwitch::on_config_reload(void *argument)
-{
-    // get the list of temperature controllers and remove any that fon't have designator == "T"
+    // get the list of temperature controllers and remove any that don't have designator == "T"
     vector<uint16_t> controller_list;
     THEKERNEL->config->get_module_list(&controller_list, temperature_control_checksum);
 
