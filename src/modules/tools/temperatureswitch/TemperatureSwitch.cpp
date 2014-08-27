@@ -32,6 +32,7 @@ Author: Michael Hackney, mhackney@eclecticangler.com
 #define temperatureswitch_hotend_checksum             CHECKSUM("hotend")
 #define temperatureswitch_threshold_temp_checksum     CHECKSUM("threshold_temp")
 #define temperatureswitch_type_checksum               CHECKSUM("type")
+#define temperatureswitch_switch_checksum             CHECKSUM("switch")
 #define temperatureswitch_heatup_poll_checksum        CHECKSUM("heatup_poll")
 #define temperatureswitch_cooldown_poll_checksum      CHECKSUM("cooldown_poll")
 #define designator_checksum                           CHECKSUM("designator")
@@ -104,13 +105,17 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     }
 
     // load settings from config file
-    s = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_type_checksum)->by_default("")->as_string();
+    s = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_switch_checksum)->by_default("")->as_string();
     if(s.empty()) {
-        // no type specified so invalid entry
-        delete this;
-        return false;
+        // handle old configs where this was called type @DEPRECATED
+        s = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_type_checksum)->by_default("")->as_string();
+        if(s.empty()) {
+            // no switch specified so invalid entry
+            delete this;
+            return false;
+        }
     }
-    ts->temperatureswitch_type_cs= get_checksum(s); // checksum of the switch to use
+    ts->temperatureswitch_switch_cs= get_checksum(s); // checksum of the switch to use
 
     ts->temperatureswitch_threshold_temp = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_threshold_temp_checksum)->by_default(50.0f)->as_number();
 
@@ -174,7 +179,7 @@ float TemperatureSwitch::get_highest_temperature()
 void TemperatureSwitch::set_switch(bool switch_state)
 {
     this->temperatureswitch_state = switch_state;
-    bool ok = PublicData::set_value(switch_checksum, this->temperatureswitch_type_cs, state_checksum, &this->temperatureswitch_state);
+    bool ok = PublicData::set_value(switch_checksum, this->temperatureswitch_switch_cs, state_checksum, &this->temperatureswitch_state);
     if (!ok) {
         THEKERNEL->streams->printf("Failed changing switch state.\r\n");
     }

@@ -43,8 +43,8 @@ class TemperatureSwitch : public Module
         // temperatureswitch.hotend.threshold_temp
         float temperatureswitch_threshold_temp;
 
-        // temperatureswitch.hotend.type
-        uint16_t temperatureswitch_type_cs;
+        // temperatureswitch.hotend.switch
+        uint16_t temperatureswitch_switch_cs;
 
         // check temps on heatup every X seconds
         // this can be set in config: temperatureswitch.hotend.heatup_poll
