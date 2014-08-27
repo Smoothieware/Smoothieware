@@ -29,41 +29,41 @@ class TemperatureSwitch : public Module
         void on_module_loaded();
         void on_config_reload(void *argument);
         void on_second_tick(void *argument);
-        
+
     private:
         // turn the switch on or off
         void set_switch(bool cooler_state);
-        
+
         // get the highest temperature from the set of configured temperature controllers
         float get_highest_temperature();
-        
+
         // these are set in the config file
-        
+
         // temperatureswitch.hotend.type
-        std::string temperatureswitch_type;
-        
+        uint16_t temperatureswitch_type_cs;
+
         // temperatureswitch.hotend.threshold_temp
         float temperatureswitch_threshold_temp;
-        
+
         // is the switch currently on (1) or off (0)?
         bool temperatureswitch_state;
-        
+
         // check temps on heatup every X seconds
         // this can be set in config: temperatureswitch.hotend.heatup_poll
-        int temperatureswitch_heatup_poll;
-        
+        uint16_t temperatureswitch_heatup_poll;
+
         // check temps on cooldown every X seconds
         // this can be set in config: temperatureswitch.hotend.cooldown_poll
-        int temperatureswitch_cooldown_poll;
-        
+        uint16_t temperatureswitch_cooldown_poll;
+
         // our internal second counter
-        int second_counter;
-        
+        uint16_t second_counter;
+
         // we are delaying for this many seconds
-        int current_delay;
-        
+        uint16_t current_delay;
+
         // the set of all known temperature controllers
-        vector<uint16_t> temp_controllers;  
+        vector<uint16_t> temp_controllers;
 };
 
 #endif
