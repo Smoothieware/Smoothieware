@@ -15,6 +15,7 @@ public:
     virtual int disk_sync();
     virtual int disk_sectors();
 
+	int remount();
 protected:
     MSD_Disk *d;
 };

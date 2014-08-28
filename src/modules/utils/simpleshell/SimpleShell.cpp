@@ -27,6 +27,7 @@
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
+#include "SDFAT.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -62,6 +63,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"net",      SimpleShell::net_command},
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
+    {"remount",       SimpleShell::remount_command},
 
     // unknown command
     {NULL, NULL}
@@ -226,6 +228,14 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
         stream->printf("Could not open directory %s \r\n", folder.c_str());
     }
 }
+
+extern SDFAT mounter;
+
+void SimpleShell::remount_command( string parameters, StreamOutput *stream )
+{
+    mounter.remount();
+	stream->printf("remounted\r\n");
+} 
 
 // Delete a file
 void SimpleShell::rm_command( string parameters, StreamOutput *stream )
