@@ -98,8 +98,6 @@ void TemperatureControl::on_module_loaded()
 
 void TemperatureControl::on_halt(void *arg)
 {
-    if(this->readonly) return;
-
     // turn off heater
     this->o = 0;
     this->heater_pin.set(0);
@@ -253,9 +251,6 @@ void TemperatureControl::on_gcode_received(void *argument)
 
 void TemperatureControl::on_gcode_execute(void *argument)
 {
-    // readonly sensors don't handle this
-    if(this->readonly) return;
-
     Gcode *gcode = static_cast<Gcode *>(argument);
     if( gcode->has_m) {
         if (((gcode->m == this->set_m_code) || (gcode->m == this->set_and_wait_m_code))
@@ -309,8 +304,6 @@ void TemperatureControl::on_get_public_data(void *argument)
 
 void TemperatureControl::on_set_public_data(void *argument)
 {
-    if(this->readonly) return;
-
     PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
 
     if(!pdr->starts_with(temperature_control_checksum)) return;
@@ -325,8 +318,6 @@ void TemperatureControl::on_set_public_data(void *argument)
 
 void TemperatureControl::set_desired_temperature(float desired_temperature)
 {
-    if(this->readonly) return;
-
     if (desired_temperature == 1.0)
         desired_temperature = preset1;
     else if (desired_temperature == 2.0)
