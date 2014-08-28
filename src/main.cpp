@@ -162,6 +162,7 @@ void init() {
     kernel->add_module( new Network() );
     #endif
     #ifndef NO_TOOLS_TEMPERATURESWITCH
+    // Must be loaded after TemperatureControlPool
     kernel->add_module( new TemperatureSwitch() );
     #endif
 

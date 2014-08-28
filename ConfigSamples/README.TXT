@@ -7,8 +7,8 @@ Smoothie enabled hardware.
 The full configs found in the ConfigSamples director include:
 * Smoothieboard - This directory contains a sample configuration for the
   most recent Smoothieboard. http://smoothieware.org/smoothieboard
-  
-* Smoothieboard.Kossel - This directory contains a sample config for a
+
+* Smoothieboard.delta - This directory contains a sample config for a
   Rostock or Kossel style linear delta bot using the most recent Smoothieboard.
 
 * AzteegX5Mini - This directory contains a sample config file for using
