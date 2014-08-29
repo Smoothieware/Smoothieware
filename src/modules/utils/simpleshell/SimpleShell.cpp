@@ -130,8 +130,8 @@ static uint32_t heapWalk(StreamOutput *stream, bool verbose)
 void SimpleShell::on_module_loaded()
 {
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-	this->register_for_event(ON_GCODE_RECEIVED);
-	this->register_for_event(ON_SECOND_TICK);
+    this->register_for_event(ON_GCODE_RECEIVED);
+    this->register_for_event(ON_SECOND_TICK);
 
     reset_delay_secs = 0;
 }
@@ -234,7 +234,7 @@ extern SDFAT mounter;
 void SimpleShell::remount_command( string parameters, StreamOutput *stream )
 {
     mounter.remount();
-	stream->printf("remounted\r\n");
+    stream->printf("remounted\r\n");
 } 
 
 // Delete a file
