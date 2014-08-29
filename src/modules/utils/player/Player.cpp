@@ -61,7 +61,7 @@ void Player::on_gcode_received(void *argument)
     if (gcode->has_m) {
         if (gcode->m == 21) { // Dummy code; makes Octoprint happy -- supposed to initialize SD card
             gcode->mark_as_taken();
-			mounter.remount();
+            mounter.remount();
             gcode->stream->printf("SD card ok\r\n");
 
         } else if (gcode->m == 23) { // select file
