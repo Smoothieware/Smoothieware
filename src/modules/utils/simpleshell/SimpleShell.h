@@ -49,6 +49,8 @@ private:
     static void load_command( string parameters, StreamOutput *stream);
     static void save_command( string parameters, StreamOutput *stream);
 
+    static void remount_command( string parameters, StreamOutput *stream);
+
     bool parse_command(const char *cmd, string args, StreamOutput *stream);
 
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);

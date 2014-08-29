@@ -19,6 +19,7 @@
 #include "Pauser.h"
 #include "Config.h"
 #include "ConfigValue.h"
+#include "SDFAT.h"
 
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
@@ -27,6 +28,8 @@
 
 #define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
 #define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
+
+extern SDFAT mounter;
 
 void Player::on_module_loaded()
 {
@@ -58,6 +61,7 @@ void Player::on_gcode_received(void *argument)
     if (gcode->has_m) {
         if (gcode->m == 21) { // Dummy code; makes Octoprint happy -- supposed to initialize SD card
             gcode->mark_as_taken();
+            mounter.remount();
             gcode->stream->printf("SD card ok\r\n");
 
         } else if (gcode->m == 23) { // select file
