@@ -9,44 +9,65 @@
 #include "Pauser.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "StreamOutputPool.h"
 
 using namespace std;
 
 #define pause_button_enable_checksum CHECKSUM("pause_button_enable")
+#define kill_button_enable_checksum  CHECKSUM("kill_button_enable")
 #define pause_button_pin_checksum    CHECKSUM("pause_button_pin")
-#define freeze_command_checksum      CHECKSUM("freeze")
-#define unfreeze_command_checksum    CHECKSUM("unfreeze")
+#define kill_button_pin_checksum     CHECKSUM("kill_button_pin")
 
-PauseButton::PauseButton(){}
+PauseButton::PauseButton(){
+    this->button_state = true;
+    this->killed= false;
+}
 
 void PauseButton::on_module_loaded(){
-    this->button_state = true;
+    this->pause_enable = THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool();
+    this->kill_enable  = THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool();
+    this->pause_button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input();
+    this->kill_button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input();
 
-    this->enable     =  THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool();
-    this->button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input();
+    if(pause_button.equals(kill_button)) {
+        // kill button takes priority
+        this->pause_enable= false;
+        this->pause_button.from_string("nc");
+    }
 
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
 
-    if(this->enable) THEKERNEL->slow_ticker->attach( 100, this, &PauseButton::button_tick );
+    if( (this->pause_enable && this->pause_button.connected()) || (this->kill_enable && this->kill_button.connected()) ) {
+        THEKERNEL->slow_ticker->attach( 100, this, &PauseButton::button_tick );
+    }
 }
 
 //TODO: Make this use InterruptIn
 //Check the state of the button and act accordingly based on current pause state
 uint32_t PauseButton::button_tick(uint32_t dummy){
-    if(!this->enable) return 0;
-    // If button changed
-    bool newstate = this->button.get();
-    if(this->button_state != newstate){
-        this->button_state = newstate;
-        // If button pressed
-        if( this->button_state ){
-            if( THEKERNEL->pauser->paused() ){
-                THEKERNEL->pauser->release();
-            }else{
-                THEKERNEL->pauser->take();
+    // If pause button changed
+    if(this->pause_enable && this->pause_button.connected()) {
+        bool newstate = this->pause_button.get();
+        if(this->button_state != newstate){
+            this->button_state = newstate;
+            // If button pressed
+            if( this->button_state ){
+                if( THEKERNEL->pauser->paused() ){
+                    THEKERNEL->pauser->release();
+                }else{
+                    THEKERNEL->pauser->take();
+                }
             }
         }
     }
+
+    if(!this->killed && this->kill_enable && this->kill_button.connected() && this->kill_button.get()) {
+            this->killed= true;
+            THEKERNEL->pauser->take();
+            THEKERNEL->call_event(ON_HALT);
+            //THEKERNEL->streams->printf("Kill button pressed - reset required to continue\r\n"); // not in an interrupt
+    }
+
     return 0;
 }
 
@@ -59,14 +80,14 @@ void PauseButton::on_console_line_received( void *argument )
     char first_char = new_message.message[0];
     if(strchr(";( \n\rGMTN", first_char) != NULL) return;
 
-    int checksum = get_checksum(shift_parameter(new_message.message));
+    string cmd= shift_parameter(new_message.message);
 
-    if (checksum == freeze_command_checksum) {
+    if (cmd == "freeze") {
         if( !THEKERNEL->pauser->paused() ){
             THEKERNEL->pauser->take();
         }
 
-    }else if (checksum == unfreeze_command_checksum) {
+    }else if (cmd == "unfreeze") {
         if( THEKERNEL->pauser->paused() ){
             THEKERNEL->pauser->release();
         }

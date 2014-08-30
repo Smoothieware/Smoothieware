@@ -12,10 +12,13 @@ class PauseButton : public Module {
         uint32_t button_tick(uint32_t dummy);
 
     private:
-        Pin button;
+        Pin pause_button;
+        Pin kill_button;
         struct {
-            bool enable:1;
+            bool pause_enable:1;
+            bool kill_enable:1;
             bool button_state:1;
+            bool killed:1;
         };
 };
 
