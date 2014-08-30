@@ -63,7 +63,16 @@ void MorganSCARASolution::cartesian_to_actuator( float cartesian_mm[], float act
     if (this->arm1_length == this->arm2_length)
         SCARA_C2 = (SQ(SCARA_pos[X_AXIS])+SQ(SCARA_pos[Y_AXIS])-2.0f*SQ(this->arm1_length)) / (2.0f * SQ(this->arm1_length));
     else
-        SCARA_C2 = (SQ(SCARA_pos[X_AXIS])+SQ(SCARA_pos[Y_AXIS])-SQ(this->arm1_length)-SQ(this->arm2_length)) / (2.0f * SQ(this->arm1_length)); 
+        SCARA_C2 = (SQ(SCARA_pos[X_AXIS])+SQ(SCARA_pos[Y_AXIS])-SQ(this->arm1_length)-SQ(this->arm2_length)) / (2.0f * SQ(this->arm1_length));
+
+    // SCARA position is undefined if abs(SCARA_C2) >=1
+    // In reality abs(SCARA_C2) >0.95 is problematic.
+
+    if (SCARA_C2 > 0.95f)
+        SCARA_C2 = 0.95f;
+    else if (SCARA_C2 < -0.95f)
+        SCARA_C2 = -0.95f;
+
      
     SCARA_S2 = sqrtf(1.0f-SQ(SCARA_C2));
 
