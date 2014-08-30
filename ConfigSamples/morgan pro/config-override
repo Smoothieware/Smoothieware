@@ -1,0 +1,36 @@
+; config override present: /sd/config-override
+;Steps per unit:
+M92 X212.39999 Y212.39999 Z208.66000
+;Acceleration mm/sec^2:
+M204 S3000.00000
+;X- Junction Deviation, S - Minimum Planner speed:
+M205 X0.05000 S0.00000
+;Max feedrates in mm/sec, XYZ cartesian, ABC actuator:
+M203 X300.00000 Y300.00000 Z83.33334 A250.00000 B250.00000 C66.66666
+;Optional arm solution specific settings:
+M665 P149.4900 T149.4900 X190.0000 Y-65.0000
+;Home offset (mm):
+M206 X0.00 Y0.00 Z-1.50
+;Trim (mm):
+M666 X0.000 Y0.000 Z0.000
+;Max Z
+M665 Z200.000
+;E Steps per mm:
+M92 E180.8000 P57988
+;E Filament diameter:
+M200 D0.0000 P57988
+;E retract length, feedrate:
+M207 S3.0000 F2700.0000 Z0.0000 Q6000.0000 P57988
+;E retract recover length, feedrate:
+M208 S0.0000 F480.0000 P57988
+;PID settings:
+M301 S0 P10.0000 I0.3000 D200.0000
+;PID settings:
+M301 S1 P10.0000 I0.3000 D200.0000
+;Bed Level settings:
+M374 X0 A-0.00 B0.10 C0.50 D1.10 E1.80
+M374 X1 A-0.50 B-0.30 C0.10 D0.70 E1.40
+M374 X2 A-0.70 B-0.50 C-0.10 D0.50 E1.20
+M374 X3 A-0.60 B-0.40 C-0.10 D0.50 E1.50
+M374 X4 A-0.40 B-0.20 C0.10 D0.70 E0.00
+

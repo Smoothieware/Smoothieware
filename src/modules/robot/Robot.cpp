@@ -646,23 +646,18 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     float actuator_pos[3];
     float adj_target[3]; // adjust target for bed leveling
     float millimeters_of_travel;
-    float target_zdelta;
-    float milestone_zdelta;
+    //float target_zdelta;
+    //float milestone_zdelta;
 
     // find distance moved by each axis (X Y) 
     for (int axis = X_AXIS; axis <= Y_AXIS; axis++)
         deltas[axis] = (target[axis]  ) - (last_milestone[axis]  );
 
     // calculate the corrected target Z endpoint for bed level
-    target_zdelta = this->arm_bilinear_interp(target[X_AXIS]/50.0F, target[Y_AXIS]/50.0F);
-    target[Z_AXIS] += target_zdelta;  // add zdelta to the target
-    milestone_zdelta = this->arm_bilinear_interp(last_milestone[X_AXIS]/50.0F, last_milestone[Y_AXIS]/50.0F);
+    //target_zdelta = this->arm_bilinear_interp(target[X_AXIS]/50.0F, target[Y_AXIS]/50.0F);
+    //target[Z_AXIS] += target_zdelta;  // add zdelta to the target
+    //milestone_zdelta = this->arm_bilinear_interp(last_milestone[X_AXIS]/50.0F, last_milestone[Y_AXIS]/50.0F);
 
-<<<<<<< HEAD
-    // Find distance moved by Z including the bed leveling grid (This is transparent to the user and upper level firmware)
-    deltas[Z_AXIS] = (target[Z_AXIS] ) - // zdelta was already added...
-	           (last_milestone[Z_AXIS] + milestone_zdelta );
-=======
     memcpy(adj_target, target, sizeof(adj_target));
 
     // check function pointer and call if set to adjust Z for bed leveling
@@ -673,7 +668,6 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     // find distance moved by each axis, use actual adjusted target
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
         deltas[axis] = adj_target[axis] - last_milestone[axis];
->>>>>>> upstream/edge
 
     // Compute how long this move moves, so we can attach it to the block for later use
     millimeters_of_travel = sqrtf( powf( deltas[X_AXIS], 2 ) +  powf( deltas[Y_AXIS], 2 ) +  powf( deltas[Z_AXIS], 2 ) );
@@ -692,13 +686,8 @@ void Robot::append_milestone( float target[], float rate_mm_s )
         }
     }
 
-<<<<<<< HEAD
-    // find new actuator position given cartesian position
-    arm_solution->cartesian_to_actuator( target, actuator_pos );
-=======
     // find actuator position given cartesian position, use actual adjusted target
     arm_solution->cartesian_to_actuator( adj_target, actuator_pos );
->>>>>>> upstream/edge
 
     // check per-actuator speed limits
     for (int actuator = 0; actuator <= 2; actuator++) {
@@ -711,12 +700,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     // Append the block to the planner
     THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
 
-<<<<<<< HEAD
-    // Update the last_milestone to the current target for the next time we use last_milestone
-    target[Z_AXIS] -= target_zdelta;   // revert to actual Z for last_milestone assignment
-=======
     // Update the last_milestone to the current target for the next time we use last_milestone, use the requested target not the adjusted one
->>>>>>> upstream/edge
     memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
 
 }

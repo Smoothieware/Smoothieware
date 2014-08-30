@@ -1,0 +1,18 @@
+;Steps per unit:
+M92 X158.39999 Y158.39999 Z2150.57007
+;Acceleration mm/sec^2:
+M204 S1000.00000
+;X- Junction Deviation, S - Minimum Planner speed:
+M205 X0.05000 S0.00000
+;Max feedrates in mm/sec, XYZ cartesian, ABC actuator:
+M203 X500.00000 Y500.00000 Z3.33333 A166.66667 B166.66667 C3.33333
+;Home offset (mm):
+M206 X0.00 Y0.00 Z-13.15
+;E Steps per mm:
+M92 E166.6700 P57988
+;E Filament diameter:
+M200 D0.0000 P57988
+;PID settings:
+M301 S0 P10.0000 I0.3000 D200.0000
+;PID settings:
+M301 S1 P10.0000 I0.3000 D200.0000
