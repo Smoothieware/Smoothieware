@@ -25,11 +25,11 @@ PauseButton::PauseButton(){
 
 void PauseButton::on_module_loaded(){
     this->pause_enable = THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool();
-    this->kill_enable  = THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool();
+    this->kill_enable  = THEKERNEL->config->value( kill_button_enable_checksum )->by_default(false)->as_bool();
     this->pause_button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input();
-    this->kill_button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input();
+    this->kill_button.from_string( THEKERNEL->config->value( kill_button_pin_checksum )->by_default("nc")->as_string())->as_input();
 
-    if(pause_button.equals(kill_button)) {
+    if(this->kill_enable && this->kill_button.connected() && pause_button.equals(kill_button)) {
         // kill button takes priority
         this->pause_enable= false;
         this->pause_button.from_string("nc");

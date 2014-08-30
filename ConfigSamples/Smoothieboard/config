@@ -61,6 +61,9 @@ second_usb_serial_enable                     false            # This enables a s
 #leds_disable                                true             # disable using leds after config loaded
 #play_led_disable                            true             # disable the play led
 #msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
+pause_button_enable                          true             # Pause button enable
+#kill_button_enable                           false            # enable the kill button
+#kill_button_pin                              2.12             # kill button pin. default is same as pause button 2.12 (2.11 is another good choice)
 
 # Extruder module configuration
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -249,9 +252,6 @@ zprobe.probe_height                          5               # how much above be
 #leveling-strategy.three-point-leveling.probe_offsets  0,0,0       # the probe offsets from nozzle, must be x,y,z, default is no offset
 #leveling-strategy.three-point-leveling.save_plane     false       # set to true to allow the bed plane to be saved with M500 default is false
 
-# Pause button
-pause_button_enable                          true             #
-
 # Panel
 panel.enable                                 false             # set to true to enable the panel code
 panel.lcd                                    smoothiepanel     # set type of panel
@@ -268,8 +268,7 @@ panel.encoder_b_pin                          3.26!^            # encoder pin
 #panel.encoder_b_pin                         3.26!^            # encoder pin         ; GLCD EXP2 Pin 5
 #panel.click_button_pin                      1.30!^            # click button        ; GLCD EXP1 Pin 2
 #panel.buzz_pin                              1.31              # pin for buzzer      ; GLCD EXP1 Pin 1
-#panel.button_pause_pin                      2.11^             # kill/pause          ; GLCD EXP2 Pin 8 either
-#panel.back_button_pin                       2.11!^            # back button         ; GLCD EXP2 Pin 8 or
+#panel.back_button_pin                       2.11!^            # back button         ; GLCD EXP2 Pin 8
 
 # pins used with other panels
 #panel.up_button_pin                         0.1!              # up button if used
