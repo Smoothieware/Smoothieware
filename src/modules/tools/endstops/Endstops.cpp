@@ -229,7 +229,7 @@ void Endstops::on_config_reload(void *argument)
     }
 }
 
-static const char *endstop_names[]= {"MIN_X", "MIN_Y", "MIN_Z", "MAX_X", "MAX_Y", "MAX_Z"};
+static const char *endstop_names[]= {"min_x", "min_y", "min_z", "max_x", "max_y", "max_z"};
 
 void Endstops::on_idle(void *argument)
 {
