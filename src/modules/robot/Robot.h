@@ -73,6 +73,7 @@ class Robot : public Module {
         float arm_bilinear_interp(float X, float Y);
 
         float last_milestone[3];                             // Last position, in millimeters
+//        float last_z_adj_milestone;                          // Last adjusted Z position, in millimeters (for Z distance calculation in Adjustment strategies)
         bool  inch_mode;                                       // true for inch mode, false for millimeter mode ( default )
         int8_t motion_mode;                                   // Motion mode for the current received Gcode
         float seek_rate;                                     // Current rate for seeking moves ( mm/s )

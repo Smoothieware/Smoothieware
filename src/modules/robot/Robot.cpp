@@ -665,10 +665,11 @@ void Robot::append_milestone( float target[], float rate_mm_s )
         adj_target[Z_AXIS] += adjustZfnc(target[X_AXIS], target[Y_AXIS]);
     }
 
-    // find distance moved by each axis, use actual adjusted target
+    // find distance moved by each axis, use actual target.
+    // Z offset merely ensures proper movement, so should not be foctored into the calculated distance.
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
-        deltas[axis] = adj_target[axis] - last_milestone[axis];
-
+        deltas[axis] = target[axis] - last_milestone[axis];
+    
     // Compute how long this move moves, so we can attach it to the block for later use
     millimeters_of_travel = sqrtf( powf( deltas[X_AXIS], 2 ) +  powf( deltas[Y_AXIS], 2 ) +  powf( deltas[Z_AXIS], 2 ) );
 
