@@ -123,7 +123,6 @@ Robot::Robot()
     this->motion_mode =  MOTION_MODE_SEEK;
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
     clear_vector(this->last_milestone);
-//    last_z_adj_milestone = 0.0F;	// set to zero adjusted milestone for first move.
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
@@ -604,9 +603,9 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     memcpy(adj_target, target, sizeof(adj_target));
 
     // check function pointer and call if set to adjust Z for bed leveling
-    if(adjustZfnc)
+    if(adjustZfnc) {
         adj_target[Z_AXIS] += adjustZfnc(target[X_AXIS], target[Y_AXIS]);
-    
+    }
 
     // find distance moved by each axis, use actual target.
     // Z offset merely ensures proper movement, so should not be foctored into the calculated distance.
@@ -621,7 +620,6 @@ void Robot::append_milestone( float target[], float rate_mm_s )
         unit_vec[i] = deltas[i] / millimeters_of_travel;
 
     // Do not move faster than the configured cartesian limits
-    // Z speed should be related to the actual movement on the platform plane, and not adjusted milestones.
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
         if ( max_speeds[axis] > 0 ) {
             float axis_speed = fabs(unit_vec[axis] * rate_mm_s);
@@ -647,8 +645,6 @@ void Robot::append_milestone( float target[], float rate_mm_s )
 
     // Update the last_milestone to the current target for the next time we use last_milestone, use the requested target not the adjusted one
     memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
-
-//    last_z_adj_milestone = adj_target[Z_AXIS];  // save the last adjusted Z milestone for accurate distance calculation (speed and extrution problems)
 
 }
 
