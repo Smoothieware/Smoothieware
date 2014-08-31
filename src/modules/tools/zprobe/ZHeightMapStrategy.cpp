@@ -98,13 +98,15 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
             // M370: Clear current ZHeightMap for calibration, and move to first position
             case 370: {
                 this->homexyz();
-                for (int i=0; i<25; i++){
-                    this->bed_level_data.pData[i] = 0.0F;        // Clear the ZHeightMap
-                }
+                //for (int i=0; i<25; i++){
+                //    this->bed_level_data.pData[i] = 0.0F;        // Clear the ZHeightMap
+                //}
 
                 this->cal[X_AXIS] = 0;                                              // Clear calibration position
                 this->cal[Y_AXIS] = 0;
                 this->in_cal = true;                                         // In calbration mode
+                this->setAdjustFunction(false); // disable leveling code for caloibration
+
 
             }
             return true;
@@ -154,7 +156,8 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
                             this->bed_level_data.pData[i+(x*5)] = gcode->get_value('A'+i);
                         }
                     }
-                }    
+                }
+                this->setAdjustFunction(true); // Enable leveling code   
             }
             return true;
             case 376: {
