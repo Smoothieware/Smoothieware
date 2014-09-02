@@ -22,16 +22,19 @@ using std::string;
 #include "checksumm.h"
 #include "ConfigValue.h"
 
-GcodeDispatch::GcodeDispatch() {}
+#define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+
+GcodeDispatch::GcodeDispatch() {
+    currentline = -1;
+    uploading = false;
+    last_g= 255;
+}
 
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded()
 {
     return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    currentline = -1;
-    uploading = false;
-    last_g= 255;
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
