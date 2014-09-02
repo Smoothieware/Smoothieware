@@ -53,6 +53,7 @@ private:
     float slow_feedrate;
     float fast_feedrate;
     float probe_height;
+    float max_z;
     volatile struct {
         volatile bool running:1;
         bool is_delta:1;
