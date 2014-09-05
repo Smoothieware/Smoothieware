@@ -27,43 +27,42 @@ class TemperatureSwitch : public Module
     public:
         TemperatureSwitch();
         void on_module_loaded();
-        void on_config_reload(void *argument);
         void on_second_tick(void *argument);
-        
+
     private:
-        // turn the switch on or off
-        void set_switch(bool cooler_state);
-        
+        bool load_config(uint16_t modcs);
+
         // get the highest temperature from the set of configured temperature controllers
         float get_highest_temperature();
-        
-        // these are set in the config file
-        
-        // temperatureswitch.hotend.type
-        std::string temperatureswitch_type;
-        
+
+        // turn the switch on or off
+        void set_switch(bool cooler_state);
+
+        // the set of temperature controllers that match the reuired designator prefix
+        vector<uint16_t> temp_controllers;
+
         // temperatureswitch.hotend.threshold_temp
         float temperatureswitch_threshold_temp;
-        
-        // is the switch currently on (1) or off (0)?
-        bool temperatureswitch_state;
-        
+
+        // temperatureswitch.hotend.switch
+        uint16_t temperatureswitch_switch_cs;
+
         // check temps on heatup every X seconds
         // this can be set in config: temperatureswitch.hotend.heatup_poll
-        int temperatureswitch_heatup_poll;
-        
+        uint16_t temperatureswitch_heatup_poll;
+
         // check temps on cooldown every X seconds
         // this can be set in config: temperatureswitch.hotend.cooldown_poll
-        int temperatureswitch_cooldown_poll;
-        
+        uint16_t temperatureswitch_cooldown_poll;
+
         // our internal second counter
-        int second_counter;
-        
+        uint16_t second_counter;
+
         // we are delaying for this many seconds
-        int current_delay;
-        
-        // the set of all known temperature controllers
-        vector<uint16_t> temp_controllers;  
+        uint16_t current_delay;
+
+        // is the switch currently on (1) or off (0)?
+        bool temperatureswitch_state;
 };
 
 #endif
