@@ -29,6 +29,9 @@ ProbeScreen::ProbeScreen()
 
 void ProbeScreen::on_exit()
 {
+    this->do_probe= false;
+    this->do_status= false;
+    this->new_result= false;
     delete this;
 }
 
@@ -50,10 +53,10 @@ void ProbeScreen::on_refresh()
     if(this->new_result) {
         this->new_result= false;
         THEPANEL->lcd->setCursor(0, 3);
-        THEPANEL->lcd->printf("%s", this->result.substr(0, 20).c_str());
+        THEPANEL->lcd->printf("%20s", this->result.substr(0, 20).c_str());
         if(this->result.size() > 20) {
             THEPANEL->lcd->setCursor(0, 4);
-            THEPANEL->lcd->printf("%s", this->result.substr(20, 20).c_str());
+            THEPANEL->lcd->printf("%20s", this->result.substr(20, 20).c_str());
         }
     }
 }
@@ -69,9 +72,10 @@ void ProbeScreen::display_menu_line(uint16_t line)
 
 void ProbeScreen::clicked_menu_entry(uint16_t line)
 {
+    this->do_status= false;
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); return;
-        case 1: this->do_status= true; break;
+        case 1: this->do_status= true; this->tcnt= 1; break;
         case 2: this->do_probe= true; break;
     }
 }
@@ -87,8 +91,9 @@ void ProbeScreen::on_main_loop()
         this->result= string_stream.getOutput();
         this->new_result= true;
 
-    }else if (this->do_status) {
-        this->do_status= false;
+    }else if (this->do_status && --this->tcnt == 0) {
+        // this will refresh the results every 10 main loop iterations
+        this->tcnt= 10; // update every 10 times
         StringStream string_stream;
         Gcode gcode("M119", &string_stream);
         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
