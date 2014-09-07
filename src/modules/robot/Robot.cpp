@@ -123,11 +123,11 @@ Robot::Robot()
     this->motion_mode =  MOTION_MODE_SEEK;
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
     clear_vector(this->last_milestone);
-//    last_z_adj_milestone = 0.0F;	// set to zero adjusted milestone for first move.
+    clear_vector(this->transformed_last_milestone);
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
-    this->adjustZfnc= nullptr;
+    this->compensationTransform= nullptr;
 }
 
 //Called when the module has just been loaded
@@ -572,6 +572,9 @@ void Robot::reset_axis_position(float x, float y, float z)
     this->last_milestone[X_AXIS] = x;
     this->last_milestone[Y_AXIS] = y;
     this->last_milestone[Z_AXIS] = z;
+    this->transformed_last_milestone[X_AXIS] = x;
+    this->transformed_last_milestone[Y_AXIS] = y;
+    this->transformed_last_milestone[Z_AXIS] = z;
 
     float actuator_pos[3];
     arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
@@ -583,6 +586,7 @@ void Robot::reset_axis_position(float x, float y, float z)
 void Robot::reset_axis_position(float position, int axis)
 {
     this->last_milestone[axis] = position;
+    this->transformed_last_milestone[axis] = position;
 
     float actuator_pos[3];
     arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
@@ -598,21 +602,25 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     float deltas[3];
     float unit_vec[3];
     float actuator_pos[3];
-    float adj_target[3]; // adjust target for bed leveling
+    float transformed_target[3]; // adjust target for bed compensation
     float millimeters_of_travel;
 
-    memcpy(adj_target, target, sizeof(adj_target));
+    // unity transform by default
+    memcpy(transformed_target, target, sizeof(transformed_target));
 
-    // check function pointer and call if set to adjust Z for bed leveling
-    if(adjustZfnc)
-        adj_target[Z_AXIS] += adjustZfnc(target[X_AXIS], target[Y_AXIS]);
-    
+    // check function pointer and call if set to transform the target to compensate for bed
+    if(compensationTransform) {
+        // some compensation strategies can transform XYZ, some just change Z
+        compensationTransform(transformed_target);
+    }
 
-    // find distance moved by each axis, use actual target.
-    // Z offset merely ensures proper movement, so should not be foctored into the calculated distance.
-    for (int axis = X_AXIS; axis <= Z_AXIS; axis++)
-        deltas[axis] = target[axis] - last_milestone[axis];
-    
+    // find distance moved by each axis, use transformed target from last_transformed_target
+    for (int axis = X_AXIS; axis <= Z_AXIS; axis++){
+        deltas[axis] = transformed_target[axis] - transformed_last_milestone[axis];
+    }
+    // store last transformed
+    memcpy(this->transformed_last_milestone, transformed_target, sizeof(this->transformed_last_milestone));
+
     // Compute how long this move moves, so we can attach it to the block for later use
     millimeters_of_travel = sqrtf( powf( deltas[X_AXIS], 2 ) +  powf( deltas[Y_AXIS], 2 ) +  powf( deltas[Z_AXIS], 2 ) );
 
@@ -632,7 +640,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     }
 
     // find actuator position given cartesian position, use actual adjusted target
-    arm_solution->cartesian_to_actuator( adj_target, actuator_pos );
+    arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
 
     // check per-actuator speed limits
     for (int actuator = 0; actuator <= 2; actuator++) {

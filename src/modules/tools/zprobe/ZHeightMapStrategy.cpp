@@ -44,6 +44,7 @@
 #include "PublicData.h"
 #include "Conveyor.h"
 #include "ZProbe.h"
+#include "Plane3D.h"
 #include "nuts_bolts.h"
 
 #include <string>
@@ -53,6 +54,8 @@
 
 #define bed_x_checksum                CHECKSUM("bed_x")
 #define bed_y_checksum                CHECKSUM("bed_y")
+#define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
+//#define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
 
 
 ZHeightMapStrategy::ZHeightMapStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
@@ -61,6 +64,11 @@ ZHeightMapStrategy::ZHeightMapStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe
         probe_points[i] = std::make_tuple(NAN, NAN);
     }
     plane = nullptr;*/
+    this->cal[X_AXIS] = 0.0f;
+    this->cal[Y_AXIS] = 0.0f;
+    this->cal[Z_AXIS] = 10.0f;
+
+    this->in_cal = false;
 }
 
 ZHeightMapStrategy::~ZHeightMapStrategy()
@@ -73,6 +81,8 @@ bool ZHeightMapStrategy::handleConfig()
     this->bed_x = THEKERNEL->config->value(leveling_strategy_checksum, zheightmap_leveling_checksum, bed_x_checksum)->by_default(200.0F)->as_number();
     this->bed_y = THEKERNEL->config->value(leveling_strategy_checksum, zheightmap_leveling_checksum, bed_y_checksum)->by_default(200.0F)->as_number();
 
+    this->slow_rate = THEKERNEL->config->value(leveling_strategy_checksum, zheightmap_leveling_checksum, slow_feedrate_checksum)->by_default(20.0F)->as_number();
+    
     this->bed_div_x = this->bed_x / 4.0F;    // Find divisors to find the 25 calbration points
     this->bed_div_y = this->bed_y / 4.0F;
 
@@ -102,10 +112,10 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
                 //    this->bed_level_data.pData[i] = 0.0F;        // Clear the ZHeightMap
                 //}
 
-                this->cal[X_AXIS] = 0;                                              // Clear calibration position
-                this->cal[Y_AXIS] = 0;
+                this->cal[X_AXIS] = 0.0f;                                              // Clear calibration position
+                this->cal[Y_AXIS] = 0.0f;
                 this->in_cal = true;                                         // In calbration mode
-                this->setAdjustFunction(false); // disable leveling code for caloibration
+                //this->setAdjustFunction(false); // disable leveling code for caloibration
 
 
             }
@@ -126,7 +136,7 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
                     int pindex = 0;
 
                     THEKERNEL->robot->get_axis_position(cartesian);         // get actual position from robot
-                    pindex = (int) ((cartesian[X_AXIS]/10.0F)+(cartesian[Y_AXIS]/50.0F));
+                    pindex = (int) ((cartesian[X_AXIS]/this->bed_div_x*bed_level_data.numRows)+(cartesian[Y_AXIS]/this->bed_div_y));
 
                     this->move(this->cal, slow_rate);                       // move to the next position
                     this->next_cal();                                       // to not cause damage to machine due to Z-offset
@@ -208,6 +218,8 @@ void ZHeightMapStrategy::move(float *position, float feed)
     // Assemble Gcode to add onto the queue
     snprintf(cmd, sizeof(cmd), "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", position[0], position[1], position[2], feed * 60); // use specified feedrate (mm/sec)
 
+    //THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
+
     Gcode gc(cmd, &(StreamOutput::NullStream));
     THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
 }
@@ -239,11 +251,11 @@ void ZHeightMapStrategy::next_cal(void){
 void ZHeightMapStrategy::setAdjustFunction(bool on)
 {
     if(on) {
-        // set the adjustZfnc in robot
-        THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->arm_bilinear_interp(x, y); };
+        // set the compensationTransform in robot
+        THEKERNEL->robot->compensationTransform= [this](float target[3]) { target[2] += this->plane->getz(target[0], target[1]); };
     }else{
         // clear it
-        THEKERNEL->robot->adjustZfnc= nullptr;
+        THEKERNEL->robot->compensationTransform= nullptr;
     }
 }
 

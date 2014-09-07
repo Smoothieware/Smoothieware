@@ -9,7 +9,7 @@
 #define zheightmap_leveling_checksum CHECKSUM("zheightmap-leveling")
 
 class StreamOutput;
-//class Plane3D;
+class Plane3D;
 
 typedef struct
 {
@@ -45,7 +45,7 @@ private:
     float bed_div_x;
     float bed_div_y;
     float cal[3];            // calibration positions for manual leveling: TODO - remove when auto is functional
-
+    Plane3D *plane;
     struct {
         bool home:1;
         bool save:1;
