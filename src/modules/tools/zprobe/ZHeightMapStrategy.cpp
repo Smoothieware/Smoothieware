@@ -185,7 +185,7 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
             case 500: // M500 saves some volatile settings to config override file
             case 503:  // M503 just prints the settings
 
-                // Bed ZHeightMap data as gcode: Still not working right...
+                // Bed ZHeightMap data as gcode:
                 gcode->stream->printf(";Bed Level settings:\n");
                 int x,y;
                 for (x=0; x<5; x++){
@@ -252,7 +252,7 @@ void ZHeightMapStrategy::setAdjustFunction(bool on)
 {
     if(on) {
         // set the compensationTransform in robot
-        THEKERNEL->robot->compensationTransform= [this](float target[3]) { target[2] += this->plane->getz(target[0], target[1]); };
+        THEKERNEL->robot->compensationTransform= [this](float target[3]) { target[2] += this->arm_bilinear_interp(target[0], target[1]); };
     }else{
         // clear it
         THEKERNEL->robot->compensationTransform= nullptr;
