@@ -44,7 +44,7 @@
 #include "PublicData.h"
 #include "Conveyor.h"
 #include "ZProbe.h"
-#include "Plane3D.h"
+//#include "Plane3D.h"
 #include "nuts_bolts.h"
 
 #include <string>
@@ -60,10 +60,6 @@
 
 ZHeightMapStrategy::ZHeightMapStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
- /*   for (int i = 0; i < 3; ++i) {
-        probe_points[i] = std::make_tuple(NAN, NAN);
-    }
-    plane = nullptr;*/
     this->cal[X_AXIS] = 0.0f;
     this->cal[Y_AXIS] = 0.0f;
     this->cal[Z_AXIS] = 10.0f;
@@ -73,7 +69,6 @@ ZHeightMapStrategy::ZHeightMapStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe
 
 ZHeightMapStrategy::~ZHeightMapStrategy()
 {
-   // delete plane;
 }
 
 bool ZHeightMapStrategy::handleConfig()
@@ -259,12 +254,14 @@ void ZHeightMapStrategy::setAdjustFunction(bool on)
     }
 }
 
+/*
 // find the Z offset for the point on the plane at x, y
 float ZHeightMapStrategy::getZOffset(float x, float y)
 {
     //if(this->plane == nullptr) return NAN;
     return this->arm_bilinear_interp(x, y);
 }
+*/
 
 float ZHeightMapStrategy::arm_bilinear_interp(float X,
                                  float Y)
