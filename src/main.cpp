@@ -11,7 +11,6 @@
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
-#include "modules/tools/touchprobe/Touchprobe.h"
 #include "modules/tools/zprobe/ZProbe.h"
 #include "modules/tools/scaracal/SCARAcal.h"
 #include "modules/tools/switch/SwitchPool.h"
