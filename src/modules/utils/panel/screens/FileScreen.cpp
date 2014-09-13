@@ -55,7 +55,7 @@ void FileScreen::on_refresh()
 void FileScreen::enter_folder(std::string folder)
 {
 
-    // Rembember where we are
+    // Remember where we are
     this->current_folder = folder;
 
     // We need the number of lines to setup the menu
@@ -141,14 +141,15 @@ string FileScreen::file_at(uint16_t line)
     d = opendir(this->current_folder.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            if ( count == line ) {
-                string to_return =  lc(string(p->d_name));
-                //printf("line: %u string:%s\r\n", line, to_return.c_str());
-                //if( to_return[to_return.length()-1] == '.' ){ to_return[to_return.length()-1] = 0x00; }
-                closedir(d);
-                return to_return;
+            string fn=  lc(string(p->d_name));
+            // only filter files that have a .g in them
+            if(fn.find(".g") != string::npos) {
+                if ( count == line ) {
+                    closedir(d);
+                    return fn;
+                }
+                count++;
             }
-            count++;
         }
     }
 
@@ -165,7 +166,9 @@ uint16_t FileScreen::count_folder_content(std::string folder)
     d = opendir(folder.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            count++;
+            string fn= lc(string(p->d_name));
+            if(fn.find(".g") != string::npos)
+                count++;
         }
         closedir(d);
         return count;
@@ -187,7 +190,7 @@ void FileScreen::on_main_loop()
 void FileScreen::play(string path)
 {
     struct SerialMessage message;
-    message.message = string("play ") + path + " -q";
+    message.message = string("play ") + path;
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
