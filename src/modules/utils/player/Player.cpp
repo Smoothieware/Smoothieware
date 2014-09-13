@@ -54,6 +54,21 @@ void Player::on_second_tick(void *)
     if (!THEKERNEL->pauser->paused()) this->elapsed_secs++;
 }
 
+// extract any options found on line, terminates args at the space before the first option (-v)
+// eg this is a file.gcode -v
+//    will return -v and set args to this is a file.gcode
+string Player::extract_options(string& args)
+{
+    string opts;
+    size_t pos= args.find(" -");
+    if(pos != string::npos) {
+        opts= args.substr(pos);
+        args= args.substr(0, pos);
+    }
+
+    return opts;
+}
+
 void Player::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
@@ -66,8 +81,7 @@ void Player::on_gcode_received(void *argument)
 
         } else if (gcode->m == 23) { // select file
             gcode->mark_as_taken();
-            // Get filename
-            this->filename = "/sd/" + shift_parameter( args );
+            this->filename = "/sd/" + args; // filename is whatever is in args
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
@@ -144,7 +158,7 @@ void Player::on_gcode_received(void *argument)
         } else if (gcode->m == 32) { // select file and start print
             gcode->mark_as_taken();
             // Get filename
-            this->filename = "/sd/" + shift_parameter( args );
+            this->filename = "/sd/" + args; // filename is whatever is in args including spaces
             this->current_stream = &(StreamOutput::NullStream);
 
             if(this->current_file_handler != NULL) {
@@ -188,10 +202,10 @@ void Player::on_console_line_received( void *argument )
 // Play a gcode file by considering each line as if it was received on the serial console
 void Player::play_command( string parameters, StreamOutput *stream )
 {
-
-    // Get filename
-    this->filename          = absolute_from_relative(shift_parameter( parameters ));
-    string options          = shift_parameter( parameters );
+    // extract any options from the line and terminate the line there
+    string options= extract_options(parameters);
+    // Get filename which is the entire parameter line upto any options found or entire line
+    this->filename = absolute_from_relative(parameters);
 
     if(this->playing_file) {
         stream->printf("Currently printing, abort print first\r\n");

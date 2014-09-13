@@ -19,19 +19,20 @@ class FileScreen : public PanelScreen {
         void on_enter();
         void on_refresh();
         void on_main_loop();
-        void enter_folder(std::string folder);
-        uint16_t count_folder_content(std::string folder);
         void clicked_line(uint16_t line);
         void display_menu_line(uint16_t line);
-        bool is_a_folder( string path );
-        string file_at(uint16_t line);
-
-        std::string current_folder;
 
     private:
+        void enter_folder(const char *folder);
+        bool is_a_folder(const char *path );
+        uint16_t count_folder_content(const char *folder);
+        string file_at(uint16_t line);
+        bool filter_file(const char *f);
         void play(string path);
-        bool start_play;
+
+        std::string current_folder;
         string play_path;
+        bool start_play;
 };
 
 
