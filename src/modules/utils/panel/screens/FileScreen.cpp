@@ -141,14 +141,11 @@ string FileScreen::file_at(uint16_t line)
     d = opendir(this->current_folder.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            string fn=  lc(string(p->d_name));
+            string fn= lc(string(p->d_name));
             // only filter files that have a .g in them
-            if(fn.find(".g") != string::npos) {
-                if ( count == line ) {
-                    closedir(d);
-                    return fn;
-                }
-                count++;
+            if(fn.find(".g") != string::npos && count++ == line ) {
+                closedir(d);
+                return fn;
             }
         }
     }
@@ -157,7 +154,7 @@ string FileScreen::file_at(uint16_t line)
     return "";
 }
 
-// Count how many files there are in the current folder
+// Count how many files there are in the current folder that have a .g in them
 uint16_t FileScreen::count_folder_content(std::string folder)
 {
     DIR *d;
