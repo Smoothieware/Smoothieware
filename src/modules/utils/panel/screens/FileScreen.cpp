@@ -36,7 +36,7 @@ void FileScreen::on_enter()
     if ( this->current_folder.compare("") == 0 ) {
         this->enter_folder("/");
     } else {
-        this->enter_folder(this->current_folder);
+        this->enter_folder(this->current_folder.c_str());
     }
 }
 
@@ -52,14 +52,13 @@ void FileScreen::on_refresh()
 }
 
 // Enter a new folder
-void FileScreen::enter_folder(std::string folder)
+void FileScreen::enter_folder(const char *folder)
 {
-
     // Remember where we are
     this->current_folder = folder;
 
     // We need the number of lines to setup the menu
-    uint16_t number_of_files_in_folder = this->count_folder_content(this->current_folder);
+    uint16_t number_of_files_in_folder = this->count_folder_content(this->current_folder.c_str());
 
     // Setup menu
     THEPANEL->setup_menu(number_of_files_in_folder + 1); // same number of files as menu items
@@ -92,18 +91,18 @@ void FileScreen::clicked_line(uint16_t line)
             if ( this->current_folder[this->current_folder.length() - 1] == '/' && this->current_folder.length() != 1 ) {
                 this->current_folder.erase(this->current_folder.length() - 1, 1);
             }
-            this->enter_folder(this->current_folder);
+            this->enter_folder(this->current_folder.c_str());
         }
     } else {
         //printf("enter file\r\n");
         // Enter file
         string path = this->current_folder;
-        if ( path.compare("/") == 0 ) {
+        if(path.compare("/") == 0) {
             path = "";
         }
         path = path + "/" + this->file_at( line - 1 );
-        if ( this->is_a_folder( path ) ) {
-            this->enter_folder(path);
+        if(this->is_a_folder(path.c_str())) {
+            this->enter_folder(path.c_str());
             return;
         }
 
@@ -115,21 +114,27 @@ void FileScreen::clicked_line(uint16_t line)
 }
 
 // Check wether a line is a folder or a file
-bool FileScreen::is_a_folder( string path )
+bool FileScreen::is_a_folder(const char *path)
 {
-    // In the special case of /local/ ( the mbed flash chip ) we don't have sub-folders, everything is a file
-    if ( path.substr(0, 7).compare("/local/") == 0 ) {
-        return false;
-    }
     // Else, check if it's a folder or not
     DIR *d;
-    d = opendir(path.c_str());
+    d = opendir(path);
     if (d == NULL) {
         return false;
     } else {
         closedir(d);
         return true;
     }
+}
+
+bool FileScreen::filter_file(const char *f)
+{
+    string fn= lc(f);
+    string path = this->current_folder;
+    if(path == "/") path= "";
+    path= path + "/" + fn;
+    // only filter files that have a .g in them and directories
+    return (is_a_folder(path.c_str()) || fn.find(".g") != string::npos);
 }
 
 // Find the "line"th file in the current folder
@@ -141,11 +146,10 @@ string FileScreen::file_at(uint16_t line)
     d = opendir(this->current_folder.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            string fn= lc(string(p->d_name));
-            // only filter files that have a .g in them
-            if(fn.find(".g") != string::npos && count++ == line ) {
+            // only filter files that have a .g in them and directories
+            if(filter_file(p->d_name) && count++ == line ) {
                 closedir(d);
-                return fn;
+                return p->d_name;
             }
         }
     }
@@ -155,24 +159,22 @@ string FileScreen::file_at(uint16_t line)
 }
 
 // Count how many files there are in the current folder that have a .g in them
-uint16_t FileScreen::count_folder_content(std::string folder)
+uint16_t FileScreen::count_folder_content(const char *folder)
 {
     DIR *d;
     struct dirent *p;
     uint16_t count = 0;
-    d = opendir(folder.c_str());
+    d = opendir(folder);
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            string fn= lc(string(p->d_name));
-            if(fn.find(".g") != string::npos)
-                count++;
+            if(filter_file(p->d_name)) count++;
         }
         closedir(d);
         return count;
-    } else {
-        return 0;
     }
+    return 0;
 }
+
 void FileScreen::on_main_loop()
 {
     if (this->start_play) {
