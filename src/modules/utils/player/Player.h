@@ -33,6 +33,7 @@ class Player : public Module {
         void play_command( string parameters, StreamOutput* stream );
         void progress_command( string parameters, StreamOutput* stream );
         void abort_command( string parameters, StreamOutput* stream );
+        string extract_options(string& args);
 
         string filename;
 

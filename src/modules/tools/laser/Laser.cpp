@@ -17,6 +17,16 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 
+#include "libs/Pin.h"
+#include "Gcode.h"
+#include "PwmOut.h" // mbed.h lib
+
+#define laser_module_enable_checksum        CHECKSUM("laser_module_enable")
+#define laser_module_pin_checksum           CHECKSUM("laser_module_pin")
+#define laser_module_pwm_period_checksum    CHECKSUM("laser_module_pwm_period")
+#define laser_module_max_power_checksum     CHECKSUM("laser_module_max_power")
+#define laser_module_tickle_power_checksum  CHECKSUM("laser_module_tickle_power")
+
 Laser::Laser(){
 }
 
