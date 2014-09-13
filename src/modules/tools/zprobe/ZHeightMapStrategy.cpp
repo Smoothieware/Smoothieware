@@ -44,7 +44,6 @@
 #include "PublicData.h"
 #include "Conveyor.h"
 #include "ZProbe.h"
-//#include "Plane3D.h"
 #include "nuts_bolts.h"
 
 #include <string>
@@ -77,12 +76,12 @@ bool ZHeightMapStrategy::handleConfig()
     this->bed_y = THEKERNEL->config->value(leveling_strategy_checksum, zheightmap_leveling_checksum, bed_y_checksum)->by_default(200.0F)->as_number();
 
     this->slow_rate = THEKERNEL->config->value(leveling_strategy_checksum, zheightmap_leveling_checksum, slow_feedrate_checksum)->by_default(20.0F)->as_number();
-    
-    this->bed_div_x = this->bed_x / 4.0F;    // Find divisors to find the 25 calbration points
-    this->bed_div_y = this->bed_y / 4.0F;
 
     this->bed_level_data.numRows = 5;
     this->bed_level_data.numCols = 5;
+    
+    this->bed_div_x = this->bed_x / 4.0F;    // Find divisors to find the 25 calbration points
+    this->bed_div_y = this->bed_y / 4.0F;
 
     this->bed_level_data.pData = (float*) malloc((this->bed_level_data.numRows) * this->bed_level_data.numCols *sizeof(float));
 
@@ -247,21 +246,21 @@ void ZHeightMapStrategy::setAdjustFunction(bool on)
 {
     if(on) {
         // set the compensationTransform in robot
-        THEKERNEL->robot->compensationTransform= [this](float target[3]) { target[2] += this->arm_bilinear_interp(target[0], target[1]); };
+        THEKERNEL->robot->compensationTransform= [this](float target[3]) { target[2] += this->getZOffset(target[0], target[1]); };
     }else{
         // clear it
         THEKERNEL->robot->compensationTransform= nullptr;
     }
 }
 
-/*
+
 // find the Z offset for the point on the plane at x, y
 float ZHeightMapStrategy::getZOffset(float x, float y)
 {
     //if(this->plane == nullptr) return NAN;
     return this->arm_bilinear_interp(x, y);
 }
-*/
+
 
 float ZHeightMapStrategy::arm_bilinear_interp(float X,
                                  float Y)
