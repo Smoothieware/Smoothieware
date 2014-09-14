@@ -11,7 +11,6 @@
 #include "PanelScreen.h"
 
 #include <string>
-using namespace std;
 
 class FileScreen : public PanelScreen {
     public:
@@ -25,13 +24,12 @@ class FileScreen : public PanelScreen {
     private:
         void enter_folder(const char *folder);
         bool is_a_folder(const char *path );
-        uint16_t count_folder_content(const char *folder);
-        string file_at(uint16_t line);
+        uint16_t count_folder_content();
+        std::string file_at(uint16_t line);
         bool filter_file(const char *f);
-        void play(string path);
+        void play(const char *path);
 
-        std::string current_folder;
-        string play_path;
+        std::string play_path;
         bool start_play;
 };
 
