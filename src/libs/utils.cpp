@@ -180,15 +180,13 @@ string absolute_from_relative( string path )
         return path;
     }
 
-    string match = "../" ;
-    while ( path.substr(0, 3) == match ) {
+    while ( path.substr(0, 3) == "../" ) {
         path = path.substr(3);
         unsigned found = cwd.find_last_of("/");
         cwd = cwd.substr(0, found);
     }
 
-    match = ".." ;
-    if ( path.substr(0, 2) == match ) {
+    if ( path.substr(0, 2) == ".." ) {
         path = path.substr(2);
         unsigned found = cwd.find_last_of("/");
         cwd = cwd.substr(0, found);
