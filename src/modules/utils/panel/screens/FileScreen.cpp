@@ -97,6 +97,9 @@ void FileScreen::clicked_line(uint16_t line)
             return;
         }
 
+        // reset to root directory
+        THEKERNEL->current_path= "/";
+
         // start printing that file...
         this->play_path = path;
         this->start_play = true;
