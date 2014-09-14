@@ -27,7 +27,7 @@ set GCC4ARM_MD5=09c19b3248863074f5498a88f31bee16
 set GCC4ARM_MD5_FILENAME=%ROOTDIR%gcc-arm-none-eabi.md5
 set GCC4ARM_DIR=%ROOTDIR%gcc-arm-none-eabi
 set GCC4ARM_BINDIR=%GCC4ARM_DIR%\bin
-set OUR_MAKE=%ROOTDIR%external\win32\make.exe
+set OUR_MAKE=%ROOTDIR%build\win32\make.exe
 set BUILDENV_CMD=%GCC4ARM_BINDIR%\buildenv.cmd
 set BUILDSHELL_CMD=%ROOTDIR%BuildShell.cmd
 set BUILDSHELL_DEBUG_CMD=%ROOTDIR%BuildShellDebug.cmd
@@ -42,13 +42,13 @@ echo Logging install results to %LOGFILE%
 echo %DATE% %TIME%  Starting %0 %*>%LOGFILE%
 
 echo Downloading GNU Tools for ARM Embedded Processors...
-echo %DATE% %TIME%  Executing external\win32\curl -kL0 %GCC4ARM_URL%>>%LOGFILE%
-external\win32\curl -kL0 %GCC4ARM_URL% >%GCC4ARM_TAR%
+echo %DATE% %TIME%  Executing build\win32\curl -kL0 %GCC4ARM_URL%>>%LOGFILE%
+build\win32\curl -kL0 %GCC4ARM_URL% >%GCC4ARM_TAR%
 if errorlevel 1 goto ExitOnError
 
 echo Validating md5 signature of GNU Tools for ARM Embedded Processors...
 echo %GCC4ARM_MD5% *%GCC4ARM_FILENAME%>%GCC4ARM_MD5_FILENAME%
-call :RunAndLog external\win32\md5sum --check %GCC4ARM_MD5_FILENAME%
+call :RunAndLog build\win32\md5sum --check %GCC4ARM_MD5_FILENAME%
 if errorlevel 1 goto ExitOnError
 del "%GCC4ARM_MD5_FILENAME%"
 
@@ -57,7 +57,7 @@ call :RunAndLog rd /s /q %GCC4ARM_DIR%
 call :RunAndLog md %GCC4ARM_DIR%
 if errorlevel 1 goto ExitOnError
 call :RunAndLog cd %GCC4ARM_DIR%
-call :RunAndLog ..\external\win32\bsdtar xf %GCC4ARM_TAR%
+call :RunAndLog ..\build\win32\bsdtar xf %GCC4ARM_TAR%
 if errorlevel 1 goto ExitOnError
 call :RunAndLog cd ..
 
@@ -66,14 +66,12 @@ echo @echo off>%BUILDENV_CMD%
 echo REM Uncomment next line and set destination drive to match mbed device>>%BUILDENV_CMD%
 echo REM SET LPC_DEPLOY=copy PROJECT.bin f:\>>%BUILDENV_CMD%
 echo.>>%BUILDENV_CMD%
-echo SET PATH=%%~dp0;%%~dp0..\..\external\win32;%%PATH%%>>%BUILDENV_CMD%
+echo SET PATH=%%~dp0;%%~dp0..\..\build\win32;%%PATH%%>>%BUILDENV_CMD%
 rem
 echo @cmd.exe /K %%~dp0\gcc-arm-none-eabi\bin\buildenv.cmd>%BUILDSHELL_CMD%
-rem
-echo @cmd.exe /K "set GCC4MBED_TYPE=Debug& %%~dp0\gcc-arm-none-eabi\bin\buildenv.cmd">%BUILDSHELL_DEBUG_CMD%
 
 rem Place GNU Tool for ARM Embedded Processors in the path before building gcc4mbed code.
-set path=%GCC4ARM_BINDIR%;%ROOTDIR%external\win32;%PATH%
+set path=%GCC4ARM_BINDIR%;%ROOTDIR%build\win32;%PATH%
 
 echo Performing a clean build of the gcc4mbed samples...
 call :RunAndLog %OUR_MAKE% clean
