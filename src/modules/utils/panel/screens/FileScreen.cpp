@@ -19,11 +19,10 @@
 #include "DirHandle.h"
 #include "mri.h"
 
-using namespace std;
+using std::string;
 
 FileScreen::FileScreen()
 {
-    this->current_folder = "";
     this->start_play = false;
 }
 
@@ -33,11 +32,7 @@ void FileScreen::on_enter()
     THEPANEL->lcd->clear();
 
     // Default folder to enter
-    if ( this->current_folder.compare("") == 0 ) {
-        this->enter_folder("/");
-    } else {
-        this->enter_folder(this->current_folder.c_str());
-    }
+    this->enter_folder(THEKERNEL->current_path.c_str());
 }
 
 // For every ( potential ) refresh of the screen
@@ -55,10 +50,10 @@ void FileScreen::on_refresh()
 void FileScreen::enter_folder(const char *folder)
 {
     // Remember where we are
-    this->current_folder = folder;
+    THEKERNEL->current_path= folder;
 
     // We need the number of lines to setup the menu
-    uint16_t number_of_files_in_folder = this->count_folder_content(this->current_folder.c_str());
+    uint16_t number_of_files_in_folder = this->count_folder_content();
 
     // Setup menu
     THEPANEL->setup_menu(number_of_files_in_folder + 1); // same number of files as menu items
@@ -82,25 +77,21 @@ void FileScreen::display_menu_line(uint16_t line)
 void FileScreen::clicked_line(uint16_t line)
 {
     if ( line == 0 ) {
-        if ( this->current_folder.compare("/") == 0 ) {
+        string path= THEKERNEL->current_path;
+        if(path == "/") {
             // Exit file navigation
             THEPANEL->enter_screen(this->parent);
         } else {
             // Go up one folder
-            this->current_folder = this->current_folder.substr(0, this->current_folder.find_last_of('/') + 1);
-            if ( this->current_folder[this->current_folder.length() - 1] == '/' && this->current_folder.length() != 1 ) {
-                this->current_folder.erase(this->current_folder.length() - 1, 1);
+            path = path.substr(0, path.find_last_of('/'));
+            if (path.empty()) {
+                path= "/";
             }
-            this->enter_folder(this->current_folder.c_str());
+            this->enter_folder(path.c_str());
         }
     } else {
-        //printf("enter file\r\n");
         // Enter file
-        string path = this->current_folder;
-        if(path.compare("/") == 0) {
-            path = "";
-        }
-        path = path + "/" + this->file_at( line - 1 );
+        string path= absolute_from_relative(this->file_at(line - 1));
         if(this->is_a_folder(path.c_str())) {
             this->enter_folder(path.c_str());
             return;
@@ -130,9 +121,7 @@ bool FileScreen::is_a_folder(const char *path)
 bool FileScreen::filter_file(const char *f)
 {
     string fn= lc(f);
-    string path = this->current_folder;
-    if(path == "/") path= "";
-    path= path + "/" + fn;
+    string path= absolute_from_relative(fn);
     // only filter files that have a .g in them and directories
     return (is_a_folder(path.c_str()) || fn.find(".g") != string::npos);
 }
@@ -143,7 +132,7 @@ string FileScreen::file_at(uint16_t line)
     DIR *d;
     struct dirent *p;
     uint16_t count = 0;
-    d = opendir(this->current_folder.c_str());
+    d = opendir(THEKERNEL->current_path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
             // only filter files that have a .g in them and directories
@@ -159,12 +148,12 @@ string FileScreen::file_at(uint16_t line)
 }
 
 // Count how many files there are in the current folder that have a .g in them
-uint16_t FileScreen::count_folder_content(const char *folder)
+uint16_t FileScreen::count_folder_content()
 {
     DIR *d;
     struct dirent *p;
     uint16_t count = 0;
-    d = opendir(folder);
+    d = opendir(THEKERNEL->current_path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
             if(filter_file(p->d_name)) count++;
@@ -180,13 +169,13 @@ void FileScreen::on_main_loop()
     if (this->start_play) {
         this->start_play = false;
         THEPANEL->set_playing_file(this->play_path);
-        this->play(this->play_path);
+        this->play(this->play_path.c_str());
         THEPANEL->enter_screen(this->parent);
         return;
     }
 }
 
-void FileScreen::play(string path)
+void FileScreen::play(const char *path)
 {
     struct SerialMessage message;
     message.message = string("play ") + path;
