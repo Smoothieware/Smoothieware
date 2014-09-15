@@ -9,6 +9,8 @@
 #define MODULE_H
 
 // See : http://smoothieware.org/listofevents
+// When adding a new event the virtual method needs to be defined in class Module and the method pointer need to be defined in
+// Module.cpp:16 in the same order
 enum _EVENT_ENUM {
     ON_MAIN_LOOP,
     ON_CONSOLE_LINE_RECEIVED,
@@ -23,6 +25,7 @@ enum _EVENT_ENUM {
     ON_SECOND_TICK,
     ON_GET_PUBLIC_DATA,
     ON_SET_PUBLIC_DATA,
+    ON_HALT,
     NUMBER_OF_DEFINED_EVENTS
 };
 
@@ -56,6 +59,7 @@ public:
     virtual void on_second_tick(void*){};
     virtual void on_get_public_data(void*){};
     virtual void on_set_public_data(void*){};
+    virtual void on_halt(void*){};
 
 };
 

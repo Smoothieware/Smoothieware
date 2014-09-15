@@ -11,6 +11,7 @@
 #include <string>
 using std::string;
 #include <string.h>
+#include <functional>
 
 #include "libs/Module.h"
 
@@ -28,10 +29,12 @@ class Robot : public Module {
         void on_set_public_data(void* argument);
 
         void reset_axis_position(float position, int axis);
+        void reset_axis_position(float x, float y, float z);
         void get_axis_position(float position[]);
         float to_millimeters(float value);
         float from_millimeters(float value);
         float get_seconds_per_minute() const { return seconds_per_minute; }
+        float get_z_maxfeedrate() const { return this->max_speeds[2]; }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
         bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
@@ -39,6 +42,9 @@ class Robot : public Module {
 
         // gets accessed by Panel, Endstops, ZProbe
         std::vector<StepperMotor*> actuators;
+
+        // set by a leveling strategy to transform the target of a move according to the current plan
+        std::function<void(float[3])> compensationTransform;
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
@@ -56,11 +62,12 @@ class Robot : public Module {
         void check_max_actuator_speeds();
 
         float last_milestone[3];                             // Last position, in millimeters
-        bool  inch_mode;                                       // true for inch mode, false for millimeter mode ( default )
-        int8_t motion_mode;                                   // Motion mode for the current received Gcode
+        float transformed_last_milestone[3];                 // Last transformed position
+        bool  inch_mode;                                     // true for inch mode, false for millimeter mode ( default )
+        int8_t motion_mode;                                  // Motion mode for the current received Gcode
         float seek_rate;                                     // Current rate for seeking moves ( mm/s )
         float feed_rate;                                     // Current rate for feeding moves ( mm/s )
-        uint8_t plane_axis_0, plane_axis_1, plane_axis_2;     // Current plane ( XY, XZ, YZ )
+        uint8_t plane_axis_0, plane_axis_1, plane_axis_2;    // Current plane ( XY, XZ, YZ )
         float mm_per_line_segment;                           // Setting : Used to split lines into segments
         float mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed

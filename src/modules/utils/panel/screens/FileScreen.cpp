@@ -8,6 +8,7 @@
 #include "libs/Kernel.h"
 #include "Panel.h"
 #include "PanelScreen.h"
+#include "LcdBase.h"
 #include "MainMenuScreen.h"
 #include "FileScreen.h"
 #include "libs/nuts_bolts.h"
@@ -18,11 +19,10 @@
 #include "DirHandle.h"
 #include "mri.h"
 
-using namespace std;
+using std::string;
 
 FileScreen::FileScreen()
 {
-    this->current_folder = "";
     this->start_play = false;
 }
 
@@ -32,11 +32,7 @@ void FileScreen::on_enter()
     THEPANEL->lcd->clear();
 
     // Default folder to enter
-    if ( this->current_folder.compare("") == 0 ) {
-        this->enter_folder("/");
-    } else {
-        this->enter_folder(this->current_folder);
-    }
+    this->enter_folder(THEKERNEL->current_path.c_str());
 }
 
 // For every ( potential ) refresh of the screen
@@ -51,14 +47,13 @@ void FileScreen::on_refresh()
 }
 
 // Enter a new folder
-void FileScreen::enter_folder(std::string folder)
+void FileScreen::enter_folder(const char *folder)
 {
-
-    // Rembember where we are
-    this->current_folder = folder;
+    // Remember where we are
+    THEKERNEL->current_path= folder;
 
     // We need the number of lines to setup the menu
-    uint16_t number_of_files_in_folder = this->count_folder_content(this->current_folder);
+    uint16_t number_of_files_in_folder = this->count_folder_content();
 
     // Setup menu
     THEPANEL->setup_menu(number_of_files_in_folder + 1); // same number of files as menu items
@@ -82,27 +77,23 @@ void FileScreen::display_menu_line(uint16_t line)
 void FileScreen::clicked_line(uint16_t line)
 {
     if ( line == 0 ) {
-        if ( this->current_folder.compare("/") == 0 ) {
+        string path= THEKERNEL->current_path;
+        if(path == "/") {
             // Exit file navigation
             THEPANEL->enter_screen(this->parent);
         } else {
             // Go up one folder
-            this->current_folder = this->current_folder.substr(0, this->current_folder.find_last_of('/') + 1);
-            if ( this->current_folder[this->current_folder.length() - 1] == '/' && this->current_folder.length() != 1 ) {
-                this->current_folder.erase(this->current_folder.length() - 1, 1);
+            path = path.substr(0, path.find_last_of('/'));
+            if (path.empty()) {
+                path= "/";
             }
-            this->enter_folder(this->current_folder);
+            this->enter_folder(path.c_str());
         }
     } else {
-        //printf("enter file\r\n");
         // Enter file
-        string path = this->current_folder;
-        if ( path.compare("/") == 0 ) {
-            path = "";
-        }
-        path = path + "/" + this->file_at( line - 1 );
-        if ( this->is_a_folder( path ) ) {
-            this->enter_folder(path);
+        string path= absolute_from_relative(this->file_at(line - 1));
+        if(this->is_a_folder(path.c_str())) {
+            this->enter_folder(path.c_str());
             return;
         }
 
@@ -114,15 +105,11 @@ void FileScreen::clicked_line(uint16_t line)
 }
 
 // Check wether a line is a folder or a file
-bool FileScreen::is_a_folder( string path )
+bool FileScreen::is_a_folder(const char *path)
 {
-    // In the special case of /local/ ( the mbed flash chip ) we don't have sub-folders, everything is a file
-    if ( path.substr(0, 7).compare("/local/") == 0 ) {
-        return false;
-    }
     // Else, check if it's a folder or not
     DIR *d;
-    d = opendir(path.c_str());
+    d = opendir(path);
     if (d == NULL) {
         return false;
     } else {
@@ -131,23 +118,28 @@ bool FileScreen::is_a_folder( string path )
     }
 }
 
+bool FileScreen::filter_file(const char *f)
+{
+    string fn= lc(f);
+    string path= absolute_from_relative(fn);
+    // only filter files that have a .g in them and directories
+    return (is_a_folder(path.c_str()) || fn.find(".g") != string::npos);
+}
+
 // Find the "line"th file in the current folder
 string FileScreen::file_at(uint16_t line)
 {
     DIR *d;
     struct dirent *p;
     uint16_t count = 0;
-    d = opendir(this->current_folder.c_str());
+    d = opendir(THEKERNEL->current_path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            if ( count == line ) {
-                string to_return =  lc(string(p->d_name));
-                //printf("line: %u string:%s\r\n", line, to_return.c_str());
-                //if( to_return[to_return.length()-1] == '.' ){ to_return[to_return.length()-1] = 0x00; }
+            // only filter files that have a .g in them and directories
+            if(filter_file(p->d_name) && count++ == line ) {
                 closedir(d);
-                return to_return;
+                return p->d_name;
             }
-            count++;
         }
     }
 
@@ -155,38 +147,38 @@ string FileScreen::file_at(uint16_t line)
     return "";
 }
 
-// Count how many files there are in the current folder
-uint16_t FileScreen::count_folder_content(std::string folder)
+// Count how many files there are in the current folder that have a .g in them
+uint16_t FileScreen::count_folder_content()
 {
     DIR *d;
     struct dirent *p;
     uint16_t count = 0;
-    d = opendir(folder.c_str());
+    d = opendir(THEKERNEL->current_path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            count++;
+            if(filter_file(p->d_name)) count++;
         }
         closedir(d);
         return count;
-    } else {
-        return 0;
     }
+    return 0;
 }
+
 void FileScreen::on_main_loop()
 {
     if (this->start_play) {
         this->start_play = false;
         THEPANEL->set_playing_file(this->play_path);
-        this->play(this->play_path);
+        this->play(this->play_path.c_str());
         THEPANEL->enter_screen(this->parent);
         return;
     }
 }
 
-void FileScreen::play(string path)
+void FileScreen::play(const char *path)
 {
     struct SerialMessage message;
-    message.message = string("play ") + path + " -q";
+    message.message = string("play ") + path;
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }

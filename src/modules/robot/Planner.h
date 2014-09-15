@@ -8,13 +8,9 @@
 #ifndef PLANNER_H
 #define PLANNER_H
 
-#include "Block.h"
-
-using namespace std;
-
 class Block;
 
-class Planner : public Module
+class Planner
 {
 public:
     Planner();
@@ -23,18 +19,16 @@ public:
     void recalculate();
     Block *get_current_block();
     void cleanup_queue();
-    void on_module_loaded();
-    void on_config_reload(void *argument);
     float get_acceleration() const { return acceleration; }
+    float get_z_acceleration() const { return z_acceleration > 0.0F ? z_acceleration : acceleration; }
 
     friend class Robot; // for acceleration, junction deviation, minimum_planner_speed
 
 private:
+    void config_load();
     float previous_unit_vec[3];
-    Block last_deleted_block;     // Item -1 in the queue, TODO: Grbl does not need this, but Smoothie won't work without it, we are probably doing something wrong
-    bool has_deleted_block;       // Flag for above value
-
     float acceleration;          // Setting
+    float z_acceleration;        // Setting
     float junction_deviation;    // Setting
     float minimum_planner_speed; // Setting
 };

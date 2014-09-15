@@ -25,7 +25,6 @@
 #include "SlowTicker.h"
 #include "Pauser.h"
 #include "ConfigValue.h"
-#include "TemperatureControl.h"
 #include "PID_Autotuner.h"
 
 // Temp sensor implementations:
@@ -67,6 +66,7 @@ TemperatureControl::TemperatureControl(uint16_t name, int index)
     waiting= false;
     min_temp_violated= false;
     sensor= nullptr;
+    readonly= false;
 }
 
 TemperatureControl::~TemperatureControl()
@@ -81,15 +81,27 @@ void TemperatureControl::on_module_loaded()
     this->target_temperature = UNDEFINED;
 
     // Settings
-    this->on_config_reload(this);
+    this->load_config();
 
     // Register for events
-    this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_MAIN_LOOP);
-    this->register_for_event(ON_SECOND_TICK);
     this->register_for_event(ON_GET_PUBLIC_DATA);
-    this->register_for_event(ON_SET_PUBLIC_DATA);
+
+    if(!this->readonly) {
+        this->register_for_event(ON_GCODE_EXECUTE);
+        this->register_for_event(ON_SECOND_TICK);
+        this->register_for_event(ON_MAIN_LOOP);
+        this->register_for_event(ON_SET_PUBLIC_DATA);
+        this->register_for_event(ON_HALT);
+    }
+}
+
+void TemperatureControl::on_halt(void *arg)
+{
+    // turn off heater
+    this->o = 0;
+    this->heater_pin.set(0);
+    this->target_temperature = UNDEFINED;
 }
 
 void TemperatureControl::on_main_loop(void *argument)
@@ -101,7 +113,7 @@ void TemperatureControl::on_main_loop(void *argument)
 }
 
 // Get configuration from the config file
-void TemperatureControl::on_config_reload(void *argument)
+void TemperatureControl::load_config()
 {
 
     // General config
@@ -111,6 +123,16 @@ void TemperatureControl::on_config_reload(void *argument)
     this->readings_per_second = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
+
+    // Heater pin
+    this->heater_pin.from_string( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->by_default("nc")->as_string());
+    if(this->heater_pin.connected()){
+        this->readonly= false;
+        this->heater_pin.as_output();
+
+    } else {
+        this->readonly= true;
+    }
 
     // For backward compatibility, default to a thermistor sensor.
     std::string sensor_type = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, sensor_checksum)->by_default("thermistor")->as_string();
@@ -127,27 +149,24 @@ void TemperatureControl::on_config_reload(void *argument)
     }
     sensor->UpdateConfig(temperature_control_checksum, this->name_checksum);
 
-    this->preset1 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
-    this->preset2 =             THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
+    this->preset1 = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset1_checksum)->by_default(0)->as_number();
+    this->preset2 = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, preset2_checksum)->by_default(0)->as_number();
 
 
     // sigma-delta output modulation
     this->o = 0;
 
-    // Heater pin
-    this->heater_pin.from_string(    THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->required()->as_string())->as_output();
-    this->heater_pin.max_pwm(        THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
+    if(!this->readonly) {
+        // used to enable bang bang control of heater
+        this->use_bangbang = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, bang_bang_checksum)->by_default(false)->as_bool();
+        this->hysteresis = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, hysteresis_checksum)->by_default(2)->as_number();
+        this->heater_pin.max_pwm( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
+        this->heater_pin.set(0);
+        set_low_on_debug(heater_pin.port_number, heater_pin.pin);
+        // activate SD-DAC timer
+        THEKERNEL->slow_ticker->attach( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number(), &heater_pin, &Pwm::on_tick);
+    }
 
-    this->heater_pin.set(0);
-
-    // used to enable bang bang control of heater
-    this->use_bangbang = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, bang_bang_checksum)->by_default(false)->as_bool();
-    this->hysteresis = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, hysteresis_checksum)->by_default(2)->as_number();
-
-    set_low_on_debug(heater_pin.port_number, heater_pin.pin);
-
-    // activate SD-DAC timer
-    THEKERNEL->slow_ticker->attach( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number() , &heater_pin, &Pwm::on_tick);
 
     // reading tick
     THEKERNEL->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
@@ -157,8 +176,12 @@ void TemperatureControl::on_config_reload(void *argument)
     setPIDp( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number() );
     setPIDi( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_factor_checksum)->by_default(0.3f)->as_number() );
     setPIDd( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, d_factor_checksum)->by_default(200)->as_number() );
-    // set to the same as max_pwm by default
-    this->i_max = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
+
+    if(!this->readonly) {
+        // set to the same as max_pwm by default
+        this->i_max = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
+    }
+
     this->iTerm = 0.0;
     this->lastInput = -1.0;
     this->last_reading = 0.0;
@@ -174,8 +197,13 @@ void TemperatureControl::on_gcode_received(void *argument)
             int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED) ? 0.0 : target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);
             gcode->mark_as_taken();
+            return;
+        }
 
-        } else if (gcode->m == 301) {
+        // readonly sensors don't handle the rest
+        if(this->readonly) return;
+
+        if (gcode->m == 301) {
             gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
                 if (gcode->has_letter('P'))
@@ -235,7 +263,7 @@ void TemperatureControl::on_gcode_execute(void *argument)
             } else {
                 this->set_desired_temperature(v);
 
-                if( gcode->m == this->set_and_wait_m_code) {
+                if( gcode->m == this->set_and_wait_m_code && !this->waiting) {
                     THEKERNEL->pauser->take();
                     this->waiting = true;
                 }
@@ -308,6 +336,10 @@ float TemperatureControl::get_temperature()
 uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
 {
     float temperature = sensor->get_temperature();
+    if(this->readonly) {
+        last_reading = temperature;
+        return 0;
+    }
 
     if (target_temperature > 0) {
         if (isinf(temperature)) {

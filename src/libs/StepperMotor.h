@@ -19,15 +19,6 @@ class StepperMotor {
         StepperMotor();
         StepperMotor(Pin& step, Pin& dir, Pin& en);
 
-        // Called a great many times per second, to step if we have to now
-        inline void tick() {
-            // increase the ( fixed point ) counter by one tick 11t
-            fx_counter += (uint32_t)(1<<16);
-
-            // if we are to step now 10t
-            if (fx_counter >= fx_ticks_per_step)
-                step();
-        };
 
         void step();
         inline void unstep() { step_pin.set(0); };
@@ -104,6 +95,16 @@ class StepperMotor {
         bool remove_from_active_list_next_reset;
 
         bool is_move_finished; // Whether the move just finished
+
+        // Called a great many times per second, to step if we have to now
+        inline void tick() {
+            // increase the ( fixed point ) counter by one tick 11t
+            fx_counter += (uint32_t)(1<<16);
+
+            // if we are to step now 10t
+            if (fx_counter >= fx_ticks_per_step)
+                step();
+        };
 };
 
 #endif

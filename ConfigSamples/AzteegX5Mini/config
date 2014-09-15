@@ -1,4 +1,4 @@
-# Robot module configurations : general handling of movement G-codes and slicing into moves
+#leveling-strategy.three-point-leveling.probe_offsets  0,0,0       # the probe offsets from nozzle, must be x,y,z, default is no offset# Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
@@ -12,6 +12,7 @@ gamma_steps_per_mm                           1637.7953        # Steps per mm for
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
 acceleration                                 3000             # Acceleration in mm/second/second.
+#z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 disables it, disabled by default. DO NOT SET ON A DELTA
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8 . Lower values mean being more careful, higher values means being faster and have more jerk
@@ -43,6 +44,7 @@ z_axis_max_speed                             300              # mm/min
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface and a terminal connected)
+#msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
 
 # Extruder module configuration
 extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -94,13 +96,15 @@ switch.misc.input_on_command                 M42              #
 switch.misc.input_off_command                M43              #
 switch.misc.output_pin                       2.4              #
 
-# automatically toggle a switch at a specified temperature
+# automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures and switch different swithxes
 # useful to turn on a fan or water pump to cool the hotend
-#temperatureswitch.hotend.enable	          true             #
-#temperatureswitch.hotend.type                misc             # select which MOSFET to use, fan or misc (small MOSFETs)
+#temperatureswitch.hotend.enable                true             #
+#temperatureswitch.hotend.designator          T                # first character of the temperature control designator to use as the temperature sensor to monitor
+#temperatureswitch.hotend.switch              misc             # select which switch to use, matches the name of the defined switch
 #temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
 #temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
 #temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
+
 
 # Switch module for spindle control
 #switch.spindle.enable                        false            #
@@ -124,6 +128,11 @@ gamma_homing_direction                       home_to_min      #
 gamma_min                                    0                #
 gamma_max                                    200              #
 
+# optional enable limit switches, actions will stop if any enabled limit switch is triggered
+#alpha_limit_enable                          false            # set to true to enable X min and max limit switches
+#beta_limit_enable                           false            # set to true to enable Y min and max limit switches
+#gamma_limit_enable                          false            # set to true to enable Z min and max limit switches
+
 #probe endstop
 #probe_pin                                   1.29             # optional pin for probe
 
@@ -137,6 +146,27 @@ gamma_slow_homing_rate_mm_s                  2                # "
 alpha_homing_retract_mm                      5                # distance in mm
 beta_homing_retract_mm                       5                # "
 gamma_homing_retract_mm                      1                # "
+
+#endstop_debounce_count                       100              # uncomment if you get noise on your endstops, default is 100
+
+# optional Z probe
+zprobe.enable                                false           # set to true to enable a zprobe
+zprobe.probe_pin                             1.29!^          # pin probe is attached to if NC remove the !
+zprobe.slow_feedrate                         5               # mm/sec probe feed rate
+#zprobe.debounce_count                       100             # set if noisy
+zprobe.fast_feedrate                         100             # move feedrate mm/sec
+zprobe.probe_height                          5               # how much above bed to start probe
+
+# associated with zprobe the leveling strategy to use
+#leveling-strategy.three-point-leveling.enable         true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
+#leveling-strategy.three-point-leveling.point1         100.0,0.0   # the first probe point (x,y) optional may be defined with M557
+#leveling-strategy.three-point-leveling.point2         200.0,200.0 # the second probe point (x,y)
+#leveling-strategy.three-point-leveling.point3         0.0,200.0   # the third probe point (x,y)
+#leveling-strategy.three-point-leveling.home_first     true        # home the XY axis before probing
+#leveling-strategy.three-point-leveling.tolerance      0.03        # the probe tolerance in mm, anything less that this will be ignored, default is 0.03mm
+#leveling-strategy.three-point-leveling.probe_offsets  0,0,0       # the probe offsets from nozzle, must be x,y,z, default is no offset
+#leveling-strategy.three-point-leveling.save_plane     false       # set to true to allow the bed plane to be saved with M500 default is false
+
 
 # Pause button
 pause_button_enable                          true             #

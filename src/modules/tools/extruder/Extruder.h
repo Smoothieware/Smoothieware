@@ -30,6 +30,7 @@ class Extruder : public Tool {
         void     on_block_end(void* argument);
         void     on_play(void* argument);
         void     on_pause(void* argument);
+        void     on_halt(void* argument);
         void     on_speed_change(void* argument);
         uint32_t acceleration_tick(uint32_t dummy);
         uint32_t stepper_motor_finished_move(uint32_t dummy);
@@ -37,40 +38,48 @@ class Extruder : public Tool {
 
     private:
         void on_get_public_data(void* argument);
-        void update_steps_per_millimeter();
 
-        Pin             step_pin;                     // Step pin for the stepper driver
-        Pin             dir_pin;                      // Dir pin for the stepper driver
-        Pin             en_pin;
+        StepperMotor*  stepper_motor;
+        Pin            step_pin;                     // Step pin for the stepper driver
+        Pin            dir_pin;                      // Dir pin for the stepper driver
+        Pin            en_pin;
 
         float          target_position;              // End point ( in mm ) for the current move
         float          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
         float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
         Block*         current_block;                // Current block we are stepping, same as Stepper's one
 
-        float          steps_per_millimeter;         // Steps to travel one millimeter
-
         // kept together so they can be passed as public data
         struct {
-            float          steps_per_millimeter_setting; // original steps to travel one millimeter as set in config, saved while in volumetric mode
-            float          filament_diameter;            // filament diameter
+            float steps_per_millimeter;         // Steps to travel one millimeter
+            float filament_diameter;            // filament diameter
+            float extruder_multiplier;          // flow rate 1.0 == 100%
+            float acceleration;                 // extruder accleration SOLO setting
+            float retract_length;               // firmware retract length
         };
 
+        float          volumetric_multiplier;
         float          feed_rate;                    //
-        float          acceleration;                 //
         float          max_speed;
 
         float          travel_ratio;
         float          travel_distance;
+
+        // for firmware retract
+        float          retract_feedrate;
+        float          retract_recover_feedrate;
+        float          retract_recover_length;
+        float          retract_zlift_length;
+        float          retract_zlift_feedrate;
 
         char mode;        // extruder motion mode,  OFF, SOLO, or FOLLOW
         struct {
             bool absolute_mode:1; // absolute/relative coordinate mode switch
             bool paused:1;
             bool single_config:1;
+            bool retracted:1;
         };
 
-        StepperMotor* stepper_motor;
 
 };
 

@@ -52,6 +52,7 @@ z_axis_max_speed                             30000.0          # mm/min
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface and a terminal connected)
+#msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
 
 # Extruder module configuration
 extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -104,13 +105,15 @@ switch.fan.input_on_command                  M106             #
 switch.fan.input_off_command                 M107             #
 switch.fan.output_pin                        2.4              #
 
-# automatically toggle a switch at a specified temperature
+# automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures and switch different swithxes
 # useful to turn on a fan or water pump to cool the hotend
-#temperatureswitch.hotend.enable	          true             #
-#temperatureswitch.hotend.type                misc             # select which MOSFET to use, fan or misc (small MOSFETs)
+#temperatureswitch.hotend.enable                true             #
+#temperatureswitch.hotend.designator          T                # first character of the temperature control designator to use as the temperature sensor to monitor
+#temperatureswitch.hotend.switch              misc             # select which switch to use, matches the name of the defined switch
 #temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
 #temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
 #temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
+
 
 # switch.psu.enable                            true             # turn atx on/off
 # switch.psu.input_on_command                  M80              #
@@ -160,9 +163,11 @@ zprobe.probe_pin                             1.29!^          # pin probe is atta
 zprobe.slow_feedrate                         5               # mm/sec probe feed rate
 #zprobe.debounce_count                       100             # set if noisy
 zprobe.fast_feedrate                         100             # move feedrate
-zprobe.probe_radius                          100             # where to probe
 zprobe.probe_height                          5               # how much above bed to start probe
 
+# associated with zprobe the leveling strategy to use
+#leveling-strategy.delta-calibration.enable   true            # basic delta calibration
+#leveling-strategy.delta-calibration.radius   100             # the probe radius
 
 # Pause button
 pause_button_enable                          true             #

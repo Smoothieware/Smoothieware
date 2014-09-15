@@ -148,15 +148,18 @@ void StepperMotor::move( bool direction, unsigned int steps ){
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( float speed ){
 
-    if (speed < 20.0)
-        speed = 20.0;
+    // FIXME NOTE this can cause axis to run faster than expected thus making the line incorrect, or on a delta make the effector move wrong
+    // seems we can do...  minimum_speed = ceil(step_ticker->frequency/65536.0F), which would be 2 not 20 at 100Khz
+    if (speed < 20.0F)
+        speed = 20.0F;
 
     // How many steps we must output per second
     this->steps_per_second = speed;
 
-    // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64
+    // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64 <--- REALLY? I don't think it is at the moment looks like 32bit fixed point
     float ticks_per_step = (float)( (float)this->step_ticker->frequency / speed );
-    float double_fx_ticks_per_step = (float)(1<<8) * ( (float)(1<<8) * ticks_per_step ); // 8x8 because we had to do 16x16 because 32 did not work
+    //float double_fx_ticks_per_step = (float)(1<<8) * ( (float)(1<<8) * ticks_per_step ); // 8x8 because we had to do 16x16 because 32 did not work
+    float double_fx_ticks_per_step = 65536.0F * ticks_per_step; // isn't this better on a 32bit machine?
     this->fx_ticks_per_step = (uint32_t)( floor(double_fx_ticks_per_step) );
 
 }

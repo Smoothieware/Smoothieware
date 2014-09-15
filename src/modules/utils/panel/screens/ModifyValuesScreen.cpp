@@ -21,10 +21,11 @@ using namespace std;
 #define MENU_CONTROL_MODE 0
 #define VALUE_CONTROL_MODE 1
 
-ModifyValuesScreen::ModifyValuesScreen()
+ModifyValuesScreen::ModifyValuesScreen(bool delete_on_exit)
 {
-    execute_function = -1;
-    control_mode = MENU_CONTROL_MODE;
+    this->delete_on_exit= delete_on_exit;
+    this->execute_function = -1;
+    this->control_mode = MENU_CONTROL_MODE;
 }
 
 ModifyValuesScreen::~ModifyValuesScreen()
@@ -33,6 +34,12 @@ ModifyValuesScreen::~ModifyValuesScreen()
     for(auto i : menu_items) {
         free(std::get<0>(i));
     }
+}
+
+void ModifyValuesScreen::on_exit()
+{
+    if(this->delete_on_exit)
+        delete this;
 }
 
 void ModifyValuesScreen::on_enter()
@@ -127,11 +134,16 @@ void ModifyValuesScreen::on_main_loop()
     execute_function = -1;
 }
 
+void ModifyValuesScreen::addMenuItem(const MenuItemType& item)
+{
+    menu_items.push_back(item);
+}
+
 void ModifyValuesScreen::addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc, float  min, float max)
 {
     string n(name);
     if(n.size() > 10) {
         n= n.substr(0, 10);
     }
-    menu_items.push_back(make_tuple(strdup(n.c_str()), getter, setter, inc, min, max));
+    addMenuItem(make_tuple(strdup(n.c_str()), getter, setter, inc, min, max));
 }

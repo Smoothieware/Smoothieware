@@ -5,7 +5,7 @@ default_seek_rate                            4000             # Default rate ( m
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for
                                                               # these segments.  Smaller values mean more resolution,
                                                               # higher values mean faster computation
-#mm_per_line_segment                         0.5              # Lines can be cut into segments ( not usefull with cartesian
+#mm_per_line_segment                         0.5              # Lines can be cut into segments ( not useful with cartesian
                                                               # coordinates robots ).
 delta_segments_per_second                    100              # for deltas only same as in Marlin/Delta, set to 0 to disable
                                                               # and use mm_per_line_segment
@@ -18,7 +18,7 @@ beta_steps_per_mm                            100              # Steps per mm for
 gamma_steps_per_mm                           100              # Steps per mm for gamma stepper
 
 arm_length                                   250.0            # this is the length of an arm from hinge to hinge
-arm_radius                                   124.0            # this is the horiontal distance from hinge to hinge
+arm_radius                                   124.0            # this is the horizontal distance from hinge to hinge
                                                               # when the effector is centered
 
 # Planner module configuration : Look-ahead and acceleration configuration
@@ -66,6 +66,7 @@ uart0.baud_rate                              115200           # Baud rate for th
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface
                                                               # and a terminal connected)
 #leds_disable                                true             # disable using leds after config loaded
+#msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
 
 # Extruder module configuration
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -78,10 +79,18 @@ extruder.hotend.step_pin                        2.3              # Pin for extru
 extruder.hotend.dir_pin                         0.22             # Pin for extruder dir signal
 extruder.hotend.en_pin                          0.21             # Pin for extruder enable signal
 
-# for now the first extruder's offsets should be left at 0 or homing will get confused
+# extruder offset
 #extruder.hotend.x_offset                        0                # x offset from origin in mm
 #extruder.hotend.y_offset                        0                # y offset from origin in mm
 #extruder.hotend.z_offset                        0                # z offset from origin in mm
+
+# firmware retract settings when using G10/G11, these are the defaults if not defined, must be defined for each extruder if not using the defaults
+#extruder.hotend.retract_length                  3               # retract length in mm
+#extruder.hotend.retract_feedrate                45              # retract feedrate in mm/sec
+#extruder.hotend.retract_recover_length          0               # additional length for recover
+#extruder.hotend.retract_recover_feedrate        8               # recover feedrate in mm/sec (should be less than retract feedrate)
+#extruder.hotend.retract_zlift_length            0               # zlift on retract in mm, 0 disables
+#extruder.hotend.retract_zlift_feedrate          6000            # zlift feedrate in mm/min (Note mm/min NOT mm/sec)
 
 delta_current                                1.5              # First extruder stepper motor current
 
@@ -173,10 +182,11 @@ switch.fan.output_type                       pwm              # pwm output setta
 #switch.misc.output_pin                       2.4              #
 #switch.misc.output_type                      digital          # just an on or off pin
 
-# automatically toggle a switch at a specified temperature
+# automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures and switch different swithxes
 # useful to turn on a fan or water pump to cool the hotend
-#temperatureswitch.hotend.enable	          true             #
-#temperatureswitch.hotend.type                misc             # select which MOSFET to use, fan or misc (small MOSFETs)
+#temperatureswitch.hotend.enable              true             #
+#temperatureswitch.hotend.designator          T                # first character of the temperature control designator to use as the temperature sensor to monitor
+#temperatureswitch.hotend.switch              misc             # select which switch to use, matches the name of the defined switch
 #temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
 #temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
 #temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
@@ -224,9 +234,12 @@ zprobe.probe_pin                             1.28!^          # pin probe is atta
 zprobe.slow_feedrate                         5               # mm/sec probe feed rate
 #zprobe.debounce_count                       100             # set if noisy
 zprobe.fast_feedrate                         100             # move feedrate mm/sec
-zprobe.probe_radius                          100             # where to probe
 zprobe.probe_height                          5               # how much above bed to start probe
 #gamma_min_endstop                           nc              # normally 1.28. Change to nc to prevent conflict,
+
+# associated with zprobe the leveling strategy to use
+#leveling-strategy.delta-calibration.enable   true            # basic delta calibration
+#leveling-strategy.delta-calibration.radius   100             # the probe radius
 
 # Pause button
 pause_button_enable                          true             #

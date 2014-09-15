@@ -8,15 +8,7 @@
 #ifndef MAINMENUSCREEN_H
 #define MAINMENUSCREEN_H
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/Pin.h"
-#include "LcdBase.h"
-#include "Panel.h"
 #include "PanelScreen.h"
-#include "WatchScreen.h"
-#include "JogScreen.h"
 
 class MainMenuScreen : public PanelScreen {
     public:
@@ -26,15 +18,15 @@ class MainMenuScreen : public PanelScreen {
         void display_menu_line(uint16_t line);
         void clicked_menu_entry(uint16_t line);
 
+        friend class Panel;
+    private:
         PanelScreen* watch_screen;
         PanelScreen* file_screen;
         PanelScreen* jog_screen;
         PanelScreen* prepare_screen;
-        PanelScreen* configure_screen;
 
-    private:
         void abort_playing();
-        PanelScreen* setupConfigureScreen();
+        void setupConfigureScreen();
 };
 
 
