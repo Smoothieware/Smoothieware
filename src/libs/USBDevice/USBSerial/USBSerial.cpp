@@ -268,7 +268,7 @@ void USBSerial::on_main_loop(void *argument)
         {
             attached = true;
             THEKERNEL->streams->append_stream(this);
-            writeBlock((const uint8_t *) "Smoothie\nok\n", 12);
+            puts("Smoothie\r\nok\r\n");
         }
         else
         {
