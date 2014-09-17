@@ -221,7 +221,7 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
     d = opendir(folder.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            stream->printf("%s\r\n", lc(string(p->d_name)).c_str());
+            stream->printf("%s%c\r\n", lc(string(p->d_name)).c_str(), p->d_isdir?'/':' ');
         }
         closedir(d);
     } else {
@@ -235,7 +235,7 @@ void SimpleShell::remount_command( string parameters, StreamOutput *stream )
 {
     mounter.remount();
     stream->printf("remounted\r\n");
-} 
+}
 
 // Delete a file
 void SimpleShell::rm_command( string parameters, StreamOutput *stream )
@@ -516,6 +516,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("pwd\r\n");
     stream->printf("cat file [limit]\r\n");
     stream->printf("rm file\r\n");
+    stream->printf("remount\r\n");
     stream->printf("play file [-v]\r\n");
     stream->printf("progress - shows progress of current play\r\n");
     stream->printf("abort - abort currently playing file\r\n");

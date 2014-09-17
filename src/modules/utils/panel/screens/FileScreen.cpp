@@ -32,7 +32,13 @@ void FileScreen::on_enter()
     THEPANEL->lcd->clear();
 
     // Default folder to enter
-    this->enter_folder(THEKERNEL->current_path.c_str());
+    this->enter_folder("/");
+}
+
+void FileScreen::on_exit()
+{
+    // reset to root directory, I'd prefer not to do this but it crashes on entry next time if it doesn't start at root
+    THEKERNEL->current_path= "/";
 }
 
 // For every ( potential ) refresh of the screen
@@ -69,7 +75,13 @@ void FileScreen::display_menu_line(uint16_t line)
     if ( line == 0 ) {
         THEPANEL->lcd->printf("..");
     } else {
-        THEPANEL->lcd->printf("%s", (this->file_at(line - 1).substr(0, 18)).c_str());
+        bool isdir;
+        string fn= this->file_at(line - 1, isdir).substr(0, 18);
+        if(isdir) {
+            if(fn.size() >= 18) fn.back()= '/';
+            else fn.append("/");
+        }
+        THEPANEL->lcd->printf("%s", fn.c_str());
     }
 }
 
@@ -90,9 +102,10 @@ void FileScreen::clicked_line(uint16_t line)
             this->enter_folder(path.c_str());
         }
     } else {
-        // Enter file
-        string path= absolute_from_relative(this->file_at(line - 1));
-        if(this->is_a_folder(path.c_str())) {
+        // Enter file or dir
+        bool isdir;
+        string path= absolute_from_relative(this->file_at(line - 1, isdir));
+        if(isdir) {
             this->enter_folder(path.c_str());
             return;
         }
@@ -101,33 +114,17 @@ void FileScreen::clicked_line(uint16_t line)
         this->play_path = path;
         this->start_play = true;
     }
-
 }
 
-// Check wether a line is a folder or a file
-bool FileScreen::is_a_folder(const char *path)
-{
-    // Else, check if it's a folder or not
-    DIR *d;
-    d = opendir(path);
-    if (d == NULL) {
-        return false;
-    } else {
-        closedir(d);
-        return true;
-    }
-}
-
+// only filter files that have a .g in them
 bool FileScreen::filter_file(const char *f)
 {
     string fn= lc(f);
-    string path= absolute_from_relative(fn);
-    // only filter files that have a .g in them and directories
-    return (is_a_folder(path.c_str()) || fn.find(".g") != string::npos);
+    return (fn.find(".g") != string::npos);
 }
 
 // Find the "line"th file in the current folder
-string FileScreen::file_at(uint16_t line)
+string FileScreen::file_at(uint16_t line, bool& isdir)
 {
     DIR *d;
     struct dirent *p;
@@ -136,14 +133,17 @@ string FileScreen::file_at(uint16_t line)
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
             // only filter files that have a .g in them and directories
-            if(filter_file(p->d_name) && count++ == line ) {
+            if((p->d_isdir || filter_file(p->d_name)) && count++ == line ) {
+                isdir= p->d_isdir;
+                string fn= p->d_name;
                 closedir(d);
-                return p->d_name;
+                return fn;
             }
         }
     }
 
     if (d != NULL) closedir(d);
+    isdir= false;
     return "";
 }
 
@@ -156,7 +156,7 @@ uint16_t FileScreen::count_folder_content()
     d = opendir(THEKERNEL->current_path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            if(filter_file(p->d_name)) count++;
+            if(p->d_isdir || filter_file(p->d_name)) count++;
         }
         closedir(d);
         return count;
