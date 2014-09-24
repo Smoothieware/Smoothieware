@@ -189,7 +189,9 @@ bool ZProbe::run_probe(int& steps, bool fast)
 bool ZProbe::return_probe(int steps)
 {
     // move probe back to where it was
-    this->current_feedrate = this->slow_feedrate*2 * Z_STEPS_PER_MM; // feedrate in steps/sec
+    float fr= this->slow_feedrate*2; // nominally twice slow feedrate
+    if(fr > this->fast_feedrate) fr= this->fast_feedrate; // unless that is greater than fast feedrate
+    this->current_feedrate = fr * Z_STEPS_PER_MM; // feedrate in steps/sec
     bool dir= steps < 0;
     steps= abs(steps);
 
