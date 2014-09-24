@@ -74,6 +74,8 @@ class Panel : public Module {
         string getMessage() { return message; }
         bool hasMessage() { return message.size() > 0; }
 
+        uint16_t get_screen_lines() const { return screen_lines; }
+
         // public as it is directly accessed by screens... not good
         // TODO pass lcd into ctor of each sub screen
         LcdBase* lcd;
@@ -87,14 +89,12 @@ class Panel : public Module {
         void setup_temperature_screen();
 
         // Menu
-        char menu_offset;
         int menu_selected_line;
         int menu_start_line;
         int menu_rows;
         int panel_lines;
-        bool menu_changed;
-        bool control_value_changed;
         uint16_t menu_current_line;
+        char menu_offset;
 
         // Control
         float normal_increment;
@@ -108,17 +108,22 @@ class Panel : public Module {
         Button pause_button;
 
         int* counter;
-        volatile bool counter_changed;
-        volatile bool click_changed;
-        volatile bool refresh_flag;
-        volatile bool do_buttons;
-        volatile bool do_encoder;
+
+        volatile struct {
+            bool start_up:1;
+            bool menu_changed:1;
+            bool control_value_changed:1;
+            volatile bool counter_changed:1;
+            volatile bool click_changed:1;
+            volatile bool refresh_flag:1;
+            volatile bool do_buttons:1;
+            volatile bool do_encoder:1;
+        };
 
         int idle_time;
-        bool start_up;
         int encoder_click_resolution;
-        char mode;
         uint16_t screen_lines;
+        char mode;
 
         PanelScreen* top_screen;
         PanelScreen* current_screen;
