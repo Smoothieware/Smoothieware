@@ -38,6 +38,8 @@
 #define lcd_checksum               CHECKSUM("lcd")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
+#define viki2_checksum             CHECKSUM("viki2")
+#define mini_viki2_checksum        CHECKSUM("mini_viki2")
 #define universal_adapter_checksum CHECKSUM("universal_adapter")
 
 #define menu_offset_checksum        CHECKSUM("menu_offset")
@@ -90,6 +92,12 @@ void Panel::on_module_loaded()
         this->lcd = new ReprapDiscountGLCD();
     } else if (lcd_cksm == st7565_glcd_checksum) {
         this->lcd = new ST7565();
+    } else if (lcd_cksm == viki2_checksum) {
+        this->lcd = new ST7565();
+        this->lcd->set_variant(1);
+    } else if (lcd_cksm == mini_viki2_checksum) {
+        this->lcd = new ST7565();
+        this->lcd->set_variant(2);
     } else if (lcd_cksm == universal_adapter_checksum) {
         this->lcd = new UniversalAdapter();
     } else {

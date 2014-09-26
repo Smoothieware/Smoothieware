@@ -28,7 +28,7 @@ public:
 	//encoder which dosent exist :/
 	uint8_t readButtons();
 	int readEncoderDelta();
-	int getEncoderResolution() { return 2; }
+	int getEncoderResolution() { return (is_viki2 || is_mini_viki2) ? 4 : 2; }
 	uint16_t get_screen_lines() { return 8; }
 	bool hasGraphics() { return true; }
 
@@ -48,6 +48,11 @@ public:
     void renderGlyph(int x, int y, const uint8_t *g, int pixelWidth, int pixelHeight);
     void pixel(int x, int y, int colour);
 
+    uint8_t getContrast() { return contrast; }
+    void setContrast(uint8_t c);
+
+    void set_variant(int n);
+
 private:
     //buffer
 	unsigned char *framebuffer;
@@ -64,7 +69,11 @@ private:
 	// text cursor position
 	uint8_t tx, ty;
     uint8_t contrast;
-    bool reversed;
+    struct {
+        bool reversed:1;
+        bool is_viki2:1;
+        bool is_mini_viki2:1;
+    };
 };
 
 #endif /* ST7565_H_ */

@@ -53,6 +53,8 @@ class LcdBase {
         virtual void buzz(long,uint16_t){};
         virtual bool hasGraphics() { return false; }
         virtual bool encoderReturnsDelta() { return false; } // set to true if the panel handles encoder clicks and returns a delta
+        virtual uint8_t getContrast() { return 0; }
+        virtual void setContrast(uint8_t c) { }
 
         // on graphics panels, the input bitmap is in X windows XBM format but
         // with the bits in a byte reversed so bit7 is left most and bit0 is
@@ -63,7 +65,7 @@ class LcdBase {
         virtual void on_main_loop(){};
         // override this if the panel can handle more or less screen lines
         virtual uint16_t get_screen_lines() { return 4; }
-        // used to set a variant for a panel (like viki vs panelolou2)
+        // used to set a variant for a panel (like viki2 vs st7565)
         virtual void set_variant(int n) {};
 
     protected:

@@ -76,21 +76,38 @@ ST7565::ST7565() {
     this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input();
 
-    // contrast, mviki needs  0x018
+    // contrast
     this->contrast= THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(9)->as_number();
     // reverse display
     this->reversed= THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(false)->as_bool();
 
-    framebuffer= (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memoery from USB_RAM
+    framebuffer= (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memory from USB_RAM
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
     }
+
+    // set default for sub variants
+    is_viki2 = is_mini_viki2= false; // defaults to Wulfnors panel
 }
 
 ST7565::~ST7565() {
 	delete this->spi;
     AHB0.dealloc(framebuffer);
 }
+
+// variant 0 is Wulfnor panel, 1 is viki2, 2 is miniviki2
+void ST7565::set_variant(int n) {
+    switch(n) {
+        case 1:
+            is_viki2= true;
+            this->reversed= true;
+            break;
+        case 2:
+            is_mini_viki2= true;
+            this->reversed= true;
+            break;
+    }
+};
 
 //send commands to lcd
 void ST7565::send_commands(const unsigned char* buf, size_t size){
@@ -176,6 +193,17 @@ void ST7565::init(){
   send_commands(init_seq, sizeof(init_seq));
   clear();
 }
+
+void ST7565::setContrast(uint8_t c){
+    const unsigned char contrast_seq[] = {
+      0x27,    //Contrast set
+      0x81,
+      c    //contrast value
+  };
+  this->contrast= c;
+  send_commands(contrast_seq, sizeof(contrast_seq));
+}
+
 int ST7565::drawChar(int x, int y, unsigned char c, int color){
 	int retVal=-1;
 	  if(c=='\n'){
