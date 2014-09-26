@@ -52,6 +52,8 @@ public:
     void setContrast(uint8_t c);
 
     void set_variant(int n);
+    void buzz(long duration, uint16_t freq);
+    void setLed(int led, bool onoff);
 
 private:
     //buffer
@@ -62,9 +64,13 @@ private:
 	Pin a0;
 	Pin click_pin;
 	Pin up_pin;
-	Pin down_pin;
+    Pin down_pin;
+    Pin buzz_pin;
+	Pin aux_pin;
     Pin encoder_a_pin;
     Pin encoder_b_pin;
+    Pin red_led;
+    Pin blue_led;
 
 	// text cursor position
 	uint8_t tx, ty;
@@ -73,6 +79,8 @@ private:
         bool reversed:1;
         bool is_viki2:1;
         bool is_mini_viki2:1;
+        bool use_pause:1;
+        bool use_back:1;
     };
 };
 

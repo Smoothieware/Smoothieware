@@ -172,12 +172,24 @@ zprobe.probe_height                          5               # how much above be
 # Pause button
 pause_button_enable                          true             #
 
-# Panel http://smoothieware.org/panel
+# Panel See http://smoothieware.org/panel
 panel.enable                                 false               # set to true to enable the panel code
-panel.lcd                                    viki_lcd       # set type of panel also viki_lcd, i2c_lcd is a generic i2c panel, panelolu2
+
+# Example viki2 config
+panel.lcd                                    viki2             # set type of panel
+panel.spi_channel                            0                 # set spi channel to use P0_18,P0_15 MOSI,SCLK
+panel.spi_cs_pin                             0.16              # set spi chip select
 panel.encoder_a_pin                          3.25!^            # encoder pin
 panel.encoder_b_pin                          3.26!^            # encoder pin
-panel.i2c_pins                               3                 # set i2c channel to use
+panel.click_button_pin                       2.11!^            # click button
+panel.a0_pin                                 2.6               # st7565 needs an a0
+#panel.contrast                              8                 # override contrast setting (default is 9)
+#panel.encoder_resolution                    4                 # override number of clicks to move 1 item (default is 4)
+#panel.button_pause_pin                      4.29^             # kill/pause set one of these for the auxilliary button on viki2
+#panel.back_button_pin                       4.29!^            # back button recommended to use this on EXP1
+panel.buzz_pin                               1.31              # pin for buzzer on EXP2
+panel.red_led_pin                            0.26              # pin for red led on viki2 on EXP1
+panel.blue_led_pin                           0.25              # pin for blue led on viki2 on EXP1
 
 panel.menu_offset                            1                 # some panels will need 1 here
 

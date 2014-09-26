@@ -31,10 +31,15 @@
 #define click_button_pin_checksum  CHECKSUM("click_button_pin")
 #define up_button_pin_checksum     CHECKSUM("up_button_pin")
 #define down_button_pin_checksum   CHECKSUM("down_button_pin")
+#define pause_button_pin_checksum  CHECKSUM("pause_button_pin")
+#define back_button_pin_checksum   CHECKSUM("back_button_pin")
+#define buzz_pin_checksum          CHECKSUM("buzz_pin")
 #define contrast_checksum          CHECKSUM("contrast")
 #define reverse_checksum           CHECKSUM("reverse")
 #define rst_pin_checksum           CHECKSUM("rst_pin")
 #define a0_pin_checksum            CHECKSUM("a0_pin")
+#define red_led_checksum           CHECKSUM("red_led_pin")
+#define blue_led_checksum          CHECKSUM("blue_led_pin")
 
 #define CLAMP(x, low, high) { if ( (x) < (low) ) x = (low); if ( (x) > (high) ) x = (high); } while (0);
 #define swap(a, b) { uint8_t t = a; a = b; b = t; }
@@ -72,9 +77,33 @@ ST7565::ST7565() {
     this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
 
+    // the aux pin can be pause or back on a viki2
+    this->aux_pin.from_string("nc");
+    string aux_but= THEKERNEL->config->value( panel_checksum, pause_button_pin_checksum )->by_default("nc")->as_string();
+    if(aux_but != "nc") {
+        this->aux_pin.from_string(aux_but)->as_input();
+        this->use_pause= true;
+        this->use_back= false;
+
+    }else{
+        aux_but= THEKERNEL->config->value( panel_checksum, back_button_pin_checksum )->by_default("nc")->as_string();
+        if(aux_but != "nc") {
+            this->aux_pin.from_string(aux_but)->as_input();
+            this->use_back= true;
+            this->use_pause= false;
+        }
+    }
+
     this->click_pin.from_string(THEKERNEL->config->value( panel_checksum, click_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input();
+
+    this->buzz_pin.from_string(THEKERNEL->config->value( panel_checksum, buzz_pin_checksum)->by_default("nc")->as_string())->as_output();
+
+    this->red_led.from_string(THEKERNEL->config->value( panel_checksum, red_led_checksum)->by_default("nc")->as_string())->as_output();
+    this->blue_led.from_string(THEKERNEL->config->value( panel_checksum, blue_led_checksum)->by_default("nc")->as_string())->as_output();
+    this->red_led.set(0);
+    this->blue_led.set(0);
 
     // contrast
     this->contrast= THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(9)->as_number();
@@ -265,6 +294,10 @@ uint8_t ST7565::readButtons(void) {
         state |= (this->up_pin.get() ? BUTTON_UP : 0);
         state |= (this->down_pin.get() ? BUTTON_DOWN : 0);
     }
+    if(this->aux_pin.connected() && this->aux_pin.get()) {
+        if(this->use_pause) state |= BUTTON_PAUSE;
+        else if(this->use_back) state |= BUTTON_LEFT;
+    }
     return state;
 }
 
@@ -326,4 +359,29 @@ void ST7565::pixel(int x, int y, int colour)
         *byte &= ~mask; // clear pixel
     else
         *byte |= mask; // set pixel
+}
+
+// cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
+void ST7565::buzz(long duration, uint16_t freq) {
+    if(!this->buzz_pin.connected()) return;
+
+    duration *=1000; //convert from ms to us
+    long period = 1000000 / freq; // period in us
+    long elapsed_time = 0;
+    while (elapsed_time < duration) {
+        this->buzz_pin.set(1);
+        wait_us(period / 2);
+        this->buzz_pin.set(0);
+        wait_us(period / 2);
+        elapsed_time += (period);
+    }
+}
+
+void ST7565::setLed(int led, bool onoff) {
+    if(!is_viki2) return;
+
+    switch(led) {
+        case LED_HOTEND_ON: red_led.set(onoff); break;
+        case LED_BED_ON: blue_led.set(onoff); break;
+    }
 }
