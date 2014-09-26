@@ -55,13 +55,15 @@
 #define bed_y_checksum                CHECKSUM("bed_y")
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
 //#define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
+#define probe_offsets_checksum       CHECKSUM("probe_offsets")
+
 
 
 ZHeightMapStrategy::ZHeightMapStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
     this->cal[X_AXIS] = 0.0f;
     this->cal[Y_AXIS] = 0.0f;
-    this->cal[Z_AXIS] = 10.0f;
+    this->cal[Z_AXIS] = 30.0f;
 
     this->in_cal = false;
 }
@@ -85,6 +87,11 @@ bool ZHeightMapStrategy::handleConfig()
 
     this->bed_level_data.pData = (float*) malloc((this->bed_level_data.numRows) * this->bed_level_data.numCols *sizeof(float));
 
+    // Probe offsets xxx,yyy,zzz
+    std::string po = THEKERNEL->config->value(leveling_strategy_checksum, zheightmap_leveling_checksum, probe_offsets_checksum)->by_default("0,0,0")->as_string();
+    this->probe_offsets= parseXYZ(po.c_str());
+
+
     int i;
     for (i=0; i<(this->bed_level_data.numRows * this->bed_level_data.numCols); i++){
         this->bed_level_data.pData[i] = 0.0F;        // Clear the grid
@@ -95,25 +102,45 @@ bool ZHeightMapStrategy::handleConfig()
 
 bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
 {
-    if(gcode->has_m) {
+     // G code processing
+    if(gcode->has_g) {
+        if( gcode->g == 31 ) { // report status
+//            if(this->plane == nullptr) {
+//                 gcode->stream->printf("Bed leveling plane is not set\n");
+//            }else{
+//                 gcode->stream->printf("Bed leveling plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
+//            }
+///            gcode->stream->printf("Probe is %s\n", zprobe->getProbeStatus() ? "Triggered" : "Not triggered");
+            return true;
+
+        } else if( gcode->g == 32 ) { // three point probe
+            // first wait for an empty queue i.e. no moves left
+            THEKERNEL->conveyor->wait_for_empty_queue();
+            if(!doProbing(gcode->stream)) {
+                gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
+            } else {
+                gcode->stream->printf("Probe completed, bed grid defined\n");
+            }
+            return true;
+        }
+
+    } else if(gcode->has_m) {
         switch( gcode->m ) {
 
             // manual bed ZHeightMap calbration: M370 - M375
             // M370: Clear current ZHeightMap for calibration, and move to first position
             case 370: {
                 this->homexyz();
-                //for (int i=0; i<25; i++){
-                //    this->bed_level_data.pData[i] = 0.0F;        // Clear the ZHeightMap
-                //}
+                for (int i=0; i<25; i++){
+                    this->bed_level_data.pData[i] = 0.0F;        // Clear the ZHeightMap
+                }
 
                 this->cal[X_AXIS] = 0.0f;                                              // Clear calibration position
                 this->cal[Y_AXIS] = 0.0f;
                 this->in_cal = true;                                         // In calbration mode
-                //this->setAdjustFunction(false); // disable leveling code for caloibration
-
-
+                
             }
-            return true;
+            //return true;
             // M371: Move to next initial position
             case 371: {
                 if (in_cal){
@@ -176,21 +203,38 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
                 
             }
             return true;
+            case 565: { // M565: Set Z probe offsets
+                float x= 0, y= 0, z= 0;
+                if(gcode->has_letter('X')) x = gcode->get_value('X');
+                if(gcode->has_letter('Y')) y = gcode->get_value('Y');
+                if(gcode->has_letter('Z')) z = gcode->get_value('Z');
+                probe_offsets = std::make_tuple(x, y, z);
+            }
+            return true;
             case 500: // M500 saves some volatile settings to config override file
-            case 503:  // M503 just prints the settings
+            case 503: { // M503 just prints the settings
 
                 // Bed ZHeightMap data as gcode:
-                gcode->stream->printf(";Bed Level settings:\n");
-                int x,y;
-                for (x=0; x<5; x++){
+                gcode->stream->printf(";Bed Level settings:\r\n");
+                
+                for (int x=0; x<5; x++){
+                    int y;
+                    
                     gcode->stream->printf("M374 X%i",x);
                     for (y=0; y<5; y++){
                          gcode->stream->printf(" %c%1.2f", 'A'+y, this->bed_level_data.pData[(x*5)+y]);
                     }
-                    gcode->stream->printf("\n"); 
-                }  
+                    gcode->stream->printf("\r\n"); 
+                }
+
+                float x,y,z;
+                gcode->stream->printf(";Probe offsets:\n");
+                std::tie(x, y, z) = probe_offsets;
+                gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
+
                 gcode->mark_as_taken();
                 break;
+            }
             
             return true;
         }
@@ -198,6 +242,48 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
 
     return false;
 }
+
+bool ZHeightMapStrategy::doProbing(StreamOutput *stream)  // probed calibration
+{
+    // home first
+    this->homexyz();
+
+    this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + 5.0f;
+
+    for (int i=0; i<25; i++){
+       this->bed_level_data.pData[i] = 0.0F;        // Clear the ZHeightMap
+    }
+
+    this->cal[X_AXIS] = 0.0f;                       // Clear calibration position
+    this->cal[Y_AXIS] = 0.0f;
+    this->in_cal = true;                            // In calbration mode
+                
+    this->move(this->cal, slow_rate);               // Move to probe start point
+    //this->next_cal();                               // Set up next cal point
+
+    for (int probes = 0; probes <25; probes++){
+        int pindex = 0;
+
+        float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
+                                       this->cal[Y_AXIS]-std::get<Y_AXIS>(this->probe_offsets));
+                                 //   - (cal[Z_AXIS] - std::get<Z_AXIS>(this->probe_offsets));  // Find probe distance from current location
+
+        pindex = (int) ((this->cal[X_AXIS]/this->bed_div_x*bed_level_data.numRows)+(this->cal[Y_AXIS]/this->bed_div_y));
+
+        if (probes == 24){
+            this->homexyz();
+        } else {
+            this->next_cal();                        // to not cause damage to machine due to Z-offset
+            this->move(this->cal, slow_rate);   // move to the next position
+        }
+        this->bed_level_data.pData[pindex]           // set offset
+          = z ;                                      // save the offset
+    }
+                     
+    this->in_cal = false;
+    return true;
+}
+
 
 void ZHeightMapStrategy::homexyz()
 {
@@ -303,4 +389,18 @@ float ZHeightMapStrategy::arm_bilinear_interp(float X,
 
 }
 
+// parse a "X,Y,Z" string return x,y,z tuple
+std::tuple<float, float, float> ZHeightMapStrategy::parseXYZ(const char *str)
+{
+    float x = 0, y = 0, z= 0;
+    char *p;
+    x = strtof(str, &p);
+    if(p + 1 < str + strlen(str)) {
+        y = strtof(p + 1, &p);
+        if(p + 1 < str + strlen(str)) {
+            z = strtof(p + 1, nullptr);
+        }
+    }
+    return std::make_tuple(x, y, z);
+}
 

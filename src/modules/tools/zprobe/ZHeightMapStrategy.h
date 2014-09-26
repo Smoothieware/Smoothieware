@@ -5,6 +5,7 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <tuple>
 
 #define zheightmap_leveling_checksum CHECKSUM("zheightmap-leveling")
 
@@ -38,7 +39,11 @@ private:
     float arm_bilinear_interp(float X, float Y);
 
     void setAdjustFunction(bool);
-
+    bool doProbing(StreamOutput *stream);
+    
+    std::tuple<float, float, float> probe_offsets;
+    std::tuple<float, float, float> parseXYZ(const char *str);
+        
     float slow_rate;
     float bed_x;
     float bed_y;
