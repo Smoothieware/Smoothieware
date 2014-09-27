@@ -271,18 +271,18 @@ void Extruder::on_gcode_received(void *argument)
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             if( this->single_config ) {
-                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f\n", this->steps_per_millimeter);
-                gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f\n", this->filament_diameter);
-                gcode->stream->printf(";E retract length, feedrate, zlift length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f\n", this->retract_length, this->retract_feedrate*60.0F, this->retract_zlift_length, this->retract_zlift_feedrate);
-                gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F);
-                gcode->stream->printf(";E acceleration mm/sec^2:\nM204 E%1.4f\n", this->acceleration);
+                gcode->stream->printf(";E Steps per mm:\r\nM92 E%1.4f\r\n", this->steps_per_millimeter);
+                gcode->stream->printf(";E Filament diameter:\r\nM200 D%1.4f\r\n", this->filament_diameter);
+                gcode->stream->printf(";E retract length, feedrate, zlift length, feedrate:\r\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f\n", this->retract_length, this->retract_feedrate*60.0F, this->retract_zlift_length, this->retract_zlift_feedrate);
+                gcode->stream->printf(";E retract recover length, feedrate:\r\nM208 S%1.4f F%1.4f\r\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F);
+                gcode->stream->printf(";E acceleration mm/sec^2:\nM204 E%1.4f\r\n", this->acceleration);
 
             } else {
-                gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", this->steps_per_millimeter, this->identifier);
-                gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f P%d\n", this->filament_diameter, this->identifier);
-                gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f P%d\n", this->retract_length, this->retract_feedrate*60.0F, this->retract_zlift_length, this->retract_zlift_feedrate, this->identifier);
-                gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f P%d\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F, this->identifier);
-                gcode->stream->printf(";E acceleration mm/sec^2:\nM204 E%1.4f P%d\n", this->acceleration, this->identifier);
+                gcode->stream->printf(";E Steps per mm:\r\nM92 E%1.4f P%d\r\n", this->steps_per_millimeter, this->identifier);
+                gcode->stream->printf(";E Filament diameter:\r\nM200 D%1.4f P%d\r\n", this->filament_diameter, this->identifier);
+                gcode->stream->printf(";E retract length, feedrate:\r\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f P%d\r\n", this->retract_length, this->retract_feedrate*60.0F, this->retract_zlift_length, this->retract_zlift_feedrate, this->identifier);
+                gcode->stream->printf(";E retract recover length, feedrate:\r\nM208 S%1.4f F%1.4f P%d\r\n", this->retract_recover_length, this->retract_recover_feedrate*60.0F, this->identifier);
+                gcode->stream->printf(";E acceleration mm/sec^2:\r\nM204 E%1.4f P%d\r\n", this->acceleration, this->identifier);
             }
             gcode->mark_as_taken();
         } else if( gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 ) {

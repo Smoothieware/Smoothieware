@@ -39,7 +39,13 @@ private:
     float arm_bilinear_interp(float X, float Y);
 
     void setAdjustFunction(bool);
-    bool doProbing(StreamOutput *stream);
+    bool doProbing(StreamOutput *stream);   
+
+    bool loadGrid();
+    bool saveGrid();
+
+    StreamOutput *ZMap_file;
+    //FILE *ZMap_file;
     
     std::tuple<float, float, float> probe_offsets;
     std::tuple<float, float, float> parseXYZ(const char *str);

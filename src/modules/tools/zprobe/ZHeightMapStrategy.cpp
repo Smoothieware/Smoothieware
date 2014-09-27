@@ -44,6 +44,7 @@
 #include "PublicData.h"
 #include "Conveyor.h"
 #include "ZProbe.h"
+#include "libs/FileStream.h"
 #include "nuts_bolts.h"
 
 #include <string>
@@ -97,6 +98,8 @@ bool ZHeightMapStrategy::handleConfig()
         this->bed_level_data.pData[i] = 0.0F;        // Clear the grid
     }
 
+    this->loadGrid();
+
     return true;
 }
 
@@ -105,6 +108,19 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
      // G code processing
     if(gcode->has_g) {
         if( gcode->g == 31 ) { // report status
+
+               // Bed ZHeightMap data as gcode:
+                gcode->stream->printf(";Bed Level settings:\r\n");
+                
+                for (int x=0; x<5; x++){
+                    int y;
+                    
+                    gcode->stream->printf("X%i",x);
+                    for (y=0; y<5; y++){
+                         gcode->stream->printf(" %c%1.2f", 'A'+y, this->bed_level_data.pData[(x*5)+y]);
+                    }
+                    gcode->stream->printf("\r\n"); 
+                }
 //            if(this->plane == nullptr) {
 //                 gcode->stream->printf("Bed leveling plane is not set\n");
 //            }else{
@@ -211,10 +227,18 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
                 probe_offsets = std::make_tuple(x, y, z);
             }
             return true;
+
+            case 501: // Load grid values
+                this->loadGrid();
+            return true;
+
             case 500: // M500 saves some volatile settings to config override file
+
+                this->saveGrid();
+
             case 503: { // M503 just prints the settings
 
-                // Bed ZHeightMap data as gcode:
+ /*               // Bed ZHeightMap data as gcode:
                 gcode->stream->printf(";Bed Level settings:\r\n");
                 
                 for (int x=0; x<5; x++){
@@ -226,11 +250,11 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
                     }
                     gcode->stream->printf("\r\n"); 
                 }
-
+*/
                 float x,y,z;
-                gcode->stream->printf(";Probe offsets:\n");
+                gcode->stream->printf(";Probe offsets:\r\n");
                 std::tie(x, y, z) = probe_offsets;
-                gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
+                gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\r\n", x, y, z);
 
                 gcode->mark_as_taken();
                 break;
@@ -241,6 +265,41 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
     }
 
     return false;
+}
+
+bool ZHeightMapStrategy::saveGrid()
+{
+    ZMap_file = new FileStream("/sd/grid");
+
+    for (int pos = 0; pos < 25; pos++){
+        ZMap_file->printf("%1.3f\r\n", this->bed_level_data.pData[pos]);
+    }
+    delete ZMap_file;
+
+    return true;
+
+}
+
+bool ZHeightMapStrategy::loadGrid()
+{
+    FILE *fd = fopen("/sd/grid", "r");
+    if(fd != NULL) {
+ 
+        for (int pos = 0; pos < 25; pos++){
+            float val;
+
+            fscanf(fd, "%f\r\n", &val);
+            this->bed_level_data.pData[pos] = val;
+        }
+
+        fclose(fd);
+
+        return true;
+
+    } else {
+        return false;
+    }
+
 }
 
 bool ZHeightMapStrategy::doProbing(StreamOutput *stream)  // probed calibration
@@ -266,7 +325,6 @@ bool ZHeightMapStrategy::doProbing(StreamOutput *stream)  // probed calibration
 
         float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
                                        this->cal[Y_AXIS]-std::get<Y_AXIS>(this->probe_offsets));
-                                 //   - (cal[Z_AXIS] - std::get<Z_AXIS>(this->probe_offsets));  // Find probe distance from current location
 
         pindex = (int) ((this->cal[X_AXIS]/this->bed_div_x*bed_level_data.numRows)+(this->cal[Y_AXIS]/this->bed_div_y));
 
