@@ -102,8 +102,8 @@ ST7565::ST7565() {
 
     this->red_led.from_string(THEKERNEL->config->value( panel_checksum, red_led_checksum)->by_default("nc")->as_string())->as_output();
     this->blue_led.from_string(THEKERNEL->config->value( panel_checksum, blue_led_checksum)->by_default("nc")->as_string())->as_output();
-    this->red_led.set(0);
-    this->blue_led.set(0);
+    this->red_led.set(false);
+    this->blue_led.set(true);
 
     // contrast
     this->contrast= THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(9)->as_number();
@@ -380,8 +380,13 @@ void ST7565::buzz(long duration, uint16_t freq) {
 void ST7565::setLed(int led, bool onoff) {
     if(!is_viki2) return;
 
-    switch(led) {
-        case LED_HOTEND_ON: red_led.set(onoff); break;
-        case LED_BED_ON: blue_led.set(onoff); break;
+    if(led == LED_HOT){
+        if(onoff)  {
+            red_led.set(true);
+            blue_led.set(false);
+        }else{
+            red_led.set(false);
+            blue_led.set(true);
+        }
     }
 }

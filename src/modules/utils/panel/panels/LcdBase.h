@@ -17,6 +17,7 @@
 #define LED_FAN_ON    1
 #define LED_HOTEND_ON 2
 #define LED_BED_ON    3
+#define LED_HOT       4
 
 class Panel;
 
