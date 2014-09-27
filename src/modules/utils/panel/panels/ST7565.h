@@ -14,7 +14,7 @@
 
 class ST7565: public LcdBase {
 public:
-	ST7565();
+	ST7565(uint8_t v= 0);
 	virtual ~ST7565();
 	void home();
     void clear();
@@ -28,7 +28,7 @@ public:
 	//encoder which dosent exist :/
 	uint8_t readButtons();
 	int readEncoderDelta();
-	int getEncoderResolution() { return (is_viki2 || is_mini_viki2) ? 4 : 2; }
+	int getEncoderResolution() { return is_viki2 ? 4 : 2; }
 	uint16_t get_screen_lines() { return 8; }
 	bool hasGraphics() { return true; }
 
@@ -51,7 +51,6 @@ public:
     uint8_t getContrast() { return contrast; }
     void setContrast(uint8_t c);
 
-    void set_variant(int n);
     void buzz(long duration, uint16_t freq);
     void setLed(int led, bool onoff);
 

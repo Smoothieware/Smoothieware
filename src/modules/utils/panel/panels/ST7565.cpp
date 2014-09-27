@@ -44,10 +44,32 @@
 #define CLAMP(x, low, high) { if ( (x) < (low) ) x = (low); if ( (x) > (high) ) x = (high); } while (0);
 #define swap(a, b) { uint8_t t = a; a = b; b = t; }
 
-ST7565::ST7565() {
-	//SPI com
+ST7565::ST7565(uint8_t variant) {
+    // set the variant
+    switch(variant) {
+        case 1:
+            is_viki2= true;
+            is_mini_viki2= false;
+            this->reversed= true;
+            this->contrast= 9;
+            break;
+        case 2:
+            is_mini_viki2= true;
+            is_viki2= false;
+            this->reversed= true;
+            this->contrast= 18;
+            break;
+        default:
+            // set default for sub variants
+            is_viki2= false; // defaults to Wulfnors panel
+            is_mini_viki2= false;
+            this->reversed= false;
+            this->contrast= 9;
+            break;
+    }
 
-   // select which SPI channel to use
+    //SPI com
+    // select which SPI channel to use
     int spi_channel = THEKERNEL->config->value(panel_checksum, spi_channel_checksum)->by_default(0)->as_number();
     PinName mosi;
     PinName sclk;
@@ -74,23 +96,30 @@ ST7565::ST7565() {
     this->a0.from_string(THEKERNEL->config->value( panel_checksum, a0_pin_checksum)->by_default("2.13")->as_string())->as_output();
     a0.set(1);
 
-    this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
-    this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
-
-    // the aux pin can be pause or back on a viki2
-    this->aux_pin.from_string("nc");
-    string aux_but= THEKERNEL->config->value( panel_checksum, pause_button_pin_checksum )->by_default("nc")->as_string();
-    if(aux_but != "nc") {
-        this->aux_pin.from_string(aux_but)->as_input();
-        this->use_pause= true;
-        this->use_back= false;
-
+    if(!is_viki2 && !is_mini_viki2) {
+        this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
+        this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     }else{
-        aux_but= THEKERNEL->config->value( panel_checksum, back_button_pin_checksum )->by_default("nc")->as_string();
+        this->up_pin.from_string("nc");
+        this->down_pin.from_string("nc");
+    }
+
+    this->aux_pin.from_string("nc");
+    if(is_viki2) {
+        // the aux pin can be pause or back on a viki2
+        string aux_but= THEKERNEL->config->value( panel_checksum, pause_button_pin_checksum )->by_default("nc")->as_string();
         if(aux_but != "nc") {
             this->aux_pin.from_string(aux_but)->as_input();
-            this->use_back= true;
-            this->use_pause= false;
+            this->use_pause= true;
+            this->use_back= false;
+
+        }else{
+            aux_but= THEKERNEL->config->value( panel_checksum, back_button_pin_checksum )->by_default("nc")->as_string();
+            if(aux_but != "nc") {
+                this->aux_pin.from_string(aux_but)->as_input();
+                this->use_back= true;
+                this->use_pause= false;
+            }
         }
     }
 
@@ -100,43 +129,30 @@ ST7565::ST7565() {
 
     this->buzz_pin.from_string(THEKERNEL->config->value( panel_checksum, buzz_pin_checksum)->by_default("nc")->as_string())->as_output();
 
-    this->red_led.from_string(THEKERNEL->config->value( panel_checksum, red_led_checksum)->by_default("nc")->as_string())->as_output();
-    this->blue_led.from_string(THEKERNEL->config->value( panel_checksum, blue_led_checksum)->by_default("nc")->as_string())->as_output();
-    this->red_led.set(false);
-    this->blue_led.set(true);
+    if(is_viki2) {
+        this->red_led.from_string(THEKERNEL->config->value( panel_checksum, red_led_checksum)->by_default("nc")->as_string())->as_output();
+        this->blue_led.from_string(THEKERNEL->config->value( panel_checksum, blue_led_checksum)->by_default("nc")->as_string())->as_output();
+        this->red_led.set(false);
+        this->blue_led.set(true);
+    }
 
-    // contrast
-    this->contrast= THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(9)->as_number();
+    // contrast override
+    this->contrast= THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(this->contrast)->as_number();
+
     // reverse display
-    this->reversed= THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(false)->as_bool();
+    this->reversed= THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(this->reversed)->as_bool();
 
     framebuffer= (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memory from USB_RAM
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
     }
 
-    // set default for sub variants
-    is_viki2 = is_mini_viki2= false; // defaults to Wulfnors panel
 }
 
 ST7565::~ST7565() {
 	delete this->spi;
     AHB0.dealloc(framebuffer);
 }
-
-// variant 0 is Wulfnor panel, 1 is viki2, 2 is miniviki2
-void ST7565::set_variant(int n) {
-    switch(n) {
-        case 1:
-            is_viki2= true;
-            this->reversed= true;
-            break;
-        case 2:
-            is_mini_viki2= true;
-            this->reversed= true;
-            break;
-    }
-};
 
 //send commands to lcd
 void ST7565::send_commands(const unsigned char* buf, size_t size){

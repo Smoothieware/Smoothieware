@@ -93,11 +93,9 @@ void Panel::on_module_loaded()
     } else if (lcd_cksm == st7565_glcd_checksum) {
         this->lcd = new ST7565();
     } else if (lcd_cksm == viki2_checksum) {
-        this->lcd = new ST7565();
-        this->lcd->set_variant(1);
+        this->lcd = new ST7565(1); // variant 1
     } else if (lcd_cksm == mini_viki2_checksum) {
-        this->lcd = new ST7565();
-        this->lcd->set_variant(2);
+        this->lcd = new ST7565(2); // variant 2
     } else if (lcd_cksm == universal_adapter_checksum) {
         this->lcd = new UniversalAdapter();
     } else {
