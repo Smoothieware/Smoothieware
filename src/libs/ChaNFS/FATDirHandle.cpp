@@ -35,7 +35,7 @@ struct dirent *FATDirHandle::readdir() {
         int stringSize = 0;
 #if _USE_LFN
         fn = *finfo.lfname ? finfo.lfname : finfo.fname;
-        stringSize = finfo.lfsize;
+        stringSize = *finfo.lfname ? finfo.lfsize : sizeof(finfo.fname);
 #else
         fn = fno.fname;
         stringSize =  sizeof(finfo.fname);

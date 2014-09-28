@@ -12,9 +12,6 @@
 #include "mbed.h"
 #include "libs/Pin.h"
 
-class SDCard;
-class SDFAT;
-
 class ST7565: public LcdBase {
 public:
 	ST7565(uint8_t v= 0);
@@ -58,7 +55,6 @@ public:
     void setLed(int led, bool onoff);
 
 private:
-    bool mount_external_sd(bool on);
 
     //buffer
 	unsigned char *framebuffer;
@@ -75,10 +71,6 @@ private:
     Pin encoder_b_pin;
     Pin red_led;
     Pin blue_led;
-    Pin sdcd_pin;
-
-    SDCard *sd;
-    SDFAT *extmounter;
 
 	// text cursor position
 	uint8_t tx, ty;

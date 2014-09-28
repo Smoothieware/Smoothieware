@@ -36,17 +36,7 @@ ReprapDiscountGLCD::ReprapDiscountGLCD() {
 
     // select which SPI channel to use
     int spi_channel = THEKERNEL->config->value(panel_checksum, spi_channel_checksum)->by_default(0)->as_number();
-    PinName mosi;
-    PinName sclk;
-    if(spi_channel == 0){
-        mosi= P0_18; sclk= P0_15;
-    }else if(spi_channel == 1){
-        mosi= P0_9; sclk= P0_7;
-    }else{
-        mosi= P0_18; sclk= P0_15;
-    }
-
-    this->glcd= new RrdGlcd(mosi, sclk, this->spi_cs_pin);
+    this->glcd= new RrdGlcd(spi_channel, this->spi_cs_pin);
 
     int spi_frequency = THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(1000000)->as_number();
     this->glcd->setFrequency(spi_frequency);

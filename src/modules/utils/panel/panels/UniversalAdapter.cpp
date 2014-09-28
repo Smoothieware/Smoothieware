@@ -55,9 +55,7 @@ UniversalAdapter::UniversalAdapter()
 
     // select which SPI channel to use
     int spi_channel = THEKERNEL->config->value(panel_checksum, spi_channel_checksum)->by_default(0)->as_number();
-    PinName mosi;
-    PinName miso;
-    PinName sclk;
+    PinName mosi, miso, sclk;
     if(spi_channel == 0) {
         mosi = P0_18; miso = P0_17; sclk = P0_15;
     } else if(spi_channel == 1) {

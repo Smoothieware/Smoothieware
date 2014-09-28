@@ -14,8 +14,7 @@
 #include "StreamOutputPool.h"
 #include "ConfigValue.h"
 
-#include "libs/USBDevice/USBMSD/SDCard.h"
-#include "libs/SDFAT.h"
+
 
 //definitions for lcd
 #define LCDWIDTH 128
@@ -41,7 +40,6 @@
 #define reverse_checksum           CHECKSUM("reverse")
 #define rst_pin_checksum           CHECKSUM("rst_pin")
 #define a0_pin_checksum            CHECKSUM("a0_pin")
-#define sdcd_pin_checksum          CHECKSUM("sdcd_pin")
 #define red_led_checksum           CHECKSUM("red_led_pin")
 #define blue_led_checksum          CHECKSUM("blue_led_pin")
 
@@ -76,17 +74,16 @@ ST7565::ST7565(uint8_t variant)
     //SPI com
     // select which SPI channel to use
     int spi_channel = THEKERNEL->config->value(panel_checksum, spi_channel_checksum)->by_default(0)->as_number();
-    PinName mosi;
-    PinName sclk;
+    PinName mosi, miso, sclk;
     if(spi_channel == 0) {
-        mosi = P0_18; sclk = P0_15;
+        mosi = P0_18; miso = P0_17; sclk = P0_15;
     } else if(spi_channel == 1) {
-        mosi = P0_9; sclk = P0_7;
+        mosi = P0_9; miso = P0_8; sclk = P0_7;
     } else {
-        mosi = P0_18; sclk = P0_15;
+        mosi = P0_18; miso = P0_17; sclk = P0_15;
     }
 
-    this->spi = new mbed::SPI(mosi, NC, sclk);
+    this->spi = new mbed::SPI(mosi, miso, sclk);
     this->spi->frequency(THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(1000000)->as_number()); //4Mhz freq, can try go a little lower
 
     //chip select
@@ -141,9 +138,6 @@ ST7565::ST7565(uint8_t variant)
         this->blue_led.set(true);
     }
 
-    // external sdcard detect
-    this->sdcd_pin.from_string(THEKERNEL->config->value( panel_checksum, sdcd_pin_checksum )->by_default("nc")->as_string())->as_input();
-
     // contrast override
     this->contrast = THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(this->contrast)->as_number();
 
@@ -155,15 +149,12 @@ ST7565::ST7565(uint8_t variant)
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
     }
 
-    this->sd= nullptr;
-    this->extmounter= nullptr;
 }
 
 ST7565::~ST7565()
 {
     delete this->spi;
     AHB0.dealloc(framebuffer);
-    delete this->extmounter;
 }
 
 //send commands to lcd
@@ -339,14 +330,6 @@ uint8_t ST7565::readButtons(void)
         else if(this->use_back) state |= BUTTON_LEFT;
     }
 
-    // sd insert detect, mount sdcard if inserted, unmount if removed
-    if(this->sdcd_pin.connected()) {
-        if(this->extmounter == nullptr && this->sdcd_pin.get()) {
-            mount_external_sd(true);
-        }else if(this->extmounter != nullptr && !this->sdcd_pin.get()){
-            mount_external_sd(false);
-        }
-    }
     return state;
 }
 
@@ -445,26 +428,3 @@ void ST7565::setLed(int led, bool onoff)
     }
 }
 
-bool ST7565::mount_external_sd(bool on)
-{
-    // now setup the external sdcard if we have one and mount it
-    if(on) {
-        if(this->sd == nullptr) {
-            size_t n= sizeof(SDCard);
-            void *v = AHB0.alloc(n);
-            memset(v, 0, n); // clear the allocated memory
-            this->sd= new(v) SDCard(P0_18, P0_17, P0_15, P2_8); // allocate object using zeroed memory
-        }
-        delete this->extmounter; // if it was not unmounted before
-        size_t n= sizeof(SDFAT);
-        void *v = AHB0.alloc(n);
-        memset(v, 0, n); // clear the allocated memory
-        this->extmounter= new(v) SDFAT("ext", this->sd);
-        THEKERNEL->streams->printf("External SDcard mounted as /ext, size %d\n", n);
-    }else{
-        delete this->extmounter;
-        this->extmounter= nullptr;
-        THEKERNEL->streams->printf("External SDcard unmounted\n");
-    }
-    return true;
-}

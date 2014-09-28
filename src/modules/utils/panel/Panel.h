@@ -9,6 +9,8 @@
 #define PANEL_H
 
 #include "Button.h"
+#include "Pin.h"
+#include "mbed.h"
 #include <string>
 using std::string;
 
@@ -19,6 +21,8 @@ using std::string;
 
 class LcdBase;
 class PanelScreen;
+class SDCard;
+class SDFAT;
 
 class Panel : public Module {
     public:
@@ -32,6 +36,7 @@ class Panel : public Module {
         void on_idle(void* argument);
         void on_main_loop(void* argument);
         void on_gcode_received(void* argument);
+        void on_second_tick(void* argument);
         void enter_screen(PanelScreen* screen);
         void reset_counter();
 
@@ -88,6 +93,14 @@ class Panel : public Module {
     private:
         void setup_temperature_screen();
 
+        // external SD card
+        bool mount_external_sd(bool on);
+        Pin sdcd_pin;
+        uint8_t extsd_spi_channel;
+        PinName extsd_spi_cs;
+        SDCard *sd;
+        SDFAT *extmounter;
+
         // Menu
         int menu_selected_line;
         int menu_start_line;
@@ -113,6 +126,7 @@ class Panel : public Module {
             bool start_up:1;
             bool menu_changed:1;
             bool control_value_changed:1;
+            bool external_sd_enable:1;
             volatile bool counter_changed:1;
             volatile bool click_changed:1;
             volatile bool refresh_flag:1;
