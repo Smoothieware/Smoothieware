@@ -79,8 +79,6 @@ public:
 
     CARD_TYPE card_type(void);
 
-    void on_main_loop(void);
-
     bool busy();
 
 protected:
