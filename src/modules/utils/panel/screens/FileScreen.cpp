@@ -32,12 +32,12 @@ void FileScreen::on_enter()
     THEPANEL->lcd->clear();
 
     // Default folder to enter
-    this->enter_folder("/");
+    this->enter_folder(THEKERNEL->current_path.c_str());
 }
 
 void FileScreen::on_exit()
 {
-    // reset to root directory, I'd prefer not to do this but it crashes on entry next time if it doesn't start at root
+    // reset to root directory, I think this is less confusing
     THEKERNEL->current_path= "/";
 }
 

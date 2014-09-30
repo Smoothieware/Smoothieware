@@ -55,6 +55,7 @@ public:
     void setLed(int led, bool onoff);
 
 private:
+
     //buffer
 	unsigned char *framebuffer;
 	mbed::SPI* spi;
