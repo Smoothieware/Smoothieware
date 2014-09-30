@@ -125,6 +125,7 @@ void WatchScreen::on_refresh()
         THEPANEL->lcd->setLed(LED_BED_ON, this->bedtarget > 0);
         THEPANEL->lcd->setLed(LED_HOTEND_ON, this->hotendtarget > 0);
         THEPANEL->lcd->setLed(LED_FAN_ON, this->fan_state);
+        THEPANEL->lcd->setLed(LED_HOT, this->hotendtemp > 50 || this->bedtemp > 40);
 
         if (THEPANEL->lcd->hasGraphics()) {
             // display the graphical icons below the status are

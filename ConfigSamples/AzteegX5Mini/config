@@ -171,23 +171,41 @@ zprobe.probe_height                          5               # how much above be
 # Pause button
 pause_button_enable                          true             #
 
-# Panel
+# Panel See http://smoothieware.org/panel
 panel.enable                                 false             # set to true to enable the panel code
 
-# Example for reprap discount GLCD
-# on glcd EXP1 is to left and EXP2 is to right, pin 1 is bottom left, pin 2 is top left etc.
-# +5v is EXP1 pin 10, Gnd is EXP1 pin 9
-#panel.lcd                                   reprap_discount_glcd     #
-#panel.spi_channel                           0                 # pins 0.18, 0.15     ; GLCD EXP1 Pins 3,5 (MOSI, SCLK)
-#panel.spi_cs_pin                            0.16              # spi chip select     ; GLCD EXP1 Pin 4
-#panel.encoder_a_pin                         3.25!^            # encoder pin         ; GLCD EXP2 Pin 3
-#panel.encoder_b_pin                         3.26!^            # encoder pin         ; GLCD EXP2 Pin 5
-#panel.click_button_pin                      2.11!^            # click button        ; GLCD EXP1 Pin 2
-#panel.buzz_pin                              1.31              # pin for buzzer      ; GLCD EXP1 Pin 1
-#panel.button_pause_pin                      4.29^             # kill/pause          ; GLCD EXP2 Pin 8 either
-#panel.back_button_pin                       4.29!^            # back button         ; GLCD EXP2 Pin 8 or
+# Example viki2 config for an azteeg miniV2 with IDC cable
+panel.lcd                                    viki2             # set type of panel
+panel.spi_channel                            0                 # set spi channel to use P0_18,P0_15 MOSI,SCLK
+panel.spi_cs_pin                             0.16              # set spi chip select
+panel.encoder_a_pin                          3.25!^            # encoder pin
+panel.encoder_b_pin                          3.26!^            # encoder pin
+panel.click_button_pin                       2.11!^            # click button
+panel.a0_pin                                 2.6               # st7565 needs an a0
+#panel.contrast                              8                 # override contrast setting (default is 9)
+#panel.encoder_resolution                    4                 # override number of clicks to move 1 item (default is 4)
+#panel.button_pause_pin                      1.22^             # kill/pause set one of these for the auxilliary button on viki2
+#panel.back_button_pin                       1.22!^            # back button recommended to use this on EXP1
+panel.buzz_pin                               0.25              # pin for buzzer on EXP2
+panel.red_led_pin                            2.8               # pin for red led on viki2 on EXP1
+panel.blue_led_pin                           4.29              # pin for blue led on viki2 on EXP1
+panel.external_sd                            true              # set to true if there is an extrernal sdcard on the panel
+panel.external_sd.spi_channel                0                 # set spi channel the sdcard is on
+panel.external_sd.spi_cs_pin                 1.23              # set spi chip select for the sdcard
+panel.external_sd.sdcd_pin                   1.31!^            # sd detect signal (set to nc if no sdcard detect)
+panel.menu_offset                            1                 # some panels will need 1 here
 
-panel.menu_offset                            0                 # some panels will need 1 here
+# Example miniviki2 config
+#panel.lcd                                    mini_viki2        # set type of panel
+#panel.spi_channel                            0                 # set spi channel to use P0_18,P0_15 MOSI,SCLK
+#panel.spi_cs_pin                             0.16              # set spi chip select
+#panel.encoder_a_pin                          3.25!^            # encoder pin
+#panel.encoder_b_pin                          3.26!^            # encoder pin
+#panel.click_button_pin                       2.11!^            # click button
+#panel.a0_pin                                 2.6               # st7565 needs an a0
+##panel.contrast                               18                # override contrast setting (default is 18)
+##panel.encoder_resolution                     2                 # override number of clicks to move 1 item (default is 2)
+#panel.menu_offset                            1                 # here controls how sensitive the menu is. some panels will need 1
 
 panel.alpha_jog_feedrate                     6000              # x jogging feedrate in mm/min
 panel.beta_jog_feedrate                      6000              # y jogging feedrate in mm/min
