@@ -31,18 +31,45 @@
 #define click_button_pin_checksum  CHECKSUM("click_button_pin")
 #define up_button_pin_checksum     CHECKSUM("up_button_pin")
 #define down_button_pin_checksum   CHECKSUM("down_button_pin")
+#define pause_button_pin_checksum  CHECKSUM("pause_button_pin")
+#define back_button_pin_checksum   CHECKSUM("back_button_pin")
+#define buzz_pin_checksum          CHECKSUM("buzz_pin")
 #define contrast_checksum          CHECKSUM("contrast")
 #define reverse_checksum           CHECKSUM("reverse")
 #define rst_pin_checksum           CHECKSUM("rst_pin")
 #define a0_pin_checksum            CHECKSUM("a0_pin")
+#define red_led_checksum           CHECKSUM("red_led_pin")
+#define blue_led_checksum          CHECKSUM("blue_led_pin")
 
 #define CLAMP(x, low, high) { if ( (x) < (low) ) x = (low); if ( (x) > (high) ) x = (high); } while (0);
 #define swap(a, b) { uint8_t t = a; a = b; b = t; }
 
-ST7565::ST7565() {
-	//SPI com
+ST7565::ST7565(uint8_t variant) {
+    // set the variant
+    switch(variant) {
+        case 1:
+            is_viki2= true;
+            is_mini_viki2= false;
+            this->reversed= true;
+            this->contrast= 9;
+            break;
+        case 2:
+            is_mini_viki2= true;
+            is_viki2= false;
+            this->reversed= true;
+            this->contrast= 18;
+            break;
+        default:
+            // set default for sub variants
+            is_viki2= false; // defaults to Wulfnors panel
+            is_mini_viki2= false;
+            this->reversed= false;
+            this->contrast= 9;
+            break;
+    }
 
-   // select which SPI channel to use
+    //SPI com
+    // select which SPI channel to use
     int spi_channel = THEKERNEL->config->value(panel_checksum, spi_channel_checksum)->by_default(0)->as_number();
     PinName mosi;
     PinName sclk;
@@ -69,22 +96,57 @@ ST7565::ST7565() {
     this->a0.from_string(THEKERNEL->config->value( panel_checksum, a0_pin_checksum)->by_default("2.13")->as_string())->as_output();
     a0.set(1);
 
-    this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
-    this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
+    if(!is_viki2 && !is_mini_viki2) {
+        this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
+        this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
+    }else{
+        this->up_pin.from_string("nc");
+        this->down_pin.from_string("nc");
+    }
+
+    this->aux_pin.from_string("nc");
+    if(is_viki2) {
+        // the aux pin can be pause or back on a viki2
+        string aux_but= THEKERNEL->config->value( panel_checksum, pause_button_pin_checksum )->by_default("nc")->as_string();
+        if(aux_but != "nc") {
+            this->aux_pin.from_string(aux_but)->as_input();
+            this->use_pause= true;
+            this->use_back= false;
+
+        }else{
+            aux_but= THEKERNEL->config->value( panel_checksum, back_button_pin_checksum )->by_default("nc")->as_string();
+            if(aux_but != "nc") {
+                this->aux_pin.from_string(aux_but)->as_input();
+                this->use_back= true;
+                this->use_pause= false;
+            }
+        }
+    }
 
     this->click_pin.from_string(THEKERNEL->config->value( panel_checksum, click_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->encoder_a_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_a_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->encoder_b_pin.from_string(THEKERNEL->config->value( panel_checksum, encoder_b_pin_checksum)->by_default("nc")->as_string())->as_input();
 
-    // contrast, mviki needs  0x018
-    this->contrast= THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(9)->as_number();
-    // reverse display
-    this->reversed= THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(false)->as_bool();
+    this->buzz_pin.from_string(THEKERNEL->config->value( panel_checksum, buzz_pin_checksum)->by_default("nc")->as_string())->as_output();
 
-    framebuffer= (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memoery from USB_RAM
+    if(is_viki2) {
+        this->red_led.from_string(THEKERNEL->config->value( panel_checksum, red_led_checksum)->by_default("nc")->as_string())->as_output();
+        this->blue_led.from_string(THEKERNEL->config->value( panel_checksum, blue_led_checksum)->by_default("nc")->as_string())->as_output();
+        this->red_led.set(false);
+        this->blue_led.set(true);
+    }
+
+    // contrast override
+    this->contrast= THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(this->contrast)->as_number();
+
+    // reverse display
+    this->reversed= THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(this->reversed)->as_bool();
+
+    framebuffer= (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memory from USB_RAM
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
     }
+
 }
 
 ST7565::~ST7565() {
@@ -176,6 +238,17 @@ void ST7565::init(){
   send_commands(init_seq, sizeof(init_seq));
   clear();
 }
+
+void ST7565::setContrast(uint8_t c){
+    const unsigned char contrast_seq[] = {
+      0x27,    //Contrast set
+      0x81,
+      c    //contrast value
+  };
+  this->contrast= c;
+  send_commands(contrast_seq, sizeof(contrast_seq));
+}
+
 int ST7565::drawChar(int x, int y, unsigned char c, int color){
 	int retVal=-1;
 	  if(c=='\n'){
@@ -236,6 +309,10 @@ uint8_t ST7565::readButtons(void) {
     if(this->up_pin.connected()) {
         state |= (this->up_pin.get() ? BUTTON_UP : 0);
         state |= (this->down_pin.get() ? BUTTON_DOWN : 0);
+    }
+    if(this->aux_pin.connected() && this->aux_pin.get()) {
+        if(this->use_pause) state |= BUTTON_PAUSE;
+        else if(this->use_back) state |= BUTTON_LEFT;
     }
     return state;
 }
@@ -298,4 +375,34 @@ void ST7565::pixel(int x, int y, int colour)
         *byte &= ~mask; // clear pixel
     else
         *byte |= mask; // set pixel
+}
+
+// cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
+void ST7565::buzz(long duration, uint16_t freq) {
+    if(!this->buzz_pin.connected()) return;
+
+    duration *=1000; //convert from ms to us
+    long period = 1000000 / freq; // period in us
+    long elapsed_time = 0;
+    while (elapsed_time < duration) {
+        this->buzz_pin.set(1);
+        wait_us(period / 2);
+        this->buzz_pin.set(0);
+        wait_us(period / 2);
+        elapsed_time += (period);
+    }
+}
+
+void ST7565::setLed(int led, bool onoff) {
+    if(!is_viki2) return;
+
+    if(led == LED_HOT){
+        if(onoff)  {
+            red_led.set(true);
+            blue_led.set(false);
+        }else{
+            red_led.set(false);
+            blue_led.set(true);
+        }
+    }
 }

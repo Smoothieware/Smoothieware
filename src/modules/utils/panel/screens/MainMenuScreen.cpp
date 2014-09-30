@@ -85,6 +85,15 @@ void MainMenuScreen::setupConfigureScreen()
         0.1F
         );
 
+    mvs->addMenuItem("Contrast",
+        []() -> float { return THEPANEL->lcd->getContrast(); },
+        [this](float v) { THEPANEL->lcd->setContrast(v); },
+        1,
+        0,
+        255,
+        true // instant update
+        );
+
     THEPANEL->enter_screen(mvs);
 }
 

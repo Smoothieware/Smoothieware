@@ -76,6 +76,10 @@ void ModifyValuesScreen::on_refresh()
             }
             THEPANEL->lcd->setCursor(0, 2);
             THEPANEL->lcd->printf("%10.3f    ", value);
+            if(this->instant) {
+                // NOTE this cannot be something that needs to be set in on_main_loop
+                std::get<2>(menu_items[selected_item])(value);
+            }
         }
 
     } else {
@@ -113,6 +117,7 @@ void ModifyValuesScreen::clicked_menu_entry(uint16_t line)
         THEPANEL->enter_control_mode(inc, inc / 10);
         this->min_value= std::get<4>(menu_items[line]);
         this->max_value= std::get<5>(menu_items[line]);
+        this->instant= std::get<6>(menu_items[line]);
 
         THEPANEL->set_control_value(value);
         THEPANEL->lcd->clear();
@@ -139,11 +144,11 @@ void ModifyValuesScreen::addMenuItem(const MenuItemType& item)
     menu_items.push_back(item);
 }
 
-void ModifyValuesScreen::addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc, float  min, float max)
+void ModifyValuesScreen::addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc, float  min, float max, bool instant)
 {
     string n(name);
     if(n.size() > 10) {
         n= n.substr(0, 10);
     }
-    addMenuItem(make_tuple(strdup(n.c_str()), getter, setter, inc, min, max));
+    addMenuItem(make_tuple(strdup(n.c_str()), getter, setter, inc, min, max, instant));
 }
