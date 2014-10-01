@@ -98,7 +98,9 @@ bool ZHeightMapStrategy::handleConfig()
         this->bed_level_data.pData[i] = 0.0F;        // Clear the grid
     }
 
-    this->loadGrid();
+    if(this->loadGrid()){
+        this->setAdjustFunction(true); // Enable leveling code
+    }
 
     return true;
 }
@@ -207,7 +209,7 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
                 this->setAdjustFunction(true); // Enable leveling code   
             }
             return true;
-            case 376: {
+            case 376: { // Check grid value calculations
                 float target[3];
 
                 for(char letter = 'X'; letter <= 'Z'; letter++) {
@@ -238,23 +240,10 @@ bool ZHeightMapStrategy::handleGcode(Gcode *gcode)
 
             case 503: { // M503 just prints the settings
 
- /*               // Bed ZHeightMap data as gcode:
-                gcode->stream->printf(";Bed Level settings:\r\n");
-                
-                for (int x=0; x<5; x++){
-                    int y;
-                    
-                    gcode->stream->printf("M374 X%i",x);
-                    for (y=0; y<5; y++){
-                         gcode->stream->printf(" %c%1.2f", 'A'+y, this->bed_level_data.pData[(x*5)+y]);
-                    }
-                    gcode->stream->printf("\r\n"); 
-                }
-*/
                 float x,y,z;
-                gcode->stream->printf(";Probe offsets:\r\n");
+                gcode->stream->printf(";Probe offsets:\n");
                 std::tie(x, y, z) = probe_offsets;
-                gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\r\n", x, y, z);
+                gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
 
                 gcode->mark_as_taken();
                 break;
@@ -272,7 +261,7 @@ bool ZHeightMapStrategy::saveGrid()
     ZMap_file = new FileStream("/sd/grid");
 
     for (int pos = 0; pos < 25; pos++){
-        ZMap_file->printf("%1.3f\r\n", this->bed_level_data.pData[pos]);
+        ZMap_file->printf("%1.3f\n", this->bed_level_data.pData[pos]);
     }
     delete ZMap_file;
 
@@ -288,7 +277,7 @@ bool ZHeightMapStrategy::loadGrid()
         for (int pos = 0; pos < 25; pos++){
             float val;
 
-            fscanf(fd, "%f\r\n", &val);
+            fscanf(fd, "%f\n", &val);
             this->bed_level_data.pData[pos] = val;
         }
 
