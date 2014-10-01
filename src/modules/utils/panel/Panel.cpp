@@ -693,13 +693,14 @@ bool Panel::mount_external_sd(bool on)
 
 void Panel::on_second_tick(void *arg)
 {
-    if(!this->external_sd_enable) return;
+    if(!this->external_sd_enable || this->start_up) return;
 
     // sd insert detect, mount sdcard if inserted, unmount if removed
     if(this->sdcd_pin.connected()) {
         if(this->extmounter == nullptr && this->sdcd_pin.get()) {
             mount_external_sd(true);
             // go to the play screen and the /ext directory
+            // TODO we don't want to do this if we just booted and card was already in
             THEKERNEL->current_path= "/ext";
             MainMenuScreen *mms= static_cast<MainMenuScreen*>(this->top_screen);
             THEPANEL->enter_screen(mms->file_screen);
