@@ -307,17 +307,19 @@ void Extruder::on_gcode_received(void *argument)
         }else if( this->enabled && (gcode->g == 10 || gcode->g == 11) ) { // firmware retract command
             gcode->mark_as_taken();
             // check we are in the correct state of retract or unretract
-            if(gcode->g == 10 && !retracted)
-                retracted= true;
-            else if(gcode->g == 11 && retracted)
-                retracted= false;
-            else
+            if(gcode->g == 10 && !retracted) {
+                this->retracted= true;
+                this->cancel_zlift_restore= false;
+            } else if(gcode->g == 11 && retracted){
+                this->retracted= false;
+            } else
                 return; // ignore duplicates
 
             // now we do a special hack to add zlift if needed, this should go in Robot but if it did the zlift would be executed before retract which is bad
             // this way zlift will happen after retract, (or before for unretract) NOTE we call the robot->on_gcode_receive directly to avoid recursion
-            if(retract_zlift_length > 0 && gcode->g == 11) {
+            if(retract_zlift_length > 0 && gcode->g == 11 && !this->cancel_zlift_restore) {
                 // reverse zlift happens before unretract
+                // NOTE we do not do this if cancel_zlift_restore is set to true, which happens if there is an absolute Z move inbetween G10 and G11
                 char buf[32];
                 int n= snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", -retract_zlift_length, retract_zlift_feedrate);
                 string cmd(buf, n);
@@ -342,6 +344,10 @@ void Extruder::on_gcode_received(void *argument)
                 THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
                 THEKERNEL->robot->absolute_mode= oldmode; // restore mode
             }
+
+        }else if( this->enabled && this->retracted && (gcode->g == 0 || gcode->g == 1) && gcode->has_letter('Z')) {
+            // NOTE we cancel the zlift restore for the following G11 as we have moved to an absolute Z which we need to stay at
+            this->cancel_zlift_restore= true;
         }
     }
 }
