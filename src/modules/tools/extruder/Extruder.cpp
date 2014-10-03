@@ -317,8 +317,6 @@ void Extruder::on_gcode_received(void *argument)
 
             // now we do a special hack to add zlift if needed, this should go in Robot but if it did the zlift would be executed before retract which is bad
             // this way zlift will happen after retract, (or before for unretract) NOTE we call the robot->on_gcode_receive directly to avoid recursion
-            // FIXME this will break if an G0/1 Znnn happens inbetween G10 and G11, ie when retract on layer change is used.
-            // basically it would start at Z0.2, zlift to Z0.5, then G0 Z0.4 is done then G11 would zlift back to Z0.1 as it does a relative -0.3
             if(retract_zlift_length > 0 && gcode->g == 11 && !this->cancel_zlift_restore) {
                 // reverse zlift happens before unretract
                 // NOTE we do not do this if cancel_zlift_restore is set to true, which happens if there is an absolute Z move inbetween G10 and G11
