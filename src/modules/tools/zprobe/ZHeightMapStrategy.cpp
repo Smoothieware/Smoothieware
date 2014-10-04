@@ -19,10 +19,19 @@
     leveling-strategy.ZHeightMap-leveling.bedx           200
     leveling-strategy.ZHeightMap-leveling.bedy           200
 
+    The probe offset should be defined, default to zero offset
+
+    leveling-strategy.zheightmap-leveling.probe_offsets  0,0,16.3
+
+    slow feedrate can be defined for probe speed
+
+    leveling-strategy.zheightmap-leveling.slow_feedrate  100
+
+   
     Usage
     -----
-    //TODO: G32 probes the twenty-five probe points and defines the bed ZHeightMap, this will remain in effect until reset or M370
-    //TODO: G31 reports the status
+    G32 probes the twenty-five probe points and defines the bed ZHeightMap, this will remain in effect until reset or M370
+    G31 reports the status
 
     M370 clears the ZHeightMap and the bed leveling is disabled until G32 is run again
     M371 moves the head to the next calibration postion without saving
