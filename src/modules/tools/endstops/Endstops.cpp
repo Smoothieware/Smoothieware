@@ -195,8 +195,8 @@ void Endstops::on_config_reload(void *argument)
 
     this->is_corexy                 =  THEKERNEL->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
     this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
-    this->is_scara                  =  THEKERNEL->config->value(scara_homing_checksum)->by_default(false)->as_bool();  
-   
+    this->is_scara                  =  THEKERNEL->config->value(scara_homing_checksum)->by_default(false)->as_bool();
+
     // see if an order has been specified, must be three characters, XYZ or YXZ etc
     string order= THEKERNEL->config->value(homing_order_checksum)->by_default("")->as_string();
     this->homing_order= 0;
@@ -631,21 +631,23 @@ void Endstops::on_gcode_received(void *argument)
             break;
 
             case 206: // M206 - set homing offset
-                if (gcode->has_letter('P')){
+                if (gcode->has_letter('X')) home_offset[0] = gcode->get_value('X');
+                if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
+                if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
+                gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+                gcode->mark_as_taken();
+                break;
+
+            case 306: // Similar to M206 but sets Homing offsets based on current position, Would be M207 but that is taken
+                {
                     float cartesian[3];
-
                     THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
-
                     if (gcode->has_letter('X')) home_offset[0] -= cartesian[X_AXIS];
                     if (gcode->has_letter('Y')) home_offset[1] -= cartesian[Y_AXIS];
                     if (gcode->has_letter('Z')) home_offset[2] -= cartesian[Z_AXIS];
-                } else {
-                    if (gcode->has_letter('X')) home_offset[0] = gcode->get_value('X');
-                    if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
-                    if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
+                    gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+                    gcode->mark_as_taken();
                 }
-                gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
-                gcode->mark_as_taken();
                 break;
 
             case 500: // save settings
