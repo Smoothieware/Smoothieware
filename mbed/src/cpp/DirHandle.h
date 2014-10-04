@@ -28,6 +28,7 @@ typedef int mode_t;
 
 struct dirent {
     char d_name[NAME_MAX+1];
+    unsigned int d_fsize;
     bool d_isdir;
 };
 
