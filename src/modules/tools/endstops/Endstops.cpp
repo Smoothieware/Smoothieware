@@ -40,6 +40,7 @@
 #define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
 #define corexy_homing_checksum                  CHECKSUM("corexy_homing")
 #define delta_homing_checksum                   CHECKSUM("delta_homing")
+#define scara_homing_checksum                   CHECKSUM("scara_homing")
 
 #define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
 #define beta_min_endstop_checksum        CHECKSUM("beta_min_endstop")
@@ -194,7 +195,8 @@ void Endstops::on_config_reload(void *argument)
 
     this->is_corexy                 =  THEKERNEL->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
     this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
-
+    this->is_scara                  =  THEKERNEL->config->value(scara_homing_checksum)->by_default(false)->as_bool();  
+   
     // see if an order has been specified, must be three characters, XYZ or YXZ etc
     string order= THEKERNEL->config->value(homing_order_checksum)->by_default("")->as_string();
     this->homing_order= 0;
@@ -380,7 +382,7 @@ void Endstops::do_homing_cartesian(char axes_to_move)
     // Wait for all axes to have homed
     this->wait_for_homed(axes_to_move);
 
-    if (this->is_delta) {
+    if (this->is_delta || this->is_scara) {
         // move for soft trim
         this->status = MOVING_BACK;
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
@@ -565,8 +567,8 @@ void Endstops::on_gcode_received(void *argument)
 
             // Do we move select axes or all of them
             char axes_to_move = 0;
-            // only enable homing if the endstop is defined, deltas always home all axis
-            bool home_all = this->is_delta || !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
+            // only enable homing if the endstop is defined, deltas, scaras always home all axis
+            bool home_all = this->is_delta || this->is_scara || !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
 
             for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
                 if ( (home_all || gcode->has_letter(c+'X')) && this->pins[c + (this->home_direction[c] ? 0 : 3)].connected() ) {
@@ -659,7 +661,7 @@ void Endstops::on_gcode_received(void *argument)
 
 
             case 666:
-                if(this->is_delta) { // M666 - set trim for each axis in mm, NB negative mm trim is down
+                if(this->is_delta || this->is_scara) { // M666 - set trim for each axis in mm, NB negative mm trim is down
                     if (gcode->has_letter('X')) trim_mm[0] = gcode->get_value('X');
                     if (gcode->has_letter('Y')) trim_mm[1] = gcode->get_value('Y');
                     if (gcode->has_letter('Z')) trim_mm[2] = gcode->get_value('Z');
