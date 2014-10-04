@@ -215,17 +215,38 @@ void SimpleShell::on_console_line_received( void *argument )
 // Convert the first parameter into an absolute path, then list the files in that path
 void SimpleShell::ls_command( string parameters, StreamOutput *stream )
 {
-    string folder = absolute_from_relative( parameters );
+    string path, opts;
+    while(!parameters.empty()) {
+        string s= shift_parameter( parameters );
+        if(s.front() == '-') {
+            opts.append(s);
+        } else {
+            path= s;
+            if(!parameters.empty()){
+                path.append(" ");
+                path.append(parameters);
+            }
+            break;
+        }
+    }
+    if(path.empty()) path= "/";
+
     DIR *d;
     struct dirent *p;
-    d = opendir(folder.c_str());
+    d = opendir(path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            stream->printf("%s%c\r\n", lc(string(p->d_name)).c_str(), p->d_isdir?'/':' ');
+            stream->printf("%s", lc(string(p->d_name)).c_str());
+            if(p->d_isdir){
+                stream->printf("/");
+            }else if(opts.find("-s", 0, 2) != string::npos) {
+                stream->printf(" %d", p->d_fsize);
+            }
+            stream->printf("\r\n");
         }
         closedir(d);
     } else {
-        stream->printf("Could not open directory %s \r\n", folder.c_str());
+        stream->printf("Could not open directory %s\r\n", path.c_str());
     }
 }
 
@@ -511,7 +532,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("Commands:\r\n");
     stream->printf("version\r\n");
     stream->printf("mem [-v]\r\n");
-    stream->printf("ls [folder]\r\n");
+    stream->printf("ls [-s] [folder]\r\n");
     stream->printf("cd folder\r\n");
     stream->printf("pwd\r\n");
     stream->printf("cat file [limit]\r\n");

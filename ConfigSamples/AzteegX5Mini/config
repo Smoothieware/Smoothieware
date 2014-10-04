@@ -10,7 +10,7 @@ beta_steps_per_mm                            80               # Steps per mm for
 gamma_steps_per_mm                           1637.7953        # Steps per mm for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
-planner_queue_size                           32               # Size of the planning queue, must be a power of 2. 128 seems to be the maximum.
+planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOUR ARE DOING
 acceleration                                 3000             # Acceleration in mm/second/second.
 #z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 disables it, disabled by default. DO NOT SET ON A DELTA
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
@@ -68,7 +68,9 @@ laser_module_enable                          false            # Whether to activ
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all. All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.24             # Pin for the thermistor to read
 temperature_control.hotend.heater_pin        2.5              # Pin that controls the heater
-temperature_control.hotend.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64 for a list of valid thermistor names
+temperature_control.hotend.thermistor        EPCOS100K        # see http://smoothieware.org/temperaturecontrol#toc5
+#temperature_control.hotend.beta             4066             # or set the beta value
+
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
@@ -80,7 +82,9 @@ temperature_control.hotend.d_factor          24               #
 temperature_control.bed.enable               false            #
 temperature_control.bed.thermistor_pin       0.23             #
 temperature_control.bed.heater_pin           2.7              #
-temperature_control.bed.thermistor           Honeywell100K    # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64 for a list of valid thermistor names
+temperature_control.bed.thermistor           Honeywell100K    # see http://smoothieware.org/temperaturecontrol#toc5
+#temperature_control.bed.beta                4066             # or set the beta value
+
 temperature_control.bed.set_m_code           140              #
 temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #
