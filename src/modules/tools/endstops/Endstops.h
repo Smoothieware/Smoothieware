@@ -53,6 +53,7 @@ class Endstops : public Module{
         struct {
             bool is_corexy:1;
             bool is_delta:1;
+            bool is_scara:1;
             bool move_to_origin_after_home:1;
         };
 };
