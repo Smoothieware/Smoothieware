@@ -120,8 +120,8 @@ temperature_control.hotend.enable            true             # Whether to activ
                                                               # All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.23             # Pin for the thermistor to read
 temperature_control.hotend.heater_pin        2.7              # Pin that controls the heater, set to nc if a readonly thermistor is being defined
-temperature_control.hotend.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64
-                                                              # for a list of valid thermistor names
+temperature_control.hotend.thermistor        EPCOS100K        # see http://smoothieware.org/temperaturecontrol#toc5
+#temperature_control.hotend.beta             4066             # or set the beta value
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
@@ -137,9 +137,9 @@ temperature_control.hotend.designator        T                #
                                                               # All configuration is ignored if false.
 
 #temperature_control.hotend2.thermistor_pin    0.25             # Pin for the thermistor to read
-#temperature_control.hotend2.heater_pin        1.23              # Pin that controls the heater
-#temperature_control.hotend2.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64
-                                                              # for a list of valid thermistor names
+#temperature_control.hotend2.heater_pin        1.23             # Pin that controls the heater
+#temperature_control.hotend2.thermistor        EPCOS100K        # see http://smoothieware.org/temperaturecontrol#toc5
+##temperature_control.hotend2.beta             4066             # or set the beta value
 #temperature_control.hotend2.set_m_code        884              #
 #temperature_control.hotend2.set_and_wait_m_code 889            #
 #temperature_control.hotend2.designator        T1               #
@@ -153,8 +153,9 @@ temperature_control.hotend.designator        T                #
 temperature_control.bed.enable               true             #
 temperature_control.bed.thermistor_pin       0.24             #
 temperature_control.bed.heater_pin           2.5              #
-temperature_control.bed.thermistor           Honeywell100K    # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64
-                                                              # for a list of valid thermistor names
+temperature_control.bed.thermistor           Honeywell100K    # see http://smoothieware.org/temperaturecontrol#toc5
+#temperature_control.bed.beta                3974             # or set the beta value
+
 temperature_control.bed.set_m_code           140              #
 temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #

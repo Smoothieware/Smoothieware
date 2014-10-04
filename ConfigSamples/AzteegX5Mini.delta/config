@@ -76,7 +76,9 @@ laser_module_enable                          false            # Whether to activ
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all. All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.24             # Pin for the thermistor to read
 temperature_control.hotend.heater_pin        2.5              # Pin that controls the heater
-temperature_control.hotend.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64 for a list of valid thermistor names
+temperature_control.hotend.thermistor        EPCOS100K        # see http://smoothieware.org/temperaturecontrol#toc5
+#temperature_control.hotend.beta             4066             # or set the beta value
+
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
@@ -86,12 +88,14 @@ temperature_control.hotend.designator        T                #
 # temperature_control.hotend.i_factor          5.00             #
 # temperature_control.hotend.d_factor          79.91            #
 
-# For EPCOS B57540G0104F000 Digikey 495-2125-ND change as needed
+# For bed
 temperature_control.bed.enable               false            #
 temperature_control.bed.thermistor_pin       0.23             #
 temperature_control.bed.heater_pin           2.7              #
 temperature_control.bed.beta                 4036             #
-temperature_control.bed.thermistor           EPCOSB57540G0104F000     # B57891S0104F008 Digikey 495-2164-ND
+temperature_control.bed.thermistor           EPCOS100K        # http://smoothieware.org/temperaturecontrol#toc5
+#temperature_control.bed.beta                4066             # or set the beta value
+
 temperature_control.bed.set_m_code           140              #
 temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #
