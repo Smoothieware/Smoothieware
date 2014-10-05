@@ -240,7 +240,9 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
             return true;
 
             case 501: // Load grid values
-                this->loadGrid();
+                if(this->loadGrid()){
+                    this->setAdjustFunction(true); // Enable leveling code
+                }
             return true;
 
             case 500: // M500 saves some volatile settings to config override file
