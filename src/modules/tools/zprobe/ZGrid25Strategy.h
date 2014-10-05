@@ -1,5 +1,5 @@
-#ifndef _ZHEIGHTMAPSTRATEGY
-#define _ZHEIGHTMAPSTRATEGY
+#ifndef _ZGrid25STRATEGY
+#define _ZGrid25STRATEGY
 
 #include "LevelingStrategy.h"
 
@@ -7,28 +7,19 @@
 #include <stdint.h>
 #include <tuple>
 
-#define zheightmap_leveling_checksum CHECKSUM("zheightmap-leveling")
+#define ZGrid25_leveling_checksum CHECKSUM("ZGrid25-leveling")
 
 class StreamOutput;
 class Plane3D;
 
-typedef struct
-{
-    uint16_t numRows;
-    uint16_t numCols;
-    float *pData;
-} arm_bilinear_interp_instance;
-
-class ZHeightMapStrategy : public LevelingStrategy
+class ZGrid25Strategy : public LevelingStrategy
 {
 public:
-    ZHeightMapStrategy(ZProbe *zprobe);
-    ~ZHeightMapStrategy();
+    ZGrid25Strategy(ZProbe *zprobe);
+    ~ZGrid25Strategy();
     bool handleGcode(Gcode* gcode);
     bool handleConfig();
     float getZOffset(float x, float y);
-
-    arm_bilinear_interp_instance bed_level_data;
 
 private:
     void homexyz();
@@ -36,27 +27,25 @@ private:
     void move(float *position, float feed);
     void next_cal(void);
 
-    float arm_bilinear_interp(float X, float Y);
-
     void setAdjustFunction(bool);
     bool doProbing(StreamOutput *stream);   
 
     bool loadGrid();
     bool saveGrid();
 
-    StreamOutput *ZMap_file;
-    //FILE *ZMap_file;
-    
     std::tuple<float, float, float> probe_offsets;
     std::tuple<float, float, float> parseXYZ(const char *str);
+
+    uint16_t numRows;
+    uint16_t numCols;
+    float *pData;
         
     float slow_rate;
     float bed_x;
     float bed_y;
     float bed_div_x;
     float bed_div_y;
-    float cal[3];            // calibration positions for manual leveling: TODO - remove when auto is functional
-    Plane3D *plane;
+    float cal[3];            // calibration positions for manual leveling
     struct {
         bool home:1;
         bool save:1;
