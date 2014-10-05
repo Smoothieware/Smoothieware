@@ -642,9 +642,9 @@ void Endstops::on_gcode_received(void *argument)
                 {
                     float cartesian[3];
                     THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
-                    if (gcode->has_letter('X')) home_offset[0] -= cartesian[X_AXIS];
-                    if (gcode->has_letter('Y')) home_offset[1] -= cartesian[Y_AXIS];
-                    if (gcode->has_letter('Z')) home_offset[2] -= cartesian[Z_AXIS];
+                    if (gcode->has_letter('X')) home_offset[0] -= (cartesian[X_AXIS] + gcode->get_value('X'));
+                    if (gcode->has_letter('Y')) home_offset[1] -= (cartesian[Y_AXIS] + gcode->get_value('Y'));
+                    if (gcode->has_letter('Z')) home_offset[2] -= (cartesian[Z_AXIS] + gcode->get_value('Z'));
                     gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
                     gcode->mark_as_taken();
                 }
