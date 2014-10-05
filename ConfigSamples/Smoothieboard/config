@@ -237,6 +237,7 @@ zprobe.probe_pin                             1.28!^          # pin probe is atta
 zprobe.slow_feedrate                         5               # mm/sec probe feed rate
 #zprobe.debounce_count                       100             # set if noisy
 zprobe.fast_feedrate                         100             # move feedrate mm/sec
+zprobe.probe_radius                          100             # where to probe
 zprobe.probe_height                          5               # how much above bed to start probe
 #gamma_min_endstop                           nc              # normally 1.28. Change to nc to prevent conflict,
 
