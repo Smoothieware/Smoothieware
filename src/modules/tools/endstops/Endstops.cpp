@@ -642,10 +642,21 @@ void Endstops::on_gcode_received(void *argument)
                 {
                     float cartesian[3];
                     THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
-                    if (gcode->has_letter('X')) home_offset[0] -= (cartesian[X_AXIS] + gcode->get_value('X'));
-                    if (gcode->has_letter('Y')) home_offset[1] -= (cartesian[Y_AXIS] + gcode->get_value('Y'));
-                    if (gcode->has_letter('Z')) home_offset[2] -= (cartesian[Z_AXIS] + gcode->get_value('Z'));
+                    if (gcode->has_letter('X')){
+                        home_offset[0] -= (cartesian[X_AXIS] - gcode->get_value('X'));
+                        cartesian[X_AXIS] = gcode->get_value('X');     // set cartesian value to the specified offset to prevent accumilation
+                    }
+                    if (gcode->has_letter('Y')){
+                        home_offset[1] -= (cartesian[Y_AXIS] - gcode->get_value('Y'));
+                        cartesian[Y_AXIS] = gcode->get_value('Y');
+                    }
+                    if (gcode->has_letter('Z')){
+                        home_offset[2] -= (cartesian[Z_AXIS] - gcode->get_value('Z'));
+                        cartesian[Z_AXIS] = gcode->get_value('Z');
+                    }
+
                     gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+                    THEKERNEL->robot->reset_axis_position(cartesian[0],cartesian[1],cartesian[2]);    // reset the new actual position to robot
                     gcode->mark_as_taken();
                 }
                 break;
@@ -653,7 +664,7 @@ void Endstops::on_gcode_received(void *argument)
             case 500: // save settings
             case 503: // print settings
                 gcode->stream->printf(";Home offset (mm):\nM206 X%1.2f Y%1.2f Z%1.2f\n", home_offset[0], home_offset[1], home_offset[2]);
-                if (is_delta) {
+                if (this->is_delta || this->is_scara) {
                     gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
                     gcode->stream->printf(";Max Z\nM665 Z%1.3f\n", this->homing_position[2]);
                 }
