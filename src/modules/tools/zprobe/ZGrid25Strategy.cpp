@@ -132,20 +132,17 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                     }
                     gcode->stream->printf("\r\n"); 
                 }
-//            if(this->plane == nullptr) {
-//                 gcode->stream->printf("Bed leveling plane is not set\n");
-//            }else{
-//                 gcode->stream->printf("Bed leveling plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
-//            }
-///            gcode->stream->printf("Probe is %s\n", zprobe->getProbeStatus() ? "Triggered" : "Not triggered");
             return true;
 
         } else if( gcode->g == 32 ) { // three point probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
+
+            this->setAdjustFunction(false); // Disable leveling code
             if(!doProbing(gcode->stream)) {
                 gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
             } else {
+                this->setAdjustFunction(true); // Enable leveling code
                 gcode->stream->printf("Probe completed, bed grid defined\n");
             }
             return true;
@@ -157,6 +154,8 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
             // manual bed ZGrid25 calbration: M370 - M375
             // M370: Clear current ZGrid25 for calibration, and move to first position
             case 370: {
+                this->setAdjustFunction(false); // Disable leveling code
+
                 this->homexyz();
                 for (int i=0; i<25; i++){
                     this->pData[i] = 0.0F;        // Clear the ZGrid25
@@ -197,6 +196,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
             // M373: finalize calibration  
             case 373: {
                  this->in_cal = false;
+                 this->setAdjustFunction(true); // Enable leveling code   
 
             }
             return true;
