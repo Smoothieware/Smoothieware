@@ -60,7 +60,8 @@ second_usb_serial_enable                     false            # This enables a s
                                                               # and a terminal connected)
 #leds_disable                                true             # disable using leds after config loaded
 #play_led_disable                            true             # disable the play led
-#msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
+#msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true (needs special binary)
+#dfu_enable                                  false            # for linux developers, set to true to enable DFU
 
 # Extruder module configuration
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
