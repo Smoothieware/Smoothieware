@@ -31,12 +31,15 @@ class Laser : public Module{
     private:
         void set_proportional_power();
 
-        mbed::PwmOut*    laser_pin;    // PWM output to regulate the laser power
-        mbed::AnalogOut* dac_pin;      // DAC output to regulate the laser power
+        union laser_pin_t {
+            mbed::PwmOut*    pwm;    // PWM output to regulate the laser power
+            mbed::AnalogOut* dac;      // DAC output to regulate the laser power
+        } laser_pin;
 
         struct {
             bool laser_on:1;     // Laser status
             bool laser_inverting:1; // stores whether the pwm period should be inverted
+            bool laser_control_type_pwm:1; // true for pwm, false for dac output
         };
         float            laser_max_power; // initial setpoint used if one is not specified in G1 Snnn
         float            laser_tickle_power; // value used to tickle the laser on moves
