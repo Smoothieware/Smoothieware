@@ -146,7 +146,6 @@ void Laser::on_gcode_execute(void* argument){
             else if( dac_pin != NULL){
                 this->dac_pin->write(this->laser_inverting ? 1.0f - this->laser_tickle_power : this->laser_tickle_power);
             }
-            this->laser_pin->write(this->laser_inverting ? 1 - this->laser_tickle_power : this->laser_tickle_power);
             this->laser_on =  false;
         }else if( code >= 1 && code <= 3 ){ // G1, G2, G3
             this->laser_on =  true;
