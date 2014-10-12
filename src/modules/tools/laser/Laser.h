@@ -12,6 +12,7 @@
 
 namespace mbed {
     class PwmOut;
+    class AnalogOut;
 }
 
 class Laser : public Module{
@@ -23,17 +24,21 @@ class Laser : public Module{
         void on_block_begin(void* argument);
         void on_play(void* argument);
         void on_pause(void* argument);
+        void on_halt(void* argument);
         void on_gcode_execute(void* argument);
         void on_speed_change(void* argument);
 
     private:
         void set_proportional_power();
-        mbed::PwmOut *laser_pin;    // PWM output to regulate the laser power
+
+        mbed::PwmOut*    laser_pin;    // PWM output to regulate the laser power
+        mbed::AnalogOut* dac_pin;      // DAC output to regulate the laser power
+
         struct {
             bool laser_on:1;     // Laser status
             bool laser_inverting:1; // stores whether the pwm period should be inverted
         };
-        float            laser_max_power; // maximum allowed laser power to be output on the pwm pin
+        float            laser_max_power; // initial setpoint used if one is not specified in G1 Snnn
         float            laser_tickle_power; // value used to tickle the laser on moves
 };
 
