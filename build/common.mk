@@ -85,6 +85,10 @@ else
 CSRCS = $(CSRCS1)
 endif
 
+ifeq "$(DISABLEMSD)" "1"
+DEFINES += -DDISABLEMSD
+endif
+
 ASRCS =  $(wildcard $(SRC)/*.S $(SRC)/*/*.S $(SRC)/*/*/*.S $(SRC)/*/*/*/*.S $(SRC)/*/*/*/*/*.S)
 ifneq "$(OS)" "Windows_NT"
 ASRCS +=  $(wildcard $(SRC)/*.s $(SRC)/*/*.s $(SRC)/*/*/*.s $(SRC)/*/*/*/*.s $(SRC)/*/*/*/*/*.s)

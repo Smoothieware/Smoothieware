@@ -229,7 +229,8 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
             break;
         }
     }
-    if(path.empty()) path= "/";
+
+    path= absolute_from_relative(path);
 
     DIR *d;
     struct dirent *p;
