@@ -69,7 +69,8 @@ Gcode &Gcode::operator= (const Gcode &to_copy)
 // Whether or not a Gcode has a letter
 bool Gcode::has_letter( char letter ) const
 {
-    for (size_t i = 0; i < strlen(this->command); ++i) {
+    size_t len = strlen(this->command);
+    for (size_t i = 0; i < len; ++i) {
         if( command[i] == letter ) {
             return true;
         }
@@ -132,7 +133,8 @@ uint32_t Gcode::get_uint( char letter, char **ptr ) const
 int Gcode::get_num_args() const
 {
     int count = 0;
-    for(size_t i = 1; i < strlen(command); i++) {
+    size_t len = strlen(command);
+    for(size_t i = 1; i < len; i++) {
         if( this->command[i] >= 'A' && this->command[i] <= 'Z' ) {
             count++;
         }
