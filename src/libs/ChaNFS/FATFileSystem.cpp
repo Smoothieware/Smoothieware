@@ -107,6 +107,15 @@ int FATFileSystem::remove(const char *filename) {
     return 0;
 }
 
+int FATFileSystem::rename(const char *filename1, const char *filename2) {
+    FRESULT res = f_rename(filename1, filename2);
+    if(res) {
+        FFSDEBUG("f_rename() failed (%d, %s)\n", res, FR_ERRORS[res]);
+        return -1;
+    }
+    return 0;
+}
+
 int FATFileSystem::format() {
     FFSDEBUG("format()\n");
     FRESULT res = f_mkfs(_fsid, 0, 512); // Logical drive number, Partitioning rule, Allocation unit size (bytes per cluster)
