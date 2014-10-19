@@ -305,7 +305,11 @@ extern "C" int remove(const char *path) {
 }
 
 extern "C" int rename(const char *oldname, const char *newname) {
-    return -1;
+    FilePath fp(oldname);
+    FileSystemLike *fs = fp.fileSystem();
+    if (fs == NULL) return -1;
+
+    return fs->rename(fp.fileName(), newname);
 }
 
 extern "C" char *tmpnam(char *s) {

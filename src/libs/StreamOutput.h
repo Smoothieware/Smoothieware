@@ -27,6 +27,7 @@ class StreamOutput {
         virtual int _putc(int c) { return 1; }
         virtual int _getc(void) { return 0; }
         virtual int puts(const char* str) = 0;
+        virtual bool ready() { return true; };
 
         static NullStreamOutput NullStream;
 };
