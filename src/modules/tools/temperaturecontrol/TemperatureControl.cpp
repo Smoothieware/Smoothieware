@@ -43,7 +43,7 @@
 #define bang_bang_checksum                 CHECKSUM("bang_bang")
 #define hysteresis_checksum                CHECKSUM("hysteresis")
 #define heater_pin_checksum                CHECKSUM("heater_pin")
-#define max_temp                           CHECKSUM("max_temp")
+#define max_temp_checksum                  CHECKSUM("max_temp")
 
 #define get_m_code_checksum                CHECKSUM("get_m_code")
 #define set_m_code_checksum                CHECKSUM("set_m_code")
