@@ -251,6 +251,11 @@ uint8_t USBSerial::available()
     return rxbuf.available();
 }
 
+bool USBSerial::ready()
+{
+    return rxbuf.available();
+}
+
 void USBSerial::on_module_loaded()
 {
     this->register_for_event(ON_MAIN_LOOP);
