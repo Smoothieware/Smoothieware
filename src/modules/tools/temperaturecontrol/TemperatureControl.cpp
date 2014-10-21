@@ -43,6 +43,7 @@
 #define bang_bang_checksum                 CHECKSUM("bang_bang")
 #define hysteresis_checksum                CHECKSUM("hysteresis")
 #define heater_pin_checksum                CHECKSUM("heater_pin")
+#define max_temp_checksum                  CHECKSUM("max_temp")
 
 #define get_m_code_checksum                CHECKSUM("get_m_code")
 #define set_m_code_checksum                CHECKSUM("set_m_code")
@@ -123,6 +124,9 @@ void TemperatureControl::load_config()
     this->readings_per_second = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
+
+    // Max temperature we are not allowed to get over
+    this->max_temp = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_temp_checksum)->by_default(1000)->as_number();
 
     // Heater pin
     this->heater_pin.from_string( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, heater_pin_checksum)->by_default("nc")->as_string());
@@ -318,6 +322,11 @@ void TemperatureControl::on_set_public_data(void *argument)
 
 void TemperatureControl::set_desired_temperature(float desired_temperature)
 {
+    // Never go over the configured max temperature
+    if( desired_temperature > this->max_temp ){
+        desired_temperature = this->max_temp;
+    }
+
     if (desired_temperature == 1.0)
         desired_temperature = preset1;
     else if (desired_temperature == 2.0)
