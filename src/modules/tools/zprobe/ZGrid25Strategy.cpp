@@ -307,18 +307,33 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
     // home first
     this->homexyz();
 
-    this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + 5.0f;
-
     for (int i=0; i<25; i++){
        this->pData[i] = 0.0F;        // Clear the ZGrid25
     }
 
-    this->cal[X_AXIS] = 0.0f;                       // Clear calibration position
+    stream->printf("*** Ensure probe is attached and press probe when done ***\n");
+
+    this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
+    this->cal[Y_AXIS] = this->bed_y/2.0f;
+    this->cal[Z_AXIS] = 200.0f;                     // Position head for probe attachment
+    this->move(this->cal, slow_rate);               // Move to probe attachment point
+
+    stream->printf("*** Ensure probe is attached and press probe when done ***\n");
+
+ //   int secwait = 0;
+    while(!zprobe->getProbeStatus());// || secwait < 10 )
+    //{
+   //     sleep(1);
+   //     secwait++;
+  //  }
+    this->in_cal = true;                         // In calbration mode
+    
+    this->cal[X_AXIS] = 0.0f;                    // Clear calibration position
     this->cal[Y_AXIS] = 0.0f;
-    this->in_cal = true;                            // In calbration mode
-                
-    this->move(this->cal, slow_rate);               // Move to probe start point
-    //this->next_cal();                               // Set up next cal point
+    this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + 5.0f;
+         
+    this->move(this->cal, slow_rate);            // Move to probe start point
+    //this->next_cal();                          // Set up next cal point
 
     for (int probes = 0; probes <25; probes++){
         int pindex = 0;
@@ -329,15 +344,20 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
         pindex = (int) ((this->cal[X_AXIS]/this->bed_div_x*numRows)+(this->cal[Y_AXIS]/this->bed_div_y));
 
         if (probes == 24){
-            this->homexyz();
+            this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
+            this->cal[Y_AXIS] = this->bed_y/2.0f;
+            this->cal[Z_AXIS] = 200.0f;                     // Position head for probe removal
         } else {
             this->next_cal();                        // to not cause damage to machine due to Z-offset
-            this->move(this->cal, slow_rate);   // move to the next position
         }
-        this->pData[pindex]           // set offset
-          = z ;                                      // save the offset
+        this->move(this->cal, slow_rate);        // move to the next position
+        
+        this->pData[pindex]                      // set offset
+          = z ;                                  // save the offset
     }
-                     
+    
+    stream->printf("\nDone!  Please remove probe\n");
+                 
     this->in_cal = false;
     return true;
 }
