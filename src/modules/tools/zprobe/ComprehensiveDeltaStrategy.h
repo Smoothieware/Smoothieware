@@ -50,6 +50,8 @@ private:
     float cur_depth_map[12];		// Current collected depth for all test points
     float last_depth_map[12];		// Last collected depth for all test points
 
+    bool heuristic_calibration();
+    bool probe_triforce(float (&depth)[6], float &score_avg, float &score_ISM, float &PHTT);
     bool measure_probe_repeatability(Gcode *gcode);
     bool depth_map_print_surface(bool display_results);
     bool depth_map_segmented_line(float first[2], float second[2], unsigned char segments);

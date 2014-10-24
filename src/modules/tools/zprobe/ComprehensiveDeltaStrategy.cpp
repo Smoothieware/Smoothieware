@@ -110,26 +110,13 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
         }
 
         if(gcode->g == 31) { // Depth-map the bed and display the results
+
             _printf("Depth-mapping the bed. Please stand by...\n");
             //depth_map_print_surface(true);	// Setting "true" makes it nicely print the results over serial
-            depth_map_segmented_line(test_point[TP_Y], test_point[TP_OPP_Y], 10);
-/*
-float point[2] = {10, 0};
-float ref[2] = {0, 0};
-_printf("Reference: <%1.3f, %1.3f>\n", ref[X], ref[Y]);
-_printf("....Point: <%1.3f, %1.3f>\n", point[X], point[Y]);
-_printf("Rotating Point 90 degrees around Reference...\n");
-rotate2D(point, ref, 90);
-_printf("Point, after rotation: <%1.3f, %1.3f>\n", point[X], point[Y]);
-_printf("Rotating Point -180 degrees around Reference...\n");
-rotate2D(point, ref, -180);
-_printf("    Point: <%1.3f, %1.3f>\n", point[X], point[Y]);
-*/
-
-
-
-
+            //depth_map_segmented_line(test_point[TP_Y], test_point[TP_OPP_Y], 10);
+            heuristic_calibration();
             return true;
+
         }
 
         if(gcode->g == 32) { // Auto calibration for delta, Z bed mapping for cartesian
@@ -359,6 +346,115 @@ void ComprehensiveDeltaStrategy::midpoint(float first[2], float second[2], float
     dest[1] = (first[1] + second[1]) / 2;
 
 }
+
+
+
+
+
+
+
+
+
+bool ComprehensiveDeltaStrategy::heuristic_calibration() {
+
+    float depth[6];
+    float score_avg;
+    float score_ISM;
+    float PHTT;
+    
+    probe_triforce(depth, score_avg, score_ISM, PHTT);
+    
+    return true;
+
+}
+
+
+
+
+/* Probe the depth of points near each tower, and at the halfway points between each tower:
+
+        1
+        /\
+     2 /__\ 6
+      /\  /\
+     /__\/__\
+    3   4    5
+
+   This pattern defines the points of a triforce, hence the name.
+*/
+bool ComprehensiveDeltaStrategy::probe_triforce(float (&depth)[6], float &score_avg, float &score_ISM, float &PHTT) {
+
+    // Init test points
+    int triforce[6] = { TP_Z, TP_MID_ZX, TP_X, TP_MID_XY, TP_Y, TP_MID_YZ };
+
+    int s;				// # of steps (passed by reference to probe_delta_tower, which sets it)
+    int i;
+    score_avg = 0;			// Score starts at 0 (perfect) - the further away it gets, the worse off we are!
+    score_ISM = 0;
+
+    // Need to get bed height in current tower angle configuration (the following method automatically refreshes mm_PHTT)
+    // We're passing the current value of PHTT back by reference in case the caller cares, e.g. if they want a baseline.
+    find_bed_center_height();
+    PHTT = mm_probe_height_to_trigger;
+    zprobe->home();
+
+    // This is for storing the probe results in terms of score (deviation from center height).
+    // This is different from the "scores" we return, which is the average and intersextile mean of the contents of scores[].
+    float score[6];
+
+    for(i=0; i<6; i++) {
+        // Probe triforce
+        _printf("[PT] Probing point %d at <%1.3f, %1.3f>.\n", i, test_point[triforce[i]][X], test_point[triforce[i]][Y]);
+
+        // Move into position and probe the depth
+        // depth[i] is probed and calculated in exactly the same way that mm_probe_height_to_trigger is
+        // This means that we can compare probe results from this and mm_PHTT on equal terms
+        zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight(), zprobe->getFastFeedrate());
+        if(!do_probe_at(s, test_point[triforce[i]][X], test_point[triforce[i]][Y])) {
+            return false;
+        }
+        depth[i] = zprobe->zsteps_to_mm(s);
+        score[i] = fabs(depth[i] - mm_probe_height_to_trigger);
+    }
+    
+    // Do some statistics
+    auto mm = std::minmax({score});
+    for(i=0; i<6; i++) {
+    
+        // Average
+        score_avg += score[i];
+
+        // Intersextile mean (ignore lowest and highest values, keep the remaining four)
+        // Works similar to an interquartile mean, but more specific to our problem domain (we always have exactly 6 samples)
+        // Context: http://en.wikipedia.org/wiki/Interquartile_mean
+        if(score[i] != *mm.first && score[i] != *mm.second) {
+            score_ISM += score[i];
+        }
+    }
+    score_avg /= 6;
+    score_ISM /= 4;
+
+    _printf("[TQ] Probe height to trigger at bed center (PHTT) - this is the target depth: %1.3f\n", mm_probe_height_to_trigger);
+    _printf("[TQ]        Current depths: {%1.3f, %1.3f, %1.3f, %1.3f, %1.3f, %1.3f}\n", depth[0], depth[1], depth[2], depth[3], depth[4], depth[5]);
+    _printf("[TQ]   Delta(depth - PHTT): {%1.3f, %1.3f, %1.3f, %1.3f, %1.3f, %1.3f}\n", fabs(depth[0] - mm_probe_height_to_trigger), fabs(depth[1] - mm_probe_height_to_trigger), fabs(depth[2] - mm_probe_height_to_trigger), fabs(depth[3] - mm_probe_height_to_trigger), fabs(depth[4] - mm_probe_height_to_trigger), fabs(depth[5] - mm_probe_height_to_trigger));
+    _printf("[TQ]  Score (lower=better): avg=%1.3f, ISM=%1.3f\n", score_avg, score_ISM);
+
+    return true;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*
@@ -889,6 +985,7 @@ bool ComprehensiveDeltaStrategy::set_delta_basic_geometry(float arm_length, floa
     options['L'] = arm_length;
     options['R'] = arm_radius;
     if(THEKERNEL->robot->arm_solution->set_optional(options)) {
+        post_adjust_kinematics();
         return true;
     } else {
         return false;
@@ -911,6 +1008,7 @@ bool ComprehensiveDeltaStrategy::set_tower_radius_offsets(float x, float y, floa
     options['B'] = y;
     options['C'] = z;
     if(THEKERNEL->robot->arm_solution->set_optional(options)) {
+        post_adjust_kinematics();
         return true;
     } else {
         return false;
@@ -934,6 +1032,7 @@ bool ComprehensiveDeltaStrategy::set_tower_angle_offsets(float x, float y, float
     options['E'] = y;
     options['F'] = z;
     if(THEKERNEL->robot->arm_solution->set_optional(options)) {
+        post_adjust_kinematics();
         return true;
     } else {
         return false;
@@ -957,6 +1056,7 @@ bool ComprehensiveDeltaStrategy::set_tower_arm_offsets(float x, float y, float z
     options['H'] = y;
     options['I'] = z;
     if(THEKERNEL->robot->arm_solution->set_optional(options)) {
+        post_adjust_kinematics();
         return true;
     } else {
         return false;
