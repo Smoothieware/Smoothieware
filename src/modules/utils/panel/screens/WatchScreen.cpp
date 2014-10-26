@@ -121,14 +121,21 @@ void WatchScreen::on_refresh()
 
         // for LCDs with leds set them according to heater status
         bool bed_on= false, hotend_on= false, is_hot= false;
+        uint8_t heon=0, hemsk= 0x01; // bit set for which hotend is on bit0: hotend1, bit1: hotend2 etc
         for(auto m : THEPANEL->temperature_modules) {
             // query each heater
             void *p= getTemperatures(m);
             struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
             if(temp != nullptr) {
-                if(temp->designator.front() == 'B' && temp->target_temperature > 0) bed_on= true;   // bed on/off
-                if(temp->designator.front() == 'T' && temp->target_temperature > 0) hotend_on= true;// hotend on/off (anyone)
                 if(temp->current_temperature > 50) is_hot= true; // anything is hot
+                if(temp->designator.front() == 'B' && temp->target_temperature > 0) bed_on= true;   // bed on/off
+                if(temp->designator.front() == 'T') { // a hotend by convention
+                    if(temp->target_temperature > 0){
+                        hotend_on= true;// hotend on/off (anyone)
+                        heon |= hemsk;
+                    }
+                    hemsk <<= 1;
+                }
             }
         }
         THEPANEL->lcd->setLed(LED_BED_ON, bed_on);
@@ -143,11 +150,12 @@ void WatchScreen::on_refresh()
             // for (int i = 0; i < 5; ++i) {
             //     THEPANEL->lcd->bltGlyph(i*24, 38, 23, 19, icons, 15, i*24, 0);
             // }
-            if (hotend_on)
-                THEPANEL->lcd->bltGlyph(8, 38, 20, 19, icons, 15, 0, 0);
+            if(heon&0x01) THEPANEL->lcd->bltGlyph(0, 38, 20, 19, icons, 15, 0, 0);
+            if(heon&0x02) THEPANEL->lcd->bltGlyph(20, 38, 20, 19, icons, 15, 24, 0);
+            if(heon&0x04) THEPANEL->lcd->bltGlyph(40, 38, 20, 19, icons, 15, 48, 0);
 
             if (bed_on)
-                THEPANEL->lcd->bltGlyph(32, 38, 23, 19, icons, 15, 64, 0);
+                THEPANEL->lcd->bltGlyph(60, 38, 23, 19, icons, 15, 64, 0);
 
             if(this->fan_state)
                 THEPANEL->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
