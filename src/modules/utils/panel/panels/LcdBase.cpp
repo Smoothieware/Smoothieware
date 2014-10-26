@@ -13,5 +13,5 @@ int LcdBase::printf(const char* format, ...){
     int n= vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
     this->write(buffer, n);
-    return 0;
+    return n;
 }
