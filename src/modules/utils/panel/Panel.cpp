@@ -631,6 +631,7 @@ void Panel::setup_temperature_screen()
         bool ok = PublicData::get_value( temperature_control_checksum, i, current_temperature_checksum, &returned_data );
         if (!ok) continue;
 
+        this->temperature_modules.push_back(i);
         struct pad_temperature t =  *static_cast<struct pad_temperature *>(returned_data);
 
         // rename if two of the known types

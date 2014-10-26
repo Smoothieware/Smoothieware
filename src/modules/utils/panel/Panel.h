@@ -21,6 +21,7 @@ using std::string;
 
 class LcdBase;
 class PanelScreen;
+class ModifyValuesScreen;
 class SDCard;
 class SDFAT;
 
@@ -86,6 +87,7 @@ class Panel : public Module {
         LcdBase* lcd;
         PanelScreen* custom_screen;
         PanelScreen* temperature_screen;
+        vector<uint16_t> temperature_modules;
 
         // as panelscreen accesses private fields in Panel
         friend class PanelScreen;
