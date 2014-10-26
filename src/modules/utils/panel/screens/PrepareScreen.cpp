@@ -17,7 +17,7 @@
 #include "PublicDataRequest.h"
 #include "PublicData.h"
 #include "TemperatureControlPublicAccess.h"
-
+#include "ModifyValuesScreen.h"
 #include <string>
 using namespace std;
 
