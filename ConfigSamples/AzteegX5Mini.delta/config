@@ -22,18 +22,20 @@ arm_length                                   269.00           # length of the de
 
 
 # If you have a Z probe, you can select a calibration strategy here
-# ---------------------------------------------------------------------
-leveling-strategy.comprehensive-delta.enable true
-comprehensive-delta.probe_offset_x                        0                # distance between the probe and the center of the effector
-comprehensive-delta.probe_offset_y                        0                # these are represented in the ZProbe class as offset_x/y/z
-comprehensive-delta.probe_offset_z                        4.36             # height above print surface at which the probe triggers
-
-
-# Optional Z probe, see http://smoothieware.org/zprobe
 # To calculate offset_x/y/z:
 # - Heat up the hot end with filament loaded - and the print surface, if you have bed heat (this is important!)
 # - Jog the hot end down to the print surface, leaving a little dot of plastic
-# - Deploy the probe, jog it until the probe tip touches the dot, and record the values in offset_x/y/z
+# - Deploy the probe, jog it until the probe tip touches the dot
+# - Jog the probe up a little, remove the dot, jog it down until it triggers, and record the exact values in offset_x/y/z
+# ---------------------------------------------------------------------
+leveling-strategy.comprehensive-delta.enable true
+comprehensive-delta.probe_smoothing                       1                # if your probe has repeatability issues, this will probe multiple times & take the average (default 1)
+comprehensive-delta.probe_offset_x                        0                # distance between the probe and the nozzle
+comprehensive-delta.probe_offset_y                        0                # these are represented in the ZProbe class as offset_x/y/z
+comprehensive-delta.probe_offset_z                        16.38            #
+
+
+# Optional Z probe, see http://smoothieware.org/zprobe
 # ---------------------------------------------------------------------
 probe                                        endstop
 probe_pin                                    1.29             # optional pin for probe
@@ -42,8 +44,8 @@ zprobe.probe_pin                             1.29!^           # pin probe is att
 zprobe.slow_feedrate                         10               # mm/sec probe feed rate
 zprobe.fast_feedrate                         70               # move feedrate
 zprobe.debounce_count                        0                # set if noisy
-zprobe.probe_radius                          100              # how far out from bed center to probe
-zprobe.probe_height                          25               # how much above bed to start probe (give the probe enough height that the tip doesn't drag when moving!)
+zprobe.probe_radius                          120              # how far out from bed center to probe
+zprobe.probe_height                          10               # how high the probe has to be moved above trigger elevation so that it won't drag
 
 
 # Speeds
@@ -56,7 +58,8 @@ mm_per_line_segment                          5                # Lines can be cut
 delta_segments_per_second                    250              # segments per second used for deltas
 
 
-# Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
+# Arm solution configuration : Delta robot. Translates mm positions into stepper positions
+# This is for an old Rostock MAX with 15-teeth pullies. Use a belt/pulley calculator to find the values for your machine
 # ---------------------------------------------------------------------
 alpha_steps_per_mm                           213.3333         # Steps per mm for alpha stepper
 beta_steps_per_mm                            213.3333         # Steps per mm for beta stepper
@@ -140,7 +143,7 @@ z_axis_max_speed                             30000.0          # mm/min
 # Extruder module configuration
 # ---------------------------------------------------------------------
 extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
-extruder_steps_per_mm                        191.472          # Steps per mm for extruder stepper
+extruder_steps_per_mm                        191.472          # Steps per mm for extruder stepper - you should do a filament calibration to get this REALLY correct
 extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
 extruder_acceleration                        2000             # Acceleration in mm/sec^2 only used for retracts
 extruder_max_speed                           1000             # mm/sec NOTE only used for retracts
