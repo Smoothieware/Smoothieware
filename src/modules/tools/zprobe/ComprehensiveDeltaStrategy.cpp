@@ -14,6 +14,7 @@
 #include "BaseSolution.h"
 #include "SerialMessage.h"
 #include "Vector3.h"
+#include "Planner.h"
 
 #include <tuple>
 #include <algorithm>
@@ -22,10 +23,11 @@
 // Using just "radius" sounds like the printer radius, but probing can't always be done that far out.
 #define probe_radius_checksum CHECKSUM("probe_radius")
 
-#define probe_smoothing_checksum CHECKSUM("probe_smoothing")
-#define probe_offset_x_checksum  CHECKSUM("probe_offset_x")
-#define probe_offset_y_checksum  CHECKSUM("probe_offset_y")
-#define probe_offset_z_checksum  CHECKSUM("probe_offset_z")
+#define probe_smoothing_checksum      CHECKSUM("probe_smoothing")
+#define probe_acceleration_checksum   CHECKSUM("probe_acceleration")
+#define probe_offset_x_checksum       CHECKSUM("probe_offset_x")
+#define probe_offset_y_checksum       CHECKSUM("probe_offset_y")
+#define probe_offset_z_checksum       CHECKSUM("probe_offset_z")
 
 #define X 0
 #define Y 1
@@ -50,7 +52,7 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
     // Determine whether this strategy has been selected
     float r = THEKERNEL->config->value(leveling_strategy_checksum, comprehensive_delta_strategy_checksum, probe_radius_checksum)->by_default(-1)->as_number();
     if(r == -1) {
-        // deprecated config syntax
+        // Deprecated config syntax
         r =  THEKERNEL->config->value(zprobe_checksum, probe_radius_checksum)->by_default(100.0F)->as_number();
     }
     this->probe_radius = r;
@@ -60,6 +62,9 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
     if(ps < 1) ps = 1;
     if(ps > 10) ps = 10;
     this->probe_smoothing = ps;
+
+    // Probe acceleration
+    probe_acceleration = THEKERNEL->config->value(comprehensive_delta_strategy_checksum, probe_acceleration_checksum)->by_default(200)->as_number();
 
     // Effector coordinates when probe is at bed center, at the exact height where it triggers.
     // To determine this:
@@ -204,6 +209,31 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
 }
 
 
+void ComprehensiveDeltaStrategy::save_acceleration() {
+    saved_acceleration = THEKERNEL->planner->get_acceleration();
+}
+
+
+void ComprehensiveDeltaStrategy::restore_acceleration() {
+    set_acceleration(saved_acceleration);
+}
+
+
+void ComprehensiveDeltaStrategy::set_acceleration(float a) {
+    char cmd[20];       // Should be enough for "M204 S1234.45678"
+    snprintf(cmd, 19, "M204 S%1.5f", a);
+    // -- Send command
+    struct SerialMessage message;
+    message.message = cmd;
+    message.stream = &(StreamOutput::NullStream);
+    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+    THEKERNEL->conveyor->wait_for_empty_queue();
+
+    _printf("[RA] Acceleration restored to %1.3f\n", THEKERNEL->planner->get_acceleration());
+
+}
+
+
 // Prepare to probe
 void ComprehensiveDeltaStrategy::prepare_to_probe() {
 
@@ -254,16 +284,37 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
     float mu = 0;	// Mean
     float sigma = 0;	// Standard deviation
     float dev = 0;	// Sample deviation
+    float want_acceleration = probe_acceleration;
 
     // Setup for number of samples / eccentricity testing / probe smoothing
     bool do_eccentricity_test = true;
 
     // Process G-code params, if any
     if(gcode != nullptr) {
-        if(gcode->has_letter('P')) {
-            probe_smoothing = (int)gcode->get_value('P');
+        if(gcode->has_letter('A')) {
+            want_acceleration = gcode->get_value('A');
+            if(want_acceleration < 1 || want_acceleration > 1000) {
+                want_acceleration = probe_acceleration;
+            }
         }
-        if(gcode->has_letter('E')) do_eccentricity_test = false;
+        if(gcode->has_letter('B')) {
+            zprobe->setDebounceCount((int)gcode->get_value('B'));
+        }
+        if(gcode->has_letter('D')) {
+            zprobe->setDecelerateOnTrigger(gcode->get_value('D'));
+        }
+        if(gcode->has_letter('E')) {
+            do_eccentricity_test = false;
+        }
+        if(gcode->has_letter('P')) {
+            probe_smoothing = (unsigned int)gcode->get_value('P');
+        }
+        if(gcode->has_letter('U')) {
+            zprobe->setFastFeedrate(gcode->get_value('U'));
+        }
+        if(gcode->has_letter('V')) {
+            zprobe->setSlowFeedrate(gcode->get_value('V'));
+        }
         if(gcode->has_letter('S')) {
             nSamples = (int)gcode->get_value('S');
             if(nSamples > 30) {
@@ -272,24 +323,27 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
             }
         }
     }
+
     float sample[nSamples];
     if(probe_smoothing < 1) probe_smoothing = 1;
     if(probe_smoothing > 10) probe_smoothing = 10;
 
-
     // Hi
-    _printf("[RT] Repeatability test: %d samples\n", nSamples);
-    _printf("[RT] Eccentricity test is ");
-    if(do_eccentricity_test) {
-        _printf("on.\n");
-    } else {
-        _printf("off.\n");
-    }
-    _printf("[RT] Probe smoothing: %d\n", probe_smoothing);
+    _printf("[RT]    Repeatability test: %d samples (S)\n", nSamples);
+    _printf("[RT]      Acceleration (A): %1.1f\n", want_acceleration = 0 ? THEKERNEL->planner->get_acceleration() : want_acceleration);
+    _printf("[RT]    Debounce count (B): %d\n", zprobe->getDebounceCount());
+    _printf("[RT]  Smooth decel (D0|D1): %s\n", zprobe->getDecelerateOnTrigger() ? "true" : "false");
+    _printf("[RT] Eccentricity test (E): %s\n", do_eccentricity_test ? "on" : "off");
+    _printf("[RT]   Probe smoothing (P): %d\n", probe_smoothing);
+    _printf("[RT]             Feedrates: Fast (U) = %1.3f, Slow (V) = %1.3f\n", zprobe->getFastFeedrate(), zprobe->getSlowFeedrate());
     _printf("[RT] 1 step = %1.5f mm.\n", zprobe->zsteps_to_mm(1.0f));
  
     // Move into position, after safely determining the true bed height
     prepare_to_probe();
+
+    // Slow down the acceleration
+    save_acceleration();
+    set_acceleration(want_acceleration);
 
     float xDeg = 0.866025f;
     float yDeg = 0.5f;
@@ -369,6 +423,10 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
         _printf("UNUSABLE! Please fix!");
     }
     _printf("\n \n");
+
+    // Pop acceleration
+    restore_acceleration();
+
     return true;
 
 }
@@ -1176,10 +1234,10 @@ _printf("[BH] Not the first time through - probe_from_height = %1.3f\n", probe_f
         return false;
     }
     mm_probe_height_to_trigger = zprobe->zsteps_to_mm(steps);
-_printf("[BH] probe_from_height (%1.3f) + mm_PHTT (%1.3f) - probe_offset_z (%1.3f)\n", probe_from_height, mm_probe_height_to_trigger, probe_offset_z);
+_printf("[BH] probe_from_height (%1.3f) + mm_PHTT (%1.3f) + probe_offset_z (%1.3f)\n", probe_from_height, mm_probe_height_to_trigger, probe_offset_z);
 
     // Set final bed height
-    bed_height = probe_from_height + mm_probe_height_to_trigger - probe_offset_z;
+    bed_height = probe_from_height + mm_probe_height_to_trigger + probe_offset_z;
 _printf("[BH] Bed height set to %1.3f\n", bed_height);
 
     // Tell the machine about the new height
