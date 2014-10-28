@@ -43,6 +43,9 @@ private:
     float probe_offset_z;
     float probe_radius;
     float mm_probe_height_to_trigger;	// At bed center, distance from probe_height to where probe triggers
+    float saved_acceleration;
+    float probe_acceleration;
+    
 
     // For holding options specific to our arm solution
     BaseSolution::arm_options_t options;
@@ -54,6 +57,9 @@ private:
     float last_depth_map[CDS_DEPTH_MAP_N_POINTS];	// Last collected depth for all test points
 
     void prepare_to_probe();
+    void set_acceleration(float a);
+    void save_acceleration();
+    void restore_acceleration();
 
     bool heuristic_calibration();
     bool require_clean_geometry();
