@@ -39,6 +39,7 @@ class StepperMotor {
         float get_steps_per_mm()  const { return steps_per_mm; }
         void change_steps_per_mm(float);
         void change_last_milestone(float);
+        float get_last_milestone(void) const { return last_milestone_mm; }
 
         int  steps_to_target(float);
         uint32_t get_steps_to_move() const { return steps_to_move; }
