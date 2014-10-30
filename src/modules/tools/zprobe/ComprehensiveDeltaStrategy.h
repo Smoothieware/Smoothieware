@@ -38,6 +38,7 @@ private:
     float bed_height;
     float probe_from_height;		// Will be set to NaN during init; call find_bed_center_height() to set
     int probe_smoothing;		// Probe this many times and return the average of the results (default 1)
+    int probe_priming;			// Some probes have to be test-tapped a bunch of times before they "settle"
     float probe_offset_x;
     float probe_offset_y;
     float probe_offset_z;
@@ -45,6 +46,18 @@ private:
     float mm_probe_height_to_trigger;	// At bed center, distance from probe_height to where probe triggers
     float saved_acceleration;
     float probe_acceleration;
+    struct best_probe_calibration {
+        float sigma;
+        int range;
+        float accel;
+        int debounce_count;
+        bool decelerate;
+        bool eccentricity;
+        int smoothing;
+        int priming;
+        float fast;
+        float slow;
+    } best_probe_calibration;
     
 
     // For holding options specific to our arm solution
@@ -57,9 +70,7 @@ private:
     float last_depth_map[CDS_DEPTH_MAP_N_POINTS];	// Last collected depth for all test points
 
     void prepare_to_probe();
-    void set_acceleration(float a);
-    void save_acceleration();
-    void restore_acceleration();
+    bool prime_probe();
 
     bool heuristic_calibration();
     bool require_clean_geometry();
@@ -67,10 +78,13 @@ private:
     bool measure_probe_repeatability(Gcode *gcode = nullptr);
     bool depth_map_print_surface(bool display_results);
     bool depth_map_segmented_line(float first[2], float second[2], unsigned char segments);
-    bool calibrate_delta_endstops(Gcode *gcode = nullptr);
-    bool calibrate_delta_radius(Gcode *gcode = nullptr);
+    bool calibrate_delta_endstops(bool keep_settings = false, float override_target = 0, float override_radius = 0);
+    bool calibrate_delta_radius(float override_target = 0, float override_radius = 0);
 
-    void init();
+    void set_acceleration(float a);
+    void save_acceleration();
+    void restore_acceleration();
+
     void rotate2D(float (&point)[2], float reference[2], float angle);
     void save_depth_map();		// Copies cur_depth_map to last_depth_map
 
@@ -84,10 +98,10 @@ private:
 
     bool geom_dirty;			// Means we need to redo the endstops/delta radius
 
-    bool find_bed_center_height();
-    bool do_probe_at(int &steps, float x, float y);
+    bool find_bed_center_height(bool reset_all = false);
+    bool do_probe_at(int &steps, float x, float y, bool skip_smoothing = false);
 
-    bool set_trim(float x, float y, float z, StreamOutput *stream);
+    bool set_trim(float x, float y, float z);
     bool get_trim(float& x, float& y, float& z);
 
     bool set_delta_basic_geometry(float arm_length, float arm_radius);
@@ -101,6 +115,7 @@ private:
 
     bool set_tower_arm_offsets(float x, float y, float z);
     bool get_tower_arm_offsets(float &x, float &y, float &z);
+
 
     void flush();
 
