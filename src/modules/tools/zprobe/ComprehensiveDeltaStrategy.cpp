@@ -25,6 +25,7 @@
 
 #define probe_smoothing_checksum      CHECKSUM("probe_smoothing")
 #define probe_acceleration_checksum   CHECKSUM("probe_acceleration")
+#define probe_priming_checksum        CHECKSUM("probe_priming")
 #define probe_offset_x_checksum       CHECKSUM("probe_offset_x")
 #define probe_offset_y_checksum       CHECKSUM("probe_offset_y")
 #define probe_offset_z_checksum       CHECKSUM("probe_offset_z")
@@ -35,13 +36,15 @@
 #define _printf THEKERNEL->streams->printf
 
 
+// This serves in place of a constructor; it will be called whenever the config is reloaded
+// (which you can do over a serial console, by the way)
 bool ComprehensiveDeltaStrategy::handleConfig() {
 
     // Set probe_from_height to a value that find_bed_center_height() will know means it needs to be initialized
     probe_from_height = -1;
 
     // Set the dirty flag, so we know we have to calibrate the endstops and delta radius
-    geom_dirty = 1;
+    geom_dirty = true;
 
     // Zero out the depth map arrays
     for(int i=0; i<12; i++) {
@@ -49,6 +52,17 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
         last_depth_map[i] = 0;
     }
 
+    // Initialize the best probe calibration stats (we'll use sigma==-1 to check whether initialized)
+    best_probe_calibration.sigma = -1;
+    best_probe_calibration.range = -1;
+    best_probe_calibration.accel = -1;
+    best_probe_calibration.debounce_count = -1;
+    best_probe_calibration.decelerate = false;
+    best_probe_calibration.eccentricity = true ;
+    best_probe_calibration.smoothing = -1;
+    best_probe_calibration.fast = -1;
+    best_probe_calibration.slow = -1;
+    
     // Determine whether this strategy has been selected
     float r = THEKERNEL->config->value(leveling_strategy_checksum, comprehensive_delta_strategy_checksum, probe_radius_checksum)->by_default(-1)->as_number();
     if(r == -1) {
@@ -58,10 +72,16 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
     this->probe_radius = r;
 
     // Probe smoothing: If your probe is super jittery, we can probe multiple times per request and average the results
-    int ps = THEKERNEL->config->value(comprehensive_delta_strategy_checksum, probe_smoothing_checksum)->by_default(1)->as_number();
-    if(ps < 1) ps = 1;
-    if(ps > 10) ps = 10;
-    this->probe_smoothing = ps;
+    int p = THEKERNEL->config->value(comprehensive_delta_strategy_checksum, probe_smoothing_checksum)->by_default(1)->as_number();
+    if(p <  1) p = 1;
+    if(p > 10) p = 10;
+    this->probe_smoothing = p;
+
+    // Probe priming: Run the probe a specified # of times before the "real" probing (good for printers that demonstrate a Z settling issue)
+    p = THEKERNEL->config->value(comprehensive_delta_strategy_checksum, probe_priming_checksum)->by_default(0)->as_number();
+    if(p <  0) p = 0;
+    if(p > 20) p = 20;
+    this->probe_priming = p;
 
     // Probe acceleration
     probe_acceleration = THEKERNEL->config->value(comprehensive_delta_strategy_checksum, probe_acceleration_checksum)->by_default(200)->as_number();
@@ -123,6 +143,7 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
 }
 
 
+// Process incoming G- and M-codes
 bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
 
     if( gcode->has_g) {
@@ -139,7 +160,11 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
             _printf("Depth-mapping the bed. Please stand by...\n");
             //depth_map_print_surface(true);	// Setting "true" makes it nicely print the results over serial
             //depth_map_segmented_line(test_point[TP_Y], test_point[TP_OPP_Y], 10);
+
+            if(gcode->has_letter('K')) geom_dirty = false;
+
             heuristic_calibration();
+
             return true;
 
         }
@@ -172,19 +197,27 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
             //       - At the end, if a height map reveals that the printer is still outside target tolerance, it can
             //         suggest that the user run the calibration again with an easier (larger) tolerance
 
+            float override_target = 0;
+            float override_radius = 0;
+            bool keep_settings = true;
+
+            if(gcode->has_letter('I')) override_target = gcode->get_value('I'); // Override default target
+            if(gcode->has_letter('J')) override_radius = gcode->get_value('J'); // Override default probe radius
+            if(gcode->has_letter('K')) keep_settings = false;                   // Don't keep current settings
+
             if(!gcode->has_letter('R')) {
-                if(!calibrate_delta_endstops(gcode)) {
+                if(!calibrate_delta_endstops(keep_settings, override_target, override_radius)) {
                     _printf("Calibration failed to complete, probe not triggered\n");
                     return true;
                 }
             }
             if(!gcode->has_letter('E')) {
-                if(!calibrate_delta_radius(gcode)) {
+                if(!calibrate_delta_radius(override_target, override_radius)) {
                     _printf("Calibration failed to complete, probe not triggered\n");
                     return true;
                 }
             }
-            _printf("Basic calibration complete, save settings with M500\n \n");
+            _printf("Save settings with M500\n \n");
             return true;
         }
 
@@ -205,31 +238,6 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
     }
 
     return false;
-
-}
-
-
-void ComprehensiveDeltaStrategy::save_acceleration() {
-    saved_acceleration = THEKERNEL->planner->get_acceleration();
-}
-
-
-void ComprehensiveDeltaStrategy::restore_acceleration() {
-    set_acceleration(saved_acceleration);
-}
-
-
-void ComprehensiveDeltaStrategy::set_acceleration(float a) {
-    char cmd[20];       // Should be enough for "M204 S1234.45678"
-    snprintf(cmd, 19, "M204 S%1.5f", a);
-    // -- Send command
-    struct SerialMessage message;
-    message.message = cmd;
-    message.stream = &(StreamOutput::NullStream);
-    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-    THEKERNEL->conveyor->wait_for_empty_queue();
-
-    _printf("[RA] Acceleration restored to %1.3f\n", THEKERNEL->planner->get_acceleration());
 
 }
 
@@ -256,10 +264,56 @@ bool ComprehensiveDeltaStrategy::require_clean_geometry() {
 
     if(geom_dirty) {
         _printf("[EC] Geometry has been changed since last endstop/delta radius calibration - redoing.\n");
-        calibrate_delta_endstops();
-        calibrate_delta_radius();
+        if(!calibrate_delta_endstops(true)) return false;	// Keep the previous endstop settings
+        if(!calibrate_delta_radius()) return false;
+        if(!find_bed_center_height(true)) return false;		// Reset probe_from_height, since the endstops were adjusted
         geom_dirty = false;
     }
+
+    return true;
+
+}
+
+
+// Prime the probe, if set
+bool ComprehensiveDeltaStrategy::prime_probe() {
+
+    if(probe_priming) {
+        int i, steps;
+        _printf("[PR] Priming probe %d times.\n", probe_priming);
+        for(i=0; i<probe_priming; i++) {
+            if(!do_probe_at(steps, 0, 0)) {
+                return false;
+            }
+        }
+    }
+    return true;
+
+}
+
+
+// Main heuristic calibration routine
+bool ComprehensiveDeltaStrategy::heuristic_calibration() {
+
+//    float depth[6];
+//    float score_avg;
+//    float score_ISM;
+//    float PHTT;
+//    probe_triforce(depth, score_avg, score_ISM, PHTT);
+
+    // Collect initial surface map and save it to last_depth_map[] for later comparison
+    depth_map_print_surface(true);
+    save_depth_map();
+
+    // Main calibration loop
+    for(int i = 0; i < 10; i++) {
+
+        // Analyze
+        
+        // Alter
+
+    }
+
 
     return true;
 
@@ -280,14 +334,13 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
     int i;
     int steps;
     int nSamples = 10;
-
     float mu = 0;	// Mean
     float sigma = 0;	// Standard deviation
     float dev = 0;	// Sample deviation
-    float want_acceleration = probe_acceleration;
 
-    // Setup for number of samples / eccentricity testing / probe smoothing
-    bool do_eccentricity_test = true;
+    // Options
+    float want_acceleration = probe_acceleration;
+    bool do_eccentricity_test = false;
 
     // Process G-code params, if any
     if(gcode != nullptr) {
@@ -298,21 +351,35 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
             }
         }
         if(gcode->has_letter('B')) {
-            zprobe->setDebounceCount((int)gcode->get_value('B'));
+            int db = (int)gcode->get_value('B');
+            if(db <    0) db = 0;
+            if(db > 2000) db = 2000;
+            zprobe->setDebounceCount(db);
         }
         if(gcode->has_letter('D')) {
-            zprobe->setDecelerateOnTrigger(gcode->get_value('D'));
+            // This will be cast to a bool
+            zprobe->setDecelerateOnTrigger((bool)gcode->get_value('D'));
         }
         if(gcode->has_letter('E')) {
-            do_eccentricity_test = false;
+            do_eccentricity_test = true;
         }
         if(gcode->has_letter('P')) {
             probe_smoothing = (unsigned int)gcode->get_value('P');
+            if(probe_smoothing <  0) probe_smoothing = 0;
+            if(probe_smoothing > 10) probe_smoothing = 10;
+        }
+        if(gcode->has_letter('Q')) {
+            probe_priming = (unsigned int)gcode->get_value('Q');
+            // If your probe takes more than 20 hits to settle, you should figure out why :(
+            if(probe_priming <  0) probe_priming = 0;
+            if(probe_priming > 20) probe_priming = 20;
         }
         if(gcode->has_letter('U')) {
+            // ZProbe sanity-checks this already
             zprobe->setFastFeedrate(gcode->get_value('U'));
         }
         if(gcode->has_letter('V')) {
+            // ZProbe sanity-checks this already
             zprobe->setSlowFeedrate(gcode->get_value('V'));
         }
         if(gcode->has_letter('S')) {
@@ -335,19 +402,20 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
     _printf("[RT]  Smooth decel (D0|D1): %s\n", zprobe->getDecelerateOnTrigger() ? "true" : "false");
     _printf("[RT] Eccentricity test (E): %s\n", do_eccentricity_test ? "on" : "off");
     _printf("[RT]   Probe smoothing (P): %d\n", probe_smoothing);
+    _printf("[RT]     Probe priming (Q): %d\n", probe_priming);
     _printf("[RT]             Feedrates: Fast (U) = %1.3f, Slow (V) = %1.3f\n", zprobe->getFastFeedrate(), zprobe->getSlowFeedrate());
     _printf("[RT] 1 step = %1.5f mm.\n", zprobe->zsteps_to_mm(1.0f));
  
     // Move into position, after safely determining the true bed height
     prepare_to_probe();
 
-    // Slow down the acceleration
-    save_acceleration();
-    set_acceleration(want_acceleration);
+    // Prime the probe (run it a number of times to get it to "settle")
+    if(!prime_probe()) return false;
 
     float xDeg = 0.866025f;
     float yDeg = 0.5f;
     float radius = 10;// probe_radius;
+
 
     // Move the probe around to see if we can throw it off (e.g.: if it's loose, the printer has "delta arm blues", etc.)
     for(i=0; i<nSamples; i++) {
@@ -376,7 +444,7 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
         // Probe at center
         if(do_probe_at(steps, 0, 0)) {
             sample[i] = steps;
-            _printf("[RT] Test %d of %d: Measured %d steps (%1.3f mm)\n", i + 1, nSamples, steps, zprobe->zsteps_to_mm(steps));
+            _printf("[RT] Test %2d of %2d: Measured %d steps (%1.3f mm)\n", i + 1, nSamples, steps, zprobe->zsteps_to_mm(steps));
             if(steps > 50000) {
                 _printf("[RT] Discarding result and trying again. Check probe_height.\n");
                 i--;
@@ -411,6 +479,38 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
     _printf("[RT]   sigma: %1.3f steps (%1.3f mm)\n", sigma, zprobe->zsteps_to_mm(sigma));
     _printf("[RT] Repeatability: %1.4f (add a little to be sure)\n", rep);
 
+    if(best_probe_calibration.sigma == -1 || sigma < best_probe_calibration.sigma) {
+
+        _printf("[RT] This is your best score so far!\n");
+        best_probe_calibration.sigma = sigma;
+        best_probe_calibration.range = max - min;
+        best_probe_calibration.accel = want_acceleration;
+        best_probe_calibration.debounce_count = zprobe->getDebounceCount();
+        best_probe_calibration.decelerate = zprobe->getDecelerateOnTrigger();
+        best_probe_calibration.eccentricity = do_eccentricity_test;
+        best_probe_calibration.smoothing = probe_smoothing;
+        best_probe_calibration.priming = probe_priming;
+        best_probe_calibration.fast = zprobe->getFastFeedrate();
+        best_probe_calibration.slow = zprobe->getSlowFeedrate();
+
+    } else {
+
+        _printf(
+            "[RT] Best score so far: [sigma=%1.3f, range=%d] => accel=%f, debounce=%d, decelerate=%s, eccentricity=%s, smoothing=%d, priming=%d, fastFR=%1.3f, slowFR=%1.3f\n",
+            best_probe_calibration.sigma,
+            best_probe_calibration.range,
+            best_probe_calibration.accel,
+            best_probe_calibration.debounce_count,
+            best_probe_calibration.decelerate ? "true" : "false",
+            best_probe_calibration.eccentricity ? "on" : "off",
+            best_probe_calibration.smoothing,
+            best_probe_calibration.priming,
+            best_probe_calibration.fast,
+            best_probe_calibration.slow
+        );
+
+    }
+
     // Print evaluation
     _printf("[RT] This score is ");
     if(rep < 0.015) {
@@ -424,100 +524,9 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
     }
     _printf("\n \n");
 
-    // Pop acceleration
-    restore_acceleration();
-
     return true;
 
 }
-
-
-// calculate the X and Y positions for the three towers given the radius from the center
-static std::tuple<float, float, float, float, float, float> getCoordinates(float radius) {
-
-    float px = 0.866F * radius; // ~sin(60)
-    float py = 0.5F * radius; // cos(60)
-    float t1x = -px, t1y = -py; // X Tower
-    float t2x = px, t2y = -py; // Y Tower
-    float t3x = 0.0F, t3y = radius; // Z Tower
-    return std::make_tuple(t1x, t1y, t2x, t2y, t3x, t3y);
-
-}
-
-
-// Rotate a point around another point in 2-space.
-// Adapted from http://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
-void ComprehensiveDeltaStrategy::rotate2D(float (&point)[2], float reference[2], float angle) {
-
-    float s = sin(angle * 3.141595 / 180.0);
-    float c = cos(angle * 3.141595 / 180.0);
-    
-    point[X] -= reference[X];
-    point[Y] -= reference[Y];
-
-    float xNew = point[X] * c - point[Y] * s;
-    float yNew = point[X] * s + point[Y] * c;
-
-    point[X] = xNew + reference[X];
-    point[Y] = yNew + reference[Y];
-
-}
-
-
-// Calculate the midpoint of a 2-D line.
-// first[] and second[] are floats. Resulting midpoint stored in dest[].
-void ComprehensiveDeltaStrategy::midpoint(float first[2], float second[2], float (&dest)[2]) {
-
-    dest[0] = (first[0] + second[0]) / 2;
-    dest[1] = (first[1] + second[1]) / 2;
-
-}
-
-
-// Copy cur_depth_map to last_depth_map & zero all of cur_depth_map
-void ComprehensiveDeltaStrategy::save_depth_map() {
-
-    for(int i = 0; i < CDS_DEPTH_MAP_N_POINTS; i++) {
-        last_depth_map[i] = cur_depth_map[i];
-        cur_depth_map[i] = 0;
-    }
-
-}
-
-
-
-
-
-
-
-
-bool ComprehensiveDeltaStrategy::heuristic_calibration() {
-
-//    float depth[6];
-//    float score_avg;
-//    float score_ISM;
-//    float PHTT;
-//    probe_triforce(depth, score_avg, score_ISM, PHTT);
-
-    // Collect initial surface map and save it to last_depth_map[] for later comparison
-    depth_map_print_surface(true);
-    save_depth_map();
-
-    // Main calibration loop
-    for(int i = 0; i < 10; i++) {
-
-        // Analyze
-        
-        // Alter
-
-    }
-
-
-    return true;
-
-}
-
-
 
 
 /* Probe the depth of points near each tower, and at the halfway points between each tower:
@@ -531,6 +540,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration() {
 
    This pattern defines the points of a triforce, hence the name.
 */
+/*
 bool ComprehensiveDeltaStrategy::probe_triforce(float (&depth)[6], float &score_avg, float &score_ISM, float &PHTT) {
 
     // Init test points
@@ -543,8 +553,9 @@ bool ComprehensiveDeltaStrategy::probe_triforce(float (&depth)[6], float &score_
 
     // Need to get bed height in current tower angle configuration (the following method automatically refreshes mm_PHTT)
     // We're passing the current value of PHTT back by reference in case the caller cares, e.g. if they want a baseline.
-    prepare_to_probe();
     require_clean_geometry();
+    prepare_to_probe();
+    if(!prime_probe()) return false;
     PHTT = mm_probe_height_to_trigger;
 
     // This is for storing the probe results in terms of score (deviation from center height).
@@ -590,19 +601,7 @@ bool ComprehensiveDeltaStrategy::probe_triforce(float (&depth)[6], float &score_
     return true;
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
+*/
 
 
 /*
@@ -627,6 +626,9 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(bool display_results) {
 
     // Measure depth from probe_from_height at bed center
     prepare_to_probe();
+
+    if(!prime_probe()) return false;
+
     if(do_probe_at(origin_steps, 0, 0)) {
         _printf("[DM] Steps to bed surface at center: %d (%1.3f mm)\n", origin_steps, zprobe->zsteps_to_mm(origin_steps));
     } else {
@@ -678,40 +680,15 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(bool display_results) {
     // Do stats
     _printf("Deviation: Best = %1.3f, Worst = %1.3f\n \n", zprobe->zsteps_to_mm(best), zprobe->zsteps_to_mm(worst));
 
-
     return true;
 
 }
 
 
-// Distance between two points in 2-space
-float ComprehensiveDeltaStrategy::distance(float first[2], float second[2]) {
-    return sqrt(pow(second[X] - first[X], 2) + pow(second[Y] - first[Y], 2));
-}
 
 
-// Print all the particulars of our geometry model
-void ComprehensiveDeltaStrategy::print_geometry() {
-
-    float arm_length, arm_radius;
-    float radX, radY, radZ;
-    float angX, angY, angZ;
-    float armX, armY, armZ;
-
-    get_delta_basic_geometry(arm_length, arm_radius);
-    get_tower_radius_offsets(radX, radY, radZ);
-    get_tower_angle_offsets(angX, angY, angZ);
-    get_tower_arm_offsets(armX, armY, armZ);
-
-    _printf("[PG] Basic - Arm length: %1.3f  Radius: %1.3f\n", arm_length, arm_radius);
-    _printf("[PG] Radius offsets (ABC): {%1.3f, %1.3f, %1.3f}\n", radX, radY, radZ);
-    _printf("[PG]  Angle offsets (DEF): {%1.3f, %1.3f, %1.3f}\n", angX, angY, angZ);
-    _printf("[PG]    Arm offsets (TUV): {%1.3f, %1.3f, %1.3f}\n", armX, armY, armZ);
-
-}
-
-
-// Depth-map an imaginary line from a tower to its opposite point in a given number of segments
+// Depth-map an imaginary line, and points perpendicular, from a tower to its opposite point
+// (across the print surface), in a given number of segments
 bool ComprehensiveDeltaStrategy::depth_map_segmented_line(float first[2], float second[2], unsigned char segments) {
 
     // Calculate vector and length
@@ -730,6 +707,8 @@ bool ComprehensiveDeltaStrategy::depth_map_segmented_line(float first[2], float 
 
     require_clean_geometry();
     prepare_to_probe();
+    
+    if(!prime_probe()) return false;
 
     if(do_probe_at(origin_steps, 0, 0)) {
         _printf("[SL] Steps from probe_from_height to bed surface at center: %d\n", origin_steps);
@@ -777,21 +756,13 @@ bool ComprehensiveDeltaStrategy::depth_map_segmented_line(float first[2], float 
         _printf("Segment %d endpoint at <%1.3f, %1.3f> - depths: pos=%1.3f, center=%1.3f, neg=%1.3f\n", i, tp[X], tp[Y], zprobe->zsteps_to_mm(origin_steps - base_depths[i][0]), zprobe->zsteps_to_mm(origin_steps - base_depths[i][1]), zprobe->zsteps_to_mm(origin_steps - base_depths[i][2]));
     }
 
-
-
-// STRATEGY
-
-// Perpendicular Probing
-
-
-
-
     return true;   
+
 }
 
 
 /*
- Level X/Y/Z tower endstops
+ Calibrate X/Y/Z tower endstops
  - Probe center, then test points near each tower
  - Adjust each tower's trim proportional to the measured deviation
  - Back off the adjustment constant if it stays the same or gets worse
@@ -799,37 +770,32 @@ bool ComprehensiveDeltaStrategy::depth_map_segmented_line(float first[2], float 
  - Once we get an acceptable trim, normalize it
    (otherwise it will "creep down" with each successive call that keeps existing trim)
 */
-bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(Gcode *gcode) {
+bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(bool keep_settings, float override_target, float override_radius) {
 
     int s;
     bool keep = false;
     float target = 0.03F;
-    if(gcode != nullptr) {
-        if(gcode->has_letter('I')) target = gcode->get_value('I'); // override default target
-        if(gcode->has_letter('J')) this->probe_radius = gcode->get_value('J'); // override default probe radius
-        if(gcode->has_letter('K')) keep = true;   // keep current settings
-    }
+
+    if(override_target) target = override_target;
+    if(override_radius) probe_radius = override_radius;
+    if(keep_settings) keep = true;
 
     float deviation = 0;                                       // Stores current deviation from center
     float last_deviation = 999;                                // Stores last deviation from center   
 
     _printf(" \n");
-    _printf("[ES] Calibrating endstops: target %fmm, radius %fmm\n", target, this->probe_radius);
+    _printf("[ES] Calibrating endstops: target %fmm, radius %fmm, keep=%s\n", target, this->probe_radius, keep ? "true" : "false");
 
     // How much to try adjusting the trim each time (empirically determined, old default was 1.2522)
     // If an adjustment makes the calibration worse, this will be reduced unless it's already < 1.0 
     float trimscale = 1.3F;                                     // Starting point
-
-    // Set probe points
-    float t1x, t1y, t2x, t2y, t3x, t3y;
-    std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
 
     // Set up trim
     float trimx = 0.0F, trimy = 0.0F, trimz = 0.0F;
     if(!keep) {
 
         // Zero trim values
-        if(!set_trim(0, 0, 0, gcode->stream)) return false;
+        if(!set_trim(0, 0, 0)) return false;
 
     } else {
 
@@ -846,36 +812,45 @@ bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(Gcode *gcode) {
     // Find bed height and move probe into position
     prepare_to_probe();
 
+    if(!prime_probe()) {
+        return false;
+    }
+
     // Get initial probes
     // ========================================================================
     // Probe the base of the X tower
-    if(!do_probe_at(s, t1x, t1y)) return false;
+    if(!do_probe_at(s, test_point[TP_X][X], test_point[TP_X][Y])) return false;
     float t1z = zprobe->zsteps_to_mm(s);
 
     // Probe the base of the Y tower
-    if(!do_probe_at(s, t2x, t2y)) return false;
+    if(!do_probe_at(s, test_point[TP_Y][X], test_point[TP_Y][Y])) return false;
     float t2z = zprobe->zsteps_to_mm(s);
 
     // Probe the base of the Z tower
-    if(!do_probe_at(s, t3x, t3y)) return false;
+    if(!do_probe_at(s, test_point[TP_Z][X], test_point[TP_Z][Y])) return false;
+
     float t3z = zprobe->zsteps_to_mm(s);
 
     // Is the trim already within spec? If so, we're done
     auto mm = std::minmax({t1z, t2z, t3z});
     if((mm.second - mm.first) <= target) { 
-        _printf("[ES] Trim already set within required parameters: difference = %f\n", mm.second - mm.first);
+        _printf("[ES] Trim already set within required parameters: difference = %f\n \n", mm.second - mm.first);
         return true;
     } else {
         _printf("[ES] Towers out of spec by %1.3f - will need to level the endstops\n", (mm.second - mm.first) - target);
         last_deviation = mm.second - mm.first;
+        if(last_deviation < target * 2) {
+            _printf("[ES] Already close, so reducing the trim scale.\n");
+            trimscale *= 0.9;
+        }
     }
 
     // Set all towers' trims to worst case (we need to start with negative trim; positive = belt grinding!)
     trimx += (mm.first - t1z) * trimscale;
     trimy += (mm.first - t2z) * trimscale;
     trimz += (mm.first - t3z) * trimscale;
-    
-    
+
+
     // Main endstop leveling loop
     // ========================================================================
     for (int i = 1; i <= 20; ++i) {
@@ -884,21 +859,21 @@ bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(Gcode *gcode) {
         THEKERNEL->call_event(ON_IDLE);
 
         // Tell the robot what the new trim is
-        if(!set_trim(trimx, trimy, trimz, gcode->stream)) return false;
+        if(!set_trim(trimx, trimy, trimz)) return false;
 
         // Move probe to start position at probe_from_height millimeters above the bed (relative move)
         prepare_to_probe();
 
         // probe the base of the X tower
-        if(!do_probe_at(s, t1x, t1y)) return false;
+        if(!do_probe_at(s, test_point[TP_X][X], test_point[TP_X][Y])) return false;
         t1z = zprobe->zsteps_to_mm(s);
 
         // probe the base of the Y tower
-        if(!do_probe_at(s, t2x, t2y)) return false;
+        if(!do_probe_at(s, test_point[TP_Y][X], test_point[TP_Y][Y])) return false;
         t2z = zprobe->zsteps_to_mm(s);
 
         // probe the base of the Z tower
-        if(!do_probe_at(s, t3x, t3y)) return false;
+        if(!do_probe_at(s, test_point[TP_Z][X], test_point[TP_Z][Y])) return false;
         t3z = zprobe->zsteps_to_mm(s);
 
         // Is this part of the calibration good enough to move on?
@@ -922,30 +897,22 @@ bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(Gcode *gcode) {
             trimy += (mm.first - t2z) * trimscale;
             trimz += (mm.first - t3z) * trimscale;
 
-        } else {
-
-            _printf("[ES] Trim set to within required paramters: want %1.3f, difference is %1.3f\n", target, mm.second - mm.first);
-
             // Correct the downward creep issue by normalizing the trim offsets.
             mm = std::minmax({trimx, trimy, trimz});
-            _printf("[ES] Trim is {%1.3f, %1.3f, %1.3f} - normalizing... ", trimx, trimy, trimz);
             trimx -= mm.second;
             trimy -= mm.second;
             trimz -= mm.second;
+            _printf("[ES] Trim set to {%1.3f, %1.3f, %1.3f} (normalized)\n", trimx, trimy, trimz);
 
-            // Tell robot about new trim
-            if(!set_trim(trimx, trimy, trimz, gcode->stream)) {
-                _printf("[ES] ERROR: Couldn't normalize trim\n");
-                return false;
-            } else {
-                _printf("[ES] New values: {%1.3f, %1.3f, %1.3f}.\n \n", trimx, trimy, trimz);
-                return true;
-            }
+        } else {
+
+            _printf("[ES] Trim set to within required paramters: want %1.3f, difference is %1.3f\n \n", target, mm.second - mm.first);
+            return true;
         }
     }
 
     if((mm.second - mm.first) > target) {
-        _printf("[ES] Trim did not resolve to within required parameters: delta %f\n", mm.second - mm.first);
+        _printf("[ES] Trim did not resolve to within required parameters: delta %f\n \n", mm.second - mm.first);
         return false;
     }
 
@@ -956,29 +923,25 @@ bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(Gcode *gcode) {
 }
 
 
-/*
-    probe edges to get outer positions, then probe center
-    modify the delta radius until center and X converge
-*/
-
-bool ComprehensiveDeltaStrategy::calibrate_delta_radius(Gcode *gcode) {
+// Calibrate delta radius
+bool ComprehensiveDeltaStrategy::calibrate_delta_radius(float override_target, float override_radius) {
 
     float target = 0.03F;
-    if(gcode->has_letter('I')) target = gcode->get_value('I'); // override default target
-    if(gcode->has_letter('J')) this->probe_radius = gcode->get_value('J'); // override default probe radius
+
+    if(override_target) target = override_target;
+    if(override_radius) probe_radius = override_radius;
 
     _printf("[DR] Calibrating delta radius: target %f, radius %f\n", target, this->probe_radius);
 
-    // get probe points
-    float t1x, t1y, t2x, t2y, t3x, t3y;
-    std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
-
     // Determine printer height and move to probing height
     prepare_to_probe();
+    
+    if(!prime_probe()) return false;
 
     // probe center to get reference point at this Z height
     int dc;
     if(!do_probe_at(dc, 0, 0)) return false;
+
     _printf("[DR] Center Z: %1.3fmm (%d steps)\n", zprobe->zsteps_to_mm(dc), dc);
     float cmm = zprobe->zsteps_to_mm(dc);
 
@@ -998,11 +961,15 @@ bool ComprehensiveDeltaStrategy::calibrate_delta_radius(Gcode *gcode) {
     for (int i = 1; i <= 10; ++i) {
         // probe t1, t2, t3 and get average, but use coordinated moves, probing center won't change
         int dx, dy, dz;
-        if(!do_probe_at(dx, t1x, t1y)) return false;
+        if(!do_probe_at(dx, test_point[TP_X][X], test_point[TP_X][Y])) return false;
+
+
 //        _printf("T1-%d Z: %1.3fmm (%d steps)\n", i, zprobe->zsteps_to_mm(dx), dx);
-        if(!do_probe_at(dy, t2x, t2y)) return false;
+        if(!do_probe_at(dy, test_point[TP_Y][X], test_point[TP_Y][Y])) return false;
+
 //        _printf("T2-%d Z: %1.3fmm (%d steps)\n", i, zprobe->zsteps_to_mm(dy), dy);
-        if(!do_probe_at(dz, t3x, t3y)) return false;
+        if(!do_probe_at(dz, test_point[TP_Z][X], test_point[TP_Z][Y])) return false;
+
 //        _printf("T3-%d Z: %1.3fm (%d steps)\n", i, zprobe->zsteps_to_mm(dz), dz);
 
         // now look at the difference and reduce it by adjusting delta radius
@@ -1019,31 +986,226 @@ bool ComprehensiveDeltaStrategy::calibrate_delta_radius(Gcode *gcode) {
         // set the new delta radius
         options['R'] = delta_radius;
         THEKERNEL->robot->arm_solution->set_optional(options);
-        _printf("Setting delta radius to: %1.4f\n", delta_radius);
+        _printf("[DR] Setting delta radius to: %1.4f\n", delta_radius);
 
         prepare_to_probe();
 
         // flush the output
         THEKERNEL->call_event(ON_IDLE);
     }
+    
+    _printf("[DR] All set!\n \n");
     return true;
+
 }
 
 
+// Probe the center of the bed to determine its height in steps, taking probe offsets into account.
+// Refreshes the following variables, AND SHOULD BE CALLED BEFORE READING THEM:
+//	bed_height
+//	probe_from_height
+// 	mm_probe_height_to_trigger
+bool ComprehensiveDeltaStrategy::find_bed_center_height(bool reset_all) {
 
-bool ComprehensiveDeltaStrategy::set_trim(float x, float y, float z, StreamOutput *stream) {
+    // Step counter
+    int steps;
+
+    // Start from the top
+    zprobe->home();
+
+    // Did they ask for a complete reset? (This means we have to re-find bed center height)
+    if(reset_all) {
+        probe_from_height = -1;
+    }
+ 
+    // If we haven't determined the probe-from height yet, do so now
+    // We'll remember it until the machine is reset
+    if(probe_from_height == -1) {
+
+        // Fast the first time
+        _printf("[BH] Determining the probe-from height.\n");
+        zprobe->run_probe(steps, true);
+        
+        // Probe from height = total measured height - height required for the probe not to drag
+        probe_from_height = zprobe->zsteps_to_mm(steps) - zprobe->getProbeHeight();
+        zprobe->home();
+
+    } else {
+        _printf("[BH] Probe-from height = %1.3f\n", probe_from_height);
+    }
+
+    // Move to probe_from_height (relative move!)
+    zprobe->coordinated_move(NAN, NAN, -probe_from_height, zprobe->getFastFeedrate(), true);
+    
+    // Prime the probe - this measurement is one of the most important!
+    if(!prime_probe()) return false;
+    
+    // Move to probing offset (also relative)
+    // We do these as two seperate steps because the top of a delta's build envelope is domed,
+    // and we want to avoid the possibility of asking the effector to move somewhere it can't
+    zprobe->coordinated_move(probe_offset_x, probe_offset_y, NAN, zprobe->getFastFeedrate(), true);
+
+    // Now, slowly probe the depth
+    save_acceleration();
+    set_acceleration(probe_acceleration);
+    if(!zprobe->run_probe(steps, false)) {
+        restore_acceleration();
+        return false;
+    }
+    restore_acceleration();
+    mm_probe_height_to_trigger = zprobe->zsteps_to_mm(steps);
+//_printf("[BH] probe_from_height (%1.3f) + mm_PHTT (%1.3f) + probe_offset_z (%1.3f)\n", probe_from_height, mm_probe_height_to_trigger, probe_offset_z);
+
+    // Set final bed height
+    bed_height = probe_from_height + mm_probe_height_to_trigger + probe_offset_z;
+
+    // Tell the machine about the new height
+    // FIXME: Endstops.cpp might have a more direct method for doing this - if so, that should be used instead!
+    // -- Construct command
+    char cmd[18];       // Should be enough for "M665 Z1000.12345"
+    snprintf(cmd, 17, "M665 Z%1.5f", bed_height);
+//    _printf("[BH] Setting bed height: ");
+//    _printf(cmd);
+//    _printf("\n");
+    
+    // -- Send command
+    struct SerialMessage message;
+    message.message = cmd;
+    message.stream = &(StreamOutput::NullStream);
+    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+    THEKERNEL->conveyor->wait_for_empty_queue();
+
+    _printf("[BH] Bed height set to %1.3f\n", bed_height);
+
+    return true;
+
+    /*
+    _printf(
+        "find_bed_center_height(): %d steps (%f mm) from probe_height (%f) to probe_offset_z (%f)\n",
+        s, (float)(s / Z_STEPS_PER_MM), probe_height, probe_offset_z);
+    _printf(
+        "find_bed_center_height(): Bed is %f mm tall.\n", bed_height);
+    */
+}
+
+
+// Do a probe at a specified (X, Y) location, taking probe offset into account
+bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y, bool skip_smoothing) {
+    // Move to location, corrected for probe offset (if any)
+    zprobe->coordinated_move(x + probe_offset_x, y + probe_offset_y, NAN, zprobe->getFastFeedrate(), false);
+
+    // Run the number of tests specified in probe_smoothing
+    steps = 0;
+    int smoothing, result;
+    if(skip_smoothing) {
+        smoothing = 1;
+    } else {
+        smoothing = probe_smoothing;
+    }
+
+    save_acceleration();
+    set_acceleration(probe_acceleration);
+
+    for(int i=0; i < smoothing; i++) {
+        // Run the probe
+        if(!zprobe->run_probe(result)) {
+            if(i != 0) steps /= i;
+            _printf("[DP] do_probe_at(steps, %1.3f, %1.3f) - run_probe() returned false, s=%d.\n", x + probe_offset_x, y + probe_offset_y, steps);
+            restore_acceleration();
+            return false;
+        }
+
+        // Return probe to original Z
+        if(zprobe->getDecelerateOnTrigger()) {
+            zprobe->return_probe(zprobe->getStepsAtDecelEnd());
+        } else {
+            zprobe->return_probe(result);
+        }
+
+        // Add to accumulator
+        steps += result;
+
+    }
+
+    restore_acceleration();
+    
+    // Average
+    steps /= smoothing;
+
+    // Sanity check
+    if(steps < 100) {
+        _printf("[DP] do_probe_at(): steps=%d - this is much too small - is probe_height high enough?\n", steps);
+        return false;
+    } else {
+        return true;
+    }
+}
+
+
+// When delta parameters are adjusted, you have to either home the printer or reset the kinematics.
+// If you don't, there will be a violent jerk the next time you ask the robot to move! This routine
+// should save a LOT of time over homing the robot. NOTE: Use the version of this method with offsets
+// if you reset the endstops because their offset values ARE NOT used in motion planning!
+void ComprehensiveDeltaStrategy::post_adjust_kinematics() {
+
+    float pos[3];
+    THEKERNEL->robot->get_axis_position(pos);
+    THEKERNEL->robot->reset_axis_position(pos[0], pos[1], pos[2]);
+
+}
+
+
+// This is the version you want to use if you're fiddling with the endstops. Note that endstop
+// offset values are POSITIVE (steps down, not up).
+void ComprehensiveDeltaStrategy::post_adjust_kinematics(float offset[3]) {
+
+    float pos[3];
+    THEKERNEL->robot->get_axis_position(pos);
+    THEKERNEL->robot->reset_axis_position(pos[0] + offset[0], pos[1] + offset[1], pos[2] + offset[2]);
+    geom_dirty = true;
+
+}
+
+// Following are getters/setters for global accelration (not Z-specific)
+void ComprehensiveDeltaStrategy::save_acceleration() {
+    saved_acceleration = THEKERNEL->planner->get_acceleration();
+}
+
+
+void ComprehensiveDeltaStrategy::restore_acceleration() {
+    set_acceleration(saved_acceleration);
+}
+
+
+void ComprehensiveDeltaStrategy::set_acceleration(float a) {
+
+    char cmd[20];       // Should be enough for "M204 S1234.45678"
+    snprintf(cmd, 19, "M204 S%1.5f", a);
+    // -- Send command
+    struct SerialMessage message;
+    message.message = cmd;
+    message.stream = &(StreamOutput::NullStream);
+    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+    THEKERNEL->conveyor->wait_for_empty_queue();
+
+}
+
+
+// Following are getters/setters for endstops
+bool ComprehensiveDeltaStrategy::set_trim(float x, float y, float z) {
 
     float t[3] {x, y, z};
     bool ok = PublicData::set_value( endstops_checksum, trim_checksum, t);
 
     if (ok) {
-        stream->printf("[ES] Set trim to: X=%f Y=%f Z=%f\n", x, y, z);
+        _printf("[ES] Set trim to: X=%f Y=%f Z=%f\n", x, y, z);
     } else {
-        stream->printf("[ES] Unable to set trim. Are endstops enabled?\n");
+        _printf("[ES] Unable to set trim. Are endstops enabled?\n");
     }
 
     return ok;
 }
+
 
 bool ComprehensiveDeltaStrategy::get_trim(float &x, float &y, float &z) {
 
@@ -1060,45 +1222,12 @@ bool ComprehensiveDeltaStrategy::get_trim(float &x, float &y, float &z) {
     return false;
 }
 
-/*
-    options['L'] = this->arm_length;
-    options['R'] = this->arm_radius;
-    options['A'] = this->tower1_offset;
-    options['B'] = this->tower2_offset;
-    options['C'] = this->tower3_offset;
-    options['D'] = this->tower1_angle;
-    options['E'] = this->tower2_angle;
-    options['F'] = this->tower3_angle;
-    options['G'] = this->tower1_arm_offset;
-    options['H'] = this->tower2_arm_offset;
-    options['I'] = this->tower3_arm_offset;
 
-*/
+// Following are getters/setters for delta geometry variables
 
-// When delta parameters are adjusted, you have to either home the printer or reset the kinematics.
-// If you don't, there will be a violent jerk the next time you ask the robot to move! This routine
-// should save a LOT of time over homing the robot. NOTE: Use the version of this method with offsets
-// if you reset the endstops because their offset values ARE NOT used in motion planning!
-void ComprehensiveDeltaStrategy::post_adjust_kinematics() {
-
-    float pos[3];
-    THEKERNEL->robot->get_axis_position(pos);
-    THEKERNEL->robot->reset_axis_position(pos[0], pos[1], pos[2]);
-
-}
-
-// This is the version you want to use if you're fiddling with the endstops. Note that endstop
-// offset values are POSITIVE (steps down, not up).
-void ComprehensiveDeltaStrategy::post_adjust_kinematics(float offset[3]) {
-
-    float pos[3];
-    THEKERNEL->robot->get_axis_position(pos);
-    THEKERNEL->robot->reset_axis_position(pos[0] + offset[0], pos[1] + offset[1], pos[2] + offset[2]);
-    geom_dirty = true;
-
-}
-
+// Basics (arm length & average radius of all three towers)
 bool ComprehensiveDeltaStrategy::set_delta_basic_geometry(float arm_length, float arm_radius) {
+
     options['L'] = arm_length;
     options['R'] = arm_radius;
     if(THEKERNEL->robot->arm_solution->set_optional(options)) {
@@ -1107,9 +1236,12 @@ bool ComprehensiveDeltaStrategy::set_delta_basic_geometry(float arm_length, floa
     } else {
         return false;
     }
+
 }
 
+
 bool ComprehensiveDeltaStrategy::get_delta_basic_geometry(float &arm_length, float &arm_radius) {
+
     if(THEKERNEL->robot->arm_solution->get_optional(options)) {
         arm_length = options['L'];
         arm_radius = options['R'];
@@ -1117,10 +1249,13 @@ bool ComprehensiveDeltaStrategy::get_delta_basic_geometry(float &arm_length, flo
     } else {
         return false;
     }
+
 }
 
 
+// Tower radius offsets
 bool ComprehensiveDeltaStrategy::set_tower_radius_offsets(float x, float y, float z) {
+
     options['A'] = x;
     options['B'] = y;
     options['C'] = z;
@@ -1130,9 +1265,12 @@ bool ComprehensiveDeltaStrategy::set_tower_radius_offsets(float x, float y, floa
     } else {
         return false;
     }
+
 }
 
+
 bool ComprehensiveDeltaStrategy::get_tower_radius_offsets(float &x, float &y, float &z) {
+
     if(THEKERNEL->robot->arm_solution->get_optional(options)) {
         x = options['A'];
         y = options['B'];
@@ -1141,10 +1279,13 @@ bool ComprehensiveDeltaStrategy::get_tower_radius_offsets(float &x, float &y, fl
     } else {
         return false;
     }
+
 }
 
-              
+
+// Tower angle offsets
 bool ComprehensiveDeltaStrategy::set_tower_angle_offsets(float x, float y, float z) {
+
     options['D'] = x;
     options['E'] = y;
     options['F'] = z;
@@ -1154,9 +1295,12 @@ bool ComprehensiveDeltaStrategy::set_tower_angle_offsets(float x, float y, float
     } else {
         return false;
     }
+
 }
 
+
 bool ComprehensiveDeltaStrategy::get_tower_angle_offsets(float &x, float &y, float &z) {
+
     if(THEKERNEL->robot->arm_solution->get_optional(options)) {
         x = options['D'];
         y = options['E'];
@@ -1165,10 +1309,13 @@ bool ComprehensiveDeltaStrategy::get_tower_angle_offsets(float &x, float &y, flo
     } else {
         return false;
     }
+
 }
 
-                          
+
+// Arm length offsets
 bool ComprehensiveDeltaStrategy::set_tower_arm_offsets(float x, float y, float z) {
+
     options['T'] = x;
     options['U'] = y;
     options['V'] = z;
@@ -1178,9 +1325,12 @@ bool ComprehensiveDeltaStrategy::set_tower_arm_offsets(float x, float y, float z
     } else {
         return false;
     }
+
 }
 
+
 bool ComprehensiveDeltaStrategy::get_tower_arm_offsets(float &x, float &y, float &z) {
+
     if(THEKERNEL->robot->arm_solution->get_optional(options)) {
         x = options['T'];
         y = options['U'];
@@ -1189,119 +1339,79 @@ bool ComprehensiveDeltaStrategy::get_tower_arm_offsets(float &x, float &y, float
     } else {
         return false;
     }
+
 }
 
-                                  
-// Probe the center of the bed to determine its height in steps, taking probe offsets into account.
-// Refreshes the following variables, AND SHOULD BE CALLED BEFORE READING THEM:
-//	bed_height
-//	probe_from_height
-// 	mm_probe_height_to_trigger
-bool ComprehensiveDeltaStrategy::find_bed_center_height() {
 
-    // Step counter
-    int steps;
+// Print all the particulars of our geometry model
+void ComprehensiveDeltaStrategy::print_geometry() {
 
-    // Start from the top
-    zprobe->home();
- 
-    // If we haven't determined the probe-from height yet, do so now
-    // We'll remember it until the machine is reset
-    if(probe_from_height == -1) {
+    float arm_length, arm_radius;
+    float radX, radY, radZ;
+    float angX, angY, angZ;
+    float armX, armY, armZ;
 
-        // Fast the first time
-        _printf("[BH] First time through, so I need to determine the probe-from height.\n");
-        zprobe->run_probe(steps, true);
-        
-        // Probe from height = total measured height - height required for the probe not to drag
-        probe_from_height = zprobe->zsteps_to_mm(steps) - zprobe->getProbeHeight();
-        zprobe->home();
+    get_delta_basic_geometry(arm_length, arm_radius);
+    get_tower_radius_offsets(radX, radY, radZ);
+    get_tower_angle_offsets(angX, angY, angZ);
+    get_tower_arm_offsets(armX, armY, armZ);
 
-    } else {
-_printf("[BH] Not the first time through - probe_from_height = %1.3f\n", probe_from_height);
-    }
+    _printf("[PG] Basic - Arm length: %1.3f  Radius: %1.3f\n", arm_length, arm_radius);
+    _printf("[PG] Radius offsets (ABC): {%1.3f, %1.3f, %1.3f}\n", radX, radY, radZ);
+    _printf("[PG]  Angle offsets (DEF): {%1.3f, %1.3f, %1.3f}\n", angX, angY, angZ);
+    _printf("[PG]    Arm offsets (TUV): {%1.3f, %1.3f, %1.3f}\n", armX, armY, armZ);
 
-    // Move to probe_from_height (relative move!)
-    zprobe->coordinated_move(NAN, NAN, -probe_from_height, zprobe->getFastFeedrate(), true);
-    
-    // Move to probing offset (also relative)
-    // We do these as two seperate steps because the top of a delta's build envelope is domed,
-    // and we want to avoid the possibility of asking the effector to move somewhere it can't
-    zprobe->coordinated_move(probe_offset_x, probe_offset_y, NAN, zprobe->getFastFeedrate(), true);
-    
-    // Now, slowly probe the depth
-    if(!zprobe->run_probe(steps, false)) {
-        return false;
-    }
-    mm_probe_height_to_trigger = zprobe->zsteps_to_mm(steps);
-_printf("[BH] probe_from_height (%1.3f) + mm_PHTT (%1.3f) + probe_offset_z (%1.3f)\n", probe_from_height, mm_probe_height_to_trigger, probe_offset_z);
-
-    // Set final bed height
-    bed_height = probe_from_height + mm_probe_height_to_trigger + probe_offset_z;
-_printf("[BH] Bed height set to %1.3f\n", bed_height);
-
-    // Tell the machine about the new height
-    // FIXME: Endstops.cpp might have a more direct method for doing this - if so, that should be used instead!
-    // -- Construct command
-    char cmd[18];       // Should be enough for "M665 Z1000.12345"
-    snprintf(cmd, 17, "M665 Z%1.5f", bed_height);
-    _printf("[BH] Setting bed height: ");
-    _printf(cmd);
-    _printf("\n");
-    
-    // -- Send command
-    struct SerialMessage message;
-    message.message = cmd;
-    message.stream = &(StreamOutput::NullStream);
-    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-    THEKERNEL->conveyor->wait_for_empty_queue();
-
-    return true;
-
-    /*
-    _printf(
-        "find_bed_center_height(): %d steps (%f mm) from probe_height (%f) to probe_offset_z (%f)\n",
-        s, (float)(s / Z_STEPS_PER_MM), probe_height, probe_offset_z);
-    _printf(
-        "find_bed_center_height(): Bed is %f mm tall.\n", bed_height);
-    */
 }
 
-bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y) {
-    // Move to location, corrected for probe offset (if any)
-    zprobe->coordinated_move(x + probe_offset_x, y + probe_offset_y, NAN, zprobe->getFastFeedrate(), false);
 
-    // Run the number of tests specified in probe_smoothing
-    steps = 0;
-    int result;
-    for(int i=0; i<probe_smoothing; i++) {
-        // Run the probe
-        if(!zprobe->run_probe(result)) {
-            _printf("do_probe_at(steps, %1.3f, %1.3f) - run_probe() returned false, s=%d.\n", x + probe_offset_x, y + probe_offset_y, steps);
-            return false;
-        }
-
-        // Return probe to original Z
-        zprobe->return_probe(result);
-
-        // Add to accumulator
-        steps += result;
-
-    }
-    
-    // Average
-    steps /= probe_smoothing;
-
-    // Sanity check
-    if(steps < 100) {
-        _printf("do_probe_at(): steps=%d - this is much too small - is probe_height high enough?\n", steps);
-        return false;
-    } else {
-        return true;
-    }
+// Distance between two points in 2-space
+float ComprehensiveDeltaStrategy::distance(float first[2], float second[2]) {
+    return sqrt(pow(second[X] - first[X], 2) + pow(second[Y] - first[Y], 2));
 }
+
+
+// Rotate a point around another point in 2-space.
+// Adapted from http://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
+void ComprehensiveDeltaStrategy::rotate2D(float (&point)[2], float reference[2], float angle) {
+
+    float s = sin(angle * 3.141595 / 180.0);
+    float c = cos(angle * 3.141595 / 180.0);
+    
+    point[X] -= reference[X];
+    point[Y] -= reference[Y];
+
+    float xNew = point[X] * c - point[Y] * s;
+    float yNew = point[X] * s + point[Y] * c;
+
+    point[X] = xNew + reference[X];
+    point[Y] = yNew + reference[Y];
+
+}
+
+
+// Calculate the midpoint of a 2-D line.
+// first[] and second[] are floats. Resulting midpoint stored in dest[].
+void ComprehensiveDeltaStrategy::midpoint(float first[2], float second[2], float (&dest)[2]) {
+
+    dest[0] = (first[0] + second[0]) / 2;
+    dest[1] = (first[1] + second[1]) / 2;
+
+}
+
+
+// Copy cur_depth_map to last_depth_map & zero all of cur_depth_map
+void ComprehensiveDeltaStrategy::save_depth_map() {
+
+    for(int i = 0; i < CDS_DEPTH_MAP_N_POINTS; i++) {
+        last_depth_map[i] = cur_depth_map[i];
+        cur_depth_map[i] = 0;
+    }
+
+}
+
 
 // Flush the serial buffer
 void ComprehensiveDeltaStrategy::flush() {
     THEKERNEL->call_event(ON_IDLE);
 }
+
