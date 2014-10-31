@@ -56,11 +56,16 @@ void Laser::on_module_loaded() {
         if( dummy_pin->pin == 20 ){ this->laser_pin = new mbed::PwmOut(LED2); }
         if( dummy_pin->pin == 21 ){ this->laser_pin = new mbed::PwmOut(LED3); }
         if( dummy_pin->pin == 23 ){ this->laser_pin = new mbed::PwmOut(LED4); }
+        if( dummy_pin->pin == 24 ){ this->laser_pin = new mbed::PwmOut(P1_24); }
+        if( dummy_pin->pin == 26 ){ this->laser_pin = new mbed::PwmOut(P1_26); }
+    }else if( dummy_pin->port_number == 3 ){
+        if( dummy_pin->pin == 25 ){ this->laser_pin = new mbed::PwmOut(P3_25); }
+        if( dummy_pin->pin == 26 ){ this->laser_pin = new mbed::PwmOut(P3_26); }
     }
 
     if (laser_pin == NULL)
     {
-        THEKERNEL->streams->printf("Error: Laser cannot use P%d.%d (P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23 only). Laser module disabled.\n", dummy_pin->port_number, dummy_pin->pin);
+        THEKERNEL->streams->printf("Error: Laser cannot use P%d.%d (P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P2.26 only). Laser module disabled.\n", dummy_pin->port_number, dummy_pin->pin);
         delete dummy_pin;
         delete this;
         return;
