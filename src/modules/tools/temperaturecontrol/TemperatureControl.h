@@ -51,6 +51,7 @@ class TemperatureControl : public Module {
 
         // PID runtime
         float i_max;
+        float i_windup;
 
         int o;
 

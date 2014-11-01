@@ -56,6 +56,7 @@
 #define d_factor_checksum                  CHECKSUM("d_factor")
 
 #define i_max_checksum                     CHECKSUM("i_max")
+#define i_windup_checksum                  CHECKSUM("i_windup")
 
 #define preset1_checksum                   CHECKSUM("preset1")
 #define preset2_checksum                   CHECKSUM("preset2")
@@ -185,6 +186,12 @@ void TemperatureControl::load_config()
         // set to the same as max_pwm by default
         this->i_max = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_max_checksum   )->by_default(this->heater_pin.max_pwm())->as_number();
     }
+
+    if(!this->readonly) {
+        // set windup range to 0 (ie disable) by default.  A reasonable value for a hotend would be 10-30C.
+        this->i_windup = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, i_windup_checksum   )->by_default(0)->as_number();
+    }
+
 
     this->iTerm = 0.0;
     this->lastInput = -1.0;
@@ -403,6 +410,11 @@ void TemperatureControl::pid_process(float temperature)
 
     if(this->lastInput < 0.0) this->lastInput = temperature; // set first time
     float d = (temperature - this->lastInput);
+
+    // Prevent integral windup if enabled
+    if(this->i_windup != 0) {
+        if(fabs(error) > i_windup) this->iTerm = 0.0;
+    }
 
     // calculate the PID output
     // TODO does this need to be scaled by max_pwm/256? I think not as p_factor already does that
