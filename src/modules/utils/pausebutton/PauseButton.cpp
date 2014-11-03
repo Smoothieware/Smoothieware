@@ -81,6 +81,11 @@ void PauseButton::on_console_line_received( void *argument )
 {
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
 
+    if(this->killed && new_message.message == "M999") {
+        this->killed= false;
+        return;
+    }
+
     // ignore comments and blank lines and if this is a G code then also ignore it
     char first_char = new_message.message[0];
     if(strchr(";( \n\rGMTN", first_char) != NULL) return;
