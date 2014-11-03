@@ -15,7 +15,7 @@
 #include "Pauser.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
-
+#include "Gcode.h"
 
 #define pause_led_pin_checksum      CHECKSUM("pause_led_pin")
 #define play_led_pin_checksum       CHECKSUM("play_led_pin")
@@ -36,6 +36,7 @@ void PlayLed::on_module_loaded()
 
     on_config_reload(this);
     this->register_for_event(ON_HALT);
+    this->register_for_event(ON_GCODE_RECEIVED);
     THEKERNEL->slow_ticker->attach(12, this, &PlayLed::led_tick);
 }
 
@@ -47,6 +48,14 @@ void PlayLed::on_config_reload(void *argument)
     ledpin = THEKERNEL->config->value( play_led_pin_checksum  )->by_default(ledpin)->as_string(); // override with play_led_pin if it's found
 
     led.from_string(ledpin)->as_output()->set(false);
+}
+
+void PlayLed::on_gcode_received(void *argument)
+{
+    Gcode *gcode = static_cast<Gcode *>(argument);
+    if ( gcode->has_m && gcode->m == 999 && halted) {
+            halted= false;
+    }
 }
 
 uint32_t PlayLed::led_tick(uint32_t)
