@@ -318,7 +318,9 @@ void Player::abort_command( string parameters, StreamOutput *stream )
     fclose(current_file_handler);
     current_file_handler = NULL;
     // clear out the block queue
-    THEKERNEL->conveyor->flush_queue();
+    if(parameters.empty()) {
+        THEKERNEL->conveyor->flush_queue();
+    }
     stream->printf("Aborted playing or paused file\r\n");
 }
 
@@ -335,7 +337,7 @@ void Player::on_main_loop(void *argument)
 
     if( this->playing_file ) {
         if(halted) {
-            abort_command("", &(StreamOutput::NullStream));
+            abort_command("1", &(StreamOutput::NullStream));
             return;
         }
 
