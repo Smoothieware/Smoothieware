@@ -36,6 +36,7 @@
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
 #define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
+#define gamma_max_checksum       CHECKSUM("gamma_max")
 
 // from endstop section
 #define delta_homing_checksum    CHECKSUM("delta_homing")
@@ -114,9 +115,10 @@ void ZProbe::on_config_reload(void *argument)
         }
     }
 
-    this->probe_height =  THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number();
+    this->probe_height  = THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number();
     this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(5)->as_number(); // feedrate in mm/sec
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
+    this->max_z         = THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number(); // maximum zprobe distance
 }
 
 bool ZProbe::wait_for_probe(int& steps)
@@ -163,16 +165,17 @@ bool ZProbe::run_probe(int& steps, bool fast)
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
     this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
+    float maxz= this->max_z*2;
 
     // move Z down
     STEPPER[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
-    STEPPER[Z_AXIS]->move(true, 1000 * Z_STEPS_PER_MM); // always probes down, no more than 1000mm TODO should be 2*maxz
+    STEPPER[Z_AXIS]->move(true, maxz * Z_STEPS_PER_MM); // always probes down, no more than 2*maxz
     if(this->is_delta) {
         // for delta need to move all three actuators
         STEPPER[X_AXIS]->set_speed(0);
-        STEPPER[X_AXIS]->move(true, 1000 * STEPS_PER_MM(X_AXIS));
+        STEPPER[X_AXIS]->move(true, maxz * STEPS_PER_MM(X_AXIS));
         STEPPER[Y_AXIS]->set_speed(0);
-        STEPPER[Y_AXIS]->move(true, 1000 * STEPS_PER_MM(Y_AXIS));
+        STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS));
     }
 
     // start acceration hrprocessing
@@ -186,7 +189,9 @@ bool ZProbe::run_probe(int& steps, bool fast)
 bool ZProbe::return_probe(int steps)
 {
     // move probe back to where it was
-    this->current_feedrate = this->slow_feedrate*2 * Z_STEPS_PER_MM; // feedrate in steps/sec
+    float fr= this->slow_feedrate*2; // nominally twice slow feedrate
+    if(fr > this->fast_feedrate) fr= this->fast_feedrate; // unless that is greater than fast feedrate
+    this->current_feedrate = fr * Z_STEPS_PER_MM; // feedrate in steps/sec
     bool dir= steps < 0;
     steps= abs(steps);
 

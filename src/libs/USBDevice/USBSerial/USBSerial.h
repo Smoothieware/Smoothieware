@@ -40,6 +40,7 @@ public:
     int puts(const char *);
 
     uint8_t available();
+    bool ready();
 
     uint16_t writeBlock(const uint8_t * buf, uint16_t size);
 

@@ -20,7 +20,9 @@
 #include <stdint.h>
 
 /* Used to insert hardcoded breakpoint into user's code. */
-#define __debugbreak()  do { __asm volatile ("bkpt #0"); } while (0)
+#ifndef __debugbreak
+    #define __debugbreak()  { __asm volatile ("bkpt #0"); }
+#endif
 
 /* Error strings that can be returned to GDB. */
 #define     MRI_ERROR_INVALID_ARGUMENT      "E01"   /* Encountered error when parsing command arguments. */
@@ -91,12 +93,12 @@ int __mriPlatform_CommUartIndex(void);
 
 #ifndef MRI_VERSION_STRING
 
-#define MRI_BRANCH "https://github.com/adamgreen/mri/tree/version_0.5"
+#define MRI_BRANCH "https://github.com/adamgreen/mri/tree/version_0.6"
 
 #define MRI_VERSION_MAJOR       0
-#define MRI_VERSION_MINOR       5
-#define MRI_VERSION_BUILD       20130120
-#define MRI_VERSION_SUBBUILD    1
+#define MRI_VERSION_MINOR       6
+#define MRI_VERSION_BUILD       20140515
+#define MRI_VERSION_SUBBUILD    2
 
 #define MRI_STR(X) MRI_STR2(X)
 #define MRI_STR2(X) #X

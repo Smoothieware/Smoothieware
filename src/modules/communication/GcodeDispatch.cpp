@@ -169,6 +169,7 @@ try_again:
                                 } else {
                                     new_message.stream->printf("; No config override\n");
                                 }
+                                gcode->add_nl= true;
                                 break; // fall through to process by modules
                             }
                         }

@@ -9,7 +9,7 @@ using std::string;
 
 extern volatile bool _isr_context;
 
-string lc(string str);
+string lc(const string& str);
 
 bool is_alpha( int );
 bool is_digit( int );

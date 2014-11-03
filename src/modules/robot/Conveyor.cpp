@@ -69,10 +69,9 @@ void Conveyor::on_module_loaded(){
 void Conveyor::on_idle(void* argument){
     if (queue.tail_i != gc_pending)
     {
-        if (queue.is_empty())
+        if (queue.is_empty()) {
             __debugbreak();
-        else
-        {
+        }else{
             // Cleanly delete block
             Block* block = queue.tail_ref();
 //             block->debug();

@@ -91,6 +91,8 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache *cache, const char 
                     else if(file_exists("/local" + inc_file_name)) inc_file_name = "/local" + inc_file_name;
                 }
                 if(file_exists(inc_file_name)) {
+                    printf("Including config file: %s\n", inc_file_name.c_str());
+
                     // save position in current config file
                     fpos_t pos;
                     fgetpos(lp, &pos);
@@ -102,6 +104,8 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache *cache, const char 
                     // reopen the current config file and restore position
                     freopen(file_name, "r", lp);
                     fsetpos(lp, &pos);
+                }else{
+                    printf("Unable to find included config file: %s\n", inc_file_name.c_str());
                 }
             }
         }else break;

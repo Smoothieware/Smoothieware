@@ -78,6 +78,7 @@ class Extruder : public Tool {
             bool paused:1;
             bool single_config:1;
             bool retracted:1;
+            bool cancel_zlift_restore:1; // hack to stop a G11 zlift restore from overring an absolute Z setting
         };
 
 

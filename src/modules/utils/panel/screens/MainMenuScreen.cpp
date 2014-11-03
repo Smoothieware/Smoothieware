@@ -15,6 +15,7 @@
 #include "JogScreen.h"
 #include "ControlScreen.h"
 #include "PrepareScreen.h"
+#include "ProbeScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
@@ -84,13 +85,22 @@ void MainMenuScreen::setupConfigureScreen()
         0.1F
         );
 
+    mvs->addMenuItem("Contrast",
+        []() -> float { return THEPANEL->lcd->getContrast(); },
+        [this](float v) { THEPANEL->lcd->setContrast(v); },
+        1,
+        0,
+        255,
+        true // instant update
+        );
+
     THEPANEL->enter_screen(mvs);
 }
 
 void MainMenuScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(6);
+    THEPANEL->setup_menu(7);
     this->refresh_menu();
 }
 
@@ -113,7 +123,7 @@ void MainMenuScreen::display_menu_line(uint16_t line)
         case 3: THEPANEL->lcd->printf("Prepare"); break;
         case 4: THEPANEL->lcd->printf("Custom"); break;
         case 5: THEPANEL->lcd->printf("Configure"); break;
-            //case 5: THEPANEL->lcd->printf("Tune"); break;
+        case 6: THEPANEL->lcd->printf("Probe"); break;
     }
 }
 
@@ -126,6 +136,7 @@ void MainMenuScreen::clicked_menu_entry(uint16_t line)
         case 3: THEPANEL->enter_screen(this->prepare_screen ); break;
         case 4: THEPANEL->enter_screen(THEPANEL->custom_screen ); break;
         case 5: setupConfigureScreen(); break;
+        case 6: THEPANEL->enter_screen((new ProbeScreen())->set_parent(this)); break;
     }
 }
 

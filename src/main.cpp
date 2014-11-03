@@ -11,7 +11,6 @@
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
-#include "modules/tools/touchprobe/Touchprobe.h"
 #include "modules/tools/zprobe/ZProbe.h"
 #include "modules/tools/scaracal/SCARAcal.h"
 #include "modules/tools/switch/SwitchPool.h"
@@ -56,12 +55,14 @@
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
 #define disable_leds_checksum  CHECKSUM("leds_disable")
+#define dfu_enable_checksum  CHECKSUM("dfu_enable")
 
 // Watchdog wd(5000000, WDT_MRI);
 
 // USB Stuff
 SDCard sd  __attribute__ ((section ("AHBSRAM0"))) (P0_9, P0_8, P0_7, P0_6);      // this selects SPI1 as the sdcard as it is on Smoothieboard
 //SDCard sd(P0_18, P0_17, P0_15, P0_16);  // this selects SPI0 as the sdcard
+//SDCard sd(P0_18, P0_17, P0_15, P2_8);  // this selects SPI0 as the sdcard witrh a different sd select
 
 USB u __attribute__ ((section ("AHBSRAM0")));
 USBSerial usbserial __attribute__ ((section ("AHBSRAM0"))) (&u);
@@ -70,7 +71,6 @@ USBMSD msc __attribute__ ((section ("AHBSRAM0"))) (&u, &sd);
 #else
 USBMSD *msc= NULL;
 #endif
-DFU dfu __attribute__ ((section ("AHBSRAM0"))) (&u);
 
 SDFAT mounter __attribute__ ((section ("AHBSRAM0"))) ("sd", &sd);
 
@@ -99,9 +99,12 @@ void init() {
     //some boards don't have leds.. TOO BAD!
     kernel->use_leds= !kernel->config->value( disable_leds_checksum )->by_default(false)->as_bool();
 
+    bool sdok= (sd.disk_initialize() == 0);
+    if(!sdok) kernel->streams->printf("SDCard is disabled\r\n");
+
 #ifdef DISABLEMSD
     // attempt to be able to disable msd in config
-    if(!kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
+    if(sdok && !kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
         // HACK to zero the memory USBMSD uses as it and its objects seem to not initialize properly in the ctor
         size_t n= sizeof(USBMSD);
         void *v = AHB0.alloc(n);
@@ -113,7 +116,6 @@ void init() {
     }
 #endif
 
-    bool sdok= (sd.disk_initialize() == 0);
 
     // Create and add main modules
     kernel->add_module( new SimpleShell() );
@@ -179,9 +181,12 @@ void init() {
 
     kernel->add_module( &usbserial );
     if( kernel->config->value( second_usb_serial_enable_checksum )->by_default(false)->as_bool() ){
-        kernel->add_module( new USBSerial(&u) );
+        kernel->add_module( new(AHB0) USBSerial(&u) );
     }
-    kernel->add_module( &dfu );
+
+    if( kernel->config->value( dfu_enable_checksum )->by_default(false)->as_bool() ){
+        kernel->add_module( new(AHB0) DFU(&u));
+    }
     kernel->add_module( &u );
 
     // clear up the config cache to save some memory

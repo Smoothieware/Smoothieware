@@ -22,7 +22,6 @@
 #include "SwitchPublicAccess.h"
 #include "checksumm.h"
 #include "Pauser.h"
-
 #include <math.h>
 #include <string.h>
 #include <string>
@@ -58,6 +57,7 @@ WatchScreen::WatchScreen()
     speed_changed = false;
     issue_change_speed = false;
     ipstr = nullptr;
+    update_counts= 0;
 }
 
 WatchScreen::~WatchScreen()
@@ -69,7 +69,7 @@ void WatchScreen::on_enter()
 {
     THEPANEL->lcd->clear();
     THEPANEL->setup_menu(4);
-    get_temp_data();
+    get_current_status();
     get_current_pos(this->pos);
     get_sd_play_info();
     this->current_speed = lround(get_current_speed());
@@ -102,12 +102,11 @@ void WatchScreen::on_refresh()
     }
 
     // Update Only every 20 refreshes, 1 a second
-    static int update_counts = 0;
     update_counts++;
     if ( update_counts % 20 == 0 ) {
         get_sd_play_info();
         get_current_pos(this->pos);
-        get_temp_data();
+        get_current_status();
         if (this->speed_changed) {
             this->issue_change_speed = true; // trigger actual command to change speed
             this->speed_changed = false;
@@ -121,9 +120,28 @@ void WatchScreen::on_refresh()
         this->refresh_screen(THEPANEL->lcd->hasGraphics() ? true : false); // graphics screens should be cleared
 
         // for LCDs with leds set them according to heater status
-        // TODO should be enabled and disabled and settable from config
-        THEPANEL->lcd->setLed(LED_BED_ON, this->bedtarget > 0);
-        THEPANEL->lcd->setLed(LED_HOTEND_ON, this->hotendtarget > 0);
+        bool bed_on= false, hotend_on= false, is_hot= false;
+        uint8_t heon=0, hemsk= 0x01; // bit set for which hotend is on bit0: hotend1, bit1: hotend2 etc
+        for(auto m : THEPANEL->temperature_modules) {
+            // query each heater
+            void *p= getTemperatures(m);
+            struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
+            if(temp != nullptr) {
+                if(temp->current_temperature > 50) is_hot= true; // anything is hot
+                if(temp->designator.front() == 'B' && temp->target_temperature > 0) bed_on= true;   // bed on/off
+                if(temp->designator.front() == 'T') { // a hotend by convention
+                    if(temp->target_temperature > 0){
+                        hotend_on= true;// hotend on/off (anyone)
+                        heon |= hemsk;
+                    }
+                    hemsk <<= 1;
+                }
+            }
+        }
+        THEPANEL->lcd->setLed(LED_BED_ON, bed_on);
+        THEPANEL->lcd->setLed(LED_HOTEND_ON, hotend_on);
+        THEPANEL->lcd->setLed(LED_HOT, is_hot);
+
         THEPANEL->lcd->setLed(LED_FAN_ON, this->fan_state);
 
         if (THEPANEL->lcd->hasGraphics()) {
@@ -132,11 +150,12 @@ void WatchScreen::on_refresh()
             // for (int i = 0; i < 5; ++i) {
             //     THEPANEL->lcd->bltGlyph(i*24, 38, 23, 19, icons, 15, i*24, 0);
             // }
-            if (this->hotendtarget > 0)
-                THEPANEL->lcd->bltGlyph(8, 38, 20, 19, icons, 15, 0, 0);
+            if(heon&0x01) THEPANEL->lcd->bltGlyph(0, 38, 20, 19, icons, 15, 0, 0);
+            if(heon&0x02) THEPANEL->lcd->bltGlyph(20, 38, 20, 19, icons, 15, 24, 0);
+            if(heon&0x04) THEPANEL->lcd->bltGlyph(40, 38, 20, 19, icons, 15, 48, 0);
 
-            if (this->bedtarget > 0)
-                THEPANEL->lcd->bltGlyph(32, 38, 23, 19, icons, 15, 64, 0);
+            if (bed_on)
+                THEPANEL->lcd->bltGlyph(60, 38, 23, 19, icons, 15, 64, 0);
 
             if(this->fan_state)
                 THEPANEL->lcd->bltGlyph(96, 38, 23, 19, icons, 15, 96, 0);
@@ -153,38 +172,23 @@ void WatchScreen::on_main_loop()
     }
 }
 
+void *WatchScreen::getTemperatures(uint16_t heater_cs)
+{
+    void *returned_data;
+    bool ok = PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
+
+    if (ok) {
+        return returned_data;
+    }
+
+    return nullptr;
+}
+
 // fetch the data we are displaying
-void WatchScreen::get_temp_data()
+void WatchScreen::get_current_status()
 {
     void *returned_data;
     bool ok;
-
-    ok = PublicData::get_value( temperature_control_checksum, bed_checksum, current_temperature_checksum, &returned_data );
-    if (ok) {
-        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
-        this->bedtemp = round(temp.current_temperature);
-        if (this->bedtemp > 100000) this->bedtemp = -2;
-        this->bedtarget = round(temp.target_temperature);
-        //this->bedpwm= temp.pwm;
-    } else {
-        // temp probably disabled
-        this->bedtemp = -1;
-        this->bedtarget = -1;
-    }
-
-
-    ok = PublicData::get_value( temperature_control_checksum, hotend_checksum, current_temperature_checksum, &returned_data );
-    if (ok) {
-        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
-        this->hotendtemp = round(temp.current_temperature);
-        if (this->hotendtemp > 100000) this->hotendtemp = -2;
-        this->hotendtarget = round(temp.target_temperature);
-        //this->hotendpwm= temp.pwm;
-    } else {
-        // temp probably disabled
-        this->hotendtemp = -1;
-        this->hotendtarget = -1;
-    }
 
     // get fan status
     ok = PublicData::get_value( switch_checksum, fan_checksum, 0, &returned_data );
@@ -244,9 +248,27 @@ void WatchScreen::display_menu_line(uint16_t line)
     // in menu mode
     switch ( line ) {
         case 0:
-            if(THEPANEL->temperature_screen != nullptr) {
+            if(THEPANEL->temperature_modules.size() > 0) {
                 // only if we detected heaters in config
-                THEPANEL->lcd->printf("H%03d/%03dc B%03d/%03dc", this->hotendtemp, this->hotendtarget, this->bedtemp, this->bedtarget);
+                auto tm= THEPANEL->temperature_modules;
+                int n= 0;
+                if(tm.size() > 2) {
+                    // more than two temps we need to cycle between them
+                    n= update_counts/100; // increments every 5 seconds
+                    int ntemps= (tm.size()+1)/2;
+                    n= n%ntemps; // which of the pairs of temps to display
+                }
+
+                int off= 0;
+                for (size_t i = 0; i < 2; ++i) {
+                    size_t o= i+(n*2);
+                    if(o>tm.size()-1) break;
+                    struct pad_temperature *temp= static_cast<struct pad_temperature *>(getTemperatures(tm[o]));
+                    if(temp == nullptr) continue;
+                    THEPANEL->lcd->setCursor(off, 0); // col, row
+                    off += THEPANEL->lcd->printf("%s:%03d/%03d ", temp->designator.substr(0, 2).c_str(), (int)roundf(temp->current_temperature), (int)roundf(temp->target_temperature));
+                }
+
             }else{
                 //THEPANEL->lcd->printf("No Heaters");
             }

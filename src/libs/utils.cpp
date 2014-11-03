@@ -10,44 +10,47 @@
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
 #include "utils.h"
-using namespace std;
+
 #include <string>
-using std::string;
 #include <cstring>
 #include <stdio.h>
+using std::string;
 
 volatile bool _isr_context = false;
 
-uint16_t get_checksum(const string& to_check){
+uint16_t get_checksum(const string &to_check)
+{
     return get_checksum(to_check.c_str());
 }
 
-uint16_t get_checksum(const char* to_check){
-   // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum
-   uint16_t sum1 = 0;
-   uint16_t sum2 = 0;
-   const char* p= to_check;
-   char c;
-   while((c= *p++) != 0) {
-      sum1 = (sum1 + c) % 255;
-      sum2 = (sum2 + sum1) % 255;
-   }
-   return (sum2 << 8) | sum1;
+uint16_t get_checksum(const char *to_check)
+{
+    // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum
+    uint16_t sum1 = 0;
+    uint16_t sum2 = 0;
+    const char *p = to_check;
+    char c;
+    while((c = *p++) != 0) {
+        sum1 = (sum1 + c) % 255;
+        sum2 = (sum2 + sum1) % 255;
+    }
+    return (sum2 << 8) | sum1;
 }
 
-void get_checksums(uint16_t check_sums[], const string& key){
+void get_checksums(uint16_t check_sums[], const string &key)
+{
     check_sums[0] = 0x0000;
     check_sums[1] = 0x0000;
     check_sums[2] = 0x0000;
     size_t begin_key = 0;
     unsigned int counter = 0;
-    while( begin_key < key.size() && counter < 3 ){
+    while( begin_key < key.size() && counter < 3 ) {
         size_t end_key =  key.find_first_of(".", begin_key);
         string key_node;
         if(end_key == string::npos) {
-            key_node= key.substr(begin_key);
-        }else{
-            key_node= key.substr(begin_key, end_key-begin_key);
+            key_node = key.substr(begin_key);
+        } else {
+            key_node = key.substr(begin_key, end_key - begin_key);
         }
 
         check_sums[counter] = get_checksum(key_node);
@@ -91,52 +94,67 @@ bool is_whitespace(int c)
 }
 
 // Convert to lowercase
-string lc(string str){
-    for (unsigned int i=0; i<strlen(str.c_str()); i++)
-        if (str[i] >= 0x41 && str[i] <= 0x5A)
-        str[i] = str[i] + 0x20;
-    return str;
+string lc(const string &str)
+{
+    string lcstr;
+    for (auto c : str) {
+        lcstr.append(1, ::tolower(c));
+    }
+    return lcstr;
 }
 
 // Remove non-number characters
-string remove_non_number( string str ){
+string remove_non_number( string str )
+{
     string number_mask = "0123456789-.abcdefpxABCDEFPX";
-    size_t found=str.find_first_not_of(number_mask);
-    while (found!=string::npos){
+    size_t found = str.find_first_not_of(number_mask);
+    while (found != string::npos) {
         //str[found]='*';
-        str.replace(found,1,"");
-        found=str.find_first_not_of(number_mask);
+        str.replace(found, 1, "");
+        found = str.find_first_not_of(number_mask);
     }
     return str;
 }
 
 // Get the first parameter, and remove it from the original string
-string shift_parameter( string &parameters ){
+string shift_parameter( string &parameters )
+{
     size_t beginning = parameters.find_first_of(" ");
-    if( beginning == string::npos ){ string temp = parameters; parameters = ""; return temp; }
+    if( beginning == string::npos ) {
+        string temp = parameters;
+        parameters = "";
+        return temp;
+    }
     string temp = parameters.substr( 0, beginning );
-    parameters = parameters.substr(beginning+1, parameters.size());
+    parameters = parameters.substr(beginning + 1, parameters.size());
     return temp;
 }
 
 // Separate command from arguments
-string get_arguments( string possible_command ){
+string get_arguments( string possible_command )
+{
     size_t beginning = possible_command.find_first_of(" ");
-    if( beginning == string::npos ){ return ""; }
+    if( beginning == string::npos ) {
+        return "";
+    }
     return possible_command.substr( beginning + 1, possible_command.size() - beginning + 1);
 }
 
 // Returns true if the file exists
-bool file_exists( const string file_name ){
+bool file_exists( const string file_name )
+{
     bool exists = false;
     FILE *lp = fopen(file_name.c_str(), "r");
-    if(lp){ exists = true; }
+    if(lp) {
+        exists = true;
+    }
     fclose(lp);
     return exists;
 }
 
 // Prepares and executes a watchdog reset for dfu or reboot
-void system_reset( bool dfu ){
+void system_reset( bool dfu )
+{
     if(dfu) {
         LPC_WDT->WDCLKSEL = 0x1;                // Set CLK src to PCLK
         uint32_t clk = SystemCoreClock / 16;    // WD has a fixed /4 prescaler, PCLK default is /4
@@ -144,7 +162,7 @@ void system_reset( bool dfu ){
         LPC_WDT->WDMOD = 0x3;                   // Enabled and Reset
         LPC_WDT->WDFEED = 0xAA;                 // Kick the dog!
         LPC_WDT->WDFEED = 0x55;
-    }else{
+    } else {
         NVIC_SystemReset();
     }
 }
@@ -162,22 +180,20 @@ string absolute_from_relative( string path )
         return path;
     }
 
-    string match = "../" ;
-    while ( path.substr(0,3) == match ) {
+    while ( path.substr(0, 3) == "../" ) {
         path = path.substr(3);
         unsigned found = cwd.find_last_of("/");
-        cwd = cwd.substr(0,found);
+        cwd = cwd.substr(0, found);
     }
 
-    match = ".." ;
-    if ( path.substr(0,2) == match ) {
+    if ( path.substr(0, 2) == ".." ) {
         path = path.substr(2);
         unsigned found = cwd.find_last_of("/");
-        cwd = cwd.substr(0,found);
+        cwd = cwd.substr(0, found);
     }
 
     if ( cwd[cwd.length() - 1] == '/' ) {
-         return cwd + path;
+        return cwd + path;
     }
 
     return cwd + '/' + path;

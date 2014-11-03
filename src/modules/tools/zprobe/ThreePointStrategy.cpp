@@ -153,7 +153,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             delete this->plane;
             if(gcode->get_num_args() == 0) {
                 this->plane= nullptr;
-                // delete the adjustZfnc in robot
+                // delete the compensationTransform in robot
                 setAdjustFunction(false);
             }else{
                 // smoothie specific way to restire a saved plane
@@ -297,7 +297,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     if((mm.second - mm.first) <= this->tolerance) {
         this->plane= nullptr; // plane is flat no need to do anything
         stream->printf("DEBUG: flat plane\n");
-        // clear the adjustZfnc in robot
+        // clear the compensationTransform in robot
         setAdjustFunction(false);
 
     }else{
@@ -312,11 +312,11 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 void ThreePointStrategy::setAdjustFunction(bool on)
 {
     if(on) {
-        // set the adjustZfnc in robot
-        THEKERNEL->robot->adjustZfnc= [this](float x, float y) { return this->plane->getz(x, y); };
+        // set the compensationTransform in robot
+        THEKERNEL->robot->compensationTransform= [this](float target[3]) { target[2] += this->plane->getz(target[0], target[1]); };
     }else{
         // clear it
-        THEKERNEL->robot->adjustZfnc= nullptr;
+        THEKERNEL->robot->compensationTransform= nullptr;
     }
 }
 
