@@ -55,13 +55,19 @@ using namespace std;
 Conveyor::Conveyor(){
     gc_pending = queue.tail_i;
     running = false;
+    flush = false;
 }
 
 void Conveyor::on_module_loaded(){
     register_for_event(ON_IDLE);
     register_for_event(ON_MAIN_LOOP);
+    register_for_event(ON_HALT);
 
     on_config_reload(this);
+}
+
+void Conveyor::on_halt(void* argument){
+    flush_queue();
 }
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
@@ -136,6 +142,13 @@ void Conveyor::on_block_end(void* block)
 
     gc_pending = queue.next(gc_pending);
 
+    // mark entire queue for GC if flush flag is asserted
+    if (flush){
+        while (gc_pending != queue.head_i) {
+            gc_pending = queue.next(gc_pending);
+        }
+    }
+
     // Return if queue is empty
     if (gc_pending == queue.head_i)
     {
@@ -184,6 +197,13 @@ void Conveyor::ensure_running()
         running = true;
         queue.item_ref(gc_pending)->begin();
     }
+}
+
+void Conveyor::flush_queue()
+{
+    flush = true;
+    wait_for_empty_queue();
+    flush = false;
 }
 
 // Debug function

@@ -11,25 +11,26 @@
 #include <string>
 using std::string;
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "utils/Gcode.h"
 
-#include "libs/StreamOutput.h"
-#define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+class GcodeDispatch : public Module
+{
+public:
+    GcodeDispatch();
 
-class GcodeDispatch : public Module {
-    public:
-        GcodeDispatch();
+    virtual void on_module_loaded();
+    virtual void on_console_line_received(void *line);
+    void on_halt(void *arg);
 
-        virtual void on_module_loaded();
-        virtual void on_console_line_received(void* line);
-        bool return_error_on_unhandled_gcode;
-    private:
-        int currentline;
-        bool uploading;
-        string upload_filename;
-        FILE *upload_fd;
-        uint8_t last_g;
+private:
+    int currentline;
+    string upload_filename;
+    FILE *upload_fd;
+    uint8_t last_g;
+    struct {
+        bool uploading: 1;
+        bool halted: 1;
+        bool return_error_on_unhandled_gcode:1;
+    };
 };
 
 #endif

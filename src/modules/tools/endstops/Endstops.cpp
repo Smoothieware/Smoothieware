@@ -247,10 +247,9 @@ void Endstops::on_idle(void *argument)
                 while(this->pins[n].get()) {
                     if ( ++debounce >= debounce_count ) {
                         // endstop triggered
-                        THEKERNEL->pauser->take();
-                        THEKERNEL->streams->printf("Limit switch %s was hit - reset required\n", endstop_names[n]);
+                        THEKERNEL->streams->printf("Limit switch %s was hit - reset or M999 required\n", endstop_names[n]);
                         this->status= LIMIT_TRIGGERED;
-                        // disables heaters and motors
+                        // disables heaters and motors, ignores incoming Gcode and flushes block queue
                         THEKERNEL->call_event(ON_HALT);
                         return;
                     }

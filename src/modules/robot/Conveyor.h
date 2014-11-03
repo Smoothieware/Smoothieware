@@ -27,6 +27,7 @@ public:
     void on_idle(void *);
     void on_main_loop(void *);
     void on_block_end(void *);
+    void on_halt(void *);
     void on_config_reload(void *);
 
     void notify_block_finished(Block *);
@@ -40,6 +41,8 @@ public:
     void queue_head_block(void);
 
     void dump_queue(void);
+    void flush_queue(void);
+    bool is_flushing() const { return flush; }
 
     friend class Planner; // for queue
 
@@ -48,7 +51,10 @@ private:
 
     Queue_t queue;  // Queue of Blocks
 
-    volatile bool running;
+    struct {
+        volatile bool running:1;
+        volatile bool flush:1;
+    };
 
     volatile unsigned int gc_pending;
 };
