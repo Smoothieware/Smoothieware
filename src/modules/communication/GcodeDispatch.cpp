@@ -129,12 +129,13 @@ try_again:
                         // we ignore all commands until M999
                         if(gcode->has_m && gcode->m == 999) {
                             halted= false;
-                            new_message.stream->printf("ok\r\n");
+                            // fall through and pass onto other modules
                         }else{
+                            // ignore everything, return error string to host
                             new_message.stream->printf("!!\r\n");
+                            delete gcode;
+                            continue;
                         }
-                        delete gcode;
-                        continue;
                     }
 
                     if(gcode->has_g) {

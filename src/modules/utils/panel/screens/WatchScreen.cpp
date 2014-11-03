@@ -285,6 +285,10 @@ const char *WatchScreen::get_status()
         return THEPANEL->getMessage().c_str();
     }
 
+    if (THEPANEL->is_halted()) {
+        return "HALTED Reset or M999";
+    }
+
     if (THEKERNEL->pauser->paused())
         return "Paused";
 

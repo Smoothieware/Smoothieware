@@ -18,12 +18,14 @@ using namespace std;
 #define pause_button_pin_checksum    CHECKSUM("pause_button_pin")
 #define kill_button_pin_checksum     CHECKSUM("kill_button_pin")
 
-PauseButton::PauseButton(){
+PauseButton::PauseButton()
+{
     this->button_state = true;
-    this->killed= false;
+    this->killed = false;
 }
 
-void PauseButton::on_module_loaded(){
+void PauseButton::on_module_loaded()
+{
     this->pause_enable = THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool();
     this->kill_enable  = THEKERNEL->config->value( kill_button_enable_checksum )->by_default(false)->as_bool();
     this->pause_button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input();
@@ -31,8 +33,11 @@ void PauseButton::on_module_loaded(){
 
     if(this->kill_enable && this->kill_button.connected() && pause_button.equals(kill_button)) {
         // kill button takes priority
-        this->pause_enable= false;
-        this->pause_button.from_string("nc");
+        this->pause_enable = false;
+
+    } else if(this->kill_enable && !this->kill_button.connected() && !this->pause_enable && pause_button.connected()) {
+        // use pause button for kill button
+        this->kill_button = this->pause_button;
     }
 
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
@@ -44,28 +49,28 @@ void PauseButton::on_module_loaded(){
 
 //TODO: Make this use InterruptIn
 //Check the state of the button and act accordingly based on current pause state
-uint32_t PauseButton::button_tick(uint32_t dummy){
+uint32_t PauseButton::button_tick(uint32_t dummy)
+{
     // If pause button changed
     if(this->pause_enable && this->pause_button.connected()) {
         bool newstate = this->pause_button.get();
-        if(this->button_state != newstate){
+        if(this->button_state != newstate) {
             this->button_state = newstate;
             // If button pressed
-            if( this->button_state ){
-                if( THEKERNEL->pauser->paused() ){
+            if( this->button_state ) {
+                if( THEKERNEL->pauser->paused() ) {
                     THEKERNEL->pauser->release();
-                }else{
+                } else {
                     THEKERNEL->pauser->take();
                 }
             }
         }
     }
 
-    if(!this->killed && this->kill_enable && this->kill_button.connected() && this->kill_button.get()) {
-            this->killed= true;
-            THEKERNEL->pauser->take();
-            THEKERNEL->call_event(ON_HALT);
-            //THEKERNEL->streams->printf("Kill button pressed - reset required to continue\r\n"); // not in an interrupt
+    if(!this->killed && this->kill_enable && this->kill_button.connected() && !this->kill_button.get()) {
+        this->killed = true;
+        THEKERNEL->call_event(ON_HALT);
+        //THEKERNEL->streams->printf("Kill button pressed - reset required to continue\r\n"); // not in an interrupt
     }
 
     return 0;
@@ -80,15 +85,15 @@ void PauseButton::on_console_line_received( void *argument )
     char first_char = new_message.message[0];
     if(strchr(";( \n\rGMTN", first_char) != NULL) return;
 
-    string cmd= shift_parameter(new_message.message);
+    string cmd = shift_parameter(new_message.message);
 
     if (cmd == "freeze") {
-        if( !THEKERNEL->pauser->paused() ){
+        if( !THEKERNEL->pauser->paused() ) {
             THEKERNEL->pauser->take();
         }
 
-    }else if (cmd == "unfreeze") {
-        if( THEKERNEL->pauser->paused() ){
+    } else if (cmd == "unfreeze") {
+        if( THEKERNEL->pauser->paused() ) {
             THEKERNEL->pauser->release();
         }
     }

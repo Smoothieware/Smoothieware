@@ -42,11 +42,10 @@ class Kernel {
         void call_event(_EVENT_ENUM id_event);
         void call_event(_EVENT_ENUM id_event, void * argument);
 
-        // These modules are aviable to all other modules
+        // These modules are available to all other modules
         SerialConsole*    serial;
         StreamOutputPool* streams;
 
-        GcodeDispatch*    gcode_dispatch;
         Robot*            robot;
         Stepper*          stepper;
         Planner*          planner;

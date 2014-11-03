@@ -82,6 +82,7 @@ Panel::Panel()
     this->sd= nullptr;
     this->extmounter= nullptr;
     this->external_sd_enable= false;
+    this->halted= false;
     strcpy(this->playing_file, "Playing file");
 }
 
@@ -189,6 +190,7 @@ void Panel::on_module_loaded()
     this->register_for_event(ON_IDLE);
     this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_GCODE_RECEIVED);
+    this->register_for_event(ON_HALT);
 
     // Refresh timer
     THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
@@ -267,6 +269,8 @@ void Panel::on_gcode_received(void *argument)
             this->message = get_arguments(gcode->get_command());
             if (this->message.size() > 20) this->message = this->message.substr(0, 20);
             gcode->mark_as_taken();
+        }else if(gcode->m == 999 && halted) {
+            halted= false;
         }
     }
 }
@@ -712,4 +716,9 @@ void Panel::on_second_tick(void *arg)
     }else{
         // TODO for panels with no sd card detect we need to poll to see if card is inserted - or not
     }
+}
+
+void Panel::on_halt(void *arg)
+{
+    halted= true;
 }
