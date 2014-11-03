@@ -235,7 +235,28 @@ static const char *endstop_names[]= {"min_x", "min_y", "min_z", "max_x", "max_y"
 
 void Endstops::on_idle(void *argument)
 {
-    if(this->status != NOT_HOMING) return; // don't check while homing or if a LIMIT was triggered
+    if(this->status == LIMIT_TRIGGERED) {
+        // if we were in limit triggered see if it has been cleared
+        for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+            if(this->limit_enable[c]) {
+                std::array<int, 2> minmax{{0, 3}};
+                // check min and max endstops
+                for (int i : minmax) {
+                    int n= c+i;
+                    if(this->pins[n].get()) {
+                        // still triggered, so exit
+                        return;
+                    }
+                }
+            }
+        }
+        // clear the state
+        this->status= NOT_HOMING;
+
+    }else if(this->status != NOT_HOMING) {
+        // don't check while homing
+        return;
+    }
 
     for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if(this->limit_enable[c] && STEPPER[c]->is_moving()) {
