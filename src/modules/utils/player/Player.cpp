@@ -48,11 +48,12 @@ void Player::on_module_loaded()
     this->on_boot_gcode_enable = THEKERNEL->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs = 0;
     this->reply_stream = NULL;
+    this->halted= false;
 }
 
 void Player::on_halt(void *)
 {
-    abort_command("", &(StreamOutput::NullStream));
+    halted= true;
 }
 
 void Player::on_second_tick(void *)
@@ -311,6 +312,8 @@ void Player::abort_command( string parameters, StreamOutput *stream )
     this->current_stream = NULL;
     fclose(current_file_handler);
     current_file_handler = NULL;
+    // clear out the block queue
+    THEKERNEL->conveyor->flush_queue();
     stream->printf("Aborted playing or paused file\r\n");
 }
 
@@ -326,6 +329,12 @@ void Player::on_main_loop(void *argument)
     }
 
     if( this->playing_file ) {
+        if(halted) {
+            halted= false;
+            abort_command("", &(StreamOutput::NullStream));
+            return;
+        }
+
         char buf[130]; // lines upto 128 characters are allowed, anything longer is discarded
         bool discard = false;
 

@@ -38,15 +38,18 @@ class Player : public Module {
 
         string filename;
 
-        bool on_boot_gcode_enable;
-        bool booted;
         string on_boot_gcode;
-        bool playing_file;
         StreamOutput* current_stream;
         StreamOutput* reply_stream;
         FILE* current_file_handler;
         unsigned long file_size, played_cnt;
         unsigned long elapsed_secs;
+        struct {
+            bool on_boot_gcode_enable:1;
+            bool booted:1;
+            bool playing_file:1;
+            bool halted:1;
+        };
 };
 
 #endif // PLAYER_H
