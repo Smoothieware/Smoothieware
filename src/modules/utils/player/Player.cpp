@@ -179,6 +179,9 @@ void Player::on_gcode_received(void *argument)
             } else {
                 this->playing_file = true;
             }
+
+        }else if (gcode->m == 999) {
+            halted= false;
         }
     }
 }
@@ -186,6 +189,8 @@ void Player::on_gcode_received(void *argument)
 // When a new line is received, check if it is a command, and if it is, act upon it
 void Player::on_console_line_received( void *argument )
 {
+    if(halted) return; // if in halted state ignore any commands
+
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
 
     // ignore comments and blank lines and if this is a G code then also ignore it
@@ -330,7 +335,6 @@ void Player::on_main_loop(void *argument)
 
     if( this->playing_file ) {
         if(halted) {
-            halted= false;
             abort_command("", &(StreamOutput::NullStream));
             return;
         }
