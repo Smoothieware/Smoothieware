@@ -22,6 +22,7 @@ PauseButton::PauseButton()
 {
     this->button_state = true;
     this->killed = false;
+    this->do_kill= false;
 }
 
 void PauseButton::on_module_loaded()
@@ -36,7 +37,7 @@ void PauseButton::on_module_loaded()
         this->pause_enable = false;
 
     } else if(this->kill_enable && !this->kill_button.connected() && !this->pause_enable && pause_button.connected()) {
-        // use pause button for kill button
+        // use pause button for kill button if kill buttin not specifically defined
         this->kill_button = this->pause_button;
     }
 
@@ -44,11 +45,22 @@ void PauseButton::on_module_loaded()
 
     if( (this->pause_enable && this->pause_button.connected()) || (this->kill_enable && this->kill_button.connected()) ) {
         THEKERNEL->slow_ticker->attach( 100, this, &PauseButton::button_tick );
+        this->register_for_event(ON_IDLE);
+    }
+}
+
+void PauseButton::on_idle(void *argument)
+{
+    if(do_kill) {
+        do_kill= false;
+        THEKERNEL->call_event(ON_HALT);
+        THEKERNEL->streams->printf("Kill button pressed - reset or M999 to continue\r\n");
     }
 }
 
 //TODO: Make this use InterruptIn
 //Check the state of the button and act accordingly based on current pause state
+// Note this is ISR sodon;t do anything nasty in here
 uint32_t PauseButton::button_tick(uint32_t dummy)
 {
     // If pause button changed
@@ -69,8 +81,9 @@ uint32_t PauseButton::button_tick(uint32_t dummy)
 
     if(!this->killed && this->kill_enable && this->kill_button.connected() && !this->kill_button.get()) {
         this->killed = true;
-        THEKERNEL->call_event(ON_HALT);
-        //THEKERNEL->streams->printf("Kill button pressed - reset required to continue\r\n"); // not in an interrupt
+        // we can't call this in ISR, and we need to block on_main_loop so do it in on_idle
+        // THEKERNEL->call_event(ON_HALT);
+        this->do_kill= true;
     }
 
     return 0;
