@@ -22,7 +22,18 @@ using std::string;
 #include "checksumm.h"
 #include "ConfigValue.h"
 
+#include <algorithm>
+
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+
+// goes in Flash, list of Mxxx codes that are allowed when in Halted state
+static const int allowed_mcodes[]= {105,114}; // get temp, get pos
+static bool is_allowed_mcode(int m) {
+    for (size_t i = 0; i < sizeof(allowed_mcodes)/sizeof(int); ++i) {
+        if(allowed_mcodes[i] == m) return true;
+    }
+    return false;
+}
 
 GcodeDispatch::GcodeDispatch()
 {
@@ -126,12 +137,13 @@ try_again:
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
 
                     if(halted) {
-                        // we ignore all commands until M999
+                        // we ignore all commands until M999, unless it is in the exceptions list (like M105 get temp)
                         if(gcode->has_m && gcode->m == 999) {
                             THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
                             halted= false;
                             // fall through and pass onto other modules
-                        }else{
+
+                        }else if(!is_allowed_mcode(gcode->m)) {
                             // ignore everything, return error string to host
                             new_message.stream->printf("!!\r\n");
                             delete gcode;
