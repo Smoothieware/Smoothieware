@@ -43,6 +43,7 @@ void StepperMotor::init()
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
 
+    current_position_steps= 0;
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
 }
@@ -67,6 +68,9 @@ void StepperMotor::step()
         this->step_signal_hook->call();
     }
 
+    // keep track of actuators actual position in steps
+    this->current_position_steps += (this->direction ? -1 : 1);
+
     // Is this move finished ?
     if( this->stepped == this->steps_to_move ) {
         // Mark it as finished, then StepTicker will call signal_mode_finished()
@@ -80,7 +84,6 @@ void StepperMotor::step()
 // If the move is finished, the StepTicker will call this ( because we asked it to in tick() )
 void StepperMotor::signal_move_finished()
 {
-
     // work is done ! 8t
     this->moving = false;
     this->steps_to_move = 0;
@@ -177,12 +180,14 @@ void StepperMotor::change_steps_per_mm(float new_steps)
 {
     steps_per_mm = new_steps;
     last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+    current_position_steps = last_milestone_steps;
 }
 
 void StepperMotor::change_last_milestone(float new_milestone)
 {
     last_milestone_mm = new_milestone;
     last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+    current_position_steps = last_milestone_steps;
 }
 
 int  StepperMotor::steps_to_target(float target)

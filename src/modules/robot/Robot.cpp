@@ -379,11 +379,14 @@ void Robot::on_gcode_received(void *argument)
                 check_max_actuator_speeds();
                 return;
             case 114: {
-                char buf[32];
-                int n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f",
+                char buf[64];
+                int n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f A:%1.3f B:%1.3f C:%1.3f ",
                                  from_millimeters(this->last_milestone[0]),
                                  from_millimeters(this->last_milestone[1]),
-                                 from_millimeters(this->last_milestone[2]));
+                                 from_millimeters(this->last_milestone[2]),
+                                 actuators[X_AXIS]->get_current_position(),
+                                 actuators[Y_AXIS]->get_current_position(),
+                                 actuators[Z_AXIS]->get_current_position() );
                 gcode->txt_after_ok.append(buf, n);
                 gcode->mark_as_taken();
             }
@@ -602,12 +605,10 @@ void Robot::reset_axis_position(float position, int axis)
 }
 
 // Use FK to find out where actuator is and reset lastmilestone to match
-// FIXME we need to know where the actual current actuator position is, this does not currently do that and so is useless
 void Robot::reset_position_from_current_actuator_position()
 {
-    // FIXME do not want last_milestone we need actual actuator position
-    // float actuator_pos[]= {actuators[X_AXIS]->get_current_position_mm(), actuators[Y_AXIS]->get_current_position_mm(), actuators[Z_AXIS]->get_current_position_mm()};
-    // arm_solution->actuator_to_cartesian(actuator_pos, this->last_milestone);
+    float actuator_pos[]= {actuators[X_AXIS]->get_current_position(), actuators[Y_AXIS]->get_current_position(), actuators[Z_AXIS]->get_current_position()};
+    arm_solution->actuator_to_cartesian(actuator_pos, this->last_milestone);
 }
 
 // Convert target from millimeters to steps, and append this to the planner
