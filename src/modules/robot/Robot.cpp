@@ -609,6 +609,7 @@ void Robot::reset_position_from_current_actuator_position()
 {
     float actuator_pos[]= {actuators[X_AXIS]->get_current_position(), actuators[Y_AXIS]->get_current_position(), actuators[Z_AXIS]->get_current_position()};
     arm_solution->actuator_to_cartesian(actuator_pos, this->last_milestone);
+    memcpy(this->transformed_last_milestone, this->last_milestone, sizeof(this->transformed_last_milestone));
 }
 
 // Convert target from millimeters to steps, and append this to the planner

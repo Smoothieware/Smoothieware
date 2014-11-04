@@ -252,6 +252,7 @@ void Endstops::on_idle(void *argument)
         }
         // clear the state
         this->status= NOT_HOMING;
+        return;
 
     }else if(this->status != NOT_HOMING) {
         // don't check while homing

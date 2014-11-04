@@ -318,9 +318,9 @@ void Player::abort_command( string parameters, StreamOutput *stream )
     current_file_handler = NULL;
     if(parameters.empty()) {
         // clear out the block queue
-        // I think this is a HACK... wait for queue !full as flushing a full queue doesn't work
-        // as it means there is probably a gcod waiting to be pushed and will be as soon as I flush the queue this causes
-        // on emore move but it is the last move queued so is completely wrong, this HACK means we stop cleanly but
+        // I think this is a HACK... wait for queue !full as flushing a full queue doesn't work well
+        // as it means there is probably a gcode waiting to be pushed and will be as soon as I flush the queue this causes
+        // one more move but it is the last move queued so is completely wrong, this HACK means we stop cleanly but
         // only after the current move has completed and maybe the next one.
         while (THEKERNEL->conveyor->is_queue_full()) {
             THEKERNEL->call_event(ON_IDLE);
