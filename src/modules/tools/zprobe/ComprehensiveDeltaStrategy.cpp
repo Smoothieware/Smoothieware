@@ -32,7 +32,10 @@
 
 #define X 0
 #define Y 1
+#define Z 2
 
+// This prints to ALL streams. If you have second_usb_serial_enable turned on, you better connect a terminal to it!
+// Otherwise, eventually the serial buffers will get full and the printer may crash the effector into the build surface.
 #define _printf THEKERNEL->streams->printf
 
 
@@ -40,17 +43,22 @@
 // (which you can do over a serial console, by the way)
 bool ComprehensiveDeltaStrategy::handleConfig() {
 
+    int i;
+
     // Set probe_from_height to a value that find_bed_center_height() will know means it needs to be initialized
     probe_from_height = -1;
 
     // Set the dirty flag, so we know we have to calibrate the endstops and delta radius
     geom_dirty = true;
 
-    // Zero out the depth map arrays
-    for(int i=0; i<12; i++) {
-        cur_depth_map[i] = 0;
-        last_depth_map[i] = 0;
+    // Zero out the depth map. The active test points (active_point[]) will be zeroed in determine_active_points().
+    for(i=0; i < CDS_DEPTH_MAP_N_POINTS; i++) {
+        depth_map[i].abs = 0;
+        depth_map[i].rel = 0;
     }
+    
+    // Zero out last_depth_map[]
+    save_depth_map();
 
     // Initialize the best probe calibration stats (we'll use sigma==-1 to check whether initialized)
     best_probe_calibration.sigma = -1;
@@ -157,7 +165,6 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
 
         if(gcode->g == 31) { // Depth-map the bed and display the results
 
-            _printf("Depth-mapping the bed. Please stand by...\n");
             //depth_map_print_surface(true);	// Setting "true" makes it nicely print the results over serial
             //depth_map_segmented_line(test_point[TP_Y], test_point[TP_OPP_Y], 10);
 
@@ -212,7 +219,7 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
                 }
             }
             if(!gcode->has_letter('E')) {
-                if(!calibrate_delta_radius(override_target, override_radius)) {
+                if(!calibrate_delta_radius(20, override_target, override_radius)) {
                     _printf("Calibration failed to complete, probe not triggered\n");
                     return true;
                 }
@@ -300,22 +307,382 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration() {
 //    float score_ISM;
 //    float PHTT;
 //    probe_triforce(depth, score_avg, score_ISM, PHTT);
+// http://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf
+
+/*
+
+    My notes:
+    
+    Endstop offset and delta radius are interdependent. Tower position is based on delta radius and you can't
+    move the probe near a tower without relying on calculations that take the delta radius into account in the
+    first place.
+    
+    Endstops also determine how far the virtual print center is from the actual, physical center. Therefore,
+    they have to be adjusted at the same time as everything else.
+
+    If you adjust the endstop for a tower, points near it are raised/lowered and points opposite do the
+    inverse. So, we can check the test points along the tower-opposite diagonal to see whether that tower's
+    endstop needs adjustment, although other misalignments will play into it. We may want to only do it if
+    the regression for points along that line are within a given limit.
+
+    The inverse kinematics work by subtracting the squares of (delta tower x/y - cartesian x/y) from the arm
+    length squared. The importance of arm length, numerically, seems as high as that of the tower radius.
+    I suppose it could be adjusted using similar parameters (tower neighbors' diagonals OK, but own
+    diagonals not).
+
+    Therefore, I propose a system where individual calibration types can be activated/deactivated. The first
+    caltype in the list is run first, 2nd is run 2nd, etc., rather than doing them simultaneously. I feel
+    trying to solve everything simultaneously (like Rich Cattell's method) fuzzes the numbers too much
+    because the under/overshoot of one parameter nudges ALL of the test point elevations, and it's difficult
+    to know just how much of that nudge came from one caltype vs. any other.
+    
+    This is the order of the caltypes I initially think would be best. They are in my best guess as to their
+    order of importance.
+
+    - Converge delta radius and endstops, simultaneously, until no further improvement
+    - Add radii and arm length, and converge until no further improvement
+    - Add angles and converge until no further improvement
+
+    "No further improvement" means try it until it doesn't get better, although we will accept "within
+    tolerance" if we've been trying one array of caltypes for too long.
+    
+    It is also possible we could do another heuristic type:
+    - Converge delta radius and endsdtops [dr+es]
+    - Try [dr+es] and all combinations of radii, arm length, and tower angle
+      (so dr+es+radii, dr+es+arm length, dr+es+radii+arm length, dr+es+angle, dr+es+arm length+angle, etc.)
+    - For all combinations, store the configuration (caltypes and offsets), min/max deviation, and sigma
+    - The winner is the one with the lowest deviation, or if that exceeds a critical value, whoever wins
+      between the one with the lowest deviation and the one with the lowest sigma
+    - We can present the three best deviations/sigmas, so the user can manually input the one *they* want
+
+
+    Notes from Rich C's autocalibration:
+    
+    // Apparent influences (extracted from the pseudocode below)
+    // -------------------------------------------
+    // Delta radius:    - Tower heights vs. center height
+    //
+    // Arm length:      - Tower heights vs. opposite heights
+    //                  * Individual arm length is merely an elaboration of this beyond taking the average
+    //
+    // Tower radii:	- Calculate difference between towers and opposites (diagonals) => dX = tXz - oXz, etc.
+    //			- Calcualte differences between diagonals vs. target =>
+    //                      - d12 = TRUE if abs(d1 - d2) < target * 2
+    //                      - d23 = TRUE if abs(d2 - d3) < target * 2
+    //                      - d31 = TRUE if abs(d3 - d1) < target * 2
+    //                  - For each tower, if the diagonal between its neighbors is OK but not between its
+    //			  neighbors and itself, that tower requires a radius adjustment
+    //  		* Using target * 2 seems arbitrary. Perhaps that should be 1.5 or something calculated?
+    //
+    // Tower angles:	- Calculate difference between neighbor's opposites =>
+    //			    - da1 = o2z - o3z
+    //                      - da2 = o3z - o1z
+    //                      - da3 = o1z - o2z
+    //                  - The order of subtraction seems to automatically produce the correct direction
+    //                      - 3-1 = 2 and 1-3 = -2, so the absolute value is the same - only diff. is the sign
+    //                  * This also seems quite arbitrary: a Cartesian Z difference maps directly to an angle
+    //                    without any transform at all? That doesn't take the tower radius into account.
+    //                    Consider the inverse kinematics:
+    //                      - actuator[X] = sqrtf(
+    //				arm length squared[X]
+    //				- sqr(t1x - pos[X])
+    //				- sqr(t1y - pos[Y])
+    //			      ) + pos[Z];
+    //			* t1x and t1y are a function of the tower radius, so that matters to the kinematics!
+
+    // Probing
+    // -------------------------------------------
+    - Probe towers (t1z..t3z)
+    - Probe center (cz)
+    - Probe opposites (o1z..o3z)
+    
+    // Averages and min/maxes
+    // -------------------------------------------
+    - Tower average (tave)
+    - Delta center (dc = cz - tave)
+    - Tower minmax (diff = std::minmax(t...))
+    - Opposite average (oave)
+    - Delta Z (center Z - tave)
+    - Delta average (dave = oave - tave)
+    
+    // Variables for increasing/decreasing the offsets
+    // -------------------------------------------
+    - Delta radius increase (drinc) = (tave > cz) ? -0.1 : 0.1
+    - Delta arm length increase (dalinc) = (tave > oave) ? -0.1 : 0.1
+
+    // Adjust delta radius
+    // -------------------------------------------
+    - if(cz - tave > target) {
+    -	delta_radius += drinc
+    - }
+
+    // Adjust arm length based on whether tower and opposite depths are reasonably close
+    // NOTE: *INDIVIDUAL* arm length adjustments have only a tiny impact & can be messed with after everything else is done!
+    // -------------------------------------------
+    - if(abs(dave) > target * 2) {
+    -	arm_length += dalinc
+    - }
+
+    // Calculate tower radius adjustments by comparing the tower-to-opposite diagonals
+    // -------------------------------------------
+    - d1 = t1z - o1z
+    - d2 = t2z - o2z
+    - d3 = t3z - o3z
+
+    // These are true when the radii are good enough
+    - bool d12 = abs(d1 - d2) if <= target * 2
+    - bool d23 = abs(d2 - d3) "
+    - bool d31 = abs(d3 - d1) "
+    
+    // Tower angle adjustments
+    // -------------------------------------------
+    - da1 = o2z - o3z if > target * 2
+    - da2 = o3z - o1z "
+    - da3 = o1z - o2z "
+
+    // Initial values
+    // -------------------------------------------
+    - if(drinc == 0):  if(tave > cz  ) drinc = -0.1 else 0.1
+    - if(dalinc == 0): if(tave > oave) dalinc = -0.1 else 0.1
+    
+    // Change delta radius based on center Z minus tower average
+    // -------------------------------------------
+    - if(abs(dc) > target): increase delta radius by drinc
+    
+    // Change arm length based on delta average (opposite average minus tower average)
+    // -------------------------------------------
+    - if(abs(dave) > (target * 2)): increase arm length by dalinc
+    
+    // Correct for X tower radius error
+    // -------------------------------------------
+    - set_dro = false
+    - if(d23, but not d12 or d31) {
+    -	if(d1inc == 0) d1inc = (t1z < o1z) ? -0.1 : 0.1
+    -   delta radius x (drx) += d1inc
+    - }
+    
+    // Correct for Y tower radius error
+    // -------------------------------------------
+    - if(d31, but not d12 or d23) {
+    -	if(d2inc == 0) d2inc = (t2z < o2z) ? -0.1 : 0.1
+    -	dry += d2inc
+    - }
+
+    // Correct for Z tower radius error
+    // -------------------------------------------
+    - if(d12, but not d23 or d31) {
+    -	if(d3inc == 0) d3inc = (t3z < o3z) ? -0.1 : 0.1
+    -	drz += d3inc
+    - }
+
+    // Set tower angle offsets to da1..3 if != 0
+    
+    // Set tower radius offsets to drx..z if != 0
+
+    // Set arm length if changed
+
+    // Adjust delta radius incrementor for overshoot
+    // NOTE: This halves the incrementor each time, which seems awfully aggressive
+    // -------------------------------------------
+    // Delta radius
+    - if( (drinc > 0 && cz < tave) || (drinc < 0 && cz > tave) ) drinc = -drinc / 2
+
+    // Adjust delta arm length incrementor for overshoot
+    // NOTE: Same
+    // -------------------------------------------
+    - if( (dalinc > 0 && oave < tave) || (dalinc < 0 && oave > tave) alinc = -dalinc / 2
+
+    // Tower radius overshoot?
+    // NOTE: Same
+    // -------------------------------------------
+    - if( d1inc > 0 && t1z < o1z) || (d1inc < 0 && t1z > o1z) d1inc = -d1inc / 2;
+    // Same logic for d2inc and d3inc
+
+    // Done with this iteration, so let the kernel have some CPU cycles for doing idle tasks
+    // -------------------------------------------
+    - THEKERNEL->call_event(ON_IDLE)
+
+
+*/
+
 
     // Collect initial surface map and save it to last_depth_map[] for later comparison
-    depth_map_print_surface(true);
-    save_depth_map();
+//    depth_map_print_surface(true);
+//    save_depth_map();
+
+    _printf("[HC] Heuristic calibration in progress.\n");
+    _printf("[HC] /!\\ DO NOT /!\\ access the SD card, use the panel, or send any commands. Doing so may cause the probe to CRASH!\n");
+
+    print_geometry();
+
+    // Set up target tolerance
+    float target = 0.030;		// 30 microns should be alright
+
+    // Activate the endstop and delta radius calibration types
+    caltype.endstops.active = true;
+    caltype.delta_radius.active = true;
+
 
     // Main calibration loop
-    for(int i = 0; i < 10; i++) {
+    // -------------------------------------------    
+    int i;	// Outer loop
+    int j;	// Inner loop
+    int max_iterations = 10;
 
-        // Analyze
+    for(i = 0; i < max_iterations; i++) {
+
+        // Probe depths at all test points (active points only, and no pretty-printed output)
+        depth_map_print_surface(true, false);
+
+        // Deviation for towers
+        // These are measured for all calibration types
+        auto tower_minmax = std::minmax( {depth_map[TP_X].abs, depth_map[TP_Y].abs, depth_map[TP_Z].abs} );
+        float tower_deviation = tower_minmax.second - tower_minmax.first;
+        float tower_avg = (depth_map[TP_X].abs + depth_map[TP_Y].abs + depth_map[TP_Z].abs) / 3.0f;
+
+        // Deviation for tower opposites
+        // These are NOT measured for all calibration types! See determine_active_points().
+        auto tower_opp_minmax = std::minmax( {depth_map[TP_OPP_X].abs, depth_map[TP_OPP_Y].abs, depth_map[TP_OPP_Z].abs} );
+        float tower_opp_deviation = tower_opp_minmax.second - tower_opp_minmax.first;
+
+        _printf("\n \n---===] Iteration %d of %d [===------\n", i + 1, max_iterations);
+        _printf("[HC] Towers: deviation=%1.3f avg=%1.3f\n", tower_deviation, depth_map[TP_CTR].abs - tower_avg);
+
+        // Do we calibrate the endstops?
+        if(caltype.endstops.active) {
+
+            // Yep
+            _printf("[ES] Endstops are ");
+
+            // Deviation and trimscale
+            static float last_deviation;
+            static float trimscale;
+
+            // Do we need to reset the variables?
+            if(caltype.endstops.needs_reset) {
+                last_deviation = 999;
+                trimscale = 1.3F;
+                caltype.endstops.needs_reset = false;
+            }
+
+            // Deviation within tolerance?
+            if(tower_deviation <= target) {
+
+                // Yep
+                _printf("within tolerance.\n");
+                caltype.endstops.in_tolerance = true;
+
+            } else {
+
+                // Nope
+                _printf("out of tolerance by %1.3f.\n", tower_deviation - target);
+                caltype.endstops.in_tolerance = false;
+
+                // Get trim
+                float trim[3];
+                if(!get_trim(trim[X], trim[Y], trim[Z])) {
+                    _printf("[ES] Couldn't query trim.\n");
+                    return false;
+                }
+
+                // Sanity-check trim
+                if(trim[X] > 0) trim[X] = 0;
+                if(trim[Y] > 0) trim[Y] = 0;
+                if(trim[Z] > 0) trim[Z] = 0;
+
+                // If things stayed the same or got worse, we reduce the trimscale
+                if((tower_deviation >= last_deviation) && (trimscale * 0.95 >= 0.9)) {  
+                    trimscale *= 0.9;
+                    _printf("[ES] ~ Deviation same or worse vs. last time - reducing trim scale to %1.3f\n", trimscale);
+                }
+                last_deviation = tower_deviation;
+
+                // Set all towers' trims (normalized!)
+                trim[X] += (tower_minmax.first - depth_map[TP_X].abs) * trimscale;
+                trim[Y] += (tower_minmax.first - depth_map[TP_Y].abs) * trimscale;
+                trim[Z] += (tower_minmax.first - depth_map[TP_Z].abs) * trimscale;
+
+                // Correct the downward creep issue by normalizing the trim offsets
+                auto mm = std::minmax({trim[X], trim[Y], trim[Z]});
+                trim[X] -= mm.second;
+                trim[Y] -= mm.second;
+                trim[Z] -= mm.second;
+
+                set_trim(trim[X], trim[Y], trim[Z]);
+
+            }
+        }
         
-        // Alter
+        // Do we calibrate the delta radius?
+        if(caltype.delta_radius.active) {
+
+            // Yep
+            float dr_factor = 2.5;
+            
+            // Retrieve delta radius or die trying
+            float delta_radius;
+            if(!get_delta_radius(delta_radius)) {
+                _printf("[DR] Couldn't query delta_radius.\n");
+                return false;
+            }
+
+            // Examine differences between tower depths and use this to adjust delta_radius
+            float avg = (depth_map[TP_X].abs + depth_map[TP_Y].abs + depth_map[TP_Z].abs) / 3.0;
+            float deviation = depth_map[TP_CTR].abs - avg;
+            _printf("[DR] Depths: Center=%1.3f, Tower average=%1.3f => Difference: %1.3f\n", depth_map[TP_CTR].abs, avg, deviation);
+            _printf("[DR] Delta radius is ");
+            
+            // Deviation within tolerance?
+            if(deviation <= target) {
+
+                // Yep
+                _printf("within tolerance.\n");
+                caltype.delta_radius.in_tolerance = true;
+
+            } else {
+
+                // Nope
+                _printf("out of tolerance by %1.3f.\n", deviation - target);
+                
+                _printf("[DR] Delta radius: changing from %1.3f to ", delta_radius);
+                delta_radius += (deviation * dr_factor);
+                _printf("%1.3f\n", delta_radius);
+                set_delta_radius(delta_radius);
+
+            }
+        }
+        
+        // Arm length (all)
+        if(caltype.arm_length.active) {
+        }
+        
+        // Arm length offsets (individual towers)
+        if(caltype.arm_length_individual.active) {
+        }
+        
+        // Tower radius offsets
+        if(caltype.tower_radius_individual.active) {
+        }
+        
+        // Tower angle offsets
+        if(caltype.tower_angle_individual.active) {
+        }
+
+        // OK! Now let's decide whether we need to advance to the next caltype setup, or quit because we're done.
+        // (overly simple for the time being)
+        if(caltype.endstops.in_tolerance && caltype.delta_radius.in_tolerance) {
+            _printf("[HC] Heuristic calibration is complete.\n");
+            return true;
+        }
+
+
 
     }
 
+    // If we got this far, it didn't work
+    _printf("[HC] Heuristic calibration: Max iterations exeeded.\n");
 
-    return true;
+    return false;
 
 }
 
@@ -529,88 +896,39 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
 }
 
 
-/* Probe the depth of points near each tower, and at the halfway points between each tower:
+// Determine which test points we're going to probe.
+// This is important because probing all the points takes a looooooong tiiiiiiiime and we're going to run
+// through potentially dozens of iterations.
+void ComprehensiveDeltaStrategy::determine_active_points() {
 
-        1
-        /\
-     2 /__\ 6
-      /\  /\
-     /__\/__\
-    3   4    5
-
-   This pattern defines the points of a triforce, hence the name.
-*/
-/*
-bool ComprehensiveDeltaStrategy::probe_triforce(float (&depth)[6], float &score_avg, float &score_ISM, float &PHTT) {
-
-    // Init test points
-    int triforce[6] = { TP_Z, TP_MID_ZX, TP_X, TP_MID_XY, TP_Y, TP_MID_YZ };
-
-    int s;				// # of steps (passed by reference to probe_delta_tower, which sets it)
-    int i;
-    score_avg = 0;			// Score starts at 0 (perfect) - the further away it gets, the worse off we are!
-    score_ISM = 0;
-
-    // Need to get bed height in current tower angle configuration (the following method automatically refreshes mm_PHTT)
-    // We're passing the current value of PHTT back by reference in case the caller cares, e.g. if they want a baseline.
-    require_clean_geometry();
-    prepare_to_probe();
-    if(!prime_probe()) return false;
-    PHTT = mm_probe_height_to_trigger;
-
-    // This is for storing the probe results in terms of score (deviation from center height).
-    // This is different from the "scores" we return, which is the average and intersextile mean of the contents of scores[].
-    float score[6];
-
-    for(i=0; i<6; i++) {
-        // Probe triforce
-        _printf("[PT] Probing point %d at <%1.3f, %1.3f>.\n", i, test_point[triforce[i]][X], test_point[triforce[i]][Y]);
-
-        // Move into position and probe the depth
-        // depth[i] is probed and calculated in exactly the same way that mm_probe_height_to_trigger is
-        // This means that we can compare probe results from this and mm_PHTT on equal terms
-        if(!do_probe_at(s, test_point[triforce[i]][X], test_point[triforce[i]][Y])) {
-            return false;
-        }
-        depth[i] = zprobe->zsteps_to_mm(s);
-        score[i] = fabs(depth[i] - mm_probe_height_to_trigger);
+    // Clear any active test points
+    for(int i=0; i<CDS_DEPTH_MAP_N_POINTS; i++) {
+        active_point[i] = false;
     }
-    
-    // Do some statistics
-    auto mm = std::minmax({score});
-    for(i=0; i<6; i++) {
-    
-        // Average
-        score_avg += score[i];
 
-        // Intersextile mean (ignore lowest and highest values, keep the remaining four)
-        // Works similar to an interquartile mean, but more specific to our problem domain (we always have exactly 6 samples)
-        // Context: http://en.wikipedia.org/wiki/Interquartile_mean
-        if(score[i] != *mm.first && score[i] != *mm.second) {
-            score_ISM += score[i];
-        }
+    // Decide which test points we want.
+    // First, every test we run has to know about the tower elevations
+    active_point[TP_X] = true;
+    active_point[TP_Y] = true;
+    active_point[TP_Z] = true;
+    
+    // Tests other than endstops and delta radius also require tower-opposite points
+    if( caltype.arm_length.active               ||
+        caltype.arm_length_individual.active    ||
+        caltype.tower_radius_individual.active  ||
+        caltype.tower_angle_individual.active) {
+
+            active_point[TP_OPP_X] = true;
+            active_point[TP_OPP_Y] = true;
+            active_point[TP_OPP_Z] = true;
+
     }
-    score_avg /= 6;
-    score_ISM /= 4;
-
-    _printf("[TQ] Probe height to trigger at bed center (PHTT) - this is the target depth: %1.3f\n", mm_probe_height_to_trigger);
-    _printf("[TQ]        Current depths: {%1.3f, %1.3f, %1.3f, %1.3f, %1.3f, %1.3f}\n", depth[0], depth[1], depth[2], depth[3], depth[4], depth[5]);
-    _printf("[TQ]   Delta(depth - PHTT): {%1.3f, %1.3f, %1.3f, %1.3f, %1.3f, %1.3f}\n", fabs(depth[0] - mm_probe_height_to_trigger), fabs(depth[1] - mm_probe_height_to_trigger), fabs(depth[2] - mm_probe_height_to_trigger), fabs(depth[3] - mm_probe_height_to_trigger), fabs(depth[4] - mm_probe_height_to_trigger), fabs(depth[5] - mm_probe_height_to_trigger));
-    _printf("[TQ]  Score (lower=better): avg=%1.3f, ISM=%1.3f\n", score_avg, score_ISM);
-
-    return true;
-
 }
-*/
 
 
-/*
-
- Depth-map the print surface
- Initially useful for diagnostics, but the data may be useful for doing live height corrections
-
-*/
-bool ComprehensiveDeltaStrategy::depth_map_print_surface(bool display_results) {
+// Depth-map the print surface
+// Initially useful for diagnostics, but the data may be useful for doing live height corrections
+bool ComprehensiveDeltaStrategy::depth_map_print_surface(bool active_points_only, bool display_results) {
 
 // This code doesn't go in this method - just leaving it here for now...
 //    float permitted_deviation = 0.05f;
@@ -621,8 +939,12 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(bool display_results) {
     int origin_steps;	// Steps from probe_height to bed surface at bed center
     int steps; 		// Steps from probe_height to bed surface at one of the test points
 
-    require_clean_geometry();
-    print_geometry();
+    determine_active_points();
+// It made sense to put this here before, but now that we're using heuristic_calibration(), I don't think it does
+//    require_clean_geometry();
+    if(display_results) {
+        print_geometry();
+    }
 
     // Measure depth from probe_from_height at bed center
     prepare_to_probe();
@@ -630,55 +952,87 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(bool display_results) {
     if(!prime_probe()) return false;
 
     if(do_probe_at(origin_steps, 0, 0)) {
-        _printf("[DM] Steps to bed surface at center: %d (%1.3f mm)\n", origin_steps, zprobe->zsteps_to_mm(origin_steps));
+        depth_map[TP_CTR].rel = 0;
+        depth_map[TP_CTR].abs = zprobe->zsteps_to_mm(origin_steps);
+        _printf("[DM] MM to bed surface at center: %d (%1.3f mm)\n", origin_steps, depth_map[TP_CTR].abs);
     } else {
         return false;
     }
+    
 
     // Measure depth from probe_height at all test points
     float best = 999;
     float worst = 0;
 //    float mu;
 //    float sigma;
+
+    // These are for pretty-printing a table with all test points
     unsigned char lines[] = { 1, 3, 2, 2, 3, 1 };
     unsigned char line = 0;
-    for(int i=0; i<12; i++) {
-//        _printf("Test point %d: <%1.3f, %1.3f>: ", i, test_point[i][0], test_point[i][1]);
-        if(!do_probe_at(steps, test_point[i][0], test_point[i][1])) {
-            _printf("[DM] do_probe_at() returned false.\n");
-            return false;
-        }
-//        _printf("%d steps (deflection = %d steps, %1.3f mm)\n", s, origin_steps - s, zprobe->zsteps_to_mm(origin_steps - s));
-        cur_depth_map[i] = origin_steps - steps;
-        if(fabs(cur_depth_map[i]) < fabs(best)) {
-            best = cur_depth_map[i];
-        }
-        if(fabs(cur_depth_map[i]) > fabs(worst)) {
-            worst = cur_depth_map[i];
-        }
 
-        if(line == 0) {
-            _printf("[DM] ");
-        }
+    // Main probing loop
+    for(int i=0; i<CDS_DEPTH_MAP_N_POINTS; i++) {
 
-         
-        _printf(" %1.3f ", zprobe->zsteps_to_mm(cur_depth_map[i]));
+        // If active_points_only, we only probe the points figured out in determine_active_points(); else we probe them all
+        // We don't probe TP_CTR because we already did above, in order to be able to store relative depths
+        if(i != TP_CTR && (active_point[i] || !active_points_only)) {
+
+            // Run the probe
+            if(!do_probe_at(steps, test_point[i][X], test_point[i][Y])) {
+                _printf("[DM] do_probe_at() returned false.\n");
+                return false;
+            }
+
+            // Store result in depth_map
+            depth_map[i].rel = zprobe->zsteps_to_mm(origin_steps - steps);
+            depth_map[i].abs = zprobe->zsteps_to_mm(steps);
+
+            // Do some statistics (sign doesn't matter, only magnitude)
+            if(fabs(depth_map[i].rel) < fabs(best)) {
+                best = depth_map[i].rel;
+            } else {
+            }
+
+            if(fabs(depth_map[i].rel) > fabs(worst)) {
+                worst = depth_map[i].rel;
+            } else {
+            }
+
+            if(display_results) {
+
+                // We're going to pretty-print a table with all test points
+                if(line == 0) {
+                    _printf("[DM] ");
+                }
+
+                _printf(" %1.3f ", depth_map[i].rel);
         
-        if(--lines[line] <= 0) {
-            line++;
-            _printf("\n[DM] ");
-        }
+                if(--lines[line] <= 0) {
+                    line++;
+                    _printf("\n[DM] ");
+                }
 
-        if(i == 5) {
-            _printf("CTR: 0\n[DM] ");
-        }
+                if(i == 5) {
+                    _printf("CTR: 0\n[DM] ");
+                }
 
-        flush();
+                flush();
+
+            } else {
+
+                // We're going to plainly print the results, one by one, with no special formatting
+                _printf("[DM] Depth: %1.3fmm (%1.3fmm absolute)\n", depth_map[i].rel, depth_map[i].abs);
+            
+            }
+
+        }
     }
-    flush();
+    
+    // Finish up
+    _printf("[DM] Deviation: Best = %1.3f, Worst = %1.3f\n \n", best, worst);
 
-    // Do stats
-    _printf("Deviation: Best = %1.3f, Worst = %1.3f\n \n", zprobe->zsteps_to_mm(best), zprobe->zsteps_to_mm(worst));
+    // Flush the stream buffer
+    flush();
 
     return true;
 
@@ -721,7 +1075,8 @@ bool ComprehensiveDeltaStrategy::depth_map_segmented_line(float first[2], float 
     float arm_radius;
     float armX, armY, armZ;
 
-    get_delta_basic_geometry(arm_length, arm_radius);
+    get_arm_length(arm_length);
+    get_delta_radius(arm_radius);
     get_tower_arm_offsets(armX, armY, armZ);
 //    _printf("Segments: %d\n", segments);
 //    _printf("Basic - Arm length: %1.3f  Radius: %1.3f\n", arm_length, arm_radius);
@@ -770,7 +1125,7 @@ bool ComprehensiveDeltaStrategy::depth_map_segmented_line(float first[2], float 
  - Once we get an acceptable trim, normalize it
    (otherwise it will "creep down" with each successive call that keeps existing trim)
 */
-bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(bool keep_settings, float override_target, float override_radius) {
+bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(int iterations, bool keep_settings, float override_target, float override_radius) {
 
     int s;
     bool keep = false;
@@ -853,10 +1208,17 @@ bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(bool keep_settings, fl
 
     // Main endstop leveling loop
     // ========================================================================
-    for (int i = 1; i <= 20; ++i) {
+    for (int i = 0; i <= iterations; ++i) {
 
         // Flush serial buffer
         THEKERNEL->call_event(ON_IDLE);
+
+        // Correct the downward creep issue by normalizing the trim offsets.
+        mm = std::minmax({trimx, trimy, trimz});
+        trimx -= mm.second;
+        trimy -= mm.second;
+        trimz -= mm.second;
+//        _printf("[ES] Trim set to {%1.3f, %1.3f, %1.3f} (normalized)\n", trimx, trimy, trimz);
 
         // Tell the robot what the new trim is
         if(!set_trim(trimx, trimy, trimz)) return false;
@@ -897,12 +1259,6 @@ bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(bool keep_settings, fl
             trimy += (mm.first - t2z) * trimscale;
             trimz += (mm.first - t3z) * trimscale;
 
-            // Correct the downward creep issue by normalizing the trim offsets.
-            mm = std::minmax({trimx, trimy, trimz});
-            trimx -= mm.second;
-            trimy -= mm.second;
-            trimz -= mm.second;
-            _printf("[ES] Trim set to {%1.3f, %1.3f, %1.3f} (normalized)\n", trimx, trimy, trimz);
 
         } else {
 
@@ -924,7 +1280,7 @@ bool ComprehensiveDeltaStrategy::calibrate_delta_endstops(bool keep_settings, fl
 
 
 // Calibrate delta radius
-bool ComprehensiveDeltaStrategy::calibrate_delta_radius(float override_target, float override_radius) {
+bool ComprehensiveDeltaStrategy::calibrate_delta_radius(int iterations, float override_target, float override_radius) {
 
     float target = 0.03F;
 
@@ -1142,10 +1498,8 @@ bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y, bool 
 }
 
 
-// When delta parameters are adjusted, you have to either home the printer or reset the kinematics.
-// If you don't, there will be a violent jerk the next time you ask the robot to move! This routine
-// should save a LOT of time over homing the robot. NOTE: Use the version of this method with offsets
-// if you reset the endstops because their offset values ARE NOT used in motion planning!
+// The printer has to have its position refreshed when the kinematics change. Otherwise, it will jerk violently the
+// next time it moves.
 void ComprehensiveDeltaStrategy::post_adjust_kinematics() {
 
     float pos[3];
@@ -1156,7 +1510,7 @@ void ComprehensiveDeltaStrategy::post_adjust_kinematics() {
 
 
 // This is the version you want to use if you're fiddling with the endstops. Note that endstop
-// offset values are POSITIVE (steps down, not up).
+// offset values are NEGATIVE (steps down).
 void ComprehensiveDeltaStrategy::post_adjust_kinematics(float offset[3]) {
 
     float pos[3];
@@ -1225,11 +1579,10 @@ bool ComprehensiveDeltaStrategy::get_trim(float &x, float &y, float &z) {
 
 // Following are getters/setters for delta geometry variables
 
-// Basics (arm length & average radius of all three towers)
-bool ComprehensiveDeltaStrategy::set_delta_basic_geometry(float arm_length, float arm_radius) {
+// Arm length
+bool ComprehensiveDeltaStrategy::set_arm_length(float arm_length) {
 
     options['L'] = arm_length;
-    options['R'] = arm_radius;
     if(THEKERNEL->robot->arm_solution->set_optional(options)) {
         post_adjust_kinematics();
         return true;
@@ -1239,12 +1592,35 @@ bool ComprehensiveDeltaStrategy::set_delta_basic_geometry(float arm_length, floa
 
 }
 
-
-bool ComprehensiveDeltaStrategy::get_delta_basic_geometry(float &arm_length, float &arm_radius) {
+bool ComprehensiveDeltaStrategy::get_arm_length(float &arm_length) {
 
     if(THEKERNEL->robot->arm_solution->get_optional(options)) {
         arm_length = options['L'];
-        arm_radius = options['R'];
+        return true;
+    } else {
+        return false;
+    }
+
+}
+
+
+// Delta radius
+bool ComprehensiveDeltaStrategy::set_delta_radius(float delta_radius) {
+
+    options['R'] = delta_radius;
+    if(THEKERNEL->robot->arm_solution->set_optional(options)) {
+        post_adjust_kinematics();
+        return true;
+    } else {
+        return false;
+    }
+
+}
+
+bool ComprehensiveDeltaStrategy::get_delta_radius(float &delta_radius) {
+
+    if(THEKERNEL->robot->arm_solution->get_optional(options)) {
+        delta_radius = options['R'];
         return true;
     } else {
         return false;
@@ -1267,7 +1643,6 @@ bool ComprehensiveDeltaStrategy::set_tower_radius_offsets(float x, float y, floa
     }
 
 }
-
 
 bool ComprehensiveDeltaStrategy::get_tower_radius_offsets(float &x, float &y, float &z) {
 
@@ -1298,7 +1673,6 @@ bool ComprehensiveDeltaStrategy::set_tower_angle_offsets(float x, float y, float
 
 }
 
-
 bool ComprehensiveDeltaStrategy::get_tower_angle_offsets(float &x, float &y, float &z) {
 
     if(THEKERNEL->robot->arm_solution->get_optional(options)) {
@@ -1328,7 +1702,6 @@ bool ComprehensiveDeltaStrategy::set_tower_arm_offsets(float x, float y, float z
 
 }
 
-
 bool ComprehensiveDeltaStrategy::get_tower_arm_offsets(float &x, float &y, float &z) {
 
     if(THEKERNEL->robot->arm_solution->get_optional(options)) {
@@ -1347,16 +1720,21 @@ bool ComprehensiveDeltaStrategy::get_tower_arm_offsets(float &x, float &y, float
 void ComprehensiveDeltaStrategy::print_geometry() {
 
     float arm_length, arm_radius;
+    float trimX, trimY, trimZ;
     float radX, radY, radZ;
     float angX, angY, angZ;
     float armX, armY, armZ;
 
-    get_delta_basic_geometry(arm_length, arm_radius);
+    get_trim(trimX, trimY, trimZ);
+    get_arm_length(arm_length);
+    get_delta_radius(arm_radius);
     get_tower_radius_offsets(radX, radY, radZ);
     get_tower_angle_offsets(angX, angY, angZ);
     get_tower_arm_offsets(armX, armY, armZ);
 
-    _printf("[PG] Basic - Arm length: %1.3f  Radius: %1.3f\n", arm_length, arm_radius);
+    _printf("[PG]           Arm length: %1.3f\n", arm_length);
+    _printf("[PG]               Radius: %1.3f\n", arm_radius);
+    _printf("[PG]      Endstop offsets: {%1.3f, %1.3f, %1.3f}\n", trimX, trimY, trimZ);
     _printf("[PG] Radius offsets (ABC): {%1.3f, %1.3f, %1.3f}\n", radX, radY, radZ);
     _printf("[PG]  Angle offsets (DEF): {%1.3f, %1.3f, %1.3f}\n", angX, angY, angZ);
     _printf("[PG]    Arm offsets (TUV): {%1.3f, %1.3f, %1.3f}\n", armX, armY, armZ);
@@ -1399,12 +1777,12 @@ void ComprehensiveDeltaStrategy::midpoint(float first[2], float second[2], float
 }
 
 
-// Copy cur_depth_map to last_depth_map & zero all of cur_depth_map
+// Copy depth_map to last_depth_map & zero all of depth_map
 void ComprehensiveDeltaStrategy::save_depth_map() {
 
     for(int i = 0; i < CDS_DEPTH_MAP_N_POINTS; i++) {
-        last_depth_map[i] = cur_depth_map[i];
-        cur_depth_map[i] = 0;
+        last_depth_map[i].rel = depth_map[i].rel;
+        last_depth_map[i].abs = depth_map[i].abs;
     }
 
 }
@@ -1415,3 +1793,83 @@ void ComprehensiveDeltaStrategy::flush() {
     THEKERNEL->call_event(ON_IDLE);
 }
 
+
+
+
+
+
+
+
+/* Probe the depth of points near each tower, and at the halfway points between each tower:
+
+        1
+        /\
+     2 /__\ 6
+      /\  /\
+     /__\/__\
+    3   4    5
+
+   This pattern defines the points of a triforce, hence the name.
+*/
+/*
+bool ComprehensiveDeltaStrategy::probe_triforce(float (&depth)[6], float &score_avg, float &score_ISM, float &PHTT) {
+
+    // Init test points
+    int triforce[6] = { TP_Z, TP_MID_ZX, TP_X, TP_MID_XY, TP_Y, TP_MID_YZ };
+
+    int s;				// # of steps (passed by reference to probe_delta_tower, which sets it)
+    int i;
+    score_avg = 0;			// Score starts at 0 (perfect) - the further away it gets, the worse off we are!
+    score_ISM = 0;
+
+    // Need to get bed height in current tower angle configuration (the following method automatically refreshes mm_PHTT)
+    // We're passing the current value of PHTT back by reference in case the caller cares, e.g. if they want a baseline.
+    require_clean_geometry();
+    prepare_to_probe();
+    if(!prime_probe()) return false;
+    PHTT = mm_probe_height_to_trigger;
+
+    // This is for storing the probe results in terms of score (deviation from center height).
+    // This is different from the "scores" we return, which is the average and intersextile mean of the contents of scores[].
+    float score[6];
+
+    for(i=0; i<6; i++) {
+        // Probe triforce
+        _printf("[PT] Probing point %d at <%1.3f, %1.3f>.\n", i, test_point[triforce[i]][X], test_point[triforce[i]][Y]);
+
+        // Move into position and probe the depth
+        // depth[i] is probed and calculated in exactly the same way that mm_probe_height_to_trigger is
+        // This means that we can compare probe results from this and mm_PHTT on equal terms
+        if(!do_probe_at(s, test_point[triforce[i]][X], test_point[triforce[i]][Y])) {
+            return false;
+        }
+        depth[i] = zprobe->zsteps_to_mm(s);
+        score[i] = fabs(depth[i] - mm_probe_height_to_trigger);
+    }
+    
+    // Do some statistics
+    auto mm = std::minmax({score});
+    for(i=0; i<6; i++) {
+    
+        // Average
+        score_avg += score[i];
+
+        // Intersextile mean (ignore lowest and highest values, keep the remaining four)
+        // Works similar to an interquartile mean, but more specific to our problem domain (we always have exactly 6 samples)
+        // Context: http://en.wikipedia.org/wiki/Interquartile_mean
+        if(score[i] != *mm.first && score[i] != *mm.second) {
+            score_ISM += score[i];
+        }
+    }
+    score_avg /= 6;
+    score_ISM /= 4;
+
+    _printf("[TQ] Probe height to trigger at bed center (PHTT) - this is the target depth: %1.3f\n", mm_probe_height_to_trigger);
+    _printf("[TQ]        Current depths: {%1.3f, %1.3f, %1.3f, %1.3f, %1.3f, %1.3f}\n", depth[0], depth[1], depth[2], depth[3], depth[4], depth[5]);
+    _printf("[TQ]   Delta(depth - PHTT): {%1.3f, %1.3f, %1.3f, %1.3f, %1.3f, %1.3f}\n", fabs(depth[0] - mm_probe_height_to_trigger), fabs(depth[1] - mm_probe_height_to_trigger), fabs(depth[2] - mm_probe_height_to_trigger), fabs(depth[3] - mm_probe_height_to_trigger), fabs(depth[4] - mm_probe_height_to_trigger), fabs(depth[5] - mm_probe_height_to_trigger));
+    _printf("[TQ]  Score (lower=better): avg=%1.3f, ISM=%1.3f\n", score_avg, score_ISM);
+
+    return true;
+
+}
+*/
