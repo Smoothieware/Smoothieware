@@ -34,6 +34,7 @@ public:
 
     void wait_for_empty_queue();
     bool is_queue_empty() { return queue.is_empty(); };
+    bool is_queue_full() { return queue.is_full(); };
 
     void ensure_running(void);
 
@@ -50,13 +51,14 @@ private:
     typedef HeapRing<Block> Queue_t;
 
     Queue_t queue;  // Queue of Blocks
+    volatile unsigned int gc_pending;
 
     struct {
         volatile bool running:1;
         volatile bool flush:1;
+        volatile bool halted:1;
     };
 
-    volatile unsigned int gc_pending;
 };
 
 #endif // CONVEYOR_H

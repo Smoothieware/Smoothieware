@@ -55,19 +55,22 @@ private:
     float trapezoid_adjusted_rate;
     int trapezoid_tick_cycle_counter;
     int cycles_per_step_event;
-    bool trapezoid_generator_busy;
     int microseconds_per_step_pulse;
     int acceleration_ticks_per_second;
     unsigned int minimum_steps_per_second;
     int base_stepping_frequency;
     unsigned short step_bits[3];
     int counter_increment;
-    bool paused;
-    bool force_speed_update;
-    bool enable_pins_status;
     Hook *acceleration_tick_hook;
-
     StepperMotor *main_stepper;
+
+    struct {
+        bool enable_pins_status:1;
+        bool force_speed_update:1;
+        bool paused:1;
+        bool trapezoid_generator_busy:1;
+        bool halted:1;
+    };
 
 };
 

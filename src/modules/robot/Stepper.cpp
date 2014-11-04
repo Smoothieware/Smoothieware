@@ -40,6 +40,7 @@ Stepper::Stepper()
     this->paused = false;
     this->trapezoid_generator_busy = false;
     this->force_speed_update = false;
+    this->halted= false;
 }
 
 //Called when the module has just been loaded
@@ -97,7 +98,12 @@ void Stepper::on_play(void *argument)
 
 void Stepper::on_halt(void *argument)
 {
-    this->turn_enable_pins_off();
+    if(argument == nullptr) {
+        this->turn_enable_pins_off();
+        this->halted= true;
+    }else{
+        this->halted= false;
+    }
 }
 
 void Stepper::on_gcode_received(void *argument)
@@ -106,6 +112,7 @@ void Stepper::on_gcode_received(void *argument)
     // Attach gcodes to the last block for on_gcode_execute
     if( gcode->has_m && (gcode->m == 84 || gcode->m == 17 || gcode->m == 18 )) {
         THEKERNEL->conveyor->append_gcode(gcode);
+
     }
 }
 

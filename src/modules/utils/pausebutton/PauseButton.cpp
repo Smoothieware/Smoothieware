@@ -53,14 +53,14 @@ void PauseButton::on_idle(void *argument)
 {
     if(do_kill) {
         do_kill= false;
-        THEKERNEL->call_event(ON_HALT);
+        THEKERNEL->call_event(ON_HALT, nullptr);
         THEKERNEL->streams->printf("Kill button pressed - reset or M999 to continue\r\n");
     }
 }
 
 //TODO: Make this use InterruptIn
 //Check the state of the button and act accordingly based on current pause state
-// Note this is ISR sodon;t do anything nasty in here
+// Note this is ISR so don't do anything nasty in here
 uint32_t PauseButton::button_tick(uint32_t dummy)
 {
     // If pause button changed

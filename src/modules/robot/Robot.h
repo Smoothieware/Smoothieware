@@ -27,9 +27,11 @@ class Robot : public Module {
         void on_gcode_received(void* argument);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
+        void on_halt(void *arg);
 
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
+        void reset_position_from_current_actuator_position();
         void get_axis_position(float position[]);
         float to_millimeters(float value);
         float from_millimeters(float value);
@@ -63,11 +65,10 @@ class Robot : public Module {
 
         float last_milestone[3];                             // Last position, in millimeters
         float transformed_last_milestone[3];                 // Last transformed position
-        bool  inch_mode;                                     // true for inch mode, false for millimeter mode ( default )
         int8_t motion_mode;                                  // Motion mode for the current received Gcode
+        uint8_t plane_axis_0, plane_axis_1, plane_axis_2;    // Current plane ( XY, XZ, YZ )
         float seek_rate;                                     // Current rate for seeking moves ( mm/s )
         float feed_rate;                                     // Current rate for feeding moves ( mm/s )
-        uint8_t plane_axis_0, plane_axis_1, plane_axis_2;    // Current plane ( XY, XZ, YZ )
         float mm_per_line_segment;                           // Setting : Used to split lines into segments
         float mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
@@ -90,6 +91,11 @@ class Robot : public Module {
         StepperMotor* alpha_stepper_motor;
         StepperMotor* beta_stepper_motor;
         StepperMotor* gamma_stepper_motor;
+
+        struct {
+            bool halted:1;
+            bool inch_mode:1;                                     // true for inch mode, false for millimeter mode ( default )
+        };
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed

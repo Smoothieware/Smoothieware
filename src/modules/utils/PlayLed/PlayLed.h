@@ -13,7 +13,6 @@ public:
     void on_module_loaded(void);
     void on_config_reload(void *);
     void on_halt(void *arg);
-    void on_gcode_received(void* argument);
 
 private:
     uint32_t led_tick(uint32_t);

@@ -128,6 +128,7 @@ Robot::Robot()
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
     this->compensationTransform= nullptr;
+    this->halted= false;
 }
 
 //Called when the module has just been loaded
@@ -136,6 +137,7 @@ void Robot::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
+    this->register_for_event(ON_HALT);
 
     // Configuration
     this->on_config_reload(this);
@@ -260,6 +262,11 @@ void Robot::check_max_actuator_speeds()
         gamma_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / gamma_stepper_motor->get_steps_per_mm());
         THEKERNEL->streams->printf("WARNING: gamma_max_rate exceeds base_stepping_frequency * gamma_steps_per_mm: %f, setting to %f\n", step_freq, gamma_stepper_motor->max_rate);
     }
+}
+
+void Robot::on_halt(void *arg)
+{
+    halted= (arg == nullptr);
 }
 
 void Robot::on_get_public_data(void *argument)
@@ -561,7 +568,6 @@ void Robot::on_gcode_received(void *argument)
 // and continue
 void Robot::distance_in_gcode_is_known(Gcode *gcode)
 {
-
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
     THEKERNEL->conveyor->append_gcode(gcode);
 }
@@ -595,6 +601,14 @@ void Robot::reset_axis_position(float position, int axis)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
+// Use FK to find out where actuator is and reset lastmilestone to match
+// FIXME we need to know where the actual current actuator position is, this does not currently do that and so is useless
+void Robot::reset_position_from_current_actuator_position()
+{
+    // FIXME do not want last_milestone we need actual actuator position
+    // float actuator_pos[]= {actuators[X_AXIS]->get_current_position_mm(), actuators[Y_AXIS]->get_current_position_mm(), actuators[Z_AXIS]->get_current_position_mm()};
+    // arm_solution->actuator_to_cartesian(actuator_pos, this->last_milestone);
+}
 
 // Convert target from millimeters to steps, and append this to the planner
 void Robot::append_milestone( float target[], float rate_mm_s )
@@ -708,6 +722,7 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
         // segment 0 is already done - it's the end point of the previous move so we start at segment 1
         // We always add another point after this loop so we stop at segments-1, ie i < segments
         for (int i = 1; i < segments; i++) {
+            if(halted) return; // don;t queue any more segments
             for(int axis = X_AXIS; axis <= Z_AXIS; axis++ )
                 segment_end[axis] = last_milestone[axis] + segment_delta[axis];
 
@@ -801,6 +816,7 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
     arc_target[this->plane_axis_2] = this->last_milestone[this->plane_axis_2];
 
     for (i = 1; i < segments; i++) { // Increment (segments-1)
+        if(halted) return; // don't queue any more segments
 
         if (count < this->arc_correction ) {
             // Apply vector rotation matrix

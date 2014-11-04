@@ -43,7 +43,7 @@ void GcodeDispatch::on_module_loaded()
 void GcodeDispatch::on_halt(void *arg)
 {
     // set halt stream and ignore everything until M999
-    this->halted= true;
+    this->halted= (arg == nullptr);
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -128,6 +128,7 @@ try_again:
                     if(halted) {
                         // we ignore all commands until M999
                         if(gcode->has_m && gcode->m == 999) {
+                            THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
                             halted= false;
                             // fall through and pass onto other modules
                         }else{
@@ -162,7 +163,7 @@ try_again:
                             case 112: // emergency stop, do the best we can with this
                                 // TODO this really needs to be handled out-of-band
                                 // disables heaters and motors, ignores further incoming Gcode and clears block queue
-                                THEKERNEL->call_event(ON_HALT);
+                                THEKERNEL->call_event(ON_HALT, nullptr);
                                 THEKERNEL->streams->printf("ok Emergency Stop Requested - reset or M999 required to continue\r\n");
                                 delete gcode;
                                 return;

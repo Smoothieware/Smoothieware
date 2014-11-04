@@ -36,7 +36,6 @@ void PlayLed::on_module_loaded()
 
     on_config_reload(this);
     this->register_for_event(ON_HALT);
-    this->register_for_event(ON_GCODE_RECEIVED);
     THEKERNEL->slow_ticker->attach(12, this, &PlayLed::led_tick);
 }
 
@@ -50,14 +49,6 @@ void PlayLed::on_config_reload(void *argument)
     led.from_string(ledpin)->as_output()->set(false);
 }
 
-void PlayLed::on_gcode_received(void *argument)
-{
-    Gcode *gcode = static_cast<Gcode *>(argument);
-    if ( gcode->has_m && gcode->m == 999 && halted) {
-            halted= false;
-    }
-}
-
 uint32_t PlayLed::led_tick(uint32_t)
 {
     if(this->halted) {
@@ -65,7 +56,7 @@ uint32_t PlayLed::led_tick(uint32_t)
         return 0;
     }
 
-    if(++cnt >= 3) { // 3 ticks
+    if(++cnt >= 4) { // 4 ticks
         cnt= 0;
 
         if (THEKERNEL->pauser->paused()) {
@@ -80,5 +71,5 @@ uint32_t PlayLed::led_tick(uint32_t)
 
 void PlayLed::on_halt(void *arg)
 {
-    this->halted= true;
+    this->halted= (arg == nullptr);
 }

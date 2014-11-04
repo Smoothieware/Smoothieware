@@ -56,6 +56,7 @@ Conveyor::Conveyor(){
     gc_pending = queue.tail_i;
     running = false;
     flush = false;
+    halted= false;
 }
 
 void Conveyor::on_module_loaded(){
@@ -67,7 +68,12 @@ void Conveyor::on_module_loaded(){
 }
 
 void Conveyor::on_halt(void* argument){
-    flush_queue();
+    if(argument == nullptr) {
+        halted= true;
+        flush_queue();
+    }else{
+        halted= false;
+    }
 }
 
 // Delete blocks here, because they can't be deleted in interrupt context ( see Block.cpp:release )
@@ -165,8 +171,7 @@ void Conveyor::on_block_end(void* block)
 // Wait for the queue to be empty
 void Conveyor::wait_for_empty_queue()
 {
-    while (!queue.is_empty())
-    {
+    while (!queue.is_empty()) {
         ensure_running();
         THEKERNEL->call_event(ON_IDLE, this);
     }
@@ -177,14 +182,21 @@ void Conveyor::wait_for_empty_queue()
  */
 void Conveyor::queue_head_block()
 {
-    while (queue.is_full())
-    {
+    // upstream caller will block on this until there is room in the queue
+    while (queue.is_full()) {
         ensure_running();
         THEKERNEL->call_event(ON_IDLE, this);
     }
 
-    queue.head_ref()->ready();
-    queue.produce_head();
+    if(halted) {
+        // we do not want to stick more stuff on the queue if we are in halt state
+        // clear and release the block on the head
+        queue.head_ref()->clear();
+
+    }else{
+        queue.head_ref()->ready();
+        queue.produce_head();
+    }
 }
 
 void Conveyor::ensure_running()
@@ -198,6 +210,16 @@ void Conveyor::ensure_running()
         queue.item_ref(gc_pending)->begin();
     }
 }
+
+/*
+
+    In most cases this will not totally flush the queue, as when streaming
+    gcode there is one stalled waiting for space in the queue, in
+    queue_head_block() so after this flush, once main_loop runs again one more
+    gcode gets stuck in the queue, this is bad. Current work around is to call
+    this when the queue in not full and streaming has stopped
+
+*/
 
 void Conveyor::flush_queue()
 {

@@ -269,8 +269,6 @@ void Panel::on_gcode_received(void *argument)
             this->message = get_arguments(gcode->get_command());
             if (this->message.size() > 20) this->message = this->message.substr(0, 20);
             gcode->mark_as_taken();
-        }else if(gcode->m == 999 && halted) {
-            halted= false;
         }
     }
 }
@@ -720,5 +718,5 @@ void Panel::on_second_tick(void *arg)
 
 void Panel::on_halt(void *arg)
 {
-    halted= true;
+    halted= (arg == nullptr);
 }

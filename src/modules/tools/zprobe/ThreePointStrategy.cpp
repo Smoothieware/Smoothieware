@@ -201,8 +201,8 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 
         }
         #if 0
-         else if(gcode->m == 999) {
-            // DEBUG run a test M999 A B C X Y set Z to A B C and test for point at X Y
+         else if(gcode->m == 9999) {
+            // DEBUG run a test M9999 A B C X Y set Z to A B C and test for point at X Y
             Vector3 v[3];
             float x, y, z, a= 0, b= 0, c= 0;
             if(gcode->has_letter('A')) a = gcode->get_value('A');

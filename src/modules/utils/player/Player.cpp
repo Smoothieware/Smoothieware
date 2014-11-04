@@ -8,6 +8,7 @@
 #include "Player.h"
 
 #include "libs/Kernel.h"
+#include "Robot.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "SerialConsole.h"
@@ -51,9 +52,9 @@ void Player::on_module_loaded()
     this->halted= false;
 }
 
-void Player::on_halt(void *)
+void Player::on_halt(void *arg)
 {
-    halted= true;
+    halted= (arg == nullptr);
 }
 
 void Player::on_second_tick(void *)
@@ -180,8 +181,6 @@ void Player::on_gcode_received(void *argument)
                 this->playing_file = true;
             }
 
-        }else if (gcode->m == 999) {
-            halted= false;
         }
     }
 }
@@ -317,9 +316,20 @@ void Player::abort_command( string parameters, StreamOutput *stream )
     this->current_stream = NULL;
     fclose(current_file_handler);
     current_file_handler = NULL;
-    // clear out the block queue
     if(parameters.empty()) {
+        // clear out the block queue
+        // I think this is a HACK... wait for queue !full as flushing a full queue doesn't work
+        // as it means there is probably a gcod waiting to be pushed and will be as soon as I flush the queue this causes
+        // on emore move but it is the last move queued so is completely wrong, this HACK means we stop cleanly but
+        // only after the current move has completed and maybe the next one.
+        while (THEKERNEL->conveyor->is_queue_full()) {
+            THEKERNEL->call_event(ON_IDLE);
+        }
+
         THEKERNEL->conveyor->flush_queue();
+
+        // now the position will think it is at the last received pos, so we need to do FK to get the actuator position and reset the current position
+        THEKERNEL->robot->reset_position_from_current_actuator_position();
     }
     stream->printf("Aborted playing or paused file\r\n");
 }
