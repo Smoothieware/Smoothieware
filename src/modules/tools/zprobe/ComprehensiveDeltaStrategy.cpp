@@ -516,7 +516,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration() {
     print_geometry();
 
     // Set up target tolerance
-    float target = 0.030;		// 30 microns should be alright
+    float target = 0.010;		// 30 microns should be alright
 
     // Activate the endstop and delta radius calibration types
     caltype.endstops.active = true;
@@ -530,6 +530,9 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration() {
     int max_iterations = 10;
 
     for(i = 0; i < max_iterations; i++) {
+
+        // Nice header to make it easier to visually parse the output
+        _printf("\n \n---===] Iteration %d of %d [===------\n", i + 1, max_iterations);
 
         // Probe depths at all test points (active points only, and no pretty-printed output)
         depth_map_print_surface(true, false);
@@ -545,14 +548,13 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration() {
         auto tower_opp_minmax = std::minmax( {depth_map[TP_OPP_X].abs, depth_map[TP_OPP_Y].abs, depth_map[TP_OPP_Z].abs} );
         float tower_opp_deviation = tower_opp_minmax.second - tower_opp_minmax.first;
 
-        _printf("\n \n---===] Iteration %d of %d [===------\n", i + 1, max_iterations);
-        _printf("[HC] Towers: deviation=%1.3f avg=%1.3f\n", tower_deviation, depth_map[TP_CTR].abs - tower_avg);
+        _printf("[HC] Towers: deviation=%1.3f; average depth relative to center=%1.3f\n", tower_deviation, depth_map[TP_CTR].abs - tower_avg);
 
         // Do we calibrate the endstops?
         if(caltype.endstops.active) {
 
             // Yep
-            _printf("[ES] Endstops are ");
+            _printf("[ES] Endstops - Depths: Difference => %1.3f (want %1.3f)\n", tower_deviation, target);
 
             // Deviation and trimscale
             static float last_deviation;
@@ -566,7 +568,8 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration() {
             }
 
             // Deviation within tolerance?
-            if(tower_deviation <= target) {
+            _printf("[ES] Endstops are ");
+            if(fabs(tower_deviation) <= target) {
 
                 // Yep
                 _printf("within tolerance.\n");
@@ -629,11 +632,11 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration() {
             // Examine differences between tower depths and use this to adjust delta_radius
             float avg = (depth_map[TP_X].abs + depth_map[TP_Y].abs + depth_map[TP_Z].abs) / 3.0;
             float deviation = depth_map[TP_CTR].abs - avg;
-            _printf("[DR] Depths: Center=%1.3f, Tower average=%1.3f => Difference: %1.3f\n", depth_map[TP_CTR].abs, avg, deviation);
+            _printf("[DR] Delta Radius - Depths: Center=%1.3f, Tower average=%1.3f => Difference: %1.3f (want %1.3f)\n", depth_map[TP_CTR].abs, avg, deviation, target);
             _printf("[DR] Delta radius is ");
             
             // Deviation within tolerance?
-            if(deviation <= target) {
+            if(fabs(deviation) <= target) {
 
                 // Yep
                 _printf("within tolerance.\n");
@@ -644,7 +647,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration() {
                 // Nope
                 _printf("out of tolerance by %1.3f.\n", deviation - target);
                 
-                _printf("[DR] Delta radius: changing from %1.3f to ", delta_radius);
+                _printf("[DR] Changing delta radius from %1.3f to ", delta_radius);
                 delta_radius += (deviation * dr_factor);
                 _printf("%1.3f\n", delta_radius);
                 set_delta_radius(delta_radius);
