@@ -62,7 +62,7 @@ second_usb_serial_enable                     false            # This enables a s
 #play_led_disable                            true             # disable the play led
 pause_button_enable                          true             # Pause button enable
 #pause_button_pin                            2.12             # pause button pin. default is P2.12
-#kill_button_enable                           false            # enable the kill button
+#kill_button_enable                           false            # set to true to enable a kill button
 #kill_button_pin                              2.12             # kill button pin. default is same as pause button 2.12 (2.11 is another good choice)
 #msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true (needs special binary)
 #dfu_enable                                  false            # for linux developers, set to true to enable DFU
