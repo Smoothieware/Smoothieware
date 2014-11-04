@@ -245,13 +245,16 @@ void Endstops::on_idle(void *argument)
                     int n= c+i;
                     if(this->pins[n].get()) {
                         // still triggered, so exit
+                        bounce_cnt= 0;
                         return;
                     }
                 }
             }
         }
-        // clear the state
-        this->status= NOT_HOMING;
+        if(++bounce_cnt > 10) { // can use less as it calls on_idle in between
+            // clear the state
+            this->status= NOT_HOMING;
+        }
         return;
 
     }else if(this->status != NOT_HOMING) {
