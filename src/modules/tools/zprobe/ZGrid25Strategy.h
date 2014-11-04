@@ -43,6 +43,7 @@ private:
     float slow_rate;
     float bed_x;
     float bed_y;
+    float bed_z;
     float bed_div_x;
     float bed_div_y;
     float cal[3];            // calibration positions for manual leveling

@@ -63,6 +63,8 @@
 
 #define bed_x_checksum                CHECKSUM("bed_x")
 #define bed_y_checksum                CHECKSUM("bed_y")
+#define bed_z_checksum                CHECKSUM("bed_z")
+
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
 //#define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
@@ -86,6 +88,7 @@ bool ZGrid25Strategy::handleConfig()
 {
     this->bed_x = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, bed_x_checksum)->by_default(200.0F)->as_number();
     this->bed_y = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, bed_y_checksum)->by_default(200.0F)->as_number();
+    this->bed_z = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, bed_z_checksum)->by_default(200.0F)->as_number();
 
     this->slow_rate = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, slow_feedrate_checksum)->by_default(20.0F)->as_number();
 
@@ -315,7 +318,7 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
 
     this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
     this->cal[Y_AXIS] = this->bed_y/2.0f;
-    this->cal[Z_AXIS] = 200.0f;                     // Position head for probe attachment
+    this->cal[Z_AXIS] = this->bed_z/2.0f;           // Position head for probe attachment
     this->move(this->cal, slow_rate);               // Move to probe attachment point
 
     stream->printf("*** Ensure probe is attached and press probe when done ***\n");
@@ -346,7 +349,7 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
         if (probes == 24){
             this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
             this->cal[Y_AXIS] = this->bed_y/2.0f;
-            this->cal[Z_AXIS] = 200.0f;                     // Position head for probe removal
+            this->cal[Z_AXIS] = this->bed_z/2.0f;                     // Position head for probe removal
         } else {
             this->next_cal();                        // to not cause damage to machine due to Z-offset
         }
