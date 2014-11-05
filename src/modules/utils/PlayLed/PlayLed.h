@@ -12,14 +12,15 @@ public:
 
     void on_module_loaded(void);
     void on_config_reload(void *);
+    void on_halt(void *arg);
 
 private:
-    void on_play(         void *);
-    void on_block_begin(  void *);
-    void on_block_end(    void *);
-    uint32_t half_second_tick(uint32_t);
-
+    uint32_t led_tick(uint32_t);
     Pin  led;
+    struct {
+        uint8_t cnt:4;
+        bool halted:1;
+    };
 };
 
 #endif /* _PLAYLED_H */

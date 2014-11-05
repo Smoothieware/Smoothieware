@@ -8,6 +8,7 @@
 #include "Player.h"
 
 #include "libs/Kernel.h"
+#include "Robot.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "SerialConsole.h"
@@ -42,11 +43,18 @@ void Player::on_module_loaded()
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
     this->register_for_event(ON_GCODE_RECEIVED);
+    this->register_for_event(ON_HALT);
 
     this->on_boot_gcode = THEKERNEL->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
     this->on_boot_gcode_enable = THEKERNEL->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
     this->elapsed_secs = 0;
     this->reply_stream = NULL;
+    this->halted= false;
+}
+
+void Player::on_halt(void *arg)
+{
+    halted= (arg == nullptr);
 }
 
 void Player::on_second_tick(void *)
@@ -172,6 +180,7 @@ void Player::on_gcode_received(void *argument)
             } else {
                 this->playing_file = true;
             }
+
         }
     }
 }
@@ -179,6 +188,8 @@ void Player::on_gcode_received(void *argument)
 // When a new line is received, check if it is a command, and if it is, act upon it
 void Player::on_console_line_received( void *argument )
 {
+    if(halted) return; // if in halted state ignore any commands
+
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
 
     // ignore comments and blank lines and if this is a G code then also ignore it
@@ -305,6 +316,21 @@ void Player::abort_command( string parameters, StreamOutput *stream )
     this->current_stream = NULL;
     fclose(current_file_handler);
     current_file_handler = NULL;
+    if(parameters.empty()) {
+        // clear out the block queue
+        // I think this is a HACK... wait for queue !full as flushing a full queue doesn't work well
+        // as it means there is probably a gcode waiting to be pushed and will be as soon as I flush the queue this causes
+        // one more move but it is the last move queued so is completely wrong, this HACK means we stop cleanly but
+        // only after the current move has completed and maybe the next one.
+        while (THEKERNEL->conveyor->is_queue_full()) {
+            THEKERNEL->call_event(ON_IDLE);
+        }
+
+        THEKERNEL->conveyor->flush_queue();
+
+        // now the position will think it is at the last received pos, so we need to do FK to get the actuator position and reset the current position
+        THEKERNEL->robot->reset_position_from_current_actuator_position();
+    }
     stream->printf("Aborted playing or paused file\r\n");
 }
 
@@ -320,6 +346,11 @@ void Player::on_main_loop(void *argument)
     }
 
     if( this->playing_file ) {
+        if(halted) {
+            abort_command("1", &(StreamOutput::NullStream));
+            return;
+        }
+
         char buf[130]; // lines upto 128 characters are allowed, anything longer is discarded
         bool discard = false;
 
