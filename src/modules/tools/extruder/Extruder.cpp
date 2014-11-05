@@ -94,8 +94,10 @@ void Extruder::on_halt(void *arg)
 {
     if(arg == nullptr) {
         // turn off motor
-        this->enabled= false;
         this->en_pin.set(1);
+        // disable if multi extruder
+        if(!this->single_config)
+            this->enabled= false;
     }
 }
 
