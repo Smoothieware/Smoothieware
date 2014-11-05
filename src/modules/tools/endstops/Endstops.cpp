@@ -66,7 +66,6 @@
 #define alpha_homing_retract_checksum    CHECKSUM("alpha_homing_retract")
 #define beta_homing_retract_checksum     CHECKSUM("beta_homing_retract")
 #define gamma_homing_retract_checksum    CHECKSUM("gamma_homing_retract")
-#define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
 
 // same as above but in user friendly mm/s and mm
 #define alpha_fast_homing_rate_mm_checksum  CHECKSUM("alpha_fast_homing_rate_mm_s")
@@ -345,6 +344,7 @@ void Endstops::wait_for_homed(char axes_to_move)
                         running = true;
                     } else if ( STEPPER[c]->is_moving() ) {
                         STEPPER[c]->move(0, 0);
+                        axes_to_move &= ~(1<<c); // no need to check it again
                     }
                 } else {
                     // The endstop was not hit yet

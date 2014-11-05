@@ -49,13 +49,13 @@ class Endstops : public Module{
         float  slow_rates[3];
         Pin    pins[6];
         volatile float feed_rate[3];
-        volatile char status;
         struct {
             bool is_corexy:1;
             bool is_delta:1;
             bool is_scara:1;
             bool move_to_origin_after_home:1;
             uint8_t bounce_cnt:4;
+            volatile char status:3;
         };
 };
 
