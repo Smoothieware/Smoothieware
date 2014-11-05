@@ -18,7 +18,7 @@ private:
     uint32_t led_tick(uint32_t);
     Pin  led;
     struct {
-        uint8_t cnt:8;
+        uint8_t cnt:4;
         bool halted:1;
     };
 };

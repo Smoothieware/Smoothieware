@@ -26,6 +26,7 @@
 #include <string.h>
 #include <string>
 #include <stdio.h>
+#include <algorithm>
 
 using namespace std;
 static const uint8_t icons[] = { // 115x19 - 3 bytes each: he1, he2, he3, bed, fan
@@ -265,8 +266,10 @@ void WatchScreen::display_menu_line(uint16_t line)
                     if(o>tm.size()-1) break;
                     struct pad_temperature *temp= static_cast<struct pad_temperature *>(getTemperatures(tm[o]));
                     if(temp == nullptr) continue;
+                    int t= std::min(999, (int)roundf(temp->current_temperature));
+                    int tt= roundf(temp->target_temperature);
                     THEPANEL->lcd->setCursor(off, 0); // col, row
-                    off += THEPANEL->lcd->printf("%s:%03d/%03d ", temp->designator.substr(0, 2).c_str(), (int)roundf(temp->current_temperature), (int)roundf(temp->target_temperature));
+                    off += THEPANEL->lcd->printf("%s:%03d/%03d ", temp->designator.substr(0, 2).c_str(), t, tt);
                 }
 
             }else{

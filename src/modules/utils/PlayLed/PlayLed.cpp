@@ -56,7 +56,7 @@ uint32_t PlayLed::led_tick(uint32_t)
         return 0;
     }
 
-    if(++cnt >= 4) { // 4 ticks
+    if(++cnt >= 6) { // 6 ticks ~ 500ms
         cnt= 0;
 
         if (THEKERNEL->pauser->paused()) {

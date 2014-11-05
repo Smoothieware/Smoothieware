@@ -44,7 +44,7 @@ void PauseButton::on_module_loaded()
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
 
     if( (this->pause_enable && this->pause_button.connected()) || (this->kill_enable && this->kill_button.connected()) ) {
-        THEKERNEL->slow_ticker->attach( 100, this, &PauseButton::button_tick );
+        THEKERNEL->slow_ticker->attach( 10, this, &PauseButton::button_tick );
         this->register_for_event(ON_IDLE);
     }
 }

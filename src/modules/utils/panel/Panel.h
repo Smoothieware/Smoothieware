@@ -100,7 +100,6 @@ class Panel : public Module {
         // external SD card
         bool mount_external_sd(bool on);
         Pin sdcd_pin;
-        uint8_t extsd_spi_channel;
         PinName extsd_spi_cs;
         SDCard *sd;
         SDFAT *extmounter;
@@ -110,8 +109,6 @@ class Panel : public Module {
         int menu_start_line;
         int menu_rows;
         int panel_lines;
-        uint16_t menu_current_line;
-        char menu_offset;
 
         // Control
         float normal_increment;
@@ -126,6 +123,22 @@ class Panel : public Module {
 
         int* counter;
 
+        int idle_time;
+
+        PanelScreen* top_screen;
+        PanelScreen* current_screen;
+
+        float jogging_speed_mm_min[3];
+        float default_hotend_temperature;
+        float default_bed_temperature;
+
+        string message;
+
+        uint16_t screen_lines;
+        uint16_t menu_current_line;
+        char playing_file[20];
+        uint8_t extsd_spi_channel;
+
         volatile struct {
             bool start_up:1;
             bool menu_changed:1;
@@ -137,22 +150,10 @@ class Panel : public Module {
             volatile bool refresh_flag:1;
             volatile bool do_buttons:1;
             volatile bool do_encoder:1;
+            char mode:2;
+            char menu_offset:3;
+            int encoder_click_resolution:3;
         };
-
-        int idle_time;
-        int encoder_click_resolution;
-        uint16_t screen_lines;
-        char mode;
-
-        PanelScreen* top_screen;
-        PanelScreen* current_screen;
-
-        float jogging_speed_mm_min[3];
-        float default_hotend_temperature;
-        float default_bed_temperature;
-
-        char playing_file[20];
-        string message;
 };
 
 #endif

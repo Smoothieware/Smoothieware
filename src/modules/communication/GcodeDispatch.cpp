@@ -22,8 +22,6 @@ using std::string;
 #include "checksumm.h"
 #include "ConfigValue.h"
 
-#include <algorithm>
-
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
 
 // goes in Flash, list of Mxxx codes that are allowed when in Halted state
