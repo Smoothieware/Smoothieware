@@ -16,13 +16,14 @@ gamma_steps_per_mm                           1600             # Steps per mm for
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING
 acceleration                                 3000             # Acceleration in mm/second/second.
-#z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 disables it, disabled by default. DO NOT SET ON A DELTA
+#z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 uses acceleration which is the default. DO NOT SET ON A DELTA
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters,
-                                                              # see https://github.com/grbl/grbl/blob/master/planner.c#L409
+                                                              # see https://github.com/grbl/grbl/blob/master/planner.c
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8
                                                               # Lower values mean being more careful, higher values means being
                                                               # faster and have more jerk
+#z_junction_deviation                        0.0              # for Z only moves, -1 uses junction_deviation, zero disables junction_deviation on z moves DO NOT SET ON A DELTA
 #minimum_planner_speed                       0.0              # sets the minimum planner speed in mm/sec
 
 # Stepper module configuration

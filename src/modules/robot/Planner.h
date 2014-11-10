@@ -30,6 +30,7 @@ private:
     float acceleration;          // Setting
     float z_acceleration;        // Setting
     float junction_deviation;    // Setting
+    float z_junction_deviation;  // Setting
     float minimum_planner_speed; // Setting
 };
 
