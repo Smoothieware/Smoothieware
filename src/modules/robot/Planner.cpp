@@ -30,6 +30,7 @@ using namespace std;
 #define z_acceleration_checksum        CHECKSUM("z_acceleration")
 #define max_jerk_checksum              CHECKSUM("max_jerk")
 #define junction_deviation_checksum    CHECKSUM("junction_deviation")
+#define z_junction_deviation_checksum  CHECKSUM("z_junction_deviation")
 #define minimum_planner_speed_checksum CHECKSUM("minimum_planner_speed")
 
 // The Planner does the acceleration math for the queue of Blocks ( movements ).
@@ -46,7 +47,8 @@ void Planner::config_load(){
     this->acceleration = THEKERNEL->config->value(acceleration_checksum)->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2
     this->z_acceleration = THEKERNEL->config->value(z_acceleration_checksum)->by_default(0.0F )->as_number(); // disabled by default
 
-    this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum)->by_default(  0.05F)->as_number();
+    this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum)->by_default(0.05F)->as_number();
+    this->z_junction_deviation = THEKERNEL->config->value(z_junction_deviation_checksum)->by_default(-1)->as_number(); // disabled by default
     this->minimum_planner_speed = THEKERNEL->config->value(minimum_planner_speed_checksum)->by_default(0.0f)->as_number();
 }
 
@@ -54,7 +56,7 @@ void Planner::config_load(){
 // Append a block to the queue, compute it's speed factors
 void Planner::append_block( float actuator_pos[], float rate_mm_s, float distance, float unit_vec[] )
 {
-    float acceleration;
+    float acceleration, junction_deviation;
 
     // Create ( recycle ) a new block
     Block* block = THEKERNEL->conveyor->queue.head_ref();
@@ -74,12 +76,14 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
         block->steps[i] = labs(steps);
     }
 
+    acceleration= this->acceleration;
+    junction_deviation= this->junction_deviation;
+
     // use either regular acceleration or a z only move accleration
-    if(this->z_acceleration > 0.0F && block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0) {
+    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0) {
         // z only move
-        acceleration= this->z_acceleration;
-    } else{
-        acceleration= this->acceleration;
+        if(this->z_acceleration > 0.0F) acceleration= this->z_acceleration;
+        if(this->z_junction_deviation >= 0.0F) junction_deviation= this->z_junction_deviation;
     }
 
     // Max number of steps, for all axes
@@ -121,7 +125,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     {
         float previous_nominal_speed = THEKERNEL->conveyor->queue.item_ref(THEKERNEL->conveyor->queue.prev(THEKERNEL->conveyor->queue.head_i))->nominal_speed;
 
-        if (previous_nominal_speed > 0.0F) {
+        if (previous_nominal_speed > 0.0F && junction_deviation > 0.0F) {
             // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
             // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
             float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
@@ -135,7 +139,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
                 if (cos_theta > -0.95F) {
                     // Compute maximum junction velocity based on maximum acceleration and junction deviation
                     float sin_theta_d2 = sqrtf(0.5F * (1.0F - cos_theta)); // Trig half angle identity. Always positive.
-                    vmax_junction = min(vmax_junction, sqrtf(acceleration * this->junction_deviation * sin_theta_d2 / (1.0F - sin_theta_d2)));
+                    vmax_junction = min(vmax_junction, sqrtf(acceleration * junction_deviation * sin_theta_d2 / (1.0F - sin_theta_d2)));
                 }
             }
         }
