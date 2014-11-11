@@ -438,7 +438,7 @@ void Robot::on_gcode_received(void *argument)
                 }
                 break;
 
-            case 205: // M205 Xnnn - set junction deviation Snnn - Set minimum planner speed
+            case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed
                 gcode->mark_as_taken();
                 if (gcode->has_letter('X')) {
                     float jd = gcode->get_value('X');
@@ -446,6 +446,13 @@ void Robot::on_gcode_received(void *argument)
                     if (jd < 0.0F)
                         jd = 0.0F;
                     THEKERNEL->planner->junction_deviation = jd;
+                }
+                if (gcode->has_letter('Z')) {
+                    float jd = gcode->get_value('Z');
+                    // enforce minimum, -1 disables it and uses regular junction deviation
+                    if (jd < -1.0F)
+                        jd = -1.0F;
+                    THEKERNEL->planner->z_junction_deviation = jd;
                 }
                 if (gcode->has_letter('S')) {
                     float mps = gcode->get_value('S');
@@ -480,7 +487,7 @@ void Robot::on_gcode_received(void *argument)
             case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f Z%1.5f\n", THEKERNEL->planner->acceleration, THEKERNEL->planner->z_acceleration);
-                gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
+                gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
                                       alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
