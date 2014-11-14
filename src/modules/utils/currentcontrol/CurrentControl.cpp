@@ -88,6 +88,7 @@ void CurrentControl::on_gcode_received(void *argument)
                     float c = gcode->get_value(alpha[i]);
                     this->digipot->set_current(i, c);
                 }
+                gcode->stream->printf("%c:%3.1fA%c", alpha[i], this->digipot->get_current(i), (i == 7)?'\n':' ');
             }
 
         } else if(gcode->m == 500 || gcode->m == 503) {
