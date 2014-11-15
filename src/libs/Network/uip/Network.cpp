@@ -83,7 +83,7 @@ static uint32_t getSerialNumberHash()
     return crc32((uint8_t *)&result[1], 4 * 4);
 }
 
-static bool parse_ip_str(const string &s, uint8_t *a, int len, char sep = '.')
+static bool parse_ip_str(const string &s, uint8_t *a, int len, int base=10, char sep = '.')
 {
     int p = 0;
     const char *n;
@@ -96,7 +96,7 @@ static bool parse_ip_str(const string &s, uint8_t *a, int len, char sep = '.')
         } else {
             n = s.substr(p).c_str();
         }
-        a[i] = atoi(n);
+        a[i] = (int)strtol(n, NULL, base);
     }
     return true;
 }
@@ -132,7 +132,7 @@ void Network::on_module_loaded()
 
     string mac = THEKERNEL->config->value( network_checksum, network_mac_override_checksum )->by_default("")->as_string();
     if (mac.size() == 17 ) { // parse mac address
-        if (!parse_ip_str(mac, mac_address, 6, ':')) {
+        if (!parse_ip_str(mac, mac_address, 6, 16, ':')) {
             printf("Invalid MAC address: %s\n", mac.c_str());
             printf("Network not started due to errors in config");
             return;
