@@ -483,8 +483,7 @@ void Extruder::on_block_begin(void *argument)
             block->take();
             this->current_block = block;
 
-            this->stepper_motor->set_steps_per_second(0);
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
+            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step, 0);
 
         } else {
             this->current_block = NULL;
@@ -576,7 +575,7 @@ void Extruder::on_speed_change( void *argument )
     * or even : ( stepper steps per second ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->get_trapezoid_adjusted_rate()) * ( (float)this->stepper_motor->get_steps_to_move() / (float)this->current_block->steps_event_count ), THEKERNEL->stepper->get_minimum_steps_per_second() ) );
+    this->stepper_motor->set_speed(THEKERNEL->stepper->get_trapezoid_adjusted_rate() * (float)this->stepper_motor->get_steps_to_move() / (float)this->current_block->steps_event_count);
 
 }
 

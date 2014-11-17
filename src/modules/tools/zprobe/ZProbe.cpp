@@ -168,14 +168,11 @@ bool ZProbe::run_probe(int& steps, bool fast)
     float maxz= this->max_z*2;
 
     // move Z down
-    STEPPER[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
-    STEPPER[Z_AXIS]->move(true, maxz * Z_STEPS_PER_MM); // always probes down, no more than 2*maxz
+    STEPPER[Z_AXIS]->move(true, maxz * Z_STEPS_PER_MM, 0); // always probes down, no more than 2*maxz
     if(this->is_delta) {
         // for delta need to move all three actuators
-        STEPPER[X_AXIS]->set_speed(0);
-        STEPPER[X_AXIS]->move(true, maxz * STEPS_PER_MM(X_AXIS));
-        STEPPER[Y_AXIS]->set_speed(0);
-        STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS));
+        STEPPER[X_AXIS]->move(true, maxz * STEPS_PER_MM(X_AXIS), 0);
+        STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS), 0);
     }
 
     // start acceration hrprocessing
@@ -195,13 +192,10 @@ bool ZProbe::return_probe(int steps)
     bool dir= steps < 0;
     steps= abs(steps);
 
-    STEPPER[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
-    STEPPER[Z_AXIS]->move(dir, steps);
+    STEPPER[Z_AXIS]->move(dir, steps, 0);
     if(this->is_delta) {
-        STEPPER[X_AXIS]->set_speed(0);
-        STEPPER[X_AXIS]->move(dir, steps);
-        STEPPER[Y_AXIS]->set_speed(0);
-        STEPPER[Y_AXIS]->move(dir, steps);
+        STEPPER[X_AXIS]->move(dir, steps, 0);
+        STEPPER[Y_AXIS]->move(dir, steps, 0);
     }
 
     this->running = true;
@@ -325,7 +319,7 @@ void ZProbe::accelerate(int c)
     // Z may have a different acceleration to X and Y
     float acc= (c==Z_AXIS) ? THEKERNEL->planner->get_z_acceleration() : THEKERNEL->planner->get_acceleration();
     if( current_rate < target_rate ) {
-        uint32_t rate_increase = int(floor((acc / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c)));
+        uint32_t rate_increase = floor((acc / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c));
         current_rate = min( target_rate, current_rate + rate_increase );
     }
     if( current_rate > target_rate ) {

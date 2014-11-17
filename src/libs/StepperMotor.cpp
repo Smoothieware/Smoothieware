@@ -58,7 +58,11 @@ void StepperMotor::step()
     this->step_ticker->reset_step_pins = true;
 
     // move counter back 11t
-    this->fx_counter -= this->fx_ticks_per_step;
+    if(this->fx_counter > this->fx_ticks_per_step) {
+        this->fx_counter -= this->fx_ticks_per_step;
+    }else{
+        this->fx_counter= 0; // can't make it less than 0 as it is a uint
+    }
 
     // we have moved a step 9t
     this->stepped++;
@@ -114,10 +118,8 @@ inline void StepperMotor::update_exit_tick()
     }
 }
 
-
-
 // Instruct the StepperMotor to move a certain number of steps
-void StepperMotor::move( bool direction, unsigned int steps )
+void StepperMotor::move( bool direction, unsigned int steps, float initial_speed)
 {
     // We do not set the direction directly, we will set the pin just before the step pin on the next tick
     this->dir_pin.set(direction);
@@ -135,6 +137,7 @@ void StepperMotor::move( bool direction, unsigned int steps )
 
     // Starting now we are moving
     if( steps > 0 ) {
+        set_speed(initial_speed);
         this->moving = true;
     } else {
         this->moving = false;
@@ -145,20 +148,20 @@ void StepperMotor::move( bool direction, unsigned int steps )
 // Set the speed at which this steper moves
 void StepperMotor::set_speed( float speed )
 {
+    float slowest_speed= ceil(this->step_ticker->frequency/65536.0F);
+
+    if(speed < slowest_speed) { // this is the slowest it can be
+        speed= slowest_speed;
+    }
+
     // How many steps we must output per second
     this->steps_per_second = speed;
 
     // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64 <--- REALLY? I don't think it is at the moment looks like 32bit fixed point
     float ticks_per_step = (float)( (float)this->step_ticker->frequency / speed );
-
     float double_fx_ticks_per_step = 65536.0F * ticks_per_step; // isn't this better on a 32bit machine?
-    if(double_fx_ticks_per_step >= 65536.0F*65536.0F) { // too slow exceeds the 32 bit uint
-        // minimum_speed = ceil(step_ticker->frequency/65536.0F), which would be 2 at 100Khz (NOTE was set to 20)
-        this->steps_per_second = ceil(this->step_ticker->frequency/65536.0F); // this is the maximum it can be
-        ticks_per_step = (float)( (float)this->step_ticker->frequency / this->steps_per_second);
-        double_fx_ticks_per_step = 65536.0F * ticks_per_step;
-    }
 
+    // set the new speed
     this->fx_ticks_per_step = (uint32_t)( floor(double_fx_ticks_per_step) );
 }
 

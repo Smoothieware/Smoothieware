@@ -27,7 +27,7 @@ class StepperMotor {
 
         bool is_moving() { return moving; }
         void move_finished();
-        void move( bool direction, unsigned int steps );
+        void move( bool direction, unsigned int steps, float initial_speed= 0.0F);
         void signal_move_finished();
         void set_speed( float speed );
         void update_exit_tick();
@@ -35,7 +35,7 @@ class StepperMotor {
         void unpause();
 
         float get_steps_per_second()  const { return steps_per_second; }
-        void set_steps_per_second(float ss) { steps_per_second= ss; }
+        // void set_steps_per_second(float ss) { steps_per_second= ss; }
         float get_steps_per_mm()  const { return steps_per_mm; }
         void change_steps_per_mm(float);
         void change_last_milestone(float);
@@ -102,8 +102,8 @@ class StepperMotor {
             // increase the ( fixed point ) counter by one tick 11t
             fx_counter += (uint32_t)(1<<16);
 
-            // if we are to step now 10t
-            if (fx_counter >= fx_ticks_per_step)
+            // if we are to step now 10t, however do not step until speed has been set
+            if (fx_ticks_per_step > 0 && fx_counter >= fx_ticks_per_step)
                 step();
         };
 };
