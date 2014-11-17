@@ -257,7 +257,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
                 trapezoid_adjusted_rate = current_block->rate_delta * 0.5F;
             }
 
-        } else if(current_steps_completed <= this->current_block->accelerate_until + 1) {
+        } else if(current_steps_completed < this->current_block->accelerate_until) {
             // If we are accelerating
             // Increase speed
             this->trapezoid_adjusted_rate += this->current_block->rate_delta;
@@ -265,7 +265,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
                 this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
             }
 
-        } else if (current_steps_completed > this->current_block->decelerate_after) {
+        } else if (current_steps_completed >= this->current_block->decelerate_after) {
             // If we are decelerating
             // Reduce speed
             // NOTE: We will only reduce speed if the result will be > 0. This catches small
