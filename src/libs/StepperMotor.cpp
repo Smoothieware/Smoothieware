@@ -61,7 +61,7 @@ void StepperMotor::step()
     if(this->fx_counter > this->fx_ticks_per_step) {
         this->fx_counter -= this->fx_ticks_per_step;
     }else{
-        this->fx_counter= 0; // can't make it less than 0 as it is a uint
+        this->fx_counter= 0; // can't make it less than 0 as it is a uint, unless we get interrupted I don't think this case is possible
     }
 
     // we have moved a step 9t

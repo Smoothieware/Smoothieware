@@ -102,8 +102,8 @@ class StepperMotor {
             // increase the ( fixed point ) counter by one tick 11t
             fx_counter += (uint32_t)(1<<16);
 
-            // if we are to step now 10t, however do not step until speed has been set
-            if (fx_ticks_per_step > 0 && fx_counter >= fx_ticks_per_step)
+            // if we are to step now 10t
+            if (fx_counter >= fx_ticks_per_step)
                 step();
         };
 };
