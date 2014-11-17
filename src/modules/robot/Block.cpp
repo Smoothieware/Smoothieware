@@ -174,7 +174,7 @@ float Block::reverse_pass(float exit_speed)
         // for max allowable speed if block is decelerating and nominal length is false.
         if ((!this->nominal_length_flag) && (this->max_entry_speed > exit_speed))
         {
-            float max_entry_speed = max_allowable_speed(-THEKERNEL->planner->get_acceleration(), exit_speed, this->millimeters);
+            float max_entry_speed = max_allowable_speed(-this->acceleration, exit_speed, this->millimeters);
 
             this->entry_speed = min(max_entry_speed, this->max_entry_speed);
 
@@ -231,7 +231,7 @@ float Block::max_exit_speed()
         return nominal_speed;
 
     // otherwise, we have to work out max exit speed based on entry and acceleration
-    float max = max_allowable_speed(-THEKERNEL->planner->get_acceleration(), this->entry_speed, this->millimeters);
+    float max = max_allowable_speed(-this->acceleration, this->entry_speed, this->millimeters);
 
     return min(max, nominal_speed);
 }

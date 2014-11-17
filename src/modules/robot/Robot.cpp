@@ -419,8 +419,6 @@ void Robot::on_gcode_received(void *argument)
                 gcode->mark_as_taken();
 
                 if (gcode->has_letter('S')) {
-                    // TODO for safety so it applies only to following gcodes, maybe a better way to do this?
-                    THEKERNEL->conveyor->wait_for_empty_queue();
                     float acc = gcode->get_value('S'); // mm/s^2
                     // enforce minimum
                     if (acc < 1.0F)
@@ -428,8 +426,6 @@ void Robot::on_gcode_received(void *argument)
                     THEKERNEL->planner->acceleration = acc;
                 }
                 if (gcode->has_letter('Z')) {
-                    // TODO for safety so it applies only to following gcodes, maybe a better way to do this?
-                    THEKERNEL->conveyor->wait_for_empty_queue();
                     float acc = gcode->get_value('Z'); // mm/s^2
                     // enforce positive
                     if (acc < 0.0F)

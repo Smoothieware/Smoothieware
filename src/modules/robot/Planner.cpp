@@ -86,6 +86,8 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
         if(this->z_junction_deviation >= 0.0F) junction_deviation= this->z_junction_deviation;
     }
 
+    block->acceleration= acceleration; // save in block
+
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
 
