@@ -71,7 +71,7 @@ void Stepper::on_config_reload(void *argument)
 {
 
     this->acceleration_ticks_per_second =  THEKERNEL->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
-    this->minimum_steps_per_second      =  THEKERNEL->config->value(minimum_steps_per_minute_checksum     )->by_default(3000  )->as_number() / 60.0F;
+    this->minimum_steps_per_second      =  THEKERNEL->config->value(minimum_steps_per_minute_checksum     )->by_default(120  )->as_number() / 60.0F;
 
     // Steppers start off by default
     this->turn_enable_pins_off();
@@ -297,7 +297,6 @@ inline void Stepper::trapezoid_generator_reset()
 {
     this->trapezoid_adjusted_rate = this->current_block->initial_rate;
     this->force_speed_update = true;
-    this->trapezoid_tick_cycle_counter = 0;
 }
 
 // Update the speed for all steppers

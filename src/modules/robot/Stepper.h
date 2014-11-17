@@ -45,22 +45,11 @@ public:
 
 private:
     Block *current_block;
-    int counters[3];
     int stepped[3];
-    int offsets[3];
-    float counter_alpha;
-    float counter_beta;
-    float counter_gamma;
-    unsigned int out_bits;
     float trapezoid_adjusted_rate;
-    int trapezoid_tick_cycle_counter;
-    int cycles_per_step_event;
-    int microseconds_per_step_pulse;
     int acceleration_ticks_per_second;
     unsigned int minimum_steps_per_second;
     int base_stepping_frequency;
-    unsigned short step_bits[3];
-    int counter_increment;
     Hook *acceleration_tick_hook;
     StepperMotor *main_stepper;
 
