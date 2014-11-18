@@ -27,7 +27,7 @@ class StepperMotor {
 
         bool is_moving() { return moving; }
         void move_finished();
-        void move( bool direction, unsigned int steps, float initial_speed= 0.0F);
+        void move( bool direction, unsigned int steps, float initial_speed= -1.0F);
         void signal_move_finished();
         void set_speed( float speed );
         void update_exit_tick();

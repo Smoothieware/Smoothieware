@@ -137,7 +137,7 @@ void StepperMotor::move( bool direction, unsigned int steps, float initial_speed
 
     // Starting now we are moving
     if( steps > 0 ) {
-        set_speed(initial_speed);
+        if(initial_speed >= 0.0F) set_speed(initial_speed);
         this->moving = true;
     } else {
         this->moving = false;

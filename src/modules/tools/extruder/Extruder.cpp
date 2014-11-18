@@ -98,6 +98,8 @@ void Extruder::on_halt(void *arg)
         // disable if multi extruder
         if(!this->single_config)
             this->enabled= false;
+        // stop moving if we are moving as the block queue flush won't do it for us
+        if(this->stepper_motor->is_moving()) this->stepper_motor->move(0, 0);
     }
 }
 
@@ -507,7 +509,8 @@ void Extruder::on_block_begin(void *argument)
             block->take();
             this->current_block = block;
 
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step, (float)block->initial_rate * (float)steps_to_step / (float)block->steps_event_count );
+            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
+            on_speed_change(0); // set initial speed
         } else {
             this->current_block = NULL;
         }
@@ -565,6 +568,15 @@ void Extruder::on_speed_change( void *argument )
 
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
     if( this->current_block == NULL ||  this->paused || this->mode != FOLLOW || !this->stepper_motor->is_moving()) {
+        return;
+    }
+
+    // if we are flushing the queue we need to stop the motor when it has decelerated to zero
+    // this is what steppermotor does
+    if(THEKERNEL->conveyor->is_flushing() && THEKERNEL->stepper->get_trapezoid_adjusted_rate() == this->current_block->rate_delta * 0.5F) {
+        this->stepper_motor->move(0, 0);
+        this->current_block->release();
+        this->current_block = NULL;
         return;
     }
 
