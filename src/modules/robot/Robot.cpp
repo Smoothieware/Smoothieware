@@ -129,6 +129,7 @@ Robot::Robot()
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
     this->compensationTransform= nullptr;
+    this->halted= false;
 }
 
 //Called when the module has just been loaded
@@ -137,6 +138,7 @@ void Robot::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
+    this->register_for_event(ON_HALT);
 
     // Configuration
     this->on_config_reload(this);
@@ -263,6 +265,11 @@ void Robot::check_max_actuator_speeds()
     }
 }
 
+void Robot::on_halt(void *arg)
+{
+    halted= (arg == nullptr);
+}
+
 void Robot::on_get_public_data(void *argument)
 {
     PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
@@ -376,11 +383,14 @@ void Robot::on_gcode_received(void *argument)
                 check_max_actuator_speeds();
                 return;
             case 114: {
-                char buf[32];
-                int n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f",
+                char buf[64];
+                int n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f A:%1.3f B:%1.3f C:%1.3f ",
                                  from_millimeters(this->last_milestone[0]),
                                  from_millimeters(this->last_milestone[1]),
-                                 from_millimeters(this->last_milestone[2]));
+                                 from_millimeters(this->last_milestone[2]),
+                                 actuators[X_AXIS]->get_current_position(),
+                                 actuators[Y_AXIS]->get_current_position(),
+                                 actuators[Z_AXIS]->get_current_position() );
                 gcode->txt_after_ok.append(buf, n);
                 gcode->mark_as_taken();
             }
@@ -432,7 +442,7 @@ void Robot::on_gcode_received(void *argument)
                 }
                 break;
 
-            case 205: // M205 Xnnn - set junction deviation Snnn - Set minimum planner speed
+            case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed
                 gcode->mark_as_taken();
                 if (gcode->has_letter('X')) {
                     float jd = gcode->get_value('X');
@@ -440,6 +450,13 @@ void Robot::on_gcode_received(void *argument)
                     if (jd < 0.0F)
                         jd = 0.0F;
                     THEKERNEL->planner->junction_deviation = jd;
+                }
+                if (gcode->has_letter('Z')) {
+                    float jd = gcode->get_value('Z');
+                    // enforce minimum, -1 disables it and uses regular junction deviation
+                    if (jd < -1.0F)
+                        jd = -1.0F;
+                    THEKERNEL->planner->z_junction_deviation = jd;
                 }
                 if (gcode->has_letter('S')) {
                     float mps = gcode->get_value('S');
@@ -474,7 +491,7 @@ void Robot::on_gcode_received(void *argument)
             case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f Z%1.5f\n", THEKERNEL->planner->acceleration, THEKERNEL->planner->z_acceleration);
-                gcode->stream->printf(";X- Junction Deviation, S - Minimum Planner speed:\nM205 X%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->minimum_planner_speed);
+                gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
                                       alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
@@ -565,7 +582,6 @@ void Robot::on_gcode_received(void *argument)
 // and continue
 void Robot::distance_in_gcode_is_known(Gcode *gcode)
 {
-
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
     THEKERNEL->conveyor->append_gcode(gcode);
 }
@@ -599,6 +615,13 @@ void Robot::reset_axis_position(float position, int axis)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
+// Use FK to find out where actuator is and reset lastmilestone to match
+void Robot::reset_position_from_current_actuator_position()
+{
+    float actuator_pos[]= {actuators[X_AXIS]->get_current_position(), actuators[Y_AXIS]->get_current_position(), actuators[Z_AXIS]->get_current_position()};
+    arm_solution->actuator_to_cartesian(actuator_pos, this->last_milestone);
+    memcpy(this->transformed_last_milestone, this->last_milestone, sizeof(this->transformed_last_milestone));
+}
 
 // Convert target from millimeters to steps, and append this to the planner
 void Robot::append_milestone( float target[], float rate_mm_s )
@@ -712,6 +735,7 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
         // segment 0 is already done - it's the end point of the previous move so we start at segment 1
         // We always add another point after this loop so we stop at segments-1, ie i < segments
         for (int i = 1; i < segments; i++) {
+            if(halted) return; // don;t queue any more segments
             for(int axis = X_AXIS; axis <= Z_AXIS; axis++ )
                 segment_end[axis] = last_milestone[axis] + segment_delta[axis];
 
@@ -805,6 +829,7 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
     arc_target[this->plane_axis_2] = this->last_milestone[this->plane_axis_2];
 
     for (i = 1; i < segments; i++) { // Increment (segments-1)
+        if(halted) return; // don't queue any more segments
 
         if (count < this->arc_correction ) {
             // Apply vector rotation matrix

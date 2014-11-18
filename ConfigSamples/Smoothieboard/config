@@ -16,13 +16,14 @@ gamma_steps_per_mm                           1600             # Steps per mm for
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING
 acceleration                                 3000             # Acceleration in mm/second/second.
-#z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 disables it, disabled by default. DO NOT SET ON A DELTA
+#z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 uses acceleration which is the default. DO NOT SET ON A DELTA
 acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters,
-                                                              # see https://github.com/grbl/grbl/blob/master/planner.c#L409
+                                                              # see https://github.com/grbl/grbl/blob/master/planner.c
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8
                                                               # Lower values mean being more careful, higher values means being
                                                               # faster and have more jerk
+#z_junction_deviation                        0.0              # for Z only moves, -1 uses junction_deviation, zero disables junction_deviation on z moves DO NOT SET ON A DELTA
 #minimum_planner_speed                       0.0              # sets the minimum planner speed in mm/sec
 
 # Stepper module configuration
@@ -60,6 +61,10 @@ second_usb_serial_enable                     false            # This enables a s
                                                               # and a terminal connected)
 #leds_disable                                true             # disable using leds after config loaded
 #play_led_disable                            true             # disable the play led
+pause_button_enable                          true             # Pause button enable
+#pause_button_pin                            2.12             # pause button pin. default is P2.12
+#kill_button_enable                           false            # set to true to enable a kill button
+#kill_button_pin                              2.12             # kill button pin. default is same as pause button 2.12 (2.11 is another good choice)
 #msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true (needs special binary)
 #dfu_enable                                  false            # for linux developers, set to true to enable DFU
 
@@ -109,7 +114,7 @@ delta_current                                1.5              # First extruder s
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is
                                                               # ignored if false.
-#laser_module_pin                             2.5             # this pin will be PWMed to control the laser. Only P2.0 - P2.5
+#laser_module_pin                             2.5             # this pin will be PWMed to control the laser. Only P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P3.26
                                                               # can be used since laser requires hardware PWM
 #laser_module_max_power                       0.8             # this is the maximum duty cycle that will be applied to the laser
 #laser_module_tickle_power                    0.0             # this duty cycle will be used for travel moves to keep the laser
@@ -252,9 +257,6 @@ zprobe.probe_height                          5               # how much above be
 #leveling-strategy.three-point-leveling.probe_offsets  0,0,0       # the probe offsets from nozzle, must be x,y,z, default is no offset
 #leveling-strategy.three-point-leveling.save_plane     false       # set to true to allow the bed plane to be saved with M500 default is false
 
-# Pause button
-pause_button_enable                          true             #
-
 # Panel
 panel.enable                                 false             # set to true to enable the panel code
 panel.lcd                                    smoothiepanel     # set type of panel
@@ -271,8 +273,7 @@ panel.encoder_b_pin                          3.26!^            # encoder pin
 #panel.encoder_b_pin                         3.26!^            # encoder pin         ; GLCD EXP2 Pin 5
 #panel.click_button_pin                      1.30!^            # click button        ; GLCD EXP1 Pin 2
 #panel.buzz_pin                              1.31              # pin for buzzer      ; GLCD EXP1 Pin 1
-#panel.button_pause_pin                      2.11^             # kill/pause          ; GLCD EXP2 Pin 8 either
-#panel.back_button_pin                       2.11!^            # back button         ; GLCD EXP2 Pin 8 or
+#panel.back_button_pin                       2.11!^            # back button         ; GLCD EXP2 Pin 8
 
 # pins used with other panels
 #panel.up_button_pin                         0.1!              # up button if used

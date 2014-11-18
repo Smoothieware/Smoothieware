@@ -17,6 +17,10 @@ class Pin {
             return this->pin < 32;
         }
 
+        inline bool equals(const Pin& other) const {
+            return (this->pin == other.pin) && (this->port == other.port);
+        }
+
         inline Pin* as_output(){
             if (this->pin < 32)
                 this->port->FIODIR |= 1<<this->pin;

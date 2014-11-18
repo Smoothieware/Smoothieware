@@ -27,12 +27,14 @@ public:
     void on_idle(void *);
     void on_main_loop(void *);
     void on_block_end(void *);
+    void on_halt(void *);
     void on_config_reload(void *);
 
     void notify_block_finished(Block *);
 
     void wait_for_empty_queue();
     bool is_queue_empty() { return queue.is_empty(); };
+    bool is_queue_full() { return queue.is_full(); };
 
     void ensure_running(void);
 
@@ -40,6 +42,8 @@ public:
     void queue_head_block(void);
 
     void dump_queue(void);
+    void flush_queue(void);
+    bool is_flushing() const { return flush; }
 
     friend class Planner; // for queue
 
@@ -47,10 +51,14 @@ private:
     typedef HeapRing<Block> Queue_t;
 
     Queue_t queue;  // Queue of Blocks
-
-    volatile bool running;
-
     volatile unsigned int gc_pending;
+
+    struct {
+        volatile bool running:1;
+        volatile bool flush:1;
+        volatile bool halted:1;
+    };
+
 };
 
 #endif // CONVEYOR_H

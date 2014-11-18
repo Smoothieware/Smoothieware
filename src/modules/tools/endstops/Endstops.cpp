@@ -66,7 +66,6 @@
 #define alpha_homing_retract_checksum    CHECKSUM("alpha_homing_retract")
 #define beta_homing_retract_checksum     CHECKSUM("beta_homing_retract")
 #define gamma_homing_retract_checksum    CHECKSUM("gamma_homing_retract")
-#define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
 
 // same as above but in user friendly mm/s and mm
 #define alpha_fast_homing_rate_mm_checksum  CHECKSUM("alpha_fast_homing_rate_mm_s")
@@ -235,7 +234,32 @@ static const char *endstop_names[]= {"min_x", "min_y", "min_z", "max_x", "max_y"
 
 void Endstops::on_idle(void *argument)
 {
-    if(this->status != NOT_HOMING) return; // don't check while homing or if a LIMIT was triggered
+    if(this->status == LIMIT_TRIGGERED) {
+        // if we were in limit triggered see if it has been cleared
+        for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+            if(this->limit_enable[c]) {
+                std::array<int, 2> minmax{{0, 3}};
+                // check min and max endstops
+                for (int i : minmax) {
+                    int n= c+i;
+                    if(this->pins[n].get()) {
+                        // still triggered, so exit
+                        bounce_cnt= 0;
+                        return;
+                    }
+                }
+            }
+        }
+        if(++bounce_cnt > 10) { // can use less as it calls on_idle in between
+            // clear the state
+            this->status= NOT_HOMING;
+        }
+        return;
+
+    }else if(this->status != NOT_HOMING) {
+        // don't check while homing
+        return;
+    }
 
     for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if(this->limit_enable[c] && STEPPER[c]->is_moving()) {
@@ -247,11 +271,10 @@ void Endstops::on_idle(void *argument)
                 while(this->pins[n].get()) {
                     if ( ++debounce >= debounce_count ) {
                         // endstop triggered
-                        THEKERNEL->pauser->take();
-                        THEKERNEL->streams->printf("Limit switch %s was hit - reset required\n", endstop_names[n]);
+                        THEKERNEL->streams->printf("Limit switch %s was hit - reset or M999 required\n", endstop_names[n]);
                         this->status= LIMIT_TRIGGERED;
-                        // disables heaters and motors
-                        THEKERNEL->call_event(ON_HALT);
+                        // disables heaters and motors, ignores incoming Gcode and flushes block queue
+                        THEKERNEL->call_event(ON_HALT, nullptr);
                         return;
                     }
                 }
@@ -321,6 +344,7 @@ void Endstops::wait_for_homed(char axes_to_move)
                         running = true;
                     } else if ( STEPPER[c]->is_moving() ) {
                         STEPPER[c]->move(0, 0);
+                        axes_to_move &= ~(1<<c); // no need to check it again
                     }
                 } else {
                     // The endstop was not hit yet
