@@ -98,8 +98,6 @@ void Extruder::on_halt(void *arg)
         // disable if multi extruder
         if(!this->single_config)
             this->enabled= false;
-        // stop moving if we are moving as the block queue flush won't do it for us
-        if(this->stepper_motor->is_moving()) this->stepper_motor->move(0, 0);
     }
 }
 
