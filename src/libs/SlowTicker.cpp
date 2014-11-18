@@ -65,8 +65,7 @@ void SlowTicker::set_frequency( int frequency ){
 void SlowTicker::tick(){
 
     // Call all hooks that need to be called ( bresenham )
-    for (uint32_t i=0; i<this->hooks.size(); i++){
-        Hook* hook = this->hooks.at(i);
+    for (Hook* hook : this->hooks){
         hook->countdown -= this->interval;
         if (hook->countdown < 0)
         {
