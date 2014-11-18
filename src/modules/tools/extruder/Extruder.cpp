@@ -569,9 +569,9 @@ void Extruder::on_speed_change( void *argument )
         return;
     }
 
-    // if we are flushing the queue we need to stop the motor when it has decelerated to zero
+    // if we are flushing the queue we need to stop the motor when it has decelerated to zero, we get this call with argumnet == 0 when this happens
     // this is what steppermotor does
-    if(THEKERNEL->conveyor->is_flushing() && THEKERNEL->stepper->get_trapezoid_adjusted_rate() == this->current_block->rate_delta * 0.5F) {
+    if(argument == 0) {
         this->stepper_motor->move(0, 0);
         this->current_block->release();
         this->current_block = NULL;

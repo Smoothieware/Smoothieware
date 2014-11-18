@@ -248,11 +248,11 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
                 trapezoid_adjusted_rate -= current_block->rate_delta;
 
             } else if (trapezoid_adjusted_rate == current_block->rate_delta * 0.5F) {
-                for (auto i : THEKERNEL->robot->actuators)
-                    i->move(i->direction, 0);
-                if (current_block)
-                    current_block->release();
+                for (auto i : THEKERNEL->robot->actuators) i->move(i->direction, 0); // stop motors
+                if (current_block) current_block->release();
+                THEKERNEL->call_event(ON_SPEED_CHANGE, 0); // tell others we stopped
                 return 0;
+
             } else {
                 trapezoid_adjusted_rate = current_block->rate_delta * 0.5F;
             }
