@@ -48,6 +48,7 @@ void Block::clear()
     entry_speed         = 0.0F;
     exit_speed          = 0.0F;
     rate_delta          = 0.0F;
+    acceleration        = 100.0F; // we don't want to get devide by zeroes if this is not set
     initial_rate        = -1;
     final_rate          = -1;
     accelerate_until    = 0;

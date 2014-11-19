@@ -36,6 +36,7 @@ junction_deviation                           0.05             # Similar to the o
 microseconds_per_step_pulse                  1                # Duration of step pulses to stepper drivers, in microseconds
 minimum_steps_per_minute                     120              # Never step slower than this
 base_stepping_frequency                      100000           # Base frequency for stepping, higher gives smoother movement
+#number_of_motors                             5                # total number of stepper motors only change if adding extra external extruders
 
 # Cartesian axis speed limits
 x_axis_max_speed                             30000            # mm/min

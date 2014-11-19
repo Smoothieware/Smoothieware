@@ -145,24 +145,24 @@ void StepperMotor::move( bool direction, unsigned int steps, float initial_speed
     this->update_exit_tick();
 }
 
-// Set the speed at which this steper moves
+// Set the speed at which this stepper moves
 void StepperMotor::set_speed( float speed )
 {
-    float slowest_speed= ceil(this->step_ticker->frequency/65536.0F);
+    float slowest_speed= ceil(this->step_ticker->frequency/fx_increment);
 
-    if(speed < slowest_speed) { // this is the slowest it can be
+    if(speed < slowest_speed) { // this is the slowest it can be and fit in 64bit fixed point 32:32
         speed= slowest_speed;
     }
 
     // How many steps we must output per second
     this->steps_per_second = speed;
 
-    // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64 <--- REALLY? I don't think it is at the moment looks like 32bit fixed point
+    // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64
     float ticks_per_step = (float)( (float)this->step_ticker->frequency / speed );
-    float double_fx_ticks_per_step = 65536.0F * ticks_per_step; // isn't this better on a 32bit machine?
+    float double_fx_ticks_per_step = fx_increment * ticks_per_step;
 
     // set the new speed
-    this->fx_ticks_per_step = (uint32_t)( floor(double_fx_ticks_per_step) );
+    this->fx_ticks_per_step = floor(double_fx_ticks_per_step);
 }
 
 // Pause this stepper motor

@@ -85,8 +85,12 @@ class StepperMotor {
 
         uint32_t steps_to_move;
         uint32_t stepped;
-        uint32_t fx_counter;
-        uint32_t fx_ticks_per_step;
+
+        // set to 64 bit fixed point, 32:32 bits fractional
+        const uint32_t fx_shift= 32;
+        const uint64_t fx_increment= ((uint64_t)1<<fx_shift);
+        uint64_t fx_counter;
+        uint64_t fx_ticks_per_step;
 
         struct {
             bool direction:1;
@@ -99,8 +103,8 @@ class StepperMotor {
 
         // Called a great many times per second, to step if we have to now
         inline void tick() {
-            // increase the ( fixed point ) counter by one tick 11t
-            fx_counter += (uint32_t)(1<<16);
+            // increase the ( 64 fixed point 32:32 ) counter by one tick 11t
+            fx_counter += fx_increment;
 
             // if we are to step now 10t
             if (fx_counter >= fx_ticks_per_step)

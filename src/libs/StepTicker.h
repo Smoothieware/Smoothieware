@@ -21,7 +21,8 @@ class StepTicker{
         friend class StepperMotor;
         static StepTicker* global_step_ticker;
 
-        StepTicker();
+        StepTicker(int nmotors);
+        ~StepTicker();
         void set_frequency( float frequency );
         void tick();
         void signal_moves_finished();
@@ -37,15 +38,15 @@ class StepTicker{
         vector<StepperMotor*> stepper_motors;
         uint32_t delay;
         uint32_t period;
-        uint32_t debug;
         uint32_t last_duration;
-        bool has_axes;
 
-        bool moves_finished;
-        bool reset_step_pins;
-
-        StepperMotor* active_motors[12];
+        int num_motors;
+        StepperMotor** active_motors;
         uint32_t active_motor_bm;
+        struct {
+            bool moves_finished:1;
+            bool reset_step_pins:1;
+        };
 
 };
 

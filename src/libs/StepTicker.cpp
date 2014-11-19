@@ -28,7 +28,7 @@ extern bool _isr_context;
 
 StepTicker* StepTicker::global_step_ticker;
 
-StepTicker::StepTicker(){
+StepTicker::StepTicker(int nmotors){
     StepTicker::global_step_ticker = this;
 
     // Configure the timer
@@ -44,18 +44,22 @@ StepTicker::StepTicker(){
     // Default start values
     this->moves_finished = false;
     this->reset_step_pins = false;
-    this->debug = 0;
-    this->has_axes = 0;
     this->set_frequency(0.001);
     this->set_reset_delay(100);
     this->last_duration = 0;
-    for (int i = 0; i < 12; i++){
-        this->active_motors[i] = NULL;
+    this->num_motors= nmotors;
+    this->active_motors= new StepperMotor*[num_motors];
+    for (int i = 0; i < num_motors; i++){
+        this->active_motors[i] = nullptr;
     }
     this->active_motor_bm = 0;
 
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
+}
+
+StepTicker::~StepTicker() {
+    delete[] this->active_motors;
 }
 
 // Set the base stepping frequency
@@ -79,7 +83,6 @@ void StepTicker::set_reset_delay( float seconds ){
 StepperMotor* StepTicker::add_stepper_motor(StepperMotor* stepper_motor){
     this->stepper_motors.push_back(stepper_motor);
     stepper_motor->step_ticker = this;
-    this->has_axes = true;
     return stepper_motor;
 }
 
@@ -89,7 +92,7 @@ inline void StepTicker::tick(){
     int i;
     uint32_t bm = 1;
     // We iterate over each active motor
-    for (i = 0; i < 12; i++, bm <<= 1){
+    for (i = 0; i < num_motors; i++, bm <<= 1){
         if (this->active_motor_bm & bm){
             this->active_motors[i]->tick();
         }
@@ -103,7 +106,7 @@ void StepTicker::signal_moves_finished(){
     _isr_context = true;
 
     uint16_t bitmask = 1;
-    for ( uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
+    for ( uint8_t motor = 0; motor < num_motors; motor++, bitmask <<= 1){
         if (this->active_motor_bm & bitmask){
             if(this->active_motors[motor]->is_move_finished){
                 this->active_motors[motor]->signal_move_finished();
@@ -127,7 +130,7 @@ inline void StepTicker::reset_tick(){
 
     int i;
     uint32_t bm;
-    for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
+    for (i = 0, bm = 1; i < num_motors; i++, bm <<= 1)
     {
         if (this->active_motor_bm & bm)
             this->active_motors[i]->unstep();
@@ -152,7 +155,7 @@ void StepTicker::TIMER0_IRQHandler (void){
 
     // Step pins
     uint16_t bitmask = 1;
-    for (uint8_t motor = 0; motor < 12; motor++, bitmask <<= 1){
+    for (uint8_t motor = 0; motor < num_motors; motor++, bitmask <<= 1){
         if (this->active_motor_bm & bitmask){
             this->active_motors[motor]->tick();
         }
@@ -179,7 +182,7 @@ void StepTicker::TIMER0_IRQHandler (void){
         this->signal_moves_finished();
 
         // If we went over the duration an interrupt is supposed to last, we have a problem
-        // That can happen tipically when we change blocks, where more than usual computation is done
+        // That can happen typically when we change blocks, where more than usual computation is done
         // This can be OK, if we take notice of it, which we do now
         if( LPC_TIM0->TC > this->period ){ // TODO: remove the size condition
 
@@ -188,25 +191,23 @@ void StepTicker::TIMER0_IRQHandler (void){
             // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
             uint32_t ticks_to_skip = (  ( LPC_TIM0->TC + this->last_duration ) / this->period );
 
-            // Next step is now to reduce this to how many steps we can *actually* skip
+            // Next step is now to reduce this to how many steps we can *actually* skip, as we do not want to cause an actual step
             uint32_t ticks_we_actually_can_skip = ticks_to_skip;
 
             int i;
             uint32_t bm;
-            for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
+            for (i = 0, bm = 1; i < num_motors; i++, bm <<= 1)
             {
-                if (this->active_motor_bm & bm)
+                if( (this->active_motor_bm & bm) && (this->active_motors[i]->fx_ticks_per_step >= this->active_motors[i]->fx_counter) )
                     ticks_we_actually_can_skip =
-                        min(ticks_we_actually_can_skip,
-                            (uint32_t)((uint64_t)( (uint64_t)this->active_motors[i]->fx_ticks_per_step - (uint64_t)this->active_motors[i]->fx_counter ) >> 32)
-                            );
+                        min(ticks_we_actually_can_skip, (uint32_t)((active_motors[i]->fx_ticks_per_step - active_motors[i]->fx_counter) >> active_motors[i]->fx_shift));
             }
 
             // Adding to MR0 for this time is not enough, we must also increment the counters ourself artificially
-            for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
+            for (i = 0, bm = 1; i < num_motors; i++, bm <<= 1)
             {
                 if (this->active_motor_bm & bm)
-                    this->active_motors[i]->fx_counter += (uint64_t)((uint64_t)(ticks_we_actually_can_skip)<<32);
+                    this->active_motors[i]->fx_counter += ((uint64_t)ticks_we_actually_can_skip << active_motors[i]->fx_shift);
             }
 
             // When must we have our next MR0 ? ( +1 is here to account that we are actually doing a legit MR0 match here too, not only overtime )
@@ -234,7 +235,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
 {
     uint32_t bm;
     int i;
-    for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
+    for (i = 0, bm = 1; i < num_motors; i++, bm <<= 1)
     {
         if (this->active_motors[i] == motor)
         {
@@ -244,7 +245,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
             }
             return;
         }
-        if (this->active_motors[i] == NULL)
+        if (this->active_motors[i] == nullptr)
         {
             this->active_motors[i] = motor;
             this->active_motor_bm |= bm;
@@ -261,7 +262,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
 void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
 {
     uint32_t bm; int i;
-    for (i = 0, bm = 1; i < 12; i++, bm <<= 1)
+    for (i = 0, bm = 1; i < num_motors; i++, bm <<= 1)
     {
         if (this->active_motors[i] == motor)
         {
