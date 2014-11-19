@@ -21,6 +21,7 @@
 #include "checksumm.h"
 #include "PublicData.h"
 #include "Gcode.h"
+//#include "StepTicker.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "modules/robot/RobotPublicAccess.h"
@@ -475,6 +476,8 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
         AHB0.debug(stream);
         AHB1.debug(stream);
     }
+
+    //stream->printf("overruns: %lu\n", THEKERNEL->step_ticker->overruns);
 }
 
 static uint32_t getDeviceType()

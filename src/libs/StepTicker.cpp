@@ -47,6 +47,7 @@ StepTicker::StepTicker(int nmotors){
     this->set_frequency(0.001);
     this->set_reset_delay(100);
     this->last_duration = 0;
+    //this->overruns= 0;
     this->num_motors= nmotors;
     this->active_motors= new StepperMotor*[num_motors];
     for (int i = 0; i < num_motors; i++){
@@ -185,6 +186,7 @@ void StepTicker::TIMER0_IRQHandler (void){
         // That can happen typically when we change blocks, where more than usual computation is done
         // This can be OK, if we take notice of it, which we do now
         if( LPC_TIM0->TC > this->period ){ // TODO: remove the size condition
+            //overruns++;
 
             uint32_t start_tc = LPC_TIM0->TC;
 
@@ -198,9 +200,14 @@ void StepTicker::TIMER0_IRQHandler (void){
             uint32_t bm;
             for (i = 0, bm = 1; i < num_motors; i++, bm <<= 1)
             {
-                if( (this->active_motor_bm & bm) && (this->active_motors[i]->fx_ticks_per_step >= this->active_motors[i]->fx_counter) )
-                    ticks_we_actually_can_skip =
-                        min(ticks_we_actually_can_skip, (uint32_t)((active_motors[i]->fx_ticks_per_step - active_motors[i]->fx_counter) >> active_motors[i]->fx_shift));
+                if((this->active_motor_bm & bm) != 0) {
+                    if(this->active_motors[i]->fx_ticks_per_step > this->active_motors[i]->fx_counter) {
+                        ticks_we_actually_can_skip =
+                            min(ticks_we_actually_can_skip, (uint32_t)((active_motors[i]->fx_ticks_per_step - active_motors[i]->fx_counter) >> active_motors[i]->fx_shift));
+                    }else{
+                        ticks_we_actually_can_skip= 0;
+                    }
+                }
             }
 
             // Adding to MR0 for this time is not enough, we must also increment the counters ourself artificially

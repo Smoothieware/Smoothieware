@@ -94,7 +94,6 @@ class StepperMotor {
 
         struct {
             bool direction:1;
-            bool remove_from_active_list_next_reset:1;
             bool is_move_finished:1; // Whether the move just finished
             bool signal_step:1;
             bool paused:1;

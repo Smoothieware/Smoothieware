@@ -35,7 +35,6 @@ void StepperMotor::init()
     this->stepped = 0;
     this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
-    this->remove_from_active_list_next_reset = false;
     this->is_move_finished = false;
     this->signal_step = false;
     this->step_signal_hook = new Hook();
@@ -96,7 +95,6 @@ void StepperMotor::signal_move_finished()
     this->end_hook->call();
 
     // We only need to do this if we were not instructed to move
-    // NOTE this is always true
     if( this->moving == false ) {
         this->update_exit_tick();
     }
@@ -109,7 +107,6 @@ inline void StepperMotor::update_exit_tick()
 {
     if( !this->moving || this->paused || this->steps_to_move == 0 ) {
         // We must exit tick() after setting the pins, no bresenham is done
-        //this->remove_from_active_list_next_reset = true;
         this->step_ticker->remove_motor_from_active_list(this);
     } else {
         // We must do the bresenham in tick()
