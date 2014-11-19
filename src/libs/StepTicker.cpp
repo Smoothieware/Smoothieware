@@ -42,7 +42,7 @@ StepTicker::StepTicker(int nmotors){
     LPC_TIM1->TCR = 1;              // Enable interrupt
 
     // Default start values
-    this->moves_finished = false;
+    this->a_move_finished = false;
     this->reset_step_pins = false;
     this->set_frequency(0.001);
     this->set_reset_delay(100);
@@ -101,9 +101,9 @@ inline void StepTicker::tick(){
     _isr_context = false;
 }
 
-// Call signal_mode_finished() on each active motor that asked to be signaled. We do this instead of inside of tick() so that
+// Call signal_move_finished() on each active motor that asked to be signaled. We do this instead of inside of tick() so that
 // all tick()s are called before we do the move finishing
-void StepTicker::signal_moves_finished(){
+void StepTicker::signal_a_move_finished(){
     _isr_context = true;
 
     uint16_t bitmask = 1;
@@ -120,7 +120,7 @@ void StepTicker::signal_moves_finished(){
             }
         }
     }
-    this->moves_finished = false;
+    this->a_move_finished = false;
 
     _isr_context = false;
 }
@@ -175,12 +175,12 @@ void StepTicker::TIMER0_IRQHandler (void){
     }
 
     // If a move finished in this tick, we have to tell the actuator to act accordingly
-    if( this->moves_finished ){
+    if( this->a_move_finished ){
 
         // Do not get out of here before everything is nice and tidy
         LPC_TIM0->MR0 = 20000000;
 
-        this->signal_moves_finished();
+        this->signal_a_move_finished();
 
         // If we went over the duration an interrupt is supposed to last, we have a problem
         // That can happen typically when we change blocks, where more than usual computation is done

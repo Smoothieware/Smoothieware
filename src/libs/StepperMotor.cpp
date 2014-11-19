@@ -79,7 +79,7 @@ void StepperMotor::step()
         // Mark it as finished, then StepTicker will call signal_mode_finished()
         // This is so we don't call that before all the steps have been generated for this tick()
         this->is_move_finished = true;
-        this->step_ticker->moves_finished = true;
+        this->step_ticker->a_move_finished = true;
     }
 }
 
