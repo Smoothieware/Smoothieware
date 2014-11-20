@@ -508,7 +508,7 @@ void Extruder::on_block_begin(void *argument)
             this->current_block = block;
 
             this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
-            on_speed_change(0); // set initial speed
+            on_speed_change(this); // set initial speed
         } else {
             this->current_block = NULL;
         }
@@ -571,7 +571,7 @@ void Extruder::on_speed_change( void *argument )
 
     // if we are flushing the queue we need to stop the motor when it has decelerated to zero, we get this call with argumnet == 0 when this happens
     // this is what steppermotor does
-    if(THEKERNEL->conveyor->is_flushing() && argument == 0) {
+    if(argument == 0) {
         this->stepper_motor->move(0, 0);
         this->current_block->release();
         this->current_block = NULL;
