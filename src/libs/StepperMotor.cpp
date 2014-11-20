@@ -54,7 +54,7 @@ void StepperMotor::step()
 {
     // output to pins 37t
     this->step_pin.set( 1 );
-    this->step_ticker->reset_step_pins = true;
+    THEKERNEL->step_ticker->reset_step_pins = true;
 
     // move counter back 11t
     if(this->fx_counter > this->fx_ticks_per_step) {
@@ -79,7 +79,7 @@ void StepperMotor::step()
         // Mark it as finished, then StepTicker will call signal_mode_finished()
         // This is so we don't call that before all the steps have been generated for this tick()
         this->is_move_finished = true;
-        this->step_ticker->a_move_finished = true;
+        THEKERNEL->step_ticker->a_move_finished = true;
     }
 }
 
@@ -107,11 +107,11 @@ inline void StepperMotor::update_exit_tick()
 {
     if( !this->moving || this->paused || this->steps_to_move == 0 ) {
         // We must exit tick() after setting the pins, no bresenham is done
-        this->step_ticker->remove_motor_from_active_list(this);
+        THEKERNEL->step_ticker->remove_motor_from_active_list(this);
     } else {
         // We must do the bresenham in tick()
         // We have to do this or there could be a bug where the removal still happens when it doesn't need to
-        this->step_ticker->add_motor_to_active_list(this);
+        THEKERNEL->step_ticker->add_motor_to_active_list(this);
     }
 }
 
@@ -145,7 +145,7 @@ void StepperMotor::move( bool direction, unsigned int steps, float initial_speed
 // Set the speed at which this stepper moves
 void StepperMotor::set_speed( float speed )
 {
-    float slowest_speed= ceil(this->step_ticker->frequency/fx_increment);
+    float slowest_speed= ceil(THEKERNEL->step_ticker->frequency/fx_increment);
 
     if(speed < slowest_speed) { // this is the slowest it can be and fit in 64bit fixed point 32:32
         speed= slowest_speed;
@@ -155,7 +155,7 @@ void StepperMotor::set_speed( float speed )
     this->steps_per_second = speed;
 
     // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64
-    float ticks_per_step = (float)( (float)this->step_ticker->frequency / speed );
+    float ticks_per_step = (float)( (float)THEKERNEL->step_ticker->frequency / speed );
     float double_fx_ticks_per_step = fx_increment * ticks_per_step;
 
     // set the new speed

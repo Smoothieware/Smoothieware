@@ -10,8 +10,6 @@
 #ifndef STEPTICKER_H
 #define STEPTICKER_H
 
-using namespace std;
-#include <vector>
 #include <stdint.h>
 
 class StepperMotor;
@@ -26,7 +24,6 @@ class StepTicker{
         void set_frequency( float frequency );
         void tick();
         void signal_a_move_finished();
-        StepperMotor* add_stepper_motor(StepperMotor* stepper_motor);
         void set_reset_delay( float seconds );
         void reset_tick();
         void add_motor_to_active_list(StepperMotor* motor);
@@ -36,15 +33,14 @@ class StepTicker{
 
     private:
         float frequency;
-        vector<StepperMotor*> stepper_motors;
         uint32_t delay;
         uint32_t period;
         uint32_t last_duration;
 
-        int num_motors;
         StepperMotor** active_motors;
         uint32_t active_motor_bm;
         struct {
+            uint8_t num_motors:8; // increase for more than 256 motors
             bool a_move_finished:1;
             bool reset_step_pins:1;
         };

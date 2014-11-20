@@ -212,9 +212,9 @@ void Robot::on_config_reload(void *argument)
 
     // TODO: delete or detect old steppermotors
     // Make our 3 StepperMotors
-    this->alpha_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(alpha_step_pin, alpha_dir_pin, alpha_en_pin) );
-    this->beta_stepper_motor   = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(beta_step_pin,  beta_dir_pin,  beta_en_pin ) );
-    this->gamma_stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(gamma_step_pin, gamma_dir_pin, gamma_en_pin) );
+    this->alpha_stepper_motor  = new StepperMotor(alpha_step_pin, alpha_dir_pin, alpha_en_pin);
+    this->beta_stepper_motor   = new StepperMotor(beta_step_pin,  beta_dir_pin,  beta_en_pin );
+    this->gamma_stepper_motor  = new StepperMotor(gamma_step_pin, gamma_dir_pin, gamma_en_pin);
 
     alpha_stepper_motor->change_steps_per_mm(steps_per_mm[0]);
     beta_stepper_motor->change_steps_per_mm(steps_per_mm[1]);
@@ -483,7 +483,7 @@ void Robot::on_gcode_received(void *argument)
             case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f Z%1.5f\n", THEKERNEL->planner->acceleration, THEKERNEL->planner->z_acceleration);
-                gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
+                gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
                                       alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);

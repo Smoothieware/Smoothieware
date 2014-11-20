@@ -8,14 +8,11 @@
 
 #include "StepTicker.h"
 
-using namespace std;
-#include <vector>
-
 #include "libs/nuts_bolts.h"
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "StepperMotor.h"
-
+#include "StreamOutputPool.h"
 #include "system_LPC17xx.h" // mbed.h lib
 #include <math.h>
 #include <mri.h>
@@ -78,13 +75,6 @@ void StepTicker::set_frequency( float frequency ){
 void StepTicker::set_reset_delay( float seconds ){
     this->delay = int(floor(float(SystemCoreClock/4)*( seconds )));  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM1->MR0 = this->delay;
-}
-
-// Add a stepper motor object to our list of steppers we must take care of
-StepperMotor* StepTicker::add_stepper_motor(StepperMotor* stepper_motor){
-    this->stepper_motors.push_back(stepper_motor);
-    stepper_motor->step_ticker = this;
-    return stepper_motor;
 }
 
 // Call tick() on each active motor

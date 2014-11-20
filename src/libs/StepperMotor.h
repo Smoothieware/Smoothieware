@@ -35,7 +35,6 @@ class StepperMotor {
         void unpause();
 
         float get_steps_per_second()  const { return steps_per_second; }
-        // void set_steps_per_second(float ss) { steps_per_second= ss; }
         float get_steps_per_mm()  const { return steps_per_mm; }
         void change_steps_per_mm(float);
         void change_last_milestone(float);
@@ -70,7 +69,6 @@ class StepperMotor {
 
         uint32_t signal_step_number;
 
-        StepTicker* step_ticker;
         Pin step_pin;
         Pin dir_pin;
         Pin en_pin;
@@ -87,8 +85,8 @@ class StepperMotor {
         uint32_t stepped;
 
         // set to 64 bit fixed point, 32:32 bits fractional
-        const uint32_t fx_shift= 32;
-        const uint64_t fx_increment= ((uint64_t)1<<fx_shift);
+        static const uint32_t fx_shift= 32;
+        static const uint64_t fx_increment= ((uint64_t)1<<fx_shift);
         uint64_t fx_counter;
         uint64_t fx_ticks_per_step;
 

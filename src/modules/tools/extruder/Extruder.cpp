@@ -130,7 +130,7 @@ void Extruder::on_module_loaded()
     THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &Extruder::acceleration_tick );
 
     // Stepper motor object for the extruder
-    this->stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(step_pin, dir_pin, en_pin) );
+    this->stepper_motor = new StepperMotor(step_pin, dir_pin, en_pin);
     this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
 }
 

@@ -149,7 +149,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     block->max_entry_speed = vmax_junction;
 
     // Initialize block entry speed. Compute based on deceleration to user-defined minimum_planner_speed.
-    float v_allowable = max_allowable_speed(-acceleration, minimum_planner_speed, block->millimeters); //TODO: Get from config
+    float v_allowable = max_allowable_speed(-acceleration, minimum_planner_speed, block->millimeters);
     block->entry_speed = min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags
