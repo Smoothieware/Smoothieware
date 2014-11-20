@@ -20,7 +20,7 @@ class Block;
 class Extruder : public Tool {
     public:
         Extruder(uint16_t config_identifier, bool single= false);
-        virtual ~Extruder() {}
+        virtual ~Extruder();
 
         void     on_module_loaded();
         void     on_config_reload(void* argument);
@@ -59,8 +59,7 @@ class Extruder : public Tool {
         };
 
         float          volumetric_multiplier;
-        float          feed_rate;                    //
-        float          max_speed;
+        float          feed_rate;               // mm/sec for SOLO moves only
 
         float          travel_ratio;
         float          travel_distance;

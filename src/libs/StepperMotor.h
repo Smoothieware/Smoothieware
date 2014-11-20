@@ -18,7 +18,7 @@ class StepperMotor {
     public:
         StepperMotor();
         StepperMotor(Pin& step, Pin& dir, Pin& en);
-
+        ~StepperMotor();
 
         void step();
         inline void unstep() { step_pin.set(0); };
@@ -30,6 +30,8 @@ class StepperMotor {
         void move( bool direction, unsigned int steps, float initial_speed= -1.0F);
         void signal_move_finished();
         void set_speed( float speed );
+        void set_step_rate(float requested_rate, uint32_t block_steps_event_count);
+
         void update_exit_tick();
         void pause();
         void unpause();
@@ -40,6 +42,10 @@ class StepperMotor {
         void change_last_milestone(float);
         float get_last_milestone(void) const { return last_milestone_mm; }
         float get_current_position(void) const { return (float)current_position_steps/steps_per_mm; }
+        float get_max_rate(void) const { return max_rate; }
+        void set_max_rate(float mr) { max_rate= mr; }
+        float get_min_rate(void) const { return minimum_step_rate; }
+        void set_min_rate(float mr) { minimum_step_rate= mr; }
 
         int  steps_to_target(float);
         uint32_t get_steps_to_move() const { return steps_to_move; }
@@ -64,6 +70,7 @@ class StepperMotor {
 
     private:
         void init();
+
         Hook* end_hook;
         Hook* step_signal_hook;
 
@@ -75,7 +82,8 @@ class StepperMotor {
 
         float steps_per_second;
         float steps_per_mm;
-        float max_rate;
+        float max_rate; // this is not really rate it is in mm/sec, misnamed used in Robot and Extruder
+        float minimum_step_rate; // this is the minimum step_rate in steps/sec for this motor for this block
 
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;

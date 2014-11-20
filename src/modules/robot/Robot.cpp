@@ -220,9 +220,9 @@ void Robot::on_config_reload(void *argument)
     beta_stepper_motor->change_steps_per_mm(steps_per_mm[1]);
     gamma_stepper_motor->change_steps_per_mm(steps_per_mm[2]);
 
-    alpha_stepper_motor->max_rate = THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
-    beta_stepper_motor->max_rate  = THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F;
-    gamma_stepper_motor->max_rate = THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F;
+    alpha_stepper_motor->set_max_rate(THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
+    beta_stepper_motor->set_max_rate(THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F);
+    gamma_stepper_motor->set_max_rate(THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
     check_max_actuator_speeds(); // check the configs are sane
 
     actuators.clear();
@@ -245,21 +245,21 @@ void Robot::on_config_reload(void *argument)
 // we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
 void Robot::check_max_actuator_speeds()
 {
-    float step_freq= alpha_stepper_motor->max_rate * alpha_stepper_motor->get_steps_per_mm();
+    float step_freq= alpha_stepper_motor->get_max_rate() * alpha_stepper_motor->get_steps_per_mm();
     if(step_freq > THEKERNEL->base_stepping_frequency) {
-        alpha_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / alpha_stepper_motor->get_steps_per_mm());
+        alpha_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / alpha_stepper_motor->get_steps_per_mm()));
         THEKERNEL->streams->printf("WARNING: alpha_max_rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", step_freq, alpha_stepper_motor->max_rate);
     }
 
-    step_freq= beta_stepper_motor->max_rate * beta_stepper_motor->get_steps_per_mm();
+    step_freq= beta_stepper_motor->get_max_rate() * beta_stepper_motor->get_steps_per_mm();
     if(step_freq > THEKERNEL->base_stepping_frequency) {
-        beta_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / beta_stepper_motor->get_steps_per_mm());
+        beta_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / beta_stepper_motor->get_steps_per_mm()));
         THEKERNEL->streams->printf("WARNING: beta_max_rate exceeds base_stepping_frequency * beta_steps_per_mm: %f, setting to %f\n", step_freq, beta_stepper_motor->max_rate);
     }
 
-    step_freq= gamma_stepper_motor->max_rate * gamma_stepper_motor->get_steps_per_mm();
+    step_freq= gamma_stepper_motor->get_max_rate() * gamma_stepper_motor->get_steps_per_mm();
     if(step_freq > THEKERNEL->base_stepping_frequency) {
-        gamma_stepper_motor->max_rate= floorf(THEKERNEL->base_stepping_frequency / gamma_stepper_motor->get_steps_per_mm());
+        gamma_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / gamma_stepper_motor->get_steps_per_mm()));
         THEKERNEL->streams->printf("WARNING: gamma_max_rate exceeds base_stepping_frequency * gamma_steps_per_mm: %f, setting to %f\n", step_freq, gamma_stepper_motor->max_rate);
     }
 }
@@ -400,17 +400,17 @@ void Robot::on_gcode_received(void *argument)
                 if (gcode->has_letter('Z'))
                     this->max_speeds[Z_AXIS] = gcode->get_value('Z');
                 if (gcode->has_letter('A'))
-                    alpha_stepper_motor->max_rate = gcode->get_value('A');
+                    alpha_stepper_motor->set_max_rate(gcode->get_value('A'));
                 if (gcode->has_letter('B'))
-                    beta_stepper_motor->max_rate = gcode->get_value('B');
+                    beta_stepper_motor->set_max_rate(gcode->get_value('B'));
                 if (gcode->has_letter('C'))
-                    gamma_stepper_motor->max_rate = gcode->get_value('C');
+                    gamma_stepper_motor->set_max_rate(gcode->get_value('C'));
 
                 check_max_actuator_speeds();
 
                 gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
-                                      alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
+                                      alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
                 gcode->add_nl = true;
                 gcode->mark_as_taken();
                 break;
@@ -486,7 +486,7 @@ void Robot::on_gcode_received(void *argument)
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
-                                      alpha_stepper_motor->max_rate, beta_stepper_motor->max_rate, gamma_stepper_motor->max_rate);
+                                      alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
 
                 // get or save any arm solution specific optional values
                 BaseSolution::arm_options_t options;
@@ -664,8 +664,8 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     for (int actuator = 0; actuator <= 2; actuator++) {
         float actuator_rate  = fabs(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * rate_mm_s / millimeters_of_travel;
 
-        if (actuator_rate > actuators[actuator]->max_rate)
-            rate_mm_s *= (actuators[actuator]->max_rate / actuator_rate);
+        if (actuator_rate > actuators[actuator]->get_max_rate())
+            rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
     }
 
     // Append the block to the planner

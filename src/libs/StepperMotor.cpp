@@ -12,6 +12,9 @@
 
 #include <math.h>
 
+// in steps/sec the default minimum speed (was 20steps/sec hardcoded)
+#define DEFAULT_MINIMUM_ACTUATOR_RATE 20.0F
+
 // A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
 // TODO : Abstract this into Actuator
 
@@ -25,6 +28,11 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     init();
     enable(false);
     set_high_on_debug(en.port_number, en.pin);
+}
+
+StepperMotor::~StepperMotor()
+{
+    delete step_signal_hook;
 }
 
 void StepperMotor::init()
@@ -41,10 +49,11 @@ void StepperMotor::init()
 
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
+    minimum_step_rate    = DEFAULT_MINIMUM_ACTUATOR_RATE;
 
-    current_position_steps= 0;
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
+    current_position_steps= 0;
 }
 
 
@@ -90,6 +99,7 @@ void StepperMotor::signal_move_finished()
     // work is done ! 8t
     this->moving = false;
     this->steps_to_move = 0;
+    this->minimum_step_rate = DEFAULT_MINIMUM_ACTUATOR_RATE;
 
     // signal it to whatever cares 41t 411t
     this->end_hook->call();
@@ -142,21 +152,40 @@ void StepperMotor::move( bool direction, unsigned int steps, float initial_speed
     this->update_exit_tick();
 }
 
-// Set the speed at which this stepper moves
+// this is called to set the step rate based on this blocks rate, we use this instead of set_speed for coordinated moves
+// so that we can floor to a minimum speed which is proportional for all axis. the minimum step rate is set at the start
+// of each block based on the slowest axis of all coordinated axis.
+// the rate passed in is the requested rate, it is scaled for this motor based on steps_to_move and block_steps_event_count
+void StepperMotor::set_step_rate(float requested_rate, uint32_t block_steps_event_count)
+{
+    float rate= requested_rate * ((float)steps_to_move / (float)block_steps_event_count);
+    if(rate < minimum_step_rate) rate= minimum_step_rate;
+    set_speed(rate);
+}
+
+// Set the speed at which this stepper moves in steps/sec, should be called set_step_rate()
+// we need to make sure that we have a minimum speed here and that it fits the 64bit fixed point fx counters
+// Note nothing will really ever go as slow as the minimum speed here, it is just forced to avoid bad errors
+// fx_ticks_per_step is what actually sets the step rate, it is fixed point 32.32
 void StepperMotor::set_speed( float speed )
 {
-    float slowest_speed= ceil(THEKERNEL->step_ticker->frequency/fx_increment);
-
-    if(speed < slowest_speed) { // this is the slowest it can be and fit in 64bit fixed point 32:32
-        speed= slowest_speed;
+    if(speed <= 0.0F) { // we can't actually do 0 but we can get close, need to avoid divide by zero later on
+        this->fx_ticks_per_step= 0xFFFFF00000000000ULL; // that is 4,294,963,200 10us ticks which is ~11.9 hours for 1 step
+        this->steps_per_second = THEKERNEL->step_ticker->frequency / (this->fx_ticks_per_step>>fx_shift);
+        return;
     }
 
     // How many steps we must output per second
     this->steps_per_second = speed;
 
     // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64
-    float ticks_per_step = (float)( (float)THEKERNEL->step_ticker->frequency / speed );
-    float double_fx_ticks_per_step = fx_increment * ticks_per_step;
+    // we need to use double here to match the 64bit resolution of the ticker
+    double ticks_per_step = (double)THEKERNEL->step_ticker->frequency / speed;
+    if(ticks_per_step > 0xFFFFF000UL) { // maximum we can really do and allow a few overflow steps
+        ticks_per_step= 0xFFFFF000UL;
+        this->steps_per_second = THEKERNEL->step_ticker->frequency / ticks_per_step;
+    }
+    double double_fx_ticks_per_step = fx_increment * ticks_per_step;
 
     // set the new speed
     this->fx_ticks_per_step = floor(double_fx_ticks_per_step);

@@ -38,9 +38,9 @@ class StepTicker{
         uint32_t last_duration;
 
         StepperMotor** active_motors;
-        uint32_t active_motor_bm;
+        uint32_t active_motor_bm; // limit to 32 motors
         struct {
-            uint8_t num_motors:8; // increase for more than 256 motors
+            uint8_t num_motors:6; // increase for more than 32 motors
             bool a_move_finished:1;
             bool reset_step_pins:1;
         };

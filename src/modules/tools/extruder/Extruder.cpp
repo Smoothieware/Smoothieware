@@ -86,8 +86,14 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     this->retracted = false;
     this->volumetric_multiplier = 1.0F;
     this->extruder_multiplier = 1.0F;
+    this->stepper_motor= nullptr;
 
     memset(this->offset, 0, sizeof(this->offset));
+}
+
+Extruder::~Extruder()
+{
+    delete stepper_motor;
 }
 
 void Extruder::on_halt(void *arg)
@@ -103,9 +109,15 @@ void Extruder::on_halt(void *arg)
 
 void Extruder::on_module_loaded()
 {
-
     // Settings
     this->on_config_reload(this);
+
+    // Start values
+    this->target_position = 0;
+    this->current_position = 0;
+    this->unstepped_distance = 0;
+    this->current_block = NULL;
+    this->mode = OFF;
 
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
     this->register_for_event(ON_BLOCK_BEGIN);
@@ -118,20 +130,8 @@ void Extruder::on_module_loaded()
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_GET_PUBLIC_DATA);
 
-    // Start values
-    this->target_position = 0;
-    this->current_position = 0;
-    this->unstepped_distance = 0;
-    this->current_block = NULL;
-    this->mode = OFF;
-
     // Update speed every *acceleration_ticks_per_second*
-    // TODO: Make this an independent setting
     THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &Extruder::acceleration_tick );
-
-    // Stepper motor object for the extruder
-    this->stepper_motor = new StepperMotor(step_pin, dir_pin, en_pin);
-    this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
 }
 
 // Get config
@@ -143,7 +143,6 @@ void Extruder::on_config_reload(void *argument)
         this->steps_per_millimeter        = THEKERNEL->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
         this->filament_diameter           = THEKERNEL->config->value(extruder_filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration                = THEKERNEL->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
-        this->max_speed                   = THEKERNEL->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
         this->feed_rate                   = THEKERNEL->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
 
         this->step_pin.from_string(         THEKERNEL->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
@@ -162,7 +161,6 @@ void Extruder::on_config_reload(void *argument)
         this->steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
         this->filament_diameter    = THEKERNEL->config->value(extruder_checksum, this->identifier, filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
-        this->max_speed            = THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum         )->by_default(1000)->as_number();
         this->feed_rate            = THEKERNEL->config->value(                                     default_feed_rate_checksum )->by_default(1000)->as_number();
 
         this->step_pin.from_string( THEKERNEL->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
@@ -185,6 +183,15 @@ void Extruder::on_config_reload(void *argument)
 
     if(filament_diameter > 0.01) {
         this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
+    }
+
+    // Stepper motor object for the extruder
+    this->stepper_motor = new StepperMotor(step_pin, dir_pin, en_pin);
+    this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
+    if( this->single_config ) {
+        this->stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_max_speed_checksum)->by_default(1000)->as_number());
+    }else{
+        this->stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum)->by_default(1000)->as_number());
     }
 }
 
@@ -449,12 +456,11 @@ void Extruder::on_gcode_execute(void *argument)
 
             if (gcode->has_letter('F')) {
                 feed_rate = gcode->get_value('F') / THEKERNEL->robot->get_seconds_per_minute();
-                if (feed_rate > max_speed)
-                    feed_rate = max_speed;
+                if (feed_rate > stepper_motor->get_max_rate())
+                    feed_rate = stepper_motor->get_max_rate();
             }
         }
     }
-
 }
 
 // When a new block begins, either follow the robot, or step by ourselves ( or stay back and do nothing )
@@ -587,8 +593,8 @@ void Extruder::on_speed_change( void *argument )
     * or even : ( stepper steps per second ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed(THEKERNEL->stepper->get_trapezoid_adjusted_rate() * (float)this->stepper_motor->get_steps_to_move() / (float)this->current_block->steps_event_count);
-
+    //this->stepper_motor->set_speed(THEKERNEL->stepper->get_trapezoid_adjusted_rate() * (float)this->stepper_motor->get_steps_to_move() / (float)this->current_block->steps_event_count);
+    this->stepper_motor->set_step_rate(THEKERNEL->stepper->get_trapezoid_adjusted_rate(), (float)this->current_block->steps_event_count);
 }
 
 // When the stepper has finished it's move

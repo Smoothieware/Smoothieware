@@ -302,18 +302,17 @@ void Stepper::set_step_events_per_second( float steps_per_second )
 {
     // Instruct the stepper motors
     if( THEKERNEL->robot->alpha_stepper_motor->moving ) {
-        THEKERNEL->robot->alpha_stepper_motor->set_speed( steps_per_second * ( (float)this->current_block->steps[ALPHA_STEPPER] / (float)this->current_block->steps_event_count ) );
+        THEKERNEL->robot->alpha_stepper_motor->set_step_rate(steps_per_second, this->current_block->steps_event_count);
     }
     if( THEKERNEL->robot->beta_stepper_motor->moving  ) {
-        THEKERNEL->robot->beta_stepper_motor->set_speed(  steps_per_second * ( (float)this->current_block->steps[BETA_STEPPER ] / (float)this->current_block->steps_event_count ) );
+        THEKERNEL->robot->beta_stepper_motor->set_step_rate(steps_per_second, this->current_block->steps_event_count);
     }
     if( THEKERNEL->robot->gamma_stepper_motor->moving ) {
-        THEKERNEL->robot->gamma_stepper_motor->set_speed( steps_per_second * ( (float)this->current_block->steps[GAMMA_STEPPER] / (float)this->current_block->steps_event_count ) );
+        THEKERNEL->robot->gamma_stepper_motor->set_step_rate(steps_per_second , this->current_block->steps_event_count);
     }
 
     // Other modules might want to know the speed changed
     THEKERNEL->call_event(ON_SPEED_CHANGE, this);
-
 }
 
 // This function has the role of making sure acceleration and deceleration curves have their
