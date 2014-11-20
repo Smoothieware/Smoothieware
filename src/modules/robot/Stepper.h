@@ -39,7 +39,6 @@ public:
     uint32_t synchronize_acceleration(uint32_t dummy);
 
     int get_acceleration_ticks_per_second() const { return acceleration_ticks_per_second; }
-    unsigned int get_minimum_steps_per_second() const { return minimum_steps_per_second; }
     float get_trapezoid_adjusted_rate() const { return trapezoid_adjusted_rate; }
     const Block *get_current_block() const { return current_block; }
 
@@ -48,7 +47,6 @@ private:
     int stepped[3];
     float trapezoid_adjusted_rate;
     int acceleration_ticks_per_second;
-    unsigned int minimum_steps_per_second;
     int base_stepping_frequency;
     Hook *acceleration_tick_hook;
     StepperMotor *main_stepper;

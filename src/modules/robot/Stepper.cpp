@@ -71,7 +71,6 @@ void Stepper::on_config_reload(void *argument)
 {
 
     this->acceleration_ticks_per_second =  THEKERNEL->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
-    this->minimum_steps_per_second      =  THEKERNEL->config->value(minimum_steps_per_minute_checksum     )->by_default(120  )->as_number() / 60.0F;
 
     // Steppers start off by default
     this->turn_enable_pins_off();
@@ -112,7 +111,6 @@ void Stepper::on_gcode_received(void *argument)
     // Attach gcodes to the last block for on_gcode_execute
     if( gcode->has_m && (gcode->m == 84 || gcode->m == 17 || gcode->m == 18 )) {
         THEKERNEL->conveyor->append_gcode(gcode);
-
     }
 }
 
@@ -257,7 +255,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
                 trapezoid_adjusted_rate = current_block->rate_delta * 0.5F;
             }
 
-        } else if(current_steps_completed <= this->current_block->accelerate_until+1) {
+        } else if(current_steps_completed <= this->current_block->accelerate_until) {
             // If we are accelerating
             // Increase speed
             this->trapezoid_adjusted_rate += this->current_block->rate_delta;
@@ -302,12 +300,6 @@ inline void Stepper::trapezoid_generator_reset()
 // Update the speed for all steppers
 void Stepper::set_step_events_per_second( float steps_per_second )
 {
-    // We do not step slower than this, FIXME shoul dbe calculated for the slowest axis not the fastest
-    //steps_per_second = max(steps_per_second, this->minimum_steps_per_second);
-    if( steps_per_second < this->minimum_steps_per_second ) {
-        steps_per_second = this->minimum_steps_per_second;
-    }
-
     // Instruct the stepper motors
     if( THEKERNEL->robot->alpha_stepper_motor->moving ) {
         THEKERNEL->robot->alpha_stepper_motor->set_speed( steps_per_second * ( (float)this->current_block->steps[ALPHA_STEPPER] / (float)this->current_block->steps_event_count ) );

@@ -327,7 +327,7 @@ void ZProbe::accelerate(int c)
     }
 
     // steps per second
-    STEPPER[c]->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
+    STEPPER[c]->set_speed(current_rate);
 }
 
 // issue a coordinated move directly to robot, and return when done
