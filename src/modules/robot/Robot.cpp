@@ -780,7 +780,7 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
     this->distance_in_gcode_is_known( gcode );
 
     // Figure out how many segments for this gcode
-    uint16_t segments = floor(gcode->millimeters_of_travel / this->mm_per_arc_segment);
+    uint16_t segments = floorf(gcode->millimeters_of_travel / this->mm_per_arc_segment);
 
     float theta_per_segment = angular_travel / segments;
     float linear_per_segment = linear_travel / segments;

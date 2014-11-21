@@ -313,12 +313,12 @@ uint32_t ZProbe::acceleration_tick(uint32_t dummy)
 
 void ZProbe::accelerate(int c)
 {   uint32_t current_rate = STEPPER[c]->get_steps_per_second();
-    uint32_t target_rate = int(floor(this->current_feedrate));
+    uint32_t target_rate = floorf(this->current_feedrate);
 
     // Z may have a different acceleration to X and Y
     float acc= (c==Z_AXIS) ? THEKERNEL->planner->get_z_acceleration() : THEKERNEL->planner->get_acceleration();
     if( current_rate < target_rate ) {
-        uint32_t rate_increase = floor((acc / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c));
+        uint32_t rate_increase = floorf((acc / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c));
         current_rate = min( target_rate, current_rate + rate_increase );
     }
     if( current_rate > target_rate ) {

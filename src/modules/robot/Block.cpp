@@ -109,7 +109,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // How many steps to accelerate and decelerate
     float acceleration_per_second = this->rate_delta * THEKERNEL->stepper->get_acceleration_ticks_per_second(); // ( step/s^2)
     int accelerate_steps = ceilf( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_second ) );
-    int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_second ) );
+    int decelerate_steps = floorf( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_second ) );
 
     // Calculate the size of Plateau of Nominal Rate ( during which we don't accelerate nor decelerate, but just cruise )
     int plateau_steps = this->steps_event_count - accelerate_steps - decelerate_steps;

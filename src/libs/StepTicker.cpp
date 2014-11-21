@@ -63,7 +63,7 @@ StepTicker::~StepTicker() {
 // Set the base stepping frequency
 void StepTicker::set_frequency( float frequency ){
     this->frequency = frequency;
-    this->period = int(floor((SystemCoreClock/4)/frequency));  // SystemCoreClock/4 = Timer increments in a second
+    this->period = floorf((SystemCoreClock/4)/frequency);  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM0->MR0 = this->period;
     if( LPC_TIM0->TC > LPC_TIM0->MR0 ){
         LPC_TIM0->TCR = 3;  // Reset
@@ -73,7 +73,7 @@ void StepTicker::set_frequency( float frequency ){
 
 // Set the reset delay
 void StepTicker::set_reset_delay( float seconds ){
-    this->delay = int(floor(float(SystemCoreClock/4)*( seconds )));  // SystemCoreClock/4 = Timer increments in a second
+    this->delay = floorf(float(SystemCoreClock/4)*( seconds ));  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM1->MR0 = this->delay;
 }
 
