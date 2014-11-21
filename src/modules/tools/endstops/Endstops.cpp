@@ -105,8 +105,6 @@
 #define STEPPER THEKERNEL->robot->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
 
-#define max(a,b) (((a) > (b)) ? (a) : (b))
-#define min(a,b) (((a) <= (b)) ? (a) : (b))
 
 // Homing States
 enum{

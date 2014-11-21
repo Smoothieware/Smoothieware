@@ -114,7 +114,6 @@ using std::string;
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
-#define max(a,b) (((a) > (b)) ? (a) : (b))
 
 Robot::Robot()
 {
@@ -434,7 +433,7 @@ void Robot::on_gcode_received(void *argument)
                 }
                 break;
 
-            case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed
+            case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed, Ynnn - set minimum step rate
                 gcode->mark_as_taken();
                 if (gcode->has_letter('X')) {
                     float jd = gcode->get_value('X');
@@ -456,6 +455,9 @@ void Robot::on_gcode_received(void *argument)
                     if (mps < 0.0F)
                         mps = 0.0F;
                     THEKERNEL->planner->minimum_planner_speed = mps;
+                }
+                if (gcode->has_letter('Y')) {
+                    alpha_stepper_motor->default_minimum_actuator_rate = gcode->get_value('Y');
                 }
                 break;
 
@@ -704,14 +706,14 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
         // the faster the travel speed the fewer segments needed
         // NOTE rate is mm/sec and we take into account any speed override
         float seconds = gcode->millimeters_of_travel / rate_mm_s;
-        segments = max(1, ceil(this->delta_segments_per_second * seconds));
+        segments = max(1.0F, ceilf(this->delta_segments_per_second * seconds));
         // TODO if we are only moving in Z on a delta we don't really need to segment at all
 
     } else {
         if(this->mm_per_line_segment == 0.0F) {
             segments = 1; // don't split it up
         } else {
-            segments = ceil( gcode->millimeters_of_travel / this->mm_per_line_segment);
+            segments = ceilf( gcode->millimeters_of_travel / this->mm_per_line_segment);
         }
     }
 

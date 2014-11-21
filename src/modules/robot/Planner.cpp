@@ -97,7 +97,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
     if( distance > 0.0F ){
         block->nominal_speed = rate_mm_s;           // (mm/s) Always > 0
-        block->nominal_rate = ceil(block->steps_event_count * rate_mm_s / distance); // (step/s) Always > 0
+        block->nominal_rate = ceilf(block->steps_event_count * rate_mm_s / distance); // (step/s) Always > 0
     }else{
         block->nominal_speed = 0.0F;
         block->nominal_rate  = 0;

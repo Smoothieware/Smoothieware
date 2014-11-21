@@ -294,7 +294,6 @@ void ZProbe::on_gcode_received(void *argument)
     }
 }
 
-#define max(a,b) (((a) > (b)) ? (a) : (b))
 // Called periodically to change the speed to match acceleration
 uint32_t ZProbe::acceleration_tick(uint32_t dummy)
 {
