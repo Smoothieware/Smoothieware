@@ -41,27 +41,7 @@ void Laser::on_module_loaded() {
     Pin* dummy_pin = new Pin();
     dummy_pin->from_string(THEKERNEL->config->value(laser_module_pin_checksum)->by_default("nc")->as_string())->as_output();
 
-    laser_pin = NULL;
-
-    // Get mBed-style pin from smoothie-style pin
-    if( dummy_pin->port_number == 2 ){
-        if( dummy_pin->pin == 0 ){ this->laser_pin = new mbed::PwmOut(p26); }
-        if( dummy_pin->pin == 1 ){ this->laser_pin = new mbed::PwmOut(p25); }
-        if( dummy_pin->pin == 2 ){ this->laser_pin = new mbed::PwmOut(p24); }
-        if( dummy_pin->pin == 3 ){ this->laser_pin = new mbed::PwmOut(p23); }
-        if( dummy_pin->pin == 4 ){ this->laser_pin = new mbed::PwmOut(p22); }
-        if( dummy_pin->pin == 5 ){ this->laser_pin = new mbed::PwmOut(p21); }
-    }else if( dummy_pin->port_number == 1 ){
-        if( dummy_pin->pin == 18 ){ this->laser_pin = new mbed::PwmOut(LED1); }
-        if( dummy_pin->pin == 20 ){ this->laser_pin = new mbed::PwmOut(LED2); }
-        if( dummy_pin->pin == 21 ){ this->laser_pin = new mbed::PwmOut(LED3); }
-        if( dummy_pin->pin == 23 ){ this->laser_pin = new mbed::PwmOut(LED4); }
-        if( dummy_pin->pin == 24 ){ this->laser_pin = new mbed::PwmOut(P1_24); }
-        if( dummy_pin->pin == 26 ){ this->laser_pin = new mbed::PwmOut(P1_26); }
-    }else if( dummy_pin->port_number == 3 ){
-        if( dummy_pin->pin == 25 ){ this->laser_pin = new mbed::PwmOut(P3_25); }
-        if( dummy_pin->pin == 26 ){ this->laser_pin = new mbed::PwmOut(P3_26); }
-    }
+    laser_pin = dummy_pin->hardware_pwm();
 
     if (laser_pin == NULL)
     {
