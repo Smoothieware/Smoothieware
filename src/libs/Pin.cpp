@@ -4,6 +4,9 @@
 
 Pin::Pin(){
     this->inverting= false;
+    this->valid= false;
+    this->pin= 32;
+    this->port= nullptr;
 }
 
 // Make a new pin object from a string
@@ -14,6 +17,7 @@ Pin* Pin::from_string(std::string value){
     const char* cs = value.c_str();
     // cn is the position of the next char after the number we just read
     char* cn = NULL;
+    valid= true;
 
     // grab first integer as port. pointer to first non-digit goes in cn
     this->port_number = strtol(cs, &cn, 10);
@@ -72,16 +76,17 @@ Pin* Pin::from_string(std::string value){
     }
 
     // from_string failed. TODO: some sort of error
+    valid= false;
     port_number = 0;
     port = gpios[0];
-    pin = 255;
+    pin = 32;
     inverting = false;
     return this;
 }
 
 // Configure this pin as OD
 Pin* Pin::as_open_drain(){
-    if (this->pin >= 32) return this;
+    if (!this->valid) return this;
     if( this->port_number == 0 ){ LPC_PINCON->PINMODE_OD0 |= (1<<this->pin); }
     if( this->port_number == 1 ){ LPC_PINCON->PINMODE_OD1 |= (1<<this->pin); }
     if( this->port_number == 2 ){ LPC_PINCON->PINMODE_OD2 |= (1<<this->pin); }
@@ -94,7 +99,7 @@ Pin* Pin::as_open_drain(){
 
 // Configure this pin as a repeater
 Pin* Pin::as_repeater(){
-    if (this->pin >= 32) return this;
+    if (!this->valid) return this;
     // Set the two bits for this pin as 01
     if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE0 &= ~(2<<( this->pin    *2)); }
     if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE1 &= ~(2<<((this->pin-16)*2)); }
@@ -108,7 +113,7 @@ Pin* Pin::as_repeater(){
 
 // Configure this pin as no pullup or pulldown
 Pin* Pin::pull_none(){
-	if (this->pin >= 32) return this;
+	if (!this->valid) return this;
 	// Set the two bits for this pin as 10
 	if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 |= (2<<( this->pin*2)); LPC_PINCON->PINMODE0 &= ~(1<<( this->pin    *2)); }
 	if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 |= (2<<( this->pin*2)); LPC_PINCON->PINMODE1 &= ~(1<<((this->pin-16)*2)); }
@@ -122,7 +127,7 @@ Pin* Pin::pull_none(){
 
 // Configure this pin as a pullup
 Pin* Pin::pull_up(){
-    if (this->pin >= 32) return this;
+    if (!this->valid) return this;
     // Set the two bits for this pin as 00
     if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 &= ~(3<<( this->pin    *2)); }
     if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 &= ~(3<<((this->pin-16)*2)); }
@@ -136,7 +141,7 @@ Pin* Pin::pull_up(){
 
 // Configure this pin as a pulldown
 Pin* Pin::pull_down(){
-    if (this->pin >= 32) return this;
+    if (!this->valid) return this;
     // Set the two bits for this pin as 11
     if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 |= (3<<( this->pin    *2)); }
     if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 |= (3<<((this->pin-16)*2)); }

@@ -128,7 +128,8 @@ inline void StepperMotor::update_exit_tick()
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps, float initial_speed)
 {
-    // We do not set the direction directly, we will set the pin just before the step pin on the next tick
+    // INCORRECT: We do not set the direction directly, we will set the pin just before the step pin on the next tick
+    // FIXME really? looks a lot like the pin is set here not in the next step
     this->dir_pin.set(direction);
     this->direction = direction;
 
