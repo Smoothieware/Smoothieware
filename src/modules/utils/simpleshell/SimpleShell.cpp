@@ -476,8 +476,6 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
         AHB0.debug(stream);
         AHB1.debug(stream);
     }
-
-    //stream->printf("overruns: %lu\n", THEKERNEL->step_ticker->overruns);
 }
 
 static uint32_t getDeviceType()

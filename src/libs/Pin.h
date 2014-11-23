@@ -60,9 +60,9 @@ class Pin {
         // these should be private, and use getters
         LPC_GPIO_TypeDef* port;
 
+        unsigned char pin;
+        char port_number;
         struct {
-            unsigned char pin:6;
-            char port_number:3;
             bool inverting:1;
             bool valid:1;
         };
