@@ -144,7 +144,7 @@ uint32_t Spindle::on_update_speed(uint32_t dummy)
         float new_pwm = 0.5f;
         new_pwm += control_P_term * error;
         new_pwm += current_I_value;
-        new_pwm += control_D_term * (error - prev_error);
+        new_pwm += control_D_term * UPDATE_FREQ * (error - prev_error);
         new_pwm = confine(new_pwm, 0.0f, 1.0f);
         prev_error = error;
         
