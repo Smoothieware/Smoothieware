@@ -17,6 +17,11 @@
 #include <math.h>
 #include <mri.h>
 
+#ifdef STEPTICKER_DEBUG_PIN
+#include "gpio.h"
+extern GPIO stepticker_debug_pin;
+#endif
+
 extern bool _isr_context;
 
 // StepTicker handles the base frequency ticking for the Stepper Motors / Actuators
@@ -63,7 +68,7 @@ StepTicker::~StepTicker() {
 // Set the base stepping frequency
 void StepTicker::set_frequency( float frequency ){
     this->frequency = frequency;
-    this->period = floorf((SystemCoreClock/4)/frequency);  // SystemCoreClock/4 = Timer increments in a second
+    this->period = floorf((SystemCoreClock/4.0F)/frequency);  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM0->MR0 = this->period;
     if( LPC_TIM0->TC > LPC_TIM0->MR0 ){
         LPC_TIM0->TCR = 3;  // Reset
@@ -73,7 +78,7 @@ void StepTicker::set_frequency( float frequency ){
 
 // Set the reset delay
 void StepTicker::set_reset_delay( float seconds ){
-    this->delay = floorf(float(SystemCoreClock/4)*( seconds ));  // SystemCoreClock/4 = Timer increments in a second
+    this->delay = floorf((SystemCoreClock/4.0F)*seconds);  // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM1->MR0 = this->delay;
 }
 
@@ -101,12 +106,13 @@ void StepTicker::signal_a_move_finished(){
         if (this->active_motor_bm & bitmask){
             if(this->active_motors[motor]->is_move_finished){
                 this->active_motors[motor]->signal_move_finished();
-                if(this->active_motors[motor]->moving == false){
-                    if (motor > 0){
-                        motor--;
-                        bitmask >>= 1;
-                    }
-                }
+                // Theoretically this does nothing and the reason for it is currently unknown and/or forgotten
+                // if(this->active_motors[motor]->moving == false){
+                //     if (motor > 0){
+                //         motor--;
+                //         bitmask >>= 1;
+                //     }
+                // }
             }
         }
     }
@@ -167,6 +173,10 @@ void StepTicker::TIMER0_IRQHandler (void){
     // If a move finished in this tick, we have to tell the actuator to act accordingly
     if( this->a_move_finished ){
 
+        #ifdef STEPTICKER_DEBUG_PIN
+        stepticker_debug_pin= 1;
+        #endif
+
         // Do not get out of here before everything is nice and tidy
         LPC_TIM0->MR0 = 20000000;
 
@@ -175,9 +185,8 @@ void StepTicker::TIMER0_IRQHandler (void){
         // If we went over the duration an interrupt is supposed to last, we have a problem
         // That can happen typically when we change blocks, where more than usual computation is done
         // This can be OK, if we take notice of it, which we do now
-        if( LPC_TIM0->TC > this->period ){ // TODO: remove the size condition
+        if(LPC_TIM0->TC > this->period ){ // TODO: remove the size condition
             //overruns++;
-
             uint32_t start_tc = LPC_TIM0->TC;
 
             // How many ticks we want to skip ( this does not include the current tick, but we add the time we spent doing this computation last time )
@@ -214,6 +223,7 @@ void StepTicker::TIMER0_IRQHandler (void){
             int difference = (int)(LPC_TIM0->TC) - (int)(start_tc);
             if( difference > 0 ){ this->last_duration = (uint32_t)difference; }
 
+
         }else{
             LPC_TIM0->MR0 = this->period;
         }
@@ -222,6 +232,9 @@ void StepTicker::TIMER0_IRQHandler (void){
             LPC_TIM0->MR0 += this->period;
         }
 
+        #ifdef STEPTICKER_DEBUG_PIN
+        stepticker_debug_pin= 0;
+        #endif
     }
 
 }

@@ -159,7 +159,9 @@ void StepperMotor::move( bool direction, unsigned int steps, float initial_speed
 void StepperMotor::set_step_rate(float requested_rate, uint32_t block_steps_event_count)
 {
     float rate= requested_rate * ((float)steps_to_move / (float)block_steps_event_count);
-    if(rate < minimum_step_rate) rate= minimum_step_rate;
+    if(rate < minimum_step_rate) {
+        rate= minimum_step_rate;
+    }
     set_speed(rate);
 }
 

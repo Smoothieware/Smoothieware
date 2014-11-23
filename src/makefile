@@ -53,6 +53,12 @@ endif
 # use c++11 features for the checksums and set default baud rate for serial uart
 DEFINES += -DCHECKSUM_USE_CPP -DDEFAULT_SERIAL_BAUD_RATE=$(DEFAULT_SERIAL_BAUD_RATE)
 
+# Set a Pin here that toggles high on block begin and low on block end for debugging with logic analyzer
+#DEFINES += -DBLOCK_DEBUG_PIN=P4_29
+
+# Set a Pin here that toggles on Stepticker overrun for debugging with logic analyzer
+DEFINES += -DSTEPTICKER_DEBUG_PIN=P4_29
+
 # add any modules that you do not want included in the build
 export EXCLUDED_MODULES = tools/touchprobe
 # e.g for a CNC machine

@@ -47,7 +47,6 @@ private:
     int stepped[3];
     float trapezoid_adjusted_rate;
     int acceleration_ticks_per_second;
-    int base_stepping_frequency;
     Hook *acceleration_tick_hook;
     StepperMotor *main_stepper;
 

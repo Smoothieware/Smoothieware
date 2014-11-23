@@ -341,7 +341,7 @@ uint32_t Stepper::synchronize_acceleration(uint32_t dummy)
             this->main_stepper->attach_signal_step(this->current_block->decelerate_after, this, &Stepper::synchronize_acceleration);
         }
     } else {
-        // If we are called not at the first steps, this means we are beginning deceleration
+        // If we are called not at the first steps, this means we are beginning deceleratingration
         NVIC_SetPendingIRQ(TIMER2_IRQn);
         // Synchronize both counters
         LPC_TIM2->TC = LPC_TIM0->TC;
