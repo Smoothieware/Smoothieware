@@ -90,10 +90,6 @@ void init() {
         leds[i].output();
         leds[i]= 0;
     }
-    
-    // Allow using the systick counter to measure times accurately
-    SysTick->LOAD = SYSTICK_MAXCOUNT;
-    SysTick->CTRL = 0x05; // Count on core clock, no interrupts
 
     Kernel* kernel = new Kernel();
 

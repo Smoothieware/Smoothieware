@@ -101,6 +101,8 @@ void Spindle::on_module_loaded()
         delete smoothie_pin;
     }
     
+    SysTick_Config(SYSTICK_MAXCOUNT, false);
+    
     THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &Spindle::on_update_speed);
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GCODE_EXECUTE);
