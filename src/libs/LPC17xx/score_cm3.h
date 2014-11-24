@@ -789,9 +789,9 @@ static __INLINE void NVIC_DecodePriority (uint32_t Priority, uint32_t PriorityGr
  */
 static __INLINE uint32_t SysTick_Config(uint32_t ticks, bool enable_irq)
 {
-  if (ticks > SYSTICK_MAXCOUNT + 1)  return (1);                                             /* Reload value impossible */
+  if (ticks > SYSTICK_MAXCOUNT)  return (1);                                             /* Reload value impossible */
 
-  SysTick->LOAD  =  (ticks & SYSTICK_MAXCOUNT) - 1;                                      /* set reload register */
+  SysTick->LOAD  =  ticks;                                      /* set reload register */
   SysTick->VAL   =  (0x00);                                                              /* Load the SysTick Counter Value */
   SysTick->CTRL = (1 << SYSTICK_CLKSOURCE) | (1<<SYSTICK_ENABLE); /* Enable SysTick IRQ and SysTick Timer */
   
