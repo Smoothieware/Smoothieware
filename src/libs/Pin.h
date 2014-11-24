@@ -6,6 +6,11 @@
 #include <string>
 
 #include "libs/LPC17xx/sLPC17xx.h" // smoothed mbed.h lib
+#include "PinNames.h"
+
+namespace mbed {
+    class PwmOut;
+}
 
 class Pin {
     public:
@@ -56,6 +61,8 @@ class Pin {
             else
                 this->port->FIOCLR = 1 << this->pin;
         }
+
+        mbed::PwmOut *hardware_pwm();
 
         // these should be private, and use getters
         LPC_GPIO_TypeDef* port;

@@ -8,6 +8,7 @@
 #include "libs/Kernel.h"
 
 #include "modules/tools/laser/Laser.h"
+#include "modules/tools/spindle/Spindle.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
@@ -165,6 +166,9 @@ void init() {
     #endif
     #ifndef NO_TOOLS_LASER
     kernel->add_module( new Laser() );
+    #endif
+    #ifndef NO_TOOLS_SPINDLE
+    kernel->add_module( new Spindle() );
     #endif
     #ifndef NO_UTILS_PANEL
     kernel->add_module( new Panel() );
