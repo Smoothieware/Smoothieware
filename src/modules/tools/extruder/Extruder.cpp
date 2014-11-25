@@ -487,8 +487,7 @@ void Extruder::on_block_begin(void *argument)
             // We take the block, we have to release it or everything gets stuck
             block->take();
             this->current_block = block;
-
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step, 0);
+            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step, rate_increase()); // start at first acceleration step
 
         } else {
             this->current_block = NULL;
@@ -534,6 +533,10 @@ void Extruder::on_block_end(void *argument)
     this->current_block = NULL;
 }
 
+uint32_t Extruder::rate_increase() const {
+    return floorf((this->acceleration / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * this->steps_per_millimeter);
+}
+
 // Called periodically to change the speed to match acceleration or to match the speed of the robot
 // Only used in SOLO mode
 uint32_t Extruder::acceleration_tick(uint32_t dummy)
@@ -551,15 +554,10 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy)
     uint32_t target_rate = floorf(this->feed_rate * this->steps_per_millimeter);
 
     if( current_rate < target_rate ) {
-        uint32_t rate_increase = floorf((this->acceleration / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * this->steps_per_millimeter);
-        current_rate = min( target_rate, current_rate + rate_increase );
+        current_rate = min( target_rate, current_rate + rate_increase() );
+        // steps per second
+        this->stepper_motor->set_speed(current_rate);
     }
-    if( current_rate > target_rate ) {
-        current_rate = target_rate;
-    }
-
-    // steps per second
-    this->stepper_motor->set_speed(current_rate);
 
     return 0;
 }

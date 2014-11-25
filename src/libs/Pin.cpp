@@ -182,5 +182,5 @@ mbed::PwmOut* Pin::hardware_pwm()
         if (pin == 25) { return new mbed::PwmOut(P3_25); }
         if (pin == 26) { return new mbed::PwmOut(P3_26); }
     }
-    return NULL;
+    return nullptr;
 }
