@@ -321,7 +321,6 @@ void Stepper::set_step_events_per_second( float steps_per_second )
 // All we do is reset the other timer so that it does what we want
 uint32_t Stepper::synchronize_acceleration(uint32_t dummy)
 {
-
     // No move was done, this is called from on_block_begin
     // This means we setup the accel timer in a way where it gets called right after
     // we exit this step interrupt, and so that it is then in synch with
@@ -341,7 +340,7 @@ uint32_t Stepper::synchronize_acceleration(uint32_t dummy)
             this->main_stepper->attach_signal_step(this->current_block->decelerate_after, this, &Stepper::synchronize_acceleration);
         }
     } else {
-        // If we are called not at the first steps, this means we are beginning deceleratingration
+        // If we are called not at the first steps, this means we are beginning deceleration
         NVIC_SetPendingIRQ(TIMER2_IRQn);
         // Synchronize both counters
         LPC_TIM2->TC = LPC_TIM0->TC;

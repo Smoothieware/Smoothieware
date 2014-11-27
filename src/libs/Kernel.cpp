@@ -100,23 +100,24 @@ Kernel::Kernel(){
     NVIC_SetPriorityGrouping(0);
     NVIC_SetPriority(TIMER0_IRQn, 2);
     NVIC_SetPriority(TIMER1_IRQn, 1);
-    NVIC_SetPriority(TIMER2_IRQn, 3);
+    NVIC_SetPriority(TIMER2_IRQn, 4);
+    NVIC_SetPriority(PendSV_IRQn, 3);
 
     // Set other priorities lower than the timers
-    NVIC_SetPriority(ADC_IRQn, 4);
-    NVIC_SetPriority(USB_IRQn, 4);
+    NVIC_SetPriority(ADC_IRQn, 5);
+    NVIC_SetPriority(USB_IRQn, 5);
 
     // If MRI is enabled
     if( MRI_ENABLE ){
-        if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 4); }
-        if( NVIC_GetPriority(UART1_IRQn) > 0 ){ NVIC_SetPriority(UART1_IRQn, 4); }
-        if( NVIC_GetPriority(UART2_IRQn) > 0 ){ NVIC_SetPriority(UART2_IRQn, 4); }
-        if( NVIC_GetPriority(UART3_IRQn) > 0 ){ NVIC_SetPriority(UART3_IRQn, 4); }
+        if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 5); }
+        if( NVIC_GetPriority(UART1_IRQn) > 0 ){ NVIC_SetPriority(UART1_IRQn, 5); }
+        if( NVIC_GetPriority(UART2_IRQn) > 0 ){ NVIC_SetPriority(UART2_IRQn, 5); }
+        if( NVIC_GetPriority(UART3_IRQn) > 0 ){ NVIC_SetPriority(UART3_IRQn, 5); }
     }else{
-        NVIC_SetPriority(UART0_IRQn, 4);
-        NVIC_SetPriority(UART1_IRQn, 4);
-        NVIC_SetPriority(UART2_IRQn, 4);
-        NVIC_SetPriority(UART3_IRQn, 4);
+        NVIC_SetPriority(UART0_IRQn, 5);
+        NVIC_SetPriority(UART1_IRQn, 5);
+        NVIC_SetPriority(UART2_IRQn, 5);
+        NVIC_SetPriority(UART3_IRQn, 5);
     }
 
     // Configure the step ticker
