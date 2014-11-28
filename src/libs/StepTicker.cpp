@@ -197,6 +197,7 @@ void StepTicker::TIMER0_IRQHandler (void){
 }
 
 
+// TODO optimize so we don't have to search, keep index in steppermotor
 // We make a list of steppers that want to be called so that we don't call them for nothing
 void StepTicker::add_motor_to_active_list(StepperMotor* motor)
 {
@@ -207,7 +208,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
         if (this->active_motors[i] == motor)
         {
             this->active_motor_bm |= bm;
-            if( this->active_motor_bm != 0 ){
+            if( this->active_motor_bm != 0 ){ // this is always true!
                 LPC_TIM0->TCR = 1;               // Enable interrupt
             }
             return;

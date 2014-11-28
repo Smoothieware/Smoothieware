@@ -40,8 +40,8 @@ void StepperMotor::init()
     this->moving = false;
     this->paused = false;
     this->fx_counter = 0;
+    this->fx_ticks_per_step = 0xFFFFF00000000000ULL; // some big number so we don't start stepping before it is set
     this->stepped = 0;
-    this->fx_ticks_per_step = 0;
     this->steps_to_move = 0;
     this->is_move_finished = false;
     this->signal_step = false;
@@ -93,6 +93,7 @@ void StepperMotor::step()
         this->is_move_finished = true;
         THEKERNEL->step_ticker->a_move_finished = true;
         this->fx_counter = 0;      // set this to zero here so we don't miss any for next move
+        this->fx_ticks_per_step = 0xFFFFF00000000000ULL; // some big number so we don't start stepping before it is set again
     }
 }
 
