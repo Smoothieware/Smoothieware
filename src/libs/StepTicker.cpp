@@ -30,7 +30,7 @@ extern bool _isr_context;
 
 StepTicker* StepTicker::global_step_ticker;
 
-StepTicker::StepTicker(int nmotors){
+StepTicker::StepTicker(){
     StepTicker::global_step_ticker = this;
 
     // Configure the timer
@@ -50,20 +50,14 @@ StepTicker::StepTicker(int nmotors){
     this->set_frequency(0.001);
     this->set_reset_delay(100);
     this->last_duration = 0;
-    //this->overruns= 0;
-    this->num_motors= nmotors;
-    this->active_motors= new StepperMotor*[num_motors];
-    for (int i = 0; i < num_motors; i++){
-        this->active_motors[i] = nullptr;
-    }
-    this->active_motor_bm = 0;
+    this->num_motors= 0;
+    this->active_motor.reset();
 
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
 }
 
 StepTicker::~StepTicker() {
-    delete[] this->active_motors;
 }
 
 // Set the base stepping frequency
@@ -86,12 +80,10 @@ void StepTicker::set_reset_delay( float seconds ){
 // Call tick() on each active motor
 inline void StepTicker::tick(){
     _isr_context = true;
-    int i;
-    uint32_t bm = 1;
     // We iterate over each active motor
-    for (i = 0; i < num_motors; i++, bm <<= 1){
-        if (this->active_motor_bm & bm){
-            this->active_motors[i]->tick();
+    for (int i = 0; i < num_motors; i++){
+        if (this->active_motor[i]){
+            this->motor[i]->tick();
         }
     }
     _isr_context = false;
@@ -102,19 +94,16 @@ inline void StepTicker::tick(){
 void StepTicker::signal_a_move_finished(){
     _isr_context = true;
 
-    uint16_t bitmask = 1;
-    for ( uint8_t motor = 0; motor < num_motors; motor++, bitmask <<= 1){
-        if (this->active_motor_bm & bitmask){
-            if(this->active_motors[motor]->is_move_finished){
-                this->active_motors[motor]->signal_move_finished();
+    for (int motor = 0; motor < num_motors; motor++){
+        if (this->active_motor[motor] && this->motor[motor]->is_move_finished){
+            this->motor[motor]->signal_move_finished();
                 // Theoretically this does nothing and the reason for it is currently unknown and/or forgotten
-                // if(this->active_motors[motor]->moving == false){
+                // if(this->motor[motor]->moving == false){
                 //     if (motor > 0){
                 //         motor--;
                 //         bitmask >>= 1;
                 //     }
                 // }
-            }
         }
     }
     this->a_move_finished = false;
@@ -126,12 +115,9 @@ void StepTicker::signal_a_move_finished(){
 inline void StepTicker::reset_tick(){
     _isr_context = true;
 
-    int i;
-    uint32_t bm;
-    for (i = 0, bm = 1; i < num_motors; i++, bm <<= 1)
-    {
-        if (this->active_motor_bm & bm)
-            this->active_motors[i]->unstep();
+    for (int i = 0; i < num_motors; i++) {
+        if(this->active_motor[i])
+            this->motor[i]->unstep();
     }
 
     _isr_context = false;
@@ -172,9 +158,9 @@ void StepTicker::TIMER0_IRQHandler (void){
     LPC_TIM0->MR0 = this->period;
 
     // Step pins
-    for (uint32_t motor = 0, bm = 1; motor < num_motors; motor++, bm <<= 1){
-        if (this->active_motor_bm & bm){
-            this->active_motors[motor]->tick();
+    for (uint32_t motor = 0; motor < num_motors; motor++){
+        if (this->active_motor[motor]){
+            this->motor[motor]->tick();
         }
     }
 
@@ -196,50 +182,30 @@ void StepTicker::TIMER0_IRQHandler (void){
     }
 }
 
+// returns index of the stepper motor in the array and bitset
+int StepTicker::register_motor(StepperMotor* motor)
+{
+    this->motor.push_back(motor);
+    this->num_motors= this->motor.size();
+    return this->num_motors-1;
+}
 
-// TODO optimize so we don't have to search, keep index in steppermotor
-// We make a list of steppers that want to be called so that we don't call them for nothing
+// activate the specified motor, must have been registered
 void StepTicker::add_motor_to_active_list(StepperMotor* motor)
 {
-    uint32_t bm;
-    int i;
-    for (i = 0, bm = 1; i < num_motors; i++, bm <<= 1)
-    {
-        if (this->active_motors[i] == motor)
-        {
-            this->active_motor_bm |= bm;
-            if( this->active_motor_bm != 0 ){ // this is always true!
-                LPC_TIM0->TCR = 1;               // Enable interrupt
-            }
-            return;
-        }
-        if (this->active_motors[i] == nullptr)
-        {
-            this->active_motors[i] = motor;
-            this->active_motor_bm |= bm;
-            if( this->active_motor_bm != 0 ){
-                LPC_TIM0->TCR = 1;               // Enable interrupt
-            }
-            return;
-        }
+    bool enabled= active_motor.any(); // see if interrupt was previously enabled
+    active_motor[motor->index]= 1;
+    if(!enabled) {
+        LPC_TIM0->TCR = 1;               // Enable interrupt
     }
-    return;
 }
 
 // Remove a stepper from the list of active motors
 void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
 {
-    uint32_t bm; int i;
-    for (i = 0, bm = 1; i < num_motors; i++, bm <<= 1)
-    {
-        if (this->active_motors[i] == motor)
-        {
-            this->active_motor_bm &= ~bm;
-            // If we have no motor to work on, disable the whole interrupt
-            if( this->active_motor_bm == 0 ){
-                LPC_TIM0->TCR = 0;               // Disable interrupt
-            }
-            return;
-        }
+    active_motor[motor->index]= 0;
+    // If we have no motor to work on, disable the whole interrupt
+    if(this->active_motor.none()){
+        LPC_TIM0->TCR = 0;               // Disable interrupt
     }
 }

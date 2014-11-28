@@ -11,6 +11,8 @@
 #define STEPTICKER_H
 
 #include <stdint.h>
+#include <vector>
+#include <bitset>
 
 class StepperMotor;
 
@@ -19,28 +21,30 @@ class StepTicker{
         friend class StepperMotor;
         static StepTicker* global_step_ticker;
 
-        StepTicker(int nmotors);
+        StepTicker();
         ~StepTicker();
         void set_frequency( float frequency );
-        void tick();
         void signal_a_move_finished();
         void set_reset_delay( float seconds );
-        void reset_tick();
+        int register_motor(StepperMotor* motor);
         void add_motor_to_active_list(StepperMotor* motor);
         void remove_motor_from_active_list(StepperMotor* motor);
+
+        void reset_tick();
         void TIMER0_IRQHandler (void);
         void PendSV_IRQHandler (void);
 
     private:
+        void tick();
         float frequency;
         uint32_t delay;
         uint32_t period;
         uint32_t last_duration;
 
-        StepperMotor** active_motors;
-        uint32_t active_motor_bm; // limit to 32 motors
+        std::vector<StepperMotor*> motor;
+        std::bitset<32> active_motor; // limit to 32 motors
         struct {
-            uint8_t num_motors:6; // increase for more than 32 motors
+            uint8_t num_motors:5;
             volatile bool a_move_finished:1;
             volatile bool pending_sv:1;
             bool reset_step_pins:1;

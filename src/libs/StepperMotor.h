@@ -75,6 +75,7 @@ class StepperMotor {
         Hook* step_signal_hook;
 
         uint32_t signal_step_number;
+        int index;
 
         Pin step_pin;
         Pin dir_pin;

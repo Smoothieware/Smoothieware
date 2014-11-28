@@ -34,7 +34,6 @@
 
 #define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
-#define number_of_motors_checksum                   CHECKSUM("number_of_motors")
 
 Kernel* Kernel::instance;
 
@@ -91,8 +90,7 @@ Kernel::Kernel(){
     // HAL stuff
     add_module( this->slow_ticker          = new SlowTicker());
 
-    int nmotors=  this->config->value(number_of_motors_checksum)->by_default(5)->as_number(); // default X Y Z E1 E2
-    this->step_ticker          = new StepTicker(nmotors);
+    this->step_ticker          = new StepTicker();
     this->adc                  = new Adc();
 
     // TODO : These should go into platform-specific files

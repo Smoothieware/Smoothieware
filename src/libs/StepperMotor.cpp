@@ -37,6 +37,7 @@ StepperMotor::~StepperMotor()
 
 void StepperMotor::init()
 {
+    this->index= THEKERNEL->step_ticker->register_motor(this);
     this->moving = false;
     this->paused = false;
     this->fx_counter = 0;
@@ -118,7 +119,7 @@ void StepperMotor::signal_move_finished()
 }
 
 // This is just a way not to check for ( !this->moving || this->paused || this->fx_ticks_per_step == 0 ) at every tick()
-inline void StepperMotor::update_exit_tick()
+void StepperMotor::update_exit_tick()
 {
     if( !this->moving || this->paused || this->steps_to_move == 0 ) {
         // We must exit tick() after setting the pins, no bresenham is done
