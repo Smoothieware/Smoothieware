@@ -522,10 +522,17 @@ void Robot::on_gcode_received(void *argument)
                     arm_solution->set_optional(options);
                 }
 
-                // set delta segments per second, not saved by M500
-                if(gcode->has_letter('S')) {
+
+                if(gcode->has_letter('S')) { // set delta segments per second, not saved by M500
                     this->delta_segments_per_second = gcode->get_value('S');
+                    gcode->stream->printf("Delta segments set to %8.4f segs/sec\n", this->delta_segments_per_second);
+
+                }else if(gcode->has_letter('U')) { // or set mm_per_line_segment, not saved by M500
+                    this->mm_per_line_segment = gcode->get_value('U');
+                    this->delta_segments_per_second = 0;
+                    gcode->stream->printf("mm per line segment set to %8.4f\n", this->mm_per_line_segment);
                 }
+
                 break;
             }
         }

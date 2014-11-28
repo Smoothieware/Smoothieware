@@ -61,6 +61,8 @@ void StepperMotor::init()
 // we also here check if the move is finished etc ...
 void StepperMotor::step()
 {
+    if(this->is_move_finished) return; // we can't do anything until the next move has been processed, but we will be able to offset the time by shortening the next step
+
     // output to pins 37t
     this->step_pin.set( 1 );
     THEKERNEL->step_ticker->reset_step_pins = true;
@@ -89,6 +91,7 @@ void StepperMotor::step()
         // This is so we don't call that before all the steps have been generated for this tick()
         this->is_move_finished = true;
         THEKERNEL->step_ticker->a_move_finished = true;
+        this->fx_counter = 0;      // set this to zero here so we don't miss any for next move
     }
 }
 
@@ -128,8 +131,6 @@ inline void StepperMotor::update_exit_tick()
 // Instruct the StepperMotor to move a certain number of steps
 void StepperMotor::move( bool direction, unsigned int steps, float initial_speed)
 {
-    // INCORRECT: We do not set the direction directly, we will set the pin just before the step pin on the next tick
-    // FIXME really? looks a lot like the pin is set here not in the next step
     this->dir_pin.set(direction);
     this->direction = direction;
 
@@ -137,7 +138,6 @@ void StepperMotor::move( bool direction, unsigned int steps, float initial_speed
     this->steps_to_move = steps;
 
     // Zero our tool counters
-    this->fx_counter = 0;      // Bresenheim counter
     this->stepped = 0;
 
     // Do not signal steps until we get instructed to
