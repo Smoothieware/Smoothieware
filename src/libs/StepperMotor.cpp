@@ -61,7 +61,8 @@ void StepperMotor::init()
 // we also here check if the move is finished etc ...
 void StepperMotor::step()
 {
-    if(this->is_move_finished) return; // we can't do anything until the next move has been processed, but we will be able to offset the time by shortening the next step
+    // we can't do anything until the next move has been processed, but we will be able to offset the time by shortening the next step
+    if(THEKERNEL->step_ticker->a_move_finished) return;
 
     // output to pins 37t
     this->step_pin.set( 1 );

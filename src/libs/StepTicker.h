@@ -41,7 +41,8 @@ class StepTicker{
         uint32_t active_motor_bm; // limit to 32 motors
         struct {
             uint8_t num_motors:6; // increase for more than 32 motors
-            bool a_move_finished:1;
+            volatile bool a_move_finished:1;
+            volatile bool pending_sv:1;
             bool reset_step_pins:1;
         };
 

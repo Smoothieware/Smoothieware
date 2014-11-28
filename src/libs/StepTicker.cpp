@@ -45,6 +45,7 @@ StepTicker::StepTicker(int nmotors){
 
     // Default start values
     this->a_move_finished = false;
+    this->pending_sv = false;
     this->reset_step_pins = false;
     this->set_frequency(0.001);
     this->set_reset_delay(100);
@@ -158,6 +159,8 @@ void StepTicker::PendSV_IRQHandler (void){
 
     this->signal_a_move_finished();
 
+    this->pending_sv= false;
+
     #ifdef STEPTICKER_DEBUG_PIN
     stepticker_debug_pin= 0;
     #endif
@@ -169,9 +172,8 @@ void StepTicker::TIMER0_IRQHandler (void){
     LPC_TIM0->MR0 = this->period;
 
     // Step pins
-    uint16_t bitmask = 1;
-    for (uint8_t motor = 0; motor < num_motors; motor++, bitmask <<= 1){
-        if (this->active_motor_bm & bitmask){
+    for (uint32_t motor = 0, bm = 1; motor < num_motors; motor++, bm <<= 1){
+        if (this->active_motor_bm & bm){
             this->active_motors[motor]->tick();
         }
     }
@@ -186,8 +188,9 @@ void StepTicker::TIMER0_IRQHandler (void){
     }
 
     // If a move finished in this tick, we have to tell the actuator to act accordingly
-    if( this->a_move_finished ){
-        // we delegate the slow stuff to the pendsv handler
+    if(!this->pending_sv && this->a_move_finished ){
+        this->pending_sv= true; // don't multiple trigger pendsv
+        // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
         //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
         SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;
     }

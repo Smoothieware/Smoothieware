@@ -96,12 +96,12 @@ class StepperMotor {
         // set to 64 bit fixed point, 32:32 bits fractional
         static const uint32_t fx_shift= 32;
         static const uint64_t fx_increment= ((uint64_t)1<<fx_shift);
-        uint64_t fx_counter;
-        uint64_t fx_ticks_per_step;
+        volatile uint64_t fx_counter;
+        volatile uint64_t fx_ticks_per_step;
 
         struct {
             bool direction:1;
-            bool is_move_finished:1; // Whether the move just finished
+            volatile bool is_move_finished:1; // Whether the move just finished
             bool signal_step:1;
             bool paused:1;
             volatile bool moving:1;
