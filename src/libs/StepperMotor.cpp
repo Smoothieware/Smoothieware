@@ -37,6 +37,7 @@ StepperMotor::~StepperMotor()
 
 void StepperMotor::init()
 {
+    // register this motor with the step ticker, and get its index in that array and bit position
     this->index= THEKERNEL->step_ticker->register_motor(this);
     this->moving = false;
     this->paused = false;
