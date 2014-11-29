@@ -45,15 +45,16 @@ StepTicker::StepTicker(){
 
     // Default start values
     this->a_move_finished = false;
-    this->pending_sv = false;
+    this->do_move_finished = false;
     this->reset_step_pins = false;
-    this->set_frequency(0.001);
+    this->set_frequency(100000);
     this->set_reset_delay(100);
     this->set_acceleration_ticks_per_second(1000);
     this->last_duration = 0;
     this->num_motors= 0;
     this->active_motor.reset();
     this->acceleration_tick_cnt= 0;
+    this->do_acceleration_tick= false;
 
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
@@ -101,7 +102,6 @@ void StepTicker::signal_a_move_finished(){
                 // }
         }
     }
-    this->a_move_finished = false;
 
     _isr_context = false;
 }
@@ -134,16 +134,11 @@ extern "C" void PendSV_Handler(void) {
 
 // slightly lower priority than TIMER0, the whole end of block/start of block is done here allowing the timer to continue ticking
 // also handles the acceleration tick
-void StepTicker::PendSV_IRQHandler (void){
-    if(this->do_acceleration_tick) {
-        this->do_acceleration_tick= false;
-        // call registered acceleration handlers
-        for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
-            acceleration_tick_handlers[i]();
-        }
-    }
+void StepTicker::PendSV_IRQHandler (void) {
 
-    if(this->a_move_finished) {
+    if(this->do_move_finished) {
+        this->do_move_finished= false;
+
         #ifdef STEPTICKER_DEBUG_PIN
         stepticker_debug_pin= 1;
         #endif
@@ -155,7 +150,13 @@ void StepTicker::PendSV_IRQHandler (void){
         #endif
     }
 
-    this->pending_sv= false;
+    if(this->do_acceleration_tick) {
+        this->do_acceleration_tick= false;
+        // call registered acceleration handlers
+        for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
+            acceleration_tick_handlers[i]();
+        }
+    }
 }
 
 void StepTicker::TIMER0_IRQHandler (void){
@@ -183,9 +184,13 @@ void StepTicker::TIMER0_IRQHandler (void){
         this->do_acceleration_tick= true;
     }
 
+    if(this->a_move_finished) {
+        this->a_move_finished = false;
+        this->do_move_finished= 1;
+    }
+
     // If a move finished in this tick, we have to tell the actuator to act accordingly
-    if(!this->pending_sv && (this->a_move_finished || this->do_acceleration_tick)){
-        this->pending_sv= true; // don't multiple trigger pendsv
+    if(this->do_move_finished || this->do_acceleration_tick){
         // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
         //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
         SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;

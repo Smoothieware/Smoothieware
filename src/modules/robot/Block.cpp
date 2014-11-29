@@ -22,11 +22,6 @@
 using std::string;
 #include <vector>
 
-#ifdef BLOCK_DEBUG_PIN
-#include "gpio.h"
-extern GPIO block_debug_pin;
-#endif
-
 // A block represents a movement, it's length for each stepper motor, and the corresponding acceleration curves.
 // It's stacked on a queue, and that queue is then executed in order, to move the motors.
 // Most of the accel math is also done in this class
@@ -252,10 +247,6 @@ void Block::append_gcode(Gcode* gcode)
 
 void Block::begin()
 {
-#ifdef BLOCK_DEBUG_PIN
-    block_debug_pin= 1;
-#endif
-
     recalculate_flag = false;
 
     if (!is_ready)
@@ -291,20 +282,14 @@ void Block::take()
 // Mark the block as no longer taken by one module, go to next block if this free's it
 void Block::release()
 {
-    if (--this->times_taken <= 0)
-    {
+    if (--this->times_taken <= 0) {
         times_taken = 0;
-        if (is_ready)
-        {
-#ifdef BLOCK_DEBUG_PIN
-            block_debug_pin= 0;
-#endif
+        if (is_ready) {
             is_ready = false;
             THEKERNEL->call_event(ON_BLOCK_END, this);
 
             // ensure conveyor gets called last
             THEKERNEL->conveyor->on_block_end(this);
-
         }
     }
 }

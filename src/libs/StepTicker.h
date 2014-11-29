@@ -53,7 +53,7 @@ class StepTicker{
         struct {
             uint8_t num_motors:5;
             volatile bool a_move_finished:1;
-            volatile bool pending_sv:1;
+            volatile bool do_move_finished:1;
             volatile bool do_acceleration_tick:1;
             bool reset_step_pins:1;
         };
