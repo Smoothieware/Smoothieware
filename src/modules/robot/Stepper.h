@@ -12,7 +12,6 @@
 #include <stdint.h>
 
 class Block;
-class Hook;
 class StepperMotor;
 
 class Stepper : public Module
@@ -31,30 +30,24 @@ public:
     uint32_t main_interrupt(uint32_t dummy);
     void trapezoid_generator_reset();
     void set_step_events_per_second(float);
-    uint32_t trapezoid_generator_tick(uint32_t dummy);
+    void trapezoid_generator_tick(void);
     uint32_t stepper_motor_finished_move(uint32_t dummy);
     int config_step_timer( int cycles );
     void turn_enable_pins_on();
     void turn_enable_pins_off();
-    uint32_t synchronize_acceleration(uint32_t dummy);
 
-    int get_acceleration_ticks_per_second() const { return acceleration_ticks_per_second; }
     float get_trapezoid_adjusted_rate() const { return trapezoid_adjusted_rate; }
     const Block *get_current_block() const { return current_block; }
 
 private:
     Block *current_block;
-    int stepped[3];
     float trapezoid_adjusted_rate;
-    int acceleration_ticks_per_second;
-    Hook *acceleration_tick_hook;
     StepperMotor *main_stepper;
 
     struct {
         bool enable_pins_status:1;
         bool force_speed_update:1;
         bool paused:1;
-        bool trapezoid_generator_busy:1;
         bool halted:1;
     };
 

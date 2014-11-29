@@ -130,7 +130,7 @@ void Extruder::on_module_loaded()
     this->register_for_event(ON_GET_PUBLIC_DATA);
 
     // Update speed every *acceleration_ticks_per_second*
-    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &Extruder::acceleration_tick );
+    THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){acceleration_tick(); });
 }
 
 // Get config
@@ -534,21 +534,21 @@ void Extruder::on_block_end(void *argument)
 }
 
 uint32_t Extruder::rate_increase() const {
-    return floorf((this->acceleration / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * this->steps_per_millimeter);
+    return floorf((this->acceleration / THEKERNEL->acceleration_ticks_per_second) * this->steps_per_millimeter);
 }
 
 // Called periodically to change the speed to match acceleration or to match the speed of the robot
 // Only used in SOLO mode
-uint32_t Extruder::acceleration_tick(uint32_t dummy)
+void Extruder::acceleration_tick(void)
 {
-    if(!this->enabled) return 0;
+    if(!this->enabled) return;
 
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
     if( this->current_block == NULL ||  this->paused || this->mode != SOLO ) {
-        return 0;
+        return;
     }
 
-    if(!this->stepper_motor->is_moving()) return 0;
+    if(!this->stepper_motor->is_moving()) return;
 
     uint32_t current_rate = this->stepper_motor->get_steps_per_second();
     uint32_t target_rate = floorf(this->feed_rate * this->steps_per_millimeter);
@@ -559,7 +559,7 @@ uint32_t Extruder::acceleration_tick(uint32_t dummy)
         this->stepper_motor->set_speed(current_rate);
     }
 
-    return 0;
+    return;
 }
 
 // Speed has been updated for the robot's stepper, we must update accordingly

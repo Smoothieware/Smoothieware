@@ -32,7 +32,6 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
 
 StepperMotor::~StepperMotor()
 {
-    delete step_signal_hook;
 }
 
 void StepperMotor::init()
@@ -46,8 +45,6 @@ void StepperMotor::init()
     this->stepped = 0;
     this->steps_to_move = 0;
     this->is_move_finished = false;
-    this->signal_step = false;
-    this->step_signal_hook = new Hook();
 
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
@@ -79,11 +76,6 @@ void StepperMotor::step()
 
     // we have moved a step 9t
     this->stepped++;
-
-    // Do we need to signal this step
-    if( this->stepped == this->signal_step_number && this->signal_step ) {
-        this->step_signal_hook->call();
-    }
 
     // keep track of actuators actual position in steps
     this->current_position_steps += (this->direction ? -1 : 1);
@@ -143,9 +135,6 @@ void StepperMotor::move( bool direction, unsigned int steps, float initial_speed
 
     // Zero our tool counters
     this->stepped = 0;
-
-    // Do not signal steps until we get instructed to
-    this->signal_step = false;
 
     // Starting now we are moving
     if( steps > 0 ) {

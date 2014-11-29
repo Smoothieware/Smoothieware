@@ -57,12 +57,6 @@ class StepperMotor {
             this->end_hook = hook;
         }
 
-        template<typename T> void attach_signal_step(uint32_t step, T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
-            this->step_signal_hook->attach(optr, fptr);
-            this->signal_step_number = step;
-            this->signal_step = true;
-        }
-
         friend class StepTicker;
         friend class Stepper;
         friend class Planner;
@@ -71,11 +65,8 @@ class StepperMotor {
     private:
         void init();
 
-        Hook* end_hook;
-        Hook* step_signal_hook;
-
-        uint32_t signal_step_number;
         int index;
+        Hook* end_hook;
 
         Pin step_pin;
         Pin dir_pin;
@@ -103,7 +94,6 @@ class StepperMotor {
         struct {
             bool direction:1;
             volatile bool is_move_finished:1; // Whether the move just finished
-            bool signal_step:1;
             bool paused:1;
             volatile bool moving:1;
         };

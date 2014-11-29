@@ -112,7 +112,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     this->final_rate   = ceilf(this->nominal_rate * exitspeed  / this->nominal_speed);   // (step/s)
 
     // How many steps to accelerate and decelerate
-    float acceleration_per_second = this->rate_delta * THEKERNEL->stepper->get_acceleration_ticks_per_second(); // ( step/s^2)
+    float acceleration_per_second = this->rate_delta * THEKERNEL->acceleration_ticks_per_second; // ( step/s^2)
     int accelerate_steps = ceilf( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_second ) );
     int decelerate_steps = floorf( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_second ) );
 

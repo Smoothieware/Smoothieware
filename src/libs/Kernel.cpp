@@ -34,6 +34,7 @@
 
 #define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
+#define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
 
 Kernel* Kernel::instance;
 
@@ -46,7 +47,7 @@ Kernel::Kernel(){
     this->serial = new SerialConsole(USBTX, USBRX, DEFAULT_SERIAL_BAUD_RATE);
 
     // Config next, but does not load cache yet
-    this->config         = new Config();
+    this->config = new Config();
 
     // Pre-load the config cache, do after setting up serial so we can report errors to serial
     this->config->config_cache_load();
@@ -55,7 +56,7 @@ Kernel::Kernel(){
     delete this->serial;
     this->serial= NULL;
 
-    this->streams        = new StreamOutputPool();
+    this->streams = new StreamOutputPool();
 
     this->current_path   = "/";
 
@@ -88,10 +89,10 @@ Kernel::Kernel(){
     this->add_module( this->serial );
 
     // HAL stuff
-    add_module( this->slow_ticker          = new SlowTicker());
+    add_module( this->slow_ticker = new SlowTicker());
 
-    this->step_ticker          = new StepTicker();
-    this->adc                  = new Adc();
+    this->step_ticker = new StepTicker();
+    this->adc = new Adc();
 
     // TODO : These should go into platform-specific files
     // LPC17xx-specific
@@ -119,12 +120,14 @@ Kernel::Kernel(){
     }
 
     // Configure the step ticker
-    this->base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
-    float microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
+    this->base_stepping_frequency = this->config->value(base_stepping_frequency_checksum)->by_default(100000)->as_number();
+    float microseconds_per_step_pulse = this->config->value(microseconds_per_step_pulse_checksum)->by_default(5)->as_number();
+    this->acceleration_ticks_per_second = THEKERNEL->config->value(acceleration_ticks_per_second_checksum)->by_default(1000)->as_number();
 
     // Configure the step ticker ( TODO : shouldnt this go into stepticker's code ? )
     this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000.0F );
     this->step_ticker->set_frequency( this->base_stepping_frequency );
+    this->step_ticker->set_acceleration_ticks_per_second(acceleration_ticks_per_second); // must be set after set_frequency
 
     // Core modules
     this->add_module( new GcodeDispatch() );

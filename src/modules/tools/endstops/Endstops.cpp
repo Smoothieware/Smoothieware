@@ -27,6 +27,7 @@
 #include "EndstopsPublicAccess.h"
 #include "StreamOutputPool.h"
 #include "Pauser.h"
+#include "StepTicker.h"
 
 #include <ctype.h>
 
@@ -135,7 +136,7 @@ void Endstops::on_module_loaded()
     register_for_event(ON_GET_PUBLIC_DATA);
     register_for_event(ON_SET_PUBLIC_DATA);
 
-    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &Endstops::acceleration_tick );
+    THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){acceleration_tick(); });
 
     // Settings
     this->on_config_reload(this);
@@ -734,9 +735,9 @@ void Endstops::on_gcode_received(void *argument)
 }
 
 // Called periodically to change the speed to match acceleration
-uint32_t Endstops::acceleration_tick(uint32_t dummy)
+void Endstops::acceleration_tick(void)
 {
-    if(this->status >= NOT_HOMING) return(0); // nothing to do, only do this when moving for homing sequence
+    if(this->status >= NOT_HOMING) return; // nothing to do, only do this when moving for homing sequence
 
     // foreach stepper that is moving
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
@@ -746,7 +747,7 @@ uint32_t Endstops::acceleration_tick(uint32_t dummy)
         uint32_t target_rate = floorf(this->feed_rate[c]*STEPS_PER_MM(c));
         float acc= (c==Z_AXIS) ? THEKERNEL->planner->get_z_acceleration() : THEKERNEL->planner->get_acceleration();
         if( current_rate < target_rate ){
-            uint32_t rate_increase = floorf((acc/THEKERNEL->stepper->get_acceleration_ticks_per_second())*STEPS_PER_MM(c));
+            uint32_t rate_increase = floorf((acc/THEKERNEL->acceleration_ticks_per_second)*STEPS_PER_MM(c));
             current_rate = min( target_rate, current_rate + rate_increase );
         }
         if( current_rate > target_rate ){ current_rate = target_rate; }
@@ -755,7 +756,7 @@ uint32_t Endstops::acceleration_tick(uint32_t dummy)
         STEPPER[c]->set_speed(current_rate);
     }
 
-    return 0;
+    return;
 }
 
 void Endstops::on_get_public_data(void* argument){

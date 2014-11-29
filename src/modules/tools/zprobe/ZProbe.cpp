@@ -25,6 +25,7 @@
 #include "EndstopsPublicAccess.h"
 #include "PublicData.h"
 #include "LevelingStrategy.h"
+#include "StepTicker.h"
 
 // strategies we know about
 #include "DeltaCalibrationStrategy.h"
@@ -66,7 +67,7 @@ void ZProbe::on_module_loaded()
     // register event-handlers
     register_for_event(ON_GCODE_RECEIVED);
 
-    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &ZProbe::acceleration_tick );
+    THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){acceleration_tick(); });
 }
 
 void ZProbe::on_config_reload(void *argument)
@@ -295,9 +296,9 @@ void ZProbe::on_gcode_received(void *argument)
 }
 
 // Called periodically to change the speed to match acceleration
-uint32_t ZProbe::acceleration_tick(uint32_t dummy)
+void ZProbe::acceleration_tick(void)
 {
-    if(!this->running) return(0); // nothing to do
+    if(!this->running) return; // nothing to do
     if(STEPPER[Z_AXIS]->is_moving()) accelerate(Z_AXIS);
 
     if(is_delta) {
@@ -308,7 +309,7 @@ uint32_t ZProbe::acceleration_tick(uint32_t dummy)
         }
     }
 
-    return 0;
+    return;
 }
 
 void ZProbe::accelerate(int c)
@@ -318,7 +319,7 @@ void ZProbe::accelerate(int c)
     // Z may have a different acceleration to X and Y
     float acc= (c==Z_AXIS) ? THEKERNEL->planner->get_z_acceleration() : THEKERNEL->planner->get_acceleration();
     if( current_rate < target_rate ) {
-        uint32_t rate_increase = floorf((acc / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c));
+        uint32_t rate_increase = floorf((acc / THEKERNEL->acceleration_ticks_per_second) * STEPS_PER_MM(c));
         current_rate = min( target_rate, current_rate + rate_increase );
     }
     if( current_rate > target_rate ) {

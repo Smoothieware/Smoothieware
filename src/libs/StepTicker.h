@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <vector>
 #include <bitset>
+#include <functional>
 
 class StepperMotor;
 
@@ -29,24 +30,31 @@ class StepTicker{
         int register_motor(StepperMotor* motor);
         void add_motor_to_active_list(StepperMotor* motor);
         void remove_motor_from_active_list(StepperMotor* motor);
+        void set_acceleration_ticks_per_second(uint32_t acceleration_ticks_per_second);
 
         void reset_tick();
         void TIMER0_IRQHandler (void);
         void PendSV_IRQHandler (void);
 
+        void register_acceleration_tick_handler(std::function<void(void)> cb){
+            acceleration_tick_handlers.push_back(cb);
+        }
+
     private:
-        void tick();
         float frequency;
         uint32_t delay;
         uint32_t period;
         uint32_t last_duration;
-
+        uint32_t acceleration_tick_period;
+        uint32_t acceleration_tick_cnt;
+        std::vector<std::function<void(void)>> acceleration_tick_handlers;
         std::vector<StepperMotor*> motor;
         std::bitset<32> active_motor; // limit to 32 motors
         struct {
             uint8_t num_motors:5;
             volatile bool a_move_finished:1;
             volatile bool pending_sv:1;
+            volatile bool do_acceleration_tick:1;
             bool reset_step_pins:1;
         };
 

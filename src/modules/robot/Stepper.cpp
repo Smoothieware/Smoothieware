@@ -19,6 +19,7 @@
 #include "ConfigValue.h"
 #include "Gcode.h"
 #include "Block.h"
+#include "StepTicker.h"
 
 #include <vector>
 using namespace std;
@@ -28,9 +29,6 @@ using namespace std;
 
 #include <mri.h>
 
-#define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
-#define minimum_steps_per_minute_checksum           CHECKSUM("minimum_steps_per_minute")
-
 // The stepper reacts to blocks that have XYZ movement to transform them into actual stepper motor moves
 // TODO: This does accel, accel should be in StepperMotor
 
@@ -38,7 +36,6 @@ Stepper::Stepper()
 {
     this->current_block = NULL;
     this->paused = false;
-    this->trapezoid_generator_busy = false;
     this->force_speed_update = false;
     this->halted= false;
 }
@@ -58,7 +55,7 @@ void Stepper::on_module_loaded()
     this->on_config_reload(this);
 
     // Acceleration ticker
-    this->acceleration_tick_hook = THEKERNEL->slow_ticker->attach( this->acceleration_ticks_per_second, this, &Stepper::trapezoid_generator_tick );
+    THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){trapezoid_generator_tick(); });
 
     // Attach to the end_of_move stepper event
     THEKERNEL->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
@@ -69,9 +66,6 @@ void Stepper::on_module_loaded()
 // Get configuration from the config file
 void Stepper::on_config_reload(void *argument)
 {
-
-    this->acceleration_ticks_per_second =  THEKERNEL->config->value(acceleration_ticks_per_second_checksum)->by_default(100   )->as_number();
-
     // Steppers start off by default
     this->turn_enable_pins_off();
 }
@@ -193,11 +187,7 @@ void Stepper::on_block_begin(void *argument)
     }
 
     // Set the initial speed for this move
-    this->trapezoid_generator_tick(0);
-
-    // Synchronise the acceleration curve with the stepping
-    this->synchronize_acceleration(0);
-
+    this->trapezoid_generator_tick();
 }
 
 // Current block is discarded
@@ -227,9 +217,8 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
 // This is called ACCELERATION_TICKS_PER_SECOND times per second by the step_event
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
-uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
+void Stepper::trapezoid_generator_tick(void)
 {
-
     // Do not do the accel math for nothing
     if(this->current_block && !this->paused && this->main_stepper->moving ) {
 
@@ -249,7 +238,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
                 for (auto i : THEKERNEL->robot->actuators) i->move(i->direction, 0); // stop motors
                 if (current_block) current_block->release();
                 THEKERNEL->call_event(ON_SPEED_CHANGE, 0); // tell others we stopped
-                return 0;
+                return;
 
             } else {
                 trapezoid_adjusted_rate = current_block->rate_delta * 0.5F;
@@ -286,7 +275,7 @@ uint32_t Stepper::trapezoid_generator_tick( uint32_t dummy )
         this->set_step_events_per_second(this->trapezoid_adjusted_rate);
     }
 
-    return 0;
+    return;
 }
 
 // Initializes the trapezoid generator from the current block. Called whenever a new
@@ -315,37 +304,4 @@ void Stepper::set_step_events_per_second( float steps_per_second )
     THEKERNEL->call_event(ON_SPEED_CHANGE, this);
 }
 
-// This function has the role of making sure acceleration and deceleration curves have their
-// rhythm synchronized. The accel/decel must start at the same moment as the speed update routine
-// This is caller in "step just occured" or "block just began" ( step Timer ) context, so we need to be fast.
-// All we do is reset the other timer so that it does what we want
-uint32_t Stepper::synchronize_acceleration(uint32_t dummy)
-{
-    // No move was done, this is called from on_block_begin
-    // This means we setup the accel timer in a way where it gets called right after
-    // we exit this step interrupt, and so that it is then in synch with
-    if( this->main_stepper->stepped == 0 ) {
-        // Whatever happens, we must call the accel interrupt asap
-        // Because it will set the initial rate
-        // We also want to synchronize in case we start accelerating or decelerating now
-
-        // Accel interrupt must happen asap
-        NVIC_SetPendingIRQ(TIMER2_IRQn);
-        // Synchronize both counters
-        LPC_TIM2->TC = LPC_TIM0->TC;
-
-        // If we start decelerating after this, we must ask the actuator to warn us
-        // so we can do what we do in the "else" bellow
-        if( this->current_block->decelerate_after > 0 && this->current_block->decelerate_after < this->main_stepper->steps_to_move ) {
-            this->main_stepper->attach_signal_step(this->current_block->decelerate_after, this, &Stepper::synchronize_acceleration);
-        }
-    } else {
-        // If we are called not at the first steps, this means we are beginning deceleration
-        NVIC_SetPendingIRQ(TIMER2_IRQn);
-        // Synchronize both counters
-        LPC_TIM2->TC = LPC_TIM0->TC;
-    }
-
-    return 0;
-}
 
