@@ -22,16 +22,37 @@ using std::string;
 #include "checksumm.h"
 #include "ConfigValue.h"
 
-GcodeDispatch::GcodeDispatch() {}
+#define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+
+// goes in Flash, list of Mxxx codes that are allowed when in Halted state
+static const int allowed_mcodes[]= {105,114}; // get temp, get pos
+static bool is_allowed_mcode(int m) {
+    for (size_t i = 0; i < sizeof(allowed_mcodes)/sizeof(int); ++i) {
+        if(allowed_mcodes[i] == m) return true;
+    }
+    return false;
+}
+
+GcodeDispatch::GcodeDispatch()
+{
+    halted= false;
+    uploading = false;
+    currentline = -1;
+    last_g= 255;
+}
 
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded()
 {
     return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    currentline = -1;
-    uploading = false;
-    last_g= 255;
+    this->register_for_event(ON_HALT);
+}
+
+void GcodeDispatch::on_halt(void *arg)
+{
+    // set halt stream and ignore everything until M999
+    this->halted= (arg == nullptr);
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -108,13 +129,30 @@ try_again:
                     possible_command = possible_command.substr(nextcmd);
                 }
 
+
                 if(!uploading) {
                     //Prepare gcode for dispatch
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
 
+                    if(halted) {
+                        // we ignore all commands until M999, unless it is in the exceptions list (like M105 get temp)
+                        if(gcode->has_m && gcode->m == 999) {
+                            THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
+                            halted= false;
+                            // fall through and pass onto other modules
+
+                        }else if(!is_allowed_mcode(gcode->m)) {
+                            // ignore everything, return error string to host
+                            new_message.stream->printf("!!\r\n");
+                            delete gcode;
+                            continue;
+                        }
+                    }
+
                     if(gcode->has_g) {
                         last_g= gcode->g;
                     }
+
                     if(gcode->has_m) {
                         switch (gcode->m) {
                             case 28: // start upload command
@@ -134,11 +172,10 @@ try_again:
 
                             case 112: // emergency stop, do the best we can with this
                                 // TODO this really needs to be handled out-of-band
-                                // stops block queue
-                                THEKERNEL->pauser->take();
-                                // disables heaters and motors
-                                THEKERNEL->call_event(ON_HALT);
-                                THEKERNEL->streams->printf("ok Emergency Stop Requested - reset required to continue\r\n");
+                                // disables heaters and motors, ignores further incoming Gcode and clears block queue
+                                THEKERNEL->call_event(ON_HALT, nullptr);
+                                THEKERNEL->streams->printf("ok Emergency Stop Requested - reset or M999 required to continue\r\n");
+                                delete gcode;
                                 return;
 
                             case 500: // M500 save volatile settings to config-override
@@ -166,6 +203,7 @@ try_again:
                                 } else {
                                     new_message.stream->printf("; No config override\n");
                                 }
+                                gcode->add_nl= true;
                                 break; // fall through to process by modules
                             }
                         }

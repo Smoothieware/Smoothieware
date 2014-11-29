@@ -20,6 +20,7 @@
 #define morgan_offset_y_checksum     CHECKSUM("morgan_offset_y")
 #define axis_scaling_x_checksum      CHECKSUM("axis_scaling_x")
 #define axis_scaling_y_checksum      CHECKSUM("axis_scaling_y")
+#define morgan_homing_checksum      CHECKSUM("morgan_homing")
 
 #define SQ(x) powf(x, 2)
 #define ROUND(x, y) (roundf(x * 1e ## y) / 1e ## y)

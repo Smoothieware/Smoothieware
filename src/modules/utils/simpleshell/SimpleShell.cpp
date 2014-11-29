@@ -50,6 +50,8 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"pwd",      SimpleShell::pwd_command},
     {"cat",      SimpleShell::cat_command},
     {"rm",       SimpleShell::rm_command},
+    {"mv",       SimpleShell::mv_command},
+    {"upload",   SimpleShell::upload_command},
     {"reset",    SimpleShell::reset_command},
     {"dfu",      SimpleShell::dfu_command},
     {"break",    SimpleShell::break_command},
@@ -63,13 +65,13 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"net",      SimpleShell::net_command},
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
-    {"remount",       SimpleShell::remount_command},
+    {"remount",  SimpleShell::remount_command},
 
     // unknown command
     {NULL, NULL}
 };
 
-int SimpleShell::reset_delay_secs= 0;
+int SimpleShell::reset_delay_secs = 0;
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
 static uint32_t heapWalk(StreamOutput *stream, bool verbose)
@@ -149,7 +151,7 @@ void SimpleShell::on_second_tick(void *)
 void SimpleShell::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
-    string args= get_arguments(gcode->get_command());
+    string args = get_arguments(gcode->get_command());
 
     if (gcode->has_m) {
         if (gcode->m == 20) { // list sd card
@@ -162,19 +164,19 @@ void SimpleShell::on_gcode_received(void *argument)
             gcode->mark_as_taken();
             rm_command("/sd/" + args, gcode->stream);
 
-        }else if(gcode->m == 501) { // load config override
+        } else if(gcode->m == 501) { // load config override
             gcode->mark_as_taken();
             if(args.empty()) {
                 load_command("/sd/config-override", gcode->stream);
-            }else{
+            } else {
                 load_command("/sd/config-override." + args, gcode->stream);
             }
 
-        }else if(gcode->m == 504) { // save to specific config override file
+        } else if(gcode->m == 504) { // save to specific config override file
             gcode->mark_as_taken();
             if(args.empty()) {
                 save_command("/sd/config-override", gcode->stream);
-            }else{
+            } else {
                 save_command("/sd/config-override." + args, gcode->stream);
             }
         }
@@ -215,17 +217,39 @@ void SimpleShell::on_console_line_received( void *argument )
 // Convert the first parameter into an absolute path, then list the files in that path
 void SimpleShell::ls_command( string parameters, StreamOutput *stream )
 {
-    string folder = absolute_from_relative( parameters );
+    string path, opts;
+    while(!parameters.empty()) {
+        string s = shift_parameter( parameters );
+        if(s.front() == '-') {
+            opts.append(s);
+        } else {
+            path = s;
+            if(!parameters.empty()) {
+                path.append(" ");
+                path.append(parameters);
+            }
+            break;
+        }
+    }
+
+    path = absolute_from_relative(path);
+
     DIR *d;
     struct dirent *p;
-    d = opendir(folder.c_str());
+    d = opendir(path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            stream->printf("%s\r\n", lc(string(p->d_name)).c_str());
+            stream->printf("%s", lc(string(p->d_name)).c_str());
+            if(p->d_isdir) {
+                stream->printf("/");
+            } else if(opts.find("-s", 0, 2) != string::npos) {
+                stream->printf(" %d", p->d_fsize);
+            }
+            stream->printf("\r\n");
         }
         closedir(d);
     } else {
-        stream->printf("Could not open directory %s \r\n", folder.c_str());
+        stream->printf("Could not open directory %s\r\n", path.c_str());
     }
 }
 
@@ -235,14 +259,24 @@ void SimpleShell::remount_command( string parameters, StreamOutput *stream )
 {
     mounter.remount();
     stream->printf("remounted\r\n");
-} 
+}
 
 // Delete a file
 void SimpleShell::rm_command( string parameters, StreamOutput *stream )
 {
-    const char *fn= absolute_from_relative(shift_parameter( parameters )).c_str();
+    const char *fn = absolute_from_relative(shift_parameter( parameters )).c_str();
     int s = remove(fn);
     if (s != 0) stream->printf("Could not delete %s \r\n", fn);
+}
+
+// Rename a file
+void SimpleShell::mv_command( string parameters, StreamOutput *stream )
+{
+    string from = absolute_from_relative(shift_parameter( parameters ));
+    string to = shift_parameter(parameters);
+    int s = rename(from.c_str(), to.c_str());
+    if (s != 0) stream->printf("Could not rename %s to %s\r\n", from.c_str(), to.c_str());
+    else stream->printf("renamed %s to %s\r\n", from.c_str(), to.c_str());
 }
 
 // Change current absolute path to provided path
@@ -289,7 +323,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     string buffer;
     int c;
     int newlines = 0;
-    int linecnt= 0;
+    int linecnt = 0;
     // Print each line of the file
     while ((c = fgetc (lp)) != EOF) {
         buffer.append((char *)&c, 1);
@@ -297,14 +331,80 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
             newlines++;
             stream->puts(buffer.c_str());
             buffer.clear();
-            if(linecnt > 80) linecnt= 0;
+            if(linecnt > 80) linecnt = 0;
         }
         if ( newlines == limit ) {
             break;
         }
     };
     fclose(lp);
+}
 
+void SimpleShell::upload_command( string parameters, StreamOutput *stream )
+{
+    // this needs to be a hack. it needs to read direct from serial and not allow on_main_loop run until done
+    // NOTE this will block all operation until the upload is complete, so do not do while printing
+    if(!THEKERNEL->conveyor->is_queue_empty()) {
+        stream->printf("upload not allowed while printing or busy\n");
+        return;
+    }
+
+    // open file to upload to
+    string upload_filename = absolute_from_relative( parameters );
+    FILE *fd = fopen(upload_filename.c_str(), "w");
+    if(fd != NULL) {
+        stream->printf("uploading to file: %s, send control-D or control-Z to finish\r\n", upload_filename.c_str());
+    } else {
+        stream->printf("failed to open file: %s.\r\n", upload_filename.c_str());
+        return;
+    }
+
+    int cnt = 0;
+    bool uploading = true;
+    while(uploading) {
+        if(!stream->ready()) {
+            // we need to kick things or they die
+            THEKERNEL->call_event(ON_IDLE);
+            continue;
+        }
+
+        char c = stream->_getc();
+        if( c == 4 || c == 26) { // ctrl-D or ctrl-Z
+            uploading = false;
+            // close file
+            fclose(fd);
+            stream->printf("uploaded %d bytes\n", cnt);
+            return;
+
+        } else {
+            // write character to file
+            cnt++;
+            if(fputc(c, fd) != c) {
+                // error writing to file
+                stream->printf("error writing to file. ignoring all characters until EOF\r\n");
+                fclose(fd);
+                fd = NULL;
+                uploading= false;
+
+            } else {
+                if ((cnt%400) == 0) {
+                    // HACK ALERT to get around fwrite corruption close and re open for append
+                    fclose(fd);
+                    fd = fopen(upload_filename.c_str(), "a");
+                }
+            }
+        }
+    }
+    // we got an error so ignore everything until EOF
+    char c;
+    do {
+        if(stream->ready()) {
+            c= stream->_getc();
+        }else{
+            THEKERNEL->call_event(ON_IDLE);
+            c= 0;
+        }
+    } while(c != 4 && c != 26);
 }
 
 // loads the specified config-override file
@@ -316,20 +416,20 @@ void SimpleShell::load_command( string parameters, StreamOutput *stream )
         filename = THEKERNEL->config_override_filename();
     }
 
-    FILE *fp= fopen(filename.c_str(), "r");
+    FILE *fp = fopen(filename.c_str(), "r");
     if(fp != NULL) {
         char buf[132];
         stream->printf("Loading config override file: %s...\n", filename.c_str());
         while(fgets(buf, sizeof buf, fp) != NULL) {
             stream->printf("  %s", buf);
             if(buf[0] == ';') continue; // skip the comments
-            struct SerialMessage message= {&(StreamOutput::NullStream), buf};
+            struct SerialMessage message = {&(StreamOutput::NullStream), buf};
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
         }
         stream->printf("config override file executed\n");
         fclose(fp);
 
-    }else{
+    } else {
         stream->printf("File not found: %s\n", filename.c_str());
     }
 }
@@ -367,12 +467,11 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
     unsigned long m = g_maximumHeapAddress - heap;
     stream->printf("Unused Heap: %lu bytes\r\n", m);
 
-    uint32_t f= heapWalk(stream, verbose);
+    uint32_t f = heapWalk(stream, verbose);
     stream->printf("Total Free RAM: %lu bytes\r\n", m + f);
 
     stream->printf("Free AHB0: %lu, AHB1: %lu\r\n", AHB0.free(), AHB1.free());
-    if (verbose)
-    {
+    if (verbose) {
         AHB0.debug(stream);
         AHB1.debug(stream);
     }
@@ -400,13 +499,13 @@ static uint32_t getDeviceType()
 void SimpleShell::net_command( string parameters, StreamOutput *stream)
 {
     void *returned_data;
-    bool ok= PublicData::get_value( network_checksum, get_ipconfig_checksum, &returned_data );
+    bool ok = PublicData::get_value( network_checksum, get_ipconfig_checksum, &returned_data );
     if(ok) {
-        char *str= (char *)returned_data;
+        char *str = (char *)returned_data;
         stream->printf("%s\r\n", str);
         free(str);
 
-    }else{
+    } else {
         stream->printf("No network detected\n");
     }
 }
@@ -491,11 +590,11 @@ void SimpleShell::switch_command( string parameters, StreamOutput *stream)
 {
     string type = shift_parameter( parameters );
     string value = shift_parameter( parameters );
-    bool ok= false;
+    bool ok = false;
     if(value == "on" || value == "off") {
-        bool b= value == "on";
+        bool b = value == "on";
         ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
-    }else{
+    } else {
         float v = strtof(value.c_str(), NULL);
         ok = PublicData::set_value( switch_checksum, get_checksum(type), value_checksum, &v );
     }
@@ -511,11 +610,13 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("Commands:\r\n");
     stream->printf("version\r\n");
     stream->printf("mem [-v]\r\n");
-    stream->printf("ls [folder]\r\n");
+    stream->printf("ls [-s] [folder]\r\n");
     stream->printf("cd folder\r\n");
     stream->printf("pwd\r\n");
     stream->printf("cat file [limit]\r\n");
     stream->printf("rm file\r\n");
+    stream->printf("mv file newfile\r\n");
+    stream->printf("remount\r\n");
     stream->printf("play file [-v]\r\n");
     stream->printf("progress - shows progress of current play\r\n");
     stream->printf("abort - abort currently playing file\r\n");

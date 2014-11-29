@@ -85,6 +85,15 @@ void MainMenuScreen::setupConfigureScreen()
         0.1F
         );
 
+    mvs->addMenuItem("Contrast",
+        []() -> float { return THEPANEL->lcd->getContrast(); },
+        [this](float v) { THEPANEL->lcd->setContrast(v); },
+        1,
+        0,
+        255,
+        true // instant update
+        );
+
     THEPANEL->enter_screen(mvs);
 }
 
@@ -109,7 +118,7 @@ void MainMenuScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Watch"); break;
-        case 1: THEPANEL->lcd->printf(THEPANEL->is_playing() ? "Abort" : "Play"); break;
+        case 1: if(THEPANEL->is_halted()) THEPANEL->lcd->printf("Clear HALT"); else THEPANEL->lcd->printf(THEPANEL->is_playing() ? "Abort" : "Play"); break;
         case 2: THEPANEL->lcd->printf("Jog"); break;
         case 3: THEPANEL->lcd->printf("Prepare"); break;
         case 4: THEPANEL->lcd->printf("Custom"); break;
@@ -121,8 +130,13 @@ void MainMenuScreen::display_menu_line(uint16_t line)
 void MainMenuScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
-        case 0: THEPANEL->enter_screen(this->watch_screen   ); break;
-        case 1: THEPANEL->is_playing() ? abort_playing() : THEPANEL->enter_screen(this->file_screen); break;
+        case 0: THEPANEL->enter_screen(this->watch_screen); break;
+        case 1:
+            if(THEPANEL->is_halted()){
+                send_command("M999");
+                THEPANEL->enter_screen(this->watch_screen);
+            }else if(THEPANEL->is_playing()) abort_playing();
+             else THEPANEL->enter_screen(this->file_screen); break;
         case 2: THEPANEL->enter_screen(this->jog_screen     ); break;
         case 3: THEPANEL->enter_screen(this->prepare_screen ); break;
         case 4: THEPANEL->enter_screen(THEPANEL->custom_screen ); break;

@@ -76,7 +76,9 @@ laser_module_enable                          false            # Whether to activ
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all. All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.24             # Pin for the thermistor to read
 temperature_control.hotend.heater_pin        2.5              # Pin that controls the heater
-temperature_control.hotend.thermistor        EPCOS100K        # see src/modules/tools/temperaturecontrol/TemperatureControl.cpp:64 for a list of valid thermistor names
+temperature_control.hotend.thermistor        EPCOS100K        # see http://smoothieware.org/temperaturecontrol#toc5
+#temperature_control.hotend.beta             4066             # or set the beta value
+
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
@@ -86,12 +88,14 @@ temperature_control.hotend.designator        T                #
 # temperature_control.hotend.i_factor          5.00             #
 # temperature_control.hotend.d_factor          79.91            #
 
-# For EPCOS B57540G0104F000 Digikey 495-2125-ND change as needed
+# For bed
 temperature_control.bed.enable               false            #
 temperature_control.bed.thermistor_pin       0.23             #
 temperature_control.bed.heater_pin           2.7              #
 temperature_control.bed.beta                 4036             #
-temperature_control.bed.thermistor           EPCOSB57540G0104F000     # B57891S0104F008 Digikey 495-2164-ND
+temperature_control.bed.thermistor           EPCOS100K        # http://smoothieware.org/temperaturecontrol#toc5
+#temperature_control.bed.beta                4066             # or set the beta value
+
 temperature_control.bed.set_m_code           140              #
 temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #
@@ -172,14 +176,41 @@ zprobe.probe_height                          5               # how much above be
 # Pause button
 pause_button_enable                          true             #
 
-# Panel http://smoothieware.org/panel
-panel.enable                                 false               # set to true to enable the panel code
-panel.lcd                                    viki_lcd       # set type of panel also viki_lcd, i2c_lcd is a generic i2c panel, panelolu2
+# Panel See http://smoothieware.org/panel
+panel.enable                                 false             # set to true to enable the panel code
+
+# Example viki2 config for an azteeg miniV2 with IDC cable
+panel.lcd                                    viki2             # set type of panel
+panel.spi_channel                            0                 # set spi channel to use P0_18,P0_15 MOSI,SCLK
+panel.spi_cs_pin                             0.16              # set spi chip select
 panel.encoder_a_pin                          3.25!^            # encoder pin
 panel.encoder_b_pin                          3.26!^            # encoder pin
-panel.i2c_pins                               3                 # set i2c channel to use
-
+panel.click_button_pin                       2.11!^            # click button
+panel.a0_pin                                 2.6               # st7565 needs an a0
+#panel.contrast                              8                 # override contrast setting (default is 9)
+#panel.encoder_resolution                    4                 # override number of clicks to move 1 item (default is 4)
+#panel.button_pause_pin                      1.22^             # kill/pause set one of these for the auxilliary button on viki2
+#panel.back_button_pin                       1.22!^            # back button recommended to use this on EXP1
+panel.buzz_pin                               0.25              # pin for buzzer on EXP2
+panel.red_led_pin                            2.8               # pin for red led on viki2 on EXP1
+panel.blue_led_pin                           4.29              # pin for blue led on viki2 on EXP1
+panel.external_sd                            true              # set to true if there is an extrernal sdcard on the panel
+panel.external_sd.spi_channel                0                 # set spi channel the sdcard is on
+panel.external_sd.spi_cs_pin                 1.23              # set spi chip select for the sdcard
+panel.external_sd.sdcd_pin                   1.31!^            # sd detect signal (set to nc if no sdcard detect)
 panel.menu_offset                            1                 # some panels will need 1 here
+
+# Example mini viki2 config
+#panel.lcd                                    mini_viki2        # set type of panel
+#panel.spi_channel                            0                 # set spi channel to use P0_18,P0_15 MOSI,SCLK
+#panel.spi_cs_pin                             0.16              # set spi chip select
+#panel.encoder_a_pin                          3.25!^            # encoder pin
+#panel.encoder_b_pin                          3.26!^            # encoder pin
+#panel.click_button_pin                       2.11!^            # click button
+#panel.a0_pin                                 2.6               # st7565 needs an a0
+##panel.contrast                               18                # override contrast setting (default is 18)
+##panel.encoder_resolution                     2                 # override number of clicks to move 1 item (default is 2)
+#panel.menu_offset                            1                 # here controls how sensitive the menu is. some panels will need 1
 
 panel.alpha_jog_feedrate                     6000              # x jogging feedrate in mm/min
 panel.beta_jog_feedrate                      6000              # y jogging feedrate in mm/min

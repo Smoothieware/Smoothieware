@@ -6,6 +6,11 @@
 #include <string>
 
 #include "libs/LPC17xx/sLPC17xx.h" // smoothed mbed.h lib
+#include "PinNames.h"
+
+namespace mbed {
+    class PwmOut;
+}
 
 class Pin {
     public:
@@ -15,6 +20,10 @@ class Pin {
 
         inline bool connected(){
             return this->pin < 32;
+        }
+
+        inline bool equals(const Pin& other) const {
+            return (this->pin == other.pin) && (this->port == other.port);
         }
 
         inline Pin* as_output(){
@@ -54,6 +63,8 @@ class Pin {
                 this->port->FIOCLR = 1 << this->pin;
         }
 
+        mbed::PwmOut *hardware_pwm();
+        
         LPC_GPIO_TypeDef* port;
         bool inverting;
         char port_number;

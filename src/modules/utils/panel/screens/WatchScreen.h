@@ -10,6 +10,8 @@
 
 #include "PanelScreen.h"
 
+#include <tuple>
+
 class WatchScreen : public PanelScreen
 {
 public:
@@ -21,27 +23,27 @@ public:
     void display_menu_line(uint16_t line);
 
 private:
-    void get_temp_data();
+    void get_current_status();
     float get_current_speed();
     void set_speed();
     void get_current_pos(float *cp);
     void get_sd_play_info();
     const char *get_status();
     const char *get_network();
+    void *getTemperatures(uint16_t heater_cs);
 
-    bool speed_changed;
-    bool issue_change_speed;
-    bool fan_state;
-    int hotendtemp;
-    int hotendtarget;
-    int bedtemp;
-    int bedtarget;
+    uint32_t update_counts;
     int current_speed;
     float pos[3];
     unsigned long elapsed_time;
     unsigned int sd_pcnt_played;
-
     char *ipstr;
+
+    struct {
+        bool speed_changed:1;
+        bool issue_change_speed:1;
+        bool fan_state:1;
+    };
 };
 
 #endif

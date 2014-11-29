@@ -30,6 +30,7 @@
 #include "gpio.h"
 
 #include "disk.h"
+#include "mbed.h"
 
 // #include "DMA.h"
 
@@ -59,6 +60,7 @@ public:
      * @param name The name used to access the virtual filesystem
      */
     SDCard(PinName, PinName, PinName, PinName);
+    virtual ~SDCard() {};
 
     typedef enum {
         SDCARD_FAIL,
@@ -79,8 +81,6 @@ public:
 
     CARD_TYPE card_type(void);
 
-    void on_main_loop(void);
-
     bool busy();
 
 protected:
@@ -99,7 +99,7 @@ protected:
     uint32_t _sd_sectors();
     uint32_t _sectors;
 
-    ::SPI _spi;
+    mbed::SPI _spi;
     GPIO _cs;
 
     volatile bool busyflag;

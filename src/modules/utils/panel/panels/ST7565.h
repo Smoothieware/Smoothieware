@@ -14,7 +14,7 @@
 
 class ST7565: public LcdBase {
 public:
-	ST7565();
+	ST7565(uint8_t v= 0);
 	virtual ~ST7565();
 	void home();
     void clear();
@@ -28,7 +28,7 @@ public:
 	//encoder which dosent exist :/
 	uint8_t readButtons();
 	int readEncoderDelta();
-	int getEncoderResolution() { return 2; }
+	int getEncoderResolution() { return is_viki2 ? 4 : 2; }
 	uint16_t get_screen_lines() { return 8; }
 	bool hasGraphics() { return true; }
 
@@ -48,7 +48,14 @@ public:
     void renderGlyph(int x, int y, const uint8_t *g, int pixelWidth, int pixelHeight);
     void pixel(int x, int y, int colour);
 
+    uint8_t getContrast() { return contrast; }
+    void setContrast(uint8_t c);
+
+    void buzz(long duration, uint16_t freq);
+    void setLed(int led, bool onoff);
+
 private:
+
     //buffer
 	unsigned char *framebuffer;
 	mbed::SPI* spi;
@@ -57,14 +64,24 @@ private:
 	Pin a0;
 	Pin click_pin;
 	Pin up_pin;
-	Pin down_pin;
+    Pin down_pin;
+    Pin buzz_pin;
+	Pin aux_pin;
     Pin encoder_a_pin;
     Pin encoder_b_pin;
+    Pin red_led;
+    Pin blue_led;
 
 	// text cursor position
 	uint8_t tx, ty;
     uint8_t contrast;
-    bool reversed;
+    struct {
+        bool reversed:1;
+        bool is_viki2:1;
+        bool is_mini_viki2:1;
+        bool use_pause:1;
+        bool use_back:1;
+    };
 };
 
 #endif /* ST7565_H_ */

@@ -251,6 +251,11 @@ uint8_t USBSerial::available()
     return rxbuf.available();
 }
 
+bool USBSerial::ready()
+{
+    return rxbuf.available();
+}
+
 void USBSerial::on_module_loaded()
 {
     this->register_for_event(ON_MAIN_LOOP);
@@ -268,7 +273,7 @@ void USBSerial::on_main_loop(void *argument)
         {
             attached = true;
             THEKERNEL->streams->append_stream(this);
-            writeBlock((const uint8_t *) "Smoothie\nok\n", 12);
+            puts("Smoothie\r\nok\r\n");
         }
         else
         {

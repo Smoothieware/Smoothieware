@@ -41,21 +41,11 @@ void Laser::on_module_loaded() {
     Pin* dummy_pin = new Pin();
     dummy_pin->from_string(THEKERNEL->config->value(laser_module_pin_checksum)->by_default("nc")->as_string())->as_output();
 
-    laser_pin = NULL;
-
-    // Get mBed-style pin from smoothie-style pin
-    if( dummy_pin->port_number == 2 ){
-        if( dummy_pin->pin == 0 ){ this->laser_pin = new mbed::PwmOut(p26); }
-        if( dummy_pin->pin == 1 ){ this->laser_pin = new mbed::PwmOut(p25); }
-        if( dummy_pin->pin == 2 ){ this->laser_pin = new mbed::PwmOut(p24); }
-        if( dummy_pin->pin == 3 ){ this->laser_pin = new mbed::PwmOut(p23); }
-        if( dummy_pin->pin == 4 ){ this->laser_pin = new mbed::PwmOut(p22); }
-        if( dummy_pin->pin == 5 ){ this->laser_pin = new mbed::PwmOut(p21); }
-    }
+    laser_pin = dummy_pin->hardware_pwm();
 
     if (laser_pin == NULL)
     {
-        THEKERNEL->streams->printf("Error: Laser cannot use P%d.%d (P2.0 - P2.5 only). Laser module disabled.\n", dummy_pin->port_number, dummy_pin->pin);
+        THEKERNEL->streams->printf("Error: Laser cannot use P%d.%d (P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P2.26 only). Laser module disabled.\n", dummy_pin->port_number, dummy_pin->pin);
         delete dummy_pin;
         delete this;
         return;

@@ -16,6 +16,7 @@ class FileScreen : public PanelScreen {
     public:
         FileScreen();
         void on_enter();
+        void on_exit();
         void on_refresh();
         void on_main_loop();
         void clicked_line(uint16_t line);
@@ -23,9 +24,8 @@ class FileScreen : public PanelScreen {
 
     private:
         void enter_folder(const char *folder);
-        bool is_a_folder(const char *path );
         uint16_t count_folder_content();
-        std::string file_at(uint16_t line);
+        std::string file_at(uint16_t line, bool& isdir);
         bool filter_file(const char *f);
         void play(const char *path);
 
