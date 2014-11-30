@@ -106,6 +106,7 @@ void StepperMotor::signal_move_finished()
     // We only need to do this if we were not instructed to move
     if( this->moving == false ) {
         this->update_exit_tick();
+        this->fx_counter = 0; // so it starts at zero next time we activate it, as we won't be getting any more ticks until then
     }
 
     this->is_move_finished = false;

@@ -22,7 +22,6 @@
 extern GPIO stepticker_debug_pin;
 #endif
 
-extern bool _isr_context;
 
 // StepTicker handles the base frequency ticking for the Stepper Motors / Actuators
 // It has a list of those, and calls their tick() functions at regular intervals
@@ -45,12 +44,11 @@ StepTicker::StepTicker(){
 
     // Default start values
     this->a_move_finished = false;
-    this->do_move_finished = false;
+    this->do_move_finished = 0;
     this->reset_step_pins = false;
     this->set_frequency(100000);
     this->set_reset_delay(100);
     this->set_acceleration_ticks_per_second(1000);
-    this->last_duration = 0;
     this->num_motors= 0;
     this->active_motor.reset();
     this->acceleration_tick_cnt= 0;
@@ -88,9 +86,7 @@ void StepTicker::set_acceleration_ticks_per_second(uint32_t acceleration_ticks_p
 // Call signal_move_finished() on each active motor that asked to be signaled. We do this instead of inside of tick() so that
 // all tick()s are called before we do the move finishing
 void StepTicker::signal_a_move_finished(){
-    _isr_context = true;
-
-    for (int motor = 0; motor < num_motors; motor++){
+     for (int motor = 0; motor < num_motors; motor++){
         if (this->active_motor[motor] && this->motor[motor]->is_move_finished){
             this->motor[motor]->signal_move_finished();
                 // Theoretically this does nothing and the reason for it is currently unknown and/or forgotten
@@ -102,20 +98,14 @@ void StepTicker::signal_a_move_finished(){
                 // }
         }
     }
-
-    _isr_context = false;
 }
 
 // Reset step pins on all active motors
 inline void StepTicker::reset_tick(){
-    _isr_context = true;
-
     for (int i = 0; i < num_motors; i++) {
         if(this->active_motor[i])
             this->motor[i]->unstep();
     }
-
-    _isr_context = false;
 }
 
 extern "C" void TIMER1_IRQHandler (void){
@@ -136,8 +126,8 @@ extern "C" void PendSV_Handler(void) {
 // also handles the acceleration tick
 void StepTicker::PendSV_IRQHandler (void) {
 
-    if(this->do_move_finished) {
-        this->do_move_finished= false;
+    if(this->do_move_finished.load() > 0) {
+        this->do_move_finished--;
 
         #ifdef STEPTICKER_DEBUG_PIN
         stepticker_debug_pin= 1;
@@ -162,7 +152,6 @@ void StepTicker::PendSV_IRQHandler (void) {
 void StepTicker::TIMER0_IRQHandler (void){
     // Reset interrupt register
     LPC_TIM0->IR |= 1 << 0;
-    LPC_TIM0->MR0 = this->period;
 
     // Step pins
     for (uint32_t motor = 0; motor < num_motors; motor++){
@@ -186,11 +175,11 @@ void StepTicker::TIMER0_IRQHandler (void){
 
     if(this->a_move_finished) {
         this->a_move_finished = false;
-        this->do_move_finished= 1;
+        this->do_move_finished++;
     }
 
     // If a move finished in this tick, we have to tell the actuator to act accordingly
-    if(this->do_move_finished || this->do_acceleration_tick){
+    if(this->do_move_finished.load()  > 0 || this->do_acceleration_tick){
         // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
         //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
         SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;

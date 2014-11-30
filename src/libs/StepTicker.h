@@ -14,6 +14,7 @@
 #include <vector>
 #include <bitset>
 #include <functional>
+#include <atomic>
 
 class StepperMotor;
 
@@ -44,20 +45,16 @@ class StepTicker{
         float frequency;
         uint32_t delay;
         uint32_t period;
-        uint32_t last_duration;
         uint32_t acceleration_tick_period;
         uint32_t acceleration_tick_cnt;
         std::vector<std::function<void(void)>> acceleration_tick_handlers;
         std::vector<StepperMotor*> motor;
         std::bitset<32> active_motor; // limit to 32 motors
-        struct {
-            uint8_t num_motors:5;
-            volatile bool a_move_finished:1;
-            volatile bool do_move_finished:1;
-            volatile bool do_acceleration_tick:1;
-            bool reset_step_pins:1;
-        };
-
+        std::atomic_uchar do_move_finished;
+        uint8_t num_motors:5;
+        volatile bool a_move_finished;
+        volatile bool do_acceleration_tick;
+        volatile bool reset_step_pins;
 };
 
 
