@@ -20,7 +20,6 @@
 #include "libs/Pin.h"
 #include "Gcode.h"
 #include "PwmOut.h" // mbed.h lib
-#include "AnalogOut.h" // mbed.h lib
 
 #define laser_module_enable_checksum        CHECKSUM("laser_module_enable")
 #define laser_module_pin_checksum           CHECKSUM("laser_module_pin")
@@ -42,15 +41,9 @@ void Laser::on_module_loaded() {
     Pin* dummy_pin = new Pin();
     dummy_pin->from_string(THEKERNEL->config->value(laser_module_pin_checksum)->by_default("nc")->as_string())->as_output();
 
-
     laser_pin = dummy_pin->hardware_pwm();
 
-    if( dummy_pin->port_number == 0 && dummy_pin->pin == 26 ){
-        this->laser_pin.dac = new mbed::AnalogOut(p18);
-        this->laser_control_type_pwm = false;
-    }
-
-    if (laser_pin.pwm == NULL)
+    if (laser_pin == NULL)
     {
         THEKERNEL->streams->printf("Error: Laser cannot use P%d.%d (P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P2.26 only). Laser module disabled.\n", dummy_pin->port_number, dummy_pin->pin);
         delete dummy_pin;
@@ -58,16 +51,13 @@ void Laser::on_module_loaded() {
         return;
     }
 
+    this->laser_inverting = dummy_pin->inverting;
+
     delete dummy_pin;
     dummy_pin = NULL;
 
-    if( this->laser_control_type_pwm ){
-        this->laser_pin.pwm->period_us(THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number());
-        this->laser_pin.pwm->write(this->laser_inverting ? 1 : 0);
-    }
-    else{
-        this->laser_pin.dac->write(this->laser_inverting ? 1.0f : 0.0f);
-    }
+    this->laser_pin->period_us(THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number());
+    this->laser_pin->write(this->laser_inverting ? 1 : 0);
 
     this->laser_max_power =    THEKERNEL->config->value(laser_module_max_power_checksum   )->by_default(0.8f)->as_number() ;
     this->laser_tickle_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0   )->as_number() ;
@@ -77,19 +67,13 @@ void Laser::on_module_loaded() {
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_PLAY);
     this->register_for_event(ON_PAUSE);
-    this->register_for_event(ON_HALT);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
 }
 
 // Turn laser off laser at the end of a move
 void  Laser::on_block_end(void* argument){
-    if( this->laser_control_type_pwm ){
-        this->laser_pin.pwm->write(this->laser_inverting ? 1 : 0);
-    }
-    else{
-        this->laser_pin.dac->write(this->laser_inverting ? 1.0f : 0.0f);
-    }
+    this->laser_pin->write(this->laser_inverting ? 1 : 0);
 }
 
 // Set laser power at the beginning of a block
@@ -99,22 +83,7 @@ void Laser::on_block_begin(void* argument){
 
 // When the play/pause button is set to pause, or a module calls the ON_PAUSE event
 void Laser::on_pause(void* argument){
-    if( this->laser_control_type_pwm ){
-        this->laser_pin.pwm->write(this->laser_inverting ? 1 : 0);
-    }
-    else{
-        this->laser_pin.dac->write(this->laser_inverting ? 1.0f : 0.0f);
-    }
-}
-
-// when a print is aborted or a module calls the ON_HALT event
-void Laser::on_halt(void* argument){
-    if( this->laser_control_type_pwm ){
-        this->laser_pin.pwm->write(this->laser_inverting ? 1 : 0);
-    }
-    else{
-        this->laser_pin.dac->write(this->laser_inverting ? 1.0f : 0.0f);
-    }
+    this->laser_pin->write(this->laser_inverting ? 1 : 0);
 }
 
 // When the play/pause button is set to play, or a module calls the ON_PLAY event
@@ -129,12 +98,7 @@ void Laser::on_gcode_execute(void* argument){
     if( gcode->has_g){
         int code = gcode->g;
         if( code == 0 ){                    // G0
-            if( this->laser_control_type_pwm ){
-                this->laser_pin.pwm->write(this->laser_inverting ? 1 - this->laser_tickle_power : this->laser_tickle_power);
-            }
-            else{
-                this->laser_pin.dac->write(this->laser_inverting ? 1.0f - this->laser_tickle_power : this->laser_tickle_power);
-            }
+            this->laser_pin->write(this->laser_inverting ? 1 - this->laser_tickle_power : this->laser_tickle_power);
             this->laser_on =  false;
         }else if( code >= 1 && code <= 3 ){ // G1, G2, G3
             this->laser_on =  true;
@@ -158,10 +122,6 @@ void Laser::set_proportional_power(){
     if( this->laser_on && THEKERNEL->stepper->get_current_block() ){
         // adjust power to maximum power and actual velocity
         float proportional_power = float(float(this->laser_max_power) * float(THEKERNEL->stepper->get_trapezoid_adjusted_rate()) / float(THEKERNEL->stepper->get_current_block()->nominal_rate));
-        if (this->laser_inverting) {
-            proportional_power = 1 - proportional_power;
-        }
-        if( this->laser_control_type_pwm ){ this->laser_pin.pwm->write(proportional_power); }
-        else{ this->laser_pin.dac->write(proportional_power); }
+        this->laser_pin->write(this->laser_inverting ? 1 - proportional_power : proportional_power);
     }
 }
