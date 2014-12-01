@@ -44,6 +44,8 @@ Config::Config()
         fcs = new FileConfigSource("/sd/config", "sd");
     else if( file_exists("/sd/config.txt") )
         fcs = new FileConfigSource("/sd/config.txt", "sd");
+    else if( file_exists("/sd/.config") )
+        fcs = new FileConfigSource("/sd/.config", "sd");
     if( fcs != NULL )
         this->config_sources.push_back( fcs );
 }
