@@ -11,6 +11,7 @@ using namespace std;
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "SlowTicker.h"
+#include "StepTicker.h"
 #include "libs/Hook.h"
 #include "modules/robot/Conveyor.h"
 #include "Pauser.h"
@@ -125,6 +126,8 @@ bool SlowTicker::flag_1s(){
 extern GPIO leds[];
 void SlowTicker::on_idle(void*)
 {
+    THEKERNEL->step_ticker->run_acceleration_tick_when_ready();
+
     static uint16_t ledcnt= 0;
     if(THEKERNEL->use_leds) {
         // flash led 3 to show we are alive

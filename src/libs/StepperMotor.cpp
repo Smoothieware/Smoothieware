@@ -41,7 +41,7 @@ void StepperMotor::init()
     this->moving = false;
     this->paused = false;
     this->fx_counter = 0;
-    this->fx_ticks_per_step = 0xFFFFF00000000000ULL; // some big number so we don't start stepping before it is set
+    this->fx_ticks_per_step = 0xFFFFF000UL; // some big number so we don't start stepping before it is set
     this->stepped = 0;
     this->steps_to_move = 0;
     this->is_move_finished = false;
@@ -57,22 +57,19 @@ void StepperMotor::init()
 
 
 // This is called ( see the .h file, we had to put a part of things there for obscure inline reasons ) when a step has to be generated
-// we also here check if the move is finished etc ...
+// we also here check if the move is finished etc ..
+// Thi sis in highest priority interrupt so cannot be pre-empted
 void StepperMotor::step()
 {
     // we can't do anything until the next move has been processed, but we will be able to offset the time by shortening the next step
-    if(this->is_move_finished) return;
+    if(!this->moving) return;
 
     // output to pins 37t
     this->step_pin.set( 1 );
     THEKERNEL->step_ticker->reset_step_pins = true;
 
     // move counter back 11t
-    if(this->fx_counter > this->fx_ticks_per_step) {
-        this->fx_counter -= this->fx_ticks_per_step;
-    }else{
-        this->fx_counter= 0; // can't make it less than 0 as it is a uint, unless we get interrupted I don't think this case is possible
-    }
+    this->fx_counter -= this->fx_ticks_per_step;
 
     // we have moved a step 9t
     this->stepped++;
@@ -85,9 +82,9 @@ void StepperMotor::step()
         // Mark it as finished, then StepTicker will call signal_mode_finished()
         // This is so we don't call that before all the steps have been generated for this tick()
         this->is_move_finished = true;
-        THEKERNEL->step_ticker->a_move_finished = true;
+        THEKERNEL->step_ticker->a_move_finished= true;
         this->fx_counter = 0;      // set this to zero here so we don't miss any for next move
-        this->fx_ticks_per_step = 0xFFFFF00000000000ULL; // some big number so we don't start stepping before it is set again
+        this->fx_ticks_per_step = 0xFFFFF000UL; // some big number so we don't start stepping before it is set again
     }
 }
 
@@ -104,6 +101,7 @@ void StepperMotor::signal_move_finished()
     this->end_hook->call();
 
     // We only need to do this if we were not instructed to move
+    // FIXME trouble here is that if this stops first but other axis are still going we will now stop getting ticks so we cannot know how long we were delayed
     if( this->moving == false ) {
         this->update_exit_tick();
         this->fx_counter = 0; // so it starts at zero next time we activate it, as we won't be getting any more ticks until then
@@ -147,45 +145,27 @@ void StepperMotor::move( bool direction, unsigned int steps, float initial_speed
     this->update_exit_tick();
 }
 
-// this is called to set the step rate based on this blocks rate, we use this instead of set_speed for coordinated moves
-// so that we can floor to a minimum speed which is proportional for all axis. the minimum step rate is set at the start
-// of each block based on the slowest axis of all coordinated axis.
-// the rate passed in is the requested rate, it is scaled for this motor based on steps_to_move and block_steps_event_count
-void StepperMotor::set_step_rate(float requested_rate, uint32_t block_steps_event_count)
-{
-    float rate= requested_rate * ((float)steps_to_move / (float)block_steps_event_count);
-    if(rate < minimum_step_rate) {
-        rate= minimum_step_rate;
-    }
-    set_speed(rate);
-}
-
 // Set the speed at which this stepper moves in steps/sec, should be called set_step_rate()
-// we need to make sure that we have a minimum speed here and that it fits the 64bit fixed point fx counters
+// we need to make sure that we have a minimum speed here and that it fits the 32bit fixed point fx counters
 // Note nothing will really ever go as slow as the minimum speed here, it is just forced to avoid bad errors
-// fx_ticks_per_step is what actually sets the step rate, it is fixed point 32.32
+// fx_ticks_per_step is what actually sets the step rate, it is fixed point 18.14
 void StepperMotor::set_speed( float speed )
 {
-    if(speed <= 0.0F) { // we can't actually do 0 but we can get close, need to avoid divide by zero later on
-        this->fx_ticks_per_step= 0xFFFFF00000000000ULL; // that is 4,294,963,200 10us ticks which is ~11.9 hours for 1 step
-        this->steps_per_second = THEKERNEL->step_ticker->frequency / (this->fx_ticks_per_step>>fx_shift);
-        return;
+    if(speed < minimum_step_rate) {
+        speed= minimum_step_rate;
     }
+
+    // if(speed <= 0.0F) { // we can't actually do 0 but we can get close, need to avoid divide by zero later on
+    //     this->fx_ticks_per_step= 0xFFFFFFFFUL; // 0.381 steps/sec
+    //     this->steps_per_second = THEKERNEL->step_ticker->get_frequency() / (this->fx_ticks_per_step >> fx_shift);
+    //     return;
+    // }
 
     // How many steps we must output per second
     this->steps_per_second = speed;
 
-    // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64
-    // we need to use double here to match the 64bit resolution of the ticker
-    double ticks_per_step = (double)THEKERNEL->step_ticker->frequency / speed;
-    if(ticks_per_step > 0xFFFFF000UL) { // maximum we can really do and allow a few overflow steps
-        ticks_per_step= 0xFFFFF000UL;
-        this->steps_per_second = THEKERNEL->step_ticker->frequency / ticks_per_step;
-    }
-    double double_fx_ticks_per_step = fx_increment * ticks_per_step;
-
-    // set the new speed
-    this->fx_ticks_per_step = floor(double_fx_ticks_per_step);
+    // set the new speed, NOTE this can be pre-empted by stepticker so the following write needs to be atomic
+    this->fx_ticks_per_step= floor(fx_increment * THEKERNEL->step_ticker->get_frequency() / speed);
 }
 
 // Pause this stepper motor

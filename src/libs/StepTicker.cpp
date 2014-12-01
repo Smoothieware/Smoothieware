@@ -128,7 +128,6 @@ void StepTicker::PendSV_IRQHandler (void) {
 
     if(this->do_move_finished.load() > 0) {
         this->do_move_finished--;
-
         #ifdef STEPTICKER_DEBUG_PIN
         stepticker_debug_pin= 1;
         #endif
@@ -140,6 +139,17 @@ void StepTicker::PendSV_IRQHandler (void) {
         #endif
     }
 
+    // if(this->do_acceleration_tick) {
+    //     this->do_acceleration_tick= false;
+    //     // call registered acceleration handlers
+    //     for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
+    //         acceleration_tick_handlers[i]();
+    //     }
+    // }
+}
+
+// run in DO_IDLE from SlowTicker.cpp
+void  StepTicker::run_acceleration_tick_when_ready() {
     if(this->do_acceleration_tick) {
         this->do_acceleration_tick= false;
         // call registered acceleration handlers
@@ -153,7 +163,7 @@ void StepTicker::TIMER0_IRQHandler (void){
     // Reset interrupt register
     LPC_TIM0->IR |= 1 << 0;
 
-    // Step pins
+    // Step pins NOTE takes 1.2us when nothing to step, 1.8-2us for one motor stepped and 2.6us when two motors stepped, 3.167us when three motors stepped
     for (uint32_t motor = 0; motor < num_motors; motor++){
         if (this->active_motor[motor]){
             this->motor[motor]->tick();
@@ -167,19 +177,19 @@ void StepTicker::TIMER0_IRQHandler (void){
         this->reset_step_pins = false;
     }
 
-    // do an acceleration tick, after we have done everything else
+    // do an acceleration tick, after we have done everything else (run in ON_IDLE)
     if(++this->acceleration_tick_cnt >= this->acceleration_tick_period) {
         this->acceleration_tick_cnt= 0;
         this->do_acceleration_tick= true;
     }
 
     if(this->a_move_finished) {
-        this->a_move_finished = false;
-        this->do_move_finished++;
+        this->a_move_finished= false;
+        this->do_move_finished++; // Note this is an atomic variable because it is updated in two interrupts of different priorities so can be pre-empted
     }
 
     // If a move finished in this tick, we have to tell the actuator to act accordingly
-    if(this->do_move_finished.load()  > 0 || this->do_acceleration_tick){
+    if(this->do_move_finished.load() > 0){
         // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
         //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
         SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;

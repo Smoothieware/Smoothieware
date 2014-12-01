@@ -20,7 +20,6 @@ class StepperMotor;
 
 class StepTicker{
     public:
-        friend class StepperMotor;
         static StepTicker* global_step_ticker;
 
         StepTicker();
@@ -32,7 +31,7 @@ class StepTicker{
         void add_motor_to_active_list(StepperMotor* motor);
         void remove_motor_from_active_list(StepperMotor* motor);
         void set_acceleration_ticks_per_second(uint32_t acceleration_ticks_per_second);
-
+        float get_frequency() const { return frequency; }
         void reset_tick();
         void TIMER0_IRQHandler (void);
         void PendSV_IRQHandler (void);
@@ -40,6 +39,9 @@ class StepTicker{
         void register_acceleration_tick_handler(std::function<void(void)> cb){
             acceleration_tick_handlers.push_back(cb);
         }
+        void run_acceleration_tick_when_ready();
+
+        friend class StepperMotor;
 
     private:
         float frequency;
@@ -51,7 +53,7 @@ class StepTicker{
         std::vector<StepperMotor*> motor;
         std::bitset<32> active_motor; // limit to 32 motors
         std::atomic_uchar do_move_finished;
-        uint8_t num_motors:5;
+        uint8_t num_motors;
         volatile bool a_move_finished;
         volatile bool do_acceleration_tick;
         volatile bool reset_step_pins;

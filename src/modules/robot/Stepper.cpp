@@ -199,7 +199,6 @@ void Stepper::on_block_end(void *argument)
 // When a stepper motor has finished it's assigned movement
 uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
 {
-
     // We care only if none is still moving
     if( THEKERNEL->robot->alpha_stepper_motor->moving || THEKERNEL->robot->beta_stepper_motor->moving || THEKERNEL->robot->gamma_stepper_motor->moving ) {
         return 0;
@@ -289,15 +288,17 @@ inline void Stepper::trapezoid_generator_reset()
 // Update the speed for all steppers
 void Stepper::set_step_events_per_second( float steps_per_second )
 {
+    float isps= steps_per_second / this->current_block->steps_event_count;
+
     // Instruct the stepper motors
     if( THEKERNEL->robot->alpha_stepper_motor->moving ) {
-        THEKERNEL->robot->alpha_stepper_motor->set_step_rate(steps_per_second, this->current_block->steps_event_count);
+        THEKERNEL->robot->alpha_stepper_motor->set_speed(isps * this->current_block->steps[ALPHA_STEPPER]);
     }
     if( THEKERNEL->robot->beta_stepper_motor->moving  ) {
-        THEKERNEL->robot->beta_stepper_motor->set_step_rate(steps_per_second, this->current_block->steps_event_count);
+        THEKERNEL->robot->beta_stepper_motor->set_speed(isps * this->current_block->steps[BETA_STEPPER]);
     }
     if( THEKERNEL->robot->gamma_stepper_motor->moving ) {
-        THEKERNEL->robot->gamma_stepper_motor->set_step_rate(steps_per_second , this->current_block->steps_event_count);
+        THEKERNEL->robot->gamma_stepper_motor->set_speed(isps * this->current_block->steps[GAMMA_STEPPER]);
     }
 
     // Other modules might want to know the speed changed

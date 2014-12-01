@@ -10,6 +10,7 @@
 
 #include "libs/Hook.h"
 #include "Pin.h"
+#include <atomic>
 
 class StepTicker;
 class Hook;
@@ -30,7 +31,6 @@ class StepperMotor {
         void move( bool direction, unsigned int steps, float initial_speed= -1.0F);
         void signal_move_finished();
         void set_speed( float speed );
-        void set_step_rate(float requested_rate, uint32_t block_steps_event_count);
 
         void update_exit_tick();
         void pause();
@@ -85,11 +85,11 @@ class StepperMotor {
         uint32_t steps_to_move;
         uint32_t stepped;
 
-        // set to 64 bit fixed point, 32:32 bits fractional
-        static const uint32_t fx_shift= 32;
-        static const uint64_t fx_increment= ((uint64_t)1<<fx_shift);
-        volatile uint64_t fx_counter;
-        volatile uint64_t fx_ticks_per_step;
+        // set to 32 bit fixed point, 18:14 bits fractional
+        static const uint32_t fx_shift= 14;
+        static const uint32_t fx_increment= ((uint64_t)1<<fx_shift);
+        uint32_t fx_counter;
+        uint32_t fx_ticks_per_step;
 
         struct {
             bool direction:1;
@@ -100,10 +100,10 @@ class StepperMotor {
 
         // Called a great many times per second, to step if we have to now
         inline void tick() {
-            // increase the ( 64 fixed point 32:32 ) counter by one tick 11t
+            // increase the ( 32 fixed point 18:14 ) counter by one tick 11t
             fx_counter += fx_increment;
 
-            // if we are to step now 10t
+            // if we are to step now
             if (fx_counter >= fx_ticks_per_step)
                 step();
         };
