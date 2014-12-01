@@ -116,11 +116,13 @@ void FileScreen::clicked_line(uint16_t line)
     }
 }
 
-// only filter files that have a .g in them
+// only filter files that have a .g, .ngc or .nc in them
 bool FileScreen::filter_file(const char *f)
 {
     string fn= lc(f);
-    return (fn.find(".g") != string::npos);
+    return (fn.find(".g") != string::npos) ||
+           (fn.find(".ngc") != string::npos) ||
+           (fn.find(".nc") != string::npos);
 }
 
 // Find the "line"th file in the current folder
