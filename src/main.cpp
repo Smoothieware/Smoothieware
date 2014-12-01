@@ -29,6 +29,7 @@
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "StepTicker.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/nuts_bolts.h"
@@ -229,6 +230,8 @@ void init() {
             fclose(fp);
         }
     }
+
+    THEKERNEL->step_ticker->start();
 }
 
 int main()

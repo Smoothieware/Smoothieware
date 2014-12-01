@@ -39,7 +39,8 @@ class StepTicker{
         void register_acceleration_tick_handler(std::function<void(void)> cb){
             acceleration_tick_handlers.push_back(cb);
         }
-        void run_acceleration_tick_when_ready();
+        void acceleration_tick();
+        void start();
 
         friend class StepperMotor;
 

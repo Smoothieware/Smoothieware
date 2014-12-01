@@ -42,6 +42,17 @@ StepTicker::StepTicker(){
     LPC_TIM1->MCR = 1;
     LPC_TIM1->TCR = 1;              // Enable interrupt
 
+    // Setup RIT timer
+    LPC_SC->PCONP |= (1L<<16); // RIT Power
+    LPC_SC->PCLKSEL1 &= ~(3L << 26); // Clear PCLK_RIT bits;
+    LPC_SC->PCLKSEL1 |=  (1L << 26); // Set PCLK_RIT bits to 0x01;
+    LPC_RIT->RICOMPVAL = (uint32_t)(((SystemCoreClock / 1000000L) * 1000)-1); // 1ms period
+    LPC_RIT->RICOUNTER = 0;
+    // Set counter clear/reset after interrupt
+    LPC_RIT->RICTRL |= (2L); //RITENCLR
+    LPC_RIT->RICTRL &= ~(8L); // disable
+    //NVIC_SetVector(RIT_IRQn, (uint32_t)&_ritisr);
+
     // Default start values
     this->a_move_finished = false;
     this->do_move_finished = 0;
@@ -53,12 +64,16 @@ StepTicker::StepTicker(){
     this->active_motor.reset();
     this->acceleration_tick_cnt= 0;
     this->do_acceleration_tick= false;
-
-    NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
-    NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
 }
 
 StepTicker::~StepTicker() {
+}
+
+//called when everythinf is setup and interrupts can start
+void StepTicker::start() {
+    NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
+    NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
+    NVIC_EnableIRQ(RIT_IRQn);
 }
 
 // Set the base stepping frequency
@@ -78,9 +93,13 @@ void StepTicker::set_reset_delay( float seconds ){
     LPC_TIM1->MR0 = this->delay;
 }
 
-// this is the number of stepper ticks (100,000/sec) per acceleration tick
+// this is the number of acceleration ticks per second
 void StepTicker::set_acceleration_ticks_per_second(uint32_t acceleration_ticks_per_second) {
     this->acceleration_tick_period= floorf(this->frequency/acceleration_ticks_per_second);
+    uint32_t us= roundf(1000000.0F/acceleration_ticks_per_second); // period in microseconds
+    LPC_RIT->RICOMPVAL = (uint32_t)(((SystemCoreClock / 1000000L) * us)-1); // us
+    LPC_RIT->RICOUNTER = 0;
+    LPC_RIT->RICTRL |= (8L); // Enable rit
 }
 
 // Call signal_move_finished() on each active motor that asked to be signaled. We do this instead of inside of tick() so that
@@ -118,12 +137,16 @@ extern "C" void TIMER0_IRQHandler (void){
     StepTicker::global_step_ticker->TIMER0_IRQHandler();
 }
 
+extern "C" void RIT_IRQHandler (void){
+    LPC_RIT->RICTRL |= 1L;
+    StepTicker::global_step_ticker->acceleration_tick();
+}
+
 extern "C" void PendSV_Handler(void) {
     StepTicker::global_step_ticker->PendSV_IRQHandler();
 }
 
 // slightly lower priority than TIMER0, the whole end of block/start of block is done here allowing the timer to continue ticking
-// also handles the acceleration tick
 void StepTicker::PendSV_IRQHandler (void) {
 
     if(this->do_move_finished.load() > 0) {
@@ -148,15 +171,14 @@ void StepTicker::PendSV_IRQHandler (void) {
     // }
 }
 
-// run in DO_IDLE from SlowTicker.cpp
-void  StepTicker::run_acceleration_tick_when_ready() {
-    if(this->do_acceleration_tick) {
-        this->do_acceleration_tick= false;
-        // call registered acceleration handlers
-        for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
-            acceleration_tick_handlers[i]();
-        }
+// run in RIT
+void  StepTicker::acceleration_tick() {
+    //stepticker_debug_pin= 1;
+    // call registered acceleration handlers
+    for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
+        acceleration_tick_handlers[i]();
     }
+    //stepticker_debug_pin= 0;
 }
 
 void StepTicker::TIMER0_IRQHandler (void){
@@ -178,10 +200,10 @@ void StepTicker::TIMER0_IRQHandler (void){
     }
 
     // do an acceleration tick, after we have done everything else (run in ON_IDLE)
-    if(++this->acceleration_tick_cnt >= this->acceleration_tick_period) {
-        this->acceleration_tick_cnt= 0;
-        this->do_acceleration_tick= true;
-    }
+    // if(++this->acceleration_tick_cnt >= this->acceleration_tick_period) {
+    //     this->acceleration_tick_cnt= 0;
+    //     this->do_acceleration_tick= true;
+    // }
 
     if(this->a_move_finished) {
         this->a_move_finished= false;

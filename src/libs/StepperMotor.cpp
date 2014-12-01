@@ -62,7 +62,7 @@ void StepperMotor::init()
 void StepperMotor::step()
 {
     // we can't do anything until the next move has been processed, but we will be able to offset the time by shortening the next step
-    if(!this->moving) return;
+    if(this->is_move_finished || !this->moving) return;
 
     // output to pins 37t
     this->step_pin.set( 1 );
@@ -83,8 +83,6 @@ void StepperMotor::step()
         // This is so we don't call that before all the steps have been generated for this tick()
         this->is_move_finished = true;
         THEKERNEL->step_ticker->a_move_finished= true;
-        this->fx_counter = 0;      // set this to zero here so we don't miss any for next move
-        this->fx_ticks_per_step = 0xFFFFF000UL; // some big number so we don't start stepping before it is set again
     }
 }
 
@@ -93,6 +91,8 @@ void StepperMotor::step()
 void StepperMotor::signal_move_finished()
 {
     // work is done ! 8t
+    this->fx_counter = 0;      // set this to zero here so we don't miss any for next move
+    this->fx_ticks_per_step = 0xFFFFF000UL; // some big number so we don't start stepping before it is set again
     this->moving = false;
     this->steps_to_move = 0;
     this->minimum_step_rate = default_minimum_actuator_rate;
@@ -104,7 +104,6 @@ void StepperMotor::signal_move_finished()
     // FIXME trouble here is that if this stops first but other axis are still going we will now stop getting ticks so we cannot know how long we were delayed
     if( this->moving == false ) {
         this->update_exit_tick();
-        this->fx_counter = 0; // so it starts at zero next time we activate it, as we won't be getting any more ticks until then
     }
 
     this->is_move_finished = false;
@@ -114,11 +113,10 @@ void StepperMotor::signal_move_finished()
 void StepperMotor::update_exit_tick()
 {
     if( !this->moving || this->paused || this->steps_to_move == 0 ) {
-        // We must exit tick() after setting the pins, no bresenham is done
+        // No more ticks will be recieved and no more events from StepTicker
         THEKERNEL->step_ticker->remove_motor_from_active_list(this);
     } else {
-        // We must do the bresenham in tick()
-        // We have to do this or there could be a bug where the removal still happens when it doesn't need to
+        // we will now get ticks and StepTIcker will send us events
         THEKERNEL->step_ticker->add_motor_to_active_list(this);
     }
 }
