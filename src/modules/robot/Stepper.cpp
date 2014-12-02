@@ -162,29 +162,34 @@ void Stepper::on_block_begin(void *argument)
     }
 
     // Setup : instruct stepper motors to move
+    // Find the stepper with the more steps, it's the one the speed calculations will want to follow
+    this->main_stepper= nullptr;
     if( block->steps[ALPHA_STEPPER] > 0 ) {
-        THEKERNEL->robot->alpha_stepper_motor->move( block->direction_bits[ALPHA_STEPPER], block->steps[ALPHA_STEPPER]);
+        THEKERNEL->robot->alpha_stepper_motor->move( block->direction_bits[ALPHA_STEPPER], block->steps[ALPHA_STEPPER])->set_moved_last_block(true);
+        this->main_stepper = THEKERNEL->robot->alpha_stepper_motor;
+    }else{
+        THEKERNEL->robot->alpha_stepper_motor->set_moved_last_block(false);
     }
+
     if( block->steps[BETA_STEPPER ] > 0 ) {
-        THEKERNEL->robot->beta_stepper_motor->move(  block->direction_bits[BETA_STEPPER], block->steps[BETA_STEPPER ]);
+        THEKERNEL->robot->beta_stepper_motor->move(  block->direction_bits[BETA_STEPPER], block->steps[BETA_STEPPER ])->set_moved_last_block(true);
+        if(this->main_stepper == nullptr || THEKERNEL->robot->beta_stepper_motor->get_steps_to_move() > this->main_stepper->get_steps_to_move())
+            this->main_stepper = THEKERNEL->robot->beta_stepper_motor;
+    }else{
+        THEKERNEL->robot->beta_stepper_motor->set_moved_last_block(false);
     }
     if( block->steps[GAMMA_STEPPER] > 0 ) {
-        THEKERNEL->robot->gamma_stepper_motor->move( block->direction_bits[GAMMA_STEPPER], block->steps[GAMMA_STEPPER]);
+        THEKERNEL->robot->gamma_stepper_motor->move( block->direction_bits[GAMMA_STEPPER], block->steps[GAMMA_STEPPER])->set_moved_last_block(true);
+        if(this->main_stepper == nullptr || THEKERNEL->robot->gamma_stepper_motor->get_steps_to_move() > this->main_stepper->get_steps_to_move())
+            this->main_stepper = THEKERNEL->robot->gamma_stepper_motor;
+    }else{
+        THEKERNEL->robot->gamma_stepper_motor->set_moved_last_block(false);
     }
 
     this->current_block = block;
 
     // Setup acceleration for this block
     this->trapezoid_generator_reset();
-
-    // Find the stepper with the more steps, it's the one the speed calculations will want to follow
-    this->main_stepper = THEKERNEL->robot->alpha_stepper_motor;
-    if( THEKERNEL->robot->beta_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ) {
-        this->main_stepper = THEKERNEL->robot->beta_stepper_motor;
-    }
-    if( THEKERNEL->robot->gamma_stepper_motor->steps_to_move > this->main_stepper->steps_to_move ) {
-        this->main_stepper = THEKERNEL->robot->gamma_stepper_motor;
-    }
 
     // Set the initial speed for this move
     this->trapezoid_generator_tick();

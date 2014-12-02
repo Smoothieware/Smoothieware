@@ -62,8 +62,7 @@ StepTicker::StepTicker(){
     this->set_acceleration_ticks_per_second(1000);
     this->num_motors= 0;
     this->active_motor.reset();
-    this->acceleration_tick_cnt= 0;
-    this->do_acceleration_tick= false;
+    this->tick_cnt= 0;
 }
 
 StepTicker::~StepTicker() {
@@ -95,7 +94,6 @@ void StepTicker::set_reset_delay( float seconds ){
 
 // this is the number of acceleration ticks per second
 void StepTicker::set_acceleration_ticks_per_second(uint32_t acceleration_ticks_per_second) {
-    this->acceleration_tick_period= floorf(this->frequency/acceleration_ticks_per_second);
     uint32_t us= roundf(1000000.0F/acceleration_ticks_per_second); // period in microseconds
     LPC_RIT->RICOMPVAL = (uint32_t)(((SystemCoreClock / 1000000L) * us)-1); // us
     LPC_RIT->RICOUNTER = 0;
@@ -161,17 +159,9 @@ void StepTicker::PendSV_IRQHandler (void) {
         stepticker_debug_pin= 0;
         #endif
     }
-
-    // if(this->do_acceleration_tick) {
-    //     this->do_acceleration_tick= false;
-    //     // call registered acceleration handlers
-    //     for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
-    //         acceleration_tick_handlers[i]();
-    //     }
-    // }
 }
 
-// run in RIT
+// run in RIT lower priority than PendSV
 void  StepTicker::acceleration_tick() {
     //stepticker_debug_pin= 1;
     // call registered acceleration handlers
@@ -184,11 +174,13 @@ void  StepTicker::acceleration_tick() {
 void StepTicker::TIMER0_IRQHandler (void){
     // Reset interrupt register
     LPC_TIM0->IR |= 1 << 0;
+    tick_cnt++; // count number of ticks
 
     // Step pins NOTE takes 1.2us when nothing to step, 1.8-2us for one motor stepped and 2.6us when two motors stepped, 3.167us when three motors stepped
     for (uint32_t motor = 0; motor < num_motors; motor++){
-        // always send tick to all motors
-        this->motor[motor]->tick();
+        // send tick to all active motors
+        if(this->active_motor[motor])
+            this->motor[motor]->tick();
     }
 
     // We may have set a pin on in this tick, now we start the timer to set it off
@@ -197,12 +189,6 @@ void StepTicker::TIMER0_IRQHandler (void){
         LPC_TIM1->TCR = 1;
         this->reset_step_pins = false;
     }
-
-    // do an acceleration tick, after we have done everything else (run in ON_IDLE)
-    // if(++this->acceleration_tick_cnt >= this->acceleration_tick_period) {
-    //     this->acceleration_tick_cnt= 0;
-    //     this->do_acceleration_tick= true;
-    // }
 
     if(this->a_move_finished) {
         this->a_move_finished= false;

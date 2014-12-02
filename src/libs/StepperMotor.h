@@ -28,10 +28,10 @@ class StepperMotor {
 
         bool is_moving() { return moving; }
         void move_finished();
-        void move( bool direction, unsigned int steps, float initial_speed= -1.0F);
+        StepperMotor* move( bool direction, unsigned int steps, float initial_speed= -1.0F);
         void signal_move_finished();
-        void set_speed( float speed );
-
+        StepperMotor* set_speed( float speed );
+        void set_moved_last_block(bool flg) { last_step_tick_valid= flg; }
         void update_exit_tick();
         void pause();
         void unpause();
@@ -84,10 +84,11 @@ class StepperMotor {
 
         uint32_t steps_to_move;
         uint32_t stepped;
+        uint32_t last_step_tick;
 
         // set to 32 bit fixed point, 18:14 bits fractional
         static const uint32_t fx_shift= 14;
-        static const uint32_t fx_increment= ((uint64_t)1<<fx_shift);
+        static const uint32_t fx_increment= ((uint32_t)1<<fx_shift);
         uint32_t fx_counter;
         uint32_t fx_ticks_per_step;
 
@@ -97,6 +98,7 @@ class StepperMotor {
             bool paused:1;
             bool active:1; // whether in the stepticker active motors list or not
             volatile bool moving:1;
+            bool last_step_tick_valid:1; // set if the last step tick time is valid (ie the motor moved last block)
         };
 
         // Called a great many times per second, to step if we have to now
