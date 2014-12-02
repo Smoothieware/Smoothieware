@@ -223,10 +223,12 @@ void Stepper::trapezoid_generator_tick(void)
 
         // Store this here because we use it a lot down there
         uint32_t current_steps_completed = this->main_stepper->stepped;
+        float last_rate= trapezoid_adjusted_rate;
 
         if( this->force_speed_update ) {
             // Do not accel, just set the value
             this->force_speed_update = false;
+            last_rate= -1;
 
         } else if(THEKERNEL->conveyor->is_flushing()) {
             // if we are flushing the queue, decelerate to 0 then finish this block
@@ -271,10 +273,11 @@ void Stepper::trapezoid_generator_tick(void)
             this->trapezoid_adjusted_rate = this->current_block->nominal_rate;
         }
 
-        this->set_step_events_per_second(this->trapezoid_adjusted_rate);
+        if(last_rate != trapezoid_adjusted_rate) {
+            // don't call this if speed did not change
+            this->set_step_events_per_second(this->trapezoid_adjusted_rate);
+        }
     }
-
-    return;
 }
 
 // Initializes the trapezoid generator from the current block. Called whenever a new
