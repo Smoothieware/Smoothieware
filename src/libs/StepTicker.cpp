@@ -187,9 +187,8 @@ void StepTicker::TIMER0_IRQHandler (void){
 
     // Step pins NOTE takes 1.2us when nothing to step, 1.8-2us for one motor stepped and 2.6us when two motors stepped, 3.167us when three motors stepped
     for (uint32_t motor = 0; motor < num_motors; motor++){
-        if (this->active_motor[motor]){
-            this->motor[motor]->tick();
-        }
+        // always send tick to all motors
+        this->motor[motor]->tick();
     }
 
     // We may have set a pin on in this tick, now we start the timer to set it off

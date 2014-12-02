@@ -95,6 +95,7 @@ class StepperMotor {
             bool direction:1;
             volatile bool is_move_finished:1; // Whether the move just finished
             bool paused:1;
+            bool active:1; // whether in the stepticker active motors list or not
             volatile bool moving:1;
         };
 
