@@ -511,6 +511,7 @@ void Extruder::on_block_begin(void *argument)
             on_speed_change(this); // set initial speed
         } else {
             this->current_block = NULL;
+            this->stepper_motor->set_moved_last_block(false);
         }
 
     } else if( this->mode == OFF ) {

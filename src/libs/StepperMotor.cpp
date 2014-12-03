@@ -45,6 +45,7 @@ void StepperMotor::init()
     this->steps_to_move = 0;
     this->is_move_finished = false;
     this->last_step_tick_valid= false;
+    this->last_step_tick= 0;
 
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
@@ -130,9 +131,13 @@ StepperMotor* StepperMotor::move( bool direction, unsigned int steps, float init
     this->stepped = 0;
     this->fx_ticks_per_step = 0xFFFFF000UL; // some big number so we don't start stepping before it is set again
     if(this->last_step_tick_valid) {
-        // NOTE only steppermotors managed in Stepper.cpp set or unset this flag
         // we set this based on when the last step was, thus compensating for missed ticks
-        this->fx_counter= THEKERNEL->step_ticker->ticks_since(this->last_step_tick)*fx_increment;
+        uint32_t ts= THEKERNEL->step_ticker->ticks_since(this->last_step_tick);
+        // if an axis stops too soon then we can get a huge number of ticks here which causes problems, so if the number of ticks is too great we ignore them
+        // example of when this happens is when one axis is going very slow an the min 20steps/sec kicks in, the axis will reach its target much sooner leaving a long gap
+        // until the end of the block.
+        if(ts > 15) ts= 0;
+        this->fx_counter= ts*fx_increment;
     }else{
         this->fx_counter = 0; // set to zero as there was no step last block
     }

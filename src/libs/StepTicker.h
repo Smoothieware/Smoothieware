@@ -34,7 +34,7 @@ class StepTicker{
         float get_frequency() const { return frequency; }
         void reset_tick();
         uint32_t get_tick_cnt() const { return tick_cnt; }
-        uint32_t ticks_since(uint32_t last) const { return (tick_cnt>last) ? tick_cnt-last : (UINT32_MAX-last) + tick_cnt + 1; }
+        uint32_t ticks_since(uint32_t last) const { return (tick_cnt>=last) ? tick_cnt-last : (UINT32_MAX-last) + tick_cnt + 1; }
 
         void TIMER0_IRQHandler (void);
         void PendSV_IRQHandler (void);

@@ -178,6 +178,7 @@ void Stepper::on_block_begin(void *argument)
     }else{
         THEKERNEL->robot->beta_stepper_motor->set_moved_last_block(false);
     }
+
     if( block->steps[GAMMA_STEPPER] > 0 ) {
         THEKERNEL->robot->gamma_stepper_motor->move( block->direction_bits[GAMMA_STEPPER], block->steps[GAMMA_STEPPER])->set_moved_last_block(true);
         if(this->main_stepper == nullptr || THEKERNEL->robot->gamma_stepper_motor->get_steps_to_move() > this->main_stepper->get_steps_to_move())
