@@ -96,7 +96,6 @@ class StepperMotor {
             bool direction:1;
             volatile bool is_move_finished:1; // Whether the move just finished
             bool paused:1;
-            bool active:1; // whether in the stepticker active motors list or not
             volatile bool moving:1;
             bool last_step_tick_valid:1; // set if the last step tick time is valid (ie the motor moved last block)
         };

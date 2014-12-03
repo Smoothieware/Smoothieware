@@ -44,7 +44,6 @@ void StepperMotor::init()
     this->stepped = 0;
     this->steps_to_move = 0;
     this->is_move_finished = false;
-    this->active= false;
     this->last_step_tick_valid= false;
 
     steps_per_mm         = 1.0F;
@@ -62,9 +61,6 @@ void StepperMotor::init()
 // This is in highest priority interrupt so cannot be pre-empted
 void StepperMotor::step()
 {
-    // we can't do anything until the next move has been processed
-    if(!this->active || !this->moving) return;
-
     // output to pins 37t
     this->step_pin.set( 1 );
     THEKERNEL->step_ticker->reset_step_pins = true;
@@ -115,11 +111,9 @@ void StepperMotor::update_exit_tick()
     if( !this->moving || this->paused || this->steps_to_move == 0 ) {
         // No more ticks will be recieved and no more events from StepTicker
         THEKERNEL->step_ticker->remove_motor_from_active_list(this);
-        this->active= false;
     } else {
         // we will now get ticks and StepTIcker will send us events
         THEKERNEL->step_ticker->add_motor_to_active_list(this);
-        this->active= true;
     }
 }
 

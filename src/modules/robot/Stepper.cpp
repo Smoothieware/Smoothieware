@@ -144,15 +144,15 @@ void Stepper::on_block_begin(void *argument)
 {
     Block *block  = static_cast<Block *>(argument);
 
-    // The stepper does not care about 0-blocks
-    if( block->millimeters == 0.0F ) {
-        return;
-    }
-
-    // Mark the new block as of interrest to us
-    if( block->steps[ALPHA_STEPPER] > 0 || block->steps[BETA_STEPPER] > 0 || block->steps[GAMMA_STEPPER] > 0 ) {
+    // Mark the new block as of interrest to us, handle blocks that have no axis moves properly (like Extrude blocks etc)
+    if(block->millimeters > 0.0F && (block->steps[ALPHA_STEPPER] > 0 || block->steps[BETA_STEPPER] > 0 || block->steps[GAMMA_STEPPER] > 0) ) {
         block->take();
+
     } else {
+        // none of the steppers move this block so make sure they know that
+        for(auto a : THEKERNEL->robot->actuators) {
+            a->set_moved_last_block(false);
+        }
         return;
     }
 

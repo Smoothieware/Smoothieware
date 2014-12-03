@@ -466,6 +466,7 @@ void Extruder::on_gcode_execute(void *argument)
 void Extruder::on_block_begin(void *argument)
 {
     if(!this->enabled) return;
+
     Block *block = static_cast<Block *>(argument);
 
 
@@ -492,6 +493,7 @@ void Extruder::on_block_begin(void *argument)
         } else {
             this->current_block = NULL;
         }
+        this->stepper_motor->set_moved_last_block(false);
 
     } else if( this->mode == FOLLOW ) {
         // In non-solo mode, we just follow the stepper module
@@ -499,19 +501,13 @@ void Extruder::on_block_begin(void *argument)
 
         this->current_position += this->travel_distance;
 
-        int steps_to_step = abs(floorf(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) ));
-
-        if ( this->travel_distance > 0 ) {
-            this->unstepped_distance += this->travel_distance - (steps_to_step / this->steps_per_millimeter); //catch any overflow
-        }   else {
-            this->unstepped_distance += this->travel_distance + (steps_to_step / this->steps_per_millimeter); //catch any overflow
-        }
+        int steps_to_step = abs(floorf(this->steps_per_millimeter * this->travel_distance));
 
         if( steps_to_step != 0 ) {
             block->take();
             this->current_block = block;
 
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
+            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step)->set_moved_last_block(true);
             on_speed_change(this); // set initial speed
         } else {
             this->current_block = NULL;
@@ -521,7 +517,7 @@ void Extruder::on_block_begin(void *argument)
         // No movement means we must reset our speed
         this->current_block = NULL;
         //this->stepper_motor->set_speed(0);
-
+        this->stepper_motor->set_moved_last_block(false);
     }
 
 }
@@ -544,11 +540,9 @@ void Extruder::acceleration_tick(void)
     if(!this->enabled) return;
 
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if( this->current_block == NULL ||  this->paused || this->mode != SOLO ) {
+    if( this->current_block == NULL || !this->stepper_motor->is_moving() || this->paused || this->mode != SOLO ) {
         return;
     }
-
-    if(!this->stepper_motor->is_moving()) return;
 
     uint32_t current_rate = this->stepper_motor->get_steps_per_second();
     uint32_t target_rate = floorf(this->feed_rate * this->steps_per_millimeter);
@@ -565,10 +559,8 @@ void Extruder::acceleration_tick(void)
 // Speed has been updated for the robot's stepper, we must update accordingly
 void Extruder::on_speed_change( void *argument )
 {
-    if(!this->enabled) return;
-
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if( this->current_block == NULL ||  this->paused || this->mode != FOLLOW || !this->stepper_motor->is_moving()) {
+    if(!this->enabled || this->current_block == NULL ||  this->paused || this->mode != FOLLOW || !this->stepper_motor->is_moving()) {
         return;
     }
 
