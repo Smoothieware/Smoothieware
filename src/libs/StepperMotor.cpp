@@ -64,7 +64,6 @@ void StepperMotor::step()
 {
     // output to pins 37t
     this->step_pin.set( 1 );
-    THEKERNEL->step_ticker->reset_step_pins = true;
 
     // move counter back 11t
     this->fx_counter -= this->fx_ticks_per_step;

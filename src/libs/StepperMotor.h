@@ -101,13 +101,16 @@ class StepperMotor {
         };
 
         // Called a great many times per second, to step if we have to now
-        inline void tick() {
+        inline bool tick() {
             // increase the ( 32 fixed point 18:14 ) counter by one tick 11t
             fx_counter += fx_increment;
 
             // if we are to step now
-            if (fx_counter >= fx_ticks_per_step)
+            if (fx_counter >= fx_ticks_per_step){
                 step();
+                return true;
+            }
+            return false;
         };
 };
 

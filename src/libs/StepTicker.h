@@ -32,7 +32,7 @@ class StepTicker{
         void remove_motor_from_active_list(StepperMotor* motor);
         void set_acceleration_ticks_per_second(uint32_t acceleration_ticks_per_second);
         float get_frequency() const { return frequency; }
-        void reset_tick();
+        void unstep_tick();
         uint32_t get_tick_cnt() const { return tick_cnt; }
         uint32_t ticks_since(uint32_t last) const { return (tick_cnt>=last) ? tick_cnt-last : (UINT32_MAX-last) + tick_cnt + 1; }
 
@@ -48,16 +48,15 @@ class StepTicker{
 
     private:
         float frequency;
-        uint32_t delay;
         uint32_t period;
         volatile uint32_t tick_cnt;
         std::vector<std::function<void(void)>> acceleration_tick_handlers;
         std::vector<StepperMotor*> motor;
         std::bitset<32> active_motor; // limit to 32 motors
+        std::bitset<32> unstep;       // limit to 32 motors
         std::atomic_uchar do_move_finished;
         uint8_t num_motors;
         volatile bool a_move_finished;
-        volatile bool reset_step_pins;
 };
 
 

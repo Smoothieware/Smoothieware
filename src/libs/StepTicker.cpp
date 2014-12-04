@@ -40,7 +40,7 @@ StepTicker::StepTicker(){
     LPC_SC->PCONP |= (1 << 2);      // Power Ticker ON
     LPC_TIM1->MR0 = 1000000;
     LPC_TIM1->MCR = 1;
-    LPC_TIM1->TCR = 1;              // Enable interrupt
+    LPC_TIM1->TCR = 0;              // Disable interrupt
 
     // Setup RIT timer
     LPC_SC->PCONP |= (1L<<16); // RIT Power
@@ -56,7 +56,7 @@ StepTicker::StepTicker(){
     // Default start values
     this->a_move_finished = false;
     this->do_move_finished = 0;
-    this->reset_step_pins = false;
+    this->unstep.reset();
     this->set_frequency(100000);
     this->set_reset_delay(100);
     this->set_acceleration_ticks_per_second(1000);
@@ -87,9 +87,9 @@ void StepTicker::set_frequency( float frequency ){
 }
 
 // Set the reset delay
-void StepTicker::set_reset_delay( float seconds ){
-    this->delay = floorf((SystemCoreClock/4.0F)*seconds);  // SystemCoreClock/4 = Timer increments in a second
-    LPC_TIM1->MR0 = this->delay;
+void StepTicker::set_reset_delay( float microseconds ){
+    uint32_t delay = floorf((SystemCoreClock/4.0F)*(microseconds/1000000.0F));  // SystemCoreClock/4 = Timer increments in a second
+    LPC_TIM1->MR0 = delay;
 }
 
 // this is the number of acceleration ticks per second
@@ -117,17 +117,19 @@ void StepTicker::signal_a_move_finished(){
     }
 }
 
-// Reset step pins on all active motors
-inline void StepTicker::reset_tick(){
+// Reset step pins on any motor that was stepped
+inline void StepTicker::unstep_tick(){
     for (int i = 0; i < num_motors; i++) {
-        if(this->active_motor[i])
+        if(this->unstep[i]){
             this->motor[i]->unstep();
+            this->unstep[i]= 0;
+        }
     }
 }
 
 extern "C" void TIMER1_IRQHandler (void){
     LPC_TIM1->IR |= 1 << 0;
-    StepTicker::global_step_ticker->reset_tick();
+    StepTicker::global_step_ticker->unstep_tick();
 }
 
 // The actual interrupt handler where we do all the work
@@ -163,12 +165,10 @@ void StepTicker::PendSV_IRQHandler (void) {
 
 // run in RIT lower priority than PendSV
 void  StepTicker::acceleration_tick() {
-    //stepticker_debug_pin= 1;
     // call registered acceleration handlers
     for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
         acceleration_tick_handlers[i]();
     }
-    //stepticker_debug_pin= 0;
 }
 
 void StepTicker::TIMER0_IRQHandler (void){
@@ -179,16 +179,24 @@ void StepTicker::TIMER0_IRQHandler (void){
     // Step pins NOTE takes 1.2us when nothing to step, 1.8-2us for one motor stepped and 2.6us when two motors stepped, 3.167us when three motors stepped
     for (uint32_t motor = 0; motor < num_motors; motor++){
         // send tick to all active motors
-        if(this->active_motor[motor])
-            this->motor[motor]->tick();
+        if(this->active_motor[motor] && this->motor[motor]->tick()){
+            // we stepped so schedule an unstep
+            this->unstep[motor]= 1;
+        }
     }
 
-    // We may have set a pin on in this tick, now we start the timer to set it off
-    if( this->reset_step_pins ){
+    // We may have set a pin on in this tick, now we reset the timer to set it off
+    // Note there could be a race here if we run another tick before the unsteps have happened,
+    // right now it takes about 3-4us but if the unstep were near 10uS or greater it would be an issue
+    // also it takes at least 2us to get here so even when set to 1us pulse width it will still be about 3us
+    if( this->unstep.any()){
         LPC_TIM1->TCR = 3;
         LPC_TIM1->TCR = 1;
-        this->reset_step_pins = false;
     }
+    // just let it run it will fire every 143 seconds
+    // else{
+    //     LPC_TIM1->TCR = 0; // disable interrupt, no point in it running if nothing to do
+    // }
 
     if(this->a_move_finished) {
         this->a_move_finished= false;
