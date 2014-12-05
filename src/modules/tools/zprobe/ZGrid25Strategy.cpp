@@ -252,7 +252,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 
                 this->saveGrid();
 
-            case 503: { // M503 just prints the settings
+            /*case 503: { // M503 just prints the settings
 
                 float x,y,z;
                 gcode->stream->printf(";Probe offsets:\n");
@@ -261,7 +261,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 
                 gcode->mark_as_taken();
                 break;
-            }
+            }*/
             
             return true;
         }
