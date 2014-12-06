@@ -17,7 +17,7 @@ using std::string;
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "libs/StreamOutputPool.h"
-#include "libs/FileStream.h"
+#include "libs/AppendFileStream.h"
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
@@ -180,7 +180,7 @@ try_again:
 
                             case 500: // M500 save volatile settings to config-override
                                 // replace stream with one that writes to config-override file
-                                gcode->stream = new FileStream(THEKERNEL->config_override_filename());
+                                gcode->stream = new AppendFileStream(THEKERNEL->config_override_filename());
                                 // dispatch the M500 here so we can free up the stream when done
                                 THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
                                 delete gcode->stream;
