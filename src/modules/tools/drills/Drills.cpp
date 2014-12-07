@@ -84,7 +84,8 @@ Incremental (L) : no
 */
 
 /* reset all sticky values, called before each cycle */
-void Drills::reset_sticky() {
+void Drills::reset_sticky()
+{
     this->sticky_z = 0; // Z depth
     this->sticky_r = 0; // R plane
     this->sticky_f = 0; // feedrate
@@ -93,7 +94,8 @@ void Drills::reset_sticky() {
 }
 
 /* update all sticky values, called before each hole */
-void Drills::update_sticky(Gcode *gcode) {
+void Drills::update_sticky(Gcode *gcode)
+{
     if (gcode->has_letter('Z')) this->sticky_z = gcode->get_value('Z');
     if (gcode->has_letter('R')) this->sticky_r = gcode->get_value('R');
     if (gcode->has_letter('F')) this->sticky_f = gcode->get_value('F');
@@ -108,7 +110,8 @@ void Drills::update_sticky(Gcode *gcode) {
 }
 
 /* send a formatted Gcode line */
-int Drills::send_gcode(const char* format, ...) {
+int Drills::send_gcode(const char* format, ...)
+{
     // handle variable arguments
     va_list args;
     va_start(args, format);
