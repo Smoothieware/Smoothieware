@@ -20,20 +20,28 @@ class Drills : public Module
         void on_module_loaded();
 
     private:
+        void on_config_reload(void *argument);
         void on_gcode_received(void *argument);
+        void reset_sticky();
         void update_sticky(Gcode *gcode);
-        int send_line(const char* format, ...);
-        void simple_cycle(Gcode *gcode);
+        int  send_gcode(const char* format, ...);
+        void make_hole(Gcode *gcode);
+        void peck_hole();
 
-        bool cycle_started;
-        int retract_type;
+        bool cycle_started; // cycle status
+        int  retract_type;  // rretract type
 
-        float initial_z;
-        float r_plane;
+        float initial_z; // Initial-Z
+        float r_plane;   // R-Plane
 
-        float sticky_z;
-        float sticky_r;
-        float sticky_f;
+        float sticky_z; // final depth
+        float sticky_r; // R-Plane
+        float sticky_f; // feedrate
+
+        float sticky_q; // depth increment
+        int   sticky_p; // dwell pause
+
+        int dwell_unity; // unity for dwell
 };
 
 #endif

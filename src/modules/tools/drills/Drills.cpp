@@ -7,11 +7,16 @@
 
 #include "Kernel.h"
 #include "Drills.h"
+#include "checksumm.h"
+#include "Config.h"
+#include "ConfigValue.h"
 #include "Gcode.h"
 #include "Robot.h"
 #include "Conveyor.h"
+#include "SlowTicker.h"
 #include "StepperMotor.h"
 #include "StreamOutputPool.h"
+#include <math.h> /* fmod */
 
 #define STEPPER THEKERNEL->robot->actuators
 
@@ -19,13 +24,33 @@
 #define Y_AXIS 1
 #define Z_AXIS 2
 
+// retract modes
 #define RETRACT_TO_Z 0
 #define RETRACT_TO_R 1
+
+// dwell unity
+#define DWELL_UNITY_S 0 // seconds
+#define DWELL_UNITY_P 1 // millis
+
+// config names
+#define drills_checksum      CHECKSUM("drills")
+#define enable_checksum      CHECKSUM("enable")
+#define dwell_unity_checksum CHECKSUM("dwell_unity")
 
 Drills::Drills() {}
 
 void Drills::on_module_loaded()
 {
+    // if the module is disabled -> do nothing
+    if(! THEKERNEL->config->value(drills_checksum, enable_checksum)->by_default(false)->as_bool()) {
+        // as this module is not needed free up the resource
+        delete this;
+        return;
+    }
+    
+    // Settings
+    this->on_config_reload(this);
+
     // events
     this->register_for_event(ON_GCODE_RECEIVED);
 
@@ -36,9 +61,14 @@ void Drills::on_module_loaded()
     this->initial_z = 0;
     this->r_plane   = 0;
 
-    this->sticky_z = 0;
-    this->sticky_r = 0;
-    this->sticky_f = 0;
+    this->reset_sticky();
+}
+
+void Drills::on_config_reload(void *argument)
+{
+    // take the dwell unity configured by user, or select S (seconds) by default
+    string dwell_unity = THEKERNEL->config->value(drills_checksum, dwell_unity_checksum)->by_default("S")->as_string();
+    this->dwell_unity  = (dwell_unity == "P") ? DWELL_UNITY_P : DWELL_UNITY_S;
 }
 
 /*
@@ -47,18 +77,30 @@ http://www.tormach.com/g81_g89_backgroung.html
 
 /!\ This code expects a clean gcode, no fail safe at this time.
 
-Implemented     : G98, G99, G81
-Incremental (L) : no
+Implemented     : G80-83, G98, G99
 Absolute mode   : yes
 Relative mode   : no
+Incremental (L) : no
 */
 
-// not useful for now, but when come G82, G83, etc...
+/* reset all sticky values, called before each cycle */
+void Drills::reset_sticky() {
+    this->sticky_z = 0; // Z depth
+    this->sticky_r = 0; // R plane
+    this->sticky_f = 0; // feedrate
+    this->sticky_q = 0; // peck drilling increment
+    this->sticky_p = 0; // dwell in seconds
+}
+
+/* update all sticky values, called before each hole */
 void Drills::update_sticky(Gcode *gcode) {
     if (gcode->has_letter('Z')) this->sticky_z = gcode->get_value('Z');
     if (gcode->has_letter('R')) this->sticky_r = gcode->get_value('R');
     if (gcode->has_letter('F')) this->sticky_f = gcode->get_value('F');
+    if (gcode->has_letter('Q')) this->sticky_q = gcode->get_value('Q');
+    if (gcode->has_letter('P')) this->sticky_p = gcode->get_int('P');
     
+    // set retract plane
     if (this->retract_type == RETRACT_TO_Z) 
         this->r_plane = this->initial_z;
     else 
@@ -66,76 +108,138 @@ void Drills::update_sticky(Gcode *gcode) {
 }
 
 /* send a formatted Gcode line */
-int Drills::send_line(const char* format, ...) {
+int Drills::send_gcode(const char* format, ...) {
+    // handle variable arguments
     va_list args;
     va_start(args, format);
+    // make the formatted string
     char line[32]; // max length for an gcode line
     int n = vsnprintf(line, sizeof(line), format, args);
     va_end(args);
-    // send gcode
+    // debug, print the gcode sended
+    //THEKERNEL->streams->printf(">>> %s\r\n", line);
+    // make gcode object
     Gcode gc(line, &(StreamOutput::NullStream));
-    THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+    // since G4 does not work properly
+    THEKERNEL->slow_ticker->on_gcode_received(&gc);
+    // send to robot directly
+    THEKERNEL->robot->on_gcode_received(&gc);
+    // return the gcode srting length
     return n;
 }
 
-/* G81: simple cycle */
-void Drills::simple_cycle(Gcode *gcode)
+/* G83: peck drilling */
+void Drills::peck_hole()
 {
+    // start values
+    float depth  = this->sticky_r - this->sticky_z; // travel depth
+    float cycles = depth / this->sticky_q;          // cycles count
+    float rest   = fmod(depth, this->sticky_q);     // final pass
+    float z_pos  = this->sticky_r;                  // current z position
+
+    // for each cycle
+    for (int i = 1; i < cycles; i++) {
+        // decrement depth
+        z_pos -= this->sticky_q;
+        // feed down to depth at feedrate (F and Z)
+        this->send_gcode("G1 F%1.4f Z%1.4f", this->sticky_f, z_pos);
+        // rapids to retract position (R)
+        this->send_gcode("G0 Z%1.4f", this->sticky_r);
+    }
+
+    // final depth not reached
+    if (rest > 0) {
+        // feed down to final depth at feedrate (F and Z)
+        this->send_gcode("G1 F%1.4f Z%1.4f", this->sticky_f, this->sticky_z);
+    }
+}
+
+void Drills::make_hole(Gcode *gcode)
+{
+    // compile X and Y values
     char x[16] = "";
     char y[16] = "";
-
     if (gcode->has_letter('X'))
         snprintf(x, sizeof(x), " X%1.4f", gcode->get_value('X'));
     if (gcode->has_letter('Y'))
         snprintf(y, sizeof(y), " Y%1.4f", gcode->get_value('Y'));
 
     // rapids to X/Y
-    this->send_line("G0%s%s", x, y);
+    this->send_gcode("G0%s%s", x, y);
     // rapids to retract position (R)
-    this->send_line("G0 Z%1.4f", this->sticky_r);
-    // feed down to depth at feedrate (F and Z)
-    this->send_line("G1 F%1.4f Z%1.4f", this->sticky_f, this->sticky_z);
+    this->send_gcode("G0 Z%1.4f", this->sticky_r);
+    
+    // if peck drilling
+    if (this->sticky_q > 0) 
+        this->peck_hole();
+    else
+        // feed down to depth at feedrate (F and Z)
+        this->send_gcode("G1 F%1.4f Z%1.4f", this->sticky_f, this->sticky_z);
+    
+    // if dwell, wait for x seconds
+    if (this->sticky_p > 0) {
+        // dwell exprimed in seconds
+        if (this->dwell_unity == DWELL_UNITY_S)
+            this->send_gcode("G4 S%u", this->sticky_p);
+        // dwell exprimed in milliseconds
+        else
+            this->send_gcode("G4 P%u", this->sticky_p);
+    }
+    
     // rapids retract at R-Plane (Initial-Z or R)
-    this->send_line("G0 Z%1.4f", this->r_plane);
+    this->send_gcode("G0 Z%1.4f", this->r_plane);
 }
 
 void Drills::on_gcode_received(void* argument)
 {
-    // gcode line
+    // received gcode
     Gcode *gcode = static_cast<Gcode *>(argument);
 
-    // no G in Gcode, exit...
+    // no "G" in gcode, exit...
     if (! gcode->has_g) 
         return;
     
+    // "G" value
     int code = gcode->g;
 
+    // cycle start
     if (code == 98 || code == 99) {
+        // wait for any moves left and current position is update
         THEKERNEL->conveyor->wait_for_empty_queue();
+        // backup last Z position as initila Z value
         this->initial_z = STEPPER[Z_AXIS]->get_current_position();
+        // set retract type
         this->retract_type = (code == 98) ? RETRACT_TO_Z : RETRACT_TO_R;
+        // reset sticky values
+        this->reset_sticky();
+        // mark cycle started and gcode taken
         this->cycle_started = true;
         gcode->mark_as_taken();
     }
+    // cycle end
     else if (code == 80) {
+        // mark cycle endded and gcode taken
         this->cycle_started = false;
         gcode->mark_as_taken();
-        // rapids retract at Initial-Z
+        // if retract position is R-Plane
         if (this->retract_type == RETRACT_TO_R) {
-            this->send_line("G0 Z%1.4f", this->initial_z);
+            // rapids retract at Initial-Z to avoid futur collisions
+            this->send_gcode("G0 Z%1.4f", this->initial_z);
         }
     }
+    // in cycle
     else if (this->cycle_started) {
         // relative mode not supported for now...
         if (THEKERNEL->robot->absolute_mode == false) {
             gcode->stream->printf("Drills: relative mode not supported.\r\n");
             gcode->stream->printf("Drills: skip hole...\r\n");
+            // exit
             return;
         }
-        // simple cycle
-        if (code == 81) {
+        // implemented cycles
+        if (code == 81 || code == 82 || code == 83) {
             this->update_sticky(gcode);
-            this->simple_cycle(gcode);
+            this->make_hole(gcode);
             gcode->mark_as_taken();
         }
     }
