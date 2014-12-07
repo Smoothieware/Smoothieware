@@ -252,7 +252,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 
                 this->saveGrid();
 
-            /*case 503: { // M503 just prints the settings
+            case 503: { // M503 just prints the settings
 
                 float x,y,z;
                 gcode->stream->printf(";Probe offsets:\n");
@@ -261,7 +261,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 
                 gcode->mark_as_taken();
                 break;
-            }*/
+            }
             
             return true;
         }
@@ -323,12 +323,8 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
 
     stream->printf("*** Ensure probe is attached and press probe when done ***\n");
 
- //   int secwait = 0;
     while(!zprobe->getProbeStatus());// || secwait < 10 )
-    //{
-   //     sleep(1);
-   //     secwait++;
-  //  }
+
     this->in_cal = true;                         // In calbration mode
     
     this->cal[X_AXIS] = 0.0f;                    // Clear calibration position
@@ -336,7 +332,6 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
     this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + 5.0f;
          
     this->move(this->cal, slow_rate);            // Move to probe start point
-    //this->next_cal();                          // Set up next cal point
 
     for (int probes = 0; probes <25; probes++){
         int pindex = 0;
