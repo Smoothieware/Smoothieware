@@ -20,6 +20,9 @@
 
 using namespace std;
 
+// static as it is shared by all screens
+std::vector<std::string> PanelScreen::command_queue;
+
 PanelScreen::PanelScreen() {}
 PanelScreen::~PanelScreen() {}
 
@@ -87,7 +90,7 @@ void PanelScreen::send_command(const char *gcstr)
 void PanelScreen::on_main_loop()
 {
     // for each command in queue send it
-    for (auto cmd : command_queue) {
+    for (auto& cmd : command_queue) {
         struct SerialMessage message;
         message.message = cmd;
         message.stream = &(StreamOutput::NullStream);

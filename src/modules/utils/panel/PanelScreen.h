@@ -37,7 +37,7 @@ protected:
     void send_gcode(std::string g);
     void send_gcode(const char *gm_code, char parameter, float value);
     void send_command(const char *gcstr);
-    std::vector<std::string> command_queue;
+    static std::vector<std::string> command_queue;
     PanelScreen *parent;
 };
 
