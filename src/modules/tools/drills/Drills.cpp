@@ -18,8 +18,7 @@
 #include "StreamOutputPool.h"
 #include <math.h> /* fmod */
 
-#define STEPPER THEKERNEL->robot->actuators
-
+// axis index
 #define X_AXIS 0
 #define Y_AXIS 1
 #define Z_AXIS 2
@@ -121,12 +120,9 @@ int Drills::send_gcode(const char* format, ...)
     va_end(args);
     // debug, print the gcode sended
     //THEKERNEL->streams->printf(">>> %s\r\n", line);
-    // make gcode object
+    // make gcode object and send it (right way)
     Gcode gc(line, &(StreamOutput::NullStream));
-    // since G4 does not work properly
-    THEKERNEL->slow_ticker->on_gcode_received(&gc);
-    // send to robot directly
-    THEKERNEL->robot->on_gcode_received(&gc);
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
     // return the gcode srting length
     return n;
 }
@@ -209,8 +205,11 @@ void Drills::on_gcode_received(void* argument)
     if (code == 98 || code == 99) {
         // wait for any moves left and current position is update
         THEKERNEL->conveyor->wait_for_empty_queue();
-        // backup last Z position as initila Z value
-        this->initial_z = STEPPER[Z_AXIS]->get_current_position();
+        // get actual position from robot
+        float pos[3];
+        THEKERNEL->robot->get_axis_position(pos);
+        // backup Z position as Initial-Z value
+        this->initial_z = pos[Z_AXIS];
         // set retract type
         this->retract_type = (code == 98) ? RETRACT_TO_Z : RETRACT_TO_R;
         // reset sticky values
