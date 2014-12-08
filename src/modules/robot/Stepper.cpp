@@ -194,6 +194,9 @@ void Stepper::on_block_begin(void *argument)
 
     // Set the initial speed for this move
     this->trapezoid_generator_tick();
+
+    // synchronize the acceleration timer with the start of the new block so it does not drift and randomly fire during the block
+    THEKERNEL->step_ticker->synchronize_acceleration();
 }
 
 // Current block is discarded

@@ -42,6 +42,8 @@ class StepTicker{
             acceleration_tick_handlers.push_back(cb);
         }
         void acceleration_tick();
+        void synchronize_acceleration();
+
         void start();
 
         friend class StepperMotor;
