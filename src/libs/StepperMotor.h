@@ -11,6 +11,7 @@
 #include "libs/Hook.h"
 #include "Pin.h"
 #include <atomic>
+#include <functional>
 
 class StepTicker;
 class Hook;
@@ -85,6 +86,7 @@ class StepperMotor {
         uint32_t steps_to_move;
         uint32_t stepped;
         uint32_t last_step_tick;
+        uint32_t signal_step;
 
         // set to 32 bit fixed point, 18:14 bits fractional
         static const uint32_t fx_shift= 14;

@@ -100,6 +100,21 @@ void StepTicker::set_acceleration_ticks_per_second(uint32_t acceleration_ticks_p
     LPC_RIT->RICTRL |= (8L); // Enable rit
 }
 
+// Synchronize the acceleration timer, and optionally schedule it to fire now
+void StepTicker::synchronize_acceleration(bool fire_now) {
+    LPC_RIT->RICOUNTER = 0;
+    if(fire_now){
+        NVIC_SetPendingIRQ(RIT_IRQn);
+    }else{
+        if(NVIC_GetPendingIRQ(RIT_IRQn)) {
+            // clear pending interrupt so it does not interrupt immediately
+            LPC_RIT->RICTRL |= 1L; // also clear the interrupt in case it fired
+            NVIC_ClearPendingIRQ(RIT_IRQn);
+        }
+    }
+}
+
+
 // Call signal_move_finished() on each active motor that asked to be signaled. We do this instead of inside of tick() so that
 // all tick()s are called before we do the move finishing
 void StepTicker::signal_a_move_finished(){
@@ -122,9 +137,9 @@ inline void StepTicker::unstep_tick(){
     for (int i = 0; i < num_motors; i++) {
         if(this->unstep[i]){
             this->motor[i]->unstep();
-            this->unstep[i]= 0;
         }
     }
+    this->unstep.reset();
 }
 
 extern "C" void TIMER1_IRQHandler (void){
@@ -236,5 +251,6 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
     // If we have no motor to work on, disable the whole interrupt
     if(this->active_motor.none()){
         LPC_TIM0->TCR = 0;               // Disable interrupt
+        tick_cnt= 0;
     }
 }

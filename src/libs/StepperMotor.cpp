@@ -54,6 +54,7 @@ void StepperMotor::init()
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
     current_position_steps= 0;
+    signal_step= 0;
 }
 
 
@@ -62,6 +63,9 @@ void StepperMotor::init()
 // This is in highest priority interrupt so cannot be pre-empted
 void StepperMotor::step()
 {
+    // ignore if we are still processing the end of a block
+    if(this->is_move_finished) return;
+
     // output to pins 37t
     this->step_pin.set( 1 );
 
@@ -73,6 +77,12 @@ void StepperMotor::step()
 
     // keep track of actuators actual position in steps
     this->current_position_steps += (this->direction ? -1 : 1);
+
+    // we may need to callback on a specific step, usually used to synchronize deceleration timer
+    if(this->signal_step != 0 && this->stepped == this->signal_step) {
+        THEKERNEL->step_ticker->synchronize_acceleration(true);
+        this->signal_step= 0;
+    }
 
     // Is this move finished ?
     if( this->stepped == this->steps_to_move ) {
@@ -135,7 +145,9 @@ StepperMotor* StepperMotor::move( bool direction, unsigned int steps, float init
         // if an axis stops too soon then we can get a huge number of ticks here which causes problems, so if the number of ticks is too great we ignore them
         // example of when this happens is when one axis is going very slow an the min 20steps/sec kicks in, the axis will reach its target much sooner leaving a long gap
         // until the end of the block.
-        if(ts > 15) ts= 0;
+        // TODO we may need to set this based on the current step rate, trouble is we don't know what that is yet, we could use the last fx_ticks_per_step as a guide
+        if(ts > 5) ts= 5; // limit to 50us catch up around 1-2 steps
+        else if(ts > 15) ts= 0; // no way to know what the delay was
         this->fx_counter= ts*fx_increment;
     }else{
         this->fx_counter = 0; // set to zero as there was no step last block
