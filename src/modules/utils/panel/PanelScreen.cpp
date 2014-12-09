@@ -20,11 +20,13 @@
 
 using namespace std;
 
+// static as it is shared by all screens
+std::vector<std::string> PanelScreen::command_queue;
+
 PanelScreen::PanelScreen() {}
 PanelScreen::~PanelScreen() {}
 
 void PanelScreen::on_refresh() {}
-void PanelScreen::on_main_loop() {}
 
 void PanelScreen::on_enter() {}
 
@@ -69,27 +71,31 @@ void PanelScreen::send_gcode(const char *gm_code, char parameter, float value)
     send_gcode(g);
 }
 
-// Helper to send commands, must be called from mainloop
-// may contain multipe commands separated by \n
+// Helper to send commands, may be called from on_idle will delegate all commands to on_main_loop
+// may contain multiple commands separated by \n
 void PanelScreen::send_command(const char *gcstr)
 {
     string cmd(gcstr);
-    vector<string> q;
     while (cmd.size() > 0) {
         size_t b = cmd.find_first_of("\n");
         if ( b == string::npos ) {
-            q.push_back(cmd);
+            command_queue.push_back(cmd);
             break;
         }
-        q.push_back(cmd.substr( 0, b ));
+        command_queue.push_back(cmd.substr( 0, b ));
         cmd = cmd.substr(b + 1);
     }
+}
 
-    // for each command send it
-    for (std::vector<string>::iterator i = q.begin(); i != q.end(); ++i) {
+void PanelScreen::on_main_loop()
+{
+    // for each command in queue send it
+    for (auto& cmd : command_queue) {
         struct SerialMessage message;
-        message.message = *i;
+        message.message = cmd;
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        cmd.clear();
     }
+    command_queue.clear();
 }
