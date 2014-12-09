@@ -100,11 +100,17 @@ void StepTicker::set_acceleration_ticks_per_second(uint32_t acceleration_ticks_p
     LPC_RIT->RICTRL |= (8L); // Enable rit
 }
 
-// Synchronize the acceleration timer, and optionally schedule it to file now
+// Synchronize the acceleration timer, and optionally schedule it to fire now
 void StepTicker::synchronize_acceleration(bool fire_now) {
     LPC_RIT->RICOUNTER = 0;
     if(fire_now){
         NVIC_SetPendingIRQ(RIT_IRQn);
+    }else{
+        if(NVIC_GetPendingIRQ(RIT_IRQn)) {
+            // clear pending interrupt so it does not interrupt immediately
+            LPC_RIT->RICTRL |= 1L; // also clear the interrupt in case it fired
+            NVIC_ClearPendingIRQ(RIT_IRQn);
+        }
     }
 }
 
@@ -161,23 +167,25 @@ void StepTicker::PendSV_IRQHandler (void) {
     if(this->do_move_finished.load() > 0) {
         this->do_move_finished--;
         #ifdef STEPTICKER_DEBUG_PIN
-        stepticker_debug_pin= 1;
+        //stepticker_debug_pin= 1;
         #endif
 
         this->signal_a_move_finished();
 
         #ifdef STEPTICKER_DEBUG_PIN
-        stepticker_debug_pin= 0;
+        //stepticker_debug_pin= 0;
         #endif
     }
 }
 
 // run in RIT lower priority than PendSV
 void  StepTicker::acceleration_tick() {
+stepticker_debug_pin= 1;
     // call registered acceleration handlers
     for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
         acceleration_tick_handlers[i]();
     }
+stepticker_debug_pin= 0;
 }
 
 void StepTicker::TIMER0_IRQHandler (void){
