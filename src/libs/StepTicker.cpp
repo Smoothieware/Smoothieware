@@ -100,9 +100,12 @@ void StepTicker::set_acceleration_ticks_per_second(uint32_t acceleration_ticks_p
     LPC_RIT->RICTRL |= (8L); // Enable rit
 }
 
-// Synchronise the acceleration timer with the new block
-void StepTicker::synchronize_acceleration() {
+// Synchronize the acceleration timer, and optionally schedule it to file now
+void StepTicker::synchronize_acceleration(bool fire_now) {
     LPC_RIT->RICOUNTER = 0;
+    if(fire_now){
+        NVIC_SetPendingIRQ(RIT_IRQn);
+    }
 }
 
 

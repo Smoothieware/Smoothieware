@@ -196,7 +196,12 @@ void Stepper::on_block_begin(void *argument)
     this->trapezoid_generator_tick();
 
     // synchronize the acceleration timer with the start of the new block so it does not drift and randomly fire during the block
-    THEKERNEL->step_ticker->synchronize_acceleration();
+    THEKERNEL->step_ticker->synchronize_acceleration(false);
+
+    // set a flag to synchronize the acceleration timer with the deceleration step, and fire it immediately we get to that step
+    if( block->decelerate_after > 0 && block->decelerate_after+1 < this->main_stepper->steps_to_move ) {
+        this->main_stepper->signal_step= block->decelerate_after+1; // we make it +1 as deceleration does not start until steps > decelerate_after
+    }
 }
 
 // Current block is discarded

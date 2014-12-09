@@ -54,6 +54,7 @@ void StepperMotor::init()
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
     current_position_steps= 0;
+    signal_step= 0;
 }
 
 
@@ -76,6 +77,12 @@ void StepperMotor::step()
 
     // keep track of actuators actual position in steps
     this->current_position_steps += (this->direction ? -1 : 1);
+
+    // we may need to callback on a specific step, usually used to synchronize deceleration timer
+    if(this->signal_step != 0 && this->stepped == this->signal_step) {
+        THEKERNEL->step_ticker->synchronize_acceleration(true);
+        this->signal_step= 0;
+    }
 
     // Is this move finished ?
     if( this->stepped == this->steps_to_move ) {

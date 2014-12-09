@@ -42,7 +42,7 @@ class StepTicker{
             acceleration_tick_handlers.push_back(cb);
         }
         void acceleration_tick();
-        void synchronize_acceleration();
+        void synchronize_acceleration(bool fire_now);
 
         void start();
 
