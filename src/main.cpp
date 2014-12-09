@@ -29,6 +29,7 @@
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "StepTicker.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/nuts_bolts.h"
@@ -83,6 +84,11 @@ GPIO leds[5] = {
     GPIO(P4_28)
 };
 
+// debug pins, only used if defined in src/makefile
+#ifdef STEPTICKER_DEBUG_PIN
+GPIO stepticker_debug_pin(STEPTICKER_DEBUG_PIN);
+#endif
+
 void init() {
 
     // Default pins to low status
@@ -90,6 +96,11 @@ void init() {
         leds[i].output();
         leds[i]= 0;
     }
+
+#ifdef STEPTICKER_DEBUG_PIN
+    stepticker_debug_pin.output();
+    stepticker_debug_pin= 0;
+#endif
 
     Kernel* kernel = new Kernel();
 
@@ -219,6 +230,8 @@ void init() {
             fclose(fp);
         }
     }
+
+    THEKERNEL->step_ticker->start();
 }
 
 int main()

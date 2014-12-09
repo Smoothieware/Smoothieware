@@ -53,6 +53,11 @@ endif
 # use c++11 features for the checksums and set default baud rate for serial uart
 DEFINES += -DCHECKSUM_USE_CPP -DDEFAULT_SERIAL_BAUD_RATE=$(DEFAULT_SERIAL_BAUD_RATE)
 
+ifneq "$(STEPTICKER_DEBUG_PIN)" ""
+# Set a Pin here that toggles on end of move
+DEFINES += -DSTEPTICKER_DEBUG_PIN=$(STEPTICKER_DEBUG_PIN)
+endif
+
 # add any modules that you do not want included in the build
 export EXCLUDED_MODULES = tools/touchprobe
 # e.g for a CNC machine

@@ -29,7 +29,7 @@ public:
     void on_module_loaded();
     void on_config_reload(void *argument);
     void on_gcode_received(void *argument);
-    uint32_t acceleration_tick(uint32_t dummy);
+    void acceleration_tick(void);
 
     bool wait_for_probe(int& steps);
     bool run_probe(int& steps, bool fast= false);

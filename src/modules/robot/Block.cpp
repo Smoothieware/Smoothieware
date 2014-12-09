@@ -48,6 +48,7 @@ void Block::clear()
     entry_speed         = 0.0F;
     exit_speed          = 0.0F;
     rate_delta          = 0.0F;
+    acceleration        = 100.0F; // we don't want to get devide by zeroes if this is not set
     initial_rate        = -1;
     final_rate          = -1;
     accelerate_until    = 0;
@@ -102,13 +103,13 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
         return;
 
     // The planner passes us factors, we need to transform them in rates
-    this->initial_rate = ceil(this->nominal_rate * entryspeed / this->nominal_speed);   // (step/s)
-    this->final_rate   = ceil(this->nominal_rate * exitspeed  / this->nominal_speed);   // (step/s)
+    this->initial_rate = ceilf(this->nominal_rate * entryspeed / this->nominal_speed);   // (step/s)
+    this->final_rate   = ceilf(this->nominal_rate * exitspeed  / this->nominal_speed);   // (step/s)
 
     // How many steps to accelerate and decelerate
-    float acceleration_per_second = this->rate_delta * THEKERNEL->stepper->get_acceleration_ticks_per_second(); // ( step/s^2)
-    int accelerate_steps = ceil( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_second ) );
-    int decelerate_steps = floor( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_second ) );
+    float acceleration_per_second = this->rate_delta * THEKERNEL->acceleration_ticks_per_second; // ( step/s^2)
+    int accelerate_steps = ceilf( this->estimate_acceleration_distance( this->initial_rate, this->nominal_rate, acceleration_per_second ) );
+    int decelerate_steps = floorf( this->estimate_acceleration_distance( this->nominal_rate, this->final_rate,  -acceleration_per_second ) );
 
     // Calculate the size of Plateau of Nominal Rate ( during which we don't accelerate nor decelerate, but just cruise )
     int plateau_steps = this->steps_event_count - accelerate_steps - decelerate_steps;
@@ -117,7 +118,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // have to use intersection_distance() to calculate when to abort acceleration and start braking
     // in order to reach the final_rate exactly at the end of this block.
     if (plateau_steps < 0) {
-        accelerate_steps = ceil(this->intersection_distance(this->initial_rate, this->final_rate, acceleration_per_second, this->steps_event_count));
+        accelerate_steps = ceilf(this->intersection_distance(this->initial_rate, this->final_rate, acceleration_per_second, this->steps_event_count));
         accelerate_steps = max( accelerate_steps, 0 ); // Check limits due to numerical round-off
         accelerate_steps = min( accelerate_steps, int(this->steps_event_count) );
         plateau_steps = 0;
@@ -174,7 +175,7 @@ float Block::reverse_pass(float exit_speed)
         // for max allowable speed if block is decelerating and nominal length is false.
         if ((!this->nominal_length_flag) && (this->max_entry_speed > exit_speed))
         {
-            float max_entry_speed = max_allowable_speed(-THEKERNEL->planner->get_acceleration(), exit_speed, this->millimeters);
+            float max_entry_speed = max_allowable_speed(-this->acceleration, exit_speed, this->millimeters);
 
             this->entry_speed = min(max_entry_speed, this->max_entry_speed);
 
@@ -231,7 +232,7 @@ float Block::max_exit_speed()
         return nominal_speed;
 
     // otherwise, we have to work out max exit speed based on entry and acceleration
-    float max = max_allowable_speed(-THEKERNEL->planner->get_acceleration(), this->entry_speed, this->millimeters);
+    float max = max_allowable_speed(-this->acceleration, this->entry_speed, this->millimeters);
 
     return min(max, nominal_speed);
 }
@@ -257,6 +258,7 @@ void Block::begin()
     for(unsigned int index = 0; index < gcodes.size(); index++)
         THEKERNEL->call_event(ON_GCODE_EXECUTE, &(gcodes[index]));
 
+
     THEKERNEL->call_event(ON_BLOCK_BEGIN, this);
 
     if (times_taken < 0)
@@ -280,11 +282,9 @@ void Block::take()
 // Mark the block as no longer taken by one module, go to next block if this free's it
 void Block::release()
 {
-    if (--this->times_taken <= 0)
-    {
+    if (--this->times_taken <= 0) {
         times_taken = 0;
-        if (is_ready)
-        {
+        if (is_ready) {
             is_ready = false;
             THEKERNEL->call_event(ON_BLOCK_END, this);
 
