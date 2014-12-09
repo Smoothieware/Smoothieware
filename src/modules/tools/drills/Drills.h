@@ -31,17 +31,17 @@ class Drills : public Module
         bool cycle_started; // cycle status
         int  retract_type;  // rretract type
 
-        float initial_z; // Initial-Z
-        float r_plane;   // R-Plane
+        float initial_z;    // Initial-Z
+        float r_plane;      // R-Plane
 
-        float sticky_z; // final depth
-        float sticky_r; // R-Plane
-        float sticky_f; // feedrate
+        float sticky_z;     // final depth
+        float sticky_r;     // R-Plane
+        float sticky_f;     // feedrate
 
-        float sticky_q; // depth increment
-        int   sticky_p; // dwell pause
+        float sticky_q;     // depth increment
+        int   sticky_p;     // dwell pause
 
-        int dwell_unity; // unity for dwell
+        int   dwell_unity;  // unity for dwell
 };
 
 #endif
