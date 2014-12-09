@@ -167,25 +167,23 @@ void StepTicker::PendSV_IRQHandler (void) {
     if(this->do_move_finished.load() > 0) {
         this->do_move_finished--;
         #ifdef STEPTICKER_DEBUG_PIN
-        //stepticker_debug_pin= 1;
+        stepticker_debug_pin= 1;
         #endif
 
         this->signal_a_move_finished();
 
         #ifdef STEPTICKER_DEBUG_PIN
-        //stepticker_debug_pin= 0;
+        stepticker_debug_pin= 0;
         #endif
     }
 }
 
 // run in RIT lower priority than PendSV
 void  StepTicker::acceleration_tick() {
-stepticker_debug_pin= 1;
     // call registered acceleration handlers
     for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
         acceleration_tick_handlers[i]();
     }
-stepticker_debug_pin= 0;
 }
 
 void StepTicker::TIMER0_IRQHandler (void){
