@@ -145,7 +145,7 @@ StepperMotor* StepperMotor::move( bool direction, unsigned int steps, float init
         // if an axis stops too soon then we can get a huge number of ticks here which causes problems, so if the number of ticks is too great we ignore them
         // example of when this happens is when one axis is going very slow an the min 20steps/sec kicks in, the axis will reach its target much sooner leaving a long gap
         // until the end of the block.
-        // TODO we may need to set this based on the current step rate, trouble is we don't know what that is yet
+        // TODO we may need to set this based on the current step rate, trouble is we don't know what that is yet, we could use the last fx_ticks_per_step as a guide
         if(ts > 5) ts= 5; // limit to 50us catch up around 1-2 steps
         else if(ts > 15) ts= 0; // no way to know what the delay was
         this->fx_counter= ts*fx_increment;
