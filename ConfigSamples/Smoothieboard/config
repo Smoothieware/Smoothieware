@@ -186,7 +186,7 @@ switch.fan.output_type                       pwm              # pwm output setta
 
 # automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures and switch different swithxes
 # useful to turn on a fan or water pump to cool the hotend
-#temperatureswitch.hotend.enable	            true             #
+#temperatureswitch.hotend.enable              true             #
 #temperatureswitch.hotend.designator          T                # first character of the temperature control designator to use as the temperature sensor to monitor
 #temperatureswitch.hotend.switch              misc             # select which switch to use, matches the name of the defined switch
 #temperatureswitch.hotend.threshold_temp      60.0             # temperature to turn on (if rising) or off the switch
