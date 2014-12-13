@@ -163,6 +163,11 @@ bool ZProbe::wait_for_probe(int& steps)
 // single probe and report amount moved
 bool ZProbe::run_probe(int& steps, bool fast)
 {
+    // not a block move so disable the last tick setting
+    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        STEPPER[c]->set_moved_last_block(false);
+    }
+
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
     this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
@@ -176,7 +181,7 @@ bool ZProbe::run_probe(int& steps, bool fast)
         STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS), 0);
     }
 
-    // start acceration hrprocessing
+    // start acceration processing
     this->running = true;
 
     bool r = wait_for_probe(steps);

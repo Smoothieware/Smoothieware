@@ -538,10 +538,8 @@ uint32_t Extruder::rate_increase() const {
 // Only used in SOLO mode
 void Extruder::acceleration_tick(void)
 {
-    if(!this->enabled) return;
-
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if( this->current_block == NULL || !this->stepper_motor->is_moving() || this->paused || this->mode != SOLO ) {
+    if(!this->enabled || this->mode != SOLO || this->current_block == NULL || !this->stepper_motor->is_moving() || this->paused ) {
         return;
     }
 

@@ -100,8 +100,8 @@ Kernel::Kernel(){
     NVIC_SetPriority(TIMER0_IRQn, 2);
     NVIC_SetPriority(TIMER1_IRQn, 1);
     NVIC_SetPriority(TIMER2_IRQn, 4);
-    NVIC_SetPriority(RIT_IRQn, 4);
     NVIC_SetPriority(PendSV_IRQn, 3);
+    NVIC_SetPriority(RIT_IRQn, 3); // we make acceleration tick the same prio as pendsv so it can't be pre-empted by end of block
 
     // Set other priorities lower than the timers
     NVIC_SetPriority(ADC_IRQn, 5);
