@@ -121,6 +121,9 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     // path width or max_jerk in the previous grbl version. This approach does not actually deviate
     // from path, but used as a robust way to compute cornering speeds, as it takes into account the
     // nonlinearities of both the junction angle and junction velocity.
+
+    // NOTE however it does not take into account independent axis, in most cartesian X and Y and Z are totally independent
+    // and this allows one to stop with little to no decleration in many cases. This is particualrly bad on leadscrew based systems that will skip steps.
     float vmax_junction = minimum_planner_speed; // Set default max junction speed
 
     if (!THEKERNEL->conveyor->is_queue_empty())

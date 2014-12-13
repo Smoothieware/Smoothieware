@@ -230,6 +230,7 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
 // This is called ACCELERATION_TICKS_PER_SECOND times per second by the step_event
 // interrupt. It can be assumed that the trapezoid-generator-parameters and the
 // current_block stays untouched by outside handlers for the duration of this function call.
+// NOTE caled at the same priority as PendSV so it may make that longer but it is better that having htis pre empted by pendsv
 void Stepper::trapezoid_generator_tick(void)
 {
     // Do not do the accel math for nothing
