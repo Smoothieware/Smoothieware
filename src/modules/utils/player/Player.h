@@ -41,7 +41,8 @@ class Player : public Module {
         string extract_options(string& args);
 
         string filename;
-
+        string after_suspend_gcode;
+        string before_resume_gcode;
         string on_boot_gcode;
         StreamOutput* current_stream;
         StreamOutput* reply_stream;
@@ -49,7 +50,6 @@ class Player : public Module {
         unsigned long file_size, played_cnt;
         unsigned long elapsed_secs;
         float saved_position[3];
-        float saved_position_e;
         float saved_feed_rate;
         std::map<uint16_t, float> saved_temperatures;
         struct {

@@ -32,12 +32,17 @@
 
 #include <cstddef>
 #include <cmath>
+#include <algorithm>
 
 #include "mbed.h"
 
 #define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
 #define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
+#define after_suspend_gcode_checksum    CHECKSUM("after_suspend_gcode")
+#define before_resume_gcode_checksum    CHECKSUM("before_resume_gcode")
 #define extruder_checksum               CHECKSUM("extruder")
+#define save_state_checksum             CHECKSUM("save_state")
+#define restore_state_checksum          CHECKSUM("restore_state")
 
 extern SDFAT mounter;
 
@@ -64,6 +69,11 @@ void Player::on_module_loaded()
 
     this->on_boot_gcode = THEKERNEL->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
     this->on_boot_gcode_enable = THEKERNEL->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
+
+    this->after_suspend_gcode = THEKERNEL->config->value(after_suspend_gcode_checksum)->by_default("")->as_string();
+    this->before_resume_gcode = THEKERNEL->config->value(before_resume_gcode_checksum)->by_default("")->as_string();
+    std::replace( this->after_suspend_gcode.begin(), this->after_suspend_gcode.end(), '_', ' '); // replace _ with space
+    std::replace( this->before_resume_gcode.begin(), this->before_resume_gcode.end(), '_', ' '); // replace _ with space
 }
 
 void Player::on_halt(void *arg)
@@ -73,7 +83,7 @@ void Player::on_halt(void *arg)
 
 void Player::on_second_tick(void *)
 {
-    if (!THEKERNEL->pauser->paused()) this->elapsed_secs++;
+    if(this->playing_file) this->elapsed_secs++;
 }
 
 // extract any options found on line, terminates args at the space before the first option (-v)
@@ -460,7 +470,7 @@ Suspend a print in progress
 3. save the current position, extruder position, temperatures - any state that would need to be restored
 4. retract by specifed amount either on command line or in config
 5. turn off heaters.
-6. optionally move to safe position if enabled and specified (either in config or on command line)
+6. optionally run after_suspend gcode (either in config or on command line)
 
 User may jog or remove and insert filament at this point, extruding or retracting as needed
 
@@ -493,13 +503,8 @@ void Player::suspend_command(string parameters, StreamOutput *stream )
     // save current XYZ position
     THEKERNEL->robot->get_axis_position(this->saved_position);
 
-    // save current extruder position
-    float *rd;
-    if(PublicData::get_value( extruder_checksum, (void **)&rd )) {
-        this->saved_position_e= *(rd+5);
-    }else {
-        this->saved_position_e= NAN;
-    }
+    // save current extruder state
+    PublicData::set_value( extruder_checksum, save_state_checksum, nullptr );
 
     // save state
     this->saved_inch_mode= THEKERNEL->robot->inch_mode;
@@ -526,7 +531,13 @@ void Player::suspend_command(string parameters, StreamOutput *stream )
         PublicData::set_value( temperature_control_checksum, h.first, &t );
     }
 
-    // TODO Move to safe position if defined....
+    // execute optional gcode if defined
+    if(!after_suspend_gcode.empty()) {
+        struct SerialMessage message;
+        message.message = after_suspend_gcode;
+        message.stream = &(StreamOutput::NullStream);
+        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    }
 
     stream->printf("Print Suspended, enter resume to continue printing\n");
 }
@@ -534,8 +545,9 @@ void Player::suspend_command(string parameters, StreamOutput *stream )
 /**
 resume the suspended print
 1. restore the temperatures and wait for them to get up to temp
-2. restore the position it was at and E and any other saved state
-3. resume sd print or send resume upstream
+2. optionally run before_resume gcode if specified
+3. restore the position it was at and E and any other saved state
+4. resume sd print or send resume upstream
 */
 void Player::resume_command(string parameters, StreamOutput *stream )
 {
@@ -581,6 +593,15 @@ void Player::resume_command(string parameters, StreamOutput *stream )
         }
     }
 
+    // execute optional gcode if defined
+    if(!before_resume_gcode.empty()) {
+        stream->printf("Executing before resume gcode...\n");
+        struct SerialMessage message;
+        message.message = before_resume_gcode;
+        message.stream = &(StreamOutput::NullStream);
+        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    }
+
     // Restore position
     stream->printf("Restoring saved XYZ positions and state...\n");
     THEKERNEL->robot->inch_mode= saved_inch_mode;
@@ -593,21 +614,15 @@ void Player::resume_command(string parameters, StreamOutput *stream )
         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
     }
 
-    if(!isnan(saved_position_e)) {
-        // we just set E to the position it was at as the user will have extruded manually
-        int n = snprintf(buf, sizeof(buf), "G92 E%f", saved_position_e);
-        string g(buf, n);
-        Gcode gcode(g, &(StreamOutput::NullStream));
-        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
-    }
-
-    // TODO restore e absolute mode
+    // restore extruder state
+    PublicData::set_value( extruder_checksum, restore_state_checksum, nullptr );
 
     stream->printf("Resuming print\n");
 
     if(this->was_playing_file) {
         this->playing_file = true;
     }else{
+        // Send resume to host
         THEKERNEL->streams->printf("// action:resume\r\n");
     }
 
