@@ -22,6 +22,9 @@
 #include "SwitchPublicAccess.h"
 #include "checksumm.h"
 #include "Pauser.h"
+#include "TemperatureControlPool.h"
+
+
 #include <math.h>
 #include <string.h>
 #include <string>
@@ -123,7 +126,7 @@ void WatchScreen::on_refresh()
         // for LCDs with leds set them according to heater status
         bool bed_on= false, hotend_on= false, is_hot= false;
         uint8_t heon=0, hemsk= 0x01; // bit set for which hotend is on bit0: hotend1, bit1: hotend2 etc
-        for(auto m : THEPANEL->temperature_modules) {
+        for(auto m : THEKERNEL->temperature_control_pool->get_controllers()) {
             // query each heater
             void *p= getTemperatures(m);
             struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
@@ -250,9 +253,10 @@ void WatchScreen::display_menu_line(uint16_t line)
     // in menu mode
     switch ( line ) {
         case 0:
-            if(THEPANEL->temperature_modules.size() > 0) {
+        {
+            auto& tm= THEKERNEL->temperature_control_pool->get_controllers();
+            if(tm.size() > 0) {
                 // only if we detected heaters in config
-                auto tm= THEPANEL->temperature_modules;
                 int n= 0;
                 if(tm.size() > 2) {
                     // more than two temps we need to cycle between them
@@ -277,6 +281,7 @@ void WatchScreen::display_menu_line(uint16_t line)
                 //THEPANEL->lcd->printf("No Heaters");
             }
             break;
+        }
         case 1: THEPANEL->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]); break;
         case 2: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
         case 3: THEPANEL->lcd->printf("%19s", this->get_status()); break;

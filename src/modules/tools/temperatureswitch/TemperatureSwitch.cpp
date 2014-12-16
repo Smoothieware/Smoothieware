@@ -26,6 +26,7 @@ Author: Michael Hackney, mhackney@eclecticangler.com
 #include "checksumm.h"
 #include "PublicData.h"
 #include "StreamOutputPool.h"
+#include "TemperatureControlPool.h"
 
 #define temperatureswitch_checksum                    CHECKSUM("temperatureswitch")
 #define enable_checksum                               CHECKSUM("enable")
@@ -83,8 +84,7 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     TemperatureSwitch *ts= new TemperatureSwitch();
 
     // get the list of temperature controllers and remove any that don't have designator == specified designator
-    vector<uint16_t> tempcontrollers;
-    THEKERNEL->config->get_module_list(&tempcontrollers, temperature_control_checksum);
+    auto& tempcontrollers= THEKERNEL->temperature_control_pool->get_controllers();
 
     // see what its designator is and add to list of it the one we specified
     void *returned_temp;

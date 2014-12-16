@@ -20,28 +20,24 @@ using namespace std;
 
 #define enable_checksum              CHECKSUM("enable")
 
-void TemperatureControlPool::load_tools(){
+void TemperatureControlPool::load_tools()
+{
 
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
-    int cnt= 0;
-    for( auto cs : modules ){
+    int cnt = 0;
+    for( auto cs : modules ) {
         // If module is enabled
-        if( THEKERNEL->config->value(temperature_control_checksum, cs, enable_checksum )->as_bool() ){
-            TemperatureControl* controller = new TemperatureControl(cs, cnt++);
-            //controllers.push_back( controller );
+        if( THEKERNEL->config->value(temperature_control_checksum, cs, enable_checksum )->as_bool() ) {
+            TemperatureControl *controller = new TemperatureControl(cs, cnt++);
+            controllers.push_back( cs );
             THEKERNEL->add_module(controller);
         }
     }
 
     // no need to create one of these if no heaters defined
     if(cnt > 0) {
-      PID_Autotuner* pidtuner = new PID_Autotuner();
-      THEKERNEL->add_module( pidtuner );
+        PID_Autotuner *pidtuner = new PID_Autotuner();
+        THEKERNEL->add_module( pidtuner );
     }
 }
-
-
-
-
-

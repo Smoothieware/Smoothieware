@@ -45,7 +45,6 @@ class Extruder : public Tool {
         Pin            dir_pin;                      // Dir pin for the stepper driver
         Pin            en_pin;
         float          target_position;              // End point ( in mm ) for the current move
-        float          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
         float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
         Block*         current_block;                // Current block we are stepping, same as Stepper's one
 
@@ -56,6 +55,7 @@ class Extruder : public Tool {
             float extruder_multiplier;          // flow rate 1.0 == 100%
             float acceleration;                 // extruder accleration SOLO setting
             float retract_length;               // firmware retract length
+            float current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
         };
 
         float          volumetric_multiplier;

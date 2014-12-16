@@ -25,18 +25,35 @@
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "PublicDataRequest.h"
+#include "PublicData.h"
 #include "PlayerPublicAccess.h"
+#include "TemperatureControlPublicAccess.h"
+#include "TemperatureControlPool.h"
+
+#include <cstddef>
+#include <cmath>
+
+#include "mbed.h"
 
 #define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
 #define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
+#define extruder_checksum               CHECKSUM("extruder")
 
 extern SDFAT mounter;
 
-void Player::on_module_loaded()
+Player::Player()
 {
     this->playing_file = false;
-    this->current_file_handler = NULL;
+    this->current_file_handler = nullptr;
     this->booted = false;
+    this->elapsed_secs = 0;
+    this->reply_stream = nullptr;
+    this->halted= false;
+    this->suspended= false;
+}
+
+void Player::on_module_loaded()
+{
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_SECOND_TICK);
@@ -47,9 +64,6 @@ void Player::on_module_loaded()
 
     this->on_boot_gcode = THEKERNEL->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
     this->on_boot_gcode_enable = THEKERNEL->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
-    this->elapsed_secs = 0;
-    this->reply_stream = NULL;
-    this->halted= false;
 }
 
 void Player::on_halt(void *arg)
@@ -206,8 +220,13 @@ void Player::on_console_line_received( void *argument )
         this->play_command( possible_command, new_message.stream );
     }else if (cmd == "progress"){
         this->progress_command( possible_command, new_message.stream );
-    }else if (cmd == "abort")
+    }else if (cmd == "abort") {
         this->abort_command( possible_command, new_message.stream );
+    }else if (cmd == "suspend") {
+        this->suspend_command( possible_command, new_message.stream );
+    }else if (cmd == "resume") {
+        this->resume_command( possible_command, new_message.stream );
+    }
 }
 
 // Play a gcode file by considering each line as if it was received on the serial console
@@ -218,7 +237,7 @@ void Player::play_command( string parameters, StreamOutput *stream )
     // Get filename which is the entire parameter line upto any options found or entire line
     this->filename = absolute_from_relative(parameters);
 
-    if(this->playing_file) {
+    if(this->playing_file || this->suspended) {
         stream->printf("Currently printing, abort print first\r\n");
         return;
     }
@@ -309,6 +328,7 @@ void Player::abort_command( string parameters, StreamOutput *stream )
         stream->printf("Not currently playing\r\n");
         return;
     }
+    suspended= false;
     playing_file = false;
     played_cnt = 0;
     file_size = 0;
@@ -431,4 +451,167 @@ void Player::on_set_public_data(void *argument)
         abort_command("", &(StreamOutput::NullStream));
         pdr->set_taken();
     }
+}
+
+/**
+Suspend a print in progress
+1. send pause to upstream host, or pause if printing from sd
+2. wait for empty queue
+3. save the current position, extruder position, temperatures - any state that would need to be restored
+4. retract by specifed amount either on command line or in config
+5. turn off heaters.
+6. optionally move to safe position if enabled and specified (either in config or on command line)
+
+User may jog or remove and insert filament at this point, extruding or retracting as needed
+
+*/
+void Player::suspend_command(string parameters, StreamOutput *stream )
+{
+    if(suspended) {
+        stream->printf("Already suspended\n");
+        return;
+    }
+
+    stream->printf("ok Suspending print, waiting for queue to empty...\n");
+
+    suspended= true;
+    if( this->playing_file ) {
+        // pause an sd print
+        this->playing_file = false;
+        this->was_playing_file= true;
+    }else{
+        // send pause to upstream host, we send it on all ports as we don't know which it is on
+        THEKERNEL->streams->printf("// action:pause\r\n");
+        this->was_playing_file= false;
+    }
+
+    // wait for queue to empty
+    THEKERNEL->conveyor->wait_for_empty_queue();
+
+    stream->printf("Saving current state...\n");
+
+    // save current XYZ position
+    THEKERNEL->robot->get_axis_position(this->saved_position);
+
+    // save current extruder position
+    float *rd;
+    if(PublicData::get_value( extruder_checksum, (void **)&rd )) {
+        this->saved_position_e= *(rd+5);
+    }else {
+        this->saved_position_e= NAN;
+    }
+
+    // save state
+    this->saved_inch_mode= THEKERNEL->robot->inch_mode;
+    this->saved_absolute_mode= THEKERNEL->robot->absolute_mode;
+    this->saved_feed_rate= THEKERNEL->robot->get_feed_rate();
+
+    // save current temperatures
+    for(auto m : THEKERNEL->temperature_control_pool->get_controllers()) {
+        // query each heater and save the target temperature if on
+        void *p;
+        if(PublicData::get_value( temperature_control_checksum, m, current_temperature_checksum, &p )) {
+            struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
+            if(temp != nullptr && temp->target_temperature > 0) {
+                this->saved_temperatures[m]= temp->target_temperature;
+            }
+        }
+    }
+
+    // TODO retract by optional amount...
+
+    // turn off heaters that were on
+    for(auto& h : this->saved_temperatures) {
+        float t= 0;
+        PublicData::set_value( temperature_control_checksum, h.first, &t );
+    }
+
+    // TODO Move to safe position if defined....
+
+    stream->printf("Print Suspended, enter resume to continue printing\n");
+}
+
+/**
+resume the suspended print
+1. restore the temperatures and wait for them to get up to temp
+2. restore the position it was at and E and any other saved state
+3. resume sd print or send resume upstream
+*/
+void Player::resume_command(string parameters, StreamOutput *stream )
+{
+    if(!suspended) {
+        stream->printf("Not suspended\n");
+        return;
+    }
+
+    stream->printf("ok resuming print...\n");
+
+    // set heaters to saved temps
+    for(auto& h : this->saved_temperatures) {
+        float t= h.second;
+        PublicData::set_value( temperature_control_checksum, h.first, &t );
+    }
+
+    // wait for them to reach temp
+    if(!this->saved_temperatures.empty()) {
+        stream->printf("Waiting for heaters...\n");
+        bool wait= true;
+        uint32_t tus= us_ticker_read(); // mbed call
+        while(wait) {
+            wait= false;
+
+            bool timeup= false;
+            if((us_ticker_read() - tus) >= 1000000) { // print every 1 second
+                timeup= true;
+                tus= us_ticker_read(); // mbed call
+            }
+
+            for(auto& h : this->saved_temperatures) {
+                void *p;
+                if(PublicData::get_value( temperature_control_checksum, h.first, current_temperature_checksum, &p )) {
+                    struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
+                    if(timeup) stream->printf("%s:%3.1f /%3.1f @%d ", temp->designator.c_str(), temp->current_temperature, ((temp->target_temperature == -1) ? 0.0 : temp->target_temperature), temp->pwm);
+                    wait= wait || (temp->current_temperature < h.second);
+                }
+            }
+            if(timeup) stream->printf("\n");
+
+            if(wait)
+                THEKERNEL->call_event(ON_IDLE, this);
+        }
+    }
+
+    // Restore position
+    stream->printf("Restoring saved XYZ positions and state...\n");
+    THEKERNEL->robot->inch_mode= saved_inch_mode;
+    THEKERNEL->robot->absolute_mode= saved_absolute_mode;
+    char buf[128];
+    {
+        int n = snprintf(buf, sizeof(buf), "G1 X%f Y%f Z%f F%f", saved_position[0], saved_position[1], saved_position[2], saved_feed_rate);
+        string g(buf, n);
+        Gcode gcode(g, &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+    }
+
+    if(!isnan(saved_position_e)) {
+        // we just set E to the position it was at as the user will have extruded manually
+        int n = snprintf(buf, sizeof(buf), "G92 E%f", saved_position_e);
+        string g(buf, n);
+        Gcode gcode(g, &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+    }
+
+    // TODO restore e absolute mode
+
+    stream->printf("Resuming print\n");
+
+    if(this->was_playing_file) {
+        this->playing_file = true;
+    }else{
+        THEKERNEL->streams->printf("// action:resume\r\n");
+    }
+
+    // clean up
+    this->saved_temperatures.clear();
+    suspended= false;
 }
