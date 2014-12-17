@@ -66,7 +66,6 @@
 #define bed_z_checksum                CHECKSUM("bed_z")
 
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
-//#define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 
 

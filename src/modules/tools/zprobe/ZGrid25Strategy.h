@@ -10,7 +10,6 @@
 #define ZGrid25_leveling_checksum CHECKSUM("ZGrid25-leveling")
 
 class StreamOutput;
-class Plane3D;
 
 class ZGrid25Strategy : public LevelingStrategy
 {
