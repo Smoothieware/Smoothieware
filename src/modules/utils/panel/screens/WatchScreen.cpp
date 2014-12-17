@@ -290,23 +290,23 @@ void WatchScreen::display_menu_line(uint16_t line)
 
 const char *WatchScreen::get_status()
 {
-    if (THEPANEL->hasMessage()) {
+    if (THEPANEL->hasMessage())
         return THEPANEL->getMessage().c_str();
-    }
 
-    if (THEPANEL->is_halted()) {
+    if (THEPANEL->is_halted())
         return "HALTED Reset or M999";
-    }
 
     if (THEKERNEL->pauser->paused())
         return "Paused";
 
+    if (THEPANEL->is_suspended())
+        return "Suspended";
+
     if (THEPANEL->is_playing())
         return THEPANEL->get_playing_file();
 
-    if (!THEKERNEL->conveyor->is_queue_empty()) {
+    if (!THEKERNEL->conveyor->is_queue_empty())
         return "Printing";
-    }
 
     const char *ip = get_network();
     if (ip == NULL) {

@@ -594,6 +594,18 @@ bool Panel::is_playing() const
     return false;
 }
 
+bool Panel::is_suspended() const
+{
+    void *returned_data;
+
+    bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
+    if (ok) {
+        bool b = *static_cast<bool *>(returned_data);
+        return b;
+    }
+    return false;
+}
+
 void  Panel::set_playing_file(string f)
 {
     // just copy the first 20 characters after the first / if there

@@ -75,6 +75,7 @@ class Panel : public Module {
 
         // file playing from sd
         bool is_playing() const;
+        bool is_suspended() const;
         void set_playing_file(string f);
         const char* get_playing_file() { return playing_file; }
 
