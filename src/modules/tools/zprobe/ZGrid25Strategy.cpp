@@ -82,6 +82,7 @@ ZGrid25Strategy::ZGrid25Strategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 
 ZGrid25Strategy::~ZGrid25Strategy()
 {
+    free(this->pData);
 }
 
 bool ZGrid25Strategy::handleConfig()
