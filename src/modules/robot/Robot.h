@@ -37,16 +37,21 @@ class Robot : public Module {
         float from_millimeters(float value);
         float get_seconds_per_minute() const { return seconds_per_minute; }
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }
+        void setToolOffset(const float offset[3]);
+        float get_feed_rate() const { return feed_rate; }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
-        bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
-        void setToolOffset(const float offset[3]);
 
         // gets accessed by Panel, Endstops, ZProbe
         std::vector<StepperMotor*> actuators;
 
         // set by a leveling strategy to transform the target of a move according to the current plan
         std::function<void(float[3])> compensationTransform;
+
+        struct {
+            bool inch_mode:1;                                 // true for inch mode, false for millimeter mode ( default )
+            bool absolute_mode:1;                             // true for absolute mode ( default ), false for relative mode
+        };
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
@@ -94,7 +99,6 @@ class Robot : public Module {
 
         struct {
             bool halted:1;
-            bool inch_mode:1;                                     // true for inch mode, false for millimeter mode ( default )
         };
 };
 
