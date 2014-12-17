@@ -7,8 +7,6 @@ using namespace std;
 #include <vector>
 using std::string;
 
-extern volatile bool _isr_context;
-
 string lc(const string& str);
 
 bool is_alpha( int );

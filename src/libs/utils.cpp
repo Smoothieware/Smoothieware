@@ -16,8 +16,6 @@
 #include <stdio.h>
 using std::string;
 
-volatile bool _isr_context = false;
-
 uint16_t get_checksum(const string &to_check)
 {
     return get_checksum(to_check.c_str());

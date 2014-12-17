@@ -8,8 +8,6 @@
 #include <string>
 #include <math.h>
 
-#define max(a,b) (((a) > (b)) ? (a) : (b))
-
 class AD5206 : public DigipotBase {
     public:
         AD5206(){
@@ -26,7 +24,7 @@ class AD5206 : public DigipotBase {
                     currents[channel]= -1;
                     return;
                 }
-				current = min( max( current, 0.0L ), 2.0L );
+				current = min( max( current, 0.0F ), 2.0F );
 				char adresses[6] = { 0x05, 0x03, 0x01, 0x00, 0x02, 0x04 };
 				currents[channel] = current;
 				cs.set(0);

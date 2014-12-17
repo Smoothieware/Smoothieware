@@ -171,6 +171,7 @@ void WatchScreen::on_main_loop()
         this->issue_change_speed = false;
         set_speed();
     }
+    PanelScreen::on_main_loop(); // in case any queued commands left
 }
 
 void *WatchScreen::getTemperatures(uint16_t heater_cs)

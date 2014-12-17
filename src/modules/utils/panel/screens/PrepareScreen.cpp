@@ -23,8 +23,6 @@ using namespace std;
 
 PrepareScreen::PrepareScreen()
 {
-    this->command = nullptr;
-
     // Children screens
     if(THEPANEL->temperature_screen != nullptr) {
         this->extruder_screen = (new ExtruderScreen())->set_parent(this);
@@ -72,10 +70,10 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); break;
-        case 1: command = "G28"; break;
-        case 2: command = "G92 X0 Y0 Z0"; break;
-        case 3: command = "G92 Z0"; break;
-        case 4: command = "M84"; break;
+        case 1: send_command("G28"); break;
+        case 2: send_command("G92 X0 Y0 Z0"); break;
+        case 3: send_command("G92 Z0"); break;
+        case 4: send_command("M84"); break;
         case 5: this->preheat(); break;
         case 6: this->cooldown(); break;
         case 7: THEPANEL->enter_screen(this->extruder_screen); break;
@@ -96,13 +94,4 @@ void PrepareScreen::cooldown()
     float t = 0;
     PublicData::set_value( temperature_control_checksum, hotend_checksum, &t );
     PublicData::set_value( temperature_control_checksum, bed_checksum, &t );
-}
-
-// queuing commands needs to be done from main loop
-void PrepareScreen::on_main_loop()
-{
-    // change actual axis value
-    if (this->command == nullptr) return;
-    send_command(this->command);
-    this->command = nullptr;
 }

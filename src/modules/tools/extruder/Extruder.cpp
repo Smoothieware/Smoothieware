@@ -69,7 +69,6 @@
 
 #define PI 3.14159265358979F
 
-#define max(a,b) (((a) > (b)) ? (a) : (b))
 
 /* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
 * It can work in two modes : either the head does not move, and the extruder moves the filament at a specified speed ( SOLO mode here )
@@ -86,8 +85,14 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     this->retracted = false;
     this->volumetric_multiplier = 1.0F;
     this->extruder_multiplier = 1.0F;
+    this->stepper_motor= nullptr;
 
     memset(this->offset, 0, sizeof(this->offset));
+}
+
+Extruder::~Extruder()
+{
+    delete stepper_motor;
 }
 
 void Extruder::on_halt(void *arg)
@@ -103,9 +108,15 @@ void Extruder::on_halt(void *arg)
 
 void Extruder::on_module_loaded()
 {
-
     // Settings
     this->on_config_reload(this);
+
+    // Start values
+    this->target_position = 0;
+    this->current_position = 0;
+    this->unstepped_distance = 0;
+    this->current_block = NULL;
+    this->mode = OFF;
 
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
     this->register_for_event(ON_BLOCK_BEGIN);
@@ -118,20 +129,8 @@ void Extruder::on_module_loaded()
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_GET_PUBLIC_DATA);
 
-    // Start values
-    this->target_position = 0;
-    this->current_position = 0;
-    this->unstepped_distance = 0;
-    this->current_block = NULL;
-    this->mode = OFF;
-
     // Update speed every *acceleration_ticks_per_second*
-    // TODO: Make this an independent setting
-    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &Extruder::acceleration_tick );
-
-    // Stepper motor object for the extruder
-    this->stepper_motor  = THEKERNEL->step_ticker->add_stepper_motor( new StepperMotor(step_pin, dir_pin, en_pin) );
-    this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
+    THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){acceleration_tick(); });
 }
 
 // Get config
@@ -143,7 +142,6 @@ void Extruder::on_config_reload(void *argument)
         this->steps_per_millimeter        = THEKERNEL->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
         this->filament_diameter           = THEKERNEL->config->value(extruder_filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration                = THEKERNEL->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
-        this->max_speed                   = THEKERNEL->config->value(extruder_max_speed_checksum         )->by_default(1000)->as_number();
         this->feed_rate                   = THEKERNEL->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
 
         this->step_pin.from_string(         THEKERNEL->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
@@ -162,7 +160,6 @@ void Extruder::on_config_reload(void *argument)
         this->steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
         this->filament_diameter    = THEKERNEL->config->value(extruder_checksum, this->identifier, filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
-        this->max_speed            = THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum         )->by_default(1000)->as_number();
         this->feed_rate            = THEKERNEL->config->value(                                     default_feed_rate_checksum )->by_default(1000)->as_number();
 
         this->step_pin.from_string( THEKERNEL->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
@@ -185,6 +182,15 @@ void Extruder::on_config_reload(void *argument)
 
     if(filament_diameter > 0.01) {
         this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
+    }
+
+    // Stepper motor object for the extruder
+    this->stepper_motor = new StepperMotor(step_pin, dir_pin, en_pin);
+    this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
+    if( this->single_config ) {
+        this->stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_max_speed_checksum)->by_default(1000)->as_number());
+    }else{
+        this->stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum)->by_default(1000)->as_number());
     }
 }
 
@@ -449,18 +455,18 @@ void Extruder::on_gcode_execute(void *argument)
 
             if (gcode->has_letter('F')) {
                 feed_rate = gcode->get_value('F') / THEKERNEL->robot->get_seconds_per_minute();
-                if (feed_rate > max_speed)
-                    feed_rate = max_speed;
+                if (feed_rate > stepper_motor->get_max_rate())
+                    feed_rate = stepper_motor->get_max_rate();
             }
         }
     }
-
 }
 
 // When a new block begins, either follow the robot, or step by ourselves ( or stay back and do nothing )
 void Extruder::on_block_begin(void *argument)
 {
     if(!this->enabled) return;
+
     Block *block = static_cast<Block *>(argument);
 
 
@@ -469,7 +475,7 @@ void Extruder::on_block_begin(void *argument)
 
         this->current_position += this->travel_distance ;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) )));
+        int steps_to_step = abs(floorf(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) ));
 
         if ( this->travel_distance > 0 ) {
             this->unstepped_distance += this->travel_distance - (steps_to_step / this->steps_per_millimeter); //catch any overflow
@@ -482,13 +488,12 @@ void Extruder::on_block_begin(void *argument)
             // We take the block, we have to release it or everything gets stuck
             block->take();
             this->current_block = block;
-
-            this->stepper_motor->set_steps_per_second(0);
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step);
+            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step, rate_increase()); // start at first acceleration step
 
         } else {
             this->current_block = NULL;
         }
+        this->stepper_motor->set_moved_last_block(false);
 
     } else if( this->mode == FOLLOW ) {
         // In non-solo mode, we just follow the stepper module
@@ -496,29 +501,24 @@ void Extruder::on_block_begin(void *argument)
 
         this->current_position += this->travel_distance;
 
-        int steps_to_step = abs(int(floor(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) )));
-
-        if ( this->travel_distance > 0 ) {
-            this->unstepped_distance += this->travel_distance - (steps_to_step / this->steps_per_millimeter); //catch any overflow
-        }   else {
-            this->unstepped_distance += this->travel_distance + (steps_to_step / this->steps_per_millimeter); //catch any overflow
-        }
+        int steps_to_step = abs(floorf(this->steps_per_millimeter * this->travel_distance));
 
         if( steps_to_step != 0 ) {
             block->take();
             this->current_block = block;
 
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step );
-            this->on_speed_change(0); // initialise speed in case we get called first
+            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step)->set_moved_last_block(true);
+            on_speed_change(this); // set initial speed
         } else {
             this->current_block = NULL;
+            this->stepper_motor->set_moved_last_block(false);
         }
 
     } else if( this->mode == OFF ) {
         // No movement means we must reset our speed
         this->current_block = NULL;
         //this->stepper_motor->set_speed(0);
-
+        this->stepper_motor->set_moved_last_block(false);
     }
 
 }
@@ -530,40 +530,45 @@ void Extruder::on_block_end(void *argument)
     this->current_block = NULL;
 }
 
-// Called periodically to change the speed to match acceleration or to match the speed of the robot
-uint32_t Extruder::acceleration_tick(uint32_t dummy)
-{
-    if(!this->enabled) return 0;
+uint32_t Extruder::rate_increase() const {
+    return floorf((this->acceleration / THEKERNEL->acceleration_ticks_per_second) * this->steps_per_millimeter);
+}
 
+// Called periodically to change the speed to match acceleration or to match the speed of the robot
+// Only used in SOLO mode
+void Extruder::acceleration_tick(void)
+{
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if( this->current_block == NULL ||  this->paused || this->mode != SOLO ) {
-        return 0;
+    if(!this->enabled || this->mode != SOLO || this->current_block == NULL || !this->stepper_motor->is_moving() || this->paused ) {
+        return;
     }
 
     uint32_t current_rate = this->stepper_motor->get_steps_per_second();
-    uint32_t target_rate = int(floor(this->feed_rate * this->steps_per_millimeter));
+    uint32_t target_rate = floorf(this->feed_rate * this->steps_per_millimeter);
 
     if( current_rate < target_rate ) {
-        uint32_t rate_increase = int(floor((this->acceleration / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * this->steps_per_millimeter));
-        current_rate = min( target_rate, current_rate + rate_increase );
-    }
-    if( current_rate > target_rate ) {
-        current_rate = target_rate;
+        current_rate = min( target_rate, current_rate + rate_increase() );
+        // steps per second
+        this->stepper_motor->set_speed(current_rate);
     }
 
-    // steps per second
-    this->stepper_motor->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
-
-    return 0;
+    return;
 }
 
 // Speed has been updated for the robot's stepper, we must update accordingly
 void Extruder::on_speed_change( void *argument )
 {
-    if(!this->enabled) return;
-
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if( this->current_block == NULL ||  this->paused || this->mode != FOLLOW || this->stepper_motor->is_moving() != true ) {
+    if(!this->enabled || this->current_block == NULL ||  this->paused || this->mode != FOLLOW || !this->stepper_motor->is_moving()) {
+        return;
+    }
+
+    // if we are flushing the queue we need to stop the motor when it has decelerated to zero, we get this call with argumnet == 0 when this happens
+    // this is what steppermotor does
+    if(argument == 0) {
+        this->stepper_motor->move(0, 0);
+        this->current_block->release();
+        this->current_block = NULL;
         return;
     }
 
@@ -576,8 +581,7 @@ void Extruder::on_speed_change( void *argument )
     * or even : ( stepper steps per second ) * ( extruder steps / current block's steps )
     */
 
-    this->stepper_motor->set_speed( max( ( THEKERNEL->stepper->get_trapezoid_adjusted_rate()) * ( (float)this->stepper_motor->get_steps_to_move() / (float)this->current_block->steps_event_count ), THEKERNEL->stepper->get_minimum_steps_per_second() ) );
-
+    this->stepper_motor->set_speed(THEKERNEL->stepper->get_trapezoid_adjusted_rate() * (float)this->stepper_motor->get_steps_to_move() / (float)this->current_block->steps_event_count);
 }
 
 // When the stepper has finished it's move
