@@ -30,6 +30,7 @@ using std::string;
 #include "StepTicker.h"
 #include "checksumm.h"
 #include "utils.h"
+#include "Pauser.h"
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
 #include "StreamOutputPool.h"
@@ -362,6 +363,9 @@ void Robot::on_gcode_received(void *argument)
         }
     } else if( gcode->has_m) {
         switch( gcode->m ) {
+            case 0:  // M0 - Pause until pause button pressed again
+                THEKERNEL->pauser->take();
+                return;
             case 92: // M92 - set steps per mm
                 if (gcode->has_letter('X'))
                     actuators[0]->change_steps_per_mm(this->to_millimeters(gcode->get_value('X')));
