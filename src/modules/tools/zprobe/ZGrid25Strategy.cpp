@@ -65,8 +65,7 @@
 #define bed_y_checksum                CHECKSUM("bed_y")
 #define bed_z_checksum                CHECKSUM("bed_z")
 
-#define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
-//#define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
+#define slow_feedrate_checksum       CHECKSUM("slow_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 
 
@@ -82,6 +81,7 @@ ZGrid25Strategy::ZGrid25Strategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 
 ZGrid25Strategy::~ZGrid25Strategy()
 {
+    free (this->pData);
 }
 
 bool ZGrid25Strategy::handleConfig()
