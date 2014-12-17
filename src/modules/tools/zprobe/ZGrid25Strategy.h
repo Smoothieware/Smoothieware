@@ -48,9 +48,6 @@ private:
     float bed_div_y;
     float cal[3];            // calibration positions for manual leveling
     struct {
-        bool home:1;
-        bool save:1;
-        bool is_scara:1;
         bool in_cal:1;
     };
 };
