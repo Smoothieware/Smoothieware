@@ -55,6 +55,9 @@
 #include "ZProbe.h"
 #include "libs/FileStream.h"
 #include "nuts_bolts.h"
+#include "platform_memory.h"
+#include "MemoryPool.h"
+//#include "new.h"
 
 #include <string>
 #include <algorithm>
@@ -65,7 +68,7 @@
 #define bed_y_checksum                CHECKSUM("bed_y")
 #define bed_z_checksum                CHECKSUM("bed_z")
 
-#define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
+#define slow_feedrate_checksum       CHECKSUM("slow_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 
 
@@ -81,7 +84,8 @@ ZGrid25Strategy::ZGrid25Strategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 
 ZGrid25Strategy::~ZGrid25Strategy()
 {
-    free(this->pData);
+    // Free program memory for the pData grid
+    if(this->pData != nullptr) AHB0.dealloc(this->pData);
 }
 
 bool ZGrid25Strategy::handleConfig()
@@ -95,10 +99,12 @@ bool ZGrid25Strategy::handleConfig()
     this->numRows = 5;
     this->numCols = 5;
     
+    //TODO: divisors needs to change to acomodate arbitrary number of grid points
     this->bed_div_x = this->bed_x / 4.0F;    // Find divisors to find the 25 calbration points
     this->bed_div_y = this->bed_y / 4.0F;
 
-    this->pData = (float*) malloc((this->numRows) * this->numCols *sizeof(float));
+    // Allocate program memory for the pData grid
+    this->pData = (float *)AHB0.alloc(this->numRows * this->numCols * sizeof(float));
 
     // Probe offsets xxx,yyy,zzz
     std::string po = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, probe_offsets_checksum)->by_default("0,0,0")->as_string();
@@ -160,7 +166,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                 this->setAdjustFunction(false); // Disable leveling code
 
                 this->homexyz();
-                for (int i=0; i<25; i++){
+                for (int i=0; i<25; i++){    //TODO: GRid points (i)
                     this->pData[i] = 0.0F;        // Clear the ZGrid25
                 }
 
