@@ -39,6 +39,7 @@ class Player : public Module {
         void suspend_command( string parameters, StreamOutput* stream );
         void resume_command( string parameters, StreamOutput* stream );
         string extract_options(string& args);
+        void suspend_part2();
 
         string filename;
         string after_suspend_gcode;
@@ -46,6 +47,8 @@ class Player : public Module {
         string on_boot_gcode;
         StreamOutput* current_stream;
         StreamOutput* reply_stream;
+        StreamOutput* suspend_stream;
+
         FILE* current_file_handler;
         unsigned long file_size, played_cnt;
         unsigned long elapsed_secs;
@@ -61,6 +64,7 @@ class Player : public Module {
             bool saved_inch_mode:1;
             bool saved_absolute_mode:1;
             bool was_playing_file:1;
+            uint8_t suspend_loops:4;
         };
 };
 

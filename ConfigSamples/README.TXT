@@ -14,6 +14,8 @@ The full configs found in the ConfigSamples director include:
 * AzteegX5Mini - This directory contains a sample config file for using
   the Azteeg X5 Mini.
 
+* Snippets - these are snippets of config that can be included in the main config or copy pasted.
+
 There are also example config fragments to be be found in the rest of the docs.
 
 You can find even more information about Smoothie configuration at this URL:

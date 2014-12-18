@@ -55,6 +55,7 @@ Player::Player()
     this->reply_stream = nullptr;
     this->halted= false;
     this->suspended= false;
+    this->suspend_loops= 0;
 }
 
 void Player::on_module_loaded()
@@ -366,6 +367,14 @@ void Player::abort_command( string parameters, StreamOutput *stream )
 
 void Player::on_main_loop(void *argument)
 {
+    if(suspended && suspend_loops > 0) {
+        // if we are suspended we need to allow main loop to cycle a few times then finsih off the supend processing
+        if(--suspend_loops == 0) {
+            suspend_part2();
+            return;
+        }
+    }
+
     if( !this->booted ) {
         this->booted = true;
         if( this->on_boot_gcode_enable ) {
@@ -466,6 +475,7 @@ void Player::on_set_public_data(void *argument)
 /**
 Suspend a print in progress
 1. send pause to upstream host, or pause if printing from sd
+1a. loop on_main_loop several times to clear any buffered commmands
 2. wait for empty queue
 3. save the current position, extruder position, temperatures - any state that would need to be restored
 4. retract by specifed amount either on command line or in config
@@ -495,10 +505,18 @@ void Player::suspend_command(string parameters, StreamOutput *stream )
         this->was_playing_file= false;
     }
 
+    // we need to allow main loop to cycle a few times to clear any buffered commands in the serial streams etc
+    suspend_loops= 10;
+    suspend_stream= stream;
+}
+
+// this completes the suspend
+void Player::suspend_part2()
+{
     // wait for queue to empty
     THEKERNEL->conveyor->wait_for_empty_queue();
 
-    stream->printf("Saving current state...\n");
+    suspend_stream->printf("Saving current state...\n");
 
     // save current XYZ position
     THEKERNEL->robot->get_axis_position(this->saved_position);
@@ -539,7 +557,7 @@ void Player::suspend_command(string parameters, StreamOutput *stream )
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     }
 
-    stream->printf("Print Suspended, enter resume to continue printing\n");
+    suspend_stream->printf("Print Suspended, enter resume to continue printing\n");
 }
 
 /**
