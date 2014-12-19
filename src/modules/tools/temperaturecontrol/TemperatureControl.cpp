@@ -359,7 +359,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
             heater_pin.set((this->o = 0));
         } else {
             pid_process(temperature);
-            if ((temperature > target_temperature) && waiting) {
+            if ( waiting && (temperature >= target_temperature) ) {
                 THEKERNEL->pauser->release();
                 waiting = false;
             }

@@ -38,6 +38,7 @@ class Extruder : public Tool {
 
     private:
         void on_get_public_data(void* argument);
+        void on_set_public_data(void* argument);
         uint32_t rate_increase() const;
 
         StepperMotor*  stepper_motor;
@@ -45,7 +46,6 @@ class Extruder : public Tool {
         Pin            dir_pin;                      // Dir pin for the stepper driver
         Pin            en_pin;
         float          target_position;              // End point ( in mm ) for the current move
-        float          current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
         float          unstepped_distance;           // overflow buffer for requested moves that are less than 1 step
         Block*         current_block;                // Current block we are stepping, same as Stepper's one
 
@@ -56,24 +56,27 @@ class Extruder : public Tool {
             float extruder_multiplier;          // flow rate 1.0 == 100%
             float acceleration;                 // extruder accleration SOLO setting
             float retract_length;               // firmware retract length
+            float current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
         };
 
-        float          volumetric_multiplier;
-        float          feed_rate;               // mm/sec for SOLO moves only
+        float saved_current_position;
+        float volumetric_multiplier;
+        float feed_rate;               // mm/sec for SOLO moves only
 
-        float          travel_ratio;
-        float          travel_distance;
+        float travel_ratio;
+        float travel_distance;
 
         // for firmware retract
-        float          retract_feedrate;
-        float          retract_recover_feedrate;
-        float          retract_recover_length;
-        float          retract_zlift_length;
-        float          retract_zlift_feedrate;
+        float retract_feedrate;
+        float retract_recover_feedrate;
+        float retract_recover_length;
+        float retract_zlift_length;
+        float retract_zlift_feedrate;
 
         struct {
             char mode:3;        // extruder motion mode,  OFF, SOLO, or FOLLOW
             bool absolute_mode:1; // absolute/relative coordinate mode switch
+            bool saved_absolute_mode:1;
             bool paused:1;
             bool single_config:1;
             bool retracted:1;
