@@ -10,7 +10,6 @@
 #define ZGrid25_leveling_checksum CHECKSUM("ZGrid25-leveling")
 
 class StreamOutput;
-class Plane3D;
 
 class ZGrid25Strategy : public LevelingStrategy
 {
@@ -48,9 +47,6 @@ private:
     float bed_div_y;
     float cal[3];            // calibration positions for manual leveling
     struct {
-        bool home:1;
-        bool save:1;
-        bool is_scara:1;
         bool in_cal:1;
     };
 };
