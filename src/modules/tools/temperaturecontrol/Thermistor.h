@@ -35,6 +35,7 @@ class Thermistor : public TempSensor
         int new_thermistor_reading();
         float adc_value_to_temperature(int adc_value);
         void calc_jk();
+        uint32_t oversample_tick(uint32_t dummy);
 
         // Thermistor computation settings using beta, not used if using Steinhart-Hart
         float r0;
@@ -58,6 +59,10 @@ class Thermistor : public TempSensor
             };
         };
 
+        uint16_t oversample_freq;
+        uint16_t oversample_count;
+        int oversample_sum;
+        
         Pin  thermistor_pin;
 
         RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
