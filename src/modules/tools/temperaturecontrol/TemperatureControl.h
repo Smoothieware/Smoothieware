@@ -62,15 +62,6 @@ class TemperatureControl : public Module {
 
         Pwm  heater_pin;
 
-        struct {
-            bool use_bangbang:1;
-            bool waiting:1;
-            bool min_temp_violated:1;
-            bool link_to_tool:1;
-            bool active:1;
-            bool readonly:1;
-        };
-
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;
         uint16_t get_m_code;
@@ -90,6 +81,16 @@ class TemperatureControl : public Module {
         float i_factor;
         float d_factor;
         float PIDdt;
+
+        struct {
+            bool use_bangbang:1;
+            bool waiting:1;
+            bool min_temp_violated:1;
+            bool link_to_tool:1;
+            bool active:1;
+            bool readonly:1;
+            bool windup:1;
+        };
 };
 
 #endif
