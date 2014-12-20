@@ -399,21 +399,24 @@ void TemperatureControl::pid_process(float temperature)
 
     // regular PID control
     float error = target_temperature - temperature;
-    this->iTerm += (error * this->i_factor);
-    if (this->iTerm > this->i_max) this->iTerm = this->i_max;
-    else if (this->iTerm < 0.0) this->iTerm = 0.0;
+    
+    float new_I = this->iTerm + (error * this->i_factor);
+    if (new_I > this->i_max) new_I = this->i_max;
+    else if (new_I < 0.0) new_I = 0.0;
 
     if(this->lastInput < 0.0) this->lastInput = temperature; // set first time
     float d = (temperature - this->lastInput);
 
     // calculate the PID output
     // TODO does this need to be scaled by max_pwm/256? I think not as p_factor already does that
-    this->o = (this->p_factor * error) + this->iTerm - (this->d_factor * d);
+    this->o = (this->p_factor * error) + new_I - (this->d_factor * d);
 
     if (this->o >= heater_pin.max_pwm())
         this->o = heater_pin.max_pwm();
     else if (this->o < 0)
         this->o = 0;
+    else
+        this->iTerm = new_I; // Only update I term when output is not saturated.
 
     this->heater_pin.pwm(this->o);
     this->lastInput = temperature;
