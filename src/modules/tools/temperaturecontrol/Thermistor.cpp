@@ -14,6 +14,7 @@
 #include "ConfigValue.h"
 #include "libs/Median.h"
 #include "Thermistor.h"
+#include "SlowTicker.h"
 
 // a const list of predefined thermistors
 #include "predefined_thermistors.h"
@@ -31,6 +32,7 @@
 #define r1_checksum                        CHECKSUM("r1")
 #define r2_checksum                        CHECKSUM("r2")
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
+#define oversample_freq_checksum           CHECKSUM("oversample_freq")
 
 Thermistor::Thermistor()
 {
@@ -69,6 +71,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     this->beta = THEKERNEL->config->value(module_checksum, name_checksum, beta_checksum)->by_default(this->beta)->as_number(); // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
     this->r1 = THEKERNEL->config->value(module_checksum, name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
     this->r2 = THEKERNEL->config->value(module_checksum, name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
+    this->oversample_freq = THEKERNEL->config->value(module_checksum, name_checksum, oversample_freq_checksum)->by_default(0)->as_int();
 
     // Thermistor math
     j = (1.0 / beta);
@@ -77,6 +80,13 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     // Thermistor pin for ADC readings
     this->thermistor_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, thermistor_pin_checksum )->required()->as_string());
     THEKERNEL->adc->enable_pin(&thermistor_pin);
+    
+    if (this->oversample_freq > 0)
+    {
+        this->oversample_count = 1;
+        this->oversample_sum = 0;
+        THEKERNEL->slow_ticker->attach(this->oversample_freq, this, &Thermistor::oversample_tick);
+    }
 }
 
 float Thermistor::get_temperature()
@@ -86,25 +96,57 @@ float Thermistor::get_temperature()
 
 float Thermistor::adc_value_to_temperature(int adc_value)
 {
-    if ((adc_value == 4095) || (adc_value == 0))
+    if ((adc_value >= 65530) || (adc_value <= 10))
         return infinityf();
-    float r = r2 / ((4095.0 / adc_value) - 1.0);
+    float r = r2 / ((4095.0f * 16.0f / adc_value) - 1.0f);
     if (r1 > 0)
         r = (r1 * r) / (r1 - r);
-    return (1.0 / (k + (j * log(r / r0)))) - 273.15;
+    return (1.0f / (k + (j * logf(r / r0)))) - 273.15f;
 }
 
 int Thermistor::new_thermistor_reading()
 {
-    int last_raw = THEKERNEL->adc->read(&thermistor_pin);
+    int last_raw;
+
+    // Data is always scaled by 16, because that is the most we can fit
+    // in the uint16_t median buffer.
+    if (oversample_freq == 0)
+    {
+        last_raw = 16 * THEKERNEL->adc->read(&thermistor_pin);
+    }
+    else
+    {
+        last_raw = 16 * oversample_sum / oversample_count;
+        oversample_sum = THEKERNEL->adc->read(&thermistor_pin);
+        oversample_count = 1;
+    }
+
     if (queue.size() >= queue.capacity()) {
         uint16_t l;
         queue.pop_front(l);
     }
     uint16_t r = last_raw;
     queue.push_back(r);
+
     for (int i=0; i<queue.size(); i++)
       median_buffer[i] = *queue.get_ref(i);
     uint16_t m = median_buffer[quick_median(median_buffer, queue.size())];
     return m;
+}
+
+uint32_t Thermistor::oversample_tick(uint32_t dummy)
+{
+    int value = THEKERNEL->adc->read(&thermistor_pin);
+
+    // LPC1769 ADC seems to give spurious spikes sometimes when the stepper
+    // drivers are active. Filter most of them out before oversampling. The
+    // median filter will take out the rest.
+    int avg = oversample_sum / oversample_count;
+    if (value > avg - 5 && value < avg + 5)
+    {
+        oversample_count++;
+        oversample_sum += value;
+    }
+
+    return 0;
 }
