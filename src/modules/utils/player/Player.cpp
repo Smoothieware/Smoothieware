@@ -179,7 +179,6 @@ void Player::on_gcode_received(void *argument)
                         this->current_stream = &(StreamOutput::NullStream);
                     }
                 }
-
             } else {
                 gcode->stream->printf("No file loaded\r\n");
             }
@@ -206,6 +205,8 @@ void Player::on_gcode_received(void *argument)
                 this->playing_file = true;
             }
 
+        } else if (gcode->m == 600) { // suspend print, Not entirely Marlin compliant
+            this->suspend_command("", &(StreamOutput::NullStream));
         }
     }
 }
