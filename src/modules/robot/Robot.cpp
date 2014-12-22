@@ -697,23 +697,23 @@ void Robot::append_milestone( float target[], float rate_mm_s )
 // Append a move to the queue ( cutting it into segments if needed )
 void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
 {
-
     // Find out the distance for this gcode
-    gcode->millimeters_of_travel = powf( target[X_AXIS] - this->last_milestone[X_AXIS], 2 ) +  powf( target[Y_AXIS] - this->last_milestone[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - this->last_milestone[Z_AXIS], 2 );
+    // NOTE we need to do sqrt here as this setting of millimeters_of_travel is used by extruder and other modules even of there is no XYZ move
+    // FIXME not sure why we need to do this twice,it is also done in append_milestone()
+    gcode->millimeters_of_travel = sqrtf(powf( target[X_AXIS] - this->last_milestone[X_AXIS], 2 ) +  powf( target[Y_AXIS] - this->last_milestone[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - this->last_milestone[Z_AXIS], 2 ));
 
-    // We ignore non-moves ( for example, extruder moves are not XYZ moves )
-    if( gcode->millimeters_of_travel < 1e-8F ) {
+    // We ignore non- XYZ moves ( for example, extruder moves are not XYZ moves )
+    if( gcode->millimeters_of_travel < 0.00001F ) {
         return;
     }
-
-    gcode->millimeters_of_travel = sqrtf(gcode->millimeters_of_travel);
 
     // Mark the gcode as having a known distance
     this->distance_in_gcode_is_known( gcode );
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
-    // In delta robots either mm_per_line_segment can be used OR delta_segments_per_second The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
+    // In delta robots either mm_per_line_segment can be used OR delta_segments_per_second
+    // The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
     uint16_t segments;
 
     if(this->delta_segments_per_second > 1.0F) {
@@ -788,7 +788,7 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
     gcode->millimeters_of_travel = hypotf(angular_travel * radius, fabs(linear_travel));
 
     // We don't care about non-XYZ moves ( for example the extruder produces some of those )
-    if( gcode->millimeters_of_travel < 0.0001F ) {
+    if( gcode->millimeters_of_travel < 0.00001F ) {
         return;
     }
 
