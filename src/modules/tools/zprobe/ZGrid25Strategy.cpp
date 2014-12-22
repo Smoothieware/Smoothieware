@@ -87,7 +87,7 @@
 #define cols_checksum                CHECKSUM("cols")
 #define rows_checksum                CHECKSUM("rows")
 
-#define probe_points                 this->numRows * this->numCols 
+#define probe_points                 (this->numRows * this->numCols)
 
 
 
@@ -408,14 +408,14 @@ void ZGrid25Strategy::move(float *position, float feed)
 
 
 void ZGrid25Strategy::next_cal(void){
-    if (this->cal[X_AXIS] == bed_div_x || this->cal[X_AXIS] == bed_div_x * 3){
+    if (int(this->cal[X_AXIS] / bed_div_x) % 2 != 0){  // Odd row
         this->cal[Y_AXIS] -= bed_div_y;
         if (this->cal[Y_AXIS] < 0){
             this->cal[Y_AXIS] = 0;
             this->cal[X_AXIS] += bed_div_x;
         }
     }
-    else {
+    else {                                          // Even row
         this->cal[Y_AXIS] += bed_div_y;
         if (this->cal[Y_AXIS] > bed_y){
             this->cal[X_AXIS] += bed_div_x;
