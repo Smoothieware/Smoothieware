@@ -19,23 +19,36 @@
     leveling-strategy.ZGrid25-leveling.bedx           200
     leveling-strategy.ZGrid25-leveling.bedy           200
 
+
+    The number of divisions for X and Y should be defined
+
+    leveling-strategy.ZGrid25-leveling.rows           7          # X divisions (Default 5)
+    leveling-strategy.ZGrid25-leveling.cols           9          # Y divisions (Default 5)
+
+
     The probe offset should be defined, default to zero offset
 
     leveling-strategy.ZGrid25-leveling.probe_offsets  0,0,16.3
+
 
     slow feedrate can be defined for probe speed
 
     leveling-strategy.ZGrid25-leveling.slow_feedrate  100
 
+
    
     Usage
     -----
-    G32 probes the twenty-five probe points and defines the bed ZGrid25, this will remain in effect until reset or M370
+    G32 probes the probe points and defines the bed ZGrid25, this will remain in effect until reset or M370
     G31 reports the status
 
     M370 clears the ZGrid25 and the bed leveling is disabled until G32 is run again
     M371 moves the head to the next calibration postion without saving
-    M372 move the head to the next calibration postion after saving the current probe point
+    M372 move the head to the next calibration postion after saving the current probe point to memory
+   
+    M373 completes calibration and enables the grid
+
+    M
 
     M500 saves the probe points and the probe offsets
     M503 displays the current settings
@@ -71,6 +84,11 @@
 #define slow_feedrate_checksum       CHECKSUM("slow_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 
+#define cols_checksum                CHECKSUM("cols")
+#define rows_checksum                CHECKSUM("rows")
+
+#define probe_points                 this->numRows * this->numCols 
+
 
 
 ZGrid25Strategy::ZGrid25Strategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
@@ -96,15 +114,14 @@ bool ZGrid25Strategy::handleConfig()
 
     this->slow_rate = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, slow_feedrate_checksum)->by_default(20.0F)->as_number();
 
-    this->numRows = 5;
-    this->numCols = 5;
+    this->numRows = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, rows_checksum)->by_default(5)->as_number();
+    this->numCols = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, cols_checksum)->by_default(5)->as_number();
     
-    //TODO: divisors needs to change to acomodate arbitrary number of grid points
-    this->bed_div_x = this->bed_x / 4.0F;    // Find divisors to find the 25 calbration points
-    this->bed_div_y = this->bed_y / 4.0F;
+    this->bed_div_x = this->bed_x / float(this->numRows-1);    // Find divisors to find the calbration points
+    this->bed_div_y = this->bed_y / float(this->numCols-1);
 
     // Allocate program memory for the pData grid
-    this->pData = (float *)AHB0.alloc(this->numRows * this->numCols * sizeof(float));
+    this->pData = (float *)AHB0.alloc(probe_points * sizeof(float));
 
     // Probe offsets xxx,yyy,zzz
     std::string po = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, probe_offsets_checksum)->by_default("0,0,0")->as_string();
@@ -112,7 +129,7 @@ bool ZGrid25Strategy::handleConfig()
 
 
     int i;
-    for (i=0; i<(this->numRows * this->numCols); i++){
+    for (i=0; i<(probe_points); i++){
         this->pData[i] = 0.0F;        // Clear the grid
     }
 
@@ -132,12 +149,12 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                // Bed ZGrid25 data as gcode:
                 gcode->stream->printf(";Bed Level settings:\r\n");
                 
-                for (int x=0; x<5; x++){
+                for (int x=0; x<this->numRows; x++){
                     int y;
                     
                     gcode->stream->printf("X%i",x);
-                    for (y=0; y<5; y++){
-                         gcode->stream->printf(" %c%1.2f", 'A'+y, this->pData[(x*5)+y]);
+                    for (y=0; y<this->numCols; y++){
+                         gcode->stream->printf(" %c%1.2f", 'A'+y, this->pData[(x*this->numCols)+y]);
                     }
                     gcode->stream->printf("\r\n"); 
                 }
@@ -166,8 +183,8 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                 this->setAdjustFunction(false); // Disable leveling code
 
                 this->homexyz();
-                for (int i=0; i<25; i++){    //TODO: GRid points (i)
-                    this->pData[i] = 0.0F;        // Clear the ZGrid25
+                for (int i=0; i<probe_points; i++){
+                    this->pData[i] = 0.0F;        // Clear the ZGrid
                 }
 
                 this->cal[X_AXIS] = 0.0f;                                              // Clear calibration position
@@ -209,7 +226,8 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 
             }
             return true;
-            // M374: manually inject calibration - Alphabetical ZGrid25 assignment
+ 
+/*           // M374: manually inject calibration - Alphabetical ZGrid25 assignment  TODO - debug only
             case 374: {
                 int i=0,
                     x=0;
@@ -227,7 +245,8 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                 this->setAdjustFunction(true); // Enable leveling code   
             }
             return true;
-            case 376: { // Check grid value calculations
+
+            case 376: { // Check grid value calculations: TODO - For debug only.
                 float target[3];
 
                 for(char letter = 'X'; letter <= 'Z'; letter++) {
@@ -239,6 +258,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                 
             }
             return true;
+*/
             case 565: { // M565: Set Z probe offsets
                 float x= 0, y= 0, z= 0;
                 if(gcode->has_letter('X')) x = gcode->get_value('X');
@@ -256,7 +276,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 
             case 500: // M500 saves some volatile settings to config override file
 
-                this->saveGrid();
+                this->saveGrid();  // TODO: Move this line to a new gcode for saving grids
 
             case 503: { // M503 just prints the settings
 
@@ -280,7 +300,7 @@ bool ZGrid25Strategy::saveGrid()
 {
     StreamOutput *ZMap_file = new FileStream("/sd/grid25");
 
-    for (int pos = 0; pos < 25; pos++){
+    for (int pos = 0; pos < probe_points; pos++){
         ZMap_file->printf("%1.3f\n", this->pData[pos]);
     }
     delete ZMap_file;
@@ -294,7 +314,7 @@ bool ZGrid25Strategy::loadGrid()
     FILE *fd = fopen("/sd/grid25", "r");
     if(fd != NULL) {
  
-        for (int pos = 0; pos < 25; pos++){
+        for (int pos = 0; pos < probe_points; pos++){
             float val;
 
             fscanf(fd, "%f\n", &val);
@@ -316,7 +336,7 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
     // home first
     this->homexyz();
 
-    for (int i=0; i<25; i++){
+    for (int i=0; i<probe_points; i++){
        this->pData[i] = 0.0F;        // Clear the ZGrid25
     }
 
@@ -339,7 +359,7 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
          
     this->move(this->cal, slow_rate);            // Move to probe start point
 
-    for (int probes = 0; probes <25; probes++){
+    for (int probes = 0; probes <probe_points; probes++){
         int pindex = 0;
 
         float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
@@ -347,7 +367,7 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
 
         pindex = (int) ((this->cal[X_AXIS]/this->bed_div_x*numRows)+(this->cal[Y_AXIS]/this->bed_div_y));
 
-        if (probes == 24){
+        if (probes == (probe_points-1)){
             this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
             this->cal[Y_AXIS] = this->bed_y/2.0f;
             this->cal[Z_AXIS] = this->bed_z/2.0f;                     // Position head for probe removal
