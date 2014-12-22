@@ -75,6 +75,7 @@ class Panel : public Module {
 
         // file playing from sd
         bool is_playing() const;
+        bool is_suspended() const;
         void set_playing_file(string f);
         const char* get_playing_file() { return playing_file; }
 
@@ -88,14 +89,11 @@ class Panel : public Module {
         // TODO pass lcd into ctor of each sub screen
         LcdBase* lcd;
         PanelScreen* custom_screen;
-        PanelScreen* temperature_screen;
-        vector<uint16_t> temperature_modules;
 
         // as panelscreen accesses private fields in Panel
         friend class PanelScreen;
 
     private:
-        void setup_temperature_screen();
 
         // external SD card
         bool mount_external_sd(bool on);

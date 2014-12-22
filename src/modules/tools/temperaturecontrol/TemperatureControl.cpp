@@ -56,6 +56,7 @@
 #define d_factor_checksum                  CHECKSUM("d_factor")
 
 #define i_max_checksum                     CHECKSUM("i_max")
+#define windup_checksum                    CHECKSUM("windup")
 
 #define preset1_checksum                   CHECKSUM("preset1")
 #define preset2_checksum                   CHECKSUM("preset2")
@@ -166,6 +167,7 @@ void TemperatureControl::load_config()
         // used to enable bang bang control of heater
         this->use_bangbang = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, bang_bang_checksum)->by_default(false)->as_bool();
         this->hysteresis = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, hysteresis_checksum)->by_default(2)->as_number();
+        this->windup = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, windup_checksum)->by_default(false)->as_bool();
         this->heater_pin.max_pwm( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
         this->heater_pin.set(0);
         set_low_on_debug(heater_pin.port_number, heater_pin.pin);
@@ -329,14 +331,25 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
         desired_temperature = this->max_temp;
     }
 
-    if (desired_temperature == 1.0)
+    if (desired_temperature == 1.0F)
         desired_temperature = preset1;
-    else if (desired_temperature == 2.0)
+    else if (desired_temperature == 2.0F)
         desired_temperature = preset2;
 
+    float last_target_temperature= target_temperature;
     target_temperature = desired_temperature;
-    if (desired_temperature == 0.0)
+    if (desired_temperature == 0.0F){
+        // turning it off
         heater_pin.set((this->o = 0));
+
+    }else if(last_target_temperature == 0.0F) {
+        // if it was off and we are now turning it on we need to initialize
+        this->lastInput= last_reading;
+        // set to whatever the output currently is See http://brettbeauregard.com/blog/2011/04/improving-the-beginner%E2%80%99s-pid-initialization/
+        this->iTerm= this->o;
+        if (this->iTerm > this->i_max) this->iTerm = this->i_max;
+        else if (this->iTerm < 0.0) this->iTerm = 0.0;
+    }
 }
 
 float TemperatureControl::get_temperature()
@@ -359,7 +372,7 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
             heater_pin.set((this->o = 0));
         } else {
             pid_process(temperature);
-            if ((temperature > target_temperature) && waiting) {
+            if ( waiting && (temperature >= target_temperature) ) {
                 THEKERNEL->pauser->release();
                 waiting = false;
             }
@@ -399,21 +412,24 @@ void TemperatureControl::pid_process(float temperature)
 
     // regular PID control
     float error = target_temperature - temperature;
-    this->iTerm += (error * this->i_factor);
-    if (this->iTerm > this->i_max) this->iTerm = this->i_max;
-    else if (this->iTerm < 0.0) this->iTerm = 0.0;
 
-    if(this->lastInput < 0.0) this->lastInput = temperature; // set first time
+    float new_I = this->iTerm + (error * this->i_factor);
+    if (new_I > this->i_max) new_I = this->i_max;
+    else if (new_I < 0.0) new_I = 0.0;
+    if(!this->windup) this->iTerm= new_I;
+
     float d = (temperature - this->lastInput);
 
     // calculate the PID output
     // TODO does this need to be scaled by max_pwm/256? I think not as p_factor already does that
-    this->o = (this->p_factor * error) + this->iTerm - (this->d_factor * d);
+    this->o = (this->p_factor * error) + new_I - (this->d_factor * d);
 
     if (this->o >= heater_pin.max_pwm())
         this->o = heater_pin.max_pwm();
     else if (this->o < 0)
         this->o = 0;
+    else if(this->windup)
+        this->iTerm = new_I; // Only update I term when output is not saturated.
 
     this->heater_pin.pwm(this->o);
     this->lastInput = temperature;

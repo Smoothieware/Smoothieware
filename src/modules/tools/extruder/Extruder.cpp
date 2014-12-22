@@ -59,6 +59,9 @@
 #define retract_zlift_length_checksum        CHECKSUM("retract_zlift_length")
 #define retract_zlift_feedrate_checksum      CHECKSUM("retract_zlift_feedrate")
 
+#define save_state_checksum                  CHECKSUM("save_state")
+#define restore_state_checksum               CHECKSUM("restore_state")
+
 #define X_AXIS      0
 #define Y_AXIS      1
 #define Z_AXIS      2
@@ -128,6 +131,7 @@ void Extruder::on_module_loaded()
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_GET_PUBLIC_DATA);
+    this->register_for_event(ON_SET_PUBLIC_DATA);
 
     // Update speed every *acceleration_ticks_per_second*
     THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){acceleration_tick(); });
@@ -202,6 +206,24 @@ void Extruder::on_get_public_data(void* argument){
     if(this->enabled) {
         // Note this is allowing both step/mm and filament diameter to be exposed via public data
         pdr->set_data_ptr(&this->steps_per_millimeter);
+        pdr->set_taken();
+    }
+}
+
+void Extruder::on_set_public_data(void *argument)
+{
+    PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
+
+    if(!pdr->starts_with(extruder_checksum)) return;
+
+    // save or restore state
+    if(pdr->second_element_is(save_state_checksum)) {
+        this->saved_current_position= this->current_position;
+        this->saved_absolute_mode= this->absolute_mode;
+        pdr->set_taken();
+    }else if(pdr->second_element_is(restore_state_checksum)) {
+        this->current_position= this->saved_current_position;
+        this->absolute_mode= this->saved_absolute_mode;
         pdr->set_taken();
     }
 }
@@ -440,7 +462,7 @@ void Extruder::on_gcode_execute(void *argument)
                 }
 
                 // If the robot is moving, we follow it's movement, otherwise, we move alone
-                if( fabs(gcode->millimeters_of_travel) < 0.0001F ) { // With floating numbers, we can have 0 != 0 ... beeeh. For more info see : http://upload.wikimedia.org/wikipedia/commons/0/0a/Cain_Henri_Vidal_Tuileries.jpg
+                if( fabs(gcode->millimeters_of_travel) < 0.00001F ) { // With floating numbers, we can have 0 != 0, NOTE needs to be same as in Robot.cpp#701
                     this->mode = SOLO;
                     this->travel_distance = relative_extrusion_distance;
                 } else {
@@ -467,57 +489,49 @@ void Extruder::on_block_begin(void *argument)
 {
     if(!this->enabled) return;
 
-    Block *block = static_cast<Block *>(argument);
-
-
-    if( this->mode == SOLO ) {
-        // In solo mode we take the block so we can move even if the stepper has nothing to do
-
-        this->current_position += this->travel_distance ;
-
-        int steps_to_step = abs(floorf(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) ));
-
-        if ( this->travel_distance > 0 ) {
-            this->unstepped_distance += this->travel_distance - (steps_to_step / this->steps_per_millimeter); //catch any overflow
-        }   else {
-            this->unstepped_distance += this->travel_distance + (steps_to_step / this->steps_per_millimeter); //catch any overflow
-        }
-
-        if( steps_to_step != 0 ) {
-
-            // We take the block, we have to release it or everything gets stuck
-            block->take();
-            this->current_block = block;
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step, rate_increase()); // start at first acceleration step
-
-        } else {
-            this->current_block = NULL;
-        }
+    if( this->mode == OFF ) {
+        this->current_block = NULL;
         this->stepper_motor->set_moved_last_block(false);
+        return;
+    }
 
-    } else if( this->mode == FOLLOW ) {
-        // In non-solo mode, we just follow the stepper module
+    Block *block = static_cast<Block *>(argument);
+    if( this->mode == FOLLOW ) {
+        // In FOLLOW mode, we just follow the stepper module
         this->travel_distance = block->millimeters * this->travel_ratio;
+    }
 
-        this->current_position += this->travel_distance;
+    // common for both FOLLOW and SOLO
+    this->current_position += this->travel_distance ;
 
-        int steps_to_step = abs(floorf(this->steps_per_millimeter * this->travel_distance));
+    // round down, we take care of the fractional part next time
+    int steps_to_step = abs(floorf(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) ));
 
-        if( steps_to_step != 0 ) {
-            block->take();
-            this->current_block = block;
+    // accumulate the fractional part
+    if ( this->travel_distance > 0 ) {
+        this->unstepped_distance += this->travel_distance - (steps_to_step / this->steps_per_millimeter);
+    } else {
+        this->unstepped_distance += this->travel_distance + (steps_to_step / this->steps_per_millimeter);
+    }
 
-            this->stepper_motor->move( ( this->travel_distance > 0 ), steps_to_step)->set_moved_last_block(true);
+    if( steps_to_step != 0 ) {
+        // We take the block, we have to release it or everything gets stuck
+        block->take();
+        this->current_block = block;
+        this->stepper_motor->move( (this->travel_distance > 0), steps_to_step);
+
+        if(this->mode == FOLLOW) {
             on_speed_change(this); // set initial speed
-        } else {
-            this->current_block = NULL;
+            this->stepper_motor->set_moved_last_block(true);
+        }else{
+            // SOLO
+            this->stepper_motor->set_speed(rate_increase());  // start at first acceleration step
             this->stepper_motor->set_moved_last_block(false);
         }
 
-    } else if( this->mode == OFF ) {
-        // No movement means we must reset our speed
+    } else {
+        // no steps to take this time
         this->current_block = NULL;
-        //this->stepper_motor->set_speed(0);
         this->stepper_motor->set_moved_last_block(false);
     }
 

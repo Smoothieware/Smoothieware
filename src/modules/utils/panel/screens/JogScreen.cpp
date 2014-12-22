@@ -29,7 +29,7 @@ JogScreen::JogScreen()
 void JogScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(4);
+    THEPANEL->setup_menu(5);
     this->refresh_menu();
 }
 
@@ -50,6 +50,7 @@ void JogScreen::display_menu_line(uint16_t line)
         case 1: THEPANEL->lcd->printf("Move 10.0mm      \x7E"); break;
         case 2: THEPANEL->lcd->printf("Move  1.0mm      \x7E");  break;
         case 3: THEPANEL->lcd->printf("Move  0.1mm      \x7E");  break;
+        case 4: THEPANEL->lcd->printf("Move  0.01mm     \x7E"); break;
     }
 }
 
@@ -60,6 +61,7 @@ void JogScreen::clicked_menu_entry(uint16_t line)
         case 1: this->control_screen->set_jog_increment(10.0); break;
         case 2: this->control_screen->set_jog_increment(1.0); break;
         case 3: this->control_screen->set_jog_increment(0.1); break;
+        case 4: this->control_screen->set_jog_increment(0.01); break;
     }
     THEPANEL->enter_screen(this->control_screen);
 }

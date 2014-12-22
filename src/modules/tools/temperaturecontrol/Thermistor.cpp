@@ -14,6 +14,7 @@
 #include "ConfigValue.h"
 #include "libs/Median.h"
 #include "Thermistor.h"
+#include "libs/platform_memory.h"
 
 // a const list of predefined thermistors
 #include "predefined_thermistors.h"
@@ -32,8 +33,17 @@
 #define r2_checksum                        CHECKSUM("r2")
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
 
+
+// Temporary buffer used only during median computation.
+// Shared between all thermistors.
+static uint16_t *median_buffer = NULL;
+
 Thermistor::Thermistor()
 {
+    if (median_buffer == NULL)
+    {
+        median_buffer = static_cast<uint16_t*>(AHB0.alloc(QUEUE_LEN * sizeof(uint16_t)));
+    }
 }
 
 Thermistor::~Thermistor()

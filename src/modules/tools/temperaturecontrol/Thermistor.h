@@ -40,8 +40,6 @@ class Thermistor : public TempSensor
         Pin  thermistor_pin;
 
         RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
-        uint16_t median_buffer[QUEUE_LEN];
-        
 };
 
 #endif

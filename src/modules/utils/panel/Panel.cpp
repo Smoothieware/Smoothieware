@@ -36,6 +36,7 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "Config.h"
+#include "TemperatureControlPool.h"
 
 // for parse_pins in mbed
 #include "pinmap.h"
@@ -136,7 +137,6 @@ void Panel::on_module_loaded()
 
     // these need to be called here as they need the config cache loaded as they enumerate modules
     this->custom_screen= new CustomScreen();
-    setup_temperature_screen();
 
     // some panels may need access to this global info
     this->lcd->setPanel(this);
@@ -594,6 +594,18 @@ bool Panel::is_playing() const
     return false;
 }
 
+bool Panel::is_suspended() const
+{
+    void *returned_data;
+
+    bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
+    if (ok) {
+        bool b = *static_cast<bool *>(returned_data);
+        return b;
+    }
+    return false;
+}
+
 void  Panel::set_playing_file(string f)
 {
     // just copy the first 20 characters after the first / if there
@@ -601,62 +613,6 @@ void  Panel::set_playing_file(string f)
     if (n == string::npos) n = 0;
     strncpy(playing_file, f.substr(n + 1, 19).c_str(), sizeof(playing_file));
     playing_file[sizeof(playing_file) - 1] = 0;
-}
-
-static float getTargetTemperature(uint16_t heater_cs)
-{
-    void *returned_data;
-    bool ok = PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
-
-    if (ok) {
-        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
-        return temp.target_temperature;
-    }
-
-    return 0.0F;
-}
-
-void Panel::setup_temperature_screen()
-{
-    // setup temperature screen
-    auto mvs= new ModifyValuesScreen(false); // does not delete itself on exit
-    this->temperature_screen= mvs;
-
-    // enumerate heaters and add a menu item for each one
-    vector<uint16_t> modules;
-    THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
-
-    int cnt= 0;
-    for(auto i : modules) {
-        if (!THEKERNEL->config->value(temperature_control_checksum, i, enable_checksum )->as_bool()) continue;
-        void *returned_data;
-        bool ok = PublicData::get_value( temperature_control_checksum, i, current_temperature_checksum, &returned_data );
-        if (!ok) continue;
-
-        this->temperature_modules.push_back(i);
-        struct pad_temperature t =  *static_cast<struct pad_temperature *>(returned_data);
-
-        // rename if two of the known types
-        const char *name;
-        if(t.designator == "T") name= "Hotend";
-        else if(t.designator == "B") name= "Bed";
-        else name= t.designator.c_str();
-
-        mvs->addMenuItem(name, // menu name
-            [i]() -> float { return getTargetTemperature(i); }, // getter
-            [i](float t) { PublicData::set_value( temperature_control_checksum, i, &t ); }, // setter
-            1.0F, // increment
-            0.0F, // Min
-            500.0F // Max
-        );
-        cnt++;
-    }
-
-    if(cnt== 0) {
-        // no heaters and probably no extruders either
-        delete mvs;
-        this->temperature_screen= nullptr;
-    }
 }
 
 bool Panel::mount_external_sd(bool on)
