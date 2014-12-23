@@ -6,6 +6,9 @@
 #include "Kernel.h"
 #include "StreamOutputPool.h"
 
+// This depends on ThreePointStrategy's Plane3D.h for virtual shimming.
+#include "Plane3D.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -13,13 +16,24 @@
 
 #define comprehensive_delta_strategy_checksum CHECKSUM("comprehensive-delta")
 
-// Size of the grid to be used for depth maps
+// Size of the grid to be used for depth maps.
+// DM_GRID_DIMENSION ***NEEDS*** TO BE AN ODD NUMBER OR THE MATH WON'T WORK!!!
 #define DM_GRID_DIMENSION 5
 #define DM_GRID_ELEMENTS (DM_GRID_DIMENSION * DM_GRID_DIMENSION)
 
+// Method prefixes - how many prefixes we will set aside room for
+#define MP_MAX_PREFIXES 6
 
-// For the iterative calibration - these are the points tested
-enum _cds_test_point_t {
+// Some commonly used strings
+#define _STR_TRUE_ "true"
+#define _STR_FALSE_ "false"
+#define _STR_ENABLED_ "enabled"
+#define _STR_DISABLED_ "disabled"
+#define _STR_ON_ "on"
+#define _STR_OFF_ "off"
+
+// For iterative calibration, and also virtual shimming - these are the points tested
+enum _cds_tower_point_t {
         TP_Z,
 
        TP_CTR,
@@ -27,6 +41,13 @@ enum _cds_test_point_t {
 TP_X,		  TP_Y
 };
 
+// The bed is probed as a series of test points
+enum _test_point_type {
+    TP_CENTER,			// Center is not "active" to exclude it from kinematic simulations
+    TP_ACTIVE,
+    TP_ACTIVE_NEIGHBOR,
+    TP_INACTIVE
+};
 
 // For storing depths
 struct _cds_depths_t {
@@ -70,17 +91,15 @@ class CalibrationType {
 
 };
 
-#define _printf THEKERNEL->streams->printf
 
 // This is for holding a test configuration for one variable, like trim for all towers or machine delta radius.
-// i[] is the iterator.
 class TestConfig {
 
     public:
 
     float range_min;
     float range_max;
-    float i;
+//    float i;
     float min;
     float max;
 
@@ -89,7 +108,7 @@ class TestConfig {
         range_min = _range_min;
         range_max = _range_max;
         reset_min_max();
-        i = 0;
+//        i = 0;
     }
 
     // Reset min/max to their range values
@@ -97,7 +116,7 @@ class TestConfig {
         min = range_min;
         max = range_max;
     }
-
+/*
     // Produce a random number in [ range_min .. value .. range_max ]
     // The value will be confined to be within fraction (0..1) * width
     // I would like to optimize the second rand() out, but haven't figured out how yet
@@ -120,7 +139,7 @@ class TestConfig {
         return val;
     
     }
-
+*/
 };
 
 
@@ -136,6 +155,7 @@ class KinematicSettings {
     float tower_radius[3];
     float tower_angle[3];
     float tower_arm[3];
+    float virtual_shimming[3];
     
     void init() {
         initialized = false;
@@ -146,6 +166,7 @@ class KinematicSettings {
             tower_radius[i] = 0;
             tower_angle[i] = 0;
             tower_arm[i] = 0;
+            virtual_shimming[i] = 0;
         }
     }
 
@@ -153,7 +174,7 @@ class KinematicSettings {
         init();
     }
 
-    KinematicSettings(float _trim[3], float _delta_radius, float _arm_length, float _tower_radius[3], float _tower_angle[3], float _tower_arm[3]) {
+    KinematicSettings(float _trim[3], float _delta_radius, float _arm_length, float _tower_radius[3], float _tower_angle[3], float _tower_arm[3], float _virtual_shimming[3]) {
         delta_radius = _delta_radius;
         arm_length = _arm_length;
         for(int i=0; i<3; i++) {
@@ -161,6 +182,7 @@ class KinematicSettings {
             tower_radius[i] = _tower_radius[i];
             tower_angle[i] = _tower_angle[i];
             tower_arm[i] = _tower_arm[i];
+            virtual_shimming[i] = _virtual_shimming[i];
         }
     }
 
@@ -172,6 +194,7 @@ class KinematicSettings {
             settings.tower_radius[i] = tower_radius[i];
             settings.tower_angle[i] = tower_angle[i];
             settings.tower_arm[i] = tower_arm[i];
+            settings.virtual_shimming[i] = virtual_shimming[i];
         }
         settings.initialized = true;
 
@@ -191,15 +214,16 @@ public:
 private:
 
     // This holds all calibration types
-    struct caltype {
+    struct {
         CalibrationType endstop;
         CalibrationType delta_radius;
         CalibrationType arm_length;
         CalibrationType tower_angle;
+        CalibrationType virtual_shimming;
     } caltype;
 
     // This holds the best probe calibration we've been able to get, so far, in this session
-    struct best_probe_calibration {
+    struct {
         float sigma;
         int range;
         float accel;
@@ -217,7 +241,8 @@ private:
     // allocating variables on the stack each call. Similarly, there are several calculated values that
     // are used over and over again. Therefore, we do the calculations in the most efficient manner
     // possible using this struct.
-    struct bili {
+    struct {
+
         // Bounding box for the depth-map quad the coordinates are within
         float x1, y1, x2, y2;
         
@@ -247,15 +272,39 @@ private:
         float y_minus_y1;
         
         float result;
+
     } bili;
 
+    // For Z correction
+    struct {
+
+        // Do anything?
+        bool active;
+
+        // For correcting Z by depth
+        bool depth_enabled;
+        bool have_depth_map;
+        float depth[DM_GRID_ELEMENTS];
+        
+        // For correcting Z by surface plane rotation
+        bool plane_enabled;
+        bool have_normal;
+        float tri_points[3][3];
+        Vector3 normal;
+        float d;
+
+    } surface_transform;
+
+    float st_z_offset;
+
     // These hold the current and test kinematic settings
+    // FIXME: Migrate this into heuristic_calibration so they don't waste RAM 99.999% of the time
+    //        (if we're not calibrating, we really don't need these available, right?)
     KinematicSettings base_set;
     KinematicSettings cur_set;
-    KinematicSettings test_set;
     KinematicSettings temp_set;
-    KinematicSettings winning_mu;
-    KinematicSettings winning_sigma;
+//    KinematicSettings winning_mu;
+//    KinematicSettings winning_sigma;
 
     // For holding options specific to our arm solution
     BaseSolution::arm_options_t options;
@@ -276,46 +325,57 @@ private:
     float saved_acceleration;
     float probe_acceleration;
     bool geom_dirty;			// Means we need to redo the endstops/delta radius
-    bool z_compensation_enabled;	// Whether Z-correction is turned on
+    
+    // Method prefixes - whenever you _printf, it will print "[prefix] words"
+    // (the prefix has to be a two-char ASCIIZ string)
+    char method_prefix[MP_MAX_PREFIXES][3];
+    int method_prefix_idx;
 
     // These are linked lists (test_points indexes the current & last depth maps)
     // The depth maps store Z offsets from the height at bed center
     float test_point[DM_GRID_ELEMENTS][2];		// 1st subscript: which point; 2nd subscript: x and y
-    bool active_point[DM_GRID_ELEMENTS];		// Which points are currently being tested
     float test_axis[DM_GRID_ELEMENTS][3];		// Axis (carriage) positions generated by simulate_IK()
-    float surface_transform[DM_GRID_ELEMENTS];		// For correcting Z error
     _cds_depths_t depth_map[DM_GRID_ELEMENTS];		// Current collected depth for all test points
-    _cds_depths_t test_depth_map[DM_GRID_ELEMENTS];	// Depth map generated by simulate_FK_and_get_energy()
+//    _cds_depths_t test_depth_map[DM_GRID_ELEMENTS];	// Depth map generated by simulate_FK_and_get_energy()
+
+    // TPT_ACTIVE means the point is active and within probe_radius
+    // TPT_ACTIVE_NEIGHBOR means the point is just outside the probe_radius circle, and needed for interpolation
+    // TPT_INACTIVE means the point is inactive and not used for any purpose
+    _test_point_type active_point[DM_GRID_ELEMENTS];		// Which points are currently being tested
+
+    // Contains array indices for points closest to towers, and to center
+    int tower_point_idx[4];
 
     // Inverse and forward kinematics simulation
     void simulate_IK(float cartesian[DM_GRID_ELEMENTS][3], float trim[3]);
     float simulate_FK_and_get_energy(float axis_position[DM_GRID_ELEMENTS][3], float trim[3], float cartesian[DM_GRID_ELEMENTS][3]);
+
+    // For test points used by parallel simulated annealing and depth correction
+    int find_nearest_test_point(float pos[2]);
+    void init_test_points();
 
     // Parallel simulated annealing methods
     bool heuristic_calibration(int annealing_tries, float max_temp, float binsearch_width, bool simulate_only, bool keep_settings, bool zero_all_offsets, float overrun_divisor);
     float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float min, float max, float binsearch_width, float cartesian[DM_GRID_ELEMENTS][3], float target);
     float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float min, float max, float binsearch_width, float cartesian[DM_GRID_ELEMENTS][3], float target);
     bool set_test_trim(float x, float y, float z, bool dummy);
+    bool set_test_virtual_shimming(float x, float y, float z, bool dummy);
     void move_randomly_towards(float &value, float best, float temp, float target, float overrun_divisor);
     float calc_energy(_cds_depths_t points[DM_GRID_ELEMENTS]);
     float calc_energy(float cartesian[DM_GRID_ELEMENTS][3]);
 
     // For depth map-based Z-correction
-    void init_test_points();
     void set_adjust_function(bool on);
     float get_adjust_z(float targetX, float targetY);
 
     // Probe calibration
     bool measure_probe_repeatability(Gcode *gcode = nullptr);
 
-    // Determine which points are active (circular print surface requires culling a few)
-    void determine_active_points();
-
     // Depth map the print surface
-    bool depth_map_print_surface(float cartesian[DM_GRID_ELEMENTS][3], _cds_dmps_result display_results);
+    bool depth_map_print_surface(float cartesian[DM_GRID_ELEMENTS][3], _cds_dmps_result display_results, bool extrapolate_neighbors);
 
     // Iterative calibration
-    bool iterative_calibration();
+    bool iterative_calibration(bool keep_settings);
 
     // Probing methods
     void prepare_to_probe();
@@ -324,6 +384,9 @@ private:
     bool do_probe_at(int &steps, float x, float y, bool skip_smoothing = false);
 
     // Kinematics
+    bool set_kinematics(KinematicSettings settings, bool update = true);
+    bool get_kinematics(KinematicSettings &settings);
+
     void print_kinematics();
     void print_kinematics(KinematicSettings settings);
 
@@ -348,8 +411,8 @@ private:
     bool set_tower_arm_offsets(float x, float y, float z, bool update = true);
     bool get_tower_arm_offsets(float &x, float &y, float &z);
 
-    bool set_kinematics(KinematicSettings settings, bool update = true);
-    bool get_kinematics(KinematicSettings &settings);
+    bool set_virtual_shimming(float x, float y, float z, bool update = true);
+    bool get_virtual_shimming(float &x, float &y, float &z);
 
     void set_acceleration(float a);
     void save_acceleration();
@@ -372,8 +435,15 @@ private:
     void print_depths(float depths[DM_GRID_ELEMENTS][3]);
     void str_pad_left(unsigned char spaces);
     bool require_clean_geometry();
-    void print_task_with_warning(char task[], char str[]);
+    void print_task_with_warning(const std::string& str);
     void flush();
+    void newline();
+    
+    // Method prefixes
+    int prefix_printf(const char* format, ...);
+    void print_method_prefix();
+    void push_prefix(const std::string& mp);
+    void pop_prefix();
 
 };
 
