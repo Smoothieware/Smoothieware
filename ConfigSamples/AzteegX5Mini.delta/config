@@ -22,19 +22,20 @@ arm_length                                   269.00           # length of the de
 
 
 # If you have a Z probe, you can select a calibration strategy here
-# To calculate offset_x/y/z:
+# To calculate probe_offset_x/y/z:
 # - Heat up the hot end with filament loaded - and the print surface, if you have bed heat (this is important!)
 # - Jog the hot end down to the print surface, leaving a little dot of plastic
 # - Deploy the probe, jog it until the probe tip touches the dot
 # - Jog the probe up a little, remove the dot, jog it down until it triggers, and record the exact values in offset_x/y/z
+# PLEASE NOTE: probe_offset_x and probe_offset_y MUST be 0 if you want to use depth (Z) correction!
 # ---------------------------------------------------------------------
 leveling-strategy.comprehensive-delta.enable true
 comprehensive-delta.probe_smoothing                       1                # if your probe has repeatability issues, this will probe multiple times & take the average (default 1)
 comprehensive-delta.probe_priming                         5                # if your probe keeps "creeping down", this will run it the specified number of times to get it to settle
 comprehensive-delta.probe_acceleration                    75               # acceleration will be temporarily set to this during probing; original is restored later; 100 is a good value
 comprehensive-delta.probe_offset_x                        0                # distance between the probe and the nozzle
-comprehensive-delta.probe_offset_y                        0                # these are represented in the ZProbe class as offset_x/y/z
-comprehensive-delta.probe_offset_z                        -45              #
+comprehensive-delta.probe_offset_y                        0                #
+comprehensive-delta.probe_offset_z                        -5               #
 
 
 # Optional Z probe, see http://smoothieware.org/zprobe
@@ -46,7 +47,7 @@ zprobe.probe_pin                             1.29!^           # pin probe is att
 zprobe.slow_feedrate                         35               # mm/sec probe feed rate
 zprobe.fast_feedrate                         70               # move feedrate
 zprobe.debounce_count                        0                # set if noisy
-zprobe.probe_radius                          115              # how far out from bed center to probe
+zprobe.probe_radius                          100              # how far out from bed center to probe
 zprobe.probe_height                          10               # how high the probe has to be moved above trigger elevation so that it won't drag
 zprobe.decelerate_on_trigger                 true             # beneficial, unless your probe has no runout after it hits the trigger - in which case, set this to false
 zprobe.decelerate_runout                     10               # how many millimeters your probe can move past the trigger point; we'll abort any decel > this long
@@ -280,7 +281,7 @@ pause_button_enable                          true             #
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 # ---------------------------------------------------------------------
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
-second_usb_serial_enable                     false             # This enables a second usb serial port (to have both pronterface and a terminal connected)
+second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface and a terminal connected)
 
 
 # Laser module configuration
