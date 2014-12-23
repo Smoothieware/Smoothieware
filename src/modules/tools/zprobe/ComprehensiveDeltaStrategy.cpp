@@ -1,7 +1,8 @@
 /*
 
-    Comprehensive Delta Strategy
-    
+    Comprehensive Delta Strategy by 626Pilot of the SeeMeCNC Forums
+    This code requires a Z-probe. You can use your own, or get mine here: http://www.thingiverse.com/626Pilot/designs
+
     G-codes:	G29	Probe Calibration
                 G31	Heuristic Calibration
                 G32	Iterative Calibration
@@ -10,11 +11,27 @@
     Files:	/sd/dm_surface_transform (contains depth map for use with depth map Z correction)
     
     The recommended way to use this is:
-    G32 K (iterative calibration - gets endstops/delta radius correct - K to keep, but don't use that if you want to run G32 afterwards)
+    G32 (iterative calibration - gets endstops/delta radius correct - K to keep, but don't use that if you want to run G32 afterwards)
     G31 O P Q R S (simulated annealing - corrects for errors in X, Y, and Z - it may help to run this multiple times)
     G31 A (depth mapping - corrects errors in Z, but not X or Y)
 
+    To Do
+    -------------------------
+    * Make G31 B the specific command for heuristic calibration, and have it select O P Q R S (all annealing types) by default.
+    * Move some class variables into heuristic_calibration(). They take up a lot of space when not in use, and they are never in use
+      when we're not calibrating, so...
+    * Move all the long-ass sections of code in the G-code processor into their own methods. We're allocating a lot of stuff on the
+      stack each call, when we don't need to, and this increases the chances of an out-of-memory crash whenever G29-G33 are sent.
+    * Audit other "heavy" class variables to see whether they might be moved into methods.
+    * Spin off probe calibration to its own separate class, and load it only when necessary. (It needs to keep some class variables
+      around between calls, but again, these are never used when we're not doing probe calibration.)
+    * We are using both three-dimensional (Cartesian) and one-dimensional (depths type, .abs and .rel) arrays. Cartesians are
+      necessary for IK/FK, but maybe we can make a type with X, Y, absolute Z, and relative Z, and be done with the multiple types.
+      Such arrays can be "fat" while in use because they will live on the stack, and not take up any space when the calibration
+      routines are not running.
+
 */
+
 
 #include "ComprehensiveDeltaStrategy.h"
 #include "Kernel.h"
@@ -1001,11 +1018,8 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             if(caltype.virtual_shimming.active) {
             
                 for(k=0; k<3; k++) {
-//if(k==0)                    _printf("Shimming[X] before find_optimal_config[%d]=%1.3f ", k, cur_set.virtual_shimming[k]);
                     best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_virtual_shimming, cur_set.virtual_shimming, k, test_virtual_shimming[k].range_min, test_virtual_shimming[k].range_max, binsearch_width, cur_cartesian, target);
-//if(k==0)                    _printf(", best=%1.3f, after find_optimal_config=%1.3f ", best_value, cur_set.virtual_shimming[k]);
                     move_randomly_towards(cur_set.virtual_shimming[k], best_value, temp * caltype.virtual_shimming.annealing_temp_mul, target, overrun_divisor);
-//if(k==0)                    _printf(", after move_randomly_towards=%1.3f, plane={%1.3f, %1.3f, %1.3f, %1.3f}\n", cur_set.virtual_shimming[k], surface_transform.normal[X], surface_transform.normal[Y], surface_transform.normal[Z], surface_transform.d);
                 }
                 set_virtual_shimming(cur_set.virtual_shimming[X], cur_set.virtual_shimming[Y], cur_set.virtual_shimming[Z], false);
 
