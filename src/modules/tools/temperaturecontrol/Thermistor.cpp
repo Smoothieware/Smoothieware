@@ -33,17 +33,8 @@
 #define r2_checksum                        CHECKSUM("r2")
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
 
-
-// Temporary buffer used only during median computation.
-// Shared between all thermistors.
-static uint16_t *median_buffer = NULL;
-
 Thermistor::Thermistor()
 {
-    if (median_buffer == NULL)
-    {
-        median_buffer = static_cast<uint16_t*>(AHB0.alloc(QUEUE_LEN * sizeof(uint16_t)));
-    }
 }
 
 Thermistor::~Thermistor()
@@ -113,6 +104,7 @@ int Thermistor::new_thermistor_reading()
     }
     uint16_t r = last_raw;
     queue.push_back(r);
+    uint16_t median_buffer[queue.size()];
     for (int i=0; i<queue.size(); i++)
       median_buffer[i] = *queue.get_ref(i);
     uint16_t m = median_buffer[quick_median(median_buffer, queue.size())];
