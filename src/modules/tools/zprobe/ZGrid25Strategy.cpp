@@ -300,6 +300,8 @@ bool ZGrid25Strategy::saveGrid()
 {
     StreamOutput *ZMap_file = new FileStream("/sd/grid25");
 
+    ZMap_file->printf("P%i\n",probe_points);    // Store probe points to prevent loading undefined grid files
+
     for (int pos = 0; pos < probe_points; pos++){
         ZMap_file->printf("%1.3f\n", this->pData[pos]);
     }
@@ -311,15 +313,33 @@ bool ZGrid25Strategy::saveGrid()
 
 bool ZGrid25Strategy::loadGrid()
 {
+    char flag[10];	
+    int fpoints;
+    float val;
+
     FILE *fd = fopen("/sd/grid25", "r");
     if(fd != NULL) {
- 
-        for (int pos = 0; pos < probe_points; pos++){
-            float val;
-
-            fscanf(fd, "%f\n", &val);
-            this->pData[pos] = val;
+        fscanf(fd, "%s\n", flag);
+        if (flag[0] == 'P'){
+            sscanf(flag, "P%i\n", &fpoints);    // read number of points
+            fscanf(fd, "%f\n", &val);          // read first value from file
+            
+        } else {  // original 25point file
+            fpoints = 25;
+            sscanf(flag, "%f\n", &val);     // read first value from string
         }
+
+        if (fpoints == probe_points){  // Only read file if grid points match up with file
+
+            this->pData[0] = val;    // Place the first read value in grid
+             
+            for (int pos = 1; pos < probe_points; pos++){
+                fscanf(fd, "%f\n", &val);
+                this->pData[pos] = val;
+            }
+
+        }
+
 
         fclose(fd);
 
@@ -336,8 +356,11 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
     // home first
     this->homexyz();
 
+    // deactivate correction during moves
+    this->setAdjustFunction(false);
+
     for (int i=0; i<probe_points; i++){
-       this->pData[i] = 0.0F;        // Clear the ZGrid25
+       this->pData[i] = 0.0F;        // Clear the ZGrid
     }
 
     stream->printf("*** Ensure probe is attached and press probe when done ***\n");
@@ -381,7 +404,10 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
     }
     
     stream->printf("\nDone!  Please remove probe\n");
-                 
+   
+    // activate correction
+    this->setAdjustFunction(true);
+              
     this->in_cal = false;
     return true;
 }
