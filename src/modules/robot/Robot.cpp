@@ -694,8 +694,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
 void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
 {
     // Find out the distance for this gcode
-    // NOTE we need to do sqrt here as this setting of millimeters_of_travel is used by extruder and other modules even of there is no XYZ move
-    // FIXME not sure why we need to do this twice,it is also done in append_milestone()
+    // NOTE we need to do sqrt here as this setting of millimeters_of_travel is used by extruder and other modules even if there is no XYZ move
     gcode->millimeters_of_travel = sqrtf(powf( target[X_AXIS] - this->last_milestone[X_AXIS], 2 ) +  powf( target[Y_AXIS] - this->last_milestone[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - this->last_milestone[Z_AXIS], 2 ));
 
     // We ignore non- XYZ moves ( for example, extruder moves are not XYZ moves )
