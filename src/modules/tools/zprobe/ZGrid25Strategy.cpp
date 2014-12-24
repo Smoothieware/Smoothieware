@@ -209,7 +209,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                     int pindex = 0;
 
                     THEKERNEL->robot->get_axis_position(cartesian);         // get actual position from robot
-                    pindex = (int) ((cartesian[X_AXIS]/this->bed_div_x*numRows)+(cartesian[Y_AXIS]/this->bed_div_y));
+                    pindex = (int) (((cartesian[X_AXIS]/this->bed_div_x)*this->numCols)+(cartesian[Y_AXIS]/this->bed_div_y));
 
                     this->move(this->cal, slow_rate);                       // move to the next position
                     this->next_cal();                                       // to not cause damage to machine due to Z-offset
@@ -388,7 +388,7 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
         float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
                                        this->cal[Y_AXIS]-std::get<Y_AXIS>(this->probe_offsets));
 
-        pindex = (int) ((this->cal[X_AXIS]/this->bed_div_x*numRows)+(this->cal[Y_AXIS]/this->bed_div_y));
+        pindex = (int) (((this->cal[X_AXIS]/this->bed_div_x)*this->numCols)+(this->cal[Y_AXIS]/this->bed_div_y));
 
         if (probes == (probe_points-1)){
             this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
