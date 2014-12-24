@@ -160,7 +160,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                 }
             return true;
 
-        } else if( gcode->g == 32 ) { // three point probe
+        } else if( gcode->g == 32 ) { //run probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
@@ -209,12 +209,20 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                     int pindex = 0;
 
                     THEKERNEL->robot->get_axis_position(cartesian);         // get actual position from robot
-                    pindex = (int) (((cartesian[X_AXIS]/this->bed_div_x)*this->numCols)+(cartesian[Y_AXIS]/this->bed_div_y));
+
+                    pindex = int(cartesian[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(cartesian[Y_AXIS]/this->bed_div_y + 0.25);
+
+                    // DEBUG
+                    gcode->stream->printf("[%3.1f][%3.1f] - index %i :[%d][%d] = %1.5f\n", cartesian[X_AXIS], cartesian[Y_AXIS], 
+                                                                                           pindex, 
+                                                                                           int(cartesian[X_AXIS]/this->bed_div_x + 0.25), 
+                                                                                           int(cartesian[Y_AXIS]/this->bed_div_y + 0.25), 
+                                                                                           cartesian[Z_AXIS]);
 
                     this->move(this->cal, slow_rate);                       // move to the next position
                     this->next_cal();                                       // to not cause damage to machine due to Z-offset
 
-                    this->pData[pindex] = 0.0F + cartesian[Z_AXIS];  // save the offset
+                    this->pData[pindex] = cartesian[Z_AXIS];  // save the offset
 
                 }                   
             }
@@ -245,7 +253,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                 this->setAdjustFunction(true); // Enable leveling code   
             }
             return true;
-
+*/
             case 376: { // Check grid value calculations: TODO - For debug only.
                 float target[3];
 
@@ -258,7 +266,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                 
             }
             return true;
-*/
+
             case 565: { // M565: Set Z probe offsets
                 float x= 0, y= 0, z= 0;
                 if(gcode->has_letter('X')) x = gcode->get_value('X');
@@ -388,7 +396,7 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
         float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
                                        this->cal[Y_AXIS]-std::get<Y_AXIS>(this->probe_offsets));
 
-        pindex = (int) (((this->cal[X_AXIS]/this->bed_div_x)*this->numCols)+(this->cal[Y_AXIS]/this->bed_div_y));
+        pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
 
         if (probes == (probe_points-1)){
             this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
@@ -437,8 +445,13 @@ void ZGrid25Strategy::next_cal(void){
     if (int(this->cal[X_AXIS] / bed_div_x) % 2 != 0){  // Odd row
         this->cal[Y_AXIS] -= bed_div_y;
         if (this->cal[Y_AXIS] < 0){
-            this->cal[Y_AXIS] = 0;
             this->cal[X_AXIS] += bed_div_x;
+            if (this->cal[X_AXIS] > bed_x){
+                this->cal[X_AXIS] = 0;
+                this->cal[Y_AXIS] = 0;
+            }
+            else
+                this->cal[Y_AXIS] = 0;
         }
     }
     else {                                          // Even row
