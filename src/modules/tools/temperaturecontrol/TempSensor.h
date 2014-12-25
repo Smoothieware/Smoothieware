@@ -8,6 +8,8 @@
 #ifndef tempsensor_h
 #define tempsensor_h
 
+#include <map>
+
 class TempSensor
 {
 public:
@@ -19,6 +21,10 @@ public:
 
     // Make sure the interface provides a destructor.
     virtual ~TempSensor() {}
+
+    typedef std::map<char, float> sensor_options_t;
+    virtual bool set_optional(const sensor_options_t& options) { return false; };
+    virtual bool get_optional(sensor_options_t& options) { return false; };
 };
 
 #endif
