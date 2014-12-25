@@ -740,7 +740,7 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
         // segment 0 is already done - it's the end point of the previous move so we start at segment 1
         // We always add another point after this loop so we stop at segments-1, ie i < segments
         for (int i = 1; i < segments; i++) {
-            if(halted) return; // don;t queue any more segments
+            if(halted) return; // don't queue any more segments
             for(int axis = X_AXIS; axis <= Z_AXIS; axis++ )
                 segment_end[axis] = last_milestone[axis] + segment_delta[axis];
 
