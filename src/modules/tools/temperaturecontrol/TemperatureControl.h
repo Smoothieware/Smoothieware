@@ -12,6 +12,7 @@
 #include "Pwm.h"
 #include "TempSensor.h"
 #include "TemperatureControlPublicAccess.h"
+#include "Gcode.h"
 
 class TemperatureControl : public Module {
 
@@ -38,6 +39,7 @@ class TemperatureControl : public Module {
         void load_config();
         uint32_t thermistor_read_tick(uint32_t dummy);
         void pid_process(float);
+		bool has_letter_T_Index(Gcode *gcode);
 
         int pool_index;
 
