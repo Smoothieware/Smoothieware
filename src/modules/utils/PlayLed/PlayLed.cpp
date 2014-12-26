@@ -43,7 +43,7 @@ void PlayLed::on_config_reload(void *argument)
 {
     string ledpin = "4.28!";
 
-    ledpin = THEKERNEL->config->value( pause_led_pin_checksum )->by_default(ledpin)->as_string(); // check for pause_led_pin first
+    //ledpin = THEKERNEL->config->value( pause_led_pin_checksum )->by_default(ledpin)->as_string(); // check for pause_led_pin first
     ledpin = THEKERNEL->config->value( play_led_pin_checksum  )->by_default(ledpin)->as_string(); // override with play_led_pin if it's found
 
     led.from_string(ledpin)->as_output()->set(false);

@@ -196,6 +196,14 @@ void TemperatureControl::load_config()
     this->last_reading = 0.0;
 }
 
+bool TemperatureControl::has_letter_T_Index(Gcode *gcode)
+{
+     if ( !gcode->has_letter('T') )
+        return true;
+     return (gcode->get_value('T') == this->pool_index) ;
+}
+
+
 void TemperatureControl::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
@@ -264,7 +272,7 @@ void TemperatureControl::on_gcode_received(void *argument)
             }
             gcode->mark_as_taken();
 
-        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S')) {
+        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S') && has_letter_T_Index(gcode) ) {
             // this only gets handled if it is not controlle dby the tool manager or is active in the toolmanager
             this->active = true;
 
@@ -296,7 +304,7 @@ void TemperatureControl::on_gcode_execute(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
     if( gcode->has_m) {
         if (((gcode->m == this->set_m_code) || (gcode->m == this->set_and_wait_m_code))
-            && gcode->has_letter('S') && this->active) {
+            && gcode->has_letter('S') && this->active && has_letter_T_Index(gcode)) {
             float v = gcode->get_value('S');
 
             if (v == 0.0) {
