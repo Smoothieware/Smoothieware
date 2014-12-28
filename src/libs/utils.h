@@ -15,6 +15,9 @@ bool is_numeric( int );
 bool is_alphanum( int );
 bool is_whitespace( int );
 
+vector<string> split(const char *str, char c = ',');
+vector<float> parse_number_list(const char *str);
+
 string remove_non_number( string str );
 
 uint16_t get_checksum(const string& to_check);
