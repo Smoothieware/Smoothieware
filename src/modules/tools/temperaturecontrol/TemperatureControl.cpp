@@ -81,6 +81,7 @@ void TemperatureControl::on_module_loaded()
 
     // We start not desiring any temp
     this->target_temperature = UNDEFINED;
+    this->sensor_settings= false; // set to true if sensor settings have been overriden
 
     // Settings
     this->load_config();
@@ -221,13 +222,46 @@ void TemperatureControl::on_gcode_received(void *argument)
                 if (gcode->has_letter('D'))
                     setPIDd( gcode->get_value('D') );
                 if (gcode->has_letter('X'))
-                    this->i_max    = gcode->get_value('X');
+                    this->i_max = gcode->get_value('X');
+                if (gcode->has_letter('Y'))
+                    this->heater_pin.max_pwm(gcode->get_value('Y'));
+
+            }else if(!gcode->has_letter('S')) {
+                gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g max pwm: %d O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm(), o);
             }
-            //gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Pv:%g Iv:%g Dv:%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor/this->PIDdt, this->d_factor*this->PIDdt, this->i_max, this->p, this->i, this->d, o);
-            gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, o);
+
+        } else if (gcode->m == 305) { // set sensor settings
+            gcode->mark_as_taken();
+            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
+                this->sensor_settings= true;
+                TempSensor::sensor_options_t options;
+                if(sensor->get_optional(options)) {
+                    for(auto &i : options) {
+                        // foreach optional value
+                        char c = i.first;
+                        if(gcode->has_letter(c)) { // set new value
+                            i.second = gcode->get_value(c);
+                        }
+                    }
+                    // set the new options
+                    sensor->set_optional(options);
+                }
+            }
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
-            gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt);
+            gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f X%1.4f Y%d\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm());
+
+            if(this->sensor_settings) {
+                // get or save any sensor specific optional values
+                TempSensor::sensor_options_t options;
+                if(sensor->get_optional(options) && !options.empty()) {
+                    gcode->stream->printf(";Optional temp sensor specific settings:\nM305 S%d", this->pool_index);
+                    for(auto &i : options) {
+                        gcode->stream->printf(" %c%1.4f", i.first, i.second);
+                    }
+                    gcode->stream->printf("\n");
+                }
+            }
             gcode->mark_as_taken();
 
         } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S')) {

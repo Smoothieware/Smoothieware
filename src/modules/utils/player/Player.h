@@ -64,7 +64,9 @@ class Player : public Module {
             bool saved_inch_mode:1;
             bool saved_absolute_mode:1;
             bool was_playing_file:1;
+            bool leave_heaters_on:1;
             uint8_t suspend_loops:4;
+
         };
 };
 

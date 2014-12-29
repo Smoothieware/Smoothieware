@@ -90,6 +90,7 @@ class TemperatureControl : public Module {
             bool active:1;
             bool readonly:1;
             bool windup:1;
+            bool sensor_settings:1;
         };
 };
 
