@@ -22,6 +22,7 @@
 #include "InterruptIn.h"
 #include "PwmOut.h"
 #include "port_api.h"
+#include "us_ticker_api.h"
 
 #define spindle_enable_checksum          CHECKSUM("spindle_enable")
 #define spindle_pwm_pin_checksum         CHECKSUM("spindle_pwm_pin")
@@ -32,6 +33,7 @@
 #define spindle_control_P_checksum       CHECKSUM("spindle_control_P")
 #define spindle_control_I_checksum       CHECKSUM("spindle_control_I")
 #define spindle_control_D_checksum       CHECKSUM("spindle_control_D")
+#define spindle_control_smoothing_checksum CHECKSUM("spindle_control_smoothing")
 
 #define UPDATE_FREQ 1000
 
@@ -60,6 +62,13 @@ void Spindle::on_module_loaded()
     control_P_term = THEKERNEL->config->value(spindle_control_P_checksum)->by_default(0.0001f)->as_number();
     control_I_term = THEKERNEL->config->value(spindle_control_I_checksum)->by_default(0.0001f)->as_number();
     control_D_term = THEKERNEL->config->value(spindle_control_D_checksum)->by_default(0.0001f)->as_number();
+    
+    // Smoothing value is low pass filter time constant in seconds.
+    float smoothing_time = THEKERNEL->config->value(spindle_control_smoothing_checksum)->by_default(0.1f)->as_number();
+    if (smoothing_time * UPDATE_FREQ < 1.0f)
+        smoothing_decay = 1.0f;
+    else
+        smoothing_decay = 1.0f / (UPDATE_FREQ * smoothing_time);
     
     // Get the pin for hardware pwm
     {
@@ -91,6 +100,7 @@ void Spindle::on_module_loaded()
             PinName pinname = port_pin((PortName)smoothie_pin->port_number, smoothie_pin->pin);
             feedback_pin = new mbed::InterruptIn(pinname);
             feedback_pin->rise(this, &Spindle::on_pin_rise);
+            NVIC_SetPriority(EINT3_IRQn, 16);
         }
         else
         {
@@ -101,8 +111,6 @@ void Spindle::on_module_loaded()
         delete smoothie_pin;
     }
     
-    SysTick_Config(SYSTICK_MAXCOUNT, false);
-    
     THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &Spindle::on_update_speed);
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GCODE_EXECUTE);
@@ -110,8 +118,8 @@ void Spindle::on_module_loaded()
 
 void Spindle::on_pin_rise()
 {
-    uint32_t timestamp = SYSTICK_MAXCOUNT - SysTick->VAL;
-    last_time = (timestamp - last_edge) & SYSTICK_MAXCOUNT;
+    uint32_t timestamp = us_ticker_read();
+    last_time = timestamp - last_edge;
     last_edge = timestamp;
     irq_count++;
 }
@@ -132,9 +140,14 @@ uint32_t Spindle::on_update_speed(uint32_t dummy)
     // Calculate current RPM
     uint32_t t = last_time;
     if (t == 0)
+    {
         current_rpm = 0;
+    }
     else
-        current_rpm = SystemCoreClock * 60.0f / (t * pulses_per_rev);
+    {
+        float new_rpm = 1000000 * 60.0f / (t * pulses_per_rev);
+        current_rpm = smoothing_decay * new_rpm + (1.0f - smoothing_decay) * current_rpm;
+    }
     
     if (spindle_on)
     {
