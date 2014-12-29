@@ -346,10 +346,10 @@ void Robot::on_gcode_received(void *argument)
                     delay_ms += gcode->get_int('S') * 1000;
                 }
                 if (delay_ms > 0){
-                    uint32_t start= us_ticker_read(); // mbed call
                     // drain queue
                     THEKERNEL->conveyor->wait_for_empty_queue();
                     // wait for specified time
+                    uint32_t start= us_ticker_read(); // mbed call
                     while ((us_ticker_read() - start) < delay_ms*1000) {
                         THEKERNEL->call_event(ON_IDLE, this);
                     }
