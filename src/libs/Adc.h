@@ -10,13 +10,12 @@
 #ifndef ADC_H
 #define ADC_H
 
-#include "libs/Module.h"
 #include "PinNames.h" // mbed.h lib
 #include "libs/ADC/adc.h"
 
 class Pin;
 
-class Adc : public Module{
+class Adc {
     public:
         Adc();
         void enable_pin(Pin* pin);

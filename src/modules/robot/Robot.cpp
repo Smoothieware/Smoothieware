@@ -8,6 +8,8 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 
+#include "mbed.h" // for us_ticker_read()
+
 #include <math.h>
 #include <string>
 using std::string;
@@ -335,6 +337,25 @@ void Robot::on_gcode_received(void *argument)
             case 1:  this->motion_mode = MOTION_MODE_LINEAR; gcode->mark_as_taken();  break;
             case 2:  this->motion_mode = MOTION_MODE_CW_ARC; gcode->mark_as_taken();  break;
             case 3:  this->motion_mode = MOTION_MODE_CCW_ARC; gcode->mark_as_taken();  break;
+            case 4: {
+                uint32_t delay_ms= 0;
+                if (gcode->has_letter('P')) {
+                    delay_ms= gcode->get_int('P');
+                }
+                if (gcode->has_letter('S')) {
+                    delay_ms += gcode->get_int('S') * 1000;
+                }
+                if (delay_ms > 0){
+                    // drain queue
+                    THEKERNEL->conveyor->wait_for_empty_queue();
+                    // wait for specified time
+                    uint32_t start= us_ticker_read(); // mbed call
+                    while ((us_ticker_read() - start) < delay_ms*1000) {
+                        THEKERNEL->call_event(ON_IDLE, this);
+                    }
+                }
+                gcode->mark_as_taken();
+            }
             case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); gcode->mark_as_taken();  break;
             case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); gcode->mark_as_taken();  break;
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;
