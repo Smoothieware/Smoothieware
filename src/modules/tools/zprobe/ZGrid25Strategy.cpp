@@ -5,7 +5,7 @@
     Summary
     -------
     Probes twenty-five calculated points on the bed and creates ZGrid25 data of the bed surface.
-    Bilinear 
+    Bilinear
     As the head moves in X and Y it will adjust Z to keep the head tram with the bed.
 
     Configuration
@@ -36,7 +36,7 @@
     leveling-strategy.ZGrid25-leveling.slow_feedrate  100
 
 
-   
+
     Usage
     -----
     G32 probes the probe points and defines the bed ZGrid25, this will remain in effect until reset or M370
@@ -45,7 +45,7 @@
     M370 clears the ZGrid25 and the bed leveling is disabled until G32 is run again
     M371 moves the head to the next calibration postion without saving
     M372 move the head to the next calibration postion after saving the current probe point to memory
-   
+
     M373 completes calibration and enables the grid
 
     M
@@ -64,12 +64,15 @@
 #include "ConfigValue.h"
 #include "PublicDataRequest.h"
 #include "PublicData.h"
+#include "EndstopsPublicAccess.h"
 #include "Conveyor.h"
 #include "ZProbe.h"
 #include "libs/FileStream.h"
 #include "nuts_bolts.h"
 #include "platform_memory.h"
 #include "MemoryPool.h"
+#include "libs/utils.h"
+
 //#include "new.h"
 
 #include <string>
@@ -116,20 +119,14 @@ bool ZGrid25Strategy::handleConfig()
 
     this->numRows = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, rows_checksum)->by_default(5)->as_number();
     this->numCols = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, cols_checksum)->by_default(5)->as_number();
-    
-    this->bed_div_x = this->bed_x / float(this->numRows-1);    // Find divisors to find the calbration points
-    this->bed_div_y = this->bed_y / float(this->numCols-1);
-
-    // Allocate program memory for the pData grid
-    this->pData = (float *)AHB0.alloc(probe_points * sizeof(float));
 
     // Probe offsets xxx,yyy,zzz
     std::string po = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid25_leveling_checksum, probe_offsets_checksum)->by_default("0,0,0")->as_string();
     this->probe_offsets= parseXYZ(po.c_str());
 
+    this->calcConfig();                // Run calculations for Grid size and allocate grid memory
 
-    int i;
-    for (i=0; i<(probe_points); i++){
+    for (int i=0; i<(probe_points); i++){
         this->pData[i] = 0.0F;        // Clear the grid
     }
 
@@ -140,23 +137,37 @@ bool ZGrid25Strategy::handleConfig()
     return true;
 }
 
+void ZGrid25Strategy::calcConfig()
+{
+    this->bed_div_x = this->bed_x / float(this->numRows-1);    // Find divisors to find the calbration points
+    this->bed_div_y = this->bed_y / float(this->numCols-1);
+
+    // Ensure free program memory for the pData grid
+    if(this->pData != nullptr) AHB0.dealloc(this->pData);
+
+    // Allocate program memory for the pData grid
+    this->pData = (float *)AHB0.alloc(probe_points * sizeof(float));
+}
+
 bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 {
+    string args = get_arguments(gcode->get_command());
+
      // G code processing
     if(gcode->has_g) {
         if( gcode->g == 31 ) { // report status
 
                // Bed ZGrid25 data as gcode:
                 gcode->stream->printf(";Bed Level settings:\r\n");
-                
+
                 for (int x=0; x<this->numRows; x++){
                     int y;
-                    
+
                     gcode->stream->printf("X%i",x);
                     for (y=0; y<this->numCols; y++){
                          gcode->stream->printf(" %c%1.2f", 'A'+y, this->pData[(x*this->numCols)+y]);
                     }
-                    gcode->stream->printf("\r\n"); 
+                    gcode->stream->printf("\r\n");
                 }
             return true;
 
@@ -182,6 +193,13 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
             case 370: {
                 this->setAdjustFunction(false); // Disable leveling code
 
+                if(gcode->has_letter('X'))  // Rows (X)
+                    this->numRows = gcode->get_value('X');
+                if(gcode->has_letter('Y'))  // Cols (Y)
+                    this->numCols = gcode->get_value('Y');
+
+                this->calcConfig();                // Run calculations for Grid size and allocate grid memory
+
                 this->homexyz();
                 for (int i=0; i<probe_points; i++){
                     this->pData[i] = 0.0F;        // Clear the ZGrid
@@ -190,7 +208,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                 this->cal[X_AXIS] = 0.0f;                                              // Clear calibration position
                 this->cal[Y_AXIS] = 0.0f;
                 this->in_cal = true;                                         // In calbration mode
-                
+
             }
             return true;
             // M371: Move to next manual calibration position
@@ -212,34 +230,33 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 
                     pindex = int(cartesian[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(cartesian[Y_AXIS]/this->bed_div_y + 0.25);
 
-                    // DEBUG
-                    gcode->stream->printf("[%3.1f][%3.1f] - index %i :[%d][%d] = %1.5f\n", cartesian[X_AXIS], cartesian[Y_AXIS], 
-                                                                                           pindex, 
-                                                                                           int(cartesian[X_AXIS]/this->bed_div_x + 0.25), 
-                                                                                           int(cartesian[Y_AXIS]/this->bed_div_y + 0.25), 
-                                                                                           cartesian[Z_AXIS]);
-
                     this->move(this->cal, slow_rate);                       // move to the next position
                     this->next_cal();                                       // to not cause damage to machine due to Z-offset
 
                     this->pData[pindex] = cartesian[Z_AXIS];  // save the offset
 
-                }                   
+                }
             }
             return true;
-            // M373: finalize calibration  
+            // M373: finalize calibration
             case 373: {
                  this->in_cal = false;
-                 this->setAdjustFunction(true); // Enable leveling code   
+                 this->setAdjustFunction(true); // Enable leveling code
 
             }
             return true;
- 
+
+            // M374: Save grid
+            case 374:{
+                this->saveGrid();  //&args);  // Save grid with set extention
+
+            }
+
 /*           // M374: manually inject calibration - Alphabetical ZGrid25 assignment  TODO - debug only
             case 374: {
                 int i=0,
                     x=0;
-                
+
                 if(gcode->has_letter('X')) { // Column nr (X)
                     x = gcode->get_value('X');
                 }
@@ -250,10 +267,10 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                         }
                     }
                 }
-                this->setAdjustFunction(true); // Enable leveling code   
+                this->setAdjustFunction(true); // Enable leveling code
             }
             return true;
-*/
+
             case 376: { // Check grid value calculations: TODO - For debug only.
                 float target[3];
 
@@ -263,10 +280,10 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                     }
                 }
                 gcode->stream->printf(" Z0 %1.3f\n",getZOffset(target[0], target[1]));
-                
+
             }
             return true;
-
+*/
             case 565: { // M565: Set Z probe offsets
                 float x= 0, y= 0, z= 0;
                 if(gcode->has_letter('X')) x = gcode->get_value('X');
@@ -284,7 +301,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 
             case 500: // M500 saves some volatile settings to config override file
 
-                this->saveGrid();  // TODO: Move this line to a new gcode for saving grids
+                //this->saveGrid();  // TODO: Move this line to a new gcode for saving grids
 
             case 503: { // M503 just prints the settings
 
@@ -296,7 +313,7 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
                 gcode->mark_as_taken();
                 break;
             }
-            
+
             return true;
         }
     }
@@ -304,11 +321,19 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
     return false;
 }
 
-bool ZGrid25Strategy::saveGrid()
+bool ZGrid25Strategy::saveGrid() //std::string *args)
 {
-    StreamOutput *ZMap_file = new FileStream("/sd/grid25");
+    //if(args->empty()) {
+        StreamOutput *ZMap_file = new FileStream("/sd/grid25" );
+   // } else {
+   //     StreamOutput *ZMap_file = new FileStream("/sd/grid25." + args);
+   // }
 
-    ZMap_file->printf("P%i\n",probe_points);    // Store probe points to prevent loading undefined grid files
+    void* rd;
+
+    PublicData::get_value( endstops_checksum, home_offset_checksum, &rd );
+
+    ZMap_file->printf("P%i %i %i %f\n", probe_points, this->numRows, this->numCols, ((float*)rd)[2]);    // Store probe points to prevent loading undefined grid files
 
     for (int pos = 0; pos < probe_points; pos++){
         ZMap_file->printf("%1.3f\n", this->pData[pos]);
@@ -321,33 +346,41 @@ bool ZGrid25Strategy::saveGrid()
 
 bool ZGrid25Strategy::loadGrid()
 {
-    char flag[10];	
-    int fpoints;
-    float val;
+    char flag[10];
+    char cmd[64];
+
+    int fpoints, GridX, GridY;
+    float val, GridZ;
 
     FILE *fd = fopen("/sd/grid25", "r");
     if(fd != NULL) {
         fscanf(fd, "%s\n", flag);
         if (flag[0] == 'P'){
-            sscanf(flag, "P%i\n", &fpoints);    // read number of points
+            sscanf(flag, "P%i %i %i %f\n", &fpoints, &GridX, &GridY, &GridZ);    // read number of points, and Grid X and Y
             fscanf(fd, "%f\n", &val);          // read first value from file
-            
-        } else {  // original 25point file
+
+        } else {  // original 25point file -- Backwards compatibility
             fpoints = 25;
             sscanf(flag, "%f\n", &val);     // read first value from string
         }
 
-        if (fpoints == probe_points){  // Only read file if grid points match up with file
-
-            this->pData[0] = val;    // Place the first read value in grid
-             
-            for (int pos = 1; pos < probe_points; pos++){
-                fscanf(fd, "%f\n", &val);
-                this->pData[pos] = val;
-            }
-
+        if (GridX != this->numRows || GridY != this->numCols){
+            this->numRows = GridX;    // Change Rows and Columns to match the saved data
+            this->numCols = GridY;
+            this->calcConfig();       // Reallocate memory for the grid according to the grid loaded
         }
 
+        // Assemble Gcode to add onto the queue
+        snprintf(cmd, sizeof(cmd), "M206 Z%1.3f", GridZ); // Send saved Z homing offset
+        Gcode gc(cmd, &(StreamOutput::NullStream));
+            THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+
+        this->pData[0] = val;    // Place the first read value in grid
+
+        for (int pos = 1; pos < probe_points; pos++){
+            fscanf(fd, "%f\n", &val);
+            this->pData[pos] = val;
+        }
 
         fclose(fd);
 
@@ -383,11 +416,11 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
     while(!zprobe->getProbeStatus());// || secwait < 10 )
 
     this->in_cal = true;                         // In calbration mode
-    
+
     this->cal[X_AXIS] = 0.0f;                    // Clear calibration position
     this->cal[Y_AXIS] = 0.0f;
     this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + 5.0f;
-         
+
     this->move(this->cal, slow_rate);            // Move to probe start point
 
     for (int probes = 0; probes <probe_points; probes++){
@@ -406,16 +439,16 @@ bool ZGrid25Strategy::doProbing(StreamOutput *stream)  // probed calibration
             this->next_cal();                        // to not cause damage to machine due to Z-offset
         }
         this->move(this->cal, slow_rate);        // move to the next position
-        
+
         this->pData[pindex]                      // set offset
           = z ;                                  // save the offset
     }
-    
+
     stream->printf("\nDone!  Please remove probe\n");
-   
+
     // activate correction
     this->setAdjustFunction(true);
-              
+
     this->in_cal = false;
     return true;
 }
@@ -494,8 +527,8 @@ float ZGrid25Strategy::getZOffset(float X, float Y)
     int xIndex = (int) xdiff;                  // Get the current sector (X)
     int yIndex = (int) ydiff;                  // Get the current sector (Y)
 
-    // * Care taken for table outside boundary 
-    // * Returns zero output when values are outside table boundary 
+    // * Care taken for table outside boundary
+    // * Returns zero output when values are outside table boundary
     if(xIndex < 0 || xIndex > (this->numRows - 1) || yIndex < 0
        || yIndex > (this->numCols - 1))
     {
@@ -511,14 +544,14 @@ float ZGrid25Strategy::getZOffset(float X, float Y)
         yIndex2 = yIndex;
     else
         yIndex2 = yIndex+1;
-  
+
     xdiff -= xIndex;                    // Find floating point
     ydiff -= yIndex;                    // Find floating point
 
     dCartX1 = (1-xdiff) * this->pData[(xIndex*this->numCols)+yIndex] + (xdiff) * this->pData[(xIndex2)*this->numCols+yIndex];
     dCartX2 = (1-xdiff) * this->pData[(xIndex*this->numCols)+yIndex2] + (xdiff) * this->pData[(xIndex2)*this->numCols+yIndex2];
 
-    return ydiff * dCartX2 + (1-ydiff) * dCartX1;    // Calculated Z-delta  
+    return ydiff * dCartX2 + (1-ydiff) * dCartX1;    // Calculated Z-delta
 
 }
 

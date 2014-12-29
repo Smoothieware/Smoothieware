@@ -3,7 +3,7 @@
 
 #include "LevelingStrategy.h"
 
-#include <string.h>
+#include <string>
 #include <stdint.h>
 #include <tuple>
 
@@ -30,7 +30,8 @@ private:
     bool doProbing(StreamOutput *stream);   
 
     bool loadGrid();
-    bool saveGrid();
+    bool saveGrid(); //std::string *args);
+    void calcConfig();
 
     std::tuple<float, float, float> probe_offsets;
     std::tuple<float, float, float> parseXYZ(const char *str);
