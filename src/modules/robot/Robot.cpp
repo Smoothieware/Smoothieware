@@ -398,6 +398,7 @@ void Robot::on_gcode_received(void *argument)
                 gcode->mark_as_taken();
                 check_max_actuator_speeds();
                 return;
+
             case 114: {
                 char buf[64];
                 int n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f A:%1.3f B:%1.3f C:%1.3f ",
@@ -411,6 +412,25 @@ void Robot::on_gcode_received(void *argument)
                 gcode->mark_as_taken();
             }
             return;
+
+            case 120: { // push state
+                gcode->mark_as_taken();
+                bool b= this->absolute_mode;
+                saved_state_t s(this->feed_rate, this->seek_rate, b);
+                state_stack.push(s);
+            }
+            break;
+
+            case 121: // pop state
+                gcode->mark_as_taken();
+                if(!state_stack.empty()) {
+                    auto s= state_stack.top();
+                    state_stack.pop();
+                    this->feed_rate= std::get<0>(s);
+                    this->seek_rate= std::get<1>(s);
+                    this->absolute_mode= std::get<2>(s);
+                }
+                break;
 
             case 203: // M203 Set maximum feedrates in mm/sec
                 if (gcode->has_letter('X'))
