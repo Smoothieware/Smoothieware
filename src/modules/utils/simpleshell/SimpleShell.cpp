@@ -17,6 +17,7 @@
 #include "mri.h"
 #include "version.h"
 #include "PublicDataRequest.h"
+#include "AppendFileStream.h"
 #include "FileStream.h"
 #include "checksumm.h"
 #include "PublicData.h"
@@ -445,11 +446,11 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
     }
 
     // replace stream with one that writes to config-override file
-    FileStream *gs = new FileStream(filename.c_str());
-    if(!gs->is_open()) {
-        stream->printf("Unable to open File %s for write\n", filename.c_str());
-        return;
-    }
+    AppendFileStream *gs = new AppendFileStream(filename.c_str());
+    // if(!gs->is_open()) {
+    //     stream->printf("Unable to open File %s for write\n", filename.c_str());
+    //     return;
+    // }
 
     // issue a M500 which will store values in the file stream
     Gcode *gcode = new Gcode("M500", gs);
