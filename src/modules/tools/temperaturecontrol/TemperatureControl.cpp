@@ -91,7 +91,6 @@ void TemperatureControl::on_module_loaded()
     this->register_for_event(ON_GET_PUBLIC_DATA);
 
     if(!this->readonly) {
-        this->register_for_event(ON_GCODE_EXECUTE);
         this->register_for_event(ON_SECOND_TICK);
         this->register_for_event(ON_MAIN_LOOP);
         this->register_for_event(ON_SET_PUBLIC_DATA);
@@ -265,7 +264,8 @@ void TemperatureControl::on_gcode_received(void *argument)
             gcode->mark_as_taken();
 
         } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S')) {
-            // this only gets handled if it is not controlle dby the tool manager or is active in the toolmanager
+            gcode->mark_as_taken();
+            // this only gets handled if it is not controlled by the tool manager or is active in the toolmanager
             this->active = true;
 
             // this is safe as old configs as well as single extruder configs the toolmanager will not be running so will return false
@@ -278,36 +278,21 @@ void TemperatureControl::on_gcode_received(void *argument)
             }
 
             if(this->active) {
-                // Attach gcodes to the last block for on_gcode_execute
-                THEKERNEL->conveyor->append_gcode(gcode);
+                // required so temp change happens in order
+                THEKERNEL->conveyor->wait_for_empty_queue();
 
-                // push an empty block if we have to wait, so the Planner can get things right, and we can prevent subsequent non-move gcodes from executing
-                if (gcode->m == this->set_and_wait_m_code) {
-                    // ensure that no subsequent gcodes get executed with our M109 or similar
-                    THEKERNEL->conveyor->queue_head_block();
-                }
-            }
-        }
-    }
-}
+                float v = gcode->get_value('S');
 
-void TemperatureControl::on_gcode_execute(void *argument)
-{
-    Gcode *gcode = static_cast<Gcode *>(argument);
-    if( gcode->has_m) {
-        if (((gcode->m == this->set_m_code) || (gcode->m == this->set_and_wait_m_code))
-            && gcode->has_letter('S') && this->active) {
-            float v = gcode->get_value('S');
+                if (v == 0.0) {
+                    this->target_temperature = UNDEFINED;
+                    this->heater_pin.set((this->o = 0));
+                } else {
+                    this->set_desired_temperature(v);
 
-            if (v == 0.0) {
-                this->target_temperature = UNDEFINED;
-                this->heater_pin.set((this->o = 0));
-            } else {
-                this->set_desired_temperature(v);
-
-                if( gcode->m == this->set_and_wait_m_code && !this->waiting) {
-                    THEKERNEL->pauser->take();
-                    this->waiting = true;
+                    if( gcode->m == this->set_and_wait_m_code && !this->waiting) {
+                        THEKERNEL->pauser->take();
+                        this->waiting = true;
+                    }
                 }
             }
         }
