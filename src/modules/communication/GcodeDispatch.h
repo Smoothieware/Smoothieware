@@ -8,6 +8,7 @@
 #ifndef GCODE_DISPATCH_H
 #define GCODE_DISPATCH_H
 
+#include <stdio.h>
 #include <string>
 using std::string;
 #include "libs/Module.h"
