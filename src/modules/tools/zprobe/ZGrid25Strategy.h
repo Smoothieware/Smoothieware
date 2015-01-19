@@ -25,9 +25,10 @@ private:
 
     void move(float *position, float feed);
     void next_cal(void);
+    void setZoffset(float zval);
 
     void setAdjustFunction(bool);
-    bool doProbing(StreamOutput *stream);   
+    bool doProbing(StreamOutput *stream);
 
     bool loadGrid();
     bool saveGrid(); //std::string *args);
@@ -39,7 +40,7 @@ private:
     uint16_t numRows;
     uint16_t numCols;
     float *pData;
-        
+
     float slow_rate;
     float bed_x;
     float bed_y;

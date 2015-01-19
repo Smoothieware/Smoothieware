@@ -80,9 +80,9 @@
 #include <cstdlib>
 #include <cmath>
 
-#define bed_x_checksum                CHECKSUM("bed_x")
-#define bed_y_checksum                CHECKSUM("bed_y")
-#define bed_z_checksum                CHECKSUM("bed_z")
+#define bed_x_checksum               CHECKSUM("bed_x")
+#define bed_y_checksum               CHECKSUM("bed_y")
+#define bed_z_checksum               CHECKSUM("bed_z")
 
 #define slow_feedrate_checksum       CHECKSUM("slow_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
@@ -248,9 +248,19 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
 
             // M374: Save grid
             case 374:{
-                this->saveGrid();  //&args);  // Save grid with set extention
-
+                if(this->saveGrid()) {
+                    gcode->stream->printf("Grid saved\n");
+                }
             }
+            return true;
+
+            case 375: // Load grid values
+                if(this->loadGrid()){
+                    this->setAdjustFunction(true); // Enable leveling code
+                    gcode->stream->printf("Grid loaded\n");
+                }
+            return true;
+
 
 /*           // M374: manually inject calibration - Alphabetical ZGrid25 assignment  TODO - debug only
             case 374: {
@@ -293,12 +303,12 @@ bool ZGrid25Strategy::handleGcode(Gcode *gcode)
             }
             return true;
 
-            case 501: // Load grid values
+ /*           case 501: // Load grid values
                 if(this->loadGrid()){
                     this->setAdjustFunction(true); // Enable leveling code
                 }
             return true;
-
+*/
             case 500: // M500 saves some volatile settings to config override file
 
                 //this->saveGrid();  // TODO: Move this line to a new gcode for saving grids
@@ -333,7 +343,7 @@ bool ZGrid25Strategy::saveGrid() //std::string *args)
 
     PublicData::get_value( endstops_checksum, home_offset_checksum, &rd );
 
-    ZMap_file->printf("P%i %i %i %f\n", probe_points, this->numRows, this->numCols, ((float*)rd)[2]);    // Store probe points to prevent loading undefined grid files
+    ZMap_file->printf("P%i %i %i %1.3f\n", probe_points, this->numRows, this->numCols, ((float*)rd)[2]);    // Store probe points to prevent loading undefined grid files
 
     for (int pos = 0; pos < probe_points; pos++){
         ZMap_file->printf("%1.3f\n", this->pData[pos]);
@@ -346,8 +356,7 @@ bool ZGrid25Strategy::saveGrid() //std::string *args)
 
 bool ZGrid25Strategy::loadGrid()
 {
-    char flag[10];
-    char cmd[64];
+    char flag[20];
 
     int fpoints, GridX, GridY;
     float val, GridZ;
@@ -370,11 +379,6 @@ bool ZGrid25Strategy::loadGrid()
             this->calcConfig();       // Reallocate memory for the grid according to the grid loaded
         }
 
-        // Assemble Gcode to add onto the queue
-        snprintf(cmd, sizeof(cmd), "M206 Z%1.3f", GridZ); // Send saved Z homing offset
-        Gcode gc(cmd, &(StreamOutput::NullStream));
-            THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-
         this->pData[0] = val;    // Place the first read value in grid
 
         for (int pos = 1; pos < probe_points; pos++){
@@ -384,11 +388,25 @@ bool ZGrid25Strategy::loadGrid()
 
         fclose(fd);
 
+        this->setZoffset(GridZ);
+
         return true;
 
     } else {
         return false;
     }
+
+}
+
+void ZGrid25Strategy::setZoffset(float zval)
+{
+    char cmd[64];
+
+    // Assemble Gcode to add onto the queue
+    snprintf(cmd, sizeof(cmd), "M206 Z%1.3f", zval); // Send saved Z homing offset
+
+    Gcode gc(cmd, &(StreamOutput::NullStream));
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 
 }
 

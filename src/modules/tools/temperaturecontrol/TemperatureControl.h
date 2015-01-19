@@ -42,7 +42,7 @@ class TemperatureControl : public Module {
         int pool_index;
 
         float target_temperature;
-        float max_temp;
+        float max_temp, min_temp;
 
         float preset1;
         float preset2;
