@@ -8,9 +8,11 @@
 #ifndef GCODE_DISPATCH_H
 #define GCODE_DISPATCH_H
 
+#include "libs/Module.h"
+
+#include <stdio.h>
 #include <string>
 using std::string;
-#include "libs/Module.h"
 
 class GcodeDispatch : public Module
 {
