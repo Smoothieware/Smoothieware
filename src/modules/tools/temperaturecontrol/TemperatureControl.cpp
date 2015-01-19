@@ -288,10 +288,13 @@ void TemperatureControl::on_gcode_received(void *argument)
                     this->heater_pin.set((this->o = 0));
                 } else {
                     this->set_desired_temperature(v);
-
-                    if( gcode->m == this->set_and_wait_m_code && !this->waiting) {
-                        THEKERNEL->pauser->take();
-                        this->waiting = true;
+                    // wait for temp to be reached, no more gcodes will be fetched until this is complete
+                    if( gcode->m == this->set_and_wait_m_code) {
+                        this->waiting = true; // on_second_tick will announce temps
+                        while ( get_temperature() < target_temperature ) {
+                            THEKERNEL->call_event(ON_IDLE, this);
+                        }
+                        this->waiting = false;
                     }
                 }
             }
@@ -338,6 +341,7 @@ void TemperatureControl::on_set_public_data(void *argument)
     if(!pdr->second_element_is(this->name_checksum)) return;
 
     // ok this is targeted at us, so set the temp
+    // NOTE unlike the M code this will set the temp now not when the queue is empty
     float t = *static_cast<float *>(pdr->get_data_ptr());
     this->set_desired_temperature(t);
     pdr->set_taken();
@@ -391,10 +395,6 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
             heater_pin.set((this->o = 0));
         } else {
             pid_process(temperature);
-            if ( waiting && (temperature >= target_temperature) ) {
-                THEKERNEL->pauser->release();
-                waiting = false;
-            }
         }
     } else {
         heater_pin.set((this->o = 0));
