@@ -58,8 +58,8 @@ void ExtruderScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); return;
-        case 1: send_command("G91\nG1 E5 F100\nG90"); break;
-        case 2: send_command("G91\nG1 E-5 F100\nG90"); break;
+        case 1: send_command("M120\nG91\nG1 E5 F100\nM121"); break;
+        case 2: send_command("M120\nG91\nG1 E-5 F100\nM121"); break;
         case 3: setupConfigSettings(); break; // lazy load
     }
 }

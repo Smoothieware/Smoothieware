@@ -14,7 +14,7 @@
 
 
 #define SQ(x) powf(x, 2)
-#define ROUND(x, y) (roundf(x * 1e ## y) / 1e ## y)
+#define ROUND(x, y) (roundf(x * (float)(1e ## y)) / (float)(1e ## y))
 
 LinearDeltaSolution::LinearDeltaSolution(Config* config)
 {
