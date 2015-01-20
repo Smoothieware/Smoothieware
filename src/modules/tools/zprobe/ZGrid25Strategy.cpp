@@ -43,10 +43,12 @@
     G31 reports the status
 
     M370 clears the ZGrid25 and the bed leveling is disabled until G32 is run again
-    M371 moves the head to the next calibration postion without saving
-    M372 move the head to the next calibration postion after saving the current probe point to memory
+    M370 X7 Y9 allocates a new grid size of 7x9 and clears as above
 
-    M373 completes calibration and enables the grid
+    M371 moves the head to the next calibration postion without saving for manual calibration
+    M372 move the head to the next calibration postion after saving the current probe point to memory - manual calbration
+
+    M373 completes calibration and enables the Z compensation grid
 
     M
 
