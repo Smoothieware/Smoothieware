@@ -25,6 +25,11 @@
 #include "libs/StreamOutput.h"
 #include "PublicDataRequest.h"
 
+#include "PublicData.h"
+#include "TemperatureControlPublicAccess.h"
+#include "TemperatureControlPool.h"
+#include "StreamOutputPool.h"
+
 #include <mri.h>
 
 // OLD config names for backwards compatibility, NOTE new configs will not be added here
@@ -62,6 +67,10 @@
 #define save_state_checksum                  CHECKSUM("save_state")
 #define restore_state_checksum               CHECKSUM("restore_state")
 
+#define cold_extrusion_checksum              CHECKSUM("prevent_cold_extrusion")
+#define cold_extrusion_designator_checksum   CHECKSUM("prevent_cold_extrusion_designator")
+#define cold_extrusion_min_temp_checksum     CHECKSUM("extrusion_min_temperature")
+
 #define X_AXIS      0
 #define Y_AXIS      1
 #define Z_AXIS      2
@@ -89,6 +98,10 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     this->volumetric_multiplier = 1.0F;
     this->extruder_multiplier = 1.0F;
     this->stepper_motor= nullptr;
+    this->prevent_cold_extrusion = false;
+    this->cold_extrusion_designator = 0;
+    this->cold_extrusion_temp_controller = 0;
+    this->cold_extrusion_min_temp = 0.0f;
 
     memset(this->offset, 0, sizeof(this->offset));
 }
@@ -192,6 +205,38 @@ void Extruder::on_config_reload(void *argument)
         this->stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_max_speed_checksum)->by_default(1000)->as_number());
     }else{
         this->stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum)->by_default(1000)->as_number());
+    }
+
+    // Should be prevent cold extrusion?
+    this->prevent_cold_extrusion = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_checksum)->by_default(false)->as_bool();
+
+    // What is the minimal extrusion temperature?
+    this->cold_extrusion_min_temp = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_min_temp_checksum)->by_default(180)->as_number();
+
+    // Get the temperature designator we should check for preventing cold extrusion
+    string temp = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_designator_checksum)->by_default("T")->as_string();
+    if(!temp.empty()) {
+        this->cold_extrusion_designator = temp[0];
+
+        // We should know all temperature controllers at this point, so go get
+        // our temperature ID!
+        for(auto m: THEKERNEL->temperature_control_pool->get_controllers()) {
+            // Query temperature controller
+            void *p = queryTemperatureController(m);
+            struct pad_temperature *temp = static_cast<struct pad_temperature *>(p);
+            if(temp != nullptr && temp->designator.front() == this->cold_extrusion_designator) {
+                // We've found it!
+                this->cold_extrusion_temp_controller = m;
+                break;
+            }
+        }
+
+        if(this->cold_extrusion_temp_controller == 0) {
+            // We could not find the desired temperature controller. We won't do
+            // cold extrusion prevention.
+            THEKERNEL->streams->printf("Warning: Cold extrusion prevention enabled but the temperature designator %c could not be found.\n", this->cold_extrusion_designator);
+            this->prevent_cold_extrusion = false;
+        }
     }
 }
 
@@ -384,6 +429,23 @@ void Extruder::on_gcode_received(void *argument)
 // Compute extrusion speed based on parameters and gcode distance of travel
 void Extruder::on_gcode_execute(void *argument)
 {
+    // If we have to prevent cold extrusion we don't need to do anything here...
+    if(this->prevent_cold_extrusion) {
+        // Query the temperature controller
+        void *p = queryTemperatureController(this->cold_extrusion_temp_controller);
+        struct pad_temperature *temp = static_cast<struct pad_temperature *>(p);
+        if(temp != nullptr) {
+            if(temp->current_temperature < this->cold_extrusion_min_temp) {
+                // WHOOPS! This is a cold extrusion!
+                // Don't do any extruder moves. Also disable the stepper.
+                int16_t temperature = static_cast<int16_t>(temp->current_temperature);
+                THEKERNEL->streams->printf("Warning: Cold extrusion prevented at %c:%d°C.\n", this->cold_extrusion_designator, temperature);
+                this->en_pin.set(1);
+                return;
+            }
+        }
+    }
+
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     // The mode is OFF by default, and SOLO or FOLLOW only if we need to extrude
@@ -609,4 +671,16 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy)
     }
     return 0;
 
+}
+
+void *Extruder::queryTemperatureController(uint16_t controller)
+{
+    void *returned_data;
+    bool ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &returned_data);
+
+    if(ok) {
+        return returned_data;
+    }
+
+    return nullptr;
 }
