@@ -40,7 +40,8 @@ class Extruder : public Tool {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         uint32_t rate_increase() const;
-        void *queryTemperatureController(uint16_t controller);
+        void *query_temperature_controller(uint16_t controller);
+        bool check_for_cold_extrusion();
 
         StepperMotor*  stepper_motor;
         Pin            step_pin;                     // Step pin for the stepper driver
@@ -79,6 +80,7 @@ class Extruder : public Tool {
         char     cold_extrusion_designator;
         uint16_t cold_extrusion_temp_controller;
         float    cold_extrusion_min_temp;
+        bool     cold_extrusion_dirty;
 
         struct {
             char mode:3;        // extruder motion mode,  OFF, SOLO, or FOLLOW

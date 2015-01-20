@@ -102,6 +102,7 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     this->cold_extrusion_designator = 0;
     this->cold_extrusion_temp_controller = 0;
     this->cold_extrusion_min_temp = 0.0f;
+    this->cold_extrusion_dirty = true;
 
     memset(this->offset, 0, sizeof(this->offset));
 }
@@ -211,32 +212,19 @@ void Extruder::on_config_reload(void *argument)
     this->prevent_cold_extrusion = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_checksum)->by_default(false)->as_bool();
 
     // What is the minimal extrusion temperature?
-    this->cold_extrusion_min_temp = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_min_temp_checksum)->by_default(180)->as_number();
+    this->cold_extrusion_min_temp = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_min_temp_checksum)->by_default(180.0f)->as_number();
 
     // Get the temperature designator we should check for preventing cold extrusion
     string temp = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_designator_checksum)->by_default("T")->as_string();
     if(!temp.empty()) {
-        this->cold_extrusion_designator = temp[0];
+        this->cold_extrusion_designator = temp.front();
 
-        // We should know all temperature controllers at this point, so go get
-        // our temperature ID!
-        for(auto m: THEKERNEL->temperature_control_pool->get_controllers()) {
-            // Query temperature controller
-            void *p = queryTemperatureController(m);
-            struct pad_temperature *temp = static_cast<struct pad_temperature *>(p);
-            if(temp != nullptr && temp->designator.front() == this->cold_extrusion_designator) {
-                // We've found it!
-                this->cold_extrusion_temp_controller = m;
-                break;
-            }
-        }
-
-        if(this->cold_extrusion_temp_controller == 0) {
-            // We could not find the desired temperature controller. We won't do
-            // cold extrusion prevention.
-            THEKERNEL->streams->printf("Warning: Cold extrusion prevention enabled but the temperature designator %c could not be found.\n", this->cold_extrusion_designator);
-            this->prevent_cold_extrusion = false;
-        }
+        // OK, state is now dirty, we need to search for the temperature
+        // controller upon the next extruder move.
+        this->cold_extrusion_dirty = true;
+    } else {
+        this->prevent_cold_extrusion = false;
+        THEKERNEL->streams->printf("Warning: Prevent cold extrusion designator is empty. Disabling cold extrusion prevention.\n");
     }
 }
 
@@ -426,13 +414,34 @@ void Extruder::on_gcode_received(void *argument)
     }
 }
 
-// Compute extrusion speed based on parameters and gcode distance of travel
-void Extruder::on_gcode_execute(void *argument)
-{
-    // If we have to prevent cold extrusion we don't need to do anything here...
+bool Extruder::check_for_cold_extrusion() {
+    if(this->prevent_cold_extrusion && this->cold_extrusion_dirty) {
+        // We want to prevent cold extrusions but we don't know which
+        // temperature controller to use yet. So we search for it.
+        for(auto m: THEKERNEL->temperature_control_pool->get_controllers()) {
+            // Query temperature controller
+            void *p = query_temperature_controller(m);
+            struct pad_temperature *temp = static_cast<struct pad_temperature *>(p);
+            if(temp != nullptr && temp->designator.front() == this->cold_extrusion_designator) {
+                // We've found it!
+                this->cold_extrusion_temp_controller = m;
+                break;
+            }
+        }
+
+        if(this->cold_extrusion_temp_controller == 0) {
+            // We could not find the desired temperature controller. We won't do
+            // cold extrusion prevention.
+            THEKERNEL->streams->printf("Warning: Cold extrusion prevention enabled but the temperature designator %c could not be found.\n", this->cold_extrusion_designator);
+            this->prevent_cold_extrusion = false;
+        } else {
+            this->cold_extrusion_dirty = false;
+        }
+    }
+
     if(this->prevent_cold_extrusion) {
         // Query the temperature controller
-        void *p = queryTemperatureController(this->cold_extrusion_temp_controller);
+        void *p = query_temperature_controller(this->cold_extrusion_temp_controller);
         struct pad_temperature *temp = static_cast<struct pad_temperature *>(p);
         if(temp != nullptr) {
             if(temp->current_temperature < this->cold_extrusion_min_temp) {
@@ -441,11 +450,17 @@ void Extruder::on_gcode_execute(void *argument)
                 int16_t temperature = static_cast<int16_t>(temp->current_temperature);
                 THEKERNEL->streams->printf("Warning: Cold extrusion prevented at %c:%d°C.\n", this->cold_extrusion_designator, temperature);
                 this->en_pin.set(1);
-                return;
+                return false;
             }
         }
     }
 
+    return true;
+}
+
+// Compute extrusion speed based on parameters and gcode distance of travel
+void Extruder::on_gcode_execute(void *argument)
+{
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     // The mode is OFF by default, and SOLO or FOLLOW only if we need to extrude
@@ -479,6 +494,14 @@ void Extruder::on_gcode_execute(void *argument)
 
 
     if( gcode->has_g && this->enabled ) {
+        // We check cold extrusion only for GCODEs which would move the extruder
+        // motor.
+        if(gcode->g != 92 && !check_for_cold_extrusion()) {
+            // The temperature controller reports a temperature below the min.
+            // extrusion temperature. Ignore this GCODE to prevent damage.
+            return;
+        }
+
         // G92: Reset extruder position
         if( gcode->g == 92 ) {
             if( gcode->has_letter('E') ) {
@@ -673,7 +696,7 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy)
 
 }
 
-void *Extruder::queryTemperatureController(uint16_t controller)
+void *Extruder::query_temperature_controller(uint16_t controller)
 {
     void *returned_data;
     bool ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &returned_data);
