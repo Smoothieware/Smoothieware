@@ -103,9 +103,6 @@ void Extruder::on_halt(void *arg)
     if(arg == nullptr) {
         // turn off motor
         this->en_pin.set(1);
-        // disable if multi extruder
-        if(!this->single_config)
-            this->enabled= false;
     }
 }
 
@@ -184,7 +181,7 @@ void Extruder::on_config_reload(void *argument)
     this->retract_zlift_length     = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_length_checksum)->by_default(0)->as_number();
     this->retract_zlift_feedrate   = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_feedrate_checksum)->by_default(100*60)->as_number(); // mm/min
 
-    if(filament_diameter > 0.01) {
+    if(filament_diameter > 0.01F) {
         this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
     }
 

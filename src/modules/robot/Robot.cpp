@@ -8,6 +8,8 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 
+#include "mbed.h" // for us_ticker_read()
+
 #include <math.h>
 #include <string>
 using std::string;
@@ -336,6 +338,25 @@ void Robot::on_gcode_received(void *argument)
             case 1:  this->motion_mode = MOTION_MODE_LINEAR; gcode->mark_as_taken();  break;
             case 2:  this->motion_mode = MOTION_MODE_CW_ARC; gcode->mark_as_taken();  break;
             case 3:  this->motion_mode = MOTION_MODE_CCW_ARC; gcode->mark_as_taken();  break;
+            case 4: {
+                uint32_t delay_ms= 0;
+                if (gcode->has_letter('P')) {
+                    delay_ms= gcode->get_int('P');
+                }
+                if (gcode->has_letter('S')) {
+                    delay_ms += gcode->get_int('S') * 1000;
+                }
+                if (delay_ms > 0){
+                    // drain queue
+                    THEKERNEL->conveyor->wait_for_empty_queue();
+                    // wait for specified time
+                    uint32_t start= us_ticker_read(); // mbed call
+                    while ((us_ticker_read() - start) < delay_ms*1000) {
+                        THEKERNEL->call_event(ON_IDLE, this);
+                    }
+                }
+                gcode->mark_as_taken();
+            }
             case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); gcode->mark_as_taken();  break;
             case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); gcode->mark_as_taken();  break;
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;
@@ -381,6 +402,7 @@ void Robot::on_gcode_received(void *argument)
                 gcode->mark_as_taken();
                 check_max_actuator_speeds();
                 return;
+
             case 114: {
                 char buf[64];
                 int n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f A:%1.3f B:%1.3f C:%1.3f ",
@@ -394,6 +416,25 @@ void Robot::on_gcode_received(void *argument)
                 gcode->mark_as_taken();
             }
             return;
+
+            case 120: { // push state
+                gcode->mark_as_taken();
+                bool b= this->absolute_mode;
+                saved_state_t s(this->feed_rate, this->seek_rate, b);
+                state_stack.push(s);
+            }
+            break;
+
+            case 121: // pop state
+                gcode->mark_as_taken();
+                if(!state_stack.empty()) {
+                    auto s= state_stack.top();
+                    state_stack.pop();
+                    this->feed_rate= std::get<0>(s);
+                    this->seek_rate= std::get<1>(s);
+                    this->absolute_mode= std::get<2>(s);
+                }
+                break;
 
             case 203: // M203 Set maximum feedrates in mm/sec
                 if (gcode->has_letter('X'))
@@ -698,8 +739,7 @@ void Robot::append_milestone( float target[], float rate_mm_s )
 void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
 {
     // Find out the distance for this gcode
-    // NOTE we need to do sqrt here as this setting of millimeters_of_travel is used by extruder and other modules even of there is no XYZ move
-    // FIXME not sure why we need to do this twice,it is also done in append_milestone()
+    // NOTE we need to do sqrt here as this setting of millimeters_of_travel is used by extruder and other modules even if there is no XYZ move
     gcode->millimeters_of_travel = sqrtf(powf( target[X_AXIS] - this->last_milestone[X_AXIS], 2 ) +  powf( target[Y_AXIS] - this->last_milestone[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - this->last_milestone[Z_AXIS], 2 ));
 
     // We ignore non- XYZ moves ( for example, extruder moves are not XYZ moves )
@@ -745,7 +785,7 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
         // segment 0 is already done - it's the end point of the previous move so we start at segment 1
         // We always add another point after this loop so we stop at segments-1, ie i < segments
         for (int i = 1; i < segments; i++) {
-            if(halted) return; // don;t queue any more segments
+            if(halted) return; // don't queue any more segments
             for(int axis = X_AXIS; axis <= Z_AXIS; axis++ )
                 segment_end[axis] = last_milestone[axis] + segment_delta[axis];
 

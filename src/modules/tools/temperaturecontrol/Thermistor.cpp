@@ -33,17 +33,8 @@
 #define r2_checksum                        CHECKSUM("r2")
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
 
-
-// Temporary buffer used only during median computation.
-// Shared between all thermistors.
-static uint16_t *median_buffer = NULL;
-
 Thermistor::Thermistor()
 {
-    if (median_buffer == NULL)
-    {
-        median_buffer = static_cast<uint16_t*>(AHB0.alloc(QUEUE_LEN * sizeof(uint16_t)));
-    }
 }
 
 Thermistor::~Thermistor()
@@ -80,13 +71,18 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     this->r1 = THEKERNEL->config->value(module_checksum, name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
     this->r2 = THEKERNEL->config->value(module_checksum, name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
 
-    // Thermistor math
-    j = (1.0 / beta);
-    k = (1.0 / (t0 + 273.15));
+    calc_jk();
 
     // Thermistor pin for ADC readings
     this->thermistor_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, thermistor_pin_checksum )->required()->as_string());
     THEKERNEL->adc->enable_pin(&thermistor_pin);
+}
+
+void Thermistor::calc_jk()
+{
+    // Thermistor math
+    j = (1.0F / beta);
+    k = (1.0F / (t0 + 273.15F));
 }
 
 float Thermistor::get_temperature()
@@ -98,10 +94,10 @@ float Thermistor::adc_value_to_temperature(int adc_value)
 {
     if ((adc_value == 4095) || (adc_value == 0))
         return infinityf();
-    float r = r2 / ((4095.0 / adc_value) - 1.0);
-    if (r1 > 0)
+    float r = r2 / ((4095.0F / adc_value) - 1.0F);
+    if (r1 > 0.0F)
         r = (r1 * r) / (r1 - r);
-    return (1.0 / (k + (j * log(r / r0)))) - 273.15;
+    return (1.0F / (k + (j * logf(r / r0)))) - 273.15F;
 }
 
 int Thermistor::new_thermistor_reading()
@@ -113,8 +109,37 @@ int Thermistor::new_thermistor_reading()
     }
     uint16_t r = last_raw;
     queue.push_back(r);
+    uint16_t median_buffer[queue.size()];
     for (int i=0; i<queue.size(); i++)
       median_buffer[i] = *queue.get_ref(i);
     uint16_t m = median_buffer[quick_median(median_buffer, queue.size())];
     return m;
 }
+
+bool Thermistor::set_optional(const sensor_options_t& options) {
+
+    sensor_options_t::const_iterator i;
+
+    i= options.find('B');
+    if(i != options.end()) {
+        this->beta= i->second;
+    }
+    i= options.find('R');
+    if(i != options.end()) {
+        this->r0= i->second;
+    }
+    i= options.find('X');
+    if(i != options.end()) {
+        this->t0= i->second;
+    }
+
+    calc_jk();
+    return true;
+}
+
+bool Thermistor::get_optional(sensor_options_t& options) {
+    options['B']= this->beta;
+    options['R']= this->r0;
+    options['X']= this->t0;
+    return true;
+};

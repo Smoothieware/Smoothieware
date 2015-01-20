@@ -27,8 +27,6 @@ class SlowTicker : public Module{
 
         void on_module_loaded(void);
         void on_idle(void*);
-        void on_gcode_received(void*);
-        void on_gcode_execute(void*);
 
         void set_frequency( int frequency );
         void tick();
@@ -57,9 +55,6 @@ class SlowTicker : public Module{
         vector<Hook*> hooks;
         uint32_t max_frequency;
         uint32_t interval;
-
-        uint32_t g4_ticks;
-        bool     g4_pause;
 
         Pin ispbtn;
 protected:

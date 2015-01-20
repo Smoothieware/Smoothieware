@@ -12,6 +12,7 @@
 using std::string;
 #include <string.h>
 #include <functional>
+#include <stack>
 
 #include "libs/Module.h"
 
@@ -68,6 +69,8 @@ class Robot : public Module {
         void clearToolOffset();
         void check_max_actuator_speeds();
 
+        typedef std::tuple<float, float, bool> saved_state_t; // save current feedrate and absolute mode
+        std::stack<saved_state_t> state_stack;               // saves state from M120
         float last_milestone[3];                             // Last position, in millimeters
         float transformed_last_milestone[3];                 // Last transformed position
         int8_t motion_mode;                                  // Motion mode for the current received Gcode

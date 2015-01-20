@@ -21,7 +21,6 @@ class TemperatureControl : public Module {
 
         void on_module_loaded();
         void on_main_loop(void* argument);
-        void on_gcode_execute(void* argument);
         void on_gcode_received(void* argument);
         void on_second_tick(void* argument);
         void on_get_public_data(void* argument);
@@ -42,7 +41,7 @@ class TemperatureControl : public Module {
         int pool_index;
 
         float target_temperature;
-        float max_temp;
+        float max_temp, min_temp;
 
         float preset1;
         float preset2;
@@ -90,6 +89,7 @@ class TemperatureControl : public Module {
             bool active:1;
             bool readonly:1;
             bool windup:1;
+            bool sensor_settings:1;
         };
 };
 

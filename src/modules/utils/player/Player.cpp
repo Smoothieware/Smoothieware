@@ -36,13 +36,16 @@
 
 #include "mbed.h"
 
-#define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
-#define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
-#define after_suspend_gcode_checksum    CHECKSUM("after_suspend_gcode")
-#define before_resume_gcode_checksum    CHECKSUM("before_resume_gcode")
-#define extruder_checksum               CHECKSUM("extruder")
-#define save_state_checksum             CHECKSUM("save_state")
-#define restore_state_checksum          CHECKSUM("restore_state")
+#define on_boot_gcode_checksum            CHECKSUM("on_boot_gcode")
+#define on_boot_gcode_enable_checksum     CHECKSUM("on_boot_gcode_enable")
+#define after_suspend_gcode_checksum      CHECKSUM("after_suspend_gcode")
+#define before_resume_gcode_checksum      CHECKSUM("before_resume_gcode")
+#define leave_heaters_on_suspend_checksum CHECKSUM("leave_heaters_on_suspend")
+
+
+#define extruder_checksum                 CHECKSUM("extruder")
+#define save_state_checksum               CHECKSUM("save_state")
+#define restore_state_checksum            CHECKSUM("restore_state")
 
 extern SDFAT mounter;
 
@@ -75,6 +78,7 @@ void Player::on_module_loaded()
     this->before_resume_gcode = THEKERNEL->config->value(before_resume_gcode_checksum)->by_default("")->as_string();
     std::replace( this->after_suspend_gcode.begin(), this->after_suspend_gcode.end(), '_', ' '); // replace _ with space
     std::replace( this->before_resume_gcode.begin(), this->before_resume_gcode.end(), '_', ' '); // replace _ with space
+    this->leave_heaters_on = THEKERNEL->config->value(leave_heaters_on_suspend_checksum)->by_default(false)->as_bool();
 }
 
 void Player::on_halt(void *arg)
@@ -523,24 +527,29 @@ void Player::suspend_part2()
     this->saved_absolute_mode= THEKERNEL->robot->absolute_mode;
     this->saved_feed_rate= THEKERNEL->robot->get_feed_rate();
 
-    // save current temperatures
-    for(auto m : THEKERNEL->temperature_control_pool->get_controllers()) {
-        // query each heater and save the target temperature if on
-        void *p;
-        if(PublicData::get_value( temperature_control_checksum, m, current_temperature_checksum, &p )) {
-            struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
-            if(temp != nullptr && temp->target_temperature > 0) {
-                this->saved_temperatures[m]= temp->target_temperature;
-            }
-        }
-    }
-
     // TODO retract by optional amount...
 
-    // turn off heaters that were on
-    for(auto& h : this->saved_temperatures) {
-        float t= 0;
-        PublicData::set_value( temperature_control_checksum, h.first, &t );
+    this->saved_temperatures.clear();
+    if(!this->leave_heaters_on) {
+        // save current temperatures
+        for(auto m : THEKERNEL->temperature_control_pool->get_controllers()) {
+            // query each heater and save the target temperature if on
+            void *p;
+            if(PublicData::get_value( temperature_control_checksum, m, current_temperature_checksum, &p )) {
+                struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
+                // TODO see if in exclude list
+                if(temp != nullptr && temp->target_temperature > 0) {
+                    this->saved_temperatures[m]= temp->target_temperature;
+                }
+            }
+        }
+
+
+        // turn off heaters that were on
+        for(auto& h : this->saved_temperatures) {
+            float t= 0;
+            PublicData::set_value( temperature_control_checksum, h.first, &t );
+        }
     }
 
     // execute optional gcode if defined
