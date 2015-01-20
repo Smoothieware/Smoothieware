@@ -5,14 +5,12 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <string>
-using std::string;
-#include "libs/Module.h"
+#include "GcodeDispatch.h"
+
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
 #include "Pauser.h"
 #include "libs/nuts_bolts.h"
-#include "GcodeDispatch.h"
 #include "modules/robot/Conveyor.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
@@ -179,6 +177,7 @@ try_again:
                                 return;
 
                             case 500: // M500 save volatile settings to config-override
+                                THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
                                 // replace stream with one that writes to config-override file
                                 gcode->stream = new AppendFileStream(THEKERNEL->config_override_filename());
                                 // dispatch the M500 here so we can free up the stream when done
