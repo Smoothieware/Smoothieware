@@ -27,14 +27,14 @@
 #define RETRACT_TO_Z 0
 #define RETRACT_TO_R 1
 
-// dwell unity
-#define DWELL_UNITY_S 0 // seconds
-#define DWELL_UNITY_P 1 // millis
+// dwell units
+#define DWELL_UNITS_S 0 // seconds
+#define DWELL_UNITS_P 1 // millis
 
 // config names
 #define drills_checksum      CHECKSUM("drills")
 #define enable_checksum      CHECKSUM("enable")
-#define dwell_unity_checksum CHECKSUM("dwell_unity")
+#define dwell_units_checksum CHECKSUM("dwell_units")
 
 Drills::Drills() {}
 
@@ -65,9 +65,9 @@ void Drills::on_module_loaded()
 
 void Drills::on_config_reload(void *argument)
 {
-    // take the dwell unity configured by user, or select S (seconds) by default
-    string dwell_unity = THEKERNEL->config->value(drills_checksum, dwell_unity_checksum)->by_default("S")->as_string();
-    this->dwell_unity  = (dwell_unity == "P") ? DWELL_UNITY_P : DWELL_UNITY_S;
+    // take the dwell units configured by user, or select S (seconds) by default
+    string dwell_units = THEKERNEL->config->value(drills_checksum, dwell_units_checksum)->by_default("S")->as_string();
+    this->dwell_units  = (dwell_units == "P") ? DWELL_UNITS_P : DWELL_UNITS_S;
 }
 
 /*
@@ -178,7 +178,7 @@ void Drills::make_hole(Gcode *gcode)
     // if dwell, wait for x seconds
     if (this->sticky_p > 0) {
         // dwell exprimed in seconds
-        if (this->dwell_unity == DWELL_UNITY_S)
+        if (this->dwell_units == DWELL_UNITS_S)
             this->send_gcode("G4 S%u", this->sticky_p);
         // dwell exprimed in milliseconds
         else

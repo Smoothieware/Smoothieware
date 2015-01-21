@@ -41,7 +41,7 @@ class Drills : public Module
         float sticky_q;     // depth increment
         int   sticky_p;     // dwell pause
 
-        int   dwell_unity;  // unity for dwell
+        int   dwell_units;  // units for dwell
 };
 
 #endif
