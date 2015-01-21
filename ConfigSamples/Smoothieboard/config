@@ -319,4 +319,4 @@ network.ip_address                           auto             # use dhcp to get 
 # G80-83, G98, G99 in absolute mode only
 # Incremental mode not implemented (L)
 drills.enable                                false # enable module, default false
-drills.dwell_unity                           S     # dwell unity [S = seconds, P = millis], default: S
+drills.dwell_units                           S     # dwell units [S = seconds, P = millis], default: S
