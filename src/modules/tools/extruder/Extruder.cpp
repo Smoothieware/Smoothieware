@@ -224,7 +224,7 @@ void Extruder::on_config_reload(void *argument)
         this->cold_extrusion_dirty = true;
     } else {
         this->prevent_cold_extrusion = false;
-        THEKERNEL->streams->printf("Warning: Prevent cold extrusion designator is empty. Disabling cold extrusion prevention.\n");
+        THEKERNEL->streams->printf("Warning: Prevent cold extrusion designator is empty. Disabling cold extrusion prevention.\r\n");
     }
 }
 
@@ -415,13 +415,16 @@ void Extruder::on_gcode_received(void *argument)
 }
 
 bool Extruder::check_for_cold_extrusion() {
+    bool cold_extrusion_detected = false;
+    struct pad_temperature *temp = nullptr;
+
     if(this->prevent_cold_extrusion && this->cold_extrusion_dirty) {
         // We want to prevent cold extrusions but we don't know which
         // temperature controller to use yet. So we search for it.
         for(auto m: THEKERNEL->temperature_control_pool->get_controllers()) {
             // Query temperature controller
             void *p = query_temperature_controller(m);
-            struct pad_temperature *temp = static_cast<struct pad_temperature *>(p);
+            temp = static_cast<struct pad_temperature *>(p);
             if(temp != nullptr && temp->designator.front() == this->cold_extrusion_designator) {
                 // We've found it!
                 this->cold_extrusion_temp_controller = m;
@@ -432,27 +435,35 @@ bool Extruder::check_for_cold_extrusion() {
         if(this->cold_extrusion_temp_controller == 0) {
             // We could not find the desired temperature controller. We won't do
             // cold extrusion prevention.
-            THEKERNEL->streams->printf("Warning: Cold extrusion prevention enabled but the temperature designator %c could not be found.\n", this->cold_extrusion_designator);
+            THEKERNEL->streams->printf("Warning: Cold extrusion prevention enabled but the temperature designator %c could not be found.\r\n", this->cold_extrusion_designator);
             this->prevent_cold_extrusion = false;
         } else {
+            // Now that we have the temperature controller ID we don't need to
+            // search it again until the next config reload
             this->cold_extrusion_dirty = false;
+
+            if(temp != nullptr && temp->current_temperature < this->cold_extrusion_min_temp) {
+                cold_extrusion_detected = true;
+            }
+        }
+    } else if(this->prevent_cold_extrusion) {
+        // Query the temperature controller
+        void *p = query_temperature_controller(this->cold_extrusion_temp_controller);
+        temp = static_cast<struct pad_temperature *>(p);
+        if(temp != nullptr) {
+            if(temp->current_temperature < this->cold_extrusion_min_temp) {
+                cold_extrusion_detected = true;
+            }
         }
     }
 
-    if(this->prevent_cold_extrusion) {
-        // Query the temperature controller
-        void *p = query_temperature_controller(this->cold_extrusion_temp_controller);
-        struct pad_temperature *temp = static_cast<struct pad_temperature *>(p);
-        if(temp != nullptr) {
-            if(temp->current_temperature < this->cold_extrusion_min_temp) {
-                // WHOOPS! This is a cold extrusion!
-                // Don't do any extruder moves. Also disable the stepper.
-                int16_t temperature = static_cast<int16_t>(temp->current_temperature);
-                THEKERNEL->streams->printf("Warning: Cold extrusion prevented at %c:%d°C.\n", this->cold_extrusion_designator, temperature);
-                this->en_pin.set(1);
-                return false;
-            }
-        }
+    if(cold_extrusion_detected) {
+        // WHOOPS! This is a cold extrusion!
+        // Don't do any extruder moves. Also disable the stepper.
+        int16_t temperature = static_cast<int16_t>(temp->current_temperature);
+        THEKERNEL->streams->printf("Warning: Cold extrusion prevented at %c:%d°C.\r\n", this->cold_extrusion_designator, temperature);
+        this->en_pin.set(1);
+        return false;
     }
 
     return true;
