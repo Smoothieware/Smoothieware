@@ -5,18 +5,18 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef DRILLS_MODULE_H
-#define DRILLS_MODULE_H
+#ifndef DRILLINGCYCLES_MODULE_H
+#define DRILLINGCYCLES_MODULE_H
 
 #include "libs/Module.h"
 
 class Gcode;
 
-class Drills : public Module
+class Drillingcycles : public Module
 {
     public:
-        Drills();
-        virtual ~Drills() {};
+        Drillingcycles();
+        virtual ~Drillingcycles() {};
         void on_module_loaded();
 
     private:

@@ -6,7 +6,7 @@
 */
 
 #include "Kernel.h"
-#include "Drills.h"
+#include "Drillingcycles.h"
 #include "checksumm.h"
 #include "Config.h"
 #include "ConfigValue.h"
@@ -32,16 +32,16 @@
 #define DWELL_UNITS_P 1 // millis
 
 // config names
-#define drills_checksum      CHECKSUM("drills")
-#define enable_checksum      CHECKSUM("enable")
-#define dwell_units_checksum CHECKSUM("dwell_units")
+#define drillingcycles_checksum CHECKSUM("drillingcycles")
+#define enable_checksum         CHECKSUM("enable")
+#define dwell_units_checksum    CHECKSUM("dwell_units")
 
-Drills::Drills() {}
+Drillingcycles::Drillingcycles() {}
 
-void Drills::on_module_loaded()
+void Drillingcycles::on_module_loaded()
 {
     // if the module is disabled -> do nothing
-    if(! THEKERNEL->config->value(drills_checksum, enable_checksum)->by_default(false)->as_bool()) {
+    if(! THEKERNEL->config->value(drillingcycles_checksum, enable_checksum)->by_default(false)->as_bool()) {
         // as this module is not needed free up the resource
         delete this;
         return;
@@ -63,10 +63,10 @@ void Drills::on_module_loaded()
     this->reset_sticky();
 }
 
-void Drills::on_config_reload(void *argument)
+void Drillingcycles::on_config_reload(void *argument)
 {
     // take the dwell units configured by user, or select S (seconds) by default
-    string dwell_units = THEKERNEL->config->value(drills_checksum, dwell_units_checksum)->by_default("S")->as_string();
+    string dwell_units = THEKERNEL->config->value(drillingcycles_checksum, dwell_units_checksum)->by_default("S")->as_string();
     this->dwell_units  = (dwell_units == "P") ? DWELL_UNITS_P : DWELL_UNITS_S;
 }
 
@@ -83,7 +83,7 @@ Incremental (L) : no
 */
 
 /* reset all sticky values, called before each cycle */
-void Drills::reset_sticky()
+void Drillingcycles::reset_sticky()
 {
     this->sticky_z = 0; // Z depth
     this->sticky_r = 0; // R plane
@@ -93,7 +93,7 @@ void Drills::reset_sticky()
 }
 
 /* update all sticky values, called before each hole */
-void Drills::update_sticky(Gcode *gcode)
+void Drillingcycles::update_sticky(Gcode *gcode)
 {
     if (gcode->has_letter('Z')) this->sticky_z = gcode->get_value('Z');
     if (gcode->has_letter('R')) this->sticky_r = gcode->get_value('R');
@@ -109,7 +109,7 @@ void Drills::update_sticky(Gcode *gcode)
 }
 
 /* send a formatted Gcode line */
-int Drills::send_gcode(const char* format, ...)
+int Drillingcycles::send_gcode(const char* format, ...)
 {
     // handle variable arguments
     va_list args;
@@ -128,7 +128,7 @@ int Drills::send_gcode(const char* format, ...)
 }
 
 /* G83: peck drilling */
-void Drills::peck_hole()
+void Drillingcycles::peck_hole()
 {
     // start values
     float depth  = this->sticky_r - this->sticky_z; // travel depth
@@ -153,7 +153,7 @@ void Drills::peck_hole()
     }
 }
 
-void Drills::make_hole(Gcode *gcode)
+void Drillingcycles::make_hole(Gcode *gcode)
 {
     // compile X and Y values
     char x[16] = "";
@@ -189,7 +189,7 @@ void Drills::make_hole(Gcode *gcode)
     this->send_gcode("G0 Z%1.4f", this->r_plane);
 }
 
-void Drills::on_gcode_received(void* argument)
+void Drillingcycles::on_gcode_received(void* argument)
 {
     // received gcode
     Gcode *gcode = static_cast<Gcode *>(argument);
@@ -233,8 +233,8 @@ void Drills::on_gcode_received(void* argument)
     else if (this->cycle_started) {
         // relative mode not supported for now...
         if (THEKERNEL->robot->absolute_mode == false) {
-            gcode->stream->printf("Drills: relative mode not supported.\r\n");
-            gcode->stream->printf("Drills: skip hole...\r\n");
+            gcode->stream->printf("Drillingcycles: relative mode not supported.\r\n");
+            gcode->stream->printf("Drillingcycles: skip hole...\r\n");
             // exit
             return;
         }
