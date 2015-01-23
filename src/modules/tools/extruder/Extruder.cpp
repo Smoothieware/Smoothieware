@@ -67,8 +67,8 @@
 #define save_state_checksum                  CHECKSUM("save_state")
 #define restore_state_checksum               CHECKSUM("restore_state")
 
+#define hotend_designator_checksum           CHECKSUM("hotend_designator")
 #define cold_extrusion_checksum              CHECKSUM("prevent_cold_extrusion")
-#define cold_extrusion_designator_checksum   CHECKSUM("prevent_cold_extrusion_designator")
 #define cold_extrusion_min_temp_checksum     CHECKSUM("extrusion_min_temperature")
 
 #define X_AXIS      0
@@ -98,11 +98,9 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     this->volumetric_multiplier = 1.0F;
     this->extruder_multiplier = 1.0F;
     this->stepper_motor= nullptr;
-    this->prevent_cold_extrusion = false;
-    this->cold_extrusion_designator = 0;
+    this->hotend_designator = 0;
     this->cold_extrusion_temp_controller = 0;
-    this->cold_extrusion_min_temp = 0.0f;
-    this->cold_extrusion_dirty = true;
+    this->cold_extrusion_min_temp = 0;
 
     memset(this->offset, 0, sizeof(this->offset));
 }
@@ -208,23 +206,28 @@ void Extruder::on_config_reload(void *argument)
         this->stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum)->by_default(1000)->as_number());
     }
 
+    // Get the temperature designator
+    string temp = THEKERNEL->config->value(extruder_checksum, this->identifier, hotend_designator_checksum)->by_default("T")->as_string();
+    this->hotend_designator = temp.empty() ? 0 : temp.front();
+
     // Should be prevent cold extrusion?
-    this->prevent_cold_extrusion = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_checksum)->by_default(false)->as_bool();
+    if(THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_checksum)->by_default(false)->as_bool()) {
+        if(this->hotend_designator == 0) {
+            // We can't do cold extrusion prevention without a hotend
+            // designator.
+            this->cold_extrusion_min_temp = 0;
+            THEKERNEL->streams->printf("Warning: Prevent cold extrusion designator is empty. Disabling cold extrusion prevention.\r\n");
+        } else {
+            // OK, cold extrusion prevention state is now dirty, we need to
+            // search for the temperature controller instance upon the next
+            // extruder move.
+            this->cold_extrusion_temp_controller = 0;
 
-    // What is the minimal extrusion temperature?
-    this->cold_extrusion_min_temp = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_min_temp_checksum)->by_default(180.0f)->as_number();
-
-    // Get the temperature designator we should check for preventing cold extrusion
-    string temp = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_designator_checksum)->by_default("T")->as_string();
-    if(!temp.empty()) {
-        this->cold_extrusion_designator = temp.front();
-
-        // OK, state is now dirty, we need to search for the temperature
-        // controller upon the next extruder move.
-        this->cold_extrusion_dirty = true;
+            this->cold_extrusion_min_temp = THEKERNEL->config->value(extruder_checksum, this->identifier, cold_extrusion_min_temp_checksum)->by_default(180)->as_number();
+        }
     } else {
-        this->prevent_cold_extrusion = false;
-        THEKERNEL->streams->printf("Warning: Prevent cold extrusion designator is empty. Disabling cold extrusion prevention.\r\n");
+        // We don't do cold extrusion prevention.
+        this->cold_extrusion_min_temp = 0;
     }
 }
 
@@ -418,14 +421,14 @@ bool Extruder::check_for_cold_extrusion() {
     bool cold_extrusion_detected = false;
     struct pad_temperature *temp = nullptr;
 
-    if(this->prevent_cold_extrusion && this->cold_extrusion_dirty) {
+    if(this->cold_extrusion_min_temp != 0 && this->cold_extrusion_temp_controller == 0) {
         // We want to prevent cold extrusions but we don't know which
         // temperature controller to use yet. So we search for it.
         for(auto m: THEKERNEL->temperature_control_pool->get_controllers()) {
             // Query temperature controller
             void *p = query_temperature_controller(m);
             temp = static_cast<struct pad_temperature *>(p);
-            if(temp != nullptr && temp->designator.front() == this->cold_extrusion_designator) {
+            if(temp != nullptr && temp->designator.front() == this->hotend_designator) {
                 // We've found it!
                 this->cold_extrusion_temp_controller = m;
                 break;
@@ -435,18 +438,16 @@ bool Extruder::check_for_cold_extrusion() {
         if(this->cold_extrusion_temp_controller == 0) {
             // We could not find the desired temperature controller. We won't do
             // cold extrusion prevention.
-            THEKERNEL->streams->printf("Warning: Cold extrusion prevention enabled but the temperature designator %c could not be found.\r\n", this->cold_extrusion_designator);
-            this->prevent_cold_extrusion = false;
+            THEKERNEL->streams->printf("Warning: Cold extrusion prevention enabled but the temperature designator %c could not be found.\r\n", this->hotend_designator);
+            this->cold_extrusion_min_temp = 0;
         } else {
             // Now that we have the temperature controller ID we don't need to
             // search it again until the next config reload
-            this->cold_extrusion_dirty = false;
-
             if(temp != nullptr && temp->current_temperature < this->cold_extrusion_min_temp) {
                 cold_extrusion_detected = true;
             }
         }
-    } else if(this->prevent_cold_extrusion) {
+    } else if(this->cold_extrusion_min_temp != 0) {  // We need to check again
         // Query the temperature controller
         void *p = query_temperature_controller(this->cold_extrusion_temp_controller);
         temp = static_cast<struct pad_temperature *>(p);
@@ -461,7 +462,7 @@ bool Extruder::check_for_cold_extrusion() {
         // WHOOPS! This is a cold extrusion!
         // Don't do any extruder moves. Also disable the stepper.
         int16_t temperature = static_cast<int16_t>(temp->current_temperature);
-        THEKERNEL->streams->printf("Warning: Cold extrusion prevented at %c:%d°C.\r\n", this->cold_extrusion_designator, temperature);
+        THEKERNEL->streams->printf("Warning: Cold extrusion prevented at %c:%d°C.\r\n", this->hotend_designator, temperature);
         this->en_pin.set(1);
         return false;
     }

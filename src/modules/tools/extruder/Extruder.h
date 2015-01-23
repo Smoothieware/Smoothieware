@@ -68,6 +68,8 @@ class Extruder : public Tool {
         float    travel_ratio;
         float    travel_distance;
 
+        char     hotend_designator;
+
         // for firmware retract
         float    retract_feedrate;
         float    retract_recover_feedrate;
@@ -76,11 +78,8 @@ class Extruder : public Tool {
         float    retract_zlift_feedrate;
 
         // Cold extrusion prevention
-        bool     prevent_cold_extrusion;
-        char     cold_extrusion_designator;
         uint16_t cold_extrusion_temp_controller;
-        float    cold_extrusion_min_temp;
-        bool     cold_extrusion_dirty;
+        uint8_t  cold_extrusion_min_temp;
 
         struct {
             char mode:3;        // extruder motion mode,  OFF, SOLO, or FOLLOW
