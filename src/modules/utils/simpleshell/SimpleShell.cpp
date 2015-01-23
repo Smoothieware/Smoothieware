@@ -445,6 +445,7 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
         filename = THEKERNEL->config_override_filename();
     }
 
+    remove(filename.c_str());
     // replace stream with one that writes to config-override file
     AppendFileStream *gs = new AppendFileStream(filename.c_str());
     // if(!gs->is_open()) {
