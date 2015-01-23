@@ -91,6 +91,11 @@ extruder.hotend.en_pin                          0.21             # Pin for extru
 #extruder.hotend.retract_zlift_length            0               # zlift on retract in mm, 0 disables
 #extruder.hotend.retract_zlift_feedrate          6000            # zlift feedrate in mm/min (Note mm/min NOT mm/sec)
 
+# Cold extrusion prevention: Prevent the extruder motor from turning when the hotend is too cold.
+# extruder.hotend.prevent_cold_extrusion            true           # Enable cold extrusion prevention
+# extruder.hotend.hotend_designator                 T              # The designator of the heater which should be watched upon extrusions
+# extruder.hotend.extrusion_min_temperature         170            # Minimum temperature to enable extrusion moves
+
 delta_current                                1.5              # First extruder stepper motor current
 
 # Second extruder module configuration
@@ -313,7 +318,7 @@ network.ip_address                           auto             # use dhcp to get 
 #network.ip_gateway                           192.168.3.1      # the gateway address
 #network.mac_override                         xx.xx.xx.xx.xx.xx  # override the mac address, only do this if you have a conflict
 
-# Drills module 
+# Drills module
 # Implement the Canned Drilling Cycles
 # G80-83, G98, G99 in absolute mode only
 # Incremental mode not implemented (L)

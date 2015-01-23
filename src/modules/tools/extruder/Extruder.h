@@ -40,6 +40,8 @@ class Extruder : public Tool {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         uint32_t rate_increase() const;
+        void *query_temperature_controller(uint16_t controller);
+        bool check_for_cold_extrusion();
 
         StepperMotor*  stepper_motor;
         Pin            step_pin;                     // Step pin for the stepper driver
@@ -59,19 +61,25 @@ class Extruder : public Tool {
             float current_position;             // Current point ( in mm ) for the current move, incremented every time a move is executed
         };
 
-        float saved_current_position;
-        float volumetric_multiplier;
-        float feed_rate;               // mm/sec for SOLO moves only
+        float    saved_current_position;
+        float    volumetric_multiplier;
+        float    feed_rate;               // mm/sec for SOLO moves only
 
-        float travel_ratio;
-        float travel_distance;
+        float    travel_ratio;
+        float    travel_distance;
+
+        char     hotend_designator;
 
         // for firmware retract
-        float retract_feedrate;
-        float retract_recover_feedrate;
-        float retract_recover_length;
-        float retract_zlift_length;
-        float retract_zlift_feedrate;
+        float    retract_feedrate;
+        float    retract_recover_feedrate;
+        float    retract_recover_length;
+        float    retract_zlift_length;
+        float    retract_zlift_feedrate;
+
+        // Cold extrusion prevention
+        uint16_t cold_extrusion_temp_controller;
+        uint8_t  cold_extrusion_min_temp;
 
         struct {
             char mode:3;        // extruder motion mode,  OFF, SOLO, or FOLLOW
