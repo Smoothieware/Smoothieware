@@ -130,6 +130,8 @@ temperature_control.hotend.thermistor        EPCOS100K        # see http://smoot
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
+#temperature_control.hotend.max_temp         250              # Set maximum temperature
+#temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below if set
 
 #temperature_control.hotend.p_factor         13.7             # permanently set the PID values after an auto pid
 #temperature_control.hotend.i_factor         0.097            #
