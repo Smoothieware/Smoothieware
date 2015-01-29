@@ -187,7 +187,7 @@ bool ZProbe::run_probe(int& steps, bool fast)
         STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS), 0);
     }
 
-    // start acceration processing
+    // start acceleration processing
     this->running = true;
 
     bool r = wait_for_probe(steps);

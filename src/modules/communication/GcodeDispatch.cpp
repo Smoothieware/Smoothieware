@@ -178,6 +178,7 @@ try_again:
 
                             case 500: // M500 save volatile settings to config-override
                                 THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
+                                remove(THEKERNEL->config_override_filename());
                                 // replace stream with one that writes to config-override file
                                 gcode->stream = new AppendFileStream(THEKERNEL->config_override_filename());
                                 // dispatch the M500 here so we can free up the stream when done
