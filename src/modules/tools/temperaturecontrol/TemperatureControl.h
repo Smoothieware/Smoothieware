@@ -5,8 +5,8 @@
       you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef temperaturecontrol_h
-#define temperaturecontrol_h
+#ifndef TEMPERATURECONTROL_H
+#define TEMPERATURECONTROL_H
 
 #include "Module.h"
 #include "Pwm.h"

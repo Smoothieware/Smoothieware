@@ -5,20 +5,21 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "Thermistor.h"
 #include "libs/Kernel.h"
-#include <math.h>
 #include "libs/Pin.h"
 #include "Config.h"
 #include "checksumm.h"
 #include "Adc.h"
 #include "ConfigValue.h"
 #include "libs/Median.h"
-#include "Thermistor.h"
-#include "libs/platform_memory.h"
+#include "utils.h"
+#include "StreamOutputPool.h"
 
 // a const list of predefined thermistors
 #include "predefined_thermistors.h"
 
+#include <math.h>
 #include "MRI_Hooks.h"
 
 #define UNDEFINED -1
@@ -32,9 +33,13 @@
 #define r1_checksum                        CHECKSUM("r1")
 #define r2_checksum                        CHECKSUM("r2")
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
+#define rt_curve_checksum                  CHECKSUM("rt_curve")
+
 
 Thermistor::Thermistor()
 {
+    this->bad_config = false;
+    this->use_steinhart_hart= false;
 }
 
 Thermistor::~Thermistor()
@@ -71,11 +76,66 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     this->r1 = THEKERNEL->config->value(module_checksum, name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
     this->r2 = THEKERNEL->config->value(module_checksum, name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
 
-    calc_jk();
+    // specified as 25.0,100000.0,150.0,1355.0,240.0,203.0 which is temp in °C,resistance in ohms
+    string rtc= THEKERNEL->config->value(module_checksum, name_checksum, rt_curve_checksum)->by_default("")->as_string();
+    if(!rtc.empty()) {
+        // use the http://en.wikipedia.org/wiki/Steinhart-Hart_equation instead of beta, as it is more accurate over the entire temp range
+        // we use three temps/resistor values taken from the thermistor R-C curve found in most datasheets
+        // eg http://sensing.honeywell.com/resistance-temperature-conversion-table-no-16, we take the resistance for 25°,150°,240° and the resistance in that table is 100000*R-T Curve coefficient
+        // eg http://www.atcsemitec.co.uk/gt-2_thermistors.html for the semitec is even easier as they give the resistance in column 8 of the R/T table
+
+        // then calculate the three Steinhart-Hart coefficients
+        // format in config is T1,R1,T2,R2,T3,R3 if all three are not sepcified we revert to an invalid config state
+        std::vector<float> trl= parse_number_list(rtc.c_str());
+        if(trl.size() != 6) {
+            // punt we need 6 numbers, three pairs
+            THEKERNEL->streams->printf("Error in config need 6 numbers for Steinhart-Hart\n");
+            this->bad_config= true;
+            return;
+        }
+
+        // calculate the coefficients
+        calculate_steinhart_hart_coefficients(trl[0], trl[1], trl[2], trl[3], trl[4], trl[5]);
+
+        this->use_steinhart_hart= true;
+        calc_jk(); // TODO remove after testing
+
+    }else{
+        // if using beta
+        calc_jk();
+        this->use_steinhart_hart= false;
+    }
 
     // Thermistor pin for ADC readings
     this->thermistor_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, thermistor_pin_checksum )->required()->as_string());
     THEKERNEL->adc->enable_pin(&thermistor_pin);
+}
+
+// calculate the coefficients from the supplied three Temp/Resistance pairs
+// copied from https://github.com/MarlinFirmware/Marlin/blob/Development/Marlin/scripts/createTemperatureLookupMarlin.py
+void Thermistor::calculate_steinhart_hart_coefficients(float t1, float r1, float t2, float r2, float t3, float r3)
+{
+    float l1 = logf(r1);
+    float l2 = logf(r2);
+    float l3 = logf(r3);
+
+    float y1 = 1.0F / (t1 + 273.15F);
+    float y2 = 1.0F / (t2 + 273.15F);
+    float y3 = 1.0F / (t3 + 273.15F);
+    float x = (y2 - y1) / (l2 - l1);
+    float y = (y3 - y1) / (l3 - l1);
+    float c = (y - x) / ((l3 - l2) * (l1 + l2 + l3));
+    float b = x - c * (powf(l1,2) + powf(l2,2) + l1 * l2);
+    float a = y1 - (b + powf(l1,2) * c) * l1;
+
+    if(c < 0) {
+        THEKERNEL->streams->printf("WARNING: negative coefficient in calculate_steinhart_hart_coefficients. Something may be wrong with the measurements\n");
+        c = -c;
+    }
+
+    this->c1= a;
+    this->c2= b;
+    this->c3= c;
 }
 
 void Thermistor::calc_jk()
@@ -87,17 +147,50 @@ void Thermistor::calc_jk()
 
 float Thermistor::get_temperature()
 {
+    if(bad_config) return infinityf();
     return adc_value_to_temperature(new_thermistor_reading());
+}
+
+void Thermistor::get_raw()
+{
+    int adc_value= new_thermistor_reading();
+     // resistance of the thermistor in ohms
+    float r = r2 / ((4095.0F / adc_value) - 1.0F);
+    if (r1 > 0.0F) r = (r1 * r) / (r1 - r);
+
+    THEKERNEL->streams->printf("adc= %d, resistance= %f\n", adc_value, r);
+
+    if(this->use_steinhart_hart) {
+        THEKERNEL->streams->printf("S/H c1= %f, c2= %f, c3= %10.8f\n", c1, c2, c3);
+        float l = logf(r);
+        float t= (1.0F / (this->c1 + this->c2 * l + this->c3 * powf(l,3))) - 273.15F;
+        THEKERNEL->streams->printf("S/H temp= %f\n", t);
+    }
+    if(this->beta > 0.0F) {
+        float t= (1.0F / (k + (j * logf(r / r0)))) - 273.15F;
+        THEKERNEL->streams->printf("beta temp= %f\n", t);
+    }
 }
 
 float Thermistor::adc_value_to_temperature(int adc_value)
 {
     if ((adc_value == 4095) || (adc_value == 0))
         return infinityf();
+
+    // resistance of the thermistor in ohms
     float r = r2 / ((4095.0F / adc_value) - 1.0F);
-    if (r1 > 0.0F)
-        r = (r1 * r) / (r1 - r);
-    return (1.0F / (k + (j * logf(r / r0)))) - 273.15F;
+    if (r1 > 0.0F) r = (r1 * r) / (r1 - r);
+
+    float t;
+    if(this->use_steinhart_hart) {
+        float l = logf(r);
+        t= (1.0F / (this->c1 + this->c2 * l + this->c3 * powf(l,3))) - 273.15F;
+    }else{
+        // use Beta value
+        t= (1.0F / (k + (j * logf(r / r0)))) - 273.15F;
+    }
+
+    return t;
 }
 
 int Thermistor::new_thermistor_reading()
