@@ -36,12 +36,14 @@
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
 #define rt_curve_checksum                  CHECKSUM("rt_curve")
 #define coefficients_checksum              CHECKSUM("coefficients")
+#define use_beta_table_checksum            CHECKSUM("use_beta_table")
 
 
 Thermistor::Thermistor()
 {
     this->bad_config = false;
     this->use_steinhart_hart= false;
+    this->beta= 0.0F; // not used by default
 }
 
 Thermistor::~Thermistor()
@@ -54,33 +56,57 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     // Values are here : http://reprap.org/wiki/Thermistor
     this->r0   = 100000;
     this->t0   = 25;
-    this->beta = 4066;
     this->r1   = 0;
     this->r2   = 4700;
 
+    // force use of beta perdefined thermistor table based on betas
+    bool use_beta_table= THEKERNEL->config->value(module_checksum, name_checksum, use_beta_table_checksum)->by_default(false)->as_bool();
+
+    bool found= false;
     // load a predefined thermistor name if found
     string thermistor = THEKERNEL->config->value(module_checksum, name_checksum, thermistor_checksum)->as_string();
-    for (auto i : predefined_thermistors) {
-        if(thermistor.compare(i.name) == 0) {
-            this->beta = i.beta;
-            this->r0   = i.r0;
-            this->t0   = i.t0;
-            this->r1   = i.r1;
-            this->r2   = i.r2;
-            break;
+    if(!use_beta_table) {
+        for (auto& i : predefined_thermistors) {
+            if(thermistor.compare(i.name) == 0) {
+                this->c1 = i.c1;
+                this->c2 = i.c2;
+                this->c3 = i.c3;
+                this->r1 = i.r1;
+                this->r2 = i.r2;
+                use_steinhart_hart= true;
+                found= true;
+                break;
+            }
+        }
+    }
+
+    // fall back to the old beta pre-defined table if not found above
+    if(!found) {
+        for (auto& i : predefined_thermistors_beta) {
+            if(thermistor.compare(i.name) == 0) {
+                this->beta = i.beta;
+                this->r0 = i.r0;
+                this->t0 = i.t0;
+                this->r1 = i.r1;
+                this->r2 = i.r2;
+                use_steinhart_hart= false;
+                break;
+            }
         }
     }
 
     // Preset values are overriden by specified values
     this->r0 = THEKERNEL->config->value(module_checksum, name_checksum, r0_checksum  )->by_default(this->r0  )->as_number(); // Stated resistance eg. 100K
     this->t0 = THEKERNEL->config->value(module_checksum, name_checksum, t0_checksum  )->by_default(this->t0  )->as_number(); // Temperature at stated resistance, eg. 25C
-    this->beta = THEKERNEL->config->value(module_checksum, name_checksum, beta_checksum)->by_default(this->beta)->as_number(); // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
+    this->beta = THEKERNEL->config->value(module_checksum, name_checksum, beta_checksum)->by_default(0)->as_number(); // Thermistor beta rating. See http://reprap.org/bin/view/Main/MeasuringThermistorBeta
     this->r1 = THEKERNEL->config->value(module_checksum, name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
     this->r2 = THEKERNEL->config->value(module_checksum, name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
 
     // specify the three Steinhart-Hart coefficients
+    // specified as three comma separated floats, no spaces
     string coef= THEKERNEL->config->value(module_checksum, name_checksum, coefficients_checksum)->by_default("")->as_string();
 
+    // speficy three temp,resistance pairs, best to use 25° 150° 240° and the coefficients will be calculated
     // specified as 25.0,100000.0,150.0,1355.0,240.0,203.0 which is temp in °C,resistance in ohms
     string rtc= THEKERNEL->config->value(module_checksum, name_checksum, rt_curve_checksum)->by_default("")->as_string();
     if(!rtc.empty()) {
@@ -105,7 +131,9 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         this->use_steinhart_hart= true;
 
     }else if(!coef.empty()) {
-        std::vector<float> v= parse_number_list(coef.c_str());
+        // the three Steinhart-Hart coefficients
+        // format in config is C1,C2,C3 if three are not sepcified we revert to an invalid config state
+         std::vector<float> v= parse_number_list(coef.c_str());
         if(v.size() != 3) {
             // punt we need 6 numbers, three pairs
             THEKERNEL->streams->printf("Error in config need 3 Steinhart-Hart coefficients\n");
@@ -118,10 +146,15 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         this->c3= v[2];
         this->use_steinhart_hart= true;
 
-    }else {
+    }else if(this->beta > 0.0F) {
         // if using beta
         calc_jk();
         this->use_steinhart_hart= false;
+
+    }else{
+        THEKERNEL->streams->printf("Error in config need rt_curve, coefficients, beta or a valid predefined thermistor defined\n");
+        this->bad_config= true;
+        return;
     }
 
     // Thermistor pin for ADC readings
