@@ -19,7 +19,8 @@
 // a const list of predefined thermistors
 #include "predefined_thermistors.h"
 
-#include <math.h>
+#include <fastmath.h>
+
 #include "MRI_Hooks.h"
 
 #define UNDEFINED -1
@@ -34,6 +35,7 @@
 #define r2_checksum                        CHECKSUM("r2")
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
 #define rt_curve_checksum                  CHECKSUM("rt_curve")
+#define coefficients_checksum              CHECKSUM("coefficients")
 
 
 Thermistor::Thermistor()
@@ -76,6 +78,9 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     this->r1 = THEKERNEL->config->value(module_checksum, name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
     this->r2 = THEKERNEL->config->value(module_checksum, name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
 
+    // specify the three Steinhart-Hart coefficients
+    string coef= THEKERNEL->config->value(module_checksum, name_checksum, coefficients_checksum)->by_default("")->as_string();
+
     // specified as 25.0,100000.0,150.0,1355.0,240.0,203.0 which is temp in °C,resistance in ohms
     string rtc= THEKERNEL->config->value(module_checksum, name_checksum, rt_curve_checksum)->by_default("")->as_string();
     if(!rtc.empty()) {
@@ -98,9 +103,22 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         calculate_steinhart_hart_coefficients(trl[0], trl[1], trl[2], trl[3], trl[4], trl[5]);
 
         this->use_steinhart_hart= true;
-        calc_jk(); // TODO remove after testing
 
-    }else{
+    }else if(!coef.empty()) {
+        std::vector<float> v= parse_number_list(coef.c_str());
+        if(v.size() != 3) {
+            // punt we need 6 numbers, three pairs
+            THEKERNEL->streams->printf("Error in config need 3 Steinhart-Hart coefficients\n");
+            this->bad_config= true;
+            return;
+        }
+
+        this->c1= v[0];
+        this->c2= v[1];
+        this->c3= v[2];
+        this->use_steinhart_hart= true;
+
+    }else {
         // if using beta
         calc_jk();
         this->use_steinhart_hart= false;
@@ -165,8 +183,7 @@ void Thermistor::get_raw()
         float l = logf(r);
         float t= (1.0F / (this->c1 + this->c2 * l + this->c3 * powf(l,3))) - 273.15F;
         THEKERNEL->streams->printf("S/H temp= %f\n", t);
-    }
-    if(this->beta > 0.0F) {
+    }else{
         float t= (1.0F / (k + (j * logf(r / r0)))) - 273.15F;
         THEKERNEL->streams->printf("beta temp= %f\n", t);
     }
@@ -210,29 +227,63 @@ int Thermistor::new_thermistor_reading()
 }
 
 bool Thermistor::set_optional(const sensor_options_t& options) {
-
+    bool define_beta= false;
     sensor_options_t::const_iterator i;
 
+    // B is beta
     i= options.find('B');
     if(i != options.end()) {
         this->beta= i->second;
+        define_beta= true;
     }
     i= options.find('R');
     if(i != options.end()) {
         this->r0= i->second;
+        define_beta= true;
     }
     i= options.find('X');
     if(i != options.end()) {
         this->t0= i->second;
+        define_beta= true;
     }
 
-    calc_jk();
+    if(!define_beta) {
+        // I,J,K ar3 the C1, C2, C3 Steinhart-Hart coefficients
+        i= options.find('I');
+        if(i != options.end()) {
+            this->c1= i->second;
+            use_steinhart_hart= true;
+        }
+        i= options.find('J');
+        if(i != options.end()) {
+            this->c2= i->second;
+            use_steinhart_hart= true;
+        }
+        i= options.find('K');
+        if(i != options.end()) {
+            this->c3= i->second;
+            use_steinhart_hart= true;
+        }
+
+    }else {
+        calc_jk();
+        use_steinhart_hart= false;
+    }
+
     return true;
 }
 
 bool Thermistor::get_optional(sensor_options_t& options) {
-    options['B']= this->beta;
-    options['R']= this->r0;
-    options['X']= this->t0;
+    if(use_steinhart_hart) {
+        options['I']= this->c1;
+        options['J']= this->c2;
+        options['K']= this->c3;
+
+    }else{
+        options['B']= this->beta;
+        options['X']= this->t0;
+        options['R']= this->r0;
+    }
+
     return true;
 };

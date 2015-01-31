@@ -39,7 +39,9 @@ class Thermistor : public TempSensor
         float t0;
         int r1;
         int r2;
-//        union {
+
+        union {
+            // this saves memory as we only use either beta or SHH
             struct{
                 float beta;
                 float j;
@@ -50,7 +52,7 @@ class Thermistor : public TempSensor
                 float c2;
                 float c3;
             };
-//        };
+        };
 
         Pin  thermistor_pin;
 
