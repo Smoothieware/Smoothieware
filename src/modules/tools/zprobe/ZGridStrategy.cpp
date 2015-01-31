@@ -163,10 +163,8 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
                 gcode->stream->printf(";Bed Level settings:\r\n");
 
                 for (int x=0; x<this->numRows; x++){
-                    int y;
-
                     gcode->stream->printf("X%i",x);
-                    for (y=0; y<this->numCols; y++){
+                    for (int y=0; y<this->numCols; y++){
                          gcode->stream->printf(" %c%1.2f", 'A'+y, this->pData[(x*this->numCols)+y]);
                     }
                     gcode->stream->printf("\r\n");
@@ -336,9 +334,9 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
 bool ZGridStrategy::saveGrid() //std::string *args)
 {
     //if(args->empty()) {
-        StreamOutput *ZMap_file = new FileStream("/sd/grid25" );
+        StreamOutput *ZMap_file = new FileStream("/sd/Zgrid" );
    // } else {
-   //     StreamOutput *ZMap_file = new FileStream("/sd/grid25." + args);
+   //     StreamOutput *ZMap_file = new FileStream("/sd/Zgrid." + args);
    // }
 
     void* rd;
@@ -360,25 +358,32 @@ bool ZGridStrategy::loadGrid()
 {
     char flag[20];
 
-    int fpoints, GridX, GridY;
+    int fpoints, GridX = 5, GridY = 5;   // for 25point file
     float val, GridZ;
 
-    FILE *fd = fopen("/sd/grid25", "r");
+    FILE *fd = fopen("/sd/Zgrid", "r");
     if(fd != NULL) {
         fscanf(fd, "%s\n", flag);
+
+        THEKERNEL->streams->printf("DEBUG: flag: %s\n", flag);
+        THEKERNEL->streams->printf("DEBUG: flag[0]: %c\n", flag[0]);
+
         if (flag[0] == 'P'){
-            sscanf(flag, "P%i %i %i %f\n", &fpoints, &GridX, &GridY, &GridZ);    // read number of points, and Grid X and Y
-            fscanf(fd, "%f\n", &val);          // read first value from file
+            THEKERNEL->streams->printf("In P\n");
+
+            sscanf(flag, "P%i\n", &fpoints);                        // read number of points, and Grid X and Y
+            fscanf(fd, "%i %i %f\n", &GridX, &GridY, &GridZ);       // read number of points, and Grid X and Y
+            fscanf(fd, "%f\n", &val);                               // read first value from file
 
         } else {  // original 25point file -- Backwards compatibility
             fpoints = 25;
-            sscanf(flag, "%f\n", &val);     // read first value from string
+            sscanf(flag, "%f\n", &val);                             // read first value from string
         }
 
         if (GridX != this->numRows || GridY != this->numCols){
-            this->numRows = GridX;    // Change Rows and Columns to match the saved data
+            this->numRows = GridX;                                  // Change Rows and Columns to match the saved data
             this->numCols = GridY;
-            this->calcConfig();       // Reallocate memory for the grid according to the grid loaded
+            this->calcConfig();                                     // Reallocate memory for the grid according to the grid loaded
         }
 
         this->pData[0] = val;    // Place the first read value in grid
