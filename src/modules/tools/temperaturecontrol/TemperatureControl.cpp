@@ -231,7 +231,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                 if(sensor->get_optional(options)) {
                     for(auto &i : options) {
                         // foreach optional value
-                        gcode->stream->printf("%s(S%d): %c%1.4f\n", this->designator.c_str(), this->pool_index, i.first, i.second);
+                        gcode->stream->printf("%s(S%d): %c%1.10f\n", this->designator.c_str(), this->pool_index, i.first, i.second);
                     }
                 }
             }
@@ -269,7 +269,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                 if(sensor->get_optional(options) && !options.empty()) {
                     gcode->stream->printf(";Optional temp sensor specific settings:\nM305 S%d", this->pool_index);
                     for(auto &i : options) {
-                        gcode->stream->printf(" %c%1.4f", i.first, i.second);
+                        gcode->stream->printf(" %c%1.10f", i.first, i.second);
                     }
                     gcode->stream->printf("\n");
                 }

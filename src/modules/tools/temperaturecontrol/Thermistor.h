@@ -34,9 +34,11 @@ class Thermistor : public TempSensor
         void calc_jk();
         void calculate_steinhart_hart_coefficients(float t1, float r1, float t2, float r2, float t3, float r3);
 
-        // Thermistor computation settings
+        // Thermistor computation settings using beta, not used if using SHHhttp://panucattdevices.freshdesk.com/helpdesk/attachments/1015374088
         float r0;
         float t0;
+
+        // on board resistor settings
         int r1;
         int r2;
 

@@ -179,7 +179,7 @@ void Thermistor::get_raw()
     THEKERNEL->streams->printf("adc= %d, resistance= %f\n", adc_value, r);
 
     if(this->use_steinhart_hart) {
-        THEKERNEL->streams->printf("S/H c1= %f, c2= %f, c3= %10.8f\n", c1, c2, c3);
+        THEKERNEL->streams->printf("S/H c1= %1.10f, c2= %1.10f, c3= %1.10f\n", c1, c2, c3);
         float l = logf(r);
         float t= (1.0F / (this->c1 + this->c2 * l + this->c3 * powf(l,3))) - 273.15F;
         THEKERNEL->streams->printf("S/H temp= %f\n", t);
