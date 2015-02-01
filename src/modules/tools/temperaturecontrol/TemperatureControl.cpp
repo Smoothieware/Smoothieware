@@ -212,26 +212,20 @@ void TemperatureControl::on_gcode_received(void *argument)
             gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
                 this->sensor_settings= true;
-                TempSensor::sensor_options_t options;
-                if(sensor->get_optional(options)) {
-                    for(auto &i : options) {
-                        // foreach optional value
-                        char c = i.first;
-                        if(gcode->has_letter(c)) { // set new value
-                            i.second = gcode->get_value(c);
-                        }
-                    }
+                std::map<char,float> args= gcode->get_args();
+                if(!args.empty()) {
                     // set the new options
-                    sensor->set_optional(options);
+                    sensor->set_optional(args);
                 }
 
             }else if(!gcode->has_letter('S')) {
+                gcode->stream->printf("%s(S%d):\n", this->designator.c_str(), this->pool_index);
                 sensor->get_raw();
                 TempSensor::sensor_options_t options;
                 if(sensor->get_optional(options)) {
                     for(auto &i : options) {
                         // foreach optional value
-                        gcode->stream->printf("%s(S%d): %c%1.10f\n", this->designator.c_str(), this->pool_index, i.first, i.second);
+                        gcode->stream->printf("%s(S%d): %c%1.18f\n", this->designator.c_str(), this->pool_index, i.first, i.second);
                     }
                 }
             }
@@ -269,7 +263,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                 if(sensor->get_optional(options) && !options.empty()) {
                     gcode->stream->printf(";Optional temp sensor specific settings:\nM305 S%d", this->pool_index);
                     for(auto &i : options) {
-                        gcode->stream->printf(" %c%1.10f", i.first, i.second);
+                        gcode->stream->printf(" %c%1.18f", i.first, i.second);
                     }
                     gcode->stream->printf("\n");
                 }

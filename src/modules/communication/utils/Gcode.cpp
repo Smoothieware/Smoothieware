@@ -24,6 +24,7 @@ Gcode::Gcode(const string &command, StreamOutput *stream, bool strip)
     this->millimeters_of_travel = 0.0F;
     this->accepted_by_module = false;
     prepare_cached_values(strip);
+    this->stripped= strip;
 }
 
 Gcode::~Gcode()
@@ -132,12 +133,26 @@ uint32_t Gcode::get_uint( char letter, char **ptr ) const
 int Gcode::get_num_args() const
 {
     int count = 0;
-    for(size_t i = 1; i < strlen(command); i++) {
+    for(size_t i = stripped?0:1; i < strlen(command); i++) {
         if( this->command[i] >= 'A' && this->command[i] <= 'Z' ) {
+            if(this->command[i] == 'T') continue;
             count++;
         }
     }
     return count;
+}
+
+std::map<char,float> Gcode::get_args() const
+{
+    std::map<char,float> m;
+    for(size_t i = stripped?0:1; i < strlen(command); i++) {
+        char c= this->command[i];
+        if( c >= 'A' && c <= 'Z' ) {
+            if(c == 'T') continue;
+            m[c]= get_value(c);
+        }
+    }
+    return m;
 }
 
 // Cache some of this command's properties, so we don't have to parse the string every time we want to look at them

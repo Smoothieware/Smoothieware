@@ -9,6 +9,8 @@
 #ifndef GCODE_H
 #define GCODE_H
 #include <string>
+#include <map>
+
 using std::string;
 
 class StreamOutput;
@@ -27,6 +29,7 @@ class Gcode {
         int get_int ( char letter, char **ptr= nullptr ) const;
         uint32_t get_uint ( char letter, char **ptr= nullptr ) const;
         int get_num_args() const;
+        std::map<char,float> get_args() const;
         void mark_as_taken();
         void strip_parameters();
 
@@ -40,6 +43,7 @@ class Gcode {
             bool has_m:1;
             bool has_g:1;
             bool accepted_by_module:1;
+            bool stripped:1;
         };
 
         StreamOutput* stream;
