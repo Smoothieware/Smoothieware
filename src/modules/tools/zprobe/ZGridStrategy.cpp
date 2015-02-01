@@ -365,11 +365,13 @@ bool ZGridStrategy::loadGrid()
     if(fd != NULL) {
         fscanf(fd, "%s\n", flag);
 
-        THEKERNEL->streams->printf("DEBUG: flag: %s\n", flag);
-        THEKERNEL->streams->printf("DEBUG: flag[0]: %c\n", flag[0]);
+        // DEBUG
+        //THEKERNEL->streams->printf("DEBUG: flag: %s\n", flag);
+        //THEKERNEL->streams->printf("DEBUG: flag[0]: %c\n", flag[0]);
 
         if (flag[0] == 'P'){
-            THEKERNEL->streams->printf("In P\n");
+            // DEBUG
+            //THEKERNEL->streams->printf("In P\n");
 
             sscanf(flag, "P%i\n", &fpoints);                        // read number of points, and Grid X and Y
             fscanf(fd, "%i %i %f\n", &GridX, &GridY, &GridZ);       // read number of points, and Grid X and Y
