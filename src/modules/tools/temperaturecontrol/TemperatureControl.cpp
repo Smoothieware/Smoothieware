@@ -211,15 +211,22 @@ void TemperatureControl::on_gcode_received(void *argument)
         if (gcode->m == 305) { // set or get sensor settings
             gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
-                this->sensor_settings= true;
                 std::map<char,float> args= gcode->get_args();
-                if(!args.empty()) {
+                args.erase('S'); // don't include the S
+                if(args.size() > 0) {
                     // set the new options
-                    sensor->set_optional(args);
+                    if(sensor->set_optional(args)) {
+                        this->sensor_settings= true;
+                    }else{
+                        gcode->stream->printf("Unable to properly set sensor settings, make sure you specify all required values\n");
+                    }
+                }else{
+                    // don't override
+                    this->sensor_settings= false;
                 }
 
             }else if(!gcode->has_letter('S')) {
-                gcode->stream->printf("%s(S%d):\n", this->designator.c_str(), this->pool_index);
+                gcode->stream->printf("%s(S%d): using %s\n", this->designator.c_str(), this->pool_index, this->readonly?"Readonly" : this->use_bangbang?"Bangbang":"PID");
                 sensor->get_raw();
                 TempSensor::sensor_options_t options;
                 if(sensor->get_optional(options)) {

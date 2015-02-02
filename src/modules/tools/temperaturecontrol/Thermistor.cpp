@@ -108,6 +108,10 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     this->r1 = THEKERNEL->config->value(module_checksum, name_checksum, r1_checksum  )->by_default(this->r1  )->as_number();
     this->r2 = THEKERNEL->config->value(module_checksum, name_checksum, r2_checksum  )->by_default(this->r2  )->as_number();
 
+    // Thermistor pin for ADC readings
+    this->thermistor_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, thermistor_pin_checksum )->required()->as_string());
+    THEKERNEL->adc->enable_pin(&thermistor_pin);
+
     // specify the three Steinhart-Hart coefficients
     // specified as three comma separated floats, no spaces
     string coef= THEKERNEL->config->value(module_checksum, name_checksum, coefficients_checksum)->by_default("")->as_string();
@@ -162,9 +166,6 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         return;
     }
 
-    // Thermistor pin for ADC readings
-    this->thermistor_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, thermistor_pin_checksum )->required()->as_string());
-    THEKERNEL->adc->enable_pin(&thermistor_pin);
 }
 
 // calculate the coefficients from the supplied three Temp/Resistance pairs
@@ -214,6 +215,10 @@ float Thermistor::get_temperature()
 
 void Thermistor::get_raw()
 {
+    if(this->bad_config) {
+       THEKERNEL->streams->printf("WARNING: The config is bad for this temperature sensor\n");
+    }
+
     int adc_value= new_thermistor_reading();
      // resistance of the thermistor in ohms
     float r = r2 / ((4095.0F / adc_value) - 1.0F);
@@ -271,22 +276,42 @@ int Thermistor::new_thermistor_reading()
 
 bool Thermistor::set_optional(const sensor_options_t& options) {
     bool define_beta= false;
+    bool change_beta= false;
+    uint8_t define_shh= 0;
 
     for(auto &i : options) {
         switch(i.first) {
             case 'B': this->beta= i.second; define_beta= true; break;
-            case 'R': this->r0= i.second; define_beta= true; break;
-            case 'X': this->t0= i.second; define_beta= true; break;
-            case 'I': this->c1= i.second; use_steinhart_hart= true; break;
-            case 'J': this->c2= i.second; use_steinhart_hart= true; break;
-            case 'K': this->c3= i.second; use_steinhart_hart= true; break;
+            case 'R': this->r0= i.second; change_beta= true; break;
+            case 'X': this->t0= i.second; change_beta= true; break;
+            case 'I': this->c1= i.second; define_shh++; break;
+            case 'J': this->c2= i.second; define_shh++; break;
+            case 'K': this->c3= i.second; define_shh++; break;
         }
     }
 
-    if(define_beta) {
+    bool error= false;
+    // if in Steinhart-Hart mode make sure B is specified, if in beta mode make sure all C1,C2,C3 are set and no beta settings
+    // this is needed if swapping between modes
+    if(use_steinhart_hart && define_shh == 0 && !define_beta) error= true; // if switching from SHH to beta need to specify new beta
+    if(!use_steinhart_hart && define_shh > 0 && (define_beta || change_beta)) error= true; // if in beta mode and switching to SHH malke sure no beta settings are set
+    if(!use_steinhart_hart && !(define_beta || change_beta) && define_shh != 3) error= true; // if in beta mode and switching to SHH must specify all three SHH
+    if(use_steinhart_hart && define_shh > 0 && (define_beta || change_beta)) error= true; // if setting SHH anfd already in SHH do not specify any beta values
+
+    if(error) {
+        this->bad_config= true;
+        return false;
+    }
+    if(define_beta || change_beta) {
         calc_jk();
         use_steinhart_hart= false;
+    }else if(define_shh > 0) {
+        use_steinhart_hart= true;
+    }else{
+        return false;
     }
+
+    if(this->bad_config) this->bad_config= false;
 
     return true;
 }
