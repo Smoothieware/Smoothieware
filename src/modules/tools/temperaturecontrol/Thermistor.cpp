@@ -142,7 +142,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 
     }else if(!coef.empty()) {
         // the three Steinhart-Hart coefficients
-        // format in config is C1,C2,C3 if three are not sepcified we revert to an invalid config state
+        // format in config is C1,C2,C3 if three are not specified we revert to an invalid config state
         std::vector<float> v= parse_number_list(coef.c_str());
         if(v.size() != 3) {
             // punt we need 6 numbers, three pairs
