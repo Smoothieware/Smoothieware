@@ -136,7 +136,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         }
 
         // calculate the coefficients
-        calculate_steinhart_hart_coefficients(trl[0], trl[1], trl[2], trl[3], trl[4], trl[5]);
+        std::tie(this->c1, this->c2, this->c3) = calculate_steinhart_hart_coefficients(trl[0], trl[1], trl[2], trl[3], trl[4], trl[5]);
 
         this->use_steinhart_hart= true;
 
@@ -170,7 +170,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 
 // calculate the coefficients from the supplied three Temp/Resistance pairs
 // copied from https://github.com/MarlinFirmware/Marlin/blob/Development/Marlin/scripts/createTemperatureLookupMarlin.py
-void Thermistor::calculate_steinhart_hart_coefficients(float t1, float r1, float t2, float r2, float t3, float r3)
+std::tuple<float,float,float> Thermistor::calculate_steinhart_hart_coefficients(float t1, float r1, float t2, float r2, float t3, float r3)
 {
     float l1 = logf(r1);
     float l2 = logf(r2);
@@ -189,10 +189,7 @@ void Thermistor::calculate_steinhart_hart_coefficients(float t1, float r1, float
         THEKERNEL->streams->printf("WARNING: negative coefficient in calculate_steinhart_hart_coefficients. Something may be wrong with the measurements\n");
         c = -c;
     }
-
-    this->c1= a;
-    this->c2= b;
-    this->c3= c;
+    return std::make_tuple(a, b, c);
 }
 
 void Thermistor::calc_jk()

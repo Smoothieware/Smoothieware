@@ -43,6 +43,7 @@ private:
     static void version_command(string parameters, StreamOutput *stream );
     static void get_command(string parameters, StreamOutput *stream );
     static void set_temp_command(string parameters, StreamOutput *stream );
+    static void calc_thermistor_command( string parameters, StreamOutput *stream);
     static void switch_command(string parameters, StreamOutput *stream );
     static void mem_command(string parameters, StreamOutput *stream );
 

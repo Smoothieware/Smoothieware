@@ -26,6 +26,8 @@
 #include "Pauser.h"
 #include "ConfigValue.h"
 #include "PID_Autotuner.h"
+#include "SerialMessage.h"
+#include "utils.h"
 
 // Temp sensor implementations:
 #include "Thermistor.h"
@@ -211,7 +213,7 @@ void TemperatureControl::on_gcode_received(void *argument)
         if (gcode->m == 305) { // set or get sensor settings
             gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
-                std::map<char,float> args= gcode->get_args();
+                TempSensor::sensor_options_t args= gcode->get_args();
                 args.erase('S'); // don't include the S
                 if(args.size() > 0) {
                     // set the new options

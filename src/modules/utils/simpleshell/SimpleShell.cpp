@@ -30,6 +30,7 @@
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
 #include "SDFAT.h"
+#include "Thermistor.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -68,6 +69,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
     {"remount",  SimpleShell::remount_command},
+    {"calc_thermistor", SimpleShell::calc_thermistor_command},
 
     // unknown command
     {NULL, NULL}
@@ -591,6 +593,22 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
         stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
     } else {
         stream->printf("%s is not a known temperature device\r\n", type.c_str());
+    }
+}
+
+void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stream)
+{
+    std::vector<float> trl= parse_number_list(parameters.c_str());
+    if(trl.size() == 6) {
+        // calculate the coefficients
+        float c1, c2, c3;
+        std::tie(c1, c2, c3) = Thermistor::calculate_steinhart_hart_coefficients(trl[0], trl[1], trl[2], trl[3], trl[4], trl[5]);
+        stream->printf("Steinhart Hart coefficients:  I%1.18f J%1.18f K%1.18f\n", c1, c2, c3);
+        stream->printf("  Paste the above in the M305 S0 command, then save with M500\n");
+
+    }else{
+        // give help
+        stream->printf("Usage: calc_thermistor T1,R1,T2,R2,T3,R3\n");
     }
 }
 
