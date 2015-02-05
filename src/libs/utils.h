@@ -1,11 +1,11 @@
-#ifndef utils_h
-#define utils_h
+#ifndef UTILS_H
+#define UTILS_H
 
 #include <stdint.h>
-using namespace std;
 #include <string>
 #include <vector>
 using std::string;
+using std::vector;
 
 string lc(const string& str);
 

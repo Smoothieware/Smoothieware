@@ -30,6 +30,7 @@
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
 #include "SDFAT.h"
+#include "Thermistor.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -68,6 +69,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
     {"remount",  SimpleShell::remount_command},
+    {"calc_thermistor", SimpleShell::calc_thermistor_command},
 
     // unknown command
     {NULL, NULL}
@@ -594,6 +596,41 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     }
 }
 
+void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stream)
+{
+    string s = shift_parameter( parameters );
+    int saveto= -1;
+    // see if we have -sn as first argument
+    if(s.find("-s", 0, 2) != string::npos) {
+        // save the results to thermistor n
+        saveto= strtol(s.substr(2).c_str(), nullptr, 10);
+    }else{
+        parameters= s;
+    }
+
+    std::vector<float> trl= parse_number_list(parameters.c_str());
+    if(trl.size() == 6) {
+        // calculate the coefficients
+        float c1, c2, c3;
+        std::tie(c1, c2, c3) = Thermistor::calculate_steinhart_hart_coefficients(trl[0], trl[1], trl[2], trl[3], trl[4], trl[5]);
+        stream->printf("Steinhart Hart coefficients:  I%1.18f J%1.18f K%1.18f\n", c1, c2, c3);
+        if(saveto == -1) {
+            stream->printf("  Paste the above in the M305 S0 command, then save with M500\n");
+        }else{
+            char buf[80];
+            int n = snprintf(buf, sizeof(buf), "M305 S%d I%1.18f J%1.18f K%1.18f", saveto, c1, c2, c3);
+            string g(buf, n);
+            Gcode gcode(g, &(StreamOutput::NullStream));
+            THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+            stream->printf("  Setting Thermistor %d to those settings, save with M500\n", saveto);
+        }
+
+    }else{
+        // give help
+        stream->printf("Usage: calc_thermistor T1,R1,T2,R2,T3,R3\n");
+    }
+}
+
 // used to test out the get public data events for switch
 void SimpleShell::switch_command( string parameters, StreamOutput *stream)
 {
@@ -640,5 +677,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("net\r\n");
     stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
+    stream->printf("upload filename - saves a stream of text to the named file\r\n");
+    stream->printf("calc_thermistor [-s0] T1,R1,T2,R2,T3,R3 - calculate the Steinhart Hart coefficients for a thermistor\r\n");
 }
 

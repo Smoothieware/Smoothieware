@@ -102,16 +102,11 @@ void LinearDeltaSolution::actuator_to_cartesian( float actuator_mm[], float cart
 
 bool LinearDeltaSolution::set_optional(const arm_options_t& options) {
 
-    arm_options_t::const_iterator i;
-
-    i= options.find('L');
-    if(i != options.end()) {
-        arm_length= i->second;
-
-    }
-    i= options.find('R');
-    if(i != options.end()) {
-        arm_radius= i->second;
+    for(auto &i : options) {
+        switch(i.first) {
+            case 'L': arm_length= i.second; break;
+            case 'R': arm_radius= i.second; break;
+        }
     }
     init();
     return true;
