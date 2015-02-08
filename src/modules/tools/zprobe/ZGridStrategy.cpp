@@ -75,8 +75,6 @@
 #include "MemoryPool.h"
 #include "libs/utils.h"
 
-//#include "new.h"
-
 #include <string>
 #include <algorithm>
 #include <cstdlib>
@@ -110,6 +108,7 @@ ZGridStrategy::~ZGridStrategy()
 {
     // Free program memory for the pData grid
     if(this->pData != nullptr) AHB0.dealloc(this->pData);
+    //delete[] this->pData;
 }
 
 bool ZGridStrategy::handleConfig()
@@ -127,22 +126,23 @@ bool ZGridStrategy::handleConfig()
     std::string po = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, probe_offsets_checksum)->by_default("0,0,0")->as_string();
     this->probe_offsets= parseXYZ(po.c_str());
 
-    this->calcConfig();                // Run calculations for Grid size and allocate grid memory
+    this->calcConfig();                // Run calculations for Grid size and allocate initial grid memory
 
-    for (int i=0; i<(probe_points); i++){
-        this->pData[i] = 0.0F;        // Clear the grid
-    }
-
-    if(this->loadGrid()){
+    if(this->loadGrid())
         this->setAdjustFunction(true); // Enable leveling code
+    else {
+        for (int i=0; i<(probe_points); i++){
+            this->pData[i] = 0.0F;        // Clear the grid
+         }
     }
+
 
     return true;
 }
 
 void ZGridStrategy::calcConfig()
 {
-    this->bed_div_x = this->bed_x / float(this->numRows-1);    // Find divisors to find the calbration points
+    this->bed_div_x = this->bed_x / float(this->numRows-1);    // Find divisors to calculate the calbration points
     this->bed_div_y = this->bed_y / float(this->numCols-1);
 
     // Ensure free program memory for the pData grid
@@ -435,7 +435,7 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 
         this->cal[X_AXIS] = 0.0f;                    // Clear calibration position
         this->cal[Y_AXIS] = 0.0f;
-        this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + 5.0f;
+        this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + zprobe->getProbeHeight();
 
         this->move(this->cal, slow_rate);            // Move to probe start point
 
