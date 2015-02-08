@@ -546,23 +546,23 @@ void Robot::on_gcode_received(void *argument)
 
             case 665: { // M665 set optional arm solution variables based on arm solution.
                 gcode->mark_as_taken();
-                // the parameter args could be any letter except S so ask solution what options it supports
-                BaseSolution::arm_options_t options;
+                // the parameter args could be any letter each arm solution only accepts certain ones
+                BaseSolution::arm_options_t options= gcode->get_args();
+                options.erase('S'); // don't include the S
+                options.erase('U'); // don't include the U
+                if(options.size() > 0) {
+                    // set the specified options
+                    arm_solution->set_optional(options);
+                }
+                options.clear();
                 if(arm_solution->get_optional(options)) {
+                    // foreach optional value
                     for(auto &i : options) {
-                        // foreach optional value
-                        char c = i.first;
-                        if(gcode->has_letter(c)) { // set new value
-                            i.second = gcode->get_value(c);
-                        }
                         // print all current values of supported options
                         gcode->stream->printf("%c: %8.4f ", i.first, i.second);
                         gcode->add_nl = true;
                     }
-                    // set the new options
-                    arm_solution->set_optional(options);
                 }
-
 
                 if(gcode->has_letter('S')) { // set delta segments per second, not saved by M500
                     this->delta_segments_per_second = gcode->get_value('S');
