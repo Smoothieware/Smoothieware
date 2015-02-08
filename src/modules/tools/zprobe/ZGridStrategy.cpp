@@ -75,12 +75,11 @@
 #include "MemoryPool.h"
 #include "libs/utils.h"
 
-//#include "new.h"
-
 #include <string>
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include <unistd.h>
 
 #define bed_x_checksum               CHECKSUM("bed_x")
 #define bed_y_checksum               CHECKSUM("bed_y")
@@ -109,6 +108,7 @@ ZGridStrategy::~ZGridStrategy()
 {
     // Free program memory for the pData grid
     if(this->pData != nullptr) AHB0.dealloc(this->pData);
+    //delete[] this->pData;
 }
 
 bool ZGridStrategy::handleConfig()
@@ -126,22 +126,23 @@ bool ZGridStrategy::handleConfig()
     std::string po = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, probe_offsets_checksum)->by_default("0,0,0")->as_string();
     this->probe_offsets= parseXYZ(po.c_str());
 
-    this->calcConfig();                // Run calculations for Grid size and allocate grid memory
+    this->calcConfig();                // Run calculations for Grid size and allocate initial grid memory
 
-    for (int i=0; i<(probe_points); i++){
-        this->pData[i] = 0.0F;        // Clear the grid
-    }
-
-    if(this->loadGrid()){
+    if(this->loadGrid())
         this->setAdjustFunction(true); // Enable leveling code
+    else {
+        for (int i=0; i<(probe_points); i++){
+            this->pData[i] = 0.0F;        // Clear the grid
+         }
     }
+
 
     return true;
 }
 
 void ZGridStrategy::calcConfig()
 {
-    this->bed_div_x = this->bed_x / float(this->numRows-1);    // Find divisors to find the calbration points
+    this->bed_div_x = this->bed_x / float(this->numRows-1);    // Find divisors to calculate the calbration points
     this->bed_div_y = this->bed_y / float(this->numCols-1);
 
     // Ensure free program memory for the pData grid
@@ -240,6 +241,9 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             return true;
             // M373: finalize calibration
             case 373: {
+                 // normalize the grid
+                 this->normalize_grid();
+
                  this->in_cal = false;
                  this->setAdjustFunction(true); // Enable leveling code
 
@@ -262,26 +266,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             return true;
 
 
-/*           // M374: manually inject calibration - Alphabetical ZGrid assignment  TODO - debug only
-            case 374: {
-                int i=0,
-                    x=0;
-
-                if(gcode->has_letter('X')) { // Column nr (X)
-                    x = gcode->get_value('X');
-                }
-                if (x<5){                    // Only for valid rows
-                    for (i=0; i<5; i++){
-                        if(gcode->has_letter('A'+i)) {
-                            this->pData[i+(x*5)] = gcode->get_value('A'+i);
-                        }
-                    }
-                }
-                this->setAdjustFunction(true); // Enable leveling code
-            }
-            return true;
-
-            case 376: { // Check grid value calculations: TODO - For debug only.
+/*          case 376: { // Check grid value calculations: For debug only.
                 float target[3];
 
                 for(char letter = 'X'; letter <= 'Z'; letter++) {
@@ -303,15 +288,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             }
             return true;
 
- /*           case 501: // Load grid values
-                if(this->loadGrid()){
-                    this->setAdjustFunction(true); // Enable leveling code
-                }
-            return true;
-*/
-            case 500: // M500 saves some volatile settings to config override file
-
-                //this->saveGrid();  // TODO: Move this line to a new gcode for saving grids
+            case 500: // M500 saves probe_offsets config override file
 
             case 503: { // M503 just prints the settings
 
@@ -331,6 +308,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
     return false;
 }
 
+
 bool ZGridStrategy::saveGrid() //std::string *args)
 {
     //if(args->empty()) {
@@ -339,11 +317,7 @@ bool ZGridStrategy::saveGrid() //std::string *args)
    //     StreamOutput *ZMap_file = new FileStream("/sd/Zgrid." + args);
    // }
 
-    void* rd;
-
-    PublicData::get_value( endstops_checksum, home_offset_checksum, &rd );
-
-    ZMap_file->printf("P%i %i %i %1.3f\n", probe_points, this->numRows, this->numCols, ((float*)rd)[2]);    // Store probe points to prevent loading undefined grid files
+    ZMap_file->printf("P%i %i %i %1.3f\n", probe_points, this->numRows, this->numCols, getZhomeoffset());    // Store probe points to prevent loading undefined grid files
 
     for (int pos = 0; pos < probe_points; pos++){
         ZMap_file->printf("%1.3f\n", this->pData[pos]);
@@ -374,7 +348,7 @@ bool ZGridStrategy::loadGrid()
             //THEKERNEL->streams->printf("In P\n");
 
             sscanf(flag, "P%i\n", &fpoints);                        // read number of points, and Grid X and Y
-            fscanf(fd, "%i %i %f\n", &GridX, &GridY, &GridZ);       // read number of points, and Grid X and Y
+            fscanf(fd, "%i %i %f\n", &GridX, &GridY, &GridZ);       // read number of points, and Grid X and Y and ZHoming offset
             fscanf(fd, "%f\n", &val);                               // read first value from file
 
         } else {  // original 25point file -- Backwards compatibility
@@ -405,6 +379,15 @@ bool ZGridStrategy::loadGrid()
         return false;
     }
 
+}
+
+float ZGridStrategy::getZhomeoffset()
+{
+    void* rd;
+
+    PublicData::get_value( endstops_checksum, home_offset_checksum, &rd );
+
+    return ((float*)rd)[2];
 }
 
 void ZGridStrategy::setZoffset(float zval)
@@ -440,46 +423,77 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 
     stream->printf("*** Ensure probe is attached and press probe when done ***\n");
 
-    while(!zprobe->getProbeStatus());// || secwait < 10 )
-
-    this->in_cal = true;                         // In calbration mode
-
-    this->cal[X_AXIS] = 0.0f;                    // Clear calibration position
-    this->cal[Y_AXIS] = 0.0f;
-    this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + 5.0f;
-
-    this->move(this->cal, slow_rate);            // Move to probe start point
-
-    for (int probes = 0; probes <probe_points; probes++){
-        int pindex = 0;
-
-        float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
-                                       this->cal[Y_AXIS]-std::get<Y_AXIS>(this->probe_offsets));
-
-        pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
-
-        if (probes == (probe_points-1)){
-            this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
-            this->cal[Y_AXIS] = this->bed_y/2.0f;
-            this->cal[Z_AXIS] = this->bed_z/2.0f;                     // Position head for probe removal
-        } else {
-            this->next_cal();                        // to not cause damage to machine due to Z-offset
-        }
-        this->move(this->cal, slow_rate);        // move to the next position
-
-        this->pData[pindex]                      // set offset
-          = z ;                                  // save the offset
+    int secwait = 0;
+    while(!zprobe->getProbeStatus() || secwait < 10 ){  // Time out after 10 seconds to prevent Smoothieware hanging
+        sleep(1);
+        secwait++;
     }
 
-    stream->printf("\nDone!  Please remove probe\n");
+    if (secwait < 10){
 
-    // activate correction
-    this->setAdjustFunction(true);
+        this->in_cal = true;                         // In calbration mode
 
-    this->in_cal = false;
+        this->cal[X_AXIS] = 0.0f;                    // Clear calibration position
+        this->cal[Y_AXIS] = 0.0f;
+        this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + zprobe->getProbeHeight();
+
+        this->move(this->cal, slow_rate);            // Move to probe start point
+
+        for (int probes = 0; probes <probe_points; probes++){
+            int pindex = 0;
+
+            float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
+                                       this->cal[Y_AXIS]-std::get<Y_AXIS>(this->probe_offsets));
+
+            pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
+
+            if (probes == (probe_points-1)){
+                this->cal[X_AXIS] = this->bed_x/2.0f;    // Clear calibration position
+                this->cal[Y_AXIS] = this->bed_y/2.0f;
+                this->cal[Z_AXIS] = this->bed_z/2.0f;    // Position head for probe removal
+            } else {
+                this->next_cal();                        // to not cause damage to machine due to Z-offset
+            }
+            this->move(this->cal, slow_rate);            // move to the next position
+
+            this->pData[pindex] = z ;                    // save the offset
+        }
+
+        stream->printf("\nCalibration timed out.  Please remove probe\n");
+
+        // activate correction
+        this->setAdjustFunction(true);
+
+        this->in_cal = false;
+    }
+    else {
+        stream->printf("\nT!  Please remove probe\n");
+    }
+
     return true;
 }
 
+
+void ZGridStrategy::normalize_grid()
+{
+    float min = 100.0F,    // set large start value
+          norm_offset = 0;
+
+    // find minimum value in offset grid
+    for (int i = 0; i < probe_points; i++)
+        if (this->pData[i] < min)
+          min = this->pData[i];
+
+    // creates addition offset to set minimum value to zero.
+    norm_offset = -min;
+
+    // adds the offset to create a table of deltas, normalzed to minimum zero
+    for (int i = 0; i < probe_points; i++)
+        this->pData[i] += norm_offset;
+
+   // subtract the offset from the current Z homing offset to preserve full probed offset.
+   this->setZoffset(getZhomeoffset() - norm_offset);
+}
 
 void ZGridStrategy::homexyz()
 {

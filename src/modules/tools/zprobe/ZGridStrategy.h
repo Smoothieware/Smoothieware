@@ -25,10 +25,12 @@ private:
 
     void move(float *position, float feed);
     void next_cal(void);
+    float getZhomeoffset();
     void setZoffset(float zval);
 
     void setAdjustFunction(bool);
     bool doProbing(StreamOutput *stream);
+    void normalize_grid();
 
     bool loadGrid();
     bool saveGrid(); //std::string *args);
