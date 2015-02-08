@@ -131,12 +131,18 @@ bool LinearDeltaSolution::set_optional(const arm_options_t& options) {
 bool LinearDeltaSolution::get_optional(arm_options_t& options) {
     options['L']= this->arm_length;
     options['R']= this->arm_radius;
-    options['A'] = this->tower1_offset;
-    options['B'] = this->tower2_offset;
-    options['C'] = this->tower3_offset;
-    options['D'] = this->tower1_angle;
-    options['E'] = this->tower2_angle;
-    options['F'] = this->tower3_angle;
+
+    // don't report these if none of them are set
+    if(this->tower1_offset != 0.0F || this->tower2_offset != 0.0F || this->tower3_offset != 0.0F ||
+       this->tower1_angle != 0.0F  || this->tower2_angle != 0.0F  || this->tower3_angle != 0.0F) {
+
+        options['A'] = this->tower1_offset;
+        options['B'] = this->tower2_offset;
+        options['C'] = this->tower3_offset;
+        options['D'] = this->tower1_angle;
+        options['E'] = this->tower2_angle;
+        options['F'] = this->tower3_angle;
+    }
 
     return true;
 };
