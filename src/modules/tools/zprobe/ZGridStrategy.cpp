@@ -128,14 +128,13 @@ bool ZGridStrategy::handleConfig()
 
     this->calcConfig();                // Run calculations for Grid size and allocate initial grid memory
 
-    if(this->loadGrid())
-        this->setAdjustFunction(true); // Enable leveling code
-    else {
-        for (int i=0; i<(probe_points); i++){
-            this->pData[i] = 0.0F;        // Clear the grid
-         }
+    for (int i=0; i<(probe_points); i++){
+        this->pData[i] = 0.0F;        // Clear the grid
     }
 
+    if(this->loadGrid()){
+        this->setAdjustFunction(true); // Enable leveling code
+    }
 
     return true;
 }
@@ -423,13 +422,7 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 
     stream->printf("*** Ensure probe is attached and press probe when done ***\n");
 
-    int secwait = 0;
-    while(!zprobe->getProbeStatus() || secwait < 10 ){  // Time out after 10 seconds to prevent Smoothieware hanging
-        sleep(1);
-        secwait++;
-    }
-
-    if (secwait < 10){
+    while(!zprobe->getProbeStatus());
 
         this->in_cal = true;                         // In calbration mode
 
@@ -465,10 +458,6 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
         this->setAdjustFunction(true);
 
         this->in_cal = false;
-    }
-    else {
-        stream->printf("\nT!  Please remove probe\n");
-    }
 
     return true;
 }
@@ -491,8 +480,8 @@ void ZGridStrategy::normalize_grid()
     for (int i = 0; i < probe_points; i++)
         this->pData[i] += norm_offset;
 
-   // subtract the offset from the current Z homing offset to preserve full probed offset.
-   this->setZoffset(getZhomeoffset() - norm_offset);
+   // add the offset to the current Z homing offset to preserve full probed offset.
+   this->setZoffset(getZhomeoffset() + norm_offset);
 }
 
 void ZGridStrategy::homexyz()
