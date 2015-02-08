@@ -452,9 +452,10 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
             this->pData[pindex] = z ;                    // save the offset
         }
 
-        stream->printf("\nCalibration timed out.  Please remove probe\n");
+        stream->printf("\nCalibration done.  Please remove probe\n");
 
         // activate correction
+        this->normalize_grid();
         this->setAdjustFunction(true);
 
         this->in_cal = false;
