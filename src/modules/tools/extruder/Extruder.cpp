@@ -266,10 +266,16 @@ void Extruder::on_gcode_received(void *argument)
             if (gcode->has_letter('D')) {
                 THEKERNEL->conveyor->wait_for_empty_queue(); // only apply after the queue has emptied
                 this->filament_diameter = gcode->get_value('D');
-                if(filament_diameter > 0.01) {
+                if(filament_diameter > 0.01F) {
                     this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
                 }else{
                     this->volumetric_multiplier = 1.0F;
+                }
+            }else {
+                if(filament_diameter > 0.01F) {
+                    gcode->stream->printf("Filament Diameter: %f\n", this->filament_diameter);
+                }else{
+                    gcode->stream->printf("Volumetric extrusion is disabled\n");
                 }
             }
             gcode->mark_as_taken();
