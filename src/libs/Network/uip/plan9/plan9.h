@@ -32,16 +32,19 @@ public:
     static void init();
     static void appcall();
 
-    struct Entry {
+    struct EntryData {
         uint8_t     type;
         uint32_t    vers;
         int         refcount;
-        std::string path;
 
-        Entry() {}
-        Entry(uint8_t t, const std::string& p)
-            : type(t), vers(0), refcount(0), path(p) {}
+        EntryData() {}
+        EntryData(uint8_t t)
+            : type(t), vers(0), refcount(0) {}
     };
+
+    typedef std::map<std::string, EntryData> EntryMap;
+    typedef EntryMap::value_type             Entry;
+    typedef std::map<uint32_t, Entry*>       FidMap;
 
 private:
     void handler();
@@ -51,8 +54,8 @@ private:
     void add_fid(uint32_t, Entry*);
     void remove_fid(uint32_t);
 
-    std::map<uint32_t,    Entry*> fids;
-    std::map<std::string, Entry>  entries;
+    EntryMap entries;
+    FidMap   fids;
 };
 
 #endif
