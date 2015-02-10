@@ -277,7 +277,7 @@ void SimpleShell::rm_command( string parameters, StreamOutput *stream )
 void SimpleShell::mv_command( string parameters, StreamOutput *stream )
 {
     string from = absolute_from_relative(shift_parameter( parameters ));
-    string to = shift_parameter(parameters);
+    string to = absolute_from_relative(shift_parameter(parameters));
     int s = rename(from.c_str(), to.c_str());
     if (s != 0) stream->printf("Could not rename %s to %s\r\n", from.c_str(), to.c_str());
     else stream->printf("renamed %s to %s\r\n", from.c_str(), to.c_str());
