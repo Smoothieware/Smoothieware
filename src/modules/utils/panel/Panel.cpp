@@ -305,9 +305,8 @@ void Panel::on_idle(void *argument)
     if (this->start_up) {
         this->lcd->init();
 
-        Version v;
-        string build(v.get_build());
-        string date(v.get_build_date());
+        string build(VERSION_BUILD);
+        string date(VERSION_BUILD_DATE);
         this->lcd->clear();
         this->lcd->setCursor(0, 0); this->lcd->printf("Welcome to Smoothie");
         this->lcd->setCursor(0, 1); this->lcd->printf("%s", build.substr(0, 20).c_str());
