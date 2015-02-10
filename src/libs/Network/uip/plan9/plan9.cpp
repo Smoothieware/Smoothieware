@@ -97,7 +97,7 @@ PACKEDSTRUCT Qid {
 
     Qid() {}
     Qid(Plan9::Entry* entry)
-        : type(entry->type), vers(entry->vers), path(uint32_t(entry)) {}
+        : type(entry->second.type), vers(entry->second.vers), path(uint32_t(entry)) {}
 };
 
 PACKEDSTRUCT Stat {
@@ -277,12 +277,12 @@ size_t putstat(char* buf, char* end, Plan9::Entry* entry)
     stat->type = 0;
     stat->dev = 0;
     stat->qid = entry;
-    stat->mode = entry->type == QTDIR ? (DMDIR | 0755) : 0644;
+    stat->mode = entry->second.type == QTDIR ? (DMDIR | 0755) : 0644;
     stat->atime = stat->mtime = 1423420000;
-    stat->length = (stat->mode & DMDIR) ? 0 : flen(entry->path);
+    stat->length = (stat->mode & DMDIR) ? 0 : flen(entry->first);
     p += sizeof (Stat);
 
-    p = putstr(p, end, entry->path == "/" ? "/" : entry->path.substr(entry->path.rfind('/') + 1).c_str());
+    p = putstr(p, end, entry->first == "/" ? "/" : entry->first.substr(entry->first.rfind('/') + 1).c_str());
     p = putstr(p, end, "smoothie");
     p = putstr(p, end, "smoothie");
     p = putstr(p, end, "smoothie");
@@ -330,9 +330,11 @@ Plan9::Entry* Plan9::get_entry(uint8_t type, const std::string& path)
 {
     std::string abspath = absolute_path(path);
     auto i = entries.find(abspath);
-    if (i != entries.end())
-        return &(i->second);
-    return &(entries[abspath] = Entry(type, abspath));
+    if (i == entries.end()) {
+        entries[abspath] = EntryData(type);
+        i = entries.find(abspath);
+    }
+    return &(*i);
 }
 
 Plan9::Entry* Plan9::get_entry(uint32_t fid) const
@@ -346,12 +348,12 @@ Plan9::Entry* Plan9::get_entry(uint32_t fid) const
 void Plan9::add_fid(uint32_t fid, Entry* entry)
 {
     fids[fid] = entry;
-    ++entry->refcount;
+    ++entry->second.refcount;
 }
 
 void Plan9::remove_fid(uint32_t fid)
 {
-    --fids[fid]->refcount;
+    --fids[fid]->second.refcount;
     fids.erase(fid);
 }
 
@@ -436,7 +438,7 @@ void Plan9::handler()
             msg->Rwalk.nwqid = 0;
             add_fid(msg->Twalk.newfid, entry);
         } else {
-            std::string path = entry->path;
+            std::string path = entry->first;
             const char* wname = msg->Twalk.wname;
             uint16_t num_entries = 0;
             Entry* entries[MAXWELEM];
@@ -483,7 +485,7 @@ void Plan9::handler()
         CHECK(msg->size == sizeof (Header) + 4, EBADMSG_TEXT);
         CHECK(entry = get_entry(msg->fid), FID_UNKNOWN_TEXT);
 
-        DEBUG_PRINTF("Tstat fid=%lu %s\n", msg->fid, entry->path.c_str());
+        DEBUG_PRINTF("Tstat fid=%lu %s\n", msg->fid, entry->first.c_str());
 
         start_response(msg, sizeof (msg->Rstat));
         CHECK((msg->Rstat.stat_size = putstat(reinterpret_cast<char*>(&(msg->Rstat.stat)), buf + uip_mss(), entry)) > 0, EFAULT_TEXT);
@@ -501,10 +503,10 @@ void Plan9::handler()
     case Topen:
         CHECK(msg->size == sizeof (msg->Topen), EBADMSG_TEXT);
         CHECK(entry = get_entry(msg->fid), FID_UNKNOWN_TEXT);
-        DEBUG_PRINTF("Topen fid=%lu %s\n", msg->fid, entry->path.c_str());
+        DEBUG_PRINTF("Topen fid=%lu %s\n", msg->fid, entry->first.c_str());
 
-        if (entry->type != QTDIR && (msg->Topen.mode & OTRUNC)) {
-            FILE* fp = fopen(entry->path.c_str(), "w");
+        if (entry->second.type != QTDIR && (msg->Topen.mode & OTRUNC)) {
+            FILE* fp = fopen(entry->first.c_str(), "w");
             CHECK(fp, EIO_TEXT);
             fclose(fp);
         }
@@ -520,8 +522,8 @@ void Plan9::handler()
         CHECK(msg->Tread.count <= IOUNIT, EBADMSG_TEXT);
         CHECK(entry = get_entry(msg->fid), FID_UNKNOWN_TEXT);
 
-        if (entry->type == QTDIR) {
-            DIR* dir = opendir(entry->path.c_str());
+        if (entry->second.type == QTDIR) {
+            DIR* dir = opendir(entry->first.c_str());
             CHECK(dir, EIO_TEXT);
 
             auto offset = msg->Tread.offset;
@@ -531,7 +533,7 @@ void Plan9::handler()
             char* data = buf + sizeof (msg->Rread);
             struct dirent* ent;
             while ((ent = readdir(dir)) && count > 0) {
-                auto path = join_path(entry->path, ent->d_name);
+                auto path = join_path(entry->first, ent->d_name);
                 DEBUG_PRINTF("Tread path %s\n", path.c_str());
 
                 Entry* child = get_entry(ent->d_isdir ? QTDIR : QTFILE, path);
@@ -555,7 +557,7 @@ void Plan9::handler()
             }
             closedir(dir);
         } else {
-            FILE* fp = fopen(entry->path.c_str(), "r");
+            FILE* fp = fopen(entry->first.c_str(), "r");
             CHECK(fp, EIO_TEXT);
             if (fseek(fp, msg->Tread.offset, SEEK_SET)) {
                 fclose(fp);
@@ -577,7 +579,7 @@ void Plan9::handler()
             CHECK(msg->Tcreate.name + msg->Tcreate.name_size + 4 <= end, EBADMSG_TEXT);
             CHECK(entry = get_entry(msg->fid), FID_UNKNOWN_TEXT);
 
-            auto path = join_path(entry->path, std::string(msg->Tcreate.name, msg->Tcreate.name_size));
+            auto path = join_path(entry->first, std::string(msg->Tcreate.name, msg->Tcreate.name_size));
             uint32_t perm;
             memcpy(&perm, msg->Tcreate.name + msg->Tcreate.name_size, 4);
 
@@ -591,8 +593,8 @@ void Plan9::handler()
                 CHECK(fp, EIO_TEXT);
                 fclose(fp);
             }
-            ++entry->vers;
-            --entry->refcount;
+            ++entry->second.vers;
+            --entry->second.refcount;
             entry = get_entry((perm & DMDIR) ? QTDIR : QTFILE, path);
             fids[msg->fid] = entry;
             start_response(msg, sizeof (msg->Rcreate));
@@ -608,7 +610,7 @@ void Plan9::handler()
             CHECK(msg->Twrite.count <= IOUNIT, EBADMSG_TEXT);
             CHECK(entry = get_entry(msg->fid), FID_UNKNOWN_TEXT);
 
-            FILE* fp = fopen(entry->path.c_str(), "r+");
+            FILE* fp = fopen(entry->first.c_str(), "r+");
             CHECK(fp, EIO_TEXT);
             if (fseek(fp, msg->Twrite.offset, SEEK_SET)) {
                 fclose(fp);
@@ -622,7 +624,7 @@ void Plan9::handler()
 
             start_response(msg, sizeof (msg->Rwrite));
             msg->Rwrite.count = count;
-            ++entry->vers;
+            ++entry->second.vers;
         }
         break;
 
@@ -633,9 +635,9 @@ void Plan9::handler()
             CHECK(entry = get_entry(msg->fid), FID_UNKNOWN_TEXT);
             Entry e = *entry;
             remove_fid(msg->fid);
-            if (e.refcount == 0)
-                entries.erase(e.path);
-            CHECK(!remove(e.path.c_str()), e.type == QTDIR ? ENOTEMPTY_TEXT : EIO_TEXT);
+            if (e.second.refcount == 0)
+                entries.erase(e.first);
+            CHECK(!remove(e.first.c_str()), e.second.type == QTDIR ? ENOTEMPTY_TEXT : EIO_TEXT);
             start_response(msg, sizeof (Header));
         }
         break;
@@ -649,14 +651,14 @@ void Plan9::handler()
             len |= *name++ << 8;
             CHECK(name + len <= end, EBADMSG_TEXT);
             start_response(msg, sizeof (Header));
-            if (len > 0 && entry->path != "/") {
-                std::string newpath = join_path(entry->path.substr(0, entry->path.rfind('/')), std::string(name, len));
-                if (newpath != entry->path) {
-                    CHECK(!rename(entry->path.c_str(), newpath.c_str()), EIO_TEXT);
-                    Entry* newentry = get_entry(entry->type, newpath);
+            if (len > 0 && entry->first != "/") {
+                std::string newpath = join_path(entry->first.substr(0, entry->first.rfind('/')), std::string(name, len));
+                if (newpath != entry->first) {
+                    CHECK(!rename(entry->first.c_str(), newpath.c_str()), EIO_TEXT);
+                    Entry* newentry = get_entry(entry->second.type, newpath);
                     remove_fid(msg->fid);
-                    if (entry->refcount == 0)
-                        entries.erase(entry->path);
+                    if (entry->second.refcount == 0)
+                        entries.erase(entry->first);
                     add_fid(msg->fid, newentry);
                 }
             }

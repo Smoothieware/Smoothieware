@@ -298,6 +298,7 @@ return_error_on_unhandled_gcode              false            #
 network.enable                               false            # enable the ethernet network services
 network.webserver.enable                     true             # enable the webserver
 network.telnet.enable                        true             # enable the telnet server
+network.plan9.enable                         false            # enable the 9p filesystem
 network.ip_address                           auto             # use dhcp to get ip address
 # uncomment the 3 below to manually setup ip address
 #network.ip_address                           192.168.3.222    # the IP address
