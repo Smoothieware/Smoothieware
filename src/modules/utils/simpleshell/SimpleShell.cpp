@@ -524,10 +524,9 @@ void SimpleShell::net_command( string parameters, StreamOutput *stream)
 // print out build version
 void SimpleShell::version_command( string parameters, StreamOutput *stream)
 {
-    Version vers;
     uint32_t dev = getDeviceType();
     const char *mcu = (dev & 0x00100000) ? "LPC1769" : "LPC1768";
-    stream->printf("Build version: %s, Build date: %s, MCU: %s, System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), mcu, SystemCoreClock / 1000000);
+    stream->printf("Build version: %s, Build date: %s, MCU: %s, System Clock: %ldMHz\r\n", VERSION_BUILD, VERSION_BUILD_DATE, mcu, SystemCoreClock / 1000000);
 }
 
 // Reset the system
