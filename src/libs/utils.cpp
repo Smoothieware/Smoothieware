@@ -167,6 +167,7 @@ void system_reset( bool dfu )
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
+// TODO: Combine with plan9 absolute_path, current_path as argument?
 string absolute_from_relative( string path )
 {
     string cwd = THEKERNEL->current_path;
