@@ -307,10 +307,18 @@ void send_error(const char* text)
     uip_send(msg, msg->size);
 }
 
+// TODO: Move to utils
+inline std::string absolute_path(const std::string& path)
+{
+    // TODO: remove /../ and /./ from paths
+    return path;
+}
+
+// TODO: Move to utils
 std::string join_path(const std::string& a, const std::string& b)
 {
-    return a.back() != '/' ? absolute_from_relative(a + "/" + b) :
-            absolute_from_relative(a + b);
+    return a.back() != '/' ? absolute_path(a + "/" + b) :
+            absolute_path(a + b);
 }
 
 } // anonymous namespace
@@ -320,7 +328,7 @@ Plan9::~Plan9() {}
 
 Plan9::Entry* Plan9::get_entry(uint8_t type, const std::string& path)
 {
-    std::string abspath = absolute_from_relative(path);
+    std::string abspath = absolute_path(path);
     auto i = entries.find(abspath);
     if (i != entries.end())
         return &(i->second);
