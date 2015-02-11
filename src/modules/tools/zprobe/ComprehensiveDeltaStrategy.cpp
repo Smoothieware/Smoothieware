@@ -3,17 +3,31 @@
     Comprehensive Delta Strategy by 626Pilot of the SeeMeCNC Forums
     This code requires a Z-probe. You can use your own, or get mine here: http://www.thingiverse.com/626Pilot/designs
 
+    This strategy implements functionality found in the following separate strategies:
+        * DeltaCalibrationStrategy (calibrate DR & endstops on delta printers) - my version is faster :)
+        * ThreePointStrategy (adjust surface normal) - this is calibrated by simulated annealing (see below)
+        * ZGridStrategy (depth-map print surface & adjust effector's Z according to that)
+
+    This strategy ADDS the following functionality, which the other strategies lack:
+        * Probe calibration
+        * Parallel simulated annealing, a "weak AI" method of calibrating delta printers (ALL 14 VARIABLES, SIMULTANEOUSLY)
+        * Surface normal (like ThreePointStrategy) AND depth-mapped interpolation (like ZGridStrategy) at the same time
+        * You don't have to pick whether you want one feature or another; you can use everything you need
+
     G-codes:	G29	Probe Calibration
-                G31	Heuristic Calibration
-                G32	Iterative Calibration
+                G31	Heuristic Calibration (parallel simulated annealing)
+                G32	Iterative Calibration (only calibrates endstops & delta radius)
                 M667	Virtual shimming and depth correction params/enable/disable
 
     Files:	/sd/dm_surface_transform (contains depth map for use with depth map Z correction)
-    
-    The recommended way to use this is:
-    G32 (iterative calibration - gets endstops/delta radius correct - K to keep, but don't use that if you want to run G32 afterwards)
+
+    The recommended way to use this on a Delta printer is:
+    G32 (iterative calibration - gets endstops/delta radius correct - K to keep, but don't use that if you want to run G31 afterwards)
     G31 O P Q R S (simulated annealing - corrects for errors in X, Y, and Z - it may help to run this multiple times)
-    G31 A (depth mapping - corrects errors in Z, but not X or Y)
+    G31 A (depth mapping - corrects errors in Z, but not X or Y - benefits from simulated annealing, though)
+
+    The recommended way to use this on a Cartesian/CoreXY/SCARA etc. printer (of which the author has tested none, FYI):
+    G31 A (depth mapping)
 
     To Do
     -------------------------
@@ -25,6 +39,7 @@
     * Audit other "heavy" class variables to see whether they might be moved into methods.
     * We are using both three-dimensional (Cartesian) and one-dimensional (depths type, .abs and .rel) arrays. Cartesians are
       necessary for IK/FK, but maybe we can make a type with X, Y, absolute Z, and relative Z, and be done with the multiple types.
+      (Except for the depth map, which has to be kept in RAM all the time.)
       Such arrays can be "fat" while in use because they will live on the stack, and not take up any space when the calibration
       routines are not running.
 
@@ -610,14 +625,21 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
             // Save depth map (CSV)
             case 500:
             case 503:
-            
-                THEKERNEL->conveyor->wait_for_empty_queue();
+
+//                THEKERNEL->conveyor->wait_for_empty_queue();
             
                 // We use gcode->stream->printf instead of _printf because the dispatcher temporarily
                 // replaces the serial stream printer with a file stream printer when M500/503 is sent.
 
                 // A=X, B=Y, C=Z, D=enabled (1 or 0)
-                gcode->stream->printf("; ABC=Shimming data; D=Shimming; E=Depth map; Z=Master enable\nM667 A%1.4f B%1.4f C%1.4f D%d E%d Z%d\n", surface_transform.tri_points[X][Z], surface_transform.tri_points[Y][Z], surface_transform.tri_points[Z][Z], surface_transform.plane_enabled, surface_transform.depth_enabled, surface_transform.active);
+                flush();
+                _printf("CDS: ready to printf\n");
+                flush();
+                
+                gcode->stream->printf(";bueller?\n");
+                _printf("CDS: done printf\n");
+                flush();
+//                gcode->stream->printf(";ABC=Shimming data; D=Shimming; E=Depth map; Z=Master enable\nM667 A%1.4f B%1.4f C%1.4f D%d E%d Z%d\n", surface_transform.tri_points[X][Z], surface_transform.tri_points[Y][Z], surface_transform.tri_points[Z][Z], surface_transform.plane_enabled, surface_transform.depth_enabled, surface_transform.active);
 
                 break;
 
@@ -2559,6 +2581,8 @@ bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y, bool 
         }
 
         // Return probe to original Z
+        zprobe->return_probe(result);
+        
         if(zprobe->getDecelerateOnTrigger()) {
             zprobe->return_probe(zprobe->getStepsAtDecelEnd());
         } else {
