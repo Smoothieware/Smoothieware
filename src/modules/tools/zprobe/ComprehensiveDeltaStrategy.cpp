@@ -23,8 +23,6 @@
     * Move all the long-ass sections of code in the G-code processor into their own methods. We're allocating a lot of stuff on the
       stack each call, when we don't need to, and this increases the chances of an out-of-memory crash whenever G29-G33 are sent.
     * Audit other "heavy" class variables to see whether they might be moved into methods.
-    * Spin off probe calibration to its own separate class, and load it only when necessary. (It needs to keep some class variables
-      around between calls, but again, these are never used when we're not doing probe calibration.)
     * We are using both three-dimensional (Cartesian) and one-dimensional (depths type, .abs and .rel) arrays. Cartesians are
       necessary for IK/FK, but maybe we can make a type with X, Y, absolute Z, and relative Z, and be done with the multiple types.
       Such arrays can be "fat" while in use because they will live on the stack, and not take up any space when the calibration
@@ -241,7 +239,11 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
                 // Build depth map
                 zero_depth_maps();
                 float cartesian[DM_GRID_ELEMENTS][3];
-                depth_map_print_surface(cartesian, RESULTS_FORMATTED, true);
+                if(!depth_map_print_surface(cartesian, RESULTS_FORMATTED, true)) {
+                    _printf("Couldn't build depth map - aborting!\n");
+                    pop_prefix();
+                    return false;
+                }
 
                 // Copy depth map to surface_transform, which contains depths only
                 for(int i=0; i<DM_GRID_ELEMENTS; i++) {
@@ -314,7 +316,9 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
                 print_kinematics();
                 newline();
                 float dummy[DM_GRID_ELEMENTS][3];
-                depth_map_print_surface(dummy, RESULTS_FORMATTED, false);
+                if(!depth_map_print_surface(dummy, RESULTS_FORMATTED, false)) {
+                    _printf("Couldn't depth-map the surface.\n");
+                }
                 pop_prefix();
                 zprobe->home();
 
@@ -798,11 +802,11 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     // Other vars
     float cur_cartesian[DM_GRID_ELEMENTS][3];
     int j, k;
-    int try_mod_10;				// Will be set to annealing_try % 10
+    int try_mod_5;				// Will be set to annealing_try % 5
     float lowest;				// For finding the lowest absolute value of three variables
 
     // Keep track of energy so that we can bail if the annealing stalls
-    #define LAST_ENERGY_N 3
+    #define LAST_ENERGY_N 6
     float last_energy[LAST_ENERGY_N];
     unsigned last_energy_count = 0;
     for(j=0; j<LAST_ENERGY_N; j++) {
@@ -880,7 +884,12 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
                 _printf("Depth-mapping the print surface...\n");
                 print_kinematics();
-                depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false);
+                if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false)) {
+                    _printf("Couldn't depth-map the surface.\n");
+                    zprobe->home();
+                    pop_prefix();
+                    return false;
+                }
 
             } else {
 
@@ -932,7 +941,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                 temp = 0.01;
             }
             
-            try_mod_10 = annealing_try % 10;
+            try_mod_5 = annealing_try % 5;
 
             // ****************
             // * Delta Radius *
@@ -1038,7 +1047,6 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             for(k=0; k<3; k++) {
                 test_endstop[k].reset_min_max();
                 test_delta_radius_offset[k].reset_min_max();
-//                test_arm_length_offset[k].reset_min_max();
                 test_tower_angle[k].reset_min_max();
                 test_virtual_shimming[k].reset_min_max();
             }
@@ -1048,7 +1056,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             // * Housekeeping *
             // ****************
 
-            if(try_mod_10 == 0) {
+            if(try_mod_5 == 0) {
                 float tempE = simulate_FK_and_get_energy(test_axis, cur_set.trim, cur_cartesian);
                 _printf("Try %d of %d, energy=%1.3f (want <= %1.3f)\n", annealing_try, annealing_tries, tempE, global_target);
 
@@ -1094,7 +1102,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                     _printf("Annealing : Within target\n");
                     break;
                 }
-            } // try_mod_10 == 0
+            } // try_mod_5 == 0
 
             flush();
 
@@ -1407,7 +1415,7 @@ void ComprehensiveDeltaStrategy::init_test_points() {
     int dm_pos;
     float neighboring_probe_radius = probe_radius + (probe_radius / ((DM_GRID_DIMENSION - 1) / 2));
 
-//_printf("Probe radius: %1.3f - Neighboring probe radius: %1.3f\n", probe_radius, neighboring_probe_radius);
+    //_printf("Probe radius: %1.3f - Neighboring probe radius: %1.3f\n", probe_radius, neighboring_probe_radius);
 
     // Determine active/inactive points based on print surface shape
     for(y=0; y<DM_GRID_DIMENSION; y++) {
@@ -1459,7 +1467,8 @@ void ComprehensiveDeltaStrategy::init_test_points() {
 
     // Mark the origin point
     active_point[find_nearest_test_point(origin)] = TP_CENTER;
-/*
+
+    /*
     // For testing
     for(y=0; y<DM_GRID_DIMENSION; y++) {
         for(x=0; x<DM_GRID_DIMENSION; x++) {
@@ -1476,7 +1485,7 @@ void ComprehensiveDeltaStrategy::init_test_points() {
         }
         newline();
     }
-*/
+    */
 
 
     // Initialize "tower points" (points nearest to a tower)
@@ -1678,13 +1687,6 @@ float ComprehensiveDeltaStrategy::get_adjust_z(float targetX, float targetY) {
 
 
 
-
-
-
-
-
-
-
 // Measure probe tolerance (repeatability)
 // Things that may have an impact on repeatability:
 // - How tightly the probe is printed and/or built
@@ -1763,7 +1765,7 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
     if(probe_smoothing < 1) probe_smoothing = 1;
     if(probe_smoothing > 10) probe_smoothing = 10;
 
-    // Hi
+    // Print settings
     _printf("   Repeatability test: %d samples (S)\n", nSamples);
     _printf("     Acceleration (A): %1.1f\n", want_acceleration = 0 ? THEKERNEL->planner->get_acceleration() : want_acceleration);
     _printf("   Debounce count (B): %d\n", zprobe->getDebounceCount());
@@ -1787,7 +1789,6 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
     float yDeg = 0.5f;
     float radius = 10;// probe_radius;
 
-
     // Move the probe around to see if we can throw it off (e.g.: if it's loose, the printer has "delta arm blues", etc.)
     for(i=0; i<nSamples; i++) {
 
@@ -1806,12 +1807,7 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
             zprobe->coordinated_move(0, 0, NAN, zprobe->getFastFeedrate(), false);
 
         }
-/*                
-                float r = 0;
-                for(long int pause = 0; pause < 1000000; pause++) {
-                    r += rand();
-                }
-*/
+
         // Probe at center
         if(do_probe_at(steps, 0, 0)) {
             sample[i] = steps;
@@ -1954,6 +1950,7 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float cartesian[DM_GRID
     prepare_to_probe();
 
     if(!prime_probe()) {
+        _printf("Couldn't prime probe.\n");
         pop_prefix();
         return false;
     }
@@ -1965,6 +1962,7 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float cartesian[DM_GRID
             _printf("Depth to bed surface at center: %d steps (%1.3f mm)\n", origin_steps, depth_map[TP_CTR].abs);
         }
     } else {
+        _printf("Couldn't measure depth to origin.\n");
         pop_prefix();
         return false;
     }
@@ -2060,7 +2058,7 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float cartesian[DM_GRID
                     pop_prefix();
                     return false;
                 }
-    //steps = 500;
+                // steps = 500;
 
                 // To extrapolate, we need the depths of the active-neighbor, and its associated active point
                 struct point_type {
@@ -2074,26 +2072,26 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float cartesian[DM_GRID
                 point_type probed { coords[X], coords[Y], { zprobe->zsteps_to_mm(steps), zprobe->zsteps_to_mm(origin_steps - steps) } };
                 point_type extrap { test_point[i][X], test_point[i][Y], { 0, 0 } };
 
-    //            _printf("neighbor=%d, active=%d\n", i, active_idx);
-    //            _printf("active = {%1.3f, %1.3f, %1.3f | %1.3f}\n", active.x, active.y, active.z.abs, active.z.rel);
-    //            _printf("probed = {%1.3f, %1.3f, %1.3f | %1.3f}\n", probed.x, probed.y, probed.z.abs, probed.z.rel);
-    //            _printf("...\n");
+                //_printf("neighbor=%d, active=%d\n", i, active_idx);
+                //_printf("active = {%1.3f, %1.3f, %1.3f | %1.3f}\n", active.x, active.y, active.z.abs, active.z.rel);
+                //_printf("probed = {%1.3f, %1.3f, %1.3f | %1.3f}\n", probed.x, probed.y, probed.z.abs, probed.z.rel);
+                //_printf("...\n");
 
                 _cds_depths_t rise { probed.z.abs - active.z.abs, probed.z.rel - active.z.rel };
                 float dist_active_to_extrap = sqrt(pow(extrap.x - active.x, 2));
                 float dist_active_to_probed = sqrt(pow(probed.x - active.x, 2));
                 float dist_mul = dist_active_to_extrap / dist_active_to_probed; // This will be 1.something
 
-    //            _printf("rise = %1.3f | %1.3f\n", rise.abs, rise.rel);
-    //            _printf("dist active to extrap = %1.3f\n", dist_active_to_extrap);
-    //            _printf("dist active to probed = %1.3f\n", dist_active_to_probed);
-    //            _printf("dist mul = %1.3f\n", dist_mul);
+                //_printf("rise = %1.3f | %1.3f\n", rise.abs, rise.rel);
+                //_printf("dist active to extrap = %1.3f\n", dist_active_to_extrap);
+                //_printf("dist active to probed = %1.3f\n", dist_active_to_probed);
+                //_printf("dist mul = %1.3f\n", dist_mul);
 
                 extrap.z.abs = active.z.abs + (rise.abs * dist_mul);
                 extrap.z.rel = zprobe->zsteps_to_mm(origin_steps) - extrap.z.abs;
 
-    //            _printf("extrap = {%1.3f, %1.3f, %1.3f | %1.3f}\n", extrap.x, extrap.y, extrap.z.abs, extrap.z.rel);
-    //            newline();
+                //_printf("extrap = {%1.3f, %1.3f, %1.3f | %1.3f}\n", extrap.x, extrap.y, extrap.z.abs, extrap.z.rel);
+                //newline();
 
                 // Store result in depth_map
                 depth_map[i].rel = extrap.z.rel;
@@ -2127,9 +2125,6 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float cartesian[DM_GRID
         }
 
     } // if(extrapolate_neighbors)
-
-
-
 
     // Show the results (pretty)
     if(display_results == RESULTS_FORMATTED) {
@@ -2999,13 +2994,13 @@ void ComprehensiveDeltaStrategy::print_depths(_cds_depths_t depths[DM_GRID_ELEME
         switch(active_point[i]) {
             case TP_CENTER:
             case TP_ACTIVE:
-                __printf(" %1.3f ", depths[i].rel);
+                __printf(" %6.3f ", depths[i].rel);
                 break;
             case TP_ACTIVE_NEIGHBOR:
-                __printf("[%1.3f]", depths[i].rel);
+                __printf("[%6.3f]", depths[i].rel);
                 break;
             case TP_INACTIVE:
-                 __printf("      ");
+                 __printf("        ");
                  break;
         }
 

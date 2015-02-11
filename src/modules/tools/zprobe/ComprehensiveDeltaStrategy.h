@@ -202,6 +202,19 @@ class KinematicSettings {
 
 };
 
+struct best_probe_calibration_t {
+    float sigma;
+    int range;
+    float accel;
+    int debounce_count;
+    bool decelerate;
+    bool eccentricity;
+    int smoothing;
+    int priming;
+    float fast;
+    float slow;
+};
+
 
 class ComprehensiveDeltaStrategy : public LevelingStrategy {
 
@@ -223,18 +236,7 @@ private:
     } caltype;
 
     // This holds the best probe calibration we've been able to get, so far, in this session
-    struct {
-        float sigma;
-        int range;
-        float accel;
-        int debounce_count;
-        bool decelerate;
-        bool eccentricity;
-        int smoothing;
-        int priming;
-        float fast;
-        float slow;
-    } best_probe_calibration;
+    best_probe_calibration_t best_probe_calibration;
 
     // Bilinear interpolation values.
     // Since get_adjust_z() may be called 100s of times per second, we don't want to have to waste time
