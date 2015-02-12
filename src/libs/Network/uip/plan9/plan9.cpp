@@ -11,13 +11,14 @@
 #include "Kernel.h"
 #include "utils.h"
 #include <string.h>
+#include <memory>
 #include "uip.h"
 
 //#define DEBUG_PRINTF(...) printf("9p " __VA_ARGS__)
 #define DEBUG_PRINTF(...)
 
-#define ERROR(...)       { error(bufout, msize, __LINE__, ##__VA_ARGS__); return 0; }
-#define CHECK(cond, ...) if (!(cond)) ERROR(__VA_ARGS__)
+#define ERROR(...)       do { error(bufout, msize, __LINE__, ##__VA_ARGS__); return 0; } while (0)
+#define CHECK(cond, ...) do { if (!(cond)) ERROR(__VA_ARGS__); } while (0)
 #define IOUNIT           (msize - sizeof (Message::Twrite))
 #define PACKEDSTRUCT     struct __attribute__ ((packed))
 #define RESPONSE(t)      response->size = sizeof (response->t); response->type = request->type+1; response->tag = request->tag
@@ -83,6 +84,38 @@ enum {
     MAXENTRIES  = 32,
     MAXFIDS     = 32,
     MAXREQUESTS = 4,
+};
+
+// TODO: Maybe this should be moved to utils?
+class File {
+    FILE* fp;
+public:
+    File(const std::string& path, const char* mode)
+        : fp(fopen(path.c_str(), mode)) {}
+
+    ~File()
+    {
+        if (fp)
+            fclose(fp);
+    }
+
+    operator FILE*() { return fp; }
+};
+
+// TODO: Maybe this should be moved to utils?
+class Dir {
+    DIR* dir;
+public:
+    Dir(const std::string& path)
+        : dir(opendir(path.c_str())) {}
+
+    ~Dir()
+    {
+        if (dir)
+            closedir(dir);
+    }
+
+    operator DIR*() { return dir; }
 };
 
 PACKEDSTRUCT Header {
@@ -278,13 +311,11 @@ inline char* putstr(char* p, char* end, const char* s)
 
 inline long flen(const std::string& path)
 {
-    FILE* fp = fopen(path.c_str(), "r");
+    File fp(path, "r");
     if (!fp)
         return 0;
     fseek(fp, 0, SEEK_END);
-    long len = ftell(fp);
-    fclose(fp);
-    return len < 0 ? 0 : len;
+    return max(0l, ftell(fp));
 }
 
 size_t putstat(Stat* stat, char* end, uint8_t type, const std::string& path)
@@ -494,7 +525,7 @@ bool Plan9::process(Message* request, Message* response)
     case Tversion:
         DEBUG_PRINTF("Tversion\n");
         RESPONSE(Rversion);
-        msize = response->Rversion.msize = min(uint32_t(INITIAL_MSIZE), request->Tversion.msize);
+        msize = response->Rversion.msize = min(INITIAL_MSIZE, request->Tversion.msize);
         response->size = putstr(response->buf + response->size, response->buf + msize, "9P2000") - response->buf;
         break;
 
@@ -538,16 +569,12 @@ bool Plan9::process(Message* request, Message* response)
 
                 DEBUG_PRINTF("Twalk path=%s\n", path.c_str());
 
-                DIR* dir = opendir(path.c_str());
-                if (dir) {
-                    closedir(dir);
+                if (Dir(path)) {
                     *wqid++ = Qid(QTDIR, path);
                     ++response->Rwalk.nwqid;
                     last_path_size = path.size();
                 } else {
-                    FILE* fp = fopen(path.c_str(), "r");
-                    if (fp) {
-                        fclose(fp);
+                    if (File(path, "r")) {
                         *wqid++ = Qid(QTFILE, path);
                         ++response->Rwalk.nwqid;
                         last_path_size = path.size();
@@ -585,11 +612,8 @@ bool Plan9::process(Message* request, Message* response)
         CHECK(entry = get_entry(request->fid));
         DEBUG_PRINTF("Topen fid=%lu %s\n", request->fid, entry->first.c_str());
 
-        if (entry->second.type != QTDIR && (request->Topen.mode & OTRUNC)) {
-            FILE* fp = fopen(entry->first.c_str(), "w");
-            CHECK(fp, EIO);
-            fclose(fp);
-        }
+        if (entry->second.type != QTDIR && (request->Topen.mode & OTRUNC))
+            CHECK(File(entry->first, "w"), EIO);
 
         RESPONSE(Ropen);
         response->Ropen.qid = entry;
@@ -603,7 +627,7 @@ bool Plan9::process(Message* request, Message* response)
         RESPONSE(Rread);
 
         if (entry->second.type == QTDIR) {
-            DIR* dir = opendir(entry->first.c_str());
+            Dir dir(entry->first);
             CHECK(dir, EIO);
 
             char* data = response->buf + sizeof (response->Rread);
@@ -631,18 +655,12 @@ bool Plan9::process(Message* request, Message* response)
                     }
                 }
             }
-            closedir(dir);
         } else {
-            FILE* fp = fopen(entry->first.c_str(), "r");
+            File fp(entry->first, "r");
             CHECK(fp, EIO);
-            if (fseek(fp, request->Tread.offset, SEEK_SET)) {
-                fclose(fp);
-                ERROR(EIO);
-            }
+            CHECK(!fseek(fp, request->Tread.offset, SEEK_SET), EIO);
             response->Rread.count = fread(response->buf + response->size, 1, request->Tread.count, fp);
-            auto ok = response->Rread.count == request->Tread.count || !ferror(fp);
-            fclose(fp);
-            CHECK(ok, EIO);
+            CHECK(response->Rread.count == request->Tread.count || !ferror(fp), EIO);
             response->size += response->Rread.count;
         }
         break;
@@ -660,13 +678,10 @@ bool Plan9::process(Message* request, Message* response)
             DEBUG_PRINTF("Tcreate fid=%lu path=%s\n", request->fid, path.c_str());
             CHECK(!(perm & ~(DMDIR | 0777)), ENOSYS);
 
-            if (perm & DMDIR) {
+            if (perm & DMDIR)
                 CHECK(!mkdir(path.c_str(), 0755), EEXIST);
-            } else {
-                FILE* fp = fopen(path.c_str(), "w");
-                CHECK(fp, EIO);
-                fclose(fp);
-            }
+            else
+                CHECK(File(path, "w"), EIO);
             remove_fid(request->fid);
             CHECK(entry = add_entry(request->fid, (perm & DMDIR) ? QTDIR : QTFILE, path));
             RESPONSE(Rcreate);
@@ -682,18 +697,13 @@ bool Plan9::process(Message* request, Message* response)
                   request->Twrite.count <= IOUNIT, EBADMSG);
             CHECK(entry = get_entry(request->fid));
 
-            FILE* fp = fopen(entry->first.c_str(), "r+");
+            File fp(entry->first, "r+");
             CHECK(fp, EIO);
-            if (fseek(fp, request->Twrite.offset, SEEK_SET)) {
-                fclose(fp);
-                ERROR(EIO);
-            }
+            CHECK(!fseek(fp, request->Twrite.offset, SEEK_SET), EIO);
 
             RESPONSE(Rwrite);
             response->Rwrite.count = fwrite(request->buf + sizeof (request->Twrite), 1, request->Twrite.count, fp);
-            auto ok = response->Rwrite.count == request->Twrite.count || !ferror(fp);
-            fclose(fp);
-            CHECK(ok, EIO);
+            CHECK(response->Rwrite.count == request->Twrite.count || !ferror(fp), EIO);
         }
         break;
 
