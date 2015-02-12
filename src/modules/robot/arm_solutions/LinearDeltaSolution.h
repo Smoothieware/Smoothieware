@@ -18,7 +18,7 @@ class LinearDeltaSolution : public BaseSolution {
         void init();
 
         float arm_length;
-        float arm_radius;
+        float arm_radius;		// Same as "delta radius" in other delta robot control software
         float arm_length_squared;
 
         float delta_tower1_x;

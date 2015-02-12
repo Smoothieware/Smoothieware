@@ -54,6 +54,7 @@ void LinearDeltaSolution::init() {
     delta_tower3_y = (delta_radius + tower3_offset) * sinf((90.0F  + tower3_angle) * PIOVER180);
 }
 
+// Inverse kinematics (translates Cartesian XYZ coordinates for the effector, into carriage positions)
 void LinearDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] )
 {
 
@@ -71,20 +72,27 @@ void LinearDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float act
                                       ) + cartesian_mm[Z_AXIS];
 }
 
+// Forward kinematics (translates carriage positions into Cartesian XYZ)
+// At the time of writing, nothing appears to call this method for any reason except ComprehensiveDeltaStrategy (see ZProbe module)
 void LinearDeltaSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] )
 {
     // from http://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates_from_cross-_and_dot-products
     // based on https://github.com/ambrop72/aprinter/blob/2de69a/aprinter/printer/DeltaTransform.h#L81
+    
+    // Current tower locations & carriage (actuator) positions
     Vector3 tower1( delta_tower1_x, delta_tower1_y, actuator_mm[0] );
     Vector3 tower2( delta_tower2_x, delta_tower2_y, actuator_mm[1] );
     Vector3 tower3( delta_tower3_x, delta_tower3_y, actuator_mm[2] );
 
+    // Median points between carriages
     Vector3 s12 = tower1.sub(tower2);
     Vector3 s23 = tower2.sub(tower3);
     Vector3 s13 = tower1.sub(tower3);
 
+    // Normal of the circle defined by the carriage positions
     Vector3 normal = s12.cross(s23);
 
+    // Find the center of that circle
     float magsq_s12 = s12.magsq();
     float magsq_s23 = s23.magsq();
     float magsq_s13 = s13.magsq();
@@ -100,11 +108,15 @@ void LinearDeltaSolution::actuator_to_cartesian( float actuator_mm[], float cart
                           delta_tower1_y * a + delta_tower2_y * b + delta_tower3_y * c,
                           actuator_mm[0] * a + actuator_mm[1] * b + actuator_mm[2] * c );
 
+    // Radius
     float r_sq = 0.5F * q * magsq_s12 * magsq_s23 * magsq_s13;
+
+    // Finally, multiply the circle's normal by the distance to each tower and subtract from circumcenter
     float dist = sqrtf(inv_nmag_sq * (arm_length_squared - r_sq));
 
     Vector3 cartesian = circumcenter.sub(normal.mul(dist));
 
+    // I guess we hate long floating point numbers, so round it to four decimal places :)
     cartesian_mm[0] = ROUND(cartesian[0], 4);
     cartesian_mm[1] = ROUND(cartesian[1], 4);
     cartesian_mm[2] = ROUND(cartesian[2], 4);
