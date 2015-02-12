@@ -142,7 +142,7 @@ endif
 
 # Libraries to be linked into final binary
 MBED_LIBS = $(MBED_DIR)/$(DEVICE)/GCC_ARM/libmbed.a
-SYS_LIBS = -specs=nano.specs -lstdc++ -lsupc++ -lm -lgcc -lc -lgcc -lc -lnosys
+SYS_LIBS = -specs=nano.specs -lstdc++ -lsupc++ -lm -lgcc -lc -lnosys
 LIBS = $(LIBS_PREFIX)
 
 ifeq "$(MRI_ENABLE)" "1"
