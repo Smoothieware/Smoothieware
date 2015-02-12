@@ -54,11 +54,11 @@ public:
 private:
     int receive();
     int send();
-    void process(Message*, Message*);
+    bool process(Message*, Message*);
 
-    Entry get_entry(uint8_t, const std::string&);
-    Entry get_entry(uint32_t) const;
-    void add_fid(uint32_t, Entry);
+    Entry add_entry(uint32_t, uint8_t, const std::string&);
+    Entry get_entry(uint32_t);
+    bool add_fid(uint32_t, Entry);
     void remove_fid(uint32_t);
 
     static const uint32_t INITIAL_MSIZE = 300;
