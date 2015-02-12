@@ -420,6 +420,7 @@ int Plan9::receive()
     Message *request = reinterpret_cast<Message*>(bufin);
 
     PSOCK_BEGIN(&sin);
+    (void)PT_YIELD_FLAG; // avoid warning unused variable
 
     for (;;) {
         PSOCK_READBUF_LEN(&sin, 4);
@@ -450,6 +451,7 @@ int Plan9::send()
     Message* response = reinterpret_cast<Message*>(bufout);
 
     PSOCK_BEGIN(&sout);
+    (void)PT_YIELD_FLAG; // avoid warning unused variable
 
     for (;;) {
         PSOCK_WAIT_UNTIL(&sout, !requests.empty());
@@ -458,7 +460,8 @@ int Plan9::send()
             Message* request = requests.front();
             requests.pop();
             process(request, response);
-            delete[] request->buf;
+            char* buf = request->buf;
+            delete[] buf;
         }
 
 
