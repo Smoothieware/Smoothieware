@@ -66,8 +66,8 @@ private:
     FidMap               fids;
     psock                sin, sout;
     char                 bufin[INITIAL_MSIZE], bufout[INITIAL_MSIZE];
-    std::queue<Message*> requests;
-    uint32_t             msize;
+    std::queue<Message*> queue;
+    uint32_t             msize, queue_size;
 };
 
 #endif

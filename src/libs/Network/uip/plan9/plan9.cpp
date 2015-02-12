@@ -368,7 +368,7 @@ std::string join_path(const std::string& a, const std::string& b)
 } // anonymous namespace
 
 Plan9::Plan9()
-: msize(INITIAL_MSIZE)
+: msize(INITIAL_MSIZE), queue_size(0)
 {
     PSOCK_INIT(&sin, bufin + 4, sizeof(bufin) - 4);
     PSOCK_INIT(&sout, bufout + 4, sizeof(bufout) - 4);
@@ -477,14 +477,15 @@ int Plan9::receive()
             DEBUG_PRINTF("recv size=%lu type=%u tag=%d\n", request->size, request->type, request->tag);
         }
 
-        PSOCK_WAIT_UNTIL(&sin, requests.size() < MAXREQUESTS);
+        PSOCK_WAIT_UNTIL(&sin, queue_size < MAXREQUESTS * INITIAL_MSIZE);
 
         // store message
         DEBUG_PRINTF("store size=%lu type=%u tag=%d\n", request->size, request->type, request->tag);
 
         Message* copy = reinterpret_cast<Message*>(new char[request->size]);
         memcpy(copy, request, request->size);
-        requests.push(copy);
+        queue.push(copy);
+        queue_size += copy->size;
     }
 
     PSOCK_END(&sin);
@@ -498,11 +499,12 @@ int Plan9::send()
     (void)PT_YIELD_FLAG; // avoid warning unused variable
 
     for (;;) {
-        PSOCK_WAIT_UNTIL(&sout, !requests.empty());
+        PSOCK_WAIT_UNTIL(&sout, !queue.empty());
 
         {
-            Message* request = requests.front();
-            requests.pop();
+            Message* request = queue.front();
+            queue.pop();
+            queue_size -= request->size;
             process(request, response);
             char* buf = request->buf;
             delete[] buf;
