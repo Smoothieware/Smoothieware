@@ -10,8 +10,6 @@
 #include "StreamOutputPool.h"
 #include "Kernel.h"
 #include "utils.h"
-#include <string.h>
-#include <memory>
 #include "uip.h"
 
 //#define DEBUG_PRINTF(...) printf("9p " __VA_ARGS__)
