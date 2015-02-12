@@ -124,24 +124,24 @@ PACKEDSTRUCT Header {
     uint16_t tag;
 };
 
+// TODO: move to utils?
+uint64_t fletcher64(const std::string& s)
+{
+    uint32_t lo = 0, hi = 0;
+    for (const char* p = s.c_str(); p < s.c_str() + s.size();) {
+        uint32_t v = 0;
+        for (int i = 0; i < 4 && p < s.c_str() + s.size(); ++i)
+            v = (v << 8) | *p++;
+        lo += v;
+        hi += lo;
+    }
+    return (uint64_t(hi) << 32) | lo;
+}
+
 PACKEDSTRUCT Qid {
     uint8_t  type;
     uint32_t vers; // we don't use the version field
     uint64_t path;
-
-    // TODO: move to utils?
-    uint64_t fletcher64(const std::string& s)
-    {
-        uint32_t lo = 0, hi = 0;
-        for (const char* p = s.c_str(); p < s.c_str() + s.size();) {
-            uint32_t v = 0;
-            for (int i = 0; i < 4 && p < s.c_str() + s.size(); ++i)
-                v = (v << 8) | *p++;
-            lo += v;
-            hi += lo;
-        }
-        return (uint64_t(hi) << 32) | lo;
-    }
 
     Qid() {}
     Qid(uint8_t t, const std::string& p)
@@ -298,7 +298,7 @@ union __attribute__ ((packed)) Plan9::Message {
 
 namespace {
 
-inline char* putstr(char* p, char* end, const char* s)
+char* putstr(char* p, char* end, const char* s)
 {
     auto n = strlen(s);
     if (!p || p + 2 + n > end)
@@ -342,7 +342,7 @@ size_t putstat(Stat* stat, char* end, uint8_t type, const std::string& path)
 }
 
 inline void error(char* bufout, uint32_t msize, int line) {}
-inline void error(char* bufout, uint32_t msize, int line, const char* text)
+void error(char* bufout, uint32_t msize, int line, const char* text)
 {
     DEBUG_PRINTF("error %s, line %d\n", text, __LINE__);
     Plan9::Message* response = reinterpret_cast<Plan9::Message*>(bufout);
