@@ -84,6 +84,22 @@ enum {
     MAXWELEM = 16,
 };
 
+uint64_t fletcher64(const std::string& s)
+{
+    uint32_t lo = 0, hi = 0;
+    const char *p = s.c_str();
+    while (p < s.c_str() + s.size()) {
+        uint32_t v = 0;
+        while (p < s.c_str() + s.size()) {
+            v |= *p++;
+            v <<= 8;
+        }
+        lo += v;
+        hi += lo;
+    }
+    return uint64_t(hi) << 32 | lo;
+}
+
 PACKEDSTRUCT Header {
     uint32_t size;
     uint8_t  type;
@@ -92,12 +108,14 @@ PACKEDSTRUCT Header {
 
 PACKEDSTRUCT Qid {
     uint8_t  type;
-    uint32_t vers;
+    uint32_t vers; // we don't use the version field
     uint64_t path;
 
     Qid() {}
+    Qid(uint8_t t, const std::string& p)
+            : type(t), vers(0), path(fletcher64(p)) {}
     Qid(Plan9::Entry entry)
-        : type(entry->second.type), vers(entry->second.vers), path(uint32_t(entry)) {}
+            : type(entry->second.type), vers(0), path(fletcher64(entry->first)) {}
 };
 
 PACKEDSTRUCT Stat {
@@ -270,7 +288,7 @@ inline long flen(const std::string& path)
     return len < 0 ? 0 : len;
 }
 
-size_t putstat(Stat* stat, char* end, Plan9::Entry entry)
+size_t putstat(Stat* stat, char* end, uint8_t type, const std::string& path)
 {
     char* p = stat->buf + sizeof (Stat);
     if (p > end)
@@ -278,12 +296,12 @@ size_t putstat(Stat* stat, char* end, Plan9::Entry entry)
 
     stat->type = 0;
     stat->dev = 0;
-    stat->qid = entry;
-    stat->mode = entry->second.type == QTDIR ? (DMDIR | 0755) : 0644;
+    stat->qid = Qid(type, path);
+    stat->mode = type == QTDIR ? (DMDIR | 0755) : 0644;
     stat->atime = stat->mtime = 1423420000;
-    stat->length = (stat->mode & DMDIR) ? 0 : flen(entry->first);
+    stat->length = (stat->mode & DMDIR) ? 0 : flen(path);
 
-    p = putstr(p, end, entry->first == "/" ? "/" : entry->first.substr(entry->first.rfind('/') + 1).c_str());
+    p = putstr(p, end, path == "/" ? "/" : path.substr(path.rfind('/') + 1).c_str());
     p = putstr(p, end, "smoothie");
     p = putstr(p, end, "smoothie");
     p = putstr(p, end, "smoothie");
@@ -356,8 +374,11 @@ void Plan9::add_fid(uint32_t fid, Entry entry)
 
 void Plan9::remove_fid(uint32_t fid)
 {
-    --fids[fid]->second.refcount;
+    Entry entry = fids[fid];
     fids.erase(fid);
+    --entry->second.refcount;
+    if (entry->second.refcount == 0)
+        entries.erase(entry->first);
 }
 
 void Plan9::init()
@@ -464,8 +485,7 @@ void Plan9::process(Message* request, Message* response)
     case Tattach:
         DEBUG_PRINTF("Tattach\n");
         CHECK(!get_entry(request->fid), FID_IN_USE_TEXT);
-        entry = get_entry(QTDIR, "/");
-        add_fid(request->fid, entry);
+        add_fid(request->fid, entry = get_entry(QTDIR, "/"));
         RESPONSE(Rattach);
         response->Rattach.qid = entry;
         break;
@@ -489,6 +509,7 @@ void Plan9::process(Message* request, Message* response)
         if (request->Twalk.nwname > 0) {
             std::string path = entry->first;
             const char* wname = request->Twalk.wname;
+            size_t last_path_size = 0;
             Qid* wqid = response->Rwalk.wqid;
 
             for (uint16_t i = 0; i < request->Twalk.nwname; ++i) {
@@ -504,14 +525,16 @@ void Plan9::process(Message* request, Message* response)
                 DIR* dir = opendir(path.c_str());
                 if (dir) {
                     closedir(dir);
-                    *wqid++ = entry = get_entry(QTDIR, path);
+                    *wqid++ = Qid(QTDIR, path);
                     ++response->Rwalk.nwqid;
+                    last_path_size = path.size();
                 } else {
                     FILE* fp = fopen(path.c_str(), "r");
                     if (fp) {
                         fclose(fp);
-                        *wqid++ = entry = get_entry(QTFILE, path);
+                        *wqid++ = Qid(QTFILE, path);
                         ++response->Rwalk.nwqid;
+                        last_path_size = path.size();
                     }
                     i = request->Twalk.nwname;
                 }
@@ -519,6 +542,7 @@ void Plan9::process(Message* request, Message* response)
 
             CHECK(response->Rwalk.nwqid > 0, ENOENT_TEXT);
             response->size += sizeof (Qid) * response->Rwalk.nwqid;
+            entry = get_entry(wqid[-1].type, path.substr(0, last_path_size));
         }
         add_fid(request->Twalk.newfid, entry);
         break;
@@ -530,7 +554,7 @@ void Plan9::process(Message* request, Message* response)
         DEBUG_PRINTF("Tstat fid=%lu %s\n", request->fid, entry->first.c_str());
 
         RESPONSE(Rstat);
-        CHECK((response->Rstat.stat_size = putstat(&response->Rstat.stat, response->buf + msize, entry)) > 0, EFAULT_TEXT);
+        CHECK((response->Rstat.stat_size = putstat(&response->Rstat.stat, response->buf + msize, entry->second.type, entry->first)) > 0, EFAULT_TEXT);
         response->size = sizeof (Header) + 2 + response->Rstat.stat_size;
         break;
 
@@ -575,9 +599,8 @@ void Plan9::process(Message* request, Message* response)
                 auto path = join_path(entry->first, d->d_name);
                 DEBUG_PRINTF("Tread path %s\n", path.c_str());
 
-                Entry child = get_entry(d->d_isdir ? QTDIR : QTFILE, path);
                 char stat_buf[sizeof (Stat) + 128];
-                size_t stat_size = putstat(reinterpret_cast<Stat*>(stat_buf), stat_buf + sizeof (stat_buf), child);
+                size_t stat_size = putstat(reinterpret_cast<Stat*>(stat_buf), stat_buf + sizeof (stat_buf), d->d_isdir ? QTDIR : QTFILE, path);
                 CHECK(stat_size > 0, EFAULT_TEXT);
 
                 if (request->Tread.offset >= stat_size) {
@@ -631,10 +654,8 @@ void Plan9::process(Message* request, Message* response)
                 CHECK(fp, EIO_TEXT);
                 fclose(fp);
             }
-            ++entry->second.vers;
-            --entry->second.refcount;
-            entry = get_entry((perm & DMDIR) ? QTDIR : QTFILE, path);
-            fids[request->fid] = entry;
+            remove_fid(request->fid);
+            add_fid(request->fid, entry = get_entry((perm & DMDIR) ? QTDIR : QTFILE, path));
             RESPONSE(Rcreate);
             response->Rcreate.qid = entry;
             response->Rcreate.iounit = IOUNIT;
@@ -660,7 +681,6 @@ void Plan9::process(Message* request, Message* response)
             auto ok = response->Rwrite.count == request->Twrite.count || !ferror(fp);
             fclose(fp);
             CHECK(ok, EIO_TEXT);
-            ++entry->second.vers;
         }
         break;
 
@@ -671,8 +691,6 @@ void Plan9::process(Message* request, Message* response)
             CHECK(entry = get_entry(request->fid), FID_UNKNOWN_TEXT);
             auto e = *entry;
             remove_fid(request->fid);
-            if (e.second.refcount == 0)
-                entries.erase(e.first);
             CHECK(!remove(e.first.c_str()), e.second.type == QTDIR ? ENOTEMPTY_TEXT : EIO_TEXT);
             RESPONSE(Rremove);
         }
@@ -691,11 +709,9 @@ void Plan9::process(Message* request, Message* response)
                 std::string newpath = join_path(entry->first.substr(0, entry->first.rfind('/')), std::string(name, len));
                 if (newpath != entry->first) {
                     CHECK(!rename(entry->first.c_str(), newpath.c_str()), EIO_TEXT);
-                    Entry newentry = get_entry(entry->second.type, newpath);
+                    uint8_t type = entry->second.type;
                     remove_fid(request->fid);
-                    if (entry->second.refcount == 0)
-                        entries.erase(entry->first);
-                    add_fid(request->fid, newentry);
+                    add_fid(request->fid, get_entry(type, newpath));
                 }
             }
         }

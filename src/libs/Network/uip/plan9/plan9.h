@@ -39,12 +39,11 @@ public:
 
     struct EntryData {
         uint8_t     type;
-        uint32_t    vers;
         int         refcount;
 
         EntryData() {}
         EntryData(uint8_t t)
-            : type(t), vers(0), refcount(0) {}
+            : type(t), refcount(0) {}
     };
 
     typedef std::map<std::string, EntryData> EntryMap;
