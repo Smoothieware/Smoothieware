@@ -46,14 +46,35 @@ public:
     float getProbeHeight() { return probe_height; }
     float zsteps_to_mm(float steps);
 
+    unsigned int getDebounceCount() { return debounce_count; }
+    void setDebounceCount(unsigned int i) { if(i > 0 && i < 10000) debounce_count = i; }
+
+    void setFastFeedrate(float f) { if(f > 0 && f < 200) fast_feedrate = f; }
+    void setSlowFeedrate(float f) { if(f > 0 && f < 200) slow_feedrate = f; }
+
+    void setDecelerateOnTrigger(bool t);
+    bool getDecelerateOnTrigger() { return decelerate_on_trigger; }
+    unsigned int getStepsAtDecelEnd() { return steps_at_decel_end; }
+    
+    void clearHasExceededRunout() { has_exceeded_runout = false; }
+    bool getHasExceededRunout() { return has_exceeded_runout; }
+    
+
 private:
     void accelerate(int c);
+    void decelerate(int c);
+    bool accelerating;
+    unsigned int steps_at_decel_end;	// Holds # of steps at the moment decelerate() stops the motors
 
     volatile float current_feedrate;
     float slow_feedrate;
     float fast_feedrate;
     float probe_height;
     float max_z;
+    bool decelerate_on_trigger;
+    float decelerate_runout;
+    uint32_t runout_steps;
+    bool has_exceeded_runout;
     volatile struct {
         volatile bool running:1;
         bool is_delta:1;
