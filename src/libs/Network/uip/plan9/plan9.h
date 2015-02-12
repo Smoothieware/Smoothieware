@@ -67,7 +67,7 @@ private:
     psock                sin, sout;
     char                 bufin[INITIAL_MSIZE], bufout[INITIAL_MSIZE];
     std::queue<Message*> queue;
-    uint32_t             msize, queue_size;
+    uint32_t             msize, queue_bytes;
 };
 
 #endif

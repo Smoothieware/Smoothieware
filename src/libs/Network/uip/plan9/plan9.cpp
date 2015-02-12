@@ -368,7 +368,7 @@ std::string join_path(const std::string& a, const std::string& b)
 } // anonymous namespace
 
 Plan9::Plan9()
-: msize(INITIAL_MSIZE), queue_size(0)
+: msize(INITIAL_MSIZE), queue_bytes(0)
 {
     PSOCK_INIT(&sin, bufin + 4, sizeof(bufin) - 4);
     PSOCK_INIT(&sout, bufout + 4, sizeof(bufout) - 4);
@@ -465,27 +465,29 @@ int Plan9::receive()
     (void)PT_YIELD_FLAG; // avoid warning unused variable
 
     for (;;) {
+        DEBUG_PRINTF("receive thread fids=%d entries=%d queue_size=%d queue_bytes=%lu\n", fids.size(), entries.size(), queue.size(), queue_bytes);
+
         PSOCK_READBUF_LEN(&sin, 4);
         memcpy(request, request->buf + 4, 4); // copy size to buffer beginning
 
-        DEBUG_PRINTF("recv size=%lu\n", request->size);
+        DEBUG_PRINTF("receive size=%lu\n", request->size);
         if (request->size > msize) {
             DEBUG_PRINTF("Bad message received %lu\n", request->size);
             PSOCK_CLOSE_EXIT(&sin);
         } else {
             PSOCK_READBUF_LEN(&sin, request->size - 4);
-            DEBUG_PRINTF("recv size=%lu type=%u tag=%d\n", request->size, request->type, request->tag);
+            DEBUG_PRINTF("receive size=%lu type=%u tag=%d\n", request->size, request->type, request->tag);
         }
 
-        PSOCK_WAIT_UNTIL(&sin, queue_size < MAXREQUESTS * INITIAL_MSIZE);
-
-        // store message
-        DEBUG_PRINTF("store size=%lu type=%u tag=%d\n", request->size, request->type, request->tag);
+        PSOCK_WAIT_UNTIL(&sin, queue_bytes < MAXREQUESTS * INITIAL_MSIZE);
 
         Message* copy = reinterpret_cast<Message*>(new char[request->size]);
         memcpy(copy, request, request->size);
         queue.push(copy);
-        queue_size += copy->size;
+        queue_bytes += copy->size;
+
+        // store message
+        DEBUG_PRINTF("store size=%lu type=%u tag=%d queue_size=%d queue_bytes=%lu\n", request->size, request->type, request->tag, queue.size(), queue_bytes);
     }
 
     PSOCK_END(&sin);
@@ -499,12 +501,14 @@ int Plan9::send()
     (void)PT_YIELD_FLAG; // avoid warning unused variable
 
     for (;;) {
+        DEBUG_PRINTF("send thread fids=%d entries=%d queue_size=%d queue_bytes=%lu\n", fids.size(), entries.size(), queue.size(), queue_bytes);
+
         PSOCK_WAIT_UNTIL(&sout, !queue.empty());
 
         {
             Message* request = queue.front();
             queue.pop();
-            queue_size -= request->size;
+            queue_bytes -= request->size;
             process(request, response);
             char* buf = request->buf;
             delete[] buf;
