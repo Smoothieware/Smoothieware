@@ -38,50 +38,51 @@ const char ENOENT[]      = "No such file or directory",
 
 enum {
     // 9P message types
-    Tversion = 100,
-    Tauth    = 102,
-    Tattach  = 104,
-    Rerror   = 107,
-    Tflush   = 108,
-    Twalk    = 110,
-    Topen    = 112,
-    Tcreate  = 114,
-    Tread    = 116,
-    Twrite   = 118,
-    Tclunk   = 120,
-    Tremove  = 122,
-    Tstat    = 124,
-    Twstat   = 126,
+    Tversion   = 100,
+    Tauth      = 102,
+    Tattach    = 104,
+    Rerror     = 107,
+    Tflush     = 108,
+    Twalk      = 110,
+    Topen      = 112,
+    Tcreate    = 114,
+    Tread      = 116,
+    Twrite     = 118,
+    Tclunk     = 120,
+    Tremove    = 122,
+    Tstat      = 124,
+    Twstat     = 126,
 
     // Qid type
-    QTDIR     = 0x80, // directories
-    QTAPPEND  = 0x40, // append only files
-    QTEXCL    = 0x20, // exclusive use files
-    QTMOUNT   = 0x10, // mounted channel
-    QTAUTH    = 0x08, // authentication file
-    QTTMP     = 0x04, // non-backed-up file
-    QTLINK    = 0x02, // symbolic link
-    QTFILE    = 0x00, // plain file
+    QTDIR       = 0x80, // directories
+    QTAPPEND    = 0x40, // append only files
+    QTEXCL      = 0x20, // exclusive use files
+    QTMOUNT     = 0x10, // mounted channel
+    QTAUTH      = 0x08, // authentication file
+    QTTMP       = 0x04, // non-backed-up file
+    QTLINK      = 0x02, // symbolic link
+    QTFILE      = 0x00, // plain file
 
     // mode
-    OREAD     = 0,	// open for read
-    OWRITE    = 1,	// write
-    ORDWR     = 2,	// read and write
-    OEXEC     = 3,      // execute, == read but check execute permission
-    OTRUNC    = 0x10,	// or'ed in (except for exec), truncate file first
-    ORCLOSE   = 0x40, 	// or'ed in, remove on close
+    OREAD       = 0,	// open for read
+    OWRITE      = 1,	// write
+    ORDWR       = 2,	// read and write
+    OEXEC       = 3,      // execute, == read but check execute permission
+    OTRUNC      = 0x10,	// or'ed in (except for exec), truncate file first
+    ORCLOSE     = 0x40, 	// or'ed in, remove on close
 
     // permission bits
-    DMDIR    = 0x80000000, // directories
-    DMAPPEND = 0x40000000, // append only files
-    DMEXCL   = 0x20000000, // exclusive use files
-    DMMOUNT  = 0x10000000, // mounted channel
-    DMAUTH   = 0x08000000, // authentication file
-    DMTMP    = 0x04000000, // non-backed-up file
+    DMDIR       = 0x80000000, // directories
+    DMAPPEND    = 0x40000000, // append only files
+    DMEXCL      = 0x20000000, // exclusive use files
+    DMMOUNT     = 0x10000000, // mounted channel
+    DMAUTH      = 0x08000000, // authentication file
+    DMTMP       = 0x04000000, // non-backed-up file
 
     MAXWELEM    = 16,
-    MAX_ENTRIES = 32,
-    MAX_FIDS    = 32
+    MAXENTRIES  = 32,
+    MAXFIDS     = 32,
+    MAXREQUESTS = 4,
 };
 
 PACKEDSTRUCT Header {
@@ -351,11 +352,11 @@ Plan9::~Plan9()
 Plan9::Entry Plan9::add_entry(uint32_t fid, uint8_t type, const std::string& path)
 {
     CHECK(fids.find(fid) == fids.end(), FID_IN_USE);
-    CHECK(fids.size() < MAX_FIDS, ENFILE);
+    CHECK(fids.size() < MAXFIDS, ENFILE);
     std::string abspath = absolute_path(path);
     auto i = entries.find(abspath);
     if (i == entries.end()) {
-        CHECK(entries.size() < MAX_ENTRIES, ENFILE);
+        CHECK(entries.size() < MAXENTRIES, ENFILE);
         entries[abspath] = EntryData(type);
         i = entries.find(abspath);
     }
@@ -367,17 +368,14 @@ Plan9::Entry Plan9::add_entry(uint32_t fid, uint8_t type, const std::string& pat
 Plan9::Entry Plan9::get_entry(uint32_t fid)
 {
     auto i = fids.find(fid);
-    if (i == fids.end()) {
-        ERROR(FID_UNKNOWN);
-        return nullptr;
-    }
+    CHECK(i != fids.end());
     return i->second;
 }
 
 bool Plan9::add_fid(uint32_t fid, Entry entry)
 {
     CHECK(fids.find(fid) == fids.end(), FID_IN_USE);
-    CHECK(fids.size() < MAX_FIDS, ENFILE);
+    CHECK(fids.size() < MAXFIDS, ENFILE);
     fids[fid] = entry;
     ++entry->second.refcount;
     return true;
@@ -447,6 +445,8 @@ int Plan9::receive()
             PSOCK_READBUF_LEN(&sin, request->size - 4);
             DEBUG_PRINTF("recv size=%lu type=%u tag=%d\n", request->size, request->type, request->tag);
         }
+
+        PSOCK_WAIT_UNTIL(&sin, requests.size() < MAXREQUESTS);
 
         // store message
         DEBUG_PRINTF("store size=%lu type=%u tag=%d\n", request->size, request->type, request->tag);
