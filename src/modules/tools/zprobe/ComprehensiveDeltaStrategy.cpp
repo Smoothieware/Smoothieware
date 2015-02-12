@@ -1,6 +1,6 @@
 /*
 
-    Comprehensive Delta Strategy by 626Pilot of the SeeMeCNC Forums
+    Comprehensive Delta Strategy by 626Pilot
     This code requires a Z-probe. You can use your own, or get mine here: http://www.thingiverse.com/626Pilot/designs
 
     This strategy implements functionality found in the following separate strategies:
@@ -10,9 +10,15 @@
 
     This strategy ADDS the following functionality, which the other strategies lack:
         * Probe calibration
-        * Parallel simulated annealing, a "weak AI" method of calibrating delta printers (ALL 14 VARIABLES, SIMULTANEOUSLY)
+        * Parallel simulated annealing, a "weak AI" method of calibrating delta printers (all 14 variables, SIMULTANEOUSLY!!!)
         * Surface normal (like ThreePointStrategy) AND depth-mapped interpolation (like ZGridStrategy) at the same time
         * You don't have to pick whether you want one feature or another; you can use everything you need
+        * Method Prefixes: All printed output gets prepended with a method prefix, so you ALWAYS know which method printed anything
+        *                  ~ Call push_prefix("XX") to specify the current method's two-character prefix
+        *                  ~ Call _printf("words", ...) to get "[XX] words" (variadic, so you can use it like normal printf)
+        *                  ~ Call pop_prefix() before you return from a method to restore the last one's prefix
+        *                  ~ The prefix stack is managed, so you can never push or pop beyond the defined prefix stack size
+        *                  ~ Saves over 10KB over manually putting "[XX] " at the beginning of every printed string
 
     G-codes:	G29	Probe Calibration
                 G31	Heuristic Calibration (parallel simulated annealing)
@@ -22,15 +28,18 @@
     Files:	/sd/dm_surface_transform (contains depth map for use with depth map Z correction)
 
     The recommended way to use this on a Delta printer is:
+    G29 (calibrate your probe)
     G32 (iterative calibration - gets endstops/delta radius correct - K to keep, but don't use that if you want to run G31 afterwards)
     G31 O P Q R S (simulated annealing - corrects for errors in X, Y, and Z - it may help to run this multiple times)
     G31 A (depth mapping - corrects errors in Z, but not X or Y - benefits from simulated annealing, though)
 
     The recommended way to use this on a Cartesian/CoreXY/SCARA etc. printer (of which the author has tested none, FYI):
+    G29 (calibrate your probe)
     G31 A (depth mapping)
 
     To Do
     -------------------------
+    * Use AHB0 to store the leveling grid, like ZGridStrategy.cpp
     * Make G31 B the specific command for heuristic calibration, and have it select O P Q R S (all annealing types) by default.
     * Move some class variables into heuristic_calibration(). They take up a lot of space when not in use, and they are never in use
       when we're not calibrating, so...
@@ -223,258 +232,22 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
     if( gcode->has_g) {
         // G code processing
         if(gcode->g == 29) { // Test the Z-probe for repeatability
-
             THEKERNEL->conveyor->wait_for_empty_queue();
             measure_probe_repeatability(gcode);
             return true;
-
         }
 
-        if(gcode->g == 31) { // Depth-map the bed and display the results
-
-            THEKERNEL->conveyor->wait_for_empty_queue();
-
-            int x, y;//, dm_pos;
-
-            if(gcode->has_letter('A')) {
-
-                // It took me a really, really long (and frustrating) time to figure this out
-                if(probe_offset_x != 0 || probe_offset_y != 0) {
-                    _printf("Depth correction doesn't work with X or Y probe offsets.\n");
-                    return false;
-                }
-            
-                push_prefix("DC");
-                newline();
-                _printf("Probing bed for depth correction...\n");
-
-                // Disable depth correction (obviously)
-                surface_transform.depth_enabled = false;
-
-                // Build depth map
-                zero_depth_maps();
-                float cartesian[DM_GRID_ELEMENTS][3];
-                if(!depth_map_print_surface(cartesian, RESULTS_FORMATTED, true)) {
-                    _printf("Couldn't build depth map - aborting!\n");
-                    pop_prefix();
-                    return false;
-                }
-
-                // Copy depth map to surface_transform, which contains depths only
-                for(int i=0; i<DM_GRID_ELEMENTS; i++) {
-                    surface_transform.depth[i] = cartesian[i][Z];
-                }
-
-                // Propagate values outward from circle to edge, in case they go outside probe_radius
-                if(surface_shape == PSS_CIRCLE) {
-                    for(y=0; y<DM_GRID_DIMENSION; y++) {
-                        for(x=0; x <= (DM_GRID_DIMENSION-1) / 2; x++) {
-
-                            int dm_pos_right = (y * DM_GRID_DIMENSION) + ((DM_GRID_DIMENSION - 1) / 2) + x;
-                            int dm_pos_left  = (y * DM_GRID_DIMENSION) + ((DM_GRID_DIMENSION - 1) / 2) - x;
-
-                            // Propagate right
-                            if(active_point[dm_pos_right] == TP_INACTIVE) {
-                                surface_transform.depth[dm_pos_right] = surface_transform.depth[dm_pos_right - 1];
-                            }
-
-                            // Propagate left
-                            if(active_point[dm_pos_left] == TP_INACTIVE) {
-                                surface_transform.depth[dm_pos_left] = surface_transform.depth[dm_pos_left + 1];
-                            }
-
-                        }
-                    }
-                }
-
-                // Enable depth correction
-                surface_transform.depth_enabled = true;
-                set_adjust_function(true);
-
-                // Save to a file.
-                // I tried saving this with G-codes, but I guess you can't stuff that much data.
-                // The config-overrides file was corrupted when I tried! I found mention of a
-                // file corruption bug elsewhere in the firmware, so I guess it's a known issue.
-                // I could have just written everything as binary data, but I wanted people to
-                // be able to populate the file with numbers from a regular $10 depth gauge in
-                // case they don't have a Z-probe.
-                FILE *fp = fopen("/sd/dm_surface_transform", "w");
-                if(fp != NULL) {
-                    fprintf(fp, "; Depth Map Surface Transform\n");
-                    for(y=0; y<DM_GRID_DIMENSION; y++) {
-                        fprintf(fp, "; Line %d of %d\n", y + 1, DM_GRID_DIMENSION);
-                        for(x=0; x<DM_GRID_DIMENSION; x++) {
-                            fprintf(fp, "%1.5f\n", surface_transform.depth[(y * DM_GRID_DIMENSION) + x]);
-                        }
-                    }
-
-                    // This is probably important to do
-                    fclose(fp);
-
-                    _printf("Surface transform saved to SD card. Type M500 to auto-enable.\n");
-                
-                } else {
-
-                    _printf("Couldn't save surface transform to SD card!\n");
-
-                }
-                
-                zprobe->home();
-                pop_prefix();
-
-            } else if(gcode->has_letter('Z')) {
-
-                // We are only here to map the surface - no calibration
-                newline();
-                push_prefix("DM");
-                _printf("Current kinematics:\n");
-                print_kinematics();
-                newline();
-                float dummy[DM_GRID_ELEMENTS][3];
-                if(!depth_map_print_surface(dummy, RESULTS_FORMATTED, false)) {
-                    _printf("Couldn't depth-map the surface.\n");
-                }
-                pop_prefix();
-                zprobe->home();
-
-            } else {
-
-                // Do a heuristic calibration (or simulation)
-                clear_calibration_types();
-                int annealing_tries = 50;
-                float max_temp = 0.35;
-                float binsearch_width = 0.1;
-                float overrun_divisor = 2;
-                bool simulate_only = false;
-                bool keep_settings = false;
-                bool zero_all_offsets = false;
-
-                // Keep settings?
-                if(gcode->has_letter('K')) {
-                    keep_settings = true;
-                }
-
-                // Simulate-only
-                if(gcode->has_letter('L')) {
-                    simulate_only = true;
-                }
-
-                // Endstops
-                if(gcode->has_letter('O')) {
-                    caltype.endstop.active = true;
-                    caltype.endstop.annealing_temp_mul = gcode->get_value('O');
-                }
-                
-                // Delta radius, including individual tower offsets
-                if(gcode->has_letter('P')) {
-                    caltype.delta_radius.active = true;
-                    caltype.delta_radius.annealing_temp_mul = gcode->get_value('P');
-                }
-
-                // Arm length, including individual arm length offsets
-                if(gcode->has_letter('Q')) {
-                    caltype.arm_length.active = true;
-                    caltype.arm_length.annealing_temp_mul = gcode->get_value('Q');
-                }
-
-                // Tower angle offsets
-                if(gcode->has_letter('R')) {
-                    caltype.tower_angle.active = true;
-                    caltype.tower_angle.annealing_temp_mul = gcode->get_value('R');
-                }
-                
-                // Surface plane virtual shimming
-                if(gcode->has_letter('S')) {
-                    caltype.virtual_shimming.active = true;
-                    caltype.virtual_shimming.annealing_temp_mul = gcode->get_value('S');
-                }
-
-                // Annealing tries
-                // Generally, more iterations require lower temps
-                if(gcode->has_letter('T')) {
-                    annealing_tries = gcode->get_value('T');
-                }
-                
-                // Max temperature (tradeoff between "too cold to get there" and "so hot that it boils" - you want "just right")
-                if(gcode->has_letter('U')) {
-                    max_temp = gcode->get_value('U');
-                }
-                
-                // Binary search width (tradeoff between speed and accuracy - I recommend 0.1)
-                if(gcode->has_letter('V')) {
-                    binsearch_width = gcode->get_value('V');
-                }
-
-                // Overrun divisor (what a random move is divided by if it overshoots the ideal value)
-                // No, it isn't a good idea to use <=1.
-                if(gcode->has_letter('W')) {
-                    overrun_divisor = gcode->get_value('W');
-                }
-
-                // Zero all offset values
-                if(gcode->has_letter('Y')) {
-                    zero_all_offsets = true;
-                }
-
-                push_prefix("HC");
-                if(gcode->get_num_args() > 0) {
-
-                    // Make sure at least one caltype is turned on
-                    if(
-                        !caltype.endstop.active &&
-                        !caltype.delta_radius.active &&
-                        !caltype.arm_length.active &&
-                        !caltype.tower_angle.active &&
-                        !caltype.virtual_shimming.active
-                    ){
-                        _printf("No calibration types selected - activating endstops & delta radius.\n");
-                        caltype.endstop.active = true;
-                        caltype.delta_radius.active = true;
-                    }
-
-                    heuristic_calibration(annealing_tries, max_temp, binsearch_width, simulate_only, keep_settings, zero_all_offsets, overrun_divisor);
-                
-                } else {
-                
-                    flush();
-                    _printf("G31 usage: (* = you can supply an annealing multiplier)\n");
-                    _printf("Z: Probe and display depth map - no calibration\n");
-                    _printf("A: Set up depth map for auto leveling (corrects Z only - run AFTER annealing)\n");
-                    _printf("\n");
-                    _printf("Simulated annealing (corrects X, Y and Z - run G32 first):\n");
-                    _printf("K: Keep last settings\n");
-                    _printf("L: Simulate only (don't probe)\n");
-                    _printf("O: Endstops *\n");
-                    _printf("P: Delta radius *\n");
-                    _printf("Q: Arm length *\n");
-                    _printf("R: Tower angle offsets *\n");
-                    _printf("S: Surface plane virtual shimming *\n");
-                    _printf("t: Annealing: Iterations (50)\n");		// Repetier Host eats lines starting with T >:(
-                    _printf("U: Annealing: Max t_emp (0.35)\n");	// Repetier Host eats all lines containing "temp" >8(
-                    _printf("V: Annealing: Binary search width (0.1)\n");
-                    _printf("W: Annealing: Overrun divisor (2)\n");
-                    _printf("Y: Zero all individual radius, angle, and arm length offsets\n");
-                    flush();
-                } //if(gcode->get_num_args() > 0)
-                pop_prefix();
-            
-            } // !gcode->has_letter('M')
-
-            return true;
-
+        if(gcode->g == 31) { // Depth mapping & heuristic delta calibration
+            return handle_depth_mapping_calibration(gcode);
         }
 
         if(gcode->g == 32) { // Auto calibration for delta, Z bed mapping for cartesian
-            // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
-
             bool keep = false;
             if(gcode->has_letter('K')) {
                 keep = gcode->get_value('K');
             }
-
+            THEKERNEL->conveyor->wait_for_empty_queue();
             iterative_calibration(keep);
-
             return true;
         }
 
@@ -500,147 +273,21 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
             
             // Surface equation for virtual shimming, depth map correction, and master enable
             case 667:
-
-                push_prefix("DM");
-
-                // Triangle points for shimming surface normal
-                if(gcode->has_letter('A')) surface_transform.tri_points[X][Z] = gcode->get_value('A');
-                if(gcode->has_letter('B')) surface_transform.tri_points[Y][Z] = gcode->get_value('B');
-                if(gcode->has_letter('C')) surface_transform.tri_points[Z][Z] = gcode->get_value('C');
-
-                // Shimming
-                if(gcode->has_letter('D')) surface_transform.plane_enabled = gcode->get_value('D');
-                if(surface_transform.plane_enabled) {
-                    set_virtual_shimming(surface_transform.tri_points[X][Z], surface_transform.tri_points[Y][Z], surface_transform.tri_points[Z][Z]);
-                    set_adjust_function(true);
-                }
-
-                // Depth map
-                if(gcode->has_letter('E')) {
-
-                    if(probe_offset_x == 0 && probe_offset_y == 0) {
-
-                        if(surface_transform.have_depth_map) {
-
-                            // Depth map already loaded 
-                            surface_transform.depth_enabled = gcode->get_value('E');
-
-                        } else {
-
-                            // ST not initialized - try to load it
-                            FILE *fp = fopen("/sd/dm_surface_transform", "r");
-                            if(fp != NULL) {
-
-                                char buf[48];
-                                int i = 0;
-                                
-                                while(fgets(buf, sizeof buf, fp) != NULL) {
-
-                                    // Chop trailing newline
-                                    char *pos;
-                                    if((pos=strchr(buf, '\n')) != NULL) {
-                                        *pos = '\0';
-                                    }
-
-                                    // Skip comment lines
-                                    if(buf[0] == ';') continue;
-
-                                    // Add float value to the transform                            
-                                    if(i < DM_GRID_ELEMENTS) {
-
-                                        float fval = atof(buf);
-
-                                        if(fval > -5 && fval < 5) {
-                                            surface_transform.depth[i] = strtof(buf, NULL);
-                                            //_printf("buffer='%s' - Surface transform element %2d set to %1.3f.\n", buf, i, surface_transform.depth[i]);
-                                            i++;
-                                        } else {
-                                            _printf("Surface transform element %2d is out of range (%1.3f) - aborting.\n", i, surface_transform.depth[i]);
-                                            fclose(fp);
-                                            surface_transform.depth_enabled = false;
-                                            return false;
-                                        }
-
-                                    }
-                                } // while
-
-                                // Goodbye, cool file full of useful numbers
-                                fclose(fp);
-
-                                // Sanity check
-                                if(i != DM_GRID_ELEMENTS) {
-                                    _printf("ERROR: Expected %d elements, but got %d - aborting.\n", DM_GRID_ELEMENTS, i);
-                                } else {
-                                    surface_transform.depth_enabled = gcode->get_value('E');
-                                    if(surface_transform.depth_enabled == true) {
-                                        surface_transform.depth_enabled = true;
-                                        set_adjust_function(true);
-                                    } else {
-                                        surface_transform.depth_enabled = false;
-                                    }
-                                }
-
-                            } else {
-
-                                _printf("Depth correction not initialized.\n");
-
-                            } // if(fp != NULL)
-
-                        } // if(surface_transform.have_depth_map)
-
-                    } else {
-
-                        // FIXME:
-                        // For now, silently fail to enable.
-                        // This is because whatever we spew here risks hanging the firmware on startup,
-                        // because it will fill a serial buffer that never gets flushed.
-                        // The same warning is printed above if you do G31 A with probe offsets enabled,
-                        // so users are somewhat likely to see it.
-                        
-                        //_printf("Depth correction doesn't work with X or Y probe offsets.\n");
-
-                    } // if(probe offsets are 0)
-                  
-                } // if(gcode->has_letter('E')
-                
-                // Global enable/disable
-                if(gcode->has_letter('Z')) {
-                    bool enable = gcode->get_value('Z');
-                    if(enable) {
-                        if(surface_transform.depth_enabled || surface_transform.plane_enabled) {
-                            set_adjust_function(true);
-                        } else {
-                            _printf("Can't enable surface transform - no data.\n");
-                        }
-                    } else {
-                        set_adjust_function(false);
-                    }
-                }
-
-//                _printf("Surface transform: Depth map=%s; Surface plane=%s; Active=%s\n", surface_transform.depth_enabled ? _STR_ENABLED_ : _STR_DISABLED_, surface_transform.plane_enabled ? _STR_ENABLED_ : _STR_DISABLED_, surface_transform.active ? _STR_ENABLED_ : _STR_DISABLED_);
-                pop_prefix();
-
+                handle_shimming_and_depth_correction(gcode);
                 break;
 
             // Save depth map (CSV)
             case 500:
             case 503:
-
-//                THEKERNEL->conveyor->wait_for_empty_queue();
-            
-                // We use gcode->stream->printf instead of _printf because the dispatcher temporarily
-                // replaces the serial stream printer with a file stream printer when M500/503 is sent.
-
-                // A=X, B=Y, C=Z, D=enabled (1 or 0)
-                flush();
-                _printf("CDS: ready to printf\n");
-                flush();
-                
-                gcode->stream->printf(";bueller?\n");
-                _printf("CDS: done printf\n");
-                flush();
-//                gcode->stream->printf(";ABC=Shimming data; D=Shimming; E=Depth map; Z=Master enable\nM667 A%1.4f B%1.4f C%1.4f D%d E%d Z%d\n", surface_transform.tri_points[X][Z], surface_transform.tri_points[Y][Z], surface_transform.tri_points[Z][Z], surface_transform.plane_enabled, surface_transform.depth_enabled, surface_transform.active);
-
+                // We use gcode->stream->printf instead of _printf because the dispatcher temporarily replaces the serial
+                // stream printer with a file stream printer when M500/503 is sent.
+                // A=X, B=Y, C=Z, D=Shimming enabled (1 or 0), E=Depth map correction enabled (1 or 0), Z=Master enable (1 or 0)
+                // Master enable has to be on for either shimming or depth map correction to actually work.
+                // Their individual flags only control whether they're available or not.
+                gcode->stream->printf(
+                    ";ABC=Shimming data; D=Shimming; E=Depth map; Z=Master enable\nM667 A%1.4f B%1.4f C%1.4f D%d E%d Z%d\n",
+                    surface_transform.tri_points[X][Z], surface_transform.tri_points[Y][Z], surface_transform.tri_points[Z][Z],
+                    (int)surface_transform.plane_enabled, (int)surface_transform.depth_enabled, (int)surface_transform.active);
                 break;
 
         } // switch(gcode->m)
@@ -652,6 +299,369 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
 }
 
 
+// Handlers for G-code commands too elaborate (read: stack-heavy) to cleanly fit in handleGcode()
+// This fixes a crash when doing M500 :)
+
+// G31
+bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) {
+
+    THEKERNEL->conveyor->wait_for_empty_queue();
+
+    int x, y;//, dm_pos;
+
+    if(gcode->has_letter('A')) {
+
+        // It took me a really, really long (and frustrating) time to figure this out
+        if(probe_offset_x != 0 || probe_offset_y != 0) {
+            _printf("Depth correction doesn't work with X or Y probe offsets.\n");
+            return false;
+        }
+    
+        push_prefix("DC");
+        newline();
+        _printf("Probing bed for depth correction...\n");
+
+        // Disable depth correction (obviously)
+        surface_transform.depth_enabled = false;
+
+        // Build depth map
+        zero_depth_maps();
+        float cartesian[DM_GRID_ELEMENTS][3];
+        if(!depth_map_print_surface(cartesian, RESULTS_FORMATTED, true)) {
+            _printf("Couldn't build depth map - aborting!\n");
+            pop_prefix();
+            return false;
+        }
+
+        // Copy depth map to surface_transform, which contains depths only
+        for(int i=0; i<DM_GRID_ELEMENTS; i++) {
+            surface_transform.depth[i] = cartesian[i][Z];
+        }
+
+        // Propagate values outward from circle to edge, in case they go outside probe_radius
+        if(surface_shape == PSS_CIRCLE) {
+            for(y=0; y<DM_GRID_DIMENSION; y++) {
+                for(x=0; x <= (DM_GRID_DIMENSION-1) / 2; x++) {
+
+                    int dm_pos_right = (y * DM_GRID_DIMENSION) + ((DM_GRID_DIMENSION - 1) / 2) + x;
+                    int dm_pos_left  = (y * DM_GRID_DIMENSION) + ((DM_GRID_DIMENSION - 1) / 2) - x;
+
+                    // Propagate right
+                    if(active_point[dm_pos_right] == TP_INACTIVE) {
+                        surface_transform.depth[dm_pos_right] = surface_transform.depth[dm_pos_right - 1];
+                    }
+
+                    // Propagate left
+                    if(active_point[dm_pos_left] == TP_INACTIVE) {
+                        surface_transform.depth[dm_pos_left] = surface_transform.depth[dm_pos_left + 1];
+                    }
+
+                }
+            }
+        }
+
+        // Enable depth correction
+        surface_transform.depth_enabled = true;
+        set_adjust_function(true);
+
+        // Save to a file.
+        // I tried saving this with G-codes, but I guess you can't stuff that much data.
+        // The config-overrides file was corrupted when I tried! I found mention of a
+        // file corruption bug elsewhere in the firmware, so I guess it's a known issue.
+        // I could have just written everything as binary data, but I wanted people to
+        // be able to populate the file with numbers from a regular $10 depth gauge in
+        // case they don't have a Z-probe.
+        FILE *fp = fopen("/sd/dm_surface_transform", "w");
+        if(fp != NULL) {
+            fprintf(fp, "; Depth Map Surface Transform\n");
+            for(y=0; y<DM_GRID_DIMENSION; y++) {
+                fprintf(fp, "; Line %d of %d\n", y + 1, DM_GRID_DIMENSION);
+                for(x=0; x<DM_GRID_DIMENSION; x++) {
+                    fprintf(fp, "%1.5f\n", surface_transform.depth[(y * DM_GRID_DIMENSION) + x]);
+                }
+            }
+
+            // This is probably important to do
+            fclose(fp);
+
+            _printf("Surface transform saved to SD card. Type M500 to auto-enable.\n");
+        
+        } else {
+
+            _printf("Couldn't save surface transform to SD card!\n");
+
+        }
+        
+        zprobe->home();
+        pop_prefix();
+
+    } else if(gcode->has_letter('Z')) {
+
+        // We are only here to map the surface - no calibration
+        newline();
+        push_prefix("DM");
+        _printf("Current kinematics:\n");
+        print_kinematics();
+        newline();
+        float dummy[DM_GRID_ELEMENTS][3];
+        if(!depth_map_print_surface(dummy, RESULTS_FORMATTED, false)) {
+            _printf("Couldn't depth-map the surface.\n");
+        }
+        pop_prefix();
+        zprobe->home();
+
+    } else {
+
+        // Do a heuristic calibration (or simulation)
+        clear_calibration_types();
+        int annealing_tries = 50;
+        float max_temp = 0.35;
+        float binsearch_width = 0.1;
+        float overrun_divisor = 2;
+        bool simulate_only = false;
+        bool keep_settings = false;
+        bool zero_all_offsets = false;
+
+        // Keep settings?
+        if(gcode->has_letter('K')) {
+            keep_settings = true;
+        }
+
+        // Simulate-only
+        if(gcode->has_letter('L')) {
+            simulate_only = true;
+        }
+
+        // Endstops
+        if(gcode->has_letter('O')) {
+            caltype.endstop.active = true;
+            caltype.endstop.annealing_temp_mul = gcode->get_value('O');
+        }
+        
+        // Delta radius, including individual tower offsets
+        if(gcode->has_letter('P')) {
+            caltype.delta_radius.active = true;
+            caltype.delta_radius.annealing_temp_mul = gcode->get_value('P');
+        }
+
+        // Arm length, including individual arm length offsets
+        if(gcode->has_letter('Q')) {
+            caltype.arm_length.active = true;
+            caltype.arm_length.annealing_temp_mul = gcode->get_value('Q');
+        }
+
+        // Tower angle offsets
+        if(gcode->has_letter('R')) {
+            caltype.tower_angle.active = true;
+            caltype.tower_angle.annealing_temp_mul = gcode->get_value('R');
+        }
+        
+        // Surface plane virtual shimming
+        if(gcode->has_letter('S')) {
+            caltype.virtual_shimming.active = true;
+            caltype.virtual_shimming.annealing_temp_mul = gcode->get_value('S');
+        }
+
+        // Annealing tries
+        // Generally, more iterations require lower temps
+        if(gcode->has_letter('T')) {
+            annealing_tries = gcode->get_value('T');
+        }
+        
+        // Max temperature (tradeoff between "too cold to get there" and "so hot that it boils" - you want "just right")
+        if(gcode->has_letter('U')) {
+            max_temp = gcode->get_value('U');
+        }
+        
+        // Binary search width (tradeoff between speed and accuracy - I recommend 0.1)
+        if(gcode->has_letter('V')) {
+            binsearch_width = gcode->get_value('V');
+        }
+
+        // Overrun divisor (what a random move is divided by if it overshoots the ideal value)
+        // No, it isn't a good idea to use <=1.
+        if(gcode->has_letter('W')) {
+            overrun_divisor = gcode->get_value('W');
+        }
+
+        // Zero all offset values
+        if(gcode->has_letter('Y')) {
+            zero_all_offsets = true;
+        }
+
+        push_prefix("HC");
+        if(gcode->get_num_args() > 0) {
+
+            // Make sure at least one caltype is turned on
+            if(
+                !caltype.endstop.active &&
+                !caltype.delta_radius.active &&
+                !caltype.arm_length.active &&
+                !caltype.tower_angle.active &&
+                !caltype.virtual_shimming.active
+            ){
+                _printf("No calibration types selected - activating endstops & delta radius.\n");
+                caltype.endstop.active = true;
+                caltype.delta_radius.active = true;
+            }
+
+            heuristic_calibration(annealing_tries, max_temp, binsearch_width, simulate_only, keep_settings, zero_all_offsets, overrun_divisor);
+        
+        } else {
+        
+            flush();
+            _printf("G31 usage: (* = you can supply an annealing multiplier)\n");
+            _printf("Z: Probe and display depth map - no calibration\n");
+            _printf("A: Set up depth map for auto leveling (corrects Z only - run AFTER annealing)\n");
+            _printf("\n");
+            _printf("Simulated annealing (corrects X, Y and Z - run G32 first):\n");
+            _printf("K: Keep last settings\n");
+            _printf("L: Simulate only (don't probe)\n");
+            _printf("O: Endstops *\n");
+            _printf("P: Delta radius *\n");
+            _printf("Q: Arm length *\n");
+            _printf("R: Tower angle offsets *\n");
+            _printf("S: Surface plane virtual shimming *\n");
+            _printf("t: Annealing: Iterations (50)\n");		// Repetier Host eats lines starting with T >:(
+            _printf("U: Annealing: Max t_emp (0.35)\n");	// Repetier Host eats all lines containing "temp" >8(
+            _printf("V: Annealing: Binary search width (0.1)\n");
+            _printf("W: Annealing: Overrun divisor (2)\n");
+            _printf("Y: Zero all individual radius, angle, and arm length offsets\n");
+            flush();
+        } //if(gcode->get_num_args() > 0)
+        pop_prefix();
+    
+    } // !gcode->has_letter('M')
+
+    return true;
+
+}
+
+// M667
+bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gcode) {
+
+    push_prefix("DM");
+
+    // Triangle points for shimming surface normal
+    if(gcode->has_letter('A')) surface_transform.tri_points[X][Z] = gcode->get_value('A');
+    if(gcode->has_letter('B')) surface_transform.tri_points[Y][Z] = gcode->get_value('B');
+    if(gcode->has_letter('C')) surface_transform.tri_points[Z][Z] = gcode->get_value('C');
+
+    // Shimming
+    if(gcode->has_letter('D')) surface_transform.plane_enabled = gcode->get_value('D');
+    if(surface_transform.plane_enabled) {
+        set_virtual_shimming(surface_transform.tri_points[X][Z], surface_transform.tri_points[Y][Z], surface_transform.tri_points[Z][Z]);
+        set_adjust_function(true);
+    }
+
+    // Depth map
+    if(gcode->has_letter('E')) {
+
+        if(probe_offset_x == 0 && probe_offset_y == 0) {
+
+            if(surface_transform.have_depth_map) {
+
+                // Depth map already loaded 
+                surface_transform.depth_enabled = gcode->get_value('E');
+
+            } else {
+
+                // ST not initialized - try to load it
+                FILE *fp = fopen("/sd/dm_surface_transform", "r");
+                if(fp != NULL) {
+
+                    char buf[48];
+                    int i = 0;
+                    
+                    while(fgets(buf, sizeof buf, fp) != NULL) {
+
+                        // Chop trailing newline
+                        char *pos;
+                        if((pos=strchr(buf, '\n')) != NULL) {
+                            *pos = '\0';
+                        }
+
+                        // Skip comment lines
+                        if(buf[0] == ';') continue;
+
+                        // Add float value to the transform                            
+                        if(i < DM_GRID_ELEMENTS) {
+
+                            float fval = atof(buf);
+
+                            if(fval > -5 && fval < 5) {
+                                surface_transform.depth[i] = strtof(buf, NULL);
+                                //_printf("buffer='%s' - Surface transform element %2d set to %1.3f.\n", buf, i, surface_transform.depth[i]);
+                                i++;
+                            } else {
+                                _printf("Surface transform element %2d is out of range (%1.3f) - aborting.\n", i, surface_transform.depth[i]);
+                                fclose(fp);
+                                surface_transform.depth_enabled = false;
+                                return false;
+                            }
+
+                        }
+                    } // while
+
+                    // Goodbye, cool file full of useful numbers
+                    fclose(fp);
+
+                    // Sanity check
+                    if(i != DM_GRID_ELEMENTS) {
+                        _printf("ERROR: Expected %d elements, but got %d - aborting.\n", DM_GRID_ELEMENTS, i);
+                    } else {
+                        surface_transform.depth_enabled = gcode->get_value('E');
+                        if(surface_transform.depth_enabled == true) {
+                            surface_transform.depth_enabled = true;
+                            set_adjust_function(true);
+                        } else {
+                            surface_transform.depth_enabled = false;
+                        }
+                    }
+
+                } else {
+
+                    _printf("Depth correction not initialized.\n");
+
+                } // if(fp != NULL)
+
+            } // if(surface_transform.have_depth_map)
+
+        } else {
+
+            // FIXME:
+            // For now, silently fail to enable.
+            // This is because whatever we spew here risks hanging the firmware on startup,
+            // because it will fill a serial buffer that never gets flushed.
+            // The same warning is printed above if you do G31 A with probe offsets enabled,
+            // so users are somewhat likely to see it.
+            
+            //_printf("Depth correction doesn't work with X or Y probe offsets.\n");
+
+        } // if(probe offsets are 0)
+      
+    } // if(gcode->has_letter('E')
+
+    // Global enable/disable
+    if(gcode->has_letter('Z')) {
+        bool enable = gcode->get_value('Z');
+        if(enable) {
+            if(surface_transform.depth_enabled || surface_transform.plane_enabled) {
+                set_adjust_function(true);
+            } else {
+                _printf("Can't enable surface transform - no data.\n");
+            }
+        } else {
+            set_adjust_function(false);
+        }
+    }
+
+    //_printf("Surface transform: Depth map=%s; Surface plane=%s; Active=%s\n", surface_transform.depth_enabled ? _STR_ENABLED_ : _STR_DISABLED_, surface_transform.plane_enabled ? _STR_ENABLED_ : _STR_DISABLED_, surface_transform.active ? _STR_ENABLED_ : _STR_DISABLED_);
+    pop_prefix();
+
+    return true;
+
+}
 
 
 // Main heuristic calibration routine
@@ -1913,6 +1923,7 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
         __printf("HORRIBLE.");
     }
     newline();
+    newline();
 
     pop_prefix();
     return true;
@@ -2581,8 +2592,6 @@ bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y, bool 
         }
 
         // Return probe to original Z
-        zprobe->return_probe(result);
-        
         if(zprobe->getDecelerateOnTrigger()) {
             zprobe->return_probe(zprobe->getStepsAtDecelEnd());
         } else {

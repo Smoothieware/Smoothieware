@@ -226,6 +226,10 @@ public:
 
 private:
 
+    // =====================
+    //       VARIABLES
+    // =====================
+
     // This holds all calibration types
     struct {
         CalibrationType endstop;
@@ -347,6 +351,15 @@ private:
 
     // Contains array indices for points closest to towers, and to center
     int tower_point_idx[4];
+
+
+    // =====================
+    //        METHODS
+    // =====================
+
+    // Handlers for G-code commands too elaborate (read: stack-heavy) to cleanly fit in handleGcode()
+    bool handle_depth_mapping_calibration(Gcode *gcode);        // G31
+    bool handle_shimming_and_depth_correction(Gcode *gcode);    // M667
 
     // Inverse and forward kinematics simulation
     void simulate_IK(float cartesian[DM_GRID_ELEMENTS][3], float trim[3]);
