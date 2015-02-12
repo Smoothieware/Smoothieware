@@ -43,7 +43,7 @@ LinearDeltaSolution::LinearDeltaSolution(Config* config)
 void LinearDeltaSolution::init() {
     arm_length_squared = SQ(arm_length);
 
-     // Effective X/Y positions of the three vertical towers.
+    // Effective X/Y positions of the three vertical towers.
     float delta_radius = arm_radius;
 
     delta_tower1_x = (delta_radius + tower1_offset) * cosf((210.0F + tower1_angle) * PIOVER180); // front left tower
