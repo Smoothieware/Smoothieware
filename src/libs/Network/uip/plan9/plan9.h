@@ -20,8 +20,13 @@
  */
 
 #include <map>
+#include <queue>
 #include <string>
 #include <stdint.h>
+
+extern "C" {
+#include "psock.h"
+}
 
 class Plan9
 {
@@ -32,27 +37,37 @@ public:
     static void init();
     static void appcall();
 
-    struct Entry {
+    struct EntryData {
         uint8_t     type;
-        uint32_t    vers;
         int         refcount;
-        std::string path;
 
-        Entry() {}
-        Entry(uint8_t t, const std::string& p)
-            : type(t), vers(0), refcount(0), path(p) {}
+        EntryData() {}
+        EntryData(uint8_t t)
+            : type(t), refcount(0) {}
     };
 
-private:
-    void handler();
+    typedef std::map<std::string, EntryData> EntryMap;
+    typedef EntryMap::value_type*            Entry;
+    typedef std::map<uint32_t, Entry>        FidMap;
+    union Message;
 
-    Entry* get_entry(uint8_t, const std::string&);
-    Entry* get_entry(uint32_t) const;
-    void add_fid(uint32_t, Entry*);
+private:
+    int receive();
+    int send();
+    void process(Message*, Message*);
+
+    Entry get_entry(uint8_t, const std::string&);
+    Entry get_entry(uint32_t) const;
+    void add_fid(uint32_t, Entry);
     void remove_fid(uint32_t);
 
-    std::map<uint32_t,    Entry*> fids;
-    std::map<std::string, Entry>  entries;
+    static const uint32_t INITIAL_MSIZE = 300;
+    EntryMap             entries;
+    FidMap               fids;
+    psock                sin, sout;
+    char                 bufin[INITIAL_MSIZE], bufout[INITIAL_MSIZE];
+    std::queue<Message*> requests;
+    uint32_t             msize;
 };
 
 #endif
