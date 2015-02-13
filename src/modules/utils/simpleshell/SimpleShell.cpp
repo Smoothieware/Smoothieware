@@ -188,10 +188,10 @@ void SimpleShell::on_gcode_received(void *argument)
     }
 }
 
-bool SimpleShell::parse_command(const char *cmd, string args, StreamOutput *stream)
+bool SimpleShell::parse_command(const string& cmd, string args, StreamOutput *stream)
 {
     for (const ptentry_t *p = commands_table; p->command != NULL; ++p) {
-        if (strncasecmp(cmd, p->command, strlen(p->command)) == 0) {
+        if (cmd == p->command) {
             p->func(args, stream);
             return true;
         }

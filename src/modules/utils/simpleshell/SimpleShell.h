@@ -55,7 +55,7 @@ private:
 
     static void remount_command( string parameters, StreamOutput *stream);
 
-    bool parse_command(const char *cmd, string args, StreamOutput *stream);
+    bool parse_command(const string& cmd, string args, StreamOutput *stream);
 
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {
