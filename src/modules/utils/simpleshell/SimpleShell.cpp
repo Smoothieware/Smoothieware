@@ -63,7 +63,8 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"version",  SimpleShell::version_command},
     {"mem",      SimpleShell::mem_command},
     {"get",      SimpleShell::get_command},
-    {"set_temp", SimpleShell::set_temp_command},
+    {"set",      SimpleShell::set_command},
+    {"set_temp", SimpleShell::set_temp_command}, // legacy command, use "set temp" instead
     {"switch",   SimpleShell::switch_command},
     {"net",      SimpleShell::net_command},
     {"load",     SimpleShell::load_command},
@@ -582,18 +583,28 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 }
 
 // used to test out the get public data events
+void SimpleShell::set_command( string parameters, StreamOutput *stream)
+{
+    string what = shift_parameter( parameters );
+
+    if (what == "temp") {
+        string type = shift_parameter( parameters );
+        string temp = shift_parameter( parameters );
+        float t = temp.empty() ? 0.0 : strtof(temp.c_str(), NULL);
+        bool ok = PublicData::set_value( temperature_control_checksum, get_checksum(type), &t );
+
+        if (ok) {
+            stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
+        } else {
+            stream->printf("%s is not a known temperature device\r\n", type.c_str());
+        }
+    }
+}
+
+// legacy command: use "set temp" instead
 void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 {
-    string type = shift_parameter( parameters );
-    string temp = shift_parameter( parameters );
-    float t = temp.empty() ? 0.0 : strtof(temp.c_str(), NULL);
-    bool ok = PublicData::set_value( temperature_control_checksum, get_checksum(type), &t );
-
-    if (ok) {
-        stream->printf("%s temp set to: %3.1f\r\n", type.c_str(), t);
-    } else {
-        stream->printf("%s is not a known temperature device\r\n", type.c_str());
-    }
+    set_command("temp " + parameters, stream);
 }
 
 void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stream)
@@ -672,7 +683,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
     stream->printf("get temp [bed|hotend]\r\n");
-    stream->printf("set_temp bed|hotend 185\r\n");
+    stream->printf("set temp bed|hotend 185\r\n");
     stream->printf("get pos\r\n");
     stream->printf("net\r\n");
     stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
