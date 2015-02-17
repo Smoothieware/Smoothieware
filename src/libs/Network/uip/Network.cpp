@@ -23,7 +23,7 @@
 #include "webserver.h"
 #include "dhcpc.h"
 #include "sftpd.h"
-
+#include "plan9.h"
 
 #include <mri.h>
 
@@ -32,6 +32,7 @@
 #define network_enable_checksum CHECKSUM("enable")
 #define network_webserver_checksum CHECKSUM("webserver")
 #define network_telnet_checksum CHECKSUM("telnet")
+#define network_plan9_checksum CHECKSUM("plan9")
 #define network_mac_override_checksum CHECKSUM("mac_override")
 #define network_ip_address_checksum CHECKSUM("ip_address")
 #define network_hostname_checksum CHECKSUM("hostname")
@@ -43,7 +44,7 @@ extern "C" void uip_log(char *m)
     printf("uIP log message: %s\n", m);
 }
 
-static bool webserver_enabled, telnet_enabled, use_dhcp;
+static bool webserver_enabled, telnet_enabled, plan9_enabled, use_dhcp;
 static Network *theNetwork;
 static Sftpd *sftpd;
 static CommandQueue *command_q= CommandQueue::getInstance();
@@ -129,6 +130,7 @@ void Network::on_module_loaded()
 
     webserver_enabled = THEKERNEL->config->value( network_checksum, network_webserver_checksum, network_enable_checksum )->by_default(false)->as_bool();
     telnet_enabled = THEKERNEL->config->value( network_checksum, network_telnet_checksum, network_enable_checksum )->by_default(false)->as_bool();
+    plan9_enabled = THEKERNEL->config->value( network_checksum, network_plan9_checksum, network_enable_checksum )->by_default(false)->as_bool();
 
     string mac = THEKERNEL->config->value( network_checksum, network_mac_override_checksum )->by_default("")->as_string();
     if (mac.size() == 17 ) { // parse mac address
@@ -304,6 +306,12 @@ static void setup_servers()
         printf("Telnetd initialized\n");
     }
 
+    if (plan9_enabled) {
+        // Initialize the plan9 server
+        Plan9::init();
+        printf("Plan9 initialized\n");
+    }
+
     // sftpd service, which is lazily created on reciept of first packet
     uip_listen(HTONS(115));
 }
@@ -393,6 +401,10 @@ extern "C" void app_select_appcall(void)
 
         case HTONS(23):
             if (telnet_enabled) Telnetd::appcall();
+            break;
+
+        case HTONS(564):
+            if (plan9_enabled) Plan9::appcall();
             break;
 
         case HTONS(115):
