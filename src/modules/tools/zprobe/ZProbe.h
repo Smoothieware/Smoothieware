@@ -10,8 +10,13 @@
 
 #include "Module.h"
 #include "Pin.h"
+#include "wait_api.h"
 
 #include <vector>
+
+namespace mbed {
+    class PwmOut;
+}
 
 // defined here as they are used in multiple files
 #define zprobe_checksum            CHECKSUM("zprobe")
@@ -39,21 +44,25 @@ public:
 
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();
+    void deploy_servo();
+    void retract_servo();
 
     bool getProbeStatus() { return this->pin.get(); }
     float getSlowFeedrate() { return slow_feedrate; }
     float getFastFeedrate() { return fast_feedrate; }
     float getProbeHeight() { return probe_height; }
     float zsteps_to_mm(float steps);
-
 private:
     void accelerate(int c);
+    mbed::PwmOut *servo_pin;    // PWM output to regulate the laser power
 
     volatile float current_feedrate;
     float slow_feedrate;
     float fast_feedrate;
     float probe_height;
     float max_z;
+    int servo_percent;
+    bool servo_disable;
     volatile struct {
         volatile bool running:1;
         bool is_delta:1;
