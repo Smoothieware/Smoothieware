@@ -132,8 +132,11 @@ bool ZGridStrategy::handleConfig()
         this->pData[i] = 0.0F;        // Clear the grid
     }
 
+    for (int d = 0; d<100; d++){  // Wait a bit - device may hang if reads file to shortly after the config-override
+        THEKERNEL->call_event(ON_IDLE);
+    }
     if(this->loadGrid()){
-        this->setAdjustFunction(true); // Enable leveling code
+       this->setAdjustFunction(true); // Enable leveling code
     }
 
     return true;
