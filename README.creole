@@ -1,3 +1,17 @@
+==626Pilot's Delta Calibration==
+This firmware includes an advanced auto-calibration system for Delta printers. See comments at the top of src/modules/tools/zprobe/ComprehensiveDeltaStrategy.cpp for more info.
+
+You will need to add some settings to your config file - see the Azteeg X5 and Smoothieboard ".delta" directories under ConfigSamples. I put all the settings you need near the top.
+
+The recommended way to use this on a Delta printer is:
+* G29 (calibrate your probe)
+* G32 (iterative calibration - gets endstops/delta radius correct)
+* G31 O P Q R S (simulated annealing - corrects for errors in X, Y, and Z - it may help to run this multiple times)
+* G31 A (depth mapping - corrects errors in Z, but not X or Y - benefits from simulated annealing, though)
+
+This is beta-quality code. I don't think it will crash your probe, but keep your hand near the power switch anyway, and DON'T walk away while it's probing!
+
+
 ==Overview
 Smoothie is a free, opensource, high performance G-code interpreter and CNC controller written in Object-Oriented C++ for the LPC17xx micro-controller ( ARM Cortex M3 architecture ). It will run on a mBed, a LPCXpresso, a SmoothieBoard, R2C2 or any other LPC17xx-based board. The motion control part is a port of the awesome grbl.
 
