@@ -20,6 +20,10 @@
         *                  ~ The prefix stack is managed, so you can never push or pop beyond the defined prefix stack size
         *                  ~ Saves over 10KB over manually putting "[XX] " at the beginning of every printed string
 
+    The code was originally written for delta printers, but the probe calibration, surface normal, and grid-based Z correction are
+    useful on other types as well. Some further improvements are needed, but I think I will eventually take "Delta" out of the
+    name.
+
     G-codes:	G29	Probe Calibration
                 G31	Heuristic Calibration (parallel simulated annealing)
                 G32	Iterative Calibration (only calibrates endstops & delta radius)
@@ -39,12 +43,19 @@
 
     To Do
     -------------------------
-    * Use AHB0 to store the leveling grid, like ZGridStrategy.cpp
+    * Move all the long-ass sections of code in the G-code processor into their own methods. We're allocating a lot of stuff on the
+      stack each call, when we don't need to, and this increases the chances of an out-of-memory crash whenever G29-G33 are sent.
+      * Already done, but I think more memory can be recovered by breaking it out a little further.
+    * Use AHB0 to store the leveling grid, like ZGridStrategy.cpp.
+    * Increase probing grid size to 7x7, rather than 5x5.
+    * Elaborate probing grid to be able to support non-square grids (for the sake of people with rectangular build areas).
+    * Add "leaning tower" support
+      * Add {X, Y} coords for top and bottom of tower & use in FK and IK in robot/arm_solutions/LinearDeltaSolution.cpp/.h
+      * Add letter codes to LinearDeltaSolution.cpp for saving/loading the values from config-override
+      * Add simulated annealing section for tower lean
     * Make G31 B the specific command for heuristic calibration, and have it select O P Q R S (all annealing types) by default.
     * Move some class variables into heuristic_calibration(). They take up a lot of space when not in use, and they are never in use
       when we're not calibrating, so...
-    * Move all the long-ass sections of code in the G-code processor into their own methods. We're allocating a lot of stuff on the
-      stack each call, when we don't need to, and this increases the chances of an out-of-memory crash whenever G29-G33 are sent.
     * Audit other "heavy" class variables to see whether they might be moved into methods.
     * We are using both three-dimensional (Cartesian) and one-dimensional (depths type, .abs and .rel) arrays. Cartesians are
       necessary for IK/FK, but maybe we can make a type with X, Y, absolute Z, and relative Z, and be done with the multiple types.
