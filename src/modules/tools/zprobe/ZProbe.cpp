@@ -27,6 +27,7 @@
 #include "LevelingStrategy.h"
 #include "StepTicker.h"
 #include "PwmOut.h" // mbed.h lib
+#include "us_ticker_api.h"
 
 // strategies we know about
 #include "DeltaCalibrationStrategy.h"
@@ -420,20 +421,27 @@ void ZProbe::deploy_servo()
 	this->servo_pin->pulsewidth_us(1000 + this->servo_percent * 10);
 
 	if(this->servo_disable) {				//Disable servo to eliminate jitter
-		wait_ms(250);
+		uint32_t start = us_ticker_read();
+		while ((us_ticker_read() - start) < 25000) {
+		   THEKERNEL->call_event(ON_IDLE);
+		}
 		this->servo_pin->pulsewidth_us(0);
 	}
 }
 
 void ZProbe::retract_servo()
 {
+
 	if(this->servo_pin == NULL) return;
 
 	this->servo_pin->period_ms(20);
 	this->servo_pin->pulsewidth_us(1000);
 
 	if(this->servo_disable) {				//Disable servo to eliminate jitter
-		wait_ms(250);
+		uint32_t start = us_ticker_read();
+		while ((us_ticker_read() - start) < 25000) {
+		   THEKERNEL->call_event(ON_IDLE);
+		}
 		this->servo_pin->pulsewidth_us(0);
 	}
 }

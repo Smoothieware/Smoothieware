@@ -8,11 +8,9 @@
 #ifndef ZPROBE_H_
 #define ZPROBE_H_
 
+#include <vector>
 #include "Module.h"
 #include "Pin.h"
-#include "wait_api.h"
-
-#include <vector>
 
 namespace mbed {
     class PwmOut;
