@@ -1,13 +1,11 @@
-#ifndef utils_h
-#define utils_h
+#ifndef UTILS_H
+#define UTILS_H
 
 #include <stdint.h>
-using namespace std;
 #include <string>
 #include <vector>
 using std::string;
-
-extern volatile bool _isr_context;
+using std::vector;
 
 string lc(const string& str);
 
@@ -16,6 +14,9 @@ bool is_digit( int );
 bool is_numeric( int );
 bool is_alphanum( int );
 bool is_whitespace( int );
+
+vector<string> split(const char *str, char c = ',');
+vector<float> parse_number_list(const char *str);
 
 string remove_non_number( string str );
 

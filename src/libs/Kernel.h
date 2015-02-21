@@ -30,6 +30,7 @@ class Planner;
 class StepTicker;
 class Adc;
 class PublicData;
+class TemperatureControlPool;
 
 class Kernel {
     public:
@@ -52,6 +53,7 @@ class Kernel {
         Config*           config;
         Conveyor*         conveyor;
         Pauser*           pauser;
+        TemperatureControlPool* temperature_control_pool;
 
         int debug;
         SlowTicker*       slow_ticker;
@@ -59,7 +61,8 @@ class Kernel {
         Adc*              adc;
         bool              use_leds;
         std::string       current_path;
-        int               base_stepping_frequency;
+        uint32_t          base_stepping_frequency;
+        uint32_t          acceleration_ticks_per_second;
 
     private:
         // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

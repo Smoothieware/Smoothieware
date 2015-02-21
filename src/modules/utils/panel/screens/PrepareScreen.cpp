@@ -18,17 +18,16 @@
 #include "PublicData.h"
 #include "TemperatureControlPublicAccess.h"
 #include "ModifyValuesScreen.h"
+#include "TemperatureControlPool.h"
+
 #include <string>
 using namespace std;
 
 PrepareScreen::PrepareScreen()
 {
-    this->command = nullptr;
-
     // Children screens
-    if(THEPANEL->temperature_screen != nullptr) {
+    if(THEKERNEL->temperature_control_pool->get_controllers().size() > 0) {
         this->extruder_screen = (new ExtruderScreen())->set_parent(this);
-        THEPANEL->temperature_screen->set_parent(this);
     }else{
         this->extruder_screen= nullptr;
     }
@@ -38,7 +37,7 @@ void PrepareScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
     // if no heaters or extruder then don't show related menu items
-    THEPANEL->setup_menu((THEPANEL->temperature_screen != nullptr) ? 9 : 5);
+    THEPANEL->setup_menu((this->extruder_screen != nullptr) ? 9 : 5);
     this->refresh_menu();
 }
 
@@ -72,14 +71,14 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); break;
-        case 1: command = "G28"; break;
-        case 2: command = "G92 X0 Y0 Z0"; break;
-        case 3: command = "G92 Z0"; break;
-        case 4: command = "M84"; break;
+        case 1: send_command("G28"); break;
+        case 2: send_command("G92 X0 Y0 Z0"); break;
+        case 3: send_command("G92 Z0"); break;
+        case 4: send_command("M84"); break;
         case 5: this->preheat(); break;
         case 6: this->cooldown(); break;
         case 7: THEPANEL->enter_screen(this->extruder_screen); break;
-        case 8: THEPANEL->enter_screen(THEPANEL->temperature_screen); break;
+        case 8: setup_temperature_screen(); break;
     }
 }
 
@@ -98,11 +97,54 @@ void PrepareScreen::cooldown()
     PublicData::set_value( temperature_control_checksum, bed_checksum, &t );
 }
 
-// queuing commands needs to be done from main loop
-void PrepareScreen::on_main_loop()
+static float getTargetTemperature(uint16_t heater_cs)
 {
-    // change actual axis value
-    if (this->command == nullptr) return;
-    send_command(this->command);
-    this->command = nullptr;
+    void *returned_data;
+    bool ok = PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
+
+    if (ok) {
+        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
+        return temp.target_temperature;
+    }
+
+    return 0.0F;
+}
+
+void PrepareScreen::setup_temperature_screen()
+{
+    // setup temperature screen
+    auto mvs= new ModifyValuesScreen(true); // delete itself on exit
+    mvs->set_parent(this);
+
+    int cnt= 0;
+    // returns enabled temperature controllers
+    for(auto i : THEKERNEL->temperature_control_pool->get_controllers()) {
+        void *returned_data;
+        bool ok = PublicData::get_value( temperature_control_checksum, i, current_temperature_checksum, &returned_data );
+        if (!ok) continue;
+
+        struct pad_temperature t =  *static_cast<struct pad_temperature *>(returned_data);
+
+        // rename if two of the known types
+        const char *name;
+        if(t.designator == "T") name= "Hotend";
+        else if(t.designator == "B") name= "Bed";
+        else name= t.designator.c_str();
+
+        mvs->addMenuItem(name, // menu name
+            [i]() -> float { return getTargetTemperature(i); }, // getter
+            [i](float t) { PublicData::set_value( temperature_control_checksum, i, &t ); }, // setter
+            1.0F, // increment
+            0.0F, // Min
+            500.0F // Max
+        );
+        cnt++;
+    }
+
+    if(cnt > 0) {
+        THEPANEL->enter_screen(mvs);
+    }else{
+        // no heaters and probably no extruders either
+        delete mvs;
+    }
 }

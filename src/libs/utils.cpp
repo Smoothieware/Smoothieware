@@ -14,9 +14,8 @@
 #include <string>
 #include <cstring>
 #include <stdio.h>
+#include <cstdlib>
 using std::string;
-
-volatile bool _isr_context = false;
 
 uint16_t get_checksum(const string &to_check)
 {
@@ -168,6 +167,7 @@ void system_reset( bool dfu )
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
+// TODO: Combine with plan9 absolute_path, current_path as argument?
 string absolute_from_relative( string path )
 {
     string cwd = THEKERNEL->current_path;
@@ -197,4 +197,33 @@ string absolute_from_relative( string path )
     }
 
     return cwd + '/' + path;
+}
+
+//split a string on a delimiter, return a vector of the split tokens
+vector<string> split(const char *str, char c)
+{
+    vector<string> result;
+
+    do {
+        const char *begin = str;
+
+        while(*str != c && *str)
+            str++;
+
+        result.push_back(string(begin, str));
+    } while (0 != *str++);
+
+    return result;
+}
+
+// parse a number list "1.1,2.2,3.3" and return the numbers in a vector of floats
+vector<float> parse_number_list(const char *str)
+{
+    vector<string> l= split(str, ',');
+    vector<float> r;
+    for(auto& s : l) {
+        float x = strtof(s.c_str(), nullptr);
+        r.push_back(x);
+    }
+    return r;
 }

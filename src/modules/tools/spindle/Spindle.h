@@ -49,6 +49,7 @@ class Spindle: public Module {
         float control_P_term;
         float control_I_term;
         float control_D_term;
+        float smoothing_decay;
         
         // These fields are updated by the interrupt
         uint32_t last_edge; // Timestamp of last edge

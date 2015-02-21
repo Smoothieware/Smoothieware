@@ -25,10 +25,12 @@
 #include "EndstopsPublicAccess.h"
 #include "PublicData.h"
 #include "LevelingStrategy.h"
+#include "StepTicker.h"
 
 // strategies we know about
 #include "DeltaCalibrationStrategy.h"
 #include "ThreePointStrategy.h"
+#include "ZGridStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
@@ -66,7 +68,7 @@ void ZProbe::on_module_loaded()
     // register event-handlers
     register_for_event(ON_GCODE_RECEIVED);
 
-    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &ZProbe::acceleration_tick );
+    THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){acceleration_tick(); });
 }
 
 void ZProbe::on_config_reload(void *argument)
@@ -92,6 +94,11 @@ void ZProbe::on_config_reload(void *argument)
                     this->strategies.push_back(new ThreePointStrategy(this));
                     found= true;
                     break;
+
+                case ZGrid_leveling_checksum:
+                     this->strategies.push_back(new ZGridStrategy(this));
+                     found= true;
+                     break;
 
                 // add other strategies here
                 //case zheight_map_strategy:
@@ -162,23 +169,25 @@ bool ZProbe::wait_for_probe(int& steps)
 // single probe and report amount moved
 bool ZProbe::run_probe(int& steps, bool fast)
 {
+    // not a block move so disable the last tick setting
+    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        STEPPER[c]->set_moved_last_block(false);
+    }
+
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
     this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
     float maxz= this->max_z*2;
 
     // move Z down
-    STEPPER[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
-    STEPPER[Z_AXIS]->move(true, maxz * Z_STEPS_PER_MM); // always probes down, no more than 2*maxz
+    STEPPER[Z_AXIS]->move(true, maxz * Z_STEPS_PER_MM, 0); // always probes down, no more than 2*maxz
     if(this->is_delta) {
         // for delta need to move all three actuators
-        STEPPER[X_AXIS]->set_speed(0);
-        STEPPER[X_AXIS]->move(true, maxz * STEPS_PER_MM(X_AXIS));
-        STEPPER[Y_AXIS]->set_speed(0);
-        STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS));
+        STEPPER[X_AXIS]->move(true, maxz * STEPS_PER_MM(X_AXIS), 0);
+        STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS), 0);
     }
 
-    // start acceration hrprocessing
+    // start acceleration processing
     this->running = true;
 
     bool r = wait_for_probe(steps);
@@ -195,13 +204,10 @@ bool ZProbe::return_probe(int steps)
     bool dir= steps < 0;
     steps= abs(steps);
 
-    STEPPER[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
-    STEPPER[Z_AXIS]->move(dir, steps);
+    STEPPER[Z_AXIS]->move(dir, steps, 0);
     if(this->is_delta) {
-        STEPPER[X_AXIS]->set_speed(0);
-        STEPPER[X_AXIS]->move(dir, steps);
-        STEPPER[Y_AXIS]->set_speed(0);
-        STEPPER[Y_AXIS]->move(dir, steps);
+        STEPPER[X_AXIS]->move(dir, steps, 0);
+        STEPPER[Y_AXIS]->move(dir, steps, 0);
     }
 
     this->running = true;
@@ -300,11 +306,10 @@ void ZProbe::on_gcode_received(void *argument)
     }
 }
 
-#define max(a,b) (((a) > (b)) ? (a) : (b))
 // Called periodically to change the speed to match acceleration
-uint32_t ZProbe::acceleration_tick(uint32_t dummy)
+void ZProbe::acceleration_tick(void)
 {
-    if(!this->running) return(0); // nothing to do
+    if(!this->running) return; // nothing to do
     if(STEPPER[Z_AXIS]->is_moving()) accelerate(Z_AXIS);
 
     if(is_delta) {
@@ -315,17 +320,17 @@ uint32_t ZProbe::acceleration_tick(uint32_t dummy)
         }
     }
 
-    return 0;
+    return;
 }
 
 void ZProbe::accelerate(int c)
 {   uint32_t current_rate = STEPPER[c]->get_steps_per_second();
-    uint32_t target_rate = int(floor(this->current_feedrate));
+    uint32_t target_rate = floorf(this->current_feedrate);
 
     // Z may have a different acceleration to X and Y
     float acc= (c==Z_AXIS) ? THEKERNEL->planner->get_z_acceleration() : THEKERNEL->planner->get_acceleration();
     if( current_rate < target_rate ) {
-        uint32_t rate_increase = int(floor((acc / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c)));
+        uint32_t rate_increase = floorf((acc / THEKERNEL->acceleration_ticks_per_second) * STEPS_PER_MM(c));
         current_rate = min( target_rate, current_rate + rate_increase );
     }
     if( current_rate > target_rate ) {
@@ -333,7 +338,7 @@ void ZProbe::accelerate(int c)
     }
 
     // steps per second
-    STEPPER[c]->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
+    STEPPER[c]->set_speed(current_rate);
 }
 
 // issue a coordinated move directly to robot, and return when done

@@ -21,7 +21,7 @@ class Endstops : public Module{
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
-        uint32_t acceleration_tick(uint32_t dummy);
+        void acceleration_tick(void);
 
     private:
         void home(char axes_to_move);

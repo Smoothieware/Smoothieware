@@ -86,6 +86,8 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
         if(this->z_junction_deviation >= 0.0F) junction_deviation= this->z_junction_deviation;
     }
 
+    block->acceleration= acceleration; // save in block
+
     // Max number of steps, for all axes
     block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
 
@@ -95,7 +97,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
     if( distance > 0.0F ){
         block->nominal_speed = rate_mm_s;           // (mm/s) Always > 0
-        block->nominal_rate = ceil(block->steps_event_count * rate_mm_s / distance); // (step/s) Always > 0
+        block->nominal_rate = ceilf(block->steps_event_count * rate_mm_s / distance); // (step/s) Always > 0
     }else{
         block->nominal_speed = 0.0F;
         block->nominal_rate  = 0;
@@ -108,7 +110,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
     // specifically for each line to compensate for this phenomenon:
     // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = (block->steps_event_count * acceleration) / (distance * THEKERNEL->stepper->get_acceleration_ticks_per_second()); // (step/min/acceleration_tick)
+    block->rate_delta = (block->steps_event_count * acceleration) / (distance * THEKERNEL->acceleration_ticks_per_second); // (step/min/acceleration_tick)
 
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction
@@ -119,6 +121,9 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     // path width or max_jerk in the previous grbl version. This approach does not actually deviate
     // from path, but used as a robust way to compute cornering speeds, as it takes into account the
     // nonlinearities of both the junction angle and junction velocity.
+
+    // NOTE however it does not take into account independent axis, in most cartesian X and Y and Z are totally independent
+    // and this allows one to stop with little to no decleration in many cases. This is particualrly bad on leadscrew based systems that will skip steps.
     float vmax_junction = minimum_planner_speed; // Set default max junction speed
 
     if (!THEKERNEL->conveyor->is_queue_empty())
@@ -147,7 +152,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     block->max_entry_speed = vmax_junction;
 
     // Initialize block entry speed. Compute based on deceleration to user-defined minimum_planner_speed.
-    float v_allowable = max_allowable_speed(-acceleration, minimum_planner_speed, block->millimeters); //TODO: Get from config
+    float v_allowable = max_allowable_speed(-acceleration, minimum_planner_speed, block->millimeters);
     block->entry_speed = min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags

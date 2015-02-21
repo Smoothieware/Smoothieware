@@ -11,6 +11,7 @@ using namespace std;
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "SlowTicker.h"
+#include "StepTicker.h"
 #include "libs/Hook.h"
 #include "modules/robot/Conveyor.h"
 #include "Pauser.h"
@@ -35,9 +36,6 @@ SlowTicker::SlowTicker(){
     flag_1s_flag = 0;
     flag_1s_count = SystemCoreClock>>2;
 
-    g4_ticks = 0;
-    g4_pause = false;
-
     // Configure the actual timer after setup to avoid race conditions
     LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
     LPC_TIM2->MR0 = 10000;          // Initial dummy value for Match Register
@@ -48,8 +46,6 @@ SlowTicker::SlowTicker(){
 
 void SlowTicker::on_module_loaded(){
     register_for_event(ON_IDLE);
-    register_for_event(ON_GCODE_RECEIVED);
-    register_for_event(ON_GCODE_EXECUTE);
 }
 
 // Set the base frequency we use for all sub-frequencies
@@ -65,8 +61,7 @@ void SlowTicker::set_frequency( int frequency ){
 void SlowTicker::tick(){
 
     // Call all hooks that need to be called ( bresenham )
-    for (uint32_t i=0; i<this->hooks.size(); i++){
-        Hook* hook = this->hooks.at(i);
+    for (Hook* hook : this->hooks){
         hook->countdown -= this->interval;
         if (hook->countdown < 0)
         {
@@ -84,16 +79,6 @@ void SlowTicker::tick(){
         flag_1s_count += SystemCoreClock >> 2;
         // and set a flag for idle event to pick up
         flag_1s_flag++;
-    }
-
-    // if we're counting down a pause
-    if (g4_ticks > 0)
-    {
-        // deduct tick time from timeout
-        if (g4_ticks > interval)
-            g4_ticks -= interval;
-        else
-            g4_ticks = 0;
     }
 
     // Enter MRI mode if the ISP button is pressed
@@ -136,52 +121,6 @@ void SlowTicker::on_idle(void*)
     if (flag_1s())
         // fire the on_second_tick event
         THEKERNEL->call_event(ON_SECOND_TICK);
-
-    // if G4 has finished, release our pause
-    if (g4_pause && (g4_ticks == 0))
-    {
-        g4_pause = false;
-        THEKERNEL->pauser->release();
-    }
-}
-
-// When a G4-type gcode is received, add it to the queue so we can execute it in time
-void SlowTicker::on_gcode_received(void* argument){
-    Gcode* gcode = static_cast<Gcode*>(argument);
-    // Add the gcode to the queue ourselves if we need it
-    if( gcode->has_g && gcode->g == 4 ){
-        THEKERNEL->conveyor->append_gcode(gcode);
-        // ensure that no subsequent gcodes get executed along with our G4
-        THEKERNEL->conveyor->queue_head_block();
-    }
-}
-
-// When a G4-type gcode is executed, start the pause
-void SlowTicker::on_gcode_execute(void* argument){
-    Gcode* gcode = static_cast<Gcode*>(argument);
-
-    if (gcode->has_g){
-        if (gcode->g == 4){
-            gcode->mark_as_taken();
-            bool updated = false;
-            if (gcode->has_letter('P')) {
-                updated = true;
-                g4_ticks += gcode->get_int('P') * ((SystemCoreClock >> 2) / 1000UL);
-            }
-            if (gcode->has_letter('S')) {
-                updated = true;
-                g4_ticks += gcode->get_int('S') * (SystemCoreClock >> 2);
-            }
-            if (updated){
-                // G4 Smm Pnn should pause for mm seconds + nn milliseconds
-                // at 120MHz core clock, the longest possible delay is (2^32 / (120MHz / 4)) = 143 seconds
-                if (!g4_pause){
-                    g4_pause = true;
-                    THEKERNEL->pauser->take();
-                }
-            }
-        }
-    }
 }
 
 extern "C" void TIMER2_IRQHandler (void){
