@@ -422,7 +422,7 @@ void ZProbe::deploy_servo()
 
 	if(this->servo_disable) {				//Disable servo to eliminate jitter
 		uint32_t start = us_ticker_read();
-		while ((us_ticker_read() - start) < 25000) {
+		while ((us_ticker_read() - start) < 250000) {
 		   THEKERNEL->call_event(ON_IDLE);
 		}
 		this->servo_pin->pulsewidth_us(0);
@@ -439,7 +439,7 @@ void ZProbe::retract_servo()
 
 	if(this->servo_disable) {				//Disable servo to eliminate jitter
 		uint32_t start = us_ticker_read();
-		while ((us_ticker_read() - start) < 25000) {
+		while ((us_ticker_read() - start) < 250000) {
 		   THEKERNEL->call_event(ON_IDLE);
 		}
 		this->servo_pin->pulsewidth_us(0);
