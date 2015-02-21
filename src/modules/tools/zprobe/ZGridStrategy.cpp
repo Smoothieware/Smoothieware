@@ -247,17 +247,28 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
 
             // M374: Save grid
             case 374:{
-                if(this->saveGrid(args)) {
+               char gridname[5];
+
+               if(gcode->has_letter('S'))  // Custom grid number
+                    sprintf(gridname, "S%3.0f", gcode->get_value('S'));
+
+                if(this->saveGrid(gridname)) {
                     gcode->stream->printf("Grid saved\n");
                 }
             }
             return true;
 
-            case 375: // Load grid values
-                if(this->loadGrid(args)){
+            case 375:{ // Load grid values
+                char gridname[5];
+
+                if(gcode->has_letter('S'))  // Custom grid number
+                    sprintf(gridname, "S%3.0f", gcode->get_value('S'));
+
+                if(this->loadGrid(gridname)){
                     this->setAdjustFunction(true); // Enable leveling code
                     gcode->stream->printf("Grid loaded\n");
                 }
+            }
             return true;
 
 /*          case 376: { // Check grid value calculations: For debug only.
