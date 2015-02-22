@@ -247,13 +247,18 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
 
             // M374: Save grid
             case 374:{
-               char gridname[5];
+                char gridname[5];
 
-               if(gcode->has_letter('S'))  // Custom grid number
-                    sprintf(gridname, "S%3.0f", gcode->get_value('S'));
+                if(gcode->has_letter('S'))  // Custom grid number
+                    snprintf(gridname, sizeof(char) * 5, "S%03.0f", gcode->get_value('S'));
+                else
+                    gridname[0] = '\0';
 
                 if(this->saveGrid(gridname)) {
-                    gcode->stream->printf("Grid saved\n");
+                    gcode->stream->printf("Grid saved: Filename: /sd/Zgrid.%s\n",gridname);
+                }
+                else {
+                    gcode->stream->printf("Error: Grid not saved: Filename: /sd/Zgrid.%s\n",gridname);
                 }
             }
             return true;
@@ -262,11 +267,16 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
                 char gridname[5];
 
                 if(gcode->has_letter('S'))  // Custom grid number
-                    sprintf(gridname, "S%3.0f", gcode->get_value('S'));
+                    snprintf(gridname, sizeof(char) * 5, "S%03.0f", gcode->get_value('S'));
+                else
+                    gridname[0] = '\0';
 
-                if(this->loadGrid(gridname)){
+                if(this->loadGrid(gridname)) {
                     this->setAdjustFunction(true); // Enable leveling code
-                    gcode->stream->printf("Grid loaded\n");
+                    gcode->stream->printf("Grid loaded: /sd/Zgrid.%s\n",gridname);
+                }
+                else {
+                    gcode->stream->printf("Error: Grid not loaded: /sd/Zgrid.%s\n",gridname);
                 }
             }
             return true;
@@ -294,7 +304,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             return true;
 
             case 500: // M500 saves probe_offsets config override file
-                gcode->stream->printf("M375  ; Load default grid\n");
+                gcode->stream->printf(";Load default grid\nM375\n");
 
 
             case 503: { // M503 just prints the settings
