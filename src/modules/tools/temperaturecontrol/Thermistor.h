@@ -36,7 +36,7 @@ class Thermistor : public TempSensor
         float adc_value_to_temperature(int adc_value);
         void calc_jk();
 
-        // Thermistor computation settings using beta, not used if using SHHhttp://panucattdevices.freshdesk.com/helpdesk/attachments/1015374088
+        // Thermistor computation settings using beta, not used if using Steinhart-Hart
         float r0;
         float t0;
 
