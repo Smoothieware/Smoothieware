@@ -5,7 +5,7 @@ default_seek_rate                            4000             # Default rate ( m
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for
                                                               # these segments.  Smaller values mean more resolution,
                                                               # higher values mean faster computation
-mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian
+#mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian
                                                               # coordinates robots ).
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
