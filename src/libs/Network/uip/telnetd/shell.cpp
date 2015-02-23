@@ -224,7 +224,8 @@ int Shell::command_result(const char *str, void *p)
 /*---------------------------------------------------------------------------*/
 void Shell::start()
 {
-    telnet->output("Smoothie command shell\r\n> ");
+    telnet->output("Smoothie command shell\r\n");
+    telnet->output_prompt(SHELL_PROMPT);
 }
 
 int Shell::queue_size()
