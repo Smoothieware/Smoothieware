@@ -50,7 +50,8 @@ class Player : public Module {
         StreamOutput* suspend_stream;
 
         FILE* current_file_handler;
-        unsigned long file_size, played_cnt;
+        long file_size;
+        unsigned long played_cnt;
         unsigned long elapsed_secs;
         float saved_position[3];
         float saved_feed_rate;
