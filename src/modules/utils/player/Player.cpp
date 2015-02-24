@@ -207,8 +207,19 @@ void Player::on_gcode_received(void *argument)
                 gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
             } else {
                 this->playing_file = true;
+
+                // get size of file
+                int result = fseek(this->current_file_handler, 0, SEEK_END);
+                if (0 != result) {
+                        file_size = 0;
+                } else {
+                        file_size = ftell(this->current_file_handler);
+                        fseek(this->current_file_handler, 0, SEEK_SET);
+                }
             }
 
+            this->played_cnt = 0;
+            this->elapsed_secs = 0;
         } else if (gcode->m == 600) { // suspend print, Not entirely Marlin compliant
             this->suspend_command("", &(StreamOutput::NullStream));
         }

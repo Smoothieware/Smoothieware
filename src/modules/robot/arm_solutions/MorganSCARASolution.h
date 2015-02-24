@@ -22,7 +22,9 @@ class MorganSCARASolution : public BaseSolution {
         float arm2_length;
         float morgan_offset_x;
         float morgan_offset_y;
-        float slow_rate;
+        float morgan_undefined_min;
+        float morgan_undefined_max;
+       float slow_rate;
 };
 
 #endif // MORGANSCARASOLUTION_H
