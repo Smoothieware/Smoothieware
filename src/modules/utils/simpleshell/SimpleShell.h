@@ -42,6 +42,7 @@ private:
     static void help_command(string parameters, StreamOutput *stream );
     static void version_command(string parameters, StreamOutput *stream );
     static void get_command(string parameters, StreamOutput *stream );
+    static void set_command(string parameters, StreamOutput *stream );
     static void set_temp_command(string parameters, StreamOutput *stream );
     static void calc_thermistor_command( string parameters, StreamOutput *stream);
     static void switch_command(string parameters, StreamOutput *stream );
@@ -54,7 +55,7 @@ private:
 
     static void remount_command( string parameters, StreamOutput *stream);
 
-    bool parse_command(const char *cmd, string args, StreamOutput *stream);
+    bool parse_command(const string& cmd, string args, StreamOutput *stream);
 
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {
