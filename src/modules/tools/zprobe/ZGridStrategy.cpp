@@ -132,10 +132,6 @@ bool ZGridStrategy::handleConfig()
         this->pData[i] = 0.0F;        // Clear the grid
     }
 
-    if(this->loadGrid()){
-        this->setAdjustFunction(true); // Enable leveling code
-    }
-
     return true;
 }
 
@@ -251,19 +247,39 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
 
             // M374: Save grid
             case 374:{
-                if(this->saveGrid()) {
-                    gcode->stream->printf("Grid saved\n");
+                char gridname[5];
+
+                if(gcode->has_letter('S'))  // Custom grid number
+                    snprintf(gridname, sizeof(char) * 5, "S%03.0f", gcode->get_value('S'));
+                else
+                    gridname[0] = '\0';
+
+                if(this->saveGrid(gridname)) {
+                    gcode->stream->printf("Grid saved: Filename: /sd/Zgrid.%s\n",gridname);
+                }
+                else {
+                    gcode->stream->printf("Error: Grid not saved: Filename: /sd/Zgrid.%s\n",gridname);
                 }
             }
             return true;
 
-            case 375: // Load grid values
-                if(this->loadGrid()){
-                    this->setAdjustFunction(true); // Enable leveling code
-                    gcode->stream->printf("Grid loaded\n");
-                }
-            return true;
+            case 375:{ // Load grid values
+                char gridname[5];
 
+                if(gcode->has_letter('S'))  // Custom grid number
+                    snprintf(gridname, sizeof(char) * 5, "S%03.0f", gcode->get_value('S'));
+                else
+                    gridname[0] = '\0';
+
+                if(this->loadGrid(gridname)) {
+                    this->setAdjustFunction(true); // Enable leveling code
+                    gcode->stream->printf("Grid loaded: /sd/Zgrid.%s\n",gridname);
+                }
+                else {
+                    gcode->stream->printf("Error: Grid not loaded: /sd/Zgrid.%s\n",gridname);
+                }
+            }
+            return true;
 
 /*          case 376: { // Check grid value calculations: For debug only.
                 float target[3];
@@ -288,6 +304,8 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             return true;
 
             case 500: // M500 saves probe_offsets config override file
+                gcode->stream->printf(";Load default grid\nM375\n");
+
 
             case 503: { // M503 just prints the settings
 
@@ -308,13 +326,10 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
 }
 
 
-bool ZGridStrategy::saveGrid() //std::string *args)
+bool ZGridStrategy::saveGrid(std::string args)
 {
-    //if(args->empty()) {
-        StreamOutput *ZMap_file = new FileStream("/sd/Zgrid" );
-   // } else {
-   //     StreamOutput *ZMap_file = new FileStream("/sd/Zgrid." + args);
-   // }
+    args = "/sd/Zgrid." + args;
+    StreamOutput *ZMap_file = new FileStream(args.c_str());
 
     ZMap_file->printf("P%i %i %i %1.3f\n", probe_points, this->numRows, this->numCols, getZhomeoffset());    // Store probe points to prevent loading undefined grid files
 
@@ -327,24 +342,19 @@ bool ZGridStrategy::saveGrid() //std::string *args)
 
 }
 
-bool ZGridStrategy::loadGrid()
+bool ZGridStrategy::loadGrid(std::string args)
 {
     char flag[20];
 
     int fpoints, GridX = 5, GridY = 5;   // for 25point file
     float val, GridZ;
 
-    FILE *fd = fopen("/sd/Zgrid", "r");
+    args = "/sd/Zgrid." + args;
+    FILE *fd = fopen(args.c_str(), "r");
     if(fd != NULL) {
         fscanf(fd, "%s\n", flag);
 
-        // DEBUG
-        //THEKERNEL->streams->printf("DEBUG: flag: %s\n", flag);
-        //THEKERNEL->streams->printf("DEBUG: flag[0]: %c\n", flag[0]);
-
         if (flag[0] == 'P'){
-            // DEBUG
-            //THEKERNEL->streams->printf("In P\n");
 
             sscanf(flag, "P%i\n", &fpoints);                        // read number of points, and Grid X and Y
             fscanf(fd, "%i %i %f\n", &GridX, &GridY, &GridZ);       // read number of points, and Grid X and Y and ZHoming offset
