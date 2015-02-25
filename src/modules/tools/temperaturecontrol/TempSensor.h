@@ -9,6 +9,7 @@
 #define TEMPSENSOR_H
 
 #include <map>
+#include <stdint.h>
 
 class TempSensor
 {
