@@ -16,8 +16,12 @@
 
     The bed size limits must be defined, in order for the module to calculate the calibration points
 
-    leveling-strategy.ZGrid-leveling.bedx           200
-    leveling-strategy.ZGrid-leveling.bedy           200
+    leveling-strategy.ZGrid-leveling.bed_x           200
+    leveling-strategy.ZGrid-leveling.bed_y           200
+
+    Machine height, used to determine probe attachment point (bed_z / 2)
+
+    leveling-strategy.ZGrid-leveling.bed_z           20
 
 
     The number of divisions for X and Y should be defined
@@ -102,20 +106,20 @@ ZGridStrategy::ZGridStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
     this->cal[Z_AXIS] = 30.0f;
 
     this->in_cal = false;
+    this->pData = nullptr;
 }
 
 ZGridStrategy::~ZGridStrategy()
 {
     // Free program memory for the pData grid
     if(this->pData != nullptr) AHB0.dealloc(this->pData);
-    //delete[] this->pData;
 }
 
 bool ZGridStrategy::handleConfig()
 {
     this->bed_x = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_x_checksum)->by_default(200.0F)->as_number();
     this->bed_y = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_y_checksum)->by_default(200.0F)->as_number();
-    this->bed_z = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_z_checksum)->by_default(200.0F)->as_number();
+    this->bed_z = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_z_checksum)->by_default(20.0F)->as_number();
 
     this->slow_rate = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, slow_feedrate_checksum)->by_default(20.0F)->as_number();
 
@@ -394,9 +398,13 @@ float ZGridStrategy::getZhomeoffset()
 {
     void* rd;
 
-    PublicData::get_value( endstops_checksum, home_offset_checksum, &rd );
+    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &rd );
 
-    return ((float*)rd)[2];
+    if (ok) {
+      return ((float*)rd)[2];
+    }
+
+    return 0;
 }
 
 void ZGridStrategy::setZoffset(float zval)
@@ -434,41 +442,41 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 
     while(!zprobe->getProbeStatus());
 
-        this->in_cal = true;                         // In calbration mode
+    this->in_cal = true;                         // In calbration mode
 
-        this->cal[X_AXIS] = 0.0f;                    // Clear calibration position
-        this->cal[Y_AXIS] = 0.0f;
-        this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + zprobe->getProbeHeight();
+    this->cal[X_AXIS] = 0.0f;                    // Clear calibration position
+    this->cal[Y_AXIS] = 0.0f;
+    this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + zprobe->getProbeHeight();
 
-        this->move(this->cal, slow_rate);            // Move to probe start point
+    this->move(this->cal, slow_rate);            // Move to probe start point
 
-        for (int probes = 0; probes <probe_points; probes++){
-            int pindex = 0;
+    for (int probes = 0; probes < probe_points; probes++){
+        int pindex = 0;
 
-            float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
-                                       this->cal[Y_AXIS]-std::get<Y_AXIS>(this->probe_offsets));
+        float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
+                                               this->cal[Y_AXIS]-std::get<Y_AXIS>(this->probe_offsets));
 
-            pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
+        pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
 
-            if (probes == (probe_points-1)){
-                this->cal[X_AXIS] = this->bed_x/2.0f;    // Clear calibration position
-                this->cal[Y_AXIS] = this->bed_y/2.0f;
-                this->cal[Z_AXIS] = this->bed_z/2.0f;    // Position head for probe removal
-            } else {
-                this->next_cal();                        // to not cause damage to machine due to Z-offset
-            }
-            this->move(this->cal, slow_rate);            // move to the next position
-
-            this->pData[pindex] = z ;                    // save the offset
+        if (probes == (probe_points-1)){
+            this->cal[X_AXIS] = this->bed_x/2.0f;    // Clear calibration position
+            this->cal[Y_AXIS] = this->bed_y/2.0f;
+            this->cal[Z_AXIS] = this->bed_z/2.0f;    // Position head for probe removal
+        } else {
+            this->next_cal();                        // to not cause damage to machine due to Z-offset
         }
+        this->move(this->cal, slow_rate);            // move to the next position
 
-        stream->printf("\nCalibration done.  Please remove probe\n");
+        this->pData[pindex] = z ;                    // save the offset
+    }
 
-        // activate correction
-        this->normalize_grid();
-        this->setAdjustFunction(true);
+    stream->printf("\nCalibration done.  Please remove probe\n");
 
-        this->in_cal = false;
+    // activate correction
+    this->normalize_grid();
+    this->setAdjustFunction(true);
+
+    this->in_cal = false;
 
     return true;
 }
