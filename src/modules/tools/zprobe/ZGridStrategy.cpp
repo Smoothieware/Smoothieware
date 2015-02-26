@@ -250,7 +250,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
                 char gridname[5];
 
                 if(gcode->has_letter('S'))  // Custom grid number
-                    snprintf(gridname, sizeof(char) * 5, "S%03.0f", gcode->get_value('S'));
+                    snprintf(gridname, sizeof(gridnames), "S%03.0f", gcode->get_value('S'));
                 else
                     gridname[0] = '\0';
 
@@ -267,7 +267,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
                 char gridname[5];
 
                 if(gcode->has_letter('S'))  // Custom grid number
-                    snprintf(gridname, sizeof(char) * 5, "S%03.0f", gcode->get_value('S'));
+                    snprintf(gridname, sizeof(gridnames), "S%03.0f", gcode->get_value('S'));
                 else
                     gridname[0] = '\0';
 
