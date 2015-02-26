@@ -16,8 +16,12 @@
 
     The bed size limits must be defined, in order for the module to calculate the calibration points
 
-    leveling-strategy.ZGrid-leveling.bedx           200
-    leveling-strategy.ZGrid-leveling.bedy           200
+    leveling-strategy.ZGrid-leveling.bed_x           200
+    leveling-strategy.ZGrid-leveling.bed_y           200
+
+    Machine height, used to determine probe attachment point (bed_z / 2)
+
+    leveling-strategy.ZGrid-leveling.bed_z           20
 
 
     The number of divisions for X and Y should be defined
@@ -115,7 +119,7 @@ bool ZGridStrategy::handleConfig()
 {
     this->bed_x = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_x_checksum)->by_default(200.0F)->as_number();
     this->bed_y = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_y_checksum)->by_default(200.0F)->as_number();
-    this->bed_z = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_z_checksum)->by_default(200.0F)->as_number();
+    this->bed_z = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_z_checksum)->by_default(20.0F)->as_number();
 
     this->slow_rate = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, slow_feedrate_checksum)->by_default(20.0F)->as_number();
 
