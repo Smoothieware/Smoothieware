@@ -106,13 +106,13 @@ ZGridStrategy::ZGridStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
     this->cal[Z_AXIS] = 30.0f;
 
     this->in_cal = false;
+    this->pData = nullptr;
 }
 
 ZGridStrategy::~ZGridStrategy()
 {
     // Free program memory for the pData grid
     if(this->pData != nullptr) AHB0.dealloc(this->pData);
-    //delete[] this->pData;
 }
 
 bool ZGridStrategy::handleConfig()
