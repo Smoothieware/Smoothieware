@@ -398,9 +398,13 @@ float ZGridStrategy::getZhomeoffset()
 {
     void* rd;
 
-    PublicData::get_value( endstops_checksum, home_offset_checksum, &rd );
+    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &rd );
 
-    return ((float*)rd)[2];
+    if (ok) {
+      return ((float*)rd)[2];
+    }
+
+    return 0;
 }
 
 void ZGridStrategy::setZoffset(float zval)
