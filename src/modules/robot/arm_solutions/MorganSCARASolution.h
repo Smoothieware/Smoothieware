@@ -24,7 +24,7 @@ class MorganSCARASolution : public BaseSolution {
         float morgan_offset_y;
         float morgan_undefined_min;
         float morgan_undefined_max;
-       float slow_rate;
+        float slow_rate;
 };
 
 #endif // MORGANSCARASOLUTION_H

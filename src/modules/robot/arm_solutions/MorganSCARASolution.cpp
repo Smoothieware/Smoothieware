@@ -38,7 +38,10 @@ MorganSCARASolution::MorganSCARASolution(Config* config)
     // morgan_offset_y is the y offset of bed zero position towards the SCARA tower center
     morgan_offset_y     = config->value(morgan_offset_y_checksum)->by_default(-60.0f)->as_number();
     // morgan_undefined is the ratio at which the SCARA position is undefined.
+    // required to prevent the arm moving through singularity points
+    // min: head close to tower
     morgan_undefined_min  = config->value(morgan_undefined_min_checksum)->by_default(0.95f)->as_number();
+    // max: head on maximum reach
     morgan_undefined_max  = config->value(morgan_undefined_max_checksum)->by_default(0.95f)->as_number();
 
     init();
