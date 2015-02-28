@@ -26,6 +26,7 @@
 #define filament_detector_checksum  CHECKSUM("filament_detector")
 #define enable_checksum             CHECKSUM("enable")
 #define encoder_pin_checksum        CHECKSUM("encoder_pin")
+#define bulge_pin_checksum          CHECKSUM("bulge_pin")
 #define seconds_per_check_checksum  CHECKSUM("seconds_per_check")
 #define pulses_per_mm_checksum      CHECKSUM("pulses_per_mm")
 
@@ -62,6 +63,13 @@ void FilamentDetector::on_module_loaded()
     this->encoder_pin->rise(this, &FilamentDetector::on_pin_rise);
     NVIC_SetPriority(EINT3_IRQn, 16); // set to low priority
 
+    // optional bulge detector
+    bulge_pin.from_string( THEKERNEL->config->value(filament_detector_checksum, bulge_pin_checksum)->by_default("nc" )->as_string())->as_input();
+    if(bulge_pin.connected()) {
+        // input pin polling
+        THEKERNEL->slow_ticker->attach( 100, this, &FilamentDetector::button_tick);
+    }
+
     seconds_per_check= THEKERNEL->config->value(filament_detector_checksum, seconds_per_check_checksum)->by_default(2)->as_number();
     pulses_per_mm= THEKERNEL->config->value(filament_detector_checksum, pulses_per_mm_checksum)->by_default(1)->as_number();
 
@@ -79,6 +87,7 @@ void FilamentDetector::send_command(std::string msg, StreamOutput *stream)
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
 
+// needed to detect when we resume
 void FilamentDetector::on_console_line_received( void *argument )
 {
     if(!suspended) return;
@@ -137,4 +146,16 @@ void FilamentDetector::check_encoder()
         // we got no pulses and E moved since last time so fire off alarm
         this->filament_out_alarm= true;
     }
+}
+
+uint32_t FilamentDetector::button_tick(uint32_t dummy)
+{
+    if(!bulge_pin.connected()) return 0;
+
+    if(bulge_pin.get()) {
+        // we got a trigger from the bulge detector
+        this->filament_out_alarm= true;
+    }
+
+    return 0;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Module.h"
+#include "Pin.h"
 
 #include <stdint.h>
 #include <atomic>
@@ -10,7 +11,6 @@ namespace mbed {
     class InterruptIn;
 }
 
-class Pin;
 class StreamOutput;
 
 class FilamentDetector: public Module
@@ -27,9 +27,10 @@ private:
     void on_pin_rise();
     void check_encoder();
     void send_command(std::string msg, StreamOutput *stream);
+    uint32_t button_tick(uint32_t dummy);
 
     mbed::InterruptIn *encoder_pin{0};
-    Pin *bulge_pin{0};
+    Pin bulge_pin;
     float e_last_moved{0};
     std::atomic_uint pulses{0};
     float pulses_per_mm{0};
