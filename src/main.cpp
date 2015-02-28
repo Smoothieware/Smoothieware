@@ -17,6 +17,7 @@
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
+#include "FilamentDetector.h"
 
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -187,6 +188,9 @@ void init() {
     #endif
     #ifndef NO_TOOLS_DRILLINGCYCLES
     kernel->add_module( new Drillingcycles() );
+    #endif
+    #ifndef NO_TOOLS_FILAMENTDETECTOR
+    kernel->add_module( new FilamentDetector() );
     #endif
 
     // Create and initialize USB stuff

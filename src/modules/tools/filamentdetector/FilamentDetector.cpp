@@ -50,7 +50,7 @@ void FilamentDetector::on_module_loaded()
         return;
     }
 
-    // load settings
+    // encoder pin has to be interrupt enabled pin like 0.26, 0.27, 0.28
     Pin dummy_pin;
     dummy_pin.from_string( THEKERNEL->config->value(filament_detector_checksum, encoder_pin_checksum)->by_default("nc" )->as_string());
     this->encoder_pin= dummy_pin.interrupt_pin();
@@ -60,6 +60,7 @@ void FilamentDetector::on_module_loaded()
         return;
     }
 
+    // set interrupt on rising edge
     this->encoder_pin->rise(this, &FilamentDetector::on_pin_rise);
     NVIC_SetPriority(EINT3_IRQn, 16); // set to low priority
 
@@ -70,7 +71,10 @@ void FilamentDetector::on_module_loaded()
         THEKERNEL->slow_ticker->attach( 100, this, &FilamentDetector::button_tick);
     }
 
+    // how many seconds between checks, must be long enough for several pulses to be detected, but not too long
     seconds_per_check= THEKERNEL->config->value(filament_detector_checksum, seconds_per_check_checksum)->by_default(2)->as_number();
+
+    // the number of pulses per mm of filament moving through the detector, can be fractional
     pulses_per_mm= THEKERNEL->config->value(filament_detector_checksum, pulses_per_mm_checksum)->by_default(1)->as_number();
 
     // register event-handlers
