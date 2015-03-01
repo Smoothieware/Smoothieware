@@ -104,26 +104,47 @@ void FilamentDetector::on_console_line_received( void *argument )
     string possible_command = new_message.message;
     string cmd = shift_parameter(possible_command);
     if(cmd == "resume") {
+        this->pulses= 0;
+        e_last_moved= NAN;
         suspended= false;
     }
+}
+
+float FilamentDetector::get_emove()
+{
+    float *rd;
+    if(PublicData::get_value( extruder_checksum, (void **)&rd )) {
+        return *(rd+5); // current position for extruder in mm
+    }
+    return NAN;
 }
 
 void FilamentDetector::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
     if (gcode->has_m) {
-        if (gcode->m == 405) { // diable filament detector
+        if (gcode->m == 404) { // set filament detector parameters S seconds per check, P pulses per mm
+            if(gcode->has_letter('S')){
+                seconds_per_check= gcode->get_value('S');
+                seconds_passed= 0;
+            }
+            if(gcode->has_letter('P')){
+                pulses_per_mm= gcode->get_value('P');
+            }
+            gcode->stream->printf("// pulses per mm: %f, seconds per check: %d\n", pulses_per_mm, seconds_per_check);
+
+        } else if (gcode->m == 405) { // disable filament detector
             active= false;
+            e_last_moved= get_emove();
 
         }else if (gcode->m == 406) { // enable filament detector
             this->pulses= 0;
-            e_last_moved= NAN;
+            e_last_moved=  get_emove();
             active= true;
 
         }else if (gcode->m == 407) { // display filament detector pulses and status
-           float *rd;
-            if(!PublicData::get_value( extruder_checksum, (void **)&rd )) {
-                float e_moved= *(rd+5); // current position for extruder in mm
+            float e_moved= get_emove();
+            if(!isnan(e_moved)) {
                 float delta= e_moved - e_last_moved;
                 gcode->stream->printf("Extruder moved: %f mm\n", delta);
             }
@@ -162,13 +183,13 @@ void FilamentDetector::on_pin_rise()
 
 void FilamentDetector::check_encoder()
 {
-    uint32_t pulse_cnt= this->pulses.exchange(0); // atomic load and reset
     if(suspended) return; // already suspended
+    if(!active) return;  // not enabled
+
+    uint32_t pulse_cnt= this->pulses.exchange(0); // atomic load and reset
 
     // get number of E steps taken and make sure we have seen enough pulses to cover that
-    float *rd;
-    if(!PublicData::get_value( extruder_checksum, (void **)&rd )) return;
-    float e_moved= *(rd+5); // current position for extruder in mm
+    float e_moved= get_emove();
     if(isnan(e_last_moved)) {
         e_last_moved= e_moved;
         return;
@@ -176,6 +197,10 @@ void FilamentDetector::check_encoder()
 
     float delta= e_moved - e_last_moved;
     e_last_moved= e_moved;
+    if(delta < 0) {
+        // we ignore retracts for the purposes of jam detection
+        return;
+    }
 
     // figure out how many pulses need to have happened to cover that e move
     uint32_t needed_pulses= floorf(delta*pulses_per_mm);

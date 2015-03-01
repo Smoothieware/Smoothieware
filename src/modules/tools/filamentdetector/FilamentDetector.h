@@ -29,6 +29,7 @@ private:
     void check_encoder();
     void send_command(std::string msg, StreamOutput *stream);
     uint32_t button_tick(uint32_t dummy);
+    float get_emove();
 
     mbed::InterruptIn *encoder_pin{0};
     Pin bulge_pin;
