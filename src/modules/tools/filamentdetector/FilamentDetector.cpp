@@ -17,6 +17,7 @@
 #include "SerialMessage.h"
 #include "FilamentDetector.h"
 #include "utils.h"
+#include "Gcode.h"
 
 #include "InterruptIn.h" // mbed
 #include "us_ticker_api.h" // mbed
@@ -34,6 +35,8 @@ FilamentDetector::FilamentDetector()
 {
     suspended= false;
     filament_out_alarm= false;
+    active= true;
+    e_last_moved= NAN;
 }
 
 FilamentDetector::~FilamentDetector()
@@ -81,6 +84,7 @@ void FilamentDetector::on_module_loaded()
     register_for_event(ON_SECOND_TICK);
     register_for_event(ON_MAIN_LOOP);
     register_for_event(ON_CONSOLE_LINE_RECEIVED);
+    this->register_for_event(ON_GCODE_RECEIVED);
 }
 
 void FilamentDetector::send_command(std::string msg, StreamOutput *stream)
@@ -104,9 +108,36 @@ void FilamentDetector::on_console_line_received( void *argument )
     }
 }
 
+void FilamentDetector::on_gcode_received(void *argument)
+{
+    Gcode *gcode = static_cast<Gcode *>(argument);
+    if (gcode->has_m) {
+        if (gcode->m == 405) { // diable filament detector
+            active= false;
+
+        }else if (gcode->m == 406) { // enable filament detector
+            this->pulses= 0;
+            e_last_moved= NAN;
+            active= true;
+
+        }else if (gcode->m == 407) { // display filament detector pulses and status
+           float *rd;
+            if(!PublicData::get_value( extruder_checksum, (void **)&rd )) {
+                float e_moved= *(rd+5); // current position for extruder in mm
+                float delta= e_moved - e_last_moved;
+                gcode->stream->printf("Extruder moved: %f mm\n", delta);
+            }
+
+            gcode->stream->printf("Encoder pulses: %u\n", pulses.load());
+            if(this->suspended) gcode->stream->printf("Filament detector triggered\n");
+            gcode->stream->printf("Filament detector is %s\n", active?"enabled":"disabled");
+        }
+    }
+}
+
 void FilamentDetector::on_main_loop(void *argument)
 {
-    if (this->filament_out_alarm) {
+    if (active && this->filament_out_alarm) {
         this->filament_out_alarm = false;
         THEKERNEL->streams->printf("// Filament Detector has detected a filament jam\n");
         this->suspended= true;
@@ -138,6 +169,11 @@ void FilamentDetector::check_encoder()
     float *rd;
     if(!PublicData::get_value( extruder_checksum, (void **)&rd )) return;
     float e_moved= *(rd+5); // current position for extruder in mm
+    if(isnan(e_last_moved)) {
+        e_last_moved= e_moved;
+        return;
+    }
+
     float delta= e_moved - e_last_moved;
     e_last_moved= e_moved;
 

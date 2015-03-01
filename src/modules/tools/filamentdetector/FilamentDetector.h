@@ -22,6 +22,7 @@ public:
     void on_main_loop(void* argument);
     void on_second_tick(void* argument);
     void on_console_line_received( void *argument );
+    void on_gcode_received(void *argument);
 
 private:
     void on_pin_rise();
@@ -40,5 +41,6 @@ private:
     struct {
         bool filament_out_alarm:1;
         bool suspended:1;
+        bool active:1;
     };
 };
