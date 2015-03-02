@@ -321,3 +321,10 @@ network.ip_address                           auto             # use dhcp to get 
 # Incremental mode not implemented (L)
 drillingcycles.enable                                false # enable module, default false
 drillingcycles.dwell_units                           S     # dwell units [S = seconds, P = millis], default: S
+
+# IR emitter module
+iremitter.enable                                     false # enable module, default false
+iremitter.mcode                                      M108  # trigger code, defaulf M108
+iremitter.pin                                        1.30  # LED pin
+iremitter.camera                                     nikon # [canon, canonwldc100, minolta, nikon, olympus, pentax, sony], default nikon
+

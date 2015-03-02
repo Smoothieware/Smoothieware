@@ -17,6 +17,7 @@
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
+#include "modules/tools/iremitter/Iremitter.h"
 
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -187,6 +188,9 @@ void init() {
     #endif
     #ifndef NO_TOOLS_DRILLINGCYCLES
     kernel->add_module( new Drillingcycles() );
+    #endif
+    #ifndef NO_TOOLS_IREMITTER
+    kernel->add_module( new Iremitter() );
     #endif
 
     // Create and initialize USB stuff
