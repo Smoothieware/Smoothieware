@@ -8,8 +8,11 @@
 #ifndef IREMITTER_MODULE_H
 #define IREMITTER_MODULE_H
 
-#include "Pin.h"
 #include "mbed.h"
+
+namespace mbed {
+    class PwmOut;
+}
 
 class Gcode;
 
@@ -19,37 +22,28 @@ class Iremitter : public Module
         Iremitter();
         virtual ~Iremitter() {};
         void on_module_loaded();
-        enum CAMERA {
-            CANON,
-            CANONWLDC100,
-            MINOLTA,
-            NIKON,
-            OLYMPUS,
-            PENTAX,
-            SONY,
-        };
 
     private:
         void on_config_reload(void *argument);
         void on_gcode_received(void *argument);
         void on_gcode_execute(void *argument);
-
-        bool is_executable(Gcode *gcode);
-        void high_us(unsigned int time, int freq);
         
+        vector<int> split_raw_code(const char *str, char c = ',');
+        
+        bool is_executable(Gcode *gcode);
+        void trigger_loop();
         void trigger();
 
-        void canon_trigger();
-        void canonwldc100_trigger();
-        void minolta_trigger();
-        void nikon_trigger();
-        void olympus_trigger();
-        void pentax_trigger();
-        void sony_trigger();
+        mbed::PwmOut *led_pin;        // PWM pin
+        bool led_pin_high;            // LED pin status
 
-        CAMERA       camera;
-        unsigned int mcode;
-        Pin          pin;
+        unsigned int m_code;          // M code to trigger the IR LED
+        unsigned int frequency;       // PWM LED frequency
+
+        vector<int> raw_code;         // integer raw code vector
+        unsigned int raw_code_ptr;    // loop pointer into the raw code vector
+
+        Timeout timeout;              // timeout to delay sending
 };
 
 #endif
