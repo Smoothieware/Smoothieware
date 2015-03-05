@@ -43,20 +43,23 @@
 
     To Do
     -------------------------
-    * Move all the long-ass sections of code in the G-code processor into their own methods. We're allocating a lot of stuff on the
-      stack each call, when we don't need to, and this increases the chances of an out-of-memory crash whenever G29-G33 are sent.
-      * Already done, but I think more memory can be recovered by breaking it out a little further.
-    * Use AHB0 to store the leveling grid, like ZGridStrategy.cpp.
-    * Increase probing grid size to 7x7, rather than 5x5.
+    * Migrate about 1KB of arrays from static class members to malloc'd on AHB0:
+      * surface_transform.depth (done)
+      * best_probe_calibration
+      * test_point (200 bytes)
+      * test_axis (300 bytes)
+      * depth_map (200 bytes?)
+      * active_point (100 bytes)
+    * Audit arrays created during probe calibration & simulated annealing to see if any are candidates for AHB0 migration.
+    * Increase probing grid size to 7x7, rather than 5x5. (Needs above AHB0 migration to be done first, crashes otherwise)
     * Elaborate probing grid to be able to support non-square grids (for the sake of people with rectangular build areas).
     * Add "leaning tower" support
-      * Add {X, Y} coords for top and bottom of tower & use in FK and IK in robot/arm_solutions/LinearDeltaSolution.cpp/.h
+      * Add {X, Y, Z(?)} coords for top and bottom of tower & use in FK and IK in robot/arm_solutions/LinearDeltaSolution.cpp/.h
       * Add letter codes to LinearDeltaSolution.cpp for saving/loading the values from config-override
       * Add simulated annealing section for tower lean
     * Make G31 B the specific command for heuristic calibration, and have it select O P Q R S (all annealing types) by default.
-    * Move some class variables into heuristic_calibration(). They take up a lot of space when not in use, and they are never in use
-      when we're not calibrating, so...
-    * Audit other "heavy" class variables to see whether they might be moved into methods.
+      * Make the annealer do a test probe rather than printing out the simulated depths.
+      * If G31 B is run without args, use the last probed depths.
     * We are using both three-dimensional (Cartesian) and one-dimensional (depths type, .abs and .rel) arrays. Cartesians are
       necessary for IK/FK, but maybe we can make a type with X, Y, absolute Z, and relative Z, and be done with the multiple types.
       (Except for the depth map, which has to be kept in RAM all the time.)
@@ -146,8 +149,6 @@ int __attribute__ ((noinline)) ComprehensiveDeltaStrategy::prefix_printf(const c
 // (which you can do over a serial console, by the way)
 bool ComprehensiveDeltaStrategy::handleConfig() {
 
-    int i;
-
     // Init method prefixes
     method_prefix_idx = -1;
     push_prefix("");
@@ -159,15 +160,11 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
     geom_dirty = true;
 
     // Turn off Z compensation (we don't want that interfering with our readings)
+    surface_transform.depth = nullptr;
     surface_transform.depth_enabled = false;
     surface_transform.have_depth_map = false;
 
-    // Zero out surface transform depths
-    for(i=0; i<DM_GRID_ELEMENTS; i++) {
-        surface_transform.depth[i] = 0;
-    }
-
-    // Zero out surface normal
+    // Zero out the surface normal
     set_virtual_shimming(0, 0, 0);
     set_adjust_function(true);
 
@@ -234,6 +231,40 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
 
     return true;
 
+}
+
+
+// Init & clear memory on AHB0 for the bed-leveling depth map
+// Thanks to ZGridStrategy.cpp, where I figured out how to use AHB0.
+bool ComprehensiveDeltaStrategy::initDepthMapRAM() {
+
+    // Init space on AHB0 for storing the bed leveling lerp grid
+    if(surface_transform.depth != nullptr) {
+        AHB0.dealloc(surface_transform.depth);
+    }
+
+    surface_transform.depth = (float *)AHB0.alloc(DM_GRID_ELEMENTS * sizeof(float));
+
+    if(surface_transform.depth == nullptr) {
+        _printf("ERROR: Couldn't allocate RAM for depth map.\n");
+        return false;
+    }
+
+    // Zero out surface transform depths
+    for(int i=0; i<DM_GRID_ELEMENTS; i++) {
+        surface_transform.depth[i] = 0;
+    }
+
+    return true;
+
+}
+
+
+// Destructor
+ComprehensiveDeltaStrategy::~ComprehensiveDeltaStrategy() {
+    if(surface_transform.depth != nullptr) {
+        AHB0.dealloc(surface_transform.depth);
+    }
 }
 
 
@@ -311,7 +342,7 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
 
 
 // Handlers for G-code commands too elaborate (read: stack-heavy) to cleanly fit in handleGcode()
-// This fixes a crash when doing M500 :)
+// This fixes config-override file corruption when doing M500. :)
 
 // G31
 bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) {
@@ -335,6 +366,12 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         // Disable depth correction (obviously)
         surface_transform.depth_enabled = false;
 
+        // Allocate some RAM for the depth map
+        if(!initDepthMapRAM()) {
+            _printf("Couldn't allocate RAM for the depth map.");
+            return false;
+        }
+
         // Build depth map
         zero_depth_maps();
         float cartesian[DM_GRID_ELEMENTS][3];
@@ -344,7 +381,8 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
             return false;
         }
 
-        // Copy depth map to surface_transform, which contains depths only
+
+        // Copy depth map to surface_transform.depth[], which contains depths only
         for(int i=0; i<DM_GRID_ELEMENTS; i++) {
             surface_transform.depth[i] = cartesian[i][Z];
         }
@@ -578,6 +616,13 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
             } else {
 
                 // ST not initialized - try to load it
+                
+                // First, allocate memory for depth map
+                if(!initDepthMapRAM()) {
+                    _printf("Couldn't allocate RAM for the depth map.");
+                    return false;
+                }
+                
                 FILE *fp = fopen("/sd/dm_surface_transform", "r");
                 if(fp != NULL) {
 
@@ -620,6 +665,8 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
                     // Sanity check
                     if(i != DM_GRID_ELEMENTS) {
                         _printf("ERROR: Expected %d elements, but got %d - aborting.\n", DM_GRID_ELEMENTS, i);
+                        surface_transform.have_depth_map = false;
+                        surface_transform.depth_enabled = false;
                     } else {
                         surface_transform.depth_enabled = gcode->get_value('E');
                         if(surface_transform.depth_enabled == true) {
@@ -715,6 +762,9 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             - }							// OK
 */
 
+    // LED twiddling
+    bool LED_state = false;
+
     // Banner
     push_prefix("HC");
     print_task_with_warning("Heuristic calibration");
@@ -745,7 +795,6 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         set_trim(0, 0, 0);
         set_tower_radius_offsets(0, 0, 0);
         set_tower_angle_offsets(0, 0, 0);
-//        set_tower_arm_offsets(0, 0, 0);
         get_kinematics(base_set);
         get_kinematics(cur_set);
     }
@@ -866,6 +915,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         // Clear flag that tells the IK simulator to restore kinematics to temp_set after the simulation runs
         restore_from_temp_set = false;
 
+
         if(simulate_only) {
 
             // Doing it for pretend: Generate some test values
@@ -964,9 +1014,6 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         _printf("Starting test configuration: Arm Length=%1.3f, Delta Radius=%1.3f\n", cur_set.arm_length, cur_set.delta_radius);
 
 
-        // ***********************
-        // * Simulated Annealing *
-        // ***********************
 
         // Get energy of initial state
         float energy = calc_energy(cur_cartesian);
@@ -975,7 +1022,21 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         _printf("Existing calibration has energy %1.3f\n \n", energy);
         _printf("Reticulating splines...\n");
 
+
+        // ************************************
+        // * Simulated Annealing - Inner Loop *
+        // ************************************
+
         for(annealing_try=0; annealing_try<annealing_tries; annealing_try++) {
+
+
+            // Twiddle an LED so the user knows we aren't dead
+            // From main.c: "led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok"
+            // Therefore, LED 1 seems like the one to strobe. Normally, it's constantly dark when this method is running.
+            if(THEKERNEL->use_leds) {
+                leds[1] = LED_state;
+                LED_state = !LED_state;
+            }
 
             // Set the annealing temperature
             tempFraction = (float)annealing_try / (float)annealing_tries;
@@ -1676,6 +1737,7 @@ float ComprehensiveDeltaStrategy::get_adjust_z(float targetX, float targetY) {
         bili.Q12 = surface_transform.depth[bili.st_Q12];
         bili.Q21 = surface_transform.depth[bili.st_Q21];
         bili.Q22 = surface_transform.depth[bili.st_Q22];
+
         // Set up the first terms
         // ----------------------------------------------------------------------
         bili.divisor = (bili.x2 - bili.x1) * (bili.y2 - bili.y1);
@@ -3148,28 +3210,34 @@ void ComprehensiveDeltaStrategy::display_calibration_types(bool active, bool ina
     char TAO[] = "Tower Angle Offset (R)";
     char VS[] = "Virtual Shimming (S)";
     char format[] = "[%s, mul=%1.2f] ";
+    int nShown = 0;
 
     // Display active caltypes
     if(active) {
 
         if(caltype.endstop.active) {
             __printf(format, ES, caltype.endstop.annealing_temp_mul);
+            nShown++;
         }
 
         if(caltype.delta_radius.active) {
             __printf(format, DR, caltype.delta_radius.annealing_temp_mul);
+            nShown++;
         }
 
         if(caltype.arm_length.active) {
             __printf(format, AL, caltype.arm_length.annealing_temp_mul);
+            nShown++;
         }
 
         if(caltype.tower_angle.active) {
             __printf(format, TAO, caltype.tower_angle.annealing_temp_mul);
+            nShown++;
         }
         
         if(caltype.virtual_shimming.active) {
             __printf(format, VS, caltype.virtual_shimming.annealing_temp_mul);
+            nShown++;
         }
 
     } // active    
@@ -3179,25 +3247,35 @@ void ComprehensiveDeltaStrategy::display_calibration_types(bool active, bool ina
 
         if(!caltype.endstop.active) {
             __printf(format, ES, caltype.endstop.annealing_temp_mul);
+            nShown++;
         }
 
         if(!caltype.delta_radius.active) {
             __printf(format, DR, caltype.delta_radius.annealing_temp_mul);
+            nShown++;
         }
 
         if(!caltype.arm_length.active) {
             __printf(format, AL, caltype.arm_length.annealing_temp_mul);
+            nShown++;
         }
 
         if(!caltype.tower_angle.active) {
             __printf(format, TAO, caltype.tower_angle.annealing_temp_mul);
+            nShown++;
         }
 
         if(!caltype.virtual_shimming.active) {
             __printf(format, VS, caltype.virtual_shimming.annealing_temp_mul);
+            nShown++;
         }
 
     } // inactive
+
+    // Print a nice placeholder if no caltypes were active/inactive
+    if(nShown == 0) {
+        __printf("(none)");
+    }
 
     __printf("\n");
 
