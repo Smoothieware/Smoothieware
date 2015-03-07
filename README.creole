@@ -5,11 +5,23 @@ You will need to add some settings to your config file - see the Azteeg X5 and S
 
 The recommended way to use this on a Delta printer is:
 * G29 (calibrate your probe)
-* G32 (iterative calibration - gets endstops/delta radius correct)
 * G31 O P Q R S (simulated annealing - corrects for errors in X, Y, and Z - it may help to run this multiple times)
 * G31 A (depth mapping - corrects errors in Z, but not X or Y - benefits from simulated annealing, though)
+* G32 (iterative calibration - gets endstops/delta radius correct)
 
-This is beta-quality code. I don't think it will crash your probe, but keep your hand near the power switch anyway, and DON'T walk away while it's probing!
+It's a good idea to run G29 first, to get an idea of how repeatable your probe is. You want 30 microns (0.03mm) or less, ideally zero. If your probe's repeatability is worse than that, you may have printed it too loosely (not enough filament flow) or you may have "delta arm blues" or some other slop in the printer that should be corrected before trying any sort of calibration..
+
+After your probe is calibrated, you can run G32, which will perform a standard "GeneB"-style calibration, in which delta radius and endstops are adjusted. That will get your printer a little closer to its optimal configuration. (If you already have an existing sorta-good calibration, you can skip this step.)
+
+Then, you can run the simulated annealing calibration. Type G31 OPQRS. If you want to completely start from scratch, you can run G31 OPQRSY (the Y means "reset all offsets to 0"). The printer will go down and tap the print surface in a grid, and then start the simulated annealing process. It should take a minute or so, and you'll see one of the LEDs on the controller flash on and off slowly to indicate that it's working.
+
+After the annealing is finished, you can run G31 Z to depth-map the print surface and report the values. If all the numbers are less than 0.1mm, you're in good shape. You may want to run G31 OPQRS (**not OPQRSY**, which would lose all the progress it made before) to see if you can get an improved calibration. I usually run G31 OPQRS 1-4 times, depending on whether the successive runs show improvement. Usually, one run is enough.
+
+G31 OPQRS fixes errors in X, Y, and Z, assisting greatly with dimensional accuracy. However, it may be that you want an even better calibration. After G31 OPQRS, you can run G31 A. That will tap the bed in a grid as before, but instead of adjusting the calibration, it will store a depth map of the print surface and use this to correct Z in real time. This ONLY fixes errors in Z, not X or Y, so you should only run it AFTER you do the annealing. Afterwards, you can run G31 Z again, and it'll show you the final corrected depths - they should be within a few microns of zero!
+
+When you're satisfied with your calibration, type M500 to save everything. If you turn the printer off and then on again, it WON'T lose its configuration, so you only have to do this calibration once. Run it again if the printer is moved, or a heavy object or person collides with it.
+
+**This is beta-quality code.** I don't think it will crash your probe, but keep your hand near the power switch anyway, and DON'T walk away while it's probing!
 
 
 ==Overview
