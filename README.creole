@@ -1,6 +1,8 @@
 ==626Pilot's Delta Calibration==
 This firmware includes an advanced auto-calibration system for Delta printers. See comments at the top of src/modules/tools/zprobe/ComprehensiveDeltaStrategy.cpp for more info.
 
+**At this time, you MUST compile the firmware yourself. The firmware.bin in this repo is outdated and I haven't got around to fixing it yet! Instructions for compiling & flashing the firmware are further down.**
+
 The auto-calibration system requires either a Z-probe, or a print surface resting on force-sensitive resistors (FSRs) that have been hooked up to your controller to serve as "min endstops." If you need a Z-probe, this is the one I designed, which can be built for about $15 + some 3D-printed parts: http://www.thingiverse.com/thing:161753
 
 You will need to add some settings to your config file - see the Azteeg X5 and Smoothieboard ".delta" directories under ConfigSamples. I put all the settings you need near the top.
