@@ -41,6 +41,7 @@ private:
 
     struct {
         bool filament_out_alarm:1;
+        bool bulge_detected:1;
         bool suspended:1;
         bool active:1;
     };

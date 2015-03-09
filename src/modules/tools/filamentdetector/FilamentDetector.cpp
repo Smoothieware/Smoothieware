@@ -35,6 +35,7 @@ FilamentDetector::FilamentDetector()
 {
     suspended= false;
     filament_out_alarm= false;
+    bulge_detected= false;
     active= true;
     e_last_moved= NAN;
 }
@@ -160,10 +161,18 @@ void FilamentDetector::on_main_loop(void *argument)
 {
     if (active && this->filament_out_alarm) {
         this->filament_out_alarm = false;
-        THEKERNEL->streams->printf("// Filament Detector has detected a filament jam\n");
-        this->suspended= true;
-        // fire suspend command
-        this->send_command( "M600", &(StreamOutput::NullStream) );
+        if(bulge_detected){
+            THEKERNEL->streams->printf("// Filament Detector has detected a bulge in the filament\n");
+            bulge_detected= false;
+        }else{
+            THEKERNEL->streams->printf("// Filament Detector has detected a filament jam\n");
+        }
+
+        if(!suspended) {
+            this->suspended= true;
+            // fire suspend command
+            this->send_command( "M600", &(StreamOutput::NullStream) );
+        }
     }
 }
 
@@ -215,11 +224,12 @@ void FilamentDetector::check_encoder()
 
 uint32_t FilamentDetector::button_tick(uint32_t dummy)
 {
-    if(!bulge_pin.connected()) return 0;
+    if(!bulge_pin.connected() || suspended) return 0;
 
     if(bulge_pin.get()) {
         // we got a trigger from the bulge detector
         this->filament_out_alarm= true;
+        this->bulge_detected= true;
     }
 
     return 0;
