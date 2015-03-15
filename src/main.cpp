@@ -16,6 +16,7 @@
 #include "modules/tools/scaracal/SCARAcal.h"
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
+#include "modules/tools/proton/proton.h"
 
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -126,6 +127,8 @@ void init() {
     kernel->add_module( new PlayLed() );
     kernel->add_module( new Endstops() );
     kernel->add_module( new Player() );
+
+    kernel->add_module( new Proton () );
 
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
