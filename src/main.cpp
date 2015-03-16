@@ -26,7 +26,6 @@
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
-#include "libs/Network/uip/Network.h"
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
@@ -39,21 +38,17 @@
 // Debug
 #include "libs/SerialMessage.h"
 
-#include "libs/USBDevice/USB.h"
-#include "libs/USBDevice/USBMSD/USBMSD.h"
-#include "libs/USBDevice/USBMSD/SDCard.h"
-#include "libs/USBDevice/USBSerial/USBSerial.h"
-#include "libs/USBDevice/DFU.h"
-#include "libs/SDFAT.h"
 #include "StreamOutputPool.h"
 #include "ToolManager.h"
 
 #include "libs/Watchdog.h"
 
 #include "version.h"
-#include "system_LPC17xx.h"
 
-#include "mbed.h"
+#include <mbed.h>
+#include <SDFileSystem.h>
+#include <USBSerial.h>
+#include <USBMSD.h>
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
@@ -63,26 +58,25 @@
 // Watchdog wd(5000000, WDT_MRI);
 
 // USB Stuff
-SDCard sd  __attribute__ ((section ("AHBSRAM0"))) (P0_9, P0_8, P0_7, P0_6);      // this selects SPI1 as the sdcard as it is on Smoothieboard
-//SDCard sd(P0_18, P0_17, P0_15, P0_16);  // this selects SPI0 as the sdcard
-//SDCard sd(P0_18, P0_17, P0_15, P2_8);  // this selects SPI0 as the sdcard witrh a different sd select
+// this selects SPI1 as the sdcard on NUCLEAO STM32F411
+SDFileSystem sd  (SPI_MOSI, SPI_MISO, SPI_SCK, SPI_CS, "sd"); 
 
-USB u __attribute__ ((section ("AHBSRAM0")));
-USBSerial usbserial __attribute__ ((section ("AHBSRAM0"))) (&u);
-#ifndef DISABLEMSD
-USBMSD msc __attribute__ ((section ("AHBSRAM0"))) (&u, &sd);
-#else
+//~ USB u;
+USBSerial usbserial;
+//~ #ifndef DISABLEMSD
+//~ USBMSD msc (&u, &sd);
+//~ #else
 USBMSD *msc= NULL;
-#endif
+//~ #endif
 
-SDFAT mounter __attribute__ ((section ("AHBSRAM0"))) ("sd", &sd);
+//~ SDFAT mounter __attribute__ ("sd", &sd);
 
-GPIO leds[5] = {
-    GPIO(P1_18),
-    GPIO(P1_19),
-    GPIO(P1_20),
-    GPIO(P1_21),
-    GPIO(P4_28)
+DigitalOut leds[5] = {
+    DigitalOut(LED1),
+    DigitalOut(LED2),
+    DigitalOut(LED3),
+    DigitalOut(LED4),
+    DigitalOut(LED1)
 };
 
 // debug pins, only used if defined in src/makefile
@@ -94,7 +88,6 @@ void init() {
 
     // Default pins to low status
     for (int i = 0; i < 5; i++){
-        leds[i].output();
         leds[i]= 0;
     }
 
@@ -116,17 +109,15 @@ void init() {
     if(!sdok) kernel->streams->printf("SDCard is disabled\r\n");
 
 #ifdef DISABLEMSD
-    // attempt to be able to disable msd in config
-    if(sdok && !kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
-        // HACK to zero the memory USBMSD uses as it and its objects seem to not initialize properly in the ctor
-        size_t n= sizeof(USBMSD);
-        void *v = AHB0.alloc(n);
-        memset(v, 0, n); // clear the allocated memory
-        msc= new(v) USBMSD(&u, &sd); // allocate object using zeroed memory
-    }else{
-        msc= NULL;
-        kernel->streams->printf("MSD is disabled\r\n");
-    }
+    //~ // attempt to be able to disable msd in config
+    //~ if(sdok && !kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
+        //~ // HACK to zero the memory USBMSD uses as it and its objects seem to not initialize properly in the ctor
+        //~ size_t n= sizeof(USBMSD);
+        //~ msc = USBMSD(&u, &sd); // allocate object using zeroed memory
+    //~ }else{
+        //~ msc= NULL;
+        //~ kernel->streams->printf("MSD is disabled\r\n");
+    //~ }
 #endif
 
 
@@ -190,25 +181,26 @@ void init() {
     #endif
 
     // Create and initialize USB stuff
-    u.init();
+    //~ u.init();
 
 #ifdef DISABLEMSD
-    if(sdok && msc != NULL){
-        kernel->add_module( msc );
-    }
+    //~ if(sdok && msc != NULL){
+        //~ kernel->add_module( msc );
+    //~ }
 #else
     kernel->add_module( &msc );
 #endif
 
-    kernel->add_module( &usbserial );
+    //~ kernel->add_module( &usbserial );
     if( kernel->config->value( second_usb_serial_enable_checksum )->by_default(false)->as_bool() ){
-        kernel->add_module( new(AHB0) USBSerial(&u) );
+            /* FIXME */
+        //~ kernel->add_module( USBSerial(&u) );
     }
 
     if( kernel->config->value( dfu_enable_checksum )->by_default(false)->as_bool() ){
-        kernel->add_module( new(AHB0) DFU(&u));
+        //~ kernel->add_module( DFU(&u));
     }
-    kernel->add_module( &u );
+    //~ kernel->add_module( &u );
 
     // clear up the config cache to save some memory
     kernel->config->config_cache_clear();
