@@ -1,0 +1,3 @@
+[submodule "mbed"]
+	path = mbed
+	url = git@github.com:clementleger/gcc4mbed.git
