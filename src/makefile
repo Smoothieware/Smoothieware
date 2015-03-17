@@ -2,6 +2,7 @@ PROJECT		:= main
 GCC4MBED_DIR	:= $(CURDIR)/../mbed/
 DEVICES		:= NUCLEO_F411RE
 MBED_LIBS	:= USBDevice fs
+EXCLUDE 	:= libs/Network
 
 # BUILD_TYPE can be set to the following values:
 #  Checked - Optimizations enabled with MRI debug monitor support. (Recommended Type)
