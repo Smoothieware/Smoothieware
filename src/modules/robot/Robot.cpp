@@ -77,6 +77,20 @@ using std::string;
 #define  beta_max_rate_checksum              CHECKSUM("beta_max_rate")
 #define  gamma_max_rate_checksum             CHECKSUM("gamma_max_rate")
 
+#define  alpha_has_slave_checksum            CHECKSUM("alpha_has_slave")
+#define  alpha_slave_step_pin_checksum       CHECKSUM("alpha_slave_step_pin")
+#define  alpha_slave_dir_pin_checksum        CHECKSUM("alpha_slave_dir_pin")
+#define  alpha_slave_en_pin_checksum         CHECKSUM("alpha_slave_en_pin")
+
+#define  beta_has_slave_checksum            CHECKSUM("beta_has_slave")
+#define  beta_slave_step_pin_checksum       CHECKSUM("beta_slave_step_pin")
+#define  beta_slave_dir_pin_checksum        CHECKSUM("beta_slave_dir_pin")
+#define  beta_slave_en_pin_checksum         CHECKSUM("beta_slave_en_pin")
+
+#define  gamma_has_slave_checksum            CHECKSUM("gamma_has_slave")
+#define  gamma_slave_step_pin_checksum       CHECKSUM("gamma_slave_step_pin")
+#define  gamma_slave_dir_pin_checksum        CHECKSUM("gamma_slave_dir_pin")
+#define  gamma_slave_en_pin_checksum         CHECKSUM("gamma_slave_en_pin")
 
 // new-style actuator stuff
 #define  actuator_checksum                   CHEKCSUM("actuator")
@@ -185,26 +199,6 @@ void Robot::on_config_reload(void *argument)
     this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
-    Pin alpha_step_pin;
-    Pin alpha_dir_pin;
-    Pin alpha_en_pin;
-    Pin beta_step_pin;
-    Pin beta_dir_pin;
-    Pin beta_en_pin;
-    Pin gamma_step_pin;
-    Pin gamma_dir_pin;
-    Pin gamma_en_pin;
-
-    alpha_step_pin.from_string( THEKERNEL->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
-    alpha_dir_pin.from_string(  THEKERNEL->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
-    alpha_en_pin.from_string(   THEKERNEL->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
-    beta_step_pin.from_string(  THEKERNEL->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
-    beta_dir_pin.from_string(   THEKERNEL->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
-    beta_en_pin.from_string(    THEKERNEL->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
-    gamma_step_pin.from_string( THEKERNEL->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
-    gamma_dir_pin.from_string(  THEKERNEL->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
-    gamma_en_pin.from_string(   THEKERNEL->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
-
     float steps_per_mm[3] = {
         THEKERNEL->config->value(alpha_steps_per_mm_checksum)->by_default(  80.0F)->as_number(),
         THEKERNEL->config->value(beta_steps_per_mm_checksum )->by_default(  80.0F)->as_number(),
@@ -213,9 +207,14 @@ void Robot::on_config_reload(void *argument)
 
     // TODO: delete or detect old steppermotors
     // Make our 3 StepperMotors
-    this->alpha_stepper_motor  = new StepperMotor(alpha_step_pin, alpha_dir_pin, alpha_en_pin);
-    this->beta_stepper_motor   = new StepperMotor(beta_step_pin,  beta_dir_pin,  beta_en_pin );
-    this->gamma_stepper_motor  = new StepperMotor(gamma_step_pin, gamma_dir_pin, gamma_en_pin);
+    this->alpha_stepper_motor = create_stepper_motor(alpha_step_pin_checksum, "2.0", alpha_dir_pin_checksum, "0.5", alpha_en_pin_checksum, "0.4", 
+                                                     alpha_has_slave_checksum, alpha_slave_step_pin_checksum, "2.3", alpha_slave_dir_pin_checksum, "0.22", alpha_slave_en_pin_checksum, "0.21");
+
+    this->beta_stepper_motor   = create_stepper_motor(beta_step_pin_checksum,  "2.1", beta_dir_pin_checksum, "0.11", beta_en_pin_checksum, "0.10",
+                                                      beta_has_slave_checksum, beta_slave_step_pin_checksum, "2.3", beta_slave_dir_pin_checksum, "0.22", beta_slave_en_pin_checksum, "0.21");
+
+    this->gamma_stepper_motor  = create_stepper_motor(gamma_step_pin_checksum,  "2.2", gamma_dir_pin_checksum, "0.20", gamma_en_pin_checksum, "0.19",
+                                                      gamma_has_slave_checksum, gamma_slave_step_pin_checksum, "2.3", gamma_slave_dir_pin_checksum, "0.22", gamma_slave_en_pin_checksum, "0.21");
 
     alpha_stepper_motor->change_steps_per_mm(steps_per_mm[0]);
     beta_stepper_motor->change_steps_per_mm(steps_per_mm[1]);
@@ -240,6 +239,39 @@ void Robot::on_config_reload(void *argument)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 
     //this->clearToolOffset();
+}
+
+StepperMotor* Robot::create_stepper_motor(uint16_t step_pin_cs, string step_pin_dflt, uint16_t dir_pin_cs, string  dir_pin_dflt, uint16_t en_pin_cs, string en_pin_dflt, 
+                                          uint16_t motor_has_slave_cs, 
+                                          uint16_t slave_step_pin_cs, string slave_step_pin_dflt, uint16_t slave_dir_pin_cs, string slave_dir_pin_dflt, uint16_t slave_en_pin_cs, string slave_en_pin_dflt)
+{
+  StepperMotor *motor = 0;
+  Pin dir_pin;
+  Pin en_pin;
+  Pin step_pin;
+
+  // master motor pins
+  step_pin.from_string(  THEKERNEL->config->value(step_pin_cs)->by_default(step_pin_dflt)->as_string())->as_output();
+  dir_pin.from_string(   THEKERNEL->config->value(dir_pin_cs )->by_default(dir_pin_dflt )->as_string())->as_output();
+  en_pin.from_string(    THEKERNEL->config->value(en_pin_cs  )->by_default(en_pin_dflt  )->as_string())->as_output();
+
+  if(!THEKERNEL->config->value(motor_has_slave_cs)->by_default(false)->as_bool()) {
+    motor  = new StepperMotor(step_pin, dir_pin, en_pin);
+  } else {
+    // motor has slave motor
+    Pin slave_step_pin;
+    Pin slave_dir_pin;
+    Pin slave_en_pin;
+
+    // slave motor pins
+    slave_step_pin.from_string( THEKERNEL->config->value(slave_step_pin_cs)->by_default(slave_step_pin_dflt)->as_string())->as_output();
+    slave_dir_pin.from_string(  THEKERNEL->config->value(slave_dir_pin_cs )->by_default(slave_dir_pin_dflt )->as_string())->as_output();
+    slave_en_pin.from_string(   THEKERNEL->config->value(slave_en_pin_cs  )->by_default(slave_en_pin_dflt  )->as_string())->as_output();
+    
+    motor  = new StepperMotor(step_pin, dir_pin, en_pin, slave_step_pin, slave_dir_pin, slave_en_pin);
+  }
+
+  return motor;
 }
 
 // this does a sanity check that actuator speeds do not exceed steps rate capability

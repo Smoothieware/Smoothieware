@@ -17,12 +17,19 @@ float StepperMotor::default_minimum_actuator_rate= 20.0F;
 
 // A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
 
-StepperMotor::StepperMotor()
+StepperMotor::StepperMotor() : has_slave(false)
 {
     init();
 }
 
-StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en)
+StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en), has_slave(false)
+{
+    init();
+    enable(false);
+    set_high_on_debug(en.port_number, en.pin);
+}
+
+StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en, Pin &slave_step, Pin &slave_dir, Pin &slave_en) : step_pin(step), dir_pin(dir), en_pin(en), slave_step_pin(slave_step), slave_dir_pin(slave_dir), slave_en_pin(slave_en), has_slave(true)
 {
     init();
     enable(false);
@@ -68,6 +75,7 @@ void StepperMotor::step()
 
     // output to pins 37t
     this->step_pin.set( 1 );
+    if(has_slave) this->slave_step_pin.set( 1 );
 
     // move counter back 11t
     this->fx_counter -= this->fx_ticks_per_step;
@@ -131,6 +139,7 @@ void StepperMotor::update_exit_tick()
 StepperMotor* StepperMotor::move( bool direction, unsigned int steps, float initial_speed)
 {
     this->dir_pin.set(direction);
+    if(has_slave) this->slave_dir_pin.set(direction);
     this->direction = direction;
 
     // How many steps we have to move until the move is done

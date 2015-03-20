@@ -20,12 +20,21 @@ class StepperMotor {
     public:
         StepperMotor();
         StepperMotor(Pin& step, Pin& dir, Pin& en);
+
+        // slave motor pins present
+        StepperMotor(Pin& step, Pin& dir, Pin& en, Pin& slave_step, Pin& slave_dir, Pin& slave_en);
         ~StepperMotor();
 
         void step();
-        inline void unstep() { step_pin.set(0); };
+        inline void unstep() { 
+            step_pin.set(0); 
+            if(has_slave) slave_step_pin.set(0);
+        };
 
-        inline void enable(bool state) { en_pin.set(!state); };
+        inline void enable(bool state) { 
+            en_pin.set(!state); 
+            if(has_slave) slave_en_pin.set(!state);
+        };
 
         bool is_moving() { return moving; }
         void move_finished();
@@ -66,12 +75,16 @@ class StepperMotor {
     private:
         void init();
 
+        bool has_slave;
         int index;
         Hook* end_hook;
 
         Pin step_pin;
         Pin dir_pin;
         Pin en_pin;
+        Pin slave_step_pin;
+        Pin slave_dir_pin;
+        Pin slave_en_pin;
 
         float steps_per_second;
         float steps_per_mm;
