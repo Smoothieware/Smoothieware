@@ -50,7 +50,6 @@ void Switch::on_module_loaded()
     this->switch_changed = false;
 
     this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_MAIN_LOOP);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
@@ -147,15 +146,12 @@ void Switch::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
     // Add the gcode to the queue ourselves if we need it
-    if (match_input_on_gcode(gcode) || match_input_off_gcode(gcode)) {
-        THEKERNEL->conveyor->append_gcode(gcode);
+    if (!(match_input_on_gcode(gcode) || match_input_off_gcode(gcode))) {
+        return;
     }
-}
 
-// Turn pin on and off
-void Switch::on_gcode_execute(void *argument)
-{
-    Gcode *gcode = static_cast<Gcode *>(argument);
+    // drain queue
+    THEKERNEL->conveyor->wait_for_empty_queue();
 
     if(match_input_on_gcode(gcode)) {
         int v;
