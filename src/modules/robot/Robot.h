@@ -68,6 +68,9 @@ class Robot : public Module {
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
         void clearToolOffset();
         void check_max_actuator_speeds();
+        StepperMotor *create_stepper_motor(uint16_t step_pin, string step_pin_dflt, uint16_t dir_pin, string dir_pin_dflt, uint16_t en_pin, string en_pin_dflt, 
+                                           uint16_t motor_has_slave, 
+                                           uint16_t slave_step_pin, string slave_step_pin_dflt, uint16_t slave_dir_pin, string slave_dir_pin_dflt, uint16_t slave_en_pin, string slave_en_pin_dflt);
 
         typedef std::tuple<float, float, bool> saved_state_t; // save current feedrate and absolute mode
         std::stack<saved_state_t> state_stack;               // saves state from M120
