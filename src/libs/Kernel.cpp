@@ -94,6 +94,7 @@ Kernel::Kernel(){
     this->step_ticker = new StepTicker();
     this->adc = new Adc();
 
+/* FIXME STM32 
     // TODO : These should go into platform-specific files
     // LPC17xx-specific
     NVIC_SetPriorityGrouping(0);
@@ -119,7 +120,7 @@ Kernel::Kernel(){
         NVIC_SetPriority(UART2_IRQn, 5);
         NVIC_SetPriority(UART3_IRQn, 5);
     }
-
+*/
     // Configure the step ticker
     this->base_stepping_frequency = this->config->value(base_stepping_frequency_checksum)->by_default(100000)->as_number();
     float microseconds_per_step_pulse = this->config->value(microseconds_per_step_pulse_checksum)->by_default(5)->as_number();

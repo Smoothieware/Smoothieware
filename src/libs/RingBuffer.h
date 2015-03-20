@@ -10,6 +10,7 @@
 #ifndef RINGBUFFER_H
 #define RINGBUFFER_H
 
+#include "mbed.h"
 
 template<class kind, int length> class RingBuffer {
     public:

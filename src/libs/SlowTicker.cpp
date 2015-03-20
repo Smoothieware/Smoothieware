@@ -36,12 +36,14 @@ SlowTicker::SlowTicker(){
     flag_1s_flag = 0;
     flag_1s_count = SystemCoreClock>>2;
 
+        /* FIXME STM32 
     // Configure the actual timer after setup to avoid race conditions
     LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
     LPC_TIM2->MR0 = 10000;          // Initial dummy value for Match Register
     LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
     LPC_TIM2->TCR = 1;              // Enable interrupt
     NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
+    */
 }
 
 void SlowTicker::on_module_loaded(){
@@ -51,10 +53,13 @@ void SlowTicker::on_module_loaded(){
 // Set the base frequency we use for all sub-frequencies
 void SlowTicker::set_frequency( int frequency ){
     this->interval = (SystemCoreClock >> 2) / frequency;   // SystemCoreClock/4 = Timer increments in a second
+    
+        /* FIXME STM32 
     LPC_TIM2->MR0 = this->interval;
     LPC_TIM2->TCR = 3;  // Reset
     LPC_TIM2->TCR = 1;  // Reset
     flag_1s_count= SystemCoreClock>>2;
+    * */
 }
 
 // The actual interrupt being called by the timer, this is where work is done
@@ -124,9 +129,12 @@ void SlowTicker::on_idle(void*)
 }
 
 extern "C" void TIMER2_IRQHandler (void){
+        
+        /* FIXME STM32 
     if((LPC_TIM2->IR >> 0) & 1){  // If interrupt register set for MR0
         LPC_TIM2->IR |= 1 << 0;   // Reset it
     }
     global_slow_ticker->tick();
+    */
 }
 

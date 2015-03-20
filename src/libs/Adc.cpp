@@ -9,8 +9,6 @@
 #include "libs/nuts_bolts.h"
 #include "libs/Kernel.h"
 #include "libs/Pin.h"
-#include "libs/ADC/adc.h"
-#include "libs/Pin.h"
 
 
 using namespace std;
@@ -19,24 +17,34 @@ using namespace std;
 // TODO : Having the same name is confusing, should change that
 
 Adc::Adc(){
+        
+        /* FIXME STM32 
     this->adc = new ADC(1000, 1);
+    * */
 }
 
 // Enables ADC on a given pin
 void Adc::enable_pin(Pin* pin){
+        /* FIXME STM32 
     PinName pin_name = this->_pin_to_pinname(pin);
     this->adc->burst(1);
     this->adc->setup(pin_name,1);
     this->adc->interrupt_state(pin_name,1);
+    * */
 }
 
 // Read the last value ( burst mode ) on a given pin
 unsigned int Adc::read(Pin* pin){
+        /* FIXME STM32 
     return this->adc->read(this->_pin_to_pinname(pin));
+    */
+    return 0;
 }
 
 // Convert a smoothie Pin into a mBed Pin
 PinName Adc::_pin_to_pinname(Pin* pin){
+        
+        /* FIXME STM32 
     if( pin->port == LPC_GPIO0 && pin->pin == 23 ){
         return p15;
     }else if( pin->port == LPC_GPIO0 && pin->pin == 24 ){
@@ -53,5 +61,7 @@ PinName Adc::_pin_to_pinname(Pin* pin){
         //TODO: Error
         return NC;
     }
+    */
+    return NC;
 }
 

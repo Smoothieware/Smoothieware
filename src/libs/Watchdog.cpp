@@ -1,7 +1,5 @@
 #include "Watchdog.h"
 
-#include <lpc17xx_wdt.h>
-
 #include <mri.h>
 
 // TODO : comment this
@@ -9,14 +7,18 @@
 
 Watchdog::Watchdog(uint32_t timeout, WDT_ACTION action)
 {
+        /* FIXME STM32 
     WDT_Init(WDT_CLKSRC_IRC, (action == WDT_MRI)?WDT_MODE_INT_ONLY:WDT_MODE_RESET);
     WDT_Start(timeout);
     WDT_Feed();
+    * */
 }
 
 void Watchdog::feed()
 {
+        /* FIXME STM32 
     WDT_Feed();
+    * */
 }
 
 void Watchdog::on_module_loaded()
@@ -33,7 +35,9 @@ void Watchdog::on_idle(void*)
 
 extern "C" void WDT_IRQHandler(void)
 {
+        /* FIXME STM32 
     WDT_ClrTimeOutFlag();
     WDT_Feed();
+    */
     __debugbreak();
 }

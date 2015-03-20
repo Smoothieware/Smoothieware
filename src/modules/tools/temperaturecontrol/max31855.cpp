@@ -42,6 +42,7 @@ void Max31855::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     PinName miso;
     PinName mosi;
     PinName sclk;
+    /* FIXME STM32 
     if(spi_channel == 0) {
         // Channel 0
         mosi=P0_18; miso=P0_17; sclk=P0_15;
@@ -49,6 +50,7 @@ void Max31855::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         // Channel 1
         mosi=P0_9; miso=P0_8; sclk=P0_7;
     } 
+        */
 
     delete spi;
     spi = new mbed::SPI(mosi, miso, sclk);

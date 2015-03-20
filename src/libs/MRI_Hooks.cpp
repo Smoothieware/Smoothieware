@@ -1,6 +1,5 @@
 #include "MRI_Hooks.h"
 
-#include <sLPC17xx.h>
 #include <mri.h>
 
 // This is used by MRI to turn pins on and off when entering and leaving MRI. Useful for not burning everything down
@@ -24,13 +23,16 @@ extern "C" {
         0
     };
 
+            /* FIXME STM32
     static uint32_t _previous_state[5];
 
     static LPC_GPIO_TypeDef* io;
     static int i;
+    * */
 
     void __mriPlatform_EnteringDebuggerHook()
     {
+            /* FIXME STM32
         for (i = 0; i < 5; i++)
         {
             io           = (LPC_GPIO_TypeDef*) (LPC_GPIO_BASE + (0x20 * i));
@@ -41,10 +43,12 @@ extern "C" {
             io->FIOSET   = _set_high_on_debug[i];
             io->FIOCLR   = _set_low_on_debug[i];
         }
+        */
     }
 
     void __mriPlatform_LeavingDebuggerHook()
     {
+            /* FIXME STM32
         for (i = 0; i < 5; i++)
         {
             io           = (LPC_GPIO_TypeDef*) (LPC_GPIO_BASE + (0x20 * i));
@@ -52,6 +56,7 @@ extern "C" {
             io->FIOSET   =   _previous_state[i]  & (_set_high_on_debug[i] | _set_low_on_debug[i]);
             io->FIOCLR   = (~_previous_state[i]) & (_set_high_on_debug[i] | _set_low_on_debug[i]);
         }
+        */
     }
 
     void set_high_on_debug(int port, int pin)

@@ -12,8 +12,6 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "Button.h"
-#include "libs/USBDevice/USBMSD/SDCard.h"
-#include "libs/SDFAT.h"
 
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "screens/CustomScreen.h"

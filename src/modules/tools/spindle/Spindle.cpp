@@ -16,7 +16,6 @@
 #include "StreamOutputPool.h"
 #include "SlowTicker.h"
 #include "Conveyor.h"
-#include "system_LPC17xx.h"
 
 #include "libs/Pin.h"
 #include "InterruptIn.h"
@@ -100,7 +99,9 @@ void Spindle::on_module_loaded()
             PinName pinname = port_pin((PortName)smoothie_pin->port_number, smoothie_pin->pin);
             feedback_pin = new mbed::InterruptIn(pinname);
             feedback_pin->rise(this, &Spindle::on_pin_rise);
+            /* FIXME STM32 
             NVIC_SetPriority(EINT3_IRQn, 16);
+            * */
         }
         else
         {

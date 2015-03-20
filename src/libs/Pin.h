@@ -9,10 +9,6 @@
 
 #include "PinNames.h"
 
-namespace mbed {
-    class PwmOut;
-}
-
 class Pin {
     public:
         Pin();
@@ -20,8 +16,7 @@ class Pin {
         Pin* from_string(std::string value);
         /* FIXME STM32 */
         inline bool connected(){
-            //~ return this->valid;
-            return true;
+            return this->valid;
         }
 
         inline bool equals(const Pin& other) const {
@@ -66,10 +61,10 @@ class Pin {
                 //~ this->port->FIOCLR = 1 << this->pin;
         }
 
-        mbed::PwmOut *hardware_pwm();
+        PwmOut *hardware_pwm();
 
         // these should be private, and use getters
-        DigitalInOut port;
+        int port;
 
         unsigned char pin;
         char port_number;

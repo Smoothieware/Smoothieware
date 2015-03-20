@@ -83,7 +83,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
-#include <unistd.h>
 
 #define bed_x_checksum               CHECKSUM("bed_x")
 #define bed_y_checksum               CHECKSUM("bed_y")

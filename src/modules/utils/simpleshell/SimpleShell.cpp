@@ -29,11 +29,10 @@
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
+/* FIXME STM32 
 #include "SDFAT.h"
+* */
 #include "Thermistor.h"
-
-#include "system_LPC17xx.h"
-#include "LPC17xx.h"
 
 extern unsigned int g_maximumHeapAddress;
 
@@ -41,6 +40,7 @@ extern unsigned int g_maximumHeapAddress;
 #include <mri.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/stat.h>
 
 extern "C" uint32_t  __end__;
 extern "C" uint32_t  __malloc_free_list;
@@ -68,7 +68,9 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"net",      SimpleShell::net_command},
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
+/* FIXME STM32 
     {"remount",  SimpleShell::remount_command},
+    * */
     {"calc_thermistor", SimpleShell::calc_thermistor_command},
 
     // unknown command
@@ -240,14 +242,16 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
 
     DIR *d;
     struct dirent *p;
+    struct stat s;
     d = opendir(path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
+            stat(p->d_name, &s); 
             stream->printf("%s", lc(string(p->d_name)).c_str());
-            if(p->d_isdir) {
+            if(S_ISDIR(s.st_mode)) {
                 stream->printf("/");
             } else if(opts.find("-s", 0, 2) != string::npos) {
-                stream->printf(" %d", p->d_fsize);
+                stream->printf(" %d", s.st_size);
             }
             stream->printf("\r\n");
         }
@@ -257,6 +261,8 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
     }
 }
 
+/* FIXME STM32 
+
 extern SDFAT mounter;
 
 void SimpleShell::remount_command( string parameters, StreamOutput *stream )
@@ -264,6 +270,8 @@ void SimpleShell::remount_command( string parameters, StreamOutput *stream )
     mounter.remount();
     stream->printf("remounted\r\n");
 }
+*
+* */
 
 // Delete a file
 void SimpleShell::rm_command( string parameters, StreamOutput *stream )

@@ -1,9 +1,5 @@
 #include "gpio.h"
 
-#include "LPC17xx.h"
-#include "lpc17xx_pinsel.h"
-#include "lpc17xx_gpio.h"
-
 GPIO::GPIO(PinName pin) {
     this->port = (pin >> 5) & 7;
     this->pin = pin & 0x1F;
@@ -29,6 +25,7 @@ GPIO::GPIO(uint8_t port, uint8_t pin, uint8_t direction) {
 // GPIO::~GPIO() {}
 
 void GPIO::setup() {
+        /* FIXME STM32 
 	PINSEL_CFG_Type PinCfg;
 	PinCfg.Funcnum = 0;
 	PinCfg.OpenDrain = PINSEL_PINMODE_NORMAL;
@@ -36,10 +33,14 @@ void GPIO::setup() {
 	PinCfg.Portnum = GPIO::port;
 	PinCfg.Pinnum = GPIO::pin;
 	PINSEL_ConfigPin(&PinCfg);
+	* */
 }
 
 void GPIO::set_direction(uint8_t direction) {
+	
+        /* FIXME STM32 
 	FIO_SetDir(port, 1UL << pin, direction);
+	*/
 }
 
 void GPIO::output() {
@@ -59,15 +60,22 @@ void GPIO::write(uint8_t value) {
 }
 
 void GPIO::set() {
+        /* FIXME STM32 
 	FIO_SetValue(port, 1UL << pin);
+	*/
 }
 
 void GPIO::clear() {
+        /* FIXME STM32 
 	FIO_ClearValue(port, 1UL << pin);
+	*/
 }
 
 uint8_t GPIO::get() {
+        /* FIXME STM32 
 	return (FIO_ReadValue(port) & (1UL << pin))?255:0;
+	*/
+	return 0;
 }
 
 int GPIO::operator=(int value) {

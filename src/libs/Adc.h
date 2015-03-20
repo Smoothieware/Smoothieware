@@ -11,7 +11,6 @@
 #define ADC_H
 
 #include "PinNames.h" // mbed.h lib
-#include "libs/ADC/adc.h"
 
 class Pin;
 
@@ -22,7 +21,8 @@ class Adc {
         unsigned int read(Pin* pin);
         PinName _pin_to_pinname(Pin* pin);
 
-        ADC* adc;
+        /* FIXME STM32 */
+        //~ ADC* adc;
 };
 
 

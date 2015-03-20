@@ -25,7 +25,7 @@
 #include "libs/StreamOutput.h"
 #include "PublicDataRequest.h"
 
-#include <mri.h>
+#include <cmath>
 
 // OLD config names for backwards compatibility, NOTE new configs will not be added here
 #define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")

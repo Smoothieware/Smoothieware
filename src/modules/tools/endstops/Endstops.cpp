@@ -30,6 +30,7 @@
 #include "StepTicker.h"
 
 #include <ctype.h>
+#include <cmath>
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1
@@ -411,7 +412,7 @@ void Endstops::do_homing_cartesian(char axes_to_move)
                 // move up or down depending on sign of trim, -ive is down away from home
                 if (this->trim_mm[c] < 0) inverted_dir = !inverted_dir;
                 this->feed_rate[c]= this->slow_rates[c];
-                STEPPER[c]->move(inverted_dir, abs(round(this->trim_mm[c]*STEPS_PER_MM(c))), 0);
+                STEPPER[c]->move(inverted_dir, (double) abs( (double) round(this->trim_mm[c]*STEPS_PER_MM(c))), 0);
             }
         }
 

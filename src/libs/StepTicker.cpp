@@ -13,7 +13,6 @@
 #include "libs/Kernel.h"
 #include "StepperMotor.h"
 #include "StreamOutputPool.h"
-#include "system_LPC17xx.h" // mbed.h lib
 #include <math.h>
 #include <mri.h>
 
@@ -32,6 +31,7 @@ StepTicker* StepTicker::global_step_ticker;
 StepTicker::StepTicker(){
     StepTicker::global_step_ticker = this;
 
+        /* FIXME STM32 
     // Configure the timer
     LPC_TIM0->MR0 = 10000000;       // Initial dummy value for Match Register
     LPC_TIM0->MCR = 3;              // Match on MR0, reset on MR0, match on MR1
@@ -52,7 +52,7 @@ StepTicker::StepTicker(){
     LPC_RIT->RICTRL |= (2L); //RITENCLR
     LPC_RIT->RICTRL &= ~(8L); // disable
     //NVIC_SetVector(RIT_IRQn, (uint32_t)&_ritisr);
-
+*/
     // Default start values
     this->a_move_finished = false;
     this->do_move_finished = 0;
@@ -70,38 +70,47 @@ StepTicker::~StepTicker() {
 
 //called when everythinf is setup and interrupts can start
 void StepTicker::start() {
+        /* FIXME STM32 
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(RIT_IRQn);
+    * */
 }
 
 // Set the base stepping frequency
 void StepTicker::set_frequency( float frequency ){
     this->frequency = frequency;
     this->period = floorf((SystemCoreClock/4.0F)/frequency);  // SystemCoreClock/4 = Timer increments in a second
+        /* FIXME STM32 
     LPC_TIM0->MR0 = this->period;
     if( LPC_TIM0->TC > LPC_TIM0->MR0 ){
         LPC_TIM0->TCR = 3;  // Reset
         LPC_TIM0->TCR = 1;  // Reset
     }
+    * */
 }
 
 // Set the reset delay
 void StepTicker::set_reset_delay( float microseconds ){
     uint32_t delay = floorf((SystemCoreClock/4.0F)*(microseconds/1000000.0F));  // SystemCoreClock/4 = Timer increments in a second
+        /* FIXME STM32 
     LPC_TIM1->MR0 = delay;
+    * */
 }
 
 // this is the number of acceleration ticks per second
 void StepTicker::set_acceleration_ticks_per_second(uint32_t acceleration_ticks_per_second) {
     uint32_t us= roundf(1000000.0F/acceleration_ticks_per_second); // period in microseconds
+        /* FIXME STM32 
     LPC_RIT->RICOMPVAL = (uint32_t)(((SystemCoreClock / 1000000L) * us)-1); // us
     LPC_RIT->RICOUNTER = 0;
     LPC_RIT->RICTRL |= (8L); // Enable rit
+    * */
 }
 
 // Synchronize the acceleration timer, and optionally schedule it to fire now
 void StepTicker::synchronize_acceleration(bool fire_now) {
+        /* FIXME STM32 
     LPC_RIT->RICOUNTER = 0;
     if(fire_now){
         NVIC_SetPendingIRQ(RIT_IRQn);
@@ -112,6 +121,7 @@ void StepTicker::synchronize_acceleration(bool fire_now) {
             NVIC_ClearPendingIRQ(RIT_IRQn);
         }
     }
+    * */
 }
 
 
@@ -143,7 +153,9 @@ inline void StepTicker::unstep_tick(){
 }
 
 extern "C" void TIMER1_IRQHandler (void){
+        /* FIXME STM32 
     LPC_TIM1->IR |= 1 << 0;
+    * */
     StepTicker::global_step_ticker->unstep_tick();
 }
 
@@ -153,7 +165,9 @@ extern "C" void TIMER0_IRQHandler (void){
 }
 
 extern "C" void RIT_IRQHandler (void){
+        /* FIXME STM32 
     LPC_RIT->RICTRL |= 1L;
+    * */
     StepTicker::global_step_ticker->acceleration_tick();
 }
 
@@ -187,8 +201,10 @@ void  StepTicker::acceleration_tick() {
 }
 
 void StepTicker::TIMER0_IRQHandler (void){
+        /* FIXME STM32 
     // Reset interrupt register
     LPC_TIM0->IR |= 1 << 0;
+    * */
     tick_cnt++; // count number of ticks
 
     // Step pins NOTE takes 1.2us when nothing to step, 1.8-2us for one motor stepped and 2.6us when two motors stepped, 3.167us when three motors stepped
@@ -205,8 +221,10 @@ void StepTicker::TIMER0_IRQHandler (void){
     // right now it takes about 3-4us but if the unstep were near 10uS or greater it would be an issue
     // also it takes at least 2us to get here so even when set to 1us pulse width it will still be about 3us
     if( this->unstep.any()){
+        /* FIXME STM32 
         LPC_TIM1->TCR = 3;
         LPC_TIM1->TCR = 1;
+        * */
     }
     // just let it run it will fire every 143 seconds
     // else{
@@ -222,7 +240,9 @@ void StepTicker::TIMER0_IRQHandler (void){
     if(this->do_move_finished.load() > 0){
         // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
         //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
+        /* FIXME STM32 
         SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;
+        * */
     }
 }
 
@@ -240,7 +260,9 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
     bool enabled= active_motor.any(); // see if interrupt was previously enabled
     active_motor[motor->index]= 1;
     if(!enabled) {
+        /* FIXME STM32 
         LPC_TIM0->TCR = 1;               // Enable interrupt
+        * */
     }
 }
 
@@ -250,7 +272,9 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
     active_motor[motor->index]= 0;
     // If we have no motor to work on, disable the whole interrupt
     if(this->active_motor.none()){
+        /* FIXME STM32 
         LPC_TIM0->TCR = 0;               // Disable interrupt
+        * */
         tick_cnt= 0;
     }
 }
