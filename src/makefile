@@ -1,8 +1,8 @@
 PROJECT		:= main
-GCC4MBED_DIR	:= $(CURDIR)/../mbed/
+GCC4MBED_DIR	:= ../mbed
 DEVICES		:= NUCLEO_F411RE
 MBED_LIBS	:= USBDevice fs
-EXCLUDE 	:= libs/Network/ libs/ADC/ modules/utils/panel USBAudio
+EXCLUDE 	:= libs/Network/ libs/ADC/ modules/utils/panel 
 
 # BUILD_TYPE can be set to the following values:
 #  Checked - Optimizations enabled with MRI debug monitor support. (Recommended Type)
@@ -66,7 +66,7 @@ export EXCLUDED_MODULES = tools/touchprobe
 #export EXCLUDED_MODULES = tools/touchprobe tools/laser tools/temperaturecontrol tools/extruder
 
 # set to not compile in any network support
-DEFINES += -DNONETWORK -DDISABLEMSD -DNO_TOOLS_TOUCHPROBE
+DEFINES += -DNONETWORK -DDISABLEMSD -DNO_TOOLS_TOUCHPROBE -DNO_UTILS_PANEL
 
 include $(GCC4MBED_DIR)/build/gcc4mbed.mk
 

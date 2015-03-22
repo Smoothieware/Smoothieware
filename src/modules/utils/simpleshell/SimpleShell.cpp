@@ -251,7 +251,7 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
             if(S_ISDIR(s.st_mode)) {
                 stream->printf("/");
             } else if(opts.find("-s", 0, 2) != string::npos) {
-                stream->printf(" %d", s.st_size);
+                stream->printf(" %ld", s.st_size);
             }
             stream->printf("\r\n");
         }
@@ -481,6 +481,7 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
 // show free memory
 void SimpleShell::mem_command( string parameters, StreamOutput *stream)
 {
+/* FIXME STM32 
     bool verbose = shift_parameter( parameters ).find_first_of("Vv") != string::npos ;
     unsigned long heap = (unsigned long)_sbrk(0);
     unsigned long m = g_maximumHeapAddress - heap;
@@ -488,12 +489,12 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
 
     uint32_t f = heapWalk(stream, verbose);
     stream->printf("Total Free RAM: %lu bytes\r\n", m + f);
-
     stream->printf("Free AHB0: %lu, AHB1: %lu\r\n", AHB0.free(), AHB1.free());
     if (verbose) {
         AHB0.debug(stream);
         AHB1.debug(stream);
     }
+    * */
 }
 
 static uint32_t getDeviceType()

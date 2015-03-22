@@ -27,7 +27,7 @@ FirmConfigSource::FirmConfigSource(const char* name){
 
 // Transfer all values found in the file to the passed cache
 void FirmConfigSource::transfer_values_to_cache( ConfigCache* cache ){
-
+/* FIXME STM32
     char* p = &_binary_config_default_start;
     // For each line
     while( p < &_binary_config_default_end ){
@@ -41,6 +41,7 @@ void FirmConfigSource::transfer_values_to_cache( ConfigCache* cache ){
         p= eol;
         process_line_from_ascii_config(line, cache);
     }
+    * */
 }
 
 // Return true if the check_sums match
@@ -59,6 +60,7 @@ string FirmConfigSource::read( uint16_t check_sums[3] ){
 
     string value = "";
 
+/* FIXME STM32
     char* p = &_binary_config_default_start;
     // For each line
     while( p < &_binary_config_default_end ){
@@ -72,7 +74,7 @@ string FirmConfigSource::read( uint16_t check_sums[3] ){
         value = process_line_from_ascii_config(line, check_sums);
         if(!value.empty()) return value;
     }
-
+*/
     return value;
 }
 
