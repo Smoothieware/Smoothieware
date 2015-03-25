@@ -28,7 +28,7 @@ junction_deviation                           0.05             # Similar to the o
 
 # Stepper module configuration
 microseconds_per_step_pulse                  1                # Duration of step pulses to stepper drivers, in microseconds
-base_stepping_frequency                      100000           # Base frequency for stepping, higher gives smoother movement
+base_stepping_frequency                      100000           # Base frequency for stepping
 
 # Cartesian axis speed limits
 x_axis_max_speed                             30000            # mm/min
@@ -316,7 +316,7 @@ network.ip_address                           auto             # use dhcp to get 
 #network.ip_gateway                           192.168.3.1      # the gateway address
 #network.mac_override                         xx.xx.xx.xx.xx.xx  # override the mac address, only do this if you have a conflict
 
-# Drills module 
+# Drills module
 # Implement the Canned Drilling Cycles
 # G80-83, G98, G99 in absolute mode only
 # Incremental mode not implemented (L)
