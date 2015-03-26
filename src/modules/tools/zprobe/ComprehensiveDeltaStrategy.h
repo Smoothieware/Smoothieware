@@ -17,6 +17,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <ctime>
+#include <random>
 
 // For twiddling LEDs
 extern GPIO leds[];
@@ -32,12 +34,28 @@ extern GPIO leds[];
 #define MP_MAX_PREFIXES 6
 
 // Some commonly used strings
-#define _STR_TRUE_ "true"
-#define _STR_FALSE_ "false"
-#define _STR_ENABLED_ "enabled"
-#define _STR_DISABLED_ "disabled"
-#define _STR_ON_ "on"
-#define _STR_OFF_ "off"
+#define _STR_TRUE_ "True"
+#define _STR_FALSE_ "False"
+#define _STR_ENABLED_ "Enabled"
+#define _STR_DISABLED_ "Disabled"
+#define _STR_ON_ "On"
+#define _STR_OFF_ "Off"
+
+// Calibration types
+#define CDS_N_CALTYPES 5
+enum _cds_caltype_t {
+    CT_ENDSTOP,
+    CT_DELTA_RADIUS,
+    CT_ARM_LENGTH,
+    CT_TOWER_ANGLE,
+    CT_VIRTUAL_SHIMMING,
+    CT_TOWER_VECTOR
+};
+
+// For bit-twiddling, taken from https://github.com/626Pilot/RaspberryPi-NeoPixel-WS2812/blob/master/ws2812-RPi.c
+#define SETBIT(word, bit) word |= 1<<bit
+#define CLRBIT(word, bit) word &= ~(1<<bit)
+#define GETBIT(word, bit) word & (1 << bit) ? 1 : 0
 
 // For iterative calibration, and also virtual shimming - these are the points tested
 enum _cds_tower_point_t {
@@ -225,13 +243,15 @@ struct best_probe_calibration_t {
 
 class ComprehensiveDeltaStrategy : public LevelingStrategy {
 
-public:
+  public:
+
     ComprehensiveDeltaStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe){};
     ~ComprehensiveDeltaStrategy();
     bool handleGcode(Gcode* gcode);
     bool handleConfig();
 
-private:
+
+  private:
 
     // =====================
     //       VARIABLES
@@ -338,6 +358,7 @@ private:
     float saved_acceleration;
     float probe_acceleration;
     bool geom_dirty;			// Means we need to redo the endstops/delta radius
+    char LED_state = 0b00000000;	// For saving blinky light state
     
     // Method prefixes - whenever you _printf, it will print "[prefix] words"
     // (the prefix has to be a two-char ASCIIZ string)
@@ -369,6 +390,7 @@ private:
     // Handlers for G-code commands too elaborate (read: stack-heavy) to cleanly fit in handleGcode()
     bool handle_depth_mapping_calibration(Gcode *gcode);        // G31
     bool handle_shimming_and_depth_correction(Gcode *gcode);    // M667
+    void print_g31_help();
 
     // Inverse and forward kinematics simulation
     void simulate_IK(float cartesian[DM_GRID_ELEMENTS][3], float trim[3]);
@@ -379,7 +401,7 @@ private:
     void init_test_points();
 
     // Parallel simulated annealing methods
-    bool heuristic_calibration(int annealing_tries, float max_temp, float binsearch_width, bool simulate_only, bool keep_settings, bool zero_all_offsets, float overrun_divisor);
+    bool heuristic_calibration(int annealing_tries, float max_temp, float binsearch_width, bool simulate_only, bool keep_settings, bool zero_all_offsets, float overrun_divisor, bool set_geom_after_each_caltype);
     float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float min, float max, float binsearch_width, float cartesian[DM_GRID_ELEMENTS][3], float target);
     float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float min, float max, float binsearch_width, float cartesian[DM_GRID_ELEMENTS][3], float target);
     bool set_test_trim(float x, float y, float z, bool dummy);
@@ -451,6 +473,7 @@ private:
     void midpoint(float first[2], float second[2], float (&dest)[2]);
 
     // Utilities
+    void blink_LED(unsigned char which);
     void zero_depth_maps();
     void copy_depth_map(_cds_depths_t source[], _cds_depths_t dest[]);
     void clear_calibration_types();

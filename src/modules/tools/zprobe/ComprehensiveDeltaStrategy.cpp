@@ -470,6 +470,7 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         bool simulate_only = false;
         bool keep_settings = false;
         bool zero_all_offsets = false;
+        bool set_geom_after_each_caltype = true;
 
         // Keep settings?
         if(gcode->has_letter('K')) {
@@ -538,6 +539,11 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
             zero_all_offsets = true;
         }
 
+        // Set geometry after each caltype
+        if(gcode->has_letter('J')) {
+            set_geom_after_each_caltype = false;
+        }
+
         push_prefix("HC");
         if(gcode->get_num_args() > 0) {
 
@@ -554,35 +560,52 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
                 caltype.delta_radius.active = true;
             }
 
-            heuristic_calibration(annealing_tries, max_temp, binsearch_width, simulate_only, keep_settings, zero_all_offsets, overrun_divisor);
+            // OK! Run the simulated annealing algorithm.
+            heuristic_calibration(annealing_tries, max_temp, binsearch_width, simulate_only, keep_settings, zero_all_offsets, overrun_divisor, set_geom_after_each_caltype);
         
         } else {
-        
-            flush();
-            _printf("G31 usage: (* = you can supply an annealing multiplier)\n");
-            _printf("Z: Probe and display depth map - no calibration\n");
-            _printf("A: Set up depth map for auto leveling (corrects Z only - run AFTER annealing)\n");
-            _printf("\n");
-            _printf("Simulated annealing (corrects X, Y and Z - run G32 first):\n");
-            _printf("K: Keep last settings\n");
-            _printf("L: Simulate only (don't probe)\n");
-            _printf("O: Endstops *\n");
-            _printf("P: Delta radius *\n");
-            _printf("Q: Arm length *\n");
-            _printf("R: Tower angle offsets *\n");
-            _printf("S: Surface plane virtual shimming *\n");
-            _printf("t: Annealing: Iterations (50)\n");		// Repetier Host eats lines starting with T >:(
-            _printf("U: Annealing: Max t_emp (0.35)\n");	// Repetier Host eats all lines containing "temp" >8(
-            _printf("V: Annealing: Binary search width (0.1)\n");
-            _printf("W: Annealing: Overrun divisor (2)\n");
-            _printf("Y: Zero all individual radius, angle, and arm length offsets\n");
-            flush();
+
+            // No args given, so show instructions
+            print_g31_help();
+
         } //if(gcode->get_num_args() > 0)
         pop_prefix();
     
     } // !gcode->has_letter('M')
 
     return true;
+
+}
+
+
+// This probably eats a ton of stack, so it gets its own method
+void __attribute__ ((noinline)) ComprehensiveDeltaStrategy::print_g31_help() {
+
+    asm("");	// A subtle hint to the compiler: DON'T inline this
+
+    flush();
+    _printf("G31 usage: (* = you can supply an annealing multiplier)\n");
+    _printf("Z: Probe and display depth map - no calibration\n");
+    _printf("A: Set up depth map for auto leveling (corrects Z only - run AFTER annealing)\n");
+    _printf("\n");
+    flush();
+    _printf("Simulated annealing (corrects X, Y and Z - run G32 first):\n");
+    _printf("J: Update geometry after ALL vars are annealed each pass, rather than after each one is annealed\n");
+    _printf("K: Keep last settings\n");
+    _printf("L: Simulate only (don't probe)\n");
+    _printf("O: Endstops *\n");
+    flush();
+    _printf("P: Delta radius *\n");
+    _printf("Q: Arm length *\n");
+    _printf("R: Tower angle offsets *\n");
+    _printf("S: Surface plane virtual shimming *\n");
+    flush();
+    _printf("t: Annealing: Iterations (50)\n");		// Repetier Host eats lines starting with T >:(
+    _printf("U: Annealing: Max t_emp (0.35)\n");	// Repetier Host eats all lines containing "temp" >8(
+    _printf("V: Annealing: Binary search width (0.1)\n");
+    _printf("W: Annealing: Overrun divisor (2)\n");
+    _printf("Y: Zero all individual radius, angle, and arm length offsets\n");
+    flush();
 
 }
 
@@ -724,11 +747,12 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
 
 // Main heuristic calibration routine
 // This expects caltype.*.active to be set true/false beforehand
-bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, float max_temp, float binsearch_width, bool simulate_only, bool keep_settings, bool zero_all_offsets, float overrun_divisor) {
+bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, float max_temp, float binsearch_width, bool simulate_only, bool keep_settings, bool zero_all_offsets, float overrun_divisor, bool set_geom_after_each_caltype) {
 
 
-/*
-        Simulated annealing notes
+    /*
+
+        Simulated Annealing Notes
         
         - Works by trying to take the system from a high-energy state to the lowest-energy state
         - Slowly reduces the "temperature" of the system
@@ -760,10 +784,12 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             - 	}						// OK
             -	k++						// OK
             - }							// OK
-*/
 
-    // LED twiddling
-    bool LED_state = false;
+    */
+
+
+    // We'll be needing some random numbers
+    srand(clock());
 
     // Banner
     push_prefix("HC");
@@ -810,12 +836,13 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     _printf("         Inactive tests: ");
     display_calibration_types(false, true);
 
-    _printf(" Keep last settings (K): %s\n", keep_settings ? _STR_TRUE_ : _STR_FALSE_);
-    _printf("    Annealing tries (T): %d\n", annealing_tries);
-    _printf("           Max temp (U): %1.3f\n", max_temp);
-    _printf("Binary search width (V): %1.3f\n", binsearch_width);
-    _printf("    Overrun divisor (W): %1.3f\n", overrun_divisor);
-    _printf("   Zero all offsets (Y): %s\n", zero_all_offsets ? _STR_TRUE_ : _STR_FALSE_);
+    _printf("Set geom during/after (J): %s\n", set_geom_after_each_caltype ? "During" : "After");
+    _printf("   Keep last settings (K): %s\n", keep_settings ? _STR_TRUE_ : _STR_FALSE_);
+    _printf("      Annealing tries (T): %d\n", annealing_tries);
+    _printf("             Max temp (U): %1.3f\n", max_temp);
+    _printf("  Binary search width (V): %1.3f\n", binsearch_width);
+    _printf("      Overrun divisor (W): %1.3f\n", overrun_divisor);
+    _printf("     Zero all offsets (Y): %s\n", zero_all_offsets ? _STR_TRUE_ : _STR_FALSE_);
     newline();
 
     // Make sure the depth maps are blank
@@ -826,8 +853,6 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     // * Run a simulated annealing to get the printer config most likely *
     // * to produce what the real printer is doing                       *
     // *******************************************************************
-
-    srand(time(NULL));
 
     // Depth correction has to be off, or none of this stuff will work
     surface_transform.depth_enabled = false;
@@ -1013,8 +1038,6 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         newline();
         _printf("Starting test configuration: Arm Length=%1.3f, Delta Radius=%1.3f\n", cur_set.arm_length, cur_set.delta_radius);
 
-
-
         // Get energy of initial state
         float energy = calc_energy(cur_cartesian);
         newline();
@@ -1022,6 +1045,13 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         _printf("Existing calibration has energy %1.3f\n \n", energy);
         _printf("Reticulating splines...\n");
 
+        // For deciding the random order in which to run the calibrations (it's different each time
+        // in order to eliminate a potential source of bias)
+        unsigned char caltype_order[CDS_N_CALTYPES];
+        for(int c=0; c<CDS_N_CALTYPES; c++) {
+            caltype_order[c] = c;
+        }
+        
 
         // ************************************
         // * Simulated Annealing - Inner Loop *
@@ -1029,14 +1059,22 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
         for(annealing_try=0; annealing_try<annealing_tries; annealing_try++) {
 
+            // Shuffle caltype list
+            int iter = 3;
+            for(int i=0; i<CDS_N_CALTYPES * iter; i++) {
+                float rnd = (float)rand() / RAND_MAX;
+                int j = rnd * CDS_N_CALTYPES;
+                int tmp = caltype_order[i % iter];
+                caltype_order[i % iter] = caltype_order[j];
+                caltype_order[j] = tmp;
+            }
+            
 
-            // Twiddle an LED so the user knows we aren't dead
+            // Twiddle an LED so the user knows we aren't dead.
             // From main.c: "led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok"
             // Therefore, LED 1 seems like the one to strobe. Normally, it's constantly dark when this method is running.
-            if(THEKERNEL->use_leds) {
-                leds[1] = LED_state;
-                LED_state = !LED_state;
-            }
+            // We will blink LED 2 as each calibration type (endstops, delta radius, etc.) is annealed.
+            blink_LED(1);
 
             // Set the annealing temperature
             tempFraction = (float)annealing_try / (float)annealing_tries;
@@ -1047,98 +1085,169 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             
             try_mod_5 = annealing_try % 5;
 
-            // ****************
-            // * Delta Radius *
-            // ****************
+            for(int cal_type=0; cal_type<CDS_N_CALTYPES; cal_type++) {
 
-            if(caltype.delta_radius.active) {
+                switch(caltype_order[cal_type]) {
 
-                // Find the best tower (delta) radius offsets
-                for(k=0; k<3; k++) {
-                    best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_radius_offsets, cur_set.tower_radius, k, test_delta_radius_offset[k].range_min, test_delta_radius_offset[k].range_max, binsearch_width, cur_cartesian, target);
-                    move_randomly_towards(cur_set.tower_radius[k], best_value, temp * caltype.delta_radius.annealing_temp_mul, target, overrun_divisor);
+                    case CT_ENDSTOP:
+//                        _printf("~ Endstop ~\n"); flush();
+                        
+                        // ************
+                        // * Endstops *
+                        // ************
+
+                        if(caltype.endstop.active) {
+
+                            for(k=0; k<3; k++) {
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_trim, cur_set.trim, k, test_endstop[k].range_min, test_endstop[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set.trim[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
+
+                                // Set trim
+                                if(set_geom_after_each_caltype) {
+                                    set_trim(cur_set.trim[X], cur_set.trim[Y], cur_set.trim[Z]);
+                                }
+
+                            } // k
+
+                        } // caltype.endstop
+
+                        blink_LED(2);
+                        break;
+
+                    case CT_DELTA_RADIUS:
+//                        _printf("~ DR ~\n"); flush();
+                        // ****************
+                        // * Delta Radius *
+                        // ****************
+
+                        if(caltype.delta_radius.active) {
+
+                            // Find the best tower (delta) radius offsets
+                            for(k=0; k<3; k++) {
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_radius_offsets, cur_set.tower_radius, k, test_delta_radius_offset[k].range_min, test_delta_radius_offset[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set.tower_radius[k], best_value, temp * caltype.delta_radius.annealing_temp_mul, target, overrun_divisor);
+
+                                // Find the tower radius with the lowest absolute value
+                                lowest = 999;
+                                for(k=0; k<3; k++) {
+                                    if(fabs(cur_set.tower_radius[k]) < lowest) {
+                                        lowest = cur_set.tower_radius[k];
+                                    }
+                                }
+
+                                // Steal that value from the individual radius settings and give it to the global radius setting
+                                for(k=0; k<3; k++) {
+                                    cur_set.tower_radius[k] -= lowest;
+                                }
+                                cur_set.delta_radius += lowest;
+
+
+                                // Update the robot
+                                if(set_geom_after_each_caltype) {
+                                    set_delta_radius(cur_set.delta_radius, false);
+                                    set_tower_radius_offsets(cur_set.tower_radius[X], cur_set.tower_radius[Y], cur_set.tower_radius[Z], false);
+                                }
+
+                            } // k
+
+                        } // caltype.delta_radius
+
+                        blink_LED(2);
+                        break;
+
+                    case CT_ARM_LENGTH:
+//                        _printf("~ Arm Length ~\n"); flush();
+                        // **************
+                        // * Arm Length *
+                        // **************
+
+                        if(caltype.arm_length.active) {
+
+                            best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_arm_length, test_arm_length.range_min, test_arm_length.range_max, binsearch_width, cur_cartesian, target);
+                            move_randomly_towards(cur_set.arm_length, best_value, temp * caltype.arm_length.annealing_temp_mul, target, overrun_divisor);
+
+                            // Update the robot
+                            if(set_geom_after_each_caltype) {
+                                set_arm_length(cur_set.arm_length, false);
+                            }
+
+                        } // caltype.arm_length
+                        
+                        blink_LED(2);
+                        break;
+
+                    case CT_TOWER_ANGLE:
+//                        _printf("~ Tower Angle ~\n"); flush();
+                        // ****************
+                        // * Tower angles *
+                        // ****************
+
+                        if(caltype.tower_angle.active) {
+
+                            for(k=0; k<3; k++) {
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_angle_offsets, cur_set.tower_angle, k, test_tower_angle[k].range_min, test_tower_angle[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set.tower_angle[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
+
+                                // Update the robot
+                                if(set_geom_after_each_caltype) {
+                                    set_tower_angle_offsets(cur_set.tower_angle[X], cur_set.tower_angle[Y], cur_set.tower_angle[Z], false);
+                                }
+
+                            } // k
+
+                        } // caltype.tower_angle
+
+                        blink_LED(2);
+                        break;
+
+                    case CT_VIRTUAL_SHIMMING:
+//                        _printf("~ Shimming ~\n"); flush();
+                        // ********************
+                        // * Virtual Shimming *
+                        // ********************
+
+                        if(caltype.virtual_shimming.active) {
+                        
+                            for(k=0; k<3; k++) {
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_virtual_shimming, cur_set.virtual_shimming, k, test_virtual_shimming[k].range_min, test_virtual_shimming[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set.virtual_shimming[k], best_value, temp * caltype.virtual_shimming.annealing_temp_mul, target, overrun_divisor);
+
+                                // Update the robot
+                                if(set_geom_after_each_caltype) {
+                                    set_virtual_shimming(cur_set.virtual_shimming[X], cur_set.virtual_shimming[Y], cur_set.virtual_shimming[Z], false);
+                                }
+
+                            } // k
+
+                        } // caltype.virtual_shimming
+
+                        blink_LED(2);
+                        break;
+
+                    case CT_TOWER_VECTOR:
+//                        _printf("~ Tower Vector ~\n"); flush();
+                        blink_LED(2);
+                        break;
+
                 }
 
-                // Find the tower radius with the lowest absolute value
-                lowest = 999;
-                for(k=0; k<3; k++) {
-                    if(fabs(cur_set.tower_radius[k]) < lowest) {
-                        lowest = cur_set.tower_radius[k];
-                    }
-                }
+            }
 
-                // Steal that value from the individual radius settings and give it to the global radius setting
-                for(k=0; k<3; k++) {
-                    cur_set.tower_radius[k] -= lowest;
-                }
-                cur_set.delta_radius += lowest;
 
-                // Tell the robot what the new delta radius & offsets are
+            // If we haven't been committing the changes to the robot as we've gone through the
+            // annealing process, do so now
+            if(!set_geom_after_each_caltype) {
+                set_trim(cur_set.trim[X], cur_set.trim[Y], cur_set.trim[Z]);
                 set_delta_radius(cur_set.delta_radius, false);
                 set_tower_radius_offsets(cur_set.tower_radius[X], cur_set.tower_radius[Y], cur_set.tower_radius[Z], false);
-
-            } // caltype.delta_radius.active
-
-
-            // **************
-            // * Arm Length *
-            // **************
-
-            if(caltype.arm_length.active) {
-
-              	best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_arm_length, test_arm_length.range_min, test_arm_length.range_max, binsearch_width, cur_cartesian, target);
-              	move_randomly_towards(cur_set.arm_length, best_value, temp * caltype.arm_length.annealing_temp_mul, target, overrun_divisor);
-              	set_arm_length(cur_set.arm_length, false);
-            }
-
-
-            // ************
-            // * Endstops *
-            // ************
-
-            if(caltype.endstop.active) {
-
-                for(k=0; k<3; k++) {
-                    best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_trim, cur_set.trim, k, test_endstop[k].range_min, test_endstop[k].range_max, binsearch_width, cur_cartesian, target);
-                    move_randomly_towards(cur_set.trim[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
-                }
-
-                // Set trim
-                set_trim(cur_set.trim[X], cur_set.trim[Y], cur_set.trim[Z]);
-
-            }
-
-
-            // ****************
-            // * Tower angles *
-            // ****************
-
-            if(caltype.tower_angle.active) {
-
-                for(k=0; k<3; k++) {
-                    best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_angle_offsets, cur_set.tower_angle, k, test_tower_angle[k].range_min, test_tower_angle[k].range_max, binsearch_width, cur_cartesian, target);
-                    move_randomly_towards(cur_set.tower_angle[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
-                }
+                set_arm_length(cur_set.arm_length, false);
                 set_tower_angle_offsets(cur_set.tower_angle[X], cur_set.tower_angle[Y], cur_set.tower_angle[Z], false);
-
-            }
-
-
-            // ********************
-            // * Virtual Shimming *
-            // ********************
-
-            if(caltype.virtual_shimming.active) {
-            
-                for(k=0; k<3; k++) {
-                    best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_virtual_shimming, cur_set.virtual_shimming, k, test_virtual_shimming[k].range_min, test_virtual_shimming[k].range_max, binsearch_width, cur_cartesian, target);
-                    move_randomly_towards(cur_set.virtual_shimming[k], best_value, temp * caltype.virtual_shimming.annealing_temp_mul, target, overrun_divisor);
-                }
                 set_virtual_shimming(cur_set.virtual_shimming[X], cur_set.virtual_shimming[Y], cur_set.virtual_shimming[Z], false);
-
             }
 
-            // Tell the robot to recalculate the kinematics
+
+            // Tell the robot to update its position according to the new kinematics
+            // Note: This is probably a waste of time. It may have served some better purpose before
             post_adjust_kinematics();
 
 
@@ -2737,7 +2846,12 @@ void ComprehensiveDeltaStrategy::set_acceleration(float a) {
 }
 
 
-// Following are getters/setters for endstops
+// ----------------------------------------------------------
+// Following are getters/setters for delta geometry variables
+// ----------------------------------------------------------
+
+
+// Endstops
 bool ComprehensiveDeltaStrategy::set_trim(float x, float y, float z) {
 
     float t[3] {x, y, z};
@@ -2767,8 +2881,6 @@ bool ComprehensiveDeltaStrategy::get_trim(float &x, float &y, float &z) {
     return false;
 }
 
-
-// Following are getters/setters for delta geometry variables
 
 // Arm length
 bool ComprehensiveDeltaStrategy::set_arm_length(float arm_length, bool update) {
@@ -3166,6 +3278,29 @@ void ComprehensiveDeltaStrategy::rotate2D(float (&point)[2], float reference[2],
 }
 
 
+// Blink the idle loop LED.
+void ComprehensiveDeltaStrategy::blink_LED(unsigned char which) {
+
+    if(THEKERNEL->use_leds) {
+        switch(which) {
+            case 1:
+            case 2:
+                if(GETBIT(LED_state, which)) {
+                    CLRBIT(LED_state, which);
+                    leds[which] = 0;
+                } else {
+                    SETBIT(LED_state, which);
+                    leds[which] = 1;
+                }
+                break;
+            default:
+                __printf("[BL] ERROR: Can only blink LEDs 0 and 1!\n");
+                break;
+        }
+    }
+
+}
+
 // Zero out depth_map.
 void ComprehensiveDeltaStrategy::zero_depth_maps() {
 
@@ -3413,294 +3548,3 @@ void ComprehensiveDeltaStrategy::pop_prefix() {
 }
 
 
-
-
-
-
-
-
-
-
-
-// Dead code waiting to be flushed down the turlet below this line - cut here:
-// ---8<-----------8<-----------8<-----------8<-----------8<------------8<----
-
-
-/*
-                // Find the best arm length offsets
-//                for(k=0; k<3; k++) {
-k = annealing_try % 3;
-                    best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_arm_offsets, cur_set.tower_arm, k, test_arm_length_offset[k].range_min, test_arm_length_offset[k].range_max, binsearch_width, cur_cartesian, target);
-                    move_randomly_towards(cur_set.tower_arm[k], best_value, temp * caltype.arm_length.annealing_temp_mul, target, overrun_divisor);
-//                }
-
-                // Find the arm length offset with the lowest absolute value
-                lowest = 999;
-                for(k=0; k<3; k++) {
-                    if(fabs(cur_set.tower_arm[k]) < lowest) {
-                        lowest = cur_set.tower_arm[k];
-                    }
-                }
-
-                // Steal that value from the individual arm length settings and give it to the global arm length setting
-                for(k=0; k<3; k++) {
-                    cur_set.tower_arm[k] -= lowest;
-                }
-                cur_set.arm_length += lowest;
-
-                // Tell the robot what the new arm length & offsets are            
-                set_arm_length(cur_set.arm_length, false);
-                set_tower_arm_offsets(cur_set.tower_arm[X], cur_set.tower_arm[Y], cur_set.tower_arm[Z], false);
-/**/
-
-
-/*
-    // Towers are 60 degrees off centerline.
-    // So, the quadrants look like this:
-    // Q2: -xDeg, +yDeg   Q1: +xDeg, +yDeg
-    // Q3: -xDeg, -yDeg   Q4: +xDeg, -yDeg
-    float xDeg = 0.866025f;
-    float yDeg = 0.5;
-
-    // Points at towers (this is simple quadrant stuff)
-    test_point[TP_X][X] = -xDeg * probe_radius;
-    test_point[TP_X][Y] = -yDeg * probe_radius;
-    test_point[TP_Y][X] =  xDeg * probe_radius;
-    test_point[TP_Y][Y] = -yDeg * probe_radius;
-    test_point[TP_Z][X] =                    0;
-    test_point[TP_Z][Y] =         probe_radius;
-
-    // Points opposite towers
-    // Merely a sign-flipped version of above, so the points are mirrored about the origin
-    test_point[TP_OPP_X][X] =  xDeg * probe_radius;
-    test_point[TP_OPP_X][Y] =  yDeg * probe_radius;
-    test_point[TP_OPP_Y][X] = -xDeg * probe_radius;
-    test_point[TP_OPP_Y][Y] =  yDeg * probe_radius;
-    test_point[TP_OPP_Z][X] =                    0;
-    test_point[TP_OPP_Z][Y] =        -probe_radius;
-
-    // Midpoints between towers
-    midpoint(test_point[TP_X], test_point[TP_Y], test_point[TP_MID_XY]);
-    midpoint(test_point[TP_Y], test_point[TP_Z], test_point[TP_MID_YZ]);
-    midpoint(test_point[TP_Z], test_point[TP_X], test_point[TP_MID_ZX]);
-
-    // Opposite midpoints between towers
-    // These happen to be halfway between {0, 0} and the points opposite the X/Y/Z towers
-    test_point[TP_OPP_MID_XY][X] = test_point[TP_MID_XY][X];
-    test_point[TP_OPP_MID_XY][Y] = -test_point[TP_MID_XY][Y];
-    test_point[TP_OPP_MID_ZX][X] = test_point[TP_OPP_X][X] / 2;
-    test_point[TP_OPP_MID_ZX][Y] = -test_point[TP_OPP_X][Y] / 2;
-    test_point[TP_OPP_MID_YZ][X] = test_point[TP_OPP_Y][X] / 2;
-    test_point[TP_OPP_MID_YZ][Y] = -test_point[TP_OPP_Y][Y] / 2;
-*/
-
-
-
-
-// Copy depth_map to last_depth_map & zero all of depth_map
-/*
-void ComprehensiveDeltaStrategy::save_depth_map() {
-
-    for(int i = 0; i < CDS_DEPTH_MAP_N_POINTS; i++) {
-        last_depth_map[i].rel = depth_map[i].rel;
-        last_depth_map[i].abs = depth_map[i].abs;
-    }
-
-}
-*/
-
-
-
-
-
-/* Probe the depth of points near each tower, and at the halfway points between each tower:
-
-        1
-        /\
-     2 /__\ 6
-      /\  /\
-     /__\/__\
-    3   4    5
-
-   This pattern defines the points of a triforce, hence the name.
-*/
-/*
-bool ComprehensiveDeltaStrategy::probe_triforce(float (&depth)[6], float &score_avg, float &score_ISM, float &PHTT) {
-
-    // Init test points
-    int triforce[6] = { TP_Z, TP_MID_ZX, TP_X, TP_MID_XY, TP_Y, TP_MID_YZ };
-
-    int s;				// # of steps (passed by reference to probe_delta_tower, which sets it)
-    int i;
-    score_avg = 0;			// Score starts at 0 (perfect) - the further away it gets, the worse off we are!
-    score_ISM = 0;
-
-    // Need to get bed height in current tower angle configuration (the following method automatically refreshes mm_PHTT)
-    // We're passing the current value of PHTT back by reference in case the caller cares, e.g. if they want a baseline.
-    require_clean_geometry();
-    prepare_to_probe();
-    if(!prime_probe()) return false;
-    PHTT = mm_probe_height_to_trigger;
-
-    // This is for storing the probe results in terms of score (deviation from center height).
-    // This is different from the "scores" we return, which is the average and intersextile mean of the contents of scores[].
-    float score[6];
-
-    for(i=0; i<6; i++) {
-        // Probe triforce
-        _printf("[PT] Probing point %d at <%1.3f, %1.3f>.\n", i, test_point[triforce[i]][X], test_point[triforce[i]][Y]);
-
-        // Move into position and probe the depth
-        // depth[i] is probed and calculated in exactly the same way that mm_probe_height_to_trigger is
-        // This means that we can compare probe results from this and mm_PHTT on equal terms
-        if(!do_probe_at(s, test_point[triforce[i]][X], test_point[triforce[i]][Y])) {
-            return false;
-        }
-        depth[i] = zprobe->zsteps_to_mm(s);
-        score[i] = fabs(depth[i] - mm_probe_height_to_trigger);
-    }
-    
-    // Do some statistics
-    auto mm = std::minmax({score});
-    for(i=0; i<6; i++) {
-    
-        // Average
-        score_avg += score[i];
-
-        // Intersextile mean (ignore lowest and highest values, keep the remaining four)
-        // Works similar to an interquartile mean, but more specific to our problem domain (we always have exactly 6 samples)
-        // Context: http://en.wikipedia.org/wiki/Interquartile_mean
-        if(score[i] != *mm.first && score[i] != *mm.second) {
-            score_ISM += score[i];
-        }
-    }
-    score_avg /= 6;
-    score_ISM /= 4;
-
-    _printf("[TQ] Probe height to trigger at bed center (PHTT) - this is the target depth: %1.3f\n", mm_probe_height_to_trigger);
-    _printf("[TQ]        Current depths: {%1.3f, %1.3f, %1.3f, %1.3f, %1.3f, %1.3f}\n", depth[0], depth[1], depth[2], depth[3], depth[4], depth[5]);
-    _printf("[TQ]   Delta(depth - PHTT): {%1.3f, %1.3f, %1.3f, %1.3f, %1.3f, %1.3f}\n", fabs(depth[0] - mm_probe_height_to_trigger), fabs(depth[1] - mm_probe_height_to_trigger), fabs(depth[2] - mm_probe_height_to_trigger), fabs(depth[3] - mm_probe_height_to_trigger), fabs(depth[4] - mm_probe_height_to_trigger), fabs(depth[5] - mm_probe_height_to_trigger));
-    _printf("[TQ]  Score (lower=better): avg=%1.3f, ISM=%1.3f\n", score_avg, score_ISM);
-
-    return true;
-
-}
-*/
-
-/*
-// Depth-map an imaginary line, and points perpendicular, from a tower to its opposite point
-// (across the print surface), in a given number of segments
-bool ComprehensiveDeltaStrategy::depth_map_segmented_line(float first[2], float second[2], unsigned char segments) {
-
-    // Calculate vector and length
-    Vector3 vec(second[X] - first[X], second[Y] - first[Y], 0);
-    Vector3 vec_norm = vec.unit();
-    float dist = distance2D(first, second);
-    float seg_dist = dist / (float)segments;
-//    _printf("Endpoints: <%1.3f, %1.3f> to <%1.3f, %1.3f>\n", first[X], first[Y], second[X], second[Y]);
-//    _printf("   Vector: <%1.3f, %1.3f>; Norm: <%1.3f, %1.3f>\n", vec[0], vec[1], vec_norm[0], vec_norm[1]);
-//    _printf("     Dist: %1.3f, segment dist: %1.3f\n", dist, seg_dist);
-
-
-    // Measure depth from probe_height at bed center
-    int steps;
-    int origin_steps = 0;
-
-    require_clean_geometry();
-    prepare_to_probe();
-    
-    if(!prime_probe()) return false;
-
-    if(do_probe_at(origin_steps, 0, 0)) {
-        _printf("[SL] Steps from probe_from_height to bed surface at center: %d\n", origin_steps);
-    } else {
-        _printf("[SL] do_probe_at() returned false.\n");
-        return false;
-    }
-
-    float arm_length;
-    float arm_radius;
-    float armX, armY, armZ;
-
-    get_arm_length(arm_length);
-    get_delta_radius(arm_radius);
-    get_tower_arm_offsets(armX, armY, armZ);
-//    _printf("Segments: %d\n", segments);
-//    _printf("Basic - Arm length: %1.3f  Radius: %1.3f\n", arm_length, arm_radius);
-//    _printf("Arm offsets: <%1.3f, %1.3f, %1.3f>\n", armX, armY, armZ);
-//    _printf("Origin Z steps: %d\n", origin_steps);
-
-    int base_depths[segments + 1][3];
-
-    for(int i=0; i <= segments; i++) {
-        //void ComprehensiveDeltaStrategy::rotate2D(float (&point)[2], float reference[2], float angle)
-        float tp[2] = { first[X] + (vec_norm[X] * seg_dist * i), first[Y] + (vec_norm[Y] * seg_dist * i) };
-        float tp_pos_rot[2] = { first[X] + (vec_norm[X] * seg_dist * (i + 1)), first[Y] + (vec_norm[Y] * seg_dist * (i + 1)) };
-        float tp_neg_rot[2] = { first[X] + (vec_norm[X] * seg_dist * (i + 1)), first[Y] + (vec_norm[Y] * seg_dist * (i + 1)) };
-        rotate2D(tp_pos_rot, tp, 90);
-        rotate2D(tp_neg_rot, tp, -90);
-
-
-        _printf(
-            "Segment %d endpoint at <%1.3f, %1.3f> has projection <%1.3f, %1.3f> and perpendiculars <%1.3f, %1.3f> and <%1.3f, %1.3f>\n",
-            i, tp[X], tp[Y],
-            first[X] + (vec_norm[X] * seg_dist * (i + 1)), first[Y] + (vec_norm[Y] * seg_dist * (i + 1)),
-            tp_pos_rot[X], tp_pos_rot[Y], tp_neg_rot[X], tp_neg_rot[Y]);
-
-            
-        do_probe_at(steps, tp_pos_rot[X], tp_pos_rot[Y]);
-        base_depths[i][0] = steps;
-        do_probe_at(steps, tp[X], tp[Y]);
-        base_depths[i][1] = steps;
-        do_probe_at(steps, tp_neg_rot[X], tp_neg_rot[Y]);
-        base_depths[i][2] = steps;
-        
-        _printf("Segment %d endpoint at <%1.3f, %1.3f> - depths: pos=%1.3f, center=%1.3f, neg=%1.3f\n", i, tp[X], tp[Y], zprobe->zsteps_to_mm(origin_steps - base_depths[i][0]), zprobe->zsteps_to_mm(origin_steps - base_depths[i][1]), zprobe->zsteps_to_mm(origin_steps - base_depths[i][2]));
-    }
-
-    return true;   
-
-}
-*/
-
-/*
-                    // Find the direction of the most optimal configuration with a binary search
-                    for(j=0; j<sampling_tries; j++) {
-                
-                        // Test energy at min & max
-                        cur_set.trim[k] = t_endstop[k].min;
-                        energy_min = simulate_FK_and_get_energy(test_axis, cur_set.trim, cur_cartesian);
-                        
-                        cur_set.trim[k] = t_endstop[k].max;
-                        energy_max = simulate_FK_and_get_energy(test_axis, cur_set.trim, cur_cartesian);
-
-                        // Who won?
-                        if(t_endstop[k].max - t_endstop[k].min <= target) {
-                            break;
-                        }
-                        if(energy_min < energy_max) {
-                            t_endstop[k].max -= ((t_endstop[k].max - t_endstop[k].min) * binsearch_width);
-                        } else {
-                            t_endstop[k].min += ((t_endstop[k].max - t_endstop[k].min) * binsearch_width);
-                        }
-
-                    }
-
-                    t_endstop[k].best = (t_endstop[k].min + t_endstop[k].max) / 2.0f;
-                    step = ( ((float)rand() / RAND_MAX) * temp ) + 0.001;
-
-    //_printf("[HC] Tower %d, try %3d: best=%1.3f step=%1.3f ", k, annealing_try, t_endstop[k].best, step);
-                    if(t_endstop[k].best > t_endstop[k].val + target) {
-                        if(t_endstop[k].val + step > t_endstop[k].best) {
-                            step /= 2;
-                        }
-                        t_endstop[k].val += step;
-                    }
-                    if(t_endstop[k].best < t_endstop[k].val - target) {
-                        if(t_endstop[k].val - step < t_endstop[k].best) {
-                            step /= 2;
-                        }
-                        t_endstop[k].val -= step;
-                    }
-    //_printf("val=%1.3f\n", t_endstop[k].val);
-*/
