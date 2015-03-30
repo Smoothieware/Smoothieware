@@ -46,6 +46,9 @@ Kernel::Kernel(){
 	// Set to UART0, this will be changed to use the same UART as MRI if it's enabled
     this->serial = new SerialConsole(USBTX, USBRX, DEFAULT_SERIAL_BAUD_RATE);
 
+    // Enable GPIO ports A, B, C and H
+    RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_GPIOCEN | RCC_AHB1ENR_GPIOHEN);
+
     // Config next, but does not load cache yet
     this->config = new Config();
 

@@ -20,51 +20,94 @@ class Pin {
         }
 
         inline bool equals(const Pin& other) const {
-            //~ return (this->pin == other.pin) && (this->port == other.port);
+            return (this->pin == other.pin) && (this->port == other.port);
             return true;
         }
 
         inline Pin* as_output(){
-            //~ if (this->valid)
-                //~ this->port->FIODIR |= 1<<this->pin;
+            if (this->valid) {
+                uint32_t moder = this->port->MODER;
+                moder &= ~(3 << (this->pin * 2));
+                moder |= (1 << (this->pin * 2));
+                this->port->MODER = moder;
+            }
             return this;
         }
 
         inline Pin* as_input(){
-            //~ if (this->valid)
-                //~ this->port->FIODIR &= ~(1<<this->pin);
+            if (this->valid) {
+                this->port->MODER &= ~(3 << (this->pin * 2));
+            }
             return this;
         }
 
-        Pin* as_open_drain(void);
+        // Configure this pin as no pullup or pulldown
+        inline Pin* pull_none(){
+        
+            if (this->valid) {
+                // No pull up/down RMW
+                uint32_t pupdr = this->port->PUPDR;
+                pupdr &= ~(3 << (this->pin * 2));
+                this->port->PUPDR = pupdr;
+            }
+            return this;
+        }
+        // Configure this pin as a pullup
+        inline Pin* pull_up(){
+        
+            if (this->valid) {
+                // pull up RMW
+                uint32_t pupdr = this->port->PUPDR;
+                pupdr &= ~(3 << (this->pin * 2));
+                pupdr |= (1 << (this->pin * 2));
+                this->port->PUPDR = pupdr;
+            }
+	    return this;
+        }
+
+        // Configure this pin as a pulldown
+        inline Pin* pull_down(){
+        
+            if (this->valid) {
+                // pull up RMW
+                uint32_t pupdr = this->port->PUPDR;
+                pupdr &= ~(3 << (this->pin * 2));
+                pupdr |= (2 << (this->pin * 2));
+                this->port->PUPDR = pupdr;
+            }
+	    return this;
+        }
+        
+        // Configure this pin as OD
+        inline Pin* as_open_drain(){
+            if (this->valid) {
+                // Open drain
+                this->port->OTYPER |= (1 << this->pin);
+            }
+            pull_none();
+            return this;
+        }
 
         Pin* as_repeater(void);
 
-        Pin* pull_up(void);
-
-        Pin* pull_down(void);
-
-        Pin* pull_none(void);
-
         inline bool get(){
-            //~ if (!this->valid) return false;
-            //~ return this->inverting ^ (( this->port->FIOPIN >> this->pin ) & 1);
-            return true;
+            if (!this->valid) return false;
+            return this->inverting ^ (( this->port->IDR >> this->pin ) & 1);
         }
 
         inline void set(bool value)
         {
-            //~ if (!this->valid) return;
-            //~ if ( this->inverting ^ value )
-                //~ this->port->FIOSET = 1 << this->pin;
-            //~ else
-                //~ this->port->FIOCLR = 1 << this->pin;
+            if (!this->valid) return;
+            if (this->inverting ^ value)
+                this->port->BSRRL = 1 << this->pin;
+            else
+                this->port->BSRRH = 1 << this->pin;
         }
 
         PwmOut *hardware_pwm();
 
         // these should be private, and use getters
-        int port;
+        GPIO_TypeDef *port;
 
         unsigned char pin;
         char port_number;
