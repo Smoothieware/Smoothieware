@@ -106,11 +106,12 @@ class Pin {
 
         PwmOut *hardware_pwm();
 
+        GPIO_TypeDef* get_port(char port);
+
         // these should be private, and use getters
         GPIO_TypeDef *port;
 
         unsigned char pin;
-        char port_number;
         struct {
             bool inverting:1;
             bool valid:1;

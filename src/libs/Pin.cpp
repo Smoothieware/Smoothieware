@@ -6,85 +6,90 @@
 #include "PinNames.h"
 
 Pin::Pin(){
-    this->inverting= false;
-    this->valid= false;
-    this->pin= 32;
-        /* FIXME STM32 */
-    //~ this->port= nullptr;
+    this->inverting = false;
+    this->valid = false;
+    this->pin = 32;
+    this->port = nullptr;
+}
+
+GPIO_TypeDef* Pin::get_port(char port)
+{
+    switch (port) {
+        case 'A':
+                return GPIOA;
+        case 'B':
+                return GPIOB;
+        case 'C':
+                return GPIOC;
+        case 'H':
+                return GPIOH;
+        default:
+                return nullptr;
+    }
 }
 
 // Make a new pin object from a string
 Pin* Pin::from_string(std::string value){
-    GPIO_TypeDef* gpios[5] = {GPIOA,GPIOB,GPIOC,GPIOH};
 
     // cs is the current position in the string
     const char* cs = value.c_str();
     // cn is the position of the next char after the number we just read
     char* cn = NULL;
-    valid= true;
-
-    // grab first integer as port. pointer to first non-digit goes in cn
-    this->port_number = strtol(cs, &cn, 10);
+    valid = true;
+    cn = strchr(cs, '.');
     // if cn > cs then strtol read at least one digit
-    if ((cn > cs) && (port_number <= 4)){
+    if (cn > cs){
         // translate port index into something useful
-        this->port = gpios[(unsigned int) this->port_number];
+        this->port = get_port(cn[0]);
+        // next char after the '.'
+        cn++;
         // if the char after the first integer is a . then we should expect a pin index next
-        if (*cn == '.'){
-            // move pointer to first digit (hopefully) of pin index
-            cs = ++cn;
+        // grab pin index.
+        this->pin = strtol(cs, &cn, 10);
 
-            // grab pin index.
-            this->pin = strtol(cs, &cn, 10);
+        // if strtol read some numbers, cn will point to the first non-digit
+        if ((cn > cs) && (pin < 16)){
 
-            // if strtol read some numbers, cn will point to the first non-digit
-            if ((cn > cs) && (pin < 32)){
-                    /* FIXME STM32 
-                this->port->FIOMASK &= ~(1 << this->pin);
-                * */
-
-                // now check for modifiers:-
-                // ! = invert pin
-                // o = set pin to open drain
-                // ^ = set pin to pull up
-                // v = set pin to pull down
-                // - = set pin to no pull up or down
-                // @ = set pin to repeater mode
-                for (;*cn;cn++) {
-                    switch(*cn) {
-                        case '!':
-                            this->inverting = true;
-                            break;
-                        case 'o':
-                            as_open_drain();
-                            break;
-                        case '^':
-                            pull_up();
-                            break;
-                        case 'v':
-                            pull_down();
-                            break;
-                        case '-':
-                            pull_none();
-                            break;
-                        case '@':
-                            as_repeater();
-                            break;
-                        default:
-                            // skip any whitespace following the pin index
-                            if (!is_whitespace(*cn))
-                                return this;
-                    }
+            // now check for modifiers:-
+            // ! = invert pin
+            // o = set pin to open drain
+            // ^ = set pin to pull up
+            // v = set pin to pull down
+            // - = set pin to no pull up or down
+            // @ = set pin to repeater mode
+            for (;*cn;cn++) {
+                switch(*cn) {
+                    case '!':
+                        this->inverting = true;
+                        break;
+                    case 'o':
+                        as_open_drain();
+                        break;
+                    case '^':
+                        pull_up();
+                        break;
+                    case 'v':
+                        pull_down();
+                        break;
+                    case '-':
+                        pull_none();
+                        break;
+                    case '@':
+                        as_repeater();
+                        break;
+                    default:
+                        // skip any whitespace following the pin index
+                        if (!is_whitespace(*cn))
+                            return this;
                 }
-                return this;
             }
+            return this;
         }
     }
 
     // from_string failed. TODO: some sort of error
     valid= false;
-    port_number = 0;
-    port = gpios[0];
+    port = nullptr;
     pin = 32;
     inverting = false;
     return this;

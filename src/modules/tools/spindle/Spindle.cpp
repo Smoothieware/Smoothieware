@@ -94,16 +94,16 @@ void Spindle::on_module_loaded()
         Pin *smoothie_pin = new Pin();
         smoothie_pin->from_string(THEKERNEL->config->value(spindle_feedback_pin_checksum)->by_default("nc")->as_string());
         smoothie_pin->as_input();
+            /* FIXME STM32 
         if (smoothie_pin->port_number == 0 || smoothie_pin->port_number == 2)
         {
             PinName pinname = port_pin((PortName)smoothie_pin->port_number, smoothie_pin->pin);
             feedback_pin = new mbed::InterruptIn(pinname);
             feedback_pin->rise(this, &Spindle::on_pin_rise);
-            /* FIXME STM32 
             NVIC_SetPriority(EINT3_IRQn, 16);
-            * */
         }
         else
+            * */
         {
             THEKERNEL->streams->printf("Error: Spindle feedback pin has to be on P0 or P2.\n");
             delete this;

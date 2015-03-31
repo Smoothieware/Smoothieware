@@ -1,4 +1,4 @@
-.section .rodata.configdefault,"a"
+.section .data.configdefault,"a"
 .global _binary_config_default_start
 _binary_config_default_start:
 .incbin "config.default"

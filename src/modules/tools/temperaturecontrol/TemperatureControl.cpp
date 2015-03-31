@@ -174,7 +174,9 @@ void TemperatureControl::load_config()
         this->windup = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, windup_checksum)->by_default(false)->as_bool();
         this->heater_pin.max_pwm( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_pwm_checksum)->by_default(255)->as_number() );
         this->heater_pin.set(0);
+        /* FIXME STM32
         set_low_on_debug(heater_pin.port_number, heater_pin.pin);
+        */
         // activate SD-DAC timer
         THEKERNEL->slow_ticker->attach( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number(), &heater_pin, &Pwm::on_tick);
     }
