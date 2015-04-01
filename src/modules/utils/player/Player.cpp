@@ -35,6 +35,8 @@
 #include <cmath>
 #include <algorithm>
 
+#include <SDFileSystem.h>
+
 #include "mbed.h"
 
 #define on_boot_gcode_checksum            CHECKSUM("on_boot_gcode")
@@ -48,9 +50,7 @@
 #define save_state_checksum               CHECKSUM("save_state")
 #define restore_state_checksum            CHECKSUM("restore_state")
 
-/* FIXME STM32
-extern SDFAT mounter;
-* */
+extern SDFileSystem sd;
 
 Player::Player()
 {
@@ -116,9 +116,8 @@ void Player::on_gcode_received(void *argument)
     if (gcode->has_m) {
         if (gcode->m == 21) { // Dummy code; makes Octoprint happy -- supposed to initialize SD card
             gcode->mark_as_taken();
-            /* FIXME STM32
-            mounter.remount();
-            * */
+            sd.unmount();
+            sd.mount();
             gcode->stream->printf("SD card ok\r\n");
 
         } else if (gcode->m == 23) { // select file
