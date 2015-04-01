@@ -78,9 +78,6 @@ Pin* Pin::from_string(std::string value){
                     case '-':
                         pull_none();
                         break;
-                    case '@':
-                        as_repeater();
-                        break;
                     default:
                         // skip any whitespace following the pin index
                         if (!is_whitespace(*cn))
@@ -98,26 +95,6 @@ Pin* Pin::from_string(std::string value){
     inverting = false;
     return this;
 }
-
-
-
-// Configure this pin as a repeater
-Pin* Pin::as_repeater(){
-    /* FIXME STM32 
-    if (!this->valid) return this;
-    // Set the two bits for this pin as 01
-    if( this->port_number == 0 && this->pin < 16  ){ LPC_PINCON->PINMODE0 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE0 &= ~(2<<( this->pin    *2)); }
-    if( this->port_number == 0 && this->pin >= 16 ){ LPC_PINCON->PINMODE1 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE1 &= ~(2<<((this->pin-16)*2)); }
-    if( this->port_number == 1 && this->pin < 16  ){ LPC_PINCON->PINMODE2 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE2 &= ~(2<<( this->pin    *2)); }
-    if( this->port_number == 1 && this->pin >= 16 ){ LPC_PINCON->PINMODE3 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE3 &= ~(2<<((this->pin-16)*2)); }
-    if( this->port_number == 2 && this->pin < 16  ){ LPC_PINCON->PINMODE4 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE4 &= ~(2<<( this->pin    *2)); }
-    if( this->port_number == 3 && this->pin >= 16 ){ LPC_PINCON->PINMODE7 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE7 &= ~(2<<((this->pin-16)*2)); }
-    if( this->port_number == 4 && this->pin >= 16 ){ LPC_PINCON->PINMODE9 |= (1<<( this->pin*2)); LPC_PINCON->PINMODE9 &= ~(2<<((this->pin-16)*2)); }
-    * */
-    return this;
-}
-
-
 
 // If available on this pin, return mbed hardware pwm class for this pin
 PwmOut* Pin::hardware_pwm()
