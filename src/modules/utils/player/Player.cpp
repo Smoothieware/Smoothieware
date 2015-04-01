@@ -20,9 +20,6 @@
 #include "Pauser.h"
 #include "Config.h"
 #include "ConfigValue.h"
-/* FIXME STM32
-#include "SDFAT.h"
-*/
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "PublicDataRequest.h"
