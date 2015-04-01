@@ -30,7 +30,7 @@ SlowTicker::SlowTicker(){
 
 
     // ISP button FIXME: WHy is this here?
-    ispbtn.from_string("2.10")->as_input()->pull_up();
+    //~ ispbtn.from_string("2.10")->as_input()->pull_up();
 
     // TODO: What is this ??
     flag_1s_flag = 0;
@@ -88,8 +88,8 @@ void SlowTicker::tick(){
 
     // Enter MRI mode if the ISP button is pressed
     // TODO: This should have it's own module
-    if (ispbtn.get() == 0)
-        __debugbreak();
+    //~ if (ispbtn.get() == 0)
+        //~ __debugbreak();
 
 }
 
@@ -112,14 +112,14 @@ bool SlowTicker::flag_1s(){
     return false;
 }
 
-#include "gpio.h"
-extern GPIO leds[];
 void SlowTicker::on_idle(void*)
 {
     static uint16_t ledcnt= 0;
     if(THEKERNEL->use_leds) {
         // flash led 3 to show we are alive
+        /* FIXME STM32 
         leds[2]= (ledcnt++ & 0x1000) ? 1 : 0;
+        * */
     }
 
     // if interrupt has set the 1 second flag

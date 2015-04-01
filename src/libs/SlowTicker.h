@@ -55,7 +55,7 @@ class SlowTicker : public Module{
         uint32_t max_frequency;
         uint32_t interval;
 
-        Pin ispbtn;
+        //~ Pin ispbtn;
 protected:
     int flag_1s_count;
     volatile int flag_1s_flag;

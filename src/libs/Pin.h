@@ -11,7 +11,7 @@
 
 class Pin {
     public:
-        Pin();
+        Pin(PinName p = NC);
 
         Pin* from_string(std::string value);
         /* FIXME STM32 */

@@ -5,24 +5,28 @@
 #include "PwmOut.h"
 #include "PinNames.h"
 
-Pin::Pin(){
-    this->inverting = false;
-    this->valid = false;
-    this->pin = 32;
-    this->port = nullptr;
+Pin::Pin(PinName p){
+    this->inverting = true;
+    this->valid = true;
+    this->pin = STM_PIN(p);
+    switch(STM_PORT(p)) {
+        case 0: this->port = GPIOA; break;
+        case 1: this->port = GPIOB; break;
+        case 2: this->port = GPIOC; break;
+        case 3: this->port = GPIOD; break;
+        case 7: this->port = GPIOH; break;
+        default: this->valid = false; break;
+    }
 }
 
 GPIO_TypeDef* Pin::get_port(char port)
 {
     switch (port) {
-        case 'A':
-                return GPIOA;
-        case 'B':
-                return GPIOB;
-        case 'C':
-                return GPIOC;
-        case 'H':
-                return GPIOH;
+        case 'A': return GPIOA;
+        case 'B': return GPIOB;
+        case 'C': return GPIOC;
+        case 'D': return GPIOD;
+        case 'H': return GPIOH;
         default:
                 return nullptr;
     }
