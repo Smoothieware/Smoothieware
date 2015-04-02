@@ -81,7 +81,7 @@ DigitalOut leds[5] = {
 
 // debug pins, only used if defined in src/makefile
 #ifdef STEPTICKER_DEBUG_PIN
-GPIO stepticker_debug_pin(STEPTICKER_DEBUG_PIN);
+DigitalOut stepticker_debug_pin(STEPTICKER_DEBUG_PIN);
 #endif
 
 void init() {
@@ -92,7 +92,6 @@ void init() {
     }
 
 #ifdef STEPTICKER_DEBUG_PIN
-    stepticker_debug_pin.output();
     stepticker_debug_pin= 0;
 #endif
 

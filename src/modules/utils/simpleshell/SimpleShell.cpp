@@ -29,12 +29,11 @@
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
-/* FIXME STM32 
-#include "SDFAT.h"
-* */
 #include "Thermistor.h"
 
 extern unsigned int g_maximumHeapAddress;
+
+#include <SDFileSystem.h>
 
 #include <malloc.h>
 #include <mri.h>
@@ -68,9 +67,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"net",      SimpleShell::net_command},
     {"load",     SimpleShell::load_command},
     {"save",     SimpleShell::save_command},
-/* FIXME STM32 
     {"remount",  SimpleShell::remount_command},
-    * */
     {"calc_thermistor", SimpleShell::calc_thermistor_command},
 
     // unknown command
@@ -261,17 +258,14 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
     }
 }
 
-/* FIXME STM32 
-
-extern SDFAT mounter;
+extern SDFileSystem sd;
 
 void SimpleShell::remount_command( string parameters, StreamOutput *stream )
 {
-    mounter.remount();
+    sd.unmount();
+    sd.mount();
     stream->printf("remounted\r\n");
 }
-*
-* */
 
 // Delete a file
 void SimpleShell::rm_command( string parameters, StreamOutput *stream )

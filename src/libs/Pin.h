@@ -11,10 +11,10 @@
 
 class Pin {
     public:
-        Pin();
+        Pin(PinName p = NC);
 
         Pin* from_string(std::string value);
-        /* FIXME STM32 */
+
         inline bool connected(){
             return this->valid;
         }
@@ -87,8 +87,6 @@ class Pin {
             pull_none();
             return this;
         }
-
-        Pin* as_repeater(void);
 
         inline bool get(){
             if (!this->valid) return false;
