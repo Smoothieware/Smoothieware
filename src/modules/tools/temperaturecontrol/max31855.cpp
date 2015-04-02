@@ -33,24 +33,25 @@ Max31855::~Max31855()
 void Max31855::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 {
     // Chip select
-    this->spi_cs_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, chip_select_checksum)->by_default("0.16")->as_string());
+    this->spi_cs_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, chip_select_checksum)->by_default("A.13")->as_string());
     this->spi_cs_pin.set(true);
     this->spi_cs_pin.as_output();
     
     // select which SPI channel to use
-    int spi_channel = THEKERNEL->config->value(module_checksum, name_checksum, spi_channel_checksum)->by_default(0)->as_number();
-    PinName miso;
-    PinName mosi;
-    PinName sclk;
-    /* FIXME STM32 
-    if(spi_channel == 0) {
-        // Channel 0
-        mosi=P0_18; miso=P0_17; sclk=P0_15;
-    } else {
+    int spi_channel = THEKERNEL->config->value(module_checksum, name_checksum, spi_channel_checksum)->by_default(1)->as_number();
+    PinName miso = PA_6;
+    PinName mosi = PA_7;
+    PinName sclk = PA_5;
+    if(spi_channel == 1) {
         // Channel 1
-        mosi=P0_9; miso=P0_8; sclk=P0_7;
-    } 
-        */
+        mosi=PA_7; miso=PA_6; sclk=PA_5;
+    } else if(spi_channel == 2) {
+        // Channel 2
+        mosi=PB_15; miso=PB_14; sclk=PB_13;
+    }else if(spi_channel == 3) {
+        // Channel 3
+        mosi=PB_5; miso=PB_4; sclk=PB_3;
+    }
 
     delete spi;
     spi = new mbed::SPI(mosi, miso, sclk);
