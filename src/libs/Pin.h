@@ -110,6 +110,7 @@ class Pin {
         GPIO_TypeDef *port;
 
         unsigned char pin;
+        unsigned char port_number;
         struct {
             bool inverting:1;
             bool valid:1;
