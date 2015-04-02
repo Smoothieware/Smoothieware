@@ -33,7 +33,7 @@ Max31855::~Max31855()
 void Max31855::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 {
     // Chip select
-    this->spi_cs_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, chip_select_checksum)->by_default("A.13")->as_string());
+    this->spi_cs_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, chip_select_checksum)->by_default("C.14")->as_string());
     this->spi_cs_pin.set(true);
     this->spi_cs_pin.as_output();
     

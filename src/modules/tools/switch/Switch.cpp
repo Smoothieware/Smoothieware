@@ -89,7 +89,7 @@ void Switch::on_config_reload(void *argument)
             this->output_pin.set(this->switch_state);
         }
     }
-        /* FIXME STM32
+        /* MRI STM32
     set_low_on_debug(output_pin.port_number, output_pin.pin);
     */
 
