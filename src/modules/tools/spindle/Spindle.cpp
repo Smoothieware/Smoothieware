@@ -94,18 +94,28 @@ void Spindle::on_module_loaded()
         Pin *smoothie_pin = new Pin();
         smoothie_pin->from_string(THEKERNEL->config->value(spindle_feedback_pin_checksum)->by_default("nc")->as_string());
         smoothie_pin->as_input();
-            /* FIXME STM32 
-        if (smoothie_pin->port_number == 0 || smoothie_pin->port_number == 2)
+        if (smoothie_pin->valid)
         {
-            PinName pinname = port_pin((PortName)smoothie_pin->port_number, smoothie_pin->pin);
-            feedback_pin = new mbed::InterruptIn(pinname);
+            feedback_pin = new mbed::InterruptIn(smoothie_pin->pin_name);
             feedback_pin->rise(this, &Spindle::on_pin_rise);
-            NVIC_SetPriority(EINT3_IRQn, 16);
+            if (smoothie_pin->pin == 0)
+                NVIC_SetPriority(EXTI0_IRQn, 16);
+            else if (smoothie_pin->pin == 1)
+                NVIC_SetPriority(EXTI1_IRQn, 16);
+            else if (smoothie_pin->pin == 2)
+                NVIC_SetPriority(EXTI2_IRQn, 16);
+            else if (smoothie_pin->pin == 3)
+                NVIC_SetPriority(EXTI3_IRQn, 16);
+            else if (smoothie_pin->pin == 4)
+                NVIC_SetPriority(EXTI4_IRQn, 16);
+            else if (smoothie_pin->pin >= 5 && smoothie_pin->pin <= 9)
+                NVIC_SetPriority(EXTI9_5_IRQn, 16);
+            else if (smoothie_pin->pin >= 10 && smoothie_pin->pin <= 15)
+                NVIC_SetPriority(EXTI15_10_IRQn, 16);
         }
         else
-            * */
         {
-            THEKERNEL->streams->printf("Error: Spindle feedback pin has to be on P0 or P2.\n");
+            THEKERNEL->streams->printf("Error: Spindle feedback pin invalid.\n");
             delete this;
             return;
         }

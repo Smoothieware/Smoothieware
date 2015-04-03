@@ -11,6 +11,7 @@ Pin::Pin(PinName p){
     this->valid = true;
     this->pin = STM_PIN(p);
     this->port_number = STM_PORT(p);
+    this->pin_name = p;
 
     switch(STM_PORT(p)) {
         case 0: this->port = GPIOA; break;
@@ -58,6 +59,7 @@ Pin* Pin::from_string(std::string value){
         // if strtol read some numbers, cn will point to the first non-digit
         if ((cn > cs) && (pin < 16)){
 
+            this->pin_name = (PinName) ((this->port_number << 4) | this->pin);
             // now check for modifiers:-
             // ! = invert pin
             // o = set pin to open drain
@@ -107,10 +109,13 @@ extern const PinMap PinMap_PWM[];
 PwmOut* Pin::hardware_pwm()
 {
     int i = 0;
-    PinName p = (PinName) ((port_number << 4) | pin);
+
+    if (!this->valid)
+        return nullptr;
+
     while(PinMap_PWM[i].pin != NC) {
-        if (PinMap_PWM[i].pin == p) {
-                return new PwmOut(p);
+        if (PinMap_PWM[i].pin == this->pin_name) {
+                return new PwmOut(this->pin_name);
         }
         i++;
     }
