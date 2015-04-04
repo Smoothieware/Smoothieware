@@ -308,6 +308,12 @@ void TemperatureControl::on_gcode_received(void *argument)
                     this->set_desired_temperature(v);
                     // wait for temp to be reached, no more gcodes will be fetched until this is complete
                     if( gcode->m == this->set_and_wait_m_code) {
+                        if(isinf(get_temperature()) && isinf(sensor->get_temperature())) {
+                            THEKERNEL->streams->printf("Temperature reading is unreliable HALT asserted - reset or M999 required\n");
+                            THEKERNEL->call_event(ON_HALT, nullptr);
+                            return;
+                        }
+
                         this->waiting = true; // on_second_tick will announce temps
                         while ( get_temperature() < target_temperature ) {
                             THEKERNEL->call_event(ON_IDLE, this);

@@ -24,7 +24,7 @@ junction_deviation                           0.05             # Similar to the o
 
 # Stepper module configuration
 microseconds_per_step_pulse                  1                # Duration of step pulses to stepper drivers, in microseconds
-base_stepping_frequency                      100000           # Base frequency for stepping, higher gives smoother movement
+base_stepping_frequency                      100000           # Base frequency for stepping
 
 # Stepper module pins ( ports, and pin numbers, appending "!" to the number will invert a pin )
 alpha_step_pin                               2.1              # Pin for alpha stepper step signal
