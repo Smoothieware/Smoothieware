@@ -220,8 +220,12 @@ void Player::on_gcode_received(void *argument)
 
             this->played_cnt = 0;
             this->elapsed_secs = 0;
+
         } else if (gcode->m == 600) { // suspend print, Not entirely Marlin compliant
             this->suspend_command("", &(StreamOutput::NullStream));
+
+        } else if (gcode->m == 601) { // resume print
+            this->resume_command("", &(StreamOutput::NullStream));
         }
     }
 }
