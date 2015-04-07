@@ -26,16 +26,16 @@
 LinearDeltaSolution::LinearDeltaSolution(Config* config)
 {
     // arm_length is the length of the arm from hinge to hinge
-    arm_length = config->value(arm_length_checksum)->by_default(250.0f)->as_number();
+    arm_length = config->value((unsigned int)arm_length_checksum)->by_default(250.0f)->as_number();
     // arm_radius is the horizontal distance from hinge to hinge when the effector is centered
-    arm_radius = config->value(arm_radius_checksum)->by_default(124.0f)->as_number();
+    arm_radius = config->value((unsigned int)arm_radius_checksum)->by_default(124.0f)->as_number();
 
-    tower1_angle = config->value(tower1_angle_checksum)->by_default(0.0f)->as_number();
-    tower2_angle = config->value(tower2_angle_checksum)->by_default(0.0f)->as_number();
-    tower3_angle = config->value(tower3_angle_checksum)->by_default(0.0f)->as_number();
-    tower1_offset = config->value(tower1_offset_checksum)->by_default(0.0f)->as_number();
-    tower2_offset = config->value(tower2_offset_checksum)->by_default(0.0f)->as_number();
-    tower3_offset = config->value(tower3_offset_checksum)->by_default(0.0f)->as_number();
+    tower1_angle = config->value((unsigned int)tower1_angle_checksum)->by_default(0.0f)->as_number();
+    tower2_angle = config->value((unsigned int)tower2_angle_checksum)->by_default(0.0f)->as_number();
+    tower3_angle = config->value((unsigned int)tower3_angle_checksum)->by_default(0.0f)->as_number();
+    tower1_offset = config->value((unsigned int)tower1_offset_checksum)->by_default(0.0f)->as_number();
+    tower2_offset = config->value((unsigned int)tower2_offset_checksum)->by_default(0.0f)->as_number();
+    tower3_offset = config->value((unsigned int)tower3_offset_checksum)->by_default(0.0f)->as_number();
 
     init();
 }

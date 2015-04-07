@@ -27,6 +27,7 @@ using std::string;
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/LinearDeltaSolution.h"
+#include "arm_solutions/RotatableDeltaSolution.h"
 #include "arm_solutions/HBotSolution.h"
 #include "arm_solutions/MorganSCARASolution.h"
 #include "StepTicker.h"
@@ -52,6 +53,7 @@ using std::string;
 #define  rotatable_cartesian_checksum        CHECKSUM("rotatable_cartesian")
 #define  rostock_checksum                    CHECKSUM("rostock")
 #define  linear_delta_checksum               CHECKSUM("linear_delta")
+#define  rotatable_delta_checksum            CHECKSUM("rotatable_delta")
 #define  delta_checksum                      CHECKSUM("delta")
 #define  hbot_checksum                       CHECKSUM("hbot")
 #define  corexy_checksum                     CHECKSUM("corexy")
@@ -152,7 +154,7 @@ void Robot::on_config_reload(void *argument)
     // To make adding those solution easier, they have their own, separate object.
     // Here we read the config to find out which arm solution to use
     if (this->arm_solution) delete this->arm_solution;
-    int solution_checksum = get_checksum(THEKERNEL->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
+    int solution_checksum = get_checksum(THEKERNEL->config->value((unsigned int)arm_solution_checksum)->by_default("cartesian")->as_string());
     // Note checksums are not const expressions when in debug mode, so don't use switch
     if(solution_checksum == hbot_checksum || solution_checksum == corexy_checksum) {
         this->arm_solution = new HBotSolution(THEKERNEL->config);
@@ -162,6 +164,10 @@ void Robot::on_config_reload(void *argument)
 
     } else if(solution_checksum == rotatable_cartesian_checksum) {
         this->arm_solution = new RotatableCartesianSolution(THEKERNEL->config);
+
+    } else if(solution_checksum == rotatable_delta_checksum) {
+        this->arm_solution = new RotatableDeltaSolution(THEKERNEL->config);
+
 
     } else if(solution_checksum == morgan_checksum) {
         this->arm_solution = new MorganSCARASolution(THEKERNEL->config);
@@ -174,16 +180,16 @@ void Robot::on_config_reload(void *argument)
     }
 
 
-    this->feed_rate           = THEKERNEL->config->value(default_feed_rate_checksum   )->by_default(  100.0F)->as_number();
-    this->seek_rate           = THEKERNEL->config->value(default_seek_rate_checksum   )->by_default(  100.0F)->as_number();
-    this->mm_per_line_segment = THEKERNEL->config->value(mm_per_line_segment_checksum )->by_default(    0.0F)->as_number();
-    this->delta_segments_per_second = THEKERNEL->config->value(delta_segments_per_second_checksum )->by_default(0.0f   )->as_number();
-    this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(    0.5f)->as_number();
-    this->arc_correction      = THEKERNEL->config->value(arc_correction_checksum      )->by_default(    5   )->as_number();
+    this->feed_rate           = THEKERNEL->config->value((unsigned int)default_feed_rate_checksum   )->by_default(  100.0F)->as_number();
+    this->seek_rate           = THEKERNEL->config->value((unsigned int)default_seek_rate_checksum   )->by_default(  100.0F)->as_number();
+    this->mm_per_line_segment = THEKERNEL->config->value((unsigned int)mm_per_line_segment_checksum )->by_default(    0.0F)->as_number();
+    this->delta_segments_per_second = THEKERNEL->config->value((unsigned int)delta_segments_per_second_checksum )->by_default(0.0f   )->as_number();
+    this->mm_per_arc_segment  = THEKERNEL->config->value((unsigned int)mm_per_arc_segment_checksum  )->by_default(    0.5f)->as_number();
+    this->arc_correction      = THEKERNEL->config->value((unsigned int)arc_correction_checksum      )->by_default(    5   )->as_number();
 
-    this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
-    this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
-    this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
+    this->max_speeds[X_AXIS]  = THEKERNEL->config->value((unsigned int)x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
+    this->max_speeds[Y_AXIS]  = THEKERNEL->config->value((unsigned int)y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
+    this->max_speeds[Z_AXIS]  = THEKERNEL->config->value((unsigned int)z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
     Pin alpha_step_pin;
     Pin alpha_dir_pin;
@@ -195,20 +201,20 @@ void Robot::on_config_reload(void *argument)
     Pin gamma_dir_pin;
     Pin gamma_en_pin;
 
-    alpha_step_pin.from_string( THEKERNEL->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
-    alpha_dir_pin.from_string(  THEKERNEL->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
-    alpha_en_pin.from_string(   THEKERNEL->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
-    beta_step_pin.from_string(  THEKERNEL->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
-    beta_dir_pin.from_string(   THEKERNEL->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
-    beta_en_pin.from_string(    THEKERNEL->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
-    gamma_step_pin.from_string( THEKERNEL->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
-    gamma_dir_pin.from_string(  THEKERNEL->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
-    gamma_en_pin.from_string(   THEKERNEL->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
+    alpha_step_pin.from_string( THEKERNEL->config->value((unsigned int)alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
+    alpha_dir_pin.from_string(  THEKERNEL->config->value((unsigned int)alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
+    alpha_en_pin.from_string(   THEKERNEL->config->value((unsigned int)alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
+    beta_step_pin.from_string(  THEKERNEL->config->value((unsigned int)beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
+    beta_dir_pin.from_string(   THEKERNEL->config->value((unsigned int)beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
+    beta_en_pin.from_string(    THEKERNEL->config->value((unsigned int)beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
+    gamma_step_pin.from_string( THEKERNEL->config->value((unsigned int)gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
+    gamma_dir_pin.from_string(  THEKERNEL->config->value((unsigned int)gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
+    gamma_en_pin.from_string(   THEKERNEL->config->value((unsigned int)gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
 
     float steps_per_mm[3] = {
-        THEKERNEL->config->value(alpha_steps_per_mm_checksum)->by_default(  80.0F)->as_number(),
-        THEKERNEL->config->value(beta_steps_per_mm_checksum )->by_default(  80.0F)->as_number(),
-        THEKERNEL->config->value(gamma_steps_per_mm_checksum)->by_default(2560.0F)->as_number(),
+        THEKERNEL->config->value((unsigned int)alpha_steps_per_mm_checksum)->by_default(  80.0F)->as_number(),
+        THEKERNEL->config->value((unsigned int)beta_steps_per_mm_checksum )->by_default(  80.0F)->as_number(),
+        THEKERNEL->config->value((unsigned int)gamma_steps_per_mm_checksum)->by_default(2560.0F)->as_number(),
     };
 
     // TODO: delete or detect old steppermotors
@@ -221,9 +227,9 @@ void Robot::on_config_reload(void *argument)
     beta_stepper_motor->change_steps_per_mm(steps_per_mm[1]);
     gamma_stepper_motor->change_steps_per_mm(steps_per_mm[2]);
 
-    alpha_stepper_motor->set_max_rate(THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
-    beta_stepper_motor->set_max_rate(THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F);
-    gamma_stepper_motor->set_max_rate(THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
+    alpha_stepper_motor->set_max_rate(THEKERNEL->config->value((unsigned int)alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
+    beta_stepper_motor->set_max_rate(THEKERNEL->config->value((unsigned int)beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F);
+    gamma_stepper_motor->set_max_rate(THEKERNEL->config->value((unsigned int)gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
     check_max_actuator_speeds(); // check the configs are sane
 
     actuators.clear();
@@ -356,6 +362,7 @@ void Robot::on_gcode_received(void *argument)
                 }
                 gcode->mark_as_taken();
             }
+            break; //added by DHP to suppress warning 20150324
             case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); gcode->mark_as_taken();  break;
             case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); gcode->mark_as_taken();  break;
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;

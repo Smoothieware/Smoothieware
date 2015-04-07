@@ -7,7 +7,7 @@
 #define DEG2RAD       0.01745329251994329576923690768489
 
 RotatableCartesianSolution::RotatableCartesianSolution(Config* config) {
-    float alpha_angle  = config->value(alpha_angle_checksum)->by_default(0.0f)->as_number() * DEG2RAD;
+    float alpha_angle  = config->value((unsigned int)alpha_angle_checksum)->by_default(0.0f)->as_number() * DEG2RAD;
     sin_alpha          = sinf(alpha_angle);
     cos_alpha          = cosf(alpha_angle);
 }

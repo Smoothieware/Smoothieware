@@ -25,23 +25,29 @@ STACK_SIZE=3072
 # as a dedicated debug channel.  If you are using the USB based serial port for
 # the console then this should cause you no problems.  Set MRI_BREAK_ON_INIT to
 # 0 if you don't want to break into GDB at startup.
-ENABLE_DEBUG_MONITOR?=0
+ENABLE_DEBUG_MONITOR?=1
 
 # this is the default UART baud rate used if it is not set in config
 # it is also the baud rate used to report any errors found while parsing the config file
-DEFAULT_SERIAL_BAUD_RATE?=9600
-
-ifeq "$(ENABLE_DEBUG_MONITOR)" "1"
-# Can add MRI_UART_BAUD=115200 to next line if GDB fails to connect to MRI.
-# Tends to happen on some Linux distros but not Windows and OS X.
+DEFAULT_SERIAL_BAUD_RATE?=115200
+MRI_UART_BAUD=115200
 MRI_UART=MRI_UART_0
 MRI_BREAK_ON_INIT=1
 MRI_SEMIHOST_STDIO=1
-else
-MRI_UART=MRI_UART_0 MRI_UART_SHARE
-MRI_BREAK_ON_INIT=0
-MRI_SEMIHOST_STDIO=0
-endif
+
+#ifeq "$(ENABLE_DEBUG_MONITOR)" "1"
+## Can add MRI_UART_BAUD=115200 to next line if GDB fails to connect to MRI.
+## Tends to happen on some Linux distros but not Windows and OS X.
+#MRI_UART=MRI_UART_0
+#MRI_BREAK_ON_INIT=1
+#MRI_SEMIHOST_STDIO=1
+#else
+#MRI_UART=MRI_UART_0 MRI_UART_SHARE
+#MRI_BREAK_ON_INIT=0
+#MRI_SEMIHOST_STDIO=0
+#endif
+
+
 
 # generate a git version string, sorry only on linux and mac osx
 ifneq "$(OS)" "Windows_NT"
@@ -68,8 +74,8 @@ export EXCLUDED_MODULES = tools/touchprobe
 
 include $(BUILD_DIR)/build.mk
 
-CONSOLE?=/dev/arduino
-BAUD?=1000000
+CONSOLE?=/dev/tty.usbserial-A6026NUK
+BAUD?=115200
 
 .PHONY: debug-store flash upload debug console dfu
 
@@ -80,13 +86,15 @@ flash: ../LPC1768/$(PROJECT).hex debug-store
 	lpc21isp $< $(CONSOLE) 115200 12000
 
 dfu: ../LPC1768/$(PROJECT).bin
-	dfu-util -D $< -R
+	/Users/douglaspearless/Documents/workspace/Smoothieware/build/osx64/dfu-util -D $< -R
 
 upload: ../LPC1768/$(PROJECT).bin debug-store
-	dfu-util -R -d 1d50:6015 -D $<
+        /Users/douglaspearless/Documents/workspace/Smoothieware/build/osx64/dfu-util -R -d 1d50:6015 -D $<
+#	dfu-util -R -d 1d50:6015 -D $<
 
-debug: ../LPC1768/$(PROJECT)_lastupload.elf
-	arm-none-eabi-gdb $< -ex  "set target-charset ASCII" -ex "set remotelogfile mri.log" -ex "target remote $(CONSOLE)"
+#debug: ../LPC1768/$(PROJECT)_lastupload.elf
+debug: ../LPC1768/$(PROJECT).elf
+	/Users/douglaspearless/Documents/workspace/Smoothieware/build/osx64/arm-none-eabi-gdb $< -ex  "set target-charset ASCII" -ex "set remotelogfile mri.log" -ex "target remote $(CONSOLE)"
 
 console:
 	stty raw ignbrk -echo $(BAUD) < $(CONSOLE)

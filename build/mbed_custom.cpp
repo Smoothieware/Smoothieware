@@ -22,6 +22,30 @@
 
 #include "platform_memory.h"
 
+#ifdef ENABLE_DEBUG_MONITOR
+#error "STOP"
+#endif
+
+#ifndef MRI_BREAK_ON_INIT
+#define MRI_BREAK_ON_INIT 1
+#endif
+
+#ifndef MRI_SEMIHOST_STDIO
+#define MRI_SEMIHOST_STDIO 1
+#endif
+
+#ifndef STACK_SIZE
+#define STACK_SIZE 3072
+#endif
+
+#ifndef WRITE_BUFFER_DISABLE
+#define WRITE_BUFFER_DISABLE 0
+#endif
+
+#ifndef MRI_ENABLE
+#define MRI_ENABLE 1
+#endif
+
 unsigned int g_maximumHeapAddress;
 
 static void fillUnusedRAM(void);

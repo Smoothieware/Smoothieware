@@ -32,8 +32,8 @@ private:
     bool doProbing(StreamOutput *stream);
     void normalize_grid();
 
-    bool loadGrid();
-    bool saveGrid(); //std::string *args);
+    bool loadGrid(std::string args);
+    bool saveGrid(std::string args);
     void calcConfig();
 
     std::tuple<float, float, float> probe_offsets;
