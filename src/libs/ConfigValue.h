@@ -35,6 +35,7 @@ class ConfigValue{
         friend class ConfigSource;
         friend class Configurator;
         friend class FileConfigSource;
+        friend class RotatableDeltaSolution;
 
     private:
         bool has_characters( const char* mask );

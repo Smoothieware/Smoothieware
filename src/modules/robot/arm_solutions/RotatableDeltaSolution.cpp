@@ -4,6 +4,7 @@
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Config.h"
+#include "libs/utils.h"
 
 #include <fastmath.h>
 
@@ -100,37 +101,40 @@ RotatableDeltaSolution::RotatableDeltaSolution(Config* config)
 	//#xyz_steps = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
 
 	ConfigValue *result = new ConfigValue;
-	result -> clear();
-	//ConfigValue *result::value(uint16_t check_sums[]);
 	uint16_t check_sums[3];
 
-	//result->ConfigValue( alpha_steps_per_mm_checksum );
-	//result->found = true;
-	//result->check_sums[0] = check_sums[0];
-	//result->check_sums[1] = check_sums[1];
-	//result->check_sums[2] = check_sums[2];
-	//result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
+	result -> clear();
+	get_checksums(check_sums, "alpha_steps_per_mm");
+	result->found = true;
+	result->check_sums[0] = check_sums[0];
+	result->check_sums[1] = check_sums[1];
+	result->check_sums[2] = check_sums[2];
+	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
 
 	//now we need to update the config for alpha
+	//Kernel().config->config_cache->replace_or_push_back(result); //need to fix the syntax
 
+	result -> clear();
+	get_checksums(check_sums, "beta_steps_per_mm");
+	result->found = true;
+	result->check_sums[0] = check_sums[0];
+	result->check_sums[1] = check_sums[1];
+	result->check_sums[2] = check_sums[2];
+	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
 
-	//check_sums = beta_steps_per_mm_checksum;
-	//result->found = true;
-	//result->check_sums[0] = check_sums[0];
-	//result->check_sums[1] = check_sums[1];
-	//result->check_sums[2] = check_sums[2];
-	//result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
+	//now we need to update the config for betas
+	//Kernel().config->config_cache->replace_or_push_back(result); //need to fix the syntax
 
-	//now we need to update the config for beta
-
-	//check_sums = gamma_steps_per_mm_checksum;
-	//result->found = true;
-	//result->check_sums[0] = check_sums[0];
-	//result->check_sums[1] = check_sums[1];
-	//result->check_sums[2] = check_sums[2];
-	//result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
+	result -> clear();
+	get_checksums(check_sums, "gamma_steps_per_mm");
+	result->found = true;
+	result->check_sums[0] = check_sums[0];
+	result->check_sums[1] = check_sums[1];
+	result->check_sums[2] = check_sums[2];
+	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
 
 	//now we need to update the config for gamma
+	//Kernel().config->config_cache->replace_or_push_back(result); //need to fix the syntax
 
     init();
 }

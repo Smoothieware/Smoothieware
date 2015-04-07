@@ -33,7 +33,8 @@ class Config : public Module {
         void get_module_list(vector<uint16_t>* list, uint16_t family);
         bool is_config_cache_loaded() { return config_cache != NULL; };    // Whether or not the cache is currently popluated
 
-        friend class  Configurator;
+        friend class Configurator;
+        friend class RotatableDeltaSolution;
 
     private:
         bool   has_characters(uint16_t check_sum, string str );

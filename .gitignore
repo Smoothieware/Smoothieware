@@ -22,3 +22,6 @@ debug
 /win_install.log
 /linux_install.log
 
+/.project
+/.cproject
+/.gitignore
