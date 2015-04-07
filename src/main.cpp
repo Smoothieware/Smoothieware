@@ -73,10 +73,10 @@ USBMSD *msc= NULL;
 
 DigitalOut leds[5] = {
     DigitalOut(LED1),
-    DigitalOut(LED2),
-    DigitalOut(LED3),
-    DigitalOut(LED4),
-    DigitalOut(LED1)
+    DigitalOut(PC_10),
+    DigitalOut(PC_11),
+    DigitalOut(PC_12),
+    DigitalOut(PD_2)
 };
 
 // debug pins, only used if defined in src/makefile

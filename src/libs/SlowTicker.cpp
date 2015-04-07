@@ -19,6 +19,8 @@ using namespace std;
 
 #include <mri.h>
 
+#define SLOW_TIMER_PRESCALER    10000
+
 // This module uses a Timer to periodically call hooks
 // Modules register with a function ( callback ) and a frequency, and we then call that function at the given frequency.
 
@@ -34,16 +36,20 @@ SlowTicker::SlowTicker(){
 
     // TODO: What is this ??
     flag_1s_flag = 0;
-    flag_1s_count = SystemCoreClock>>2;
+    // The APB1 bus clock is Core clock frequency / 2
+    flag_1s_count = SystemCoreClock >> 1;
+    // Tick 10 times per seconds at beginning
+    this->interval = ((SystemCoreClock >> 1) / SLOW_TIMER_PRESCALER) / 10;
 
-        /* FIXME STM32 
-    // Configure the actual timer after setup to avoid race conditions
-    LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
-    LPC_TIM2->MR0 = 10000;          // Initial dummy value for Match Register
-    LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
-    LPC_TIM2->TCR = 1;              // Enable interrupt
-    NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
-    */
+    RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;             // Enable TIM9 clock
+    TIM4->PSC = SLOW_TIMER_PRESCALER - 1;           // Set prescaler to 10000
+    TIM4->ARR = this->interval - 1;                 // Set auto-reload
+    TIM4->EGR |= TIM_EGR_UG;                        // Force update
+    TIM4->SR &= ~TIM_SR_UIF;                        // Clear the update flag
+    TIM4->DIER |= TIM_DIER_UIE;                     // Enable interrupt on update event
+    NVIC_EnableIRQ(TIM4_IRQn);                      // Enable TIM9 IRQ
+    TIM4->CR1 |= TIM_CR1_CEN;                       // Enable TIM9 counter
+    
 }
 
 void SlowTicker::on_module_loaded(){
@@ -52,8 +58,12 @@ void SlowTicker::on_module_loaded(){
 
 // Set the base frequency we use for all sub-frequencies
 void SlowTicker::set_frequency( int frequency ){
-    this->interval = (SystemCoreClock >> 2) / frequency;   // SystemCoreClock/4 = Timer increments in a second
+    this->interval = ((SystemCoreClock >> 1) / SLOW_TIMER_PRESCALER) / frequency;   // SystemCoreClock/4 = Timer increments in a second
     
+    TIM4->CR1 &= ~TIM_CR1_CEN;                       // Disable TIM4 counter
+    flag_1s_count = ((SystemCoreClock >> 1) / SLOW_TIMER_PRESCALER);
+    TIM4->ARR = this->interval - 1;
+    TIM4->CR1 |= TIM_CR1_CEN;                       // Enable it again
         /* FIXME STM32 
     LPC_TIM2->MR0 = this->interval;
     LPC_TIM2->TCR = 3;  // Reset
@@ -112,29 +122,26 @@ bool SlowTicker::flag_1s(){
     return false;
 }
 
+extern DigitalOut leds[5];
+
 void SlowTicker::on_idle(void*)
 {
-    static uint16_t ledcnt= 0;
-    if(THEKERNEL->use_leds) {
-        // flash led 3 to show we are alive
-        /* FIXME STM32 
-        leds[2]= (ledcnt++ & 0x1000) ? 1 : 0;
-        * */
-    }
-
     // if interrupt has set the 1 second flag
-    if (flag_1s())
+    if (flag_1s()) {
         // fire the on_second_tick event
         THEKERNEL->call_event(ON_SECOND_TICK);
+        if(THEKERNEL->use_leds) {
+            // flash led 3 to show we are alive
+            leds[2]= !leds[2];
+        }
+    }
 }
 
-extern "C" void TIMER2_IRQHandler (void){
-        
-        /* FIXME STM32 
-    if((LPC_TIM2->IR >> 0) & 1){  // If interrupt register set for MR0
-        LPC_TIM2->IR |= 1 << 0;   // Reset it
+extern "C" void TIM4_IRQHandler (void){
+    if((TIM4->SR & TIM_SR_UIF) != 0)   { // If update flag is set
+        TIM4->SR &= ~TIM_SR_UIF;         // Reset it
     }
     global_slow_ticker->tick();
-    */
+
 }
 
