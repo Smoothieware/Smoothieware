@@ -43,6 +43,8 @@ private:
     uint16_t numCols;
     float *pData;
 
+    bool wait_for_probe;
+
     float slow_rate;
     float bed_x;
     float bed_y;
