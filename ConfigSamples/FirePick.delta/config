@@ -33,6 +33,8 @@ small_pulley_teeth							 16.0			  # how many teeth as on the pulley on the step
 big_pulley_teeth							150.0			  # how many teeth are on the main pulley note if your robot does not use a pulley
 															  # reduction system, make it the same as small_pulley_teeth to get 1:1
 
+#these are now derived for a Rotatable Delta srive system and should be removed fron the config
+#and calculated in the code itself.
 alpha_steps_per_mm                           100              # Steps per mm for alpha stepper
 beta_steps_per_mm                            100              # Steps per mm for beta stepper
 gamma_steps_per_mm                           100              # Steps per mm for gamma stepper
