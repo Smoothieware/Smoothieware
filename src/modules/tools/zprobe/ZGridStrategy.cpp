@@ -39,9 +39,9 @@
        leveling-strategy.ZGrid-leveling.wait_for_probe  true
 
 
-    Slow feedrate can be defined for probe speed
+    Slow feedrate can be defined for probe positioning speed.  Note this is not Probing slow rate - it can be set to a fast speed if required.
 
-       leveling-strategy.ZGrid-leveling.slow_feedrate  100
+       leveling-strategy.ZGrid-leveling.slow_feedrate  100         # ZGrid probe positioning feedrate
 
 
 
