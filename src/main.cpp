@@ -5,6 +5,9 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Update by Douglas Pearless to add Rotatable Delta arm for FirePick
+ */
 #include "libs/Kernel.h"
 
 #include "modules/tools/laser/Laser.h"
