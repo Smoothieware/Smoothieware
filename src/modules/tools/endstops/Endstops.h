@@ -23,6 +23,7 @@ class Endstops : public Module{
         void on_config_reload(void* argument);
         void acceleration_tick(void);
 
+
     private:
         void home(char axes_to_move);
         void do_homing_cartesian(char axes_to_move);
