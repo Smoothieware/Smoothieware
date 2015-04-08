@@ -36,7 +36,7 @@ class StepTicker{
         uint32_t get_tick_cnt() const { return tick_cnt; }
         uint32_t ticks_since(uint32_t last) const { return (tick_cnt>=last) ? tick_cnt-last : (UINT32_MAX-last) + tick_cnt + 1; }
 
-        void TIMER0_IRQHandler (void);
+        void step_tick (void);
         void PendSV_IRQHandler (void);
         void register_acceleration_tick_handler(std::function<void(void)> cb){
             acceleration_tick_handlers.push_back(cb);

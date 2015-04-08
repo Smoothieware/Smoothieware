@@ -21,6 +21,7 @@
 extern GPIO stepticker_debug_pin;
 #endif
 
+#define TICK_STEPPER_TIMER_PRESCALER    1000
 
 // StepTicker handles the base frequency ticking for the Stepper Motors / Actuators
 // It has a list of those, and calls their tick() functions at regular intervals
@@ -30,6 +31,27 @@ StepTicker* StepTicker::global_step_ticker;
 
 StepTicker::StepTicker(){
     StepTicker::global_step_ticker = this;
+
+    /* Timer 9, 10 and 11 are located on APB2 bus */
+    RCC->APB2ENR |= RCC_APB2ENR_TIM9EN | RCC_APB2ENR_TIM10EN | RCC_APB2ENR_TIM11EN;
+
+    TIM9->PSC = TICK_STEPPER_TIMER_PRESCALER - 1;   // Set prescaler
+    TIM9->ARR = 1000 - 1;                           // Set auto-reload
+    TIM9->EGR |= TIM_EGR_UG;                        // Force update
+    TIM9->SR &= ~TIM_SR_UIF;                        // Clear the update flag
+    TIM9->DIER |= TIM_DIER_UIE;                     // Enable interrupt on update event
+
+    TIM10->PSC = TICK_STEPPER_TIMER_PRESCALER - 1;
+    TIM10->ARR = 1000 - 1;
+    TIM10->EGR |= TIM_EGR_UG;
+    TIM10->SR &= ~TIM_SR_UIF;
+    TIM10->DIER |= TIM_DIER_UIE;
+
+    TIM11->PSC = TICK_STEPPER_TIMER_PRESCALER - 1;
+    TIM11->ARR = 1000 - 1;
+    TIM11->EGR |= TIM_EGR_UG;
+    TIM11->SR &= ~TIM_SR_UIF;
+    TIM11->DIER |= TIM_DIER_UIE;
 
         /* FIXME STM32 
     // Configure the timer
@@ -70,11 +92,12 @@ StepTicker::~StepTicker() {
 
 //called when everythinf is setup and interrupts can start
 void StepTicker::start() {
-        /* FIXME STM32 
-    NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
-    NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
-    NVIC_EnableIRQ(RIT_IRQn);
-    * */
+    /* Enable all interrupts */
+    NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
+    TIM9->CR1 |= TIM_CR1_CEN;
+
+    NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+    NVIC_EnableIRQ(TIM1_TRG_COM_TIM11_IRQn);
 }
 
 // Set the base stepping frequency
@@ -152,23 +175,26 @@ inline void StepTicker::unstep_tick(){
     this->unstep.reset();
 }
 
-extern "C" void TIMER1_IRQHandler (void){
-        /* FIXME STM32 
-    LPC_TIM1->IR |= 1 << 0;
-    * */
-    StepTicker::global_step_ticker->unstep_tick();
+extern "C" void TIM1_TRG_COM_TIM11_IRQHandler (void){
+    if((TIM11->SR & TIM_SR_UIF) != 0)   {
+        TIM11->SR &= ~TIM_SR_UIF;
+        StepTicker::global_step_ticker->unstep_tick();
+    }
 }
 
 // The actual interrupt handler where we do all the work
-extern "C" void TIMER0_IRQHandler (void){
-    StepTicker::global_step_ticker->TIMER0_IRQHandler();
+extern "C" void TIM1_UP_TIM10_IRQHandler (void){
+    if((TIM10->SR & TIM_SR_UIF) != 0)   {
+        TIM10->SR &= ~TIM_SR_UIF;
+        StepTicker::global_step_ticker->step_tick();
+    }
 }
 
-extern "C" void RIT_IRQHandler (void){
-        /* FIXME STM32 
-    LPC_RIT->RICTRL |= 1L;
-    * */
-    StepTicker::global_step_ticker->acceleration_tick();
+extern "C" void TIM1_BRK_TIM9_IRQHandler (void){
+    if((TIM9->SR & TIM_SR_UIF) != 0)   {
+        TIM9->SR &= ~TIM_SR_UIF;
+        StepTicker::global_step_ticker->acceleration_tick();
+    }
 }
 
 extern "C" void PendSV_Handler(void) {
@@ -200,11 +226,8 @@ void  StepTicker::acceleration_tick() {
     }
 }
 
-void StepTicker::TIMER0_IRQHandler (void){
-        /* FIXME STM32 
-    // Reset interrupt register
-    LPC_TIM0->IR |= 1 << 0;
-    * */
+void StepTicker::step_tick (void){
+
     tick_cnt++; // count number of ticks
 
     // Step pins NOTE takes 1.2us when nothing to step, 1.8-2us for one motor stepped and 2.6us when two motors stepped, 3.167us when three motors stepped
@@ -238,11 +261,7 @@ void StepTicker::TIMER0_IRQHandler (void){
 
     // If a move finished in this tick, we have to tell the actuator to act accordingly
     if(this->do_move_finished.load() > 0){
-        // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
-        //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
-        /* FIXME STM32 
-        SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;
-        * */
+        SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
     }
 }
 
@@ -260,9 +279,7 @@ void StepTicker::add_motor_to_active_list(StepperMotor* motor)
     bool enabled= active_motor.any(); // see if interrupt was previously enabled
     active_motor[motor->index]= 1;
     if(!enabled) {
-        /* FIXME STM32 
-        LPC_TIM0->TCR = 1;               // Enable interrupt
-        * */
+        TIM10->CR1 |= TIM_CR1_CEN;
     }
 }
 
@@ -272,9 +289,7 @@ void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
     active_motor[motor->index]= 0;
     // If we have no motor to work on, disable the whole interrupt
     if(this->active_motor.none()){
-        /* FIXME STM32 
-        LPC_TIM0->TCR = 0;               // Disable interrupt
-        * */
+        TIM10->CR1 &= ~TIM_CR1_CEN;
         tick_cnt= 0;
     }
 }
