@@ -63,13 +63,8 @@ void SlowTicker::set_frequency( int frequency ){
     TIM4->CR1 &= ~TIM_CR1_CEN;                       // Disable TIM4 counter
     flag_1s_count = ((SystemCoreClock >> 1) / SLOW_TIMER_PRESCALER);
     TIM4->ARR = this->interval - 1;
+    TIM4->CNT = 0;                       // Reset counter
     TIM4->CR1 |= TIM_CR1_CEN;                       // Enable it again
-        /* FIXME STM32 
-    LPC_TIM2->MR0 = this->interval;
-    LPC_TIM2->TCR = 3;  // Reset
-    LPC_TIM2->TCR = 1;  // Reset
-    flag_1s_count= SystemCoreClock>>2;
-    * */
 }
 
 // The actual interrupt being called by the timer, this is where work is done
@@ -91,7 +86,7 @@ void SlowTicker::tick(){
     if (flag_1s_count < 0)
     {
         // add a second to our counter
-        flag_1s_count += SystemCoreClock >> 2;
+        flag_1s_count += ((SystemCoreClock >> 1) / SLOW_TIMER_PRESCALER);
         // and set a flag for idle event to pick up
         flag_1s_flag++;
     }
