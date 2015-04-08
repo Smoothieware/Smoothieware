@@ -100,9 +100,9 @@ Kernel::Kernel(){
     // TODO : These should go into platform-specific files
     // LPC17xx-specific
     NVIC_SetPriorityGrouping(0);
-    NVIC_SetPriority(TIM2_IRQn, 2);
-    NVIC_SetPriority(TIM3_IRQn, 1);
-    // Slow ticket interupt
+    NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 2);
+    NVIC_SetPriority(TIM1_TRG_COM_TIM11_IRQn, 1);
+    // Slow ticker interupt
     NVIC_SetPriority(TIM4_IRQn, 4);
     NVIC_SetPriority(PendSV_IRQn, 3);
     NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, 3); // we make acceleration tick the same prio as pendsv so it can't be pre-empted by end of block
