@@ -1,6 +1,7 @@
 #include "RotatableDeltaSolution.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "ConfigCache.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Config.h"
@@ -45,6 +46,7 @@
 //maybe make these #defines like above
   //const float sqrt3 = 1.7320508075688772935274463415059;  // sqrt(3.0)
 const float pi     = 3.14159265358979323846;    // PI
+const float two_pi = 2 * pi;
 const float sin120 = 0.86602540378443864676372317075294; //sqrt3/2.0
 const float cos120 = -0.5;
 const float tan60  = 1.7320508075688772935274463415059; //sqrt3;
@@ -83,22 +85,44 @@ RotatableDeltaSolution::RotatableDeltaSolution(Config* config)
 
 	//While the by_default() method fills in default values if the field is missing from the config
 	//it does not prevent crazy numbers being inputed, so we try to prevent odd ratios and divide by zero
-	//errors in our configutation calculations
+	//errors in our configuration calculations
 	xyz_full_steps_per_rotation = config->value((unsigned int)xyz_full_steps_per_rotation_checksum)->by_default(200.0f)->as_number();
-	if (xyz_full_steps_per_rotation < 1) xyz_full_steps_per_rotation = 200.0;
+	if (xyz_full_steps_per_rotation < 1) xyz_full_steps_per_rotation = 200.0; //try to prevent stupid config entries
 
 	xyz_microsteps = config->value((unsigned int)xyz_microsteps_checksum)->by_default(16.0f)->as_number();
-	if (xyz_microsteps < 1) xyz_microsteps = 16.0;
+	if (xyz_microsteps < 1) xyz_microsteps = 16.0; //try to prevent stupid config entries
 
 	small_pulley_teeth = config->value((unsigned int)small_pulley_teeth_checksum)->by_default(16.0f)->as_number();
-	if (small_pulley_teeth < 1) small_pulley_teeth = 16.0;
+	if (small_pulley_teeth < 1) small_pulley_teeth = 16.0; //try to prevent stupid config entries
 
 	big_pulley_teeth = config->value((unsigned int)big_pulley_teeth_checksum)->by_default(150.0f)->as_number();
-	if (big_pulley_teeth < 1) big_pulley_teeth = 150.0;
+	if (big_pulley_teeth < 1) big_pulley_teeth = 150.0; //try to prevent stupid config entries
 
-	//Note: We need to override the following values read from the config file as these must be
-	// calculated as xyz_steps are in degrees:
-	//#xyz_steps = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
+	//
+	//We need to override the alpha_steps_per_mm, beta_steps_per_mm & gamma_steps_per_mm read from the config file
+	//as these must be calculated based on other parameters in the config file on the SD card.
+	//The formula is:
+	//     (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))*(two_pi*delta_rf)
+	//
+	//which means:
+	//
+	//xyz_full_steps_per_rotation*xyz_microsteps gives the number of steps the stepper motor needs to rotate 360 degrees
+	//
+	//(big_pulley_teeth/small_pulley_teeth) gives the ratio of the large pulley to the small one so that we can determine
+	//the  number of rotations the stepper motor needs to rotate the large pulley fully 360 degrees
+	//
+	//and the two_pi*delta_rf gives the circumference of the large pulley itself.
+	//
+	//So the formula informs us the number of steps the stepper motor needs to move a mm on the large pulley.
+	//
+	//For example, a 0.9 degree stepper has 400 steps per revolution, driven using a 1/32 microstep DRV8825 driver chip
+	//with a 16 tooth small pulley on the stepper motor and a 150 tooth (equivalent) large pulley of radius 90mm results in:
+	//
+	//(400*32*(150/16))/(2 * pi * 90) = 212.206590789194 microsteps are required to move the effector attached to
+	//the large pulley 1mm in a linear sense.
+	//
+	//Lastly, if you are not using a small and large pulley system like the FirePick is, simply make these two values
+	//the same, BUT NOT ZERO.
 
 	ConfigValue *result = new ConfigValue;
 	uint16_t check_sums[3];
@@ -109,10 +133,11 @@ RotatableDeltaSolution::RotatableDeltaSolution(Config* config)
 	result->check_sums[0] = check_sums[0];
 	result->check_sums[1] = check_sums[1];
 	result->check_sums[2] = check_sums[2];
-	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
+	//result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0; //need to change calc to mm from degrees
+	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/(two_pi*delta_rf);
 
 	//now we need to update the config for alpha
-	//Kernel().config->config_cache->replace_or_push_back(result); //need to fix the syntax
+	Kernel().config->config_cache->replace_or_push_back(result);
 
 	result -> clear();
 	get_checksums(check_sums, "beta_steps_per_mm");
@@ -120,10 +145,11 @@ RotatableDeltaSolution::RotatableDeltaSolution(Config* config)
 	result->check_sums[0] = check_sums[0];
 	result->check_sums[1] = check_sums[1];
 	result->check_sums[2] = check_sums[2];
-	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
+	//result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0; //need to change calc to mm from degrees
+	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/(two_pi*delta_rf);
 
-	//now we need to update the config for betas
-	//Kernel().config->config_cache->replace_or_push_back(result); //need to fix the syntax
+	//now we need to update the config for beta
+	Kernel().config->config_cache->replace_or_push_back(result);
 
 	result -> clear();
 	get_checksums(check_sums, "gamma_steps_per_mm");
@@ -131,10 +157,11 @@ RotatableDeltaSolution::RotatableDeltaSolution(Config* config)
 	result->check_sums[0] = check_sums[0];
 	result->check_sums[1] = check_sums[1];
 	result->check_sums[2] = check_sums[2];
-	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0;
+	//result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0; //need to change calc to mm from degrees
+	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/(two_pi*delta_rf);
 
 	//now we need to update the config for gamma
-	//Kernel().config->config_cache->replace_or_push_back(result); //need to fix the syntax
+	Kernel().config->config_cache->replace_or_push_back(result);
 
     init();
 }

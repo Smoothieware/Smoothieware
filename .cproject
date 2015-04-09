@@ -95,12 +95,36 @@
 							<builder id="ilg.gnuarmeclipse.managedbuild.cross.builder.594449669" incrementalBuildTarget="all upload ENABLE_DEBUG_MONITOR=1" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="ilg.gnuarmeclipse.managedbuild.cross.builder"/>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.675889643" name="Cross ARM GNU Assembler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler">
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor.1158335562" name="Use preprocessor" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor" value="true" valueType="boolean"/>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs.60506803" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MRI_ENABLE=1"/>
+									<listOptionValue builtIn="false" value="DEFAULT_SERIAL_BAUD_RATE=115200"/>
+									<listOptionValue builtIn="false" value="STACK_SIZE=3072"/>
+									<listOptionValue builtIn="false" value="WRITE_BUFFER_DISABLE=1"/>
+									<listOptionValue builtIn="false" value="HEAP_TAGS=0"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.1529038679" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1196545596" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.972233392" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MRI_ENABLE=1"/>
+									<listOptionValue builtIn="false" value="DEFAULT_SERIAL_BAUD_RATE=115200"/>
+									<listOptionValue builtIn="false" value="STACK_SIZE=3072"/>
+									<listOptionValue builtIn="false" value="WRITE_BUFFER_DISABLE=1"/>
+									<listOptionValue builtIn="false" value="HEAP_TAGS=0"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1524777877" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1114518429" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.include.paths.1093662756" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Smoothieware}&quot;"/>
+								</option>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs.1364798573" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MRI_ENABLE=1"/>
+									<listOptionValue builtIn="false" value="DEFAULT_SERIAL_BAUD_RATE=115200"/>
+									<listOptionValue builtIn="false" value="STACK_SIZE=3072"/>
+									<listOptionValue builtIn="false" value="WRITE_BUFFER_DISABLE=1"/>
+									<listOptionValue builtIn="false" value="HEAP_TAGS=0"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.694299856" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker.443634413" name="Cross ARM C Linker" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker">
@@ -127,6 +151,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.854090020" name="mbed_custom.cpp" rcbsApplicability="disable" resourcePath="build/mbed_custom.cpp" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1114518429.1012745617">
+						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1114518429.1012745617" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1114518429">
+							<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.851195926" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input"/>
+						</tool>
+					</fileInfo>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -225,12 +254,36 @@
 							<builder id="ilg.gnuarmeclipse.managedbuild.cross.builder.174700601" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="ilg.gnuarmeclipse.managedbuild.cross.builder"/>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.902091900" name="Cross ARM GNU Assembler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler">
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor.57721900" name="Use preprocessor" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor" value="true" valueType="boolean"/>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs.1013235467" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MRI_ENABLE=1"/>
+									<listOptionValue builtIn="false" value="DEFAULT_SERIAL_BAUD_RATE=115200"/>
+									<listOptionValue builtIn="false" value="STACK_SIZE=3072"/>
+									<listOptionValue builtIn="false" value="WRITE_BUFFER_DISABLE=1"/>
+									<listOptionValue builtIn="false" value="HEAP_TAGS=0"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.790100826" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.2082625412" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.160325758" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MRI_ENABLE=1"/>
+									<listOptionValue builtIn="false" value="DEFAULT_SERIAL_BAUD_RATE=115200"/>
+									<listOptionValue builtIn="false" value="STACK_SIZE=3072"/>
+									<listOptionValue builtIn="false" value="WRITE_BUFFER_DISABLE=1"/>
+									<listOptionValue builtIn="false" value="HEAP_TAGS=0"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1240430986" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1733471964" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.include.paths.1232561286" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Smoothieware}&quot;"/>
+								</option>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs.127790855" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MRI_ENABLE=1"/>
+									<listOptionValue builtIn="false" value="DEFAULT_SERIAL_BAUD_RATE=115200"/>
+									<listOptionValue builtIn="false" value="STACK_SIZE=3072"/>
+									<listOptionValue builtIn="false" value="WRITE_BUFFER_DISABLE=1"/>
+									<listOptionValue builtIn="false" value="HEAP_TAGS=0"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.896426657" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker.1671956367" name="Cross ARM C Linker" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker">
@@ -257,15 +310,17 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.1404227276" name="mbed_custom.cpp" rcbsApplicability="disable" resourcePath="build/mbed_custom.cpp" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1733471964.985132844">
+						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1733471964.985132844" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1733471964">
+							<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.888260451" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input"/>
+						</tool>
+					</fileInfo>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 		<cconfiguration id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.280256172">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.280256172" moduleId="org.eclipse.cdt.core.settings" name="Debug">
-				<macros>
-					<stringMacro name="MRI_BREAK_ON_INIT" type="VALUE_TEXT" value="1"/>
-				</macros>
 				<externalSettings/>
 				<extensions>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
@@ -351,15 +406,52 @@
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.debugging.gprof.1154849295" name="Generate gprof information (-pg)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.debugging.gprof"/>
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.debugging.other.1552745386" name="Other debugging flags" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.debugging.other"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="ilg.gnuarmeclipse.managedbuild.cross.targetPlatform.2012183904" isAbstract="false" osList="all" superClass="ilg.gnuarmeclipse.managedbuild.cross.targetPlatform"/>
-							<builder autoBuildTarget="all" cleanBuildTarget="clean" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" id="ilg.gnuarmeclipse.managedbuild.cross.builder.2065902188" incrementalBuildTarget="all upload ENABLE_DEBUG_MONITOR=1" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" superClass="ilg.gnuarmeclipse.managedbuild.cross.builder"/>
+							<builder autoBuildTarget="all" cleanBuildTarget="clean" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" id="ilg.gnuarmeclipse.managedbuild.cross.builder.2065902188" incrementalBuildTarget="all upload ENABLE_DEBUG_MONITOR=1" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="false" superClass="ilg.gnuarmeclipse.managedbuild.cross.builder">
+								<outputEntries>
+									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name=""/>
+								</outputEntries>
+							</builder>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.1980505440" name="Cross ARM GNU Assembler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler">
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor.39190536" name="Use preprocessor" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor" value="true" valueType="boolean"/>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs.980100308" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="DEFAULT_SERIAL_BAUD_RATE=115200"/>
+									<listOptionValue builtIn="false" value="MRI_BREAK_ON_INIT=1"/>
+									<listOptionValue builtIn="false" value="MRI_UART=MRI_UART_0"/>
+									<listOptionValue builtIn="false" value="MRI_SEMIHOST_STDIO=1"/>
+									<listOptionValue builtIn="false" value="MRI_UART_BAUD=115200"/>
+									<listOptionValue builtIn="false" value="STACK_SIZE=3072"/>
+									<listOptionValue builtIn="false" value="WRITE_BUFFER_DISABLE=1"/>
+									<listOptionValue builtIn="false" value="HEAP_TAGS=0"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.1191239241" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1271906200" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.1738592768" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MRI_ENABLE=1"/>
+									<listOptionValue builtIn="false" value="DEFAULT_SERIAL_BAUD_RATE=115200"/>
+									<listOptionValue builtIn="false" value="MRI_BREAK_ON_INIT=1"/>
+									<listOptionValue builtIn="false" value="MRI_UART=MRI_UART_0"/>
+									<listOptionValue builtIn="false" value="MRI_SEMIHOST_STDIO=1"/>
+									<listOptionValue builtIn="false" value="MRI_UART_BAUD=115200"/>
+									<listOptionValue builtIn="false" value="STACK_SIZE=3072"/>
+									<listOptionValue builtIn="false" value="WRITE_BUFFER_DISABLE=1"/>
+									<listOptionValue builtIn="false" value="HEAP_TAGS=0"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.837874291" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1945032321" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.include.paths.2037422174" name="Include paths (-I)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.include.paths" useByScannerDiscovery="false"/>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs.718701447" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.cpp.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MRI_ENABLE=1"/>
+									<listOptionValue builtIn="false" value="DEFAULT_SERIAL_BAUD_RATE=115200"/>
+									<listOptionValue builtIn="false" value="MRI_BREAK_ON_INIT=1"/>
+									<listOptionValue builtIn="false" value="MRI_UART=MRI_UART_0"/>
+									<listOptionValue builtIn="false" value="MRI_SEMIHOST_STDIO=1"/>
+									<listOptionValue builtIn="false" value="MRI_UART_BAUD=115200"/>
+									<listOptionValue builtIn="false" value="STACK_SIZE=3072"/>
+									<listOptionValue builtIn="false" value="WRITE_BUFFER_DISABLE=1"/>
+									<listOptionValue builtIn="false" value="HEAP_TAGS=0"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.431520272" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker.335481784" name="Cross ARM C Linker" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker">
@@ -386,6 +478,14 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.280256172.1279458932" name="mbed_custom.cpp" rcbsApplicability="disable" resourcePath="build/mbed_custom.cpp" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1945032321.108327510">
+						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1945032321.108327510" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1945032321">
+							<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.87881146" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input"/>
+						</tool>
+					</fileInfo>
+					<sourceEntries>
+						<entry excluding="mbed/" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -395,15 +495,6 @@
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 		<project id="Smoothieware.null.1712443587" name="Smoothieware"/>
 	</storageModule>
-	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583;ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.2099162905;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1196545596;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1524777877">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583;ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.2099162905;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1114518429;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.694299856">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
@@ -412,5 +503,26 @@
 			<resource resourceType="PROJECT" workspacePath="/Smoothieware"/>
 		</configuration>
 		<configuration configurationName="Debug"/>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019;ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.2082625412;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1240430986">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583;ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.2099162905;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1196545596;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1524777877">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583;ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.2099162905;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1114518429;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.694299856">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.280256172;ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.280256172.;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1945032321;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.431520272">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.280256172;ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.280256172.;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1271906200;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.837874291">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019;ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1733471964;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.896426657">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>

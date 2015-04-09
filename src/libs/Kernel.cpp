@@ -36,6 +36,7 @@
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
 #define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
 
+
 Kernel* Kernel::instance;
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
