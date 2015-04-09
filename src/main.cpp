@@ -47,8 +47,8 @@
 
 #include <mbed.h>
 #include <SDFileSystem.h>
-#include <USBSerial.h>
-#include <USBMSD.h>
+//~ #include <USBSerial.h>
+//~ #include <USBMSD.h>
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
@@ -62,11 +62,11 @@
 SDFileSystem sd  (SPI_MOSI, SPI_MISO, SPI_SCK, SPI_CS, "sd"); 
 
 //~ USB u;
-USBSerial usbserial;
+//~ USBSerial usbserial;
 //~ #ifndef DISABLEMSD
 //~ USBMSD msc (&u, &sd);
 //~ #else
-USBMSD *msc= NULL;
+//~ USBMSD *msc= NULL;
 //~ #endif
 
 //~ SDFAT mounter __attribute__ ("sd", &sd);

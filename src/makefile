@@ -1,7 +1,7 @@
 PROJECT		:= main
 GCC4MBED_DIR	:= ../mbed
 DEVICES		:= NUCLEO_F411RE
-MBED_LIBS	:= USBDevice fs
+MBED_LIBS	:= fs
 EXCLUDE 	:= libs/Network/ libs/ADC/ modules/utils/panel 
 
 # BUILD_TYPE can be set to the following values:
