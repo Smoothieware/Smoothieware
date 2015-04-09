@@ -3,6 +3,8 @@ Smoothie is a free, opensource, high performance G-code interpreter and CNC cont
 
 Documentation can be found here : [[http://smoothieware.org/]]
 
+This FirePick fork is to implement a Rotatable Delta drive mechanisim for the FirePick [[http://firepick.org/]]
+
 NOTE it is not necessary to build Smoothie yourself unless you want to. prebuilt binaries are availble here http://builds.smoothieware.org/
 
 ==Quick Start
