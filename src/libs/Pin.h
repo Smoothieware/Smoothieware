@@ -24,6 +24,16 @@ class Pin {
             return true;
         }
 
+        Pin& operator= (int value) {
+            set(value == 0 ? false : true);
+            return *this;
+        }
+
+        Pin& operator! () {
+            set(!this->pin_value);
+            return *this;
+        }
+
         inline Pin* as_output(){
             if (this->valid) {
                 uint32_t moder = this->port->MODER;
@@ -95,6 +105,7 @@ class Pin {
 
         inline void set(bool value)
         {
+            this->pin_value = value;
             if (!this->valid) return;
             if (this->inverting ^ value)
                 this->port->BSRRL = 1 << this->pin;
@@ -112,6 +123,7 @@ class Pin {
         unsigned char pin;
         PinName pin_name;
         unsigned char port_number;
+        bool pin_value;
         struct {
             bool inverting:1;
             bool valid:1;

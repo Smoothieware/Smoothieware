@@ -7,11 +7,12 @@
 #include "pinmap.h"
 
 Pin::Pin(PinName p){
-    this->inverting = true;
+    this->inverting = false;
     this->valid = true;
     this->pin = STM_PIN(p);
     this->port_number = STM_PORT(p);
     this->pin_name = p;
+    this->pin_value = false;
 
     switch(STM_PORT(p)) {
         case 0: this->port = GPIOA; break;
