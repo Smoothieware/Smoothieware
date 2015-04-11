@@ -71,13 +71,14 @@ SDFileSystem sd  (SPI_MOSI, SPI_MISO, SPI_SCK, SPI_CS, "sd");
 
 //~ SDFAT mounter __attribute__ ("sd", &sd);
 
-DigitalOut leds[5] = {
-    DigitalOut(LED1),
-    DigitalOut(PC_10),
-    DigitalOut(PC_11),
-    DigitalOut(PC_12),
-    DigitalOut(PD_2)
+Pin leds[5] = {
+    Pin(LED1),
+    Pin(PC_10),
+    Pin(PC_11),
+    Pin(PC_12),
+    Pin(PD_2)
 };
+
 
 // debug pins, only used if defined in src/makefile
 #ifdef STEPTICKER_DEBUG_PIN
@@ -85,9 +86,12 @@ DigitalOut stepticker_debug_pin(STEPTICKER_DEBUG_PIN);
 #endif
 
 void init() {
+    // Enable clocks for GPIO ports A, B, C, D and H 
+    RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_GPIOCEN| RCC_AHB1ENR_GPIODEN | RCC_AHB1ENR_GPIOHEN);
 
     // Default pins to low status
     for (int i = 0; i < 5; i++){
+        leds[i].as_output();
         leds[i]= 0;
     }
 
