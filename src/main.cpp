@@ -72,7 +72,7 @@ SDFileSystem sd  (SPI_MOSI, SPI_MISO, SPI_SCK, SPI_CS, "sd");
 //~ SDFAT mounter __attribute__ ("sd", &sd);
 
 Pin leds[5] = {
-    Pin(LED1),
+    Pin(PA_13),
     Pin(PC_10),
     Pin(PC_11),
     Pin(PC_12),
