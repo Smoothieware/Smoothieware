@@ -69,8 +69,6 @@ SDFileSystem sd  (SPI_MOSI, SPI_MISO, SPI_SCK, SPI_CS, "sd");
 //~ USBMSD *msc= NULL;
 //~ #endif
 
-//~ SDFAT mounter __attribute__ ("sd", &sd);
-
 Pin leds[5] = {
     Pin(PC_3),
     Pin(PC_10),
