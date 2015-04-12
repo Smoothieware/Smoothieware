@@ -49,10 +49,10 @@ Pin* Pin::from_string(std::string value){
     // if cn > cs then strtol read at least one digit
     if (cn > cs){
         // translate port index into something useful
-        this->port = get_port(cn[0]);
-        this->port_number = cn[0] - 'A';
+        this->port = get_port(cn[-1]);
+        this->port_number = cn[-1] - 'A';
         // next char after the '.'
-        cn++;
+        cs = cn + 1;
         // if the char after the first integer is a . then we should expect a pin index next
         // grab pin index.
         this->pin = strtol(cs, &cn, 10);
