@@ -67,7 +67,7 @@ TP_X,		  TP_Y
 };
 
 // The bed is probed as a series of test points
-enum _test_point_type {
+enum test_point_enum_t {
     TP_CENTER,			// Center is not "active" to exclude it from kinematic simulations
     TP_ACTIVE,
     TP_ACTIVE_NEIGHBOR,
@@ -75,7 +75,7 @@ enum _test_point_type {
 };
 
 // For storing depths
-struct _cds_depths_t {
+struct cds_depths_t {
     float abs;		// Absolute depth (e.g.: 12.345)
     float rel;		// Depth relative to center (e.g.: 0.345 or -0.345)
 };
@@ -211,17 +211,17 @@ class KinematicSettings {
         }
     }
 
-    void copy_to(KinematicSettings &settings) {
-        settings.delta_radius = delta_radius;
-        settings.arm_length = arm_length;
+    void copy_to(KinematicSettings *settings) {
+        settings->delta_radius = delta_radius;
+        settings->arm_length = arm_length;
         for(int i=0; i<3; i++) {
-            settings.trim[i] = trim[i];
-            settings.tower_radius[i] = tower_radius[i];
-            settings.tower_angle[i] = tower_angle[i];
-            settings.tower_arm[i] = tower_arm[i];
-            settings.virtual_shimming[i] = virtual_shimming[i];
+            settings->trim[i] = trim[i];
+            settings->tower_radius[i] = tower_radius[i];
+            settings->tower_angle[i] = tower_angle[i];
+            settings->tower_arm[i] = tower_arm[i];
+            settings->virtual_shimming[i] = virtual_shimming[i];
         }
-        settings.initialized = true;
+        settings->initialized = true;
 
     }
 
@@ -241,6 +241,81 @@ struct best_probe_calibration_t {
 };
 
 
+
+
+
+// Bilinear interpolation ("lerp") values.
+// Since get_adjust_z() may be called 100s of times per second, we don't want to have to waste time
+// allocating variables on the stack each call. Similarly, there are several calculated values that
+// are used over and over again. Therefore, we do the calculations in the most efficient manner
+// possible using this struct.
+struct bili_t {
+
+    // Bounding box for the depth-map quad the coordinates are within
+    float x1, y1, x2, y2;
+    
+    // surface_transform[] indices of the quad's four points
+    int st_Q11, st_Q12, st_Q21, st_Q22;
+
+    // Depths at the quad's four points
+    float Q11, Q12, Q21, Q22;
+
+    float cartesian_to_array_scaler;
+
+    // Cartesian point's location in the array
+    float array_x;
+    float array_y;
+
+    // Divisor: (x2 - x1)(y2 - y1)
+    float divisor;
+    
+    // First term: Height at point / (x1 - x1) * (y2 - y1)
+    //           = Height at point / divisor
+    float first_term[4];
+
+    float x2_minus_x;
+    float x_minus_x1;
+
+    float y2_minus_y;
+    float y_minus_y1;
+    
+    float result;
+
+    float st_z_offset;
+
+};
+
+// For Z correction
+struct surface_transform_t {
+
+    // Do anything?
+    bool active;
+
+    // For correcting Z by depth
+    bool depth_enabled;
+    bool have_depth_map;
+    float *depth;	// This will be malloc'd on AHB0
+
+    // For correcting Z by surface plane rotation
+    bool plane_enabled;
+    bool have_normal;
+    float tri_points[3][3];
+    Vector3 normal;
+    float d;
+
+};
+
+// This holds all calibration types
+struct {
+    CalibrationType endstop;
+    CalibrationType delta_radius;
+    CalibrationType arm_length;
+    CalibrationType tower_angle;
+    CalibrationType virtual_shimming;
+} caltype;
+
+
+
 class ComprehensiveDeltaStrategy : public LevelingStrategy {
 
   public:
@@ -257,85 +332,18 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     //       VARIABLES
     // =====================
 
-    // This holds all calibration types
-    struct {
-        CalibrationType endstop;
-        CalibrationType delta_radius;
-        CalibrationType arm_length;
-        CalibrationType tower_angle;
-        CalibrationType virtual_shimming;
-    } caltype;
-
     // This holds the best probe calibration we've been able to get, so far, in this session
-    best_probe_calibration_t best_probe_calibration;
+    best_probe_calibration_t *best_probe_calibration;
 
-    // Bilinear interpolation values.
-    // Since get_adjust_z() may be called 100s of times per second, we don't want to have to waste time
-    // allocating variables on the stack each call. Similarly, there are several calculated values that
-    // are used over and over again. Therefore, we do the calculations in the most efficient manner
-    // possible using this struct.
-    struct {
-
-        // Bounding box for the depth-map quad the coordinates are within
-        float x1, y1, x2, y2;
-        
-        // surface_transform[] indices of the quad's four points
-        int st_Q11, st_Q12, st_Q21, st_Q22;
-
-        // Depths at the quad's four points
-        float Q11, Q12, Q21, Q22;
-
-        float cartesian_to_array_scaler;
-
-        // Cartesian point's location in the array
-        float array_x;
-        float array_y;
-
-        // Divisor: (x2 - x1)(y2 - y1)
-        float divisor;
-        
-        // First term: Height at point / (x1 - x1) * (y2 - y1)
-        //           = Height at point / divisor
-        float first_term[4];
-
-        float x2_minus_x;
-        float x_minus_x1;
-
-        float y2_minus_y;
-        float y_minus_y1;
-        
-        float result;
-
-    } bili;
-
-    // For Z correction
-    struct {
-
-        // Do anything?
-        bool active;
-
-        // For correcting Z by depth
-        bool depth_enabled;
-        bool have_depth_map;
-        float *depth;	// This will be malloc'd on AHB0
-
-        // For correcting Z by surface plane rotation
-        bool plane_enabled;
-        bool have_normal;
-        float tri_points[3][3];
-        Vector3 normal;
-        float d;
-
-    } surface_transform;
-
-    float st_z_offset;
+    surface_transform_t *surface_transform;
+    bili_t *bili;
 
     // These hold the current and test kinematic settings
     // FIXME: Migrate this into heuristic_calibration so they don't waste RAM 99.999% of the time
     //        (if we're not calibrating, we really don't need these available, right?)
-    KinematicSettings base_set;
-    KinematicSettings cur_set;
-    KinematicSettings temp_set;
+    KinematicSettings *base_set;
+    KinematicSettings *cur_set;
+    KinematicSettings *temp_set;
 //    KinematicSettings winning_mu;
 //    KinematicSettings winning_sigma;
 
@@ -367,14 +375,20 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
 
     // These are linked lists (test_points indexes the current & last depth maps)
     // The depth maps store Z offsets from the height at bed center
-    float test_point[DM_GRID_ELEMENTS][2];		// 1st subscript: which point; 2nd subscript: x and y
-    float test_axis[DM_GRID_ELEMENTS][3];		// Axis (carriage) positions generated by simulate_IK()
-    _cds_depths_t depth_map[DM_GRID_ELEMENTS];		// Current collected depth for all test points
+//    float test_point[DM_GRID_ELEMENTS][2];		// 1st subscript: which point; 2nd subscript: x and y
+//    float test_axis[DM_GRID_ELEMENTS][3];		// Axis (carriage) positions generated by simulate_IK()
+    float **test_point;					// 1st subscript: which point; 2nd subscript: x and y
+    float **test_axis;					// Axis (carriage) positions generated by simulate_IK()
+    float **cur_cartesian;				// Temporary depth map
+    float **temp_cartesian;
+//    cds_depths_t depth_map[DM_GRID_ELEMENTS];		// Current collected depth for all test points
+    cds_depths_t *depth_map;				// Current collected depth for all test points
 
     // TPT_ACTIVE means the point is active and within probe_radius
     // TPT_ACTIVE_NEIGHBOR means the point is just outside the probe_radius circle, and needed for interpolation
     // TPT_INACTIVE means the point is inactive and not used for any purpose (outside the circle on round printers)
-    _test_point_type active_point[DM_GRID_ELEMENTS];		// Which points are currently being tested
+//    test_point_enum_t active_point[DM_GRID_ELEMENTS];	// Which points are currently being tested
+    test_point_enum_t *active_point;			// Which points are currently being tested
 
     // Contains array indices for points closest to towers, and to center
     int tower_point_idx[4];
@@ -384,8 +398,11 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     //        METHODS
     // =====================
 
-    // Init & clear memory on AHB0 for the bed-leveling depth map
-    bool initDepthMapRAM();
+    // Init & clear memory on AHB0 for the bed-leveling depth map, and many other things
+    bool allocate_RAM(bool zero_pointers);
+    float** AHB0_alloc2Df(int rows, int columns);
+    bool AHB0_dealloc2Df(float** ptr, int rows);
+    void AHB0_dealloc_if_not_nullptr(void *ptr);
 
     // Handlers for G-code commands too elaborate (read: stack-heavy) to cleanly fit in handleGcode()
     bool handle_depth_mapping_calibration(Gcode *gcode);        // G31
@@ -393,8 +410,10 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     void print_g31_help();
 
     // Inverse and forward kinematics simulation
-    void simulate_IK(float cartesian[DM_GRID_ELEMENTS][3], float trim[3]);
-    float simulate_FK_and_get_energy(float axis_position[DM_GRID_ELEMENTS][3], float trim[3], float cartesian[DM_GRID_ELEMENTS][3]);
+//    void simulate_IK(float cartesian[DM_GRID_ELEMENTS][3], float trim[3]);
+    void simulate_IK(float **cartesian, float trim[3]);
+//    float simulate_FK_and_get_energy(float axis_position[DM_GRID_ELEMENTS][3], float trim[3], float cartesian[DM_GRID_ELEMENTS][3]);
+    float simulate_FK_and_get_energy(float **axis_position, float trim[3], float **cartesian);
 
     // For test points used by parallel simulated annealing and depth correction
     int find_nearest_test_point(float pos[2]);
@@ -402,13 +421,14 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
 
     // Parallel simulated annealing methods
     bool heuristic_calibration(int annealing_tries, float max_temp, float binsearch_width, bool simulate_only, bool keep_settings, bool zero_all_offsets, float overrun_divisor, bool set_geom_after_each_caltype);
-    float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float min, float max, float binsearch_width, float cartesian[DM_GRID_ELEMENTS][3], float target);
-    float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float min, float max, float binsearch_width, float cartesian[DM_GRID_ELEMENTS][3], float target);
+    float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float min, float max, float binsearch_width, float **cartesian, float target);
+    float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float min, float max, float binsearch_width, float **cartesian, float target);
     bool set_test_trim(float x, float y, float z, bool dummy);
     bool set_test_virtual_shimming(float x, float y, float z, bool dummy);
     void move_randomly_towards(float &value, float best, float temp, float target, float overrun_divisor);
-    float calc_energy(_cds_depths_t points[DM_GRID_ELEMENTS]);
-    float calc_energy(float cartesian[DM_GRID_ELEMENTS][3]);
+//    float calc_energy(cds_depths_t points[DM_GRID_ELEMENTS]);
+    float calc_energy(cds_depths_t *points);
+    float calc_energy(float **cartesian);
 
     // For depth map-based Z-correction
     void set_adjust_function(bool on);
@@ -418,7 +438,7 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     bool measure_probe_repeatability(Gcode *gcode = nullptr);
 
     // Depth map the print surface
-    bool depth_map_print_surface(float cartesian[DM_GRID_ELEMENTS][3], _cds_dmps_result display_results, bool extrapolate_neighbors);
+    bool depth_map_print_surface(float **cartesian, _cds_dmps_result display_results, bool extrapolate_neighbors);
 
     // Iterative calibration
     bool iterative_calibration(bool keep_settings);
@@ -430,11 +450,11 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     bool do_probe_at(int &steps, float x, float y, bool skip_smoothing = false);
 
     // Kinematics
-    bool set_kinematics(KinematicSettings settings, bool update = true);
-    bool get_kinematics(KinematicSettings &settings);
+    bool set_kinematics(KinematicSettings *settings, bool update = true);
+    bool get_kinematics(KinematicSettings *settings);
 
     void print_kinematics();
-    void print_kinematics(KinematicSettings settings);
+    void print_kinematics(KinematicSettings *settings);
 
     void post_adjust_kinematics();
     void post_adjust_kinematics(float offset[3]);
@@ -475,11 +495,11 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     // Utilities
     void blink_LED(unsigned char which);
     void zero_depth_maps();
-    void copy_depth_map(_cds_depths_t source[], _cds_depths_t dest[]);
+    void copy_depth_map(cds_depths_t source[], cds_depths_t dest[]);
     void clear_calibration_types();
     void display_calibration_types(bool active, bool inactive);
-    void print_depths(_cds_depths_t depths[DM_GRID_ELEMENTS]);
-    void print_depths(float depths[DM_GRID_ELEMENTS][3]);
+    void print_depths(cds_depths_t *depths);
+    void print_depths(float **depths);
     void str_pad_left(unsigned char spaces);
     bool require_clean_geometry();
     void print_task_with_warning(const std::string& str);

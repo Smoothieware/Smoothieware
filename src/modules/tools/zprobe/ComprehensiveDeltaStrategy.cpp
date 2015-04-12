@@ -43,13 +43,9 @@
 
     To Do
     -------------------------
-    * Migrate about 1KB of arrays from static class members to malloc'd on AHB0:
-      * surface_transform.depth (done)
-      * best_probe_calibration
-      * test_point (200 bytes)
-      * test_axis (300 bytes)
-      * depth_map (200 bytes?)
-      * active_point (100 bytes)
+    * Migrate loads of arrays to AHB0
+        * This is done, but none of the 2D arrays can be freed due to a possible bug in the memory pool manager.
+        * See comments in AHB0_dealloc2Df(). It might be my fault, but I've put enough hours in on this already.
     * Audit arrays created during probe calibration & simulated annealing to see if any are candidates for AHB0 migration.
     * Increase probing grid size to 7x7, rather than 5x5. (Needs above AHB0 migration to be done first, crashes otherwise)
     * Elaborate probing grid to be able to support non-square grids (for the sake of people with rectangular build areas).
@@ -115,6 +111,7 @@
 #define ZX 2
 
 
+
 // This prints to ALL streams. If you have second_usb_serial_enable turned on, you better connect a terminal to it!
 // Otherwise, eventually the serial buffers will get full and the printer may crash the effector into the build surface.
 
@@ -123,6 +120,274 @@
 
 // Print "words", no prefix
 #define __printf THEKERNEL->streams->printf
+
+
+
+// Init & clear memory on AHB0 for the bed-leveling depth map, and many other things.
+// Thanks to ZGridStrategy.cpp, where I figured out how to use AHB0.
+bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
+
+    char error_str[] = "ERROR: Couldn't allocate RAM for";
+
+    // If the printer is still booting, these objects will have random values in their memory addresses.
+    // We need to zero them so that the following code blocks don't try to deallocate non-existent memory!
+    if(zero_pointers) {
+
+        best_probe_calibration = nullptr;
+        surface_transform = nullptr;
+        bili = nullptr;
+        base_set = nullptr;
+        cur_set = nullptr;
+        temp_set = nullptr;
+        cur_cartesian = nullptr;
+        temp_cartesian = nullptr;
+        test_point = nullptr;
+        test_axis = nullptr;
+        depth_map = nullptr;
+        active_point = nullptr;
+
+    } else {
+
+        // Free up space if for some strange reason it's already allocated
+        if(surface_transform != nullptr) {
+            AHB0_dealloc_if_not_nullptr(surface_transform->depth);
+        }
+        
+        AHB0_dealloc_if_not_nullptr(best_probe_calibration);
+        AHB0_dealloc_if_not_nullptr(surface_transform);
+        AHB0_dealloc_if_not_nullptr(bili);
+        AHB0_dealloc_if_not_nullptr(base_set);
+        AHB0_dealloc_if_not_nullptr(cur_set);
+        AHB0_dealloc_if_not_nullptr(temp_set);
+        AHB0_dealloc_if_not_nullptr(depth_map);
+        AHB0_dealloc_if_not_nullptr(active_point);
+
+        AHB0_dealloc2Df(test_point, DM_GRID_ELEMENTS);
+        AHB0_dealloc2Df(test_axis, DM_GRID_ELEMENTS);
+        AHB0_dealloc2Df(cur_cartesian, DM_GRID_ELEMENTS);
+        AHB0_dealloc2Df(temp_cartesian, DM_GRID_ELEMENTS);
+
+    }
+    
+    // Allocate space for surface_transform
+    surface_transform = (struct surface_transform_t *)AHB0.alloc(sizeof(surface_transform_t));
+    if(surface_transform == nullptr) {
+        _printf("%s surface transform.\n", error_str);
+        return false;
+    }
+
+    // Allocate space for depth map
+    surface_transform->depth = (float *)AHB0.alloc(DM_GRID_ELEMENTS * sizeof(float));
+    if(surface_transform->depth == nullptr) {
+        _printf("%s depth map.\n", error_str);
+        return false;
+    }
+
+    // Zero depth map
+    for(int i=0; i<DM_GRID_ELEMENTS; i++) {
+        surface_transform->depth[i] = 0;
+    }
+
+    // Allocate space for lerp scratchpad
+    bili = (struct bili_t *)AHB0.alloc(sizeof(bili));
+    if(bili == nullptr) {
+        _printf("%s lerp scratchpad.\n", error_str);
+        return false;
+    }
+
+    // Allocate space for best probe calibration settings
+    best_probe_calibration = (struct best_probe_calibration_t*)AHB0.alloc(sizeof(best_probe_calibration_t));
+    if(best_probe_calibration == nullptr) {
+        _printf("%s best probe calibration.\n", error_str);
+        return false;
+    }
+
+    // Allocate space for kinematics settings
+    base_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
+    cur_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
+    temp_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
+    if(base_set == nullptr || cur_set == nullptr || temp_set == nullptr) {
+        _printf("%s kinematic settings.\n", error_str);
+        return false;
+    }
+
+    // Allocate space for annealing vars
+    if((cur_cartesian = AHB0_alloc2Df(DM_GRID_ELEMENTS, 3)) == nullptr) {
+        _printf("%s Cartesian grid.\n", error_str);
+        return false;
+    }
+
+    if((temp_cartesian = AHB0_alloc2Df(DM_GRID_ELEMENTS, 3)) == nullptr) {
+        _printf("%s Temp cartesian grid.\n", error_str);
+        return false;
+    }
+
+    if((test_point = AHB0_alloc2Df(DM_GRID_ELEMENTS, 2)) == nullptr) {
+        _printf("%s test points.\n", error_str);
+        return false;
+    }
+
+    if((test_axis = AHB0_alloc2Df(DM_GRID_ELEMENTS, 3)) == nullptr) {
+        _printf("%s test axes.\n", error_str);
+        return false;
+    }
+
+    depth_map = (cds_depths_t *)AHB0.alloc(sizeof(cds_depths_t) * DM_GRID_ELEMENTS);
+    if(depth_map == nullptr) {
+        _printf("%s depth map.\n", error_str);
+    }
+
+    // Allocate space for active_point
+    active_point = (test_point_enum_t *)AHB0.alloc(DM_GRID_ELEMENTS * sizeof(test_point_enum_t));
+    if(active_point == nullptr) {
+        _printf("%s active points.\n", error_str);
+        return false;
+    }
+
+    // If we got this far, we should be all good!
+    return true;
+
+}
+
+
+// Destructor
+ComprehensiveDeltaStrategy::~ComprehensiveDeltaStrategy() {
+
+    if(surface_transform != nullptr) {
+        AHB0_dealloc_if_not_nullptr(surface_transform->depth);
+    }
+
+    AHB0_dealloc_if_not_nullptr(surface_transform);
+    AHB0_dealloc_if_not_nullptr(bili);
+    AHB0_dealloc_if_not_nullptr(best_probe_calibration);
+    AHB0_dealloc_if_not_nullptr(base_set);
+    AHB0_dealloc_if_not_nullptr(cur_set);
+    AHB0_dealloc_if_not_nullptr(temp_set);
+    AHB0_dealloc_if_not_nullptr(test_point);
+    AHB0_dealloc_if_not_nullptr(test_axis);
+    AHB0_dealloc_if_not_nullptr(depth_map);
+    AHB0_dealloc_if_not_nullptr(active_point);
+
+    AHB0_dealloc2Df(test_point, DM_GRID_ELEMENTS);
+    AHB0_dealloc2Df(test_axis, DM_GRID_ELEMENTS);
+    AHB0_dealloc2Df(cur_cartesian, DM_GRID_ELEMENTS);
+    AHB0_dealloc2Df(temp_cartesian, DM_GRID_ELEMENTS);
+
+}
+
+
+// Allocate a 2D array on AHB0
+float** ComprehensiveDeltaStrategy::AHB0_alloc2Df(int rows, int columns) {
+
+    float **ptr = (float **)AHB0.alloc(rows * sizeof(float *));
+    
+    if(!ptr) {
+        return nullptr;
+    }
+
+    for(int i=0; i<rows; i++) {
+        ptr[i] = (float*)AHB0.alloc(columns * sizeof(float));
+        if(!ptr[i]) {
+            return nullptr;
+        }
+    }
+    return ptr;
+
+
+/*
+    Buggy code that didn't work.
+    Which is too bad, because it would've allocated it such that freeing it would only require one dealloc() call.
+
+    // Thanks, Dmitry: http://stackoverflow.com/questions/1970698/using-malloc-for-allocation-of-multi-dimensional-arrays-with-different-row-lengt
+
+    // The header contains the block of pointers that will point to each row
+    int header = rows * sizeof(float*);
+
+    // The body is where the actual rows are
+    int body = rows * columns * sizeof(float);
+
+    // Allocate enough space for the header and body
+    ptr = (float**)AHB0.alloc(header + body);
+
+    // buf points to the body of the array
+    float* buf = (float*)(ptr + header);
+    ptr[0] = buf;
+
+    for(int k = 1; k < rows; k++) {
+        ptr[k] = ptr[k-1] + (columns * sizeof(float));
+    }
+
+    return true;
+*/
+}
+
+
+// Deallocate 2D array from AHB0
+bool ComprehensiveDeltaStrategy::AHB0_dealloc2Df(float** ptr, int rows) {
+
+    /*
+
+        This is a stub function, and it's going to stay a stub function for the forseeable future.
+        There appears to be a bug in the deallocator. The last pointer it generates for me cannot
+        be freed. I've double-checked this by printing out the row address pointers when they are
+        allocated, and again when I try to free them. Every row pointer goes through AHB0.dealloc()
+        just fine except for the last one, no matter how long the array is.
+    
+        I believe there may be a bug in the memory pool manager, like something that's being i++'d
+        when it should be ++i'd, or similar. I don't feel like chasing that down, so whatever.
+        
+        I've rewritten all the code so that every 2D array is allocated at startup, and never freed.
+        I apologize for wasting RAM on AHB0 like this, but for now I won't look into this anymore.
+
+    */
+
+    return false;
+
+/*
+
+_printf("dealloc: ptr=%p rows=%d\n", ptr, rows);
+flush();
+
+    if(ptr != nullptr) {
+        for(int i=0; i<rows; i++) {
+            if(ptr[i] != nullptr) {
+_printf("Deallocating row at %p... ", ptr[i]);
+flush();
+                AHB0.dealloc(ptr[i]);
+_printf("Done.\n");
+flush();
+            } else {
+                __printf("AHB0_dealloc2Df: Row %d's pointer isn't null!\n", i);
+                return false;
+            }
+        }
+    }
+
+_printf("Going to deallocate main pointer at %p.\n", ptr);
+flush();
+//    AHB0_dealloc_if_not_nullptr(ptr);
+
+_printf("done.\n");
+flush();
+
+
+
+    return true;
+
+*/
+
+}
+
+
+// Deallocate stuff from AHB0, but only if it's null
+void ComprehensiveDeltaStrategy::AHB0_dealloc_if_not_nullptr(void *ptr) {
+    if(ptr != nullptr) {
+        AHB0.dealloc(ptr);
+    }
+}
+
+
+
 
 // printf() variant that can inject a prefix, and knows how to talk to the serial thingy
 // Despite the extra space it takes, we still save a few KB from not having to store the same five characters ('[XX] ')
@@ -145,9 +410,19 @@ int __attribute__ ((noinline)) ComprehensiveDeltaStrategy::prefix_printf(const c
 
 }
 
+
+
+
+
 // This serves in place of a constructor; it will be called whenever the config is reloaded
 // (which you can do over a serial console, by the way)
 bool ComprehensiveDeltaStrategy::handleConfig() {
+
+    // Allocate RAM for many things that we need to stuff into the AHB0 memory area
+    if(!allocate_RAM(true)) {
+        __printf("CDS: Unable to allocate RAM - giving up.\n");
+        return false;
+    }
 
     // Init method prefixes
     method_prefix_idx = -1;
@@ -160,9 +435,8 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
     geom_dirty = true;
 
     // Turn off Z compensation (we don't want that interfering with our readings)
-    surface_transform.depth = nullptr;
-    surface_transform.depth_enabled = false;
-    surface_transform.have_depth_map = false;
+    surface_transform->depth_enabled = false;
+    surface_transform->have_depth_map = false;
 
     // Zero out the surface normal
     set_virtual_shimming(0, 0, 0);
@@ -178,16 +452,16 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
     surface_shape = PSS_CIRCLE;
 
     // Initialize the best probe calibration stats (we'll use sigma==-1 to check whether initialized)
-    best_probe_calibration.sigma = -1;
-    best_probe_calibration.range = -1;
-    best_probe_calibration.accel = -1;
-    best_probe_calibration.debounce_count = -1;
-    best_probe_calibration.decelerate = false;
-    best_probe_calibration.eccentricity = true ;
-    best_probe_calibration.smoothing = -1;
-    best_probe_calibration.fast = -1;
-    best_probe_calibration.slow = -1;
-    
+    best_probe_calibration->sigma = -1;
+    best_probe_calibration->range = -1;
+    best_probe_calibration->accel = -1;
+    best_probe_calibration->debounce_count = -1;
+    best_probe_calibration->decelerate = false;
+    best_probe_calibration->eccentricity = true ;
+    best_probe_calibration->smoothing = -1;
+    best_probe_calibration->fast = -1;
+    best_probe_calibration->slow = -1;
+
     // Probe radius
     float r = THEKERNEL->config->value(leveling_strategy_checksum, comprehensive_delta_strategy_checksum, probe_radius_checksum)->by_default(-1)->as_number();
     if(r == -1) {
@@ -197,7 +471,7 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
     this->probe_radius = r;
 
     // Initialize bilinear interpolation array scaler (requires probe_radius)
-    bili.cartesian_to_array_scaler = (DM_GRID_DIMENSION - 1) / (probe_radius * 2);
+    bili->cartesian_to_array_scaler = (DM_GRID_DIMENSION - 1) / (probe_radius * 2);
 
     // Initialize test points (requires probe_radius)
     init_test_points();
@@ -234,44 +508,10 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
 }
 
 
-// Init & clear memory on AHB0 for the bed-leveling depth map
-// Thanks to ZGridStrategy.cpp, where I figured out how to use AHB0.
-bool ComprehensiveDeltaStrategy::initDepthMapRAM() {
-
-    // Init space on AHB0 for storing the bed leveling lerp grid
-    if(surface_transform.depth != nullptr) {
-        AHB0.dealloc(surface_transform.depth);
-    }
-
-    surface_transform.depth = (float *)AHB0.alloc(DM_GRID_ELEMENTS * sizeof(float));
-
-    if(surface_transform.depth == nullptr) {
-        _printf("ERROR: Couldn't allocate RAM for depth map.\n");
-        return false;
-    }
-
-    // Zero out surface transform depths
-    for(int i=0; i<DM_GRID_ELEMENTS; i++) {
-        surface_transform.depth[i] = 0;
-    }
-
-    return true;
-
-}
-
-
-// Destructor
-ComprehensiveDeltaStrategy::~ComprehensiveDeltaStrategy() {
-    if(surface_transform.depth != nullptr) {
-        AHB0.dealloc(surface_transform.depth);
-    }
-}
-
-
 // Process incoming G- and M-codes
 bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
 
-    if( gcode->has_g) {
+    if(gcode->has_g) {
         // G code processing
         if(gcode->g == 29) { // Test the Z-probe for repeatability
             THEKERNEL->conveyor->wait_for_empty_queue();
@@ -280,6 +520,80 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
         }
 
         if(gcode->g == 31) { // Depth mapping & heuristic delta calibration
+
+
+
+/*
+// As of now, this works.
+
+__printf("Beginning 2D array test\n");
+flush();
+
+int i,j;
+int rows=3, cols=3;
+float **array;
+array = (float**)AHB0.alloc(rows * sizeof(float *));
+for (i = 0; i < rows; i++) {
+  array[i] = (float*)AHB0.alloc(cols * sizeof(float));
+}
+
+// Some testing
+for (i = 0; i < rows; i++) {
+  for (j = 0; j < cols; j++)
+    array[i][j] = (i * j) + 0.545; // or whatever you want
+}
+
+for (i = 0; i < rows; i++) {
+  for (j = 0; j < cols; j++) {
+    __printf("row=%d col=%d val=%3.1f\n", i, j, array[i][j]);
+    flush();
+  }
+  newline();
+
+}
+
+__printf("Test complete\n");
+flush();
+
+return true;
+/**/
+
+
+
+/*
+
+// As of now, this also works!
+
+_printf("AHB0.alloc() test\n");
+
+flush();
+float** test;
+test = AHB0_alloc2Df(41, 3);
+_printf("Pointer created\n");
+flush();
+
+_printf("Setting values...\n");
+flush();
+for(int row=0; row<41; row++) {
+    for(int col=0; col<3; col++) {
+        test[row][col] = row + col;
+        __printf("%1f ", test[row][col]);
+        flush();
+    }
+    __printf("\n");
+    flush();
+}
+
+_printf("Deallocating...\n");
+flush();
+AHB0_dealloc2Df(test, 41);
+_printf("Done.\n");
+
+
+return true;
+*/
+
+
             return handle_depth_mapping_calibration(gcode);
         }
 
@@ -328,8 +642,8 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
                 // Their individual flags only control whether they're available or not.
                 gcode->stream->printf(
                     ";ABC=Shimming data; D=Shimming; E=Depth map; Z=Master enable\nM667 A%1.4f B%1.4f C%1.4f D%d E%d Z%d\n",
-                    surface_transform.tri_points[X][Z], surface_transform.tri_points[Y][Z], surface_transform.tri_points[Z][Z],
-                    (int)surface_transform.plane_enabled, (int)surface_transform.depth_enabled, (int)surface_transform.active);
+                    surface_transform->tri_points[X][Z], surface_transform->tri_points[Y][Z], surface_transform->tri_points[Z][Z],
+                    (int)surface_transform->plane_enabled, (int)surface_transform->depth_enabled, (int)surface_transform->active);
                 break;
 
         } // switch(gcode->m)
@@ -364,27 +678,21 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         _printf("Probing bed for depth correction...\n");
 
         // Disable depth correction (obviously)
-        surface_transform.depth_enabled = false;
-
-        // Allocate some RAM for the depth map
-        if(!initDepthMapRAM()) {
-            _printf("Couldn't allocate RAM for the depth map.");
-            return false;
-        }
+        surface_transform->depth_enabled = false;
 
         // Build depth map
         zero_depth_maps();
-        float cartesian[DM_GRID_ELEMENTS][3];
-        if(!depth_map_print_surface(cartesian, RESULTS_FORMATTED, true)) {
+        //float cartesian[DM_GRID_ELEMENTS][3];
+        if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, true)) {
             _printf("Couldn't build depth map - aborting!\n");
             pop_prefix();
             return false;
         }
 
 
-        // Copy depth map to surface_transform.depth[], which contains depths only
+        // Copy depth map to surface_transform->depth[], which contains depths only
         for(int i=0; i<DM_GRID_ELEMENTS; i++) {
-            surface_transform.depth[i] = cartesian[i][Z];
+            surface_transform->depth[i] = cur_cartesian[i][Z];
         }
 
         // Propagate values outward from circle to edge, in case they go outside probe_radius
@@ -397,12 +705,12 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
 
                     // Propagate right
                     if(active_point[dm_pos_right] == TP_INACTIVE) {
-                        surface_transform.depth[dm_pos_right] = surface_transform.depth[dm_pos_right - 1];
+                        surface_transform->depth[dm_pos_right] = surface_transform->depth[dm_pos_right - 1];
                     }
 
                     // Propagate left
                     if(active_point[dm_pos_left] == TP_INACTIVE) {
-                        surface_transform.depth[dm_pos_left] = surface_transform.depth[dm_pos_left + 1];
+                        surface_transform->depth[dm_pos_left] = surface_transform->depth[dm_pos_left + 1];
                     }
 
                 }
@@ -410,7 +718,7 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         }
 
         // Enable depth correction
-        surface_transform.depth_enabled = true;
+        surface_transform->depth_enabled = true;
         set_adjust_function(true);
 
         // Save to a file.
@@ -426,7 +734,7 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
             for(y=0; y<DM_GRID_DIMENSION; y++) {
                 fprintf(fp, "; Line %d of %d\n", y + 1, DM_GRID_DIMENSION);
                 for(x=0; x<DM_GRID_DIMENSION; x++) {
-                    fprintf(fp, "%1.5f\n", surface_transform.depth[(y * DM_GRID_DIMENSION) + x]);
+                    fprintf(fp, "%1.5f\n", surface_transform->depth[(y * DM_GRID_DIMENSION) + x]);
                 }
             }
 
@@ -452,8 +760,8 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         _printf("Current kinematics:\n");
         print_kinematics();
         newline();
-        float dummy[DM_GRID_ELEMENTS][3];
-        if(!depth_map_print_surface(dummy, RESULTS_FORMATTED, false)) {
+
+        if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false)) {
             _printf("Couldn't depth-map the surface.\n");
         }
         pop_prefix();
@@ -615,14 +923,14 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
     push_prefix("DM");
 
     // Triangle points for shimming surface normal
-    if(gcode->has_letter('A')) surface_transform.tri_points[X][Z] = gcode->get_value('A');
-    if(gcode->has_letter('B')) surface_transform.tri_points[Y][Z] = gcode->get_value('B');
-    if(gcode->has_letter('C')) surface_transform.tri_points[Z][Z] = gcode->get_value('C');
+    if(gcode->has_letter('A')) surface_transform->tri_points[X][Z] = gcode->get_value('A');
+    if(gcode->has_letter('B')) surface_transform->tri_points[Y][Z] = gcode->get_value('B');
+    if(gcode->has_letter('C')) surface_transform->tri_points[Z][Z] = gcode->get_value('C');
 
     // Shimming
-    if(gcode->has_letter('D')) surface_transform.plane_enabled = gcode->get_value('D');
-    if(surface_transform.plane_enabled) {
-        set_virtual_shimming(surface_transform.tri_points[X][Z], surface_transform.tri_points[Y][Z], surface_transform.tri_points[Z][Z]);
+    if(gcode->has_letter('D')) surface_transform->plane_enabled = gcode->get_value('D');
+    if(surface_transform->plane_enabled) {
+        set_virtual_shimming(surface_transform->tri_points[X][Z], surface_transform->tri_points[Y][Z], surface_transform->tri_points[Z][Z]);
         set_adjust_function(true);
     }
 
@@ -631,21 +939,14 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
 
         if(probe_offset_x == 0 && probe_offset_y == 0) {
 
-            if(surface_transform.have_depth_map) {
+            if(surface_transform->have_depth_map) {
 
                 // Depth map already loaded 
-                surface_transform.depth_enabled = gcode->get_value('E');
+                surface_transform->depth_enabled = gcode->get_value('E');
 
             } else {
 
                 // ST not initialized - try to load it
-                
-                // First, allocate memory for depth map
-                if(!initDepthMapRAM()) {
-                    _printf("Couldn't allocate RAM for the depth map.");
-                    return false;
-                }
-                
                 FILE *fp = fopen("/sd/dm_surface_transform", "r");
                 if(fp != NULL) {
 
@@ -669,13 +970,13 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
                             float fval = atof(buf);
 
                             if(fval > -5 && fval < 5) {
-                                surface_transform.depth[i] = strtof(buf, NULL);
-                                //_printf("buffer='%s' - Surface transform element %2d set to %1.3f.\n", buf, i, surface_transform.depth[i]);
+                                surface_transform->depth[i] = strtof(buf, NULL);
+                                //_printf("buffer='%s' - Surface transform element %2d set to %1.3f.\n", buf, i, surface_transform->depth[i]);
                                 i++;
                             } else {
-                                _printf("Surface transform element %2d is out of range (%1.3f) - aborting.\n", i, surface_transform.depth[i]);
+                                _printf("Surface transform element %2d is out of range (%1.3f) - aborting.\n", i, surface_transform->depth[i]);
                                 fclose(fp);
-                                surface_transform.depth_enabled = false;
+                                surface_transform->depth_enabled = false;
                                 return false;
                             }
 
@@ -688,15 +989,15 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
                     // Sanity check
                     if(i != DM_GRID_ELEMENTS) {
                         _printf("ERROR: Expected %d elements, but got %d - aborting.\n", DM_GRID_ELEMENTS, i);
-                        surface_transform.have_depth_map = false;
-                        surface_transform.depth_enabled = false;
+                        surface_transform->have_depth_map = false;
+                        surface_transform->depth_enabled = false;
                     } else {
-                        surface_transform.depth_enabled = gcode->get_value('E');
-                        if(surface_transform.depth_enabled == true) {
-                            surface_transform.depth_enabled = true;
+                        surface_transform->depth_enabled = gcode->get_value('E');
+                        if(surface_transform->depth_enabled == true) {
+                            surface_transform->depth_enabled = true;
                             set_adjust_function(true);
                         } else {
-                            surface_transform.depth_enabled = false;
+                            surface_transform->depth_enabled = false;
                         }
                     }
 
@@ -706,7 +1007,7 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
 
                 } // if(fp != NULL)
 
-            } // if(surface_transform.have_depth_map)
+            } // if(surface_transform->have_depth_map)
 
         } else {
 
@@ -727,7 +1028,7 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
     if(gcode->has_letter('Z')) {
         bool enable = gcode->get_value('Z');
         if(enable) {
-            if(surface_transform.depth_enabled || surface_transform.plane_enabled) {
+            if(surface_transform->depth_enabled || surface_transform->plane_enabled) {
                 set_adjust_function(true);
             } else {
                 _printf("Can't enable surface transform - no data.\n");
@@ -737,7 +1038,7 @@ bool ComprehensiveDeltaStrategy::handle_shimming_and_depth_correction(Gcode *gco
         }
     }
 
-    //_printf("Surface transform: Depth map=%s; Surface plane=%s; Active=%s\n", surface_transform.depth_enabled ? _STR_ENABLED_ : _STR_DISABLED_, surface_transform.plane_enabled ? _STR_ENABLED_ : _STR_DISABLED_, surface_transform.active ? _STR_ENABLED_ : _STR_DISABLED_);
+    //_printf("Surface transform: Depth map=%s; Surface plane=%s; Active=%s\n", surface_transform->depth_enabled ? _STR_ENABLED_ : _STR_DISABLED_, surface_transform->plane_enabled ? _STR_ENABLED_ : _STR_DISABLED_, surface_transform->active ? _STR_ENABLED_ : _STR_DISABLED_);
     pop_prefix();
 
     return true;
@@ -855,23 +1156,23 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     // *******************************************************************
 
     // Depth correction has to be off, or none of this stuff will work
-    surface_transform.depth_enabled = false;
+    surface_transform->depth_enabled = false;
     
     // Deal with virtual shimming
     if(caltype.virtual_shimming.active) {
-        surface_transform.plane_enabled = true;
+        surface_transform->plane_enabled = true;
     } else {
-        surface_transform.plane_enabled = false;
+        surface_transform->plane_enabled = false;
     }
 
     // We need to save the kinematic settings for later
-    if(!simulate_only || !base_set.initialized) {
+    if(!simulate_only || !base_set->initialized) {
         _printf("Baseline kinematics updated.\n");
         get_kinematics(base_set);
     }
 
     // Make sure cur_set is initialized
-    if(!cur_set.initialized) {
+    if(!cur_set->initialized) {
         get_kinematics(cur_set);
     }
 
@@ -883,7 +1184,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         get_kinematics(cur_set);
     } else {
         _printf("Restoring baseline kinematics.\n");
-        base_set.copy_to(cur_set);
+        base_set->copy_to(cur_set);
         set_kinematics(cur_set);
     }
 
@@ -891,8 +1192,8 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     // Tests (min, max, value|TEST_INIT_MIDRANGE))
     // Main tests:
     TestConfig test_endstop[3] { {-5, 0}, {-5, 0}, {-5, 0} };
-    TestConfig test_delta_radius(cur_set.delta_radius - 5, cur_set.delta_radius + 5);
-    TestConfig test_arm_length(cur_set.arm_length - 5, cur_set.arm_length + 5);
+    TestConfig test_delta_radius(cur_set->delta_radius - 5, cur_set->delta_radius + 5);
+    TestConfig test_arm_length(cur_set->arm_length - 5, cur_set->arm_length + 5);
     TestConfig test_tower_angle[3] { {-3, 3}, {-3, 3}, {-3, 3} };
     TestConfig test_virtual_shimming[3] { {-3, 3}, {-3, 3}, {-3, 3} };
 
@@ -917,7 +1218,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     bool restore_from_temp_set;
 
     // Other vars
-    float cur_cartesian[DM_GRID_ELEMENTS][3];
+//    float cur_cartesian[DM_GRID_ELEMENTS][3];
     int j, k;
     int try_mod_5;				// Will be set to annealing_try % 5
     float lowest;				// For finding the lowest absolute value of three variables
@@ -1027,16 +1328,16 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         if(need_to_simulate_IK || !simulate_only) {
             _printf("Generating carriage positions for a printer with this configuration.\n");
 
-            simulate_IK(cur_cartesian, cur_set.trim);
+            simulate_IK(cur_cartesian, cur_set->trim);
             if(restore_from_temp_set) {
-                temp_set.copy_to(cur_set);
+                temp_set->copy_to(cur_set);
                 set_kinematics(cur_set);
             }
             need_to_simulate_IK = false;
         }
 
         newline();
-        _printf("Starting test configuration: Arm Length=%1.3f, Delta Radius=%1.3f\n", cur_set.arm_length, cur_set.delta_radius);
+        _printf("Starting test configuration: Arm Length=%1.3f, Delta Radius=%1.3f\n", cur_set->arm_length, cur_set->delta_radius);
 
         // Get energy of initial state
         float energy = calc_energy(cur_cartesian);
@@ -1060,15 +1361,14 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         for(annealing_try=0; annealing_try<annealing_tries; annealing_try++) {
 
             // Shuffle caltype list
-            int iter = 3;
-            for(int i=0; i<CDS_N_CALTYPES * iter; i++) {
-                float rnd = (float)rand() / RAND_MAX;
-                int j = rnd * CDS_N_CALTYPES;
-                int tmp = caltype_order[i % iter];
-                caltype_order[i % iter] = caltype_order[j];
-                caltype_order[j] = tmp;
-            }
-            
+//            int iter = 3;
+//            for(int i=0; i<CDS_N_CALTYPES * iter; i++) {
+//                float rnd = (float)rand() / RAND_MAX;
+//                int j = rnd * CDS_N_CALTYPES;
+//                int tmp = caltype_order[i % iter];
+//                caltype_order[i % iter] = caltype_order[j];
+//                caltype_order[j] = tmp;
+//            }
 
             // Twiddle an LED so the user knows we aren't dead.
             // From main.c: "led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok"
@@ -1099,12 +1399,12 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                         if(caltype.endstop.active) {
 
                             for(k=0; k<3; k++) {
-                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_trim, cur_set.trim, k, test_endstop[k].range_min, test_endstop[k].range_max, binsearch_width, cur_cartesian, target);
-                                move_randomly_towards(cur_set.trim[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_trim, cur_set->trim, k, test_endstop[k].range_min, test_endstop[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set->trim[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
 
                                 // Set trim
                                 if(set_geom_after_each_caltype) {
-                                    set_trim(cur_set.trim[X], cur_set.trim[Y], cur_set.trim[Z]);
+                                    set_trim(cur_set->trim[X], cur_set->trim[Y], cur_set->trim[Z]);
                                 }
 
                             } // k
@@ -1124,28 +1424,28 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
                             // Find the best tower (delta) radius offsets
                             for(k=0; k<3; k++) {
-                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_radius_offsets, cur_set.tower_radius, k, test_delta_radius_offset[k].range_min, test_delta_radius_offset[k].range_max, binsearch_width, cur_cartesian, target);
-                                move_randomly_towards(cur_set.tower_radius[k], best_value, temp * caltype.delta_radius.annealing_temp_mul, target, overrun_divisor);
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_radius_offsets, cur_set->tower_radius, k, test_delta_radius_offset[k].range_min, test_delta_radius_offset[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set->tower_radius[k], best_value, temp * caltype.delta_radius.annealing_temp_mul, target, overrun_divisor);
 
                                 // Find the tower radius with the lowest absolute value
                                 lowest = 999;
                                 for(k=0; k<3; k++) {
-                                    if(fabs(cur_set.tower_radius[k]) < lowest) {
-                                        lowest = cur_set.tower_radius[k];
+                                    if(fabs(cur_set->tower_radius[k]) < lowest) {
+                                        lowest = cur_set->tower_radius[k];
                                     }
                                 }
 
                                 // Steal that value from the individual radius settings and give it to the global radius setting
                                 for(k=0; k<3; k++) {
-                                    cur_set.tower_radius[k] -= lowest;
+                                    cur_set->tower_radius[k] -= lowest;
                                 }
-                                cur_set.delta_radius += lowest;
+                                cur_set->delta_radius += lowest;
 
 
                                 // Update the robot
                                 if(set_geom_after_each_caltype) {
-                                    set_delta_radius(cur_set.delta_radius, false);
-                                    set_tower_radius_offsets(cur_set.tower_radius[X], cur_set.tower_radius[Y], cur_set.tower_radius[Z], false);
+                                    set_delta_radius(cur_set->delta_radius, false);
+                                    set_tower_radius_offsets(cur_set->tower_radius[X], cur_set->tower_radius[Y], cur_set->tower_radius[Z], false);
                                 }
 
                             } // k
@@ -1164,11 +1464,11 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                         if(caltype.arm_length.active) {
 
                             best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_arm_length, test_arm_length.range_min, test_arm_length.range_max, binsearch_width, cur_cartesian, target);
-                            move_randomly_towards(cur_set.arm_length, best_value, temp * caltype.arm_length.annealing_temp_mul, target, overrun_divisor);
+                            move_randomly_towards(cur_set->arm_length, best_value, temp * caltype.arm_length.annealing_temp_mul, target, overrun_divisor);
 
                             // Update the robot
                             if(set_geom_after_each_caltype) {
-                                set_arm_length(cur_set.arm_length, false);
+                                set_arm_length(cur_set->arm_length, false);
                             }
 
                         } // caltype.arm_length
@@ -1185,12 +1485,12 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                         if(caltype.tower_angle.active) {
 
                             for(k=0; k<3; k++) {
-                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_angle_offsets, cur_set.tower_angle, k, test_tower_angle[k].range_min, test_tower_angle[k].range_max, binsearch_width, cur_cartesian, target);
-                                move_randomly_towards(cur_set.tower_angle[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_angle_offsets, cur_set->tower_angle, k, test_tower_angle[k].range_min, test_tower_angle[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set->tower_angle[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
 
                                 // Update the robot
                                 if(set_geom_after_each_caltype) {
-                                    set_tower_angle_offsets(cur_set.tower_angle[X], cur_set.tower_angle[Y], cur_set.tower_angle[Z], false);
+                                    set_tower_angle_offsets(cur_set->tower_angle[X], cur_set->tower_angle[Y], cur_set->tower_angle[Z], false);
                                 }
 
                             } // k
@@ -1209,12 +1509,12 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                         if(caltype.virtual_shimming.active) {
                         
                             for(k=0; k<3; k++) {
-                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_virtual_shimming, cur_set.virtual_shimming, k, test_virtual_shimming[k].range_min, test_virtual_shimming[k].range_max, binsearch_width, cur_cartesian, target);
-                                move_randomly_towards(cur_set.virtual_shimming[k], best_value, temp * caltype.virtual_shimming.annealing_temp_mul, target, overrun_divisor);
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_virtual_shimming, cur_set->virtual_shimming, k, test_virtual_shimming[k].range_min, test_virtual_shimming[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set->virtual_shimming[k], best_value, temp * caltype.virtual_shimming.annealing_temp_mul, target, overrun_divisor);
 
                                 // Update the robot
                                 if(set_geom_after_each_caltype) {
-                                    set_virtual_shimming(cur_set.virtual_shimming[X], cur_set.virtual_shimming[Y], cur_set.virtual_shimming[Z], false);
+                                    set_virtual_shimming(cur_set->virtual_shimming[X], cur_set->virtual_shimming[Y], cur_set->virtual_shimming[Z], false);
                                 }
 
                             } // k
@@ -1237,12 +1537,12 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             // If we haven't been committing the changes to the robot as we've gone through the
             // annealing process, do so now
             if(!set_geom_after_each_caltype) {
-                set_trim(cur_set.trim[X], cur_set.trim[Y], cur_set.trim[Z]);
-                set_delta_radius(cur_set.delta_radius, false);
-                set_tower_radius_offsets(cur_set.tower_radius[X], cur_set.tower_radius[Y], cur_set.tower_radius[Z], false);
-                set_arm_length(cur_set.arm_length, false);
-                set_tower_angle_offsets(cur_set.tower_angle[X], cur_set.tower_angle[Y], cur_set.tower_angle[Z], false);
-                set_virtual_shimming(cur_set.virtual_shimming[X], cur_set.virtual_shimming[Y], cur_set.virtual_shimming[Z], false);
+                set_trim(cur_set->trim[X], cur_set->trim[Y], cur_set->trim[Z]);
+                set_delta_radius(cur_set->delta_radius, false);
+                set_tower_radius_offsets(cur_set->tower_radius[X], cur_set->tower_radius[Y], cur_set->tower_radius[Z], false);
+                set_arm_length(cur_set->arm_length, false);
+                set_tower_angle_offsets(cur_set->tower_angle[X], cur_set->tower_angle[Y], cur_set->tower_angle[Z], false);
+                set_virtual_shimming(cur_set->virtual_shimming[X], cur_set->virtual_shimming[Y], cur_set->virtual_shimming[Z], false);
             }
 
 
@@ -1270,7 +1570,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             // ****************
 
             if(try_mod_5 == 0) {
-                float tempE = simulate_FK_and_get_energy(test_axis, cur_set.trim, cur_cartesian);
+                float tempE = simulate_FK_and_get_energy(test_axis, cur_set->trim, cur_cartesian);
                 _printf("Try %d of %d, energy=%1.3f (want <= %1.3f)\n", annealing_try, annealing_tries, tempE, global_target);
 
                 // *****************************************************
@@ -1322,7 +1622,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
         } // annealing_try
         
-        float endE = simulate_FK_and_get_energy(test_axis, cur_set.trim, cur_cartesian);
+        float endE = simulate_FK_and_get_energy(test_axis, cur_set->trim, cur_cartesian);
         newline();
         _printf("End of annealing pass (energy=%1.3f)\n", endE);
         
@@ -1338,14 +1638,14 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
 
     // Print the results
-    _printf("Heuristic calibration complete (energy=%1.3f). Final settings:\n", simulate_FK_and_get_energy(test_axis, cur_set.trim, cur_cartesian));
+    _printf("Heuristic calibration complete (energy=%1.3f). Final settings:\n", simulate_FK_and_get_energy(test_axis, cur_set->trim, cur_cartesian));
 
     // Normalize trim (this prevents downward creep)
-    auto mm = std::minmax({ cur_set.trim[X], cur_set.trim[Y], cur_set.trim[Z] });
-    cur_set.trim[X] -= mm.second;
-    cur_set.trim[Y] -= mm.second;
-    cur_set.trim[Z] -= mm.second;
-    set_trim(cur_set.trim[X], cur_set.trim[Y], cur_set.trim[Z]);
+    auto mm = std::minmax({ cur_set->trim[X], cur_set->trim[Y], cur_set->trim[Z] });
+    cur_set->trim[X] -= mm.second;
+    cur_set->trim[Y] -= mm.second;
+    cur_set->trim[Z] -= mm.second;
+    set_trim(cur_set->trim[X], cur_set->trim[Y], cur_set->trim[Z]);
 
     print_kinematics();
     
@@ -1366,7 +1666,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
 // Find the most optimal configuration for a test function (e.g. set_delta_radius())
 // (float version)
-float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float min, float max, float binsearch_width, float cartesian[DM_GRID_ELEMENTS][3], float target) {
+float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float min, float max, float binsearch_width, float **cartesian, float target) {
 
     float energy_min, energy_max;
     
@@ -1376,10 +1676,10 @@ float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaSt
         // Test energy at min & max
 
         ((this)->*test_function)(min, true);
-        energy_min = simulate_FK_and_get_energy(test_axis, cur_set.trim, cartesian);
+        energy_min = simulate_FK_and_get_energy(test_axis, cur_set->trim, cartesian);
 
         ((this)->*test_function)(max, true);
-        energy_max = simulate_FK_and_get_energy(test_axis, cur_set.trim, cartesian);
+        energy_max = simulate_FK_and_get_energy(test_axis, cur_set->trim, cartesian);
 
         // Who won?
         if(max - min <= target) {
@@ -1401,7 +1701,7 @@ float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaSt
 
 // Find the most optimal configuration for a test function (e.g. set_delta_radius())
 // (float[3] version) 
-float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float min, float max, float binsearch_width, float cartesian[DM_GRID_ELEMENTS][3], float target) {
+float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float min, float max, float binsearch_width, float **cartesian, float target) {
 
     int j;
     float energy_min, energy_max;
@@ -1413,11 +1713,11 @@ float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaSt
         // Test energy at min & max
         values[value_idx] = min;
         ((this)->*test_function)(values[X], values[Y], values[Z], true);
-        energy_min = simulate_FK_and_get_energy(test_axis, cur_set.trim, cartesian);
+        energy_min = simulate_FK_and_get_energy(test_axis, cur_set->trim, cartesian);
 
         values[value_idx] = max;
         ((this)->*test_function)(values[X], values[Y], values[Z], true);
-        energy_max = simulate_FK_and_get_energy(test_axis, cur_set.trim, cartesian);
+        energy_max = simulate_FK_and_get_energy(test_axis, cur_set->trim, cartesian);
 
         // Who won?
         if(max - min <= target) {
@@ -1440,17 +1740,17 @@ float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaSt
 
 // find_optimal_config() requires a test function that takes three floats and returns a bool
 bool ComprehensiveDeltaStrategy::set_test_trim(float x, float y, float z, bool dummy) {
-    cur_set.trim[X] = x;
-    cur_set.trim[Y] = y;
-    cur_set.trim[Z] = z;
+    cur_set->trim[X] = x;
+    cur_set->trim[Y] = y;
+    cur_set->trim[Z] = z;
     return true;
 }
 
 
 bool ComprehensiveDeltaStrategy::set_test_virtual_shimming(float x, float y, float z, bool dummy) {
-    cur_set.virtual_shimming[X] = x;
-    cur_set.virtual_shimming[Y] = y;
-    cur_set.virtual_shimming[Z] = z;
+    cur_set->virtual_shimming[X] = x;
+    cur_set->virtual_shimming[Y] = y;
+    cur_set->virtual_shimming[Z] = z;
     set_virtual_shimming(x, y, z);
     return true;
 }
@@ -1480,7 +1780,7 @@ void ComprehensiveDeltaStrategy::move_randomly_towards(float &value, float best,
 // Simulate inverse (cartesian->actuator) kinematics
 // cartesian[] will contain the generated test points
 // test_axis[] (class member) will contain the generated axis positions
-void ComprehensiveDeltaStrategy::simulate_IK(float cartesian[DM_GRID_ELEMENTS][3], float trim[3]) {
+void ComprehensiveDeltaStrategy::simulate_IK(float **cartesian, float trim[3]) {
 
     float pos[3];
 
@@ -1499,8 +1799,8 @@ void ComprehensiveDeltaStrategy::simulate_IK(float cartesian[DM_GRID_ELEMENTS][3
             pos[Z] = cartesian[j][Z];
             
             // Adjust Cartesian positions for surface transform plane (virtual shimming)
-            if(surface_transform.plane_enabled) {
-                pos[Z] += ((-surface_transform.normal[X] * pos[X]) - (surface_transform.normal[Y] * pos[Y]) - surface_transform.d) / surface_transform.normal[Z];
+            if(surface_transform->plane_enabled) {
+                pos[Z] += ((-surface_transform->normal[X] * pos[X]) - (surface_transform->normal[Y] * pos[Y]) - surface_transform->d) / surface_transform->normal[Z];
             }
             
             // Query the robot: Where do the axes have to be for the effector to be at these coordinates?
@@ -1520,20 +1820,22 @@ void ComprehensiveDeltaStrategy::simulate_IK(float cartesian[DM_GRID_ELEMENTS][3
         
         }
         
-    } // for
+    } // for j
 
 }
 
 
 // Simulate forward (actuator->cartesian) kinematics (returns the "energy" of the end result)
 // The resulting cartesian coordinates are stored in cartesian[][]
-float ComprehensiveDeltaStrategy::simulate_FK_and_get_energy(float axis_position[DM_GRID_ELEMENTS][3], float trim[3], float cartesian[DM_GRID_ELEMENTS][3]) {
+//float ComprehensiveDeltaStrategy::simulate_FK_and_get_energy(float axis_position[DM_GRID_ELEMENTS][3], float trim[3], float cartesian[DM_GRID_ELEMENTS][3]) {
+float ComprehensiveDeltaStrategy::simulate_FK_and_get_energy(float **axis_position, float trim[3], float **cartesian) {
 
     float trimmed[3];
 
     for(int j = 0; j < DM_GRID_ELEMENTS; j++) {
 
         if(active_point[j] == TP_ACTIVE) {
+
             trimmed[X] = axis_position[j][X] - trim[X];
             trimmed[Y] = axis_position[j][Y] - trim[Y];
             trimmed[Z] = axis_position[j][Z] - trim[Z];
@@ -1541,9 +1843,10 @@ float ComprehensiveDeltaStrategy::simulate_FK_and_get_energy(float axis_position
             THEKERNEL->robot->arm_solution->actuator_to_cartesian(trimmed, cartesian[j]);
 
             // Adjust Cartesian positions for surface transform plane (virtual shimming)
-            if(surface_transform.plane_enabled) {
-                cartesian[j][Z] -= ((-surface_transform.normal[X] * cartesian[j][X]) - (surface_transform.normal[Y] * cartesian[j][Y]) - surface_transform.d) / surface_transform.normal[Z];
+            if(surface_transform->plane_enabled) {
+                cartesian[j][Z] -= ((-surface_transform->normal[X] * cartesian[j][X]) - (surface_transform->normal[Y] * cartesian[j][Y]) - surface_transform->d) / surface_transform->normal[Z];
             }
+
         }
     }
 
@@ -1615,16 +1918,19 @@ void ComprehensiveDeltaStrategy::init_test_points() {
         for(x = -probe_radius; x <= probe_radius; x += point_spacing) {
             test_point[n][X] = x;
             test_point[n][Y] = y;
+//            __printf("Set test point[%d] to { %1.1f, %1.1f }\n", n, test_point[n][X], test_point[n][Y]);
+//            _flush();
             n++;
         }
     }
-    
+
+
     // The method find_nearest_test_point() will only work once the above code is run.
+
 
     // Determine active points
     // -----------------------------------------------------
     float origin[2] = { 0, 0 };
-//    int x, y, dm_pos;
     int dm_pos;
     float neighboring_probe_radius = probe_radius + (probe_radius / ((DM_GRID_DIMENSION - 1) / 2));
 
@@ -1632,6 +1938,7 @@ void ComprehensiveDeltaStrategy::init_test_points() {
 
     // Determine active/inactive points based on print surface shape
     for(y=0; y<DM_GRID_DIMENSION; y++) {
+
         for(x=0; x<DM_GRID_DIMENSION; x++) {
 
             // Determine index of this grid position in the depth map array
@@ -1671,6 +1978,7 @@ void ComprehensiveDeltaStrategy::init_test_points() {
                 
                 // Square print shape is easy: everything is active!
                 case PSS_SQUARE:
+
                     active_point[dm_pos] = TP_ACTIVE;
                     break;
 
@@ -1731,17 +2039,17 @@ void ComprehensiveDeltaStrategy::init_test_points() {
     pos[Y] = probe_radius;
     tower_point_idx[TP_Z] = find_nearest_test_point(pos);
 
-    surface_transform.tri_points[X][X] = test_point[tower_point_idx[TP_X]][X];
-    surface_transform.tri_points[X][Y] = test_point[tower_point_idx[TP_X]][Y];
-    surface_transform.tri_points[X][Z] = 0;
+    surface_transform->tri_points[X][X] = test_point[tower_point_idx[TP_X]][X];
+    surface_transform->tri_points[X][Y] = test_point[tower_point_idx[TP_X]][Y];
+    surface_transform->tri_points[X][Z] = 0;
 
-    surface_transform.tri_points[Y][X] = test_point[tower_point_idx[TP_Y]][X];
-    surface_transform.tri_points[Y][Y] = test_point[tower_point_idx[TP_Y]][Y];
-    surface_transform.tri_points[Y][Z] = 0;
+    surface_transform->tri_points[Y][X] = test_point[tower_point_idx[TP_Y]][X];
+    surface_transform->tri_points[Y][Y] = test_point[tower_point_idx[TP_Y]][Y];
+    surface_transform->tri_points[Y][Z] = 0;
 
-    surface_transform.tri_points[Z][X] = test_point[tower_point_idx[TP_Z]][X];
-    surface_transform.tri_points[Z][Y] = test_point[tower_point_idx[TP_Z]][Y];
-    surface_transform.tri_points[Z][Z] = 0;
+    surface_transform->tri_points[Z][X] = test_point[tower_point_idx[TP_Z]][X];
+    surface_transform->tri_points[Z][Y] = test_point[tower_point_idx[TP_Z]][Y];
+    surface_transform->tri_points[Z][Z] = 0;
 
 }
 
@@ -1750,7 +2058,7 @@ void ComprehensiveDeltaStrategy::init_test_points() {
 // I used ThreePointStrategy.cpp as an example.
 void ComprehensiveDeltaStrategy::set_adjust_function(bool on) {
 
-    surface_transform.active = on;
+    surface_transform->active = on;
 
     if(on) {
 //        _printf("[ST] Depth correction enabled.\n");
@@ -1774,17 +2082,17 @@ void ComprehensiveDeltaStrategy::set_adjust_function(bool on) {
 // can be set aside beforehand, has been.
 float ComprehensiveDeltaStrategy::get_adjust_z(float targetX, float targetY) {
 
-    st_z_offset = 0;
+    bili->st_z_offset = 0;
 
     // Adjust Z according to the rotation of the plane of the print surface
-    if(surface_transform.plane_enabled && surface_transform.active) {
+    if(surface_transform->plane_enabled && surface_transform->active) {
 
-        st_z_offset = ((-surface_transform.normal[X] * targetX) - (surface_transform.normal[Y] * targetY) - surface_transform.d) / surface_transform.normal[Z];
+        bili->st_z_offset = ((-surface_transform->normal[X] * targetX) - (surface_transform->normal[Y] * targetY) - surface_transform->d) / surface_transform->normal[Z];
 
     }
 
     // Adjust Z according to depth map
-    if(surface_transform.depth_enabled && surface_transform.active) {
+    if(surface_transform->depth_enabled && surface_transform->active) {
 
 
         // Based on code retrieved from:
@@ -1806,7 +2114,7 @@ float ComprehensiveDeltaStrategy::get_adjust_z(float targetX, float targetY) {
 //count = 0;
 //if(count % 100 == 0 && zdebug) {
 //    _printf("targetX=%1.3f targetY=%1.3f\n", targetX, targetY);
-//    _printf("probe_radius=%1.3f scaler=%1.3f\n", probe_radius, bili.cartesian_to_array_scaler);
+//    _printf("probe_radius=%1.3f scaler=%1.3f\n", probe_radius, bili->cartesian_to_array_scaler);
 //
 //}
 
@@ -1814,17 +2122,17 @@ float ComprehensiveDeltaStrategy::get_adjust_z(float targetX, float targetY) {
         targetY = clamp(targetY, -probe_radius, probe_radius);
 
         // Calculate (floating-point) array position
-        bili.array_x = (targetX - -probe_radius) * bili.cartesian_to_array_scaler;
-        bili.array_y = (-targetY - -probe_radius) * bili.cartesian_to_array_scaler;	// Y inverted since it starts high and ends low
+        bili->array_x = (targetX - -probe_radius) * bili->cartesian_to_array_scaler;
+        bili->array_y = (-targetY - -probe_radius) * bili->cartesian_to_array_scaler;	// Y inverted since it starts high and ends low
 
         // Calculate bounding box
-        bili.x1 = floor(bili.array_x);
-        bili.y1 = floor(bili.array_y);
-        bili.x2 = bili.x1 + 1;
-        bili.y2 = bili.y1 + 1;
+        bili->x1 = floor(bili->array_x);
+        bili->y1 = floor(bili->array_y);
+        bili->x2 = bili->x1 + 1;
+        bili->y2 = bili->y1 + 1;
 //if(count % 100 == 0 && zdebug) {
-//    _printf("array_x=%1.3f array_y=%1.3f\n", bili.array_x, bili.array_y);
-//    _printf("Bounding box: {%1.1f, %1.1f} to {%1.1f, %1.1f}\n", bili.x1, bili.y1, bili.x2, bili.y2);
+//    _printf("array_x=%1.3f array_y=%1.3f\n", bili->array_x, bili->array_y);
+//    _printf("Bounding box: {%1.1f, %1.1f} to {%1.1f, %1.1f}\n", bili->x1, bili->y1, bili->x2, bili->y2);
 //}
 
 
@@ -1835,49 +2143,49 @@ float ComprehensiveDeltaStrategy::get_adjust_z(float targetX, float targetY) {
         //    | 
         //    |
         // y2 | Q12    Q22
-        bili.st_Q11 = (bili.y1 * DM_GRID_DIMENSION) + bili.x1;
-        bili.st_Q12 = (bili.y2 * DM_GRID_DIMENSION) + bili.x1;
-        bili.st_Q21 = (bili.y1 * DM_GRID_DIMENSION) + bili.x2;
-        bili.st_Q22 = (bili.y2 * DM_GRID_DIMENSION) + bili.x2;
+        bili->st_Q11 = (bili->y1 * DM_GRID_DIMENSION) + bili->x1;
+        bili->st_Q12 = (bili->y2 * DM_GRID_DIMENSION) + bili->x1;
+        bili->st_Q21 = (bili->y1 * DM_GRID_DIMENSION) + bili->x2;
+        bili->st_Q22 = (bili->y2 * DM_GRID_DIMENSION) + bili->x2;
 
         // Retrieve heights from the quad's points
         // ----------------------------------------------------------------------
-        bili.Q11 = surface_transform.depth[bili.st_Q11];
-        bili.Q12 = surface_transform.depth[bili.st_Q12];
-        bili.Q21 = surface_transform.depth[bili.st_Q21];
-        bili.Q22 = surface_transform.depth[bili.st_Q22];
+        bili->Q11 = surface_transform->depth[bili->st_Q11];
+        bili->Q12 = surface_transform->depth[bili->st_Q12];
+        bili->Q21 = surface_transform->depth[bili->st_Q21];
+        bili->Q22 = surface_transform->depth[bili->st_Q22];
 
         // Set up the first terms
         // ----------------------------------------------------------------------
-        bili.divisor = (bili.x2 - bili.x1) * (bili.y2 - bili.y1);
-        bili.first_term[0] = bili.Q11 / bili.divisor;
-        bili.first_term[1] = bili.Q21 / bili.divisor;
-        bili.first_term[2] = bili.Q12 / bili.divisor;
-        bili.first_term[3] = bili.Q22 / bili.divisor;
+        bili->divisor = (bili->x2 - bili->x1) * (bili->y2 - bili->y1);
+        bili->first_term[0] = bili->Q11 / bili->divisor;
+        bili->first_term[1] = bili->Q21 / bili->divisor;
+        bili->first_term[2] = bili->Q12 / bili->divisor;
+        bili->first_term[3] = bili->Q22 / bili->divisor;
 
         // Set up the second and third terms
         // ----------------------------------------------------------------------
-        bili.x2_minus_x = bili.x2 - bili.array_x;
-        bili.x_minus_x1 = bili.array_x - bili.x1;
-        bili.y2_minus_y = bili.y2 - bili.array_y;
-        bili.y_minus_y1 = bili.array_y - bili.y1;
+        bili->x2_minus_x = bili->x2 - bili->array_x;
+        bili->x_minus_x1 = bili->array_x - bili->x1;
+        bili->y2_minus_y = bili->y2 - bili->array_y;
+        bili->y_minus_y1 = bili->array_y - bili->y1;
 
 //if(count % 100 == 0 && zdebug) {
-//    _printf("Indices for array entries for this BB: Q11=%d Q21=%d Q12=%d Q22=%d\n", bili.st_Q11, bili.st_Q21, bili.st_Q12, bili.st_Q22);
-//    _printf("Heights: {%1.2f, %1.2f, %1.2f, %1.2f}\n", bili.Q11, bili.Q12, bili.Q21, bili.Q22);
-//    _printf("First terms: %1.2f, %1.2f, %1.2f, %1.2f\n", bili.first_term[0], bili.first_term[1], bili.first_term[2], bili.first_term[3]);
-//    _printf("Second & third terms: x2_minus_x=%1.2f; x_minus_x1=%1.2f; y2_minus_y=%1.2f; y_minus_y1=%1.2f\n", bili.x2_minus_x, bili.x_minus_x1, bili.y2_minus_y, bili.y_minus_y1);
+//    _printf("Indices for array entries for this BB: Q11=%d Q21=%d Q12=%d Q22=%d\n", bili->st_Q11, bili->st_Q21, bili->st_Q12, bili->st_Q22);
+//    _printf("Heights: {%1.2f, %1.2f, %1.2f, %1.2f}\n", bili->Q11, bili->Q12, bili->Q21, bili->Q22);
+//    _printf("First terms: %1.2f, %1.2f, %1.2f, %1.2f\n", bili->first_term[0], bili->first_term[1], bili->first_term[2], bili->first_term[3]);
+//    _printf("Second & third terms: x2_minus_x=%1.2f; x_minus_x1=%1.2f; y2_minus_y=%1.2f; y_minus_y1=%1.2f\n", bili->x2_minus_x, bili->x_minus_x1, bili->y2_minus_y, bili->y_minus_y1);
 //}
 
         // Interpolate    
         // ----------------------------------------------------------------------
-        bili.result =
-            bili.first_term[0] * bili.x2_minus_x * bili.y2_minus_y +
-            bili.first_term[1] * bili.x_minus_x1 * bili.y2_minus_y +
-            bili.first_term[2] * bili.x2_minus_x * bili.y_minus_y1 +
-            bili.first_term[3] * bili.x_minus_x1 * bili.y_minus_y1;
+        bili->result =
+            bili->first_term[0] * bili->x2_minus_x * bili->y2_minus_y +
+            bili->first_term[1] * bili->x_minus_x1 * bili->y2_minus_y +
+            bili->first_term[2] * bili->x2_minus_x * bili->y_minus_y1 +
+            bili->first_term[3] * bili->x_minus_x1 * bili->y_minus_y1;
 
-        st_z_offset += bili.result;
+        bili->st_z_offset += bili->result;
 
 //if(count % 100 == 0 && zdebug) {
 //    _printf("st_z_offset = %1.3f\n", st_z_offset);
@@ -1895,7 +2203,7 @@ float ComprehensiveDeltaStrategy::get_adjust_z(float targetX, float targetY) {
     count++;
     */
     
-    return st_z_offset;
+    return bili->st_z_offset;
 
 }
 
@@ -2061,34 +2369,34 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
     _printf("  sigma: %1.3f steps (%1.3f mm)\n", sigma, zprobe->zsteps_to_mm(sigma));
     _printf("Repeatability: %1.4f (add a little to be sure)\n", rep);
 
-    if(best_probe_calibration.sigma == -1 || sigma < best_probe_calibration.sigma) {
+    if(best_probe_calibration->sigma == -1 || sigma < best_probe_calibration->sigma) {
 
         _printf("This is your best score so far!\n");
-        best_probe_calibration.sigma = sigma;
-        best_probe_calibration.range = max - min;
-        best_probe_calibration.accel = want_acceleration;
-        best_probe_calibration.debounce_count = zprobe->getDebounceCount();
-        best_probe_calibration.decelerate = zprobe->getDecelerateOnTrigger();
-        best_probe_calibration.eccentricity = do_eccentricity_test;
-        best_probe_calibration.smoothing = probe_smoothing;
-        best_probe_calibration.priming = probe_priming;
-        best_probe_calibration.fast = zprobe->getFastFeedrate();
-        best_probe_calibration.slow = zprobe->getSlowFeedrate();
+        best_probe_calibration->sigma = sigma;
+        best_probe_calibration->range = max - min;
+        best_probe_calibration->accel = want_acceleration;
+        best_probe_calibration->debounce_count = zprobe->getDebounceCount();
+        best_probe_calibration->decelerate = zprobe->getDecelerateOnTrigger();
+        best_probe_calibration->eccentricity = do_eccentricity_test;
+        best_probe_calibration->smoothing = probe_smoothing;
+        best_probe_calibration->priming = probe_priming;
+        best_probe_calibration->fast = zprobe->getFastFeedrate();
+        best_probe_calibration->slow = zprobe->getSlowFeedrate();
 
     } else {
 
         _printf(
             "Best score so far: [sigma=%1.3f, range=%d] => accel=%f, debounce=%d, decelerate=%s, eccentricity=%s, smoothing=%d, priming=%d, fastFR=%1.3f, slowFR=%1.3f\n",
-            best_probe_calibration.sigma,
-            best_probe_calibration.range,
-            best_probe_calibration.accel,
-            best_probe_calibration.debounce_count,
-            best_probe_calibration.decelerate ? _STR_TRUE_ : _STR_FALSE_,
-            best_probe_calibration.eccentricity ? _STR_ON_ : _STR_OFF_,
-            best_probe_calibration.smoothing,
-            best_probe_calibration.priming,
-            best_probe_calibration.fast,
-            best_probe_calibration.slow
+            best_probe_calibration->sigma,
+            best_probe_calibration->range,
+            best_probe_calibration->accel,
+            best_probe_calibration->debounce_count,
+            best_probe_calibration->decelerate ? _STR_TRUE_ : _STR_FALSE_,
+            best_probe_calibration->eccentricity ? _STR_ON_ : _STR_OFF_,
+            best_probe_calibration->smoothing,
+            best_probe_calibration->priming,
+            best_probe_calibration->fast,
+            best_probe_calibration->slow
         );
 
     }
@@ -2117,7 +2425,7 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
 // Depth-map the print surface
 // Initially useful for diagnostics, but the data may be useful for doing live height corrections
 // Depths are stored in depth_map (class member)
-bool ComprehensiveDeltaStrategy::depth_map_print_surface(float cartesian[DM_GRID_ELEMENTS][3], _cds_dmps_result display_results, bool extrapolate_neighbors) {
+bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds_dmps_result display_results, bool extrapolate_neighbors) {
 
 /*
 
@@ -2151,6 +2459,7 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float cartesian[DM_GRID
                 iterative calibration routine, and for adjusting the plane surface normal.
 
 */
+
 
     push_prefix("DM");
 
@@ -2279,7 +2588,7 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float cartesian[DM_GRID
                 struct point_type {
                     float x;
                     float y;
-                    _cds_depths_t z;
+                    cds_depths_t z;
                 };
 
                 // Extrapolate depth at test_point[i] based on the slope between the depths of the active test point & probed point
@@ -2292,7 +2601,7 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float cartesian[DM_GRID
                 //_printf("probed = {%1.3f, %1.3f, %1.3f | %1.3f}\n", probed.x, probed.y, probed.z.abs, probed.z.rel);
                 //_printf("...\n");
 
-                _cds_depths_t rise { probed.z.abs - active.z.abs, probed.z.rel - active.z.rel };
+                cds_depths_t rise { probed.z.abs - active.z.abs, probed.z.rel - active.z.rel };
                 float dist_active_to_extrap = sqrt(pow(extrap.x - active.x, 2));
                 float dist_active_to_probed = sqrt(pow(probed.x - active.x, 2));
                 float dist_mul = dist_active_to_extrap / dist_active_to_probed; // This will be 1.something
@@ -3035,25 +3344,23 @@ bool ComprehensiveDeltaStrategy::set_virtual_shimming(float x, float y, float z,
 //_printf("SVS: {%1.3f, %1.3f, %1.3f}\n", x, y, z);
 
     // Z depths are in millimeters relative to surface, negative=lower
-    surface_transform.tri_points[X][Z] = x;
-    surface_transform.tri_points[Y][Z] = y;
-    surface_transform.tri_points[Z][Z] = z;
-
-
+    surface_transform->tri_points[X][Z] = x;
+    surface_transform->tri_points[Y][Z] = y;
+    surface_transform->tri_points[Z][Z] = z;
 
     if(x == 0 && y == 0 && z == 0) {
 
         // This gets its own special case because Vector3.cpp is incapable of handling null vectors.
         // It will literally calculate that the cross product of {0, 0, 0} and {0, 0, 0} is {nan, nan, nan}.
-        surface_transform.normal.set(0, 0, 1);
-        surface_transform.d = 0;
+        surface_transform->normal.set(0, 0, 1);
+        surface_transform->d = 0;
 
     } else {
 
         Vector3 v1, v2, v3;
-        v1.set(surface_transform.tri_points[X][X], surface_transform.tri_points[X][Y], surface_transform.tri_points[X][Z]);
-        v2.set(surface_transform.tri_points[Y][X], surface_transform.tri_points[Y][Y], surface_transform.tri_points[Y][Z]);
-        v3.set(surface_transform.tri_points[Z][X], surface_transform.tri_points[Z][Y], surface_transform.tri_points[Z][Z]);
+        v1.set(surface_transform->tri_points[X][X], surface_transform->tri_points[X][Y], surface_transform->tri_points[X][Z]);
+        v2.set(surface_transform->tri_points[Y][X], surface_transform->tri_points[Y][Y], surface_transform->tri_points[Y][Z]);
+        v3.set(surface_transform->tri_points[Z][X], surface_transform->tri_points[Z][Y], surface_transform->tri_points[Z][Z]);
 
 //        _printf("Vector 1: {%1.3f, %1.3f, %1.3f}\n", v1[X], v1[Y], v1[Z]);
 //        _printf("Vector 2: {%1.3f, %1.3f, %1.3f}\n", v2[X], v2[Y], v2[Z]);
@@ -3063,37 +3370,37 @@ bool ComprehensiveDeltaStrategy::set_virtual_shimming(float x, float y, float z,
         Vector3 ac = v1.sub(v3);
         Vector3 cross_product = ab.cross(ac);
 
-        surface_transform.normal = cross_product.unit();
+        surface_transform->normal = cross_product.unit();
 
 //        _printf("ab: {%1.3f, %1.3f, %1.3f}\n", ab[X], ab[Y], ab[Z]);
 //        _printf("ac: {%1.3f, %1.3f, %1.3f}\n", ac[X], ac[Y], ac[Z]);
 //        _printf("cross product: {%1.3f, %1.3f, %1.3f}\n", cross_product[X], cross_product[Y], cross_product[Z]);
-//        _printf("normal: {%1.3f, %1.3f, %1.3f}\n", surface_transform.normal[X], surface_transform.normal[Y], surface_transform.normal[Z]);
+//        _printf("normal: {%1.3f, %1.3f, %1.3f}\n", surface_transform->normal[X], surface_transform->normal[Y], surface_transform->normal[Z]);
 
-        Vector3 dv = surface_transform.normal.mul(v1);
+        Vector3 dv = surface_transform->normal.mul(v1);
 //        _printf("dv: {%1.3f, %1.3f, %1.3f}\n", dv[X], dv[Y], dv[Z]);
 
-        surface_transform.d = -dv[0] - dv[1] - dv[2];
-//        _printf("d: %1.3f\n", surface_transform.d);
+        surface_transform->d = -dv[0] - dv[1] - dv[2];
+//        _printf("d: %1.3f\n", surface_transform->d);
 
-        surface_transform.plane_enabled = true;
+        surface_transform->plane_enabled = true;
         set_adjust_function(true);
 
     }
 
-//    _printf("normal: {%1.3f, %1.3f, %1.3f}\n", surface_transform.normal[X], surface_transform.normal[Y], surface_transform.normal[Z]);
-//    _printf("d: %1.3f\n", surface_transform.d);
+//    _printf("normal: {%1.3f, %1.3f, %1.3f}\n", surface_transform->normal[X], surface_transform->normal[Y], surface_transform->normal[Z]);
+//    _printf("d: %1.3f\n", surface_transform->d);
 
-    surface_transform.have_normal = true;
+    surface_transform->have_normal = true;
     return true;
     
 }
 
 bool ComprehensiveDeltaStrategy::get_virtual_shimming(float &x, float &y, float &z) {
-    if(surface_transform.plane_enabled) {
-        x = surface_transform.tri_points[X][Z];
-        y = surface_transform.tri_points[Y][Z];
-        z = surface_transform.tri_points[Z][Z];
+    if(surface_transform->plane_enabled) {
+        x = surface_transform->tri_points[X][Z];
+        y = surface_transform->tri_points[Y][Z];
+        z = surface_transform->tri_points[Z][Z];
     } else {
         x = y = z = 0;
     }
@@ -3102,17 +3409,17 @@ bool ComprehensiveDeltaStrategy::get_virtual_shimming(float &x, float &y, float 
 
 
 // Getter/setter for ALL kinematics
-bool ComprehensiveDeltaStrategy::set_kinematics(KinematicSettings settings, bool update) {
+bool ComprehensiveDeltaStrategy::set_kinematics(KinematicSettings *settings, bool update) {
 
-    if(settings.initialized) {
+    if(settings->initialized) {
 
-        set_delta_radius(settings.delta_radius);
-        set_arm_length(settings.arm_length);
-        set_trim(settings.trim[X], settings.trim[Y], settings.trim[Z]);
-        set_tower_radius_offsets(settings.tower_radius[X], settings.tower_radius[Y], settings.tower_radius[Z]);
-        set_tower_angle_offsets(settings.tower_angle[X], settings.tower_angle[Y], settings.tower_angle[Z]);
-        set_tower_arm_offsets(settings.tower_arm[X], settings.tower_arm[Y], settings.tower_arm[Z]);
-        set_virtual_shimming(settings.virtual_shimming[X], settings.virtual_shimming[Y], settings.virtual_shimming[Z]);
+        set_delta_radius(settings->delta_radius);
+        set_arm_length(settings->arm_length);
+        set_trim(settings->trim[X], settings->trim[Y], settings->trim[Z]);
+        set_tower_radius_offsets(settings->tower_radius[X], settings->tower_radius[Y], settings->tower_radius[Z]);
+        set_tower_angle_offsets(settings->tower_angle[X], settings->tower_angle[Y], settings->tower_angle[Z]);
+        set_tower_arm_offsets(settings->tower_arm[X], settings->tower_arm[Y], settings->tower_arm[Z]);
+        set_virtual_shimming(settings->virtual_shimming[X], settings->virtual_shimming[Y], settings->virtual_shimming[Z]);
 
         if(update) {
             post_adjust_kinematics();
@@ -3128,16 +3435,16 @@ bool ComprehensiveDeltaStrategy::set_kinematics(KinematicSettings settings, bool
     }
 }
 
-bool ComprehensiveDeltaStrategy::get_kinematics(KinematicSettings &settings) {
+bool ComprehensiveDeltaStrategy::get_kinematics(KinematicSettings *settings) {
 
-    get_delta_radius(settings.delta_radius);
-    get_arm_length(settings.arm_length);
-    get_trim(settings.trim[X], settings.trim[Y], settings.trim[Z]);
-    get_tower_radius_offsets(settings.tower_radius[X], settings.tower_radius[Y], settings.tower_radius[Z]);
-    get_tower_angle_offsets(settings.tower_angle[X], settings.tower_angle[Y], settings.tower_angle[Z]);
-    get_tower_arm_offsets(settings.tower_arm[X], settings.tower_arm[Y], settings.tower_arm[Z]);
-    get_virtual_shimming(settings.virtual_shimming[X], settings.virtual_shimming[Y], settings.virtual_shimming[Z]);
-    settings.initialized = true;
+    get_delta_radius(settings->delta_radius);
+    get_arm_length(settings->arm_length);
+    get_trim(settings->trim[X], settings->trim[Y], settings->trim[Z]);
+    get_tower_radius_offsets(settings->tower_radius[X], settings->tower_radius[Y], settings->tower_radius[Z]);
+    get_tower_angle_offsets(settings->tower_angle[X], settings->tower_angle[Y], settings->tower_angle[Z]);
+    get_tower_arm_offsets(settings->tower_arm[X], settings->tower_arm[Y], settings->tower_arm[Z]);
+    get_virtual_shimming(settings->virtual_shimming[X], settings->virtual_shimming[Y], settings->virtual_shimming[Z]);
+    settings->initialized = true;
     return true;
 
 }
@@ -3146,31 +3453,37 @@ bool ComprehensiveDeltaStrategy::get_kinematics(KinematicSettings &settings) {
 // Print currently set kinematics
 void ComprehensiveDeltaStrategy::print_kinematics() {
 
-    KinematicSettings settings;
+    KinematicSettings *settings = new KinematicSettings();
     get_kinematics(settings);
     print_kinematics(settings);
 
 }
 
-void ComprehensiveDeltaStrategy::print_kinematics(KinematicSettings settings) {
+void ComprehensiveDeltaStrategy::print_kinematics(KinematicSettings *settings) {
 
     push_prefix("PK");
-    _printf("          Arm length: %1.3f\n", settings.arm_length);
-    _printf("        Delta radius: %1.3f\n", settings.delta_radius);
-    _printf("     Endstop offsets: {%1.3f, %1.3f, %1.3f}\n", settings.trim[X], settings.trim[Y], settings.trim[Z]);
-    _printf("Radius offsets (ABC): {%1.3f, %1.3f, %1.3f}\n", settings.tower_radius[X], settings.tower_radius[Y], settings.tower_radius[Z]);
-    _printf(" Angle offsets (DEF): {%1.3f, %1.3f, %1.3f}\n", settings.tower_angle[X], settings.tower_angle[Y], settings.tower_angle[Z]);
-    _printf("    Virtual shimming: {%1.3f, %1.3f, %1.3f}, vector={%1.3f, %1.3f, %1.3f}, d=%1.3f, %s\n", settings.virtual_shimming[X], settings.virtual_shimming[Y], settings.virtual_shimming[Z], surface_transform.normal[X], surface_transform.normal[Y], surface_transform.normal[Z], surface_transform.d, (surface_transform.plane_enabled && surface_transform.active) ? _STR_ENABLED_ : _STR_DISABLED_);
-    _printf("Depth (Z) correction: %s\n", (surface_transform.depth_enabled && surface_transform.active) ? _STR_ENABLED_ : _STR_DISABLED_);
+    _printf("          Arm length: %1.3f\n", settings->arm_length);
+    _printf("        Delta radius: %1.3f\n", settings->delta_radius);
+    _printf("     Endstop offsets: {%1.3f, %1.3f, %1.3f}\n", settings->trim[X], settings->trim[Y], settings->trim[Z]);
+    _printf("Radius offsets (ABC): {%1.3f, %1.3f, %1.3f}\n", settings->tower_radius[X], settings->tower_radius[Y], settings->tower_radius[Z]);
+    _printf(" Angle offsets (DEF): {%1.3f, %1.3f, %1.3f}\n", settings->tower_angle[X], settings->tower_angle[Y], settings->tower_angle[Z]);
+    _printf("    Virtual shimming: {%1.3f, %1.3f, %1.3f}, vector={%1.3f, %1.3f, %1.3f}, d=%1.3f, %s\n", settings->virtual_shimming[X], settings->virtual_shimming[Y], settings->virtual_shimming[Z], surface_transform->normal[X], surface_transform->normal[Y], surface_transform->normal[Z], surface_transform->d, (surface_transform->plane_enabled && surface_transform->active) ? _STR_ENABLED_ : _STR_DISABLED_);
+    _printf("Depth (Z) correction: %s\n", (surface_transform->depth_enabled && surface_transform->active) ? _STR_ENABLED_ : _STR_DISABLED_);
     pop_prefix();
 
 }
 
 
 // Print measured or simulated depths
-void ComprehensiveDeltaStrategy::print_depths(float depths[DM_GRID_ELEMENTS][3]) {
+//void ComprehensiveDeltaStrategy::print_depths(float depths[DM_GRID_ELEMENTS][3]) {
+void ComprehensiveDeltaStrategy::print_depths(float **depths) {
 
-    _cds_depths_t _depths[DM_GRID_ELEMENTS];
+    //cds_depths_t _depths[DM_GRID_ELEMENTS];
+    cds_depths_t *_depths;
+    if((_depths = (cds_depths_t *)AHB0.alloc(sizeof(cds_depths_t) * DM_GRID_ELEMENTS)) == nullptr) {
+        __printf("[PD] ERROR: Couldn't allocate RAM.\n");
+        return;
+    }
     
     for(int i=0; i<DM_GRID_ELEMENTS; i++) {
         _depths[i].abs = 0;
@@ -3178,12 +3491,15 @@ void ComprehensiveDeltaStrategy::print_depths(float depths[DM_GRID_ELEMENTS][3])
     }
     
     print_depths(_depths);
+    
+    AHB0.dealloc(_depths);
 
 }
 
-void ComprehensiveDeltaStrategy::print_depths(_cds_depths_t depths[DM_GRID_ELEMENTS]) {
+void ComprehensiveDeltaStrategy::print_depths(cds_depths_t *depths) {
 
-    float rel_depths[DM_GRID_ELEMENTS];
+//    float rel_depths[DM_GRID_ELEMENTS];
+    float *rel_depths = (float *)AHB0.alloc(DM_GRID_ELEMENTS * sizeof(float));
     float best = 999, worst = 0;
     float mu, sigma, min, max;
 
@@ -3237,8 +3553,10 @@ void ComprehensiveDeltaStrategy::print_depths(_cds_depths_t depths[DM_GRID_ELEME
     // Calculate and print statistics.
     // The difference between "best/worst" and "min/max" is that best and worst are indifferent to sign.
     calc_statistics(rel_depths, DM_GRID_ELEMENTS, mu, sigma, min, max);
-    __printf("\n[PD] Best=%1.3f, worst=%1.3f, min=%1.3f, max=%1.3f, mu=%1.3f, sigma=%1.3f, energy=%1.3f\n", best, worst, min, max, mu, sigma, calc_energy(depths));
-    flush();
+    float energy = calc_energy(depths);
+    __printf("\n[PD] Best=%1.3f, worst=%1.3f, min=%1.3f, max=%1.3f, mu=%1.3f, sigma=%1.3f, energy=%1.3f\n", best, worst, min, max, mu, sigma, energy);
+
+    AHB0.dealloc(rel_depths);
 
 }
 
@@ -3313,7 +3631,7 @@ void ComprehensiveDeltaStrategy::zero_depth_maps() {
 
 
 // Copy a depth map to another depth map
-void ComprehensiveDeltaStrategy::copy_depth_map(_cds_depths_t source[], _cds_depths_t dest[]) {
+void ComprehensiveDeltaStrategy::copy_depth_map(cds_depths_t source[], cds_depths_t dest[]) {
 
     for(int i=0; i < DM_GRID_ELEMENTS; i++) {
         dest[i].abs = source[i].abs;
@@ -3446,20 +3764,32 @@ void ComprehensiveDeltaStrategy::calc_statistics(float values[], int n_values, f
 
 
 // Calculate the "energy" of an array of depths
-float ComprehensiveDeltaStrategy::calc_energy(_cds_depths_t points[DM_GRID_ELEMENTS]) {
+float ComprehensiveDeltaStrategy::calc_energy(cds_depths_t *points) {
 
-    float cartesian[DM_GRID_ELEMENTS][3];
+//    float cartesian[DM_GRID_ELEMENTS][3];
+//    float **cartesian;
+//    if((cartesian = AHB0_alloc2Df(DM_GRID_ELEMENTS, 3)) == nullptr) {
+//        __printf("[CE] Couldn't allocate temp Cartesian array.\n");
+//        return 999;
+//    }
+
     for(int i=0; i<DM_GRID_ELEMENTS; i++) {
-        cartesian[i][X] = test_point[i][X];
-        cartesian[i][Y] = test_point[i][Y];
-        cartesian[i][Z] = points[i].rel;
+        temp_cartesian[i][X] = test_point[i][X];
+        temp_cartesian[i][Y] = test_point[i][Y];
+        temp_cartesian[i][Z] = points[i].rel;
+//        _printf("cartesian[%d] = %1.1f, %1.1f, %1.1f\n", i, test_point[i][X], test_point[i][Y], points[i].rel);
+        flush();
     }
-    
-    return calc_energy(cartesian);
+
+    float energy = calc_energy(temp_cartesian);
+
+//    AHB0_dealloc2Df(cartesian, DM_GRID_ELEMENTS);
+
+    return energy;
 
 }
 
-float ComprehensiveDeltaStrategy::calc_energy(float cartesian[DM_GRID_ELEMENTS][3]) {
+float ComprehensiveDeltaStrategy::calc_energy(float **cartesian) {
 
     float mu = 0;
     int i = 0;
@@ -3470,7 +3800,7 @@ float ComprehensiveDeltaStrategy::calc_energy(float cartesian[DM_GRID_ELEMENTS][
             i++;
         }
     }
-        
+
     return mu / i;
 
 }
