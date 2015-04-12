@@ -40,6 +40,8 @@ class Pin {
                 moder &= ~(3 << (this->pin * 2));
                 moder |= (1 << (this->pin * 2));
                 this->port->MODER = moder;
+                /* Maximum output speed */
+                this->port->OSPEEDR |= (1 << (this->pin * 2));
             }
             return this;
         }
