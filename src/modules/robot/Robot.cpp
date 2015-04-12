@@ -534,11 +534,30 @@ void Robot::on_gcode_received(void *argument)
                 // get or save any arm solution specific optional values
                 BaseSolution::arm_options_t options;
                 if(arm_solution->get_optional(options) && !options.empty()) {
-                    gcode->stream->printf(";Optional arm solution specific settings:\nM665");
+                    gcode->stream->printf(";Optional arm solution specific settings:\n");
+                    string str = "M665";
+                    char buf[16];
+                    char entries = 0;
                     for(auto &i : options) {
-                        gcode->stream->printf(" %c%1.4f", i.first, i.second);
+                        snprintf(buf, sizeof(buf), " %c%1.5f", i.first, i.second);
+                        //gcode->stream->printf(" %c%1.8f", i.first, i.second);
+                        if(str.length() + strlen(buf) > 80) {
+                            // Too long; write out line so far & put this value into the next line
+                            str += "\n";
+                            gcode->stream->printf(str.c_str());
+                            str = "M665";
+                            str += buf;
+                            entries = 1;
+                        } else {
+                            str += buf;
+                            entries++;
+                        }
                     }
-                    gcode->stream->printf("\n");
+                    // Write the final line, if there are any entries on it
+                    if(entries > 0) {
+                        str += "\n";
+                        gcode->stream->printf(str.c_str());
+                    }
                 }
                 gcode->mark_as_taken();
                 break;
@@ -550,6 +569,7 @@ void Robot::on_gcode_received(void *argument)
                 BaseSolution::arm_options_t options= gcode->get_args();
                 options.erase('S'); // don't include the S
                 options.erase('U'); // don't include the U
+                
                 if(options.size() > 0) {
                     // set the specified options
                     arm_solution->set_optional(options);
