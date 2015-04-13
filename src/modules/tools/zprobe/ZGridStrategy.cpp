@@ -12,32 +12,36 @@
     -------------
     The strategy must be enabled in the config as well as zprobe.
 
-    leveling-strategy.ZGrid-leveling.enable         true
+       leveling-strategy.ZGrid-leveling.enable         true
 
     The bed size limits must be defined, in order for the module to calculate the calibration points
 
-    leveling-strategy.ZGrid-leveling.bed_x           200
-    leveling-strategy.ZGrid-leveling.bed_y           200
+       leveling-strategy.ZGrid-leveling.bed_x           200
+       leveling-strategy.ZGrid-leveling.bed_y           200
 
     Machine height, used to determine probe attachment point (bed_z / 2)
 
-    leveling-strategy.ZGrid-leveling.bed_z           20
+       leveling-strategy.ZGrid-leveling.bed_z           20
 
 
     The number of divisions for X and Y should be defined
 
-    leveling-strategy.ZGrid-leveling.rows           7          # X divisions (Default 5)
-    leveling-strategy.ZGrid-leveling.cols           9          # Y divisions (Default 5)
+       leveling-strategy.ZGrid-leveling.rows           7          # X divisions (Default 5)
+       leveling-strategy.ZGrid-leveling.cols           9          # Y divisions (Default 5)
 
 
     The probe offset should be defined, default to zero offset
 
-    leveling-strategy.ZGrid-leveling.probe_offsets  0,0,16.3
+       leveling-strategy.ZGrid-leveling.probe_offsets  0,0,16.3
+
+    The machine can be told to wait for probe attachment and confirmation
+
+       leveling-strategy.ZGrid-leveling.wait_for_probe  true
 
 
-    slow feedrate can be defined for probe speed
+    Slow feedrate can be defined for probe positioning speed.  Note this is not Probing slow rate - it can be set to a fast speed if required.
 
-    leveling-strategy.ZGrid-leveling.slow_feedrate  100
+       leveling-strategy.ZGrid-leveling.slow_feedrate  100         # ZGrid probe positioning feedrate
 
 
 
@@ -91,6 +95,7 @@
 
 #define slow_feedrate_checksum       CHECKSUM("slow_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
+#define wait_for_probe_checksum      CHECKSUM("wait_for_probe")
 
 #define cols_checksum                CHECKSUM("cols")
 #define rows_checksum                CHECKSUM("rows")
@@ -125,6 +130,9 @@ bool ZGridStrategy::handleConfig()
 
     this->numRows = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, rows_checksum)->by_default(5)->as_number();
     this->numCols = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, cols_checksum)->by_default(5)->as_number();
+
+    this->wait_for_probe = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, wait_for_probe_checksum)->by_default(false)->as_bool();
+
 
     // Probe offsets xxx,yyy,zzz
     std::string po = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, probe_offsets_checksum)->by_default("0,0,0")->as_string();
@@ -431,16 +439,19 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
        this->pData[i] = 0.0F;        // Clear the ZGrid
     }
 
-    stream->printf("*** Ensure probe is attached and press probe when done ***\n");
+    if (this->wait_for_probe){
 
-    this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
-    this->cal[Y_AXIS] = this->bed_y/2.0f;
-    this->cal[Z_AXIS] = this->bed_z/2.0f;           // Position head for probe attachment
-    this->move(this->cal, slow_rate);               // Move to probe attachment point
+        this->cal[X_AXIS] = this->bed_x/2.0f;
+        this->cal[Y_AXIS] = this->bed_y/2.0f;
+        this->cal[Z_AXIS] = this->bed_z/2.0f;           // Position head for probe attachment
+        this->move(this->cal, slow_rate);               // Move to probe attachment point
 
-    stream->printf("*** Ensure probe is attached and press probe when done ***\n");
+        stream->printf("*** Ensure probe is attached and press probe when done ***\n");
 
-    while(!zprobe->getProbeStatus());
+        while(!zprobe->getProbeStatus()){            // Wait for button press
+            THEKERNEL->call_event(ON_IDLE);
+        };
+    }
 
     this->in_cal = true;                         // In calbration mode
 
@@ -458,16 +469,16 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 
         pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
 
-        if (probes == (probe_points-1)){
-            this->cal[X_AXIS] = this->bed_x/2.0f;    // Clear calibration position
+        if (probes == (probe_points-1) && this->wait_for_probe){  // Only move to removal position if probe confirmation was selected
+            this->cal[X_AXIS] = this->bed_x/2.0f;                 // Else machine will return to first probe position when done
             this->cal[Y_AXIS] = this->bed_y/2.0f;
-            this->cal[Z_AXIS] = this->bed_z/2.0f;    // Position head for probe removal
+            this->cal[Z_AXIS] = this->bed_z/2.0f;                 // Position head for probe removal
         } else {
-            this->next_cal();                        // to not cause damage to machine due to Z-offset
+            this->next_cal();                                     // to not cause damage to machine due to Z-offset
         }
-        this->move(this->cal, slow_rate);            // move to the next position
+        this->move(this->cal, slow_rate);                         // move to the next position
 
-        this->pData[pindex] = z ;                    // save the offset
+        this->pData[pindex] = z ;                                 // save the offset
     }
 
     stream->printf("\nCalibration done.  Please remove probe\n");
