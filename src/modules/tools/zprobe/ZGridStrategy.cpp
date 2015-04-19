@@ -12,32 +12,42 @@
     -------------
     The strategy must be enabled in the config as well as zprobe.
 
-    leveling-strategy.ZGrid-leveling.enable         true
+       leveling-strategy.ZGrid-leveling.enable         true
 
     The bed size limits must be defined, in order for the module to calculate the calibration points
 
-    leveling-strategy.ZGrid-leveling.bed_x           200
-    leveling-strategy.ZGrid-leveling.bed_y           200
+       leveling-strategy.ZGrid-leveling.bed_x           200
+       leveling-strategy.ZGrid-leveling.bed_y           200
 
     Machine height, used to determine probe attachment point (bed_z / 2)
 
-    leveling-strategy.ZGrid-leveling.bed_z           20
+       leveling-strategy.ZGrid-leveling.bed_z           20
+
+    Configure for Machines with bed 0:0 at center of platform
+       leveling-strategy.ZGrid-leveling.bed_zero        false
+
+    configure for Machines with circular beds
+       leveling-strategy.ZGrid-leveling.bed_circular    false
 
 
     The number of divisions for X and Y should be defined
 
-    leveling-strategy.ZGrid-leveling.rows           7          # X divisions (Default 5)
-    leveling-strategy.ZGrid-leveling.cols           9          # Y divisions (Default 5)
+       leveling-strategy.ZGrid-leveling.rows           7          # X divisions (Default 5)
+       leveling-strategy.ZGrid-leveling.cols           9          # Y divisions (Default 5)
 
 
     The probe offset should be defined, default to zero offset
 
-    leveling-strategy.ZGrid-leveling.probe_offsets  0,0,16.3
+       leveling-strategy.ZGrid-leveling.probe_offsets  0,0,16.3
+
+    The machine can be told to wait for probe attachment and confirmation
+
+       leveling-strategy.ZGrid-leveling.wait_for_probe  true
 
 
-    slow feedrate can be defined for probe speed
+    Slow feedrate can be defined for probe positioning speed.  Note this is not Probing slow rate - it can be set to a fast speed if required.
 
-    leveling-strategy.ZGrid-leveling.slow_feedrate  100
+       leveling-strategy.ZGrid-leveling.slow_feedrate  100         # ZGrid probe positioning feedrate
 
 
 
@@ -90,6 +100,12 @@
 
 #define slow_feedrate_checksum       CHECKSUM("slow_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
+#define wait_for_probe_checksum      CHECKSUM("wait_for_probe")
+#define center_zero_checksum         CHECKSUM("center_zero")
+#define circular_bed_checksum        CHECKSUM("circular_bed")
+#define cal_offset_x_checksum        CHECKSUM("cal_offset_x")
+#define cal_offset_y_checksum        CHECKSUM("cal_offset_y")
+
 
 #define cols_checksum                CHECKSUM("cols")
 #define rows_checksum                CHECKSUM("rows")
@@ -124,6 +140,16 @@ bool ZGridStrategy::handleConfig()
 
     this->numRows = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, rows_checksum)->by_default(5)->as_number();
     this->numCols = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, cols_checksum)->by_default(5)->as_number();
+
+    this->wait_for_probe = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, wait_for_probe_checksum)->by_default(false)->as_bool();
+
+    this->center_zero = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, center_zero_checksum)->by_default(false)->as_bool();
+    this->circular_bed = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, circular_bed_checksum)->by_default(false)->as_bool();
+
+    // configures calbration positioning offset.  Defaults to 0 for standard cartesian space machines, and to negative half of the current bed size in X and Y
+    this->cal_offset_x = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, cal_offset_x_checksum)->by_default( this->center_zero ? this->bed_x / -2.0F : 0.0F )->as_number();
+    this->cal_offset_y = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, cal_offset_y_checksum)->by_default( this->center_zero ? this->bed_y / -2.0F : 0.0F )->as_number();
+
 
     // Probe offsets xxx,yyy,zzz
     std::string po = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, probe_offsets_checksum)->by_default("0,0,0")->as_string();
@@ -430,16 +456,19 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
        this->pData[i] = 0.0F;        // Clear the ZGrid
     }
 
-    stream->printf("*** Ensure probe is attached and press probe when done ***\n");
+    if (this->wait_for_probe){
 
-    this->cal[X_AXIS] = this->bed_x/2.0f;           // Clear calibration position
-    this->cal[Y_AXIS] = this->bed_y/2.0f;
-    this->cal[Z_AXIS] = this->bed_z/2.0f;           // Position head for probe attachment
-    this->move(this->cal, slow_rate);               // Move to probe attachment point
+        this->cal[X_AXIS] = this->bed_x/2.0f;
+        this->cal[Y_AXIS] = this->bed_y/2.0f;
+        this->cal[Z_AXIS] = this->bed_z/2.0f;           // Position head for probe attachment
+        this->move(this->cal, slow_rate);               // Move to probe attachment point
 
-    stream->printf("*** Ensure probe is attached and press probe when done ***\n");
+        stream->printf("*** Ensure probe is attached and press probe when done ***\n");
 
-    while(!zprobe->getProbeStatus());
+        while(!zprobe->getProbeStatus()){            // Wait for button press
+            THEKERNEL->call_event(ON_IDLE);
+        };
+    }
 
     this->in_cal = true;                         // In calbration mode
 
@@ -452,21 +481,21 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
     for (int probes = 0; probes < probe_points; probes++){
         int pindex = 0;
 
-        float z = 5.0f - zprobe->probeDistance(this->cal[X_AXIS]-std::get<X_AXIS>(this->probe_offsets),
-                                               this->cal[Y_AXIS]-std::get<Y_AXIS>(this->probe_offsets));
+        float z = 5.0f - zprobe->probeDistance((this->cal[X_AXIS] + this->cal_offset_x)-std::get<X_AXIS>(this->probe_offsets),
+                                               (this->cal[Y_AXIS] + this->cal_offset_y)-std::get<Y_AXIS>(this->probe_offsets));
 
         pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
 
-        if (probes == (probe_points-1)){
-            this->cal[X_AXIS] = this->bed_x/2.0f;    // Clear calibration position
+        if (probes == (probe_points-1) && this->wait_for_probe){  // Only move to removal position if probe confirmation was selected
+            this->cal[X_AXIS] = this->bed_x/2.0f;                 // Else machine will return to first probe position when done
             this->cal[Y_AXIS] = this->bed_y/2.0f;
-            this->cal[Z_AXIS] = this->bed_z/2.0f;    // Position head for probe removal
+            this->cal[Z_AXIS] = this->bed_z/2.0f;                 // Position head for probe removal
         } else {
-            this->next_cal();                        // to not cause damage to machine due to Z-offset
+            this->next_cal();                                     // to not cause damage to machine due to Z-offset
         }
-        this->move(this->cal, slow_rate);            // move to the next position
+        this->move(this->cal, slow_rate);                         // move to the next position
 
-        this->pData[pindex] = z ;                    // save the offset
+        this->pData[pindex] = z ;                                 // save the offset
     }
 
     stream->printf("\nCalibration done.  Please remove probe\n");
@@ -512,10 +541,10 @@ void ZGridStrategy::move(float *position, float feed)
 {
     char cmd[64];
 
-    // Assemble Gcode to add onto the queue
-    snprintf(cmd, sizeof(cmd), "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", position[0], position[1], position[2], feed * 60); // use specified feedrate (mm/sec)
+    // Assemble Gcode to add onto the queue.  Also translate the position for non standard cartesian spaces (cal_offset)
+    snprintf(cmd, sizeof(cmd), "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", position[0] + this->cal_offset_x, position[1] + this->cal_offset_y, position[2], feed * 60); // use specified feedrate (mm/sec)
 
-    //THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
+    THEKERNEL->streams->printf("DEBUG: move: %s cent: %i\n", cmd, this->center_zero);
 
     Gcode gc(cmd, &(StreamOutput::NullStream));
     THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
@@ -523,28 +552,34 @@ void ZGridStrategy::move(float *position, float feed)
 
 
 void ZGridStrategy::next_cal(void){
-    if (int(this->cal[X_AXIS] / bed_div_x) % 2 != 0){  // Odd row
-        this->cal[Y_AXIS] -= bed_div_y;
-        if (this->cal[Y_AXIS] < 0){
+    if (int(this->cal[X_AXIS] / this->bed_div_x) % 2 != 0){  // Odd row
+        this->cal[Y_AXIS] -= this->bed_div_y;
+        if (this->cal[Y_AXIS] < 0.0F){
+
+            THEKERNEL->streams->printf("DEBUG: Y (%f) < cond (%f)\n",this->cal[Y_AXIS], 0.0F);
+
             this->cal[X_AXIS] += bed_div_x;
-            if (this->cal[X_AXIS] > bed_x){
-                this->cal[X_AXIS] = 0;
-                this->cal[Y_AXIS] = 0;
+            if (this->cal[X_AXIS] > this->bed_x){
+                this->cal[X_AXIS] = 0.0F;
+                this->cal[Y_AXIS] = 0.0F;
             }
             else
-                this->cal[Y_AXIS] = 0;
+                this->cal[Y_AXIS] = 0.0F;
         }
     }
-    else {                                          // Even row
+    else {                                          // Even row (0 is an even row - starting point)
         this->cal[Y_AXIS] += bed_div_y;
-        if (this->cal[Y_AXIS] > bed_y){
+      if (this->cal[Y_AXIS] > this->bed_y){
+
+            THEKERNEL->streams->printf("DEBUG: Y (%f) > cond (%f)\n",this->cal[Y_AXIS], this->bed_y);
+
             this->cal[X_AXIS] += bed_div_x;
             if (this->cal[X_AXIS] > bed_x){
-                this->cal[X_AXIS] = 0;
-                this->cal[Y_AXIS] = 0;
+                this->cal[X_AXIS] = 0.0F;
+                this->cal[Y_AXIS] = 0.0F;
             }
             else
-                this->cal[Y_AXIS] = bed_y;
+                this->cal[Y_AXIS] = this->bed_y;
         }
     }
 }
@@ -566,6 +601,10 @@ void ZGridStrategy::setAdjustFunction(bool on)
 float ZGridStrategy::getZOffset(float X, float Y)
 {
     int xIndex2, yIndex2;
+
+    // Subtract calibration offsets as applicable
+    X -= this->cal_offset_x;
+    Y -= this->cal_offset_y;
 
     float xdiff = X / this->bed_div_x;
     float ydiff = Y / this->bed_div_y;
