@@ -59,12 +59,13 @@ DEFINES += -DSTEPTICKER_DEBUG_PIN=$(STEPTICKER_DEBUG_PIN)
 endif
 
 # add any modules that you do not want included in the build
-export EXCLUDED_MODULES = tools/touchprobe
+#export EXCLUDED_MODULES = tools/touchprobe
 # e.g for a CNC machine
 #export EXCLUDED_MODULES = tools/touchprobe tools/laser tools/temperaturecontrol tools/extruder
+export EXCLUDED_MODULES = tools/touchprobe tools/laser  tools/extruder
 
 # set to not compile in any network support
-#export NONETWORK = 1
+export NONETWORK = 1
 
 include $(BUILD_DIR)/build.mk
 
