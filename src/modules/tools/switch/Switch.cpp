@@ -260,37 +260,37 @@ void Switch::on_main_loop(void *argument)
 // Check the state of the button and act accordingly
 uint32_t Switch::pinpoll_tick(uint32_t dummy)
 {
-	if (output_pin.connected()) {
-		if (this->output_momentary_counter == 1) {
-			this->switch_state = false;
-			this->output_pin.set(false);
-		}
-		if (this->output_momentary_counter > 0) {
-			this->output_momentary_counter--;
-		}
-	}
+    if (output_pin.connected()) {
+        if (this->output_momentary_counter == 1) {
+            this->switch_state = false;
+            this->output_pin.set(false);
+        }
+        if (this->output_momentary_counter > 0) {
+            this->output_momentary_counter--;
+        }
+    }
     if(input_pin.connected()) {
-		// If pin changed
-		bool current_state = this->input_pin.get();
-		if(this->input_pin_state != current_state) {
-			this->input_pin_state = current_state;
-			// If pin high
-			if( this->input_pin_state ) {
-				// if switch is a toggle switch
-				if( this->input_pin_behavior == toggle_checksum ) {
-					this->flip();
-					// else default is momentary
-				} else {
-					this->flip();
-				}
-				// else if button released
-			} else {
-				// if switch is momentary
-				if( this->input_pin_behavior == momentary_checksum ) {
-					this->flip();
-				}
-			}
-		}
+        // If pin changed
+        bool current_state = this->input_pin.get();
+        if(this->input_pin_state != current_state) {
+            this->input_pin_state = current_state;
+            // If pin high
+            if( this->input_pin_state ) {
+                // if switch is a toggle switch
+                if( this->input_pin_behavior == toggle_checksum ) {
+                    this->flip();
+                    // else default is momentary
+                } else {
+                    this->flip();
+                }
+                // else if button released
+            } else {
+                // if switch is momentary
+                if( this->input_pin_behavior == momentary_checksum ) {
+                    this->flip();
+                }
+            }
+        }
     }
     return 0;
 }
