@@ -45,10 +45,13 @@ class Switch : public Module {
         string    output_off_command;
         uint16_t  name_checksum;
         uint16_t  input_pin_behavior;
+        uint16_t  output_pin_behavior;
         uint16_t  input_on_command_code;
         uint16_t  input_off_command_code;
         char      input_on_command_letter;
         char      input_off_command_letter;
+        uint32_t  output_momentary_delay;
+        uint32_t  output_momentary_counter;
         struct {
             bool      switch_changed:1;
             bool      input_pin_state:1;
