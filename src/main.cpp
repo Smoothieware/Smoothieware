@@ -190,6 +190,7 @@ void init() {
     kernel->add_module( new Drillingcycles() );
     #endif
     #ifndef NO_UTILS_COLD_EXTRUSION_PREVENTION
+    // Must be loaded after TemperatureControlPool
     SecurityPool securityPool;
     securityPool.load_prevention_controllers();
     #endif
