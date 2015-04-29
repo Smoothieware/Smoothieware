@@ -37,8 +37,7 @@
 #define    max_pwm_checksum             CHECKSUM("max_pwm")
 #define    output_on_command_checksum   CHECKSUM("output_on_command")
 #define    output_off_command_checksum  CHECKSUM("output_off_command")
-#define    output_momentary_delay_checksum CHECKSUM("output_momentary_delay")
-
+#define    output_pulse_duration_checksum CHECKSUM("output_pulse_duration")
 Switch::Switch() {}
 
 Switch::Switch(uint16_t name)
@@ -73,8 +72,8 @@ void Switch::on_config_reload(void *argument)
     this->output_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
     this->output_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
     this->switch_state =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    this->output_momentary_delay = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_momentary_delay_checksum )->by_default(20)->as_number();
     string type =                THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
+    this->output_pulse_duration = (uint32_t) (THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pulse_duration_checksum )->by_default(0.2)->as_number() * 100.0) + 1;
 
     if(type == "pwm") this->output_type= PWM;
     else if(type == "digital") this->output_type= DIGITAL;
@@ -93,7 +92,7 @@ void Switch::on_config_reload(void *argument)
             this->output_pin.set(this->switch_state);
         }
     }
-    this->output_momentary_counter = 0;
+
     set_low_on_debug(output_pin.port_number, output_pin.pin);
 
     // Set the on/off command codes, Use GCode to do the parsing
@@ -125,7 +124,12 @@ void Switch::on_config_reload(void *argument)
         // set to initial state
         this->input_pin_state = this->input_pin.get();
         // input pin polling
-        THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
+        THEKERNEL->slow_ticker->attach(100, this, &Switch::pinpoll_tick);
+    }
+
+    if(this->output_pin_behavior == momentary_checksum && this->output_pin.connected()) {
+        this->output_pulse_counter = 0;
+        THEKERNEL->slow_ticker->attach(100, this, &Switch::pinpulse_tick);
     }
 
     if(this->output_type == PWM && this->output_pin.connected()) {
@@ -159,7 +163,7 @@ void Switch::on_gcode_received(void *argument)
 
     if(match_input_on_gcode(gcode)) {
         int v;
-        this->output_momentary_counter = this->output_momentary_delay;
+        this->output_pulse_counter = this->output_pulse_duration;
         if (this->output_type == PWM) {
             // PWM output pin turn on (or off if S0)
             if(gcode->has_letter('S')) {
@@ -178,7 +182,7 @@ void Switch::on_gcode_received(void *argument)
 
     } else if(match_input_off_gcode(gcode)) {
         this->switch_state = false;
-        this->output_momentary_counter = 0;
+        this->output_pulse_counter = 0;
         if (this->output_type == PWM) {
             // PWM output pin
             this->output_pin.set(false);
@@ -260,37 +264,42 @@ void Switch::on_main_loop(void *argument)
 // Check the state of the button and act accordingly
 uint32_t Switch::pinpoll_tick(uint32_t dummy)
 {
-    if (output_pin.connected()) {
-        if (this->output_momentary_counter == 1) {
-            this->switch_state = false;
-            this->output_pin.set(false);
-        }
-        if (this->output_momentary_counter > 0) {
-            this->output_momentary_counter--;
-        }
-    }
-    if(input_pin.connected()) {
-        // If pin changed
-        bool current_state = this->input_pin.get();
-        if(this->input_pin_state != current_state) {
-            this->input_pin_state = current_state;
-            // If pin high
-            if( this->input_pin_state ) {
-                // if switch is a toggle switch
-                if( this->input_pin_behavior == toggle_checksum ) {
-                    this->flip();
-                    // else default is momentary
-                } else {
-                    this->flip();
-                }
-                // else if button released
+    if(!input_pin.connected()) return 0;
+
+    // If pin changed
+    bool current_state = this->input_pin.get();
+    if(this->input_pin_state != current_state) {
+        this->input_pin_state = current_state;
+        // If pin high
+        if( this->input_pin_state ) {
+            // if switch is a toggle switch
+            if( this->input_pin_behavior == toggle_checksum ) {
+                this->flip();
+                // else default is momentary
             } else {
-                // if switch is momentary
-                if( this->input_pin_behavior == momentary_checksum ) {
-                    this->flip();
-                }
+                this->flip();
+            }
+            // else if button released
+        } else {
+            // if switch is momentary
+            if( this->input_pin_behavior == momentary_checksum ) {
+                this->flip();
             }
         }
+    }
+    return 0;
+}
+
+uint32_t Switch::pinpulse_tick(uint32_t dummy)
+{
+    if (!this->output_pin.connected()) return 0;
+
+    if (this->output_pulse_counter > 1) {
+        this->output_pulse_counter--;
+    } else if (this->output_pulse_counter == 1) {
+        this->switch_state = false;
+        this->output_pin.set(false);
+        this->output_pulse_counter = 0;
     }
     return 0;
 }

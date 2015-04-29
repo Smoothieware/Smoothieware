@@ -30,6 +30,7 @@ class Switch : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         uint32_t pinpoll_tick(uint32_t dummy);
+        uint32_t pinpulse_tick(uint32_t dummy);
         enum OUTPUT_TYPE {PWM, DIGITAL};
     private:
         void flip();
@@ -50,8 +51,8 @@ class Switch : public Module {
         uint16_t  input_off_command_code;
         char      input_on_command_letter;
         char      input_off_command_letter;
-        uint32_t  output_momentary_delay;
-        uint32_t  output_momentary_counter;
+        uint32_t  output_pulse_duration;
+        uint32_t  output_pulse_counter;
         struct {
             bool      switch_changed:1;
             bool      input_pin_state:1;
