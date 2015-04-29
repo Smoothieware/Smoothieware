@@ -22,6 +22,7 @@ extern GPIO stepticker_debug_pin;
 #endif
 
 #define TICK_STEPPER_TIMER_PRESCALER    1000
+#define RESET_TICK_TIMER_PRESCALER      10
 
 // StepTicker handles the base frequency ticking for the Stepper Motors / Actuators
 // It has a list of those, and calls their tick() functions at regular intervals
@@ -52,7 +53,7 @@ StepTicker::StepTicker(){
     TIM10->DIER |= TIM_DIER_UIE;
     
     /* Reset stepper */
-    TIM11->PSC = TICK_STEPPER_TIMER_PRESCALER - 1;
+    TIM11->PSC = RESET_TICK_TIMER_PRESCALER - 1;
     TIM11->ARR = 1000 - 1;
     TIM11->CNT = 0;
     TIM11->EGR |= TIM_EGR_UG;
@@ -88,7 +89,7 @@ void StepTicker::set_frequency( float frequency ){
     this->period = floorf((SystemCoreClock / TICK_STEPPER_TIMER_PRESCALER)/frequency);  // SystemCoreClock = Timer increments in a second
 
     TIM10->CR1 &= ~TIM_CR1_CEN;
-    TIM10->ARR = this->period;
+    TIM10->ARR = this->period - 1;
     TIM10->CNT = 0;
     TIM10->CR1 |= TIM_CR1_CEN;
 
@@ -96,7 +97,7 @@ void StepTicker::set_frequency( float frequency ){
 
 // Set the reset delay
 void StepTicker::set_reset_delay( float microseconds ){
-    uint32_t delay = floorf((SystemCoreClock / TICK_STEPPER_TIMER_PRESCALER)*(microseconds/1000000.0F));  // SystemCoreClock/4 = Timer increments in a second
+    uint32_t delay = floorf((SystemCoreClock / RESET_TICK_TIMER_PRESCALER) * (microseconds/1000000.0F));  // SystemCoreClock/4 = Timer increments in a second
     TIM11->ARR = delay - 1;
 }
 

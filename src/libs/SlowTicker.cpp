@@ -117,7 +117,7 @@ bool SlowTicker::flag_1s(){
     return false;
 }
 
-extern Pin leds[5];
+extern Pin leds[4];
 
 void SlowTicker::on_idle(void*)
 {
