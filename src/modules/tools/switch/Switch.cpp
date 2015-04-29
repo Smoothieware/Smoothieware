@@ -73,7 +73,7 @@ void Switch::on_config_reload(void *argument)
     this->output_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
     this->switch_state =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
     string type =                THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
-    this->output_pulse_duration = (uint32_t) (THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pulse_duration_checksum )->by_default(0.2)->as_number() * 100.0) + 1;
+    this->output_pulse_duration = (uint32_t) (THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pulse_duration_checksum )->by_default(0.2f)->as_number() * 100.0) + 1;
 
     if(type == "pwm") this->output_type= PWM;
     else if(type == "digital") this->output_type= DIGITAL;
