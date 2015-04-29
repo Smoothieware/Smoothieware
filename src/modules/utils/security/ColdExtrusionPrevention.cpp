@@ -1,8 +1,26 @@
 #include "ColdExtrusionPrevention.h"
 
-ColdExtrusionPrevention::ColdExtrusionPrevention() {
-    this->tickerHook = nullptr;
+#include "libs/Kernel.h"
+#include "libs/PublicData.h"
+#include "libs/StreamOutputPool.h"
+#include "Config.h"
+#include "ConfigValue.h"
+#include "Gcode.h"
+#include "checksumm.h"
+
+#include "SecurityPool.h"
+#include "TemperatureControlPool.h"
+#include "TemperatureControlPublicAccess.h"
+
+#define designator_checksum CHECKSUM("designator")
+#define min_temp_checksum   CHECKSUM("min_extrusion_temp")
+
+// TODO:
+// * Don't hold the instances in the SecurityPool. Delete it.
+
+ColdExtrusionPrevention::ColdExtrusionPrevention(uint16_t identifier) {
     this->flags = 0x00;
+    this->identifier = identifier;
 }
 
 void ColdExtrusionPrevention::on_module_loaded() {
@@ -13,47 +31,49 @@ void ColdExtrusionPrevention::on_module_loaded() {
     this->on_config_reload(this);
 }
 
-void ColdExtrusionPrevention::on_config_reload(void* modcs) {
-    bool enabled = THEKERNEL->config->value(coldextrusionprevention_checksum, modcs, enable_checksum)->by_default(false)->as_bool();
+void ColdExtrusionPrevention::on_config_reload(void* argument) {
+    bool enabled = THEKERNEL->config->value(coldextrusionprevention_checksum, this->identifier, enable_checksum)->by_default(false)->as_bool();
 
-    set_flag(FLAG_ENABLED, enabled);
-    if(!enabled)
-        return false;
+    set_flag(FLAG_ENABLE, enabled);
+    if(!enabled) {
+        return;
     }
 
-    string designator = THEKERNEL->config->value(coldextrusionprevention_checksum, modcs, designator_checksum)->by_default("")->as_string();
+    string designator = THEKERNEL->config->value(coldextrusionprevention_checksum, this->identifier, designator_checksum)->by_default("")->as_string();
 
     auto& availableControllers = THEKERNEL->temperature_control_pool->get_controllers();
+
+    temperatureController = 0;
 
     // Iterate over the list of available temperature controllers and remove the
     // ones which does not match the requested designator
     void* returned_temp;
     for(auto ctrl: availableControllers) {
-        bool temp_ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &returned_temp);
-        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_temp);
-        if(designator.compare(temp.designator) == 0) {
-            // OK, we found the desired temperature controller
-            temperatureController = controller;
+        bool temp_ok = PublicData::get_value(temperature_control_checksum, ctrl, current_temperature_checksum, &returned_temp);
+        if(temp_ok) {
+            struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_temp);
+            if(designator.compare(temp.designator) == 0) {
+                // OK, we found the desired temperature controller
+                temperatureController = ctrl;
+            }
         }
     }
 
-    if(temperatureControllers.empty()) {
+    if(temperatureController == 0) {
         // We need at least one temperature controller
-        return false;
+        return;
     }
 
-    minExtrusionTemperature = static_cast<uint8_t>(THEKERNEL->config->value(coldextrusionprevention_checksum, modcs, min_temp_checksum)->by_default(0)->as_number());
+    minExtrusionTemperature = static_cast<uint8_t>(THEKERNEL->config->value(coldextrusionprevention_checksum, this->identifier, min_temp_checksum)->by_default(0)->as_number());
     if(minExtrusionTemperature == 0) {
-        set_flag(FLAG_ENABLED, false);
-        return false;
+        set_flag(FLAG_ENABLE, false);
+        return;
     }
 
     set_flag(FLAG_TEMP_OK, false);
 
     // Read the temperature every second
     this->register_for_event(ON_SECOND_TICK);
-
-    return true;
 }
 
 void ColdExtrusionPrevention::on_gcode_received(void* argument) {
@@ -120,13 +140,13 @@ uint8_t ColdExtrusionPrevention::get_highest_temperature()
 {
     void *returned_temp;
 
-    bool temp_ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &returned_temp);
+    bool temp_ok = PublicData::get_value(temperature_control_checksum, temperatureController, current_temperature_checksum, &returned_temp);
     if (temp_ok) {
         struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_temp);
 
         if(temp.current_temperature > 0xFF) {
             return 0xFF;
-        } else if(temp.current_temperaturee < 0x00) {
+        } else if(temp.current_temperature < 0x00) {
             return 0;
         }
 

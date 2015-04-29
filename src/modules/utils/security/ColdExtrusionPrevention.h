@@ -1,15 +1,19 @@
 #ifndef MODULE_PREVENT_COLD_EXTRUSION_H_
 #define MODULE_PREVENT_COLD_EXTRUSION_H_
 
+#include "Module.h"
+#include <stdint.h>
+
 #define FLAG_ENABLE      0x01
 #define FLAG_READ_TEMP   0x02
 #define FLAG_TEMP_OK     0x04
 
 class ColdExtrusionPrevention : public Module {
     public:
-        ColdExtrusionPrevention();
+        ColdExtrusionPrevention(uint16_t identifier);
+
         void on_module_loaded();
-        void on_gcode_execute();
+        void on_gcode_execute(void* argument);
         void on_config_reload(void* argument);
         void on_idle(void* argument);
         void on_second_tick(void* argument);
@@ -25,6 +29,8 @@ class ColdExtrusionPrevention : public Module {
         uint8_t  minExtrusionTemperature;
 
         uint16_t temperatureController;
+
+        uint16_t identifier;
 };
 
 #endif
