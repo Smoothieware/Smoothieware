@@ -26,6 +26,7 @@
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
+#include "modules/utils/security/ColdExtrusionPrevention.h"
 #include "libs/Network/uip/Network.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -187,6 +188,9 @@ void init() {
     #endif
     #ifndef NO_TOOLS_DRILLINGCYCLES
     kernel->add_module( new Drillingcycles() );
+    #endif
+    #ifndef NO_UTILS_COLD_EXTRUSION_PREVENTION
+    kernel->add_module( new ColdExtrusionPrevention() );
     #endif
 
     // Create and initialize USB stuff
