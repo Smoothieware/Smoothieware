@@ -63,21 +63,27 @@ void Switch::on_module_loaded()
 // Get config
 void Switch::on_config_reload(void *argument)
 {
-    this->input_pin.from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
-    this->input_pin_behavior =   THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default(momentary_checksum)->as_number();
-    this->output_pin_behavior =  THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_behavior_checksum )->by_default(toggle_checksum)->as_number();
+    std::string input_pin_mode =      THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default("momentary")->as_string();
+    std::string output_pin_mode =     THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_behavior_checksum )->by_default("toggle")->as_string();
     std::string input_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
     std::string input_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
+    this->input_pin.from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->output_pin.from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
     this->output_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
     this->output_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
     this->switch_state =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    string type =                THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
+    std::string type =           THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
     this->output_pulse_duration = (uint32_t) (THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pulse_duration_checksum )->by_default(0.2f)->as_number() * 100.0) + 1;
 
-    if(type == "pwm") this->output_type= PWM;
-    else if(type == "digital") this->output_type= DIGITAL;
-    else this->output_type= PWM; // unkown type default to pwm
+    // Interpret the configuration
+    if (input_pin_mode == "toggle") this->input_pin_behavior = toggle_checksum;
+    else this->input_pin_behavior = momentary_checksum;
+
+    if (output_pin_mode == "momentary") this->output_pin_behavior = momentary_checksum;
+    else this->output_pin_behavior = toggle_checksum;
+
+    if(type == "digital") this->output_type= DIGITAL;
+    else this->output_type= PWM;
 
     if(this->output_pin.connected()) {
         if(this->output_type == PWM) {
@@ -120,10 +126,9 @@ void Switch::on_config_reload(void *argument)
         }
     }
 
+    // Attach tickers for various modes
     if(input_pin.connected()) {
-        // set to initial state
         this->input_pin_state = this->input_pin.get();
-        // input pin polling
         THEKERNEL->slow_ticker->attach(100, this, &Switch::pinpoll_tick);
     }
 
@@ -133,7 +138,6 @@ void Switch::on_config_reload(void *argument)
     }
 
     if(this->output_type == PWM && this->output_pin.connected()) {
-        // PWM
         THEKERNEL->slow_ticker->attach(1000, &this->output_pin, &Pwm::on_tick);
     }
 }
@@ -264,7 +268,7 @@ void Switch::on_main_loop(void *argument)
 // Check the state of the button and act accordingly
 uint32_t Switch::pinpoll_tick(uint32_t dummy)
 {
-    if(!input_pin.connected()) return 0;
+    if(!this->input_pin.connected()) return 0;
 
     // If pin changed
     bool current_state = this->input_pin.get();
