@@ -18,6 +18,7 @@
 #include "Config.h"
 #include "Gcode.h"
 #include "checksumm.h"
+#include "utils.h"
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
 
@@ -26,18 +27,24 @@
 #define    startup_state_checksum       CHECKSUM("startup_state")
 #define    startup_value_checksum       CHECKSUM("startup_value")
 #define    input_pin_checksum           CHECKSUM("input_pin")
+#define    output_pin_checksum          CHECKSUM("output_pin")
 #define    input_pin_behavior_checksum  CHECKSUM("input_pin_behavior")
 #define    output_pin_behavior_checksum CHECKSUM("output_pin_behavior")
-#define    toggle_checksum              CHECKSUM("toggle")
-#define    momentary_checksum           CHECKSUM("momentary")
+
 #define    input_on_command_checksum    CHECKSUM("input_on_command")
 #define    input_off_command_checksum   CHECKSUM("input_off_command")
-#define    output_pin_checksum          CHECKSUM("output_pin")
-#define    output_type_checksum         CHECKSUM("output_type")
-#define    max_pwm_checksum             CHECKSUM("max_pwm")
 #define    output_on_command_checksum   CHECKSUM("output_on_command")
 #define    output_off_command_checksum  CHECKSUM("output_off_command")
-#define    output_pulse_duration_checksum CHECKSUM("output_pulse_duration")
+
+#define    output_type_checksum         CHECKSUM("output_type")
+#define    max_pwm_checksum             CHECKSUM("max_pwm")
+
+#define    pwm_checksum                 CHECKSUM("pwm")
+#define    digital_checksum             CHECKSUM("digital")
+#define    toggle_checksum              CHECKSUM("toggle")
+#define    momentary_checksum           CHECKSUM("momentary")
+#define    pulse_checksum               CHECKSUM("pulse")
+
 Switch::Switch() {}
 
 Switch::Switch(uint16_t name)
@@ -63,34 +70,30 @@ void Switch::on_module_loaded()
 // Get config
 void Switch::on_config_reload(void *argument)
 {
-    std::string input_pin_mode =      THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default("momentary")->as_string();
-    std::string output_pin_mode =     THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_behavior_checksum )->by_default("toggle")->as_string();
-    std::string input_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
-    std::string input_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
-    this->input_pin.from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
-    this->output_pin.from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
-    this->output_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
-    this->output_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
-    this->switch_state =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    std::string type =           THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
-    this->output_pulse_duration = (uint32_t) (THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pulse_duration_checksum )->by_default(0.2f)->as_number() * 100.0) + 1;
+    this->input_pin.from_string     (THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
+    this->output_pin.from_string    (THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
 
-    // Interpret the configuration
-    if (input_pin_mode == "toggle") this->input_pin_behavior = toggle_checksum;
-    else this->input_pin_behavior = momentary_checksum;
+    std::string input_on_command    = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
+    std::string input_off_command   = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
+    this->output_on_command         = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
+    this->output_off_command        = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
 
-    if (output_pin_mode == "momentary") this->output_pin_behavior = momentary_checksum;
-    else this->output_pin_behavior = toggle_checksum;
+    this->switch_state              = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
+    std::string type                = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
+    std::string input_pin_mode      = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default("momentary")->as_string();
+    std::string output_pin_mode     = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_behavior_checksum )->by_default("toggle")->as_string();
 
-    if(type == "digital") this->output_type= DIGITAL;
-    else this->output_type= PWM;
+    this->is_input_momentary  = momentary_checksum == get_checksum(input_pin_mode);
+    this->is_output_pwm       = pwm_checksum == get_checksum(type);
+    this->is_output_pulse     = pulse_checksum == get_checksum(output_pin_mode);
 
+    // Configure output pin
     if(this->output_pin.connected()) {
-        if(this->output_type == PWM) {
+        if(this->is_output_pwm) {
             this->output_pin.max_pwm(THEKERNEL->config->value(switch_checksum, this->name_checksum, max_pwm_checksum )->by_default(255)->as_number());
             this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
             if(this->switch_state) {
-                this->output_pin.pwm(this->switch_value); // will be truncated to max_pwm
+                this->output_pin.pwm(this->switch_value);
             } else {
                 this->output_pin.set(false);
             }
@@ -132,12 +135,12 @@ void Switch::on_config_reload(void *argument)
         THEKERNEL->slow_ticker->attach(100, this, &Switch::pinpoll_tick);
     }
 
-    if(this->output_pin_behavior == momentary_checksum && this->output_pin.connected()) {
+    if(this->is_output_pulse && this->output_pin.connected()) {
         this->output_pulse_counter = 0;
-        THEKERNEL->slow_ticker->attach(100, this, &Switch::pinpulse_tick);
+        THEKERNEL->slow_ticker->attach(50, this, &Switch::pinpulse_tick);
     }
 
-    if(this->output_type == PWM && this->output_pin.connected()) {
+    if(this->is_output_pwm && this->output_pin.connected()) {
         THEKERNEL->slow_ticker->attach(1000, &this->output_pin, &Pwm::on_tick);
     }
 }
@@ -167,8 +170,8 @@ void Switch::on_gcode_received(void *argument)
 
     if(match_input_on_gcode(gcode)) {
         int v;
-        this->output_pulse_counter = this->output_pulse_duration;
-        if (this->output_type == PWM) {
+        this->output_pulse_counter = 4;
+        if (this->is_output_pwm) {
             // PWM output pin turn on (or off if S0)
             if(gcode->has_letter('S')) {
                 v = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
@@ -187,7 +190,7 @@ void Switch::on_gcode_received(void *argument)
     } else if(match_input_off_gcode(gcode)) {
         this->switch_state = false;
         this->output_pulse_counter = 0;
-        if (this->output_type == PWM) {
+        if (this->is_output_pwm) {
             // PWM output pin
             this->output_pin.set(false);
         } else {
@@ -245,7 +248,7 @@ void Switch::on_main_loop(void *argument)
         if(this->switch_state) {
             if(!this->output_on_command.empty()) this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
             if(this->output_pin.connected()) {
-                if(this->output_type == PWM)
+                if(this->is_output_pwm)
                     this->output_pin.pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
                 else
                     this->output_pin.set(true);
@@ -254,7 +257,7 @@ void Switch::on_main_loop(void *argument)
         } else {
             if(!this->output_off_command.empty()) this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
             if(this->output_pin.connected()) {
-                if(this->output_type == PWM)
+                if(this->is_output_pwm)
                     this->output_pin.set(false);
                 else
                     this->output_pin.set(false);
@@ -274,19 +277,13 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
     bool current_state = this->input_pin.get();
     if(this->input_pin_state != current_state) {
         this->input_pin_state = current_state;
-        // If pin high
-        if( this->input_pin_state ) {
-            // if switch is a toggle switch
-            if( this->input_pin_behavior == toggle_checksum ) {
-                this->flip();
-                // else default is momentary
-            } else {
-                this->flip();
-            }
-            // else if button released
+
+        if(this->input_pin_state ) {
+            // When pin goes high, always flip()
+            this->flip();
         } else {
-            // if switch is momentary
-            if( this->input_pin_behavior == momentary_checksum ) {
+            // When pin goes low, only flip() if momentary
+            if(this->is_input_momentary) {
                 this->flip();
             }
         }
