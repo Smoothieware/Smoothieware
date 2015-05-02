@@ -5,9 +5,9 @@ mm_per_arc_segment                           0.5              # Arcs are cut int
 #mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
-alpha_steps_per_mm                           80               # Steps per mm for alpha stepper
-beta_steps_per_mm                            80               # Steps per mm for beta stepper
-gamma_steps_per_mm                           1637.7953        # Steps per mm for gamma stepper
+alpha_steps_per_mm                           10               # Steps per mm for alpha stepper
+beta_steps_per_mm                            10               # Steps per mm for beta stepper
+gamma_steps_per_mm                           10        # Steps per mm for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOUR ARE DOING
@@ -20,19 +20,19 @@ junction_deviation                           0.05             # Similar to the o
 # Stepper module configuration
 # DRV8825 requires 2uS
 microseconds_per_step_pulse                  2                # Duration of step pulses to stepper drivers, in microseconds
-base_stepping_frequency                      100000           # Base frequency for stepping
+base_stepping_frequency                      10000           # Base frequency for stepping
 
 # Stepper module pins ( ports, and pin numbers, appending "!" to the number will invert a pin )
-alpha_step_pin                               B.8              # Pin for alpha stepper step signal
-alpha_dir_pin                                B.9              # Pin for alpha stepper direction
-alpha_en_pin                                 C.8              # Pin for alpha enable pin
+alpha_step_pin                               B.3              # Pin for alpha stepper step signal
+alpha_dir_pin                                B.5              # Pin for alpha stepper direction
+alpha_en_pin                                 A.10             # Pin for alpha enable pin
 alpha_current                                1.0              # X stepper motor current
 x_axis_max_speed                             30000            # mm/min
 alpha_max_rate                               30000.0          # mm/min actuator max speed
 
-beta_step_pin                                C.6              # Pin for beta stepper step signal
-beta_dir_pin                                 C.5              # Pin for beta stepper direction
-beta_en_pin                                  A.12             # Pin for beta enable
+beta_step_pin                                B.10             # Pin for beta stepper step signal
+beta_dir_pin                                 A.8              # Pin for beta stepper direction
+beta_en_pin                                  B.4              # Pin for beta enable
 beta_current                                 1.0              # Y stepper motor current
 y_axis_max_speed                             30000            # mm/min
 beta_max_rate                                30000.0          # mm/min actuator max speed
