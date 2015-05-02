@@ -69,11 +69,10 @@ SDFileSystem sd  (SPI_MOSI, SPI_MISO, SPI_SCK, SPI_CS, "sd");
 //~ USBMSD *msc= NULL;
 //~ #endif
 
-Pin leds[4] = {
+Pin leds[3] = {
     Pin(PC_10),
     Pin(PC_11),
     Pin(PC_12),
-    Pin(PD_2)
 };
 
 
@@ -206,9 +205,8 @@ void init() {
     kernel->config->config_cache_clear();
 
     if(kernel->use_leds) {
-        // set some leds to indicate status... led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok
-        leds[0]= 1; // indicate we are done with init
-        leds[3]= sdok?1:0; // 4th led inidicates sdcard is available (TODO maye should indicate config was found)
+        leds[0]= sdok?1:0; // 4th led inidicates sdcard is available (TODO maye should indicate config was found)
+        kernel->streams->printf("SD OK\n");
     }
 
     if(sdok) {
