@@ -18,7 +18,6 @@
 #include "Config.h"
 #include "Gcode.h"
 #include "checksumm.h"
-#include "utils.h"
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
 
@@ -27,23 +26,14 @@
 #define    startup_state_checksum       CHECKSUM("startup_state")
 #define    startup_value_checksum       CHECKSUM("startup_value")
 #define    input_pin_checksum           CHECKSUM("input_pin")
-#define    output_pin_checksum          CHECKSUM("output_pin")
 #define    input_pin_behavior_checksum  CHECKSUM("input_pin_behavior")
-#define    output_pin_behavior_checksum CHECKSUM("output_pin_behavior")
-
 #define    input_on_command_checksum    CHECKSUM("input_on_command")
 #define    input_off_command_checksum   CHECKSUM("input_off_command")
-#define    output_on_command_checksum   CHECKSUM("output_on_command")
-#define    output_off_command_checksum  CHECKSUM("output_off_command")
-
+#define    output_pin_checksum          CHECKSUM("output_pin")
 #define    output_type_checksum         CHECKSUM("output_type")
 #define    max_pwm_checksum             CHECKSUM("max_pwm")
-
-#define    pwm_checksum                 CHECKSUM("pwm")
-#define    digital_checksum             CHECKSUM("digital")
-#define    toggle_checksum              CHECKSUM("toggle")
-#define    momentary_checksum           CHECKSUM("momentary")
-#define    pulse_checksum               CHECKSUM("pulse")
+#define    output_on_command_checksum   CHECKSUM("output_on_command")
+#define    output_off_command_checksum  CHECKSUM("output_off_command")
 
 Switch::Switch() {}
 
@@ -70,28 +60,29 @@ void Switch::on_module_loaded()
 // Get config
 void Switch::on_config_reload(void *argument)
 {
-    this->input_pin.from_string     (THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
-    this->output_pin.from_string    (THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
+    this->input_pin.from_string(      THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum  )->by_default("nc")->as_string())->as_input();
+    this->output_pin.from_string(     THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
+    
+    std::string input_pin_behavior  = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default("momentary")->as_string();
+    std::string output_type         = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum        )->by_default("pwm")->as_string();
+    
+    std::string input_on_command    = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum   )->by_default("")->as_string();
+    std::string input_off_command   = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum  )->by_default("")->as_string();
 
-    std::string input_on_command    = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
-    std::string input_off_command   = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
-    this->output_on_command         = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
+    this->output_on_command         = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum  )->by_default("")->as_string();
     this->output_off_command        = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
-
-    this->switch_state              = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    std::string type                = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
-    std::string input_pin_mode      = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default("momentary")->as_string();
-    std::string output_pin_mode     = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_behavior_checksum )->by_default("toggle")->as_string();
-
-    this->is_input_momentary  = momentary_checksum == get_checksum(input_pin_mode);
-    this->is_output_pwm       = pwm_checksum == get_checksum(type);
-    this->is_output_pulse     = pulse_checksum == get_checksum(output_pin_mode);
-
-    // Configure output pin
+    this->switch_state              = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum      )->by_default(false)->as_bool();
+    
+    // Read configuration
+    this->is_input_momentary  = input_pin_behavior == "momentary";
+    this->is_output_pwm       = output_type        == "pwm";
+    this->is_output_pulse     = output_type        == "pulse";
+    
+    // Setup output pin
     if(this->output_pin.connected()) {
         if(this->is_output_pwm) {
-            this->output_pin.max_pwm(THEKERNEL->config->value(switch_checksum, this->name_checksum, max_pwm_checksum )->by_default(255)->as_number());
-            this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
+            this->output_pin.max_pwm(   THEKERNEL->config->value(switch_checksum, this->name_checksum, max_pwm_checksum       )->by_default(255)->as_number());
+            this->switch_value        = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
             if(this->switch_state) {
                 this->output_pin.pwm(this->switch_value);
             } else {
@@ -101,13 +92,12 @@ void Switch::on_config_reload(void *argument)
             this->output_pin.set(this->switch_state);
         }
     }
-
     set_low_on_debug(output_pin.port_number, output_pin.pin);
 
-    // Set the on/off command codes, Use GCode to do the parsing
+    // Parse g-code commands
     input_on_command_letter = 0;
     input_off_command_letter = 0;
-
+    
     if(!input_on_command.empty()) {
         Gcode gc(input_on_command, NULL);
         if(gc.has_g) {
@@ -129,19 +119,17 @@ void Switch::on_config_reload(void *argument)
         }
     }
 
-    // Attach tickers for various modes
+    // Attach tickers
     if(input_pin.connected()) {
         this->input_pin_state = this->input_pin.get();
         THEKERNEL->slow_ticker->attach(100, this, &Switch::pinpoll_tick);
     }
 
-    if(this->is_output_pulse && this->output_pin.connected()) {
-        this->output_pulse_counter = 0;
-        THEKERNEL->slow_ticker->attach(50, this, &Switch::pinpulse_tick);
-    }
-
     if(this->is_output_pwm && this->output_pin.connected()) {
         THEKERNEL->slow_ticker->attach(1000, &this->output_pin, &Pwm::on_tick);
+    } else if (this->is_output_pulse && this->output_pin.connected()) {
+        this->switch_value = 0;
+        THEKERNEL->slow_ticker->attach(100, this, &Switch::pinpulse_tick);
     }
 }
 
@@ -170,33 +158,33 @@ void Switch::on_gcode_received(void *argument)
 
     if(match_input_on_gcode(gcode)) {
         int v;
-        this->output_pulse_counter = 4;
         if (this->is_output_pwm) {
-            // PWM output pin turn on (or off if S0)
             if(gcode->has_letter('S')) {
-                v = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
+                v = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // Scale by max_pwm
                 this->output_pin.pwm(v);
-                this->switch_state= (v > 0);
+                this->switch_state = (v > 0);
             } else {
                 this->output_pin.pwm(this->switch_value);
-                this->switch_state= (this->switch_value > 0);
+                this->switch_state = (this->switch_value > 0);
+            }
+        } else if (this->is_output_pulse) {
+            this->output_pin.set(true);
+            this->switch_state = true;
+            if(gcode->has_letter('S')) {
+                this->switch_value = (gcode->get_value('S') * 100.0) + 1;
+            } else {
+                this->switch_value = 21; // Default 0.2s pulse
             }
         } else {
-            // logic pin turn on
+            // Digital
             this->output_pin.set(true);
             this->switch_state = true;
         }
-
+        
     } else if(match_input_off_gcode(gcode)) {
         this->switch_state = false;
-        this->output_pulse_counter = 0;
-        if (this->is_output_pwm) {
-            // PWM output pin
-            this->output_pin.set(false);
-        } else {
-            // logic pin turn off
-            this->output_pin.set(false);
-        }
+        // Digital, Pulse or PWM
+        this->output_pin.set(false);
     }
 }
 
@@ -248,41 +236,42 @@ void Switch::on_main_loop(void *argument)
         if(this->switch_state) {
             if(!this->output_on_command.empty()) this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
             if(this->output_pin.connected()) {
-                if(this->is_output_pwm)
-                    this->output_pin.pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
-                else
+                if (this->is_output_pwm) {
+                    this->output_pin.pwm(this->switch_value);
+                } else if (this->is_output_pulse) {
                     this->output_pin.set(true);
+                    this->switch_value = 21; // Default 0.2s pulse
+                } else {
+                    // Digital
+                    this->output_pin.set(true);
+                }
             }
 
         } else {
             if(!this->output_off_command.empty()) this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
             if(this->output_pin.connected()) {
-                if(this->is_output_pwm)
-                    this->output_pin.set(false);
-                else
-                    this->output_pin.set(false);
+                // Digital, Pulse or PWM
+                this->output_pin.set(false);
             }
         }
         this->switch_changed = false;
     }
 }
 
-// TODO Make this use InterruptIn
 // Check the state of the button and act accordingly
 uint32_t Switch::pinpoll_tick(uint32_t dummy)
 {
     if(!this->input_pin.connected()) return 0;
 
-    // If pin changed
     bool current_state = this->input_pin.get();
     if(this->input_pin_state != current_state) {
+        // If pin has changed
         this->input_pin_state = current_state;
-
-        if(this->input_pin_state ) {
-            // When pin goes high, always flip()
+        if(this->input_pin_state) {
+            // Always toggle switch when input goes high
             this->flip();
         } else {
-            // When pin goes low, only flip() if momentary
+            // Only toggle switch when input goes low if momentary
             if(this->is_input_momentary) {
                 this->flip();
             }
@@ -291,16 +280,18 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
     return 0;
 }
 
+// Counter for pulse mode
 uint32_t Switch::pinpulse_tick(uint32_t dummy)
 {
     if (!this->output_pin.connected()) return 0;
+    
+    // No point counting if switch is not enabled
+    if (!this->switch_state || this->switch_changed) return 0;
 
-    if (this->output_pulse_counter > 1) {
-        this->output_pulse_counter--;
-    } else if (this->output_pulse_counter == 1) {
+    this->switch_value--;
+    if (this->switch_value <= 1) {
         this->switch_state = false;
         this->output_pin.set(false);
-        this->output_pulse_counter = 0;
     }
     return 0;
 }
@@ -318,4 +309,3 @@ void Switch::send_gcode(std::string msg, StreamOutput *stream)
     message.stream = stream;
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
-
