@@ -37,9 +37,9 @@ beta_current                                 1.0              # Y stepper motor 
 y_axis_max_speed                             30000            # mm/min
 beta_max_rate                                30000.0          # mm/min actuator max speed
 
-gamma_step_pin                               A.12             # Pin for gamma stepper step signal
-gamma_dir_pin                                A.11             # Pin for gamma stepper direction
-gamma_en_pin                                 B.12             # Pin for gamma enable
+gamma_step_pin                               B.13             # Pin for gamma stepper step signal
+gamma_dir_pin                                C.4              # Pin for gamma stepper direction
+gamma_en_pin                                 B.14             # Pin for gamma enable
 gamma_current                                1.0              # Z stepper motor current
 z_axis_max_speed                             300              # mm/min
 gamma_max_rate                               300.0            # mm/min actuator max speed
