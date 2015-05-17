@@ -273,12 +273,12 @@ void SCARAcal::on_gcode_received(void *argument)
                     THEKERNEL->robot->get_axis_position(cartesian);                                     // get actual position from robot
                     THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate it to get actual actuator angles
 
-                    S_delta[1] = actuators[1] - target[1];                 // Find difference, and
-                    set_trim(S_trim[0], S_delta[1], 0, gcode->stream);     // set trim to reflect the difference
+                    S_delta[1] = ( actuators[1] - actuators[0]) - ( target[1] - target[0] );            // Find difference in angle - not actuator difference, and
+                    set_trim(S_trim[0], S_delta[1], 0, gcode->stream);                                  // set trim to reflect the difference
                 } else {
-                    set_trim(S_trim[0], 0, 0, gcode->stream);               // reset trim for calibration move
-                    this->home();                                                   // home
-                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F); // move to target
+                    set_trim(S_trim[0], 0, 0, gcode->stream);                                           // reset trim for calibration move
+                    this->home();                                                                       // home
+                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F);                     // move to target
                 }
                 gcode->mark_as_taken();
             }
