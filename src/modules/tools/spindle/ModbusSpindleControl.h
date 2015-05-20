@@ -9,7 +9,6 @@
 #define MODBUS_SPINDLE_CONTROL_MODULE_H
 
 #include "SpindleControl.h"
-#include <stdint.h>
 
 class Modbus;
 
