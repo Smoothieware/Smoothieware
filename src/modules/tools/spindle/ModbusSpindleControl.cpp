@@ -27,7 +27,7 @@ void ModbusSpindleControl::on_module_loaded()
     PinName tx_pin;
     PinName dir_pin;
     
-    // getting the mbed pin names for the soft serial connection
+    // preparing PinName objects from the config string
     {
         Pin *smoothie_pin = new Pin();
         smoothie_pin->from_string(THEKERNEL->config->value(spindle_checksum, spindle_rx_pin_checksum)->by_default("nc")->as_string());
@@ -45,8 +45,10 @@ void ModbusSpindleControl::on_module_loaded()
         delete smoothie_pin;
     }
 
+    // setup the Modbus interface
     modbus = new Modbus(tx_pin, rx_pin, dir_pin);
 
+    // register for events
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GCODE_EXECUTE);
 }

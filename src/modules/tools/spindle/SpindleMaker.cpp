@@ -29,9 +29,10 @@ void SpindleMaker::load_spindle(){
         THEKERNEL->streams->printf("NOTE: Spindle Module is disabled\n");
         return;    
     }
-
+    
     spindle = NULL;
 
+    // get the two config options that make us able to determine which spindle module we need to load
     std::string spindle_type = THEKERNEL->config->value( spindle_checksum, spindle_type_checksum )->by_default("pwm")->as_string();
     std::string vfd_type = THEKERNEL->config->value( spindle_checksum, spindle_vfd_type_checksum )->by_default("none")->as_string(); 
 
@@ -51,7 +52,8 @@ void SpindleMaker::load_spindle(){
         delete spindle;
         THEKERNEL->streams->printf("ERROR: No valid spindle type defined\n");
     }
-    
+
+    // Add the spindle if we successfully initialized one
     if( spindle != NULL) {
         THEKERNEL->add_module( spindle );
     }

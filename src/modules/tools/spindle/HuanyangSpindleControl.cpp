@@ -10,23 +10,25 @@
 #include "gpio.h"
 #include "Modbus.h"
 
-// Examples:
-// https://github.com/bebro/linuxcnc-huanyang-vfd/blob/emc2/hy_modbus.c
-
 void HuanyangSpindleControl::turn_on() 
 {
-
+    // prepare data for the spindle off command
     char turn_on_msg[6] = { 0x01, 0x03, 0x01, 0x01, 0x00, 0x00 };
+    // calculate CRC16 checksum
     unsigned int crc = modbus->crc16(turn_on_msg, 4);
     turn_on_msg[4] = crc & 0xFF;
     turn_on_msg[5] = (crc >> 8);
 
-    // Send cippled Modbus telegram for spindle ON
+    // enable transmitter
     modbus->dir_output->set();
     modbus->delay(1);
+    // send the actual message
     modbus->serial->write(turn_on_msg, 6);
+    // wait a calculated time for the data to be sent 
     modbus->delay((int) ceil(6 * modbus->delay_time));
+    // disable transmitter
     modbus->dir_output->clear();
+    // wait 50ms, required by the Modbus standard
     modbus->delay(50);
     spindle_on = true;
 
@@ -34,18 +36,23 @@ void HuanyangSpindleControl::turn_on()
 
 void HuanyangSpindleControl::turn_off() 
 {
-
+    // prepare data for the spindle off command
     char turn_off_msg[6] = { 0x01, 0x03, 0x01, 0x08, 0x00, 0x00 };
+    // calculate CRC16 checksum
     unsigned int crc = modbus->crc16(turn_off_msg, 4);
     turn_off_msg[4] = crc & 0xFF;
     turn_off_msg[5] = (crc >> 8);
 
-    // Send Modbus telegram for spindle OFF
+    // enable transmitter
     modbus->dir_output->set();
     modbus->delay(1);
+    // send the actual message
     modbus->serial->write(turn_off_msg, 6);
+    // wait a calculated time for the data to be sent 
     modbus->delay((int) ceil(6 * modbus->delay_time));
+    // disable transmitter
     modbus->dir_output->clear();
+    // wait 50ms, required by the Modbus standard
     modbus->delay(50);
     spindle_on = false;
 
@@ -54,24 +61,27 @@ void HuanyangSpindleControl::turn_off()
 void HuanyangSpindleControl::set_speed(int target_rpm) 
 {
 
-    // sizeof(set_speed_msg) verwenden
-    //char set_speed_msg[8] = { 0x01, 0x02, 0x03, 0x03, 0x00, 0x00, 0x00, 0x00 };
+    // prepare data for the set speed command
     char set_speed_msg[7] = { 0x01, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00 };
     // convert RPM into Hz
     unsigned int hz = target_rpm / 60 * 100; 
     set_speed_msg[3] = (hz >> 8);
     set_speed_msg[4] = hz & 0xFF;
-    
+    // calculate CRC16 checksum
     unsigned int crc = modbus->crc16(set_speed_msg, sizeof(set_speed_msg)-2);
     set_speed_msg[5] = crc & 0xFF;
     set_speed_msg[6] = (crc >> 8);
 
-    // Send Modbus telegram for spindle speed change
+    // enable transmitter
     modbus->dir_output->set();
     modbus->delay(1);
+    // send the actual message
     modbus->serial->write(set_speed_msg, sizeof(set_speed_msg));
+    // wait a calculated time for the data to be sent 
     modbus->delay((int) ceil(sizeof(set_speed_msg) * modbus->delay_time));
+    // disable transmitter
     modbus->dir_output->clear();
+    // wait 50ms, required by the Modbus standard
     modbus->delay(50);
 
 }

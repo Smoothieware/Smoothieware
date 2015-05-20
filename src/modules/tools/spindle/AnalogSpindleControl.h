@@ -16,7 +16,8 @@ namespace mbed {
 
 class Pin;
 
-// This module implements closed loop PID control for spindle RPM.
+// This module implements control of the spindle speed by seting a PWM from 0-100% which needs
+// to be converted to 0-10V by an external circuit
 class AnalogSpindleControl: public SpindleControl {
     public:
         AnalogSpindleControl() {};
