@@ -117,6 +117,8 @@ class Pin {
 
         PwmOut *hardware_pwm();
 
+        InterruptIn *interrupt_pin();
+
         GPIO_TypeDef* get_port(char port);
 
         // these should be private, and use getters

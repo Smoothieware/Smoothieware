@@ -231,7 +231,7 @@ void PID_Autotuner::on_idle(void *)
     justchanged = false;
 
     if ((tickCnt % 1000) == 0) {
-        s->printf("%s: %5.1f/%5.1f @%d %d/%d\n", temp_control->designator.c_str(), temp_control->get_temperature(), target_temperature, output, peakCount, requested_cycles);
+        s->printf("%s: %5.1f/%5.1f @%d %d/%d\n", temp_control->designator.c_str(), refVal, target_temperature, output, peakCount, requested_cycles);
         DEBUG_PRINTF("lookBackCnt= %d, peakCount= %d, absmax= %g, absmin= %g, peak1= %lu, peak2= %lu\n", lookBackCnt, peakCount, absMax, absMin, peak1, peak2);
     }
 }
