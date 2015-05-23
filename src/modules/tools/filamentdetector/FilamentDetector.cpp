@@ -66,8 +66,9 @@ void FilamentDetector::on_module_loaded()
 
     // set interrupt on rising edge
     this->encoder_pin->rise(this, &FilamentDetector::on_pin_rise);
+    /* FIXME STM32 
     NVIC_SetPriority(EINT3_IRQn, 16); // set to low priority
-
+        */
     // optional bulge detector
     bulge_pin.from_string( THEKERNEL->config->value(filament_detector_checksum, bulge_pin_checksum)->by_default("nc" )->as_string())->as_input();
     if(bulge_pin.connected()) {
