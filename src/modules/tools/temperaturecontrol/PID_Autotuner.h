@@ -47,7 +47,7 @@ private:
     float absMax, absMin;
     float oStep;
     int output;
-    unsigned long tickCnt;
+    volatile unsigned long tickCnt;
 };
 
 #endif /* _PID_AUTOTUNE_H */

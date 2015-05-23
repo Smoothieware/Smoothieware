@@ -62,6 +62,21 @@ void SCARAcal::home()
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 }
 
+bool SCARAcal::get_trim(float& x, float& y, float& z)
+{
+    void *returned_data;
+    bool ok = PublicData::get_value( endstops_checksum, trim_checksum, &returned_data );
+
+    if (ok) {
+        float *trim = static_cast<float *>(returned_data);
+        x= trim[0];
+        y= trim[1];
+        z= trim[2];
+        return true;
+    }
+    return false;
+}
+
 bool SCARAcal::set_trim(float x, float y, float z, StreamOutput *stream)
 {
     float t[3]{x, y, z};
@@ -76,19 +91,76 @@ bool SCARAcal::set_trim(float x, float y, float z, StreamOutput *stream)
     return ok;
 }
 
-bool SCARAcal::get_trim(float& x, float& y, float& z)
+bool SCARAcal::get_home_offset(float& x, float& y, float& z)
 {
     void *returned_data;
-    bool ok = PublicData::get_value( endstops_checksum, trim_checksum, &returned_data );
+    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &returned_data );
 
     if (ok) {
-        float *trim = static_cast<float *>(returned_data);
-        x= trim[0];
-        y= trim[1];
-        z= trim[2];
+        float *home_offset = static_cast<float *>(returned_data);
+        x= home_offset[0];
+        y= home_offset[1];
+        z= home_offset[2];
         return true;
     }
     return false;
+}
+
+bool SCARAcal::set_home_offset(float x, float y, float z, StreamOutput *stream)
+{
+    char cmd[64];
+
+    // Assemble Gcode to add onto the queue
+    snprintf(cmd, sizeof(cmd), "M206 X%1.3f Y%1.3f Z%1.3f", x, y, z); // Send saved Z homing offset
+
+    Gcode gc(cmd, &(StreamOutput::NullStream));
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+
+//}
+
+
+//    float t[3]{x, y, z};
+//    bool ok= PublicData::set_value( endstops_checksum, home_offset_checksum, t);
+
+//    if (ok) {
+        stream->printf("set home_offset to X:%f Y:%f Z:%f\n", x, y, z);
+//    } else {
+//        stream->printf("unable to set home_offset, is endstops enabled?\n");
+//    }
+
+    return true;//ok;
+}
+
+bool SCARAcal::translate_trim(StreamOutput *stream)
+{
+    float S_trim[3],
+          home_off[3],
+          actuator[3];;
+
+    this->get_home_offset(home_off[0], home_off[1], home_off[2]);               // get home offsets
+    this->get_trim(S_trim[0], S_trim[1], S_trim[2]);	                          // get current trim
+
+    THEKERNEL->robot->arm_solution->cartesian_to_actuator( home_off, actuator ); // convert current home offset to actuator angles
+
+    // Subtract trim values from actuators to determine the real home offset actuator position for X and Y.
+
+    actuator[0] -= S_trim[0];
+    actuator[1] -= S_trim[1];
+
+    // Clear X and Y trims internally
+    S_trim[0] = 0.0F;
+    S_trim[1] = 0.0F;
+
+    // convert back to get the real cartesian home offsets
+
+    THEKERNEL->robot->arm_solution->actuator_to_cartesian( actuator, home_off );
+
+    this->set_home_offset(home_off[0], home_off[1], home_off[2],stream);               // get home offsets
+                 // Set the correct home offsets;
+
+    this->set_trim(S_trim[0], S_trim[1], S_trim[2], stream);    // Now Clear relevant trims
+
+    return true;
 }
 
 void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
@@ -139,7 +211,7 @@ void SCARAcal::on_gcode_received(void *argument)
 
             }
             return;
-            
+
             case 360: {
                 float target[2] = {0.0F, 120.0F},
                       S_trim[3];
@@ -178,7 +250,7 @@ void SCARAcal::on_gcode_received(void *argument)
                     THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators ); // translate to get actuator position
 
                     STEPPER[0]->change_steps_per_mm(actuators[0] / target[0] * STEPPER[0]->get_steps_per_mm()); // Find angle difference
-                    STEPPER[1]->change_steps_per_mm(STEPPER[0]->get_steps_per_mm());  // and change steps_per_mm to ensure correct steps per *angle* 
+                    STEPPER[1]->change_steps_per_mm(STEPPER[0]->get_steps_per_mm());  // and change steps_per_mm to ensure correct steps per *angle*
                 } else {
                     this->home();                                                   // home - This time leave trims as adjusted.
                     SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F); // move to target
@@ -201,17 +273,22 @@ void SCARAcal::on_gcode_received(void *argument)
                     THEKERNEL->robot->get_axis_position(cartesian);                                     // get actual position from robot
                     THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate it to get actual actuator angles
 
-                    S_delta[1] = actuators[1] - target[1];                 // Find difference, and 
-                    set_trim(S_trim[0], S_delta[1], 0, gcode->stream);     // set trim to reflect the difference
+                    S_delta[1] = ( actuators[1] - actuators[0]) - ( target[1] - target[0] );            // Find difference in angle - not actuator difference, and
+                    set_trim(S_trim[0], S_delta[1], 0, gcode->stream);                                  // set trim to reflect the difference
                 } else {
-                    set_trim(S_trim[0], 0, 0, gcode->stream);               // reset trim for calibration move
-                    this->home();                                                   // home
-                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F); // move to target
+                    set_trim(S_trim[0], 0, 0, gcode->stream);                                           // reset trim for calibration move
+                    this->home();                                                                       // home
+                    SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F);                     // move to target
                 }
                 gcode->mark_as_taken();
             }
             return;
+
+            case 365: {
+                this->translate_trim(gcode->stream);
+
+            }
         }
-    }    
+    }
 }
 

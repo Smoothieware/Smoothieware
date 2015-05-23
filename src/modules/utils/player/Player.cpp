@@ -220,8 +220,12 @@ void Player::on_gcode_received(void *argument)
 
             this->played_cnt = 0;
             this->elapsed_secs = 0;
+
         } else if (gcode->m == 600) { // suspend print, Not entirely Marlin compliant
             this->suspend_command("", &(StreamOutput::NullStream));
+
+        } else if (gcode->m == 601) { // resume print
+            this->resume_command("", &(StreamOutput::NullStream));
         }
     }
 }
@@ -335,7 +339,7 @@ void Player::progress_command( string parameters, StreamOutput *stream )
         unsigned int pcnt = (file_size - (file_size - played_cnt)) * 100 / file_size;
         // If -b or -B is passed, report in the format used by Marlin and the others.
         if (!sdprinting) {
-            stream->printf("%u %% complete, elapsed time: %lu s", pcnt, this->elapsed_secs);
+            stream->printf("file: %s, %u %% complete, elapsed time: %lu s", this->filename.c_str(), pcnt, this->elapsed_secs);
             if(est > 0) {
                 stream->printf(", est time: %lu s",  est);
             }

@@ -118,7 +118,8 @@ try_again:
             }
 
             while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GM", possible_command.find_first_of("GM") + 1);
+                // assumes G or M are always the first on the line
+                size_t nextcmd = possible_command.find_first_of("GM", 2);
                 string single_command;
                 if(nextcmd == string::npos) {
                     single_command = possible_command;
