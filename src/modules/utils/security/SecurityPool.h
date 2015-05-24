@@ -10,10 +10,8 @@
 class SecurityPool {
     public:
         void load_prevention_controllers();
-        const std::vector<uint16_t>& get_controllers() const { return controllers; }
 
     private:
-        std::vector<uint16_t> controllers;
 };
 
 #endif

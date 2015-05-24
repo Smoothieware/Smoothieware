@@ -7,16 +7,17 @@
 #include "ConfigValue.h"
 #include "Gcode.h"
 #include "checksumm.h"
+#include "PublicDataRequest.h"
 
 #include "SecurityPool.h"
 #include "TemperatureControlPool.h"
 #include "TemperatureControlPublicAccess.h"
 
-#define designator_checksum CHECKSUM("designator")
-#define min_temp_checksum   CHECKSUM("min_extrusion_temp")
+#define designator_checksum         CHECKSUM("designator")
+#define min_temp_checksum           CHECKSUM("min_extrusion_temp")
 
-// TODO:
-// * Don't hold the instances in the SecurityPool. Delete it.
+#define extruder_checksum           CHECKSUM("extruder")
+#define extruder_enable_checksum    CHECKSUM("extruder_enable")
 
 ColdExtrusionPrevention::ColdExtrusionPrevention(uint16_t identifier) {
     this->flags = 0x00;
@@ -31,9 +32,8 @@ void ColdExtrusionPrevention::on_config_reload(void* argument) {
     bool enabled = THEKERNEL->config->value(coldextrusionprevention_checksum, this->identifier, enable_checksum)->by_default(false)->as_bool();
 
     set_flag(FLAG_ENABLE, enabled);
-    if(!enabled) {
-        //return;
-    }
+    // We do not remove the module if it is not enabled since the user could
+    // decide to enable the module later on.
 
     string designator = THEKERNEL->config->value(coldextrusionprevention_checksum, this->identifier, designator_checksum)->by_default("")->as_string();
 
@@ -57,19 +57,24 @@ void ColdExtrusionPrevention::on_config_reload(void* argument) {
 
     if(temperatureController == 0) {
         // We need at least one temperature controller
-        //return;
+        delete this;
+        return;
     }
 
     minExtrusionTemperature = static_cast<uint8_t>(THEKERNEL->config->value(coldextrusionprevention_checksum, this->identifier, min_temp_checksum)->by_default(0)->as_number());
     if(minExtrusionTemperature == 0) {
-        set_flag(FLAG_ENABLE, false);
-        //return;
+        // The minimal extrusion temperature must be set
+        delete this;
+        return;
     }
 
     set_flag(FLAG_TEMP_OK, false);
 
+    // For M302
     this->register_for_event(ON_GCODE_RECEIVED);
+    // To react on moving gcodes
     this->register_for_event(ON_GCODE_EXECUTE);
+    // To read the temperature
     this->register_for_event(ON_IDLE);
 
     // Read the temperature every second
@@ -79,14 +84,9 @@ void ColdExtrusionPrevention::on_config_reload(void* argument) {
 void ColdExtrusionPrevention::on_gcode_received(void* argument) {
     Gcode* gcode = static_cast<Gcode*>(argument);
 
-    THEKERNEL->streams->printf("OnGcodeReceived\r\n");
-
     if(gcode->has_m) {
-        THEKERNEL->streams->printf("HasM\r\n");
         if(gcode->m == 302) {
-            THEKERNEL->streams->printf("Is 302\r\n");
             if(gcode->has_letter('P')) {
-                THEKERNEL->streams->printf("Has P\r\n");
                 // Enable the prevention if the value of the P argument is 0 (or
                 // if get_uint returns an error, which has an value of 0).
                 // This enables cold extrusion with M302 P1 (disables the
@@ -94,10 +94,11 @@ void ColdExtrusionPrevention::on_gcode_received(void* argument) {
                 // the prevention).
                 // This is compatible to the definition on reprap.org
                 set_flag(FLAG_ENABLE, (gcode->get_uint('P', nullptr) == 0));
-            } else {
-                THEKERNEL->streams->printf("Cold extrusions are %s.\r\n", read_flag(FLAG_ENABLE) ? "not allowed" : "allowed");
             }
 
+            THEKERNEL->streams->printf("Cold extrusions are %s.\r\n", read_flag(FLAG_ENABLE) ? "not allowed" : "allowed");
+        } else if(gcode->m == 999) {
+            set_flag(FLAG_WAS_KILLED, false);
         }
     }
 }
@@ -109,42 +110,60 @@ void ColdExtrusionPrevention::on_gcode_execute(void* argument) {
 
     Gcode* gcode = static_cast<Gcode*>(argument);
 
-    THEKERNEL->streams->printf("Got Gcode: %s\r\n", gcode->get_command());
+    // Only do the checks if this is a gcode involving a movement of the
+    // extruder.
+    if(!gcode->has_g || !gcode->has_letter('E')) {
+        return;
+    }
 
-    if(gcode->has_g && gcode->g != 92) {
-        if(!read_flag(FLAG_TEMP_OK)) {
-            // Only prevent cold extrusions on actual movement gcodes
-            THEKERNEL->call_event(ON_HALT, nullptr);
-            THEKERNEL->streams->printf("Cold extrusion prevented - reset or M999 to re-enable the printer\r\n");
-        }
+    // Now set the flag that the printer should be killed. We don't do this here
+    // because of ISR stuff
+    if(!read_flag(FLAG_TEMP_OK) && !read_flag(FLAG_WAS_KILLED)) {
+        set_flag(FLAG_KILL_NOW, true);
     }
 }
 
 void ColdExtrusionPrevention::on_idle(void* argument) {
-        THEKERNEL->streams->printf("FLAG_ENABLE:    %d\r\n", read_flag(FLAG_ENABLE));
-    if(read_flag(FLAG_ENABLE | FLAG_READ_TEMP)) {
-        THEKERNEL->streams->printf("FLAG_ENABLE:    %d\r\n", read_flag(FLAG_ENABLE));
-        THEKERNEL->streams->printf("FLAG_READ_TEMP: %d\r\n", read_flag(FLAG_READ_TEMP));
+    if(read_flag(FLAG_KILL_NOW)) {
+        // We should kill the printer! Set/Reset all flags to the appropriate
+        // state.
+        set_flag(FLAG_WAS_KILLED, true);
+        set_flag(FLAG_KILL_NOW, false);
 
+        // Now print a message that we've killed the printer!
+        THEKERNEL->streams->printf("Cold extrusion prevented, %d°C are required - reset or M999 to re-enable the printer\r\n", minExtrusionTemperature);
+
+        THEKERNEL->call_event(ON_HALT, nullptr);
+    }
+
+    if(read_flag(FLAG_ENABLE) && read_flag(FLAG_READ_TEMP)) {
         // TODO: Find out if there are semaphores in Smoothieware.
         // Currently worst case is that this writes the variable directly after
         // the read_temp_tick ISR sets it so that the value is not read the next
         // time. So worst case is a temperature read every 2 ticks.
         set_flag(FLAG_READ_TEMP, false);
 
-        uint8_t temp = get_highest_temperature();
+        uint8_t currentTemperature = get_highest_temperature();
+        bool ok = (currentTemperature >= minExtrusionTemperature);
 
-        // Read current temperature and set the FLAG_TEMP_OK accordingly
-        set_flag(FLAG_TEMP_OK, temp >= minExtrusionTemperature);
+        if(read_flag(FLAG_TEMP_OK) != ok) {
+            // Read current temperature and set the FLAG_TEMP_OK accordingly
+            set_flag(FLAG_TEMP_OK, ok);
+        }
     }
 }
 
 void ColdExtrusionPrevention::on_second_tick(void* argument) {
-    // We only set the flag to read the temperature upon the next idle event
-    // since this is an ISR.
-    set_flag(FLAG_READ_TEMP, true);
-
-    THEKERNEL->streams->printf("OnSecondTick\r\n");
+    // Only read the temperature every 2 seconds
+    if(read_flag(FLAG_SECOND_TICK)) {
+        // We only set the flag to read the temperature upon the next idle event
+        // since this is an ISR.
+        set_flag(FLAG_READ_TEMP, true);
+        set_flag(FLAG_SECOND_TICK, false);
+    } else {
+        // Wait for the next tick
+        set_flag(FLAG_SECOND_TICK, true);
+    }
 }
 
 uint8_t ColdExtrusionPrevention::get_highest_temperature()

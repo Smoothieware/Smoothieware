@@ -13,7 +13,6 @@ void SecurityPool::load_prevention_controllers() {
     for(auto cs: modules) {
         if( THEKERNEL->config->value(coldextrusionprevention_checksum, cs, enable_checksum )->as_bool() ) {
             ColdExtrusionPrevention *ctrl = new ColdExtrusionPrevention(cs);
-            controllers.push_back(cs);
             THEKERNEL->add_module(ctrl);
         }
     }
