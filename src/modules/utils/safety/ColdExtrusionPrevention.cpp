@@ -9,7 +9,7 @@
 #include "checksumm.h"
 #include "PublicDataRequest.h"
 
-#include "SecurityPool.h"
+#include "SafetyPool.h"
 #include "TemperatureControlPool.h"
 #include "TemperatureControlPublicAccess.h"
 

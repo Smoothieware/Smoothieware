@@ -1,4 +1,4 @@
-#include "SecurityPool.h"
+#include "SafetyPool.h"
 
 #include "libs/Kernel.h"
 #include "Config.h"
@@ -6,7 +6,7 @@
 
 #include "ColdExtrusionPrevention.h"
 
-void SecurityPool::load_prevention_controllers() {
+void SafetyPool::load_prevention_controllers() {
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list(&modules, coldextrusionprevention_checksum);
 

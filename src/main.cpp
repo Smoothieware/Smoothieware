@@ -27,7 +27,7 @@
 #include "modules/utils/pausebutton/PauseButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
-#include "modules/utils/security/SecurityPool.h"
+#include "modules/utils/safety/SafetyPool.h"
 #include "libs/Network/uip/Network.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -190,10 +190,10 @@ void init() {
     #ifndef NO_TOOLS_DRILLINGCYCLES
     kernel->add_module( new Drillingcycles() );
     #endif
-    #ifndef NO_UTILS_COLD_EXTRUSION_PREVENTION
+    #ifndef NO_UTILS_SAFETY
     // Must be loaded after TemperatureControlPool
-    SecurityPool securityPool;
-    securityPool.load_prevention_controllers();
+    SafetyPool safetyPool;
+    safetyPool.load_prevention_controllers();
     #endif
     #ifndef NO_TOOLS_FILAMENTDETECTOR
     kernel->add_module( new FilamentDetector() );

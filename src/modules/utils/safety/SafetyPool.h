@@ -1,5 +1,5 @@
-#ifndef SECURITY_POOL_H_
-#define SECURITY_POOL_H_
+#ifndef SAFETY_POOL_H_
+#define SAFETY_POOL_H_
 
 #include <vector>
 #include "checksumm.h"
@@ -7,7 +7,7 @@
 #define coldextrusionprevention_checksum CHECKSUM("coldextrusionprevention")
 #define enable_checksum                  CHECKSUM("enable")
 
-class SecurityPool {
+class SafetyPool {
     public:
         void load_prevention_controllers();
 
