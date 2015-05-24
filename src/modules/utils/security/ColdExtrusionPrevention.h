@@ -21,7 +21,6 @@ class ColdExtrusionPrevention : public Module {
         void on_idle(void* argument);
         void on_second_tick(void* argument);
         void on_gcode_received(void* argument);
-        void on_halt(void* argument);
 
         uint8_t get_highest_temperature();
 
