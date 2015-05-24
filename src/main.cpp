@@ -17,6 +17,7 @@
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
+#include "FilamentDetector.h"
 
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -193,6 +194,9 @@ void init() {
     // Must be loaded after TemperatureControlPool
     SecurityPool securityPool;
     securityPool.load_prevention_controllers();
+    #endif
+    #ifndef NO_TOOLS_FILAMENTDETECTOR
+    kernel->add_module( new FilamentDetector() );
     #endif
 
     // Create and initialize USB stuff
