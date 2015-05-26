@@ -125,19 +125,12 @@ PwmOut* Pin::hardware_pwm()
     return nullptr;
 }
 
-mbed::InterruptIn* Pin::interrupt_pin()
+InterruptIn* Pin::interrupt_pin()
 {
     if(!this->valid) return nullptr;
 
     // set as input
     as_input();
 
-    if (port_number == 0 || port_number == 2) {
-        PinName pinname = port_pin((PortName)port_number, pin);
-        return new mbed::InterruptIn(pinname);
-
-    }else{
-        this->valid= false;
-        return nullptr;
-    }
+    return new InterruptIn(this->pin_name);
 }
