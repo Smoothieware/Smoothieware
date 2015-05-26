@@ -108,6 +108,15 @@ Kernel::Kernel(){
     NVIC_SetPriority(ADC_IRQn, 5);
     NVIC_SetPriority(OTG_FS_IRQn, 5);
 
+    /* Set all external interrupts to lower priority */
+    NVIC_SetPriority(EXTI0_IRQn, 16);
+    NVIC_SetPriority(EXTI1_IRQn, 16);
+    NVIC_SetPriority(EXTI2_IRQn, 16);
+    NVIC_SetPriority(EXTI3_IRQn, 16);
+    NVIC_SetPriority(EXTI4_IRQn, 16);
+    NVIC_SetPriority(EXTI9_5_IRQn, 16);
+    NVIC_SetPriority(EXTI15_10_IRQn, 16);
+
     // If MRI is enabled
     if( MRI_ENABLE ){
         if( NVIC_GetPriority(USART1_IRQn) > 0 ){ NVIC_SetPriority(USART1_IRQn, 5); }
