@@ -71,7 +71,7 @@ pause_button_enable                          true             # Pause button ena
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
 extruder.hotend.steps_per_mm                    140              # Steps per mm for extruder stepper
 extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
-extruder.hotend.acceleration                    500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+extruder.hotend.acceleration                    500              # Acceleration for the stepper motor mm/sec²
 extruder.hotend.max_speed                       50               # mm/s
 
 extruder.hotend.step_pin                        2.3              # Pin for extruder step signal
