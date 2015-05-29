@@ -529,7 +529,8 @@ void Extruder::on_block_begin(void *argument)
             this->stepper_motor->set_moved_last_block(true);
         }else{
             // SOLO
-            this->stepper_motor->set_speed(rate_increase());  // start at first acceleration step
+            uint32_t target_rate = floorf(this->feed_rate * this->steps_per_millimeter);
+            this->stepper_motor->set_speed(min( target_rate, rate_increase() ));  // start at first acceleration step
             this->stepper_motor->set_moved_last_block(false);
         }
 
