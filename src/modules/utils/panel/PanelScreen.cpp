@@ -15,9 +15,6 @@
 #include "LcdBase.h"
 #include "libs/StreamOutput.h"
 
-#include <string>
-#include <deque>
-
 using namespace std;
 
 // static as it is shared by all screens
@@ -93,9 +90,8 @@ void PanelScreen::on_main_loop()
     while(command_queue.size() > 0) {
         struct SerialMessage message;
         message.message = command_queue.front();
-        command_queue.pop_front(); 
+        command_queue.pop_front();
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     }
-    command_queue.clear();
 }

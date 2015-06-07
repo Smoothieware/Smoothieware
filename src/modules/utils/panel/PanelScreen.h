@@ -9,7 +9,7 @@
 #define PANELSCREEN_H
 
 #include <string>
-#include <deque >
+#include <deque>
 
 class Panel;
 
