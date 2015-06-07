@@ -89,13 +89,14 @@ void PanelScreen::send_command(const char *gcstr)
 
 void PanelScreen::on_main_loop()
 {
-    // for each command in queue send it
-    for (auto& cmd : command_queue) {
+    if (command_queue.size() > 0) {
+      std::string cmd = command_queue.front();    //Get first element
         struct SerialMessage message;
         message.message = cmd;
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
         cmd.clear();
+        command_queue.erase(command_queue.begin()); //Remove first element
     }
-    command_queue.clear();
 }
+    
