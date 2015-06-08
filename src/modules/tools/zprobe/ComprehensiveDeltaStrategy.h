@@ -27,7 +27,8 @@ extern GPIO leds[];
 
 // Size of the grid to be used for depth maps.
 // DM_GRID_DIMENSION ***NEEDS*** TO BE AN ODD NUMBER OR THE MATH WON'T WORK!!!
-#define DM_GRID_DIMENSION 5
+// Values of 5, 7, and 9 are reasonable. 7 is a reasonable tradeoff.
+#define DM_GRID_DIMENSION 7
 #define DM_GRID_ELEMENTS (DM_GRID_DIMENSION * DM_GRID_DIMENSION)
 
 // Method prefixes - how many prefixes we will set aside room for
@@ -501,7 +502,7 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     void print_depths(cds_depths_t *depths);
     void print_depths(float **depths);
     void str_pad_left(unsigned char spaces);
-    bool require_clean_geometry();
+    //bool require_clean_geometry();
     void print_task_with_warning(const std::string& str);
     void flush();
     void newline();

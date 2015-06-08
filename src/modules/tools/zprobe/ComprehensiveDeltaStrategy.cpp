@@ -176,7 +176,7 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
         return false;
     }
 
-    // Allocate space for depth map
+    // Allocate space for depth map (this stores the most recent clean copy of the build surface depths)
     surface_transform->depth = (float *)AHB0.alloc(DM_GRID_ELEMENTS * sizeof(float));
     if(surface_transform->depth == nullptr) {
         _printf("%s depth map.\n", error_str);
@@ -189,7 +189,7 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
     }
 
     // Allocate space for lerp scratchpad
-    bili = (struct bili_t *)AHB0.alloc(sizeof(bili));
+    bili = (struct bili_t *)AHB0.alloc(sizeof(bili_t)); // was sizeof(bili)
     if(bili == nullptr) {
         _printf("%s lerp scratchpad.\n", error_str);
         return false;
@@ -231,7 +231,7 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
         _printf("%s test axes.\n", error_str);
         return false;
     }
-
+    
     depth_map = (cds_depths_t *)AHB0.alloc(sizeof(cds_depths_t) * DM_GRID_ELEMENTS);
     if(depth_map == nullptr) {
         _printf("%s depth map.\n", error_str);
@@ -250,41 +250,17 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
 }
 
 
-// Destructor
-ComprehensiveDeltaStrategy::~ComprehensiveDeltaStrategy() {
-
-    if(surface_transform != nullptr) {
-        AHB0_dealloc_if_not_nullptr(surface_transform->depth);
-    }
-
-    AHB0_dealloc_if_not_nullptr(surface_transform);
-    AHB0_dealloc_if_not_nullptr(bili);
-    AHB0_dealloc_if_not_nullptr(best_probe_calibration);
-    AHB0_dealloc_if_not_nullptr(base_set);
-    AHB0_dealloc_if_not_nullptr(cur_set);
-    AHB0_dealloc_if_not_nullptr(temp_set);
-    AHB0_dealloc_if_not_nullptr(test_point);
-    AHB0_dealloc_if_not_nullptr(test_axis);
-    AHB0_dealloc_if_not_nullptr(depth_map);
-    AHB0_dealloc_if_not_nullptr(active_point);
-
-    AHB0_dealloc2Df(test_point, DM_GRID_ELEMENTS);
-    AHB0_dealloc2Df(test_axis, DM_GRID_ELEMENTS);
-    AHB0_dealloc2Df(cur_cartesian, DM_GRID_ELEMENTS);
-    AHB0_dealloc2Df(temp_cartesian, DM_GRID_ELEMENTS);
-
-}
-
-
 // Allocate a 2D array on AHB0
 float** ComprehensiveDeltaStrategy::AHB0_alloc2Df(int rows, int columns) {
 
+    // Allocate pointers to all the rows
     float **ptr = (float **)AHB0.alloc(rows * sizeof(float *));
     
     if(!ptr) {
         return nullptr;
     }
 
+    // Allocate space for all the rows, and the columns they contain
     for(int i=0; i<rows; i++) {
         ptr[i] = (float*)AHB0.alloc(columns * sizeof(float));
         if(!ptr[i]) {
@@ -293,32 +269,6 @@ float** ComprehensiveDeltaStrategy::AHB0_alloc2Df(int rows, int columns) {
     }
     return ptr;
 
-
-/*
-    Buggy code that didn't work.
-    Which is too bad, because it would've allocated it such that freeing it would only require one dealloc() call.
-
-    // Thanks, Dmitry: http://stackoverflow.com/questions/1970698/using-malloc-for-allocation-of-multi-dimensional-arrays-with-different-row-lengt
-
-    // The header contains the block of pointers that will point to each row
-    int header = rows * sizeof(float*);
-
-    // The body is where the actual rows are
-    int body = rows * columns * sizeof(float);
-
-    // Allocate enough space for the header and body
-    ptr = (float**)AHB0.alloc(header + body);
-
-    // buf points to the body of the array
-    float* buf = (float*)(ptr + header);
-    ptr[0] = buf;
-
-    for(int k = 1; k < rows; k++) {
-        ptr[k] = ptr[k-1] + (columns * sizeof(float));
-    }
-
-    return true;
-*/
 }
 
 
@@ -337,7 +287,7 @@ bool ComprehensiveDeltaStrategy::AHB0_dealloc2Df(float** ptr, int rows) {
         when it should be ++i'd, or similar. I don't feel like chasing that down, so whatever.
         
         I've rewritten all the code so that every 2D array is allocated at startup, and never freed.
-        I apologize for wasting RAM on AHB0 like this, but for now I won't look into this anymore.
+        I apologize for wasting RAM on AHB0 like this, but at the moment I need to move on.
 
     */
 
@@ -386,6 +336,32 @@ void ComprehensiveDeltaStrategy::AHB0_dealloc_if_not_nullptr(void *ptr) {
     }
 }
 
+
+
+// Destructor
+ComprehensiveDeltaStrategy::~ComprehensiveDeltaStrategy() {
+
+    if(surface_transform != nullptr) {
+        AHB0_dealloc_if_not_nullptr(surface_transform->depth);
+    }
+
+    AHB0_dealloc_if_not_nullptr(surface_transform);
+    AHB0_dealloc_if_not_nullptr(bili);
+    AHB0_dealloc_if_not_nullptr(best_probe_calibration);
+    AHB0_dealloc_if_not_nullptr(base_set);
+    AHB0_dealloc_if_not_nullptr(cur_set);
+    AHB0_dealloc_if_not_nullptr(temp_set);
+    AHB0_dealloc_if_not_nullptr(test_point);
+    AHB0_dealloc_if_not_nullptr(test_axis);
+    AHB0_dealloc_if_not_nullptr(depth_map);
+    AHB0_dealloc_if_not_nullptr(active_point);
+
+    AHB0_dealloc2Df(test_point, DM_GRID_ELEMENTS);
+    AHB0_dealloc2Df(test_axis, DM_GRID_ELEMENTS);
+    AHB0_dealloc2Df(cur_cartesian, DM_GRID_ELEMENTS);
+    AHB0_dealloc2Df(temp_cartesian, DM_GRID_ELEMENTS);
+
+}
 
 
 
@@ -522,76 +498,89 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
         if(gcode->g == 31) { // Depth mapping & heuristic delta calibration
 
 
+        /*
+        // Code for verifying the test points
+        _printf("There are %d grid elements.\n \n", DM_GRID_ELEMENTS);
+        for(int i=0; i<DM_GRID_ELEMENTS; i++) {
 
-/*
-// As of now, this works.
+            _printf("Test point[%d]: X=%1f, Y=%1f\n", i, test_point[i][X], test_point[i][Y]);
+            flush();
+            
+        }
 
-__printf("Beginning 2D array test\n");
-flush();
-
-int i,j;
-int rows=3, cols=3;
-float **array;
-array = (float**)AHB0.alloc(rows * sizeof(float *));
-for (i = 0; i < rows; i++) {
-  array[i] = (float*)AHB0.alloc(cols * sizeof(float));
-}
-
-// Some testing
-for (i = 0; i < rows; i++) {
-  for (j = 0; j < cols; j++)
-    array[i][j] = (i * j) + 0.545; // or whatever you want
-}
-
-for (i = 0; i < rows; i++) {
-  for (j = 0; j < cols; j++) {
-    __printf("row=%d col=%d val=%3.1f\n", i, j, array[i][j]);
-    flush();
-  }
-  newline();
-
-}
-
-__printf("Test complete\n");
-flush();
-
-return true;
-/**/
+        return false;
+        */
 
 
+        /*
+        // As of now, this works.
 
-/*
-
-// As of now, this also works!
-
-_printf("AHB0.alloc() test\n");
-
-flush();
-float** test;
-test = AHB0_alloc2Df(41, 3);
-_printf("Pointer created\n");
-flush();
-
-_printf("Setting values...\n");
-flush();
-for(int row=0; row<41; row++) {
-    for(int col=0; col<3; col++) {
-        test[row][col] = row + col;
-        __printf("%1f ", test[row][col]);
+        __printf("Beginning 2D array test\n");
         flush();
-    }
-    __printf("\n");
-    flush();
-}
 
-_printf("Deallocating...\n");
-flush();
-AHB0_dealloc2Df(test, 41);
-_printf("Done.\n");
+        int i,j;
+        int rows=3, cols=3;
+        float **array;
+        array = (float**)AHB0.alloc(rows * sizeof(float *));
+        for (i = 0; i < rows; i++) {
+          array[i] = (float*)AHB0.alloc(cols * sizeof(float));
+        }
+
+        // Some testing
+        for (i = 0; i < rows; i++) {
+          for (j = 0; j < cols; j++)
+            array[i][j] = (i * j) + 0.545; // or whatever you want
+        }
+
+        for (i = 0; i < rows; i++) {
+          for (j = 0; j < cols; j++) {
+            __printf("row=%d col=%d val=%3.1f\n", i, j, array[i][j]);
+            flush();
+          }
+          newline();
+
+        }
+
+        __printf("Test complete\n");
+        flush();
+
+        return true;
+        /**/
 
 
-return true;
-*/
+
+        /*
+
+        // As of now, this also works!
+
+        _printf("AHB0.alloc() test\n");
+
+        flush();
+        float** test;
+        test = AHB0_alloc2Df(41, 3);
+        _printf("Pointer created\n");
+        flush();
+
+        _printf("Setting values...\n");
+        flush();
+        for(int row=0; row<41; row++) {
+            for(int col=0; col<3; col++) {
+                test[row][col] = row + col;
+                __printf("%1f ", test[row][col]);
+                flush();
+            }
+            __printf("\n");
+            flush();
+        }
+
+        _printf("Deallocating...\n");
+        flush();
+        AHB0_dealloc2Df(test, 41);
+        _printf("Done.\n");
+
+
+        return true;
+        */
 
 
             return handle_depth_mapping_calibration(gcode);
@@ -681,7 +670,7 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         surface_transform->depth_enabled = false;
 
         // Build depth map
-        zero_depth_maps();
+        //zero_depth_maps();
         //float cartesian[DM_GRID_ELEMENTS][3];
         if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, true)) {
             _printf("Couldn't build depth map - aborting!\n");
@@ -1147,7 +1136,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     newline();
 
     // Make sure the depth maps are blank
-    zero_depth_maps();
+    //zero_depth_maps();
 
 
     // *******************************************************************
@@ -1312,7 +1301,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
             } else {
 
-                _printf("Keeping old depth map.\n");
+                _printf("/!\\ Keeping existing depth map.\n");
 
             }
 
@@ -1361,14 +1350,18 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         for(annealing_try=0; annealing_try<annealing_tries; annealing_try++) {
 
             // Shuffle caltype list
-//            int iter = 3;
-//            for(int i=0; i<CDS_N_CALTYPES * iter; i++) {
-//                float rnd = (float)rand() / RAND_MAX;
-//                int j = rnd * CDS_N_CALTYPES;
-//                int tmp = caltype_order[i % iter];
-//                caltype_order[i % iter] = caltype_order[j];
-//                caltype_order[j] = tmp;
-//            }
+            // Disabled - this really doesn't help, at all. In fact, I get slightly worse results with it!!!
+            // Would be interesting to see whether a weak AI could figure out the optimal order on a per-machine basis.
+/*
+            int iter = 3;
+            for(int i=0; i<CDS_N_CALTYPES * iter; i++) {
+                float rnd = (float)rand() / RAND_MAX;
+                int j = rnd * CDS_N_CALTYPES;
+                int tmp = caltype_order[i % iter];
+                caltype_order[i % iter] = caltype_order[j];
+                caltype_order[j] = tmp;
+            }
+*/
 
             // Twiddle an LED so the user knows we aren't dead.
             // From main.c: "led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok"
@@ -1649,9 +1642,13 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
     print_kinematics();
     
+//    newline();
+//    _printf("Final SIMULATED depths:\n");
+//    print_depths(cur_cartesian);
+
     newline();
-    _printf("Final SIMULATED depths:\n");
-    print_depths(cur_cartesian);
+    _printf("Checking calibration. If it's worse than it was before, you may have to run this several times!\n");
+    depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false);
 
     newline();
     _printf("You can run this command again to see if it gets better, or type M500 to save.\n");
@@ -1910,19 +1907,47 @@ void ComprehensiveDeltaStrategy::init_test_points() {
 
     // Initialize "test points" (grid)
     // -----------------------------------------------------
-    // The grid is (2 * probe_radius) x (2 * probe_radius)
+    // The grid's footprint (what it physically measures) is (2 * probe_radius) x (2 * probe_radius) millimeters.
     float x, y;
     int n = 0;
     float point_spacing = (probe_radius * 2) / (DM_GRID_DIMENSION - 1);
+    float midpoint_index = (DM_GRID_DIMENSION - 1) / 2; // Index to origin in either dimension (5x5 => 2, 7x7 => 3, etc.)
+    _printf("Point spacing: %1.3f\n", point_spacing);
+    
+    for(y=0; y<DM_GRID_DIMENSION; y++) {
+        for(x=0; x<DM_GRID_DIMENSION; x++) {
+            
+            // Convert from grid coords to Cartesian coords
+            float xCart = (-midpoint_index + x) * point_spacing;
+            float yCart = (-midpoint_index + y) * -point_spacing; // We have to invert Y
+
+            test_point[n][X] = xCart;
+            test_point[n][Y] = yCart;
+
+            // Following two lines must be commented in production to avoid stalling the firmware during init!
+//            __printf("Set test point[%d] (X=%1.0f, Y=%1.0f) to { %1.1f, %1.1f }\n", n, x, y, test_point[n][X], test_point[n][Y]);
+//            flush();
+            
+            n++;
+
+        }
+    }
+
+/*
+//  Old code that works for 5x5, but not 7x7:
     for(y = probe_radius; y >= -probe_radius; y-= point_spacing) {
         for(x = -probe_radius; x <= probe_radius; x += point_spacing) {
             test_point[n][X] = x;
             test_point[n][Y] = y;
-//            __printf("Set test point[%d] to { %1.1f, %1.1f }\n", n, test_point[n][X], test_point[n][Y]);
-//            _flush();
+
+            // Following two lines must be commented in production to avoid stalling the firmware during init!
+            __printf("Set test point[%d] (X=%1.0f, Y=%1.0f) to { %1.1f, %1.1f }\n", n, x, y, test_point[n][X], test_point[n][Y]);
+            flush();
+
             n++;
         }
     }
+*/
 
 
     // The method find_nearest_test_point() will only work once the above code is run.
@@ -2463,163 +2488,79 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
 
     push_prefix("DM");
 
-    int origin_steps;	// Steps from probe_height to bed surface at bed center
-    int steps; 		// Steps from probe_height to bed surface at one of the test points
+    if(!geom_dirty) {
 
-    float center[2] = {0, 0};
-    int center_point = find_nearest_test_point(center);
-
-    // Measure depth from probe_from_height at bed center
-
-    prepare_to_probe();
-
-    if(!prime_probe()) {
-        _printf("Couldn't prime probe.\n");
-        pop_prefix();
-        return false;
-    }
-
-    if(do_probe_at(origin_steps, 0, 0)) {
-        depth_map[center_point].rel = 0;
-        depth_map[center_point].abs = zprobe->zsteps_to_mm(origin_steps);
-        if(display_results != RESULTS_NONE) {
-            _printf("Depth to bed surface at center: %d steps (%1.3f mm)\n", origin_steps, depth_map[TP_CTR].abs);
-        }
-    } else {
-        _printf("Couldn't measure depth to origin.\n");
-        pop_prefix();
-        return false;
-    }
-
-//origin_steps = 700;
-
-    // Measure depth from probe_height at all test points
-    float best = 999;
-    float worst = 0;
-
-    // FIRST PASS: Depth-map all active points
-    for(int i=0; i<DM_GRID_ELEMENTS; i++) {
-
-        // If active_points_only, we only probe the points figured out in init_test_points(); else we probe them all
-        // We don't probe TP_CTR because we already did above, in order to be able to store relative depths
-        if(active_point[i] == TP_ACTIVE) {
-
-            // Run the probe
-            if(!do_probe_at(steps, test_point[i][X], test_point[i][Y])) {
-                _printf("do_probe_at() returned false.\n");
-                pop_prefix();
-                return false;
-            }
-//steps = 600;
-
-            // Store result in depth_map
-            depth_map[i].rel = zprobe->zsteps_to_mm(origin_steps - steps);
-            depth_map[i].abs = zprobe->zsteps_to_mm(steps);
-
-            // ...And in cartesian[]
-            // FIXME: I think there is a redundancy here... need to see how both arrays are used by callers.
+        _printf("\n");
+        _printf("Geometry hasn't changed since last depth map - keeping it!\n \n");
+        
+        // Copy the last results out of depth_map
+        for(int i=0; i<DM_GRID_ELEMENTS; i++) {
             cartesian[i][X] = test_point[i][X];
             cartesian[i][Y] = test_point[i][Y];
             cartesian[i][Z] = depth_map[i].rel;
+        }
 
-            // Do some statistics (sign doesn't matter, only magnitude)
-            if(fabs(depth_map[i].rel) < fabs(best)) {
-                best = fabs(depth_map[i].rel);
+    
+    } else {
+
+        // Geometry is dirty - we must re-probe the print surface        
+
+        int origin_steps;	// Steps from probe_height to bed surface at bed center
+        int steps; 		// Steps from probe_height to bed surface at one of the test points
+
+        float center[2] = {0, 0};
+        int center_point = find_nearest_test_point(center);
+
+        // Measure depth from probe_from_height at bed center
+        prepare_to_probe();
+
+        if(!prime_probe()) {
+            _printf("Couldn't prime probe.\n");
+            pop_prefix();
+            return false;
+        }
+    
+        if(do_probe_at(origin_steps, 0, 0)) {
+
+            depth_map[center_point].rel = 0;
+            depth_map[center_point].abs = zprobe->zsteps_to_mm(origin_steps);
+
+            if(display_results != RESULTS_NONE) {
+                _printf("Depth to bed surface at center: %d steps (%1.3f mm)\n", origin_steps, depth_map[TP_CTR].abs);
             }
 
-            if(fabs(depth_map[i].rel) > fabs(worst)) {
-                worst = fabs(depth_map[i].rel);
-            }
+        } else {
 
-            if(display_results == RESULTS_UNFORMATTED) {
-
-                // We're going to plainly print the results, one by one, with no special formatting
-                _printf("Depth: %1.3fmm (%1.3fmm absolute)\n", depth_map[i].rel, depth_map[i].abs);
-
-            }
-
-            flush();
+            _printf("Couldn't measure depth to origin.\n");
+            pop_prefix();
+            return false;
 
         }
-    }
-    
-    // SECOND PASS: Probe neighboring-active points and interpolate.
-    // We're doing two loops because it would have been a hassle to make one loop do everything.
-    // The points are probed in array order, and the active-neigbhor points on the left can't be computed
-    // until their within-radius neighbors' heights are known.
-    if(extrapolate_neighbors) {
 
+    //origin_steps = 700;
+
+        // Measure depth from probe_height at all test points
+        float best = 999;
+        float worst = 0;
+
+        // FIRST PASS: Depth-map all active points
         for(int i=0; i<DM_GRID_ELEMENTS; i++) {
 
-            if(active_point[i] == TP_ACTIVE_NEIGHBOR) {
-
-                float coords[2];
-                int active_idx;
-
-                // X is the coordinate at print_radius.
-                // Equation - complete the squares: x^2 + y^2 = probe_radius^2 - solve for x.
-                // ...
-                // x^2 = probe_radius^2 - y^2
-                // x = sqrt(probe_radius^2 - y^2)
-                coords[X] = sqrt( (probe_radius * probe_radius) - (test_point[i][Y] * test_point[i][Y]) );
-
-                // Necessary to flip coords in Q2/3 because the sqrt(... code above only produces positive results.
-                // Technically, the equation produces "two" answers because by definition, there are TWO X coords
-                // for any given Y - one on the left side of the circle, and the other on the right side.
-                if(test_point[i][X] > 0) {
-                    active_idx = i - 1;	// Neighboring point is to the left
-                } else {
-                    active_idx = i + 1;	// Neighboring point is to the right
-                    coords[X] = -coords[X];
-                }
-                
-                // Y coordinate is the same whether active or active-neighbor
-                coords[Y] = test_point[i][Y];
+            // If active_points_only, we only probe the points figured out in init_test_points(); else we probe them all
+            // We don't probe TP_CTR because we already did above, in order to be able to store relative depths
+            if(active_point[i] == TP_ACTIVE) {
 
                 // Run the probe
-                if(!do_probe_at(steps, coords[X], coords[Y])) {
+                if(!do_probe_at(steps, test_point[i][X], test_point[i][Y])) {
                     _printf("do_probe_at() returned false.\n");
                     pop_prefix();
                     return false;
                 }
-                // steps = 500;
-
-                // To extrapolate, we need the depths of the active-neighbor, and its associated active point
-                struct point_type {
-                    float x;
-                    float y;
-                    cds_depths_t z;
-                };
-
-                // Extrapolate depth at test_point[i] based on the slope between the depths of the active test point & probed point
-                point_type active { test_point[active_idx][X], test_point[active_idx][Y], { depth_map[active_idx].abs, depth_map[active_idx].rel } };
-                point_type probed { coords[X], coords[Y], { zprobe->zsteps_to_mm(steps), zprobe->zsteps_to_mm(origin_steps - steps) } };
-                point_type extrap { test_point[i][X], test_point[i][Y], { 0, 0 } };
-
-                //_printf("neighbor=%d, active=%d\n", i, active_idx);
-                //_printf("active = {%1.3f, %1.3f, %1.3f | %1.3f}\n", active.x, active.y, active.z.abs, active.z.rel);
-                //_printf("probed = {%1.3f, %1.3f, %1.3f | %1.3f}\n", probed.x, probed.y, probed.z.abs, probed.z.rel);
-                //_printf("...\n");
-
-                cds_depths_t rise { probed.z.abs - active.z.abs, probed.z.rel - active.z.rel };
-                float dist_active_to_extrap = sqrt(pow(extrap.x - active.x, 2));
-                float dist_active_to_probed = sqrt(pow(probed.x - active.x, 2));
-                float dist_mul = dist_active_to_extrap / dist_active_to_probed; // This will be 1.something
-
-                //_printf("rise = %1.3f | %1.3f\n", rise.abs, rise.rel);
-                //_printf("dist active to extrap = %1.3f\n", dist_active_to_extrap);
-                //_printf("dist active to probed = %1.3f\n", dist_active_to_probed);
-                //_printf("dist mul = %1.3f\n", dist_mul);
-
-                extrap.z.abs = active.z.abs + (rise.abs * dist_mul);
-                extrap.z.rel = zprobe->zsteps_to_mm(origin_steps) - extrap.z.abs;
-
-                //_printf("extrap = {%1.3f, %1.3f, %1.3f | %1.3f}\n", extrap.x, extrap.y, extrap.z.abs, extrap.z.rel);
-                //newline();
+    //steps = 600;
 
                 // Store result in depth_map
-                depth_map[i].rel = extrap.z.rel;
-                depth_map[i].abs = extrap.z.abs;
+                depth_map[i].rel = zprobe->zsteps_to_mm(origin_steps - steps);
+                depth_map[i].abs = zprobe->zsteps_to_mm(steps);
 
                 // ...And in cartesian[]
                 // FIXME: I think there is a redundancy here... need to see how both arrays are used by callers.
@@ -2627,28 +2568,141 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
                 cartesian[i][Y] = test_point[i][Y];
                 cartesian[i][Z] = depth_map[i].rel;
 
+                // Do some statistics (sign doesn't matter, only magnitude)
+                if(fabs(depth_map[i].rel) < fabs(best)) {
+                    best = fabs(depth_map[i].rel);
+                }
 
-            } // if TP_ACTIVE_NEIGHBOR
+                if(fabs(depth_map[i].rel) > fabs(worst)) {
+                    worst = fabs(depth_map[i].rel);
+                }
 
-        } // for i
+                if(display_results == RESULTS_UNFORMATTED) {
 
-    } else {
+                    // We're going to plainly print the results, one by one, with no special formatting
+                    _printf("Depth: %1.3fmm (%1.3fmm absolute)\n", depth_map[i].rel, depth_map[i].abs);
 
-        for(int i=0; i<DM_GRID_ELEMENTS; i++) {
+                }
 
-            if(active_point[i] == TP_ACTIVE_NEIGHBOR) {
+                flush();
 
-                depth_map[i].abs = 0;
-                depth_map[i].rel = 0;
-                cartesian[i][X] = test_point[i][X];
-                cartesian[i][Y] = test_point[i][Y];
-                cartesian[i][Z] = 0;
+            }
+        }
+    
+        // SECOND PASS: Probe neighboring-active points and interpolate.
+        // We're doing two loops because it would have been a hassle to make one loop do everything.
+        // The points are probed in array order, and the active-neigbhor points on the left can't be computed
+        // until their within-radius neighbors' heights are known.
+        if(extrapolate_neighbors) {
+
+            for(int i=0; i<DM_GRID_ELEMENTS; i++) {
+
+                if(active_point[i] == TP_ACTIVE_NEIGHBOR) {
+
+                    float coords[2];
+                    int active_idx;
+
+                    // X is the coordinate at print_radius.
+                    // Equation - complete the squares: x^2 + y^2 = probe_radius^2 - solve for x.
+                    // ...
+                    // x^2 = probe_radius^2 - y^2
+                    // x = sqrt(probe_radius^2 - y^2)
+                    coords[X] = sqrt( (probe_radius * probe_radius) - (test_point[i][Y] * test_point[i][Y]) );
+
+                    // Necessary to flip coords in Q2/3 because the sqrt(... code above only produces positive results.
+                    // Technically, the equation produces "two" answers because by definition, there are TWO X coords
+                    // for any given Y - one on the left side of the circle, and the other on the right side.
+                    if(test_point[i][X] > 0) {
+                        active_idx = i - 1;	// Neighboring point is to the left
+                    } else {
+                        active_idx = i + 1;	// Neighboring point is to the right
+                        coords[X] = -coords[X];
+                    }
+                    
+                    // Y coordinate is the same whether active or active-neighbor
+                    coords[Y] = test_point[i][Y];
+
+                    // Run the probe
+                    if(!do_probe_at(steps, coords[X], coords[Y])) {
+                        _printf("do_probe_at() returned false.\n");
+                        pop_prefix();
+                        return false;
+                    }
+                    // steps = 500;
+
+                    // To extrapolate, we need the depths of the active-neighbor, and its associated active point
+                    struct point_type {
+                        float x;
+                        float y;
+                        cds_depths_t z;
+                    };
+
+                    // Extrapolate depth at test_point[i] based on the slope between the depths of the active test point & probed point
+                    point_type active { test_point[active_idx][X], test_point[active_idx][Y], { depth_map[active_idx].abs, depth_map[active_idx].rel } };
+                    point_type probed { coords[X], coords[Y], { zprobe->zsteps_to_mm(steps), zprobe->zsteps_to_mm(origin_steps - steps) } };
+                    point_type extrap { test_point[i][X], test_point[i][Y], { 0, 0 } };
+
+                    //_printf("neighbor=%d, active=%d\n", i, active_idx);
+                    //_printf("active = {%1.3f, %1.3f, %1.3f | %1.3f}\n", active.x, active.y, active.z.abs, active.z.rel);
+                    //_printf("probed = {%1.3f, %1.3f, %1.3f | %1.3f}\n", probed.x, probed.y, probed.z.abs, probed.z.rel);
+                    //_printf("...\n");
+
+                    cds_depths_t rise { probed.z.abs - active.z.abs, probed.z.rel - active.z.rel };
+                    float dist_active_to_extrap = sqrt(pow(extrap.x - active.x, 2));
+                    float dist_active_to_probed = sqrt(pow(probed.x - active.x, 2));
+                    float dist_mul = dist_active_to_extrap / dist_active_to_probed; // This will be 1.something
+
+                    //_printf("rise = %1.3f | %1.3f\n", rise.abs, rise.rel);
+                    //_printf("dist active to extrap = %1.3f\n", dist_active_to_extrap);
+                    //_printf("dist active to probed = %1.3f\n", dist_active_to_probed);
+                    //_printf("dist mul = %1.3f\n", dist_mul);
+
+                    extrap.z.abs = active.z.abs + (rise.abs * dist_mul);
+                    extrap.z.rel = zprobe->zsteps_to_mm(origin_steps) - extrap.z.abs;
+
+                    //_printf("extrap = {%1.3f, %1.3f, %1.3f | %1.3f}\n", extrap.x, extrap.y, extrap.z.abs, extrap.z.rel);
+                    //newline();
+
+                    // Store result in depth_map
+                    depth_map[i].rel = extrap.z.rel;
+                    depth_map[i].abs = extrap.z.abs;
+
+                    // ...And in cartesian[]
+                    // FIXME: I think there is a redundancy here... need to see how both arrays are used by callers.
+                    cartesian[i][X] = test_point[i][X];
+                    cartesian[i][Y] = test_point[i][Y];
+                    cartesian[i][Z] = depth_map[i].rel;
+
+
+                } // if TP_ACTIVE_NEIGHBOR
+
+            } // for i
+
+        } else {
+
+            for(int i=0; i<DM_GRID_ELEMENTS; i++) {
+
+                if(active_point[i] == TP_ACTIVE_NEIGHBOR) {
+
+                    depth_map[i].abs = 0;
+                    depth_map[i].rel = 0;
+                    cartesian[i][X] = test_point[i][X];
+                    cartesian[i][Y] = test_point[i][Y];
+                    cartesian[i][Z] = 0;
+
+                }
 
             }
 
-        }
+        } // if(extrapolate_neighbors)
 
-    } // if(extrapolate_neighbors)
+    } // if(!geom_dirty)
+
+
+    // --------------------
+    // End of depth mapping
+    // --------------------
+
 
     // Show the results (pretty)
     if(display_results == RESULTS_FORMATTED) {
@@ -2656,6 +2710,9 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
     }
 
     pop_prefix();
+    
+    geom_dirty = false;
+    
     return true;
 
 }
@@ -2871,8 +2928,7 @@ bool ComprehensiveDeltaStrategy::iterative_calibration(bool keep_settings) {
             // Examine differences between tower depths and use this to adjust delta_radius
             float avg = (depth[TP_X] + depth[TP_Y] + depth[TP_Z]) / 3.0;
             float deviation = depth[TP_CTR] - avg;
-            _printf("Delta Radius - Depths: Center=%1.3f, Tower average=%1.3f => Difference: %1.3f (want %1.3f)\n", depth[TP_CTR], avg, deviation, target);
-            _printf("Delta radius is ");
+            _printf("Delta Radius - Depths: Center=%1.3f, Tower average=%1.3f => Difference: %1.3f (want %1.3f), ", depth[TP_CTR], avg, deviation, target);
 
             // Deviation within tolerance?
             if(fabs(deviation) <= target) {
@@ -2938,6 +2994,7 @@ void ComprehensiveDeltaStrategy::prepare_to_probe() {
 }
 
 
+/*
 // Enforce clean geometry
 bool ComprehensiveDeltaStrategy::require_clean_geometry() {
 
@@ -2951,7 +3008,7 @@ bool ComprehensiveDeltaStrategy::require_clean_geometry() {
     return true;
 
 }
-
+*/
 
 // Prime the probe, if set
 bool ComprehensiveDeltaStrategy::prime_probe() {
@@ -3172,6 +3229,7 @@ bool ComprehensiveDeltaStrategy::set_trim(float x, float y, float z) {
         __printf("[ES] Unable to set trim. Are endstops enabled?\n");
     }
 
+    geom_dirty = true;
     return ok;
 }
 
@@ -3193,6 +3251,8 @@ bool ComprehensiveDeltaStrategy::get_trim(float &x, float &y, float &z) {
 
 // Arm length
 bool ComprehensiveDeltaStrategy::set_arm_length(float arm_length, bool update) {
+
+    geom_dirty = true;
 
     options['L'] = arm_length;
     if(THEKERNEL->robot->arm_solution->set_optional(options)) {
@@ -3221,6 +3281,8 @@ bool ComprehensiveDeltaStrategy::get_arm_length(float &arm_length) {
 // Delta radius
 bool ComprehensiveDeltaStrategy::set_delta_radius(float delta_radius, bool update) {
 
+    geom_dirty = true;
+
     options['R'] = delta_radius;
     if(THEKERNEL->robot->arm_solution->set_optional(options)) {
         if(update) {
@@ -3247,6 +3309,8 @@ bool ComprehensiveDeltaStrategy::get_delta_radius(float &delta_radius) {
 
 // Tower radius offsets
 bool ComprehensiveDeltaStrategy::set_tower_radius_offsets(float x, float y, float z, bool update) {
+
+    geom_dirty = true;
 
     options['A'] = x;
     options['B'] = y;
@@ -3279,6 +3343,8 @@ bool ComprehensiveDeltaStrategy::get_tower_radius_offsets(float &x, float &y, fl
 // Tower angle offsets
 bool ComprehensiveDeltaStrategy::set_tower_angle_offsets(float x, float y, float z, bool update) {
 
+    geom_dirty = true;
+
     options['D'] = x;
     options['E'] = y;
     options['F'] = z;
@@ -3309,6 +3375,8 @@ bool ComprehensiveDeltaStrategy::get_tower_angle_offsets(float &x, float &y, flo
 
 // Arm length offsets
 bool ComprehensiveDeltaStrategy::set_tower_arm_offsets(float x, float y, float z, bool update) {
+
+    geom_dirty = true;
 
     options['T'] = x;
     options['U'] = y;
@@ -3342,6 +3410,8 @@ bool ComprehensiveDeltaStrategy::get_tower_arm_offsets(float &x, float &y, float
 bool ComprehensiveDeltaStrategy::set_virtual_shimming(float x, float y, float z, bool update) {
 
 //_printf("SVS: {%1.3f, %1.3f, %1.3f}\n", x, y, z);
+
+    geom_dirty = true;
 
     // Z depths are in millimeters relative to surface, negative=lower
     surface_transform->tri_points[X][Z] = x;
@@ -3554,7 +3624,9 @@ void ComprehensiveDeltaStrategy::print_depths(cds_depths_t *depths) {
     // The difference between "best/worst" and "min/max" is that best and worst are indifferent to sign.
     calc_statistics(rel_depths, DM_GRID_ELEMENTS, mu, sigma, min, max);
     float energy = calc_energy(depths);
-    __printf("\n[PD] Best=%1.3f, worst=%1.3f, min=%1.3f, max=%1.3f, mu=%1.3f, sigma=%1.3f, energy=%1.3f\n", best, worst, min, max, mu, sigma, energy);
+    newline();
+    __printf("[PD]\n");
+    __printf("[PD] Best=%1.3f, worst=%1.3f, min=%1.3f, max=%1.3f, mu=%1.3f, sigma=%1.3f, energy=%1.3f\n", best, worst, min, max, mu, sigma, energy);
 
     AHB0.dealloc(rel_depths);
 
