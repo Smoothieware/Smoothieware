@@ -1,29 +1,35 @@
 ==626Pilot's Delta Calibration==
 This firmware includes an advanced auto-calibration system for Delta printers. See comments at the top of src/modules/tools/zprobe/ComprehensiveDeltaStrategy.cpp for more info.
 
-**At this time, you MUST compile the firmware yourself. The firmware.bin in this repo is outdated and I haven't got around to fixing it yet! Instructions for compiling & flashing the firmware are further down.**
-
-**The calibration section of this firmware consumes enough RAM to crash your controller if you have LCD controllers, etc. turned on. If you can't calibrate without the controller locking up, disable that in config. Reducing memory usage is on the list of things to do, and is already in progress!**
+**Download firmware.bin from the FirmwareBin directory, put it on your SD card, and reboot.** Make sure you're downloading firmware.bin directly, and not just saving the page you find it on. If you don't download it directly, the controller won't boot! If you need to build and upload your own firmware, instructions are further down in this file.
 
 The auto-calibration system requires either a Z-probe, or a print surface resting on force-sensitive resistors (FSRs) that have been hooked up to your controller to serve as "min endstops." If you need a Z-probe, this is the one I designed, which can be built for about $15 + some 3D-printed parts: http://www.thingiverse.com/thing:161753
 
-You will need to add some settings to your config file - see the Azteeg X5 and Smoothieboard ".delta" directories under ConfigSamples. I put all the settings you need near the top.
+It is also possible to use a cheap (less than $5) mechanical endstop. (Not an optical one.) You will need to find a way to mount it to your effector. Make sure that the end of the lever (where it will touch the glass) is as close to dead center as possible! Otherwise, the calibration won't be as good.
+
+You will need to add some settings to your config file - see the Azteeg X5 and Smoothieboard ".delta" directories under ConfigSamples. I put all the settings you need near the top. **The Smoothieboard file is more up-to-date, as I no longer have a working Azteeg X5.**
 
 The recommended way to use this on a Delta printer is:
 * G29 (calibrate your probe)
+* G32 (iterative calibration - gets endstops/delta radius correct - type M500 after it's done to save!)
 * G31 O P Q R S (simulated annealing - corrects for errors in X, Y, and Z - it may help to run this multiple times)
 * G31 A (depth mapping - corrects errors in Z, but not X or Y - benefits from simulated annealing, though)
-* G32 (iterative calibration - gets endstops/delta radius correct)
+* M500 to save everything
 
-It's a good idea to run G29 first, to get an idea of how repeatable your probe is. You want 30 microns (0.03mm) or less, ideally zero. If your probe's repeatability is worse than that, you may have printed it too loosely (not enough filament flow) or you may have "delta arm blues" or some other slop in the printer that should be corrected before trying any sort of calibration..
+It's a good idea to run G29 first, to get an idea of how repeatable your probe is. You want 30 microns (0.03mm) or less, ideally zero. If your probe's repeatability is worse than that, you may have printed your mount too loosely (not enough filament flow) or you may have "delta arm blues" or some other slop in the printer that should be corrected before trying any sort of calibration.
 
 After your probe is calibrated, you can run G32, which will perform a standard "GeneB"-style calibration, in which delta radius and endstops are adjusted. That will get your printer a little closer to its optimal configuration. (If you already have an existing sorta-good calibration, you can skip this step.)
 
-Then, you can run the simulated annealing calibration. Type G31 OPQRS. If you want to completely start from scratch, you can run G31 OPQRSY (the Y means "reset all offsets to 0"). The printer will go down and tap the print surface in a grid, and then start the simulated annealing process. It should take a minute or so, and you'll see one of the LEDs on the controller flash on and off slowly to indicate that it's working.
+Then, you can run the simulated annealing calibration. Type G31 OPQRS. If you want to completely start from scratch, you can run G31 OPQRSY (the Y means "reset all offsets to 0"). The printer will go down and tap the print surface in a grid, and then start the simulated annealing process. It should take a few minutes, and you'll see two of the LEDs on the controller flash on and off slowly to indicate that it's working.
 
-After the annealing is finished, you can run G31 Z to depth-map the print surface and report the values. If all the numbers are less than 0.1mm, you're in good shape. You may want to run G31 OPQRS (**not OPQRSY**, which would lose all the progress it made before) to see if you can get an improved calibration. I usually run G31 OPQRS 1-4 times, depending on whether the successive runs show improvement. Usually, one run is enough.
+The algorithm has the ability to transit through worse solutions in order to find better ones, so you may find that as you run G31 OPQRS, it gets worse before it gets better, in two ways. First, the readout that tells you the energy level (during annealing) may rise before it falls. (You want the energy reading to be as low as possible, ideally 0.) Second, you may find that running G31 OPQRS produces worse (higher energy) results that then become better. Each time you get a better result, my recommendation is to type M500 so that the calibration is saved. That way, you can run the annealing process five times if you want, and if it doesn't produce an improvement, you can just reset the controller.
 
-G31 OPQRS fixes errors in X, Y, and Z, assisting greatly with dimensional accuracy. However, it may be that you want an even better calibration. After G31 OPQRS, you can run G31 A. That will tap the bed in a grid as before, but instead of adjusting the calibration, it will store a depth map of the print surface and use this to correct Z in real time. This ONLY fixes errors in Z, not X or Y, so you should only run it AFTER you do the annealing. Afterwards, you can run G31 Z again, and it'll show you the final corrected depths - they should be within a few microns of zero!
+There ARE conditions in which the simulated annealing will not improve the calibration:
+* If your calibration is already fairly good (less than 0.1 energy), this may well be the case. This is also a good reason to type M500 after you run G32 (the GeneB-style calibration).
+* It may also be that you have too much tower lean. Any tower lean will twist the effector so that it's not parallell ("tram") with the print surface. That twisting will rotate the effector's nozzle slightly off from center, meaning that its XYZ position is deflected a little from where the printer thinks it is! This can throw off the calibration. Using a digital angle gauge like the ones used to algin table saws, you may be able to re-tighten your towers to your chassis such that they have less lean. Some delta printers are better about this than others.
+* It may be that there's an issue with the probe. I found that using my Hall-O probe mount, it worked very poorly when I used 16-gauge wires to conenct it because the stiffness of the wire would push and pull against the probe during travel. If you want to use my Hall-O probe, make sure you use thin wire (22-gauge or higher), such as that which comes with the Hall-O board.
+
+G31 OPQRS fixes errors in X, Y, and Z, assisting greatly with dimensional accuracy. However, there is one final step to get an even better calibration. After G31 OPQRS, you can run G31 A. That will tap the bed in a grid as before, but instead of adjusting the calibration, it will store a depth map of the print surface and use this to correct Z in real time. This ONLY fixes errors in Z, not X or Y, so you should only run it AFTER you do the annealing. Afterwards, you can run G31 Z again, and it'll show you the final corrected depths - they should be within a few microns of zero!
 
 When you're satisfied with your calibration, type M500 to save everything. If you turn the printer off and then on again, it WON'T lose its configuration, so you only have to do this calibration once. Run it again if the printer is moved, or a heavy object or person collides with it.
 
