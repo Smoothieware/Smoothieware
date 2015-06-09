@@ -168,7 +168,6 @@ void Robot::on_config_reload(void *argument)
     } else if(solution_checksum == rotatable_delta_checksum) {
         this->arm_solution = new RotatableDeltaSolution(THEKERNEL->config);
 
-
     } else if(solution_checksum == morgan_checksum) {
         this->arm_solution = new MorganSCARASolution(THEKERNEL->config);
 

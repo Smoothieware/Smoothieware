@@ -6,13 +6,13 @@
 #include "libs/nuts_bolts.h"
 #include "libs/Config.h"
 #include "libs/utils.h"
-
+#include "StreamOutputPool.h"
 #include <fastmath.h>
 
 #define delta_e_checksum        				CHECKSUM("delta_e_checksum")
-#define delta_f_checksum   		     			CHECKSUM("delta_f_checksum")
+#define delta_f_checksum   		    			CHECKSUM("delta_f_checksum")
 #define delta_re_checksum       				CHECKSUM("delta_re_checksum")
-#define delta_rf_checksum       			 	CHECKSUM("delta_rf_checksum")
+#define delta_rf_checksum       				CHECKSUM("delta_rf_checksum")
 #define delta_z_offset_checksum      			CHECKSUM("delta_z_offset_checksum")
 
 #define delta_ee_offs_checksum     		  		CHECKSUM("delta_ee_offs_checksum")
@@ -20,7 +20,7 @@
 
 #define z_home_angle_checksum        			CHECKSUM("z_home_angle_checksum")
 
-#define delta_printable_radius_checksum    	 	CHECKSUM("delta_printable_radius_checksum")
+#define delta_printable_radius_checksum    		CHECKSUM("delta_printable_radius_checksum")
 
 #define xyz_full_steps_per_rotation_checksum	CHECKSUM("xyz_full_steps_per_rotation_checksum")
 #define xyz_microsteps_checksum					CHECKSUM("xyz_microsteps_checksum")
@@ -124,63 +124,26 @@ RotatableDeltaSolution::RotatableDeltaSolution(Config* config)
 	//Lastly, if you are not using a small and large pulley system like the FirePick is, simply make these two values
 	//the same, BUT NOT ZERO.
 
-	ConfigValue *result = new ConfigValue;
-	uint16_t check_sums[3];
-
-	result -> clear();
-	get_checksums(check_sums, "alpha_steps_per_mm");
-	result->found = true;
-	result->check_sums[0] = check_sums[0];
-	result->check_sums[1] = check_sums[1];
-	result->check_sums[2] = check_sums[2];
-	//result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0; //need to change calc to mm from degrees
-	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/(two_pi*delta_rf);
-
-	//now we need to update the config for alpha
-	Kernel().config->config_cache->replace_or_push_back(result);
-
-	result -> clear();
-	get_checksums(check_sums, "beta_steps_per_mm");
-	result->found = true;
-	result->check_sums[0] = check_sums[0];
-	result->check_sums[1] = check_sums[1];
-	result->check_sums[2] = check_sums[2];
-	//result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0; //need to change calc to mm from degrees
-	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/(two_pi*delta_rf);
-
-	//now we need to update the config for beta
-	Kernel().config->config_cache->replace_or_push_back(result);
-
-	result -> clear();
-	get_checksums(check_sums, "gamma_steps_per_mm");
-	result->found = true;
-	result->check_sums[0] = check_sums[0];
-	result->check_sums[1] = check_sums[1];
-	result->check_sums[2] = check_sums[2];
-	//result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360.0; //need to change calc to mm from degrees
-	result->value = (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/(two_pi*delta_rf);
-
-	//now we need to update the config for gamma
-	Kernel().config->config_cache->replace_or_push_back(result);
-
-    init();
+	init();
 }
 
 // inverse kinematics
 // helper functions, calculates angle theta1 (for YZ-pane)
 int RotatableDeltaSolution::delta_calcAngleYZ(float x0, float y0, float z0, float &theta)
 {
-    float y1 = -0.5 * 0.57735 * delta_f; // f/2 * tg 30
-    y0 -= 0.5 * 0.57735       * delta_e;    // shift center to edge
+    float y1 = -0.5 * tan30 * delta_f; // f/2 * tan 30
+    y0 -= 0.5 * tan30       * delta_e; // shift center to edge
     // z = a + b*y
-    float a = (x0*x0 + y0*y0 + z0*z0 +delta_rf*delta_rf - delta_re*delta_re - y1*y1) / (2.0*z0);
+    float a = (x0*x0 + y0*y0 + z0*z0 + delta_rf*delta_rf - delta_re*delta_re - y1*y1) / (2.0*z0);
     float b = (y1-y0)/z0;
-    // discriminant
-    float d = -(a+b*y1)*(a+b*y1)+delta_rf*(b*b*delta_rf+delta_rf);
-    if (d < 0) return -1; // non-existing point
-    float yj = (y1 - a*b - sqrt(d))/(b*b + 1.0); // choosing outer point
+
+    float d = -(a+b*y1)*(a+b*y1) + delta_rf*(b*b*delta_rf+delta_rf); // discriminant
+    if (d < 0) return -1;                                            // non-existing point
+
+    float yj = (y1 - a*b - sqrt(d))/(b*b + 1.0);                     // choosing outer point
     float zj = a + b*yj;
-    theta = 180.0*atan(-zj/(y1 - yj))/pi + ((yj>y1)?180.0:0.0);
+
+    theta = 180.0F*atan(-zj/(y1 - yj))/pi + ((yj>y1)?180.0:0.0);
     return 0;
 }
 
@@ -188,12 +151,12 @@ int RotatableDeltaSolution::delta_calcAngleYZ(float x0, float y0, float z0, floa
 // returned status: 0=OK, -1=non-existing position
 int RotatableDeltaSolution::delta_calcForward(float theta1, float theta2, float theta3, float &x0, float &y0, float &z0)
 {
-     float t = (delta_f-delta_e)*tan30/2.0;
-     float dtr = pi/(float)180.0;
+     float t = (delta_f-delta_e)*tan30/2.0F;
+     float degrees_to_radians = pi/180.0F;
 
-     theta1 *= dtr;
-     theta2 *= dtr;
-     theta3 *= dtr;
+     theta1 *= degrees_to_radians;
+     theta2 *= degrees_to_radians;
+     theta3 *= degrees_to_radians;
 
      float y1 = -(t + delta_rf*cos(theta1));
      float z1 = -delta_rf*sin(theta1);
@@ -233,16 +196,16 @@ int RotatableDeltaSolution::delta_calcForward(float theta1, float theta2, float 
      x0 = (a1*z0 + b1)/dnm;
      y0 = (a2*z0 + b2)/dnm;
 
-     z0 -= z_calc_offset; //nj
+     z0 += z_calc_offset; //nj
      return 0;
 }
 
 
 void RotatableDeltaSolution::init() {
 
-	z_calc_offset  = ((delta_z_offset - tool_offset - delta_ee_offs) * -1.0);
+	z_calc_offset  = (delta_z_offset - tool_offset - delta_ee_offs)*-1;
 
-    // This is calculated from the angles specified in the config (file), after applying forward
+    // This is calculated from the Z_HOME_ANGLE angles specified in the config (file), after applying forward
     // kinematics, and adding the Z calc offset to it.
 	z_home_offs    = (((delta_z_offset - tool_offset - delta_ee_offs) - 182.002) - 0.5);
 
@@ -250,75 +213,69 @@ void RotatableDeltaSolution::init() {
 
 void RotatableDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] )
 {
-	//We need to translate the cartesian coordinates in mm to the actuator position required in mm so the stepper motor  functions
-	float alpha_theta = 0;
-	float beta_theta  = 0;
-	float gamma_theta = 0;
+	//We need to translate the Cartesian coordinates in mm to the actuator position required in mm so the stepper motor  functions
+	float alpha_theta = 0.0F;
+	float beta_theta  = 0.0F;
+	float gamma_theta = 0.0F;
 
 	//Code from Trossen Robotics tutorial.
-	//The trossen tutorial puts the "X" in the front/middle. FPD puts this arm in the back/middle for aesthetics.
-	float rotated_x = -1.0 * cartesian_mm[X_AXIS];
-	float rotated_y = -1.0 * cartesian_mm[Y_AXIS];
-	float z_with_offset = cartesian_mm[Z_AXIS] + z_calc_offset; //The delta calc below places zero at the top.  Subtract the Z offset to make zero at the bottom.
 
-	int status =              delta_calcAngleYZ(rotated_x,                           rotated_y,                         z_with_offset, alpha_theta);
-	if (status == 0) status = delta_calcAngleYZ(rotated_x*cos120 + rotated_y*sin120, rotated_y*cos120-rotated_x*sin120, z_with_offset, beta_theta);  // rotate coords to +120 deg
-	if (status == 0) status = delta_calcAngleYZ(rotated_x*cos120 - rotated_y*sin120, rotated_y*cos120+rotated_x*sin120, z_with_offset, gamma_theta);  // rotate coords to -120 deg
+	float x0 = cartesian_mm[X_AXIS];
+	float y0 = cartesian_mm[Y_AXIS];
+	float z_with_offset = cartesian_mm[Z_AXIS] + z_calc_offset; //The delta calculation below places zero at the top.  Subtract the Z offset to make zero at the bottom.
 
-	if (status == -1)
+	int status =              delta_calcAngleYZ(x0,                    y0,                  z_with_offset, alpha_theta);
+	if (status == 0) status = delta_calcAngleYZ(x0*cos120 + y0*sin120, y0*cos120-x0*sin120, z_with_offset, beta_theta);  // rotate co-ordinates to +120 deg
+	if (status == 0) status = delta_calcAngleYZ(x0*cos120 - y0*sin120, y0*cos120+x0*sin120, z_with_offset, gamma_theta);  // rotate co-ordinates to -120 deg
+
+	if (status == -1)  //something went wrong
 	{
-
-	    //SERIAL_ECHO("ERROR: Delta calculation fail!  Unable to move to:");
-	    //SERIAL_ECHO("    x="); SERIAL_ECHO(cartesian_mm[X_AXIS]);
-	    //SERIAL_ECHO("    y="); SERIAL_ECHO(cartesian_mm[Y_AXIS]);
-	    //SERIAL_ECHO("    z="); SERIAL_ECHO(cartesian_mm[Z_AXIS]);
-	    //SERIAL_ECHO(" CalcZ="); SERIAL_ECHO(Z_CALC_OFFSET);
-	    //SERIAL_ECHO(" Offz="); SERIAL_ECHOLN(z_with_offset);
+	    THEKERNEL->streams->printf("ERROR: Delta calculation fail!  Unable to move to:\n");
+	    THEKERNEL->streams->printf("    x= %f\n",cartesian_mm[X_AXIS]);
+	    THEKERNEL->streams->printf("    y= %f\n",cartesian_mm[Y_AXIS]);
+	    THEKERNEL->streams->printf("    z= %f\n",cartesian_mm[Z_AXIS]);
+	    THEKERNEL->streams->printf(" CalcZ= %f\n",z_calc_offset);
+	    THEKERNEL->streams->printf(" Offz= %f\n",z_with_offset);
 	  }
 	  else
 	  {
-		  // We now have the angle required to be at cartesian_mm[x] cartesian_mm[y] cartesian_mm[z]
-		  // in the form of the angles alpha_theta beta_theta gamma_theta and we now need to work out
-		  // in mm the position the stepper motor should be at.
-		  // For this, we need to be aware of the pulley ratio in the machine as FirePick the machine this
-		  // is modeled on, uses a pulley reduction system to increase the accuracy of the device.
-		  //
-		  // actuator_mm[ALPHA_STEPPER]
-		  // actuator_mm[BETA_STEPPER ]
-		  // actuator_mm[GAMMA_STEPPER]
+		  //The Trossen tutorial puts the "X" in the front/middle, FPD puts this arm in the back/middle for aesthetics.
+		  //so we make them negative!
 
-		//    SERIAL_ECHO("cartesian x="); SERIAL_ECHO(cartesian_mm[X_AXIS]);
-		//    SERIAL_ECHO(" y="); SERIAL_ECHO(cartesian_mm[Y_AXIS]);
-		//    SERIAL_ECHO(" z="); SERIAL_ECHO(cartesian_mm[Z_AXIS]);
-		//    SERIAL_ECHO(" Offz="); SERIAL_ECHO(z_with_offset);
-		//    SERIAL_ECHO(" delta x="); SERIAL_ECHO(delta[X_AXIS]);
-		//    SERIAL_ECHO(" y="); SERIAL_ECHO(delta[Y_AXIS]);
-		//    SERIAL_ECHO(" z="); SERIAL_ECHOLN(delta[Z_AXIS]);
+		  actuator_mm[ALPHA_STEPPER] = alpha_theta;
+		  actuator_mm[BETA_STEPPER ] = beta_theta;
+		  actuator_mm[GAMMA_STEPPER] = gamma_theta;
+
+//		  THEKERNEL->streams->printf("cartesian x= %f\n\r",cartesian_mm[X_AXIS]);
+//		  THEKERNEL->streams->printf(" y= %f\n\r",cartesian_mm[Y_AXIS]);
+//		  THEKERNEL->streams->printf(" z= %f\n\r",cartesian_mm[Z_AXIS]);
+//		  THEKERNEL->streams->printf(" Offz= %f\n\r",z_with_offset);
+//		  THEKERNEL->streams->printf(" delta x= %f\n\r",delta[X_AXIS]);
+//		  THEKERNEL->streams->printf(" y= %f\n\r",delta[Y_AXIS]);
+//		  THEKERNEL->streams->printf(" z= %f\n\r",delta[Z_AXIS]);
 	  }
 
 }
 
 void RotatableDeltaSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] )
 {
-	//junk to do nothing until I port the code from Marlin
-    cartesian_mm[X_AXIS] = actuator_mm[ALPHA_STEPPER];
-    cartesian_mm[Y_AXIS] = actuator_mm[BETA_STEPPER ];
-    cartesian_mm[Z_AXIS] = actuator_mm[GAMMA_STEPPER];
+    //Use forward kinematics
+    delta_calcForward(actuator_mm[ALPHA_STEPPER], actuator_mm[BETA_STEPPER ], actuator_mm[GAMMA_STEPPER], cartesian_mm[X_AXIS], cartesian_mm[Y_AXIS], cartesian_mm[Z_AXIS]);
 }
 
 bool RotatableDeltaSolution::set_optional(const arm_options_t& options) {
 
     for(auto &i : options) {
         switch(i.first) {
-            case 'A': delta_e				 = i.second; break;
-            case 'B': delta_f				 = i.second; break;
-            case 'C': delta_re				 = i.second; break;
-            case 'D': delta_rf				 = i.second; break;
-            case 'E': delta_z_offset		 = i.second; break;
-            case 'F': delta_ee_offs			 = i.second; break;
-            case 'G': tool_offset			 = i.second; break;
-            case 'H': z_home_angle			 = i.second; break;
-            case 'I': delta_printable_radius = i.second; break;
+            case 'A': delta_e				= i.second; break;
+            case 'B': delta_f				= i.second; break;
+            case 'C': delta_re			 = i.second; break;
+            case 'D': delta_rf				= i.second; break;
+            case 'E': delta_z_offset		= i.second; break;
+            case 'F': delta_ee_offs		 = i.second; break;
+            case 'G': tool_offset			= i.second; break;
+            case 'H': z_home_angle		 = i.second; break;
+            case 'I': delta_printable_radius    = i.second; break;
         }
     }
     init();

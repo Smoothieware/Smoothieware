@@ -151,11 +151,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.854090020" name="mbed_custom.cpp" rcbsApplicability="disable" resourcePath="build/mbed_custom.cpp" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1114518429.1012745617">
-						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1114518429.1012745617" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1114518429">
-							<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.851195926" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input"/>
-						</tool>
-					</fileInfo>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -310,11 +305,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.1404227276" name="mbed_custom.cpp" rcbsApplicability="disable" resourcePath="build/mbed_custom.cpp" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1733471964.985132844">
-						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1733471964.985132844" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1733471964">
-							<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.888260451" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input"/>
-						</tool>
-					</fileInfo>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -478,11 +468,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="ilg.gnuarmeclipse.managedbuild.cross.toolchain.base.1516404583.1636820019.280256172.1279458932" name="mbed_custom.cpp" rcbsApplicability="disable" resourcePath="build/mbed_custom.cpp" toolsToInvoke="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1945032321.108327510">
-						<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1945032321.108327510" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1945032321">
-							<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.87881146" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input"/>
-						</tool>
-					</fileInfo>
 					<sourceEntries>
 						<entry excluding="mbed/" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 					</sourceEntries>

@@ -6,7 +6,7 @@
 */
 
 /*
- * Update by Douglas Pearless to add Rotatable Delta arm for FirePick
+ * Update by Douglas Pearless (DHP) to add Rotatable Delta arm for FirePick
  */
 #include "libs/Kernel.h"
 
