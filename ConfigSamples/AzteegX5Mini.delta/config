@@ -121,6 +121,7 @@ microseconds_per_step_pulse                  1                # Duration of step
 base_stepping_frequency                      100000           # Base frequency for stepping
 
 
+
 # Stepper module pins ( ports, and pin numbers, appending "!" to the number will invert a pin )
 # ---------------------------------------------------------------------
 alpha_step_pin                               2.1              # Pin for alpha stepper step signal

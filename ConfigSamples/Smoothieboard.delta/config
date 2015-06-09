@@ -125,8 +125,11 @@ gamma_trim                                   0                # software trim fo
 # ---------------------------------------------------------------------
 microseconds_per_step_pulse                  1                # Duration of step pulses to stepper drivers, in microseconds
 <<<<<<< HEAD
+<<<<<<< HEAD
 base_stepping_frequency                      100000           # Base frequency for stepping
 =======
+=======
+>>>>>>> 114b92783dd0a34f6fbedc979523ac65d8ec52e2
 minimum_steps_per_minute                     1200             # Never step slower than this
 base_stepping_frequency                      100000           # Base frequency for stepping, higher gives smoother movement
 >>>>>>> 0882463... Minor changes
