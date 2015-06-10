@@ -168,7 +168,7 @@ void RotatableDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float 
 
 	if (status == -1)  //something went wrong,
 	{
-	    //force to actuator FPD home position as we know this is a value position
+	    //force to actuator FPD home position as we know this is a valid position
 	    actuator_mm[ALPHA_STEPPER] = 0;
 	    actuator_mm[BETA_STEPPER ] = 0;
 	    actuator_mm[GAMMA_STEPPER] = 0;
