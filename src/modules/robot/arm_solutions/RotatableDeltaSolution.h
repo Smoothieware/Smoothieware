@@ -33,9 +33,6 @@ class RotatableDeltaSolution : public BaseSolution {
         float z_home_offs;		// This is calculated from the above angle, after applying forward
         				// kinematics, and adding the Z calc offset to it.
 
-        
-        float delta_printable_radius;	// Print surface diameter/2 minus unreachable space (avoid collisions with vertical towers).
-
         float xyz_full_steps_per_rotation;	// stepper motor steps per 360 full rotation
 
         float delta[3] = {0.0, 0.0, 0.0};
