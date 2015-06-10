@@ -220,6 +220,15 @@ temperatureswitch.hotend.heatup_poll         5                # poll heatup at 1
 temperatureswitch.hotend.cooldown_poll       5                # poll cooldown at 60 sec intervals
 
 
+# Filament Detector
+# ---------------------------------------------------------------------
+#filament_detector.enable                     true             #
+#filament_detector.encoder_pin                0.26             # must be interrupt enabled pin (0.26, 0.27, 0.28)
+#filament_detector.seconds_per_check          2                # may need to be longer   
+#filament_detector.pulses_per_mm              1.0              # will need to be tuned
+#filament_detector.bulge_pin                  0.27             # optional bulge detector switch and/or manual suspend
+
+
 # For allowing the board to shut off your ATX power supply
 # ---------------------------------------------------------------------
 # switch.psu.enable                            true           # turn atx on/off
