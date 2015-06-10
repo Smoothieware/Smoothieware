@@ -652,106 +652,23 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
 
     THEKERNEL->conveyor->wait_for_empty_queue();
 
-    int x, y;//, dm_pos;
-
     if(gcode->has_letter('A')) {
 
-        // It took me a really, really long (and frustrating) time to figure this out
-        if(probe_offset_x != 0 || probe_offset_y != 0) {
-            _printf("Depth correction doesn't work with X or Y probe offsets.\n");
-            return false;
-        }
-    
         push_prefix("DC");
+        print_task_with_warning("Depth-mapping calibration");
+
+        handle_z_correction();
+
         newline();
-        _printf("Probing bed for depth correction...\n");
-
-        // Disable depth correction (obviously)
-        surface_transform->depth_enabled = false;
-
-        // Build depth map
-        // We're dirtying the geometry in case they might've turned bed heat on or off since running G31 OPQRS.
-        geom_dirty = true;
-        if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, true)) {
-            _printf("Couldn't build depth map - aborting!\n");
-            pop_prefix();
-            return false;
-        }
-
-
-        // Copy depth map to surface_transform->depth[], which contains depths only
-        for(int i=0; i<DM_GRID_ELEMENTS; i++) {
-            surface_transform->depth[i] = cur_cartesian[i][Z];
-        }
-
-        // Propagate values outward from circle to edge, in case they go outside probe_radius
-        if(surface_shape == PSS_CIRCLE) {
-            for(y=0; y<DM_GRID_DIMENSION; y++) {
-                for(x=0; x <= (DM_GRID_DIMENSION-1) / 2; x++) {
-
-                    int dm_pos_right = (y * DM_GRID_DIMENSION) + ((DM_GRID_DIMENSION - 1) / 2) + x;
-                    int dm_pos_left  = (y * DM_GRID_DIMENSION) + ((DM_GRID_DIMENSION - 1) / 2) - x;
-
-                    // Propagate right
-                    if(active_point[dm_pos_right] == TP_INACTIVE) {
-                        surface_transform->depth[dm_pos_right] = surface_transform->depth[dm_pos_right - 1];
-                    }
-
-                    // Propagate left
-                    if(active_point[dm_pos_left] == TP_INACTIVE) {
-                        surface_transform->depth[dm_pos_left] = surface_transform->depth[dm_pos_left + 1];
-                    }
-
-                }
-            }
-        }
-
-        // Enable depth correction
-        surface_transform->depth_enabled = true;
-        set_adjust_function(true);
-
-        // Save to a file.
-        // I tried saving this with G-codes, but I guess you can't stuff that much data.
-        // The config-overrides file was corrupted when I tried! I found mention of a
-        // file corruption bug elsewhere in the firmware, so I guess it's a known issue.
-        // I could have just written everything as binary data, but I wanted people to
-        // be able to populate the file with numbers from a regular $10 depth gauge in
-        // case they don't have a Z-probe.
-        FILE *fp = fopen("/sd/dm_surface_transform", "w");
-        if(fp != NULL) {
-            fprintf(fp, "; Depth Map Surface Transform\n");
-            for(y=0; y<DM_GRID_DIMENSION; y++) {
-                fprintf(fp, "; Line %d of %d\n", y + 1, DM_GRID_DIMENSION);
-                for(x=0; x<DM_GRID_DIMENSION; x++) {
-                    fprintf(fp, "%1.5f\n", surface_transform->depth[(y * DM_GRID_DIMENSION) + x]);
-                }
-            }
-
-            // This is probably important to do
-            fclose(fp);
-
-            _printf("Surface transform saved to SD card.\n");
-        
-        } else {
-
-            _printf("Couldn't save surface transform to SD card!\n");
-
-        }
-
-        // Check the new calibration
         _printf("Checking calibration...\n");
-        geom_dirty = true;
         if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false)) {
             _printf("Couldn't depth-map the surface.\n");
         }
-        
-        // Dirty the geom again in case they decide to run G31 OPQRS[...] again
-        geom_dirty = true;
 
-        // Done!
-        _printf("All done. Type M500 to save!\n");
+        _printf("/!\\ IMPORTANT /!\\ Type M500 to save!\n");
         zprobe->home();
         pop_prefix();
+
 
     } else if(gcode->has_letter('Z')) {
 
@@ -882,6 +799,106 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
     
     } // !gcode->has_letter('M')
 
+    return true;
+
+}
+
+
+// Do the depth map-based calibration (fixez Z only, not X or Y)
+bool ComprehensiveDeltaStrategy::handle_z_correction() {
+
+    int x, y;
+
+    // It took me a really, really long (and frustrating) time to figure this out
+    if(probe_offset_x != 0 || probe_offset_y != 0) {
+        _printf("Depth correction doesn't work with X or Y probe offsets.\n");
+        return false;
+    }
+
+    _printf("Probing bed for depth correction...\n");
+
+    // Disable depth correction (obviously)
+    surface_transform->depth_enabled = false;
+
+    // Build depth map
+    // We're dirtying the geometry in case they might've turned bed heat on or off since running G31 OPQRS.
+    geom_dirty = true;
+    if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, true)) {
+        _printf("Couldn't build depth map - aborting!\n");
+        pop_prefix();
+        return false;
+    }
+
+
+    // Copy depth map to surface_transform->depth[], which contains depths only
+    for(int i=0; i<DM_GRID_ELEMENTS; i++) {
+        surface_transform->depth[i] = cur_cartesian[i][Z];
+    }
+
+    // Propagate values outward from circle to edge, in case they go outside probe_radius
+    if(surface_shape == PSS_CIRCLE) {
+        for(y=0; y<DM_GRID_DIMENSION; y++) {
+            for(x=0; x <= (DM_GRID_DIMENSION-1) / 2; x++) {
+
+                int dm_pos_right = (y * DM_GRID_DIMENSION) + ((DM_GRID_DIMENSION - 1) / 2) + x;
+                int dm_pos_left  = (y * DM_GRID_DIMENSION) + ((DM_GRID_DIMENSION - 1) / 2) - x;
+
+                // Propagate right
+                if(active_point[dm_pos_right] == TP_INACTIVE) {
+                    surface_transform->depth[dm_pos_right] = surface_transform->depth[dm_pos_right - 1];
+                }
+
+                // Propagate left
+                if(active_point[dm_pos_left] == TP_INACTIVE) {
+                    surface_transform->depth[dm_pos_left] = surface_transform->depth[dm_pos_left + 1];
+                }
+
+            }
+        }
+    }
+
+    // Enable depth correction
+    surface_transform->depth_enabled = true;
+    set_adjust_function(true);
+
+    // Save to a file.
+    // I tried saving this with G-codes, but I guess you can't stuff that much data.
+    // The config-overrides file was corrupted when I tried! I found mention of a
+    // file corruption bug elsewhere in the firmware, so I guess it's a known issue.
+    // I could have just written everything as binary data, but I wanted people to
+    // be able to populate the file with numbers from a regular $10 depth gauge in
+    // case they don't have a Z-probe.
+    FILE *fp = fopen("/sd/dm_surface_transform", "w");
+    if(fp != NULL) {
+        fprintf(fp, "; Depth Map Surface Transform\n");
+        //__printf("; Depth Map Surface Transform\n");
+        flush();
+        for(y=0; y<DM_GRID_DIMENSION; y++) {
+            fprintf(fp, "; Line %d of %d\n", y + 1, DM_GRID_DIMENSION);
+            //__printf("; Line %d of %d\n", y + 1, DM_GRID_DIMENSION);
+            flush();
+            for(x=0; x<DM_GRID_DIMENSION; x++) {
+                fprintf(fp, "%1.5f\n", surface_transform->depth[(y * DM_GRID_DIMENSION) + x]);
+                //__printf("%1.5f\n", surface_transform->depth[(y * DM_GRID_DIMENSION) + x]);
+                flush();
+            }
+        }
+
+        // This is probably important to do
+        fclose(fp);
+        flush();
+
+        _printf("Surface transform saved to SD card.\n");
+    
+    } else {
+
+        _printf("Couldn't save surface transform to SD card!\n");
+
+    }
+    
+    // Dirty the geom again in case they decide to run G31 OPQRS[...] again
+    geom_dirty = true;
+    
     return true;
 
 }
@@ -1662,7 +1679,6 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     _printf("Checking calibration. If it's worse than it was before, you may have to run this several times!\n");
     depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false);
 
-    newline();
     _printf("You can run this command again to see if it gets better, or type M500 to save.\n");
 
     pop_prefix();
@@ -2522,6 +2538,7 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
 
         float center[2] = {0, 0};
         int center_point = find_nearest_test_point(center);
+        //_printf("Index of center point is %d\n", center_point);
 
         // Measure depth from probe_from_height at bed center
         prepare_to_probe();
@@ -2536,6 +2553,9 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
 
             depth_map[center_point].rel = 0;
             depth_map[center_point].abs = zprobe->zsteps_to_mm(origin_steps);
+            cartesian[center_point][X] = test_point[center_point][X];
+            cartesian[center_point][Y] = test_point[center_point][Y];
+            cartesian[center_point][Z] = depth_map[center_point].rel;
 
             if(display_results != RESULTS_NONE) {
                 _printf("Depth to bed surface at center: %d steps (%1.3f mm)\n", origin_steps, zprobe->zsteps_to_mm(origin_steps));
@@ -3617,6 +3637,7 @@ void ComprehensiveDeltaStrategy::print_depths(cds_depths_t *depths) {
     float mu, sigma, min, max;
 
     // Print header
+    newline();
     __printf("[PD] ");
 
     int i;
@@ -3670,6 +3691,7 @@ void ComprehensiveDeltaStrategy::print_depths(cds_depths_t *depths) {
     newline();
     __printf("[PD]\n");
     __printf("[PD] Best=%1.3f, worst=%1.3f, min=%1.3f, max=%1.3f, mu=%1.3f, sigma=%1.3f, energy=%1.3f\n", best, worst, min, max, mu, sigma, energy);
+    newline();
 
     AHB0.dealloc(rel_depths);
 

@@ -407,6 +407,7 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
 
     // Handlers for G-code commands too elaborate (read: stack-heavy) to cleanly fit in handleGcode()
     bool handle_depth_mapping_calibration(Gcode *gcode);        // G31
+    bool handle_z_correction();
     bool handle_shimming_and_depth_correction(Gcode *gcode);    // M667
     void print_g31_help();
 
