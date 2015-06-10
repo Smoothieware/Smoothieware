@@ -670,8 +670,8 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         surface_transform->depth_enabled = false;
 
         // Build depth map
-        //zero_depth_maps();
-        //float cartesian[DM_GRID_ELEMENTS][3];
+        // We're dirtying the geometry in case they might've turned bed heat on or off since running G31 OPQRS.
+        geom_dirty = true;
         if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, true)) {
             _printf("Couldn't build depth map - aborting!\n");
             pop_prefix();
@@ -744,6 +744,9 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false)) {
             _printf("Couldn't depth-map the surface.\n");
         }
+        
+        // Dirty the geom again in case they decide to run G31 OPQRS[...] again
+        geom_dirty = true;
 
         // Done!
         _printf("All done. Type M500 to save!\n");
