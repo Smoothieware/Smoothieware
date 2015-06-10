@@ -29,9 +29,7 @@ class RotatableDeltaSolution : public BaseSolution {
         //float delta_z_offset;	// Distance from delta 8mm rod/pulley to table/bed. <- LERCHE 25-09-2014 commented
 
         float delta_ee_offs;	// Ball joint plane to bottom of end effector surface
-        //float tool_offset;	// No offset
-        //float tool_offset;	// Distance between end effector ball joint plane and tip of tool (Z probe)
-        float tool_offset;	// Distance between end effector ball joint plane and tip of tool (PnP)
+        float tool_offset;	// Distance between end effector ball joint plane and tip of tool
         float z_calc_offset;
 
         float z_home_angle;	// This is the angle where the arms hit the endstop sensor

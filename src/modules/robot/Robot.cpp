@@ -180,16 +180,16 @@ void Robot::on_config_reload(void *argument)
     }
 
 
-    this->feed_rate           = THEKERNEL->config->value((unsigned int)default_feed_rate_checksum   )->by_default(  100.0F)->as_number();
-    this->seek_rate           = THEKERNEL->config->value((unsigned int)default_seek_rate_checksum   )->by_default(  100.0F)->as_number();
-    this->mm_per_line_segment = THEKERNEL->config->value((unsigned int)mm_per_line_segment_checksum )->by_default(    0.0F)->as_number();
-    this->delta_segments_per_second = THEKERNEL->config->value((unsigned int)delta_segments_per_second_checksum )->by_default(0.0f   )->as_number();
-    this->mm_per_arc_segment  = THEKERNEL->config->value((unsigned int)mm_per_arc_segment_checksum  )->by_default(    0.5f)->as_number();
-    this->arc_correction      = THEKERNEL->config->value((unsigned int)arc_correction_checksum      )->by_default(    5   )->as_number();
+    this->feed_rate           = THEKERNEL->config->value(default_feed_rate_checksum   )->by_default(  100.0F)->as_number();
+    this->seek_rate           = THEKERNEL->config->value(default_seek_rate_checksum   )->by_default(  100.0F)->as_number();
+    this->mm_per_line_segment = THEKERNEL->config->value(mm_per_line_segment_checksum )->by_default(    0.0F)->as_number();
+    this->delta_segments_per_second = THEKERNEL->config->value(delta_segments_per_second_checksum )->by_default(0.0f   )->as_number();
+    this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(    0.5f)->as_number();
+    this->arc_correction      = THEKERNEL->config->value(arc_correction_checksum      )->by_default(    5   )->as_number();
 
-    this->max_speeds[X_AXIS]  = THEKERNEL->config->value((unsigned int)x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
-    this->max_speeds[Y_AXIS]  = THEKERNEL->config->value((unsigned int)y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
-    this->max_speeds[Z_AXIS]  = THEKERNEL->config->value((unsigned int)z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
+    this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
+    this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
+    this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
     Pin alpha_step_pin;
     Pin alpha_dir_pin;
@@ -361,8 +361,8 @@ void Robot::on_gcode_received(void *argument)
                     }
                 }
                 gcode->mark_as_taken();
-            }
-            break; //added by DHP to suppress warning 20150324
+            } 
+            break;
             case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); gcode->mark_as_taken();  break;
             case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); gcode->mark_as_taken();  break;
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;

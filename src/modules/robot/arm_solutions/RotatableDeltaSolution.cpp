@@ -22,11 +22,6 @@
 
 #define delta_printable_radius_checksum    	CHECKSUM("delta_printable_radius_checksum")
 
-#define xyz_full_steps_per_rotation_checksum	CHECKSUM("xyz_full_steps_per_rotation_checksum")
-#define xyz_microsteps_checksum			CHECKSUM("xyz_microsteps_checksum")
-#define small_pulley_teeth_checksum		CHECKSUM("small_pulley_teeth_checksum")
-#define big_pulley_teeth_checksum		CHECKSUM("big_pulley_teeth_checksum")
-
 #ifndef alpha_steps_per_mm_checksum
   #define alpha_steps_per_mm_checksum		CHECKSUM("alpha_steps_per_mm_checksum");
 #endif
@@ -39,13 +34,13 @@
   #define gamma_steps_per_mm_checksum		CHECKSUM("gamma_steps_per_mm_checksum");
 #endif
 
-const float pi     = 3.14159265358979323846;    // PI
-const float two_pi = 2 * pi;
-const float sin120 = 0.86602540378443864676372317075294; //sqrt3/2.0
-const float cos120 = -0.5;
-const float tan60  = 1.7320508075688772935274463415059; //sqrt3;
-const float sin30  = 0.5;
-const float tan30  = 0.57735026918962576450914878050196; //1/sqrt3
+const static float pi     = 3.14159265358979323846;    // PI
+const static float two_pi = 2 * pi;
+const static float sin120 = 0.86602540378443864676372317075294; //sqrt3/2.0
+const static float cos120 = -0.5;
+const static float tan60  = 1.7320508075688772935274463415059; //sqrt3;
+const static float sin30  = 0.5;
+const static float tan30  = 0.57735026918962576450914878050196; //1/sqrt3
 
 RotatableDeltaSolution::RotatableDeltaSolution(Config* config)
 {
@@ -183,12 +178,13 @@ void RotatableDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float 
 
 	if (status == -1)  //something went wrong
 	{
-	    THEKERNEL->streams->printf("ERROR: Delta calculation fail!  Unable to move to:\n");
-	    THEKERNEL->streams->printf("    x= %f\n",cartesian_mm[X_AXIS]);
-	    THEKERNEL->streams->printf("    y= %f\n",cartesian_mm[Y_AXIS]);
-	    THEKERNEL->streams->printf("    z= %f\n",cartesian_mm[Z_AXIS]);
-	    THEKERNEL->streams->printf(" CalcZ= %f\n",z_calc_offset);
-	    THEKERNEL->streams->printf(" Offz= %f\n",z_with_offset);
+//DEBUG CODE, uncomment the following to help determine what may be happening if you are trying to adapt this to your own different roational delta.
+//	    THEKERNEL->streams->printf("ERROR: Delta calculation fail!  Unable to move to:\n");
+//	    THEKERNEL->streams->printf("    x= %f\n",cartesian_mm[X_AXIS]);
+//	    THEKERNEL->streams->printf("    y= %f\n",cartesian_mm[Y_AXIS]);
+//	    THEKERNEL->streams->printf("    z= %f\n",cartesian_mm[Z_AXIS]);
+//	    THEKERNEL->streams->printf(" CalcZ= %f\n",z_calc_offset);
+//	    THEKERNEL->streams->printf(" Offz= %f\n",z_with_offset);
 	  }
 	  else
 	  {
