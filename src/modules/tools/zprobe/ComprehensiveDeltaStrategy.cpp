@@ -730,14 +730,23 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
             // This is probably important to do
             fclose(fp);
 
-            _printf("Surface transform saved to SD card. Type M500 to auto-enable.\n");
+            _printf("Surface transform saved to SD card.\n");
         
         } else {
 
             _printf("Couldn't save surface transform to SD card!\n");
 
         }
-        
+
+        // Check the new calibration
+        _printf("Checking calibration...\n");
+        geom_dirty = true;
+        if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false)) {
+            _printf("Couldn't depth-map the surface.\n");
+        }
+
+        // Done!
+        _printf("All done. Type M500 to save!\n");
         zprobe->home();
         pop_prefix();
 
