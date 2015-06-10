@@ -26,6 +26,7 @@ using std::string;
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
+#include "arm_solutions/RotatableDeltaSolution.h"
 #include "arm_solutions/LinearDeltaSolution.h"
 #include "arm_solutions/HBotSolution.h"
 #include "arm_solutions/MorganSCARASolution.h"
