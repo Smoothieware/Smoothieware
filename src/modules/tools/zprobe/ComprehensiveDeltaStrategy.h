@@ -448,7 +448,8 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     void prepare_to_probe();
     bool prime_probe();
     bool find_bed_center_height(bool reset_all = false);
-    bool do_probe_at(int &steps, float x, float y, bool skip_smoothing = false);
+    bool do_probe_at(int &steps, float x, float y, bool skip_smoothing = false, bool skip_priming = false, bool ignore_xy = false);
+    bool run_probe(int &steps, bool skip_smoothing=false, bool skip_priming=false);
 
     // Kinematics
     bool set_kinematics(KinematicSettings *settings, bool update = true);

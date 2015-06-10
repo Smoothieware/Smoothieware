@@ -2326,11 +2326,11 @@ bool ComprehensiveDeltaStrategy::measure_probe_repeatability(Gcode *gcode) {
     // Move into position, after safely determining the true bed height
     prepare_to_probe();
 
-    // Prime the probe (run it a number of times to get it to "settle")
-    if(!prime_probe()) {
-        pop_prefix();
-        return false;
-    }
+//    // Prime the probe (run it a number of times to get it to "settle")
+//    if(!prime_probe()) {
+//        pop_prefix();
+//        return false;
+//    }
 
     float xDeg = 0.866025f;
     float yDeg = 0.5f;
@@ -2514,11 +2514,11 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
         // Measure depth from probe_from_height at bed center
         prepare_to_probe();
 
-        if(!prime_probe()) {
-            _printf("Couldn't prime probe.\n");
-            pop_prefix();
-            return false;
-        }
+//        if(!prime_probe()) {
+//            _printf("Couldn't prime probe.\n");
+//            pop_prefix();
+//            return false;
+//        }
     
         if(do_probe_at(origin_steps, 0, 0)) {
 
@@ -2526,7 +2526,7 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
             depth_map[center_point].abs = zprobe->zsteps_to_mm(origin_steps);
 
             if(display_results != RESULTS_NONE) {
-                _printf("Depth to bed surface at center: %d steps (%1.3f mm)\n", origin_steps, depth_map[TP_CTR].abs);
+                _printf("Depth to bed surface at center: %d steps (%1.3f mm)\n", origin_steps, zprobe->zsteps_to_mm(origin_steps));
             }
 
         } else {
@@ -2788,10 +2788,12 @@ bool ComprehensiveDeltaStrategy::iterative_calibration(bool keep_settings) {
     
         // Determine center height
         prepare_to_probe();
-        if(!prime_probe()) {
-            pop_prefix();
-            return false;
-        }
+
+//        if(!prime_probe()) {
+//            pop_prefix();
+//            return false;
+//        }
+
         if(do_probe_at(steps, 0, 0)) {
             depth[TP_CTR] = zprobe->zsteps_to_mm(steps);
         } else {
@@ -3014,10 +3016,10 @@ bool ComprehensiveDeltaStrategy::require_clean_geometry() {
 bool ComprehensiveDeltaStrategy::prime_probe() {
 
     if(probe_priming) {
-        int i, steps;
-        __printf("[PR] Priming probe %d times.\n", probe_priming);
+        int i, steps=0;
+//        __printf("[PR] Priming probe %d times.\n", probe_priming);
         for(i=0; i<probe_priming; i++) {
-            if(!do_probe_at(steps, 0, 0)) {
+            if(!run_probe(steps, true, true)) {
                 return false;
             }
         }
@@ -3059,33 +3061,35 @@ bool ComprehensiveDeltaStrategy::find_bed_center_height(bool reset_all) {
         probe_from_height = zprobe->zsteps_to_mm(steps) - zprobe->getProbeHeight();
         zprobe->home();
 
-    } else {
-        _printf("Probe-from height = %1.3f\n", probe_from_height);
     }
+
+    _printf("Probe-from height = %1.3f\n", probe_from_height);
 
     // Move to probe_from_height (relative move!)
     zprobe->coordinated_move(NAN, NAN, -probe_from_height, zprobe->getFastFeedrate(), true);
-    
-    // Prime the probe - this measurement is one of the most important!
-    if(!prime_probe()) {
-        pop_prefix();
-        return false;
-    }
-    
+
     // Move to probing offset
     // We do these as two seperate steps because the top of a delta's build envelope is domed,
     // and we want to avoid the possibility of asking the effector to move somewhere it can't
     zprobe->coordinated_move(probe_offset_x, probe_offset_y, NAN, zprobe->getFastFeedrate(), false);
 
-    // Now, slowly probe the depth
-    save_acceleration();
-    set_acceleration(probe_acceleration);
-    if(!zprobe->run_probe(steps, false)) {
-        restore_acceleration();
+//    // Slow down
+//    save_acceleration();
+//    set_acceleration(probe_acceleration);
+
+    // Prime the probe - this measurement is one of the most important!
+//    if(!prime_probe()) {
+//        pop_prefix();
+//        return false;
+//    }
+
+    // Now, (slowly) probe the depth
+    if(!run_probe(steps, false, false)  /*!zprobe->run_probe(steps, false)*/) {
+//        restore_acceleration();
         pop_prefix();
         return false;
     }
-    restore_acceleration();
+//    restore_acceleration();
     mm_probe_height_to_trigger = zprobe->zsteps_to_mm(steps);
 
     // Set final bed height
@@ -3113,10 +3117,30 @@ bool ComprehensiveDeltaStrategy::find_bed_center_height(bool reset_all) {
 
 
 // Do a probe at a specified (X, Y) location, taking probe offset into account
-bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y, bool skip_smoothing) {
+bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y, bool skip_smoothing, bool skip_priming, bool ignore_xy) {
 
     // Move to location, corrected for probe offset (if any)
-    zprobe->coordinated_move(x + probe_offset_x, y + probe_offset_y, NAN, zprobe->getFastFeedrate(), false);
+    if(!ignore_xy) {
+        zprobe->coordinated_move(x + probe_offset_x, y + probe_offset_y, NAN, zprobe->getFastFeedrate(), false);
+    }
+
+    // Slow down
+    save_acceleration();
+    set_acceleration(probe_acceleration);
+
+    // Run the probe
+    bool success = run_probe(steps, skip_smoothing, skip_priming);
+
+    // Speed up
+    restore_acceleration();
+
+    return success;
+
+}
+
+
+// Run the probe (wrapper for ZProbe->run_probe())
+bool ComprehensiveDeltaStrategy::run_probe(int &steps, bool skip_smoothing, bool skip_priming) {
 
     // Run the number of tests specified in probe_smoothing
     steps = 0;
@@ -3127,14 +3151,19 @@ bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y, bool 
         smoothing = probe_smoothing;
     }
 
-    save_acceleration();
-    set_acceleration(probe_acceleration);
+    // Prime the probe (run it a number of times to get it to "settle")
+    if(!skip_priming) {
+        if(!prime_probe()) {
+            pop_prefix();
+            return false;
+        }
+    }
 
+    // Run the probe
     for(int i=0; i < smoothing; i++) {
-        // Run the probe
         if(!zprobe->run_probe(result)) {
             if(i != 0) steps /= i;
-            __printf("[DP] do_probe_at(steps, %1.3f, %1.3f) - run_probe() returned false, s=%d.\n", x + probe_offset_x, y + probe_offset_y, steps);
+            __printf("[RP] run_probe(steps, skip_smoothing=%d, skip_priming=%d) - run_probe() returned false, s=%d. (Was it already triggered?)\n", skip_smoothing, skip_priming, steps);
             restore_acceleration();
             return false;
         }
@@ -3151,8 +3180,6 @@ bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y, bool 
 
     }
 
-    restore_acceleration();
-    
     // Average
     steps /= smoothing;
 
@@ -3163,6 +3190,7 @@ bool ComprehensiveDeltaStrategy::do_probe_at(int &steps, float x, float y, bool 
     } else {
         return true;
     }
+
 }
 
 
@@ -3191,7 +3219,10 @@ void ComprehensiveDeltaStrategy::post_adjust_kinematics(float offset[3]) {
 
 // Following are getters/setters for global accelration (not Z-specific)
 void ComprehensiveDeltaStrategy::save_acceleration() {
-    saved_acceleration = THEKERNEL->planner->get_acceleration();
+    // We only save it if it's different from what it already is.
+    if(saved_acceleration != THEKERNEL->planner->get_acceleration()) {
+        saved_acceleration = THEKERNEL->planner->get_acceleration();
+    }
 }
 
 void ComprehensiveDeltaStrategy::restore_acceleration() {
