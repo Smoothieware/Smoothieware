@@ -178,6 +178,8 @@ void RotatableDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float 
 
 	if (status == -1)  //something went wrong
 	{
+	    //Do nothing so the actuator_mm is unchanged by this routine.
+            // as we have no idea what it should be
 //DEBUG CODE, uncomment the following to help determine what may be happening if you are trying to adapt this to your own different roational delta.
 //	    THEKERNEL->streams->printf("ERROR: Delta calculation fail!  Unable to move to:\n");
 //	    THEKERNEL->streams->printf("    x= %f\n",cartesian_mm[X_AXIS]);
