@@ -219,9 +219,9 @@ bool RotatableDeltaSolution::set_optional(const arm_options_t& options) {
             case 'D': delta_rf			= i.second; break;
             case 'E': delta_z_offset		= i.second; break;
             case 'F': delta_ee_offs		= i.second; break;
-            case 'G': tool_offset		= i.second; break;
-            case 'H': z_home_angle		= i.second; break;
-            case 'I': delta_printable_radius    = i.second; break;
+            case 'H': tool_offset		= i.second; break;
+            case 'I': z_home_angle		= i.second; break;
+            case 'J': delta_printable_radius    = i.second; break;
         }
     }
     init();
@@ -241,9 +241,9 @@ bool RotatableDeltaSolution::get_optional(arm_options_t& options) {
         options['D'] = this->delta_rf;
         options['E'] = this->delta_z_offset;
         options['F'] = this->delta_ee_offs;
-        options['G'] = this->tool_offset;
-        options['H'] = this->z_home_angle;
-        options['I'] = this->delta_printable_radius;
+        options['H'] = this->tool_offset;
+        options['I'] = this->z_home_angle;
+        options['J'] = this->delta_printable_radius;
     }
 
     return true;

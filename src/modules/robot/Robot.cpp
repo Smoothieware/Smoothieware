@@ -154,7 +154,7 @@ void Robot::on_config_reload(void *argument)
     // To make adding those solution easier, they have their own, separate object.
     // Here we read the config to find out which arm solution to use
     if (this->arm_solution) delete this->arm_solution;
-    int solution_checksum = get_checksum(THEKERNEL->config->value((unsigned int)arm_solution_checksum)->by_default("cartesian")->as_string());
+    int solution_checksum = get_checksum(THEKERNEL->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
     // Note checksums are not const expressions when in debug mode, so don't use switch
     if(solution_checksum == hbot_checksum || solution_checksum == corexy_checksum) {
         this->arm_solution = new HBotSolution(THEKERNEL->config);
@@ -201,20 +201,20 @@ void Robot::on_config_reload(void *argument)
     Pin gamma_dir_pin;
     Pin gamma_en_pin;
 
-    alpha_step_pin.from_string( THEKERNEL->config->value((unsigned int)alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
-    alpha_dir_pin.from_string(  THEKERNEL->config->value((unsigned int)alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
-    alpha_en_pin.from_string(   THEKERNEL->config->value((unsigned int)alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
-    beta_step_pin.from_string(  THEKERNEL->config->value((unsigned int)beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
-    beta_dir_pin.from_string(   THEKERNEL->config->value((unsigned int)beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
-    beta_en_pin.from_string(    THEKERNEL->config->value((unsigned int)beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
-    gamma_step_pin.from_string( THEKERNEL->config->value((unsigned int)gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
-    gamma_dir_pin.from_string(  THEKERNEL->config->value((unsigned int)gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
-    gamma_en_pin.from_string(   THEKERNEL->config->value((unsigned int)gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
+    alpha_step_pin.from_string( THEKERNEL->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
+    alpha_dir_pin.from_string(  THEKERNEL->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
+    alpha_en_pin.from_string(   THEKERNEL->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
+    beta_step_pin.from_string(  THEKERNEL->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
+    beta_dir_pin.from_string(   THEKERNEL->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
+    beta_en_pin.from_string(    THEKERNEL->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
+    gamma_step_pin.from_string( THEKERNEL->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
+    gamma_dir_pin.from_string(  THEKERNEL->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
+    gamma_en_pin.from_string(   THEKERNEL->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
 
     float steps_per_mm[3] = {
-        THEKERNEL->config->value((unsigned int)alpha_steps_per_mm_checksum)->by_default(  80.0F)->as_number(),
-        THEKERNEL->config->value((unsigned int)beta_steps_per_mm_checksum )->by_default(  80.0F)->as_number(),
-        THEKERNEL->config->value((unsigned int)gamma_steps_per_mm_checksum)->by_default(2560.0F)->as_number(),
+        THEKERNEL->config->value(alpha_steps_per_mm_checksum)->by_default(  80.0F)->as_number(),
+        THEKERNEL->config->value(beta_steps_per_mm_checksum )->by_default(  80.0F)->as_number(),
+        THEKERNEL->config->value(gamma_steps_per_mm_checksum)->by_default(2560.0F)->as_number(),
     };
 
     // TODO: delete or detect old steppermotors
@@ -227,9 +227,9 @@ void Robot::on_config_reload(void *argument)
     beta_stepper_motor->change_steps_per_mm(steps_per_mm[1]);
     gamma_stepper_motor->change_steps_per_mm(steps_per_mm[2]);
 
-    alpha_stepper_motor->set_max_rate(THEKERNEL->config->value((unsigned int)alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
-    beta_stepper_motor->set_max_rate(THEKERNEL->config->value((unsigned int)beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F);
-    gamma_stepper_motor->set_max_rate(THEKERNEL->config->value((unsigned int)gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
+    alpha_stepper_motor->set_max_rate(THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
+    beta_stepper_motor->set_max_rate(THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F);
+    gamma_stepper_motor->set_max_rate(THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
     check_max_actuator_speeds(); // check the configs are sane
 
     actuators.clear();
