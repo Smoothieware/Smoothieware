@@ -14,24 +14,20 @@ delta_segments_per_second                    100              # for deltas only 
 # Arm solution configuration : Rotatable Delta robot. Translates mm positions into stepper positions
 arm_solution                                 rotatable_delta  # selects the delta arm solution
 
-delta_e										 131.636		  # End effector length
-delta_f										 190.526		  # Base length
-delta_re									 270.000		  # Carbon rod length
-delta_rf									  90.000		  # Servo horn length
+delta_e						131.636		  # End effector length
+delta_f						190.526		  # Base length
+delta_re					270.000		  # Carbon rod length
+delta_rf					 90.000		  # Servo horn length
 
-delta_z_offset							 268.0 #290.700		  # Distance from delta 8mm rod/pulley to table/bed
-															  # NOTE: For OpenPnP, set the zero to be about 25mm above the bed.
-delta_ee_offs							 15.000			  # Ball joint plane to bottom of end effector surface
-tool_offset							 30.500			  # Distance between end effector ball joint plane and tip of tool (PnP)
-z_home_angle							-67.200			  # This is the angle where the arms hit the endstop sensor
-delta_printable_radius						 150.0			  # Print surface diameter/2 minus unreachable space (avoid collisions with vertical towers).
+delta_z_offset					268.0  			  # Distance from delta 8mm rod/pulley to table/bed
+									  # NOTE: For OpenPnP, set the zero to be about 25mm above the bed.
+delta_ee_offs					15.000			  # Ball joint plane to bottom of end effector surface
+tool_offset					30.500			  # Distance between end effector ball joint plane and tip of tool (PnP)
+z_home_angle				       -67.200			  # This is the angle where the arms hit the endstop sensor
+delta_printable_radius			        150.0			  # Print surface diameter/2 minus unreachable space
 
-xyz_full_steps_per_rotation					 400.0			  # stepper motor steps per 360 full rotation
-															  # for 1.8 degree this is 200 for 0.9 degree this is 400
-xyz_microsteps								 32.0			  # stepper motor drive usuall 8.0, 16.0 or 32.0
-small_pulley_teeth							 16.0			  # how many teeth as on the pulley on the stepper motor
-big_pulley_teeth							150.0			  # how many teeth are on the main pulley note if your robot does not use a pulley
-															  # reduction system, make it the same as small_pulley_teeth to get 1:1
+xyz_full_steps_per_rotation			400.0			  # stepper motor steps per 360 full rotation
+									  # for 1.8 degree this is 200 for 0.9 degree this is 400
 
 #the steps per mm are calculated as (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360
 # for a 0.9 degree stepper motor (400 steps per rotation) and an a4988   driver set for 16 microsteps = (400 * 16 * (150/16))/360 = 166.67
@@ -41,10 +37,6 @@ big_pulley_teeth							150.0			  # how many teeth are on the main pulley note if
 alpha_steps_per_mm                            331.49           # Steps per mm for alpha stepper
 beta_steps_per_mm                             331.49           # Steps per mm for beta stepper
 gamma_steps_per_mm                            331.49           # Steps per mm for gamma stepper
-
-#arm_length                                   250.0            # this is the length of an arm from hinge to hinge
-#arm_radius                                   124.0            # this is the horizontal distance from hinge to hinge
-#                                                              # when the effector is centered
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING
@@ -118,23 +110,23 @@ extruder.hotend.en_pin                          0.21             # Pin for extru
 #extruder.hotend.retract_zlift_length            0               # zlift on retract in mm, 0 disables
 #extruder.hotend.retract_zlift_feedrate          6000            # zlift feedrate in mm/min (Note mm/min NOT mm/sec)
 
-delta_current                                1.5              # First extruder stepper motor current
+delta_current                                   1.5              # First extruder stepper motor current
 
 # Second extruder module configuration example
-#extruder.hotend2.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
-#extruder.hotend2.steps_per_mm                    140              # Steps per mm for extruder stepper
-#extruder.hotend2.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
-#extruder.hotend2.acceleration                    500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
-#extruder.hotend2.max_speed                       50               # mm/s
+#extruder.hotend2.enable                        true             # Whether to activate the extruder module at all. All configuration is ignored if false
+#extruder.hotend2.steps_per_mm                  140              # Steps per mm for extruder stepper
+#extruder.hotend2.default_feed_rate             600              # Default rate ( mm/minute ) for moves where only the extruder moves
+#extruder.hotend2.acceleration                  500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+#extruder.hotend2.max_speed                     50               # mm/s
 
-#extruder.hotend2.step_pin                        2.8              # Pin for extruder step signal
-#extruder.hotend2.dir_pin                         2.13             # Pin for extruder dir signal
-#extruder.hotend2.en_pin                          4.29             # Pin for extruder enable signal
+#extruder.hotend2.step_pin                      2.8              # Pin for extruder step signal
+#extruder.hotend2.dir_pin                       2.13             # Pin for extruder dir signal
+#extruder.hotend2.en_pin                        4.29             # Pin for extruder enable signal
 
-#extruder.hotend2.x_offset                        0                # x offset from origin in mm
-#extruder.hotend2.y_offset                        25.0             # y offset from origin in mm
-#extruder.hotend2.z_offset                        0                # z offset from origin in mm
-#epsilon_current                              1.5              # Second extruder stepper motor current
+#extruder.hotend2.x_offset                      0                # x offset from origin in mm
+#extruder.hotend2.y_offset                      25.0             # y offset from origin in mm
+#extruder.hotend2.z_offset                      0                # z offset from origin in mm
+#epsilon_current                                1.5              # Second extruder stepper motor current
 
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is
