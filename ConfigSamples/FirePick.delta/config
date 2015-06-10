@@ -19,15 +19,15 @@ delta_f						190.526		  # Base length
 delta_re					270.000		  # Carbon rod length
 delta_rf					 90.000		  # Servo horn length
 
-delta_z_offset					268.0  			  # Distance from delta 8mm rod/pulley to table/bed
-									  # NOTE: For OpenPnP, set the zero to be about 25mm above the bed.
-delta_ee_offs					15.000			  # Ball joint plane to bottom of end effector surface
-tool_offset					30.500			  # Distance between end effector ball joint plane and tip of tool (PnP)
-z_home_angle				       -67.200			  # This is the angle where the arms hit the endstop sensor
-delta_printable_radius			        150.0			  # Print surface diameter/2 minus unreachable space
+delta_z_offset					268.0  		  # Distance from delta 8mm rod/pulley to table/bed
+								  # NOTE: For OpenPnP, set the zero to be about 25mm above the bed.
+delta_ee_offs					15.000		  # Ball joint plane to bottom of end effector surface
+tool_offset					30.500		  # Distance between end effector ball joint plane and tip of tool (PnP)
+z_home_angle				       -67.200		  # This is the angle where the arms hit the endstop sensor
+delta_printable_radius			        150.0		  # Print surface diameter/2 minus unreachable space
 
-xyz_full_steps_per_rotation			400.0			  # stepper motor steps per 360 full rotation
-									  # for 1.8 degree this is 200 for 0.9 degree this is 400
+xyz_full_steps_per_rotation			400.0		  # stepper motor steps per 360 full rotation
+								  # for 1.8 degree this is 200 for 0.9 degree this is 400
 
 #the steps per mm are calculated as (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360
 # for a 0.9 degree stepper motor (400 steps per rotation) and an a4988   driver set for 16 microsteps = (400 * 16 * (150/16))/360 = 166.67
@@ -54,28 +54,28 @@ microseconds_per_step_pulse                  1                # Duration of step
 base_stepping_frequency                      100000           # Base frequency for stepping, higher gives smoother movement
 
 # Cartesian axis speed limits
-x_axis_max_speed                             10000            # mm/min
-y_axis_max_speed                             10000            # mm/min
-z_axis_max_speed                             10000            # mm/min
+x_axis_max_speed                             30000            # mm/min
+y_axis_max_speed                             30000            # mm/min
+z_axis_max_speed                             30000            # mm/min
 
 # Stepper module pins ( ports, and pin numbers, appending "!" to the number will invert a pin )
 alpha_step_pin                               2.0              # Pin for alpha stepper step signal
 alpha_dir_pin                                0.5              # Pin for alpha stepper direction
-alpha_en_pin                                 0.4             # Pin for alpha enable pin
+alpha_en_pin                                 0.4              # Pin for alpha enable pin
 alpha_current                                1.5              # X stepper motor current
-alpha_max_rate                               3000.0          # mm/min
+alpha_max_rate                               3000.0           # mm/min
 
 beta_step_pin                                2.1              # Pin for beta stepper step signal
 beta_dir_pin                                 0.11             # Pin for beta stepper direction
-beta_en_pin                                  0.10            # Pin for beta enable
+beta_en_pin                                  0.10             # Pin for beta enable
 beta_current                                 1.5              # Y stepper motor current
-beta_max_rate                                3000.0          # mm/min
+beta_max_rate                                3000.0           # mm/min
 
 gamma_step_pin                               2.2              # Pin for gamma stepper step signal
 gamma_dir_pin                                0.20             # Pin for gamma stepper direction
-gamma_en_pin                                 0.19            # Pin for gamma enable
+gamma_en_pin                                 0.19             # Pin for gamma enable
 gamma_current                                1.5              # Z stepper motor current
-gamma_max_rate                               3000.0          # mm/min
+gamma_max_rate                               3000.0           # mm/min
 
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
@@ -84,7 +84,7 @@ second_usb_serial_enable                     false            # This enables a s
 #leds_disable                                true             # disable using leds after config loaded
 #msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
 
-#dfu_enable                                  false             # for linux developers, set to true to enable DFU
+#dfu_enable                                  false            # for linux developers, set to true to enable DFU
 
 # Extruder module configuration
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false

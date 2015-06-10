@@ -30,7 +30,6 @@ class RotatableDeltaSolution : public BaseSolution {
         float tool_offset;		// Distance between end effector ball joint plane and tip of tool
         float z_calc_offset;
 
-        float z_home_angle;		// This is the angle where the arms hit the endstop sensor
         float z_home_offs;		// This is calculated from the above angle, after applying forward
         				// kinematics, and adding the Z calc offset to it.
 

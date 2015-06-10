@@ -18,10 +18,6 @@
 #define delta_ee_offs_checksum 		  	CHECKSUM("delta_ee_offs_checksum")
 #define tool_offset_checksum			CHECKSUM("tool_offset_checksum")
 
-#define z_home_angle_checksum        		CHECKSUM("z_home_angle_checksum")
-
-#define delta_printable_radius_checksum    	CHECKSUM("delta_printable_radius_checksum")
-
 #ifndef alpha_steps_per_mm_checksum
   #define alpha_steps_per_mm_checksum		CHECKSUM("alpha_steps_per_mm_checksum");
 #endif
@@ -45,32 +41,26 @@ const static float tan30  = 0.57735026918962576450914878050196; //1/sqrt3
 RotatableDeltaSolution::RotatableDeltaSolution(Config* config)
 {
 	// End effector length
-	delta_e = config->value((unsigned int)delta_e_checksum)->by_default(131.636F)->as_number();
+	delta_e = config->value(delta_e_checksum)->by_default(131.636F)->as_number();
 
 	// Base length
-	delta_f = config->value((unsigned int)delta_f_checksum)->by_default(190.526F)->as_number();
+	delta_f = config->value(delta_f_checksum)->by_default(190.526F)->as_number();
 
 	// Carbon rod length
-	delta_re = config->value((unsigned int)delta_re_checksum)->by_default(270.000F)->as_number();
+	delta_re = config->value(delta_re_checksum)->by_default(270.000F)->as_number();
 
 	// Servo horn length
-	delta_rf = config->value((unsigned int)delta_rf_checksum)->by_default(90.000F)->as_number();
+	delta_rf = config->value(delta_rf_checksum)->by_default(90.000F)->as_number();
 
 	// Distance from delta 8mm rod/pulley to table/bed,
 	// NOTE: For OpenPnP, set the zero to be about 25mm above the bed..
-	delta_z_offset = config->value((unsigned int)delta_z_offset_checksum)->by_default(290.700F)->as_number();
+	delta_z_offset = config->value(delta_z_offset_checksum)->by_default(290.700F)->as_number();
 
 	// Ball joint plane to bottom of end effector surface
-	delta_ee_offs = config->value((unsigned int)delta_ee_offs_checksum)->by_default(15.000F)->as_number();
+	delta_ee_offs = config->value(delta_ee_offs_checksum)->by_default(15.000F)->as_number();
 
 	// Distance between end effector ball joint plane and tip of tool (PnP)
-	tool_offset = config->value((unsigned int)tool_offset_checksum)->by_default(30.500F)->as_number();
-
-	// This is the angle where the arms hit the endstop sensor
-	z_home_angle = config->value((unsigned int)z_home_angle_checksum)->by_default(-60.000F)->as_number();
-
-	// Print surface diameter/2 minus unreachable space (avoid collisions with vertical towers).
-	delta_printable_radius = config->value((unsigned int)delta_printable_radius_checksum)->by_default(150.0F)->as_number();
+	tool_offset = config->value(tool_offset_checksum)->by_default(30.500F)->as_number();
 
 	init();
 }
@@ -151,10 +141,10 @@ int RotatableDeltaSolution::delta_calcForward(float theta1, float theta2, float 
 
 void RotatableDeltaSolution::init() {
 
+	//these are calculated here and not in the config() as these variables can be fine tuned by the user.
 	z_calc_offset  = (delta_z_offset - tool_offset - delta_ee_offs)*-1.0F;
 
-    // This is calculated from the Z_HOME_ANGLE angles specified in the config (file), after applying forward
-    // kinematics, and adding the Z calc offset to it.
+	// This is calculated from the Z_HOME_ANGLE angles after applying forward kinematics, and adding the Z calc offset to it.
 	z_home_offs    = (((delta_z_offset - tool_offset - delta_ee_offs) - 182.002F) - 0.5F);
 
 }
@@ -176,10 +166,13 @@ void RotatableDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float 
 	if (status == 0) status = delta_calcAngleYZ(x0*cos120 + y0*sin120, y0*cos120-x0*sin120, z_with_offset, beta_theta);  // rotate co-ordinates to +120 deg
 	if (status == 0) status = delta_calcAngleYZ(x0*cos120 - y0*sin120, y0*cos120+x0*sin120, z_with_offset, gamma_theta);  // rotate co-ordinates to -120 deg
 
-	if (status == -1)  //something went wrong
+	if (status == -1)  //something went wrong,
 	{
-	    //Do nothing so the actuator_mm is unchanged by this routine.
-            // as we have no idea what it should be
+	    //force to actuator FPD home position as we know this is a value position
+	    actuator_mm[ALPHA_STEPPER] = 0;
+	    actuator_mm[BETA_STEPPER ] = 0;
+	    actuator_mm[GAMMA_STEPPER] = 0;
+
 //DEBUG CODE, uncomment the following to help determine what may be happening if you are trying to adapt this to your own different roational delta.
 //	    THEKERNEL->streams->printf("ERROR: Delta calculation fail!  Unable to move to:\n");
 //	    THEKERNEL->streams->printf("    x= %f\n",cartesian_mm[X_AXIS]);
@@ -222,8 +215,6 @@ bool RotatableDeltaSolution::set_optional(const arm_options_t& options) {
             case 'E': delta_z_offset		= i.second; break;
             case 'F': delta_ee_offs		= i.second; break;
             case 'H': tool_offset		= i.second; break;
-            case 'I': z_home_angle		= i.second; break;
-            case 'J': delta_printable_radius    = i.second; break;
         }
     }
     init();
@@ -235,7 +226,7 @@ bool RotatableDeltaSolution::get_optional(arm_options_t& options) {
     // don't report these if none of them are set
     if(this->delta_e     != 0.0F || this->delta_f        != 0.0F || this->delta_re               != 0.0F ||
        this->delta_rf    != 0.0F || this->delta_z_offset != 0.0F || this->delta_ee_offs          != 0.0F ||
-       this->tool_offset != 0.0F || this->z_home_angle   != 0.0F || this->delta_printable_radius != 0.0F) {
+       this->tool_offset != 0.0F) {
 
         options['A'] = this->delta_e;
         options['B'] = this->delta_f;
@@ -244,8 +235,6 @@ bool RotatableDeltaSolution::get_optional(arm_options_t& options) {
         options['E'] = this->delta_z_offset;
         options['F'] = this->delta_ee_offs;
         options['H'] = this->tool_offset;
-        options['I'] = this->z_home_angle;
-        options['J'] = this->delta_printable_radius;
     }
 
     return true;
