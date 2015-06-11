@@ -406,8 +406,8 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     void AHB0_dealloc_if_not_nullptr(void *ptr);
 
     // Handlers for G-code commands too elaborate (read: stack-heavy) to cleanly fit in handleGcode()
-    bool handle_depth_mapping_calibration(Gcode *gcode);        // G31
-    bool handle_z_correction();
+    bool handle_depth_mapping_calibration(Gcode *gcode);        // G31 null|OPQRS|Z
+    bool handle_z_correction();					// G31 A
     bool handle_shimming_and_depth_correction(Gcode *gcode);    // M667
     void print_g31_help();
 
@@ -495,14 +495,20 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     float clamp(float n, float lower, float upper);
     void midpoint(float first[2], float second[2], float (&dest)[2]);
 
+    // For printing probed or simulated depths
+    void print_depths(cds_depths_t *depths, bool extrapolated);
+    void print_depths(float **depths, bool extrapolated);
+    void print_depths_line(cds_depths_t *depths, uint8_t line, bool extrapolated);
+    void print_depths_line(float **depths, uint8_t line, bool extrapolated);
+    void print_depths_statistics(cds_depths_t *depths);
+
     // Utilities
     void blink_LED(unsigned char which);
     void zero_depth_maps();
     void copy_depth_map(cds_depths_t source[], cds_depths_t dest[]);
     void clear_calibration_types();
     void display_calibration_types(bool active, bool inactive);
-    void print_depths(cds_depths_t *depths);
-    void print_depths(float **depths);
+
     void str_pad_left(unsigned char spaces);
     //bool require_clean_geometry();
     void print_task_with_warning(const std::string& str);
