@@ -131,10 +131,6 @@ void RotatableDeltaSolution::init() {
 
 	//these are calculated here and not in the config() as these variables can be fine tuned by the user.
 	z_calc_offset  = (delta_z_offset - tool_offset - delta_ee_offs)*-1.0F;
-
-	// This is calculated from the Z_HOME_ANGLE angles after applying forward kinematics, and adding the Z calc offset to it.
-	z_home_offs    = (((delta_z_offset - tool_offset - delta_ee_offs) - 182.002F) - 0.5F);
-
 }
 
 void RotatableDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] )
