@@ -18,18 +18,6 @@
 #define delta_ee_offs_checksum 		  	CHECKSUM("delta_ee_offs_checksum")
 #define tool_offset_checksum			CHECKSUM("tool_offset_checksum")
 
-#ifndef alpha_steps_per_mm_checksum
-  #define alpha_steps_per_mm_checksum		CHECKSUM("alpha_steps_per_mm_checksum");
-#endif
-
-#ifndef beta_steps_per_mm_checksum
-  #define beta_steps_per_mm_checksum		CHECKSUM("beta_steps_per_mm_checksum");
-#endif
-
-#ifndef gamma_steps_per_mm_checksum
-  #define gamma_steps_per_mm_checksum		CHECKSUM("gamma_steps_per_mm_checksum");
-#endif
-
 const static float pi     = 3.14159265358979323846;    // PI
 const static float two_pi = 2 * pi;
 const static float sin120 = 0.86602540378443864676372317075294; //sqrt3/2.0
