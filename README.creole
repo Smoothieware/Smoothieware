@@ -20,6 +20,8 @@ The recommended way to use this on a Delta printer is:
 * G31 A (depth mapping - corrects errors in Z, but not X or Y - benefits from simulated annealing, though)
 * M500 to save everything
 
+*Hint:* Type G31 by itself to get a full list of its available commands!
+
 
 ==Probe Calibration==
 It's *essential* to run G29 first, to get an idea of how repeatable your probe is - and to tune the probing parameters, which can have a HUGE impact on accuracy! You want 30 microns (0.03mm) or less, ideally zero. If your probe's repeatability is worse than that, you may have printed your mount too loosely (not enough filament flow) or you may have "delta arm blues" or some other slop in the printer that should be corrected before trying any sort of calibration.
@@ -27,6 +29,14 @@ It's *essential* to run G29 first, to get an idea of how repeatable your probe i
 Priming and smoothing will make everything take longer to run, but may provide greater accuracy - provided that they actually provide a benefit, which they may or may not! If you need excessive priming or smoothing, it may be that your feedrates (particularly slow_feedrate) and accelerations are off. If they're too high, you may have repeatability issues; and if they're too low, you may have problems from the steppers vibrating. (They will tend to vibrate more the slower you go!)
 
 The best way to calibrate your probe is to use the command G29 E S15 with different values for smoothing (P) and priming (Q). I would not bother to use either feature unless that experiment tells you it's necessary. *Do yourself a favor.* Spend as much time on G29 as it takes to get your probe's score as low as possible. You want 0, but you can take a little higher. *Even if it takes 20 minutes to get your probe dialed in, it WILL pay off ALL THE TIME because you'll get a better calibration!!!*
+
+
+==Heated Bed==
+If you have a heated bed, you MAY want to turn it on during the GeneB-style calibration (G32) and the simulated annealing routine (G31 OPQRS). However, you may want to leave it off instead. Try it both ways. The thermal expansion of the print surface may cause better results at room temperature, or at your favorite printing temperature. Choose the one that produces a better calibration (the one with the lowest energy).
+
+"But shouldn't we always calibrate at full operating temperature?" - No, not necessarily. We want the print surface to have the least amount of deformation possible during calibration, because those deformations will throw the calibration off. That's why you'd want to try it both ways, and pick whichever one is better.
+
+*ATTENTION:* Make sure you bring your print surface up to temperature *BEFORE* you run the depth correction routine (G31 AF). The 'F' flag forces it to re-probe. The print surface WILL change shape slightly when it's brought up to temperature - and yes, it is enough to matter!!!
 
 
 ==Printer Calibration==
@@ -48,7 +58,11 @@ There ARE conditions in which the simulated annealing will not improve the calib
 
 
 ==Depth Mapping (Z-only correction)==
-G31 OPQRS fixes errors in X, Y, and Z, assisting greatly with dimensional accuracy. However, there is one final step to get an even better calibration! After G31 OPQRS, you can run G31 A. That will tap the bed in a grid as before, but instead of adjusting the calibration, it will store a depth map of the print surface and use this to correct Z in real time. This ONLY fixes errors in Z, not X or Y, so you should only run it AFTER you do the annealing. Afterwards, you can run G31 Z again, and it'll show you the final corrected depths - they should be within a few microns of zero!
+*REMEMBER:* If you have a heated bed, do the above steps with your heated bed OFF. Then, turn the bed heat ON and wait for it to STABILIZE at its operating temperature BEFORE you proceed!!!
+
+G31 OPQRS fixes errors in X, Y, and Z, assisting greatly with dimensional accuracy. However, there is one final step to get an even better calibration! After G31 OPQRS, you can run G31 AF. That will tap the bed in a grid as before, but instead of adjusting the calibration, it will store a depth map of the print surface and use this to correct Z in real time. This ONLY fixes errors in Z, not X or Y, so you should only run it AFTER you do the annealing. Afterwards, you can run G31 Z again, and it'll show you the final corrected depths - they should be within a few microns of zero!
+
+You can just run G31 A (not G31 AF) if you don't have bed heat.
 
 
 ==Saving the calibration==
