@@ -29,12 +29,5 @@ class RotatableDeltaSolution : public BaseSolution {
         float delta_ee_offs;		// Ball joint plane to bottom of end effector surface
         float tool_offset;		// Distance between end effector ball joint plane and tip of tool
         float z_calc_offset;
-
-        float z_home_offs;		// This is calculated from the above angle, after applying forward
-        				// kinematics, and adding the Z calc offset to it.
-
-        float xyz_full_steps_per_rotation;	// stepper motor steps per 360 full rotation
-
-        float delta[3] = {0.0, 0.0, 0.0};
 };
 #endif // RotatableDeltaSolution_H
