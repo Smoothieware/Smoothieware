@@ -12,6 +12,10 @@ It is also possible to use a cheap (less than $5) mechanical endstop. (Not an op
 You will need to add some settings to your config file - see the Azteeg X5 and Smoothieboard ".delta" directories under ConfigSamples. I put all the settings you need near the top. **The Smoothieboard file is more up-to-date, as I no longer have a working Azteeg X5.**
 
 
+==Configuration File==
+You'll need to pull one of the example files (boardname.delta) out of ConfigSamples and adapt it for your printer. **Make sure you don't leave ANYTHING out.** If you do, strange things may happen!
+
+
 ==Calibration Workflow==
 The recommended way to use this on a Delta printer is:
 * G29 E (calibrate your probe)
