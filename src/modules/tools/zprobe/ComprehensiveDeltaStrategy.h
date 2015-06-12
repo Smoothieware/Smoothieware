@@ -10,6 +10,7 @@
 #include "MemoryPool.h"
 #include "libs/utils.h"
 #include "gpio.h"
+#include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 
 // This depends on ThreePointStrategy's Plane3D.h for virtual shimming.
 #include "Plane3D.h"
@@ -423,8 +424,8 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
 
     // Parallel simulated annealing methods
     bool heuristic_calibration(int annealing_tries, float max_temp, float binsearch_width, bool simulate_only, bool keep_settings, bool zero_all_offsets, float overrun_divisor, bool set_geom_after_each_caltype);
-    float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float min, float max, float binsearch_width, float **cartesian, float target);
-    float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float min, float max, float binsearch_width, float **cartesian, float target);
+    float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float value, float temp, float min, float max, float binsearch_width, float **cartesian, float target);
+    float find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float temp, float min, float max, float binsearch_width, float **cartesian, float target);
     bool set_test_trim(float x, float y, float z, bool dummy);
     bool set_test_virtual_shimming(float x, float y, float z, bool dummy);
     void move_randomly_towards(float &value, float best, float temp, float target, float overrun_divisor);
@@ -503,6 +504,7 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     void print_depths_statistics(cds_depths_t *depths);
 
     // Utilities
+    bool get_bed_temp(float &temp, float &target);
     void blink_LED(unsigned char which);
     void zero_depth_maps();
     void copy_depth_map(cds_depths_t source[], cds_depths_t dest[]);

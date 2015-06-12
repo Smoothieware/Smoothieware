@@ -175,7 +175,7 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
         _printf("%s surface transform.\n", error_str);
         return false;
     }
-
+    
     // Allocate space for depth map (this stores the most recent clean copy of the build surface depths)
     surface_transform->depth = (float *)AHB0.alloc(DM_GRID_ELEMENTS * sizeof(float));
     if(surface_transform->depth == nullptr) {
@@ -183,10 +183,15 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
         return false;
     }
 
-    // Zero depth map
+    // Zero depth map & other variables
     for(int i=0; i<DM_GRID_ELEMENTS; i++) {
         surface_transform->depth[i] = 0;
     }
+    surface_transform->active = false;
+    surface_transform->depth_enabled = false;
+    surface_transform->have_depth_map = false;
+    surface_transform->plane_enabled = false;
+    surface_transform->have_normal = false;
 
     // Allocate space for lerp scratchpad
     bili = (struct bili_t *)AHB0.alloc(sizeof(bili_t)); // was sizeof(bili)
@@ -204,8 +209,11 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
 
     // Allocate space for kinematics settings
     base_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
+    new(base_set) KinematicSettings;
     cur_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
+    new(cur_set) KinematicSettings;
     temp_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
+    new(temp_set) KinematicSettings;
     if(base_set == nullptr || cur_set == nullptr || temp_set == nullptr) {
         _printf("%s kinematic settings.\n", error_str);
         return false;
@@ -497,6 +505,7 @@ bool ComprehensiveDeltaStrategy::handleGcode(Gcode *gcode) {
 
         if(gcode->g == 31) { // Depth mapping & heuristic delta calibration
 
+
         /*
         // Code for verifying the test points
         _printf("There are %d grid elements.\n \n", DM_GRID_ELEMENTS);
@@ -661,15 +670,26 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         push_prefix("DC");
         print_task_with_warning("Depth-mapping calibration");
 
-        handle_z_correction();
+        if(handle_z_correction()) {
 
-        newline();
-        _printf("Checking calibration...\n");
-        if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false)) {
-            _printf("Couldn't depth-map the surface.\n");
+            _printf("Checking calibration...\n");
+            if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false)) {
+                _printf("Couldn't depth-map the surface.\n");
+                geom_dirty = true;
+                return false;
+            }
+
+            _printf("/!\\ IMPORTANT /!\\ Type M500 to save!\n");
+
+        } else {
+
+            geom_dirty = true;
+            return false;
+
         }
 
-        _printf("/!\\ IMPORTANT /!\\ Type M500 to save!\n");
+        geom_dirty = true;
+
         zprobe->home();
         pop_prefix();
 
@@ -679,9 +699,7 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
         // We are only here to map the surface - no calibration
         newline();
         push_prefix("DM");
-        _printf("Current kinematics:\n");
         print_kinematics();
-        newline();
 
         if(!depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false)) {
             _printf("Couldn't depth-map the surface.\n");
@@ -831,7 +849,6 @@ bool ComprehensiveDeltaStrategy::handle_z_correction() {
         return false;
     }
 
-
     // Copy depth map to surface_transform->depth[], which contains depths only
     for(int i=0; i<DM_GRID_ELEMENTS; i++) {
         surface_transform->depth[i] = cur_cartesian[i][Z];
@@ -872,6 +889,7 @@ bool ComprehensiveDeltaStrategy::handle_z_correction() {
     // case they don't have a Z-probe.
     FILE *fp = fopen("/sd/dm_surface_transform", "w");
     if(fp != NULL) {
+
         fprintf(fp, "; Depth Map Surface Transform\n");
         //__printf("; Depth Map Surface Transform\n");
         flush();
@@ -897,10 +915,10 @@ bool ComprehensiveDeltaStrategy::handle_z_correction() {
         _printf("Couldn't save surface transform to SD card!\n");
 
     }
-    
+
     // Dirty the geom again in case they decide to run G31 OPQRS[...] again
     geom_dirty = true;
-    
+
     return true;
 
 }
@@ -1309,7 +1327,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                 // Trigger regen of carriage positions
                 need_to_simulate_IK = true;
 
-                _printf("After hosing the variables, the settings are now:\n");
+                _printf("Done hosing the variables.\n");
                 print_kinematics();
 
             } // !keep_settings
@@ -1408,6 +1426,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             }
             
             try_mod_5 = annealing_try % 5;
+            float local_temp;
 
             for(int cal_type=0; cal_type<CDS_N_CALTYPES; cal_type++) {
 
@@ -1422,9 +1441,11 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
                         if(caltype.endstop.active) {
 
+                            local_temp = temp * caltype.endstop.annealing_temp_mul;
+
                             for(k=0; k<3; k++) {
-                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_trim, cur_set->trim, k, test_endstop[k].range_min, test_endstop[k].range_max, binsearch_width, cur_cartesian, target);
-                                move_randomly_towards(cur_set->trim[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_trim, cur_set->trim, k, local_temp, test_endstop[k].range_min, test_endstop[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set->trim[k], best_value, local_temp, target, overrun_divisor);
 
                                 // Set trim
                                 if(set_geom_after_each_caltype) {
@@ -1446,10 +1467,12 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
                         if(caltype.delta_radius.active) {
 
+                            local_temp = temp * caltype.delta_radius.annealing_temp_mul;
+
                             // Find the best tower (delta) radius offsets
                             for(k=0; k<3; k++) {
-                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_radius_offsets, cur_set->tower_radius, k, test_delta_radius_offset[k].range_min, test_delta_radius_offset[k].range_max, binsearch_width, cur_cartesian, target);
-                                move_randomly_towards(cur_set->tower_radius[k], best_value, temp * caltype.delta_radius.annealing_temp_mul, target, overrun_divisor);
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_radius_offsets, cur_set->tower_radius, k, local_temp, test_delta_radius_offset[k].range_min, test_delta_radius_offset[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set->tower_radius[k], best_value, local_temp, target, overrun_divisor);
 
                                 // Find the tower radius with the lowest absolute value
                                 lowest = 999;
@@ -1487,8 +1510,9 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
                         if(caltype.arm_length.active) {
 
-                            best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_arm_length, test_arm_length.range_min, test_arm_length.range_max, binsearch_width, cur_cartesian, target);
-                            move_randomly_towards(cur_set->arm_length, best_value, temp * caltype.arm_length.annealing_temp_mul, target, overrun_divisor);
+                            local_temp = temp * caltype.arm_length.annealing_temp_mul;
+                            best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_arm_length, cur_set->arm_length, local_temp, test_arm_length.range_min, test_arm_length.range_max, binsearch_width, cur_cartesian, target);
+                            move_randomly_towards(cur_set->arm_length, best_value, local_temp, target, overrun_divisor);
 
                             // Update the robot
                             if(set_geom_after_each_caltype) {
@@ -1508,9 +1532,11 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
                         if(caltype.tower_angle.active) {
 
+                            local_temp = temp * caltype.tower_angle.annealing_temp_mul;
+
                             for(k=0; k<3; k++) {
-                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_angle_offsets, cur_set->tower_angle, k, test_tower_angle[k].range_min, test_tower_angle[k].range_max, binsearch_width, cur_cartesian, target);
-                                move_randomly_towards(cur_set->tower_angle[k], best_value, temp * caltype.endstop.annealing_temp_mul, target, overrun_divisor);
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_angle_offsets, cur_set->tower_angle, k, local_temp, test_tower_angle[k].range_min, test_tower_angle[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set->tower_angle[k], best_value, local_temp, target, overrun_divisor);
 
                                 // Update the robot
                                 if(set_geom_after_each_caltype) {
@@ -1531,10 +1557,12 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                         // ********************
 
                         if(caltype.virtual_shimming.active) {
-                        
+
+                            local_temp = temp * caltype.virtual_shimming.annealing_temp_mul;
+
                             for(k=0; k<3; k++) {
-                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_virtual_shimming, cur_set->virtual_shimming, k, test_virtual_shimming[k].range_min, test_virtual_shimming[k].range_max, binsearch_width, cur_cartesian, target);
-                                move_randomly_towards(cur_set->virtual_shimming[k], best_value, temp * caltype.virtual_shimming.annealing_temp_mul, target, overrun_divisor);
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_test_virtual_shimming, cur_set->virtual_shimming, k, local_temp, test_virtual_shimming[k].range_min, test_virtual_shimming[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set->virtual_shimming[k], best_value, local_temp, target, overrun_divisor);
 
                                 // Update the robot
                                 if(set_geom_after_each_caltype) {
@@ -1662,7 +1690,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
 
     // Print the results
-    _printf("Heuristic calibration complete (energy=%1.3f). Final settings:\n", simulate_FK_and_get_energy(test_axis, cur_set->trim, cur_cartesian));
+    _printf("Heuristic calibration complete (energy=%1.3f)\n", simulate_FK_and_get_energy(test_axis, cur_set->trim, cur_cartesian));
 
     // Normalize trim (this prevents downward creep)
     auto mm = std::minmax({ cur_set->trim[X], cur_set->trim[Y], cur_set->trim[Z] });
@@ -1677,15 +1705,15 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 //    _printf("Final SIMULATED depths:\n");
 //    print_depths(cur_cartesian);
 
-    newline();
-    _printf("Checking calibration. If it's worse than it was before, you may have to run this several times!\n");
-    depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false);
-
-    _printf("You can run this command again to see if it gets better, or type M500 to save.\n");
+    if(!simulate_only) {
+        _printf("Checking calibration. If it's worse than it was before, you may have to run this several times!\n");
+        depth_map_print_surface(cur_cartesian, RESULTS_FORMATTED, false);
+        _printf("You can run this command again to see if it gets better, or type M500 to save.\n");
+        zprobe->home();
+    }
 
     pop_prefix();
-    zprobe->home();
-    
+
     return true;
 
 }
@@ -1693,12 +1721,21 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
 // Find the most optimal configuration for a test function (e.g. set_delta_radius())
 // (float version)
-float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float min, float max, float binsearch_width, float **cartesian, float target) {
+float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, bool), float value, float temp, float min, float max, float binsearch_width, float **cartesian, float target) {
 
-    float energy_min, energy_max;
-    
+    float energy_min, energy_max; 
+    int j;
+
+//_printf("find_optimal_config start: value=%1.3f, temp=%1.3f, min=%1.3f, max=%1.3f, binsearch_width=%1.3f\n", value, temp, min, max, binsearch_width);
+
+    // Never search further than we can walk during this iteration
+    if(min < value - temp) min = value - temp;
+    if(max > value + temp) max = value + temp;
+
+//_printf("find_optimal_config after clipping: min=%1.3f, max=%1.3f\n", min, max);
+
     // Find the direction of the most optimal configuration using a binary search
-    for(int j=0; j<250; j++) {
+    for(j=0; j<250; j++) {
 
         // Test energy at min & max
 
@@ -1709,18 +1746,23 @@ float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaSt
         energy_max = simulate_FK_and_get_energy(test_axis, cur_set->trim, cartesian);
 
         // Who won?
+//_printf("Check: val=%1.3f temp=%1.3f min=%1.3f max=%1.3f\n", value, temp, min, max);
         if(max - min <= target) {
+//_printf("Winner!\n");
             break;
         }
         if(energy_min < energy_max) {
-            max -= ((max - min) * binsearch_width);
+//            max -= ((max - min) * binsearch_width);
+            max -= binsearch_width;
         }
         if(energy_min > energy_max) {
-            min += ((max - min) * binsearch_width);
+//            min += ((max - min) * binsearch_width);
+            min += binsearch_width;
         }
     
     }
 
+//_printf("Iterations: %d\n", j);
     return (min + max) / 2.0f;
 
 } 
@@ -1728,11 +1770,15 @@ float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaSt
 
 // Find the most optimal configuration for a test function (e.g. set_delta_radius())
 // (float[3] version) 
-float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float min, float max, float binsearch_width, float **cartesian, float target) {
+float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaStrategy::*test_function)(float, float, float, bool), float values[3], int value_idx, float temp, float min, float max, float binsearch_width, float **cartesian, float target) {
 
     int j;
     float energy_min, energy_max;
     float save_val = values[value_idx];
+
+    // Never search further than we can walk during this iteration
+    if(min < save_val - temp) min = save_val - temp;
+    if(max > save_val + temp) max = save_val + temp;
 
     // Find the direction of the most optimal configuration using a binary search
     for(j=0; j<250; j++) {
@@ -1747,18 +1793,23 @@ float ComprehensiveDeltaStrategy::find_optimal_config(bool (ComprehensiveDeltaSt
         energy_max = simulate_FK_and_get_energy(test_axis, cur_set->trim, cartesian);
 
         // Who won?
+//_printf("Check: val=%1.3f temp=%1.3f min=%1.3f max=%1.3f\n", values[value_idx], temp, min, max);
         if(max - min <= target) {
+//_printf("Winner!\n");
             break;
         }
         if(energy_min < energy_max) {
-            max -= ((max - min) * binsearch_width);
+//            max -= ((max - min) * binsearch_width);
+            max -= binsearch_width;
         }
         if(energy_min > energy_max) {
-            min += ((max - min) * binsearch_width);
+//            min += ((max - min) * binsearch_width);
+            min += binsearch_width;
         }
     
     }
 
+//_printf("Iterations: %d\n", j);
     values[value_idx] = save_val;
     return (min + max) / 2.0f;
 
@@ -2524,9 +2575,51 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
     int center_point = find_nearest_test_point(center);
     bool force_print = false;
 
+    // Check bed temp to see whether we need to abort, or force a re-probe
+    float temp, target;
+    static float last_temp=-100, last_target=-100;
+
+    if(!get_bed_temp(temp, target)) {
+        return false;
+    }
+
+    /* Test code
+    geom_dirty = false;
+    _printf(" --  geom_dirty=%d\n", geom_dirty);
+    _printf(" --  temp=%1.3f, target=%1.3f\n", temp, target);
+    _printf(" --  Last temp=%1.3f, last target=%1.3f.\n", last_temp, last_target);
+    _printf(" --  fabs(target - temp) = %1.3f\n", fabs(target - temp));
+    _printf(" --  fabs(temp - last_temp) = %1.3f\n", fabs(temp - last_temp));
+    */
+
+    if(last_temp==-100) {
+        last_temp = temp;
+        last_target = target;
+    }
+
+    // Target set, but not there yet? Ask them to wait & come back.
+    if(target != 0 && fabs(target - temp) > 0.5) {
+        _printf("/!\\ Heated bed has not stabilized at target temp. Please wait until it is, and then re-run this command.\n");
+        geom_dirty = true;
+        return false;
+    }
+    //_printf("Got past the fabs(target-temp) > 0.5 check.\n");
+
+    // Clean geometry and within half a degree of target, but target is different from what it was before? (Re-)probe.
+    if( !geom_dirty && (fabs(temp - last_temp) > 1 || target != last_target) ) {
+        _printf("/!\\ Bed temp or target temp changed - forcing re-probe.\n");
+        geom_dirty = true;
+    }
+    //_printf("Got past the geom_dirty, fabs(temp - last_temp) > 1, and target != last_target checks.\n");
+    //_printf("Passed with geom_dirty = %d.\n", geom_dirty);
+    
+    last_temp = temp;
+    last_target = target;
+
+
+    // If geometry is clean, just copy the last results over rather than wasting time on re-probing the same numbers
     if(!geom_dirty) {
 
-        _printf("\n");
         _printf("Geometry hasn't changed since last depth map - keeping it!\n \n");
         force_print = true;
         
@@ -2537,6 +2630,7 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
             cartesian[i][Z] = depth_map[i].rel;
         }
 
+    // If geometry is dirty, (re-)probe.
     } else {
 
         // Geometry is dirty - we must re-probe the print surface        
@@ -2759,7 +2853,6 @@ bool ComprehensiveDeltaStrategy::depth_map_print_surface(float **cartesian, _cds
 
             newline();
             _printf("Complete output, with extrapolated points (numbers in brackets):\n");
-            _printf("\n");
             print_depths(depth_map, true);
 
         } else if(force_print) {
@@ -2803,7 +2896,6 @@ bool ComprehensiveDeltaStrategy::iterative_calibration(bool keep_settings) {
         set_virtual_shimming(0, 0, 0);
     }
 
-    _printf("Current kinematics:\n");
     print_kinematics();
 
     // Init test points specific to this routine (we don't use the grid)
@@ -3023,9 +3115,7 @@ bool ComprehensiveDeltaStrategy::iterative_calibration(bool keep_settings) {
         // Done with ALL tasks?
         // Right now this only does the endstops & delta radius, but more can be added later.
         if(caltype.endstop.in_tolerance && caltype.delta_radius.in_tolerance) {
-            newline();
             print_kinematics();
-            newline();
             _printf("All done! Save settings with M500.\n");
             pop_prefix();
             zprobe->home();
@@ -3626,6 +3716,8 @@ void ComprehensiveDeltaStrategy::print_kinematics() {
 void ComprehensiveDeltaStrategy::print_kinematics(KinematicSettings *settings) {
 
     push_prefix("PK");
+    newline();
+    _printf("Current kinematic settings:\n");
     _printf("          Arm length: %1.3f\n", settings->arm_length);
     _printf("        Delta radius: %1.3f\n", settings->delta_radius);
     _printf("     Endstop offsets: {%1.3f, %1.3f, %1.3f}\n", settings->trim[X], settings->trim[Y], settings->trim[Z]);
@@ -3633,6 +3725,7 @@ void ComprehensiveDeltaStrategy::print_kinematics(KinematicSettings *settings) {
     _printf(" Angle offsets (DEF): {%1.3f, %1.3f, %1.3f}\n", settings->tower_angle[X], settings->tower_angle[Y], settings->tower_angle[Z]);
     _printf("    Virtual shimming: {%1.3f, %1.3f, %1.3f}, vector={%1.3f, %1.3f, %1.3f}, d=%1.3f, %s\n", settings->virtual_shimming[X], settings->virtual_shimming[Y], settings->virtual_shimming[Z], surface_transform->normal[X], surface_transform->normal[Y], surface_transform->normal[Z], surface_transform->d, (surface_transform->plane_enabled && surface_transform->active) ? _STR_ENABLED_ : _STR_DISABLED_);
     _printf("Depth (Z) correction: %s\n", (surface_transform->depth_enabled && surface_transform->active) ? _STR_ENABLED_ : _STR_DISABLED_);
+    newline();
     pop_prefix();
 
 }
@@ -3640,12 +3733,14 @@ void ComprehensiveDeltaStrategy::print_kinematics(KinematicSettings *settings) {
 
 // Print measured or simulated depths
 void ComprehensiveDeltaStrategy::print_depths(cds_depths_t *depths, bool extrapolated) {
+    newline();
     for(int i=0; i<DM_GRID_DIMENSION; i++) {
         print_depths_line(depths, i, extrapolated);
     }
 }
 
 void ComprehensiveDeltaStrategy::print_depths(float **depths, bool extrapolated) {
+    newline();
     for(uint8_t i=0; i<DM_GRID_DIMENSION; i++) {
         print_depths_line(depths, i, extrapolated);
     }
@@ -3931,7 +4026,7 @@ void ComprehensiveDeltaStrategy::display_calibration_types(bool active, bool ina
         __printf("(none)");
     }
 
-    __printf("\n");
+    newline();
 
 }
 
@@ -4050,6 +4145,25 @@ void ComprehensiveDeltaStrategy::flush() {
 
 void ComprehensiveDeltaStrategy::newline() {
     THEKERNEL->streams->printf(" \n");
+}
+
+
+// Fetch the bed temperature
+bool ComprehensiveDeltaStrategy::get_bed_temp(float &temp, float &target) {
+
+    void *returned_data;
+    string type = "bed";
+    bool ok = PublicData::get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
+    if(!ok) {
+        _printf("ERROR: Couldn't query bed temperature!\n");
+        return false;
+    }
+    struct pad_temperature _temp = *static_cast<struct pad_temperature *>(returned_data);
+    temp = _temp.current_temperature;
+    target = _temp.target_temperature;
+
+    return true;
+
 }
 
 
