@@ -37,7 +37,7 @@ If you have a heated bed, you MAY want to turn it on during the GeneB-style cali
 "But shouldn't we always calibrate at full operating temperature?" - No, not necessarily. We want the print surface to have the least amount of deformation possible during calibration, because those deformations will throw the calibration off. That's why you'd want to try it both ways, and pick whichever one is better.
 
 **ATTENTION**
-*Make sure you bring your print surface up to temperature *BEFORE* you run the depth correction routine (G31 AF). The 'F' flag forces it to re-probe. The print surface WILL change shape slightly when it's brought up to temperature - and yes, it is enough to matter!!!
+*Make sure you bring your print surface up to temperature **BEFORE** you run the depth correction routine (G31 A). The print surface WILL change shape slightly when it's brought up to temperature - and yes, it IS enough to matter!!!
 
 
 ==Printer Calibration==
