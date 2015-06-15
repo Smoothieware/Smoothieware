@@ -64,6 +64,7 @@
 
 #define hotend_temp_checksum CHECKSUM("hotend_temperature")
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
+#define panel_display_message_checksum CHECKSUM("display_message")
 
 Panel* Panel::instance= nullptr;
 
@@ -189,8 +190,8 @@ void Panel::on_module_loaded()
     // Register for events
     this->register_for_event(ON_IDLE);
     this->register_for_event(ON_MAIN_LOOP);
-    this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_HALT);
+    this->register_for_event(ON_SET_PUBLIC_DATA);
 
     // Refresh timer
     THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
@@ -261,15 +262,19 @@ uint32_t Panel::encoder_tick(uint32_t dummy)
     return 0;
 }
 
-void Panel::on_gcode_received(void *argument)
+void Panel::on_set_public_data(void *argument)
 {
-    Gcode *gcode = static_cast<Gcode *>(argument);
-    if ( gcode->has_m) {
-        if ( gcode->m == 117 ) { // set LCD message
-            this->message = get_arguments(gcode->get_command());
-            if (this->message.size() > 20) this->message = this->message.substr(0, 20);
-            gcode->mark_as_taken();
-        }
+     PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
+
+    if(!pdr->starts_with(panel_checksum)) return;
+
+    if(!pdr->second_element_is(panel_display_message_checksum)) return;
+
+    string *s = static_cast<string *>(pdr->get_data_ptr());
+    if (s->size() > 20) {
+        this->message = s->substr(0, 20);
+    } else {
+        this->message= *s;
     }
 }
 

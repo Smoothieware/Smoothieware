@@ -20,8 +20,12 @@
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "PublicDataRequest.h"
+#include "PublicData.h"
 
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+#define panel_display_message_checksum CHECKSUM("display_message")
+#define panel_checksum             CHECKSUM("panel")
 
 // goes in Flash, list of Mxxx codes that are allowed when in Halted state
 static const int allowed_mcodes[]= {105,114}; // get temp, get pos
@@ -177,6 +181,15 @@ try_again:
                                 THEKERNEL->streams->printf("ok Emergency Stop Requested - reset or M999 required to continue\r\n");
                                 delete gcode;
                                 return;
+
+                            case 117: // M117 is a special non compliant Gcode as it allows arbitrary text on the line following the command
+                            {    // concatenate the command again and send to panel if enabled
+                                string str= single_command.substr(4) + possible_command;
+                                PublicData::set_value( panel_checksum, panel_display_message_checksum, &str );
+                                delete gcode;
+                                new_message.stream->printf("ok\r\n");
+                                return;
+                            }
 
                             case 500: // M500 save volatile settings to config-override
                                 THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
