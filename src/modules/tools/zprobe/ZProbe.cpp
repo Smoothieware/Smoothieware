@@ -26,6 +26,8 @@
 #include "PublicData.h"
 #include "LevelingStrategy.h"
 #include "StepTicker.h"
+#include "PwmOut.h" // mbed.h lib
+#include "us_ticker_api.h"
 
 // strategies we know about
 #include "DeltaCalibrationStrategy.h"
@@ -39,6 +41,9 @@
 #define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
 #define gamma_max_checksum       CHECKSUM("gamma_max")
+#define servo_pin_checksum       CHECKSUM("servo_pin")
+#define servo_percent_checksum   CHECKSUM("servo_percent")
+#define servo_disable_checksum   CHECKSUM("servo_disable")
 
 // from endstop section
 #define delta_homing_checksum    CHECKSUM("delta_homing")
@@ -69,12 +74,22 @@ void ZProbe::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
 
     THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){acceleration_tick(); });
+
 }
 
 void ZProbe::on_config_reload(void *argument)
 {
     this->pin.from_string( THEKERNEL->config->value(zprobe_checksum, probe_pin_checksum)->by_default("nc" )->as_string())->as_input();
     this->debounce_count = THEKERNEL->config->value(zprobe_checksum, debounce_count_checksum)->by_default(0  )->as_number();
+
+    Pin* dummy_pin = new Pin();
+    dummy_pin->from_string(THEKERNEL->config->value(zprobe_checksum, servo_pin_checksum)->by_default("nc")->as_string())->as_output();
+    if(dummy_pin->connected()) {
+    	this->servo_pin = dummy_pin->hardware_pwm();
+        this->servo_percent = THEKERNEL->config->value(zprobe_checksum, servo_percent_checksum)->by_default(100)->as_int();
+        this->servo_disable = THEKERNEL->config->value( zprobe_checksum, servo_disable_checksum )->by_default(false)->as_bool();
+    	retract_servo();
+    }
 
     // get strategies to load
     vector<uint16_t> modules;
@@ -169,6 +184,8 @@ bool ZProbe::wait_for_probe(int& steps)
 // single probe and report amount moved
 bool ZProbe::run_probe(int& steps, bool fast)
 {
+   deploy_servo(); //Deploy Servo
+    
     // not a block move so disable the last tick setting
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         STEPPER[c]->set_moved_last_block(false);
@@ -192,6 +209,7 @@ bool ZProbe::run_probe(int& steps, bool fast)
 
     bool r = wait_for_probe(steps);
     this->running = false;
+    retract_servo();  //Retract probe
     return r;
 }
 
@@ -295,6 +313,10 @@ void ZProbe::on_gcode_received(void *argument)
             gcode->add_nl = true;
             gcode->mark_as_taken();
 
+        } else if(gcode->m == 401) {
+        	deploy_servo();
+        } else if(gcode->m == 402) {
+        	retract_servo();
         }else {
             for(auto s : strategies){
                 if(s->handleGcode(gcode)) {
@@ -389,4 +411,37 @@ void ZProbe::home()
 float ZProbe::zsteps_to_mm(float steps)
 {
     return steps / Z_STEPS_PER_MM;
+}
+
+void ZProbe::deploy_servo()
+{
+	if(this->servo_pin == NULL) return;
+
+	this->servo_pin->period_ms(20);
+	this->servo_pin->pulsewidth_us(1000 + this->servo_percent * 10);
+
+	if(this->servo_disable) {				//Disable servo to eliminate jitter
+		uint32_t start = us_ticker_read();
+		while ((us_ticker_read() - start) < 250000) {
+		   THEKERNEL->call_event(ON_IDLE);
+		}
+		this->servo_pin->pulsewidth_us(0);
+	}
+}
+
+void ZProbe::retract_servo()
+{
+
+	if(this->servo_pin == NULL) return;
+
+	this->servo_pin->period_ms(20);
+	this->servo_pin->pulsewidth_us(1000);
+
+	if(this->servo_disable) {				//Disable servo to eliminate jitter
+		uint32_t start = us_ticker_read();
+		while ((us_ticker_read() - start) < 250000) {
+		   THEKERNEL->call_event(ON_IDLE);
+		}
+		this->servo_pin->pulsewidth_us(0);
+	}
 }
