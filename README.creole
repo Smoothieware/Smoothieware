@@ -15,6 +15,8 @@ You will need to add some settings to your config file - see the Azteeg X5 and S
 ==Configuration File==
 You'll need to pull one of the example files (boardname.delta) out of ConfigSamples and adapt it for your printer. **Make sure you don't leave ANYTHING out.** If you do, strange things may happen!
 
+**This module uses a lot of RAM.** It has a lot to keep track of! You may find it necessary to disable LCD panel and network support in your configuration file until after you're done calibrating. (It will be necessary to leave the ComprehensiveDeltaStrategy module turned on at all times for depth correction, but it uses significantly less RAM when it's not actively calibrating!)
+
 
 ==Calibration Workflow==
 The recommended way to use this on a Delta printer is:
