@@ -15,13 +15,10 @@
 #include "LcdBase.h"
 #include "libs/StreamOutput.h"
 
-#include <string>
-#include <vector>
-
 using namespace std;
 
 // static as it is shared by all screens
-std::vector<std::string> PanelScreen::command_queue;
+std::deque<std::string> PanelScreen::command_queue;
 
 PanelScreen::PanelScreen() {}
 PanelScreen::~PanelScreen() {}
@@ -90,12 +87,11 @@ void PanelScreen::send_command(const char *gcstr)
 void PanelScreen::on_main_loop()
 {
     // for each command in queue send it
-    for (auto& cmd : command_queue) {
+    while(command_queue.size() > 0) {
         struct SerialMessage message;
-        message.message = cmd;
+        message.message = command_queue.front();
+        command_queue.pop_front();
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-        cmd.clear();
     }
-    command_queue.clear();
 }

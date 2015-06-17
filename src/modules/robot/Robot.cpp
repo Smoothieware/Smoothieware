@@ -27,6 +27,7 @@ using std::string;
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/LinearDeltaSolution.h"
+#include "arm_solutions/RotatableDeltaSolution.h"
 #include "arm_solutions/HBotSolution.h"
 #include "arm_solutions/MorganSCARASolution.h"
 #include "StepTicker.h"
@@ -52,6 +53,7 @@ using std::string;
 #define  rotatable_cartesian_checksum        CHECKSUM("rotatable_cartesian")
 #define  rostock_checksum                    CHECKSUM("rostock")
 #define  linear_delta_checksum               CHECKSUM("linear_delta")
+#define  rotatable_delta_checksum            CHECKSUM("rotatable_delta")
 #define  delta_checksum                      CHECKSUM("delta")
 #define  hbot_checksum                       CHECKSUM("hbot")
 #define  corexy_checksum                     CHECKSUM("corexy")
@@ -162,6 +164,10 @@ void Robot::on_config_reload(void *argument)
 
     } else if(solution_checksum == rotatable_cartesian_checksum) {
         this->arm_solution = new RotatableCartesianSolution(THEKERNEL->config);
+
+    } else if(solution_checksum == rotatable_delta_checksum) {
+        this->arm_solution = new RotatableDeltaSolution(THEKERNEL->config);
+
 
     } else if(solution_checksum == morgan_checksum) {
         this->arm_solution = new MorganSCARASolution(THEKERNEL->config);
@@ -355,7 +361,8 @@ void Robot::on_gcode_received(void *argument)
                     }
                 }
                 gcode->mark_as_taken();
-            }
+            } 
+            break;
             case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); gcode->mark_as_taken();  break;
             case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); gcode->mark_as_taken();  break;
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;
