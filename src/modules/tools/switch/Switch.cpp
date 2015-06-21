@@ -73,19 +73,31 @@ void Switch::on_config_reload(void *argument)
     this->output_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
     this->output_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
     this->switch_state =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
-    string type =                THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
+    string type =                THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("")->as_string();
 
     if(type == "pwm"){
         this->output_type= SIGMADELTA;
         this->sigmadelta_pin= new Pwm();
         this->sigmadelta_pin->from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
-        set_low_on_debug(sigmadelta_pin->port_number, sigmadelta_pin->pin);
+        if(this->sigmadelta_pin->connected()) {
+            set_low_on_debug(sigmadelta_pin->port_number, sigmadelta_pin->pin);
+        }else{
+            this->output_type= NONE;
+            delete this->sigmadelta_pin;
+            this->sigmadelta_pin= nullptr;
+        }
 
     }else if(type == "digital"){
         this->output_type= DIGITAL;
         this->digital_pin= new Pin();
         this->digital_pin->from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
-        set_low_on_debug(digital_pin->port_number, digital_pin->pin);
+        if(this->digital_pin->connected()) {
+            set_low_on_debug(digital_pin->port_number, digital_pin->pin);
+        }else{
+            this->output_type= NONE;
+            delete this->digital_pin;
+            this->digital_pin= nullptr;
+        }
 
     }else if(type == "hwpwm"){
         this->output_type= HWPWM;
@@ -96,7 +108,7 @@ void Switch::on_config_reload(void *argument)
         delete pin;
         if(this->pwm_pin == nullptr) {
             THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
-            return;
+            this->output_type= NONE;
         }
 
     } else {
