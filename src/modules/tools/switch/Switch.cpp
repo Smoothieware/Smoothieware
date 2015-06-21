@@ -102,9 +102,9 @@ void Switch::on_config_reload(void *argument)
     }else if(type == "hwpwm"){
         this->output_type= HWPWM;
         Pin *pin= new Pin();
-        set_low_on_debug(pin->port_number, pin->pin);
         pin->from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
         this->pwm_pin= pin->hardware_pwm();
+        set_low_on_debug(pin->port_number, pin->pin);
         delete pin;
         if(this->pwm_pin == nullptr) {
             THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
@@ -130,7 +130,7 @@ void Switch::on_config_reload(void *argument)
         // default is 0% duty cycle
         this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(0)->as_number();
         if(this->switch_state) {
-            this->pwm_pin->write(this->switch_value);
+            this->pwm_pin->write(this->switch_value/100.0F);
         } else {
             this->pwm_pin->write(0);
         }
@@ -218,7 +218,7 @@ void Switch::on_gcode_received(void *argument)
                 float v = gcode->get_value('S');
                 if(v > 100) v= 100;
                 else if(v < 0) v= 0;
-                this->pwm_pin->write(v);
+                this->pwm_pin->write(v/100.0F);
                 this->switch_state= (v != 0);
             } else {
                 this->pwm_pin->write(this->switch_value);
@@ -299,7 +299,7 @@ void Switch::on_main_loop(void *argument)
                 this->sigmadelta_pin->pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
 
             } else if (this->output_type == HWPWM) {
-                this->pwm_pin->write(this->switch_value);
+                this->pwm_pin->write(this->switch_value/100.0F);
 
             } else if (this->output_type == DIGITAL) {
                 this->digital_pin->set(true);
