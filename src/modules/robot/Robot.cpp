@@ -719,6 +719,9 @@ void Robot::append_milestone( float target[], float rate_mm_s )
         }
     }
 
+    // Speeds of zero are invalid
+    rate_mm_s = max((float)0.00001, rate_mm_s);
+
     // find actuator position given cartesian position, use actual adjusted target
     arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
 
