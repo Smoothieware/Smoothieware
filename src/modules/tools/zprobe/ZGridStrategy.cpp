@@ -447,9 +447,6 @@ void ZGridStrategy::setZoffset(float zval)
 
 bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 {
-    // home first
-    this->homexyz();
-
     // deactivate correction during moves
     this->setAdjustFunction(false);
 
@@ -532,11 +529,6 @@ void ZGridStrategy::normalize_grid()
    this->setZoffset(getZhomeoffset() + norm_offset);
 }
 
-void ZGridStrategy::homexyz()
-{
-    Gcode gc("G28", &(StreamOutput::NullStream));
-    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-}
 
 void ZGridStrategy::move(float *position, float feed)
 {
