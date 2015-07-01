@@ -21,8 +21,6 @@ public:
     float getZOffset(float x, float y);
 
 private:
-    void homexyz();
-
     void move(float *position, float feed);
     void next_cal(void);
     float getZhomeoffset();
