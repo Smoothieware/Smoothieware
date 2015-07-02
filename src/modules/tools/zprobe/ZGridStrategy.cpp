@@ -457,7 +457,7 @@ void ZGridStrategy::setZoffset(float zval)
 bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 {
     // home first using selected mode: NOHOME, HOMEXY, HOMEXYZ
-        this->homexyz();
+    this->homexyz();
 
     // deactivate correction during moves
     this->setAdjustFunction(false);
@@ -548,15 +548,15 @@ void ZGridStrategy::homexyz()
     case NOHOME : return;
 
     case HOMEXY : {
-                      Gcode gc("G28 X0 Y0", &(StreamOutput::NullStream));
-                      THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-                      break;
+        Gcode gc("G28 X Y", &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+        break;
     }
 
     case HOMEXYZ : {
-                      Gcode gc("G28", &(StreamOutput::NullStream));
-                      THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-                      break;
+        Gcode gc("G28", &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+        break;
     }
   }
 }
