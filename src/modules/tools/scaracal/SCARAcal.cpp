@@ -21,6 +21,8 @@
 #include "SerialMessage.h"
 #include "EndstopsPublicAccess.h"
 #include "PublicData.h"
+#include <algorithm>
+#include <map>
 
 #define scaracal_checksum CHECKSUM("scaracal")
 #define enable_checksum CHECKSUM("enable")
@@ -116,17 +118,7 @@ bool SCARAcal::set_home_offset(float x, float y, float z, StreamOutput *stream)
     Gcode gc(cmd, &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 
-//}
-
-
-//    float t[3]{x, y, z};
-//    bool ok= PublicData::set_value( endstops_checksum, home_offset_checksum, t);
-
-//    if (ok) {
-        stream->printf("set home_offset to X:%f Y:%f Z:%f\n", x, y, z);
-//    } else {
-//        stream->printf("unable to set home_offset, is endstops enabled?\n");
-//    }
+    stream->printf("Set home_offset to X:%f Y:%f Z:%f\n", x, y, z);
 
     return true;//ok;
 }
@@ -284,10 +276,28 @@ void SCARAcal::on_gcode_received(void *argument)
             }
             return;
 
-            case 365: {
+            /* TODO case 365: {   // set scara scaling
+              std::map<char, float> buf = gcode->get_args();
+              //algorithm::replace(buf.begin, buf.end , 'X', 'A');
+              //algorithm::algorithm::replace(buf.begin, buf.end , 'Y', 'B');
+              //algorithm::replace(buf.begin, buf.end , 'Z', 'C');
+
+              buf = string("M665 ") + buf;
+
+              Gcode gc(buf, &(StreamOutput::NullStream));
+              THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+
+              //stream->printf("Set scaling to X:%f Y:%f Z:%f\n", x, y, z);
+
+
+              gcode->mark_as_taken();*/
+
+            case 366: {                                      // Translate trims to the actual endstop offsets for SCARA
                 this->translate_trim(gcode->stream);
 
+                gcode->mark_as_taken();
             }
+
         }
     }
 }
