@@ -9,7 +9,6 @@
 
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/spindle/SpindleMaker.h"
-//#include "modules/tools/spindle/SpindleModbus.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
@@ -164,8 +163,6 @@ void init() {
     SpindleMaker *sm= new SpindleMaker();
     sm->load_spindle();
     delete sm;
-    //kernel->add_module( new Spindle() );
-    //kernel->add_module( new SpindleModbus() );
     #endif
     #ifndef NO_UTILS_PANEL
     kernel->add_module( new Panel() );
