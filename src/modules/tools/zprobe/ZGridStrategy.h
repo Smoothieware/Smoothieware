@@ -45,6 +45,8 @@ private:
 
     bool wait_for_probe;
 
+    char home_before_probe;
+
     float slow_rate;
     float bed_x;
     float bed_y;
