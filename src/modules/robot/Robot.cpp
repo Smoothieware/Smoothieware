@@ -820,7 +820,7 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
     float rt_axis0 = target[this->plane_axis_0] - center_axis0;
     float rt_axis1 = target[this->plane_axis_1] - center_axis1;
 
-    // Patch from GRBL Firmware - bauc 04072015
+    // Patch from GRBL Firmware - Christoph Baumann 04072015
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
     float angular_travel = atan2(r_axis0*rt_axis1-r_axis1*rt_axis0, r_axis0*rt_axis0+r_axis1*rt_axis1);
     if (is_clockwise) { // Correct atan2 output per direction
