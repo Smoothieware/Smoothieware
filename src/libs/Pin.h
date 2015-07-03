@@ -10,6 +10,7 @@
 
 namespace mbed {
     class PwmOut;
+    class InterruptIn;
 }
 
 class Pin {
@@ -63,6 +64,8 @@ class Pin {
         }
 
         mbed::PwmOut *hardware_pwm();
+
+        mbed::InterruptIn *interrupt_pin();
 
         // these should be private, and use getters
         LPC_GPIO_TypeDef* port;

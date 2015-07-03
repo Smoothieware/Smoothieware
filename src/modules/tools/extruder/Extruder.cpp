@@ -36,6 +36,7 @@
 #define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
 #define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
 #define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
+#define extruder_default_feed_rate_checksum  CHECKSUM("extruder_default_feed_rate")
 
 // NEW config names
 #define extruder_checksum                    CHECKSUM("extruder")
@@ -143,7 +144,7 @@ void Extruder::on_config_reload(void *argument)
         this->steps_per_millimeter        = THEKERNEL->config->value(extruder_steps_per_mm_checksum      )->by_default(1)->as_number();
         this->filament_diameter           = THEKERNEL->config->value(extruder_filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration                = THEKERNEL->config->value(extruder_acceleration_checksum      )->by_default(1000)->as_number();
-        this->feed_rate                   = THEKERNEL->config->value(default_feed_rate_checksum          )->by_default(1000)->as_number();
+        this->feed_rate                   = THEKERNEL->config->value(extruder_default_feed_rate_checksum )->by_default(1000)->as_number();
 
         this->step_pin.from_string(         THEKERNEL->config->value(extruder_step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
         this->dir_pin.from_string(          THEKERNEL->config->value(extruder_dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
@@ -161,7 +162,7 @@ void Extruder::on_config_reload(void *argument)
         this->steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
         this->filament_diameter    = THEKERNEL->config->value(extruder_checksum, this->identifier, filament_diameter_checksum )->by_default(0)->as_number();
         this->acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
-        this->feed_rate            = THEKERNEL->config->value(                                     default_feed_rate_checksum )->by_default(1000)->as_number();
+        this->feed_rate            = THEKERNEL->config->value(extruder_checksum, this->identifier, default_feed_rate_checksum )->by_default(1000)->as_number();
 
         this->step_pin.from_string( THEKERNEL->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
         this->dir_pin.from_string(  THEKERNEL->config->value(extruder_checksum, this->identifier, dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
@@ -528,7 +529,8 @@ void Extruder::on_block_begin(void *argument)
             this->stepper_motor->set_moved_last_block(true);
         }else{
             // SOLO
-            this->stepper_motor->set_speed(rate_increase());  // start at first acceleration step
+            uint32_t target_rate = floorf(this->feed_rate * this->steps_per_millimeter);
+            this->stepper_motor->set_speed(min( target_rate, rate_increase() ));  // start at first acceleration step
             this->stepper_motor->set_moved_last_block(false);
         }
 

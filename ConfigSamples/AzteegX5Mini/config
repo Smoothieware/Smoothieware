@@ -1,4 +1,4 @@
-#leveling-strategy.three-point-leveling.probe_offsets  0,0,0       # the probe offsets from nozzle, must be x,y,z, default is no offset# Robot module configurations : general handling of movement G-codes and slicing into moves
+# Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
@@ -111,6 +111,12 @@ switch.misc.output_pin                       2.4              #
 #temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
 #temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
 
+# filament out detector
+#filament_detector.enable                     true             #
+#filament_detector.encoder_pin                0.26             # must be interrupt enabled pin (0.26, 0.27, 0.28)
+#filament_detector.seconds_per_check          2                # may need to be longer
+#filament_detector.pulses_per_mm              1 .0             # will need to be tuned
+#filament_detector.bulge_pin                  0.27             # optional bulge detector switch and/or manual suspend
 
 # Switch module for spindle control
 #switch.spindle.enable                        false            #

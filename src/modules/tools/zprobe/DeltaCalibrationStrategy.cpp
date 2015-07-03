@@ -12,6 +12,7 @@
 #include "Conveyor.h"
 #include "ZProbe.h"
 #include "BaseSolution.h"
+#include "StepperMotor.h"
 
 #include <tuple>
 #include <algorithm>
@@ -54,6 +55,13 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
             }
             gcode->stream->printf("Calibration complete, save settings with M500\n");
             return true;
+
+        }else if (gcode->g == 29) {
+            // probe the 7 points
+            if(!probe_delta_points(gcode)) {
+                gcode->stream->printf("Calibration failed to complete, probe not triggered\n");
+            }
+            return true;
         }
 
     } else if(gcode->has_m) {
@@ -62,8 +70,6 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
 
     return false;
 }
-
-
 
 // calculate the X and Y positions for the three towers given the radius from the center
 static std::tuple<float, float, float, float, float, float> getCoordinates(float radius)
@@ -74,6 +80,31 @@ static std::tuple<float, float, float, float, float, float> getCoordinates(float
     float t2x = px, t2y = -py; // Y Tower
     float t3x = 0.0F, t3y = radius; // Z Tower
     return std::make_tuple(t1x, t1y, t2x, t2y, t3x, t3y);
+}
+
+
+// Probes the 7 points on a delta can be used for off board calibration
+bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
+{
+    // get probe points
+    float t1x, t1y, t2x, t2y, t3x, t3y;
+    std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
+
+    // gather probe points
+    float pp[][2] {{t1x, t1y}, {t2x, t2y}, {t3x, t3y}, {0, 0}, {-t1x, -t1y}, {-t2x, -t2y}, {-t3x, -t3y}};
+
+    for(auto& i : pp) {
+        int s;
+        if(!zprobe->doProbeAt(s, i[0], i[1])) return false;
+        float z = zprobe->zsteps_to_mm(s);
+        gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f (%d) A:%1.4f B:%1.4f C:%1.4f\n",
+            i[0], i[1], z, s,
+            THEKERNEL->robot->actuators[0]->get_current_position()+z,
+            THEKERNEL->robot->actuators[1]->get_current_position()+z,
+            THEKERNEL->robot->actuators[2]->get_current_position()+z);
+    }
+
+    return true;
 }
 
 /* Run a calibration routine for a delta
