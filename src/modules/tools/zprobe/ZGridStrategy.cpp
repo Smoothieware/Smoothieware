@@ -112,10 +112,6 @@
 #define cal_offset_x_checksum        CHECKSUM("cal_offset_x")
 #define cal_offset_y_checksum        CHECKSUM("cal_offset_y")
 
-#define nohome_checksum              CHECKSUM("nohome")
-#define homexy_checksum              CHECKSUM("homexy")
-#define homexyz_checksum             CHECKSUM("homexyz")
-
 #define NOHOME                       0
 #define HOMEXY                       1
 #define HOMEXYZ                      2
