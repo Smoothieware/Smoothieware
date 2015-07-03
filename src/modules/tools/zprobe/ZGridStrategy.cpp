@@ -46,7 +46,7 @@
 
     The machine can be told to home in one of the following modes:
 
-       leveling-strategy.ZGrid-leveling.home_before_probe  2;    # 0: NOHOME  1: HOMEXY  2: HOMEXYZ (Default HOMEXYZ)
+       leveling-strategy.ZGrid-leveling.home_before_probe  homexyz;    #  nohome homexy homexyz (default)
 
 
     Slow feedrate can be defined for probe positioning speed.  Note this is not Probing slow rate - it can be set to a fast speed if required.
@@ -112,6 +112,10 @@
 #define cal_offset_x_checksum        CHECKSUM("cal_offset_x")
 #define cal_offset_y_checksum        CHECKSUM("cal_offset_y")
 
+#define nohome_checksum              CHECKSUM("nohome")
+#define homexy_checksum              CHECKSUM("homexy")
+#define homexyz_checksum             CHECKSUM("homexyz")
+
 #define NOHOME                       0
 #define HOMEXY                       1
 #define HOMEXYZ                      2
@@ -150,8 +154,21 @@ bool ZGridStrategy::handleConfig()
     this->numRows = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, rows_checksum)->by_default(5)->as_number();
     this->numCols = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, cols_checksum)->by_default(5)->as_number();
 
-    this->wait_for_probe = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, wait_for_probe_checksum)->by_default(true)->as_bool();  // Morgan default = true
-    this->home_before_probe = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, home_before_probe_checksum)->by_default(HOMEXYZ)->as_number();  // Morgan default = HOMEXYZ
+    this->wait_for_probe   = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, wait_for_probe_checksum)->by_default(true)->as_bool();  // Morgan default = true
+
+    std::string home_mode  = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, home_before_probe_checksum)->by_default("homexyz")->as_string();
+    if (home_mode.compare("nohome") == 0) {
+        this->home_before_probe = NOHOME;
+    }
+    else if (home_mode.compare("homexy") == 0) {
+        this->home_before_probe = HOMEXY;
+    }
+    else { // Default
+        this->home_before_probe = HOMEXYZ;
+    }
+
+
+    //this->home_before_probe = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, home_before_probe_checksum)->by_default(HOMEXYZ)->as_number();  // Morgan default = HOMEXYZ
 
     this->center_zero = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, center_zero_checksum)->by_default(false)->as_bool();
     this->circular_bed = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, circular_bed_checksum)->by_default(false)->as_bool();
