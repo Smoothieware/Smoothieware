@@ -116,6 +116,8 @@ using std::string;
 #define SPINDLE_DIRECTION_CW 0
 #define SPINDLE_DIRECTION_CCW 1
 
+#define ARC_ANGULAR_TRAVEL_EPSILON 5E-7 // Float (radians)
+
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
 
@@ -818,13 +820,13 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
     float rt_axis0 = target[this->plane_axis_0] - center_axis0;
     float rt_axis1 = target[this->plane_axis_1] - center_axis1;
 
+    // Patch from GRBL Firmware - bauc 04072015
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
-    float angular_travel = atan2(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
-    if (angular_travel < 0) {
-        angular_travel += 2 * M_PI;
-    }
-    if (is_clockwise) {
-        angular_travel -= 2 * M_PI;
+    float angular_travel = atan2(r_axis0*rt_axis1-r_axis1*rt_axis0, r_axis0*rt_axis0+r_axis1*rt_axis1);
+    if (is_clockwise) { // Correct atan2 output per direction
+        if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= 2*M_PI; }
+    } else {
+        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel += 2*M_PI; }
     }
 
     // Find the distance for this gcode
