@@ -200,22 +200,8 @@ bool ZProbe::return_probe(int steps)
     // move probe back to where it was
     float fr= this->slow_feedrate*2; // nominally twice slow feedrate
     if(fr > this->fast_feedrate) fr= this->fast_feedrate; // unless that is greater than fast feedrate
-    this->current_feedrate = fr * Z_STEPS_PER_MM; // feedrate in steps/sec
-    bool dir= steps < 0;
-    steps= abs(steps);
 
-    STEPPER[Z_AXIS]->move(dir, steps, 0);
-    if(this->is_delta) {
-        STEPPER[X_AXIS]->move(dir, steps, 0);
-        STEPPER[Y_AXIS]->move(dir, steps, 0);
-    }
-
-    this->running = true;
-    while(STEPPER[Z_AXIS]->is_moving() || (is_delta && (STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving())) ) {
-        // wait for it to complete
-        THEKERNEL->call_event(ON_IDLE);
-    }
-
+    coordinated_move(NAN, NAN, zsteps_to_mm(steps), fr, true);
     this->running = false;
 
     return true;
