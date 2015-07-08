@@ -37,6 +37,7 @@
 #define debounce_count_checksum  CHECKSUM("debounce_count")
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
 #define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
+#define return_feedrate_checksum CHECKSUM("return_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
 #define gamma_max_checksum       CHECKSUM("gamma_max")
 
@@ -126,6 +127,7 @@ void ZProbe::on_config_reload(void *argument)
     this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(1)->as_number(); // feedrate in mm/sec
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(2)->as_number(); // feedrate in mm/sec
     this->max_z         = THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number(); // maximum zprobe distance
+    this->return_feedrate = THEKERNEL->config->value(zprobe_checksum, return_feedrate_checksum)->by_default(2)->as_number(); // feedrate in mm/sec
 }
 
 bool ZProbe::wait_for_probe(int& steps)
@@ -197,10 +199,7 @@ bool ZProbe::run_probe(int& steps, bool fast)
 bool ZProbe::return_probe(int steps)
 {
     // move probe back to where it was
-    float fr= this->slow_feedrate*2; // nominally twice slow feedrate
-    if(fr > this->fast_feedrate) fr= this->fast_feedrate; // unless that is greater than fast feedrate
-
-    coordinated_move(NAN, NAN, zsteps_to_mm(steps), fr, true);
+    coordinated_move(NAN, NAN, zsteps_to_mm(steps), this->return_feedrate, true);
     this->running = false;
 
     return true;
