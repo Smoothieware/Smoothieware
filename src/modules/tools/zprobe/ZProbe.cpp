@@ -288,19 +288,40 @@ void ZProbe::on_gcode_received(void *argument)
 
     } else if(gcode->has_m) {
         // M code processing here
-        if(gcode->m == 119) {
-            int c = this->pin.get();
-            gcode->stream->printf(" Probe: %d", c);
-            gcode->add_nl = true;
-            gcode->mark_as_taken();
+        int c;
+        switch (gcode->m ) {
+            case 119:
+                c = this->pin.get();
+                gcode->stream->printf(" Probe: %d", c);
+                gcode->add_nl = true;
+                gcode->mark_as_taken();
+                break;
 
-        }else {
-            for(auto s : strategies){
-                if(s->handleGcode(gcode)) {
-                    gcode->mark_as_taken();
-                    return;
+            case 500: // save settings
+            case 503: // print settings
+                gcode->stream->printf(";Probe feedrates slow/fast/return (mm/sec):\nM670 S%1.2f F%1.2f R%1.2f\n",
+                    this->slow_feedrate, this->fast_feedrate, this->return_feedrate);
+                gcode->stream->printf(";Probe max_z (mm):\nM670 Z%1.2f\n", this->max_z);
+                gcode->stream->printf(";Probe height (mm):\nM670 H%1.2f\n", this->probe_height);
+                gcode->mark_as_taken();
+                break;
+
+            case 670:
+                if (gcode->has_letter('S')) this->slow_feedrate = gcode->get_value('S');
+                if (gcode->has_letter('F')) this->fast_feedrate = gcode->get_value('F');
+                if (gcode->has_letter('R')) this->return_feedrate = gcode->get_value('R');
+                if (gcode->has_letter('Z')) this->max_z = gcode->get_value('Z');
+                if (gcode->has_letter('H')) this->probe_height = gcode->get_value('H');
+                gcode->mark_as_taken();
+                break;
+
+            default:
+                for(auto s : strategies){
+                    if(s->handleGcode(gcode)) {
+                        gcode->mark_as_taken();
+                        return;
+                    }
                 }
-            }
         }
     }
 }
