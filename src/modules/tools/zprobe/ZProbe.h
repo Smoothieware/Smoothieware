@@ -33,6 +33,7 @@ public:
 
     bool wait_for_probe(int& steps);
     bool run_probe(int& steps, bool fast= false);
+    bool run_probe_feed(int& steps, float feedrate);
     bool return_probe(int steps);
     bool doProbeAt(int &steps, float x, float y);
     float probeDistance(float x, float y);
@@ -52,6 +53,7 @@ private:
     volatile float current_feedrate;
     float slow_feedrate;
     float fast_feedrate;
+    float return_feedrate;
     float probe_height;
     float max_z;
     volatile struct {

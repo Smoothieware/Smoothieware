@@ -37,6 +37,7 @@
 #define debounce_count_checksum  CHECKSUM("debounce_count")
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
 #define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
+#define return_feedrate_checksum CHECKSUM("return_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
 #define gamma_max_checksum       CHECKSUM("gamma_max")
 
@@ -123,9 +124,10 @@ void ZProbe::on_config_reload(void *argument)
     }
 
     this->probe_height  = THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number();
-    this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(5)->as_number(); // feedrate in mm/sec
-    this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
+    this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(1)->as_number(); // feedrate in mm/sec
+    this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(2)->as_number(); // feedrate in mm/sec
     this->max_z         = THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number(); // maximum zprobe distance
+    this->return_feedrate = THEKERNEL->config->value(zprobe_checksum, return_feedrate_checksum)->by_default(2)->as_number(); // feedrate in mm/sec
 }
 
 bool ZProbe::wait_for_probe(int& steps)
@@ -166,8 +168,8 @@ bool ZProbe::wait_for_probe(int& steps)
     }
 }
 
-// single probe and report amount moved
-bool ZProbe::run_probe(int& steps, bool fast)
+// single probe with custom feedrate, reports steps moved
+bool ZProbe::run_probe_feed(int& steps, float feedrate)
 {
     // not a block move so disable the last tick setting
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
@@ -176,15 +178,14 @@ bool ZProbe::run_probe(int& steps, bool fast)
 
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
-    this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
-    float maxz= this->max_z*2;
+    this->current_feedrate = feedrate * Z_STEPS_PER_MM; // steps/sec
 
     // move Z down
-    STEPPER[Z_AXIS]->move(true, maxz * Z_STEPS_PER_MM, 0); // always probes down, no more than 2*maxz
+    STEPPER[Z_AXIS]->move(true, this->max_z * Z_STEPS_PER_MM, 0); // always probes down, no more than max_z
     if(this->is_delta) {
         // for delta need to move all three actuators
-        STEPPER[X_AXIS]->move(true, maxz * STEPS_PER_MM(X_AXIS), 0);
-        STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS), 0);
+        STEPPER[X_AXIS]->move(true, this->max_z * STEPS_PER_MM(X_AXIS), 0);
+        STEPPER[Y_AXIS]->move(true, this->max_z * STEPS_PER_MM(Y_AXIS), 0);
     }
 
     // start acceleration processing
@@ -195,27 +196,18 @@ bool ZProbe::run_probe(int& steps, bool fast)
     return r;
 }
 
+// single probe with either fast or slow feedrate, reports steps moved
+bool ZProbe::run_probe(int& steps, bool fast)
+{
+    float feedrate = (fast ? this->fast_feedrate : this->slow_feedrate);
+    return run_probe_feed(steps, feedrate);
+
+}
+
 bool ZProbe::return_probe(int steps)
 {
     // move probe back to where it was
-    float fr= this->slow_feedrate*2; // nominally twice slow feedrate
-    if(fr > this->fast_feedrate) fr= this->fast_feedrate; // unless that is greater than fast feedrate
-    this->current_feedrate = fr * Z_STEPS_PER_MM; // feedrate in steps/sec
-    bool dir= steps < 0;
-    steps= abs(steps);
-
-    STEPPER[Z_AXIS]->move(dir, steps, 0);
-    if(this->is_delta) {
-        STEPPER[X_AXIS]->move(dir, steps, 0);
-        STEPPER[Y_AXIS]->move(dir, steps, 0);
-    }
-
-    this->running = true;
-    while(STEPPER[Z_AXIS]->is_moving() || (is_delta && (STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving())) ) {
-        // wait for it to complete
-        THEKERNEL->call_event(ON_IDLE);
-    }
-
+    coordinated_move(NAN, NAN, zsteps_to_mm(steps), this->return_feedrate, true);
     this->running = false;
 
     return true;
@@ -263,7 +255,14 @@ void ZProbe::on_gcode_received(void *argument)
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             int steps;
-            if(run_probe(steps)) {
+            bool probe_result;
+            if(gcode->has_letter('F')) {
+                probe_result = run_probe_feed(steps, gcode->get_value('F') / 60);
+            } else {
+                probe_result = run_probe(steps);
+            }
+
+            if(probe_result) {
                 gcode->stream->printf("Z:%1.4f C:%d\n", steps / Z_STEPS_PER_MM, steps);
                 // move back to where it started, unless a Z is specified
                 if(gcode->has_letter('Z')) {
@@ -289,19 +288,40 @@ void ZProbe::on_gcode_received(void *argument)
 
     } else if(gcode->has_m) {
         // M code processing here
-        if(gcode->m == 119) {
-            int c = this->pin.get();
-            gcode->stream->printf(" Probe: %d", c);
-            gcode->add_nl = true;
-            gcode->mark_as_taken();
+        int c;
+        switch (gcode->m ) {
+            case 119:
+                c = this->pin.get();
+                gcode->stream->printf(" Probe: %d", c);
+                gcode->add_nl = true;
+                gcode->mark_as_taken();
+                break;
 
-        }else {
-            for(auto s : strategies){
-                if(s->handleGcode(gcode)) {
-                    gcode->mark_as_taken();
-                    return;
+            case 500: // save settings
+            case 503: // print settings
+                gcode->stream->printf(";Probe feedrates slow/fast/return (mm/sec):\nM670 S%1.2f F%1.2f R%1.2f\n",
+                    this->slow_feedrate, this->fast_feedrate, this->return_feedrate);
+                gcode->stream->printf(";Probe max_z (mm):\nM670 Z%1.2f\n", this->max_z);
+                gcode->stream->printf(";Probe height (mm):\nM670 H%1.2f\n", this->probe_height);
+                gcode->mark_as_taken();
+                break;
+
+            case 670:
+                if (gcode->has_letter('S')) this->slow_feedrate = gcode->get_value('S');
+                if (gcode->has_letter('F')) this->fast_feedrate = gcode->get_value('F');
+                if (gcode->has_letter('R')) this->return_feedrate = gcode->get_value('R');
+                if (gcode->has_letter('Z')) this->max_z = gcode->get_value('Z');
+                if (gcode->has_letter('H')) this->probe_height = gcode->get_value('H');
+                gcode->mark_as_taken();
+                break;
+
+            default:
+                for(auto s : strategies){
+                    if(s->handleGcode(gcode)) {
+                        gcode->mark_as_taken();
+                        return;
+                    }
                 }
-            }
         }
     }
 }
