@@ -177,14 +177,13 @@ bool ZProbe::run_probe(int& steps, bool fast)
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
     this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
-    float maxz= this->max_z*2;
 
     // move Z down
-    STEPPER[Z_AXIS]->move(true, maxz * Z_STEPS_PER_MM, 0); // always probes down, no more than 2*maxz
+    STEPPER[Z_AXIS]->move(true, this->max_z * Z_STEPS_PER_MM, 0); // always probes down, no more than max_z
     if(this->is_delta) {
         // for delta need to move all three actuators
-        STEPPER[X_AXIS]->move(true, maxz * STEPS_PER_MM(X_AXIS), 0);
-        STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS), 0);
+        STEPPER[X_AXIS]->move(true, this->max_z * STEPS_PER_MM(X_AXIS), 0);
+        STEPPER[Y_AXIS]->move(true, this->max_z * STEPS_PER_MM(Y_AXIS), 0);
     }
 
     // start acceleration processing
