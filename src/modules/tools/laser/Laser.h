@@ -34,7 +34,8 @@ class Laser : public Module{
             bool laser_inverting:1; // stores whether the pwm period should be inverted
         };
         float            laser_max_power; // maximum allowed laser power to be output on the pwm pin
-        float            laser_tickle_power; // value used to tickle the laser on moves
+        float            laser_min_power; // value used to tickle the laser on moves.  Also minimum value for auto-scaling
+        float            laser_power;     // current laser power
 };
 
 #endif
