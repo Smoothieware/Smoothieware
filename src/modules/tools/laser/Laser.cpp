@@ -24,10 +24,11 @@
 #define laser_module_enable_checksum        CHECKSUM("laser_module_enable")
 #define laser_module_pin_checksum           CHECKSUM("laser_module_pin")
 #define laser_module_pwm_period_checksum    CHECKSUM("laser_module_pwm_period")
-#define laser_module_max_power_checksum     CHECKSUM("laser_module_max_power")
-#define laser_module_min_power_checksum     CHECKSUM("laser_module_min_power")
+#define laser_module_maximum_power_checksum CHECKSUM("laser_module_maximum_power")
+#define laser_module_minimum_power_checksum CHECKSUM("laser_module_minimum_power")
+#define laser_module_default_power_checksum CHECKSUM("laser_module_default_power")
 #define laser_module_tickle_power_checksum  CHECKSUM("laser_module_tickle_power")
-#define laser_module_power_checksum         CHECKSUM("laser_module_power")
+#define laser_module_max_power_checksum     CHECKSUM("laser_module_max_power")
 
 Laser::Laser(){
 }
@@ -60,15 +61,15 @@ void Laser::on_module_loaded() {
 
     this->laser_pin->period_us(THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number());
     this->laser_pin->write(this->laser_inverting ? 1 : 0);
+    this->laser_maximum_power = THEKERNEL->config->value(laser_module_maximum_power_checksum   )->by_default(1.0f)->as_number() ;
 
-    this->laser_max_power = THEKERNEL->config->value(laser_module_max_power_checksum   )->by_default(1.0f)->as_number() ;
-    this->laser_min_power = THEKERNEL->config->value(laser_module_min_power_checksum)->by_default(0   )->as_number() ;
-    this->laser_power =     THEKERNEL->config->value(laser_module_power_checksum)->by_default(0.8f)->as_number() ;
+    // These config variables are deprecated, they have been replaced with laser_module_default_power and laser_module_minimum_power
+    this->laser_minimum_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
+    this->laser_power =         THEKERNEL->config->value(laser_module_max_power_checksum)->by_default(0.8f)->as_number() ;
 
-    // either the minimum value wasnt set, or it is 0.  Overwrite with old tickle value config.
-    if (this->laser_min_power == 0) {
-        this->laser_min_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0   )->as_number() ;
-    }
+    // Load in our preferred config variables
+    this->laser_minimum_power = THEKERNEL->config->value(laser_module_minimum_power_checksum)->by_default(this->laser_minimum_power)->as_number() ;
+    this->laser_power = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(this->laser_power)->as_number() ;
 
     //register for events
     this->register_for_event(ON_GCODE_EXECUTE);
@@ -106,7 +107,7 @@ void Laser::on_gcode_execute(void* argument){
     if( gcode->has_g){
         int code = gcode->g;
         if( code == 0 ){                    // G0
-            this->laser_pin->write(this->laser_inverting ? 1 - this->laser_min_power : this->laser_min_power);
+            this->laser_pin->write(this->laser_inverting ? 1 - this->laser_minimum_power : this->laser_minimum_power);
             this->laser_on =  false;
         }else if( code >= 1 && code <= 3 ){ // G1, G2, G3
             this->laser_on =  true;
@@ -128,7 +129,7 @@ void Laser::on_speed_change(void* argument){
 void Laser::set_proportional_power(){
     if( this->laser_on && THEKERNEL->stepper->get_current_block() ){
         // adjust power to maximum power and actual velocity
-        float proportional_power = (((this->laser_max_power-this->laser_min_power)*(this->laser_power * THEKERNEL->stepper->get_trapezoid_adjusted_rate() / THEKERNEL->stepper->get_current_block()->nominal_rate))+this->laser_min_power);
+        float proportional_power = (((this->laser_maximum_power-this->laser_minimum_power)*(this->laser_power * THEKERNEL->stepper->get_trapezoid_adjusted_rate() / THEKERNEL->stepper->get_current_block()->nominal_rate))+this->laser_minimum_power);
         this->laser_pin->write(this->laser_inverting ? 1 - proportional_power : proportional_power);
     }
 }
