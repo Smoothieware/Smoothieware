@@ -19,7 +19,7 @@ using namespace std;
 // TODO : Having the same name is confusing, should change that
 
 Adc::Adc(){
-    this->adc = new ADC(1000, 1);
+    this->adc = new ADC(1000, 8);
 }
 
 // Enables ADC on a given pin
