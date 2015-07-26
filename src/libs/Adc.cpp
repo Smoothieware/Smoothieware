@@ -16,6 +16,8 @@
 #include <cstring>
 #include <algorithm>
 
+#include "mbed.h"
+
 // This is an interface to the mbed.org ADC library you can find in libs/ADC/adc.h
 // TODO : Having the same name is confusing, should change that
 
@@ -78,7 +80,7 @@ unsigned int Adc::read(Pin *pin)
     int channel = adc->_pin_to_channel(p);
 
     uint16_t median_buffer[num_samples];
-    // needs atomic access TODO maybe be able to use std::atomic here
+    // needs atomic access TODO maybe be able to use std::atomic here or some lockless mutex
     __disable_irq();
     memcpy(median_buffer, sample_buffers[channel], sizeof(median_buffer));
     __enable_irq();

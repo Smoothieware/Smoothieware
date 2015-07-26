@@ -236,7 +236,7 @@ void Thermistor::get_raw()
 
 float Thermistor::adc_value_to_temperature(int adc_value)
 {
-    if ((adc_value == 4095) || (adc_value == 0))
+    if ((adc_value >= 4095) || (adc_value == 0))
         return infinityf();
 
     // resistance of the thermistor in ohms
