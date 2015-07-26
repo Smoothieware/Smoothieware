@@ -60,8 +60,6 @@ class Thermistor : public TempSensor
 
         Pin  thermistor_pin;
 
-        RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
-
         struct {
             bool bad_config:1;
             bool use_steinhart_hart:1;

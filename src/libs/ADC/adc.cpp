@@ -5,6 +5,7 @@
 #include "mbed.h"
 #include "adc.h"
 
+using namespace mbed;
 
 ADC *ADC::instance;
 
@@ -151,7 +152,7 @@ int ADC::_pin_to_channel(PinName pin) {
 
 PinName ADC::channel_to_pin(int chan) {
     const PinName pin[8]={p15, p16, p17, p18, p19, p20, p15, p15};
-    
+
     if ((chan < 0) || (chan > 5))
         fprintf(stderr, "ADC channel %u is outside range available to MBED pins.\n", chan);
     return(pin[chan & 0x07]);
@@ -160,7 +161,7 @@ PinName ADC::channel_to_pin(int chan) {
 
 int ADC::channel_to_pin_number(int chan) {
     const int pin[8]={15, 16, 17, 18, 19, 20, 0, 0};
-    
+
     if ((chan < 0) || (chan > 5))
         fprintf(stderr, "ADC channel %u is outside range available to MBED pins.\n", chan);
     return(pin[chan & 0x07]);
@@ -275,7 +276,7 @@ void ADC::setup(PinName pin, int state) {
 //Return channel enabled/disabled state
 int ADC::setup(PinName pin) {
     int chan;
-    
+
     chan = _pin_to_channel(pin);
     return((LPC_ADC->ADCR & (1 << chan)) >> chan);
 }
@@ -283,7 +284,7 @@ int ADC::setup(PinName pin) {
 //Select channel already setup
 void ADC::select(PinName pin) {
     int chan;
-    
+
     //Only one channel can be selected at a time if not in burst mode
     if (!burst()) LPC_ADC->ADCR &= ~0xFF;
     //Select channel
@@ -309,7 +310,7 @@ int  ADC::burst(void) {
 //Set startmode and edge
 void ADC::startmode(int mode, int edge) {
     int lpc_adc_temp;
-    
+
     //Reset start mode and edge bit,
     lpc_adc_temp = LPC_ADC->ADCR & ~(0x0F << 24);
     //Write with new values
@@ -337,7 +338,7 @@ void ADC::start(void) {
 //Set interrupt enable/disable for pin to state
 void ADC::interrupt_state(PinName pin, int state) {
     int chan;
-    
+
     chan = _pin_to_channel(pin);
     if (state == 1) {
         LPC_ADC->ADINTEN &= ~0x100;
@@ -355,7 +356,7 @@ void ADC::interrupt_state(PinName pin, int state) {
 //Return enable/disable state of interrupt for pin
 int ADC::interrupt_state(PinName pin) {
     int chan;
-        
+
     chan = _pin_to_channel(pin);
     return((LPC_ADC->ADINTEN >> chan) & 0x01);
 }
@@ -378,7 +379,7 @@ void ADC::detach(void) {
 //Append interrupt handler for pin to function isr
 void ADC::append(PinName pin, void(*fptr)(uint32_t value)) {
     int chan;
-        
+
     chan = _pin_to_channel(pin);
     _adc_isr[chan] = fptr;
 }
@@ -386,7 +387,7 @@ void ADC::append(PinName pin, void(*fptr)(uint32_t value)) {
 //Append interrupt handler for pin to function isr
 void ADC::unappend(PinName pin) {
     int chan;
-        
+
     chan = _pin_to_channel(pin);
     _adc_isr[chan] = NULL;
 }
@@ -402,13 +403,13 @@ void ADC::unappend() {
 }
 
 //Set ADC offset
-void offset(int offset) {
+void ADC::offset(int offset) {
     LPC_ADC->ADTRM &= ~(0x07 << 4);
     LPC_ADC->ADTRM |= (offset & 0x07) << 4;
 }
 
 //Return current ADC offset
-int offset(void) {
+int ADC::offset(void) {
     return((LPC_ADC->ADTRM >> 4) & 0x07);
 }
 

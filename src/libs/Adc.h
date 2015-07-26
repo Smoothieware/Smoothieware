@@ -11,20 +11,31 @@
 #define ADC_H
 
 #include "PinNames.h" // mbed.h lib
-#include "libs/ADC/adc.h"
 
 class Pin;
+namespace mbed {
+    class ADC;
+}
 
-class Adc {
-    public:
-        Adc();
-        void enable_pin(Pin* pin);
-        unsigned int read(Pin* pin);
-        PinName _pin_to_pinname(Pin* pin);
+class Adc
+{
+public:
+    Adc();
+    void enable_pin(Pin *pin);
+    unsigned int read(Pin *pin);
 
-        ADC* adc;
+    static Adc *instance;
+    void new_sample(int chan, uint32_t value);
+
+private:
+    PinName _pin_to_pinname(Pin *pin);
+    mbed::ADC *adc;
+
+
+    static const int num_channels= 6;
+    static const int num_samples= 8;
+    // buffers storing the last num_samples readings for each channel
+    uint16_t sample_buffers[num_channels][num_samples];
 };
-
-
 
 #endif
