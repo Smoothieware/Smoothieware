@@ -31,7 +31,10 @@ static void sample_isr(int chan, uint32_t value)
 Adc::Adc()
 {
     instance = this;
-    this->adc = new mbed::ADC(1000, 8);
+    // ADC sample rate need to be fast enough to be able to read the enabled channels within the thermistor poll time
+    // even though ther maybe 32 samples we only need one new one within the polling time
+    const uint32_t sample_rate= 1000; // 1KHz sample rate
+    this->adc = new mbed::ADC(sample_rate, 8);
     this->adc->append(sample_isr);
 }
 
@@ -89,6 +92,23 @@ unsigned int Adc::read(Pin *pin)
     // returns the median value of the last 8 samples
     return median_buffer[quick_median(median_buffer, num_samples)];
 
+#elif defined(OVERSAMPLE)
+    // Oversample to get 2 extra bits of resolution
+    // weed out top and bottom worst values then oversample the rest
+    // put into a 4 element moving average and return the average of the last 4 oversampled readings
+    static uint16_t ave_buf[num_channels][4]{0,0,0,0};
+    std::sort(median_buffer, median_buffer + num_samples);
+    uint32_t sum = 0;
+    for (int i = num_samples / 4; i < (num_samples - (num_samples / 4)); ++i) {
+        sum += median_buffer[i];
+    }
+    // this slows down the rate of change a little bit
+    ave_buf[channel][3]= ave_buf[channel][2];
+    ave_buf[channel][2]= ave_buf[channel][1];
+    ave_buf[channel][1]= ave_buf[channel][0];
+    ave_buf[channel][0]= sum >> OVERSAMPLE;
+    return (ave_buf[channel][0]+ave_buf[channel][1]+ave_buf[channel][2]+ave_buf[channel][3])/4;
+
 #else
     // sort the 8 readings and return the average of the middle 4
     std::sort(median_buffer, median_buffer + num_samples);
@@ -97,6 +117,7 @@ unsigned int Adc::read(Pin *pin)
         sum += median_buffer[i];
     }
     return sum / (num_samples / 2);
+
 #endif
 }
 

@@ -33,7 +33,7 @@ class Thermistor : public TempSensor
 
     private:
         int new_thermistor_reading();
-        float adc_value_to_temperature(int adc_value);
+        float adc_value_to_temperature(uint32_t adc_value);
         void calc_jk();
 
         // Thermistor computation settings using beta, not used if using Steinhart-Hart
