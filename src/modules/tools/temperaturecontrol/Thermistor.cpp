@@ -217,8 +217,10 @@ void Thermistor::get_raw()
     }
 
     int adc_value= new_thermistor_reading();
+    const uint32_t max_adc_value= THEKERNEL->adc->get_max_value();
+
      // resistance of the thermistor in ohms
-    float r = r2 / ((4095.0F / adc_value) - 1.0F);
+    float r = r2 / (((float)max_adc_value / adc_value) - 1.0F);
     if (r1 > 0.0F) r = (r1 * r) / (r1 - r);
 
     THEKERNEL->streams->printf("adc= %d, resistance= %f\n", adc_value, r);
@@ -234,14 +236,17 @@ void Thermistor::get_raw()
     }
 }
 
-float Thermistor::adc_value_to_temperature(int adc_value)
+float Thermistor::adc_value_to_temperature(uint32_t adc_value)
 {
-    if ((adc_value == 4095) || (adc_value == 0))
+    const uint32_t max_adc_value= THEKERNEL->adc->get_max_value();
+    if ((adc_value >= max_adc_value) || (adc_value == 0))
         return infinityf();
 
     // resistance of the thermistor in ohms
-    float r = r2 / ((4095.0F / adc_value) - 1.0F);
+    float r = r2 / (((float)max_adc_value / adc_value) - 1.0F);
     if (r1 > 0.0F) r = (r1 * r) / (r1 - r);
+
+    if(r > this->r0 * 8) return infinityf(); // 800k is probably open circuit
 
     float t;
     if(this->use_steinhart_hart) {
@@ -257,18 +262,8 @@ float Thermistor::adc_value_to_temperature(int adc_value)
 
 int Thermistor::new_thermistor_reading()
 {
-    int last_raw = THEKERNEL->adc->read(&thermistor_pin);
-    if (queue.size() >= queue.capacity()) {
-        uint16_t l;
-        queue.pop_front(l);
-    }
-    uint16_t r = last_raw;
-    queue.push_back(r);
-    uint16_t median_buffer[queue.size()];
-    for (int i=0; i<queue.size(); i++)
-      median_buffer[i] = *queue.get_ref(i);
-    uint16_t m = median_buffer[quick_median(median_buffer, queue.size())];
-    return m;
+    // filtering now done in ADC
+    return THEKERNEL->adc->read(&thermistor_pin);
 }
 
 bool Thermistor::set_optional(const sensor_options_t& options) {

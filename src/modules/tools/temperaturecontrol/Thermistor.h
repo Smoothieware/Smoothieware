@@ -33,7 +33,7 @@ class Thermistor : public TempSensor
 
     private:
         int new_thermistor_reading();
-        float adc_value_to_temperature(int adc_value);
+        float adc_value_to_temperature(uint32_t adc_value);
         void calc_jk();
 
         // Thermistor computation settings using beta, not used if using Steinhart-Hart
@@ -59,8 +59,6 @@ class Thermistor : public TempSensor
         };
 
         Pin  thermistor_pin;
-
-        RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of readings
 
         struct {
             bool bad_config:1;
