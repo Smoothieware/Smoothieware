@@ -44,6 +44,10 @@
 
        leveling-strategy.ZGrid-leveling.wait_for_probe  true
 
+    The machine can be told to home in one of the following modes:
+
+       leveling-strategy.ZGrid-leveling.home_before_probe  homexyz;    #  nohome homexy homexyz (default)
+
 
     Slow feedrate can be defined for probe positioning speed.  Note this is not Probing slow rate - it can be set to a fast speed if required.
 
@@ -101,11 +105,15 @@
 #define slow_feedrate_checksum       CHECKSUM("slow_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define wait_for_probe_checksum      CHECKSUM("wait_for_probe")
+#define home_before_probe_checksum   CHECKSUM("home_before_probe")
 #define center_zero_checksum         CHECKSUM("center_zero")
 #define circular_bed_checksum        CHECKSUM("circular_bed")
 #define cal_offset_x_checksum        CHECKSUM("cal_offset_x")
 #define cal_offset_y_checksum        CHECKSUM("cal_offset_y")
 
+#define NOHOME                       0
+#define HOMEXY                       1
+#define HOMEXYZ                      2
 
 #define cols_checksum                CHECKSUM("cols")
 #define rows_checksum                CHECKSUM("rows")
@@ -141,7 +149,21 @@ bool ZGridStrategy::handleConfig()
     this->numRows = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, rows_checksum)->by_default(5)->as_number();
     this->numCols = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, cols_checksum)->by_default(5)->as_number();
 
-    this->wait_for_probe = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, wait_for_probe_checksum)->by_default(false)->as_bool();
+    this->wait_for_probe   = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, wait_for_probe_checksum)->by_default(true)->as_bool();  // Morgan default = true
+
+    std::string home_mode  = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, home_before_probe_checksum)->by_default("homexyz")->as_string();
+    if (home_mode.compare("nohome") == 0) {
+        this->home_before_probe = NOHOME;
+    }
+    else if (home_mode.compare("homexy") == 0) {
+        this->home_before_probe = HOMEXY;
+    }
+    else { // Default
+        this->home_before_probe = HOMEXYZ;
+    }
+
+
+    //this->home_before_probe = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, home_before_probe_checksum)->by_default(HOMEXYZ)->as_number();  // Morgan default = HOMEXYZ
 
     this->center_zero = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, center_zero_checksum)->by_default(false)->as_bool();
     this->circular_bed = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, circular_bed_checksum)->by_default(false)->as_bool();
@@ -446,7 +468,7 @@ void ZGridStrategy::setZoffset(float zval)
 
 bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 {
-    // home first
+    // home first using selected mode: NOHOME, HOMEXY, HOMEXYZ
     this->homexyz();
 
     // deactivate correction during moves
@@ -533,8 +555,22 @@ void ZGridStrategy::normalize_grid()
 
 void ZGridStrategy::homexyz()
 {
-    Gcode gc("G28", &(StreamOutput::NullStream));
-    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+
+  switch(this->home_before_probe) {
+    case NOHOME : return;
+
+    case HOMEXY : {
+        Gcode gc("G28 X0 Y0", &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+        break;
+    }
+
+    case HOMEXYZ : {
+        Gcode gc("G28", &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+        break;
+    }
+  }
 }
 
 void ZGridStrategy::move(float *position, float feed)

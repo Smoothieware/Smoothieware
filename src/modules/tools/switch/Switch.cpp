@@ -19,7 +19,8 @@
 #include "Gcode.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
-#include "libs/StreamOutput.h"
+#include "StreamOutput.h"
+#include "StreamOutputPool.h"
 
 #include "MRI_Hooks.h"
 
@@ -36,6 +37,7 @@
 #define    max_pwm_checksum             CHECKSUM("max_pwm")
 #define    output_on_command_checksum   CHECKSUM("output_on_command")
 #define    output_off_command_checksum  CHECKSUM("output_off_command")
+#define    pwm_period_ms_checksum       CHECKSUM("pwm_period_ms")
 
 Switch::Switch() {}
 
@@ -66,32 +68,74 @@ void Switch::on_config_reload(void *argument)
     this->input_pin_behavior =   THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default(momentary_checksum)->as_number();
     std::string input_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
     std::string input_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
-    this->output_pin.from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
     this->output_on_command =    THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
     this->output_off_command =   THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
     this->switch_state =         THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
     string type =                THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
 
-    if(type == "pwm") this->output_type= PWM;
-    else if(type == "digital") this->output_type= DIGITAL;
-    else this->output_type= PWM; // unkown type default to pwm
-
-    if(this->output_pin.connected()) {
-        if(this->output_type == PWM) {
-            this->output_pin.max_pwm(THEKERNEL->config->value(switch_checksum, this->name_checksum, max_pwm_checksum )->by_default(255)->as_number());
-            this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->output_pin.max_pwm())->as_number();
-            if(this->switch_state) {
-                this->output_pin.pwm(this->switch_value); // will be truncated to max_pwm
-            } else {
-                this->output_pin.set(false);
-            }
-        } else {
-            this->output_pin.set(this->switch_state);
+    if(type == "pwm"){
+        this->output_type= SIGMADELTA;
+        this->sigmadelta_pin= new Pwm();
+        this->sigmadelta_pin->from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
+        if(this->sigmadelta_pin->connected()) {
+            set_low_on_debug(sigmadelta_pin->port_number, sigmadelta_pin->pin);
+        }else{
+            this->output_type= NONE;
+            delete this->sigmadelta_pin;
+            this->sigmadelta_pin= nullptr;
         }
+
+    }else if(type == "digital"){
+        this->output_type= DIGITAL;
+        this->digital_pin= new Pin();
+        this->digital_pin->from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
+        if(this->digital_pin->connected()) {
+            set_low_on_debug(digital_pin->port_number, digital_pin->pin);
+        }else{
+            this->output_type= NONE;
+            delete this->digital_pin;
+            this->digital_pin= nullptr;
+        }
+
+    }else if(type == "hwpwm"){
+        this->output_type= HWPWM;
+        Pin *pin= new Pin();
+        pin->from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
+        this->pwm_pin= pin->hardware_pwm();
+        set_low_on_debug(pin->port_number, pin->pin);
+        delete pin;
+        if(this->pwm_pin == nullptr) {
+            THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
+            this->output_type= NONE;
+        }
+
+    } else {
+        this->output_type= NONE;
     }
-        /* MRI STM32
-    set_low_on_debug(output_pin.port_number, output_pin.pin);
-    */
+
+    if(this->output_type == SIGMADELTA) {
+        this->sigmadelta_pin->max_pwm(THEKERNEL->config->value(switch_checksum, this->name_checksum, max_pwm_checksum )->by_default(255)->as_number());
+        this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(this->sigmadelta_pin->max_pwm())->as_number();
+        if(this->switch_state) {
+            this->sigmadelta_pin->pwm(this->switch_value); // will be truncated to max_pwm
+        } else {
+            this->sigmadelta_pin->set(false);
+        }
+
+    } else if(this->output_type == HWPWM) {
+        // default is 50Hz
+        this->pwm_pin->period_ms(THEKERNEL->config->value(switch_checksum, this->name_checksum, pwm_period_ms_checksum )->by_default(20)->as_number());
+        // default is 0% duty cycle
+        this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(0)->as_number();
+        if(this->switch_state) {
+            this->pwm_pin->write(this->switch_value/100.0F);
+        } else {
+            this->pwm_pin->write(0);
+        }
+
+    } else if(this->output_type == DIGITAL){
+        this->digital_pin->set(this->switch_state);
+    }
 
     // Set the on/off command codes, Use GCode to do the parsing
     input_on_command_letter = 0;
@@ -125,9 +169,9 @@ void Switch::on_config_reload(void *argument)
         THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
     }
 
-    if(this->output_type == PWM && this->output_pin.connected()) {
-        // PWM
-        THEKERNEL->slow_ticker->attach(1000, &this->output_pin, &Pwm::on_tick);
+    if(this->output_type == SIGMADELTA) {
+        // SIGMADELTA
+        THEKERNEL->slow_ticker->attach(1000, this->sigmadelta_pin, &Pwm::on_tick);
     }
 }
 
@@ -155,30 +199,48 @@ void Switch::on_gcode_received(void *argument)
     THEKERNEL->conveyor->wait_for_empty_queue();
 
     if(match_input_on_gcode(gcode)) {
-        int v;
-        if (this->output_type == PWM) {
-            // PWM output pin turn on (or off if S0)
+        if (this->output_type == SIGMADELTA) {
+            // SIGMADELTA output pin turn on (or off if S0)
             if(gcode->has_letter('S')) {
-                v = round(gcode->get_value('S') * output_pin.max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
-                this->output_pin.pwm(v);
+                int v = round(gcode->get_value('S') * sigmadelta_pin->max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
+                this->sigmadelta_pin->pwm(v);
                 this->switch_state= (v > 0);
             } else {
-                this->output_pin.pwm(this->switch_value);
+                this->sigmadelta_pin->pwm(this->switch_value);
                 this->switch_state= (this->switch_value > 0);
             }
-        } else {
+
+        } else if (this->output_type == HWPWM) {
+            // PWM output pin set duty cycle 0 - 100
+            if(gcode->has_letter('S')) {
+                float v = gcode->get_value('S');
+                if(v > 100) v= 100;
+                else if(v < 0) v= 0;
+                this->pwm_pin->write(v/100.0F);
+                this->switch_state= (v != 0);
+            } else {
+                this->pwm_pin->write(this->switch_value);
+                this->switch_state= (this->switch_value != 0);
+            }
+
+        } else if (this->output_type == DIGITAL) {
             // logic pin turn on
-            this->output_pin.set(true);
+            this->digital_pin->set(true);
             this->switch_state = true;
         }
+
     } else if(match_input_off_gcode(gcode)) {
         this->switch_state = false;
-        if (this->output_type == PWM) {
-            // PWM output pin
-            this->output_pin.set(false);
-        } else {
+        if (this->output_type == SIGMADELTA) {
+            // SIGMADELTA output pin
+            this->sigmadelta_pin->set(false);
+
+        } else if (this->output_type == HWPWM) {
+            this->pwm_pin->write(0);
+
+        } else if (this->output_type == DIGITAL) {
             // logic pin turn off
-            this->output_pin.set(false);
+            this->digital_pin->set(false);
         }
     }
 }
@@ -230,20 +292,29 @@ void Switch::on_main_loop(void *argument)
     if(this->switch_changed) {
         if(this->switch_state) {
             if(!this->output_on_command.empty()) this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
-            if(this->output_pin.connected()) {
-                if(this->output_type == PWM)
-                    this->output_pin.pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
-                else
-                    this->output_pin.set(true);
+
+            if(this->output_type == SIGMADELTA) {
+                this->sigmadelta_pin->pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
+
+            } else if (this->output_type == HWPWM) {
+                this->pwm_pin->write(this->switch_value/100.0F);
+
+            } else if (this->output_type == DIGITAL) {
+                this->digital_pin->set(true);
             }
 
         } else {
+
             if(!this->output_off_command.empty()) this->send_gcode( this->output_off_command, &(StreamOutput::NullStream) );
-            if(this->output_pin.connected()) {
-                if(this->output_type == PWM)
-                    this->output_pin.set(false);
-                else
-                    this->output_pin.set(false);
+
+            if(this->output_type == SIGMADELTA) {
+                this->sigmadelta_pin->set(false);
+
+            } else if (this->output_type == HWPWM) {
+                this->pwm_pin->write(0);
+
+            } else if (this->output_type == DIGITAL) {
+                this->digital_pin->set(false);
             }
         }
         this->switch_changed = false;

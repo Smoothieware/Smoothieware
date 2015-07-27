@@ -19,7 +19,7 @@ using namespace std;
 Adc::Adc(){
         
         /* FIXME STM32 
-    this->adc = new ADC(1000, 1);
+    this->adc = new ADC(1000, 8);
     * */
 }
 
