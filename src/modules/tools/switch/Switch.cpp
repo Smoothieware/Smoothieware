@@ -197,22 +197,30 @@ void Switch::on_gcode_received(void *argument)
         return;
     }
 
-    // drain queue
-    THEKERNEL->conveyor->wait_for_empty_queue();
-
+    // we need to sync this with the queue, so we need to wait for queue to empty, however due to certain slicers
+    // issuing redundant swicth on calls regularly we need to optimize by making sure the value is actually changing
+    // hence we need to do the wait for queue in each case rather than just once at the start
     if(match_input_on_gcode(gcode)) {
         if (this->output_type == SIGMADELTA) {
             // SIGMADELTA output pin turn on (or off if S0)
             if(gcode->has_letter('S')) {
                 int v = round(gcode->get_value('S') * sigmadelta_pin->max_pwm() / 255.0); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
-                this->sigmadelta_pin->pwm(v);
-                this->switch_state= (v > 0);
+                if(v != this->sigmadelta_pin->get_pwm()){ // optimize... ignore if already set to the same pwm
+                    // drain queue
+                    THEKERNEL->conveyor->wait_for_empty_queue();
+                    this->sigmadelta_pin->pwm(v);
+                    this->switch_state= (v > 0);
+                }
             } else {
+                // drain queue
+                THEKERNEL->conveyor->wait_for_empty_queue();
                 this->sigmadelta_pin->pwm(this->switch_value);
                 this->switch_state= (this->switch_value > 0);
             }
 
         } else if (this->output_type == HWPWM) {
+            // drain queue
+            THEKERNEL->conveyor->wait_for_empty_queue();
             // PWM output pin set duty cycle 0 - 100
             if(gcode->has_letter('S')) {
                 float v = gcode->get_value('S');
@@ -226,12 +234,16 @@ void Switch::on_gcode_received(void *argument)
             }
 
         } else if (this->output_type == DIGITAL) {
+            // drain queue
+            THEKERNEL->conveyor->wait_for_empty_queue();
             // logic pin turn on
             this->digital_pin->set(true);
             this->switch_state = true;
         }
 
     } else if(match_input_off_gcode(gcode)) {
+        // drain queue
+        THEKERNEL->conveyor->wait_for_empty_queue();
         this->switch_state = false;
         if (this->output_type == SIGMADELTA) {
             // SIGMADELTA output pin
