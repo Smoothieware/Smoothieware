@@ -57,21 +57,26 @@
 
     Usage
     -----
-    G32 probes the probe points and defines the bed ZGrid, this will remain in effect until reset or M370
-    G31 reports the status
+    G32                  : probes the probe points and defines the bed ZGrid, this will remain in effect until reset or M370
+    G31                  : reports the status - Display probe data points
 
-    M370 clears the ZGrid and the bed leveling is disabled until G32 is run again
-    M370 X7 Y9 allocates a new grid size of 7x9 and clears as above
+    M370                 : clears the ZGrid and the bed levelling is disabled until G32 is run again
+    M370 X7 Y9           : allocates a new grid size of 7x9 and clears as above
 
-    M371 moves the head to the next calibration postion without saving for manual calibration
-    M372 move the head to the next calibration postion after saving the current probe point to memory - manual calbration
+    M371                 : moves the head to the next calibration position without saving for manual calibration
+    M372                 : move the head to the next calibration position after saving the current probe point to memory - manual calbration
+    M373                 : completes calibration and enables the Z compensation grid
 
-    M373 completes calibration and enables the Z compensation grid
+    M374                 : Save the grid to "Zgrid" on SD card
+    M374 S###            : Save custom grid to "Zgrid.###" on SD card
 
-    M
+    M375                 : Loads grid file "Zgrid" from SD
+    M375 S###            : Load custom grid file "Zgrid.###"
 
-    M500 saves the probe points and the probe offsets
-    M503 displays the current settings
+    M565 X### Y### Z###  : Set new probe offsets
+
+    M500                 : saves the probe offsets
+    M503                 : displays the current settings
 */
 
 #include "ZGridStrategy.h"
@@ -240,6 +245,8 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             // M370: Clear current ZGrid for calibration, and move to first position
             case 370: {
                 this->setAdjustFunction(false); // Disable leveling code
+                this->cal[Z_AXIS] = std::get<Z_AXIS>(this->probe_offsets) + zprobe->getProbeHeight();
+
 
                 if(gcode->has_letter('X'))  // Rows (X)
                     this->numRows = gcode->get_value('X');
@@ -504,7 +511,8 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
     for (int probes = 0; probes < probe_points; probes++){
         int pindex = 0;
 
-        float z = 5.0f - zprobe->probeDistance((this->cal[X_AXIS] + this->cal_offset_x)-std::get<X_AXIS>(this->probe_offsets),
+        // z = z home offset - probed distance
+        float z = getZhomeoffset() -zprobe->probeDistance((this->cal[X_AXIS] + this->cal_offset_x)-std::get<X_AXIS>(this->probe_offsets),
                                                (this->cal[Y_AXIS] + this->cal_offset_y)-std::get<Y_AXIS>(this->probe_offsets));
 
         pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
@@ -581,7 +589,7 @@ void ZGridStrategy::move(float *position, float feed)
     // Assemble Gcode to add onto the queue.  Also translate the position for non standard cartesian spaces (cal_offset)
     snprintf(cmd, sizeof(cmd), "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", position[0] + this->cal_offset_x, position[1] + this->cal_offset_y, position[2], feed * 60); // use specified feedrate (mm/sec)
 
-    THEKERNEL->streams->printf("DEBUG: move: %s cent: %i\n", cmd, this->center_zero);
+    //THEKERNEL->streams->printf("DEBUG: move: %s cent: %i\n", cmd, this->center_zero);
 
     Gcode gc(cmd, &(StreamOutput::NullStream));
     THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
@@ -593,7 +601,7 @@ void ZGridStrategy::next_cal(void){
         this->cal[Y_AXIS] -= this->bed_div_y;
         if (this->cal[Y_AXIS] < 0.0F){
 
-            THEKERNEL->streams->printf("DEBUG: Y (%f) < cond (%f)\n",this->cal[Y_AXIS], 0.0F);
+            //THEKERNEL->streams->printf("DEBUG: Y (%f) < cond (%f)\n",this->cal[Y_AXIS], 0.0F);
 
             this->cal[X_AXIS] += bed_div_x;
             if (this->cal[X_AXIS] > this->bed_x){
@@ -608,7 +616,7 @@ void ZGridStrategy::next_cal(void){
         this->cal[Y_AXIS] += bed_div_y;
       if (this->cal[Y_AXIS] > this->bed_y){
 
-            THEKERNEL->streams->printf("DEBUG: Y (%f) > cond (%f)\n",this->cal[Y_AXIS], this->bed_y);
+            //THEKERNEL->streams->printf("DEBUG: Y (%f) > cond (%f)\n",this->cal[Y_AXIS], this->bed_y);
 
             this->cal[X_AXIS] += bed_div_x;
             if (this->cal[X_AXIS] > bed_x){
