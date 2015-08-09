@@ -206,7 +206,7 @@ void TemperatureControl::on_gcode_received(void *argument)
 
         if( gcode->m == this->get_m_code ) {
             char buf[32]; // should be big enough for any status
-            int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED) ? 0.0 : target_temperature), this->o);
+            int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);
             gcode->mark_as_taken();
             return;
@@ -347,7 +347,7 @@ void TemperatureControl::on_get_public_data(void *argument)
     // ok this is targeted at us, so send back the requested data
     if(pdr->third_element_is(current_temperature_checksum)) {
         this->public_data_return.current_temperature = this->get_temperature();
-        this->public_data_return.target_temperature = (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
+        this->public_data_return.target_temperature = (target_temperature <= 0) ? 0 : this->target_temperature;
         this->public_data_return.pwm = this->o;
         this->public_data_return.designator= this->designator;
         pdr->set_data_ptr(&this->public_data_return);
@@ -385,11 +385,11 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
 
     float last_target_temperature= target_temperature;
     target_temperature = desired_temperature;
-    if (desired_temperature == 0.0F){
+    if (desired_temperature <= 0.0F){
         // turning it off
         heater_pin.set((this->o = 0));
 
-    }else if(last_target_temperature == 0.0F) {
+    }else if(last_target_temperature <= 0.0F) {
         // if it was off and we are now turning it on we need to initialize
         this->lastInput= last_reading;
         // set to whatever the output currently is See http://brettbeauregard.com/blog/2011/04/improving-the-beginner%E2%80%99s-pid-initialization/
@@ -407,12 +407,7 @@ float TemperatureControl::get_temperature()
 uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
 {
     float temperature = sensor->get_temperature();
-    if(this->readonly) {
-        last_reading = temperature;
-        return 0;
-    }
-
-    if (target_temperature > 0) {
+    if(!this->readonly && target_temperature > 2) {
         if (isinf(temperature) || temperature < min_temp) {
             this->min_temp_violated = true;
             target_temperature = UNDEFINED;
@@ -420,9 +415,8 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
         } else {
             pid_process(temperature);
         }
-    } else {
-        heater_pin.set((this->o = 0));
     }
+
     last_reading = temperature;
     return 0;
 }
@@ -481,7 +475,7 @@ void TemperatureControl::pid_process(float temperature)
 void TemperatureControl::on_second_tick(void *argument)
 {
     if (waiting)
-        THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED) ? 0.0 : target_temperature), o);
+        THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), o);
 }
 
 void TemperatureControl::setPIDp(float p)
