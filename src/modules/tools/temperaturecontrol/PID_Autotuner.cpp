@@ -136,7 +136,7 @@ uint32_t PID_Autotuner::on_tick(uint32_t dummy)
     if (temp_control != NULL)
         tick = true;
 
-    tickCnt += 1000 / 20; // millisecond tick count
+    tickCnt += (1000 / 20); // millisecond tick count
     return 0;
 }
 
