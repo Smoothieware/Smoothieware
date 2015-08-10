@@ -60,6 +60,7 @@ class Thermistor : public TempSensor
 
         Pin  thermistor_pin;
 
+        float min_temp, max_temp;
         struct {
             bool bad_config:1;
             bool use_steinhart_hart:1;

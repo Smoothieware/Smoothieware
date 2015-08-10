@@ -96,7 +96,7 @@ unsigned int Adc::read(Pin *pin)
     // Oversample to get 2 extra bits of resolution
     // weed out top and bottom worst values then oversample the rest
     // put into a 4 element moving average and return the average of the last 4 oversampled readings
-    static uint16_t ave_buf[num_channels][4]{0,0,0,0};
+    static uint16_t ave_buf[num_channels][4] =  { {0} };
     std::sort(median_buffer, median_buffer + num_samples);
     uint32_t sum = 0;
     for (int i = num_samples / 4; i < (num_samples - (num_samples / 4)); ++i) {
@@ -107,7 +107,7 @@ unsigned int Adc::read(Pin *pin)
     ave_buf[channel][2]= ave_buf[channel][1];
     ave_buf[channel][1]= ave_buf[channel][0];
     ave_buf[channel][0]= sum >> OVERSAMPLE;
-    return (ave_buf[channel][0]+ave_buf[channel][1]+ave_buf[channel][2]+ave_buf[channel][3])/4;
+    return roundf((ave_buf[channel][0]+ave_buf[channel][1]+ave_buf[channel][2]+ave_buf[channel][3])/4.0F);
 
 #else
     // sort the 8 readings and return the average of the middle 4
