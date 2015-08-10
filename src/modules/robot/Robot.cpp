@@ -363,7 +363,7 @@ void Robot::on_gcode_received(void *argument)
                     }
                 }
                 gcode->mark_as_taken();
-            } 
+            }
             break;
             case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); gcode->mark_as_taken();  break;
             case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); gcode->mark_as_taken();  break;
@@ -523,6 +523,8 @@ void Robot::on_gcode_received(void *argument)
                         factor = 1000.0F;
 
                     seconds_per_minute = 6000.0F / factor;
+                }else{
+                    gcode->stream->printf("Speed factor at %f %%\n", 6000.0F / seconds_per_minute);
                 }
                 break;
 

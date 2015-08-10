@@ -302,7 +302,11 @@ void Extruder::on_gcode_received(void *argument)
             gcode->mark_as_taken();
 
         } else if (gcode->m == 221 && this->enabled) { // M221 S100 change flow rate by percentage
-            if(gcode->has_letter('S')) this->extruder_multiplier= gcode->get_value('S')/100.0F;
+            if(gcode->has_letter('S')) {
+                this->extruder_multiplier= gcode->get_value('S')/100.0F;
+            }else{
+                gcode->stream->printf("Flow rate at %f %%\n", this->extruder_multiplier * 100.0F);
+            }
             gcode->mark_as_taken();
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
