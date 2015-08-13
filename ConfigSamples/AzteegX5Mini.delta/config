@@ -91,7 +91,6 @@ temperature_control.hotend.designator        T                #
 temperature_control.bed.enable               false            #
 temperature_control.bed.thermistor_pin       0.23             #
 temperature_control.bed.heater_pin           2.7              #
-temperature_control.bed.beta                 4036             #
 temperature_control.bed.thermistor           EPCOS100K        # http://smoothieware.org/temperaturecontrol#toc5
 #temperature_control.bed.beta                4066             # or set the beta value
 
