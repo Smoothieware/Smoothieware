@@ -189,7 +189,7 @@ void PID_Autotuner::on_idle(void *)
     }
 
     if ((tickCnt % 1000) == 0) {
-        s->printf("// Autopid - %s: %5.1f/%5.1f @%d %d/%d\n", temp_control->designator.c_str(), refVal, target_temperature, output, peakCount, requested_cycles);
+        s->printf("// Autopid Status - %5.1f/%5.1f @%d %d/%d\n",  refVal, target_temperature, output, peakCount, requested_cycles);
     }
 
     if(!firstPeak){
