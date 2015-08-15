@@ -314,10 +314,3 @@ network.ip_address                           auto             # use dhcp to get 
 #network.ip_mask                              255.255.255.0    # the ip mask
 #network.ip_gateway                           192.168.3.1      # the gateway address
 #network.mac_override                         xx.xx.xx.xx.xx.xx  # override the mac address, only do this if you have a conflict
-
-# Drills module
-# Implement the Canned Drilling Cycles
-# G80-83, G98, G99 in absolute mode only
-# Incremental mode not implemented (L)
-drillingcycles.enable                                false # enable module, default false
-drillingcycles.dwell_units                           S     # dwell units [S = seconds, P = millis], default: S
