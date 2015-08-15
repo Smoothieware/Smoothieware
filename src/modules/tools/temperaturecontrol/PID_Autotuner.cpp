@@ -165,7 +165,7 @@ void PID_Autotuner::on_idle(void *)
         return;
 
     if(peakCount >= requested_cycles) {
-        s->printf("WARNING: did not resolve within %d cycles, these results are probably innacurate\n", requested_cycles);
+        s->printf("// WARNING: Autopid did not resolve within %d cycles, these results are probably innacurate\n", requested_cycles);
         finishUp();
         return;
     }
@@ -189,7 +189,7 @@ void PID_Autotuner::on_idle(void *)
     }
 
     if ((tickCnt % 1000) == 0) {
-        s->printf("%s: %5.1f/%5.1f @%d %d/%d\n", temp_control->designator.c_str(), refVal, target_temperature, output, peakCount, requested_cycles);
+        s->printf("// Autopid Status - %5.1f/%5.1f @%d %d/%d\n",  refVal, target_temperature, output, peakCount, requested_cycles);
     }
 
     if(!firstPeak){
@@ -241,7 +241,7 @@ void PID_Autotuner::on_idle(void *)
     if (justchanged && peakCount >= 4) {
         // we've transitioned. check if we can autotune based on the last peaks
         float avgSeparation = (std::abs(peaks[peakCount - 1] - peaks[peakCount - 2]) + std::abs(peaks[peakCount - 2] - peaks[peakCount - 3])) / 2;
-        s->printf("Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
+        s->printf("// Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
         if (peakCount > 3 && avgSeparation < (0.05 * (absMax - absMin))) {
             DEBUG_PRINTF("Stabilized\n");
             finishUp();

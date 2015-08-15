@@ -305,7 +305,7 @@ void Extruder::on_gcode_received(void *argument)
             if(gcode->has_letter('S')) {
                 this->extruder_multiplier= gcode->get_value('S')/100.0F;
             }else{
-                gcode->stream->printf("Flow rate at %f %%\n", this->extruder_multiplier * 100.0F);
+                gcode->stream->printf("Flow rate at %6.2f %%\n", this->extruder_multiplier * 100.0F);
             }
             gcode->mark_as_taken();
 

@@ -524,7 +524,7 @@ void Robot::on_gcode_received(void *argument)
 
                     seconds_per_minute = 6000.0F / factor;
                 }else{
-                    gcode->stream->printf("Speed factor at %f %%\n", 6000.0F / seconds_per_minute);
+                    gcode->stream->printf("Speed factor at %6.2f %%\n", 6000.0F / seconds_per_minute);
                 }
                 break;
 
