@@ -740,15 +740,16 @@ void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s )
 
     // if we have volumetric limits enabled we calculate the volume for this move and limit the rate if it exceeds the stated limit
     // Note we need to be using volumetric extrusion for this to work as Ennn is in mm³ not mm
-    // We ask Extruder to do all the work, but as Extruder won;t even see this gcode until after it has been planned
-    // we need to ask it now passing in the relative data.
+    // We also check we are not exceeding the E max_speed for the current extruder
+    // We ask Extruder to do all the work, but as Extruder won't even see this gcode until after it has been planned
+    // we need to ask it now passing in the relevant data.
     if(gcode->has_letter('E')) {
         float data[2];
         data[0]= gcode->get_value('E'); // E target (maybe absolute or relative)
-        data[1]= isecs; // inverted seconds
+        data[1]= isecs; // inverted seconds for the move
         if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
             rate_mm_s *= data[1];
-            //THEKERNEL->streams->printf("Extuder has changed the rate by %f to %f\n", data[1], rate_mm_s);
+            //THEKERNEL->streams->printf("Extruder has changed the rate by %f to %f\n", data[1], rate_mm_s);
         }
     }
 

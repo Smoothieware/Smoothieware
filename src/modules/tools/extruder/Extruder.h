@@ -40,6 +40,7 @@ class Extruder : public Tool {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         uint32_t rate_increase() const;
+        float check_max_speeds(float target, float isecs);
 
         StepperMotor*  stepper_motor;
         Pin            step_pin;                     // Step pin for the stepper driver

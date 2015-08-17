@@ -209,6 +209,52 @@ void Extruder::on_get_public_data(void* argument){
     }
 }
 
+// check against maximum speeds and return the rate modifier
+float Extruder::check_max_speeds(float target, float isecs)
+{
+    float rm= 1.0F; // default no rate modification
+    float delta;
+    // get change in E (may be mm or mm³)
+    if(milestone_absolute_mode) {
+        delta= fabsf(target - milestone_last_position); // delta move
+        milestone_last_position= target;
+
+    }else{
+        delta= target;
+        milestone_last_position += target;
+    }
+
+    if(this->max_volumetric_rate > 0 && this->filament_diameter > 0.01F) {
+        // volumetric enabled and check for volumetric rate
+        float v= delta * isecs; // the flow rate in mm³/sec
+
+        // return the rate change needed to stay within the max rate
+        if(v > max_volumetric_rate) {
+            rm = max_volumetric_rate / v;
+            isecs *= rm; // this slows the rate down for the next test
+        }
+        //THEKERNEL->streams->printf("requested flow rate: %f mm³/sec, corrected flow rate: %f  mm³/sec\n", v, v * rm);
+    }
+
+    // check for max speed as well
+    float max_speed= this->stepper_motor->get_max_rate();
+    if(max_speed > 0) {
+        if(this->filament_diameter > 0.01F) {
+            // volumetric so need to convert delta which is mm³ to mm
+            delta *= volumetric_multiplier;
+        }
+
+        float sm= 1.0F;
+        float v= delta * isecs; // the speed in mm/sec
+        if(v > max_speed) {
+            sm *= (max_speed / v);
+        }
+        //THEKERNEL->streams->printf("requested speed: %f mm/sec, corrected speed: %f  mm/sec\n", v, v * sm);
+        rm *= sm;
+    }
+    return rm;
+}
+
 void Extruder::on_set_public_data(void *argument)
 {
     PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
@@ -218,32 +264,16 @@ void Extruder::on_set_public_data(void *argument)
     // handle extrude rates request from robot
     // TODO if not in volumetric mode then limit speed based on max_speed
     if(pdr->second_element_is(target_checksum)) {
-        if(!this->enabled || this->max_volumetric_rate == 0 || this->filament_diameter == 0) return;
+        // disabled extruders do not reply NOTE only one enabled extruder supported
+        if(!this->enabled) return;
 
         float *d= static_cast<float*>(pdr->get_data_ptr());
         float target= d[0]; // the E passed in on Gcode is in mm³ (maybe absolute or relative)
         float isecs= d[1]; // inverted secs
-        float delta;
 
-        if(milestone_absolute_mode) {
-            delta= fabsf(target - milestone_last_position); // delta move
-            milestone_last_position= target;
+        // check against maximum speeds and return rate modifier
+        d[1]= check_max_speeds(target, isecs);
 
-        }else{
-            delta= target;
-            milestone_last_position += target;
-        }
-
-        // return the rate change needed to stay within the max rate
-        float v= delta * isecs; // the flow rate in mm³/sec
-
-        // TODO need to take filament diameter into account for limiting to mm/sec of stepper
-        if(v > max_volumetric_rate) {
-            d[1] = max_volumetric_rate / v;
-        }else{
-            d[1]= 1.0F;
-        }
-        //THEKERNEL->streams->printf("requested flow rate: %f, corrected flow rate: %f\n", v, v * d[1]);
         pdr->set_taken();
         return;
     }
@@ -556,7 +586,6 @@ void Extruder::on_gcode_execute(void *argument)
                     // We move proportionally to the robot's movement
                     this->mode = FOLLOW;
                     this->travel_ratio = (relative_extrusion_distance * this->volumetric_multiplier * this->extruder_multiplier) / gcode->millimeters_of_travel; // adjust for volumetric extrusion and extruder multiplier
-                    // TODO: check resulting flowrate, limit robot speed if it exceeds max_speed
                 }
 
                 this->en_pin.set(0);
