@@ -218,10 +218,10 @@ void Player::on_gcode_received(void *argument)
             this->elapsed_secs = 0;
 
         } else if (gcode->m == 600) { // suspend print, Not entirely Marlin compliant
-            this->suspend_command("", &(StreamOutput::NullStream));
+            this->suspend_command("", gcode->stream);
 
         } else if (gcode->m == 601) { // resume print
-            this->resume_command("", &(StreamOutput::NullStream));
+            this->resume_command("", gcode->stream);
         }
     }
 }
@@ -501,7 +501,7 @@ void Player::suspend_command(string parameters, StreamOutput *stream )
         return;
     }
 
-    stream->printf("ok Suspending print, waiting for queue to empty...\n");
+    stream->printf("Suspending print, waiting for queue to empty...\n");
 
     suspended= true;
     if( this->playing_file ) {
@@ -525,7 +525,7 @@ void Player::suspend_part2()
     // wait for queue to empty
     THEKERNEL->conveyor->wait_for_empty_queue();
 
-    suspend_stream->printf("Saving current state...\n");
+    suspend_stream->printf("// Saving current state...\n");
 
     // save current XYZ position
     THEKERNEL->robot->get_axis_position(this->saved_position);
@@ -571,7 +571,7 @@ void Player::suspend_part2()
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     }
 
-    suspend_stream->printf("Print Suspended, enter resume to continue printing\n");
+    suspend_stream->printf("// Print Suspended, enter resume to continue printing\n");
 }
 
 /**
@@ -588,7 +588,7 @@ void Player::resume_command(string parameters, StreamOutput *stream )
         return;
     }
 
-    stream->printf("ok resuming print...\n");
+    stream->printf("resuming print...\n");
 
     // set heaters to saved temps
     for(auto& h : this->saved_temperatures) {
