@@ -31,7 +31,6 @@ private:
     struct {
         bool uploading: 1;
         bool halted: 1;
-        bool return_error_on_unhandled_gcode:1;
     };
 };
 

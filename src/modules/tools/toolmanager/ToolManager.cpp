@@ -52,7 +52,6 @@ void ToolManager::on_gcode_received(void *argument){
 
     if( gcode->has_letter('T') ){
         int new_tool = gcode->get_value('T');
-        gcode->mark_as_taken();
         if(new_tool >= (int)this->tools.size() || new_tool < 0){
             // invalid tool
             if( return_error_on_unhandled_gcode ) {

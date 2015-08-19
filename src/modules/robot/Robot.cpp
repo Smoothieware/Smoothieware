@@ -342,10 +342,10 @@ void Robot::on_gcode_received(void *argument)
     //G-letter Gcodes are mostly what the Robot module is interrested in, other modules also catch the gcode event and do stuff accordingly
     if( gcode->has_g) {
         switch( gcode->g ) {
-            case 0:  this->motion_mode = MOTION_MODE_SEEK; gcode->mark_as_taken(); break;
-            case 1:  this->motion_mode = MOTION_MODE_LINEAR; gcode->mark_as_taken();  break;
-            case 2:  this->motion_mode = MOTION_MODE_CW_ARC; gcode->mark_as_taken();  break;
-            case 3:  this->motion_mode = MOTION_MODE_CCW_ARC; gcode->mark_as_taken();  break;
+            case 0:  this->motion_mode = MOTION_MODE_SEEK;  break;
+            case 1:  this->motion_mode = MOTION_MODE_LINEAR;   break;
+            case 2:  this->motion_mode = MOTION_MODE_CW_ARC;   break;
+            case 3:  this->motion_mode = MOTION_MODE_CCW_ARC;   break;
             case 4: {
                 uint32_t delay_ms= 0;
                 if (gcode->has_letter('P')) {
@@ -363,16 +363,15 @@ void Robot::on_gcode_received(void *argument)
                         THEKERNEL->call_event(ON_IDLE, this);
                     }
                 }
-                gcode->mark_as_taken();
             }
             break;
-            case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS); gcode->mark_as_taken();  break;
-            case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS); gcode->mark_as_taken();  break;
-            case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS); gcode->mark_as_taken();  break;
-            case 20: this->inch_mode = true; gcode->mark_as_taken();  break;
-            case 21: this->inch_mode = false; gcode->mark_as_taken();  break;
-            case 90: this->absolute_mode = true; gcode->mark_as_taken();  break;
-            case 91: this->absolute_mode = false; gcode->mark_as_taken();  break;
+            case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);   break;
+            case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS);   break;
+            case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS);   break;
+            case 20: this->inch_mode = true;   break;
+            case 21: this->inch_mode = false;   break;
+            case 90: this->absolute_mode = true;   break;
+            case 91: this->absolute_mode = false;   break;
             case 92: {
                 if(gcode->get_num_args() == 0) {
                     for (int i = X_AXIS; i <= Z_AXIS; ++i) {
@@ -386,8 +385,6 @@ void Robot::on_gcode_received(void *argument)
                         }
                     }
                 }
-
-                gcode->mark_as_taken();
                 return;
             }
         }
@@ -405,7 +402,6 @@ void Robot::on_gcode_received(void *argument)
 
                 gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm, seconds_per_minute);
                 gcode->add_nl = true;
-                gcode->mark_as_taken();
                 check_max_actuator_speeds();
                 return;
 
@@ -419,12 +415,10 @@ void Robot::on_gcode_received(void *argument)
                                  actuators[Y_AXIS]->get_current_position(),
                                  actuators[Z_AXIS]->get_current_position() );
                 gcode->txt_after_ok.append(buf, n);
-                gcode->mark_as_taken();
             }
             return;
 
             case 120: { // push state
-                gcode->mark_as_taken();
                 bool b= this->absolute_mode;
                 saved_state_t s(this->feed_rate, this->seek_rate, b);
                 state_stack.push(s);
@@ -432,7 +426,6 @@ void Robot::on_gcode_received(void *argument)
             break;
 
             case 121: // pop state
-                gcode->mark_as_taken();
                 if(!state_stack.empty()) {
                     auto s= state_stack.top();
                     state_stack.pop();
@@ -464,12 +457,10 @@ void Robot::on_gcode_received(void *argument)
                                           alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
                     gcode->add_nl = true;
                 }
-                gcode->mark_as_taken();
+
                 break;
 
             case 204: // M204 Snnn - set acceleration to nnn, Znnn sets z acceleration
-                gcode->mark_as_taken();
-
                 if (gcode->has_letter('S')) {
                     float acc = gcode->get_value('S'); // mm/s^2
                     // enforce minimum
@@ -487,7 +478,6 @@ void Robot::on_gcode_received(void *argument)
                 break;
 
             case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed, Ynnn - set minimum step rate
-                gcode->mark_as_taken();
                 if (gcode->has_letter('X')) {
                     float jd = gcode->get_value('X');
                     // enforce minimum
@@ -515,7 +505,6 @@ void Robot::on_gcode_received(void *argument)
                 break;
 
             case 220: // M220 - speed override percentage
-                gcode->mark_as_taken();
                 if (gcode->has_letter('S')) {
                     float factor = gcode->get_value('S');
                     // enforce minimum 10% speed
@@ -532,7 +521,6 @@ void Robot::on_gcode_received(void *argument)
                 break;
 
             case 400: // wait until all moves are done up to this point
-                gcode->mark_as_taken();
                 THEKERNEL->conveyor->wait_for_empty_queue();
                 break;
 
@@ -554,12 +542,11 @@ void Robot::on_gcode_received(void *argument)
                     }
                     gcode->stream->printf("\n");
                 }
-                gcode->mark_as_taken();
+
                 break;
             }
 
             case 665: { // M665 set optional arm solution variables based on arm solution.
-                gcode->mark_as_taken();
                 // the parameter args could be any letter each arm solution only accepts certain ones
                 BaseSolution::arm_options_t options= gcode->get_args();
                 options.erase('S'); // don't include the S

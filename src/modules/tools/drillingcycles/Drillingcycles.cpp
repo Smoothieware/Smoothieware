@@ -46,7 +46,7 @@ void Drillingcycles::on_module_loaded()
         delete this;
         return;
     }
-    
+
     // Settings
     this->on_config_reload(this);
 
@@ -100,11 +100,11 @@ void Drillingcycles::update_sticky(Gcode *gcode)
     if (gcode->has_letter('F')) this->sticky_f = gcode->get_value('F');
     if (gcode->has_letter('Q')) this->sticky_q = gcode->get_value('Q');
     if (gcode->has_letter('P')) this->sticky_p = gcode->get_int('P');
-    
+
     // set retract plane
-    if (this->retract_type == RETRACT_TO_Z) 
+    if (this->retract_type == RETRACT_TO_Z)
         this->r_plane = this->initial_z;
-    else 
+    else
         this->r_plane = this->sticky_r;
 }
 
@@ -167,14 +167,14 @@ void Drillingcycles::make_hole(Gcode *gcode)
     this->send_gcode("G0%s%s", x, y);
     // rapids to retract position (R)
     this->send_gcode("G0 Z%1.4f", this->sticky_r);
-    
+
     // if peck drilling
-    if (this->sticky_q > 0) 
+    if (this->sticky_q > 0)
         this->peck_hole();
     else
         // feed down to depth at feedrate (F and Z)
         this->send_gcode("G1 F%1.4f Z%1.4f", this->sticky_f, this->sticky_z);
-    
+
     // if dwell, wait for x seconds
     if (this->sticky_p > 0) {
         // dwell exprimed in seconds
@@ -184,7 +184,7 @@ void Drillingcycles::make_hole(Gcode *gcode)
         else
             this->send_gcode("G4 P%u", this->sticky_p);
     }
-    
+
     // rapids retract at R-Plane (Initial-Z or R)
     this->send_gcode("G0 Z%1.4f", this->r_plane);
 }
@@ -195,9 +195,9 @@ void Drillingcycles::on_gcode_received(void* argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     // no "G" in gcode, exit...
-    if (! gcode->has_g) 
+    if (! gcode->has_g)
         return;
-    
+
     // "G" value
     int code = gcode->g;
 
@@ -216,13 +216,12 @@ void Drillingcycles::on_gcode_received(void* argument)
         this->reset_sticky();
         // mark cycle started and gcode taken
         this->cycle_started = true;
-        gcode->mark_as_taken();
     }
     // cycle end
     else if (code == 80) {
         // mark cycle endded and gcode taken
         this->cycle_started = false;
-        gcode->mark_as_taken();
+
         // if retract position is R-Plane
         if (this->retract_type == RETRACT_TO_R) {
             // rapids retract at Initial-Z to avoid futur collisions
@@ -242,7 +241,6 @@ void Drillingcycles::on_gcode_received(void* argument)
         if (code == 81 || code == 82 || code == 83) {
             this->update_sticky(gcode);
             this->make_hole(gcode);
-            gcode->mark_as_taken();
         }
     }
 }

@@ -314,7 +314,6 @@ void Extruder::on_gcode_received(void *argument)
             char buf[16];
             int n = snprintf(buf, sizeof(buf), " E:%1.3f ", this->current_position);
             gcode->txt_after_ok.append(buf, n);
-            gcode->mark_as_taken();
 
         } else if (gcode->m == 92 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier) ) ) {
             float spm = this->steps_per_millimeter;
@@ -325,7 +324,6 @@ void Extruder::on_gcode_received(void *argument)
 
             gcode->stream->printf("E:%g ", spm);
             gcode->add_nl = true;
-            gcode->mark_as_taken();
 
         } else if (gcode->m == 200 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             if (gcode->has_letter('D')) {
@@ -343,7 +341,6 @@ void Extruder::on_gcode_received(void *argument)
                     gcode->stream->printf("Volumetric extrusion is disabled\n");
                 }
             }
-            gcode->mark_as_taken();
 
         } else if (gcode->m == 203 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             // M203 Exxx Vyyy Set maximum feedrates xxx mm/sec and/or yyy mm³/sec
@@ -360,13 +357,10 @@ void Extruder::on_gcode_received(void *argument)
                 }
             }
 
-            gcode->mark_as_taken();
-
         } else if (gcode->m == 204 && gcode->has_letter('E') &&
                    ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             // extruder acceleration M204 Ennn mm/sec^2 (Pnnn sets the specific extruder for M500)
             this->acceleration= gcode->get_value('E');
-            gcode->mark_as_taken();
 
         } else if (gcode->m == 207 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             // M207 - set retract length S[positive mm] F[feedrate mm/min] Z[additional zlift/hop] Q[zlift feedrate mm/min]
@@ -374,13 +368,11 @@ void Extruder::on_gcode_received(void *argument)
             if(gcode->has_letter('F')) retract_feedrate = gcode->get_value('F')/60.0F; // specified in mm/min converted to mm/sec
             if(gcode->has_letter('Z')) retract_zlift_length = gcode->get_value('Z');
             if(gcode->has_letter('Q')) retract_zlift_feedrate = gcode->get_value('Q');
-            gcode->mark_as_taken();
 
         } else if (gcode->m == 208 && ( (this->enabled && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             // M208 - set retract recover length S[positive mm surplus to the M207 S*] F[feedrate mm/min]
             if(gcode->has_letter('S')) retract_recover_length = gcode->get_value('S');
             if(gcode->has_letter('F')) retract_recover_feedrate = gcode->get_value('F')/60.0F; // specified in mm/min converted to mm/sec
-            gcode->mark_as_taken();
 
         } else if (gcode->m == 221 && this->enabled) { // M221 S100 change flow rate by percentage
             if(gcode->has_letter('S')) {
@@ -388,7 +380,6 @@ void Extruder::on_gcode_received(void *argument)
             }else{
                 gcode->stream->printf("Flow rate at %6.2f %%\n", this->extruder_multiplier * 100.0F);
             }
-            gcode->mark_as_taken();
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             if( this->single_config ) {
@@ -413,12 +404,11 @@ void Extruder::on_gcode_received(void *argument)
                     gcode->stream->printf(";E max volumetric rate mm³/sec:\nM203 V%1.4f P%d\n", this->max_volumetric_rate, this->identifier);
                 }
             }
-            gcode->mark_as_taken();
 
         } else if( gcode->m == 17 || gcode->m == 18 || gcode->m == 82 || gcode->m == 83 || gcode->m == 84 ) {
             // Mcodes to pass along to on_gcode_execute
             THEKERNEL->conveyor->append_gcode(gcode);
-            gcode->mark_as_taken();
+
         }
 
     }else if(gcode->has_g) {
@@ -426,16 +416,13 @@ void Extruder::on_gcode_received(void *argument)
         if( (gcode->g == 92 && gcode->has_letter('E')) || (gcode->g == 90 || gcode->g == 91) ) {
             // Gcodes to pass along to on_gcode_execute
             THEKERNEL->conveyor->append_gcode(gcode);
-            gcode->mark_as_taken();
 
         }else if( this->enabled && gcode->g < 4 && gcode->has_letter('E') && !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ) {
             // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
             THEKERNEL->conveyor->append_gcode(gcode);
             THEKERNEL->conveyor->queue_head_block();
-            gcode->mark_as_taken();
 
         }else if( this->enabled && (gcode->g == 10 || gcode->g == 11) ) { // firmware retract command
-            gcode->mark_as_taken();
             // check we are in the correct state of retract or unretract
             if(gcode->g == 10 && !retracted) {
                 this->retracted= true;

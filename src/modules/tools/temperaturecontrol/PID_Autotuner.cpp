@@ -93,11 +93,9 @@ void PID_Autotuner::on_gcode_received(void *argument)
 
     if(gcode->has_m) {
         if(gcode->m == 304) {
-            gcode->mark_as_taken();
             abort();
 
         } else if (gcode->m == 303 && gcode->has_letter('E')) {
-            gcode->mark_as_taken();
             int pool_index = gcode->get_value('E');
 
             // get the temperature control instance with this pool index
