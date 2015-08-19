@@ -372,8 +372,6 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
                 gcode->stream->printf(";Probe offsets:\n");
                 std::tie(x, y, z) = probe_offsets;
                 gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
-
-                gcode->mark_as_taken();
                 break;
             }
 

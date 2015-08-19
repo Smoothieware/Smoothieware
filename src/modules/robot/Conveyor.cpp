@@ -136,7 +136,6 @@ void Conveyor::on_config_reload(void* argument)
 
 void Conveyor::append_gcode(Gcode* gcode)
 {
-    gcode->mark_as_taken();
     queue.head_ref()->append_gcode(gcode);
 }
 

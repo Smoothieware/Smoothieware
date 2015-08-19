@@ -258,7 +258,6 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         if( gcode->g == 30 ) { // simple Z probe
-            gcode->mark_as_taken();
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
@@ -280,7 +279,6 @@ void ZProbe::on_gcode_received(void *argument)
             // find a strategy to handle the gcode
             for(auto s : strategies){
                 if(s->handleGcode(gcode)) {
-                    gcode->mark_as_taken();
                     return;
                 }
             }
@@ -293,12 +291,10 @@ void ZProbe::on_gcode_received(void *argument)
             int c = this->pin.get();
             gcode->stream->printf(" Probe: %d", c);
             gcode->add_nl = true;
-            gcode->mark_as_taken();
 
         }else {
             for(auto s : strategies){
                 if(s->handleGcode(gcode)) {
-                    gcode->mark_as_taken();
                     return;
                 }
             }
