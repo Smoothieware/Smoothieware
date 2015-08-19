@@ -29,6 +29,7 @@
 #include "PlayerPublicAccess.h"
 #include "TemperatureControlPublicAccess.h"
 #include "TemperatureControlPool.h"
+#include "ExtruderPublicAccess.h"
 
 #include <cstddef>
 #include <cmath>
@@ -41,11 +42,6 @@
 #define after_suspend_gcode_checksum      CHECKSUM("after_suspend_gcode")
 #define before_resume_gcode_checksum      CHECKSUM("before_resume_gcode")
 #define leave_heaters_on_suspend_checksum CHECKSUM("leave_heaters_on_suspend")
-
-
-#define extruder_checksum                 CHECKSUM("extruder")
-#define save_state_checksum               CHECKSUM("save_state")
-#define restore_state_checksum            CHECKSUM("restore_state")
 
 extern SDFAT mounter;
 

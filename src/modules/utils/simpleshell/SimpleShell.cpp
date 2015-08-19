@@ -35,6 +35,8 @@
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
 
+#include "mbed.h" // for wait_ms()
+
 extern unsigned int g_maximumHeapAddress;
 
 #include <malloc.h>
@@ -447,6 +449,8 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
         filename = THEKERNEL->config_override_filename();
     }
 
+    THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
+
     //remove(filename.c_str()); // seems to cause a hang every now and then
     {
         FileStream fs(filename.c_str());
@@ -454,7 +458,7 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
         // this also will truncate the existing file instead of deleting it
     }
 
-    // replace stream with one that writes to config-override file
+    // stream that appends to file
     AppendFileStream *gs = new AppendFileStream(filename.c_str());
     // if(!gs->is_open()) {
     //     stream->printf("Unable to open File %s for write\n", filename.c_str());

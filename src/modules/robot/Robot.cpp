@@ -22,6 +22,7 @@ using std::string;
 #include "StepperMotor.h"
 #include "Gcode.h"
 #include "PublicDataRequest.h"
+#include "PublicData.h"
 #include "RobotPublicAccess.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
@@ -36,6 +37,7 @@ using std::string;
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
 #include "StreamOutputPool.h"
+#include "ExtruderPublicAccess.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
@@ -93,7 +95,6 @@ using std::string;
 #define  alpha_checksum                      CHECKSUM("alpha")
 #define  beta_checksum                       CHECKSUM("beta")
 #define  gamma_checksum                      CHECKSUM("gamma")
-
 
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
@@ -457,10 +458,12 @@ void Robot::on_gcode_received(void *argument)
 
                 check_max_actuator_speeds();
 
-                gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
-                                      this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
-                                      alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
-                gcode->add_nl = true;
+                if(gcode->get_num_args() == 0) {
+                    gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
+                                          this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
+                                          alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
+                    gcode->add_nl = true;
+                }
                 gcode->mark_as_taken();
                 break;
 
@@ -682,7 +685,7 @@ void Robot::reset_position_from_current_actuator_position()
 }
 
 // Convert target from millimeters to steps, and append this to the planner
-void Robot::append_milestone( float target[], float rate_mm_s )
+void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s )
 {
     float deltas[3];
     float unit_vec[3];
@@ -726,12 +729,28 @@ void Robot::append_milestone( float target[], float rate_mm_s )
     // find actuator position given cartesian position, use actual adjusted target
     arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
 
+    float isecs= rate_mm_s / millimeters_of_travel;
     // check per-actuator speed limits
     for (int actuator = 0; actuator <= 2; actuator++) {
-        float actuator_rate  = fabs(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * rate_mm_s / millimeters_of_travel;
-
-        if (actuator_rate > actuators[actuator]->get_max_rate())
+        float actuator_rate  = fabsf(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * isecs;
+        if (actuator_rate > actuators[actuator]->get_max_rate()){
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
+        }
+    }
+
+    // if we have volumetric limits enabled we calculate the volume for this move and limit the rate if it exceeds the stated limit
+    // Note we need to be using volumetric extrusion for this to work as Ennn is in mm³ not mm
+    // We also check we are not exceeding the E max_speed for the current extruder
+    // We ask Extruder to do all the work, but as Extruder won't even see this gcode until after it has been planned
+    // we need to ask it now passing in the relevant data.
+    if(gcode->has_letter('E')) {
+        float data[2];
+        data[0]= gcode->get_value('E'); // E target (maybe absolute or relative)
+        data[1]= isecs; // inverted seconds for the move
+        if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
+            rate_mm_s *= data[1];
+            //THEKERNEL->streams->printf("Extruder has changed the rate by %f to %f\n", data[1], rate_mm_s);
+        }
     }
 
     // Append the block to the planner
@@ -797,12 +816,12 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
                 segment_end[axis] = last_milestone[axis] + segment_delta[axis];
 
             // Append the end of this segment to the queue
-            this->append_milestone(segment_end, rate_mm_s);
+            this->append_milestone(gcode, segment_end, rate_mm_s);
         }
     }
 
     // Append the end of this full move to the queue
-    this->append_milestone(target, rate_mm_s);
+    this->append_milestone(gcode, target, rate_mm_s);
 
     // if adding these blocks didn't start executing, do that now
     THEKERNEL->conveyor->ensure_running();
@@ -910,12 +929,12 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
         arc_target[this->plane_axis_2] += linear_per_segment;
 
         // Append this segment to the queue
-        this->append_milestone(arc_target, this->feed_rate / seconds_per_minute);
+        this->append_milestone(gcode, arc_target, this->feed_rate / seconds_per_minute);
 
     }
 
     // Ensure last segment arrives at target location.
-    this->append_milestone(target, this->feed_rate / seconds_per_minute);
+    this->append_milestone(gcode, target, this->feed_rate / seconds_per_minute);
 }
 
 // Do the math for an arc and add it to the queue
