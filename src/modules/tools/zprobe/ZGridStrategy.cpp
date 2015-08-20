@@ -595,14 +595,14 @@ void ZGridStrategy::move(float *position, float feed)
 
 
 void ZGridStrategy::next_cal(void){
-    if (int(this->cal[X_AXIS] / this->bed_div_x) % 2 != 0){  // Odd row
+    if ((((int) roundf(this->cal[X_AXIS] / this->bed_div_x)) & 1) != 0){  // Odd row
         this->cal[Y_AXIS] -= this->bed_div_y;
-        if (this->cal[Y_AXIS] < 0.0F){
+        if (this->cal[Y_AXIS] < (0.0F - (bed_div_y / 2.0f))){
 
             //THEKERNEL->streams->printf("DEBUG: Y (%f) < cond (%f)\n",this->cal[Y_AXIS], 0.0F);
 
             this->cal[X_AXIS] += bed_div_x;
-            if (this->cal[X_AXIS] > this->bed_x){
+            if (this->cal[X_AXIS] > (this->bed_x + (this->bed_div_x / 2.0f))){
                 this->cal[X_AXIS] = 0.0F;
                 this->cal[Y_AXIS] = 0.0F;
             }
@@ -612,12 +612,12 @@ void ZGridStrategy::next_cal(void){
     }
     else {                                          // Even row (0 is an even row - starting point)
         this->cal[Y_AXIS] += bed_div_y;
-      if (this->cal[Y_AXIS] > this->bed_y){
+      if (this->cal[Y_AXIS] > (this->bed_y + (bed_div_y / 2.0f))){
 
             //THEKERNEL->streams->printf("DEBUG: Y (%f) > cond (%f)\n",this->cal[Y_AXIS], this->bed_y);
 
             this->cal[X_AXIS] += bed_div_x;
-            if (this->cal[X_AXIS] > bed_x){
+            if (this->cal[X_AXIS] > (this->bed_x + (this->bed_div_x / 2.0f))){
                 this->cal[X_AXIS] = 0.0F;
                 this->cal[Y_AXIS] = 0.0F;
             }
