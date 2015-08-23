@@ -461,11 +461,13 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
     //     return;
     // }
 
+    __disable_irq();
     // issue a M500 which will store values in the file stream
     Gcode *gcode = new Gcode("M500", gs);
     THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
     delete gs;
     delete gcode;
+    __enable_irq();
 
     stream->printf("Settings Stored to %s\r\n", filename.c_str());
 }
