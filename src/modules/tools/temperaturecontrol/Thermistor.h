@@ -65,6 +65,7 @@ class Thermistor : public TempSensor
             bool bad_config:1;
             bool use_steinhart_hart:1;
         };
+        uint8_t thermistor_number;
 };
 
 #endif

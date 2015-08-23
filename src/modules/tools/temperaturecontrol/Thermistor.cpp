@@ -46,6 +46,7 @@ Thermistor::Thermistor()
     this->beta= 0.0F; // not used by default
     min_temp= 999;
     max_temp= 0;
+    this->thermistor_number= 0; // not a predefined thermistor
 }
 
 Thermistor::~Thermistor()
@@ -66,11 +67,13 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     bool use_beta_table= THEKERNEL->config->value(module_checksum, name_checksum, use_beta_table_checksum)->by_default(false)->as_bool();
 
     bool found= false;
+    int cnt= 0;
     // load a predefined thermistor name if found
     string thermistor = THEKERNEL->config->value(module_checksum, name_checksum, thermistor_checksum)->by_default("")->as_string();
     if(!thermistor.empty()) {
         if(!use_beta_table) {
             for (auto& i : predefined_thermistors) {
+                cnt++;
                 if(thermistor.compare(i.name) == 0) {
                     this->c1 = i.c1;
                     this->c2 = i.c2;
@@ -86,7 +89,9 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 
         // fall back to the old beta pre-defined table if not found above
         if(!found) {
+            cnt= 0;
             for (auto& i : predefined_thermistors_beta) {
+                cnt++;
                 if(thermistor.compare(i.name) == 0) {
                     this->beta = i.beta;
                     this->r0 = i.r0;
@@ -94,10 +99,17 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
                     this->r1 = i.r1;
                     this->r2 = i.r2;
                     use_steinhart_hart= false;
+                    cnt |= 0x80; // set MSB to indicate beta table
                     found= true;
                     break;
                 }
             }
+        }
+
+        if(!found) {
+            thermistor_number= 0;
+        }else{
+            thermistor_number= cnt;
         }
     }
 
@@ -241,6 +253,26 @@ void Thermistor::get_raw()
         t= (1.0F / (k + (j * logf(r / r0)))) - 273.15F;
         THEKERNEL->streams->printf("beta temp= %f, min= %f, max= %f, delta= %f\n", t, min_temp, max_temp, max_temp-min_temp);
     }
+
+    // print out predefined thermistors
+    int cnt= 1;
+    THEKERNEL->streams->printf("S/H table\n");
+    for (auto& i : predefined_thermistors) {
+        THEKERNEL->streams->printf("%d - %s\n", cnt++, i.name);
+    }
+
+    cnt= 129;
+    THEKERNEL->streams->printf("Beta table\n");
+    for (auto& i : predefined_thermistors_beta) {
+        THEKERNEL->streams->printf("%d - %s\n", cnt++, i.name);
+    }
+
+    // if using a predefined thermistor show its name and which table it is from
+    if(thermistor_number != 0) {
+        string name= (thermistor_number&0x80) ? predefined_thermistors_beta[(thermistor_number&0x7F)-1].name :  predefined_thermistors[thermistor_number-1].name;
+        THEKERNEL->streams->printf("Using predefined thermistor %d in %s table: %s\n", thermistor_number&0x7F, (thermistor_number&0x80)?"Beta":"S/H", name.c_str());
+    }
+
     // reset the min/max
     min_temp= max_temp= t;
 }
@@ -279,6 +311,7 @@ bool Thermistor::set_optional(const sensor_options_t& options) {
     bool define_beta= false;
     bool change_beta= false;
     uint8_t define_shh= 0;
+    uint8_t predefined= 0;
 
     for(auto &i : options) {
         switch(i.first) {
@@ -288,6 +321,53 @@ bool Thermistor::set_optional(const sensor_options_t& options) {
             case 'I': this->c1= i.second; define_shh++; break;
             case 'J': this->c2= i.second; define_shh++; break;
             case 'K': this->c3= i.second; define_shh++; break;
+            case 'P': predefined= i.second; break;
+        }
+    }
+
+    if(predefined != 0) {
+        if(define_beta || change_beta || define_shh != 0) {
+            // cannot use a predefined with any other option
+            this->bad_config= true;
+            return false;
+        }
+
+        if(predefined & 0x80) {
+            // use the predefined beta table
+            uint8_t n= (predefined&0x7F)-1;
+            if(n >= sizeof(predefined_thermistors_beta) / sizeof(thermistor_beta_table_t)) {
+                // not a valid index
+                return false;
+            }
+            auto &i= predefined_thermistors_beta[n];
+            this->beta = i.beta;
+            this->r0 = i.r0;
+            this->t0 = i.t0;
+            this->r1 = i.r1;
+            this->r2 = i.r2;
+            use_steinhart_hart= false;
+            calc_jk();
+            thermistor_number= predefined;
+            this->bad_config= false;
+            return true;
+
+        }else {
+            // use the predefined S/H table
+            uint8_t n= predefined-1;
+            if(n >= sizeof(predefined_thermistors) / sizeof(thermistor_table_t)) {
+                // not a valid index
+                return false;
+            }
+            auto &i= predefined_thermistors[n];
+            this->c1 = i.c1;
+            this->c2 = i.c2;
+            this->c3 = i.c3;
+            this->r1 = i.r1;
+            this->r2 = i.r2;
+            use_steinhart_hart= true;
+            thermistor_number= predefined;
+            this->bad_config= false;
+            return true;
         }
     }
 
@@ -318,6 +398,11 @@ bool Thermistor::set_optional(const sensor_options_t& options) {
 }
 
 bool Thermistor::get_optional(sensor_options_t& options) {
+    if(thermistor_number != 0) {
+        options['P']= thermistor_number;
+        return true;
+    }
+
     if(use_steinhart_hart) {
         options['I']= this->c1;
         options['J']= this->c2;
