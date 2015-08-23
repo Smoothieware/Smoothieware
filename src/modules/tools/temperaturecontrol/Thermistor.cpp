@@ -321,7 +321,7 @@ bool Thermistor::set_optional(const sensor_options_t& options) {
             case 'I': this->c1= i.second; define_shh++; break;
             case 'J': this->c2= i.second; define_shh++; break;
             case 'K': this->c3= i.second; define_shh++; break;
-            case 'P': predefined= i.second; break;
+            case 'P': predefined= roundf(i.second); break;
         }
     }
 
