@@ -16,6 +16,7 @@
 
 #define QUEUE_LEN 32
 
+class StreamOutput;
 
 class Thermistor : public TempSensor
 {
@@ -30,6 +31,7 @@ class Thermistor : public TempSensor
         bool get_optional(sensor_options_t& options);
         void get_raw();
         static std::tuple<float,float,float> calculate_steinhart_hart_coefficients(float t1, float r1, float t2, float r2, float t3, float r3);
+        static void print_predefined_thermistors(StreamOutput*);
 
     private:
         int new_thermistor_reading();
