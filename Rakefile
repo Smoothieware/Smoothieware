@@ -2,6 +2,9 @@ require 'rake'
 require 'pathname'
 require 'fileutils'
 
+verbose(ENV['verbose'] == '1')
+DEBUG = ENV['debug'] == '1'
+
 def pop_path(path)
   Pathname(path).each_filename.to_a[1..-1]
 end
@@ -70,6 +73,11 @@ SIZE = "#{TOOLSBIN}size"
 
 # include a defaults file if present
 load 'rakefile.defaults' if File.exists?('rakefile.defaults')
+
+if DEBUG
+  BUILDTYPE= 'Debug'
+  ENABLE_DEBUG_MONITOR= '0'
+end
 
 # Set build type
 BUILDTYPE= ENV['BUILDTYPE'] || 'Checked' unless defined? BUILDTYPE

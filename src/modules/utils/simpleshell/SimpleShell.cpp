@@ -72,6 +72,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"save",     SimpleShell::save_command},
     {"remount",  SimpleShell::remount_command},
     {"calc_thermistor", SimpleShell::calc_thermistor_command},
+    {"thermistors", SimpleShell::print_thermistors_command},
 
     // unknown command
     {NULL, NULL}
@@ -598,6 +599,11 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
     }
 }
 
+void SimpleShell::print_thermistors_command( string parameters, StreamOutput *stream)
+{
+    Thermistor::print_predefined_thermistors(stream);
+}
+
 void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stream)
 {
     string s = shift_parameter( parameters );
@@ -681,5 +687,6 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
     stream->printf("upload filename - saves a stream of text to the named file\r\n");
     stream->printf("calc_thermistor [-s0] T1,R1,T2,R2,T3,R3 - calculate the Steinhart Hart coefficients for a thermistor\r\n");
+    stream->printf("thermistors - print out the predefined thermistors\r\n");
 }
 

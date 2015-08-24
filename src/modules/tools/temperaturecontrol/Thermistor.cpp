@@ -182,6 +182,22 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 
 }
 
+// print out predefined thermistors
+void Thermistor::print_predefined_thermistors(StreamOutput* s)
+{
+    int cnt= 1;
+    s->printf("S/H table\n");
+    for (auto& i : predefined_thermistors) {
+        s->printf("%d - %s\n", cnt++, i.name);
+    }
+
+    cnt= 129;
+    s->printf("Beta table\n");
+    for (auto& i : predefined_thermistors_beta) {
+        s->printf("%d - %s\n", cnt++, i.name);
+    }
+}
+
 // calculate the coefficients from the supplied three Temp/Resistance pairs
 // copied from https://github.com/MarlinFirmware/Marlin/blob/Development/Marlin/scripts/createTemperatureLookupMarlin.py
 std::tuple<float,float,float> Thermistor::calculate_steinhart_hart_coefficients(float t1, float r1, float t2, float r2, float t3, float r3)
@@ -252,19 +268,6 @@ void Thermistor::get_raw()
     }else{
         t= (1.0F / (k + (j * logf(r / r0)))) - 273.15F;
         THEKERNEL->streams->printf("beta temp= %f, min= %f, max= %f, delta= %f\n", t, min_temp, max_temp, max_temp-min_temp);
-    }
-
-    // print out predefined thermistors
-    int cnt= 1;
-    THEKERNEL->streams->printf("S/H table\n");
-    for (auto& i : predefined_thermistors) {
-        THEKERNEL->streams->printf("%d - %s\n", cnt++, i.name);
-    }
-
-    cnt= 129;
-    THEKERNEL->streams->printf("Beta table\n");
-    for (auto& i : predefined_thermistors_beta) {
-        THEKERNEL->streams->printf("%d - %s\n", cnt++, i.name);
     }
 
     // if using a predefined thermistor show its name and which table it is from
