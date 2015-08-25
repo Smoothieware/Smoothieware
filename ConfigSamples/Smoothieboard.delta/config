@@ -1,3 +1,5 @@
+#temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
+#temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
 # NOTE Lines must not exceed 132 characters
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
@@ -132,6 +134,8 @@ temperature_control.hotend.thermistor        EPCOS100K        # see http://smoot
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
+#temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
+#temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
 
 #temperature_control.hotend.p_factor         13.7             # permanently set the PID values after an auto pid
 #temperature_control.hotend.i_factor         0.097            #

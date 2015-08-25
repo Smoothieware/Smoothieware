@@ -69,7 +69,7 @@ TemperatureControl::TemperatureControl(uint16_t name, int index)
     name_checksum= name;
     pool_index= index;
     waiting= false;
-    min_temp_violated= false;
+    temp_violated= false;
     sensor= nullptr;
     readonly= false;
 }
@@ -113,9 +113,11 @@ void TemperatureControl::on_halt(void *arg)
 
 void TemperatureControl::on_main_loop(void *argument)
 {
-    if (this->min_temp_violated) {
-        THEKERNEL->streams->printf("Error: MINTEMP triggered. Check your temperature sensors!\n");
-        this->min_temp_violated = false;
+    if (this->temp_violated) {
+        this->temp_violated = false;
+        THEKERNEL->streams->printf("!! Error: MINTEMP or MAXTEMP triggered. Check your temperature sensors!\n");
+        THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
+        THEKERNEL->call_event(ON_HALT, nullptr);
     }
 }
 
@@ -132,7 +134,7 @@ void TemperatureControl::load_config()
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
     // Max and min temperatures we are not allowed to get over (Safety)
-    this->max_temp = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_temp_checksum)->by_default(1000)->as_number();
+    this->max_temp = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_temp_checksum)->by_default(300)->as_number();
     this->min_temp = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, min_temp_checksum)->by_default(0)->as_number();
 
     // Heater pin
@@ -245,7 +247,20 @@ void TemperatureControl::on_gcode_received(void *argument)
         // readonly sensors don't handle the rest
         if(this->readonly) return;
 
-        if (gcode->m == 301) {
+        if (gcode->m == 143) {
+            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
+                if(gcode->has_letter('P')) {
+                    max_temp= gcode->get_value('P');
+
+                } else {
+                    gcode->stream->printf("Nothing set NOTE Usage is M143 S0 P300 where <S> is the hotend index and <P> is the maximum temp to set\n");
+                }
+
+            }else if(gcode->get_num_args() == 0) {
+                gcode->stream->printf("Maximum temperature for %s(%d) is %f°C\n", this->designator.c_str(), this->pool_index, max_temp);
+            }
+
+        } else if (gcode->m == 301) {
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
                 if (gcode->has_letter('P'))
                     setPIDp( gcode->get_value('P') );
@@ -264,6 +279,8 @@ void TemperatureControl::on_gcode_received(void *argument)
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f X%1.4f Y%d\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm());
+
+            gcode->stream->printf(";Max temperature setting:\nM143 S%d P%1.4f\n", this->pool_index, this->max_temp);
 
             if(this->sensor_settings) {
                 // get or save any sensor specific optional values
@@ -403,8 +420,8 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
 {
     float temperature = sensor->get_temperature();
     if(!this->readonly && target_temperature > 2) {
-        if (isinf(temperature) || temperature < min_temp) {
-            this->min_temp_violated = true;
+        if (isinf(temperature) || temperature < min_temp || temperature > max_temp) {
+            this->temp_violated = true;
             target_temperature = UNDEFINED;
             heater_pin.set((this->o = 0));
         } else {
