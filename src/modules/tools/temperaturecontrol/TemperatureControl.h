@@ -84,7 +84,7 @@ class TemperatureControl : public Module {
         struct {
             bool use_bangbang:1;
             bool waiting:1;
-            bool min_temp_violated:1;
+            bool temp_violated:1;
             bool link_to_tool:1;
             bool active:1;
             bool readonly:1;
