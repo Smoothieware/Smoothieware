@@ -166,8 +166,9 @@ bool ZProbe::wait_for_probe(int& steps)
     }
 }
 
-// single probe and report amount moved
-bool ZProbe::run_probe(int& steps, bool fast)
+// single probe with custom feedrate
+// returns boolean value indicating if probe was triggered
+bool ZProbe::run_probe_feed(int& steps, float feedrate)
 {
     // not a block move so disable the last tick setting
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
@@ -176,7 +177,7 @@ bool ZProbe::run_probe(int& steps, bool fast)
 
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
-    this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
+    this->current_feedrate = feedrate * Z_STEPS_PER_MM; // steps/sec
     float maxz= this->max_z*2;
 
     // move Z down
@@ -193,6 +194,15 @@ bool ZProbe::run_probe(int& steps, bool fast)
     bool r = wait_for_probe(steps);
     this->running = false;
     return r;
+}
+
+// single probe with either fast or slow feedrate
+// returns boolean value indicating if probe was triggered
+bool ZProbe::run_probe(int& steps, bool fast)
+{
+    float feedrate = (fast ? this->fast_feedrate : this->slow_feedrate);
+    return run_probe_feed(steps, feedrate);
+
 }
 
 bool ZProbe::return_probe(int steps)
@@ -262,7 +272,14 @@ void ZProbe::on_gcode_received(void *argument)
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             int steps;
-            if(run_probe(steps)) {
+            bool probe_result;
+            if(gcode->has_letter('F')) {
+                probe_result = run_probe_feed(steps, gcode->get_value('F') / 60);
+            } else {
+                probe_result = run_probe(steps);
+            }
+
+            if(probe_result) {
                 gcode->stream->printf("Z:%1.4f C:%d\n", steps / Z_STEPS_PER_MM, steps);
                 // move back to where it started, unless a Z is specified
                 if(gcode->has_letter('Z')) {
