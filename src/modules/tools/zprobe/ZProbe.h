@@ -53,6 +53,7 @@ private:
     volatile float current_feedrate;
     float slow_feedrate;
     float fast_feedrate;
+    float return_feedrate;
     float probe_height;
     float max_z;
     volatile struct {

@@ -37,6 +37,7 @@
 #define debounce_count_checksum  CHECKSUM("debounce_count")
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
 #define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
+#define return_feedrate_checksum CHECKSUM("return_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
 #define gamma_max_checksum       CHECKSUM("gamma_max")
 
@@ -125,6 +126,7 @@ void ZProbe::on_config_reload(void *argument)
     this->probe_height  = THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number();
     this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(5)->as_number(); // feedrate in mm/sec
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
+    this->return_feedrate = THEKERNEL->config->value(zprobe_checksum, return_feedrate_checksum)->by_default(0)->as_number(); // feedrate in mm/sec
     this->max_z         = THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number(); // maximum zprobe distance
 }
 
@@ -208,8 +210,15 @@ bool ZProbe::run_probe(int& steps, bool fast)
 bool ZProbe::return_probe(int steps)
 {
     // move probe back to where it was
-    float fr= this->slow_feedrate*2; // nominally twice slow feedrate
-    if(fr > this->fast_feedrate) fr= this->fast_feedrate; // unless that is greater than fast feedrate
+
+    float fr;
+    if(this->return_feedrate != 0) { // use return_feedrate if set
+        fr = this->return_feedrate;
+    } else {
+        fr = this->slow_feedrate*2; // nominally twice slow feedrate
+        if(fr > this->fast_feedrate) fr = this->fast_feedrate; // unless that is greater than fast feedrate
+    }
+
     this->current_feedrate = fr * Z_STEPS_PER_MM; // feedrate in steps/sec
     bool dir= steps < 0;
     steps= abs(steps);
