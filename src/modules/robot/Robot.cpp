@@ -672,7 +672,7 @@ void Robot::reset_position_from_current_actuator_position()
 }
 
 // Convert target from millimeters to steps, and append this to the planner
-void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s )
+void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s)
 {
     float deltas[3];
     float unit_vec[3];
@@ -726,21 +726,6 @@ void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s )
         }
     }
 
-    // if we have volumetric limits enabled we calculate the volume for this move and limit the rate if it exceeds the stated limit
-    // Note we need to be using volumetric extrusion for this to work as Ennn is in mm³ not mm
-    // We also check we are not exceeding the E max_speed for the current extruder
-    // We ask Extruder to do all the work, but as Extruder won't even see this gcode until after it has been planned
-    // we need to ask it now passing in the relevant data.
-    if(gcode->has_letter('E')) {
-        float data[2];
-        data[0]= gcode->get_value('E'); // E target (maybe absolute or relative)
-        data[1]= isecs; // inverted seconds for the move
-        if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
-            rate_mm_s *= data[1];
-            //THEKERNEL->streams->printf("Extruder has changed the rate by %f to %f\n", data[1], rate_mm_s);
-        }
-    }
-
     // Append the block to the planner
     THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
 
@@ -763,6 +748,22 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
 
     // Mark the gcode as having a known distance
     this->distance_in_gcode_is_known( gcode );
+
+    // if we have volumetric limits enabled we calculate the volume for this move and limit the rate if it exceeds the stated limit
+    // Note we need to be using volumetric extrusion for this to work as Ennn is in mm³ not mm
+    // We also check we are not exceeding the E max_speed for the current extruder
+    // We ask Extruder to do all the work, but as Extruder won't even see this gcode until after it has been planned
+    // we need to ask it now passing in the relevant data.
+    // NOTE we need to do this before we segment the line (for deltas)
+    if(gcode->has_letter('E')) {
+        float data[2];
+        data[0]= gcode->get_value('E'); // E target (maybe absolute or relative)
+        data[1]= rate_mm_s / gcode->millimeters_of_travel; // inverted seconds for the move
+        if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
+            rate_mm_s *= data[1];
+            //THEKERNEL->streams->printf("Extruder has changed the rate by %f to %f\n", data[1], rate_mm_s);
+        }
+    }
 
     // We cut the line into smaller segments. This is not usefull in a cartesian robot, but necessary for robots with rotational axes.
     // In cartesian robot, a high "mm_per_line_segment" setting will prevent waste.
