@@ -722,6 +722,7 @@ void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s )
         float actuator_rate  = fabsf(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * isecs;
         if (actuator_rate > actuators[actuator]->get_max_rate()){
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
+            isecs= rate_mm_s / millimeters_of_travel;
         }
     }
 
