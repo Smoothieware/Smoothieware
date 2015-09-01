@@ -567,7 +567,7 @@ void Extruder::on_gcode_execute(void *argument)
                 }
 
                 // If the robot is moving, we follow it's movement, otherwise, we move alone
-                if( fabs(gcode->millimeters_of_travel) < 0.00001F ) { // With floating numbers, we can have 0 != 0, NOTE needs to be same as in Robot.cpp#745
+                if( fabsf(gcode->millimeters_of_travel) < 0.00001F ) { // With floating numbers, we can have 0 != 0, NOTE needs to be same as in Robot.cpp#745
                     this->mode = SOLO;
                     this->travel_distance = relative_extrusion_distance;
                 } else {
