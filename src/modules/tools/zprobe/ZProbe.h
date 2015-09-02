@@ -35,7 +35,7 @@ public:
     bool run_probe(int& steps, bool fast= false);
     bool run_probe_feed(int& steps, float feedrate);
     bool return_probe(int steps);
-    bool doProbeAt(int &steps, float x, float y);
+    bool doProbeAt(int &steps, float x, float y, float actuator_positions[] = nullptr);
     float probeDistance(float x, float y);
 
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);

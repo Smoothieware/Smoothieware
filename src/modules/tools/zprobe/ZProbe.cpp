@@ -245,12 +245,19 @@ bool ZProbe::return_probe(int steps)
     return true;
 }
 
-bool ZProbe::doProbeAt(int &steps, float x, float y)
+bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[])
 {
     int s;
     // move to xy
     coordinated_move(x, y, NAN, getFastFeedrate());
     if(!run_probe(s)) return false;
+
+    // Store actuator positions of trigger point
+    if (actuator_positions) {
+        for (int i = 0; i < (int)THEKERNEL->robot->actuators.size(); i++) {
+            actuator_positions[i] = THEKERNEL->robot->actuators[i]->get_current_position();
+        }
+    }
 
     // return to original Z
     return_probe(s);
