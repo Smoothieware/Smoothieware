@@ -31,6 +31,7 @@
 #include "DeltaCalibrationStrategy.h"
 #include "ThreePointStrategy.h"
 #include "ZGridStrategy.h"
+#include "CalibrationStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
@@ -100,6 +101,11 @@ void ZProbe::on_config_reload(void *argument)
                      this->strategies.push_back(new ZGridStrategy(this));
                      found= true;
                      break;
+
+                case calibration_strategy_checksum:
+                    this->strategies.push_back(new CalibrationStrategy(this));
+                    found= true;
+                    break;
 
                 // add other strategies here
                 //case zheight_map_strategy:
