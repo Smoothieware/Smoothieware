@@ -529,7 +529,7 @@ void Player::suspend_part2()
     // save state
     this->saved_inch_mode= THEKERNEL->robot->inch_mode;
     this->saved_absolute_mode= THEKERNEL->robot->absolute_mode;
-    this->saved_feed_rate= THEKERNEL->robot->get_feed_rate();
+    this->saved_feed_rate= THEKERNEL->robot->get_feed_rate() * 60; // save in mm/min
 
     // TODO retract by optional amount...
 
