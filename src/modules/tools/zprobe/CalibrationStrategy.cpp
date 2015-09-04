@@ -47,10 +47,13 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
             auto args = gcode->get_args();
             std::string parameters_to_optimize; parameters_to_optimize.reserve(args.size());
             int samples = 50;
+            int repeats = 1;
 
             for (auto &v : args) {
                 if (v.first == 'N')
                     samples = int(v.second);
+                else if (v.first == 'O')
+                    repeats = int(v.second);
                 else
                     parameters_to_optimize += v.first;
             }
@@ -79,7 +82,7 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
 
             if (samples < 10) samples = 10;
 
-            if (optimize_delta_model(samples, parameters_to_optimize, gcode->stream)) {
+            if (optimize_delta_model(samples, repeats, parameters_to_optimize, gcode->stream)) {
                 gcode->stream->printf("Calibration complete. Save settings with M500.\n");
             } else {
                 gcode->stream->printf("Calibration may not have converged. Use M500 if you want to save settings anyway.\n");
@@ -133,7 +136,7 @@ bool CalibrationStrategy::setup_probe() {
 
 // fills out n actuator positions where the probe triggered
 // returns false if any probe failed
-bool CalibrationStrategy::probe_spiral(int n, float actuator_positions[/*n*/][3]) {
+bool CalibrationStrategy::probe_spiral(int n, int repeats, float actuator_positions[/*n*/][3]) {
     if (THEKERNEL->robot->actuators.size() != 3) return false;
     // Spiraling probe pattern
 
@@ -162,7 +165,7 @@ bool CalibrationStrategy::probe_spiral(int n, float actuator_positions[/*n*/][3]
         float y = r * sin(angle);
 
         int steps; // dummy
-        if (!zprobe->doProbeAt(steps, x, y, actuator_positions[i])) return false;
+        if (!zprobe->doProbeAt(steps, x, y, actuator_positions[i], repeats)) return false;
         // remove trim adjustment from returned actuator positions
         for (int j = 0; j < 3; j++)
             actuator_positions[i][j] += trim[j];
@@ -297,14 +300,14 @@ void cholesky_backsub(int n, T A[/* n*n */], T b[/* n */]) {
     }
 }
 
-bool CalibrationStrategy::optimize_delta_model(int n, std::string const& parameters, StreamOutput* stream) {
+bool CalibrationStrategy::optimize_delta_model(int n, int repeats, std::string const& parameters, StreamOutput* stream) {
 
     std::vector<V3> actuator_positions(n);
     std::vector<float> scratch;
     std::vector<float> JTJ;
     std::vector<float> JTr;
-    stream->printf("Probing %d points.\n", n);
-    if (!probe_spiral(n, &actuator_positions[0].m)) return false;
+    stream->printf("Probing %d points (%d repeat(s) per point).\n", n, repeats);
+    if (!probe_spiral(n, repeats, &actuator_positions[0].m)) return false;
 
     for (auto &v : actuator_positions) {
         stream->printf("%.5f %.5f %.5f\n",v.m[0],v.m[1],v.m[2]);

@@ -26,6 +26,7 @@
 #include "PublicData.h"
 #include "LevelingStrategy.h"
 #include "StepTicker.h"
+#include <algorithm>
 
 // strategies we know about
 #include "DeltaCalibrationStrategy.h"
@@ -251,23 +252,56 @@ bool ZProbe::return_probe(int steps)
     return true;
 }
 
-bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[])
+bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[], int repeats)
 {
+    repeats = std::max(repeats,1);
+    int current_s = 0;
     int s;
+    // TODO: 0.3 mm -> config variable
+    int repeat_jump_height = (int)(Z_STEPS_PER_MM * 0.3 + 0.999);
+    int num_actuators = (int)THEKERNEL->robot->actuators.size();
+
+    std::vector<float> stored_actuator_positions;
+    std::vector<std::pair<int,int>> stored_probe_steps(repeats);
+
+    if (actuator_positions != nullptr) {
+        stored_actuator_positions.resize(THEKERNEL->robot->actuators.size() * repeats);
+    }
+
     // move to xy
     coordinated_move(x, y, NAN, getFastFeedrate());
-    if(!run_probe(s)) return false;
 
-    // Store actuator positions of trigger point
-    if (actuator_positions) {
-        for (int i = 0; i < (int)THEKERNEL->robot->actuators.size(); i++) {
-            actuator_positions[i] = THEKERNEL->robot->actuators[i]->get_current_position();
+    for (int r = 0; r < repeats; r++) {
+        if(!run_probe(s)) return false;
+
+        // Store actuator positions of trigger point
+        if (actuator_positions != nullptr) {
+            for (int i = 0; i < num_actuators; i++) {
+                stored_actuator_positions[r*THEKERNEL->robot->actuators.size() + i] = THEKERNEL->robot->actuators[i]->get_current_position();
+            }
+        }
+        current_s += s;
+        stored_probe_steps[r] = std::make_pair(current_s,r);
+
+        if (r == repeats-1) {
+            // after the last probe, return to original Z
+            return_probe(current_s);
+        } else {
+            current_s -= repeat_jump_height;
+            return_probe(repeat_jump_height);
         }
     }
 
-    // return to original Z
-    return_probe(s);
-    steps = s;
+    // Find the median (std::pair sorts lexicographically)
+    std::nth_element(stored_probe_steps.begin(), stored_probe_steps.begin() + repeats/2, stored_probe_steps.end());
+    int median_index = stored_probe_steps[repeats/2].second;
+
+    steps = stored_probe_steps[repeats/2].first;
+    if (actuator_positions) {
+        for (int i = 0; i < num_actuators; i++) {
+            actuator_positions[i] = stored_actuator_positions[median_index * num_actuators + i];
+        }
+    }
 
     return true;
 }
