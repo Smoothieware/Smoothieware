@@ -323,7 +323,7 @@ bool CalibrationStrategy::optimize_delta_model(int n, int repeats, std::string c
     };
     auto print_state = [&]() {
         for (int i = 0; i < m; i++)
-            stream->printf("%c:%.2f ", parameters[i], stored_values[i]);
+            stream->printf("%c:%.3g ", parameters[i], stored_values[i]);
         stream->printf("\n");
     };
 
