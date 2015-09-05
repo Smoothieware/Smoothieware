@@ -199,10 +199,8 @@ void SCARAcal::on_gcode_received(void *argument)
                                  actuators[0],
                                  actuators[1]);    // display actuator angles Theta and Psi.
                 gcode->txt_after_ok.append(buf, n);
-                gcode->mark_as_taken();
-
             }
-            return;
+            break;
 
             case 360: {
                 float target[2] = {0.0F, 120.0F},
@@ -228,9 +226,9 @@ void SCARAcal::on_gcode_received(void *argument)
                     this->home();                                                   // home
                     SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F); // move to target
                 }
-                gcode->mark_as_taken();
             }
-            return;
+            break;
+
             case 361: {
                 float target[2] = {90.0F, 130.0F};
                 if(gcode->has_letter('P')) {
@@ -247,10 +245,11 @@ void SCARAcal::on_gcode_received(void *argument)
                     this->home();                                                   // home - This time leave trims as adjusted.
                     SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F); // move to target
                 }
-                gcode->mark_as_taken();
+
             }
-            return;
-              case 364: {
+            break;
+
+            case 364: {
                 float target[2] = {45.0F, 135.0F},
                       S_trim[3];
 
@@ -272,9 +271,8 @@ void SCARAcal::on_gcode_received(void *argument)
                     this->home();                                                                       // home
                     SCARA_ang_move(target[0], target[1], 100.0F, slow_rate * 3.0F);                     // move to target
                 }
-                gcode->mark_as_taken();
             }
-            return;
+            break;
 
             /* TODO case 365: {   // set scara scaling
               std::map<char, float> buf = gcode->get_args();
@@ -289,14 +287,11 @@ void SCARAcal::on_gcode_received(void *argument)
 
               //stream->printf("Set scaling to X:%f Y:%f Z:%f\n", x, y, z);
 
+        */
 
-              gcode->mark_as_taken();*/
-
-            case 366: {                                      // Translate trims to the actual endstop offsets for SCARA
+            case 366:                                       // Translate trims to the actual endstop offsets for SCARA
                 this->translate_trim(gcode->stream);
-
-                gcode->mark_as_taken();
-            }
+                break;
 
         }
     }

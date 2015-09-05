@@ -21,6 +21,7 @@ PID_Autotuner::PID_Autotuner()
     peaks = NULL;
     tick = false;
     tickCnt = 0;
+    nLookBack = 10 * 20; // 10 seconds of lookback (fixed 20ms tick period)
 }
 
 void PID_Autotuner::on_module_loaded()
@@ -35,7 +36,6 @@ void PID_Autotuner::begin(float target, StreamOutput *stream, int ncycles)
 {
     noiseBand = 0.5;
     oStep = temp_control->heater_pin.max_pwm(); // use max pwm to cycle temp
-    nLookBack = 5 * 20; // 5 seconds of lookback
     lookBackCnt = 0;
     tickCnt = 0;
 
@@ -60,12 +60,8 @@ void PID_Autotuner::begin(float target, StreamOutput *stream, int ncycles)
     peakType = 0;
     peakCount = 0;
     justchanged = false;
-
-    float refVal = temp_control->get_temperature();
-    absMax = refVal;
-    absMin = refVal;
-    output = oStep;
-    temp_control->heater_pin.pwm(oStep); // turn on to start heating
+    firstPeak= false;
+    output= 0;
 
     s->printf("%s: Starting PID Autotune, %d max cycles, M304 aborts\n", temp_control->designator.c_str(), ncycles);
 }
@@ -97,11 +93,9 @@ void PID_Autotuner::on_gcode_received(void *argument)
 
     if(gcode->has_m) {
         if(gcode->m == 304) {
-            gcode->mark_as_taken();
             abort();
 
         } else if (gcode->m == 303 && gcode->has_letter('E')) {
-            gcode->mark_as_taken();
             int pool_index = gcode->get_value('E');
 
             // get the temperature control instance with this pool index
@@ -116,15 +110,30 @@ void PID_Autotuner::on_gcode_received(void *argument)
                 return;
             }
 
+            // set target
             float target = 150.0;
             if (gcode->has_letter('S')) {
                 target = gcode->get_value('S');
                 gcode->stream->printf("Target: %5.1f\n", target);
             }
+
+            // set the cycles, really not needed for this new version
             int ncycles = 8;
             if (gcode->has_letter('C')) {
                 ncycles = gcode->get_value('C');
+                if(ncycles < 8) ncycles= 8;
             }
+
+            // optionally set the noise band, default is 0.5
+            if (gcode->has_letter('B')) {
+                noiseBand = gcode->get_value('B');
+            }
+
+            // optionally set the look back in seconds default is 10 seconds
+            if (gcode->has_letter('L')) {
+                nLookBack = gcode->get_value('L');
+            }
+
             gcode->stream->printf("Start PID tune for index E%d, designator: %s\n", pool_index, this->temp_control->designator.c_str());
             this->begin(target, gcode->stream, ncycles);
         }
@@ -136,7 +145,7 @@ uint32_t PID_Autotuner::on_tick(uint32_t dummy)
     if (temp_control != NULL)
         tick = true;
 
-    tickCnt += 1000 / 20; // millisecond tick count
+    tickCnt += (1000 / 20); // millisecond tick count
     return 0;
 }
 
@@ -154,28 +163,40 @@ void PID_Autotuner::on_idle(void *)
         return;
 
     if(peakCount >= requested_cycles) {
+        s->printf("// WARNING: Autopid did not resolve within %d cycles, these results are probably innacurate\n", requested_cycles);
         finishUp();
         return;
     }
 
     float refVal = temp_control->get_temperature();
 
-    if (refVal > absMax) absMax = refVal;
-    if (refVal < absMin) absMin = refVal;
-
     // oscillate the output base on the input's relation to the setpoint
     if (refVal > target_temperature + noiseBand) {
         output = 0;
         //temp_control->heater_pin.pwm(output);
         temp_control->heater_pin.set(0);
+        if(!firstPeak) {
+            firstPeak= true;
+            absMax= refVal;
+            absMin= refVal;
+        }
+
     } else if (refVal < target_temperature - noiseBand) {
         output = oStep;
         temp_control->heater_pin.pwm(output);
     }
 
-    bool isMax = true, isMin = true;
+    if ((tickCnt % 1000) == 0) {
+        s->printf("// Autopid Status - %5.1f/%5.1f @%d %d/%d\n",  refVal, target_temperature, output, peakCount, requested_cycles);
+    }
 
-    // id peaks
+    if(!firstPeak){
+        // we wait until we hit the first peak befire we do anything else,we need to ignore the itial warmup temperatures
+        return;
+    }
+
+    // find the peaks high and low
+    bool isMax = true, isMin = true;
     for (int i = nLookBack - 1; i >= 0; i--) {
         float val = lastInputs[i];
         if (isMax) isMax = refVal > val;
@@ -185,13 +206,15 @@ void PID_Autotuner::on_idle(void *)
 
     lastInputs[0] = refVal;
 
+    //we don't want to trust the maxes or mins until the inputs array has been filled
     if (lookBackCnt < nLookBack) {
         lookBackCnt++; // count number of times we have filled lastInputs
-        //we don't want to trust the maxes or mins until the inputs array has been filled
         return;
     }
 
     if (isMax) {
+        if(refVal > absMax) absMax= refVal;
+
         if (peakType == 0) peakType = 1;
         if (peakType == -1) {
             peakType = 1;
@@ -202,6 +225,7 @@ void PID_Autotuner::on_idle(void *)
         peaks[peakCount] = refVal;
 
     } else if (isMin) {
+        if(refVal < absMin) absMin= refVal;
         if (peakType == 0) peakType = -1;
         if (peakType == 1) {
             peakType = -1;
@@ -212,28 +236,22 @@ void PID_Autotuner::on_idle(void *)
         if (peakCount < requested_cycles) peaks[peakCount] = refVal;
     }
 
-    // we need to ignore the first cycle warming up from room temp
-
-    if (justchanged && peakCount > 2) {
-        if(peakCount == 3) { // reset min to new min
-            absMin = refVal;
-        }
-        //we've transitioned. check if we can autotune based on the last peaks
+    if (justchanged && peakCount >= 4) {
+        // we've transitioned. check if we can autotune based on the last peaks
         float avgSeparation = (std::abs(peaks[peakCount - 1] - peaks[peakCount - 2]) + std::abs(peaks[peakCount - 2] - peaks[peakCount - 3])) / 2;
-        s->printf("Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
-        if (peakCount > 3 && avgSeparation < 0.05 * (absMax - absMin)) {
+        s->printf("// Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
+        if (peakCount > 3 && avgSeparation < (0.05 * (absMax - absMin))) {
             DEBUG_PRINTF("Stabilized\n");
             finishUp();
             return;
         }
     }
 
-    justchanged = false;
-
     if ((tickCnt % 1000) == 0) {
-        s->printf("%s: %5.1f/%5.1f @%d %d/%d\n", temp_control->designator.c_str(), refVal, target_temperature, output, peakCount, requested_cycles);
         DEBUG_PRINTF("lookBackCnt= %d, peakCount= %d, absmax= %g, absmin= %g, peak1= %lu, peak2= %lu\n", lookBackCnt, peakCount, absMax, absMin, peak1, peak2);
     }
+
+    justchanged = false;
 }
 
 

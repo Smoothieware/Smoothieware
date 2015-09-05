@@ -577,7 +577,7 @@ void Endstops::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
     if ( gcode->has_g) {
         if ( gcode->g == 28 ) {
-            gcode->mark_as_taken();
+
             // G28 is received, we have homing to do
 
             // First wait for the queue to be empty
@@ -644,7 +644,7 @@ void Endstops::on_gcode_received(void *argument)
                         gcode->stream->printf("%s:%d ", endstop_names[i], this->pins[i].get());
                 }
                 gcode->add_nl= true;
-                gcode->mark_as_taken();
+
             }
             break;
 
@@ -653,7 +653,7 @@ void Endstops::on_gcode_received(void *argument)
                 if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
                 if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
                 gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
-                gcode->mark_as_taken();
+
                 break;
 
             case 306: // Similar to M206 and G92 but sets Homing offsets based on current position, Would be M207 but that is taken
@@ -674,7 +674,7 @@ void Endstops::on_gcode_received(void *argument)
                     }
 
                     gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
-                    gcode->mark_as_taken();
+
                 }
                 break;
 
@@ -685,11 +685,10 @@ void Endstops::on_gcode_received(void *argument)
                     gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
                     gcode->stream->printf(";Max Z\nM665 Z%1.3f\n", this->homing_position[2]);
                 }
-                gcode->mark_as_taken();
                 break;
 
             case 665: { // M665 - set max gamma/z height
-                gcode->mark_as_taken();
+
                 float gamma_max = this->homing_position[2];
                 if (gcode->has_letter('Z')) {
                     this->homing_position[2] = gamma_max = gcode->get_value('Z');
@@ -708,7 +707,7 @@ void Endstops::on_gcode_received(void *argument)
 
                     // print the current trim values in mm
                     gcode->stream->printf("X: %5.3f Y: %5.3f Z: %5.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
-                    gcode->mark_as_taken();
+
                 }
             break;
 
@@ -732,7 +731,6 @@ void Endstops::on_gcode_received(void *argument)
                     STEPPER[Z_AXIS]->move(z<0, abs(z), f);
                 }
                 gcode->stream->printf("Moved X %d Y %d Z %d F %d steps\n", x, y, z, f);
-                gcode->mark_as_taken();
                 break;
             }
         }

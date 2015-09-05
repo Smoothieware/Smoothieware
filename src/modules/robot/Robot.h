@@ -56,12 +56,9 @@ class Robot : public Module {
 
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
-        void append_milestone( float target[], float rate_mm_s);
+        void append_milestone( Gcode *gcode, float target[], float rate_mm_s);
         void append_line( Gcode* gcode, float target[], float rate_mm_s);
-        //void append_arc(float theta_start, float angular_travel, float radius, float depth, float rate);
         void append_arc( Gcode* gcode, float target[], float offset[], float radius, bool is_clockwise );
-
-
         void compute_arc(Gcode* gcode, float offset[], float target[]);
 
         float theta(float x, float y);

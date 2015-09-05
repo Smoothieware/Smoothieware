@@ -29,6 +29,7 @@
 #include "PlayerPublicAccess.h"
 #include "TemperatureControlPublicAccess.h"
 #include "TemperatureControlPool.h"
+#include "ExtruderPublicAccess.h"
 
 #include <cstddef>
 #include <cmath>
@@ -41,11 +42,6 @@
 #define after_suspend_gcode_checksum      CHECKSUM("after_suspend_gcode")
 #define before_resume_gcode_checksum      CHECKSUM("before_resume_gcode")
 #define leave_heaters_on_suspend_checksum CHECKSUM("leave_heaters_on_suspend")
-
-
-#define extruder_checksum                 CHECKSUM("extruder")
-#define save_state_checksum               CHECKSUM("save_state")
-#define restore_state_checksum            CHECKSUM("restore_state")
 
 extern SDFAT mounter;
 
@@ -112,12 +108,10 @@ void Player::on_gcode_received(void *argument)
     string args = get_arguments(gcode->get_command());
     if (gcode->has_m) {
         if (gcode->m == 21) { // Dummy code; makes Octoprint happy -- supposed to initialize SD card
-            gcode->mark_as_taken();
             mounter.remount();
             gcode->stream->printf("SD card ok\r\n");
 
         } else if (gcode->m == 23) { // select file
-            gcode->mark_as_taken();
             this->filename = "/sd/" + args; // filename is whatever is in args
             this->current_stream = &(StreamOutput::NullStream);
 
@@ -149,7 +143,6 @@ void Player::on_gcode_received(void *argument)
             this->elapsed_secs = 0;
 
         } else if (gcode->m == 24) { // start print
-            gcode->mark_as_taken();
             if (this->current_file_handler != NULL) {
                 this->playing_file = true;
                 // this would be a problem if the stream goes away before the file has finished,
@@ -159,11 +152,9 @@ void Player::on_gcode_received(void *argument)
             }
 
         } else if (gcode->m == 25) { // pause print
-            gcode->mark_as_taken();
             this->playing_file = false;
 
         } else if (gcode->m == 26) { // Reset print. Slightly different than M26 in Marlin and the rest
-            gcode->mark_as_taken();
             if(this->current_file_handler != NULL) {
                 string currentfn = this->filename.c_str();
                 unsigned long old_size = this->file_size;
@@ -188,11 +179,9 @@ void Player::on_gcode_received(void *argument)
             }
 
         } else if (gcode->m == 27) { // report print progress, in format used by Marlin
-            gcode->mark_as_taken();
             progress_command("-b", gcode->stream);
 
         } else if (gcode->m == 32) { // select file and start print
-            gcode->mark_as_taken();
             // Get filename
             this->filename = "/sd/" + args; // filename is whatever is in args including spaces
             this->current_stream = &(StreamOutput::NullStream);
@@ -540,7 +529,7 @@ void Player::suspend_part2()
     // save state
     this->saved_inch_mode= THEKERNEL->robot->inch_mode;
     this->saved_absolute_mode= THEKERNEL->robot->absolute_mode;
-    this->saved_feed_rate= THEKERNEL->robot->get_feed_rate();
+    this->saved_feed_rate= THEKERNEL->robot->get_feed_rate() * 60; // save in mm/min
 
     // TODO retract by optional amount...
 

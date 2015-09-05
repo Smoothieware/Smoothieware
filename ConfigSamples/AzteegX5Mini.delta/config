@@ -66,10 +66,16 @@ extruder_en_pin                              0.4              # Pin for extruder
 delta_current                                0.7              # Extruder stepper motor current
 
 # Laser module configuration
-laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is ignored if false.
-#laser_module_pin                             2.7              # this pin will be PWMed to control the laser
-#laser_module_max_power                       0.8              # this is the maximum duty cycle that will be applied to the laser
-#laser_module_tickle_power                    0.0              # this duty cycle will be used for travel moves to keep the laser active without actually burning
+laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is
+                                                              # ignored if false.
+#laser_module_pin                             2.5             # this pin will be PWMed to control the laser. Only P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P3.26
+                                                              # can be used since laser requires hardware PWM
+#laser_module_maximum_power                   1.0             # this is the maximum duty cycle that will be applied to the laser
+#laser_module_minimum_power                   0.0             # This is a value just below the minimum duty cycle that keeps the laser
+                                                              # active without actually burning.
+#laser_module_default_power                   0.8             # This is the default laser power that will be used for cuts if a power has not been specified.  The value is a scale between
+                                                              # the maximum and minimum power levels specified above
+#laser_module_pwm_period                      20              # this sets the pwm frequency as the period in microseconds
 
 # Hotend temperature control configuration
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all. All configuration is ignored if false.
@@ -81,6 +87,8 @@ temperature_control.hotend.thermistor        EPCOS100K        # see http://smoot
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
+#temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
+#temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
 
 #P39.98 I5.00 D79.91
 # temperature_control.hotend.p_factor          39.98            #
@@ -91,7 +99,6 @@ temperature_control.hotend.designator        T                #
 temperature_control.bed.enable               false            #
 temperature_control.bed.thermistor_pin       0.23             #
 temperature_control.bed.heater_pin           2.7              #
-temperature_control.bed.beta                 4036             #
 temperature_control.bed.thermistor           EPCOS100K        # http://smoothieware.org/temperaturecontrol#toc5
 #temperature_control.bed.beta                4066             # or set the beta value
 
@@ -224,5 +231,3 @@ digipot_max_current                          2.4             # max current
 digipot_factor                               106.0           # factor for converting current to digipot value
 
 return_error_on_unhandled_gcode              false            #
-
-

@@ -31,8 +31,6 @@ private:
     float target_temperature;
     StreamOutput *s;
 
-    volatile bool tick;
-
     float *peaks;
     int requested_cycles;
     float noiseBand;
@@ -43,11 +41,15 @@ private:
     int peakType;
     float *lastInputs;
     int peakCount;
-    bool justchanged;
     float absMax, absMin;
     float oStep;
     int output;
     volatile unsigned long tickCnt;
+    struct {
+        bool justchanged:1;
+        volatile bool tick:1;
+        bool firstPeak:1;
+    };
 };
 
 #endif /* _PID_AUTOTUNE_H */

@@ -37,6 +37,7 @@
 #define debounce_count_checksum  CHECKSUM("debounce_count")
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
 #define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
+#define return_feedrate_checksum CHECKSUM("return_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
 #define gamma_max_checksum       CHECKSUM("gamma_max")
 
@@ -125,6 +126,7 @@ void ZProbe::on_config_reload(void *argument)
     this->probe_height  = THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number();
     this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(5)->as_number(); // feedrate in mm/sec
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
+    this->return_feedrate = THEKERNEL->config->value(zprobe_checksum, return_feedrate_checksum)->by_default(0)->as_number(); // feedrate in mm/sec
     this->max_z         = THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number(); // maximum zprobe distance
 }
 
@@ -166,8 +168,9 @@ bool ZProbe::wait_for_probe(int& steps)
     }
 }
 
-// single probe and report amount moved
-bool ZProbe::run_probe(int& steps, bool fast)
+// single probe with custom feedrate
+// returns boolean value indicating if probe was triggered
+bool ZProbe::run_probe_feed(int& steps, float feedrate)
 {
     // not a block move so disable the last tick setting
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
@@ -176,7 +179,7 @@ bool ZProbe::run_probe(int& steps, bool fast)
 
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
-    this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
+    this->current_feedrate = feedrate * Z_STEPS_PER_MM; // steps/sec
     float maxz= this->max_z*2;
 
     // move Z down
@@ -195,11 +198,27 @@ bool ZProbe::run_probe(int& steps, bool fast)
     return r;
 }
 
+// single probe with either fast or slow feedrate
+// returns boolean value indicating if probe was triggered
+bool ZProbe::run_probe(int& steps, bool fast)
+{
+    float feedrate = (fast ? this->fast_feedrate : this->slow_feedrate);
+    return run_probe_feed(steps, feedrate);
+
+}
+
 bool ZProbe::return_probe(int steps)
 {
     // move probe back to where it was
-    float fr= this->slow_feedrate*2; // nominally twice slow feedrate
-    if(fr > this->fast_feedrate) fr= this->fast_feedrate; // unless that is greater than fast feedrate
+
+    float fr;
+    if(this->return_feedrate != 0) { // use return_feedrate if set
+        fr = this->return_feedrate;
+    } else {
+        fr = this->slow_feedrate*2; // nominally twice slow feedrate
+        if(fr > this->fast_feedrate) fr = this->fast_feedrate; // unless that is greater than fast feedrate
+    }
+
     this->current_feedrate = fr * Z_STEPS_PER_MM; // feedrate in steps/sec
     bool dir= steps < 0;
     steps= abs(steps);
@@ -258,12 +277,18 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         if( gcode->g == 30 ) { // simple Z probe
-            gcode->mark_as_taken();
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             int steps;
-            if(run_probe(steps)) {
+            bool probe_result;
+            if(gcode->has_letter('F')) {
+                probe_result = run_probe_feed(steps, gcode->get_value('F') / 60);
+            } else {
+                probe_result = run_probe(steps);
+            }
+
+            if(probe_result) {
                 gcode->stream->printf("Z:%1.4f C:%d\n", steps / Z_STEPS_PER_MM, steps);
                 // move back to where it started, unless a Z is specified
                 if(gcode->has_letter('Z')) {
@@ -280,7 +305,6 @@ void ZProbe::on_gcode_received(void *argument)
             // find a strategy to handle the gcode
             for(auto s : strategies){
                 if(s->handleGcode(gcode)) {
-                    gcode->mark_as_taken();
                     return;
                 }
             }
@@ -289,19 +313,36 @@ void ZProbe::on_gcode_received(void *argument)
 
     } else if(gcode->has_m) {
         // M code processing here
-        if(gcode->m == 119) {
-            int c = this->pin.get();
-            gcode->stream->printf(" Probe: %d", c);
-            gcode->add_nl = true;
-            gcode->mark_as_taken();
+        int c;
+        switch (gcode->m) {
+            case 119:
+                c = this->pin.get();
+                gcode->stream->printf(" Probe: %d", c);
+                gcode->add_nl = true;
+                break;
 
-        }else {
-            for(auto s : strategies){
-                if(s->handleGcode(gcode)) {
-                    gcode->mark_as_taken();
-                    return;
+            case 670:
+                if (gcode->has_letter('S')) this->slow_feedrate = gcode->get_value('S');
+                if (gcode->has_letter('K')) this->fast_feedrate = gcode->get_value('K');
+                if (gcode->has_letter('R')) this->return_feedrate = gcode->get_value('R');
+                if (gcode->has_letter('Z')) this->max_z = gcode->get_value('Z');
+                if (gcode->has_letter('H')) this->probe_height = gcode->get_value('H');
+                break;
+
+            case 500: // save settings
+            case 503: // print settings
+                gcode->stream->printf(";Probe feedrates Slow/fast(K)/Return (mm/sec):\nM670 S%1.2f K%1.2f R%1.2f\n",
+                    this->slow_feedrate, this->fast_feedrate, this->return_feedrate);
+                gcode->stream->printf(";Probe max_z (mm):\nM670 Z%1.2f\n", this->max_z);
+                gcode->stream->printf(";Probe height (mm):\nM670 H%1.2f\n", this->probe_height);
+                // fall through is intended so leveling strategies can handle m-codes too
+
+            default:
+                for(auto s : strategies){
+                    if(s->handleGcode(gcode)) {
+                        return;
+                    }
                 }
-            }
         }
     }
 }
