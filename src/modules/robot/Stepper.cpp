@@ -162,7 +162,7 @@ void Stepper::on_block_begin(void *argument)
     }
 
     // Setup : instruct stepper motors to move
-    // Find the stepper with the more steps, it's the one the speed calculations will want to follow
+    // Find the stepper with the most steps, it's the one the speed calculations will want to follow
     this->main_stepper= nullptr;
     if( block->steps[ALPHA_STEPPER] > 0 ) {
         THEKERNEL->robot->alpha_stepper_motor->move( block->direction_bits[ALPHA_STEPPER], block->steps[ALPHA_STEPPER])->set_moved_last_block(true);

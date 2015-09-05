@@ -153,7 +153,7 @@ MRI_ENABLE = 1  unless defined? MRI_ENABLE # set to 0 to disable MRI
 MRI_LIB = MRI_ENABLE == 1 ? './mri/mri.ar' : ''
 MBED_LIB = "#{MBED_DIR}/LPC1768/GCC_ARM/libmbed.a"
 
-SYS_LIBS = '-lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys'
+SYS_LIBS = '-lstdc++ -lsupc++ -lm -lgcc -lc -lgcc -lc -lnosys'
 LIBS = [MBED_LIB, SYS_LIBS, MRI_LIB].join(' ')
 
 MRI_DEFINES = %W(-DMRI_ENABLE=#{MRI_ENABLE} -DMRI_INIT_PARAMETERS='"#{MRI_UART}"' -DMRI_BREAK_ON_INIT=#{MRI_BREAK_ON_INIT} -DMRI_SEMIHOST_STDIO=#{MRI_SEMIHOST_STDIO})
