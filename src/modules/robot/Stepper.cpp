@@ -25,7 +25,6 @@
 using namespace std;
 
 #include "libs/nuts_bolts.h"
-#include "libs/Hook.h"
 
 #include <mri.h>
 
@@ -55,9 +54,9 @@ void Stepper::on_module_loaded()
     THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){trapezoid_generator_tick(); });
 
     // Attach to the end_of_move stepper event
-    THEKERNEL->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
-    THEKERNEL->robot->beta_stepper_motor->attach( this, &Stepper::stepper_motor_finished_move );
-    THEKERNEL->robot->gamma_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
+    THEKERNEL->robot->alpha_stepper_motor->attach([this]() { this->stepper_motor_finished_move(); });
+    THEKERNEL->robot->beta_stepper_motor->attach( [this]() { this->stepper_motor_finished_move(); });
+    THEKERNEL->robot->gamma_stepper_motor->attach([this]() { this->stepper_motor_finished_move(); });
 }
 
 // Get configuration from the config file
@@ -142,7 +141,7 @@ void Stepper::on_block_begin(void *argument)
     }
 
     // Setup : instruct stepper motors to move
-    // Find the stepper with the more steps, it's the one the speed calculations will want to follow
+    // Find the stepper with the most steps, it's the one the speed calculations will want to follow
     this->main_stepper= nullptr;
     if( block->steps[ALPHA_STEPPER] > 0 ) {
         THEKERNEL->robot->alpha_stepper_motor->move( block->direction_bits[ALPHA_STEPPER], block->steps[ALPHA_STEPPER])->set_moved_last_block(true);
@@ -191,19 +190,17 @@ void Stepper::on_block_end(void *argument)
 }
 
 // When a stepper motor has finished it's assigned movement
-uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
+void Stepper::stepper_motor_finished_move()
 {
     // We care only if none is still moving
     if( THEKERNEL->robot->alpha_stepper_motor->moving || THEKERNEL->robot->beta_stepper_motor->moving || THEKERNEL->robot->gamma_stepper_motor->moving ) {
-        return 0;
+        return;
     }
 
     // This block is finished, release it
     if( this->current_block != NULL ) {
         this->current_block->release();
     }
-
-    return 0;
 }
 
 

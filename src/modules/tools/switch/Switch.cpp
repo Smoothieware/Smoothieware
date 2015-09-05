@@ -203,12 +203,12 @@ void Switch::on_config_reload(void *argument)
         // set to initial state
         this->input_pin_state = this->input_pin.get();
         // input pin polling
-        THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
+        THEKERNEL->slow_ticker->attach( 100, [this] () {this->pinpoll_tick(); });
     }
 
     if(this->output_type == SIGMADELTA) {
         // SIGMADELTA
-        THEKERNEL->slow_ticker->attach(1000, this->sigmadelta_pin, &Pwm::on_tick);
+      THEKERNEL->slow_ticker->attach(1000, [this](){this->sigmadelta_pin->on_tick(); });
     }
 }
 
@@ -370,9 +370,9 @@ void Switch::on_main_loop(void *argument)
 
 // TODO Make this use InterruptIn
 // Check the state of the button and act accordingly
-uint32_t Switch::pinpoll_tick(uint32_t dummy)
+void Switch::pinpoll_tick()
 {
-    if(!input_pin.connected()) return 0;
+    if(!input_pin.connected()) return;
 
     // If pin changed
     bool current_state = this->input_pin.get();
@@ -395,7 +395,6 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
             }
         }
     }
-    return 0;
 }
 
 void Switch::flip()

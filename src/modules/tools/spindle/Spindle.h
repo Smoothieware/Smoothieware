@@ -28,7 +28,7 @@ class Spindle: public Module {
         void on_pin_rise();
         void on_gcode_received(void *argument);
         void on_gcode_execute(void *argument);
-        uint32_t on_update_speed(uint32_t dummy);
+        void on_update_speed();
         
         mbed::PwmOut *spindle_pin; // PWM output for spindle speed control
         mbed::InterruptIn *feedback_pin; // Interrupt pin for measuring speed

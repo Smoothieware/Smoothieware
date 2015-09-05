@@ -160,10 +160,10 @@ void Panel::on_module_loaded()
     default_bed_temperature    = THEKERNEL->config->value( panel_checksum, bed_temp_checksum    )->by_default(60.0f  )->as_number();
 
 
-    this->up_button.up_attach(    this, &Panel::on_up );
-    this->down_button.up_attach(  this, &Panel::on_down );
-    this->click_button.up_attach( this, &Panel::on_select );
-    this->back_button.up_attach(  this, &Panel::on_back );
+    this->up_button.up_attach(    [this](){this->on_up();});
+    this->down_button.up_attach(  [this](){this->on_down();});
+    this->click_button.up_attach( [this](){this->on_select();});
+    this->back_button.up_attach(  [this](){this->on_back();});
 
 
     //setting longpress_delay
@@ -175,13 +175,13 @@ void Panel::on_module_loaded()
 //    this->pause_button.set_longpress_delay(longpress_delay);
 
 
-    THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
+    THEKERNEL->slow_ticker->attach( 50,  [this](){this->button_tick();});
     if(lcd->encoderReturnsDelta()) {
         // panel handles encoder pins and returns a delta
-        THEKERNEL->slow_ticker->attach( 10, this, &Panel::encoder_tick );
+      THEKERNEL->slow_ticker->attach( 10, [this](){this->encoder_tick();});
     }else{
         // read encoder pins
-        THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
+      THEKERNEL->slow_ticker->attach( 1000, [this](){this->encoder_check();});
     }
 
     // Register for events
@@ -190,7 +190,7 @@ void Panel::on_module_loaded()
     this->register_for_event(ON_SET_PUBLIC_DATA);
 
     // Refresh timer
-    THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
+    THEKERNEL->slow_ticker->attach( 20, [this](){this->refresh_tick(); });
 }
 
 // Enter a screen, we only care about it now
@@ -213,15 +213,14 @@ void Panel::reset_counter()
 
 // Indicate the idle loop we want to call the refresh hook in the current screen
 // called 20 times a second
-uint32_t Panel::refresh_tick(uint32_t dummy)
+void Panel::refresh_tick()
 {
     this->refresh_flag = true;
     this->idle_time++;
-    return 0;
 }
 
 // Encoder pins changed in interrupt or call from on_idle
-uint32_t Panel::encoder_check(uint32_t dummy)
+void Panel::encoder_check()
 {
     // if encoder reads go through SPI like on universal panel adapter this needs to be
     // done in idle loop, this is indicated by lcd->encoderReturnsDelta()
@@ -241,21 +240,18 @@ uint32_t Panel::encoder_check(uint32_t dummy)
         (*this->counter) += delta;
         this->idle_time = 0;
     }
-    return 0;
 }
 
 // Read and update each button
-uint32_t Panel::button_tick(uint32_t dummy)
+void Panel::button_tick()
 {
     this->do_buttons = true;
-    return 0;
 }
 
 // Read and update encoder
-uint32_t Panel::encoder_tick(uint32_t dummy)
+void Panel::encoder_tick()
 {
     this->do_encoder = true;
-    return 0;
 }
 
 void Panel::on_set_public_data(void *argument)
@@ -347,7 +343,7 @@ void Panel::on_idle(void *argument)
 
     if(this->do_encoder) {
         this->do_encoder= false;
-        encoder_check(0);
+        encoder_check();
     }
 
     if (this->do_buttons) {
@@ -393,41 +389,37 @@ void Panel::on_idle(void *argument)
 }
 
 // Hooks for button clicks
-uint32_t Panel::on_up(uint32_t dummy)
+void Panel::on_up()
 {
     // this is simulating encoder clicks, but needs to be inverted to
     // increment values on up,increment by
     int inc = (this->mode == CONTROL_MODE) ? 1 : -(this->menu_offset+1);
     *this->counter += inc;
     this->counter_changed = true;
-    return 0;
 }
 
-uint32_t Panel::on_down(uint32_t dummy)
+void Panel::on_down()
 {
     int inc = (this->mode == CONTROL_MODE) ? -1 : (this->menu_offset+1);
     *this->counter += inc;
     this->counter_changed = true;
-    return 0;
 }
 
 // on most menu screens will go back to previous higher menu
-uint32_t Panel::on_back(uint32_t dummy)
+void Panel::on_back()
 {
     if (this->mode == MENU_MODE && this->current_screen != NULL && this->current_screen->parent != NULL) {
         this->enter_screen(this->current_screen->parent);
     }
-    return 0;
 }
 
-uint32_t Panel::on_select(uint32_t dummy)
+void Panel::on_select()
 {
     // TODO make configurable, including turning off
     // buzz is ignored on panels that do not support buzz
     this->click_changed = true;
     this->idle_time = 0;
     lcd->buzz(60, 300); // 50ms 300Hz
-    return 0;
 }
 
 bool Panel::counter_change()

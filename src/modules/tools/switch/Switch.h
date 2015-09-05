@@ -35,7 +35,7 @@ class Switch : public Module {
         void on_set_public_data(void* argument);
         void on_halt(void *arg);
 
-        uint32_t pinpoll_tick(uint32_t dummy);
+        void pinpoll_tick();
         enum OUTPUT_TYPE {NONE, SIGMADELTA, DIGITAL, HWPWM};
 
     private:

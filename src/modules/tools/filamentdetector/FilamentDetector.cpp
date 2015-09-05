@@ -63,7 +63,7 @@ void FilamentDetector::on_module_loaded()
     bulge_pin.from_string( THEKERNEL->config->value(filament_detector_checksum, bulge_pin_checksum)->by_default("nc" )->as_string())->as_input();
     if(bulge_pin.connected()) {
         // input pin polling
-        THEKERNEL->slow_ticker->attach( 100, this, &FilamentDetector::button_tick);
+      THEKERNEL->slow_ticker->attach( 100, [this] () {this->button_tick(); });
     }
 
     //Valid configurations contain an encoder pin, a bulge pin or both.
@@ -233,15 +233,13 @@ void FilamentDetector::check_encoder()
     }
 }
 
-uint32_t FilamentDetector::button_tick(uint32_t dummy)
+void FilamentDetector::button_tick()
 {
-    if(!bulge_pin.connected() || suspended || !active) return 0;
+    if(!bulge_pin.connected() || suspended || !active) return;
 
     if(bulge_pin.get()) {
         // we got a trigger from the bulge detector
         this->filament_out_alarm= true;
         this->bulge_detected= true;
     }
-
-    return 0;
 }
