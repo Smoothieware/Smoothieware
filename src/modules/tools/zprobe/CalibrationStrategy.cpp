@@ -376,9 +376,9 @@ bool CalibrationStrategy::optimize_delta_model(int n, int repeats, std::string c
 
     if (!probe_pattern(n, repeats, &actuator_positions[0].m)) return false;
 
-    for (auto &v : actuator_positions) {
-        stream->printf("%.5f %.5f %.5f\n",v.m[0],v.m[1],v.m[2]);
-    }
+//    for (auto &v : actuator_positions) {
+//        stream->printf("%.5f %.5f %.5f\n",v.m[0],v.m[1],v.m[2]);
+//    }
 
     int m = parameters.size();
 
