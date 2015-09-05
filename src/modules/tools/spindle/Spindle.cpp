@@ -111,7 +111,7 @@ void Spindle::on_module_loaded()
         delete smoothie_pin;
     }
 
-    THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &Spindle::on_update_speed);
+    THEKERNEL->slow_ticker->attach(UPDATE_FREQ, [this] () {this->on_update_speed(); });
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GCODE_EXECUTE);
 }
@@ -124,7 +124,7 @@ void Spindle::on_pin_rise()
     irq_count++;
 }
 
-uint32_t Spindle::on_update_speed(uint32_t dummy)
+void Spindle::on_update_speed()
 {
     // If we don't get any interrupts for 1 second, set current RPM to 0
     uint32_t new_irq = irq_count;
@@ -176,7 +176,7 @@ uint32_t Spindle::on_update_speed(uint32_t dummy)
     else
         spindle_pin->write(current_pwm_value);
 
-    return 0;
+    return;
 }
 
 

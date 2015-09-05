@@ -11,7 +11,7 @@ public:
     Pwm();
 
     void     on_module_load(void);
-    uint32_t on_tick(uint32_t);
+    void     on_tick();
 
     Pwm*     max_pwm(int);
     int      max_pwm(void);

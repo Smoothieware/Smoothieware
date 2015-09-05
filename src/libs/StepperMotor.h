@@ -8,13 +8,11 @@
 #ifndef STEPPERMOTOR_H
 #define STEPPERMOTOR_H
 
-#include "libs/Hook.h"
 #include "Pin.h"
 #include <atomic>
 #include <functional>
 
 class StepTicker;
-class Hook;
 
 class StepperMotor {
     public:
@@ -51,11 +49,7 @@ class StepperMotor {
         uint32_t get_steps_to_move() const { return steps_to_move; }
         uint32_t get_stepped() const { return stepped; }
 
-        template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
-            Hook* hook = new Hook();
-            hook->attach(optr, fptr);
-            this->end_hook = hook;
-        }
+        void attach( const std::function<void(void)>& f);
 
         friend class StepTicker;
         friend class Stepper;
@@ -66,7 +60,7 @@ class StepperMotor {
         void init();
 
         int index;
-        Hook* end_hook;
+        std::function<void(void)> end_hook;
 
         Pin step_pin;
         Pin dir_pin;
