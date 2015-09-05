@@ -296,6 +296,14 @@ void cholesky_backsub(int n, T A[/* n*n */], T b[/* n */]) {
     }
 }
 
+bool CalibrationStrategy::probe_pattern(int n, int repeats, float actuator_positions[/*N*/][3]) {
+    if (n <= 7) {
+        return probe_symmetric(n, repeats, &actuator_positions[0]);
+    } else {
+        return probe_spiral(n, repeats, &actuator_positions[0]);
+    }
+}
+
 bool CalibrationStrategy::optimize_delta_model(int n, int repeats, std::string const& parameters, StreamOutput* stream) {
 
     std::vector<V3> actuator_positions(n);
@@ -303,7 +311,8 @@ bool CalibrationStrategy::optimize_delta_model(int n, int repeats, std::string c
     std::vector<float> JTJ;
     std::vector<float> JTr;
     stream->printf("Probing %d points (%d repeat(s) per point).\n", n, repeats);
-    if (!probe_spiral(n, repeats, &actuator_positions[0].m)) return false;
+
+    if (!probe_pattern(n, repeats, &actuator_positions[0].m)) return false;
 
     for (auto &v : actuator_positions) {
         stream->printf("%.5f %.5f %.5f\n",v.m[0],v.m[1],v.m[2]);

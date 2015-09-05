@@ -22,8 +22,9 @@ public:
     bool handleGcode(Gcode* gcode);
     bool handleConfig();
 
-    // probes n points in a spiral pattern, return actuator positions of trigger points
-    bool probe_spiral(int n, int repeats, float actuator_positions[/*N*/][3]);
+    // probes n points, return actuator positions of trigger points
+    bool probe_pattern(int n, int repeats, float actuator_positions[/*N*/][3]);
+
 private:
     // Radius of probe circle. TODO: model other build plate shapes
     float probe_radius;
@@ -45,6 +46,8 @@ private:
                           std::vector<float>   & scratch);
     float compute_model_error(float const actuator_position[3]);
     float compute_model_rms_error(std::vector<V3> const& actuator_positions);
+    bool  probe_spiral(int n, int repeats, float actuator_positions[/*N*/][3]);
+    bool  probe_symmetric(int n, int repeats, float actuator_positions[/*N*/][3]);
 };
 
 #endif
