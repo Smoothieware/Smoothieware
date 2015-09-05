@@ -29,6 +29,15 @@ private:
     // Radius of probe circle. TODO: model other build plate shapes
     float probe_radius;
 
+    // Plane tilt
+    float plane_p = 0, plane_q = 0;
+
+    // Separate plane offset variable (to allow Home Offset to be kept constant)
+    float plane_offset = 0;
+
+    // Last row of plane rotation matrix
+    float inverse_r[3] = {0,0,1};
+
     // cache endstop trim values
     float trim[3] = {};
 
@@ -46,6 +55,7 @@ private:
                           std::vector<float>   & scratch);
     float compute_model_error(float const actuator_position[3]);
     float compute_model_rms_error(std::vector<V3> const& actuator_positions);
+    void  update_compensation_transformation();
     bool  probe_spiral(int n, int repeats, float actuator_positions[/*N*/][3]);
     bool  probe_symmetric(int n, int repeats, float actuator_positions[/*N*/][3]);
 };

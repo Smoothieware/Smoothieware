@@ -26,10 +26,20 @@
 #define radius_checksum       CHECKSUM("radius")
 #define delta_calibration_strategy_checksum CHECKSUM("delta-calibration")
 
+std::function<void(float[3])> compute_rotation_transform(float p, float q, float offset, float inverse_r[3]);
 int endstop_parameter_index(char parameter);
 
 bool CalibrationStrategy::update_parameter(char parameter, float delta) {
     return set_parameter(parameter, get_parameter(parameter) + delta);
+}
+
+void CalibrationStrategy::update_compensation_transformation()
+{
+    if (plane_p == 0 && plane_q == 0 && plane_offset == 0) {
+        THEKERNEL->robot->compensationTransform = nullptr;
+        inverse_r[0] = 0; inverse_r[1] = 0; inverse_r[2] = 1;
+    } else
+        THEKERNEL->robot->compensationTransform = compute_rotation_transform(plane_p, plane_q, plane_offset, inverse_r);
 }
 
 bool CalibrationStrategy::handleGcode(Gcode *gcode)
@@ -74,6 +84,8 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
                 }
             }
 
+            update_compensation_transformation(); // make sure no compensation transform from somewhere else is installed
+
             gcode->stream->printf("Commencing calibration of parameters: %s\n", parameters_to_optimize.c_str());
 
             samples = std::max(samples, (int)parameters_to_optimize.length());
@@ -97,6 +109,19 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
         }
     } else if(gcode->has_m) {
         // handle mcodes
+        if(gcode->m == 500 || gcode->m == 503) { // M500 save, M503 display
+            gcode->stream->printf(";Plane tilt:\n");
+            gcode->stream->printf("M567 P%.5f Q%.5f W%.5f\n", plane_p, plane_q, plane_offset);
+            return true;
+        } else if(gcode->m == 567) {
+            if (gcode->has_letter('P')) plane_p = gcode->get_value('P');
+            if (gcode->has_letter('Q')) plane_q = gcode->get_value('Q');
+            if (gcode->has_letter('W')) plane_offset = gcode->get_value('W');
+
+            update_compensation_transformation();
+
+            return true;
+        }
     }
 
     return false;
@@ -170,7 +195,41 @@ bool CalibrationStrategy::probe_spiral(int n, int repeats, float actuator_positi
     return true;
 }
 
-struct V3 { float m[3]; };
+// fills out n actuator positions where the probe triggered
+// returns false if any probe failed
+bool CalibrationStrategy::probe_symmetric(int n, int repeats, float actuator_positions[/*n*/][3]) {
+    if (THEKERNEL->robot->actuators.size() != 3) return false;
+
+    // move the probe to it's starting position a specified height above the bed
+    setup_probe();
+
+    int position_index = 0;
+    auto probe = [&](float x, float y) {
+        int steps; // dummy
+        bool success = zprobe->doProbeAt(steps, x, y, actuator_positions[position_index], repeats);
+        // remove trim adjustment from returned actuator positions
+        for (int j = 0; j < 3; j++)
+            actuator_positions[position_index][j] += trim[j];
+        position_index++;
+        return success;
+    };
+
+    // probe the center point except for n==2 and n==3
+    if (n != 2 && n != 3) {
+        if (!probe(0,0)) return false;
+        n--;
+    }
+    for (int i = 0; i < n; i++) {
+        float angle = M_PI*2*i/n;
+
+        float x = probe_radius * cos(angle);
+        float y = probe_radius * sin(angle);
+        if (!probe(x,y)) return false;
+    }
+
+    return true;
+}
+
 
 float CalibrationStrategy::compute_model_error(float const actuator_position[3]) {
     float cartesian[3];
@@ -178,8 +237,11 @@ float CalibrationStrategy::compute_model_error(float const actuator_position[3])
     // simulate the effect of trim
     for (int i = 0; i < 3; i++) trimmed_position[i] = actuator_position[i] - trim[i];
     THEKERNEL->robot->arm_solution->actuator_to_cartesian(trimmed_position, cartesian);
+
     // we want our model to map the plane to z == 0
-    return cartesian[2];
+    // Inverse compensationTransform for z
+    double d = inverse_r[0] * cartesian[0] + inverse_r[1] * cartesian[1] + inverse_r[2] * cartesian[2];
+    return d - inverse_r[2] * plane_offset;
 }
 
 float CalibrationStrategy::compute_model_rms_error(std::vector<V3> const& actuator_positions) {
@@ -410,9 +472,39 @@ int endstop_parameter_index(char parameter) {
     }
 }
 
+std::function<void(float[3])> compute_rotation_transform(float p, float q, float offset, float inverse_r[3]) {
+    // setup rotation matrix
+    Vector3 x(1,0,0),
+            y(0,1,0),
+            z(p,q,sqrt(1-p*p-q*q));
+    // orthogonalize
+    y = z.cross(x).unit();
+    x = y.cross(z); // y and z are now orthogonal unit vectors
+
+    // store last row of R
+    inverse_r[0] = x[2];
+    inverse_r[1] = y[2];
+    inverse_r[2] = z[2];
+
+    return [x,y,z,offset](float p[3]) {
+        Vector3 q(p[0],p[1],p[2]);
+        // Note: multiply by R^T
+        p[0] = q.dot(x);
+        p[1] = q.dot(y);
+        p[2] = q.dot(z) + offset;
+    };
+}
 
 
 bool CalibrationStrategy::set_parameter(char parameter, float value) {
+    if (parameter == 'P' || parameter == 'Q' || parameter == 'W') {
+        if (parameter == 'P') plane_p = value;
+        if (parameter == 'Q') plane_q = value;
+        if (parameter == 'W') plane_offset = value;
+
+        update_compensation_transformation();
+        return true;
+    }
     int endstop = endstop_parameter_index(parameter);
     if (endstop >= 0) {
         void *returned_data;
@@ -438,6 +530,9 @@ bool CalibrationStrategy::set_parameter(char parameter, float value) {
 
 
 float CalibrationStrategy::get_parameter(char parameter) {
+    if (parameter == 'P') return plane_p;
+    if (parameter == 'Q') return plane_q;
+    if (parameter == 'W') return plane_offset;
 
     int endstop = endstop_parameter_index(parameter);
     if (endstop >= 0) {
