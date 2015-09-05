@@ -64,8 +64,17 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
                     parameters_to_optimize += v.first;
             }
 
+            // TODO: the following checks are delta specific
             if (parameters_to_optimize.empty()) {
                 parameters_to_optimize = "XYZ"; // endstop only
+            }
+            // The W parameter is linearly dependent on X,Y,Z
+            if (parameters_to_optimize.find('W') != std::string::npos &&
+                    (parameters_to_optimize.find('X') != std::string::npos ||
+                     parameters_to_optimize.find('Y') != std::string::npos ||
+                     parameters_to_optimize.find('Z') != std::string::npos)) {
+                gcode->stream->printf("Warning, parameter W is coupled to X,Y,Z. Optimize either W or XYZ. Ignoring W.\n");
+                parameters_to_optimize.erase(parameters_to_optimize.find('W'));
             }
 
             // Make sure we initialize our trim variables
@@ -374,7 +383,10 @@ bool CalibrationStrategy::optimize_delta_model(int n, int repeats, std::string c
     std::vector<float> JTr;
     stream->printf("Probing %d points (%d repeat(s) per point).\n", n, repeats);
 
-    if (!probe_pattern(n, repeats, &actuator_positions[0].m)) return false;
+    if (!probe_pattern(n, repeats, &actuator_positions[0].m)) {
+        stream->printf("ERROR: Probing failed!\n");
+        return false;
+    }
 
 //    for (auto &v : actuator_positions) {
 //        stream->printf("%.5f %.5f %.5f\n",v.m[0],v.m[1],v.m[2]);
@@ -404,11 +416,13 @@ bool CalibrationStrategy::optimize_delta_model(int n, int repeats, std::string c
     print_state();
     stream->printf("RMS error before optimization: %.3f mm\n", last_error);
 
-    static const int max_iterations = 50;
+    static const int max_iterations = 50; // TODO: config parameter
     std::vector<float> A;
     std::vector<float> b;
 
-    float lambda = 1;
+    // Lambda is a damping factor. Higher lambda makes the optimization
+    // more robust to bad initial estiamtes, but also makes it converge slower
+    float lambda = 1; // TODO: config parameter?
     for (int iteration = 0; iteration < max_iterations; iteration++) {
         compute_JTJ_JTr(actuator_positions, parameters, JTJ, JTr, scratch);
 
@@ -447,6 +461,8 @@ again:
             last_error = new_error;
             save();
 
+            // Very primitive convergence criteria
+            // Looking at the magnitude of delta is most likely a better choice
             if (improvement < 0.0001) {
                 stream->printf("Done\n");
                 print_state();
@@ -455,7 +471,7 @@ again:
 
             // reduce damping
             lambda /= 2;
-            if (lambda < 1e-7) lambda = 1e-7;
+            if (lambda < 1e-7) lambda = 1e-7; // Reasonable lower limit for float precision
         }
     }
     stream->printf("Failed to converge after %d iterations\n", max_iterations);
