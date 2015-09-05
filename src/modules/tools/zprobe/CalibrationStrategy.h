@@ -52,9 +52,10 @@ private:
                           std::string     const& parameters,
                           std::vector<float>   & JTJ,
                           std::vector<float>   & JTr,
-                          std::vector<float>   & scratch);
-    float compute_model_error(float const actuator_position[3]);
-    float compute_model_rms_error(std::vector<V3> const& actuator_positions);
+                          std::vector<float>   & scratch,
+                          float home_offs_z);
+    float compute_model_error(float const actuator_position[3], float home_offs_z);
+    float compute_model_rms_error(std::vector<V3> const& actuator_positions, float home_offs_z);
     void  update_compensation_transformation();
     bool  probe_spiral(int n, int repeats, float actuator_positions[/*N*/][3]);
     bool  probe_symmetric(int n, int repeats, float actuator_positions[/*N*/][3]);

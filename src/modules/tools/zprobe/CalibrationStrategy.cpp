@@ -240,12 +240,15 @@ bool CalibrationStrategy::probe_symmetric(int n, int repeats, float actuator_pos
 }
 
 
-float CalibrationStrategy::compute_model_error(float const actuator_position[3]) {
+float CalibrationStrategy::compute_model_error(float const actuator_position[3], float home_offs_z) {
     float cartesian[3];
     float trimmed_position[3];
     // simulate the effect of trim
     for (int i = 0; i < 3; i++) trimmed_position[i] = actuator_position[i] - trim[i];
     THEKERNEL->robot->arm_solution->actuator_to_cartesian(trimmed_position, cartesian);
+
+    // if home offset z is ≠ 0, we need to compensate for that
+    cartesian[2] -= home_offs_z;
 
     // we want our model to map the plane to z == 0
     // Inverse compensationTransform for z
@@ -253,20 +256,22 @@ float CalibrationStrategy::compute_model_error(float const actuator_position[3])
     return d - inverse_r[2] * plane_offset;
 }
 
-float CalibrationStrategy::compute_model_rms_error(std::vector<V3> const& actuator_positions) {
+
+float CalibrationStrategy::compute_model_rms_error(std::vector<V3> const& actuator_positions, float home_offs_z) {
     float err = 0;
     for (auto &actuator_position : actuator_positions) {
-        float e = compute_model_error(actuator_position.m);
+        float e = compute_model_error(actuator_position.m, home_offs_z);
         err += e*e;
     }
     return sqrt(err / actuator_positions.size());
 }
 
 void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positions,
-                     std::string     const& parameters,
-                     std::vector<float>   & JTJ,
-                     std::vector<float>   & JTr,
-                     std::vector<float>   & scratch) {
+                                          std::string     const& parameters,
+                                          std::vector<float>   & JTJ,
+                                          std::vector<float>   & JTr,
+                                          std::vector<float>   & scratch,
+                                          float home_offs_z) {
     int m = parameters.size();
     scratch.resize(m);
     std::vector<float> &jacobian = scratch;
@@ -292,10 +297,10 @@ void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positi
 
             //compute central difference (f(x+h) - f(x-h)) / (2*h)
             set_parameter(parameters[i], x0 + h);
-            jacobian[i] = compute_model_error(actuator_positions[j].m);
+            jacobian[i] = compute_model_error(actuator_positions[j].m, home_offs_z);
 
             set_parameter(parameters[i], x0 - h);
-            jacobian[i] = (jacobian[i] - compute_model_error(actuator_positions[j].m)) * one_over_2_h;
+            jacobian[i] = (jacobian[i] - compute_model_error(actuator_positions[j].m, home_offs_z)) * one_over_2_h;
 
             // restore the original value
             set_parameter(parameters[i], x0);
@@ -308,7 +313,7 @@ void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positi
             }
         }
 
-        float err = compute_model_error(actuator_positions[j].m);
+        float err = compute_model_error(actuator_positions[j].m, home_offs_z);
         for (int i = 0; i < m; i++) {
             JTr[i] -= jacobian[i] * err;
         }
@@ -391,6 +396,14 @@ bool CalibrationStrategy::optimize_model(int n, int repeats, std::string const& 
 //    for (auto &v : actuator_positions) {
 //        stream->printf("%.5f %.5f %.5f\n",v.m[0],v.m[1],v.m[2]);
 //    }
+    float home_offs[3] = {};
+
+    {
+        void *returned_data;
+        if (PublicData::get_value(endstops_checksum, home_offset_checksum, &returned_data)) {
+            for (int i = 0; i < 3; i++) home_offs[i] = static_cast<float *>(returned_data)[i];
+        }
+    }
 
     int m = parameters.size();
 
@@ -412,7 +425,7 @@ bool CalibrationStrategy::optimize_model(int n, int repeats, std::string const& 
 
     save();
 
-    float last_error = compute_model_rms_error(actuator_positions);
+    float last_error = compute_model_rms_error(actuator_positions, home_offs[2]);
     print_state();
     stream->printf("RMS error before optimization: %.3f mm\n", last_error);
 
@@ -424,7 +437,7 @@ bool CalibrationStrategy::optimize_model(int n, int repeats, std::string const& 
     // more robust to bad initial estiamtes, but also makes it converge slower
     float lambda = 1; // TODO: config parameter?
     for (int iteration = 0; iteration < max_iterations; iteration++) {
-        compute_JTJ_JTr(actuator_positions, parameters, JTJ, JTr, scratch);
+        compute_JTJ_JTr(actuator_positions, parameters, JTJ, JTr, scratch, home_offs[2]);
 
 again:
         A = JTJ;
@@ -442,7 +455,7 @@ again:
             update_parameter(parameters[i], b[i]);
         }
 
-        float new_error = compute_model_rms_error(actuator_positions);
+        float new_error = compute_model_rms_error(actuator_positions, home_offs[2]);
         print_state();
         stream->printf("RMS error after iteration %d: %.3f mm", iteration+1, new_error);
         if (!(new_error < last_error)) {
