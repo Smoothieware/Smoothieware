@@ -44,7 +44,7 @@ private:
 
     // impl details
     bool  setup_probe();
-    bool  optimize_delta_model(int n, int repeats, const std::string &parameters, class StreamOutput *stream);
+    bool  optimize_model(int n, int repeats, const std::string &parameters, class StreamOutput *stream);
     float get_parameter(char parameter);
     bool  set_parameter(char parameter, float value);
     bool  update_parameter(char parameter, float delta);

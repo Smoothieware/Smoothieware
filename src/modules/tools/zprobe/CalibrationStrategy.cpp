@@ -99,7 +99,7 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
 
             samples = std::max(samples, (int)parameters_to_optimize.length());
 
-            if (optimize_delta_model(samples, repeats, parameters_to_optimize, gcode->stream)) {
+            if (optimize_model(samples, repeats, parameters_to_optimize, gcode->stream)) {
                 gcode->stream->printf("Calibration complete. Save settings with M500.\n");
             } else {
                 gcode->stream->printf("Calibration may not have converged. Use M500 if you want to save settings anyway.\n");
@@ -375,7 +375,7 @@ bool CalibrationStrategy::probe_pattern(int n, int repeats, float actuator_posit
     }
 }
 
-bool CalibrationStrategy::optimize_delta_model(int n, int repeats, std::string const& parameters, StreamOutput* stream) {
+bool CalibrationStrategy::optimize_model(int n, int repeats, std::string const& parameters, StreamOutput* stream) {
 
     std::vector<V3> actuator_positions(n);
     std::vector<float> scratch;
