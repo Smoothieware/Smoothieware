@@ -26,13 +26,9 @@
 #define radius_checksum       CHECKSUM("radius")
 #define delta_calibration_strategy_checksum CHECKSUM("delta-calibration")
 
-float trim[3]; // cache
-
 int endstop_parameter_index(char parameter);
-bool set_parameter(char parameter, float value);
-float get_parameter(char parameter);
 
-bool update_parameter(char parameter, float delta) {
+bool CalibrationStrategy::update_parameter(char parameter, float delta) {
     return set_parameter(parameter, get_parameter(parameter) + delta);
 }
 
@@ -176,7 +172,7 @@ bool CalibrationStrategy::probe_spiral(int n, int repeats, float actuator_positi
 
 struct V3 { float m[3]; };
 
-float compute_model_error(float const actuator_position[3]) {
+float CalibrationStrategy::compute_model_error(float const actuator_position[3]) {
     float cartesian[3];
     float trimmed_position[3];
     // simulate the effect of trim
@@ -186,7 +182,7 @@ float compute_model_error(float const actuator_position[3]) {
     return cartesian[2];
 }
 
-float compute_model_rms_error(std::vector<V3> const& actuator_positions) {
+float CalibrationStrategy::compute_model_rms_error(std::vector<V3> const& actuator_positions) {
     float err = 0;
     for (auto &actuator_position : actuator_positions) {
         float e = compute_model_error(actuator_position.m);
@@ -195,7 +191,7 @@ float compute_model_rms_error(std::vector<V3> const& actuator_positions) {
     return sqrt(err / actuator_positions.size());
 }
 
-void compute_JTJ_JTr(std::vector<V3> const& actuator_positions,
+void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positions,
                      std::string     const& parameters,
                      std::vector<float>   & JTJ,
                      std::vector<float>   & JTr,
@@ -406,17 +402,19 @@ int endstop_parameter_index(char parameter) {
 }
 
 
-bool set_parameter(char parameter, float value) {
+
+bool CalibrationStrategy::set_parameter(char parameter, float value) {
     int endstop = endstop_parameter_index(parameter);
     if (endstop >= 0) {
         void *returned_data;
 
         if (PublicData::get_value(endstops_checksum, trim_checksum, &returned_data)) {
+            // refresh cache
             float *rtrim = static_cast<float *>(returned_data);
-            float t[3] = {rtrim[0],rtrim[1],rtrim[2]};
-            t[endstop] = value;
+            trim[0] = rtrim[0]; trim[1] = rtrim[1]; trim[2] = rtrim[2];
+
             trim[endstop] = value;
-            return PublicData::set_value( endstops_checksum, trim_checksum, t);
+            return PublicData::set_value( endstops_checksum, trim_checksum, trim);
         }
         return false;
     } else {
@@ -430,7 +428,8 @@ bool set_parameter(char parameter, float value) {
 }
 
 
-float get_parameter(char parameter) {
+float CalibrationStrategy::get_parameter(char parameter) {
+
     int endstop = endstop_parameter_index(parameter);
     if (endstop >= 0) {
         void *returned_data;
