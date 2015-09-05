@@ -431,7 +431,7 @@ again:
         float new_error = compute_model_rms_error(actuator_positions);
         print_state();
         stream->printf("RMS error after iteration %d: %.3f mm", iteration+1, new_error);
-        if (new_error > last_error) {
+        if (!(new_error < last_error)) {
             stream->printf(" -> rolling back\n");
             restore();
             // increase damping
