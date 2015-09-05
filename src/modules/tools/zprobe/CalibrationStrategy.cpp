@@ -76,7 +76,7 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
 
             gcode->stream->printf("Commencing calibration of parameters: %s\n", parameters_to_optimize.c_str());
 
-            if (samples < 10) samples = 10;
+            samples = std::max(samples, (int)parameters_to_optimize.length());
 
             if (optimize_delta_model(samples, repeats, parameters_to_optimize, gcode->stream)) {
                 gcode->stream->printf("Calibration complete. Save settings with M500.\n");
