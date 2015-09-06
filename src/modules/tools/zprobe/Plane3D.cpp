@@ -21,7 +21,7 @@ Plane3D::Plane3D(uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
     conv_t ca, cb, cc, cd;
     ca.u= a; cb.u= b; cc.u= c; cd.u= d;
-    this->normal.set(ca.f, cb.f, cc.f);
+    this->normal = Vector3(ca.f, cb.f, cc.f);
     this->d= cd.f;
 }
 

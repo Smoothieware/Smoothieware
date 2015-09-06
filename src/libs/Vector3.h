@@ -9,7 +9,6 @@ public:
     Vector3(const Vector3& to_copy) = default;
 
     float    operator[](int) const;
-    void     set(float a, float b, float c);
     Vector3  cross(const Vector3&) const;
 
     float    dot(const Vector3&) const;

@@ -12,13 +12,6 @@ float Vector3::operator[](int i) const
     return nan;
 }
 
-void Vector3::set(float a, float b, float c)
-{
-    elem[0] = a;
-    elem[1] = b;
-    elem[2] = c;
-}
-
 Vector3 Vector3::cross(const Vector3 &vec) const
 {
     Vector3 out;
