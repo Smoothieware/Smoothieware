@@ -3,13 +3,11 @@
 #include <fastmath.h>
 #include <cstddef>
 
-float Vector3::nan = NAN;
-
 float Vector3::operator[](int i) const
 {
     if (i >= 0 && i <= 2)
         return elem[i];
-    return nan;
+    return NAN;
 }
 
 Vector3 Vector3::cross(const Vector3 &vec) const

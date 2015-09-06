@@ -25,7 +25,6 @@ public:
 
 private:
     float  elem[3]{};
-    static float nan;
 };
 
 // typedef float Vector3[3];
