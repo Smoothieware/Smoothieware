@@ -23,6 +23,8 @@ public:
 
     Vector3  unit(void) const;
 
+    float      * data()       { return elem; }
+    float const* data() const { return elem; }
 private:
     float  elem[3]{};
 };
