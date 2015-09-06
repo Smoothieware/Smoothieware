@@ -55,7 +55,7 @@ void PrepareScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Back"           ); break;
-        case 1: THEPANEL->lcd->printf("Home All Axis"  ); break;
+        case 1: THEPANEL->lcd->printf("Home All Axes"  ); break;
         case 2: THEPANEL->lcd->printf("Set Home"       ); break;
         case 3: THEPANEL->lcd->printf("Set Z0"         ); break;
         case 4: THEPANEL->lcd->printf("Motors off"     ); break;
