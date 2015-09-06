@@ -11,8 +11,7 @@ Plane3D::Plane3D(const Vector3 &v1, const Vector3 &v2, const Vector3 &v3)
 
     // ax+by+cz+d=0
     // solve for d
-    Vector3 dv = normal.mul(v1);
-    d = -dv[0] - dv[1] - dv[2];
+    d = -normal.dot(v1);
 }
 
 typedef union { float f; uint32_t u; } conv_t;
@@ -21,7 +20,7 @@ Plane3D::Plane3D(uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
     conv_t ca, cb, cc, cd;
     ca.u= a; cb.u= b; cc.u= c; cd.u= d;
-    this->normal.set(ca.f, cb.f, cc.f);
+    this->normal = Vector3(ca.f, cb.f, cc.f);
     this->d= cd.f;
 }
 

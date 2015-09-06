@@ -3,49 +3,11 @@
 #include <fastmath.h>
 #include <cstddef>
 
-float Vector3::nan = NAN;
-
-Vector3::Vector3()
-{
-    elem[0] = elem[1] = elem[2] = 0.0F;
-}
-
-Vector3::Vector3(float a, float b, float c)
-{
-    elem[0] = a;
-    elem[1] = b;
-    elem[2] = c;
-}
-
-Vector3::Vector3(const Vector3 &to_copy)
-{
-    elem[0] = to_copy.elem[0];
-    elem[1] = to_copy.elem[1];
-    elem[2] = to_copy.elem[2];
-}
-
-Vector3& Vector3::operator= (const Vector3 &to_copy)
-{
-    if( this != &to_copy ) {
-        elem[0] = to_copy.elem[0];
-        elem[1] = to_copy.elem[1];
-        elem[2] = to_copy.elem[2];
-    }
-    return *this;
-}
-
 float Vector3::operator[](int i) const
 {
     if (i >= 0 && i <= 2)
         return elem[i];
-    return nan;
-}
-
-void Vector3::set(float a, float b, float c)
-{
-    elem[0] = a;
-    elem[1] = b;
-    elem[2] = c;
+    return NAN;
 }
 
 Vector3 Vector3::cross(const Vector3 &vec) const
@@ -107,17 +69,6 @@ Vector3 Vector3::mul(float scalar) const
     out.elem[0] = elem[0] * scalar;
     out.elem[1] = elem[1] * scalar;
     out.elem[2] = elem[2] * scalar;
-
-    return out;
-}
-
-Vector3 Vector3::mul(const Vector3& v) const
-{
-    Vector3 out;
-
-    out.elem[0] = elem[0] * v[0];
-    out.elem[1] = elem[1] * v[1];
-    out.elem[2] = elem[2] * v[2];
 
     return out;
 }
