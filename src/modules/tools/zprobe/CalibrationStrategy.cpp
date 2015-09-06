@@ -284,11 +284,11 @@ void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positi
     for (auto &v : JTr) v = 0;
 
     // step length for central difference approximation
-    float h = 1e-4;
-    float one_over_2_h = 1. / (2 * h);
+    // we assume all model parameters are approximately 0 with a scale of ~mm
+    float h = 1e-3;
 
     // iterating over residual terms rather than parameters first saves
-    // a lot of memory at the cost of much more get/set_value calls
+    // a lot of memory at the cost of many more get/set_value calls
     for (int j = 0; j < (int)actuator_positions.size(); j++) {
 
         // compute numerically derivative of error w.r.t. parameters
@@ -300,6 +300,7 @@ void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positi
             jacobian[i] = compute_model_error(actuator_positions[j].m, home_offs_z);
 
             set_parameter(parameters[i], x0 - h);
+            float one_over_2_h = 1./((x0+h)-(x0-h)); // trick to improve precision
             jacobian[i] = (jacobian[i] - compute_model_error(actuator_positions[j].m, home_offs_z)) * one_over_2_h;
 
             // restore the original value
