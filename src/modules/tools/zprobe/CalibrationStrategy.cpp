@@ -35,11 +35,11 @@ bool CalibrationStrategy::update_parameter(char parameter, float delta) {
 
 void CalibrationStrategy::update_compensation_transformation()
 {
-    if (plane_p == 0 && plane_q == 0 && plane_offset == 0) {
+    if (plane_u == 0 && plane_v == 0 && plane_offset == 0) {
         THEKERNEL->robot->compensationTransform = nullptr;
         inverse_r[0] = 0; inverse_r[1] = 0; inverse_r[2] = 1;
     } else
-        THEKERNEL->robot->compensationTransform = compute_rotation_transform(plane_p, plane_q, plane_offset, inverse_r);
+        THEKERNEL->robot->compensationTransform = compute_rotation_transform(plane_u, plane_v, plane_offset, inverse_r);
 }
 
 bool CalibrationStrategy::handleGcode(Gcode *gcode)
@@ -56,7 +56,7 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
             int repeats = 1;
 
             for (auto &v : args) {
-                if (v.first == 'N')
+                if (v.first == 'P')
                     samples = int(v.second);
                 else if (v.first == 'O')
                     repeats = int(v.second);
@@ -120,11 +120,11 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
         // handle mcodes
         if(gcode->m == 500 || gcode->m == 503) { // M500 save, M503 display
             gcode->stream->printf(";Plane tilt:\n");
-            gcode->stream->printf("M567 P%.5f Q%.5f W%.5f\n", plane_p, plane_q, plane_offset);
+            gcode->stream->printf("M567 U%.5f V%.5f W%.5f\n", plane_u, plane_v, plane_offset);
             return true;
         } else if(gcode->m == 567) {
-            if (gcode->has_letter('P')) plane_p = gcode->get_value('P');
-            if (gcode->has_letter('Q')) plane_q = gcode->get_value('Q');
+            if (gcode->has_letter('U')) plane_u = gcode->get_value('U');
+            if (gcode->has_letter('V')) plane_v = gcode->get_value('V');
             if (gcode->has_letter('W')) plane_offset = gcode->get_value('W');
 
             update_compensation_transformation();
@@ -537,9 +537,9 @@ std::function<void(float[3])> compute_rotation_transform(float p, float q, float
 
 
 bool CalibrationStrategy::set_parameter(char parameter, float value) {
-    if (parameter == 'P' || parameter == 'Q' || parameter == 'W') {
-        if (parameter == 'P') plane_p = value;
-        if (parameter == 'Q') plane_q = value;
+    if (parameter == 'U' || parameter == 'V' || parameter == 'W') {
+        if (parameter == 'U') plane_u = value;
+        if (parameter == 'V') plane_v = value;
         if (parameter == 'W') plane_offset = value;
 
         update_compensation_transformation();
@@ -570,8 +570,8 @@ bool CalibrationStrategy::set_parameter(char parameter, float value) {
 
 
 float CalibrationStrategy::get_parameter(char parameter) {
-    if (parameter == 'P') return plane_p;
-    if (parameter == 'Q') return plane_q;
+    if (parameter == 'U') return plane_u;
+    if (parameter == 'V') return plane_v;
     if (parameter == 'W') return plane_offset;
 
     int endstop = endstop_parameter_index(parameter);
