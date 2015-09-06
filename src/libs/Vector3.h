@@ -20,7 +20,6 @@ public:
     Vector3  sub(const Vector3&) const;
 
     Vector3  mul(float) const;
-    Vector3  mul(const Vector3& v) const;
 
     Vector3  unit(void) const;
 

@@ -75,17 +75,6 @@ Vector3 Vector3::mul(float scalar) const
     return out;
 }
 
-Vector3 Vector3::mul(const Vector3& v) const
-{
-    Vector3 out;
-
-    out.elem[0] = elem[0] * v[0];
-    out.elem[1] = elem[1] * v[1];
-    out.elem[2] = elem[2] * v[2];
-
-    return out;
-}
-
 Vector3 Vector3::unit() const
 {
     Vector3 out;
