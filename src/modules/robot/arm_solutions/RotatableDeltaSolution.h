@@ -12,7 +12,7 @@ class RotatableDeltaSolution : public BaseSolution {
         void actuator_to_cartesian(const float[], float[] );
 
         bool set_optional(const arm_options_t& options);
-        bool get_optional(arm_options_t& options);
+        bool get_optional(arm_options_t& options, bool force_all);
 
     private:
         void init();

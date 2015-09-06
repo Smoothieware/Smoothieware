@@ -162,7 +162,7 @@ bool MorganSCARASolution::set_optional(const arm_options_t& options) {
     return true;
 }
 
-bool MorganSCARASolution::get_optional(arm_options_t& options) {
+bool MorganSCARASolution::get_optional(arm_options_t& options, bool force_all) {
     options['T']= this->arm1_length;
     options['P']= this->arm2_length;
     options['X']= this->morgan_offset_x;
