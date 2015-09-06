@@ -448,7 +448,7 @@ again:
             A[i*m + i] *= (1 + lambda);
         }
         cholesky_backsub(m, A.data(), b.data());
-        stream->printf("delta:");
+        stream->printf("Attempting delta:");
         for (auto v : b)
             stream->printf("%f ",v);
         stream->printf("\n");
@@ -457,29 +457,37 @@ again:
         }
 
         float new_error = compute_model_rms_error(actuator_positions, home_offs[2]);
-        print_state();
         stream->printf("RMS error after iteration %d: %.3f mm", iteration+1, new_error);
+
+        float sq_sum_delta = 0;
+        for (auto d : b) sq_sum_delta += d*d;
+
         if (!(new_error < last_error)) {
-            stream->printf(" -> rolling back\n");
             restore();
+            if (sq_sum_delta < 0.0001 * 0.0001) {
+                stream->printf("\nConverged\n");
+                return true;
+            }
+
+            stream->printf(" -> rolling back\n");
             // increase damping
             lambda *= 3;
             if (lambda > 1e10) {
                 stream->printf("Max lambda\n");
                 return false;
             }
-            goto again;
+            goto again; // adjusted lambda, no need to recompute JTJ, JTr
         } else {
             float improvement = (1 - new_error / last_error);
             stream->printf(" (%.3f%% improvement)\n", 100*improvement);
             last_error = new_error;
             save();
+            print_state();
 
-            // Very primitive convergence criteria
-            // Looking at the magnitude of delta is most likely a better choice
-            if (improvement < 0.0001) {
+            if (improvement < 0.0001 ||
+                sq_sum_delta < 0.0001 * 0.0001) {
+                // improvement < 0.01 % or < 0.1 µm adjustment
                 stream->printf("Done\n");
-                print_state();
                 return true;
             }
 
@@ -488,6 +496,8 @@ again:
             if (lambda < 1e-7) lambda = 1e-7; // Reasonable lower limit for float precision
         }
     }
+    if (last_error < 0.001) return true; // We are within 1 µm, let's call that a success
+
     stream->printf("Failed to converge after %d iterations\n", max_iterations);
     return false;
 }
