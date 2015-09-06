@@ -258,21 +258,21 @@ float CalibrationStrategy::compute_model_error(float const actuator_position[3],
 }
 
 
-float CalibrationStrategy::compute_model_rms_error(std::vector<V3> const& actuator_positions, float home_offs_z) {
+float CalibrationStrategy::compute_model_rms_error(std::vector<Vector3> const& actuator_positions, float home_offs_z) {
     float err = 0;
     for (auto &actuator_position : actuator_positions) {
-        float e = compute_model_error(actuator_position.m, home_offs_z);
+        float e = compute_model_error(actuator_position.data(), home_offs_z);
         err += e*e;
     }
     return sqrt(err / actuator_positions.size());
 }
 
-void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positions,
-                                          std::string     const& parameters,
-                                          std::vector<float>   & JTJ,
-                                          std::vector<float>   & JTr,
-                                          std::vector<float>   & scratch,
-                                          float home_offs_z) {
+void CalibrationStrategy::compute_JTJ_JTr(std::vector<Vector3> const& actuator_positions,
+                                          std::string          const& parameters,
+                                          std::vector<float>        & JTJ,
+                                          std::vector<float>        & JTr,
+                                          std::vector<float>        & scratch,
+                                          float                       home_offs_z) {
     int m = parameters.size();
     scratch.resize(m);
     std::vector<float> &jacobian = scratch;
@@ -297,11 +297,11 @@ void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positi
 
             //compute central difference (f(x+h) - f(x-h)) / (2*h)
             set_parameter(parameters[i], x0 + h);
-            jacobian[i] = compute_model_error(actuator_positions[j].m, home_offs_z);
+            jacobian[i] = compute_model_error(actuator_positions[j].data(), home_offs_z);
 
             set_parameter(parameters[i], x0 - h);
             float one_over_2_h = 1./((x0+h)-(x0-h)); // trick to improve precision
-            jacobian[i] = (jacobian[i] - compute_model_error(actuator_positions[j].m, home_offs_z)) * one_over_2_h;
+            jacobian[i] = (jacobian[i] - compute_model_error(actuator_positions[j].data(), home_offs_z)) * one_over_2_h;
 
             // restore the original value
             set_parameter(parameters[i], x0);
@@ -314,7 +314,7 @@ void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positi
             }
         }
 
-        float err = compute_model_error(actuator_positions[j].m, home_offs_z);
+        float err = compute_model_error(actuator_positions[j].data(), home_offs_z);
         for (int i = 0; i < m; i++) {
             JTr[i] -= jacobian[i] * err;
         }
@@ -374,7 +374,7 @@ void cholesky_backsub(int n, T A[/* n*n */], T b[/* n */]) {
     }
 }
 
-bool CalibrationStrategy::probe_pattern(int n, int repeats, float actuator_positions[/*N*/][3]) {
+bool CalibrationStrategy::probe_pattern(int n, int repeats, float actuator_positions[/*n*/][3]) {
     if (n <= 7) {
         return probe_symmetric(n, repeats, &actuator_positions[0]);
     } else {
@@ -384,19 +384,19 @@ bool CalibrationStrategy::probe_pattern(int n, int repeats, float actuator_posit
 
 bool CalibrationStrategy::optimize_model(int n, int repeats, std::string const& parameters, StreamOutput* stream) {
 
-    std::vector<V3> actuator_positions(n);
+    std::vector<Vector3> actuator_positions(n);
     std::vector<float> scratch;
     std::vector<float> JTJ;
     std::vector<float> JTr;
     stream->printf("Probing %d points (%d repeat(s) per point).\n", n, repeats);
 
-    if (!probe_pattern(n, repeats, &actuator_positions[0].m)) {
+    if (!probe_pattern(n, repeats, (float(*)[3])actuator_positions[0].data())) {
         stream->printf("ERROR: Probing failed!\n");
         return false;
     }
 
 //    for (auto &v : actuator_positions) {
-//        stream->printf("%.5f %.5f %.5f\n",v.m[0],v.m[1],v.m[2]);
+//        stream->printf("%.5f %.5f %.5f\n",v[0],v[1],v[2]);
 //    }
     float home_offs[3] = {};
 

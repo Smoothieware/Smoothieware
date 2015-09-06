@@ -8,11 +8,11 @@
 #define _GENERICLEVELINGSTRATEGY
 
 #include "LevelingStrategy.h"
+#include "Vector3.h"
 #include <string>
 #include <vector>
 
 #define calibration_strategy_checksum CHECKSUM("calibration")
-struct V3 { float m[3]; };
 
 class CalibrationStrategy : public LevelingStrategy
 {
@@ -48,14 +48,14 @@ private:
     float get_parameter(char parameter);
     bool  set_parameter(char parameter, float value);
     bool  update_parameter(char parameter, float delta);
-    void  compute_JTJ_JTr(std::vector<V3> const& actuator_positions,
-                          std::string     const& parameters,
-                          std::vector<float>   & JTJ,
-                          std::vector<float>   & JTr,
-                          std::vector<float>   & scratch,
-                          float home_offs_z);
+    void  compute_JTJ_JTr(std::vector<Vector3> const& actuator_positions,
+                          std::string          const& parameters,
+                          std::vector<float>        & JTJ,
+                          std::vector<float>        & JTr,
+                          std::vector<float>        & scratch,
+                          float                       home_offs_z);
     float compute_model_error(float const actuator_position[3], float home_offs_z);
-    float compute_model_rms_error(std::vector<V3> const& actuator_positions, float home_offs_z);
+    float compute_model_rms_error(std::vector<Vector3> const& actuator_positions, float home_offs_z);
     void  update_compensation_transformation();
     bool  probe_spiral(int n, int repeats, float actuator_positions[/*N*/][3]);
     bool  probe_symmetric(int n, int repeats, float actuator_positions[/*N*/][3]);
