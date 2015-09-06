@@ -104,6 +104,7 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
             } else {
                 gcode->stream->printf("Calibration may not have converged. Use M500 if you want to save settings anyway.\n");
             }
+            THEKERNEL->call_event(ON_IDLE);
 
             // Check if endstop trim was updated
             if (parameters_to_optimize.find('X') != std::string::npos ||
@@ -317,6 +318,7 @@ void CalibrationStrategy::compute_JTJ_JTr(std::vector<V3> const& actuator_positi
         for (int i = 0; i < m; i++) {
             JTr[i] -= jacobian[i] * err;
         }
+        THEKERNEL->call_event(ON_IDLE);
     }
 
     // fill in the lower JTJ triangle
@@ -454,9 +456,10 @@ again:
         for (int i = 0; i < m; i++) {
             update_parameter(parameters[i], b[i]);
         }
-
+        THEKERNEL->call_event(ON_IDLE);
         float new_error = compute_model_rms_error(actuator_positions, home_offs[2]);
         stream->printf("RMS error after iteration %d: %.3f mm", iteration+1, new_error);
+        THEKERNEL->call_event(ON_IDLE);
 
         float sq_sum_delta = 0;
         for (auto d : b) sq_sum_delta += d*d;
@@ -475,6 +478,7 @@ again:
                 stream->printf("Max lambda\n");
                 return false;
             }
+            THEKERNEL->call_event(ON_IDLE);
             goto again; // adjusted lambda, no need to recompute JTJ, JTr
         } else {
             float improvement = (1 - new_error / last_error);
