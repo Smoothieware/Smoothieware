@@ -121,7 +121,8 @@ bool LinearDeltaSolution::set_optional(const arm_options_t& options) {
             case 'C': tower3_offset = i.second; break;
             case 'D': tower1_angle = i.second; break;
             case 'E': tower2_angle = i.second; break;
-            case 'F': tower3_angle = i.second; break;
+            case 'F': tower3_angle = i.second; break; // WARNING this will be deprecated
+            case 'H': tower3_angle = i.second; break;
         }
     }
     init();
@@ -141,7 +142,7 @@ bool LinearDeltaSolution::get_optional(arm_options_t& options) {
         options['C'] = this->tower3_offset;
         options['D'] = this->tower1_angle;
         options['E'] = this->tower2_angle;
-        options['F'] = this->tower3_angle;
+        options['H'] = this->tower3_angle;
     }
 
     return true;
