@@ -5,35 +5,6 @@
 
 float Vector3::nan = NAN;
 
-Vector3::Vector3()
-{
-    elem[0] = elem[1] = elem[2] = 0.0F;
-}
-
-Vector3::Vector3(float a, float b, float c)
-{
-    elem[0] = a;
-    elem[1] = b;
-    elem[2] = c;
-}
-
-Vector3::Vector3(const Vector3 &to_copy)
-{
-    elem[0] = to_copy.elem[0];
-    elem[1] = to_copy.elem[1];
-    elem[2] = to_copy.elem[2];
-}
-
-Vector3& Vector3::operator= (const Vector3 &to_copy)
-{
-    if( this != &to_copy ) {
-        elem[0] = to_copy.elem[0];
-        elem[1] = to_copy.elem[1];
-        elem[2] = to_copy.elem[2];
-    }
-    return *this;
-}
-
 float Vector3::operator[](int i) const
 {
     if (i >= 0 && i <= 2)
