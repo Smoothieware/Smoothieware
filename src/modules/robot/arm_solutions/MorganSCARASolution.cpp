@@ -58,7 +58,7 @@ float MorganSCARASolution::to_degrees(float radians) {
     return radians*(180.0F/3.14159265359f);
 }
 
-void MorganSCARASolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] )
+void MorganSCARASolution::cartesian_to_actuator(const float cartesian_mm[], float actuator_mm[] )
 {
 
     float SCARA_pos[2],
@@ -103,7 +103,7 @@ void MorganSCARASolution::cartesian_to_actuator( float cartesian_mm[], float act
 
 }
 
-void MorganSCARASolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] ) {
+void MorganSCARASolution::actuator_to_cartesian(const float actuator_mm[], float cartesian_mm[] ) {
     // Perform forward kinematics, and place results in cartesian_mm[]
 
     float y1, y2,

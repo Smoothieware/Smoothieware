@@ -11,8 +11,8 @@ class CartesianSolution : public BaseSolution {
     public:
         CartesianSolution(){};
         CartesianSolution(Config*){};
-        void cartesian_to_actuator( float millimeters[], float steps[] );
-        void actuator_to_cartesian( float steps[], float millimeters[] );
+        void cartesian_to_actuator( const float millimeters[], float steps[] );
+        void actuator_to_cartesian( const float steps[], float millimeters[] );
 };
 
 

@@ -8,8 +8,8 @@ class Config;
 class LinearDeltaSolution : public BaseSolution {
     public:
         LinearDeltaSolution(Config*);
-        void cartesian_to_actuator( float[], float[] );
-        void actuator_to_cartesian( float[], float[] );
+        void cartesian_to_actuator(const float[], float[] );
+        void actuator_to_cartesian(const float[], float[] );
 
         bool set_optional(const arm_options_t& options);
         bool get_optional(arm_options_t& options);

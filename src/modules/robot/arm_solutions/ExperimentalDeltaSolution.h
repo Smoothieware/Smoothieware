@@ -8,11 +8,11 @@ class Config;
 class ExperimentalDeltaSolution : public BaseSolution {
     public:
         ExperimentalDeltaSolution(Config*);
-        void cartesian_to_actuator( float[], float[] );
-        void actuator_to_cartesian( float[], float[] );
+        void cartesian_to_actuator(const float[], float[] );
+        void actuator_to_cartesian(const float[], float[] );
 
         float solve_arm( float millimeters[] );
-        void rotate( float in[], float out[], float sin, float cos );
+        void rotate(const float in[], float out[], float sin, float cos );
 
     private:
         float arm_length;
