@@ -28,6 +28,7 @@
 #include "StreamOutputPool.h"
 #include "Pauser.h"
 #include "StepTicker.h"
+#include "BaseSolution.h"
 
 #include <ctype.h>
 
@@ -402,30 +403,6 @@ void Endstops::do_homing_cartesian(char axes_to_move)
     // Wait for all axes to have homed
     this->wait_for_homed(axes_to_move);
 
-    if (this->is_delta || this->is_scara) {
-        // move for soft trim
-        this->status = MOVING_BACK;
-        for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-            if ( this->trim_mm[c] != 0.0F && ( axes_to_move >> c ) & 1 ) {
-                inverted_dir = this->home_direction[c];
-                // move up or down depending on sign of trim, -ive is down away from home
-                if (this->trim_mm[c] < 0) inverted_dir = !inverted_dir;
-                this->feed_rate[c]= this->slow_rates[c];
-                STEPPER[c]->move(inverted_dir, abs(round(this->trim_mm[c]*STEPS_PER_MM(c))), 0);
-            }
-        }
-
-        // Wait for moves to be done
-        for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-            if (  ( axes_to_move >> c ) & 1 ) {
-                //THEKERNEL->streams->printf("axis %c \r\n", c );
-                while ( STEPPER[c]->is_moving() ) {
-                    THEKERNEL->call_event(ON_IDLE);
-                }
-            }
-        }
-    }
-
     // Homing is done
     this->status = NOT_HOMING;
 }
@@ -614,11 +591,36 @@ void Endstops::on_gcode_received(void *argument)
 
             if(home_all) {
                 // for deltas this may be important rather than setting each individually
-                THEKERNEL->robot->reset_axis_position(
+
+                // Here's where we would have been if the endstops were perfectly trimmed
+                float ideal_position[3] = {
                     this->homing_position[X_AXIS] + this->home_offset[X_AXIS],
                     this->homing_position[Y_AXIS] + this->home_offset[Y_AXIS],
-                    this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]);
-            }else{
+                    this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]
+                };
+
+                bool has_endstop_trim = this->is_delta || this->is_scara;
+                if (has_endstop_trim) {
+                    float ideal_actuator_position[3];
+                    THEKERNEL->robot->arm_solution->cartesian_to_actuator(ideal_position, ideal_actuator_position);
+
+                    // We are actually not at the ideal position, but a trim away
+                    float real_actuator_position[3] = {
+                        ideal_actuator_position[X_AXIS] - this->trim_mm[X_AXIS],
+                        ideal_actuator_position[Y_AXIS] - this->trim_mm[Y_AXIS],
+                        ideal_actuator_position[Z_AXIS] - this->trim_mm[Z_AXIS]
+                    };
+
+                    float real_position[3];
+                    THEKERNEL->robot->arm_solution->actuator_to_cartesian(real_actuator_position, real_position);
+                    // Reset the actuator positions to correspond our real position
+                    THEKERNEL->robot->reset_axis_position(real_position[0], real_position[1], real_position[2]);
+                } else {
+                    // without endstop trim, real_position == ideal_position
+                    // Reset the actuator positions to correspond our real position
+                    THEKERNEL->robot->reset_axis_position(ideal_position[0], ideal_position[1], ideal_position[2]);
+                }
+            } else {
                 // Zero the ax(i/e)s position, add in the home offset
                 for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
                     if ( (axes_to_move >> c)  & 1 ) {
