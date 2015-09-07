@@ -1,5 +1,3 @@
-#temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
-#temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
 # NOTE Lines must not exceed 132 characters
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
