@@ -36,6 +36,8 @@ Author: Michael Hackney, mhackney@eclecticangler.com
 #define temperatureswitch_switch_checksum             CHECKSUM("switch")
 #define temperatureswitch_heatup_poll_checksum        CHECKSUM("heatup_poll")
 #define temperatureswitch_cooldown_poll_checksum      CHECKSUM("cooldown_poll")
+#define temperatureswitch_trigger_checksum            CHECKSUM("trigger")
+#define temperatureswitch_inverted_checksum           CHECKSUM("inverted")
 #define designator_checksum                           CHECKSUM("designator")
 
 TemperatureSwitch::TemperatureSwitch()
@@ -115,6 +117,17 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
             return false;
         }
     }
+
+    // if we should turn the switch on or off when trigger is hit
+    ts->inverted = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_inverted_checksum)->by_default(false)->as_bool();
+
+    // if we should trigger when above and below, or when rising through, or when falling through the specified temp
+    string trig = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_trigger_checksum)->by_default("level")->as_string();
+    if(trig == "level") this->trigger= LEVEL;
+    else if(trig == "rising") this->trigger= RISING;
+    else if(trig == "falling") this->trigger= FALLING;
+    else this->trigger= LEVEL;
+
     ts->temperatureswitch_switch_cs= get_checksum(s); // checksum of the switch to use
 
     ts->temperatureswitch_threshold_temp = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_threshold_temp_checksum)->by_default(50.0f)->as_number();
@@ -123,6 +136,10 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     ts->temperatureswitch_heatup_poll = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_heatup_poll_checksum)->by_default(15)->as_number();
     ts->temperatureswitch_cooldown_poll = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_cooldown_poll_checksum)->by_default(60)->as_number();
     ts->current_delay = ts->temperatureswitch_heatup_poll;
+
+    // set initial state
+    float current_temp = this->get_highest_temperature();
+    this->lower= current_temp < this->temperatureswitch_threshold_temp;
 
     // Register for events
     ts->register_for_event(ON_SECOND_TICK);
@@ -136,23 +153,33 @@ void TemperatureSwitch::on_second_tick(void *argument)
     second_counter++;
     if (second_counter < current_delay) {
         return;
+
     } else {
         second_counter = 0;
         float current_temp = this->get_highest_temperature();
 
         if (current_temp >= this->temperatureswitch_threshold_temp) {
-            // temp >= threshold temp, turn the cooler switch on if it isn't already
-            if (!temperatureswitch_state) {
+            // temp >= threshold temp, call set_switch if trigger is LEVEL, or if we were lower and RISING
+            if (this->trigger == LEVEL || (this->lower && this->trigger == RISING)) {
+                this->lower= false;
                 set_switch(true);
                 current_delay = temperatureswitch_cooldown_poll;
             }
+            if(this->lower && this->trigger == FALLING) {
+                this->lower= false;
+            }
+
         } else {
-            // temp < threshold temp, turn the cooler switch off if it isn't already
-            if (temperatureswitch_state) {
+            // temp < threshold temp, call set_switch if trigger is LEVEL, or if we were not lower and FALLING
+            if (this->trigger == LEVEL || (!this->lower && this->trigger == FALLING)) {
+                this->lower= true;
                 set_switch(false);
                 current_delay = temperatureswitch_heatup_poll;
             }
-        }
+            if(!this->lower && this->trigger == RISING) {
+                this->lower= true;
+            }
+       }
     }
 }
 
@@ -178,9 +205,14 @@ float TemperatureSwitch::get_highest_temperature()
 // Turn the switch on (true) or off (false)
 void TemperatureSwitch::set_switch(bool switch_state)
 {
+    if(this->temperatureswitch_state == switch_state) return;
+
     this->temperatureswitch_state = switch_state;
-    bool ok = PublicData::set_value(switch_checksum, this->temperatureswitch_switch_cs, state_checksum, &this->temperatureswitch_state);
+
+    if(this->inverted) switch_state= !switch_state; // turn switch on or off inverted
+
+    bool ok = PublicData::set_value(switch_checksum, this->temperatureswitch_switch_cs, state_checksum, &switch_state);
     if (!ok) {
-        THEKERNEL->streams->printf("Failed changing switch state.\r\n");
+        THEKERNEL->streams->printf("// Failed changing switch state.\r\n");
     }
 }

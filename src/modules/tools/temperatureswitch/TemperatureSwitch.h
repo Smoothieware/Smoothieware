@@ -38,7 +38,7 @@ class TemperatureSwitch : public Module
         // turn the switch on or off
         void set_switch(bool cooler_state);
 
-        // the set of temperature controllers that match the reuired designator prefix
+        // the set of temperature controllers that match the required designator prefix
         vector<uint16_t> temp_controllers;
 
         // temperatureswitch.hotend.threshold_temp
@@ -61,8 +61,15 @@ class TemperatureSwitch : public Module
         // we are delaying for this many seconds
         uint16_t current_delay;
 
+        enum TRIGGER_TYPE {LEVEL, RISING, FALLING };
+
         // is the switch currently on (1) or off (0)?
-        bool temperatureswitch_state;
+        struct {
+            bool temperatureswitch_state:1;
+            bool inverted:1;
+            bool lower:1;
+            TRIGGER_TYPE trigger:2;
+        };
 };
 
 #endif
