@@ -38,6 +38,7 @@ Author: Michael Hackney, mhackney@eclecticangler.com
 #define temperatureswitch_cooldown_poll_checksum      CHECKSUM("cooldown_poll")
 #define temperatureswitch_trigger_checksum            CHECKSUM("trigger")
 #define temperatureswitch_inverted_checksum           CHECKSUM("inverted")
+#define temperatureswitch_arm_command_checksum        CHECKSUM("arm_mcode")
 #define designator_checksum                           CHECKSUM("designator")
 
 TemperatureSwitch::TemperatureSwitch()
@@ -123,10 +124,16 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
 
     // if we should trigger when above and below, or when rising through, or when falling through the specified temp
     string trig = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_trigger_checksum)->by_default("level")->as_string();
-    if(trig == "level") this->trigger= LEVEL;
-    else if(trig == "rising") this->trigger= RISING;
-    else if(trig == "falling") this->trigger= FALLING;
-    else this->trigger= LEVEL;
+    if(trig == "level") ts->trigger= LEVEL;
+    else if(trig == "rising") ts->trigger= RISING;
+    else if(trig == "falling") ts->trigger= FALLING;
+    else ts->trigger= LEVEL;
+
+    // the mcode used to arm the switch
+    ts->arm_mcode = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_arm_command_checksum)->by_default(0)->as_number();
+    // if not defined then always armed, otherwise start out disarmed
+    if(ts->arm_mcode == 0) ts->armed= true;
+    else ts->armed= false;
 
     ts->temperatureswitch_switch_cs= get_checksum(s); // checksum of the switch to use
 
@@ -138,13 +145,23 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     ts->current_delay = ts->temperatureswitch_heatup_poll;
 
     // set initial state
-    float current_temp = this->get_highest_temperature();
-    this->lower= current_temp < this->temperatureswitch_threshold_temp;
+    float current_temp = ts->get_highest_temperature();
+    ts->lower= current_temp < ts->temperatureswitch_threshold_temp;
 
     // Register for events
     ts->register_for_event(ON_SECOND_TICK);
-
+    ts->register_for_event(ON_GCODE_RECEIVED);
     return true;
+}
+
+void TemperatureSwitch::on_gcode_received(void *argument)
+{
+    if(this->arm_mcode == 0) return;
+
+    Gcode *gcode = static_cast<Gcode *>(argument);
+    if(gcode->has_m && gcode->m == this->arm_mcode) {
+        this->armed= (gcode->has_letter('S') && gcode->get_value('S') != 0);
+    }
 }
 
 // Called once a second but we only need to service on the cooldown and heatup poll intervals
