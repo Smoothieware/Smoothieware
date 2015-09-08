@@ -132,8 +132,14 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     // the mcode used to arm the switch
     ts->arm_mcode = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_arm_command_checksum)->by_default(0)->as_number();
     // if not defined then always armed, otherwise start out disarmed
-    if(ts->arm_mcode == 0) ts->armed= true;
-    else ts->armed= false;
+    if(ts->arm_mcode == 0){
+        ts->armed= true;
+        ts->one_shot= false;
+
+    }else{
+        ts->armed= false;
+        ts->one_shot= true;
+    }
 
     ts->temperatureswitch_switch_cs= get_checksum(s); // checksum of the switch to use
 
@@ -225,6 +231,12 @@ void TemperatureSwitch::set_switch(bool switch_state)
     if(this->temperatureswitch_state == switch_state) return;
 
     this->temperatureswitch_state = switch_state;
+
+    if(this->one_shot) {
+        // if one shot we only trigger once per arming
+        if(!this->armed) return; // do not actually switch anything if not armed, but we do need to keep the state
+        this->armed= false;
+    }
 
     if(this->inverted) switch_state= !switch_state; // turn switch on or off inverted
 
