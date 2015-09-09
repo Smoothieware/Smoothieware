@@ -167,6 +167,7 @@ void TemperatureSwitch::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
     if(gcode->has_m && gcode->m == this->arm_mcode) {
         this->armed= (gcode->has_letter('S') && gcode->get_value('S') != 0);
+        gcode->stream->printf("temperature switch %s\n", this->armed ? "armed" : "disarmed");
     }
 }
 
@@ -228,14 +229,15 @@ float TemperatureSwitch::get_highest_temperature()
 // Turn the switch on (true) or off (false)
 void TemperatureSwitch::set_switch(bool switch_state)
 {
-    if(this->temperatureswitch_state == switch_state) return;
-
-    this->temperatureswitch_state = switch_state;
-
     if(this->one_shot) {
         // if one shot we only trigger once per arming
         if(!this->armed) return; // do not actually switch anything if not armed, but we do need to keep the state
         this->armed= false;
+
+    }else{
+        // we do not check the existing state for one shots
+        if(this->temperatureswitch_state == switch_state) return;
+        this->temperatureswitch_state = switch_state;
     }
 
     if(this->inverted) switch_state= !switch_state; // turn switch on or off inverted
