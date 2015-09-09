@@ -158,7 +158,8 @@ void Switch::on_config_reload(void *argument)
 
     } else if(this->output_type == HWPWM) {
         // default is 50Hz
-        this->pwm_pin->period_ms(THEKERNEL->config->value(switch_checksum, this->name_checksum, pwm_period_ms_checksum )->by_default(20)->as_number());
+        float p= THEKERNEL->config->value(switch_checksum, this->name_checksum, pwm_period_ms_checksum )->by_default(20)->as_number() * 1000.0F; // ms but fractins are allowed
+        this->pwm_pin->period_us(p);
         // default is 0% duty cycle
         this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(0)->as_number();
         if(this->switch_state) {
