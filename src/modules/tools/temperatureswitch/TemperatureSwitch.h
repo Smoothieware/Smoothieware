@@ -28,6 +28,7 @@ class TemperatureSwitch : public Module
         TemperatureSwitch();
         void on_module_loaded();
         void on_second_tick(void *argument);
+        void on_gcode_received(void *argument);
 
     private:
         bool load_config(uint16_t modcs);
@@ -38,7 +39,7 @@ class TemperatureSwitch : public Module
         // turn the switch on or off
         void set_switch(bool cooler_state);
 
-        // the set of temperature controllers that match the reuired designator prefix
+        // the set of temperature controllers that match the required designator prefix
         vector<uint16_t> temp_controllers;
 
         // temperatureswitch.hotend.threshold_temp
@@ -61,8 +62,20 @@ class TemperatureSwitch : public Module
         // we are delaying for this many seconds
         uint16_t current_delay;
 
+        // the mcode that will arm the switch, 0 means always armed
+        uint16_t arm_mcode;
+
+        enum TRIGGER_TYPE {LEVEL, RISING, FALLING };
+
         // is the switch currently on (1) or off (0)?
-        bool temperatureswitch_state;
+        struct {
+            bool temperatureswitch_state:1;
+            bool inverted:1;
+            bool lower:1;
+            bool armed:1;
+            bool one_shot:1;
+            TRIGGER_TYPE trigger:2;
+        };
 };
 
 #endif
