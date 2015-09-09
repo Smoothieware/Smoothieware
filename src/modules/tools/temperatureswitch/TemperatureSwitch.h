@@ -73,8 +73,7 @@ class TemperatureSwitch : public Module
             bool inverted:1;
             bool lower:1;
             bool armed:1;
-            bool can_arm:1;
-            bool edge:1;
+            bool one_shot:1;
             TRIGGER_TYPE trigger:2;
         };
 };
