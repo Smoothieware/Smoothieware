@@ -634,10 +634,12 @@ void ZGridStrategy::setAdjustFunction(bool on)
 {
     if(on) {
         // set the compensationTransform in robot
-        THEKERNEL->robot->compensationTransform= [this](float target[3]) { target[2] += this->getZOffset(target[0], target[1]); };
+        THEKERNEL->robot->compensationTransform=        [this](float target[3]) { target[2] += this->getZOffset(target[0], target[1]); };
+        THEKERNEL->robot->compensationTransformInverse= [this](float target[3]) { target[2] -= this->getZOffset(target[0], target[1]); };
     }else{
         // clear it
         THEKERNEL->robot->compensationTransform= nullptr;
+        THEKERNEL->robot->compensationTransformInverse= nullptr;
     }
 }
 
