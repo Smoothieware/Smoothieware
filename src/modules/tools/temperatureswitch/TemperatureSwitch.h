@@ -31,6 +31,9 @@ class TemperatureSwitch : public Module
         void on_gcode_received(void *argument);
 
     private:
+        enum TRIGGER_TYPE {LEVEL, RISING, FALLING};
+        enum STATE {NONE, HIGH_TEMP, LOW_TEMP};
+
         bool load_config(uint16_t modcs);
 
         // get the highest temperature from the set of configured temperature controllers
@@ -38,6 +41,9 @@ class TemperatureSwitch : public Module
 
         // turn the switch on or off
         void set_switch(bool cooler_state);
+
+        // temperature has changed state
+        void set_state(STATE state);
 
         // the set of temperature controllers that match the required designator prefix
         vector<uint16_t> temp_controllers;
@@ -65,16 +71,11 @@ class TemperatureSwitch : public Module
         // the mcode that will arm the switch, 0 means always armed
         uint16_t arm_mcode;
 
-        enum TRIGGER_TYPE {LEVEL, RISING, FALLING };
-
-        // is the switch currently on (1) or off (0)?
         struct {
-            bool temperatureswitch_state:1;
             bool inverted:1;
-            bool lower:1;
             bool armed:1;
-            bool one_shot:1;
             TRIGGER_TYPE trigger:2;
+            STATE current_state:2;
         };
 };
 
