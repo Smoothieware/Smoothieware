@@ -26,7 +26,7 @@
 #define radius_checksum       CHECKSUM("radius")
 #define delta_calibration_strategy_checksum CHECKSUM("delta-calibration")
 
-std::function<void(float[3])> compute_rotation_transform(float p, float q, float offset, float inverse_r[3]);
+std::pair<std::function<void(float[3])>,std::function<void(float[3])>> compute_rotation_transform(float p, float q, float offset);
 int endstop_parameter_index(char parameter);
 
 bool CalibrationStrategy::update_parameter(char parameter, float delta) {
@@ -248,7 +248,8 @@ void CalibrationStrategy::compute_cartesian_position(float const actuator_positi
     THEKERNEL->robot->arm_solution->actuator_to_cartesian(trimmed_position, cartesian_position);
 
     // Inverse compensationTransform for z
-    THEKERNEL->robot->compensationTransformInverse(cartesian_position);
+    if (THEKERNEL->robot->compensationTransformInverse)
+        THEKERNEL->robot->compensationTransformInverse(cartesian_position);
 }
 
 float CalibrationStrategy::compute_model_error(float const actuator_position[3]) {
@@ -508,27 +509,44 @@ int endstop_parameter_index(char parameter) {
     }
 }
 
-std::function<void(float[3])> compute_rotation_transform(float p, float q, float offset, float inverse_r[3]) {
+Vector3 multiply_matrix(Vector3 const M[3], Vector3 const& x) {
+    return Vector3(
+            M[0].dot(x),
+            M[1].dot(x),
+            M[2].dot(x)
+    );
+}
+
+Vector3 multiply_matrix_transpose(Vector3 const M[3], Vector3 const& x) {
+    return Vector3(
+            Vector3(M[0].data()[0],M[1].data()[0],M[2].data()[0]).dot(x),
+            Vector3(M[0].data()[1],M[1].data()[1],M[2].data()[1]).dot(x),
+            Vector3(M[0].data()[2],M[1].data()[2],M[2].data()[2]).dot(x)
+    );
+}
+
+std::pair<std::function<void(float[3])>,std::function<void(float[3])>> compute_rotation_transform(float p, float q, float offset) {
     // setup rotation matrix
-    Vector3 x(1,0,0),
-            y(0,1,0),
-            z(p,q,sqrt(1-p*p-q*q));
-    // orthogonalize
-    y = z.cross(x).unit();
-    x = y.cross(z); // y and z are now orthogonal unit vectors
-
-    // store last row of R
-    inverse_r[0] = x[2];
-    inverse_r[1] = y[2];
-    inverse_r[2] = z[2];
-
-    return [x,y,z,offset](float p[3]) {
-        Vector3 q(p[0],p[1],p[2]);
-        // Note: multiply by R^T
-        p[0] = q.dot(x);
-        p[1] = q.dot(y);
-        p[2] = q.dot(z) + offset;
+    Vector3 M[3]{
+        Vector3{1,0,0},
+        Vector3{0,1,0},
+        Vector3{p,q,sqrtf(1-p*p-q*q)}
     };
+    // orthogonalize
+    M[1] = M[2].cross(M[0]).unit();
+    M[0] = M[1].cross(M[2]); // y and z are now orthogonal unit vectors
+    Vector3 RToffset = multiply_matrix_transpose(M, Vector3(0,0,offset));
+
+    return std::make_pair(
+                [M,offset](float p[3]) {
+        Vector3 rp = multiply_matrix(M, Vector3(p[0],p[1],p[2]));
+        for (int i = 0; i < 3; i++) p[i] = rp[i];
+        p[2] += offset;
+    },
+    [M,RToffset](float p[3]) {
+        Vector3 rp = multiply_matrix_transpose(M, Vector3(p[0],p[1],p[2]));
+        for (int i = 0; i < 3; i++) p[i] = rp[i] - RToffset[i];
+    });
 }
 
 

@@ -35,9 +35,6 @@ private:
     // Separate plane offset variable (to allow Home Offset to be kept constant)
     float plane_offset = 0;
 
-    // Last row of plane rotation matrix
-    float inverse_r[3] = {0,0,1};
-
     // cache endstop trim values
     float trim[3] = {};
 
