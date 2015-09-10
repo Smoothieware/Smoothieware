@@ -152,15 +152,16 @@ bool CalibrationStrategy::handleConfig()
 bool CalibrationStrategy::setup_probe() {
     // home
     zprobe->home();
-    zprobe->coordinated_move(NAN, NAN, 20, zprobe->getFastFeedrate(), false /* relative */);
 
     int s;
     if(!zprobe->run_probe(s, false)) return false;
 
-    //float dive_height = zprobe->zsteps_to_mm(s) - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
+    // We can not do a relative move now since we have lost our bearings (robot->last_milestone is incorrect)
+    // We also can not do a G92 since that resets our actuator positions.
+    // Luckily, our actuators know where they are.
+    THEKERNEL->robot->reset_position_from_current_actuator_position();
 
     zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight(), zprobe->getFastFeedrate(), true /* relative */);
-
     return true;
 }
 
