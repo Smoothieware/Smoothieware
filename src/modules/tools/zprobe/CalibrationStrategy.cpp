@@ -37,15 +37,50 @@ void CalibrationStrategy::update_compensation_transformation()
 {
     if (plane_u == 0 && plane_v == 0 && plane_offset == 0) {
         THEKERNEL->robot->compensationTransform = nullptr;
-        inverse_r[0] = 0; inverse_r[1] = 0; inverse_r[2] = 1;
-    } else
-        THEKERNEL->robot->compensationTransform = compute_rotation_transform(plane_u, plane_v, plane_offset, inverse_r);
+        THEKERNEL->robot->compensationTransformInverse = nullptr;
+    } else {
+        std::tie(THEKERNEL->robot->compensationTransform,
+                 THEKERNEL->robot->compensationTransformInverse)
+                 = compute_rotation_transform(plane_u, plane_v, plane_offset);
+    }
 }
 
 bool CalibrationStrategy::handleGcode(Gcode *gcode)
 {
     if( gcode->has_g) {
         // G code processing
+        if (gcode->g == 29) {
+            THEKERNEL->conveyor->wait_for_empty_queue();
+
+            auto args = gcode->get_args();
+            int samples = 50;
+            int repeats = 1;
+
+            for (auto &v : args) {
+                if (v.first == 'P')
+                    samples = int(v.second);
+                else if (v.first == 'O')
+                    repeats = int(v.second);
+            }
+
+            std::vector<Vector3> actuator_positions(samples);
+            gcode->stream->printf("Probing %d points (%d repeat(s) per point).\n", samples, repeats);
+
+            if (!probe_pattern(samples, repeats, (float(*)[3])actuator_positions[0].data())) {
+                gcode->stream->printf("ERROR: Probing failed!\n");
+                return false;
+            }
+
+            gcode->stream->printf("    X         Y         Z\n");
+            THEKERNEL->call_event(ON_IDLE);
+            for (auto const& s : actuator_positions) {
+                float cartesian[3];
+                compute_cartesian_position(s.data(), cartesian);
+                gcode->stream->printf("%8.4f %8.4f %8.4f\n", cartesian[0], cartesian[1], cartesian[2]);
+            }
+
+            return true;
+        }
         if( gcode->g == 32 ) { // auto calibration for delta, Z bed mapping for cartesian
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
