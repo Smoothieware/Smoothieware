@@ -610,11 +610,8 @@ bool CalibrationStrategy::set_parameter(char parameter, float value) {
         return false;
     } else {
         BaseSolution::arm_options_t options;
-        if(THEKERNEL->robot->arm_solution->get_optional(options)) {
-            options[parameter] = value;
-            return THEKERNEL->robot->arm_solution->set_optional(options);
-        }
-        return false;
+        options[parameter] = value;
+        return THEKERNEL->robot->arm_solution->set_optional(options);
     }
 }
 
