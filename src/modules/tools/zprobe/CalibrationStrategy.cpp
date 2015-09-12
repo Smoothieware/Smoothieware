@@ -26,8 +26,10 @@
 #define radius_checksum       CHECKSUM("radius")
 #define delta_calibration_strategy_checksum CHECKSUM("delta-calibration")
 
+namespace { // anonymous
 std::pair<std::function<void(float[3])>,std::function<void(float[3])>> compute_rotation_transform(float p, float q, float offset);
 int endstop_parameter_index(char parameter);
+} // anonymous namespace
 
 bool CalibrationStrategy::update_parameter(char parameter, float delta) {
     return set_parameter(parameter, get_parameter(parameter) + delta);
@@ -368,6 +370,7 @@ void CalibrationStrategy::compute_JTJ_JTr(std::vector<Vector3> const& actuator_p
     }
 }
 
+namespace { // anonymous
 // Solve Ax=b for positive semidefinite A using LDL^T decomposition
 // Destroys A and b in the process
 // Result is stored in b
@@ -411,6 +414,7 @@ void cholesky_backsub(int n, T A[/* n*n */], T b[/* n */]) {
             b[i] -= A[j*n + i] * b[j];
         }
     }
+}
 }
 
 bool CalibrationStrategy::probe_pattern(int n, int repeats, float actuator_positions[/*n*/][3]) {
@@ -536,6 +540,7 @@ again:
     return false;
 }
 
+namespace { // anonymous
 
 int endstop_parameter_index(char parameter) {
     switch(parameter) {
@@ -585,7 +590,7 @@ std::pair<std::function<void(float[3])>,std::function<void(float[3])>> compute_r
         for (int i = 0; i < 3; i++) p[i] = rp[i] - RToffset[i];
     });
 }
-
+} // anonymous namespace
 
 bool CalibrationStrategy::set_parameter(char parameter, float value) {
     if (isnan(value)) return false;
