@@ -14,24 +14,32 @@
 
 #include "easyunit/test.h"
 
+// this declares any global variables the test needs
 DECLARE(TemperatureSwitch)
   TemperatureSwitch *ts;
 END_DECLARE
 
+// called before each test
 SETUP(TemperatureSwitch)
 {
-  ts = new TemperatureSwitch();
-  //printf("...Setup TemperatureSwitch\n");
+    // create the module we want to test
+    ts = new TemperatureSwitch();
+    //printf("...Setup TemperatureSwitch\n");
 }
 
+// called after each test
 TEARDOWN(TemperatureSwitch)
 {
-  delete ts;
-  test_kernel_teardown();
+    // delete the module
+    delete ts;
 
-  //printf("...Teardown TemperatureSwitch\n");
+    // have kernel reset to a clean state
+    test_kernel_teardown();
+
+    //printf("...Teardown TemperatureSwitch\n");
 }
 
+// define various configs here, these are in the same formate they would appeat in the config file (comments removed for clarity)
 const static char edge_low_config[]= "\
 temperatureswitch.psu_off.enable true \n\
 temperatureswitch.psu_off.designator T \n\
@@ -54,6 +62,7 @@ temperatureswitch.psu_off.cooldown_poll 5 \n\
 ";
 
 // handle mock call to temperature control
+// simulates one temperature control with T designator and id of 123
 static void on_get_public_data_tc1(void *argument)
 {
     PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
@@ -82,6 +91,7 @@ static void on_get_public_data_tc2(void *argument)
     PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
 
     if(pdr->starts_with(temperature_control_checksum)) {
+        // return a current temperature of return_current_temp when requested
         if(!pdr->second_element_is(current_temperature_checksum)) return;
         if(!pdr->third_element_is(123)) return;
 
@@ -97,7 +107,7 @@ static void on_get_public_data_tc2(void *argument)
         pdr->clear_returned_data();
 
     } else if(pdr->starts_with(switch_checksum)){
-
+        // return status of the fan switch
         if(!pdr->second_element_is(get_checksum("fan"))) return;
 
         switch_get_hit= true;
@@ -112,6 +122,7 @@ static void on_get_public_data_tc2(void *argument)
     }
 }
 
+// simulates the switch being turned on or off so we can test the state
 static bool switch_set_hit= false;
 static void on_set_public_data_switch(void *argument)
 {
@@ -128,7 +139,7 @@ static void on_set_public_data_switch(void *argument)
     pdr->set_taken();
 }
 
-
+// stimulates the module with on_second ticks in which it asks for a temperature which we simulate above
 static bool set_temp(TemperatureSwitch *nts, float t)
 {
     // trap public data request to TemperatureControl and return a temperature
@@ -167,7 +178,8 @@ TESTF(TemperatureSwitch,level_low_high)
     // test it registered the event
     ASSERT_TRUE(THEKERNEL->kernel_has_event(ON_GCODE_RECEIVED, nts.get()));
 
-    set_temp(nts.get(), 25);
+    // set the first temperature
+    ASSERT_TRUE(set_temp(nts.get(), 25));
 
     // capture any call to the switch to turn it on or off
     switch_state= false;
@@ -176,7 +188,7 @@ TESTF(TemperatureSwitch,level_low_high)
     test_kernel_trap_event(ON_SET_PUBLIC_DATA, on_set_public_data_switch);
 
     // increase temp low -> high
-    set_temp(nts.get(), 60);
+    ASSERT_TRUE(set_temp(nts.get(), 60));
 
     ASSERT_TRUE(switch_get_hit);
     // make sure switch was set
@@ -186,7 +198,7 @@ TESTF(TemperatureSwitch,level_low_high)
     ASSERT_TRUE(switch_state);
 
     // now make sure it turns off when temp drops
-    set_temp(nts.get(), 30);
+    ASSERT_TRUE(set_temp(nts.get(), 30));
 
     // and make sure it was turned off
     ASSERT_TRUE(!switch_state);
@@ -216,20 +228,20 @@ TESTF(TemperatureSwitch,edge_high_low)
     ASSERT_TRUE(!nts->is_armed());
 
     // set initial temp low
-    set_temp(nts.get(), 25);
+    ASSERT_TRUE(set_temp(nts.get(), 25));
 
     // capture any call to the switch to turn it on or off
     switch_state= true;
     test_kernel_trap_event(ON_SET_PUBLIC_DATA, on_set_public_data_switch);
 
     // increase temp low -> high
-    set_temp(nts.get(), 60);
+    ASSERT_TRUE(set_temp(nts.get(), 60));
 
     // make sure it was not turned off
     ASSERT_TRUE(switch_state);
 
     // drop temp
-    set_temp(nts.get(), 30);
+    ASSERT_TRUE(set_temp(nts.get(), 30));
 
     // and make sure it was still on
     ASSERT_TRUE(switch_state);
@@ -241,13 +253,13 @@ TESTF(TemperatureSwitch,edge_high_low)
     ASSERT_TRUE(nts->is_armed());
 
     // increase temp low -> high
-    set_temp(nts.get(), 60);
+    ASSERT_TRUE(set_temp(nts.get(), 60));
 
     // make sure it was not turned off
     ASSERT_TRUE(switch_state);
 
     // drop temp
-    set_temp(nts.get(), 30);
+    ASSERT_TRUE(set_temp(nts.get(), 30));
 
     // and make sure it was tunred off
     ASSERT_TRUE(!switch_state);
