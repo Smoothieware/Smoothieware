@@ -220,7 +220,7 @@ bool CalibrationStrategy::probe_spiral(int n, int repeats, float actuator_positi
     auto theta = [a](float length) {
         return sqrt(2*length/a);
     };
-    double step_length = probe_radius * probe_radius / (2 * a * n);
+    float step_length = probe_radius * probe_radius / (2 * a * n);
 
     // move the probe to it's starting position a specified height above the bed
     setup_probe();
@@ -339,7 +339,7 @@ void CalibrationStrategy::compute_JTJ_JTr(std::vector<Vector3> const& actuator_p
             jacobian[i] = compute_model_error(actuator_positions[j].data());
 
             set_parameter(parameters[i], x0 - h);
-            float one_over_2_h = 1./((x0+h)-(x0-h)); // trick to improve precision
+            float one_over_2_h = 1.f/((x0+h)-(x0-h)); // trick to improve precision
             jacobian[i] = (jacobian[i] - compute_model_error(actuator_positions[j].data())) * one_over_2_h;
 
             // restore the original value
@@ -497,7 +497,7 @@ again:
 
         if (!(new_error < last_error)) {
             restore();
-            if (sq_sum_delta < 0.0001 * 0.0001) {
+            if (sq_sum_delta < 0.0001f * 0.0001f) {
                 stream->printf("\nConverged\n");
                 return true;
             }
@@ -518,8 +518,8 @@ again:
             save();
             print_state();
 
-            if (improvement < 0.0001 ||
-                sq_sum_delta < 0.0001 * 0.0001) {
+            if (improvement < 0.0001f ||
+                sq_sum_delta < 0.0001f * 0.0001f) {
                 // improvement < 0.01 % or < 0.1 µm adjustment
                 stream->printf("Done\n");
                 return true;
@@ -530,7 +530,7 @@ again:
             if (lambda < 1e-7) lambda = 1e-7; // Reasonable lower limit for float precision
         }
     }
-    if (last_error < 0.001) return true; // We are within 1 µm, let's call that a success
+    if (last_error < 0.001f) return true; // We are within 1 µm, let's call that a success
 
     stream->printf("Failed to converge after %d iterations\n", max_iterations);
     return false;
