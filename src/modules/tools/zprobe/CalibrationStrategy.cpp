@@ -217,10 +217,10 @@ bool CalibrationStrategy::probe_spiral(int n, int repeats, float actuator_positi
     // step_length = length(theta_max)) / n == probe_radius^2/(2*a*n)
     // solve a * 2pi == step_length -> a = probe_radius / (2*sqrt(n)*sqrt(pi))
 
-    float a = probe_radius / (2 * sqrt(n * M_PI));
+    float a = probe_radius / (2 * sqrtf(n * M_PI));
 
     auto theta = [a](float length) {
-        return sqrt(2*length/a);
+        return sqrtf(2*length/a);
     };
     float step_length = probe_radius * probe_radius / (2 * a * n);
 
@@ -231,8 +231,8 @@ bool CalibrationStrategy::probe_spiral(int n, int repeats, float actuator_positi
         float angle = theta(i * step_length);
         float r = angle * a;
         // polar to cartesian
-        float x = r * cos(angle);
-        float y = r * sin(angle);
+        float x = r * cosf(angle);
+        float y = r * sinf(angle);
 
         int steps; // dummy
         if (!zprobe->doProbeAt(steps, x, y, actuator_positions[i], repeats)) return false;
@@ -306,7 +306,7 @@ float CalibrationStrategy::compute_model_rms_error(std::vector<Vector3> const& a
         float e = compute_model_error(actuator_position.data());
         err += e*e;
     }
-    return sqrt(err / actuator_positions.size());
+    return sqrtf(err / actuator_positions.size());
 }
 
 void CalibrationStrategy::compute_JTJ_JTr(std::vector<Vector3> const& actuator_positions,
