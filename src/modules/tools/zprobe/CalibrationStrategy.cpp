@@ -154,7 +154,8 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
         }
     } else if(gcode->has_m) {
         // handle mcodes
-        if(gcode->m == 500 || gcode->m == 503) { // M500 save, M503 display
+        if((gcode->m == 500 && (plane_u != 0 || plane_v != 0 || plane_offset != 0))
+                || gcode->m == 503) { // M500 save, M503 display
             gcode->stream->printf(";Plane tilt:\n");
             gcode->stream->printf("M567 U%.5f V%.5f W%.5f\n", plane_u, plane_v, plane_offset);
             return true;
