@@ -587,6 +587,8 @@ std::pair<std::function<void(float[3])>,std::function<void(float[3])>> compute_r
 
 
 bool CalibrationStrategy::set_parameter(char parameter, float value) {
+    if (isnan(value)) return false;
+
     if (parameter == 'U' || parameter == 'V' || parameter == 'W') {
         if (parameter == 'U') plane_u = value;
         if (parameter == 'V') plane_v = value;
@@ -633,8 +635,10 @@ float CalibrationStrategy::get_parameter(char parameter) {
         }
     } else {
         BaseSolution::arm_options_t options;
-        if(THEKERNEL->robot->arm_solution->get_optional(options)) {
-            return options[parameter];
+        if(THEKERNEL->robot->arm_solution->get_optional(options, true /* force_all */)) {
+            auto f = options.find(parameter);
+            if (f != options.end())
+                return f->second;
         }
     }
     return NAN;
