@@ -54,8 +54,6 @@ static const uint8_t icons[] = { // 115x19 - 3 bytes each: he1, he2, he3, bed, f
     0x0C, 0x00, 0x00, 0x06, 0x00, 0x00, 0x06, 0x00, 0x01, 0xFF, 0xFF, 0x80, 0x00, 0x00, 0x00
 };
 
-
-
 WatchScreen::WatchScreen()
 {
     speed_changed = false;
@@ -80,6 +78,23 @@ void WatchScreen::on_enter()
     this->refresh_screen(false);
     THEPANEL->enter_control_mode(1, 0.5);
     THEPANEL->set_control_value(this->current_speed);
+
+    // enumerate temperature controls
+    temp_controllers.clear();
+    std::vector<struct pad_temperature> controllers;
+    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+    if (ok) {
+        for (auto &c : controllers) {
+            temp_controllers.push_back(c.id);
+        }
+    }
+}
+
+static struct pad_temperature getTemperatures(uint16_t heater_cs)
+{
+    struct pad_temperature temp;
+    PublicData::get_value( temperature_control_checksum, current_temperature_checksum, heater_cs, &temp );
+    return temp;
 }
 
 void WatchScreen::on_refresh()
@@ -126,23 +141,19 @@ void WatchScreen::on_refresh()
         // for LCDs with leds set them according to heater status
         bool bed_on= false, hotend_on= false, is_hot= false;
         uint8_t heon=0, hemsk= 0x01; // bit set for which hotend is on bit0: hotend1, bit1: hotend2 etc
-        temp_controllers.clear();
-        std::vector<struct pad_temperature> controllers;
-        bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
-        if (ok) {
-            for (auto &c : controllers) {
-                temp_controllers.push_back(c.id);
-                if(c.current_temperature > 50) is_hot= true; // anything is hot
-                if(c.designator.front() == 'B' && c.target_temperature > 0) bed_on= true;   // bed on/off
-                if(c.designator.front() == 'T') { // a hotend by convention
-                    if(c.target_temperature > 0){
-                        hotend_on= true;// hotend on/off (anyone)
-                        heon |= hemsk;
-                    }
-                    hemsk <<= 1;
+        for(auto id : temp_controllers) {
+            struct pad_temperature c= getTemperatures(id);
+            if(c.current_temperature > 50) is_hot= true; // anything is hot
+            if(c.designator.front() == 'B' && c.target_temperature > 0) bed_on= true;   // bed on/off
+            if(c.designator.front() == 'T') { // a hotend by convention
+                if(c.target_temperature > 0){
+                    hotend_on= true;// hotend on/off (anyone)
+                    heon |= hemsk;
                 }
+                hemsk <<= 1;
             }
         }
+
         THEPANEL->lcd->setLed(LED_BED_ON, bed_on);
         THEPANEL->lcd->setLed(LED_HOTEND_ON, hotend_on);
         THEPANEL->lcd->setLed(LED_HOT, is_hot);
@@ -235,13 +246,6 @@ void WatchScreen::get_sd_play_info()
         this->elapsed_time = 0;
         this->sd_pcnt_played = 0;
     }
-}
-
-static struct pad_temperature getTemperatures(uint16_t heater_cs)
-{
-    struct pad_temperature temp;
-    PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &temp );
-    return temp;
 }
 
 void WatchScreen::display_menu_line(uint16_t line)

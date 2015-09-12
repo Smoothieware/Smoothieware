@@ -210,7 +210,7 @@ float TemperatureSwitch::get_highest_temperature()
     float high_temp = 0.0;
 
     for (auto controller : temp_controllers) {
-        bool ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &temp);
+        bool ok = PublicData::get_value(temperature_control_checksum, current_temperature_checksum, controller, &temp);
         if (ok) {
             // check if this controller's temp is the highest and save it if so
             if (temp.current_temperature > high_temp) {

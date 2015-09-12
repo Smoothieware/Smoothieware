@@ -564,12 +564,27 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
     if (what == "temp") {
         struct pad_temperature temp;
         string type = shift_parameter( parameters );
-        bool ok = PublicData::get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &temp );
+        if(type.empty()) {
+            // scan all temperature controls
+            std::vector<struct pad_temperature> controllers;
+            bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+            if (ok) {
+                for (auto &c : controllers) {
+                   stream->printf("%s (%d) temp: %f/%f @%d\r\n", c.designator.c_str(), c.id, c.current_temperature, c.target_temperature, c.pwm);
+                }
 
-        if (ok) {
-            stream->printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
-        } else {
-            stream->printf("%s is not a known temperature device\r\n", type.c_str());
+            } else {
+                stream->printf("no heaters found\r\n");
+            }
+
+        }else{
+            bool ok = PublicData::get_value( temperature_control_checksum, current_temperature_checksum, get_checksum(type), &temp );
+
+            if (ok) {
+                stream->printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
+            } else {
+                stream->printf("%s is not a known temperature device\r\n", type.c_str());
+            }
         }
 
     } else if (what == "pos") {

@@ -536,14 +536,14 @@ void Player::suspend_part2()
     this->saved_temperatures.clear();
     if(!this->leave_heaters_on) {
         // save current temperatures, get a vector of all the controllers data
-        std::vector<struct pad_temperature*> *controllers;
-        bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, (void**)&controllers);
+        std::vector<struct pad_temperature> controllers;
+        bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
         if (ok) {
             // query each heater and save the target temperature if on
-            for (auto &c : *controllers) {
+            for (auto &c : controllers) {
                 // TODO see if in exclude list
-                if(c->target_temperature > 0) {
-                    this->saved_temperatures[c->id]= c->target_temperature;
+                if(c.target_temperature > 0) {
+                    this->saved_temperatures[c.id]= c.target_temperature;
                 }
             }
         }
@@ -604,7 +604,7 @@ void Player::resume_command(string parameters, StreamOutput *stream )
 
             for(auto& h : this->saved_temperatures) {
                 struct pad_temperature temp;
-                if(PublicData::get_value( temperature_control_checksum, h.first, current_temperature_checksum, &temp )) {
+                if(PublicData::get_value( temperature_control_checksum, current_temperature_checksum, h.first, &temp )) {
                     if(timeup)
                         stream->printf("%s:%3.1f /%3.1f @%d ", temp.designator.c_str(), temp.current_temperature, ((temp.target_temperature == -1) ? 0.0 : temp.target_temperature), temp.pwm);
                     wait= wait || (temp.current_temperature < h.second);

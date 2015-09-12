@@ -26,9 +26,9 @@ using namespace std;
 PrepareScreen::PrepareScreen()
 {
     // Children screens
-    void *controllers;
+    std::vector<struct pad_temperature> controllers;
     bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
-    if (ok) {
+    if (ok && controllers.size() > 0) {
         this->extruder_screen = (new ExtruderScreen())->set_parent(this);
     }else{
         this->extruder_screen= nullptr;
@@ -102,7 +102,7 @@ void PrepareScreen::cooldown()
 static float getTargetTemperature(uint16_t heater_cs)
 {
     struct pad_temperature temp;
-    bool ok = PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &temp );
+    bool ok = PublicData::get_value( temperature_control_checksum, current_temperature_checksum, heater_cs, &temp );
 
     if (ok) {
         return temp.target_temperature;
@@ -119,16 +119,16 @@ void PrepareScreen::setup_temperature_screen()
 
     int cnt= 0;
     // returns enabled temperature controllers
-    std::vector<struct pad_temperature*> *controllers;
-    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, (void**)&controllers);
+    std::vector<struct pad_temperature> controllers;
+    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
     if (ok) {
-        for (auto &c : *controllers) {
+        for (auto &c : controllers) {
             // rename if two of the known types
             const char *name;
-            if(c->designator == "T") name= "Hotend";
-            else if(c->designator == "B") name= "Bed";
-            else name= c->designator.c_str();
-            uint16_t i= c->id;
+            if(c.designator == "T") name= "Hotend";
+            else if(c.designator == "B") name= "Bed";
+            else name= c.designator.c_str();
+            uint16_t i= c.id;
 
             mvs->addMenuItem(name, // menu name
                 [i]() -> float { return getTargetTemperature(i); }, // getter
