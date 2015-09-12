@@ -560,25 +560,24 @@ void SimpleShell::break_command( string parameters, StreamOutput *stream)
 void SimpleShell::get_command( string parameters, StreamOutput *stream)
 {
     string what = shift_parameter( parameters );
-    void *returned_data;
 
     if (what == "temp") {
+        struct pad_temperature temp;
         string type = shift_parameter( parameters );
-        bool ok = PublicData::get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &returned_data );
+        bool ok = PublicData::get_value( temperature_control_checksum, get_checksum(type), current_temperature_checksum, &temp );
 
         if (ok) {
-            struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
             stream->printf("%s temp: %f/%f @%d\r\n", type.c_str(), temp.current_temperature, temp.target_temperature, temp.pwm);
         } else {
             stream->printf("%s is not a known temperature device\r\n", type.c_str());
         }
 
     } else if (what == "pos") {
-        bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &returned_data );
+        float *pos;
+        bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &pos );
 
         if (ok) {
-            float *pos = static_cast<float *>(returned_data);
-            stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
+             stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
 
         } else {
             stream->printf("get pos command failed\r\n");

@@ -603,11 +603,11 @@ void Player::resume_command(string parameters, StreamOutput *stream )
             }
 
             for(auto& h : this->saved_temperatures) {
-                void *p;
-                if(PublicData::get_value( temperature_control_checksum, h.first, current_temperature_checksum, &p )) {
-                    struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
-                    if(timeup) stream->printf("%s:%3.1f /%3.1f @%d ", temp->designator.c_str(), temp->current_temperature, ((temp->target_temperature == -1) ? 0.0 : temp->target_temperature), temp->pwm);
-                    wait= wait || (temp->current_temperature < h.second);
+                struct pad_temperature temp;
+                if(PublicData::get_value( temperature_control_checksum, h.first, current_temperature_checksum, &temp )) {
+                    if(timeup)
+                        stream->printf("%s:%3.1f /%3.1f @%d ", temp.designator.c_str(), temp.current_temperature, ((temp.target_temperature == -1) ? 0.0 : temp.target_temperature), temp.pwm);
+                    wait= wait || (temp.current_temperature < h.second);
                 }
             }
             if(timeup) stream->printf("\n");

@@ -70,7 +70,6 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     }
 
     // create a temperature control and load settings
-
     char designator= 0;
     string s= THEKERNEL->config->value(temperatureswitch_checksum, modcs, designator_checksum)->by_default("")->as_string();
     if(s.empty()){
@@ -86,13 +85,14 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     // create a new temperature switch module
     TemperatureSwitch *ts= new TemperatureSwitch();
 
-    // see what its designator is and add to list of it the one we specified
-    std::vector<struct pad_temperature*> *controllers;
-    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, (void**)&controllers);
+    // make a list of temperature controls with matching designators with the same first letter
+    // the list is added t the controllers vector given below
+    std::vector<struct pad_temperature> controllers;
+    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
     if (ok) {
-        for (auto &c : *controllers) {
-            if (c->designator[0] == designator) {
-                ts->temp_controllers.push_back(c->id);
+        for (auto &c : controllers) {
+            if (c.designator[0] == designator) {
+                ts->temp_controllers.push_back(c.id);
             }
         }
     }
@@ -206,13 +206,12 @@ void TemperatureSwitch::on_second_tick(void *argument)
 // Get the highest temperature from the set of temperature controllers
 float TemperatureSwitch::get_highest_temperature()
 {
-    void *returned_temp;
+    struct pad_temperature temp;
     float high_temp = 0.0;
 
     for (auto controller : temp_controllers) {
-        bool temp_ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &returned_temp);
-        if (temp_ok) {
-            struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_temp);
+        bool ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &temp);
+        if (ok) {
             // check if this controller's temp is the highest and save it if so
             if (temp.current_temperature > high_temp) {
                 high_temp = temp.current_temperature;

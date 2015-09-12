@@ -101,11 +101,10 @@ void PrepareScreen::cooldown()
 
 static float getTargetTemperature(uint16_t heater_cs)
 {
-    void *returned_data;
-    bool ok = PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
+    struct pad_temperature temp;
+    bool ok = PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &temp );
 
     if (ok) {
-        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
         return temp.target_temperature;
     }
 
