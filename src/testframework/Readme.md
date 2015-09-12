@@ -1,4 +1,7 @@
-# Test framework Usage
+# Test framework
+
+## Background
+
 
 This is a frame work for writing unit tests for modules or libs.
 It compiles only src/libs/... and a few select needed modules by default.
@@ -6,12 +9,14 @@ It runs on the target and the output is written to the serial UART, it runs well
 
 You can edit the Rakefile to specify which module you are going to test the example has tools/temperaturecontrol selected.
 
-The unit tests go in a directory named src/testframework/unittests/XXXX/YYYY where XXXX is the module subdirectory (tools,utils) and YYYY is the modulename
+The unit tests go in a directory named src/testframework/unittests/*XXXX*/*YYYY* where *XXXX* is the module subdirectory (tools,utils) and *YYYY* is the modulename
 
 The Kernel and main are replaced with special versions for testing.
 
-The main way to test is to stimualte the modules by sending it commands via on_gcode_received(), and monitor its actions my mockin gthe ON_PUBLIC_SET/GET calls it makes.
-A properly written module does not access other modules any other way.
+The main way to test is to stimulate the modules by sending it commands via
+on_gcode_received() (or other events it is registered for), and monitor its
+actions my mocking the ON_PUBLIC_SET/GET calls it makes. A properly written
+module does not access other modules any other way.
 
 Many HAL calls are made via THEKERNEL->xxx (eg THEKERNEL->adc) and these can be intercepted by mocks to provide the module with its external data.
 
@@ -19,14 +24,17 @@ An example is provided here...
 
 `src/testframework/unittests/tools/temperatureswitch/TEST_TemperatureSwitch.cpp`
 
-you compile a unit test and framework using rake...
+## Usage
+
+You compile a unit test and framework using [rake](http://rake.rubyforge.org/)...
 
 ```shell
-rake testing=1
-rake upload
+> rake testing=1
+> rake upload
 ```
 
-The unit test will run, the results are printed to the serial uart port, and then it is lieft in DFU mode so rake upload can be run again for the next test.
+The unit test will run, the results are printed to the serial uart port, and then it is left in DFU mode so `rake upload`  can be run again for the next test.
+
 
 
 
