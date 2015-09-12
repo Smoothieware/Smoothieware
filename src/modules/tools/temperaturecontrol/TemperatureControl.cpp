@@ -354,7 +354,32 @@ void TemperatureControl::on_get_public_data(void *argument)
         }
         return;
 
-    }else if(!pdr->second_element_is(this->name_checksum)) return;
+    }else if(!pdr->second_element_is(poll_controls_checksum)) {
+        // polling for all temperature controls
+        // add our data to the list
+        std::vector<struct pad_temperature*> *v;
+        void *data= pdr->get_data_ptr();
+        if(data == nullptr) {
+            // first one allocates a vector for the return data
+            v= new std::vector<struct pad_temperature*> ;
+            pdr->set_data_ptr(v);
+
+        }else{
+            v= static_cast<std::vector<pad_temperature*>*>(data);
+        }
+
+        // setup data
+        this->public_data_return.current_temperature = this->get_temperature();
+        this->public_data_return.target_temperature = (target_temperature <= 0) ? 0 : this->target_temperature;
+        this->public_data_return.pwm = this->o;
+        this->public_data_return.designator= this->designator;
+        this->public_data_return.id= this->name_checksum;
+        v->push_back(&this->public_data_return);
+        return;
+    }
+
+    // not targeted at us
+    if(!pdr->second_element_is(this->name_checksum)) return;
 
     // ok this is targeted at us, so send back the requested data
     if(pdr->third_element_is(current_temperature_checksum)) {
@@ -362,6 +387,7 @@ void TemperatureControl::on_get_public_data(void *argument)
         this->public_data_return.target_temperature = (target_temperature <= 0) ? 0 : this->target_temperature;
         this->public_data_return.pwm = this->o;
         this->public_data_return.designator= this->designator;
+        this->public_data_return.id= this->name_checksum;
         pdr->set_data_ptr(&this->public_data_return);
         pdr->set_taken();
     }

@@ -86,17 +86,13 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     // create a new temperature switch module
     TemperatureSwitch *ts= new TemperatureSwitch();
 
-    // get the list of temperature controllers and remove any that don't have designator == specified designator
-    auto& tempcontrollers= THEKERNEL->temperature_control_pool->get_controllers();
-
     // see what its designator is and add to list of it the one we specified
-    void *returned_temp;
-    for (auto controller : tempcontrollers) {
-        bool temp_ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &returned_temp);
-        if (temp_ok) {
-            struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_temp);
-            if (temp.designator[0] == designator) {
-                ts->temp_controllers.push_back(controller);
+    std::vector<struct pad_temperature*> *controllers;
+    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, (void**)&controllers);
+    if (ok) {
+        for (auto &c : *controllers) {
+            if (c->designator[0] == designator) {
+                ts->temp_controllers.push_back(c->id);
             }
         }
     }

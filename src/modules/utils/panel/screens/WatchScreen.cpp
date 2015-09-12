@@ -126,15 +126,16 @@ void WatchScreen::on_refresh()
         // for LCDs with leds set them according to heater status
         bool bed_on= false, hotend_on= false, is_hot= false;
         uint8_t heon=0, hemsk= 0x01; // bit set for which hotend is on bit0: hotend1, bit1: hotend2 etc
-        for(auto m : THEKERNEL->temperature_control_pool->get_controllers()) {
-            // query each heater
-            void *p= getTemperatures(m);
-            struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
-            if(temp != nullptr) {
-                if(temp->current_temperature > 50) is_hot= true; // anything is hot
-                if(temp->designator.front() == 'B' && temp->target_temperature > 0) bed_on= true;   // bed on/off
-                if(temp->designator.front() == 'T') { // a hotend by convention
-                    if(temp->target_temperature > 0){
+        temp_controllers.clear();
+        std::vector<struct pad_temperature*> *controllers;
+        bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, (void**)&controllers);
+        if (ok) {
+            for (auto &c : *controllers) {
+                temp_controllers.push_back(c->id);
+                if(c->current_temperature > 50) is_hot= true; // anything is hot
+                if(c->designator.front() == 'B' && c->target_temperature > 0) bed_on= true;   // bed on/off
+                if(c->designator.front() == 'T') { // a hotend by convention
+                    if(c->target_temperature > 0){
                         hotend_on= true;// hotend on/off (anyone)
                         heon |= hemsk;
                     }
@@ -254,7 +255,7 @@ void WatchScreen::display_menu_line(uint16_t line)
     switch ( line ) {
         case 0:
         {
-            auto& tm= THEKERNEL->temperature_control_pool->get_controllers();
+            auto& tm= this->temp_controllers;
             if(tm.size() > 0) {
                 // only if we detected heaters in config
                 int n= 0;

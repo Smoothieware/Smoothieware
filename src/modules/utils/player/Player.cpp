@@ -535,19 +535,18 @@ void Player::suspend_part2()
 
     this->saved_temperatures.clear();
     if(!this->leave_heaters_on) {
-        // save current temperatures
-        for(auto m : THEKERNEL->temperature_control_pool->get_controllers()) {
+        // save current temperatures, get a vector of all the controllers data
+        std::vector<struct pad_temperature*> *controllers;
+        bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, (void**)&controllers);
+        if (ok) {
             // query each heater and save the target temperature if on
-            void *p;
-            if(PublicData::get_value( temperature_control_checksum, m, current_temperature_checksum, &p )) {
-                struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
+            for (auto &c : *controllers) {
                 // TODO see if in exclude list
-                if(temp != nullptr && temp->target_temperature > 0) {
-                    this->saved_temperatures[m]= temp->target_temperature;
+                if(c->target_temperature > 0) {
+                    this->saved_temperatures[c->id]= c->target_temperature;
                 }
             }
         }
-
 
         // turn off heaters that were on
         for(auto& h : this->saved_temperatures) {
