@@ -64,7 +64,6 @@ class TemperatureControl : public Module {
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;
         uint16_t get_m_code;
-        struct pad_temperature public_data_return;
 
         std::string designator;
 

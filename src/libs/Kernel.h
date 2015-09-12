@@ -30,7 +30,6 @@ class Planner;
 class StepTicker;
 class Adc;
 class PublicData;
-class TemperatureControlPool;
 
 class Kernel {
     public:
@@ -53,7 +52,6 @@ class Kernel {
         Config*           config;
         Conveyor*         conveyor;
         Pauser*           pauser;
-        TemperatureControlPool* temperature_control_pool;
 
         int debug;
         SlowTicker*       slow_ticker;
