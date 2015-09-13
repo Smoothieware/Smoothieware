@@ -177,7 +177,6 @@ void Endstops::on_config_reload(void *argument)
 
     this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
 
-
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[0]         = home_dir != home_to_max_checksum;
@@ -227,6 +226,21 @@ void Endstops::on_config_reload(void *argument)
 
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]){
         register_for_event(ON_IDLE);
+    }
+
+    // NOTE this may also be true of scara. TBD
+    if(this->is_delta) {
+        // some things must be the same or they will die, so force it here to avoid config errors
+        this->fast_rates[1]= this->fast_rates[2]= this->fast_rates[0];
+        this->slow_rates[1]= this->slow_rates[2]= this->slow_rates[0];
+        this->retract_mm[1]= this->retract_mm[2]= this->retract_mm[0];
+        this->home_direction[1]= this->home_direction[2]= this->home_direction[0];
+        this->homing_position[0]= this->homing_position[1]= 0;
+        if(this->limit_enable[Z_AXIS]) {
+            // we must enable all the limits not just one
+            this->limit_enable[X_AXIS]= true;
+            this->limit_enable[Y_AXIS]= true;
+        }
     }
 }
 
@@ -288,19 +302,33 @@ void Endstops::on_idle(void *argument)
 void Endstops::back_off_home(char axes_to_move)
 {
     this->status = BACK_OFF_HOME;
-    for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
-        if(this->limit_enable[c]) {
-            if( !this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) continue; // if not triggered no need to move off
+    if((is_delta || is_scara) && this->limit_enable[X_AXIS]) {
+        // these are handled differently
+        // Move off of the endstop using a regular relative move
+        char buf[32];
+        snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", this->retract_mm[X_AXIS]*(this->home_direction[X_AXIS]?1:-1), this->fast_rates[X_AXIS]*60.0F);
+        Gcode gc(buf, &(StreamOutput::NullStream));
+        bool oldmode= THEKERNEL->robot->absolute_mode;
+        THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+        THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+        THEKERNEL->robot->absolute_mode= oldmode; // restore mode
 
-            // Move off of the endstop using a regular relative move
-            char buf[32];
-            snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->fast_rates[c]*60.0F);
-            Gcode gc(buf, &(StreamOutput::NullStream));
-            bool oldmode= THEKERNEL->robot->absolute_mode;
-            THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
-            THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-            THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+    }else{
+        // cartesians
+        for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+            if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
+            if(this->limit_enable[c]) {
+                if( !this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) continue; // if not triggered no need to move off
+
+                // Move off of the endstop using a regular relative move
+                char buf[32];
+                snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->fast_rates[c]*60.0F);
+                Gcode gc(buf, &(StreamOutput::NullStream));
+                bool oldmode= THEKERNEL->robot->absolute_mode;
+                THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+                THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+                THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+            }
         }
     }
     // Wait for above to finish
