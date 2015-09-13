@@ -302,14 +302,12 @@ void Switch::on_get_public_data(void *argument)
     if(!pdr->second_element_is(this->name_checksum)) return; // likely fan, but could be anything
 
     // ok this is targeted at us, so send back the requested data
-    // caller has provided the location to write the state
+    // caller has provided the location to write the state to
     struct pad_switch *pad= static_cast<struct pad_switch *>(pdr->get_data_ptr());
     pad->name = this->name_checksum;
     pad->state = this->switch_state;
     pad->value = this->switch_value;
-
     pdr->set_taken();
-    pdr->clear_returned_data();
 }
 
 void Switch::on_set_public_data(void *argument)

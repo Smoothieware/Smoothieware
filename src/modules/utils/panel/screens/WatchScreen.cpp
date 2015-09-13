@@ -14,7 +14,7 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
-#include "modules/robot/RobotPublicAccess.h"
+#include "Robot.h"
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "NetworkPublicAccess.h"
@@ -206,27 +206,13 @@ void WatchScreen::get_current_status()
 // fetch the data we are displaying
 float WatchScreen::get_current_speed()
 {
-    void *returned_data;
-
-    bool ok = PublicData::get_value( robot_checksum, speed_override_percent_checksum, &returned_data );
-    if (ok) {
-        float cs = *static_cast<float *>(returned_data);
-        return cs;
-    }
-    return 0.0;
+    // in percent
+    return 6000.0F / THEKERNEL->robot->get_seconds_per_minute();
 }
 
 void WatchScreen::get_current_pos(float *cp)
 {
-    void *returned_data;
-
-    bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &returned_data );
-    if (ok) {
-        float *p = static_cast<float *>(returned_data);
-        cp[0] = p[0];
-        cp[1] = p[1];
-        cp[2] = p[2];
-    }
+    THEKERNEL->robot->get_axis_position(cp);
 }
 
 void WatchScreen::get_sd_play_info()
