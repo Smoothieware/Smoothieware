@@ -54,7 +54,7 @@ static bool get_switch_state(Switch *ts, struct pad_switch& s)
 {
     // inquire if the switch is on or off (simulate an ON_GET_PUBLIC_DATA)
     PublicDataRequest pdr(switch_checksum, fan_checksum, 0);
-    pdr.set_data_ptr(&s); // the caller may have put a placeholder for the returned data here
+    pdr.set_data_ptr(&s, false);
     ts->on_get_public_data(&pdr);
     return(pdr.is_taken() && !pdr.has_returned_data());
 }

@@ -78,7 +78,6 @@ static void on_get_public_data_tc1(void *argument)
     t.id= 123;
     v->push_back(t);
     pdr->set_taken();
-    pdr->clear_returned_data();
 }
 
 // Handle temperature request and switch status request
@@ -104,7 +103,6 @@ static void on_get_public_data_tc2(void *argument)
         t->designator= "T";
         t->id= 123;
         pdr->set_taken();
-        pdr->clear_returned_data();
 
     } else if(pdr->starts_with(switch_checksum)){
         // return status of the fan switch
@@ -112,12 +110,10 @@ static void on_get_public_data_tc2(void *argument)
 
         switch_get_hit= true;
 
-        static struct pad_switch pad;
-        pad.name = get_checksum("fan");
-        pad.state = switch_state;
-        pad.value = 0;
-
-        pdr->set_data_ptr(&pad);
+        static struct pad_switch *pad= static_cast<pad_switch*>(pdr->get_data_ptr());;
+        pad->name = get_checksum("fan");
+        pad->state = switch_state;
+        pad->value = 0;
         pdr->set_taken();
     }
 }
@@ -261,7 +257,7 @@ TESTF(TemperatureSwitch,edge_high_low)
     // drop temp
     ASSERT_TRUE(set_temp(nts.get(), 30));
 
-    // and make sure it was tunred off
+    // and make sure it was turned off
     ASSERT_TRUE(!switch_state);
 
     // make sure it is not armed anymore
