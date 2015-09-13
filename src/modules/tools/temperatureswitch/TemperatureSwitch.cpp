@@ -233,14 +233,14 @@ void TemperatureSwitch::set_switch(bool switch_state)
     if(this->inverted) switch_state= !switch_state; // turn switch on or off inverted
 
     // get current switch state
-    struct pad_switch *pad;
-    bool ok = PublicData::get_value(switch_checksum, this->temperatureswitch_switch_cs, 0, (void **)&pad);
+    struct pad_switch pad;
+    bool ok = PublicData::get_value(switch_checksum, this->temperatureswitch_switch_cs, 0, &pad);
     if (!ok) {
         THEKERNEL->streams->printf("// Failed to get switch state.\r\n");
         return;
     }
 
-    if(pad->state == switch_state) return; // switch is already in the requested state
+    if(pad.state == switch_state) return; // switch is already in the requested state
 
     ok = PublicData::set_value(switch_checksum, this->temperatureswitch_switch_cs, state_checksum, &switch_state);
     if (!ok) {

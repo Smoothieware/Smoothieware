@@ -192,13 +192,10 @@ void WatchScreen::on_main_loop()
 // fetch the data we are displaying
 void WatchScreen::get_current_status()
 {
-    void *returned_data;
-    bool ok;
-
     // get fan status
-    ok = PublicData::get_value( switch_checksum, fan_checksum, 0, &returned_data );
+    struct pad_switch s;
+    bool ok = PublicData::get_value( switch_checksum, fan_checksum, 0, &s );
     if (ok) {
-        struct pad_switch s = *static_cast<struct pad_switch *>(returned_data);
         this->fan_state = s.state;
     } else {
         // fan probably disabled
