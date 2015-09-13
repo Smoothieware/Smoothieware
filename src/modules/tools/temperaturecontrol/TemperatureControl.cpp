@@ -368,12 +368,11 @@ void TemperatureControl::on_get_public_data(void *argument)
         t.id= this->name_checksum;
         v->push_back(t);
         pdr->set_taken();
-        pdr->clear_returned_data();
 
     }else if(pdr->second_element_is(current_temperature_checksum)) {
         // if targeted at us
         if(pdr->third_element_is(this->name_checksum)) {
-            // ok this is targeted at us, so send back the requested data
+            // ok this is targeted at us, so set the requ3sted data in the pointer passed into us
             struct pad_temperature *t= static_cast<pad_temperature*>(pdr->get_data_ptr());
             t->current_temperature = this->get_temperature();
             t->target_temperature = (target_temperature <= 0) ? 0 : this->target_temperature;
@@ -381,7 +380,6 @@ void TemperatureControl::on_get_public_data(void *argument)
             t->designator= this->designator;
             t->id= this->name_checksum;
             pdr->set_taken();
-            pdr->clear_returned_data();
         }
     }
 

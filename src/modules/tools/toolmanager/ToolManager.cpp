@@ -26,8 +26,6 @@ using namespace std;
 #include "libs/StreamOutput.h"
 #include "FileStream.h"
 
-#include "modules/robot/RobotPublicAccess.h"
-
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
 
 ToolManager::ToolManager(){

@@ -22,10 +22,9 @@
 #include "checksumm.h"
 #include "PublicData.h"
 #include "Gcode.h"
-//#include "StepTicker.h"
+#include "Robot.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
-#include "modules/robot/RobotPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
@@ -588,15 +587,9 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
     } else if (what == "pos") {
-        float *pos;
-        bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &pos );
-
-        if (ok) {
-             stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
-
-        } else {
-            stream->printf("get pos command failed\r\n");
-        }
+        float pos[3];
+        THEKERNEL->robot->get_axis_position(pos);
+        stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
     }
 }
 

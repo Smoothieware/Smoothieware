@@ -23,7 +23,6 @@ using std::string;
 #include "Gcode.h"
 #include "PublicDataRequest.h"
 #include "PublicData.h"
-#include "RobotPublicAccess.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
@@ -277,58 +276,6 @@ void Robot::check_max_actuator_speeds()
 void Robot::on_halt(void *arg)
 {
     halted= (arg == nullptr);
-}
-
-void Robot::on_get_public_data(void *argument)
-{
-    PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
-
-    if(!pdr->starts_with(robot_checksum)) return;
-
-    if(pdr->second_element_is(speed_override_percent_checksum)) {
-        static float return_data;
-        return_data = 100.0F * 60.0F / seconds_per_minute;
-        pdr->set_data_ptr(&return_data);
-        pdr->set_taken();
-
-    } else if(pdr->second_element_is(current_position_checksum)) {
-        static float return_data[3];
-        return_data[0] = from_millimeters(this->last_milestone[0]);
-        return_data[1] = from_millimeters(this->last_milestone[1]);
-        return_data[2] = from_millimeters(this->last_milestone[2]);
-
-        pdr->set_data_ptr(&return_data);
-        pdr->set_taken();
-    }
-}
-
-void Robot::on_set_public_data(void *argument)
-{
-    PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
-
-    if(!pdr->starts_with(robot_checksum)) return;
-
-    if(pdr->second_element_is(speed_override_percent_checksum)) {
-        // NOTE do not use this while printing!
-        float t = *static_cast<float *>(pdr->get_data_ptr());
-        // enforce minimum 10% speed
-        if (t < 10.0F) t = 10.0F;
-
-        this->seconds_per_minute = t / 0.6F; // t * 60 / 100
-        pdr->set_taken();
-    } else if(pdr->second_element_is(current_position_checksum)) {
-        float *t = static_cast<float *>(pdr->get_data_ptr());
-        for (int i = 0; i < 3; i++) {
-            this->last_milestone[i] = this->to_millimeters(t[i]);
-        }
-
-        float actuator_pos[3];
-        arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
-        for (int i = 0; i < 3; i++)
-            actuators[i]->change_last_milestone(actuator_pos[i]);
-
-        pdr->set_taken();
-    }
 }
 
 //A GCode has been received
