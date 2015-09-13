@@ -40,13 +40,6 @@ This is aprt of the Smoothie test framework, it generates a Mockable Kernl so ke
 
 Kernel* Kernel::instance;
 
-
-// define some dummies here to satisfy linker
-// Conveyor::Conveyor(){ /*dummy*/ }
-// void Conveyor::wait_for_empty_queue(){ /*dummy*/ }
-//template class HeapRing<Block>;
-
-
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
     instance= this; // setup the Singleton instance of the kernel
@@ -66,7 +59,7 @@ Kernel::Kernel(){
 
     this->slow_ticker = new SlowTicker();
 
-    // dummies (woul dbe noce to refactor to not have to create a conveyor)
+    // dummies (would be nice to refactor to not have to create a conveyor)
     this->conveyor= new Conveyor();
 
     // Configure UART depending on MRI config
