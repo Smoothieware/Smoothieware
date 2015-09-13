@@ -308,7 +308,6 @@ void Switch::on_get_public_data(void *argument)
     pad->state = this->switch_state;
     pad->value = this->switch_value;
 
-    pdr->set_data_ptr(&pad);
     pdr->set_taken();
     pdr->clear_returned_data();
 }
