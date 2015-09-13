@@ -119,8 +119,10 @@ if TESTING
   TESTMODULES= %w(tools/temperatureswitch) unless defined? EXCLUDE_MODULES
   puts "Modules under test: #{TESTMODULES}"
   excludes << %w(Kernel.cpp main.cpp) # we replace these with mock versions in testframework
-  testmodules= FileList['src/testframework/*.{c,cpp}', 'src/testframework/easyunit/*.{c,cpp}', 'src/modules/communication/SerialConsole.cpp', 'src/modules/communication/utils/Gcode.cpp'].include(TESTMODULES.collect { |e| "src/modules/#{e}/**/*.{c,cpp}"}).include(TESTMODULES.collect { |e| "src/testframework/unittests/#{e}/*.{c,cpp}"})
-  SRC = FileList['src/libs/**/*.{c,cpp}'].exclude(/#{excludes.join('|')}/) + testmodules
+  frameworkfiles= FileList['src/testframework/*.{c,cpp}', 'src/testframework/easyunit/*.{c,cpp}']
+  extrafiles= FileList['src/modules/communication/SerialConsole.cpp', 'src/modules/communication/utils/Gcode.cpp', 'src/modules/robot/Conveyor.cpp', 'src/modules/robot/Block.cpp']
+  testmodules= FileList['src/libs/**/*.{c,cpp}'].include(TESTMODULES.collect { |e| "src/modules/#{e}/**/*.{c,cpp}"}).include(TESTMODULES.collect { |e| "src/testframework/unittests/#{e}/*.{c,cpp}"}).exclude(/#{excludes.join('|')}/)
+  SRC =  frameworkfiles + extrafiles + testmodules
 else
   excludes << %w(testframework)
   SRC = FileList['src/**/*.{c,cpp}'].exclude(/#{excludes.join('|')}/)
