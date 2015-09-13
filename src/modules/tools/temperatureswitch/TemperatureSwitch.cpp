@@ -43,8 +43,6 @@ Author: Michael Hackney, mhackney@eclecticangler.com
 
 TemperatureSwitch::TemperatureSwitch()
 {
-    this->temperatureswitch_state = false;
-    this->second_counter = 0;
 }
 
 // Load module
@@ -127,15 +125,6 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
 
     // the mcode used to arm the switch
     ts->arm_mcode = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_arm_command_checksum)->by_default(0)->as_number();
-    // if not defined then always armed, otherwise start out disarmed
-    if(ts->arm_mcode == 0){
-        ts->armed= true;
-        ts->one_shot= false;
-
-    }else{
-        ts->armed= false;
-        ts->one_shot= true;
-    }
 
     ts->temperatureswitch_switch_cs= get_checksum(s); // checksum of the switch to use
 
@@ -147,19 +136,22 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     ts->current_delay = ts->temperatureswitch_heatup_poll;
 
     // set initial state
-    float current_temp = ts->get_highest_temperature();
-    ts->lower= current_temp < ts->temperatureswitch_threshold_temp;
+    ts->current_state= NONE;
+    this->second_counter = ts->current_delay; // do test immediately on first second_tick
+    // if not defined then always armed, otherwise start out disarmed
+    ts->armed= (ts->arm_mcode == 0);
 
     // Register for events
     ts->register_for_event(ON_SECOND_TICK);
-    ts->register_for_event(ON_GCODE_RECEIVED);
+
+    if(this->arm_mcode != 0) {
+        ts->register_for_event(ON_GCODE_RECEIVED);
+    }
     return true;
 }
 
 void TemperatureSwitch::on_gcode_received(void *argument)
 {
-    if(this->arm_mcode == 0) return;
-
     Gcode *gcode = static_cast<Gcode *>(argument);
     if(gcode->has_m && gcode->m == this->arm_mcode) {
         this->armed= (gcode->has_letter('S') && gcode->get_value('S') != 0);
@@ -171,36 +163,43 @@ void TemperatureSwitch::on_gcode_received(void *argument)
 void TemperatureSwitch::on_second_tick(void *argument)
 {
     second_counter++;
-    if (second_counter < current_delay) {
-        return;
+    if (second_counter < current_delay) return;
+
+    second_counter = 0;
+    float current_temp = this->get_highest_temperature();
+
+    if (current_temp >= this->temperatureswitch_threshold_temp) {
+        set_state(HIGH_TEMP);
 
     } else {
-        second_counter = 0;
-        float current_temp = this->get_highest_temperature();
+        set_state(LOW_TEMP);
+   }
+}
 
-        if (current_temp >= this->temperatureswitch_threshold_temp) {
-            // temp >= threshold temp, call set_switch if trigger is LEVEL, or if we were lower and RISING
-            if (this->trigger == LEVEL || (this->lower && this->trigger == RISING)) {
-                this->lower= false;
-                set_switch(true);
-                current_delay = temperatureswitch_cooldown_poll;
-            }
-            if(this->lower && this->trigger == FALLING) {
-                this->lower= false;
-            }
+void TemperatureSwitch::set_state(STATE state)
+{
+    if(state == this->current_state) return; // state did not change
 
-        } else {
-            // temp < threshold temp, call set_switch if trigger is LEVEL, or if we were not lower and FALLING
-            if (this->trigger == LEVEL || (!this->lower && this->trigger == FALLING)) {
-                this->lower= true;
-                set_switch(false);
-                current_delay = temperatureswitch_heatup_poll;
-            }
-            if(!this->lower && this->trigger == RISING) {
-                this->lower= true;
-            }
-       }
+    // state has changed
+    switch(this->trigger) {
+        case LEVEL:
+            // switch on or off depending on HIGH or LOW
+            set_switch(state == HIGH_TEMP);
+            break;
+
+        case RISING:
+            // switch on if rising edge
+            if(this->current_state == LOW_TEMP && state == HIGH_TEMP) set_switch(true);
+            break;
+
+        case FALLING:
+            // switch off if falling edge
+            if(this->current_state == HIGH_TEMP && state == LOW_TEMP) set_switch(false);
+            break;
     }
+
+    this->current_delay = state == HIGH_TEMP ? this->temperatureswitch_cooldown_poll : this->temperatureswitch_heatup_poll;
+    this->current_state= state;
 }
 
 // Get the highest temperature from the set of temperature controllers
@@ -224,20 +223,26 @@ float TemperatureSwitch::get_highest_temperature()
 // Turn the switch on (true) or off (false)
 void TemperatureSwitch::set_switch(bool switch_state)
 {
-    if(this->one_shot) {
-        // if one shot we only trigger once per arming
-        if(!this->armed) return; // do not actually switch anything if not armed, but we do need to keep the state
-        this->armed= false;
+    if(!this->armed) return; // do not actually switch anything if not armed
 
-    }else{
-        // we do not check the existing state for one shots
-        if(this->temperatureswitch_state == switch_state) return;
-        this->temperatureswitch_state = switch_state;
+    if(this->arm_mcode != 0 && this->trigger != LEVEL) {
+        // if edge triggered we only trigger once per arming, if level triggered we switch as long as we are armed
+        this->armed= false;
     }
 
     if(this->inverted) switch_state= !switch_state; // turn switch on or off inverted
 
-    bool ok = PublicData::set_value(switch_checksum, this->temperatureswitch_switch_cs, state_checksum, &switch_state);
+    // get current switch state
+    struct pad_switch *pad;
+    bool ok = PublicData::get_value(switch_checksum, this->temperatureswitch_switch_cs, 0, (void **)&pad);
+    if (!ok) {
+        THEKERNEL->streams->printf("// Failed to get switch state.\r\n");
+        return;
+    }
+
+    if(pad->state == switch_state) return; // switch is already in the requested state
+
+    ok = PublicData::set_value(switch_checksum, this->temperatureswitch_switch_cs, state_checksum, &switch_state);
     if (!ok) {
         THEKERNEL->streams->printf("// Failed changing switch state.\r\n");
     }
