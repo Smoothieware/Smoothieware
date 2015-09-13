@@ -28,6 +28,7 @@
 #include "StreamOutputPool.h"
 #include "Pauser.h"
 #include "StepTicker.h"
+#include "BaseSolution.h"
 
 #include <ctype.h>
 
@@ -176,7 +177,6 @@ void Endstops::on_config_reload(void *argument)
 
     this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
 
-
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[0]         = home_dir != home_to_max_checksum;
@@ -226,6 +226,21 @@ void Endstops::on_config_reload(void *argument)
 
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]){
         register_for_event(ON_IDLE);
+    }
+
+    // NOTE this may also be true of scara. TBD
+    if(this->is_delta) {
+        // some things must be the same or they will die, so force it here to avoid config errors
+        this->fast_rates[1]= this->fast_rates[2]= this->fast_rates[0];
+        this->slow_rates[1]= this->slow_rates[2]= this->slow_rates[0];
+        this->retract_mm[1]= this->retract_mm[2]= this->retract_mm[0];
+        this->home_direction[1]= this->home_direction[2]= this->home_direction[0];
+        this->homing_position[0]= this->homing_position[1]= 0;
+        if(this->limit_enable[Z_AXIS]) {
+            // we must enable all the limits not just one
+            this->limit_enable[X_AXIS]= true;
+            this->limit_enable[Y_AXIS]= true;
+        }
     }
 }
 
@@ -287,19 +302,33 @@ void Endstops::on_idle(void *argument)
 void Endstops::back_off_home(char axes_to_move)
 {
     this->status = BACK_OFF_HOME;
-    for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
-        if(this->limit_enable[c]) {
-            if( !this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) continue; // if not triggered no need to move off
+    if((is_delta || is_scara) && this->limit_enable[X_AXIS]) {
+        // these are handled differently
+        // Move off of the endstop using a regular relative move
+        char buf[32];
+        snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", this->retract_mm[X_AXIS]*(this->home_direction[X_AXIS]?1:-1), this->fast_rates[X_AXIS]*60.0F);
+        Gcode gc(buf, &(StreamOutput::NullStream));
+        bool oldmode= THEKERNEL->robot->absolute_mode;
+        THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+        THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+        THEKERNEL->robot->absolute_mode= oldmode; // restore mode
 
-            // Move off of the endstop using a regular relative move
-            char buf[32];
-            snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->fast_rates[c]*60.0F);
-            Gcode gc(buf, &(StreamOutput::NullStream));
-            bool oldmode= THEKERNEL->robot->absolute_mode;
-            THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
-            THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-            THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+    }else{
+        // cartesians
+        for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+            if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
+            if(this->limit_enable[c]) {
+                if( !this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) continue; // if not triggered no need to move off
+
+                // Move off of the endstop using a regular relative move
+                char buf[32];
+                snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->fast_rates[c]*60.0F);
+                Gcode gc(buf, &(StreamOutput::NullStream));
+                bool oldmode= THEKERNEL->robot->absolute_mode;
+                THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+                THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+                THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+            }
         }
     }
     // Wait for above to finish
@@ -401,30 +430,6 @@ void Endstops::do_homing_cartesian(char axes_to_move)
 
     // Wait for all axes to have homed
     this->wait_for_homed(axes_to_move);
-
-    if (this->is_delta || this->is_scara) {
-        // move for soft trim
-        this->status = MOVING_BACK;
-        for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-            if ( this->trim_mm[c] != 0.0F && ( axes_to_move >> c ) & 1 ) {
-                inverted_dir = this->home_direction[c];
-                // move up or down depending on sign of trim, -ive is down away from home
-                if (this->trim_mm[c] < 0) inverted_dir = !inverted_dir;
-                this->feed_rate[c]= this->slow_rates[c];
-                STEPPER[c]->move(inverted_dir, abs(round(this->trim_mm[c]*STEPS_PER_MM(c))), 0);
-            }
-        }
-
-        // Wait for moves to be done
-        for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-            if (  ( axes_to_move >> c ) & 1 ) {
-                //THEKERNEL->streams->printf("axis %c \r\n", c );
-                while ( STEPPER[c]->is_moving() ) {
-                    THEKERNEL->call_event(ON_IDLE);
-                }
-            }
-        }
-    }
 
     // Homing is done
     this->status = NOT_HOMING;
@@ -614,11 +619,36 @@ void Endstops::on_gcode_received(void *argument)
 
             if(home_all) {
                 // for deltas this may be important rather than setting each individually
-                THEKERNEL->robot->reset_axis_position(
+
+                // Here's where we would have been if the endstops were perfectly trimmed
+                float ideal_position[3] = {
                     this->homing_position[X_AXIS] + this->home_offset[X_AXIS],
                     this->homing_position[Y_AXIS] + this->home_offset[Y_AXIS],
-                    this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]);
-            }else{
+                    this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]
+                };
+
+                bool has_endstop_trim = this->is_delta || this->is_scara;
+                if (has_endstop_trim) {
+                    float ideal_actuator_position[3];
+                    THEKERNEL->robot->arm_solution->cartesian_to_actuator(ideal_position, ideal_actuator_position);
+
+                    // We are actually not at the ideal position, but a trim away
+                    float real_actuator_position[3] = {
+                        ideal_actuator_position[X_AXIS] - this->trim_mm[X_AXIS],
+                        ideal_actuator_position[Y_AXIS] - this->trim_mm[Y_AXIS],
+                        ideal_actuator_position[Z_AXIS] - this->trim_mm[Z_AXIS]
+                    };
+
+                    float real_position[3];
+                    THEKERNEL->robot->arm_solution->actuator_to_cartesian(real_actuator_position, real_position);
+                    // Reset the actuator positions to correspond our real position
+                    THEKERNEL->robot->reset_axis_position(real_position[0], real_position[1], real_position[2]);
+                } else {
+                    // without endstop trim, real_position == ideal_position
+                    // Reset the actuator positions to correspond our real position
+                    THEKERNEL->robot->reset_axis_position(ideal_position[0], ideal_position[1], ideal_position[2]);
+                }
+            } else {
                 // Zero the ax(i/e)s position, add in the home offset
                 for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
                     if ( (axes_to_move >> c)  & 1 ) {
