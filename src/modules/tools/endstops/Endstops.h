@@ -35,6 +35,7 @@ class Endstops : public Module{
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
+        bool debounced_get(int pin);
 
         float homing_position[3];
         float home_offset[3];
