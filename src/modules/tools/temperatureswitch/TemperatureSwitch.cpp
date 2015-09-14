@@ -27,6 +27,7 @@ Author: Michael Hackney, mhackney@eclecticangler.com
 #include "PublicData.h"
 #include "StreamOutputPool.h"
 #include "TemperatureControlPool.h"
+#include "mri.h"
 
 #define temperatureswitch_checksum                    CHECKSUM("temperatureswitch")
 #define enable_checksum                               CHECKSUM("enable")
@@ -45,6 +46,12 @@ TemperatureSwitch::TemperatureSwitch()
 {
 }
 
+TemperatureSwitch::~TemperatureSwitch()
+{
+    THEKERNEL->unregister_for_event(ON_SECOND_TICK, this);
+    THEKERNEL->unregister_for_event(ON_GCODE_RECEIVED, this);
+}
+
 // Load module
 void TemperatureSwitch::on_module_loaded()
 {
@@ -59,12 +66,11 @@ void TemperatureSwitch::on_module_loaded()
     delete this;
 }
 
-
-bool TemperatureSwitch::load_config(uint16_t modcs)
+TemperatureSwitch* TemperatureSwitch::load_config(uint16_t modcs)
 {
     // see if enabled
     if (!THEKERNEL->config->value(temperatureswitch_checksum, modcs, enable_checksum)->by_default(false)->as_bool()) {
-        return false;
+        return nullptr;
     }
 
     // create a temperature control and load settings
@@ -78,19 +84,23 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
         designator= s[0];
     }
 
-    if(designator == 0) return false; // no designator then not valid
+    if(designator == 0) return nullptr; // no designator then not valid
 
     // create a new temperature switch module
     TemperatureSwitch *ts= new TemperatureSwitch();
 
+    //__debugbreak();
+
     // make a list of temperature controls with matching designators with the same first letter
     // the list is added t the controllers vector given below
-    std::vector<struct pad_temperature> controllers;
-    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
-    if (ok) {
-        for (auto &c : controllers) {
-            if (c.designator[0] == designator) {
-                ts->temp_controllers.push_back(c.id);
+    {
+        std::vector<struct pad_temperature> controllers;
+        bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+        if (ok) {
+            for (auto &c : controllers) {
+                if (c.designator[0] == designator) {
+                    ts->temp_controllers.push_back(c.id);
+                }
             }
         }
     }
@@ -98,7 +108,7 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     // if we don't have any matching controllers, then not valid
     if (ts->temp_controllers.empty()) {
         delete ts;
-        return false;
+        return nullptr;
     }
 
     // load settings from config file
@@ -109,7 +119,7 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
         if(s.empty()) {
             // no switch specified so invalid entry
             delete this;
-            return false;
+            return nullptr;
         }
     }
 
@@ -147,7 +157,7 @@ bool TemperatureSwitch::load_config(uint16_t modcs)
     if(this->arm_mcode != 0) {
         ts->register_for_event(ON_GCODE_RECEIVED);
     }
-    return true;
+    return ts;
 }
 
 void TemperatureSwitch::on_gcode_received(void *argument)
