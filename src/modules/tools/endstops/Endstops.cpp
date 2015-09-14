@@ -226,6 +226,12 @@ void Endstops::on_config_reload(void *argument)
 
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]){
         register_for_event(ON_IDLE);
+        if(this->is_delta) {
+            // we must enable all the limits not just one
+            this->limit_enable[X_AXIS]= true;
+            this->limit_enable[Y_AXIS]= true;
+            this->limit_enable[Z_AXIS]= true;
+        }
     }
 
     // NOTE this may also be true of scara. TBD
@@ -236,11 +242,6 @@ void Endstops::on_config_reload(void *argument)
         this->retract_mm[1]= this->retract_mm[2]= this->retract_mm[0];
         this->home_direction[1]= this->home_direction[2]= this->home_direction[0];
         this->homing_position[0]= this->homing_position[1]= 0;
-        if(this->limit_enable[Z_AXIS]) {
-            // we must enable all the limits not just one
-            this->limit_enable[X_AXIS]= true;
-            this->limit_enable[Y_AXIS]= true;
-        }
     }
 }
 
@@ -301,38 +302,41 @@ void Endstops::on_idle(void *argument)
 // checks if triggered and only backs off if triggered
 void Endstops::back_off_home(char axes_to_move)
 {
+    std::map<char,float> params;
     this->status = BACK_OFF_HOME;
+
+    // these are handled differently
     if((is_delta || is_scara) && this->limit_enable[X_AXIS]) {
-        // these are handled differently
+        // Move off of the endstop using a regular relative move in Z only
+         params['Z']= this->retract_mm[Z_AXIS]*(this->home_direction[Z_AXIS]?1:-1);
+
+    }else{
+        // cartesians, concatenate all the moves we need to do into one gcode
+        for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+            if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
+
+            // if not triggered no need to move off
+            if(this->limit_enable[c] && this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) {
+                params[c+'X']= this->retract_mm[c]*(this->home_direction[c]?1:-1);
+            }
+        }
+    }
+
+    if(!params.empty()) {
         // Move off of the endstop using a regular relative move
-        char buf[32];
-        snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", this->retract_mm[X_AXIS]*(this->home_direction[X_AXIS]?1:-1), this->fast_rates[X_AXIS]*60.0F);
-        Gcode gc(buf, &(StreamOutput::NullStream));
+        char gcode_buf[64];
+        std::string str= append_parameters(params);
+        // use X slow rate to move, Z should have a max speed set anyway
+        snprintf(gcode_buf, sizeof(gcode_buf), "G0 %s F%1.4f", str.c_str(), this->slow_rates[X_AXIS]*60.0F);
+        Gcode gc(gcode_buf, &(StreamOutput::NullStream));
         bool oldmode= THEKERNEL->robot->absolute_mode;
         THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
         THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
         THEKERNEL->robot->absolute_mode= oldmode; // restore mode
-
-    }else{
-        // cartesians
-        for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-            if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
-            if(this->limit_enable[c]) {
-                if( !this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) continue; // if not triggered no need to move off
-
-                // Move off of the endstop using a regular relative move
-                char buf[32];
-                snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->fast_rates[c]*60.0F);
-                Gcode gc(buf, &(StreamOutput::NullStream));
-                bool oldmode= THEKERNEL->robot->absolute_mode;
-                THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
-                THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-                THEKERNEL->robot->absolute_mode= oldmode; // restore mode
-            }
-        }
+        // Wait for above to finish
+        THEKERNEL->conveyor->wait_for_empty_queue();
     }
-    // Wait for above to finish
-    THEKERNEL->conveyor->wait_for_empty_queue();
+
     this->status = NOT_HOMING;
 }
 
