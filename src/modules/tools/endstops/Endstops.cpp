@@ -360,7 +360,7 @@ void Endstops::move_to_origin(char axes_to_move)
 
     this->status = MOVE_TO_ORIGIN;
     // Move to center using a regular move, use slower of X and Y fast rate
-    float rate= min(this->fast_rates[0], this->fast_rates[1])*60.0F;
+    float rate= std::min(this->fast_rates[0], this->fast_rates[1])*60.0F;
     char buf[32];
     snprintf(buf, sizeof(buf), "G0 X0 Y0 F%1.4f", rate);
     Gcode gc(buf, &(StreamOutput::NullStream));
