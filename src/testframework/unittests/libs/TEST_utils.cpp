@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <stdio.h>
+#include <string.h>
 
 #include "easyunit/test.h"
 
@@ -37,8 +38,10 @@ TEST(UtilsTest,parse_number_list)
 
 TEST(UtilsTest,append_parameters)
 {
-    std::string str;
+    char buf[132];
 
-    str= append_parameters({{'X', 1}, {'Y', 2}, {'Z', 3}});
-    ASSERT_EQUALS(str, "X1 Y2 Z3 ");
+    int n= append_parameters(buf, {{'X', 1}, {'Y', 2}, {'Z', 3}}, sizeof(buf));
+    //printf("%d - %s\n", n, buf);
+    ASSERT_TRUE(n == 24);
+    ASSERT_TRUE(strcmp(buf, "X1.0000 Y2.0000 Z3.0000 ") == 0);
 }

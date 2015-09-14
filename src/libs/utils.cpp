@@ -15,7 +15,6 @@
 #include <cstring>
 #include <stdio.h>
 #include <cstdlib>
-#include <sstream>
 
 using std::string;
 
@@ -232,11 +231,13 @@ vector<float> parse_number_list(const char *str)
     return r;
 }
 
-std::string append_parameters(std::map<char,float> params)
+int append_parameters(char *buf, std::vector<std::pair<char,float>> params, size_t bufsize)
 {
-    std::ostringstream oss;
+    size_t n= 0;
     for(auto &i : params) {
-        oss << i.first << i.second << " ";
+        if(n >= bufsize) break;
+        buf[n++]= i.first;
+        n += snprintf(&buf[n], bufsize-n, "%1.4f ", i.second);
     }
-    return oss.str();
+    return n;
 }

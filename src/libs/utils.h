@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <map>
+
 using std::string;
 using std::vector;
 
@@ -36,6 +36,6 @@ void system_reset( bool dfu= false );
 
 string absolute_from_relative( string path );
 
-std::string append_parameters(std::map<char,float> params);
+int append_parameters(char *buf, std::vector<std::pair<char,float>> params, size_t bufsize);
 
 #endif
