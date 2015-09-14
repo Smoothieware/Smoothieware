@@ -245,6 +245,18 @@ void Endstops::on_config_reload(void *argument)
     }
 }
 
+bool Endstops::debounced_get(int pin)
+{
+    uint8_t debounce= 0;
+    while(this->pins[pin].get()) {
+        if ( ++debounce >= this->debounce_count ) {
+            // pin triggered
+            return true;
+        }
+    }
+    return false;
+}
+
 static const char *endstop_names[]= {"min_x", "min_y", "min_z", "max_x", "max_y", "max_z"};
 
 void Endstops::on_idle(void *argument)
@@ -282,16 +294,13 @@ void Endstops::on_idle(void *argument)
             // check min and max endstops
             for (int i : minmax) {
                 int n= c+i;
-                uint8_t debounce= 0;
-                while(this->pins[n].get()) {
-                    if ( ++debounce >= debounce_count ) {
-                        // endstop triggered
-                        THEKERNEL->streams->printf("Limit switch %s was hit - reset or M999 required\n", endstop_names[n]);
-                        this->status= LIMIT_TRIGGERED;
-                        // disables heaters and motors, ignores incoming Gcode and flushes block queue
-                        THEKERNEL->call_event(ON_HALT, nullptr);
-                        return;
-                    }
+                if(debounced_get(n)) {
+                    // endstop triggered
+                    THEKERNEL->streams->printf("Limit switch %s was hit - reset or M999 required\n", endstop_names[n]);
+                    this->status= LIMIT_TRIGGERED;
+                    // disables heaters and motors, ignores incoming Gcode and flushes block queue
+                    THEKERNEL->call_event(ON_HALT, nullptr);
+                    return;
                 }
             }
         }
@@ -316,7 +325,7 @@ void Endstops::back_off_home(char axes_to_move)
             if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
 
             // if not triggered no need to move off
-            if(this->limit_enable[c] && this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) {
+            if(this->limit_enable[c] && debounced_get(c + (this->home_direction[c] ? 0 : 3)) ) {
                 params.push_back({c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1)});
             }
         }
