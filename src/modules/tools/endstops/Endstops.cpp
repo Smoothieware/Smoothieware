@@ -302,13 +302,13 @@ void Endstops::on_idle(void *argument)
 // checks if triggered and only backs off if triggered
 void Endstops::back_off_home(char axes_to_move)
 {
-    std::map<char,float> params;
+    std::vector<std::pair<char,float>> params;
     this->status = BACK_OFF_HOME;
 
     // these are handled differently
     if((is_delta || is_scara) && this->limit_enable[X_AXIS]) {
         // Move off of the endstop using a regular relative move in Z only
-         params['Z']= this->retract_mm[Z_AXIS]*(this->home_direction[Z_AXIS]?1:-1);
+         params.push_back({'Z', this->retract_mm[Z_AXIS]*(this->home_direction[Z_AXIS]?1:-1)});
 
     }else{
         // cartesians, concatenate all the moves we need to do into one gcode
@@ -317,17 +317,18 @@ void Endstops::back_off_home(char axes_to_move)
 
             // if not triggered no need to move off
             if(this->limit_enable[c] && this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) {
-                params[c+'X']= this->retract_mm[c]*(this->home_direction[c]?1:-1);
+                params.push_back({c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1)});
             }
         }
     }
 
     if(!params.empty()) {
         // Move off of the endstop using a regular relative move
-        char gcode_buf[64];
-        std::string str= append_parameters(params);
+        params.insert(params.begin(), {'G', 0});
         // use X slow rate to move, Z should have a max speed set anyway
-        snprintf(gcode_buf, sizeof(gcode_buf), "G0 %s F%1.4f", str.c_str(), this->slow_rates[X_AXIS]*60.0F);
+        params.push_back({'F', this->slow_rates[X_AXIS]*60.0F});
+        char gcode_buf[64];
+        append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
         bool oldmode= THEKERNEL->robot->absolute_mode;
         THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
