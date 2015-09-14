@@ -26,15 +26,17 @@ class TemperatureSwitch : public Module
 {
     public:
         TemperatureSwitch();
+        ~TemperatureSwitch();
         void on_module_loaded();
         void on_second_tick(void *argument);
         void on_gcode_received(void *argument);
+        TemperatureSwitch* load_config(uint16_t modcs);
+
+        bool is_armed() const { return armed; }
 
     private:
         enum TRIGGER_TYPE {LEVEL, RISING, FALLING};
         enum STATE {NONE, HIGH_TEMP, LOW_TEMP};
-
-        bool load_config(uint16_t modcs);
 
         // get the highest temperature from the set of configured temperature controllers
         float get_highest_temperature();
