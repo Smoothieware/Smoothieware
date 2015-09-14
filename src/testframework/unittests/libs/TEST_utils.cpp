@@ -34,3 +34,11 @@ TEST(UtilsTest,parse_number_list)
     ASSERT_TRUE(v[1] == 2.2F);
     ASSERT_TRUE(v[2] == 3.3F);
 }
+
+TEST(UtilsTest,append_parameters)
+{
+    std::string str;
+
+    str= append_parameters({{'X', 1}, {'Y', 2}, {'Z', 3}});
+    ASSERT_EQUALS(str, "X1 Y2 Z3 ");
+}
