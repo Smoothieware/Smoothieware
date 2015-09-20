@@ -83,6 +83,7 @@
 #include "Vector3.h"
 #include "Planner.h"
 #include "utils.h"
+#include "libs/StepperMotor.h"
 
 #include <time.h>
 #include <tuple>
@@ -139,6 +140,7 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
         base_set = nullptr;
         cur_set = nullptr;
         temp_set = nullptr;
+        best_set = nullptr;
         cur_cartesian = nullptr;
         temp_cartesian = nullptr;
         test_point = nullptr;
@@ -159,6 +161,7 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
         AHB0_dealloc_if_not_nullptr(base_set);
         AHB0_dealloc_if_not_nullptr(cur_set);
         AHB0_dealloc_if_not_nullptr(temp_set);
+        AHB0_dealloc_if_not_nullptr(best_set);
         AHB0_dealloc_if_not_nullptr(depth_map);
         AHB0_dealloc_if_not_nullptr(active_point);
 
@@ -207,14 +210,17 @@ bool ComprehensiveDeltaStrategy::allocate_RAM(bool zero_pointers) {
         return false;
     }
 
-    // Allocate space for kinematics settings
+    // Allocate space for kinematic settings
     base_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
     new(base_set) KinematicSettings;
     cur_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
     new(cur_set) KinematicSettings;
     temp_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
     new(temp_set) KinematicSettings;
-    if(base_set == nullptr || cur_set == nullptr || temp_set == nullptr) {
+    best_set = (KinematicSettings *)AHB0.alloc(sizeof(KinematicSettings));
+    new(best_set) KinematicSettings;
+
+    if(base_set == nullptr || cur_set == nullptr || temp_set == nullptr || best_set == nullptr) {
         _printf("%s kinematic settings.\n", error_str);
         return false;
     }
@@ -296,6 +302,9 @@ bool ComprehensiveDeltaStrategy::AHB0_dealloc2Df(float** ptr, int rows) {
         
         I've rewritten all the code so that every 2D array is allocated at startup, and never freed.
         I apologize for wasting RAM on AHB0 like this, but at the moment I need to move on.
+        
+        If anyone objects to this RAM never being freed, you are welcome to debug my code and
+        figure out what I could not. I would love to know what I missed!
 
     */
 
@@ -359,6 +368,7 @@ ComprehensiveDeltaStrategy::~ComprehensiveDeltaStrategy() {
     AHB0_dealloc_if_not_nullptr(base_set);
     AHB0_dealloc_if_not_nullptr(cur_set);
     AHB0_dealloc_if_not_nullptr(temp_set);
+    AHB0_dealloc_if_not_nullptr(best_set);
     AHB0_dealloc_if_not_nullptr(test_point);
     AHB0_dealloc_if_not_nullptr(test_axis);
     AHB0_dealloc_if_not_nullptr(depth_map);
@@ -423,8 +433,8 @@ bool ComprehensiveDeltaStrategy::handleConfig() {
     surface_transform->have_depth_map = false;
 
     // Zero out the surface normal
-    set_virtual_shimming(0, 0, 0);
-    set_adjust_function(true);
+    set_virtual_shimming(0.0f, 0.0f, 0.0f);
+    set_adjust_function(false);
 
     // Zero out depth_map
     zero_depth_maps();
@@ -730,35 +740,45 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
             simulate_only = true;
         }
 
+        // --- Begin caltypes ---
+
         // Endstops
-        if(gcode->has_letter('O')) {
+        if(gcode->has_letter('H')) {
             caltype.endstop.active = true;
-            caltype.endstop.annealing_temp_mul = gcode->get_value('O');
-        }
-        
+            caltype.endstop.annealing_temp_mul = gcode->get_value('H');
+        } else caltype.endstop.active = false;
+
         // Delta radius, including individual tower offsets
-        if(gcode->has_letter('P')) {
+        if(gcode->has_letter('O')) {
             caltype.delta_radius.active = true;
-            caltype.delta_radius.annealing_temp_mul = gcode->get_value('P');
-        }
+            caltype.delta_radius.annealing_temp_mul = gcode->get_value('O');
+        } else caltype.delta_radius.active = false;
 
         // Arm length, including individual arm length offsets
-        if(gcode->has_letter('Q')) {
+        if(gcode->has_letter('P')) {
             caltype.arm_length.active = true;
-            caltype.arm_length.annealing_temp_mul = gcode->get_value('Q');
-        }
+            caltype.arm_length.annealing_temp_mul = gcode->get_value('P');
+        } else caltype.arm_length.active = false;
 
         // Tower angle offsets
-        if(gcode->has_letter('R')) {
+        if(gcode->has_letter('Q')) {
             caltype.tower_angle.active = true;
-            caltype.tower_angle.annealing_temp_mul = gcode->get_value('R');
-        }
+            caltype.tower_angle.annealing_temp_mul = gcode->get_value('Q');
+        } else caltype.tower_angle.active = false;
         
         // Surface plane virtual shimming
-        if(gcode->has_letter('S')) {
+        if(gcode->has_letter('R')) {
             caltype.virtual_shimming.active = true;
-            caltype.virtual_shimming.annealing_temp_mul = gcode->get_value('S');
-        }
+            caltype.virtual_shimming.annealing_temp_mul = gcode->get_value('R');
+        } else caltype.virtual_shimming.active = false;
+        
+        // Tower scaling
+        if(gcode->has_letter('S')) {
+            caltype.tower_scale.active = true;
+            caltype.tower_scale.annealing_temp_mul = gcode->get_value('S');
+        } else caltype.tower_scale.active = false;
+
+        // --- End caltypes ---
 
         // Annealing tries
         // Generally, more iterations require lower temps
@@ -801,7 +821,8 @@ bool ComprehensiveDeltaStrategy::handle_depth_mapping_calibration(Gcode *gcode) 
                 !caltype.delta_radius.active &&
                 !caltype.arm_length.active &&
                 !caltype.tower_angle.active &&
-                !caltype.virtual_shimming.active
+                !caltype.virtual_shimming.active &&
+                !caltype.tower_scale.active
             ){
                 _printf("No calibration types selected - activating endstops & delta radius.\n");
                 caltype.endstop.active = true;
@@ -939,12 +960,13 @@ void __attribute__ ((noinline)) ComprehensiveDeltaStrategy::print_g31_help() {
     _printf("J: Update geometry after ALL vars are annealed each pass, rather than after each one is annealed\n");
     _printf("K: Keep last settings\n");
     _printf("L: Simulate only (don't probe)\n");
-    _printf("O: Endstops *\n");
+    _printf("H: Endstops *\n");
     flush();
-    _printf("P: Delta radius *\n");
-    _printf("Q: Arm length *\n");
-    _printf("R: Tower angle offsets *\n");
-    _printf("S: Surface plane virtual shimming *\n");
+    _printf("O: Delta radius *\n");
+    _printf("P: Arm length *\n");
+    _printf("Q: Tower angle offsets *\n");
+    _printf("R: Surface plane virtual shimming *\n");
+    _printf("S: Tower scale *\n");
     flush();
     _printf("t: Annealing: Iterations (50)\n");		// Repetier Host eats lines starting with T >:(
     _printf("U: Annealing: Max t_emp (0.35)\n");	// Repetier Host eats all lines containing "temp" >8(
@@ -1146,6 +1168,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     if(caltype.arm_length.annealing_temp_mul == 0) caltype.arm_length.annealing_temp_mul = 1;
     if(caltype.tower_angle.annealing_temp_mul == 0) caltype.tower_angle.annealing_temp_mul = 1;
     if(caltype.virtual_shimming.annealing_temp_mul == 0) caltype.virtual_shimming.annealing_temp_mul = 1;
+    if(caltype.tower_scale.annealing_temp_mul == 0) caltype.tower_scale.annealing_temp_mul = 1;
     
     // Ensure parallel annealing temp multipliers aren't crazy
     caltype.endstop.annealing_temp_mul = clamp(caltype.endstop.annealing_temp_mul, 0, 50);
@@ -1153,6 +1176,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     caltype.arm_length.annealing_temp_mul = clamp(caltype.arm_length.annealing_temp_mul, 0, 50);
     caltype.tower_angle.annealing_temp_mul = clamp(caltype.tower_angle.annealing_temp_mul, 0, 50);
     caltype.virtual_shimming.annealing_temp_mul = clamp(caltype.virtual_shimming.annealing_temp_mul, 0, 50);
+    caltype.tower_scale.annealing_temp_mul = clamp(caltype.tower_scale.annealing_temp_mul, 0, 50);
 
     // Zero offsets, if requested
     if(zero_all_offsets) {
@@ -1160,6 +1184,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         set_trim(0, 0, 0);
         set_tower_radius_offsets(0, 0, 0);
         set_tower_angle_offsets(0, 0, 0);
+        set_tower_scale(1, 1, 1);
         get_kinematics(base_set);
         get_kinematics(cur_set);
     }
@@ -1234,6 +1259,11 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     TestConfig test_arm_length(cur_set->arm_length - 5, cur_set->arm_length + 5);
     TestConfig test_tower_angle[3] { {-3, 3}, {-3, 3}, {-3, 3} };
     TestConfig test_virtual_shimming[3] { {-3, 3}, {-3, 3}, {-3, 3} };
+    TestConfig test_tower_scale[3] { { 0.8, 1.2 }, { 0.8, 1.2 }, { 0.8, 1.2 } };
+//        { cur_set->tower_scale[X] - 50, cur_set->tower_scale[X] + 50 },
+//        { cur_set->tower_scale[Y] - 50, cur_set->tower_scale[Y] + 50 },
+//        { cur_set->tower_scale[Z] - 50, cur_set->tower_scale[Z] + 50 }
+//    };
 
     // Offsets that tie into the main tests:
     TestConfig test_delta_radius_offset[3] { {-3, 3}, {-3, 3}, {-3, 3} };
@@ -1246,7 +1276,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     float best_value;				// Binary search returns this
 
     // Set up target tolerance
-    float target = 0.005;			// Target deviation for individual element in simulated annealing only
+    float target = 0.001;			// Target deviation for individual element in simulated annealing only
     float global_target = 0.010;		// Target Z-deviation for all points on print surface
 
     // If simulating, we only need to run the numbers once per session. Otherwise, they have to be redone every time.
@@ -1260,6 +1290,10 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
     int j, k;
     int try_mod_5;				// Will be set to annealing_try % 5
     float lowest;				// For finding the lowest absolute value of three variables
+
+    // Reset the best-found-energy to an absurdly high value
+    // (it will be reduced as better and better kinematics settings are found)
+    best_set_energy = 999;
 
     // Keep track of energy so that we can bail if the annealing stalls
     #define LAST_ENERGY_N 6
@@ -1287,7 +1321,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
 
             if(!keep_settings) {
 
-                _printf("Perturbing simulated printer parameters.\n");
+                _printf("/!\\ Perturbing simulated printer parameters.\n");
 
                 // Save existing kinematics
                 restore_from_temp_set = true;
@@ -1321,13 +1355,19 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                     set_virtual_shimming(0, 0, 0);
                 }
 
+                if(caltype.tower_scale.active) {
+                    set_tower_scale(0.9, 1.0, 1.1);
+                } else {
+                    set_tower_scale(1, 1, 1);
+                }
+
                 // Save the perturbed kinematics
                 get_kinematics(cur_set);
 
                 // Trigger regen of carriage positions
                 need_to_simulate_IK = true;
 
-                _printf("Done hosing the variables.\n");
+                // Print the simulated kinematics
                 print_kinematics();
 
             } // !keep_settings
@@ -1375,7 +1415,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
         }
 
         newline();
-        _printf("Starting test configuration: Arm Length=%1.3f, Delta Radius=%1.3f\n", cur_set->arm_length, cur_set->delta_radius);
+        _printf("Starting test configuration: Arm length=%1.3f, delta radius=%1.3f, tower scale={%1.3f, %1.3f, %1.3f}\n", cur_set->arm_length, cur_set->delta_radius, cur_set->tower_scale[X], cur_set->tower_scale[Y], cur_set->tower_scale[Z]);
 
         // Get energy of initial state
         float energy = calc_energy(cur_cartesian);
@@ -1576,8 +1616,32 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                         blink_LED(2);
                         break;
 
-                    case CT_TOWER_VECTOR:
-//                        _printf("~ Tower Vector ~\n"); flush();
+                    case CT_TOWER_SCALE:
+//                        _printf("~ Per-Tower Steps/MM ~\n"); flush();
+                        // ***************
+                        // * Tower Scale *
+                        // ***************
+                        
+                        if(caltype.tower_scale.active) {
+                            local_temp = temp * caltype.tower_scale.annealing_temp_mul;
+
+                            for(k=0; k<3; k++) {
+                                best_value = find_optimal_config(&ComprehensiveDeltaStrategy::set_tower_scale, cur_set->tower_scale, k, local_temp, test_tower_scale[k].range_min, test_tower_scale[k].range_max, binsearch_width, cur_cartesian, target);
+                                move_randomly_towards(cur_set->tower_scale[k], best_value, local_temp, target, overrun_divisor);
+
+//_printf("!! Axis %d: Best value: %1.3f - Current value: %1.3f\n", k, best_value, cur_set->tower_scale[k]);
+
+                                // Update the robot
+                                if(set_geom_after_each_caltype) {
+                                    set_tower_scale(cur_set->tower_scale[X], cur_set->tower_scale[Y], cur_set->tower_scale[Z], false);
+                                }
+
+                            } // k
+                        } // caltype.tower_scale
+//_printf("---\n");
+
+                        flush();
+
                         blink_LED(2);
                         break;
 
@@ -1595,6 +1659,7 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                 set_arm_length(cur_set->arm_length, false);
                 set_tower_angle_offsets(cur_set->tower_angle[X], cur_set->tower_angle[Y], cur_set->tower_angle[Z], false);
                 set_virtual_shimming(cur_set->virtual_shimming[X], cur_set->virtual_shimming[Y], cur_set->virtual_shimming[Z], false);
+                set_tower_scale(cur_set->tower_scale[X], cur_set->tower_scale[Y], cur_set->tower_scale[Z], false);
             }
 
 
@@ -1614,21 +1679,31 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                 test_delta_radius_offset[k].reset_min_max();
                 test_tower_angle[k].reset_min_max();
                 test_virtual_shimming[k].reset_min_max();
+                test_tower_scale[k].reset_min_max();
             }
             
 
             // ****************
             // * Housekeeping *
             // ****************
+            float tempE = simulate_FK_and_get_energy(test_axis, cur_set->trim, cur_cartesian);
+            if(tempE < best_set_energy) {
+                get_kinematics(best_set);
+                _printf("New winner: old energy=%1.3f, new=%1.3f\n", best_set_energy, tempE);
+                //print_kinematics(best_set);
+                best_set_energy = tempE;
+            }
 
             if(try_mod_5 == 0) {
                 float tempE = simulate_FK_and_get_energy(test_axis, cur_set->trim, cur_cartesian);
                 _printf("Try %d of %d, energy=%1.3f (want <= %1.3f)\n", annealing_try, annealing_tries, tempE, global_target);
 
+//print_kinematics();
+
                 // *****************************************************
                 // * Keep track of last energy, and abort if it stalls *
                 // *****************************************************
-
+/*
                 // Shift the last_energy array right by one entry
                 for(j = LAST_ENERGY_N - 1; j > 0; j--) {
                     last_energy[j] = last_energy[j - 1];
@@ -1651,17 +1726,17 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
                         break;
                     }
                     
-                    /*
+                    
                     // For debugging
-                    _printf("Last energy counts: ");
-                    for(j=0; j<LAST_ENERGY_N; j++) {
-                        _printf("%1.3f ", last_energy[j]);
-                    }
-                    _printf("sigma=%1.3f\n", sigma);
-                    */
+                    //_printf("Last energy counts: ");
+                    //for(j=0; j<LAST_ENERGY_N; j++) {
+                    //    _printf("%1.3f ", last_energy[j]);
+                    //}
+                    //_printf("sigma=%1.3f\n", sigma);
+                    
 
                 }
-                
+*/
                 // Abort if within the global target
                 if(tempE <= global_target) {
                     _printf("Annealing : Within target\n");
@@ -1683,14 +1758,20 @@ bool ComprehensiveDeltaStrategy::heuristic_calibration(int annealing_tries, floa
             break;
         }
 
-
         _printf(" \n");
 
     } // outer_try
 
 
+    // Apply the best settings found (not necessarily the last!)
+    _printf("Applying best found kinematics.\n");
+    set_kinematics(best_set);
+    get_kinematics(cur_set);
+
+
     // Print the results
     _printf("Heuristic calibration complete (energy=%1.3f)\n", simulate_FK_and_get_energy(test_axis, cur_set->trim, cur_cartesian));
+
 
     // Normalize trim (this prevents downward creep)
     auto mm = std::minmax({ cur_set->trim[X], cur_set->trim[Y], cur_set->trim[Z] });
@@ -2894,6 +2975,7 @@ bool ComprehensiveDeltaStrategy::iterative_calibration(bool keep_settings) {
         set_tower_angle_offsets(0, 0, 0);
         set_tower_arm_offsets(0, 0, 0);
         set_virtual_shimming(0, 0, 0);
+        set_tower_scale(1, 1, 1);
     }
 
     print_kinematics();
@@ -3662,6 +3744,67 @@ bool ComprehensiveDeltaStrategy::get_virtual_shimming(float &x, float &y, float 
 }
 
 
+// Tower scaling
+bool ComprehensiveDeltaStrategy::set_tower_scale(float x, float y, float z, bool update) {
+
+    geom_dirty = true;
+
+    options['H'] = x;
+    options['I'] = y;
+    options['J'] = z;
+
+    if(THEKERNEL->robot->arm_solution->set_optional(options)) {
+        if(update) {
+            post_adjust_kinematics();
+        }
+        return true;
+    } else {
+        return false;
+    }
+
+
+/*    THEKERNEL->robot->actuators[0]->change_steps_per_mm(x);
+    THEKERNEL->robot->actuators[1]->change_steps_per_mm(y);
+    THEKERNEL->robot->actuators[2]->change_steps_per_mm(z);
+*/
+/*
+    char cmd[40];
+    snprintf(cmd, sizeof(cmd), "M92 X%1.4f Y%1.4f Z%1.4f", x, y, z);
+    Gcode gc(cmd, &(StreamOutput::NullStream));
+    THEKERNEL->robot->on_gcode_received(&gc);
+*/
+
+/*
+flush();
+_printf("!! x=%1.3f y=%1.3f z=%1.3f\n", x, y, z);
+float _x, _y, _z;
+get_tower_scale(_x, _y, _z);
+_printf("!! The kernel thinks x=%1.3f, y=%1.3f, z=%1.3f.\n", _x, _y, _z);
+*/
+
+}
+
+
+bool ComprehensiveDeltaStrategy::get_tower_scale(float &x, float &y, float &z) {
+
+    if(THEKERNEL->robot->arm_solution->get_optional(options)) {
+        x = options['H'];
+        y = options['I'];
+        z = options['J'];
+        return true;
+    } else {
+        return false;
+    }
+
+/*    x = THEKERNEL->robot->actuators[0]->get_steps_per_mm();
+    y = THEKERNEL->robot->actuators[1]->get_steps_per_mm();
+    z = THEKERNEL->robot->actuators[2]->get_steps_per_mm();
+*/
+    return true;
+}
+
+
+
 // Getter/setter for ALL kinematics
 bool ComprehensiveDeltaStrategy::set_kinematics(KinematicSettings *settings, bool update) {
 
@@ -3674,6 +3817,7 @@ bool ComprehensiveDeltaStrategy::set_kinematics(KinematicSettings *settings, boo
         set_tower_angle_offsets(settings->tower_angle[X], settings->tower_angle[Y], settings->tower_angle[Z]);
         set_tower_arm_offsets(settings->tower_arm[X], settings->tower_arm[Y], settings->tower_arm[Z]);
         set_virtual_shimming(settings->virtual_shimming[X], settings->virtual_shimming[Y], settings->virtual_shimming[Z]);
+        set_tower_scale(settings->tower_scale[X], settings->tower_scale[Y], settings->tower_scale[Z]);
 
         if(update) {
             post_adjust_kinematics();
@@ -3698,6 +3842,7 @@ bool ComprehensiveDeltaStrategy::get_kinematics(KinematicSettings *settings) {
     get_tower_angle_offsets(settings->tower_angle[X], settings->tower_angle[Y], settings->tower_angle[Z]);
     get_tower_arm_offsets(settings->tower_arm[X], settings->tower_arm[Y], settings->tower_arm[Z]);
     get_virtual_shimming(settings->virtual_shimming[X], settings->virtual_shimming[Y], settings->virtual_shimming[Z]);
+    get_tower_scale(settings->tower_scale[X], settings->tower_scale[Y], settings->tower_scale[Z]);
     settings->initialized = true;
     return true;
 
@@ -3724,6 +3869,7 @@ void ComprehensiveDeltaStrategy::print_kinematics(KinematicSettings *settings) {
     _printf("Radius offsets (ABC): {%1.3f, %1.3f, %1.3f}\n", settings->tower_radius[X], settings->tower_radius[Y], settings->tower_radius[Z]);
     _printf(" Angle offsets (DEF): {%1.3f, %1.3f, %1.3f}\n", settings->tower_angle[X], settings->tower_angle[Y], settings->tower_angle[Z]);
     _printf("    Virtual shimming: {%1.3f, %1.3f, %1.3f}, vector={%1.3f, %1.3f, %1.3f}, d=%1.3f, %s\n", settings->virtual_shimming[X], settings->virtual_shimming[Y], settings->virtual_shimming[Z], surface_transform->normal[X], surface_transform->normal[Y], surface_transform->normal[Z], surface_transform->d, (surface_transform->plane_enabled && surface_transform->active) ? _STR_ENABLED_ : _STR_DISABLED_);
+    _printf("         Tower scale: {%1.3f, %1.3f, %1.3f}\n", settings->tower_scale[X], settings->tower_scale[Y], settings->tower_scale[Z]);
     _printf("Depth (Z) correction: %s\n", (surface_transform->depth_enabled && surface_transform->active) ? _STR_ENABLED_ : _STR_DISABLED_);
     newline();
     pop_prefix();
@@ -3953,11 +4099,12 @@ void ComprehensiveDeltaStrategy::clear_calibration_types() {
 // The args are either-or - they shouldn't both be true.
 void ComprehensiveDeltaStrategy::display_calibration_types(bool active, bool inactive) {
 
-    char ES[] = "Endstops (O)";
-    char DR[] = "Delta Radius (P)";
-    char AL[] = "Arm Length (Q)";
-    char TAO[] = "Tower Angle Offset (R)";
-    char VS[] = "Virtual Shimming (S)";
+    char ES[] = "Endstops (H)";
+    char DR[] = "Delta Radius (O)";
+    char AL[] = "Arm Length (P)";
+    char TAO[] = "Tower Angle Offset (Q)";
+    char VS[] = "Virtual Shimming (R)";
+    char TS[] = "Tower scale (S)";
     char format[] = "[%s, mul=%1.2f] ";
     int nShown = 0;
 
@@ -3989,6 +4136,11 @@ void ComprehensiveDeltaStrategy::display_calibration_types(bool active, bool ina
             nShown++;
         }
 
+        if(caltype.tower_scale.active) {
+            __printf(format, TS, caltype.tower_scale.annealing_temp_mul);
+            nShown++;
+        }
+
     } // active    
 
     // Display inactive caltypes
@@ -4016,6 +4168,11 @@ void ComprehensiveDeltaStrategy::display_calibration_types(bool active, bool ina
 
         if(!caltype.virtual_shimming.active) {
             __printf(format, VS, caltype.virtual_shimming.annealing_temp_mul);
+            nShown++;
+        }
+
+        if(!caltype.tower_scale.active) {
+            __printf(format, TS, caltype.tower_scale.annealing_temp_mul);
             nShown++;
         }
 

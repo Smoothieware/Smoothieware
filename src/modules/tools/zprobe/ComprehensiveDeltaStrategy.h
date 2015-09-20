@@ -44,14 +44,14 @@ extern GPIO leds[];
 #define _STR_OFF_ "Off"
 
 // Calibration types
-#define CDS_N_CALTYPES 5
+#define CDS_N_CALTYPES 6
 enum _cds_caltype_t {
     CT_ENDSTOP,
     CT_DELTA_RADIUS,
     CT_ARM_LENGTH,
     CT_TOWER_ANGLE,
     CT_VIRTUAL_SHIMMING,
-    CT_TOWER_VECTOR
+    CT_TOWER_SCALE
 };
 
 // For bit-twiddling, taken from https://github.com/626Pilot/RaspberryPi-NeoPixel-WS2812/blob/master/ws2812-RPi.c
@@ -126,7 +126,6 @@ class TestConfig {
 
     float range_min;
     float range_max;
-//    float i;
     float min;
     float max;
 
@@ -135,7 +134,6 @@ class TestConfig {
         range_min = _range_min;
         range_max = _range_max;
         reset_min_max();
-//        i = 0;
     }
 
     // Reset min/max to their range values
@@ -183,6 +181,7 @@ class KinematicSettings {
     float tower_angle[3];
     float tower_arm[3];
     float virtual_shimming[3];
+    float tower_scale[3];
     
     void init() {
         initialized = false;
@@ -194,6 +193,7 @@ class KinematicSettings {
             tower_angle[i] = 0;
             tower_arm[i] = 0;
             virtual_shimming[i] = 0;
+            tower_scale[i] = 0;
         }
     }
 
@@ -201,7 +201,7 @@ class KinematicSettings {
         init();
     }
 
-    KinematicSettings(float _trim[3], float _delta_radius, float _arm_length, float _tower_radius[3], float _tower_angle[3], float _tower_arm[3], float _virtual_shimming[3]) {
+    KinematicSettings(float _trim[3], float _delta_radius, float _arm_length, float _tower_radius[3], float _tower_angle[3], float _tower_arm[3], float _virtual_shimming[3], float _tower_scale[3]) {
         delta_radius = _delta_radius;
         arm_length = _arm_length;
         for(int i=0; i<3; i++) {
@@ -210,6 +210,7 @@ class KinematicSettings {
             tower_angle[i] = _tower_angle[i];
             tower_arm[i] = _tower_arm[i];
             virtual_shimming[i] = _virtual_shimming[i];
+            tower_scale[i] = _tower_scale[i];
         }
     }
 
@@ -222,6 +223,7 @@ class KinematicSettings {
             settings->tower_angle[i] = tower_angle[i];
             settings->tower_arm[i] = tower_arm[i];
             settings->virtual_shimming[i] = virtual_shimming[i];
+            settings->tower_scale[i] = tower_scale[i];
         }
         settings->initialized = true;
 
@@ -314,6 +316,7 @@ struct {
     CalibrationType arm_length;
     CalibrationType tower_angle;
     CalibrationType virtual_shimming;
+    CalibrationType tower_scale;
 } caltype;
 
 
@@ -346,6 +349,8 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     KinematicSettings *base_set;
     KinematicSettings *cur_set;
     KinematicSettings *temp_set;
+    KinematicSettings *best_set;
+    float best_set_energy;
 //    KinematicSettings winning_mu;
 //    KinematicSettings winning_sigma;
 
@@ -353,7 +358,7 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     BaseSolution::arm_options_t options;
 
     // Whether the printer has a round or square build surface
-    _cds_print_surface_shape surface_shape; // PSS_CIRCLE or PSS_SQUARE
+    _cds_print_surface_shape surface_shape; // PSS_CIRCLE or PSS_SQUARE. (TODO: Add support for PSS_RECTANGLE.)
 
     // General vars
     float bed_height;
@@ -443,7 +448,7 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
     // Depth map the print surface
     bool depth_map_print_surface(float **cartesian, _cds_dmps_result display_results, bool extrapolate_neighbors);
 
-    // Iterative calibration
+    // Iterative (GeneB-style) calibration
     bool iterative_calibration(bool keep_settings);
 
     // Probing methods
@@ -483,6 +488,9 @@ class ComprehensiveDeltaStrategy : public LevelingStrategy {
 
     bool set_virtual_shimming(float x, float y, float z, bool update = true);
     bool get_virtual_shimming(float &x, float &y, float &z);
+
+    bool set_tower_scale(float x, float y, float z, bool update = true);
+    bool get_tower_scale(float &x, float &y, float &z);
 
     void set_acceleration(float a);
     void save_acceleration();
