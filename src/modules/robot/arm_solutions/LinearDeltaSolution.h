@@ -53,6 +53,10 @@ class LinearDeltaSolution : public BaseSolution {
         float tower2_vector[3];
         float tower3_vector[3];
 
+        // Tower scaling (experimental: interim half-solution for tower lean)
+        float tower1_scale;
+        float tower2_scale;
+        float tower3_scale;
 
 };
 #endif // LINEARDELTASOLUTION_H

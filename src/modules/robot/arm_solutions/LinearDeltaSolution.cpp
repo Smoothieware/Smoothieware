@@ -37,15 +37,20 @@ LinearDeltaSolution::LinearDeltaSolution(Config* config)
     tower2_offset = config->value(tower2_offset_checksum)->by_default(0.0f)->as_number();
     tower3_offset = config->value(tower3_offset_checksum)->by_default(0.0f)->as_number();
     
-    float up_vector[3] = { 0, 0, 1 };
-    std::memcpy(tower1_vector, up_vector, sizeof(tower1_vector));
-    std::memcpy(tower2_vector, up_vector, sizeof(tower2_vector));
-    std::memcpy(tower3_vector, up_vector, sizeof(tower3_vector));
+//    float up_vector[3] = { 0, 0, 1 };
+//    std::memcpy(tower1_vector, up_vector, sizeof(tower1_vector));
+//    std::memcpy(tower2_vector, up_vector, sizeof(tower2_vector));
+//    std::memcpy(tower3_vector, up_vector, sizeof(tower3_vector));
+
+    tower1_scale = 1.0f;
+    tower2_scale = 1.0f;
+    tower3_scale = 1.0f;
 
     init();
 }
 
 void LinearDeltaSolution::init() {
+
     arm_length_squared = SQ(arm_length);
 
     // Effective X/Y positions of the three vertical towers.
@@ -57,6 +62,7 @@ void LinearDeltaSolution::init() {
     delta_tower2_y = (delta_radius + tower2_offset) * sinf((330.0F + tower2_angle) * PIOVER180);
     delta_tower3_x = (delta_radius + tower3_offset) * cosf((90.0F  + tower3_angle) * PIOVER180); // back middle tower
     delta_tower3_y = (delta_radius + tower3_offset) * sinf((90.0F  + tower3_angle) * PIOVER180);
+
 }
 
 // Inverse kinematics (translates Cartesian XYZ coordinates for the effector, into carriage positions)
@@ -130,21 +136,24 @@ void LinearDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float act
     */
 
 
-
-
-
-    actuator_mm[ALPHA_STEPPER] = sqrtf(this->arm_length_squared
+    actuator_mm[ALPHA_STEPPER] = sqrtf(arm_length_squared
                                        - SQ(delta_tower1_x - cartesian_mm[X_AXIS])
                                        - SQ(delta_tower1_y - cartesian_mm[Y_AXIS])
                                       ) + cartesian_mm[Z_AXIS];
-    actuator_mm[BETA_STEPPER ] = sqrtf(this->arm_length_squared
+    actuator_mm[BETA_STEPPER ] = sqrtf(arm_length_squared
                                        - SQ(delta_tower2_x - cartesian_mm[X_AXIS])
                                        - SQ(delta_tower2_y - cartesian_mm[Y_AXIS])
                                       ) + cartesian_mm[Z_AXIS];
-    actuator_mm[GAMMA_STEPPER] = sqrtf(this->arm_length_squared
+    actuator_mm[GAMMA_STEPPER] = sqrtf(arm_length_squared
                                        - SQ(delta_tower3_x - cartesian_mm[X_AXIS])
                                        - SQ(delta_tower3_y - cartesian_mm[Y_AXIS])
                                       ) + cartesian_mm[Z_AXIS];
+
+    // Apply scaling
+    actuator_mm[ALPHA_STEPPER] *= tower1_scale;
+    actuator_mm[BETA_STEPPER ] *= tower2_scale;
+    actuator_mm[GAMMA_STEPPER] *= tower3_scale;
+
 }
 
 // Forward kinematics (translates carriage positions into Cartesian XYZ)
@@ -157,6 +166,11 @@ void LinearDeltaSolution::actuator_to_cartesian( float actuator_mm[], float cart
 
     // from http://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates_from_cross-_and_dot-products
     // based on https://github.com/ambrop72/aprinter/blob/2de69a/aprinter/printer/DeltaTransform.h#L81
+
+    // Apply scaling
+    actuator_mm[ALPHA_STEPPER] *= 1/tower1_scale;
+    actuator_mm[BETA_STEPPER ] *= 1/tower2_scale;
+    actuator_mm[GAMMA_STEPPER] *= 1/tower3_scale;
     
     // Current tower locations & carriage (actuator) positions
     // Old code:
@@ -180,6 +194,7 @@ void LinearDeltaSolution::actuator_to_cartesian( float actuator_mm[], float cart
     get_tower_xyz_for_dist(Z, xyz, actuator_mm[Z]);
     Vector3 tower3( xyz[X], xyz[Y], xyz[Z] );
 */
+
     // Median points between carriages
     Vector3 s12 = tower1.sub(tower2);
     Vector3 s23 = tower2.sub(tower3);
@@ -209,13 +224,13 @@ void LinearDeltaSolution::actuator_to_cartesian( float actuator_mm[], float cart
 
     // Finally, multiply the circle's normal by the distance to each tower and subtract from circumcenter
     float dist = sqrtf(inv_nmag_sq * (arm_length_squared - r_sq));
-
     Vector3 cartesian = circumcenter.sub(normal.mul(dist));
 
     // I guess we hate long floating point numbers, so round it to four decimal places :)
     cartesian_mm[0] = ROUND(cartesian[0], 4);
     cartesian_mm[1] = ROUND(cartesian[1], 4);
     cartesian_mm[2] = ROUND(cartesian[2], 4);
+
 }
 
 // If the carriage is dist mm away from 0, what are its coordinates, adjusted for tower lean?
@@ -247,7 +262,7 @@ void LinearDeltaSolution::get_tower_xyz_for_dist(uint8_t tower, float xyz[], flo
         default:
             // Would be nice to print an error here, but it would flood the serial line and lock up the board.
             // Whatever you do with the rest of the code, make sure the instruction pointer never winds up here.
-            xyz[X] = 100;  // 100 seems less dangerous than whatever random noise is in xy[]
+            xyz[X] = 100;  // 100 seems less dangerous than whatever random noise is in xyz[]
             xyz[Y] = 100;  // Should result in very strange motion, which should alert developer that there's a problem
             return;
 
@@ -274,6 +289,10 @@ bool LinearDeltaSolution::set_optional(const arm_options_t& options) {
             case 'F': tower3_angle = i.second; break;
             
             // Already taken or invalid: R, T, Z
+            case 'H': tower1_scale = i.second; break;
+            case 'I': tower2_scale = i.second; break;
+            case 'J': tower3_scale = i.second; break;
+            /*
             case 'H': tower1_vector[X] = i.second; break;
             case 'I': tower1_vector[Y] = i.second; break;
             case 'J': tower1_vector[Z] = i.second; break; // R is already taken
@@ -283,6 +302,7 @@ bool LinearDeltaSolution::set_optional(const arm_options_t& options) {
             case 'W': tower3_vector[X] = i.second; break;
             case 'X': tower3_vector[Y] = i.second; break;
             case 'Y': tower3_vector[Z] = i.second; break; // Z is already taken
+            */
         }
     }
     init();
@@ -290,29 +310,37 @@ bool LinearDeltaSolution::set_optional(const arm_options_t& options) {
 }
 
 bool LinearDeltaSolution::get_optional(arm_options_t& options) {
-    options['L']= this->arm_length;
-    options['R']= this->arm_radius;
 
-    // don't report these if none of them are set
-    if(this->tower1_offset != 0.0F || this->tower2_offset != 0.0F || this->tower3_offset != 0.0F ||
-       this->tower1_angle != 0.0F  || this->tower2_angle != 0.0F  || this->tower3_angle != 0.0F) {
+    // Always return these
+    options['L']= arm_length;
+    options['R']= arm_radius;
 
-        options['A'] = this->tower1_offset;
-        options['B'] = this->tower2_offset;
-        options['C'] = this->tower3_offset;
-        options['D'] = this->tower1_angle;
-        options['E'] = this->tower2_angle;
-        options['F'] = this->tower3_angle;
+    options['H'] = tower1_scale;
+    options['I'] = tower2_scale;
+    options['J'] = tower3_scale;
 
-        options['H'] = this->tower1_vector[X];
-        options['I'] = this->tower1_vector[Y];
-        options['J'] = this->tower1_vector[Z];
-        options['N'] = this->tower2_vector[X];
-        options['O'] = this->tower2_vector[Y];
-        options['P'] = this->tower2_vector[Z];
-        options['W'] = this->tower3_vector[X];
-        options['X'] = this->tower3_vector[Y];
-        options['Y'] = this->tower3_vector[Z];
+    // Don't return these if none of them are set
+    if(tower1_offset != 0.0F || tower2_offset != 0.0F || tower3_offset != 0.0F ||
+       tower1_angle != 0.0F  || tower2_angle != 0.0F  || tower3_angle != 0.0F ) {
+
+        options['A'] = tower1_offset;
+        options['B'] = tower2_offset;
+        options['C'] = tower3_offset;
+        options['D'] = tower1_angle;
+        options['E'] = tower2_angle;
+        options['F'] = tower3_angle;
+
+        /*
+        options['H'] = tower1_vector[X];
+        options['I'] = tower1_vector[Y];
+        options['J'] = tower1_vector[Z];
+        options['N'] = tower2_vector[X];
+        options['O'] = tower2_vector[Y];
+        options['P'] = tower2_vector[Z];
+        options['W'] = tower3_vector[X];
+        options['X'] = tower3_vector[Y];
+        options['Y'] = tower3_vector[Z];
+        */
 
     }
 
