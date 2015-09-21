@@ -69,7 +69,7 @@ TemperatureControl::TemperatureControl(uint16_t name, int index)
     name_checksum= name;
     pool_index= index;
     waiting= false;
-    min_temp_violated= false;
+    temp_violated= false;
     sensor= nullptr;
     readonly= false;
 }
@@ -113,9 +113,11 @@ void TemperatureControl::on_halt(void *arg)
 
 void TemperatureControl::on_main_loop(void *argument)
 {
-    if (this->min_temp_violated) {
-        THEKERNEL->streams->printf("Error: MINTEMP triggered. Check your temperature sensors!\n");
-        this->min_temp_violated = false;
+    if (this->temp_violated) {
+        this->temp_violated = false;
+        THEKERNEL->streams->printf("Error: MINTEMP or MAXTEMP triggered. Check your temperature sensors!\n");
+        THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
+        THEKERNEL->call_event(ON_HALT, nullptr);
     }
 }
 
@@ -132,7 +134,7 @@ void TemperatureControl::load_config()
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
     // Max and min temperatures we are not allowed to get over (Safety)
-    this->max_temp = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_temp_checksum)->by_default(1000)->as_number();
+    this->max_temp = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_temp_checksum)->by_default(300)->as_number();
     this->min_temp = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, min_temp_checksum)->by_default(0)->as_number();
 
     // Heater pin
@@ -208,14 +210,12 @@ void TemperatureControl::on_gcode_received(void *argument)
 
         if( gcode->m == this->get_m_code ) {
             char buf[32]; // should be big enough for any status
-            int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature == UNDEFINED) ? 0.0 : target_temperature), this->o);
+            int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);
-            gcode->mark_as_taken();
             return;
         }
 
         if (gcode->m == 305) { // set or get sensor settings
-            gcode->mark_as_taken();
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
                 TempSensor::sensor_options_t args= gcode->get_args();
                 args.erase('S'); // don't include the S
@@ -238,7 +238,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                 if(sensor->get_optional(options)) {
                     for(auto &i : options) {
                         // foreach optional value
-                        gcode->stream->printf("%s(S%d): %c%1.18f\n", this->designator.c_str(), this->pool_index, i.first, i.second);
+                        gcode->stream->printf("%s(S%d): %c %1.18f\n", this->designator.c_str(), this->pool_index, i.first, i.second);
                     }
                 }
             }
@@ -249,8 +249,20 @@ void TemperatureControl::on_gcode_received(void *argument)
         // readonly sensors don't handle the rest
         if(this->readonly) return;
 
-        if (gcode->m == 301) {
-            gcode->mark_as_taken();
+        if (gcode->m == 143) {
+            if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
+                if(gcode->has_letter('P')) {
+                    max_temp= gcode->get_value('P');
+
+                } else {
+                    gcode->stream->printf("Nothing set NOTE Usage is M143 S0 P300 where <S> is the hotend index and <P> is the maximum temp to set\n");
+                }
+
+            }else if(gcode->get_num_args() == 0) {
+                gcode->stream->printf("Maximum temperature for %s(%d) is %f°C\n", this->designator.c_str(), this->pool_index, max_temp);
+            }
+
+        } else if (gcode->m == 301) {
             if (gcode->has_letter('S') && (gcode->get_value('S') == this->pool_index)) {
                 if (gcode->has_letter('P'))
                     setPIDp( gcode->get_value('P') );
@@ -270,6 +282,8 @@ void TemperatureControl::on_gcode_received(void *argument)
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f X%1.4f Y%d\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm());
 
+            gcode->stream->printf(";Max temperature setting:\nM143 S%d P%1.4f\n", this->pool_index, this->max_temp);
+
             if(this->sensor_settings) {
                 // get or save any sensor specific optional values
                 TempSensor::sensor_options_t options;
@@ -281,10 +295,8 @@ void TemperatureControl::on_gcode_received(void *argument)
                     gcode->stream->printf("\n");
                 }
             }
-            gcode->mark_as_taken();
 
         } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S')) {
-            gcode->mark_as_taken();
             // this only gets handled if it is not controlled by the tool manager or is active in the toolmanager
             this->active = true;
 
@@ -342,18 +354,35 @@ void TemperatureControl::on_get_public_data(void *argument)
             pdr->set_data_ptr(&return_data);
             pdr->set_taken();
         }
-        return;
 
-    }else if(!pdr->second_element_is(this->name_checksum)) return;
+    }else if(pdr->second_element_is(poll_controls_checksum)) {
+        // polling for all temperature controls
+        // add our data to the list which is passed in via the data_ptr
 
-    // ok this is targeted at us, so send back the requested data
-    if(pdr->third_element_is(current_temperature_checksum)) {
-        this->public_data_return.current_temperature = this->get_temperature();
-        this->public_data_return.target_temperature = (target_temperature == UNDEFINED) ? 0 : this->target_temperature;
-        this->public_data_return.pwm = this->o;
-        this->public_data_return.designator= this->designator;
-        pdr->set_data_ptr(&this->public_data_return);
+        std::vector<struct pad_temperature> *v= static_cast<std::vector<pad_temperature>*>(pdr->get_data_ptr());
+
+        struct pad_temperature t;
+        // setup data
+        t.current_temperature = this->get_temperature();
+        t.target_temperature = (target_temperature <= 0) ? 0 : this->target_temperature;
+        t.pwm = this->o;
+        t.designator= this->designator;
+        t.id= this->name_checksum;
+        v->push_back(t);
         pdr->set_taken();
+
+    }else if(pdr->second_element_is(current_temperature_checksum)) {
+        // if targeted at us
+        if(pdr->third_element_is(this->name_checksum)) {
+            // ok this is targeted at us, so set the requ3sted data in the pointer passed into us
+            struct pad_temperature *t= static_cast<pad_temperature*>(pdr->get_data_ptr());
+            t->current_temperature = this->get_temperature();
+            t->target_temperature = (target_temperature <= 0) ? 0 : this->target_temperature;
+            t->pwm = this->o;
+            t->designator= this->designator;
+            t->id= this->name_checksum;
+            pdr->set_taken();
+        }
     }
 
 }
@@ -387,11 +416,11 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
 
     float last_target_temperature= target_temperature;
     target_temperature = desired_temperature;
-    if (desired_temperature == 0.0F){
+    if (desired_temperature <= 0.0F){
         // turning it off
         heater_pin.set((this->o = 0));
 
-    }else if(last_target_temperature == 0.0F) {
+    }else if(last_target_temperature <= 0.0F) {
         // if it was off and we are now turning it on we need to initialize
         this->lastInput= last_reading;
         // set to whatever the output currently is See http://brettbeauregard.com/blog/2011/04/improving-the-beginner%E2%80%99s-pid-initialization/
@@ -409,22 +438,16 @@ float TemperatureControl::get_temperature()
 uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
 {
     float temperature = sensor->get_temperature();
-    if(this->readonly) {
-        last_reading = temperature;
-        return 0;
-    }
-
-    if (target_temperature > 0) {
-        if (isinf(temperature) || temperature < min_temp) {
-            this->min_temp_violated = true;
+    if(!this->readonly && target_temperature > 2) {
+        if (isinf(temperature) || temperature < min_temp || temperature > max_temp) {
+            this->temp_violated = true;
             target_temperature = UNDEFINED;
             heater_pin.set((this->o = 0));
         } else {
             pid_process(temperature);
         }
-    } else {
-        heater_pin.set((this->o = 0));
     }
+
     last_reading = temperature;
     return 0;
 }
@@ -483,7 +506,7 @@ void TemperatureControl::pid_process(float temperature)
 void TemperatureControl::on_second_tick(void *argument)
 {
     if (waiting)
-        THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature == UNDEFINED) ? 0.0 : target_temperature), o);
+        THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), o);
 }
 
 void TemperatureControl::setPIDp(float p)

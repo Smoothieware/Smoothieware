@@ -54,7 +54,7 @@ void LinearDeltaSolution::init() {
     delta_tower3_y = (delta_radius + tower3_offset) * sinf((90.0F  + tower3_angle) * PIOVER180);
 }
 
-void LinearDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float actuator_mm[] )
+void LinearDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], float actuator_mm[] )
 {
 
     actuator_mm[ALPHA_STEPPER] = sqrtf(this->arm_length_squared
@@ -71,7 +71,7 @@ void LinearDeltaSolution::cartesian_to_actuator( float cartesian_mm[], float act
                                       ) + cartesian_mm[Z_AXIS];
 }
 
-void LinearDeltaSolution::actuator_to_cartesian( float actuator_mm[], float cartesian_mm[] )
+void LinearDeltaSolution::actuator_to_cartesian(const float actuator_mm[], float cartesian_mm[] )
 {
     // from http://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates_from_cross-_and_dot-products
     // based on https://github.com/ambrop72/aprinter/blob/2de69a/aprinter/printer/DeltaTransform.h#L81
@@ -121,27 +121,28 @@ bool LinearDeltaSolution::set_optional(const arm_options_t& options) {
             case 'C': tower3_offset = i.second; break;
             case 'D': tower1_angle = i.second; break;
             case 'E': tower2_angle = i.second; break;
-            case 'F': tower3_angle = i.second; break;
+            case 'F': tower3_angle = i.second; break; // WARNING this will be deprecated
+            case 'H': tower3_angle = i.second; break;
         }
     }
     init();
     return true;
 }
 
-bool LinearDeltaSolution::get_optional(arm_options_t& options) {
+bool LinearDeltaSolution::get_optional(arm_options_t& options, bool force_all) {
     options['L']= this->arm_length;
     options['R']= this->arm_radius;
 
     // don't report these if none of them are set
-    if(this->tower1_offset != 0.0F || this->tower2_offset != 0.0F || this->tower3_offset != 0.0F ||
-       this->tower1_angle != 0.0F  || this->tower2_angle != 0.0F  || this->tower3_angle != 0.0F) {
+    if(force_all || (this->tower1_offset != 0.0F || this->tower2_offset != 0.0F || this->tower3_offset != 0.0F ||
+       this->tower1_angle != 0.0F  || this->tower2_angle != 0.0F  || this->tower3_angle != 0.0F) ) {
 
         options['A'] = this->tower1_offset;
         options['B'] = this->tower2_offset;
         options['C'] = this->tower3_offset;
         options['D'] = this->tower1_angle;
         options['E'] = this->tower2_angle;
-        options['F'] = this->tower3_angle;
+        options['H'] = this->tower3_angle;
     }
 
     return true;

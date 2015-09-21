@@ -48,6 +48,20 @@ Config::Config()
         this->config_sources.push_back( fcs );
 }
 
+Config::Config(ConfigSource *cs)
+{
+    this->config_cache = NULL;
+    this->config_sources.push_back( cs );
+}
+
+Config::~Config()
+{
+    config_cache_clear();
+    for(auto i : this->config_sources) {
+        delete i;
+    }
+}
+
 void Config::on_module_loaded() {}
 
 void Config::on_console_line_received( void *argument ) {}

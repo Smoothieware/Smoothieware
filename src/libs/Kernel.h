@@ -30,7 +30,6 @@ class Planner;
 class StepTicker;
 class Adc;
 class PublicData;
-class TemperatureControlPool;
 
 class Kernel {
     public:
@@ -40,8 +39,10 @@ class Kernel {
 
         void add_module(Module* module);
         void register_for_event(_EVENT_ENUM id_event, Module *module);
-        void call_event(_EVENT_ENUM id_event);
-        void call_event(_EVENT_ENUM id_event, void * argument);
+        void call_event(_EVENT_ENUM id_event, void * argument= nullptr);
+
+        bool kernel_has_event(_EVENT_ENUM id_event, Module *mod);
+        void unregister_for_event(_EVENT_ENUM id_event, Module *module);
 
         // These modules are available to all other modules
         SerialConsole*    serial;
@@ -53,7 +54,6 @@ class Kernel {
         Config*           config;
         Conveyor*         conveyor;
         Pauser*           pauser;
-        TemperatureControlPool* temperature_control_pool;
 
         int debug;
         SlowTicker*       slow_ticker;

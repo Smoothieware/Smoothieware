@@ -288,7 +288,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         if(isnan(z)) return false; // probe failed
         z= zprobe->getProbeHeight() - z; // relative distance between the probe points, lower is negative z
         stream->printf("DEBUG: P%d:%1.4f\n", i, z);
-        v[i].set(x, y, z);
+        v[i] = Vector3(x, y, z);
     }
 
     // if first point is not within tolerance report it, it should ideally be 0

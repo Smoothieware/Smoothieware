@@ -30,7 +30,8 @@ private:
     void get_sd_play_info();
     const char *get_status();
     const char *get_network();
-    void *getTemperatures(uint16_t heater_cs);
+
+    std::vector<uint16_t> temp_controllers;
 
     uint32_t update_counts;
     int current_speed;

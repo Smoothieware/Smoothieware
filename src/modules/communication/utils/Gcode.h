@@ -30,7 +30,6 @@ class Gcode {
         uint32_t get_uint ( char letter, char **ptr= nullptr ) const;
         int get_num_args() const;
         std::map<char,float> get_args() const;
-        void mark_as_taken();
         void strip_parameters();
 
         // FIXME these should be private
@@ -42,7 +41,6 @@ class Gcode {
             bool add_nl:1;
             bool has_m:1;
             bool has_g:1;
-            bool accepted_by_module:1;
             bool stripped:1;
         };
 

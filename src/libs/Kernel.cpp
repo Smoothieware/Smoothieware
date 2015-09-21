@@ -159,16 +159,29 @@ void Kernel::register_for_event(_EVENT_ENUM id_event, Module *mod){
     this->hooks[id_event].push_back(mod);
 }
 
-// Call a specific event without arguments
-void Kernel::call_event(_EVENT_ENUM id_event){
-    for (auto m : hooks[id_event]) {
-        (m->*kernel_callback_functions[id_event])(this);
-    }
-}
-
 // Call a specific event with an argument
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
     for (auto m : hooks[id_event]) {
         (m->*kernel_callback_functions[id_event])(argument);
     }
 }
+
+// These are used by tests to test for various things. basically mocks
+bool Kernel::kernel_has_event(_EVENT_ENUM id_event, Module *mod)
+{
+    for (auto m : hooks[id_event]) {
+        if(m == mod) return true;
+    }
+    return false;
+}
+
+void Kernel::unregister_for_event(_EVENT_ENUM id_event, Module *mod)
+{
+    for (auto i = hooks[id_event].begin(); i != hooks[id_event].end(); ++i) {
+        if(*i == mod) {
+            hooks[id_event].erase(i);
+            return;
+        }
+    }
+}
+

@@ -147,9 +147,7 @@ void init() {
     // Note order is important here must be after extruder so Tn as a parameter will get executed first
     TemperatureControlPool *tp= new TemperatureControlPool();
     tp->load_tools();
-    kernel->temperature_control_pool= tp;
-    #else
-    kernel->temperature_control_pool= new TemperatureControlPool(); // so we can get just an empty temperature control array
+    delete tp;
     #endif
     #ifndef NO_TOOLS_LASER
     kernel->add_module( new Laser() );
@@ -173,7 +171,7 @@ void init() {
     kernel->add_module( new Network() );
     #endif
     #ifndef NO_TOOLS_TEMPERATURESWITCH
-    // Must be loaded after TemperatureControlPool
+    // Must be loaded after TemperatureControl
     kernel->add_module( new TemperatureSwitch() );
     #endif
     #ifndef NO_TOOLS_DRILLINGCYCLES

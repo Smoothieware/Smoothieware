@@ -22,6 +22,8 @@
 #include "ConfigValue.h"
 #include "PublicDataRequest.h"
 #include "PublicData.h"
+#include "SimpleShell.h"
+#include "utils.h"
 
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
 #define panel_display_message_checksum CHECKSUM("display_message")
@@ -47,7 +49,6 @@ GcodeDispatch::GcodeDispatch()
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded()
 {
-    return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_HALT);
 }
@@ -191,6 +192,30 @@ try_again:
                                 return;
                             }
 
+                            case 1000: // M1000 is a special comanad that will pass thru the raw lowercased command to the simpleshell (for hosts that do not allow such things)
+                            {
+                                // reconstruct entire command line again
+                                string str= single_command.substr(5) + possible_command;
+                                while(is_whitespace(str.front())){ str= str.substr(1); } // strip leading whitespace
+
+                                delete gcode;
+
+                                if(str.empty()) {
+                                    SimpleShell::parse_command("help", "", new_message.stream);
+
+                                }else{
+                                    string args= lc(str);
+                                    string cmd = shift_parameter(args);
+                                    // find command and execute it
+                                    if(!SimpleShell::parse_command(cmd.c_str(), args, new_message.stream)) {
+                                        new_message.stream->printf("Command not found: %s\n", cmd.c_str());
+                                    }
+                                }
+
+                                new_message.stream->printf("ok\r\n");
+                                return;
+                            }
+
                             case 500: // M500 save volatile settings to config-override
                                 THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
                                 //remove(THEKERNEL->config_override_filename()); // seems to cause a hang every now and then
@@ -235,9 +260,7 @@ try_again:
                     if(gcode->add_nl)
                         new_message.stream->printf("\r\n");
 
-                    if( return_error_on_unhandled_gcode == true && gcode->accepted_by_module == false)
-                        new_message.stream->printf("ok (command unclaimed)\r\n");
-                    else if(!gcode->txt_after_ok.empty()) {
+                    if(!gcode->txt_after_ok.empty()) {
                         new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
                         gcode->txt_after_ok.clear();
                     } else

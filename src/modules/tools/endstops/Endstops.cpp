@@ -28,9 +28,9 @@
 #include "StreamOutputPool.h"
 #include "Pauser.h"
 #include "StepTicker.h"
+#include "BaseSolution.h"
 
 #include <ctype.h>
-#include <cmath>
 
 #define ALPHA_AXIS 0
 #define BETA_AXIS  1
@@ -177,7 +177,6 @@ void Endstops::on_config_reload(void *argument)
 
     this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
 
-
     // get homing direction and convert to boolean where true is home to min, and false is home to max
     int home_dir                    = get_checksum(THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
     this->home_direction[0]         = home_dir != home_to_max_checksum;
@@ -227,7 +226,35 @@ void Endstops::on_config_reload(void *argument)
 
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]){
         register_for_event(ON_IDLE);
+        if(this->is_delta) {
+            // we must enable all the limits not just one
+            this->limit_enable[X_AXIS]= true;
+            this->limit_enable[Y_AXIS]= true;
+            this->limit_enable[Z_AXIS]= true;
+        }
     }
+
+    // NOTE this may also be true of scara. TBD
+    if(this->is_delta) {
+        // some things must be the same or they will die, so force it here to avoid config errors
+        this->fast_rates[1]= this->fast_rates[2]= this->fast_rates[0];
+        this->slow_rates[1]= this->slow_rates[2]= this->slow_rates[0];
+        this->retract_mm[1]= this->retract_mm[2]= this->retract_mm[0];
+        this->home_direction[1]= this->home_direction[2]= this->home_direction[0];
+        this->homing_position[0]= this->homing_position[1]= 0;
+    }
+}
+
+bool Endstops::debounced_get(int pin)
+{
+    uint8_t debounce= 0;
+    while(this->pins[pin].get()) {
+        if ( ++debounce >= this->debounce_count ) {
+            // pin triggered
+            return true;
+        }
+    }
+    return false;
 }
 
 static const char *endstop_names[]= {"min_x", "min_y", "min_z", "max_x", "max_y", "max_z"};
@@ -267,16 +294,13 @@ void Endstops::on_idle(void *argument)
             // check min and max endstops
             for (int i : minmax) {
                 int n= c+i;
-                uint8_t debounce= 0;
-                while(this->pins[n].get()) {
-                    if ( ++debounce >= debounce_count ) {
-                        // endstop triggered
-                        THEKERNEL->streams->printf("Limit switch %s was hit - reset or M999 required\n", endstop_names[n]);
-                        this->status= LIMIT_TRIGGERED;
-                        // disables heaters and motors, ignores incoming Gcode and flushes block queue
-                        THEKERNEL->call_event(ON_HALT, nullptr);
-                        return;
-                    }
+                if(debounced_get(n)) {
+                    // endstop triggered
+                    THEKERNEL->streams->printf("Limit switch %s was hit - reset or M999 required\n", endstop_names[n]);
+                    this->status= LIMIT_TRIGGERED;
+                    // disables heaters and motors, ignores incoming Gcode and flushes block queue
+                    THEKERNEL->call_event(ON_HALT, nullptr);
+                    return;
                 }
             }
         }
@@ -287,24 +311,42 @@ void Endstops::on_idle(void *argument)
 // checks if triggered and only backs off if triggered
 void Endstops::back_off_home(char axes_to_move)
 {
+    std::vector<std::pair<char,float>> params;
     this->status = BACK_OFF_HOME;
-    for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
-        if(this->limit_enable[c]) {
-            if( !this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) continue; // if not triggered no need to move off
 
-            // Move off of the endstop using a regular relative move
-            char buf[32];
-            snprintf(buf, sizeof(buf), "G0 %c%1.4f F%1.4f", c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1), this->fast_rates[c]*60.0F);
-            Gcode gc(buf, &(StreamOutput::NullStream));
-            bool oldmode= THEKERNEL->robot->absolute_mode;
-            THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
-            THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-            THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+    // these are handled differently
+    if((is_delta || is_scara) && this->limit_enable[X_AXIS]) {
+        // Move off of the endstop using a regular relative move in Z only
+         params.push_back({'Z', this->retract_mm[Z_AXIS]*(this->home_direction[Z_AXIS]?1:-1)});
+
+    }else{
+        // cartesians, concatenate all the moves we need to do into one gcode
+        for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+            if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
+
+            // if not triggered no need to move off
+            if(this->limit_enable[c] && debounced_get(c + (this->home_direction[c] ? 0 : 3)) ) {
+                params.push_back({c+'X', this->retract_mm[c]*(this->home_direction[c]?1:-1)});
+            }
         }
     }
-    // Wait for above to finish
-    THEKERNEL->conveyor->wait_for_empty_queue();
+
+    if(!params.empty()) {
+        // Move off of the endstop using a regular relative move
+        params.insert(params.begin(), {'G', 0});
+        // use X slow rate to move, Z should have a max speed set anyway
+        params.push_back({'F', this->slow_rates[X_AXIS]*60.0F});
+        char gcode_buf[64];
+        append_parameters(gcode_buf, params, sizeof(gcode_buf));
+        Gcode gc(gcode_buf, &(StreamOutput::NullStream));
+        bool oldmode= THEKERNEL->robot->absolute_mode;
+        THEKERNEL->robot->absolute_mode= false; // needs to be relative mode
+        THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+        THEKERNEL->robot->absolute_mode= oldmode; // restore mode
+        // Wait for above to finish
+        THEKERNEL->conveyor->wait_for_empty_queue();
+    }
+
     this->status = NOT_HOMING;
 }
 
@@ -318,7 +360,7 @@ void Endstops::move_to_origin(char axes_to_move)
 
     this->status = MOVE_TO_ORIGIN;
     // Move to center using a regular move, use slower of X and Y fast rate
-    float rate= min(this->fast_rates[0], this->fast_rates[1])*60.0F;
+    float rate= std::min(this->fast_rates[0], this->fast_rates[1])*60.0F;
     char buf[32];
     snprintf(buf, sizeof(buf), "G0 X0 Y0 F%1.4f", rate);
     Gcode gc(buf, &(StreamOutput::NullStream));
@@ -402,30 +444,6 @@ void Endstops::do_homing_cartesian(char axes_to_move)
 
     // Wait for all axes to have homed
     this->wait_for_homed(axes_to_move);
-
-    if (this->is_delta || this->is_scara) {
-        // move for soft trim
-        this->status = MOVING_BACK;
-        for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-            if ( this->trim_mm[c] != 0.0F && ( axes_to_move >> c ) & 1 ) {
-                inverted_dir = this->home_direction[c];
-                // move up or down depending on sign of trim, -ive is down away from home
-                if (this->trim_mm[c] < 0) inverted_dir = !inverted_dir;
-                this->feed_rate[c]= this->slow_rates[c];
-                STEPPER[c]->move(inverted_dir, (double) abs( (double) round(this->trim_mm[c]*STEPS_PER_MM(c))), 0);
-            }
-        }
-
-        // Wait for moves to be done
-        for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-            if (  ( axes_to_move >> c ) & 1 ) {
-                //THEKERNEL->streams->printf("axis %c \r\n", c );
-                while ( STEPPER[c]->is_moving() ) {
-                    THEKERNEL->call_event(ON_IDLE);
-                }
-            }
-        }
-    }
 
     // Homing is done
     this->status = NOT_HOMING;
@@ -578,7 +596,7 @@ void Endstops::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
     if ( gcode->has_g) {
         if ( gcode->g == 28 ) {
-            gcode->mark_as_taken();
+
             // G28 is received, we have homing to do
 
             // First wait for the queue to be empty
@@ -615,11 +633,36 @@ void Endstops::on_gcode_received(void *argument)
 
             if(home_all) {
                 // for deltas this may be important rather than setting each individually
-                THEKERNEL->robot->reset_axis_position(
+
+                // Here's where we would have been if the endstops were perfectly trimmed
+                float ideal_position[3] = {
                     this->homing_position[X_AXIS] + this->home_offset[X_AXIS],
                     this->homing_position[Y_AXIS] + this->home_offset[Y_AXIS],
-                    this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]);
-            }else{
+                    this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]
+                };
+
+                bool has_endstop_trim = this->is_delta || this->is_scara;
+                if (has_endstop_trim) {
+                    float ideal_actuator_position[3];
+                    THEKERNEL->robot->arm_solution->cartesian_to_actuator(ideal_position, ideal_actuator_position);
+
+                    // We are actually not at the ideal position, but a trim away
+                    float real_actuator_position[3] = {
+                        ideal_actuator_position[X_AXIS] - this->trim_mm[X_AXIS],
+                        ideal_actuator_position[Y_AXIS] - this->trim_mm[Y_AXIS],
+                        ideal_actuator_position[Z_AXIS] - this->trim_mm[Z_AXIS]
+                    };
+
+                    float real_position[3];
+                    THEKERNEL->robot->arm_solution->actuator_to_cartesian(real_actuator_position, real_position);
+                    // Reset the actuator positions to correspond our real position
+                    THEKERNEL->robot->reset_axis_position(real_position[0], real_position[1], real_position[2]);
+                } else {
+                    // without endstop trim, real_position == ideal_position
+                    // Reset the actuator positions to correspond our real position
+                    THEKERNEL->robot->reset_axis_position(ideal_position[0], ideal_position[1], ideal_position[2]);
+                }
+            } else {
                 // Zero the ax(i/e)s position, add in the home offset
                 for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
                     if ( (axes_to_move >> c)  & 1 ) {
@@ -645,7 +688,7 @@ void Endstops::on_gcode_received(void *argument)
                         gcode->stream->printf("%s:%d ", endstop_names[i], this->pins[i].get());
                 }
                 gcode->add_nl= true;
-                gcode->mark_as_taken();
+
             }
             break;
 
@@ -654,7 +697,7 @@ void Endstops::on_gcode_received(void *argument)
                 if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
                 if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
                 gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
-                gcode->mark_as_taken();
+
                 break;
 
             case 306: // Similar to M206 and G92 but sets Homing offsets based on current position, Would be M207 but that is taken
@@ -675,7 +718,7 @@ void Endstops::on_gcode_received(void *argument)
                     }
 
                     gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
-                    gcode->mark_as_taken();
+
                 }
                 break;
 
@@ -686,11 +729,10 @@ void Endstops::on_gcode_received(void *argument)
                     gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
                     gcode->stream->printf(";Max Z\nM665 Z%1.3f\n", this->homing_position[2]);
                 }
-                gcode->mark_as_taken();
                 break;
 
             case 665: { // M665 - set max gamma/z height
-                gcode->mark_as_taken();
+
                 float gamma_max = this->homing_position[2];
                 if (gcode->has_letter('Z')) {
                     this->homing_position[2] = gamma_max = gcode->get_value('Z');
@@ -709,7 +751,7 @@ void Endstops::on_gcode_received(void *argument)
 
                     // print the current trim values in mm
                     gcode->stream->printf("X: %5.3f Y: %5.3f Z: %5.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
-                    gcode->mark_as_taken();
+
                 }
             break;
 
@@ -733,7 +775,6 @@ void Endstops::on_gcode_received(void *argument)
                     STEPPER[Z_AXIS]->move(z<0, abs(z), f);
                 }
                 gcode->stream->printf("Moved X %d Y %d Z %d F %d steps\n", x, y, z, f);
-                gcode->mark_as_taken();
                 break;
             }
         }
