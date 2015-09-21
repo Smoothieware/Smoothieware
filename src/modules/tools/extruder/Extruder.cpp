@@ -417,7 +417,7 @@ void Extruder::on_gcode_received(void *argument)
             // Gcodes to pass along to on_gcode_execute
             THEKERNEL->conveyor->append_gcode(gcode);
 
-        }else if( this->enabled && gcode->g < 4 && fabsf(gcode->millimeters_of_travel) < 0.00001F ) { // With floating numbers, we can have 0 != 0, NOTE needs to be same as in Robot.cpp#745
+        }else if( this->enabled && gcode->g < 4 && gcode->has_letter('E') && fabsf(gcode->millimeters_of_travel) < 0.00001F ) { // With floating numbers, we can have 0 != 0, NOTE needs to be same as in Robot.cpp#745
             // NOTE was ... gcode->has_letter('E') && !gcode->has_letter('X') && !gcode->has_letter('Y') && !gcode->has_letter('Z') ) {
             // This is a SOLO move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
             THEKERNEL->conveyor->append_gcode(gcode);
