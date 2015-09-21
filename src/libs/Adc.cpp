@@ -31,9 +31,12 @@ Adc::Adc()
     instance = this;
     // ADC sample rate need to be fast enough to be able to read the enabled channels within the thermistor poll time
     // even though ther maybe 32 samples we only need one new one within the polling time
+/* FIXME STM32
     const uint32_t sample_rate= 1000; // 1KHz sample rate
+
     this->adc = new mbed::ADC(sample_rate, 8);
     this->adc->append(sample_isr);
+*/
 }
 
 /*
@@ -53,6 +56,8 @@ AD7 P0.2    0-GPIO,     1-TXD0, 2-AD0[7], 3-                4,5 bits of PINSEL0
 // Enables ADC on a given pin
 void Adc::enable_pin(Pin *pin)
 {
+#warning STM32
+/* FIXME STM32
     PinName pin_name = this->_pin_to_pinname(pin);
     int channel = adc->_pin_to_channel(pin_name);
     memset(sample_buffers[channel], 0, sizeof(sample_buffers[0]));
@@ -60,6 +65,7 @@ void Adc::enable_pin(Pin *pin)
     this->adc->burst(1);
     this->adc->setup(pin_name, 1);
     this->adc->interrupt_state(pin_name, 1);
+*/
 }
 
 // Keeps the last 8 values for each channel
@@ -77,9 +83,12 @@ void Adc::new_sample(int chan, uint32_t value)
 // Read the filtered value ( burst mode ) on a given pin
 unsigned int Adc::read(Pin *pin)
 {
+#warning STM32
+/* FIXME STM32
     PinName p = this->_pin_to_pinname(pin);
     int channel = adc->_pin_to_channel(p);
-
+*/
+        int channel = 0;
     uint16_t median_buffer[num_samples];
     // needs atomic access TODO maybe be able to use std::atomic here or some lockless mutex
     __disable_irq();
@@ -122,6 +131,8 @@ unsigned int Adc::read(Pin *pin)
 // Convert a smoothie Pin into a mBed Pin
 PinName Adc::_pin_to_pinname(Pin *pin)
 {
+#warning STM32
+/* FIXME stm32 
     if( pin->port == LPC_GPIO0 && pin->pin == 23 ) {
         return p15;
     } else if( pin->port == LPC_GPIO0 && pin->pin == 24 ) {

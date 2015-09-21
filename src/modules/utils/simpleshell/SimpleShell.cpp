@@ -23,6 +23,7 @@
 #include "PublicData.h"
 #include "Gcode.h"
 #include "Robot.h"
+#include "md5.h"
 
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "NetworkPublicAccess.h"
@@ -476,6 +477,7 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
 // show free memory
 void SimpleShell::mem_command( string parameters, StreamOutput *stream)
 {
+#warning STM32
 /* FIXME STM32 
     bool verbose = shift_parameter( parameters ).find_first_of("Vv") != string::npos ;
     unsigned long heap = (unsigned long)_sbrk(0);

@@ -2,7 +2,7 @@ PROJECT		:= main
 GCC4MBED_DIR	:= ../mbed
 DEVICES		:= NUCLEO_F411RE
 MBED_LIBS	:= fs
-EXCLUDE 	:= libs/Network/ libs/ADC/ modules/utils/panel 
+EXCLUDE 	:= libs/Network/ libs/ADC/ modules/utils/panel testframework/
 
 # BUILD_TYPE can be set to the following values:
 #  Checked - Optimizations enabled with MRI debug monitor support. (Recommended Type)

@@ -15,9 +15,6 @@
 #include <cmath>
 
 class Pin;
-namespace mbed {
-    class ADC;
-}
 
 // define how many bits of extra resolution required
 // 2 bits means the 12bit ADC is 14 bits of resolution
@@ -41,8 +38,9 @@ public:
 
 private:
     PinName _pin_to_pinname(Pin *pin);
+    /* FIXME STM32
     mbed::ADC *adc;
-
+    */
     static const int num_channels= 6;
 #ifdef OVERSAMPLE
     // we need 4^n sample to oversample and we get double that to filter out spikes
