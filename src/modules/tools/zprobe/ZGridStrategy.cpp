@@ -522,10 +522,6 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
         } else {
             this->next_cal();                                     // to not cause damage to machine due to Z-offset
         }
-	// probeDistance() moves to the correct point, so this
-	// move is not only redundant, but wrong.
-        // this->move(this->cal, slow_rate);                         // move to the next position
-
         this->pData[pindex] = z ;                                 // save the offset
     }
 
@@ -662,14 +658,6 @@ float ZGridStrategy::getZOffset(float X, float Y)
     int xIndex = (int)(floorf(xdiff));	// Get the current sector (X)
     int yIndex = (int)(floorf(ydiff));	// Get the current sector (Y)
     
-    // * Care taken for table outside boundary
-    // * Returns zero output when values are outside table boundary
-    // if(xIndex < 0 || xIndex > (this->numRows - 1) || yIndex < 0
-    //    || yIndex > (this->numCols - 1))
-    // {
-    //   return (0);
-    // }
-
     // Index bounds limited to be inside the table
     if (xIndex < 0) xIndex = 0;
     else if (xIndex > (this->numRows - 2)) xIndex = this->numRows - 2;
@@ -677,14 +665,7 @@ float ZGridStrategy::getZOffset(float X, float Y)
     if (yIndex < 0) yIndex = 0;
     else if (yIndex > (this->numCols - 2)) yIndex = this->numCols - 2;
 
-    // if (xIndex == (this->numRows - 1))
-    //     xIndex2 = xIndex;
-    // else
     xIndex2 = xIndex+1;
-
-    // if (yIndex == (this->numCols - 1))
-    //     yIndex2 = yIndex;
-    // else
     yIndex2 = yIndex+1;
 
     xdiff -= xIndex;                    // Find floating point
