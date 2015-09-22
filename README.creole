@@ -22,7 +22,7 @@ You'll need to pull one of the example files (boardname.delta) out of ConfigSamp
 The recommended way to use this on a Delta printer is:
 * G29 E (calibrate your probe)
 * G32 (iterative calibration - gets endstops/delta radius correct - type M500 after it's done to save!)
-* G31 O P Q R S (simulated annealing - corrects for errors in X, Y, and Z - it may help to run this multiple times)
+* G31 H O P Q R S (simulated annealing - corrects for errors in X, Y, and Z - it may help to run this multiple times)
 * G31 A (depth mapping - corrects errors in Z, but not X or Y - benefits from simulated annealing, though)
 * M500 to save everything
 
