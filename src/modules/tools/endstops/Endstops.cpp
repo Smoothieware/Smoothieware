@@ -371,13 +371,17 @@ void Endstops::move_to_origin(char axes_to_move)
     this->status = NOT_HOMING;
 }
 
-void Endstops::wait_for_homed(char axes_to_move)
+bool Endstops::wait_for_homed(char axes_to_move)
 {
     bool running = true;
     unsigned int debounce[3] = {0, 0, 0};
     while (running) {
         running = false;
         THEKERNEL->call_event(ON_IDLE);
+
+        // check if on_halt (eg kill)
+        if(THEKERNEL->is_halted()) return false;
+
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
             if ( ( axes_to_move >> c ) & 1 ) {
                 if ( this->pins[c + (this->home_direction[c] ? 0 : 3)].get() ) {
@@ -396,10 +400,14 @@ void Endstops::wait_for_homed(char axes_to_move)
             }
         }
     }
+    return true;
 }
 
 void Endstops::do_homing_cartesian(char axes_to_move)
 {
+    // check if on_halt (eg kill)
+    if(THEKERNEL->is_halted()) return;
+
     // this homing works for cartesian and delta printers
     // Start moving the axes to the origin
     this->status = MOVING_TO_ENDSTOP_FAST;
@@ -411,7 +419,7 @@ void Endstops::do_homing_cartesian(char axes_to_move)
     }
 
     // Wait for all axes to have homed
-    this->wait_for_homed(axes_to_move);
+    if(!this->wait_for_homed(axes_to_move)) return;
 
     // Move back a small distance
     this->status = MOVING_BACK;
@@ -443,19 +451,23 @@ void Endstops::do_homing_cartesian(char axes_to_move)
     }
 
     // Wait for all axes to have homed
-    this->wait_for_homed(axes_to_move);
+    if(!this->wait_for_homed(axes_to_move)) return;
 
     // Homing is done
     this->status = NOT_HOMING;
 }
 
-void Endstops::wait_for_homed_corexy(int axis)
+bool Endstops::wait_for_homed_corexy(int axis)
 {
     bool running = true;
     unsigned int debounce[3] = {0, 0, 0};
     while (running) {
         running = false;
         THEKERNEL->call_event(ON_IDLE);
+
+        // check if on_halt (eg kill)
+        if(THEKERNEL->is_halted()) return false;
+
         if ( this->pins[axis + (this->home_direction[axis] ? 0 : 3)].get() ) {
             if ( debounce[axis] < debounce_count ) {
                 debounce[axis] ++;
@@ -471,10 +483,14 @@ void Endstops::wait_for_homed_corexy(int axis)
             debounce[axis] = 0;
         }
     }
+    return true;
 }
 
 void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps)
 {
+    // check if on_halt (eg kill)
+    if(THEKERNEL->is_halted()) return;
+
     this->status = MOVING_TO_ENDSTOP_FAST;
     this->feed_rate[X_AXIS]= fast_rate;
     STEPPER[X_AXIS]->move(dirx, 10000000, 0);
@@ -482,7 +498,7 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate,
     STEPPER[Y_AXIS]->move(diry, 10000000, 0);
 
     // wait for primary axis
-    this->wait_for_homed_corexy(home_axis);
+    if(!this->wait_for_homed_corexy(home_axis)) return;
 
     // Move back a small distance
     this->status = MOVING_BACK;
@@ -504,7 +520,7 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate,
     STEPPER[Y_AXIS]->move(diry, 10000000, 0);
 
     // wait for primary axis
-    this->wait_for_homed_corexy(home_axis);
+    if(!this->wait_for_homed_corexy(home_axis)) return;
 }
 
 // this homing works for HBots/CoreXY
@@ -623,12 +639,22 @@ void Endstops::on_gcode_received(void *argument)
                 // eg 0b00100001 would be Y X Z, 0b00100100 would be X Y Z
                 for (uint8_t m = homing_order; m != 0; m >>= 2) {
                     int a= (1 << (m & 0x03)); // axis to move
-                    if((a & axes_to_move) != 0)
+                    if((a & axes_to_move) != 0){
                         home(a);
+                    }
+                    // check if on_halt (eg kill)
+                    if(THEKERNEL->is_halted()) break;
                 }
+
             }else {
                 // they all home at the same time
                 home(axes_to_move);
+            }
+
+            // check if on_halt (eg kill)
+            if(THEKERNEL->is_halted()){
+                THEKERNEL->streams->printf("Homing cycle aborted by kill\n");
+                return;
             }
 
             if(home_all) {

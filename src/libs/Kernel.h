@@ -44,6 +44,9 @@ class Kernel {
         bool kernel_has_event(_EVENT_ENUM id_event, Module *mod);
         void unregister_for_event(_EVENT_ENUM id_event, Module *module);
 
+        bool is_using_leds() const { return use_leds; }
+        bool is_halted() const { return halted; }
+
         // These modules are available to all other modules
         SerialConsole*    serial;
         StreamOutputPool* streams;
@@ -59,7 +62,6 @@ class Kernel {
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
-        bool              use_leds;
         std::string       current_path;
         uint32_t          base_stepping_frequency;
         uint32_t          acceleration_ticks_per_second;
@@ -67,6 +69,10 @@ class Kernel {
     private:
         // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
         std::array<std::vector<Module*>, NUMBER_OF_DEFINED_EVENTS> hooks;
+        struct {
+            bool use_leds:1;
+            bool halted:1;
+        };
 
 };
 

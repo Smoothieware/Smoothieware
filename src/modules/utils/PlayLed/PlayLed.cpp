@@ -22,8 +22,6 @@
 #define play_led_disable_checksum   CHECKSUM("play_led_disable")
 
 PlayLed::PlayLed() {
-
-    halted= false;
     cnt= 0;
 }
 
@@ -35,7 +33,7 @@ void PlayLed::on_module_loaded()
     }
 
     on_config_reload(this);
-    this->register_for_event(ON_HALT);
+
     THEKERNEL->slow_ticker->attach(12, this, &PlayLed::led_tick);
 }
 
@@ -51,7 +49,7 @@ void PlayLed::on_config_reload(void *argument)
 
 uint32_t PlayLed::led_tick(uint32_t)
 {
-    if(this->halted) {
+    if(THEKERNEL->is_halted()) {
         led.set(!led.get());
         return 0;
     }
@@ -67,9 +65,4 @@ uint32_t PlayLed::led_tick(uint32_t)
     }
 
     return 0;
-}
-
-void PlayLed::on_halt(void *arg)
-{
-    this->halted= (arg == nullptr);
 }

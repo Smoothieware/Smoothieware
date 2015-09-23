@@ -26,7 +26,6 @@ class Robot : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
-        void on_halt(void *arg);
 
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
@@ -94,10 +93,6 @@ class Robot : public Module {
         StepperMotor* alpha_stepper_motor;
         StepperMotor* beta_stepper_motor;
         StepperMotor* gamma_stepper_motor;
-
-        struct {
-            bool halted:1;
-        };
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed

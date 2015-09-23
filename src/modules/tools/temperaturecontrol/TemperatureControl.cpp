@@ -329,6 +329,11 @@ void TemperatureControl::on_gcode_received(void *argument)
                         this->waiting = true; // on_second_tick will announce temps
                         while ( get_temperature() < target_temperature ) {
                             THEKERNEL->call_event(ON_IDLE, this);
+                            // check if ON_HALT was called (usually by kill button)
+                            if(THEKERNEL->is_halted() || this->target_temperature == UNDEFINED) {
+                                THEKERNEL->streams->printf("Wait on temperature aborted by kill\n");
+                                break;
+                            }
                         }
                         this->waiting = false;
                     }

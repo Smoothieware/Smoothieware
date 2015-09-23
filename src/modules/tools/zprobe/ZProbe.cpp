@@ -135,6 +135,11 @@ bool ZProbe::wait_for_probe(int& steps)
     unsigned int debounce = 0;
     while(true) {
         THEKERNEL->call_event(ON_IDLE);
+        if(THEKERNEL->is_halted()){
+            // aborted by kill
+            return false;
+        }
+
         // if no stepper is moving, moves are finished and there was no touch
         if( !STEPPER[Z_AXIS]->is_moving() && (!is_delta || (!STEPPER[Y_AXIS]->is_moving() && !STEPPER[Z_AXIS]->is_moving())) ) {
             return false;
