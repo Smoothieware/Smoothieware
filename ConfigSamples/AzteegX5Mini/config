@@ -188,8 +188,9 @@ zprobe.probe_height                          5               # how much above be
 #leveling-strategy.three-point-leveling.save_plane     false       # set to true to allow the bed plane to be saved with M500 default is false
 
 
-# Pause button
-pause_button_enable                          true             #
+# kill button (used to be called pause) maybe assigned to a different pin, set to the onboard pin by default
+kill_button_enable                           true             # set to true to enable a kill button
+kill_button_pin                              2.12             # kill button pin. default is same as pause button 2.12 (2.11 is another good choice)
 
 # Panel See http://smoothieware.org/panel
 panel.enable                                 false             # set to true to enable the panel code
