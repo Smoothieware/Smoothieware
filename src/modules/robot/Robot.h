@@ -38,6 +38,7 @@ class Robot : public Module {
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }
         void setToolOffset(const float offset[3]);
         float get_feed_rate() const { return feed_rate; }
+        bool is_halted() const { return halted; }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
