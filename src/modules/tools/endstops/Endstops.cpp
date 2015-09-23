@@ -643,7 +643,7 @@ void Endstops::on_gcode_received(void *argument)
                         home(a);
                     }
                     // check if on_halt (eg kill)
-                    if(THEKERNEL->is_halted()) return;
+                    if(THEKERNEL->is_halted()) break;
                 }
 
             }else {
@@ -652,7 +652,10 @@ void Endstops::on_gcode_received(void *argument)
             }
 
             // check if on_halt (eg kill)
-            if(THEKERNEL->is_halted()) return;
+            if(THEKERNEL->is_halted()){
+                THEKERNEL->streams->printf("Homing cycle aborted by kill\n");
+                return;
+            }
 
             if(home_all) {
                 // for deltas this may be important rather than setting each individually
