@@ -3,7 +3,8 @@
 #include "SlowTicker.h"
 #include "Gcode.h"
 #include "TemperatureControl.h"
-#include "libs/StreamOutput.h"
+#include "StreamOutput.h"
+#include "StreamOutputPool.h"
 #include "TemperatureControlPublicAccess.h"
 #include "PublicDataRequest.h"
 #include "PublicData.h"
@@ -16,7 +17,6 @@
 PID_Autotuner::PID_Autotuner()
 {
     temp_control = NULL;
-    s = NULL;
     lastInputs = NULL;
     peaks = NULL;
     tick = false;
@@ -32,7 +32,7 @@ void PID_Autotuner::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
 }
 
-void PID_Autotuner::begin(float target, StreamOutput *stream, int ncycles)
+void PID_Autotuner::begin(float target, int ncycles)
 {
     noiseBand = 0.5;
     oStep = temp_control->heater_pin.max_pwm(); // use max pwm to cycle temp
@@ -41,8 +41,6 @@ void PID_Autotuner::begin(float target, StreamOutput *stream, int ncycles)
 
     if (lastInputs != NULL) delete[] lastInputs;
     lastInputs = new float[nLookBack + 1];
-
-    s = stream;
 
     temp_control->heater_pin.set(0);
     temp_control->target_temperature = 0.0;
@@ -62,8 +60,6 @@ void PID_Autotuner::begin(float target, StreamOutput *stream, int ncycles)
     justchanged = false;
     firstPeak= false;
     output= 0;
-
-    s->printf("%s: Starting PID Autotune, %d max cycles, M304 aborts\n", temp_control->designator.c_str(), ncycles);
 }
 
 void PID_Autotuner::abort()
@@ -74,10 +70,6 @@ void PID_Autotuner::abort()
     temp_control->target_temperature = 0;
     temp_control->heater_pin.set(0);
     temp_control = NULL;
-
-    if (s)
-        s->printf("PID Autotune Aborted\n");
-    s = NULL;
 
     if (peaks != NULL)
         delete[] peaks;
@@ -94,6 +86,7 @@ void PID_Autotuner::on_gcode_received(void *argument)
     if(gcode->has_m) {
         if(gcode->m == 304) {
             abort();
+            gcode->stream->printf("PID Autotune Aborted\n");
 
         } else if (gcode->m == 303 && gcode->has_letter('E')) {
             int pool_index = gcode->get_value('E');
@@ -135,7 +128,10 @@ void PID_Autotuner::on_gcode_received(void *argument)
             }
 
             gcode->stream->printf("Start PID tune for index E%d, designator: %s\n", pool_index, this->temp_control->designator.c_str());
-            this->begin(target, gcode->stream, ncycles);
+
+            this->begin(target, ncycles);
+
+            gcode->stream->printf("%s: Starting PID Autotune, %d max cycles, M304 aborts\n", temp_control->designator.c_str(), ncycles);
         }
     }
 }
@@ -163,7 +159,8 @@ void PID_Autotuner::on_idle(void *)
         return;
 
     if(peakCount >= requested_cycles) {
-        s->printf("// WARNING: Autopid did not resolve within %d cycles, these results are probably innacurate\n", requested_cycles);
+        // NOTE we output to kernel::streams becuase it is out-of-band data and original stream may be closed
+        THEKERNEL->streams->printf("// WARNING: Autopid did not resolve within %d cycles, these results are probably innacurate\n", requested_cycles);
         finishUp();
         return;
     }
@@ -187,7 +184,7 @@ void PID_Autotuner::on_idle(void *)
     }
 
     if ((tickCnt % 1000) == 0) {
-        s->printf("// Autopid Status - %5.1f/%5.1f @%d %d/%d\n",  refVal, target_temperature, output, peakCount, requested_cycles);
+        THEKERNEL->streams->printf("// Autopid Status - %5.1f/%5.1f @%d %d/%d\n",  refVal, target_temperature, output, peakCount, requested_cycles);
     }
 
     if(!firstPeak){
@@ -239,7 +236,7 @@ void PID_Autotuner::on_idle(void *)
     if (justchanged && peakCount >= 4) {
         // we've transitioned. check if we can autotune based on the last peaks
         float avgSeparation = (std::abs(peaks[peakCount - 1] - peaks[peakCount - 2]) + std::abs(peaks[peakCount - 2] - peaks[peakCount - 3])) / 2;
-        s->printf("// Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
+        THEKERNEL->streams->printf("// Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
         if (peakCount > 3 && avgSeparation < (0.05 * (absMax - absMin))) {
             DEBUG_PRINTF("Stabilized\n");
             finishUp();
@@ -260,26 +257,25 @@ void PID_Autotuner::finishUp()
     //we can generate tuning parameters!
     float Ku = 4 * (2 * oStep) / ((absMax - absMin) * 3.14159);
     float Pu = (float)(peak1 - peak2) / 1000;
-    s->printf("\tKu: %g, Pu: %g\n", Ku, Pu);
+    THEKERNEL->streams->printf("\tKu: %g, Pu: %g\n", Ku, Pu);
 
     float kp = 0.6 * Ku;
     float ki = 1.2 * Ku / Pu;
     float kd = Ku * Pu * 0.075;
 
-    s->printf("\tTrying:\n\tKp: %5.1f\n\tKi: %5.3f\n\tKd: %5.0f\n", kp, ki, kd);
+    THEKERNEL->streams->printf("\tTrying:\n\tKp: %5.1f\n\tKi: %5.3f\n\tKd: %5.0f\n", kp, ki, kd);
 
     temp_control->setPIDp(kp);
     temp_control->setPIDi(ki);
     temp_control->setPIDd(kd);
 
-    s->printf("PID Autotune Complete! The settings above have been loaded into memory, but not written to your config file.\n");
+    THEKERNEL->streams->printf("PID Autotune Complete! The settings above have been loaded into memory, but not written to your config file.\n");
 
 
     // and clean up
     temp_control->target_temperature = 0;
     temp_control->heater_pin.set(0);
     temp_control = NULL;
-    s = NULL;
 
     if (peaks != NULL)
         delete[] peaks;
