@@ -223,7 +223,9 @@ int Shell::command_result(const char *str, void *p)
 
 /*---------------------------------------------------------------------------*/
 void Shell::start()
-{
+{   // add it to the kernels output stream
+    DEBUG_PRINTF("Shell: Adding stream to kernel streams\n");
+    THEKERNEL->streams->append_stream(pstream);
     telnet->output("Smoothie command shell\r\n> ");
 }
 
@@ -252,11 +254,6 @@ void Shell::close()
 
 void Shell::setConsole()
 {
-    // add it to the kernels output stream if we are a console
-    // TODO do we do this for all connections? so pronterface will get file done when playing from M24?
-    // then we need to turn it off for the streaming app
-    DEBUG_PRINTF("Shell: Adding stream to kernel streams\n");
-    THEKERNEL->streams->append_stream(pstream);
     isConsole= true;
 }
 
@@ -271,10 +268,9 @@ Shell::Shell(Telnetd *telnet)
 
 Shell::~Shell()
 {
-    if(isConsole) {
-        DEBUG_PRINTF("Shell: Removing stream from kernel streams\n");
-        THEKERNEL->streams->remove_stream(pstream);
-    }
+    DEBUG_PRINTF("Shell: Removing stream from kernel streams\n");
+    THEKERNEL->streams->remove_stream(pstream);
+
     // we cannot delete this stream until it is no longer in any command queue entries
     // so mark it as closed, and allow it to delete itself when it is no longer being used
     static_cast<CallbackStream*>(pstream)->mark_closed(); // mark the stream as closed so we do not get any callbacks

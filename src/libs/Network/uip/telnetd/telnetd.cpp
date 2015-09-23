@@ -285,7 +285,6 @@ void Telnetd::newdata(void)
                 }else if (c == TELNET_GA) {
                     // enable prompt if telnet client running
                     prompt= true;
-                    shell->setConsole(); // tell shell we are a console, as this is sent be telnet clients
                 }else{
                      /* Reply with a WONT */
                     //sendopt(TELNET_WONT, c);
