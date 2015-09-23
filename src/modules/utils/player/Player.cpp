@@ -357,7 +357,7 @@ void Player::abort_command( string parameters, StreamOutput *stream )
         // now the position will think it is at the last received pos, so we need to do FK to get the actuator position and reset the current position
         THEKERNEL->robot->reset_position_from_current_actuator_position();
     }
-    stream->printf("Aborted playing or paused file\r\n");
+    stream->printf("Aborted playing or paused file. Please turn any heaters off manually\r\n");
 }
 
 void Player::on_main_loop(void *argument)
