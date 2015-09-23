@@ -12,14 +12,12 @@ public:
 
     void on_module_loaded(void);
     void on_config_reload(void *);
-    void on_halt(void *arg);
 
 private:
     uint32_t led_tick(uint32_t);
     Pin  led;
     struct {
         uint8_t cnt:4;
-        bool halted:1;
     };
 };
 

@@ -21,7 +21,6 @@ public:
 
     virtual void on_module_loaded();
     virtual void on_console_line_received(void *line);
-    void on_halt(void *arg);
 
 private:
     int currentline;
@@ -30,7 +29,6 @@ private:
     uint8_t last_g;
     struct {
         bool uploading: 1;
-        bool halted: 1;
     };
 };
 

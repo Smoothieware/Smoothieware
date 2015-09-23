@@ -27,7 +27,6 @@ class Player : public Module {
         void on_console_line_received( void* argument );
         void on_main_loop( void* argument );
         void on_second_tick(void* argument);
-        void on_halt(void* argument);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_gcode_received(void *argument);
@@ -60,7 +59,6 @@ class Player : public Module {
             bool on_boot_gcode_enable:1;
             bool booted:1;
             bool playing_file:1;
-            bool halted:1;
             bool suspended:1;
             bool saved_inch_mode:1;
             bool saved_absolute_mode:1;

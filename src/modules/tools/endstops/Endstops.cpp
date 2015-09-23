@@ -380,7 +380,7 @@ bool Endstops::wait_for_homed(char axes_to_move)
         THEKERNEL->call_event(ON_IDLE);
 
         // check if on_halt (eg kill)
-        if(THEKERNEL->robot->is_halted()) return false;
+        if(THEKERNEL->is_halted()) return false;
 
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
             if ( ( axes_to_move >> c ) & 1 ) {
@@ -406,7 +406,7 @@ bool Endstops::wait_for_homed(char axes_to_move)
 void Endstops::do_homing_cartesian(char axes_to_move)
 {
     // check if on_halt (eg kill)
-    if(THEKERNEL->robot->is_halted()) return;
+    if(THEKERNEL->is_halted()) return;
 
     // this homing works for cartesian and delta printers
     // Start moving the axes to the origin
@@ -466,7 +466,7 @@ bool Endstops::wait_for_homed_corexy(int axis)
         THEKERNEL->call_event(ON_IDLE);
 
         // check if on_halt (eg kill)
-        if(THEKERNEL->robot->is_halted()) return false;
+        if(THEKERNEL->is_halted()) return false;
 
         if ( this->pins[axis + (this->home_direction[axis] ? 0 : 3)].get() ) {
             if ( debounce[axis] < debounce_count ) {
@@ -489,7 +489,7 @@ bool Endstops::wait_for_homed_corexy(int axis)
 void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps)
 {
     // check if on_halt (eg kill)
-    if(THEKERNEL->robot->is_halted()) return;
+    if(THEKERNEL->is_halted()) return;
 
     this->status = MOVING_TO_ENDSTOP_FAST;
     this->feed_rate[X_AXIS]= fast_rate;
@@ -643,7 +643,7 @@ void Endstops::on_gcode_received(void *argument)
                         home(a);
                     }
                     // check if on_halt (eg kill)
-                    if(THEKERNEL->robot->is_halted()) return;
+                    if(THEKERNEL->is_halted()) return;
                 }
 
             }else {
@@ -652,7 +652,7 @@ void Endstops::on_gcode_received(void *argument)
             }
 
             // check if on_halt (eg kill)
-            if(THEKERNEL->robot->is_halted()) return;
+            if(THEKERNEL->is_halted()) return;
 
             if(home_all) {
                 // for deltas this may be important rather than setting each individually

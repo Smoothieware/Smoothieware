@@ -112,7 +112,7 @@ extern GPIO leds[];
 void SlowTicker::on_idle(void*)
 {
     static uint16_t ledcnt= 0;
-    if(THEKERNEL->use_leds) {
+    if(THEKERNEL->is_using_leds()) {
         // flash led 3 to show we are alive
         leds[2]= (ledcnt++ & 0x1000) ? 1 : 0;
     }

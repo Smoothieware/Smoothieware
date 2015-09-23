@@ -52,7 +52,6 @@ Player::Player()
     this->booted = false;
     this->elapsed_secs = 0;
     this->reply_stream = nullptr;
-    this->halted= false;
     this->suspended= false;
     this->suspend_loops= 0;
 }
@@ -65,7 +64,6 @@ void Player::on_module_loaded()
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
     this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_HALT);
 
     this->on_boot_gcode = THEKERNEL->config->value(on_boot_gcode_checksum)->by_default("/sd/on_boot.gcode")->as_string();
     this->on_boot_gcode_enable = THEKERNEL->config->value(on_boot_gcode_enable_checksum)->by_default(true)->as_bool();
@@ -75,11 +73,6 @@ void Player::on_module_loaded()
     std::replace( this->after_suspend_gcode.begin(), this->after_suspend_gcode.end(), '_', ' '); // replace _ with space
     std::replace( this->before_resume_gcode.begin(), this->before_resume_gcode.end(), '_', ' '); // replace _ with space
     this->leave_heaters_on = THEKERNEL->config->value(leave_heaters_on_suspend_checksum)->by_default(false)->as_bool();
-}
-
-void Player::on_halt(void *arg)
-{
-    halted= (arg == nullptr);
 }
 
 void Player::on_second_tick(void *)
@@ -222,7 +215,7 @@ void Player::on_gcode_received(void *argument)
 // When a new line is received, check if it is a command, and if it is, act upon it
 void Player::on_console_line_received( void *argument )
 {
-    if(halted) return; // if in halted state ignore any commands
+    if(THEKERNEL->is_halted()) return; // if in halted state ignore any commands
 
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
 
@@ -387,7 +380,7 @@ void Player::on_main_loop(void *argument)
     }
 
     if( this->playing_file ) {
-        if(halted) {
+        if(THEKERNEL->is_halted()) {
             abort_command("1", &(StreamOutput::NullStream));
             return;
         }

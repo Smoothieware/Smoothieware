@@ -26,7 +26,6 @@ class Robot : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
-        void on_halt(void *arg);
 
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
@@ -38,7 +37,6 @@ class Robot : public Module {
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }
         void setToolOffset(const float offset[3]);
         float get_feed_rate() const { return feed_rate; }
-        bool is_halted() const { return halted; }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
@@ -95,10 +93,6 @@ class Robot : public Module {
         StepperMotor* alpha_stepper_motor;
         StepperMotor* beta_stepper_motor;
         StepperMotor* gamma_stepper_motor;
-
-        struct {
-            bool halted:1;
-        };
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed

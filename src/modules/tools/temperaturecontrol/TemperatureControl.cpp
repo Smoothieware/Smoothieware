@@ -330,7 +330,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                         while ( get_temperature() < target_temperature ) {
                             THEKERNEL->call_event(ON_IDLE, this);
                             // check if ON_HALT was called (usually by kill button)
-                            if(this->target_temperature == UNDEFINED) break;
+                            if(THEKERNEL->is_halted() || this->target_temperature == UNDEFINED) break;
                         }
                         this->waiting = false;
                     }
