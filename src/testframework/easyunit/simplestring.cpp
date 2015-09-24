@@ -52,7 +52,7 @@ SimpleString SimpleString::operator= (const SimpleString& other)
 {
 	delete buffer;
 	buffer = new char [other.size() + 1];
-	strcpy(buffer, other.buffer);	
+	strcpy(buffer, other.buffer);
 	return *this;
 }
 
@@ -119,10 +119,26 @@ SimpleString StringFrom (int value)
 	return SimpleString(buffer);
 }
 
+SimpleString StringFrom (unsigned int value)
+{
+	char buffer [DEFAULT_SIZE];
+	sprintf (buffer, "%u", value);
+
+	return SimpleString(buffer);
+}
+
 SimpleString StringFrom (double value)
 {
 	char buffer [DEFAULT_SIZE];
 	sprintf (buffer, "%lf", value);
+
+	return SimpleString(buffer);
+}
+
+SimpleString StringFrom (float value)
+{
+	char buffer [DEFAULT_SIZE];
+	sprintf (buffer, "%f", value);
 
 	return SimpleString(buffer);
 }

@@ -46,9 +46,9 @@ class SimpleString
 		~SimpleString ();
 
 	  SimpleString operator= (const SimpleString& other);
-	
+
     SimpleString operator+ (const SimpleString& other);
-  
+
 	  char *asCharString () const;
 	  int size() const;
 
@@ -63,6 +63,8 @@ SimpleString StringFrom (bool value);
 SimpleString StringFrom (const char *value);
 SimpleString StringFrom (long value);
 SimpleString StringFrom (int value);
+SimpleString StringFrom (unsigned int value);
+SimpleString StringFrom (float value);
 SimpleString StringFrom (double value);
 SimpleString StringFrom (const SimpleString& other);
 
