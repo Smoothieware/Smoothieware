@@ -307,13 +307,29 @@ void ZProbe::on_gcode_received(void *argument)
             }
 
         } else {
-            // find a strategy to handle the gcode
-            for(auto s : strategies){
-                if(s->handleGcode(gcode)) {
+            if(gcode->subcode == 0) {
+                // find the first strategy to handle the gcode
+                for(auto s : strategies){
+                    if(s->handleGcode(gcode)) {
+                        return;
+                    }
+                }
+                gcode->stream->printf("No strategy found to handle G%d\n", gcode->g);
+
+            }else{
+                // subcode selects which strategy to send the code to
+                // they are loaded in the order they are defined in config, 1 being the first, 2 being the second and so on.
+                int i= gcode->subcode-1;
+                if(gcode->subcode < strategies.size()) {
+                    if(!strategies[i]->handleGcode(gcode)){
+                        gcode->stream->printf("strategy #%d did not handle G%d\n", i+1, gcode->g);
+                    }
                     return;
+
+                }else{
+                    gcode->stream->printf("strategy #%d is not loaded\n", i+1);
                 }
             }
-            gcode->stream->printf("No strategy found to handle G%d\n", gcode->g);
         }
 
     } else if(gcode->has_m) {
@@ -336,10 +352,9 @@ void ZProbe::on_gcode_received(void *argument)
 
             case 500: // save settings
             case 503: // print settings
-                gcode->stream->printf(";Probe feedrates Slow/fast(K)/Return (mm/sec):\nM670 S%1.2f K%1.2f R%1.2f\n",
-                    this->slow_feedrate, this->fast_feedrate, this->return_feedrate);
-                gcode->stream->printf(";Probe max_z (mm):\nM670 Z%1.2f\n", this->max_z);
-                gcode->stream->printf(";Probe height (mm):\nM670 H%1.2f\n", this->probe_height);
+                gcode->stream->printf(";Probe feedrates Slow/fast(K)/Return (mm/sec) max_z (mm) height (mm):\nM670 S%1.2f K%1.2f R%1.2f Z%1.2f H%1.2f\n",
+                    this->slow_feedrate, this->fast_feedrate, this->return_feedrate, this->max_z, this->probe_height);
+
                 // fall through is intended so leveling strategies can handle m-codes too
 
             default:
