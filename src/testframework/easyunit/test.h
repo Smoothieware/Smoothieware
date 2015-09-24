@@ -198,7 +198,7 @@ class Test
  */
 
 #define EQUALS_DELTA(expected,actual,delta)\
-  (actual - expected) <= delta && actual >= expected || (expected - actual) <= delta && expected >= actual
+  ((actual - expected) <= delta && actual >= expected) || ((expected - actual) <= delta && expected >= actual)
 
 #define TO_STRING_EQUALS_F(expected,actual)\
   StringFrom("Expected : ") + StringFrom(expected) + StringFrom(" but Actual : ") + StringFrom(actual)
