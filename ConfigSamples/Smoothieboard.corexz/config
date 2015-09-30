@@ -8,6 +8,7 @@ mm_per_arc_segment                           0.5              # Arcs are cut int
 
 # Arm solution configuration : CoreXZ robot. Translates mm positions into stepper positions
 arm_solution                                 corexz           # selects the corexz solution
+z_reduction                                  3.0              # CoreXZ z-reduction
 alpha_steps_per_mm                           25.465           # XZ motor 1: ((360/1.8)*16)/(2*2*pi*r) - r=10
 beta_steps_per_mm                            25.465           # XZ motor 2: ((360/1.8)*16)/(2*2*pi*r) - r=10
 gamma_steps_per_mm                           50.930           # y axis: ((360/1.8)*16)/(2*pi*r) - r=10

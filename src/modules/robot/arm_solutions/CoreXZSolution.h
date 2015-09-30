@@ -12,6 +12,9 @@ class CoreXZSolution : public BaseSolution {
         CoreXZSolution(Config*);
         void cartesian_to_actuator(const float[], float[] );
         void actuator_to_cartesian(const float[], float[] );
+
+    private:
+        float z_reduction;
 };
 
 #endif // COREXZSOLUTION_H
