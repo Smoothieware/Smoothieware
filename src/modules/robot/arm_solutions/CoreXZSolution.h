@@ -14,6 +14,7 @@ class CoreXZSolution : public BaseSolution {
         void actuator_to_cartesian(const float[], float[] );
 
     private:
+        float x_reduction;
         float z_reduction;
 };
 
