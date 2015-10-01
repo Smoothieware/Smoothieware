@@ -7,7 +7,7 @@
 
 CoreXZSolution::CoreXZSolution(Config* config)
 {
-	x_reduction = config->value(x_reduction_checksum)->by_default(1.0f)->as_number();
+    x_reduction = config->value(x_reduction_checksum)->by_default(1.0f)->as_number();
     z_reduction = config->value(z_reduction_checksum)->by_default(3.0f)->as_number();
 }
 
