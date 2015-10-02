@@ -29,6 +29,7 @@ using std::string;
 #include "arm_solutions/LinearDeltaSolution.h"
 #include "arm_solutions/RotatableDeltaSolution.h"
 #include "arm_solutions/HBotSolution.h"
+#include "arm_solutions/CoreXZSolution.h"
 #include "arm_solutions/MorganSCARASolution.h"
 #include "StepTicker.h"
 #include "checksumm.h"
@@ -58,6 +59,7 @@ using std::string;
 #define  delta_checksum                      CHECKSUM("delta")
 #define  hbot_checksum                       CHECKSUM("hbot")
 #define  corexy_checksum                     CHECKSUM("corexy")
+#define  corexz_checksum                     CHECKSUM("corexz")
 #define  kossel_checksum                     CHECKSUM("kossel")
 #define  morgan_checksum                     CHECKSUM("morgan")
 
@@ -156,6 +158,9 @@ void Robot::on_config_reload(void *argument)
     // Note checksums are not const expressions when in debug mode, so don't use switch
     if(solution_checksum == hbot_checksum || solution_checksum == corexy_checksum) {
         this->arm_solution = new HBotSolution(THEKERNEL->config);
+
+    } else if(solution_checksum == corexz_checksum) {
+        this->arm_solution = new CoreXZSolution(THEKERNEL->config);
 
     } else if(solution_checksum == rostock_checksum || solution_checksum == kossel_checksum || solution_checksum == delta_checksum || solution_checksum ==  linear_delta_checksum) {
         this->arm_solution = new LinearDeltaSolution(THEKERNEL->config);
