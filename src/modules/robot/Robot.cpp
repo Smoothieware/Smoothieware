@@ -251,6 +251,26 @@ void Robot::on_config_reload(void *argument)
     //this->clearToolOffset();
 }
 
+void  Robot::push_state()
+{
+    bool am= this->absolute_mode;
+    bool im= this->inch_mode;
+    saved_state_t s(this->feed_rate, this->seek_rate, am, im);
+    state_stack.push(s);
+}
+
+void Robot::pop_state()
+{
+   if(!state_stack.empty()) {
+        auto s= state_stack.top();
+        state_stack.pop();
+        this->feed_rate= std::get<0>(s);
+        this->seek_rate= std::get<1>(s);
+        this->absolute_mode= std::get<2>(s);
+        this->inch_mode= std::get<3>(s);
+    }
+}
+
 // this does a sanity check that actuator speeds do not exceed steps rate capability
 // we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
 void Robot::check_max_actuator_speeds()
@@ -361,21 +381,12 @@ void Robot::on_gcode_received(void *argument)
             }
             return;
 
-            case 120: { // push state
-                bool b= this->absolute_mode;
-                saved_state_t s(this->feed_rate, this->seek_rate, b);
-                state_stack.push(s);
-            }
-            break;
+            case 120: // push state
+                push_state();
+                break;
 
             case 121: // pop state
-                if(!state_stack.empty()) {
-                    auto s= state_stack.top();
-                    state_stack.pop();
-                    this->feed_rate= std::get<0>(s);
-                    this->seek_rate= std::get<1>(s);
-                    this->absolute_mode= std::get<2>(s);
-                }
+                pop_state();
                 break;
 
             case 203: // M203 Set maximum feedrates in mm/sec

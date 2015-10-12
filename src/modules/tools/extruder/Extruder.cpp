@@ -265,7 +265,6 @@ void Extruder::on_set_public_data(void *argument)
     if(!pdr->starts_with(extruder_checksum)) return;
 
     // handle extrude rates request from robot
-    // TODO if not in volumetric mode then limit speed based on max_speed
     if(pdr->second_element_is(target_checksum)) {
         // disabled extruders do not reply NOTE only one enabled extruder supported
         if(!this->enabled) return;
@@ -287,8 +286,9 @@ void Extruder::on_set_public_data(void *argument)
         this->saved_absolute_mode = this->absolute_mode;
         pdr->set_taken();
     } else if(pdr->second_element_is(restore_state_checksum)) {
-        this->current_position = this->saved_current_position;
-        this->absolute_mode = this->saved_absolute_mode;
+        // NOTE this only gets called when the queue is empty so the milestones will be the same
+        this->milestone_last_position= this->current_position = this->saved_current_position;
+        this->milestone_absolute_mode= this->absolute_mode = this->saved_absolute_mode;
         pdr->set_taken();
     }
 }
