@@ -692,7 +692,7 @@ void Extruder::on_speed_change( void *argument )
         return;
     }
 
-    // if we are flushing the queue we need to stop the motor when it has decelerated to zero, we get this call with argumnet == 0 when this happens
+    // if we are flushing the queue we need to stop the motor when it has decelerated to zero, we get this call with argument == 0 when this happens
     // this is what steppermotor does
     if(argument == 0) {
         this->stepper_motor->move(0, 0);
@@ -700,6 +700,36 @@ void Extruder::on_speed_change( void *argument )
         this->current_block = NULL;
         return;
     }
+
+    // access the stepper
+    Stepper *stp = static_cast<Stepper *>(argument);
+    const Block *blk= stp->get_current_block();
+
+    // see if accelerating or decelerating and where we are on the trapezoid
+    // FIXME need to optimize this as time critical section
+    bool accelerating= false;
+    bool decelerating= false;
+    float pc= 0.0F; // where on the curve we are 0 not started 1.0 finished
+    if(stp->get_steps_completed() <= blk->accelerate_until) {
+        accelerating= true;
+        pc= stp->get_steps_completed() / blk->accelerate_until;
+
+    }else if(stp->get_steps_completed() > blk->decelerate_after) {
+        decelerating= true;
+        // FIXME need to guard against divide by zero
+        pc= (stp->get_steps_completed() - blk->decelerate_after) / (blk->steps_event_count - blk->accelerate_until);
+
+    }else{
+        // cruising
+    }
+
+    // TODO using this info calculatre advance
+    if(accelerating) {
+        // go faster by amount...
+    }else if(decelerating) {
+        // go slower by amount....
+    }
+
 
     /*
     * nominal block duration = current block's steps / ( current block's nominal rate )

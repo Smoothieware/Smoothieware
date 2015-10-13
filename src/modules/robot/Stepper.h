@@ -37,6 +37,8 @@ public:
     void turn_enable_pins_off();
 
     float get_trapezoid_adjusted_rate() const { return trapezoid_adjusted_rate; }
+    uint32_t get_steps_completed() const;
+
     const Block *get_current_block() const { return current_block; }
 
 private:

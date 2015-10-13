@@ -323,4 +323,9 @@ void Stepper::set_step_events_per_second( float steps_per_second )
     THEKERNEL->call_event(ON_SPEED_CHANGE, this);
 }
 
+uint32_t Stepper::get_steps_completed() const
+{
+    return main_stepper->stepped;
+}
+
 
