@@ -16,13 +16,13 @@
 
 # Logs the command to be run and then executes the command while logging the results.
 RunAndLog () {
-    echo `date` Executing $@>>$LOGFILE
-    $@ 1>>$LOGFILE 2>$ERRORFILE
+    echo `date` Executing $@>>"$LOGFILE"
+    $@ 1>>"$LOGFILE" 2>"$ERRORFILE"
     if [ "$?" != "0" ] ; then
-        cat $ERRORFILE >>$LOGFILE
-        echo `date` Failure forced early exit>>$LOGFILE
-        cat $LOGFILE
-        rm -f $ERRORFILE
+        cat "$ERRORFILE" >>"$LOGFILE"
+        echo `date` Failure forced early exit>>"$LOGFILE"
+        cat "$LOGFILE"
+        rm -f "$ERRORFILE"
         popd >/dev/null
         read -n 1 -sp "Press any key to continue..." dummy ; echo
         exit 1
@@ -49,21 +49,21 @@ MACBIN_DIR=$ROOTDIR/build/osx64
 BUILDSHELL_CMD=$ROOTDIR/BuildShell
 
 
-echo Logging install results to $LOGFILE
-echo `date` Starting $0 $*>$LOGFILE
+echo Logging install results to "$LOGFILE"
+echo `date` Starting $0 $*>"$LOGFILE"
 
 echo Downloading GNU Tools for ARM Embedded Processors...
-echo `date` Executing curl -L0 $GCC4ARM_URL>>$LOGFILE
+echo `date` Executing curl -L0 $GCC4ARM_URL>>"$LOGFILE"
 curl -L0 $GCC4ARM_URL >$GCC4ARM_FILENAME
 
 echo Validating md5 signature of GNU Tools for ARM Embedded Processors...
-echo `date` Validating md5 signature of GNU Tools for ARM Embedded Processors>>$LOGFILE
+echo `date` Validating md5 signature of GNU Tools for ARM Embedded Processors>>"$LOGFILE"
 archive_match=`md5 -q $GCC4ARM_FILENAME | grep -c $GCC4ARM_MD5`
 if [ "$archive_match" != "1" ] ; then
-    echo $GCC4ARM_FILENAME failed MD5 signature check.>>$LOGFILE
-    echo `date` Failure forced early exit>>$LOGFILE
-    cat $LOGFILE
-    rm -f $ERRORFILE
+    echo $GCC4ARM_FILENAME failed MD5 signature check.>>"$LOGFILE"
+    echo `date` Failure forced early exit>>"$LOGFILE"
+    cat "$LOGFILE"
+    rm -f "$ERRORFILE"
     popd >/dev/null
     read -n 1 -sp "Press any key to continue..." dummy ; echo
     exit 1
@@ -108,8 +108,8 @@ echo  $GCC4ARM_BINDIR
 
 
 # Restore current directory and exit script on success.
-echo `date` Finished successfully>>$LOGFILE
+echo `date` Finished successfully>>"$LOGFILE"
 echo Finished successfully
-rm -f $ERRORFILE
+rm -f "$ERRORFILE"
 popd >/dev/null
 read -n 1 -sp "Press any key to continue..." dummy ; echo
