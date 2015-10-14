@@ -79,11 +79,14 @@ OUTDIR=../$(DEVICE)
 CSRCS1 = $(wildcard $(SRC)/*.c $(SRC)/*/*.c $(SRC)/*/*/*.c $(SRC)/*/*/*/*.c $(SRC)/*/*/*/*/*.c $(SRC)/*/*/*/*/*/*.c)
 # Totally exclude network if NONETWORK is defined
 ifeq "$(NONETWORK)" "1"
-CSRCS = $(filter-out $(SRC)/libs/Network/%,$(CSRCS1))
+CSRCS2 = $(filter-out $(SRC)/libs/Network/%,$(CSRCS1))
 DEFINES += -DNONETWORK
 else
-CSRCS = $(CSRCS1)
+CSRCS2 = $(CSRCS1)
 endif
+
+# do not compile the src/testframework as that can only be done with rake
+CSRCS = $(filter-out $(SRC)/testframework/%,$(CSRCS2))
 
 ifeq "$(DISABLEMSD)" "1"
 DEFINES += -DDISABLEMSD
@@ -104,8 +107,11 @@ endif
 # uppercase function
 uc = $(subst a,A,$(subst b,B,$(subst c,C,$(subst d,D,$(subst e,E,$(subst f,F,$(subst g,G,$(subst h,H,$(subst i,I,$(subst j,J,$(subst k,K,$(subst l,L,$(subst m,M,$(subst n,N,$(subst o,O,$(subst p,P,$(subst q,Q,$(subst r,R,$(subst s,S,$(subst t,T,$(subst u,U,$(subst v,V,$(subst w,W,$(subst x,X,$(subst y,Y,$(subst z,Z,$1))))))))))))))))))))))))))
 EXL = $(patsubst %,$(SRC)/modules/%/%,$(EXCLUDED_MODULES))
-CPPSRCS = $(filter-out $(EXL),$(CPPSRCS2))
+CPPSRCS3 = $(filter-out $(EXL),$(CPPSRCS2))
 DEFINES += $(call uc, $(subst /,_,$(patsubst %,-DNO_%,$(EXCLUDED_MODULES))))
+
+# do not compile the src/testframework as that can only be done with rake
+CPPSRCS = $(filter-out $(SRC)/testframework/%,$(CPPSRCS3))
 
 # List of the objects files to be compiled/assembled
 OBJECTS = $(patsubst %.c,$(OUTDIR)/%.o,$(CSRCS)) $(patsubst %.s,$(OUTDIR)/%.o,$(patsubst %.S,$(OUTDIR)/%.o,$(ASRCS))) $(patsubst %.cpp,$(OUTDIR)/%.o,$(CPPSRCS))

@@ -515,19 +515,21 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 
         pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
 
-        if (probes == (probe_points-1) && this->wait_for_probe){  // Only move to removal position if probe confirmation was selected
-            this->cal[X_AXIS] = this->bed_x/2.0f;                 // Else machine will return to first probe position when done
-            this->cal[Y_AXIS] = this->bed_y/2.0f;
-            this->cal[Z_AXIS] = this->bed_z/2.0f;                 // Position head for probe removal
-        } else {
-            this->next_cal();                                     // to not cause damage to machine due to Z-offset
-        }
-        this->move(this->cal, slow_rate);                         // move to the next position
+        this->next_cal();                                        // Calculate next calibration position
 
-        this->pData[pindex] = z ;                                 // save the offset
+        this->pData[pindex] = z ;                                // save the offset
     }
 
-    stream->printf("\nCalibration done.  Please remove probe\n");
+    stream->printf("\nCalibration done.\n");
+    if (this->wait_for_probe) {                                  // Only do this it the config calls for probe removal position
+        this->cal[X_AXIS] = this->bed_x/2.0f;
+        this->cal[Y_AXIS] = this->bed_y/2.0f;
+        this->cal[Z_AXIS] = this->bed_z/2.0f;                    // Position head for probe removal
+        this->move(this->cal, slow_rate);
+
+        stream->printf("Please remove probe\n");
+
+    }
 
     // activate correction
     this->normalize_grid();
@@ -654,26 +656,21 @@ float ZGridStrategy::getZOffset(float X, float Y)
 
     float dCartX1, dCartX2;
 
-    int xIndex = (int) xdiff;                  // Get the current sector (X)
-    int yIndex = (int) ydiff;                  // Get the current sector (Y)
+    // Get floor of xdiff.  Note that (int) of a negative number is its
+    // ceiling, not its floor.
 
-    // * Care taken for table outside boundary
-    // * Returns zero output when values are outside table boundary
-    if(xIndex < 0 || xIndex > (this->numRows - 1) || yIndex < 0
-       || yIndex > (this->numCols - 1))
-    {
-      return (0);
-    }
+    int xIndex = (int)(floorf(xdiff));	// Get the current sector (X)
+    int yIndex = (int)(floorf(ydiff));	// Get the current sector (Y)
 
-    if (xIndex == (this->numRows - 1))
-        xIndex2 = xIndex;
-    else
-        xIndex2 = xIndex+1;
+    // Index bounds limited to be inside the table
+    if (xIndex < 0) xIndex = 0;
+    else if (xIndex > (this->numRows - 2)) xIndex = this->numRows - 2;
 
-    if (yIndex == (this->numCols - 1))
-        yIndex2 = yIndex;
-    else
-        yIndex2 = yIndex+1;
+    if (yIndex < 0) yIndex = 0;
+    else if (yIndex > (this->numCols - 2)) yIndex = this->numCols - 2;
+
+    xIndex2 = xIndex+1;
+    yIndex2 = yIndex+1;
 
     xdiff -= xIndex;                    // Find floating point
     ydiff -= yIndex;                    // Find floating point

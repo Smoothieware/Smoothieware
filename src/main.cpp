@@ -58,7 +58,6 @@
 
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
-#define disable_leds_checksum  CHECKSUM("leds_disable")
 #define dfu_enable_checksum  CHECKSUM("dfu_enable")
 
 // Watchdog wd(5000000, WDT_MRI);
@@ -110,9 +109,6 @@ void init() {
     Version version;
     kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
 
-    //some boards don't have leds.. TOO BAD!
-    kernel->use_leds= !kernel->config->value( disable_leds_checksum )->by_default(false)->as_bool();
-
     bool sdok= (sd.disk_initialize() == 0);
     if(!sdok) kernel->streams->printf("SDCard is disabled\r\n");
 
@@ -157,9 +153,7 @@ void init() {
     // Note order is important here must be after extruder so Tn as a parameter will get executed first
     TemperatureControlPool *tp= new TemperatureControlPool();
     tp->load_tools();
-    kernel->temperature_control_pool= tp;
-    #else
-    kernel->temperature_control_pool= new TemperatureControlPool(); // so we can get just an empty temperature control array
+    delete tp;
     #endif
     #ifndef NO_TOOLS_LASER
     kernel->add_module( new Laser() );
@@ -183,7 +177,7 @@ void init() {
     kernel->add_module( new Network() );
     #endif
     #ifndef NO_TOOLS_TEMPERATURESWITCH
-    // Must be loaded after TemperatureControlPool
+    // Must be loaded after TemperatureControl
     kernel->add_module( new TemperatureSwitch() );
     #endif
     #ifndef NO_TOOLS_DRILLINGCYCLES
@@ -217,7 +211,7 @@ void init() {
     // clear up the config cache to save some memory
     kernel->config->config_cache_clear();
 
-    if(kernel->use_leds) {
+    if(kernel->is_using_leds()) {
         // set some leds to indicate status... led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok
         leds[0]= 1; // indicate we are done with init
         leds[3]= sdok?1:0; // 4th led inidicates sdcard is available (TODO maye should indicate config was found)
@@ -251,7 +245,7 @@ int main()
     uint16_t cnt= 0;
     // Main loop
     while(1){
-        if(THEKERNEL->use_leds) {
+        if(THEKERNEL->is_using_leds()) {
             // flash led 2 to show we are alive
             leds[1]= (cnt++ & 0x1000) ? 1 : 0;
         }

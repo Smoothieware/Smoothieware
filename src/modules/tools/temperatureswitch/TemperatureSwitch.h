@@ -26,11 +26,17 @@ class TemperatureSwitch : public Module
 {
     public:
         TemperatureSwitch();
+        ~TemperatureSwitch();
         void on_module_loaded();
         void on_second_tick(void *argument);
+        void on_gcode_received(void *argument);
+        TemperatureSwitch* load_config(uint16_t modcs);
+
+        bool is_armed() const { return armed; }
 
     private:
-        bool load_config(uint16_t modcs);
+        enum TRIGGER_TYPE {LEVEL, RISING, FALLING};
+        enum STATE {NONE, HIGH_TEMP, LOW_TEMP};
 
         // get the highest temperature from the set of configured temperature controllers
         float get_highest_temperature();
@@ -38,7 +44,10 @@ class TemperatureSwitch : public Module
         // turn the switch on or off
         void set_switch(bool cooler_state);
 
-        // the set of temperature controllers that match the reuired designator prefix
+        // temperature has changed state
+        void set_state(STATE state);
+
+        // the set of temperature controllers that match the required designator prefix
         vector<uint16_t> temp_controllers;
 
         // temperatureswitch.hotend.threshold_temp
@@ -61,8 +70,15 @@ class TemperatureSwitch : public Module
         // we are delaying for this many seconds
         uint16_t current_delay;
 
-        // is the switch currently on (1) or off (0)?
-        bool temperatureswitch_state;
+        // the mcode that will arm the switch, 0 means always armed
+        uint16_t arm_mcode;
+
+        struct {
+            bool inverted:1;
+            bool armed:1;
+            TRIGGER_TYPE trigger:2;
+            STATE current_state:2;
+        };
 };
 
 #endif

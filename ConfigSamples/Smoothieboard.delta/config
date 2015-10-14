@@ -1,5 +1,3 @@
-#temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
-#temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
 # NOTE Lines must not exceed 132 characters
 # Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
@@ -249,8 +247,9 @@ zprobe.probe_height                          5               # how much above be
 #leveling-strategy.delta-calibration.enable   true            # basic delta calibration
 #leveling-strategy.delta-calibration.radius   100             # the probe radius
 
-# Pause button
-pause_button_enable                          true             #
+# kill button (used to be called pause) maybe assigned to a different pin, set to the onboard pin by default
+kill_button_enable                           true             # set to true to enable a kill button
+kill_button_pin                              2.12             # kill button pin. default is same as pause button 2.12 (2.11 is another good choice)
 
 # Panel
 panel.enable                                 false             # set to true to enable the panel code

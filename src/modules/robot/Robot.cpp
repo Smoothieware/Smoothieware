@@ -23,13 +23,13 @@ using std::string;
 #include "Gcode.h"
 #include "PublicDataRequest.h"
 #include "PublicData.h"
-#include "RobotPublicAccess.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/LinearDeltaSolution.h"
 #include "arm_solutions/RotatableDeltaSolution.h"
 #include "arm_solutions/HBotSolution.h"
+#include "arm_solutions/CoreXZSolution.h"
 #include "arm_solutions/MorganSCARASolution.h"
 #include "StepTicker.h"
 #include "checksumm.h"
@@ -59,6 +59,7 @@ using std::string;
 #define  delta_checksum                      CHECKSUM("delta")
 #define  hbot_checksum                       CHECKSUM("hbot")
 #define  corexy_checksum                     CHECKSUM("corexy")
+#define  corexz_checksum                     CHECKSUM("corexz")
 #define  kossel_checksum                     CHECKSUM("kossel")
 #define  morgan_checksum                     CHECKSUM("morgan")
 
@@ -134,16 +135,12 @@ Robot::Robot()
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
     this->compensationTransform= nullptr;
-    this->halted= false;
 }
 
 //Called when the module has just been loaded
 void Robot::on_module_loaded()
 {
     this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_GET_PUBLIC_DATA);
-    this->register_for_event(ON_SET_PUBLIC_DATA);
-    this->register_for_event(ON_HALT);
 
     // Configuration
     this->on_config_reload(this);
@@ -161,6 +158,9 @@ void Robot::on_config_reload(void *argument)
     // Note checksums are not const expressions when in debug mode, so don't use switch
     if(solution_checksum == hbot_checksum || solution_checksum == corexy_checksum) {
         this->arm_solution = new HBotSolution(THEKERNEL->config);
+
+    } else if(solution_checksum == corexz_checksum) {
+        this->arm_solution = new CoreXZSolution(THEKERNEL->config);
 
     } else if(solution_checksum == rostock_checksum || solution_checksum == kossel_checksum || solution_checksum == delta_checksum || solution_checksum ==  linear_delta_checksum) {
         this->arm_solution = new LinearDeltaSolution(THEKERNEL->config);
@@ -251,6 +251,26 @@ void Robot::on_config_reload(void *argument)
     //this->clearToolOffset();
 }
 
+void  Robot::push_state()
+{
+    bool am= this->absolute_mode;
+    bool im= this->inch_mode;
+    saved_state_t s(this->feed_rate, this->seek_rate, am, im);
+    state_stack.push(s);
+}
+
+void Robot::pop_state()
+{
+   if(!state_stack.empty()) {
+        auto s= state_stack.top();
+        state_stack.pop();
+        this->feed_rate= std::get<0>(s);
+        this->seek_rate= std::get<1>(s);
+        this->absolute_mode= std::get<2>(s);
+        this->inch_mode= std::get<3>(s);
+    }
+}
+
 // this does a sanity check that actuator speeds do not exceed steps rate capability
 // we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
 void Robot::check_max_actuator_speeds()
@@ -271,63 +291,6 @@ void Robot::check_max_actuator_speeds()
     if(step_freq > THEKERNEL->base_stepping_frequency) {
         gamma_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / gamma_stepper_motor->get_steps_per_mm()));
         THEKERNEL->streams->printf("WARNING: gamma_max_rate exceeds base_stepping_frequency * gamma_steps_per_mm: %f, setting to %f\n", step_freq, gamma_stepper_motor->max_rate);
-    }
-}
-
-void Robot::on_halt(void *arg)
-{
-    halted= (arg == nullptr);
-}
-
-void Robot::on_get_public_data(void *argument)
-{
-    PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
-
-    if(!pdr->starts_with(robot_checksum)) return;
-
-    if(pdr->second_element_is(speed_override_percent_checksum)) {
-        static float return_data;
-        return_data = 100.0F * 60.0F / seconds_per_minute;
-        pdr->set_data_ptr(&return_data);
-        pdr->set_taken();
-
-    } else if(pdr->second_element_is(current_position_checksum)) {
-        static float return_data[3];
-        return_data[0] = from_millimeters(this->last_milestone[0]);
-        return_data[1] = from_millimeters(this->last_milestone[1]);
-        return_data[2] = from_millimeters(this->last_milestone[2]);
-
-        pdr->set_data_ptr(&return_data);
-        pdr->set_taken();
-    }
-}
-
-void Robot::on_set_public_data(void *argument)
-{
-    PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
-
-    if(!pdr->starts_with(robot_checksum)) return;
-
-    if(pdr->second_element_is(speed_override_percent_checksum)) {
-        // NOTE do not use this while printing!
-        float t = *static_cast<float *>(pdr->get_data_ptr());
-        // enforce minimum 10% speed
-        if (t < 10.0F) t = 10.0F;
-
-        this->seconds_per_minute = t / 0.6F; // t * 60 / 100
-        pdr->set_taken();
-    } else if(pdr->second_element_is(current_position_checksum)) {
-        float *t = static_cast<float *>(pdr->get_data_ptr());
-        for (int i = 0; i < 3; i++) {
-            this->last_milestone[i] = this->to_millimeters(t[i]);
-        }
-
-        float actuator_pos[3];
-        arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
-        for (int i = 0; i < 3; i++)
-            actuators[i]->change_last_milestone(actuator_pos[i]);
-
-        pdr->set_taken();
     }
 }
 
@@ -418,21 +381,12 @@ void Robot::on_gcode_received(void *argument)
             }
             return;
 
-            case 120: { // push state
-                bool b= this->absolute_mode;
-                saved_state_t s(this->feed_rate, this->seek_rate, b);
-                state_stack.push(s);
-            }
-            break;
+            case 120: // push state
+                push_state();
+                break;
 
             case 121: // pop state
-                if(!state_stack.empty()) {
-                    auto s= state_stack.top();
-                    state_stack.pop();
-                    this->feed_rate= std::get<0>(s);
-                    this->seek_rate= std::get<1>(s);
-                    this->absolute_mode= std::get<2>(s);
-                }
+                pop_state();
                 break;
 
             case 203: // M203 Set maximum feedrates in mm/sec
@@ -800,7 +754,7 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
         // segment 0 is already done - it's the end point of the previous move so we start at segment 1
         // We always add another point after this loop so we stop at segments-1, ie i < segments
         for (int i = 1; i < segments; i++) {
-            if(halted) return; // don't queue any more segments
+            if(THEKERNEL->is_halted()) return; // don't queue any more segments
             for(int axis = X_AXIS; axis <= Z_AXIS; axis++ )
                 segment_end[axis] = last_milestone[axis] + segment_delta[axis];
 
@@ -894,7 +848,7 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
     arc_target[this->plane_axis_2] = this->last_milestone[this->plane_axis_2];
 
     for (i = 1; i < segments; i++) { // Increment (segments-1)
-        if(halted) return; // don't queue any more segments
+        if(THEKERNEL->is_halted()) return; // don't queue any more segments
 
         if (count < this->arc_correction ) {
             // Apply vector rotation matrix

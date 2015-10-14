@@ -329,6 +329,11 @@ void TemperatureControl::on_gcode_received(void *argument)
                         this->waiting = true; // on_second_tick will announce temps
                         while ( get_temperature() < target_temperature ) {
                             THEKERNEL->call_event(ON_IDLE, this);
+                            // check if ON_HALT was called (usually by kill button)
+                            if(THEKERNEL->is_halted() || this->target_temperature == UNDEFINED) {
+                                THEKERNEL->streams->printf("Wait on temperature aborted by kill\n");
+                                break;
+                            }
                         }
                         this->waiting = false;
                     }
@@ -352,18 +357,35 @@ void TemperatureControl::on_get_public_data(void *argument)
             pdr->set_data_ptr(&return_data);
             pdr->set_taken();
         }
-        return;
 
-    }else if(!pdr->second_element_is(this->name_checksum)) return;
+    }else if(pdr->second_element_is(poll_controls_checksum)) {
+        // polling for all temperature controls
+        // add our data to the list which is passed in via the data_ptr
 
-    // ok this is targeted at us, so send back the requested data
-    if(pdr->third_element_is(current_temperature_checksum)) {
-        this->public_data_return.current_temperature = this->get_temperature();
-        this->public_data_return.target_temperature = (target_temperature <= 0) ? 0 : this->target_temperature;
-        this->public_data_return.pwm = this->o;
-        this->public_data_return.designator= this->designator;
-        pdr->set_data_ptr(&this->public_data_return);
+        std::vector<struct pad_temperature> *v= static_cast<std::vector<pad_temperature>*>(pdr->get_data_ptr());
+
+        struct pad_temperature t;
+        // setup data
+        t.current_temperature = this->get_temperature();
+        t.target_temperature = (target_temperature <= 0) ? 0 : this->target_temperature;
+        t.pwm = this->o;
+        t.designator= this->designator;
+        t.id= this->name_checksum;
+        v->push_back(t);
         pdr->set_taken();
+
+    }else if(pdr->second_element_is(current_temperature_checksum)) {
+        // if targeted at us
+        if(pdr->third_element_is(this->name_checksum)) {
+            // ok this is targeted at us, so set the requ3sted data in the pointer passed into us
+            struct pad_temperature *t= static_cast<pad_temperature*>(pdr->get_data_ptr());
+            t->current_temperature = this->get_temperature();
+            t->target_temperature = (target_temperature <= 0) ? 0 : this->target_temperature;
+            t->pwm = this->o;
+            t->designator= this->designator;
+            t->id= this->name_checksum;
+            pdr->set_taken();
+        }
     }
 
 }

@@ -82,7 +82,7 @@ void MainMenuScreen::setupConfigureScreen()
     mvs->addMenuItem("Z Home Ofs",
         []() -> float { void *rd; PublicData::get_value( endstops_checksum, home_offset_checksum, &rd ); return rd==nullptr ? 0.0F : ((float*)rd)[2]; },
         [this](float v) { send_gcode("M206", 'Z', v); },
-        0.1F
+        0.01F
         );
 
     mvs->addMenuItem("Contrast",
@@ -118,7 +118,7 @@ void MainMenuScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Watch"); break;
-        case 1: if(THEPANEL->is_halted()) THEPANEL->lcd->printf("Clear HALT"); else THEPANEL->lcd->printf(THEPANEL->is_playing() ? "Abort" : "Play"); break;
+        case 1: if(THEKERNEL->is_halted()) THEPANEL->lcd->printf("Clear HALT"); else THEPANEL->lcd->printf(THEPANEL->is_playing() ? "Abort" : "Play"); break;
         case 2: THEPANEL->lcd->printf("Jog"); break;
         case 3: THEPANEL->lcd->printf("Prepare"); break;
         case 4: THEPANEL->lcd->printf("Custom"); break;
@@ -132,7 +132,7 @@ void MainMenuScreen::clicked_menu_entry(uint16_t line)
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->watch_screen); break;
         case 1:
-            if(THEPANEL->is_halted()){
+            if(THEKERNEL->is_halted()){
                 send_command("M999");
                 THEPANEL->enter_screen(this->watch_screen);
             }else if(THEPANEL->is_playing()) abort_playing();

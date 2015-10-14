@@ -20,6 +20,8 @@ class ConfigCache;
 class Config : public Module {
     public:
         Config();
+        Config(ConfigSource*);
+        ~Config();
 
         void on_module_loaded();
         void on_console_line_received( void* argument );

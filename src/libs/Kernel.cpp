@@ -35,11 +35,14 @@
 #define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
 #define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
+#define disable_leds_checksum                       CHECKSUM("leds_disable")
 
 Kernel* Kernel::instance;
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
+    halted= false;
+
     instance= this; // setup the Singleton instance of the kernel
 
     // serial first at fixed baud rate (DEFAULT_SERIAL_BAUD_RATE) so config can report errors to serial
@@ -84,6 +87,9 @@ Kernel::Kernel(){
     if(this->serial == NULL) {
         this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
     }
+
+    //some boards don't have leds.. TOO BAD!
+    this->use_leds= !this->config->value( disable_leds_checksum )->by_default(false)->as_bool();
 
     this->add_module( this->config );
     this->add_module( this->serial );
@@ -151,16 +157,32 @@ void Kernel::register_for_event(_EVENT_ENUM id_event, Module *mod){
     this->hooks[id_event].push_back(mod);
 }
 
-// Call a specific event without arguments
-void Kernel::call_event(_EVENT_ENUM id_event){
-    for (auto m : hooks[id_event]) {
-        (m->*kernel_callback_functions[id_event])(this);
-    }
-}
-
 // Call a specific event with an argument
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
+    if(id_event == ON_HALT) {
+        this->halted= (argument == nullptr);
+    }
     for (auto m : hooks[id_event]) {
         (m->*kernel_callback_functions[id_event])(argument);
     }
 }
+
+// These are used by tests to test for various things. basically mocks
+bool Kernel::kernel_has_event(_EVENT_ENUM id_event, Module *mod)
+{
+    for (auto m : hooks[id_event]) {
+        if(m == mod) return true;
+    }
+    return false;
+}
+
+void Kernel::unregister_for_event(_EVENT_ENUM id_event, Module *mod)
+{
+    for (auto i = hooks[id_event].begin(); i != hooks[id_event].end(); ++i) {
+        if(*i == mod) {
+            hooks[id_event].erase(i);
+            return;
+        }
+    }
+}
+

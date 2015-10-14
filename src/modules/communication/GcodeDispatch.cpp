@@ -30,7 +30,7 @@
 #define panel_checksum             CHECKSUM("panel")
 
 // goes in Flash, list of Mxxx codes that are allowed when in Halted state
-static const int allowed_mcodes[]= {105,114}; // get temp, get pos
+static const int allowed_mcodes[]= {105,114,119}; // get temp, get pos, get endstops
 static bool is_allowed_mcode(int m) {
     for (size_t i = 0; i < sizeof(allowed_mcodes)/sizeof(int); ++i) {
         if(allowed_mcodes[i] == m) return true;
@@ -40,7 +40,6 @@ static bool is_allowed_mcode(int m) {
 
 GcodeDispatch::GcodeDispatch()
 {
-    halted= false;
     uploading = false;
     currentline = -1;
     last_g= 255;
@@ -50,13 +49,6 @@ GcodeDispatch::GcodeDispatch()
 void GcodeDispatch::on_module_loaded()
 {
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    this->register_for_event(ON_HALT);
-}
-
-void GcodeDispatch::on_halt(void *arg)
-{
-    // set halt stream and ignore everything until M999
-    this->halted= (arg == nullptr);
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -139,11 +131,11 @@ try_again:
                     //Prepare gcode for dispatch
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
 
-                    if(halted) {
+                    if(THEKERNEL->is_halted()) {
                         // we ignore all commands until M999, unless it is in the exceptions list (like M105 get temp)
                         if(gcode->has_m && gcode->m == 999) {
                             THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
-                            halted= false;
+
                             // fall through and pass onto other modules
 
                         }else if(!is_allowed_mcode(gcode->m)) {

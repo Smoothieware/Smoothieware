@@ -115,7 +115,13 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 {
     if(gcode->has_g) {
         // G code processing
-        if( gcode->g == 31 ) { // report status
+        if(gcode->g == 29) { // test probe points for level
+            if(!test_probe_points(gcode)) {
+                gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
+            }
+            return true;
+
+        } else if( gcode->g == 31 ) { // report status
             if(this->plane == nullptr) {
                  gcode->stream->printf("Bed leveling plane is not set\n");
             }else{
@@ -288,7 +294,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         if(isnan(z)) return false; // probe failed
         z= zprobe->getProbeHeight() - z; // relative distance between the probe points, lower is negative z
         stream->printf("DEBUG: P%d:%1.4f\n", i, z);
-        v[i].set(x, y, z);
+        v[i] = Vector3(x, y, z);
     }
 
     // if first point is not within tolerance report it, it should ideally be 0
@@ -311,6 +317,36 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         stream->printf("DEBUG: plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
         setAdjustFunction(true);
     }
+
+    return true;
+}
+
+// Probes the 3 points and reports heights
+bool ThreePointStrategy::test_probe_points(Gcode *gcode)
+{
+    // check the probe points have been defined
+    float max_delta= 0;
+    float last_z= NAN;
+    for (int i = 0; i < 3; ++i) {
+        float x, y;
+        std::tie(x, y) = probe_points[i];
+        if(isnan(x) || isnan(y)) {
+            gcode->stream->printf("Probe point P%d has not been defined, use M557 P%d Xnnn Ynnn to define it\n", i, i);
+            return false;
+        }
+
+        float z = zprobe->probeDistance(x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets));
+        if(isnan(z)) return false; // probe failed
+        gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f\n", x, y, z);
+
+        if(isnan(last_z)) {
+            last_z= z;
+        }else{
+            max_delta= std::max(max_delta, fabsf(z-last_z));
+        }
+    }
+
+    gcode->stream->printf("max delta: %f\n", max_delta);
 
     return true;
 }

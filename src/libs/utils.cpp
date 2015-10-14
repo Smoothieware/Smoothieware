@@ -15,6 +15,7 @@
 #include <cstring>
 #include <stdio.h>
 #include <cstdlib>
+
 using std::string;
 
 uint16_t get_checksum(const string &to_check)
@@ -199,6 +200,7 @@ string absolute_from_relative( string path )
     return cwd + '/' + path;
 }
 
+// FIXME this does not handle empty strings correctly
 //split a string on a delimiter, return a vector of the split tokens
 vector<string> split(const char *str, char c)
 {
@@ -216,6 +218,7 @@ vector<string> split(const char *str, char c)
     return result;
 }
 
+// FIXME this does not handle empty strings correctly
 // parse a number list "1.1,2.2,3.3" and return the numbers in a vector of floats
 vector<float> parse_number_list(const char *str)
 {
@@ -226,4 +229,15 @@ vector<float> parse_number_list(const char *str)
         r.push_back(x);
     }
     return r;
+}
+
+int append_parameters(char *buf, std::vector<std::pair<char,float>> params, size_t bufsize)
+{
+    size_t n= 0;
+    for(auto &i : params) {
+        if(n >= bufsize) break;
+        buf[n++]= i.first;
+        n += snprintf(&buf[n], bufsize-n, "%1.4f ", i.second);
+    }
+    return n;
 }
