@@ -269,7 +269,7 @@ bool CalibrationStrategy::probe_symmetric(int n, int repeats, float actuator_pos
         n--;
     }
     for (int i = 0; i < n; i++) {
-        float angle = M_PI*2*i/n;
+        float angle = M_PI/2 + M_PI*2*i/n;
 
         float x = probe_radius * cos(angle);
         float y = probe_radius * sin(angle);
