@@ -456,7 +456,7 @@ bool CalibrationStrategy::optimize_model(int n, int repeats, std::string const& 
     };
     auto print_state = [&]() {
         for (int i = 0; i < m; i++)
-            stream->printf("%c:%.3g ", parameters[i], stored_values[i]);
+            stream->printf("%c:%.3f ", parameters[i], stored_values[i]);
         stream->printf("\n");
     };
 
