@@ -42,7 +42,7 @@
 #define return_feedrate_checksum CHECKSUM("return_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
 #define gamma_max_checksum       CHECKSUM("gamma_max")
-
+#define initial_height_checksum  CHECKSUM("initial_height")
 // from endstop section
 #define delta_homing_checksum    CHECKSUM("delta_homing")
 
@@ -117,6 +117,10 @@ void ZProbe::on_config_reload(void *argument)
             if(found) this->strategies.back()->handleConfig();
         }
     }
+
+    // the initial height above the bed we stop the intial move down after home to find the bed
+    // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
+    this->initial_height= THEKERNEL->config->value(zprobe_checksum, initial_height_checksum)->by_default(20)->as_number();
 
     // need to know if we need to use delta kinematics for homing
     this->is_delta = THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
@@ -311,6 +315,22 @@ float ZProbe::probeDistance(float x, float y)
     int s;
     if(!doProbeAt(s, x, y)) return NAN;
     return zsteps_to_mm(s);
+}
+
+float ZProbe::find_bed()
+{
+    // home
+    home();
+
+    // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
+    float deltaz= getMaxZ() - initial_height;
+    coordinated_move(NAN, NAN, -deltaz, getFastFeedrate(), true);
+
+    // find bed, run at slow rate so as to not hit bed hard
+    int s;
+    if(!run_probe(s, false)) return NAN;
+
+    return zsteps_to_mm(s) + deltaz - getProbeHeight(); // distance to move from home to 5mm above bed
 }
 
 void ZProbe::on_gcode_received(void *argument)

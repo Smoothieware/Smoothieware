@@ -37,6 +37,7 @@ public:
     bool return_probe(int steps);
     bool doProbeAt(int &steps, float x, float y, float actuator_positions[] = nullptr, int repeats = 1);
     float probeDistance(float x, float y);
+    float find_bed();
 
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();
@@ -57,6 +58,8 @@ private:
     float return_feedrate;
     float probe_height;
     float max_z;
+    float initial_height;
+
     volatile struct {
         volatile bool running:1;
         bool is_delta:1;
