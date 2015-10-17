@@ -1,4 +1,5 @@
 #include "RotatableDeltaSolution.h"
+#include "ActuatorCoordinates.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "ConfigCache.h"
@@ -134,7 +135,7 @@ void RotatableDeltaSolution::init()
     z_calc_offset  = (delta_z_offset - tool_offset - delta_ee_offs) * -1.0F;
 }
 
-void RotatableDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], float actuator_mm[] )
+void RotatableDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm )
 {
     //We need to translate the Cartesian coordinates in mm to the actuator position required in mm so the stepper motor  functions
     float alpha_theta = 0.0F;
@@ -180,7 +181,7 @@ void RotatableDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], f
 
 }
 
-void RotatableDeltaSolution::actuator_to_cartesian(const float actuator_mm[], float cartesian_mm[] )
+void RotatableDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] )
 {
     //Use forward kinematics
     delta_calcForward(actuator_mm[ALPHA_STEPPER], actuator_mm[BETA_STEPPER ], actuator_mm[GAMMA_STEPPER], cartesian_mm[X_AXIS], cartesian_mm[Y_AXIS], cartesian_mm[Z_AXIS]);

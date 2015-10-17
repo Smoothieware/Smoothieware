@@ -9,6 +9,7 @@
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
 #include "modules/robot/Conveyor.h"
+#include "modules/robot/ActuatorCoordinates.h"
 #include "Endstops.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Pin.h"
@@ -669,15 +670,14 @@ void Endstops::on_gcode_received(void *argument)
 
                 bool has_endstop_trim = this->is_delta || this->is_scara;
                 if (has_endstop_trim) {
-                    float ideal_actuator_position[3];
+                    ActuatorCoordinates ideal_actuator_position;
                     THEKERNEL->robot->arm_solution->cartesian_to_actuator(ideal_position, ideal_actuator_position);
 
                     // We are actually not at the ideal position, but a trim away
-                    float real_actuator_position[3] = {
-                        ideal_actuator_position[X_AXIS] - this->trim_mm[X_AXIS],
-                        ideal_actuator_position[Y_AXIS] - this->trim_mm[Y_AXIS],
-                        ideal_actuator_position[Z_AXIS] - this->trim_mm[Z_AXIS]
-                    };
+                    ActuatorCoordinates real_actuator_position;
+                    for (size_t i = THEKERNEL->robot->actuators.size() + 1; i--;) {
+                        real_actuator_position[i] = ideal_actuator_position[i] - this->trim_mm[i];
+                    }
 
                     float real_position[3];
                     THEKERNEL->robot->arm_solution->actuator_to_cartesian(real_actuator_position, real_position);

@@ -25,6 +25,7 @@ using std::string;
 #include "PublicData.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
+#include "arm_solutions/MultiCartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/LinearDeltaSolution.h"
 #include "arm_solutions/RotatableDeltaSolution.h"
@@ -38,6 +39,7 @@ using std::string;
 #include "libs/StreamOutput.h"
 #include "StreamOutputPool.h"
 #include "ExtruderPublicAccess.h"
+#include "ActuatorCoordinates.h"
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
@@ -53,6 +55,7 @@ using std::string;
 #define  arm_solution_checksum               CHECKSUM("arm_solution")
 #define  cartesian_checksum                  CHECKSUM("cartesian")
 #define  rotatable_cartesian_checksum        CHECKSUM("rotatable_cartesian")
+#define  multi_cartesian_checksum            CHECKSUM("multi_cartesian")
 #define  rostock_checksum                    CHECKSUM("rostock")
 #define  linear_delta_checksum               CHECKSUM("linear_delta")
 #define  rotatable_delta_checksum            CHECKSUM("rotatable_delta")
@@ -67,9 +70,11 @@ using std::string;
 #define  alpha_step_pin_checksum             CHECKSUM("alpha_step_pin")
 #define  beta_step_pin_checksum              CHECKSUM("beta_step_pin")
 #define  gamma_step_pin_checksum             CHECKSUM("gamma_step_pin")
+
 #define  alpha_dir_pin_checksum              CHECKSUM("alpha_dir_pin")
 #define  beta_dir_pin_checksum               CHECKSUM("beta_dir_pin")
 #define  gamma_dir_pin_checksum              CHECKSUM("gamma_dir_pin")
+
 #define  alpha_en_pin_checksum               CHECKSUM("alpha_en_pin")
 #define  beta_en_pin_checksum                CHECKSUM("beta_en_pin")
 #define  gamma_en_pin_checksum               CHECKSUM("gamma_en_pin")
@@ -146,6 +151,13 @@ void Robot::on_module_loaded()
     this->on_config_reload(this);
 }
 
+#define ACTUATOR_CHECKSUMS(X){             \
+    CHECKSUM(X "_step_pin_checksum"),     \
+    CHECKSUM(X "_dir_pin_checksum"),      \
+    CHECKSUM(X "_en_pin_checksum") },     \
+    CHECKSUM(X "_steps_per_mm_checksum"), \
+    CHECKSUM(X "_max_rate_checksum")
+
 void Robot::on_config_reload(void *argument)
 {
 
@@ -178,6 +190,9 @@ void Robot::on_config_reload(void *argument)
     } else if(solution_checksum == cartesian_checksum) {
         this->arm_solution = new CartesianSolution(THEKERNEL->config);
 
+    } else if(solution_checksum == multi_cartesian_checksum) {
+        this->arm_solution = new MultiCartesianSolution(THEKERNEL->config);
+
     } else {
         this->arm_solution = new CartesianSolution(THEKERNEL->config);
     }
@@ -194,58 +209,53 @@ void Robot::on_config_reload(void *argument)
     this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
-    Pin alpha_step_pin;
-    Pin alpha_dir_pin;
-    Pin alpha_en_pin;
-    Pin beta_step_pin;
-    Pin beta_dir_pin;
-    Pin beta_en_pin;
-    Pin gamma_step_pin;
-    Pin gamma_dir_pin;
-    Pin gamma_en_pin;
+    // TODO: delete or detect old steppermotors
+#if 0 //pending testing
+    for (auto &a : actuators)
+        delete a;
+#endif
+    actuators.clear();
 
-    alpha_step_pin.from_string( THEKERNEL->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
-    alpha_dir_pin.from_string(  THEKERNEL->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
-    alpha_en_pin.from_string(   THEKERNEL->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
-    beta_step_pin.from_string(  THEKERNEL->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
-    beta_dir_pin.from_string(   THEKERNEL->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
-    beta_en_pin.from_string(    THEKERNEL->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
-    gamma_step_pin.from_string( THEKERNEL->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
-    gamma_dir_pin.from_string(  THEKERNEL->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
-    gamma_en_pin.from_string(   THEKERNEL->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
-
-    float steps_per_mm[3] = {
-        THEKERNEL->config->value(alpha_steps_per_mm_checksum)->by_default(  80.0F)->as_number(),
-        THEKERNEL->config->value(beta_steps_per_mm_checksum )->by_default(  80.0F)->as_number(),
-        THEKERNEL->config->value(gamma_steps_per_mm_checksum)->by_default(2560.0F)->as_number(),
+    // Make our 3 StepperMotors
+    struct
+    {
+        uint16_t pin_checksums[3];
+        uint16_t per_mm_checksum;
+        uint16_t per_sec_checksum;
+        char const *pin_defaults[3];
+        float per_mm_default;
+    } p[] =
+    {
+        { ACTUATOR_CHECKSUMS("alpha"),   {"2.0", "0.5",  "0.4"},  80.0F },
+        { ACTUATOR_CHECKSUMS("beta"),    {"2.1", "0.11", "0.10"}, 80.0F },
+        { ACTUATOR_CHECKSUMS("gamma"),   {"2.2", "0.20", "0.19"}, 2560.0F },
+        { ACTUATOR_CHECKSUMS("delta"),   {"nc",  "nc",   "nc"},   80.0F },
+        { ACTUATOR_CHECKSUMS("epsilon"), {"nc",  "nc",   "nc" },  80.0F },
+        { ACTUATOR_CHECKSUMS("zeta"),    {"nc",  "nc",   "nc" },  2560.0F }
     };
 
-    // TODO: delete or detect old steppermotors
-    // Make our 3 StepperMotors
-    this->alpha_stepper_motor  = new StepperMotor(alpha_step_pin, alpha_dir_pin, alpha_en_pin);
-    this->beta_stepper_motor   = new StepperMotor(beta_step_pin,  beta_dir_pin,  beta_en_pin );
-    this->gamma_stepper_motor  = new StepperMotor(gamma_step_pin, gamma_dir_pin, gamma_en_pin);
+    if (this->arm_solution->get_actuator_count() > k_max_actuators) {
+        THEKERNEL->streams->printf("Too many actuators, %d. Increase k_max_actuators and rebuild", this->arm_solution->get_actuator_count());
+    }
+    else {
+        for (size_t a = 0; a < this->arm_solution->get_actuator_count(); a++) {
+            Pin pins[3]; //step, dir, enable
+            for (size_t i = 0; i < 3; i++) {
+                pins[i].from_string(THEKERNEL->config->value(p[a].pin_checksums[i])->by_default(p[a].pin_defaults[i])->as_string())->as_output();
+            }
+            actuators.push_back(new StepperMotor(pins[0], pins[1], pins[2]));
 
-    alpha_stepper_motor->change_steps_per_mm(steps_per_mm[0]);
-    beta_stepper_motor->change_steps_per_mm(steps_per_mm[1]);
-    gamma_stepper_motor->change_steps_per_mm(steps_per_mm[2]);
-
-    alpha_stepper_motor->set_max_rate(THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
-    beta_stepper_motor->set_max_rate(THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F);
-    gamma_stepper_motor->set_max_rate(THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
+            actuators[a]->change_steps_per_mm(THEKERNEL->config->value(p[a].per_mm_checksum)->by_default(p[a].per_mm_default)->as_number());
+            actuators[a]->set_max_rate(THEKERNEL->config->value(p[a].per_sec_checksum)->by_default(30000.0F)->as_number());
+        }
+    }
     check_max_actuator_speeds(); // check the configs are sane
-
-    actuators.clear();
-    actuators.push_back(alpha_stepper_motor);
-    actuators.push_back(beta_stepper_motor);
-    actuators.push_back(gamma_stepper_motor);
-
 
     // initialise actuator positions to current cartesian position (X0 Y0 Z0)
     // so the first move can be correct if homing is not performed
-    float actuator_pos[3];
+    ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < actuators.size(); i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 
     //this->clearToolOffset();
@@ -275,22 +285,12 @@ void Robot::pop_state()
 // we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
 void Robot::check_max_actuator_speeds()
 {
-    float step_freq= alpha_stepper_motor->get_max_rate() * alpha_stepper_motor->get_steps_per_mm();
-    if(step_freq > THEKERNEL->base_stepping_frequency) {
-        alpha_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / alpha_stepper_motor->get_steps_per_mm()));
-        THEKERNEL->streams->printf("WARNING: alpha_max_rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", step_freq, alpha_stepper_motor->max_rate);
-    }
-
-    step_freq= beta_stepper_motor->get_max_rate() * beta_stepper_motor->get_steps_per_mm();
-    if(step_freq > THEKERNEL->base_stepping_frequency) {
-        beta_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / beta_stepper_motor->get_steps_per_mm()));
-        THEKERNEL->streams->printf("WARNING: beta_max_rate exceeds base_stepping_frequency * beta_steps_per_mm: %f, setting to %f\n", step_freq, beta_stepper_motor->max_rate);
-    }
-
-    step_freq= gamma_stepper_motor->get_max_rate() * gamma_stepper_motor->get_steps_per_mm();
-    if(step_freq > THEKERNEL->base_stepping_frequency) {
-        gamma_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / gamma_stepper_motor->get_steps_per_mm()));
-        THEKERNEL->streams->printf("WARNING: gamma_max_rate exceeds base_stepping_frequency * gamma_steps_per_mm: %f, setting to %f\n", step_freq, gamma_stepper_motor->max_rate);
+    for (auto &actuator: actuators) {
+        float step_freq = actuator->get_max_rate() * actuator->get_steps_per_mm();
+        if (step_freq > THEKERNEL->base_stepping_frequency) {
+            actuator->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuator->get_steps_per_mm()));
+            THEKERNEL->streams->printf("WARNING: actuator rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", step_freq, actuator->max_rate);
+        }
     }
 }
 
@@ -396,22 +396,22 @@ void Robot::on_gcode_received(void *argument)
                     this->max_speeds[Y_AXIS] = gcode->get_value('Y');
                 if (gcode->has_letter('Z'))
                     this->max_speeds[Z_AXIS] = gcode->get_value('Z');
-                if (gcode->has_letter('A'))
-                    alpha_stepper_motor->set_max_rate(gcode->get_value('A'));
-                if (gcode->has_letter('B'))
-                    beta_stepper_motor->set_max_rate(gcode->get_value('B'));
-                if (gcode->has_letter('C'))
-                    gamma_stepper_motor->set_max_rate(gcode->get_value('C'));
-
+                for (size_t i = 0; i < actuators.size(); i++) {
+                    if (gcode->has_letter('A' + i))
+                        actuators[i]->set_max_rate(gcode->get_value('A' + i));
+                }
                 check_max_actuator_speeds();
 
                 if(gcode->get_num_args() == 0) {
-                    gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
-                                          this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
-                                          alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
+                    if (gcode->get_num_args() == 0) {
+                        gcode->stream->printf("X:%g Y:%g Z:%g",
+                            this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+                        for (size_t i = 0; i < actuators.size(); i++) {
+                            gcode->stream->printf(" %c : %g", 'A' + i, actuators[i]->get_max_rate()); //xxx 
+                        }
+                    }
                     gcode->add_nl = true;
                 }
-
                 break;
 
             case 204: // M204 Snnn - set acceleration to nnn, Znnn sets z acceleration
@@ -454,7 +454,7 @@ void Robot::on_gcode_received(void *argument)
                     THEKERNEL->planner->minimum_planner_speed = mps;
                 }
                 if (gcode->has_letter('Y')) {
-                    alpha_stepper_motor->default_minimum_actuator_rate = gcode->get_value('Y');
+                    actuators[0]->default_minimum_actuator_rate = gcode->get_value('Y');
                 }
                 break;
 
@@ -483,9 +483,12 @@ void Robot::on_gcode_received(void *argument)
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f Z%1.5f\n", THEKERNEL->planner->acceleration, THEKERNEL->planner->z_acceleration);
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
-                gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
-                                      this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
-                                      alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
+                gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f", 
+                                      this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+                for (size_t i=0; i < actuators.size(); i++){
+                    gcode->stream->printf(" %c%1.5f", 'A'+i, actuators[i]->get_max_rate());
+                }
+                gcode->stream->printf("\n");
 
                 // get or save any arm solution specific optional values
                 BaseSolution::arm_options_t options;
@@ -593,9 +596,9 @@ void Robot::reset_axis_position(float x, float y, float z)
     this->transformed_last_milestone[Y_AXIS] = y;
     this->transformed_last_milestone[Z_AXIS] = z;
 
-    float actuator_pos[3];
+    ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < actuators.size(); i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
@@ -605,23 +608,26 @@ void Robot::reset_axis_position(float position, int axis)
     this->last_milestone[axis] = position;
     this->transformed_last_milestone[axis] = position;
 
-    float actuator_pos[3];
+    ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
 
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < actuators.size(); i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
 // Use FK to find out where actuator is and reset lastmilestone to match
 void Robot::reset_position_from_current_actuator_position()
 {
-    float actuator_pos[]= {actuators[X_AXIS]->get_current_position(), actuators[Y_AXIS]->get_current_position(), actuators[Z_AXIS]->get_current_position()};
+    ActuatorCoordinates actuator_pos;
+    for (size_t i = 0; i < actuators.size(); i++) {
+        actuator_pos[i] = actuators[i]->get_current_position();
+    }
     arm_solution->actuator_to_cartesian(actuator_pos, this->last_milestone);
     memcpy(this->transformed_last_milestone, this->last_milestone, sizeof(this->transformed_last_milestone));
 
     // now reset actuator correctly, NOTE this may lose a little precision
     arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < actuators.size(); i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
@@ -630,7 +636,7 @@ void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s)
 {
     float deltas[3];
     float unit_vec[3];
-    float actuator_pos[3];
+    ActuatorCoordinates actuator_pos;
     float transformed_target[3]; // adjust target for bed compensation
     float millimeters_of_travel;
 
@@ -672,7 +678,7 @@ void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s)
 
     float isecs= rate_mm_s / millimeters_of_travel;
     // check per-actuator speed limits
-    for (int actuator = 0; actuator <= 2; actuator++) {
+    for (size_t actuator = 0; actuator < actuators.size(); actuator++) {
         float actuator_rate  = fabsf(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * isecs;
         if (actuator_rate > actuators[actuator]->get_max_rate()){
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);

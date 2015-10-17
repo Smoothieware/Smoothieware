@@ -39,7 +39,7 @@ void Block::clear()
     gcodes.clear();
     std::vector<Gcode>().swap(gcodes); // this resizes the vector releasing its memory
 
-    clear_vector(this->steps);
+    this->steps.fill(0);
 
     steps_event_count   = 0;
     nominal_rate        = 0;
