@@ -699,11 +699,13 @@ void Endstops::on_gcode_received(void *argument)
 
             // on some systems where 0,0 is bed center it is noce to have home goto 0,0 after homing
             // default is off
-            if(this->move_to_origin_after_home)
-                move_to_origin(axes_to_move);
+            if(!is_delta && this->move_to_origin_after_home) move_to_origin(axes_to_move);
 
             // if limit switches are enabled we must back off endstop after setting home
             back_off_home(axes_to_move);
+
+            // deltas are not left at 0,0 becuase of the trim settings, so move to 0,0 if requested
+            if(is_delta && this->move_to_origin_after_home) move_to_origin(axes_to_move);
         }
 
     } else if (gcode->has_m) {
