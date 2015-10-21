@@ -10,7 +10,7 @@
 #include <array>
 
 //Most solutions will use only a portion, as reported by the solution's get_actuator_count.
-enum { k_max_actuators = 6 };
+const int k_max_actuators = 6;
 typedef struct std::array<float, k_max_actuators> ActuatorCoordinates;
 
 #endif
