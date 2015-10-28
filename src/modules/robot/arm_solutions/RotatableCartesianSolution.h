@@ -16,8 +16,7 @@ class RotatableCartesianSolution : public BaseSolution {
         void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) override;
 
     private:
-        void rotate(const float in[], ActuatorCoordinates &out, float sin, float cos);
-        void rotate(const ActuatorCoordinates &in, float out[], float sin, float cos);
+        void rotate(const float in[], float out[], float sin, float cos);
 
         float sin_alpha;
         float cos_alpha;

@@ -14,21 +14,15 @@ RotatableCartesianSolution::RotatableCartesianSolution(Config* config) {
 }
 
 void RotatableCartesianSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm ){
-    rotate( cartesian_mm, actuator_mm, sin_alpha, cos_alpha );
+    rotate( cartesian_mm, &actuator_mm[0], sin_alpha, cos_alpha );
 }
 
 void RotatableCartesianSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ){
-    rotate( actuator_mm, cartesian_mm, - sin_alpha, cos_alpha );
+    rotate( &actuator_mm[0], cartesian_mm, - sin_alpha, cos_alpha );
 }
 
-void RotatableCartesianSolution::rotate(const ActuatorCoordinates &in, float out[], float sin, float cos ){
+void RotatableCartesianSolution::rotate(const float in[], float out[], float sin, float cos ){
     out[ALPHA_STEPPER] = cos * in[X_AXIS] - sin * in[Y_AXIS];
     out[BETA_STEPPER ] = sin * in[X_AXIS] + cos * in[Y_AXIS];
     out[GAMMA_STEPPER] =       in[Z_AXIS];
-}
-
-void RotatableCartesianSolution::rotate(const float in[], ActuatorCoordinates &out, float sin, float cos) {
-    out[ALPHA_STEPPER] = cos * in[X_AXIS] - sin * in[Y_AXIS];
-    out[BETA_STEPPER] = sin * in[X_AXIS] + cos * in[Y_AXIS];
-    out[GAMMA_STEPPER] = in[Z_AXIS];
 }
