@@ -51,44 +51,11 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
 {
     if( gcode->has_g) {
         // G code processing
-        if (gcode->g == 29) {
-            THEKERNEL->conveyor->wait_for_empty_queue();
-
-            auto args = gcode->get_args();
-            int samples = 50;
-            int repeats = 1;
-
-            for (auto &v : args) {
-                if (v.first == 'P')
-                    samples = int(v.second);
-                else if (v.first == 'O')
-                    repeats = int(v.second);
-            }
-
-            std::vector<Vector3> actuator_positions(samples);
-            gcode->stream->printf("Probing %d points (%d repeat(s) per point).\n", samples, repeats);
-
-            if (!probe_pattern(samples, repeats, (float(*)[3])actuator_positions[0].data())) {
-                gcode->stream->printf("ERROR: Probing failed!\n");
-                return false;
-            }
-
-            gcode->stream->printf("    X         Y         Z\n");
-            THEKERNEL->call_event(ON_IDLE);
-            for (auto const& s : actuator_positions) {
-                float cartesian[3];
-                compute_cartesian_position(s.data(), cartesian);
-                gcode->stream->printf("%8.4f %8.4f %8.4f\n", cartesian[0], cartesian[1], cartesian[2]);
-            }
-
-            return true;
-        }
-        if( gcode->g == 32 ) { // auto calibration for delta, Z bed mapping for cartesian
+        if (gcode->g == 29 || gcode->g == 32) {
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             auto args = gcode->get_args();
-            std::string parameters_to_optimize; parameters_to_optimize.reserve(args.size());
             int samples = 50;
             int repeats = 1;
 
@@ -97,62 +64,87 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
                     samples = int(v.second);
                 else if (v.first == 'O')
                     repeats = int(v.second);
-                else
-                    parameters_to_optimize += v.first;
-            }
-
-            // TODO: the following checks are delta specific
-            if (parameters_to_optimize.empty()) {
-                parameters_to_optimize = "XYZ"; // endstop only
-            }
-            // The W parameter is linearly dependent on X,Y,Z
-            if (parameters_to_optimize.find('W') != std::string::npos &&
-                    (parameters_to_optimize.find('X') != std::string::npos ||
-                     parameters_to_optimize.find('Y') != std::string::npos ||
-                     parameters_to_optimize.find('Z') != std::string::npos)) {
-                gcode->stream->printf("Warning, parameter W is coupled to X,Y,Z. Optimize either W or XYZ. Ignoring W.\n");
-                parameters_to_optimize.erase(parameters_to_optimize.find('W'));
             }
 
             // Make sure we initialize our trim variables
-            get_parameter('X');
-            get_parameter('Y');
-            get_parameter('Z');
+            for (char par = 'X'; par <= 'Z'; par++)
+                get_parameter(par);
 
-            // Make sure all parameters are valid
-            for (auto p = parameters_to_optimize.begin(); p != parameters_to_optimize.end();) {
-                // this is done by attempting to get and then set their values
-                if (!update_parameter(*p,0)) {
-                    gcode->stream->printf("Warning, invalid parameter '%c' ignored.\n", *p);
-                    p = parameters_to_optimize.erase(p);
-                } else {
-                    p++;
+            if (gcode->g == 29) {
+                std::vector<Vector3> actuator_positions(samples);
+                gcode->stream->printf("Probing %d points (%d repeat(s) per point).\n", samples, repeats);
+
+                if (!probe_pattern(samples, repeats, (float(*)[3])actuator_positions[0].data())) {
+                    gcode->stream->printf("ERROR: Probing failed!\n");
+                    return false;
                 }
+
+                gcode->stream->printf("    X         Y         Z\n");
+                THEKERNEL->call_event(ON_IDLE);
+                for (auto const& s : actuator_positions) {
+                    float cartesian[3];
+                    compute_cartesian_position(s.data(), cartesian);
+                    gcode->stream->printf("%8.4f %8.4f %8.4f\n", cartesian[0], cartesian[1], cartesian[2]);
+                }
+
+                return true;
             }
+            if( gcode->g == 32 ) { // auto calibration for delta, Z bed mapping for cartesian
+                std::string parameters_to_optimize;
 
-            update_compensation_transformation(); // make sure no compensation transform from somewhere else is installed
+                for (auto &v : args) {
+                    if (v.first != 'P' && v.first != 'O')
+                        parameters_to_optimize += v.first;
+                }
 
-            gcode->stream->printf("Commencing calibration of parameters: %s\n", parameters_to_optimize.c_str());
+                // TODO: the following checks are delta specific
+                if (parameters_to_optimize.empty()) {
+                    parameters_to_optimize = "XYZ"; // endstop only
+                }
+                // The W parameter is linearly dependent on X,Y,Z
+                if (parameters_to_optimize.find('W') != std::string::npos &&
+                        (parameters_to_optimize.find('X') != std::string::npos ||
+                         parameters_to_optimize.find('Y') != std::string::npos ||
+                         parameters_to_optimize.find('Z') != std::string::npos)) {
+                    gcode->stream->printf("Warning, parameter W is coupled to X,Y,Z. Optimize either W or XYZ. Ignoring W.\n");
+                    parameters_to_optimize.erase(parameters_to_optimize.find('W'));
+                }
 
-            samples = std::max(samples, (int)parameters_to_optimize.length());
+                // Make sure all parameters are valid
+                for (auto p = parameters_to_optimize.begin(); p != parameters_to_optimize.end();) {
+                    // this is done by attempting to get and then set their values
+                    if (!update_parameter(*p,0)) {
+                        gcode->stream->printf("Warning, invalid parameter '%c' ignored.\n", *p);
+                        p = parameters_to_optimize.erase(p);
+                    } else {
+                        p++;
+                    }
+                }
 
-            if (optimize_model(samples, repeats, parameters_to_optimize, gcode->stream)) {
-                gcode->stream->printf("Calibration complete. Save settings with M500.\n");
-            } else {
-                gcode->stream->printf("Calibration may not have converged. Use M500 if you want to save settings anyway.\n");
+                update_compensation_transformation(); // make sure no compensation transform from somewhere else is installed
+
+                gcode->stream->printf("Commencing calibration of parameters: %s\n", parameters_to_optimize.c_str());
+
+                samples = std::max(samples, (int)parameters_to_optimize.length());
+
+                if (optimize_model(samples, repeats, parameters_to_optimize, gcode->stream)) {
+                    gcode->stream->printf("Calibration complete. Save settings with M500.\n");
+                } else {
+                    gcode->stream->printf("Calibration may not have converged. Use M500 if you want to save settings anyway.\n");
+                }
+                THEKERNEL->call_event(ON_IDLE);
+
+                // Check if endstop trim was updated
+                if (parameters_to_optimize.find('X') != std::string::npos ||
+                        parameters_to_optimize.find('Y') != std::string::npos ||
+                        parameters_to_optimize.find('Z') != std::string::npos) {
+
+                    // Deficiency: homing is the only way to activate the endstop trim values
+                    zprobe->home();
+                }
+
+                return true;
             }
-            THEKERNEL->call_event(ON_IDLE);
-
-            // Check if endstop trim was updated
-            if (parameters_to_optimize.find('X') != std::string::npos ||
-                parameters_to_optimize.find('Y') != std::string::npos ||
-                parameters_to_optimize.find('Z') != std::string::npos) {
-
-                // Deficiency: homing is the only way to activate the endstop trim values
-                zprobe->home();
-            }
-
-            return true;
         }
     } else if(gcode->has_m) {
         // handle mcodes
