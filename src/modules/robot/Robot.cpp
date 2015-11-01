@@ -637,7 +637,7 @@ void Robot::reset_position_from_current_actuator_position()
     }
 
     // now reset actuator correctly, NOTE this may lose a little precision
-    arm_solution->cartesian_to_actuator(this->transformed_last_milestone, actuator_pos);
+    //arm_solution->cartesian_to_actuator(this->transformed_last_milestone, actuator_pos);
     for (int i = 0; i < 3; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
