@@ -256,7 +256,7 @@ bool ZProbe::return_probe(int steps)
     return true;
 }
 
-bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[], int repeats)
+bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[], int repeats, class StreamOutput *output)
 {
     repeats = std::max(repeats,1);
     int current_s = 0;
@@ -275,6 +275,12 @@ bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[],
     // move to xy
     coordinated_move(x, y, NAN, getFastFeedrate());
 
+    if (output) {
+        output->printf("Probing: ");
+        if (repeats > 1)
+            output->printf(" samples [ ");
+    }
+
     for (int r = 0; r < repeats; r++) {
         if(!run_probe(s)) return false;
 
@@ -284,6 +290,10 @@ bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[],
                 stored_actuator_positions[r*THEKERNEL->robot->actuators.size() + i] = THEKERNEL->robot->actuators[i]->get_current_position();
             }
         }
+        if (output) {
+            output->printf("%3d ", current_s + s);
+        }
+
         current_s += s;
         stored_probe_steps[r] = std::make_pair(current_s,r);
 
@@ -294,6 +304,10 @@ bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[],
             current_s -= repeat_jump_height;
             return_probe(repeat_jump_height);
         }
+        THEKERNEL->call_event(ON_IDLE);
+    }
+    if (output && repeats > 1) {
+        output->printf("] median: ");
     }
 
     // Find the median (std::pair sorts lexicographically)
@@ -301,12 +315,14 @@ bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[],
     int median_index = stored_probe_steps[repeats/2].second;
 
     steps = stored_probe_steps[repeats/2].first;
+    output->printf(" %d steps,",steps);
     if (actuator_positions) {
         for (int i = 0; i < num_actuators; i++) {
             actuator_positions[i] = stored_actuator_positions[median_index * num_actuators + i];
+            output->printf(" %f", actuator_positions[i]);
         }
     }
-
+    output->printf("\n");
     return true;
 }
 

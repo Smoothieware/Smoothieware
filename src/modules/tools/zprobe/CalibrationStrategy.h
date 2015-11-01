@@ -35,6 +35,9 @@ private:
     // cache endstop trim values
     float trim[3]{};
 
+    // store output stream during calibration
+    class StreamOutput * output_stream;
+
 
     // impl details
     bool  setup_probe();

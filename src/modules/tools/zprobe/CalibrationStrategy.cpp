@@ -49,6 +49,7 @@ void CalibrationStrategy::update_compensation_transformation()
 
 bool CalibrationStrategy::handleGcode(Gcode *gcode)
 {
+    this->output_stream = gcode->stream;
     if( gcode->has_g) {
         // G code processing
         if (gcode->g == 29 || gcode->g == 32) {
@@ -227,7 +228,7 @@ bool CalibrationStrategy::probe_spiral(int n, int repeats, float actuator_positi
         float y = r * sinf(angle);
 
         int steps; // dummy
-        if (!zprobe->doProbeAt(steps, x, y, actuator_positions[i], repeats)) return false;
+        if (!zprobe->doProbeAt(steps, x, y, actuator_positions[i], repeats, output_stream)) return false;
         // remove trim adjustment from returned actuator positions
         for (int j = 0; j < 3; j++)
             actuator_positions[i][j] += trim[j];
@@ -247,7 +248,7 @@ bool CalibrationStrategy::probe_symmetric(int n, int repeats, float actuator_pos
     int position_index = 0;
     auto probe = [&](float x, float y) {
         int steps; // dummy
-        bool success = zprobe->doProbeAt(steps, x, y, actuator_positions[position_index], repeats);
+        bool success = zprobe->doProbeAt(steps, x, y, actuator_positions[position_index], repeats, output_stream);
         // remove trim adjustment from returned actuator positions
         for (int j = 0; j < 3; j++)
             actuator_positions[position_index][j] += trim[j];

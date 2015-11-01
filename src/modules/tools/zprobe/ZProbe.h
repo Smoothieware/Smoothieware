@@ -35,7 +35,7 @@ public:
     bool run_probe(int& steps, bool fast= false);
     bool run_probe_feed(int& steps, float feedrate);
     bool return_probe(int steps);
-    bool doProbeAt(int &steps, float x, float y, float actuator_positions[] = nullptr, int repeats = 1);
+    bool doProbeAt(int &steps, float x, float y, float actuator_positions[] = nullptr, int repeats = 1, class StreamOutput *output = nullptr);
     float probeDistance(float x, float y);
     float find_bed();
 
