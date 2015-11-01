@@ -35,18 +35,6 @@ bool CalibrationStrategy::update_parameter(char parameter, float delta) {
     return set_parameter(parameter, get_parameter(parameter) + delta);
 }
 
-void CalibrationStrategy::update_compensation_transformation()
-{
-    if (plane_u == 0 && plane_v == 0 && plane_offset == 0) {
-        THEKERNEL->robot->compensationTransform = nullptr;
-        THEKERNEL->robot->compensationTransformInverse = nullptr;
-    } else {
-        std::tie(THEKERNEL->robot->compensationTransform,
-                 THEKERNEL->robot->compensationTransformInverse)
-                 = compute_rotation_transform(plane_u, plane_v, plane_offset);
-    }
-}
-
 bool CalibrationStrategy::handleGcode(Gcode *gcode)
 {
     this->output_stream = gcode->stream;
@@ -122,7 +110,10 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
                     }
                 }
 
-                update_compensation_transformation(); // make sure no compensation transform from somewhere else is installed
+                if (THEKERNEL->robot->compensationTransform) {
+                    gcode->stream->printf("Warning, a bed leveling compensation transform is active. It will be disabled!\n");
+                    THEKERNEL->robot->compensationTransform = nullptr;
+                }
 
                 gcode->stream->printf("Commencing calibration of parameters: %s\n", parameters_to_optimize.c_str());
 
@@ -146,22 +137,6 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
 
                 return true;
             }
-        }
-    } else if(gcode->has_m) {
-        // handle mcodes
-        if((gcode->m == 500 && (plane_u != 0 || plane_v != 0 || plane_offset != 0))
-                || gcode->m == 503) { // M500 save, M503 display
-            gcode->stream->printf(";Plane tilt:\n");
-            gcode->stream->printf("M567 U%.5f V%.5f W%.5f\n", plane_u, plane_v, plane_offset);
-            return true;
-        } else if(gcode->m == 567) {
-            if (gcode->has_letter('U')) plane_u = gcode->get_value('U');
-            if (gcode->has_letter('V')) plane_v = gcode->get_value('V');
-            if (gcode->has_letter('W')) plane_offset = gcode->get_value('W');
-
-            update_compensation_transformation();
-
-            return true;
         }
     }
 
@@ -278,10 +253,6 @@ void CalibrationStrategy::compute_cartesian_position(float const actuator_positi
     // simulate the effect of trim
     for (int i = 0; i < 3; i++) trimmed_position[i] = actuator_position[i] - trim[i];
     THEKERNEL->robot->arm_solution->actuator_to_cartesian(trimmed_position, cartesian_position);
-
-    // Inverse compensationTransform for z
-    if (THEKERNEL->robot->compensationTransformInverse)
-        THEKERNEL->robot->compensationTransformInverse(cartesian_position);
 }
 
 float CalibrationStrategy::compute_model_error(float const actuator_position[3]) {
@@ -588,14 +559,6 @@ std::pair<std::function<void(float[3])>,std::function<void(float[3])>> compute_r
 bool CalibrationStrategy::set_parameter(char parameter, float value) {
     if (isnan(value)) return false;
 
-    if (parameter == 'U' || parameter == 'V' || parameter == 'W') {
-        if (parameter == 'U') plane_u = value;
-        if (parameter == 'V') plane_v = value;
-        if (parameter == 'W') plane_offset = value;
-
-        update_compensation_transformation();
-        return true;
-    }
     int endstop = endstop_parameter_index(parameter);
     if (endstop >= 0) {
         void *returned_data;
@@ -618,10 +581,6 @@ bool CalibrationStrategy::set_parameter(char parameter, float value) {
 
 
 float CalibrationStrategy::get_parameter(char parameter) {
-    if (parameter == 'U') return plane_u;
-    if (parameter == 'V') return plane_v;
-    if (parameter == 'W') return plane_offset;
-
     int endstop = endstop_parameter_index(parameter);
     if (endstop >= 0) {
         void *returned_data;

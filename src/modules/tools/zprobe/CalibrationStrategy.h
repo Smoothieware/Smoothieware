@@ -26,12 +26,6 @@ private:
     // Radius of probe circle. TODO: model other build plate shapes
     float probe_radius;
 
-    // Plane tilt
-    float plane_u{0}, plane_v{0};
-
-    // Separate plane offset variable (to allow Home Offset to be kept constant)
-    float plane_offset{0};
-
     // cache endstop trim values
     float trim[3]{};
 
