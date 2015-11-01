@@ -611,7 +611,7 @@ void Robot::reset_axis_position(float position, int axis)
 {
     this->last_milestone[axis] = position;
     for (int i = 0; i < 3; i++)
-        this->transformed_last_milestone[i] = this->last_milestone[axis];
+        this->transformed_last_milestone[i] = this->last_milestone[i];
 
     // check function pointer and call if set to transform the target to compensate for bed
     if(compensationTransform) {
