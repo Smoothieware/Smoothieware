@@ -167,10 +167,6 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
     if(isnan(bedht)) return false;
     gcode->stream->printf("initial Bed ht is %f mm\n", bedht);
 
-    // move to start position
-    zprobe->home();
-    zprobe->coordinated_move(NAN, NAN, -bedht, zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
-
     // get initial probes
     // probe the base of the X tower
     int s;
@@ -268,9 +264,6 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
     float bedht= zprobe->find_bed();
     if(isnan(bedht)) return false;
     gcode->stream->printf("initial Bed ht is %f mm\n", bedht);
-
-    zprobe->home();
-    zprobe->coordinated_move(NAN, NAN, -bedht, zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
 
     // probe center to get reference point at this Z height
     int dc;

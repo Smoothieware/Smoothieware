@@ -339,14 +339,15 @@ float ZProbe::find_bed()
     home();
 
     // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
-    float deltaz= getMaxZ() - initial_height;
-    coordinated_move(NAN, NAN, -deltaz, getFastFeedrate(), true);
+    coordinated_move(NAN, NAN, -getMaxZ() + initial_height, getFastFeedrate(), true);
 
     // find bed, run at slow rate so as to not hit bed hard
     int s;
     if(!run_probe(s, false)) return NAN;
 
-    return zsteps_to_mm(s) + deltaz - getProbeHeight(); // distance to move from home to 5mm above bed
+    THEKERNEL->robot->reset_position_from_current_actuator_position();
+    coordinated_move(NAN, NAN, getProbeHeight(), getFastFeedrate(), true); // do a relative move from home to the point above the bed
+    return -(-getMaxZ() + initial_height - zsteps_to_mm(s) + getProbeHeight());
 }
 
 void ZProbe::on_gcode_received(void *argument)
