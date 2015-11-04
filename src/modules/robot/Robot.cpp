@@ -151,12 +151,12 @@ void Robot::on_module_loaded()
     this->on_config_reload(this);
 }
 
-#define ACTUATOR_CHECKSUMS(X){             \
-    CHECKSUM(X "_step_pin_checksum"),     \
-    CHECKSUM(X "_dir_pin_checksum"),      \
-    CHECKSUM(X "_en_pin_checksum") },     \
-    CHECKSUM(X "_steps_per_mm_checksum"), \
-    CHECKSUM(X "_max_rate_checksum")
+#define ACTUATOR_CHECKSUMS(X){   \
+    CHECKSUM(X "_step_pin"),     \
+    CHECKSUM(X "_dir_pin"),      \
+    CHECKSUM(X "_en_pin") },     \
+    CHECKSUM(X "_steps_per_mm"), \
+    CHECKSUM(X "_max_rate")
 
 void Robot::on_config_reload(void *argument)
 {
@@ -197,7 +197,6 @@ void Robot::on_config_reload(void *argument)
         this->arm_solution = new CartesianSolution(THEKERNEL->config);
     }
 
-
     this->feed_rate           = THEKERNEL->config->value(default_feed_rate_checksum   )->by_default(  100.0F)->as_number();
     this->seek_rate           = THEKERNEL->config->value(default_seek_rate_checksum   )->by_default(  100.0F)->as_number();
     this->mm_per_line_segment = THEKERNEL->config->value(mm_per_line_segment_checksum )->by_default(    0.0F)->as_number();
@@ -226,19 +225,20 @@ void Robot::on_config_reload(void *argument)
         float per_mm_default;
     } p[] =
     {
-        { ACTUATOR_CHECKSUMS("alpha"),   {"2.0", "0.5",  "0.4"},  80.0F },
-        { ACTUATOR_CHECKSUMS("beta"),    {"2.1", "0.11", "0.10"}, 80.0F },
+        { ACTUATOR_CHECKSUMS("alpha"),   {"2.0", "0.5",  "0.4" },   80.0F },
+        { ACTUATOR_CHECKSUMS("beta"),    {"2.1", "0.11", "0.10"},   80.0F },
         { ACTUATOR_CHECKSUMS("gamma"),   {"2.2", "0.20", "0.19"}, 2560.0F },
-        { ACTUATOR_CHECKSUMS("delta"),   {"nc",  "nc",   "nc"},   80.0F },
-        { ACTUATOR_CHECKSUMS("epsilon"), {"nc",  "nc",   "nc" },  80.0F },
-        { ACTUATOR_CHECKSUMS("zeta"),    {"nc",  "nc",   "nc" },  2560.0F }
+        { ACTUATOR_CHECKSUMS("delta"),   { "nc",   "nc",   "nc"},   80.0F },
+        { ACTUATOR_CHECKSUMS("epsilon"), { "nc",   "nc",   "nc"},   80.0F },
+        { ACTUATOR_CHECKSUMS("zeta"),    { "nc",   "nc",   "nc"}, 2560.0F }
     };
 
     if (this->arm_solution->get_actuator_count() > k_max_actuators) {
         THEKERNEL->streams->printf("Too many actuators, %d. Increase k_max_actuators and rebuild", this->arm_solution->get_actuator_count());
     }
     else {
-        for (size_t a = 0; a < this->arm_solution->get_actuator_count(); a++) {
+        size_t motor_count = std::min(this->arm_solution->get_actuator_count(), sizeof(p)/sizeof(p[0]));
+        for (size_t a = 0; a < motor_count; a++) {
             Pin pins[3]; //step, dir, enable
             for (size_t i = 0; i < 3; i++) {
                 pins[i].from_string(THEKERNEL->config->value(p[a].pin_checksums[i])->by_default(p[a].pin_defaults[i])->as_string())->as_output();
