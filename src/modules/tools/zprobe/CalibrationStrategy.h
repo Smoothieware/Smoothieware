@@ -29,6 +29,9 @@ private:
     // cache endstop trim values
     float trim[3]{};
 
+    // sum of home_offset and homing_position
+    float home_position[3]{};
+
     // store output stream during calibration
     class StreamOutput * output_stream;
 
@@ -48,6 +51,7 @@ private:
     float compute_model_error(float const actuator_position[3]);
     float compute_model_rms_error(std::vector<Vector3> const& actuator_positions);
     void  update_compensation_transformation();
+    void  init_home_position();
 
     // probes n points, return actuator positions of trigger points
     bool  probe_pattern(int n, int repeats, float actuator_positions[/*N*/][3]);

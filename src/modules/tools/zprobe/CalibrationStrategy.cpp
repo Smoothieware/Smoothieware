@@ -81,6 +81,8 @@ bool CalibrationStrategy::handleGcode(Gcode *gcode)
             if( gcode->g == 32 ) { // auto calibration for delta, Z bed mapping for cartesian
                 std::string parameters_to_optimize;
 
+                init_home_position();
+
                 for (auto &v : args) {
                     if (v.first != 'P' && v.first != 'O')
                         parameters_to_optimize += v.first;
@@ -192,9 +194,6 @@ bool CalibrationStrategy::probe_spiral(int n, int repeats, float actuator_positi
 
         int steps; // dummy
         if (!zprobe->doProbeAt(steps, x, y, actuator_positions[i], repeats, output_stream)) return false;
-        // remove trim adjustment from returned actuator positions
-        for (int j = 0; j < 3; j++)
-            actuator_positions[i][j] += trim[j];
     }
 
     return true;
@@ -212,9 +211,7 @@ bool CalibrationStrategy::probe_symmetric(int n, int repeats, float actuator_pos
     auto probe = [&](float x, float y) {
         int steps; // dummy
         bool success = zprobe->doProbeAt(steps, x, y, actuator_positions[position_index], repeats, output_stream);
-        // remove trim adjustment from returned actuator positions
-        for (int j = 0; j < 3; j++)
-            actuator_positions[position_index][j] += trim[j];
+
         position_index++;
         return success;
     };
@@ -237,9 +234,13 @@ bool CalibrationStrategy::probe_symmetric(int n, int repeats, float actuator_pos
 
 
 void CalibrationStrategy::compute_cartesian_position(float const actuator_position[3], float cartesian_position[3]) {
+    // Compute physical actuator position (home_position + relative actuator_position)
+    float physical_actuator_position[3];
+    THEKERNEL->robot->arm_solution->cartesian_to_actuator(home_position, physical_actuator_position);
+
     float trimmed_position[3];
     // simulate the effect of trim
-    for (int i = 0; i < 3; i++) trimmed_position[i] = actuator_position[i] - trim[i];
+    for (int i = 0; i < 3; i++) trimmed_position[i] = physical_actuator_position[i] + actuator_position[i] - trim[i];
     THEKERNEL->robot->arm_solution->actuator_to_cartesian(trimmed_position, cartesian_position);
 }
 
@@ -259,6 +260,21 @@ float CalibrationStrategy::compute_model_rms_error(std::vector<Vector3> const& a
         err += e*e;
     }
     return sqrtf(err / actuator_positions.size());
+}
+
+void CalibrationStrategy::init_home_position()
+{
+    void* rd;
+
+    for (int i = 0; i < 3; i++) home_position[i] = 0;
+
+    if (PublicData::get_value( endstops_checksum, home_offset_checksum, &rd )) {
+        for (int i = 0; i < 3; i++) home_position[i] += ((float*)rd)[i];
+    }
+
+    if (PublicData::get_value( endstops_checksum, homing_position_checksum, &rd )) {
+        for (int i = 0; i < 3; i++) home_position[i] += ((float*)rd)[i];
+    }
 }
 
 void CalibrationStrategy::compute_JTJ_JTr(std::vector<Vector3> const& actuator_positions,
@@ -370,11 +386,25 @@ void cholesky_backsub(int n, T A[/* n*n */], T b[/* n */]) {
 }
 
 bool CalibrationStrategy::probe_pattern(int n, int repeats, float actuator_positions[/*n*/][3]) {
+    bool ret = false;
     if (n <= 7) {
-        return probe_symmetric(n, repeats, &actuator_positions[0]);
+        ret = probe_symmetric(n, repeats, &actuator_positions[0]);
     } else {
-        return probe_spiral(n, repeats, &actuator_positions[0]);
+        ret = probe_spiral(n, repeats, &actuator_positions[0]);
     }
+
+    // subtract home_position from actuator positions so that the physical endstop positions become (0,0,0)
+    float home_actuator_position[3];
+    THEKERNEL->robot->arm_solution->cartesian_to_actuator(home_position, home_actuator_position);
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < 3; j++) {
+            actuator_positions[i][j] += trim[j];
+            actuator_positions[i][j] -= home_actuator_position[j];
+        }
+    }
+
+    return ret;
 }
 
 bool CalibrationStrategy::optimize_model(int n, int repeats, std::string const& parameters, StreamOutput* stream) {
