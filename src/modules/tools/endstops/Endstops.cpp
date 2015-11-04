@@ -857,6 +857,9 @@ void Endstops::on_get_public_data(void* argument){
     }else if(pdr->second_element_is(home_offset_checksum)) {
         pdr->set_data_ptr(&this->home_offset);
         pdr->set_taken();
+    }else if(pdr->second_element_is(homing_position_checksum)) {
+        pdr->set_data_ptr(&this->homing_position);
+        pdr->set_taken();
     }
 }
 
