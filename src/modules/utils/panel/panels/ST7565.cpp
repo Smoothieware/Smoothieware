@@ -42,6 +42,7 @@
 #define a0_pin_checksum            CHECKSUM("a0_pin")
 #define red_led_checksum           CHECKSUM("red_led_pin")
 #define blue_led_checksum          CHECKSUM("blue_led_pin")
+#define init_checksum          	   CHECKSUM("init")
 
 #define CLAMP(x, low, high) { if ( (x) < (low) ) x = (low); if ( (x) > (high) ) x = (high); } while (0);
 #define swap(a, b) { uint8_t t = a; a = b; b = t; }
@@ -144,6 +145,19 @@ ST7565::ST7565(uint8_t variant)
     // reverse display
     this->reversed = THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(this->reversed)->as_bool();
 
+	// custom display init 
+	std::string init_s = THEKERNEL->config->value( panel_checksum, init_checksum )->by_default("")->as_string();
+	if(init_s!="")
+	{
+		char *p;
+		Init[InitLen++] = strtol(init_s.c_str(), &p,16);
+		while(p + 1 < init_s.c_str() + strlen(init_s.c_str()))
+		{
+			Init[InitLen++] = strtol(p+1, &p,16);
+		}
+	}	
+	
+	
     framebuffer = (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memory from USB_RAM
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
@@ -245,7 +259,14 @@ void ST7565::init()
     };
     //rst.set(0);
     if(this->rst.connected()) rst.set(1);
-    send_commands(init_seq, sizeof(init_seq));
+	if(InitLen==0)
+	{
+		send_commands(init_seq, sizeof(init_seq));
+	}
+	else
+	{
+		send_commands(Init,InitLen);
+	}
     clear();
 }
 
