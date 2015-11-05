@@ -72,6 +72,9 @@ private:
     Pin red_led;
     Pin blue_led;
 
+	unsigned char Init[50];
+	uint16_t InitLen=0;
+	
 	// text cursor position
 	uint8_t tx, ty;
     uint8_t contrast;
