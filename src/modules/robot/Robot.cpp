@@ -209,7 +209,7 @@ void Robot::on_config_reload(void *argument)
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
     // TODO: delete or detect old steppermotors
-#if 0 //pending testing
+#if 0 //TODO: Add unregistering to StepperMotor/StepTicker so we can delete old motors 
     for (auto a : actuators)
         delete a;
 #endif
