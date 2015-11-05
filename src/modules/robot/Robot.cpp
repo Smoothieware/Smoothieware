@@ -285,11 +285,11 @@ void Robot::pop_state()
 // we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
 void Robot::check_max_actuator_speeds()
 {
-    for (auto actuator: actuators) {
-        float step_freq = actuator->get_max_rate() * actuator->get_steps_per_mm();
+    for (size_t i = 0; i < actuators.size(); i++) {
+        float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
         if (step_freq > THEKERNEL->base_stepping_frequency) {
-            actuator->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuator->get_steps_per_mm()));
-            THEKERNEL->streams->printf("WARNING: actuator rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", step_freq, actuator->max_rate);
+            actuators[i]->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm()));
+            THEKERNEL->streams->printf("WARNING: actuator %c rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", 'A'+i, step_freq, actuators[i]->max_rate);
         }
     }
 }
