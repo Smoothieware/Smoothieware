@@ -123,7 +123,7 @@ void Stepper::on_gcode_execute(void *argument)
 // Enable steppers
 void Stepper::turn_enable_pins_on()
 {
-    for (auto &a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         a->enable(true);
     this->enable_pins_status = true;
 }
@@ -131,7 +131,7 @@ void Stepper::turn_enable_pins_on()
 // Disable steppers
 void Stepper::turn_enable_pins_off()
 {
-    for (auto &a : THEKERNEL->robot->actuators)
+    for (auto a : THEKERNEL->robot->actuators)
         a->enable(false);
     this->enable_pins_status = false;
 }
@@ -152,7 +152,7 @@ void Stepper::on_block_begin(void *argument)
         block->take();
     } else {
         // none of the steppers move this block so make sure they know that
-        for(auto &a : THEKERNEL->robot->actuators) {
+        for(auto a : THEKERNEL->robot->actuators) {
             a->set_moved_last_block(false);
         }
         return;
@@ -208,7 +208,7 @@ void Stepper::on_block_end(void *argument)
 uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
 {
     // We care only if none is still moving
-    for (auto &a : THEKERNEL->robot->actuators) {
+    for (auto a : THEKERNEL->robot->actuators) {
         if(a->moving)    
             return 0;
     }

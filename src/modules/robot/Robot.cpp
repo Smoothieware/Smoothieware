@@ -210,7 +210,7 @@ void Robot::on_config_reload(void *argument)
 
     // TODO: delete or detect old steppermotors
 #if 0 //pending testing
-    for (auto &a : actuators)
+    for (auto a : actuators)
         delete a;
 #endif
     actuators.clear();
@@ -285,7 +285,7 @@ void Robot::pop_state()
 // we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
 void Robot::check_max_actuator_speeds()
 {
-    for (auto &actuator: actuators) {
+    for (auto actuator: actuators) {
         float step_freq = actuator->get_max_rate() * actuator->get_steps_per_mm();
         if (step_freq > THEKERNEL->base_stepping_frequency) {
             actuator->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuator->get_steps_per_mm()));
@@ -403,12 +403,10 @@ void Robot::on_gcode_received(void *argument)
                 check_max_actuator_speeds();
 
                 if(gcode->get_num_args() == 0) {
-                    if (gcode->get_num_args() == 0) {
-                        gcode->stream->printf("X:%g Y:%g Z:%g",
-                            this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
-                        for (size_t i = 0; i < actuators.size(); i++) {
-                            gcode->stream->printf(" %c : %g", 'A' + i, actuators[i]->get_max_rate()); //xxx 
-                        }
+                    gcode->stream->printf("X:%g Y:%g Z:%g",
+                        this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+                    for (size_t i = 0; i < actuators.size(); i++) {
+                        gcode->stream->printf(" %c : %g", 'A' + i, actuators[i]->get_max_rate()); //xxx 
                     }
                     gcode->add_nl = true;
                 }
