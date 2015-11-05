@@ -147,6 +147,10 @@ void Endstops::on_module_loaded()
 // Get config
 void Endstops::on_config_reload(void *argument)
 {
+    if (THEKERNEL->robot->actuators.size() > 3) {
+        THEKERNEL->streams->printf("Please implement trim for >3 actuators");
+    }
+
     this->pins[0].from_string( THEKERNEL->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
     this->pins[1].from_string( THEKERNEL->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
     this->pins[2].from_string( THEKERNEL->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
@@ -676,7 +680,7 @@ void Endstops::on_gcode_received(void *argument)
                     // We are actually not at the ideal position, but a trim away
                     ActuatorCoordinates real_actuator_position;
                     for (size_t i = THEKERNEL->robot->actuators.size() + 1; i--;) {
-                        real_actuator_position[i] = ideal_actuator_position[i] - this->trim_mm[i];
+                        real_actuator_position[i] = ideal_actuator_position[i] - (i < 3 ? this->trim_mm[i] : 0.0f);
                     }
 
                     float real_position[3];
