@@ -208,10 +208,10 @@ void init() {
         kernel->streams->printf("WARNING Watchdog is disabled when DFU is enabled\n");
 
     }else{
-        // 5 second watchdog timeout (or config as seconds)
-        float t= kernel->config->value( watchdog_timeout_checksum )->by_default(5.0F)->as_number();
+        // 10 second watchdog timeout (or config as seconds)
+        float t= kernel->config->value( watchdog_timeout_checksum )->by_default(10.0F)->as_number();
         if(t > 0) {
-            kernel->add_module( new Watchdog(t*1000000, WDT_RESET));
+            kernel->add_module( new Watchdog(t*1000000, WDT_MRI)); // WDT_RESET));
             kernel->streams->printf("Watchdog enabled for %f seconds\n", t);
         }else{
             kernel->streams->printf("WARNING Watchdog is disabled\n");

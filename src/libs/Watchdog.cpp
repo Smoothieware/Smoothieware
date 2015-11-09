@@ -1,8 +1,12 @@
 #include "Watchdog.h"
+#include "Kernel.h"
 
 #include <lpc17xx_wdt.h>
 
 #include <mri.h>
+
+#include "gpio.h"
+extern GPIO leds[];
 
 // TODO : comment this
 // Basically, when stuff stop answering, reset, or enter MRI mode, or something
@@ -31,9 +35,19 @@ void Watchdog::on_idle(void*)
 }
 
 
+// when watchdog triggers, set a led pattern and enter MRI which turns everything off into a safe state
+// TODO handle when MRI is disabled
 extern "C" void WDT_IRQHandler(void)
 {
-    WDT_ClrTimeOutFlag();
+    if(THEKERNEL->is_using_leds()) {
+        // set led pattern to show we are in watchdog timeout
+        leds[0]= 0;
+        leds[1]= 1;
+        leds[2]= 0;
+        leds[3]= 1;
+    }
+
+    WDT_ClrTimeOutFlag(); // bootloader uses this flag to enter DFU mode
     WDT_Feed();
     __debugbreak();
 }
