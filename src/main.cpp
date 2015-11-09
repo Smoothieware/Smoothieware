@@ -7,6 +7,7 @@
 
 #include "libs/Kernel.h"
 
+#include "ResetWatchdog.h"
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/spindle/Spindle.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
@@ -17,8 +18,7 @@
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
-#include "FilamentDetector.h"
-
+#include "modules/tools/filamentdetector/FilamentDetector.h"
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/configurator/Configurator.h"
@@ -128,6 +128,7 @@ void init() {
 
 
     // Create and add main modules
+    kernel->add_module(new ResetWatchdog);
     kernel->add_module( new SimpleShell() );
     kernel->add_module( new Configurator() );
     kernel->add_module( new CurrentControl() );
