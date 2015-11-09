@@ -46,26 +46,21 @@ class Player : public Module {
         string on_boot_gcode;
         StreamOutput* current_stream;
         StreamOutput* reply_stream;
-        StreamOutput* suspend_stream;
 
         FILE* current_file_handler;
         long file_size;
         unsigned long played_cnt;
         unsigned long elapsed_secs;
         float saved_position[3];
-        float saved_feed_rate;
         std::map<uint16_t, float> saved_temperatures;
         struct {
             bool on_boot_gcode_enable:1;
             bool booted:1;
             bool playing_file:1;
             bool suspended:1;
-            bool saved_inch_mode:1;
-            bool saved_absolute_mode:1;
             bool was_playing_file:1;
             bool leave_heaters_on:1;
             uint8_t suspend_loops:4;
-
         };
 };
 
