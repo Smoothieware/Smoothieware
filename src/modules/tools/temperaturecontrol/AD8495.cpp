@@ -60,7 +60,7 @@ void AD8495::get_raw()
     const uint32_t max_adc_value= THEKERNEL->adc->get_max_value();
     float t=((float)adc_value)/(((float)max_adc_value)/3.3*0.005);
 
-    THEKERNEL->streams->printf("adc= %d, max_adc= %u, temp= %f\n", adc_value,max_adc_value,t);
+    THEKERNEL->streams->printf("adc= %d, max_adc= %lu, temp= %f\n", adc_value,max_adc_value,t);
 
     // reset the min/max
     min_temp= max_temp= t;
