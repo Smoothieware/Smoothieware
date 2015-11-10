@@ -151,11 +151,13 @@ void Robot::on_module_loaded()
     this->on_config_reload(this);
 }
 
-#define ACTUATOR_CHECKSUMS(X){   \
-    CHECKSUM(X "_step_pin"),     \
-    CHECKSUM(X "_dir_pin"),      \
-    CHECKSUM(X "_en_pin") },     \
-    CHECKSUM(X "_steps_per_mm"), \
+#define ACTUATOR_CHECKSUMS(X)       \
+    {                               \
+        CHECKSUM(X "_step_pin"),    \
+        CHECKSUM(X "_dir_pin"),     \
+        CHECKSUM(X "_en_pin")       \
+    },                              \
+    CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate")
 
 void Robot::on_config_reload(void *argument)
@@ -222,15 +224,14 @@ void Robot::on_config_reload(void *argument)
         uint16_t per_mm_checksum;
         uint16_t per_sec_checksum;
         char const *pin_defaults[3];
-        float per_mm_default;
-    } p[] =
+    } const p[] =
     {
-        { ACTUATOR_CHECKSUMS("alpha"),   {"2.0", "0.5",  "0.4" },   80.0F },
-        { ACTUATOR_CHECKSUMS("beta"),    {"2.1", "0.11", "0.10"},   80.0F },
-        { ACTUATOR_CHECKSUMS("gamma"),   {"2.2", "0.20", "0.19"}, 2560.0F },
-        { ACTUATOR_CHECKSUMS("delta"),   { "nc",   "nc",   "nc"},   80.0F },
-        { ACTUATOR_CHECKSUMS("epsilon"), { "nc",   "nc",   "nc"},   80.0F },
-        { ACTUATOR_CHECKSUMS("zeta"),    { "nc",   "nc",   "nc"}, 2560.0F }
+        { ACTUATOR_CHECKSUMS("alpha"),   {"2.0", "0.5",  "0.4" } },
+        { ACTUATOR_CHECKSUMS("beta"),    {"2.1", "0.11", "0.10"} },
+        { ACTUATOR_CHECKSUMS("gamma"),   {"2.2", "0.20", "0.19"} },
+        { ACTUATOR_CHECKSUMS("delta"),   { "nc",   "nc",   "nc"} },
+        { ACTUATOR_CHECKSUMS("epsilon"), { "nc",   "nc",   "nc"} },
+        { ACTUATOR_CHECKSUMS("zeta"),    { "nc",   "nc",   "nc"} }
     };
 
     if (this->arm_solution->get_actuator_count() > k_max_actuators) {
@@ -245,7 +246,7 @@ void Robot::on_config_reload(void *argument)
             }
             actuators.push_back(new StepperMotor(pins[0], pins[1], pins[2]));
 
-            actuators[a]->change_steps_per_mm(THEKERNEL->config->value(p[a].per_mm_checksum)->by_default(p[a].per_mm_default)->as_number());
+            actuators[a]->change_steps_per_mm(THEKERNEL->config->value(p[a].per_mm_checksum)->by_default(a==2 ? 2560.0F : 80.0F)->as_number());
             actuators[a]->set_max_rate(THEKERNEL->config->value(p[a].per_sec_checksum)->by_default(30000.0F)->as_number());
         }
     }
