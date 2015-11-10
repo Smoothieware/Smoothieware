@@ -64,28 +64,6 @@ using std::string;
 #define  kossel_checksum                     CHECKSUM("kossel")
 #define  morgan_checksum                     CHECKSUM("morgan")
 
-// stepper motor stuff
-#define  alpha_step_pin_checksum             CHECKSUM("alpha_step_pin")
-#define  beta_step_pin_checksum              CHECKSUM("beta_step_pin")
-#define  gamma_step_pin_checksum             CHECKSUM("gamma_step_pin")
-
-#define  alpha_dir_pin_checksum              CHECKSUM("alpha_dir_pin")
-#define  beta_dir_pin_checksum               CHECKSUM("beta_dir_pin")
-#define  gamma_dir_pin_checksum              CHECKSUM("gamma_dir_pin")
-
-#define  alpha_en_pin_checksum               CHECKSUM("alpha_en_pin")
-#define  beta_en_pin_checksum                CHECKSUM("beta_en_pin")
-#define  gamma_en_pin_checksum               CHECKSUM("gamma_en_pin")
-
-#define  alpha_steps_per_mm_checksum         CHECKSUM("alpha_steps_per_mm")
-#define  beta_steps_per_mm_checksum          CHECKSUM("beta_steps_per_mm")
-#define  gamma_steps_per_mm_checksum         CHECKSUM("gamma_steps_per_mm")
-
-#define  alpha_max_rate_checksum             CHECKSUM("alpha_max_rate")
-#define  beta_max_rate_checksum              CHECKSUM("beta_max_rate")
-#define  gamma_max_rate_checksum             CHECKSUM("gamma_max_rate")
-
-
 // new-style actuator stuff
 #define  actuator_checksum                   CHEKCSUM("actuator")
 
@@ -149,18 +127,16 @@ void Robot::on_module_loaded()
     this->on_config_reload(this);
 }
 
-#define ACTUATOR_CHECKSUMS(X)       \
-    {                               \
-        CHECKSUM(X "_step_pin"),    \
-        CHECKSUM(X "_dir_pin"),     \
-        CHECKSUM(X "_en_pin")       \
-    },                              \
+#define ACTUATOR_CHECKSUMS(X) {     \
+    CHECKSUM(X "_step_pin"),        \
+    CHECKSUM(X "_dir_pin"),         \
+    CHECKSUM(X "_en_pin"),          \
     CHECKSUM(X "_steps_per_mm"),    \
-    CHECKSUM(X "_max_rate")
+    CHECKSUM(X "_max_rate")         \
+}
 
 void Robot::on_config_reload(void *argument)
 {
-
     // Arm solutions are used to convert positions in millimeters into position in steps for each stepper motor.
     // While for a cartesian arm solution, this is a simple multiplication, in other, less simple cases, there is some serious math to be done.
     // To make adding those solution easier, they have their own, separate object.
@@ -183,7 +159,6 @@ void Robot::on_config_reload(void *argument)
     } else if(solution_checksum == rotatable_delta_checksum) {
         this->arm_solution = new RotatableDeltaSolution(THEKERNEL->config);
 
-
     } else if(solution_checksum == morgan_checksum) {
         this->arm_solution = new MorganSCARASolution(THEKERNEL->config);
 
@@ -205,46 +180,32 @@ void Robot::on_config_reload(void *argument)
     this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
-    // TODO: delete or detect old steppermotors
-#if 0 //TODO: Add unregistering to StepperMotor/StepTicker so we can delete old motors 
-    for (auto a : actuators)
-        delete a;
-#endif
-    actuators.clear();
-
     // Make our 3 StepperMotors
-    struct
-    {
-        uint16_t pin_checksums[3];
-        uint16_t per_mm_checksum;
-        uint16_t per_sec_checksum;
-        char const *pin_defaults[3];
-    } const p[] =
-    {
-        { ACTUATOR_CHECKSUMS("alpha"),   {"2.0", "0.5",  "0.4" } },
-        { ACTUATOR_CHECKSUMS("beta"),    {"2.1", "0.11", "0.10"} },
-        { ACTUATOR_CHECKSUMS("gamma"),   {"2.2", "0.20", "0.19"} },
-        { ACTUATOR_CHECKSUMS("delta"),   { "nc",   "nc",   "nc"} },
-        { ACTUATOR_CHECKSUMS("epsilon"), { "nc",   "nc",   "nc"} },
-        { ACTUATOR_CHECKSUMS("zeta"),    { "nc",   "nc",   "nc"} }
+    uint16_t checksums[][5] = {
+        ACTUATOR_CHECKSUMS("alpha"),  
+        ACTUATOR_CHECKSUMS("beta"),   
+        ACTUATOR_CHECKSUMS("gamma"),  
+#if MAX_ROBOT_ACTUATORS > 3
+        ACTUATOR_CHECKSUMS("delta"),  
+        ACTUATOR_CHECKSUMS("epsilon"),
+        ACTUATOR_CHECKSUMS("zeta")
+#endif
     };
+    constexpr size_t actuator_checksum_count = sizeof(checksums)/sizeof(checksums[0]);
+    static_assert(actuator_checksum_count >= k_max_actuators, "Robot checksum array too small for k_max_actuators");
 
-    if (this->arm_solution->get_actuator_count() > k_max_actuators) {
-        THEKERNEL->streams->printf("Too many actuators, %d. Increase k_max_actuators and rebuild", this->arm_solution->get_actuator_count());
-    }
-    else {
-        size_t motor_count = std::min(this->arm_solution->get_actuator_count(), sizeof(p)/sizeof(p[0]));
-        for (size_t a = 0; a < motor_count; a++) {
-            Pin pins[3]; //step, dir, enable
-            for (size_t i = 0; i < 3; i++) {
-                pins[i].from_string(THEKERNEL->config->value(p[a].pin_checksums[i])->by_default(p[a].pin_defaults[i])->as_string())->as_output();
-            }
-            actuators.push_back(new StepperMotor(pins[0], pins[1], pins[2]));
-
-            actuators[a]->change_steps_per_mm(THEKERNEL->config->value(p[a].per_mm_checksum)->by_default(a==2 ? 2560.0F : 80.0F)->as_number());
-            actuators[a]->set_max_rate(THEKERNEL->config->value(p[a].per_sec_checksum)->by_default(30000.0F)->as_number());
+    size_t motor_count = std::min(this->arm_solution->get_actuator_count(), k_max_actuators);
+    for (size_t a = 0; a < motor_count; a++) {
+        Pin pins[3]; //step, dir, enable
+        for (size_t i = 0; i < 3; i++) {
+            pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
         }
+        actuators.push_back(new StepperMotor(pins[0], pins[1], pins[2]));
+
+        actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][3])->by_default(a==2 ? 2560.0F : 80.0F)->as_number());
+        actuators[a]->set_max_rate(THEKERNEL->config->value(checksums[a][4])->by_default(30000.0F)->as_number());
     }
+
     check_max_actuator_speeds(); // check the configs are sane
 
     // initialise actuator positions to current cartesian position (X0 Y0 Z0)
