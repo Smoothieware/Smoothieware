@@ -32,6 +32,7 @@
 // Temp sensor implementations:
 #include "Thermistor.h"
 #include "max31855.h"
+#include "AD8495.h"
 
 #include "MRI_Hooks.h"
 
@@ -157,6 +158,8 @@ void TemperatureControl::load_config()
         sensor = new Thermistor();
     } else if(sensor_type.compare("max31855") == 0) {
         sensor = new Max31855();
+    } else if(sensor_type.compare("ad8495") == 0) {
+        sensor = new AD8495();
     } else {
         sensor = new TempSensor(); // A dummy implementation
     }
