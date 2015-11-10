@@ -157,6 +157,14 @@ bool MorganSCARASolution::set_optional(const arm_options_t& options) {
     //if(i != options.end()) {
     //    morgan_scaling_z= i->second;
     //}
+    i= options.find('D');          // Undefined min
+    if(i != options.end()) {
+        this->morgan_undefined_min = i->second;
+    }
+    i= options.find('E');          // undefined max
+    if(i != options.end()) {
+        this->morgan_undefined_max = i->second;
+    }
 
     init();
     return true;
@@ -170,6 +178,8 @@ bool MorganSCARASolution::get_optional(arm_options_t& options, bool force_all) {
     options['A']= this->morgan_scaling_x;
     options['B']= this->morgan_scaling_y;
     // options['C']= this->morgan_scaling_z;
+    options['D']= this->morgan_undefined_min;
+    options['E']= this->morgan_undefined_max;
 
     return true;
 };
