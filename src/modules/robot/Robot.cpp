@@ -397,7 +397,7 @@ void Robot::on_gcode_received(void *argument)
                     this->max_speeds[Y_AXIS] = gcode->get_value('Y');
                 if (gcode->has_letter('Z'))
                     this->max_speeds[Z_AXIS] = gcode->get_value('Z');
-                for (size_t i = 0; i < actuators.size(); i++) {
+                for (size_t i = 0; i < 3 && i < actuators.size(); i++) {
                     if (gcode->has_letter('A' + i))
                         actuators[i]->set_max_rate(gcode->get_value('A' + i));
                 }
@@ -406,7 +406,7 @@ void Robot::on_gcode_received(void *argument)
                 if(gcode->get_num_args() == 0) {
                     gcode->stream->printf("X:%g Y:%g Z:%g",
                         this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
-                    for (size_t i = 0; i < actuators.size(); i++) {
+                    for (size_t i = 0; i < 3 && i < actuators.size(); i++) {
                         gcode->stream->printf(" %c : %g", 'A' + i, actuators[i]->get_max_rate()); //xxx 
                     }
                     gcode->add_nl = true;
@@ -484,8 +484,8 @@ void Robot::on_gcode_received(void *argument)
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f", 
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
-                for (size_t i=0; i < actuators.size(); i++){
-                    gcode->stream->printf(" %c%1.5f", 'A'+i, actuators[i]->get_max_rate());
+                for (size_t i=0; i < 3 && i < actuators.size(); i++){
+                    gcode->stream->printf(" %c%1.5f", 'A' + i, actuators[i]->get_max_rate());
                 }
                 gcode->stream->printf("\n");
 
