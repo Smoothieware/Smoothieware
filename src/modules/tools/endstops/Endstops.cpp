@@ -147,10 +147,6 @@ void Endstops::on_module_loaded()
 // Get config
 void Endstops::on_config_reload(void *argument)
 {
-    if (THEKERNEL->robot->actuators.size() > 3) {
-        THEKERNEL->streams->printf("Please implement trim for >3 actuators");
-    }
-
     this->pins[0].from_string( THEKERNEL->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
     this->pins[1].from_string( THEKERNEL->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
     this->pins[2].from_string( THEKERNEL->config->value(gamma_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
@@ -678,10 +674,11 @@ void Endstops::on_gcode_received(void *argument)
                     THEKERNEL->robot->arm_solution->cartesian_to_actuator(ideal_position, ideal_actuator_position);
 
                     // We are actually not at the ideal position, but a trim away
-                    ActuatorCoordinates real_actuator_position;
-                    for (size_t i = THEKERNEL->robot->actuators.size() + 1; i--;) {
-                        real_actuator_position[i] = ideal_actuator_position[i] - (i < 3 ? this->trim_mm[i] : 0.0f);
-                    }
+                    ActuatorCoordinates real_actuator_position = {
+                        ideal_actuator_position[X_AXIS] - this->trim_mm[X_AXIS],
+                        ideal_actuator_position[Y_AXIS] - this->trim_mm[Y_AXIS],
+                        ideal_actuator_position[Z_AXIS] - this->trim_mm[Z_AXIS]
+                    };
 
                     float real_position[3];
                     THEKERNEL->robot->arm_solution->actuator_to_cartesian(real_actuator_position, real_position);
