@@ -25,7 +25,6 @@ using std::string;
 #include "PublicData.h"
 #include "arm_solutions/BaseSolution.h"
 #include "arm_solutions/CartesianSolution.h"
-#include "arm_solutions/MultiCartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/LinearDeltaSolution.h"
 #include "arm_solutions/RotatableDeltaSolution.h"
@@ -55,7 +54,6 @@ using std::string;
 #define  arm_solution_checksum               CHECKSUM("arm_solution")
 #define  cartesian_checksum                  CHECKSUM("cartesian")
 #define  rotatable_cartesian_checksum        CHECKSUM("rotatable_cartesian")
-#define  multi_cartesian_checksum            CHECKSUM("multi_cartesian")
 #define  rostock_checksum                    CHECKSUM("rostock")
 #define  linear_delta_checksum               CHECKSUM("linear_delta")
 #define  rotatable_delta_checksum            CHECKSUM("rotatable_delta")
@@ -191,9 +189,6 @@ void Robot::on_config_reload(void *argument)
 
     } else if(solution_checksum == cartesian_checksum) {
         this->arm_solution = new CartesianSolution(THEKERNEL->config);
-
-    } else if(solution_checksum == multi_cartesian_checksum) {
-        this->arm_solution = new MultiCartesianSolution(THEKERNEL->config);
 
     } else {
         this->arm_solution = new CartesianSolution(THEKERNEL->config);

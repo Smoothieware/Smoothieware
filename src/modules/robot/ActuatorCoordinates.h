@@ -9,8 +9,13 @@
 #define ACTUATOR_COORDINATES_H
 #include <array>
 
-//Most solutions will use only a portion, as reported by the solution's get_actuator_count.
-const int k_max_actuators = 6;
+#ifndef MAX_ROBOT_ACTUATORS
+#define MAX_ROBOT_ACTUATORS 3
+#endif
+
+//The subset in use is determined by the arm solution's get_actuator_count().
+//Keep MAX_ROBOT_ACTUATORS as small as practical it impacts block size and therefore free memory.
+const int k_max_actuators = MAX_ROBOT_ACTUATORS;
 typedef struct std::array<float, k_max_actuators> ActuatorCoordinates;
 
 #endif
