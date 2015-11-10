@@ -38,6 +38,7 @@ private:
     void SCARA_ang_move(float theta, float psi, float z, float feedrate);
 
     float slow_rate;
+    float z_move;
 
     struct {
         bool           is_scara:1;

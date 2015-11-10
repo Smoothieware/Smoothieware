@@ -59,8 +59,8 @@
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
 #define dfu_enable_checksum  CHECKSUM("dfu_enable")
+#define watchdog_timeout_checksum  CHECKSUM("watchdog_timeout")
 
-// Watchdog wd(5000000, WDT_MRI);
 
 // USB Stuff
 SDCard sd  __attribute__ ((section ("AHBSRAM0"))) (P0_9, P0_8, P0_7, P0_6);      // this selects SPI1 as the sdcard as it is on Smoothieboard
@@ -206,6 +206,18 @@ void init() {
     if( kernel->config->value( dfu_enable_checksum )->by_default(false)->as_bool() ){
         kernel->add_module( new(AHB0) DFU(&u));
     }
+
+    // 10 second watchdog timeout (or config as seconds)
+    float t= kernel->config->value( watchdog_timeout_checksum )->by_default(10.0F)->as_number();
+    if(t > 0.1F) {
+        // NOTE setting WDT_RESET with the current bootloader would leave it in DFU mode which would be suboptimal
+        kernel->add_module( new Watchdog(t*1000000, WDT_MRI)); // WDT_RESET));
+        kernel->streams->printf("Watchdog enabled for %f seconds\n", t);
+    }else{
+        kernel->streams->printf("WARNING Watchdog is disabled\n");
+    }
+
+
     kernel->add_module( &u );
 
     // clear up the config cache to save some memory
