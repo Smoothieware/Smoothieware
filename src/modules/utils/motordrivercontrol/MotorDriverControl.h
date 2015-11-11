@@ -20,15 +20,28 @@ class MotorDriverControl : public Module {
     private:
         bool config_module();
         void set_current( float current );
-        float get_current(int channel) const { return current; };
+        void set_microstep( uint8_t ms );
+        void set_decay_mode( uint8_t dm );
+        void set_torque(float torque, float gain);
 
-    protected:
+        Pin spi_cs_pin;
+        mbed::SPI *spi;
+
+        enum CHIP_TYPE {
+            DRV8711,
+            TMC2660
+        };
+        CHIP_TYPE chip;
+
         float current_factor;
         float max_current;
         float current;
-        mbed::SPI *spi;
-        Pin spi_cs_pin;
+        float torque{-1}, gain{-1};
+
         char designator;
         uint16_t cs;
         uint8_t id;
+        uint8_t microsteps;
+        uint8_t decay_mode;
+
 };
