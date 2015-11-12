@@ -15,6 +15,7 @@
 #include "mbed.h" // for SPI
 
 #include "drivers/TMC26X/TMC26X.h"
+#include "drivers/DRV8711/drv8711.h"
 
 #include <string>
 
@@ -91,7 +92,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     if(str == "DRV8711") {
         chip= DRV8711;
-        //drv8711= new DRV8711DRV(sendSPI);
+        drv8711= new DRV8711DRV(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3));
 
     }else if(str == "TMC2660") {
         chip= TMC2660;
@@ -200,28 +201,15 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 set_decay_mode(decay_mode);
             }
 
-        } else if(chip == DRV8711 && gcode->m == 911) { // M911.1 set torque, M911.2 set gain (MAYBE could be subcodes for 906 as DRV8711 doesn't set current directly)
-            if (gcode->has_letter(designator)) {
-                if(gcode->subcode == 1) {
-                    torque= gcode->get_value(designator);
-
-                }else  if(gcode->subcode == 2) {
-                    gain= gcode->get_value(designator);
-
-                }else{
-                    return;
-                }
-                set_torque(torque, gain);
-            }
-
         } else if(gcode->m == 500 || gcode->m == 503) {
-            gcode->stream->printf(";Motor id %d current mA, microsteps, decay mode:\n", id);
-            gcode->stream->printf("M906 %c%lu\n", designator, current);
+            gcode->stream->printf(";Motor id %d microsteps, decay mode, current mA:\n", id);
             gcode->stream->printf("M909 %c%lu\n", designator, microsteps);
             gcode->stream->printf("M910 %c%d\n", designator, decay_mode);
             if(torque >= 0 && gain >= 0) {
                 gcode->stream->printf("M911.1 %c%1.5f\n", designator, torque);
                 gcode->stream->printf("M911.2 %c%1.5f\n", designator, gain);
+            }else{
+                gcode->stream->printf("M906 %c%lu\n", designator, current);
             }
          }
     }
@@ -231,23 +219,24 @@ void MotorDriverControl::initialize_chip()
 {
     // send initialization sequence to chips
     if(chip == DRV8711) {
-        set_torque(torque, gain);
+        drv8711->init(current, microsteps);
 
     }else if(chip == TMC2660){
-        //setResistor(150);
         tmc26x->init();
         set_current(current);
+        set_microstep(microsteps);
+        set_decay_mode(decay_mode);
     }
 
-    set_microstep(microsteps);
-    set_decay_mode(decay_mode);
 }
 
-// set curent in milliamps
+// set current in milliamps
 void MotorDriverControl::set_current(uint32_t c)
 {
     switch(chip) {
-        case DRV8711: break; // doesn't use current
+        case DRV8711:
+            drv8711->init(c, microsteps);
+            break;
 
         case TMC2660:
             tmc26x->setCurrent(c);
@@ -260,7 +249,9 @@ uint32_t MotorDriverControl::set_microstep( uint32_t n )
 {
     uint32_t m= n;
     switch(chip) {
-        case DRV8711: break;
+        case DRV8711:
+            drv8711->init(current, microsteps);
+            break;
 
         case TMC2660:
             tmc26x->setMicrosteps(n);
@@ -278,15 +269,13 @@ void MotorDriverControl::set_decay_mode( uint8_t dm )
     }
 }
 
-void MotorDriverControl::set_torque(float torque, float gain)
-{
-
-}
-
 void MotorDriverControl::enable(bool on)
 {
     switch(chip) {
-        case DRV8711: break;
+        case DRV8711:
+            drv8711->set_enable(on);
+            break;
+
         case TMC2660:
             tmc26x->setEnabled(on);
             break;
@@ -296,7 +285,10 @@ void MotorDriverControl::enable(bool on)
 void MotorDriverControl::dump_status(StreamOutput *stream)
 {
     switch(chip) {
-        case DRV8711: break;
+        case DRV8711:
+            drv8711->dump_status(stream);
+            break;
+
         case TMC2660:
             tmc26x->dumpStatus(stream);
             break;

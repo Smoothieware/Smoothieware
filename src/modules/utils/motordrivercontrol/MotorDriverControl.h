@@ -28,7 +28,6 @@ class MotorDriverControl : public Module {
         void set_current( uint32_t current );
         uint32_t set_microstep( uint32_t ms );
         void set_decay_mode( uint8_t dm );
-        void set_torque(float torque, float gain);
         void dump_status(StreamOutput*);
         void enable(bool on);
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);
