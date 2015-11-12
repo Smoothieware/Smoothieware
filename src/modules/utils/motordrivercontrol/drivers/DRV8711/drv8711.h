@@ -31,9 +31,11 @@ private:
   struct DRIVE_Register   G_DRIVE_REG;
   struct STATUS_Register  G_STATUS_REG;
 
+  float resistor{0.05};
   std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
-  uint8_t _amps ;
-  uint8_t _torque ;
-  uint8_t _gain ;
-  uint8_t _microstepreg ;
+
+  // float _amps;
+  // uint8_t _torque;
+  // uint8_t _gain;
+  // uint8_t _microstepreg;
 };

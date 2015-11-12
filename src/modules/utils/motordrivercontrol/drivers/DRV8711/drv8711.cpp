@@ -11,13 +11,38 @@ DRV8711DRV::DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi) 
 {
 }
 
-static int map2range(int x, int in_min, int in_max, int out_min, int out_max)
-{
-    return (((x - in_min) * (out_max - out_min + 1)) / (in_max - in_min + 1)) + out_min;
-}
-
 void DRV8711DRV::init (unsigned int current, unsigned int microsteps, unsigned int gain)
 {
+    // derive torque and gain from current
+    float c= current/1000.0F; // current in amps
+    // I = (2.75 * Torque) / (256 * GAIN * Rsense) use (5,10,20,40) for gain, 0.05 is RSense Torque is 0-255
+    float a= 256 * gain * resistor;
+    // I = (2.75 * torque) / a; Ia = 2.75 * torque; a= 2.75*torque/I; a/torque= 2.75/I; torque/a = I/2.75; torque= I*a/2.75
+    float t= (c*a) / 2.75F;
+    while(t > 255) {
+        // reduce gain
+        gain= gain/2;
+        if(gain < 5) {
+            gain= 5;
+            t= 255;
+            break;
+        }
+        a= 256 * gain * resistor;
+        t= (c*a) / 2.75F;
+    }
+    while(t < 1.0F) {
+        // increase gain
+        gain= gain*2;
+        if(gain > 40) {
+            gain= 40;
+            t= 1;
+            break;
+        }
+        a= 256 * gain * resistor;
+        t= (c*a) / 2.75F;
+    }
+    uint32_t torque= t;
+
     // set the Initial default values
     // CTRL Register
     G_CTRL_REG.Address  = 0x00;
@@ -79,15 +104,7 @@ void DRV8711DRV::init (unsigned int current, unsigned int microsteps, unsigned i
     /// TORQUE Register
     G_TORQUE_REG.Address = 0x01;
     G_TORQUE_REG.SIMPLTH = 0x00;  //50uS Back EMF Sample Threshold
-
-    // derive torque and gain
-    // I = (2.75 * Torque) / (256 * GAIN * Rsense) use 20 for default gain, 0.05 is RSense
-    // I = (2.75 * Torque) /  256
-    // Torque = I / 0.0107421875;
-    unsigned int torque= (current/1000.0F) / 0.0107421875F;
-
-    unsigned int torqueMapped = map2range(torque, 0, 100, 0, 255);
-    G_TORQUE_REG.TORQUE  = torqueMapped;  // From the variable passed to the function
+    G_TORQUE_REG.TORQUE  = torque;
     //1000 0 000  01000110
 
     // OFF Register
