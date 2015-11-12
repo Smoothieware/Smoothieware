@@ -9,6 +9,10 @@ namespace mbed {
     class SPI;
 }
 
+class DRV8711DRV;
+class TMC26X;
+class StreamOutput;
+
 class MotorDriverControl : public Module {
     public:
         MotorDriverControl(uint16_t cs, uint8_t id);
@@ -16,13 +20,18 @@ class MotorDriverControl : public Module {
 
         void on_module_loaded();
         void on_gcode_received(void *);
+        void on_gcode_execute(void *);
 
     private:
         bool config_module();
-        void set_current( float current );
-        void set_microstep( uint8_t ms );
+        void initialize_chip();
+        void set_current( uint32_t current );
+        void set_microstep( uint32_t ms );
         void set_decay_mode( uint8_t dm );
         void set_torque(float torque, float gain);
+        void dump_status(StreamOutput*);
+        void enable(bool on);
+        int sendSPI(uint8_t *b, int cnt, uint8_t *r);
 
         Pin spi_cs_pin;
         mbed::SPI *spi;
@@ -33,9 +42,15 @@ class MotorDriverControl : public Module {
         };
         CHIP_TYPE chip;
 
+        // one of these drivers
+        union {
+            DRV8711DRV *drv8711;
+            TMC26X *tmc26x;
+        };
+
         float current_factor;
-        float max_current;
-        float current;
+        uint32_t max_current; // in milliamps
+        uint32_t current; // in milliamps
         float torque{-1}, gain{-1};
 
         char designator;
