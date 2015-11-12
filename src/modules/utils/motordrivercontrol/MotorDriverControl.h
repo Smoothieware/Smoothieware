@@ -15,7 +15,7 @@ class StreamOutput;
 
 class MotorDriverControl : public Module {
     public:
-        MotorDriverControl(uint16_t cs, uint8_t id);
+        MotorDriverControl(uint8_t id);
         virtual ~MotorDriverControl();
 
         void on_module_loaded();
@@ -23,10 +23,10 @@ class MotorDriverControl : public Module {
         void on_gcode_execute(void *);
 
     private:
-        bool config_module();
+        bool config_module(uint16_t cs);
         void initialize_chip();
         void set_current( uint32_t current );
-        void set_microstep( uint32_t ms );
+        uint32_t set_microstep( uint32_t ms );
         void set_decay_mode( uint8_t dm );
         void set_torque(float torque, float gain);
         void dump_status(StreamOutput*);
@@ -52,11 +52,10 @@ class MotorDriverControl : public Module {
         uint32_t max_current; // in milliamps
         uint32_t current; // in milliamps
         float torque{-1}, gain{-1};
+        uint32_t microsteps;
 
         char designator;
-        uint16_t cs;
         uint8_t id;
-        uint8_t microsteps;
         uint8_t decay_mode;
 
 };

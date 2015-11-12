@@ -30,6 +30,8 @@
 #include "TMC26X.h"
 #include "mbed.h"
 #include "StreamOutput.h"
+#include "Kernel.h"
+#include "libs/StreamOutputPool.h"
 
 //some default values used in initialization
 #define DEFAULT_MICROSTEPPING_VALUE 32
@@ -160,14 +162,14 @@ void TMC26X::setCurrent(unsigned int current)
     //with Rsense=0,15
     //for vsense = 0,310V (VSENSE not set)
     //or vsense = 0,165V (VSENSE set)
-    current_scaling = (uint8_t)((resistor_value * mASetting * 32.0 / (0.31 * 1000.0 * 1000.0)) - 0.5); //theoretically - 1.0 for better rounding it is 0.5
+    current_scaling = (uint8_t)((resistor_value * mASetting * 32.0F / (0.31F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
 
-    //check if the current scalingis too low
+    //check if the current scaling is too low
     if (current_scaling < 16) {
         //set the csense bit to get a use half the sense voltage (to support lower motor currents)
         this->driver_configuration_register_value |= VSENSE;
         //and recalculate the current setting
-        current_scaling = (uint8_t)((resistor_value * mASetting * 32.0 / (0.165 * 1000.0 * 1000.0)) - 0.5); //theoretically - 1.0 for better rounding it is 0.5
+        current_scaling = (uint8_t)((resistor_value * mASetting * 32.0F / (0.165F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
     }
 
     //do some sanity checks
@@ -191,8 +193,8 @@ unsigned int TMC26X::getCurrent(void)
     //this is not the fastest but the most accurate and illustrative way
     double result = (double)(stall_guard2_current_register_value & CURRENT_SCALING_PATTERN);
     double resistor_value = (double)this->resistor;
-    double voltage = (driver_configuration_register_value & VSENSE) ? 0.165 : 0.31;
-    result = (result + 1.0) / 32.0 * voltage / resistor_value * 1000.0 * 1000.0;
+    double voltage = (driver_configuration_register_value & VSENSE) ? 0.165F : 0.31F;
+    result = (result + 1.0F) / 32.0F * voltage / resistor_value * 1000.0F * 1000.0F;
     return (unsigned int)result;
 }
 
@@ -777,6 +779,7 @@ int TMC26X::version(void)
 void TMC26X::dumpStatus(StreamOutput *stream)
 {
     if (this->started) {
+        stream->printf("Chip type TMC26X\n");
         if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_PREWARING) {
             stream->printf("WARNING: Overtemperature Prewarning!\n");
         } else if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_SHUTDOWN) {
@@ -815,19 +818,30 @@ void TMC26X::dumpStatus(StreamOutput *stream)
             stream->printf("Approx Stall Guard: %d\n", stallGuard);
             stream->printf("Current level %d\n", current);
         }
+
+        stream->printf("Current current: %dmA, current setting: %dmA\n", getCurrentCurrent(), getCurrent());
+        stream->printf("Microsteps: 1/%d\n", microsteps);
+
+        stream->printf("Register dump:\n");
+        stream->printf(" driver control register value: %08lX\n", driver_control_register_value);
+        stream->printf(" chopper config register: %08lX\n", chopper_config_register);
+        stream->printf(" cool step register value: %08lX\n", cool_step_register_value);
+        stream->printf(" stall guard2 current register value: %08lX\n", stall_guard2_current_register_value);
+        stream->printf(" driver configuration register value: %08lX\n", driver_configuration_register_value);
     }
 }
 
 /*
  * send register settings to the stepper driver via SPI
  * returns the current status
+ * sends 20bits, the last 20 bits of the 24bits is taken as the command
  */
 void TMC26X::send262(unsigned long datagram)
 {
-    uint8_t buf[]{(uint8_t)((datagram >> 16) & 0xff), (uint8_t)((datagram >>  8) & 0xff), (uint8_t)(datagram & 0xff)};
+    uint8_t buf[]{(uint8_t)(datagram >> 16), (uint8_t)(datagram >>  8), (uint8_t)(datagram & 0xff)};
     uint8_t rbuf[3];
 
-    //ensure that only valid bist are set (0-19)
+    //ensure that only valid bist are set (0-19)k
     //datagram &=REGISTER_BIT_PATTERN;
 
     //write/read the values
@@ -838,4 +852,6 @@ void TMC26X::send262(unsigned long datagram)
 
     //store the datagram as status result
     driver_status_result = i_datagram;
+
+    THEKERNEL->streams->printf("sent: %02X, %02X, %02X received:%02X, %02X, %02X \n", buf[0], buf[1], buf[2], rbuf[0], rbuf[1], rbuf[2]);
 }

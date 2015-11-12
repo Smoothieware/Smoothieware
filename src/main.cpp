@@ -188,7 +188,7 @@ void init() {
     kernel->add_module( new FilamentDetector() );
     #endif
     #ifndef NO_UTILS_MotorDriverControl
-    kernel->add_module( new MotorDriverControl(0,0) );
+    kernel->add_module( new MotorDriverControl(0) );
     #endif
     // Create and initialize USB stuff
     u.init();

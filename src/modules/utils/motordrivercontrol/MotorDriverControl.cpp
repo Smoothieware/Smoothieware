@@ -5,12 +5,12 @@
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
 #include "libs/StreamOutputPool.h"
-
+#include "Robot.h"
+#include "StepperMotor.h"
 
 #include "Gcode.h"
 #include "Config.h"
 #include "checksumm.h"
-#include "DigipotBase.h"
 
 #include "mbed.h" // for SPI
 
@@ -21,6 +21,7 @@
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define enable_checksum                CHECKSUM("enable")
 #define chip_checksum                  CHECKSUM("chip")
+#define designator_checksum            CHECKSUM("designator")
 
 #define current_checksum               CHECKSUM("current")
 #define max_current_checksum           CHECKSUM("max_current")
@@ -36,7 +37,7 @@
 #define spi_cs_pin_checksum            CHECKSUM("spi_cs_pin")
 #define spi_frequency_checksum         CHECKSUM("spi_frequency")
 
-MotorDriverControl::MotorDriverControl(uint16_t cs, uint8_t id) : cs(cs), id(id)
+MotorDriverControl::MotorDriverControl(uint8_t id) : id(id)
 {
 }
 
@@ -49,12 +50,12 @@ void MotorDriverControl::on_module_loaded()
 {
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, motor_driver_control_checksum );
-    uint8_t cnt = 0;
+    uint8_t cnt = 1;
     for( auto cs : modules ) {
         // If module is enabled create an instance and initialize it
         if( THEKERNEL->config->value(motor_driver_control_checksum, cs, enable_checksum )->as_bool() ) {
-            MotorDriverControl *controller = new MotorDriverControl(cs, cnt++);
-            if(!controller->config_module()) delete controller;
+            MotorDriverControl *controller = new MotorDriverControl(cnt++);
+            if(!controller->config_module(cs)) delete controller;
         }
     }
 
@@ -62,7 +63,7 @@ void MotorDriverControl::on_module_loaded()
     delete this;
 }
 
-bool MotorDriverControl::config_module()
+bool MotorDriverControl::config_module(uint16_t cs)
 {
     spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
     if(!spi_cs_pin.connected()) {
@@ -71,14 +72,14 @@ bool MotorDriverControl::config_module()
     }
     spi_cs_pin.set(1);
 
-    std::string str= THEKERNEL->config->value( motor_driver_control_checksum, cs, designator)->by_default("")->as_string();
+    std::string str= THEKERNEL->config->value( motor_driver_control_checksum, cs, designator_checksum)->by_default("")->as_string();
     if(str.empty()) {
         THEKERNEL->streams->printf("MotorDriverControl ERROR: designator not defined\n");
         return false; // designator required
     }
     designator= str[0];
 
-    str= THEKERNEL->config->value( motor_driver_control_checksum, cs, chip)->by_default("")->as_string();
+    str= THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string();
     if(str.empty()) {
         THEKERNEL->streams->printf("MotorDriverControl ERROR: chip type not defined\n");
         return false; // chip type required
@@ -118,6 +119,7 @@ bool MotorDriverControl::config_module()
 
     this->spi = new mbed::SPI(mosi, miso, sclk);
     this->spi->frequency(spi_frequency);
+    this->spi->format(8, 3); // 8bit, mode3
 
 
     max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default(2.0f)->as_number();
@@ -137,6 +139,9 @@ bool MotorDriverControl::config_module()
 
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
+
+    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", designator, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
+
     return true;
 }
 
@@ -164,6 +169,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
         if(gcode->m == 906) {
             if(gcode->subcode == 1) {
                 // M906.1 dump status for all drivers
+                gcode->stream->printf("Motor %d (%c)...\n", id, designator);
                 dump_status(gcode->stream);
 
             }else if (gcode->has_letter(designator)) {
@@ -172,10 +178,20 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 set_current(current);
             }
 
-        } else if(gcode->m == 909) { // set microstepping
+        } else if(gcode->m == 909) { // M909 Annn set microstepping, M909.1 also change steps/mm
             if (gcode->has_letter(designator)) {
+                uint32_t current_microsteps= microsteps;
                 microsteps= gcode->get_value(designator);
-                set_microstep(microsteps);
+                microsteps= set_microstep(microsteps); // driver may change the steps it sets to
+                if(gcode->subcode == 1 && current_microsteps != microsteps) {
+                    // also reset the steps/mm
+                    int a= designator-'A';
+                    if(a >= 0 && a <=2) {
+                        float s= THEKERNEL->robot->actuators[a]->get_steps_per_mm()*((float)microsteps/current_microsteps);
+                        THEKERNEL->robot->actuators[a]->change_steps_per_mm(s);
+                        gcode->stream->printf("steps/mm for %c changed to: %f\n", designator, s);
+                    }
+                }
             }
 
         } else if(gcode->m == 910) { // set decay mode
@@ -201,7 +217,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
         } else if(gcode->m == 500 || gcode->m == 503) {
             gcode->stream->printf(";Motor id %d current mA, microsteps, decay mode:\n", id);
             gcode->stream->printf("M906 %c%lu\n", designator, current);
-            gcode->stream->printf("M909 %c%d\n", designator, microsteps);
+            gcode->stream->printf("M909 %c%lu\n", designator, microsteps);
             gcode->stream->printf("M910 %c%d\n", designator, decay_mode);
             if(torque >= 0 && gain >= 0) {
                 gcode->stream->printf("M911.1 %c%1.5f\n", designator, torque);
@@ -240,15 +256,18 @@ void MotorDriverControl::set_current(uint32_t c)
 }
 
 // set microsteps where n is the number of microsteps eg 64 for 1/64
-void MotorDriverControl::set_microstep( uint32_t n )
+uint32_t MotorDriverControl::set_microstep( uint32_t n )
 {
+    uint32_t m= n;
     switch(chip) {
         case DRV8711: break;
 
         case TMC2660:
             tmc26x->setMicrosteps(n);
+            m= tmc26x->getMicrosteps();
             break;
     }
+    return m;
 }
 
 void MotorDriverControl::set_decay_mode( uint8_t dm )

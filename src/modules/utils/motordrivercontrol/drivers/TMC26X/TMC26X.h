@@ -454,7 +454,7 @@ public:
     int version(void);
 
 private:
-    unsigned int resistor{150}; //current sense resitor value in milliohm
+    unsigned int resistor{50}; // current sense resitor value in milliohm
 
     //driver control register copies to easily set & modify the registers
     unsigned long driver_control_register_value;

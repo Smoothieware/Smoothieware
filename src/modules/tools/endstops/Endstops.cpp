@@ -784,7 +784,7 @@ void Endstops::on_gcode_received(void *argument)
             break;
 
             // NOTE this is to test accuracy of lead screws etc.
-            case 910: { // M910 - move specific number of raw steps
+            case 1910: { // M1910 - move specific number of raw steps
                 // Enable the motors
                 THEKERNEL->stepper->turn_enable_pins_on();
 
