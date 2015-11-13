@@ -181,7 +181,7 @@ void Robot::on_config_reload(void *argument)
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
     // Make our 3 StepperMotors
-    uint16_t checksums[][5] = {
+    uint16_t const checksums[][5] = {
         ACTUATOR_CHECKSUMS("alpha"),  
         ACTUATOR_CHECKSUMS("beta"),   
         ACTUATOR_CHECKSUMS("gamma"),  
