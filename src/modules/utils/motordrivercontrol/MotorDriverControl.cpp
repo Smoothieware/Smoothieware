@@ -123,7 +123,13 @@ bool MotorDriverControl::config_module(uint16_t cs)
     this->spi->frequency(spi_frequency);
     this->spi->format(8, 3); // 8bit, mode3
 
-    max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default(2000)->as_number(); // in mA
+    // set default max currents for each chip, can be overidden in config
+    switch(chip) {
+        case DRV8711: max_current= 4000; break;
+        case TMC2660: max_current= 4000; break;
+    }
+
+    max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default((int)max_current)->as_number(); // in mA
     //current_factor= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_factor_checksum )->by_default(1.0F)->as_number();
 
     current= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_checksum )->by_default(1000)->as_number(); // in mA
@@ -230,7 +236,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
             }
 
         } else if(gcode->m == 500 || gcode->m == 503) {
-            gcode->stream->printf(";Motor id %d  current mA, microsteps, decay mode:\n", id);
+            gcode->stream->printf(";Motor %c id %d  current mA, microsteps, decay mode:\n", designator, id);
             gcode->stream->printf("M906 %c%lu\n", designator, current);
             gcode->stream->printf("M909 %c%lu\n", designator, microsteps);
             gcode->stream->printf("M910 %c%d\n", designator, decay_mode);
