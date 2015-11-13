@@ -305,14 +305,43 @@ void DRV8711DRV::WriteAllRegisters()
     SPI_DRV8711_ReadWrite(dataHi, dataLo);
 }
 
+// sets a raw register to the value specified, for advanced settings
+// register 0 writes them, 255 displays what registers are mapped to what
+bool DRV8711DRV::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
+{
+    switch(reg) {
+        case 0:
+            WriteAllRegisters();
+            stream->printf("Registers written\n");
+            break;
+  // CTRL_Register
+  // TORQUE_Register
+  // OFF_Register
+  // BLANK_Register
+  // DECAY_Register
+  // STALL_Register
+  // DRIVE_Register
+  // STATUS_Register
+
+        case 255:
+            stream->printf("0: write registers to chip\n");
+            break;
+
+
+        default: stream->printf("No such register\n");
+    }
+    return true;
+}
+
+
+
 unsigned int DRV8711DRV::SPI_DRV8711_ReadWrite(unsigned char dataHi, unsigned char dataLo)
 {
-
     uint8_t buf[2]{dataHi, dataLo};
     uint8_t rbuf[2];
 
     spi(buf, 2, rbuf);
-
+    THEKERNEL->streams->printf("sent: %02X, %02X received:%02X, %02X\n", buf[0], buf[1], rbuf[0], rbuf[1]);
     unsigned int readData= (rbuf[0]<<8) | rbuf[1];
     return readData;
 }

@@ -7,6 +7,7 @@
 #include "libs/StreamOutputPool.h"
 #include "Robot.h"
 #include "StepperMotor.h"
+#include "PublicDataRequest.h"
 
 #include "Gcode.h"
 #include "Config.h"
@@ -33,6 +34,7 @@
 #define torque_checksum                CHECKSUM("torque")
 #define gain_checksum                  CHECKSUM("gain")
 
+#define raw_register_checksum          CHECKSUM("reg")
 
 #define spi_channel_checksum           CHECKSUM("spi_channel")
 #define spi_cs_pin_checksum            CHECKSUM("spi_cs_pin")
@@ -122,7 +124,6 @@ bool MotorDriverControl::config_module(uint16_t cs)
     this->spi->frequency(spi_frequency);
     this->spi->format(8, 3); // 8bit, mode3
 
-
     max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default(2.0f)->as_number();
     current_factor= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_factor_checksum )->by_default(1.0F)->as_number();
 
@@ -138,29 +139,36 @@ bool MotorDriverControl::config_module(uint16_t cs)
     // setup the chip via SPI
     initialize_chip();
 
+    // if raw registers are defined set them 1,2,3 etc in hex
+    str= THEKERNEL->config->value( motor_driver_control_checksum, cs, raw_register_checksum)->by_default("")->as_string();
+    if(!str.empty()) {
+        rawreg= true;
+        std::vector<uint32_t> regs= parse_number_list(str.c_str(), 16);
+        uint32_t reg= 0;
+        for(auto i : regs) {
+            switch(chip) {
+                case DRV8711: drv8711->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
+                case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
+            }
+        }
+    }else{
+        rawreg= false;
+    }
+
     this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_GCODE_EXECUTE);
+    this->register_for_event(ON_HALT);
 
     THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", designator, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
 
     return true;
 }
 
-// React to enable/disable gcodes
-void MotorDriverControl::on_gcode_execute(void *argument)
+void MotorDriverControl::on_halt(void *argument)
 {
-    Gcode *gcode = static_cast<Gcode *>(argument);
-
-    if( gcode->has_m) {
-        if( gcode->m == 17 ) {
-            enable(true);
-        }
-        if( (gcode->m == 84 || gcode->m == 18) && !gcode->has_letter('E') ) {
-            enable(false);
-        }
+    if(argument == nullptr) {
+        enable(false);
     }
 }
-
 
 void MotorDriverControl::on_gcode_received(void *argument)
 {

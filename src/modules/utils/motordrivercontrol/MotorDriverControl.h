@@ -20,7 +20,7 @@ class MotorDriverControl : public Module {
 
         void on_module_loaded();
         void on_gcode_received(void *);
-        void on_gcode_execute(void *);
+        void on_halt(void *argument);
 
     private:
         bool config_module(uint16_t cs);
@@ -54,7 +54,11 @@ class MotorDriverControl : public Module {
         uint32_t microsteps;
 
         char designator;
-        uint8_t id;
-        uint8_t decay_mode;
+
+        struct{
+            uint8_t id:4;
+            uint8_t decay_mode:4;
+            bool rawreg:1;
+        };
 
 };

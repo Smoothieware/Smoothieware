@@ -648,7 +648,7 @@ uint8_t TMC26X::getCurrentCSReading(void)
     if (!started) {
         return 0;
     }
-    //not time optimal, but solution optiomal:
+
     //first read out the stall guard value
     readStatus(TMC26X_READOUT_CURRENT);
     return (getReadoutValue() & 0x1f);
@@ -656,11 +656,11 @@ uint8_t TMC26X::getCurrentCSReading(void)
 
 unsigned int TMC26X::getCurrentCurrent(void)
 {
-    double result = (double)getCurrentCSReading();
-    double resistor_value = (double)this->resistor;
-    double voltage = (driver_configuration_register_value & VSENSE) ? 0.165 : 0.31;
-    result = (result + 1.0) / 32.0 * voltage / resistor_value * 1000.0 * 1000.0;
-    return (unsigned int)result;
+    float result = (float)getCurrentCSReading();
+    float resistor_value = (float)this->resistor;
+    float voltage = (driver_configuration_register_value & VSENSE) ? 0.165F : 0.31F;
+    result = (result + 1.0F) / 32.0F * voltage / resistor_value * 1000.0F * 1000.0F;
+    return (unsigned int)roundf(result);
 }
 
 /*
@@ -768,17 +768,12 @@ bool TMC26X::isCurrentScalingHalfed()
         return false;
     }
 }
-/*
- version() returns the version of the library:
- */
-int TMC26X::version(void)
-{
-    return 1;
-}
 
 void TMC26X::dumpStatus(StreamOutput *stream)
 {
     if (this->started) {
+        readStatus(TMC26X_READOUT_POSITION); // get the status bits
+
         stream->printf("Chip type TMC26X\n");
         if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_PREWARING) {
             stream->printf("WARNING: Overtemperature Prewarning!\n");
@@ -804,31 +799,62 @@ void TMC26X::dumpStatus(StreamOutput *stream)
             stream->printf("INFO: Motor is standing still.\n");
         }
 
-        unsigned long readout_config = driver_configuration_register_value & READ_SELECTION_PATTERN;
         int value = getReadoutValue();
-        if (readout_config == READ_MICROSTEP_POSTION) {
-            stream->printf("Microstep postion phase A: %d\n", value);
+        stream->printf("Microstep postion phase A: %d\n", value);
 
-        } else if (readout_config == READ_STALL_GUARD_READING) {
-            stream->printf("Stall Guard value: %d\n", value);
-
-        } else if (readout_config == READ_STALL_GUARD_AND_COOL_STEP) {
-            int stallGuard = value & 0xf;
-            int current = value & 0x1F0;
-            stream->printf("Approx Stall Guard: %d\n", stallGuard);
-            stream->printf("Current level %d\n", current);
-        }
+        readStatus(TMC26X_READOUT_STALLGUARD); // get the status bits
+        value = getReadoutValue();
+        stream->printf("Stall Guard value: %d\n", value);
 
         stream->printf("Current current: %dmA, current setting: %dmA\n", getCurrentCurrent(), getCurrent());
+        value = getReadoutValue();
+        int stallGuard = value & 0xf;
+        int current = value & 0x1F0;
+        stream->printf("Approx Stall Guard: %d\n", stallGuard);
+        stream->printf("Current level %d\n", current);
+
         stream->printf("Microsteps: 1/%d\n", microsteps);
 
         stream->printf("Register dump:\n");
-        stream->printf(" driver control register value: %08lX\n", driver_control_register_value);
-        stream->printf(" chopper config register: %08lX\n", chopper_config_register);
-        stream->printf(" cool step register value: %08lX\n", cool_step_register_value);
-        stream->printf(" stall guard2 current register value: %08lX\n", stall_guard2_current_register_value);
-        stream->printf(" driver configuration register value: %08lX\n", driver_configuration_register_value);
+        stream->printf(" driver control register: %08lX(%ld)\n", driver_control_register_value, driver_control_register_value);
+        stream->printf(" chopper config register: %08lX(%ld)\n", chopper_config_register, chopper_config_register);
+        stream->printf(" cool step register: %08lX(%ld)\n", cool_step_register_value, cool_step_register_value);
+        stream->printf(" stall guard2 current register: %08lX(%ld)\n", stall_guard2_current_register_value, stall_guard2_current_register_value);
+        stream->printf(" driver configuration register: %08lX(%ld)\n", driver_configuration_register_value, driver_configuration_register_value);
     }
+}
+
+// sets a raw register to the value specified, for advanced settings
+// register 0 writes them, 255 displays what registers are mapped to what
+bool TMC26X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
+{
+    switch(reg) {
+        case 0:
+            send262(driver_control_register_value);
+            send262(chopper_config_register);
+            send262(cool_step_register_value);
+            send262(stall_guard2_current_register_value);
+            send262(driver_configuration_register_value);
+            stream->printf("Registers written\n");
+            break;
+
+        case 255:
+            stream->printf("0: write registers to chip\n");
+            stream->printf("1: driver control register\n");
+            stream->printf("2: chopper config register\n");
+            stream->printf("3: cool step register\n");
+            stream->printf("4: stall guard2 current register\n");
+            stream->printf("5: driver configuration register\n");
+            break;
+
+        case 1: driver_control_register_value= val; stream->printf("driver control register set to %lu\n", val); break;
+        case 2: chopper_config_register= val; stream->printf("chopper config register set to %lu\n", val); break;
+        case 3: cool_step_register_value= val; stream->printf("cool step register set to %lu\n", val); break;
+        case 4: stall_guard2_current_register_value= val; stream->printf("stall guard2 current register set to %lu\n", val); break;
+        case 5: driver_configuration_register_value= val; stream->printf("driver configuration register set to %lu\n", val); break;
+        default: stream->printf("No such register\n");
+    }
+    return true;
 }
 
 /*
@@ -841,9 +867,6 @@ void TMC26X::send262(unsigned long datagram)
     uint8_t buf[]{(uint8_t)(datagram >> 16), (uint8_t)(datagram >>  8), (uint8_t)(datagram & 0xff)};
     uint8_t rbuf[3];
 
-    //ensure that only valid bist are set (0-19)k
-    //datagram &=REGISTER_BIT_PATTERN;
-
     //write/read the values
     spi(buf, 3, rbuf);
 
@@ -853,5 +876,5 @@ void TMC26X::send262(unsigned long datagram)
     //store the datagram as status result
     driver_status_result = i_datagram;
 
-    THEKERNEL->streams->printf("sent: %02X, %02X, %02X received:%02X, %02X, %02X \n", buf[0], buf[1], buf[2], rbuf[0], rbuf[1], rbuf[2]);
+    //THEKERNEL->streams->printf("sent: %02X, %02X, %02X received: %02X, %02X, %02X \n", buf[0], buf[1], buf[2], rbuf[0], rbuf[1], rbuf[2]);
 }

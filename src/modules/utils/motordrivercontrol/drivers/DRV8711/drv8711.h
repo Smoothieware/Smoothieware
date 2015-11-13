@@ -15,6 +15,7 @@ public:
 
   void set_enable(bool enable) ;
   void dump_status(StreamOutput *stream) ;
+  bool setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val);
 
 private:
 

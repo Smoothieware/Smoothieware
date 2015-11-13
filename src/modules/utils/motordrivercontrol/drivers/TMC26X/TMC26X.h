@@ -447,11 +447,8 @@ public:
      * The result is printed via Serial
      */
     void dumpStatus(StreamOutput *stream);
-    /*!
-     * \brief library version
-     * \return the version number as int.
-     */
-    int version(void);
+
+    bool setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val);
 
 private:
     unsigned int resistor{50}; // current sense resitor value in milliohm
