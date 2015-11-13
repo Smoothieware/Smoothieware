@@ -46,7 +46,6 @@ class Panel : public Module {
         uint32_t on_down(uint32_t dummy);
         uint32_t on_back(uint32_t dummy);
         uint32_t on_select(uint32_t dummy);
-        uint32_t on_pause(uint32_t dummy);
         uint32_t refresh_tick(uint32_t dummy);
         uint32_t encoder_check(uint32_t dummy);
         bool counter_change();
@@ -115,7 +114,6 @@ class Panel : public Module {
         Button down_button;
         Button back_button;
         Button click_button;
-        Button pause_button;
 
         int* counter;
 
