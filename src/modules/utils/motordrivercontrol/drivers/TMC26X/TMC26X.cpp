@@ -826,6 +826,7 @@ void TMC26X::dumpStatus(StreamOutput *stream)
 
 // sets a raw register to the value specified, for advanced settings
 // register 0 writes them, 255 displays what registers are mapped to what
+// FIXME status registers not reading back correctly, check docs
 bool TMC26X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
 {
     switch(reg) {

@@ -207,6 +207,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
                         float s= THEKERNEL->robot->actuators[a]->get_steps_per_mm()*((float)microsteps/current_microsteps);
                         THEKERNEL->robot->actuators[a]->change_steps_per_mm(s);
                         gcode->stream->printf("steps/mm for %c changed to: %f\n", designator, s);
+                        THEKERNEL->robot->check_max_actuator_speeds();
                     }
                 }
             }
