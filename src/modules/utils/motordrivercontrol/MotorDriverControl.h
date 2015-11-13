@@ -21,6 +21,8 @@ class MotorDriverControl : public Module {
         void on_module_loaded();
         void on_gcode_received(void *);
         void on_halt(void *argument);
+        void on_enable(void *argument);
+        void on_idle(void *argument);
 
     private:
         bool config_module(uint16_t cs);
@@ -50,7 +52,6 @@ class MotorDriverControl : public Module {
         float current_factor;
         uint32_t max_current; // in milliamps
         uint32_t current; // in milliamps
-        float torque{-1}, gain{-1};
         uint32_t microsteps;
 
         char designator;
@@ -59,6 +60,8 @@ class MotorDriverControl : public Module {
             uint8_t id:4;
             uint8_t decay_mode:4;
             bool rawreg:1;
+            bool enable_event:1;
+            bool enable_flg:1;
         };
 
 };

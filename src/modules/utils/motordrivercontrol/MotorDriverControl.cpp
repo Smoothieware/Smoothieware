@@ -31,8 +31,6 @@
 
 #define microsteps_checksum            CHECKSUM("microsteps")
 #define decay_mode_checksum            CHECKSUM("decay_mode")
-#define torque_checksum                CHECKSUM("torque")
-#define gain_checksum                  CHECKSUM("gain")
 
 #define raw_register_checksum          CHECKSUM("reg")
 
@@ -42,6 +40,7 @@
 
 MotorDriverControl::MotorDriverControl(uint8_t id) : id(id)
 {
+    enable_event= false;
 }
 
 MotorDriverControl::~MotorDriverControl()
@@ -131,11 +130,6 @@ bool MotorDriverControl::config_module(uint16_t cs)
     microsteps= THEKERNEL->config->value(motor_driver_control_checksum, cs, microsteps_checksum )->by_default(4)->as_number(); // 2^n
     decay_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, decay_mode_checksum )->by_default(1)->as_number();
 
-    if(chip == DRV8711) {
-        torque= THEKERNEL->config->value(motor_driver_control_checksum, cs, torque_checksum )->by_default(-1)->as_number();
-        gain= THEKERNEL->config->value(motor_driver_control_checksum, cs, gain_checksum )->by_default(-1)->as_number();
-    }
-
     // setup the chip via SPI
     initialize_chip();
 
@@ -157,10 +151,28 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_HALT);
+    this->register_for_event(ON_ENABLE);
+    this->register_for_event(ON_IDLE);
 
     THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", designator, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
 
     return true;
+}
+
+// event to handle enable on/off, as it could be called in an ISR we schedule to turn the steppers on or off in ON_IDLE
+// This may cause the initial step to be missed if on-idle is delayed too much but we can't do SPI in an interrupt
+void MotorDriverControl::on_enable(void *argument)
+{
+    enable_event= true;
+    enable_flg= (argument != nullptr);
+}
+
+void MotorDriverControl::on_idle(void *argument)
+{
+    if(enable_event) {
+        enable_event= false;
+        enable(enable_flg);
+    }
 }
 
 void MotorDriverControl::on_halt(void *argument)
@@ -213,12 +225,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
             gcode->stream->printf(";Motor id %d microsteps, decay mode, current mA:\n", id);
             gcode->stream->printf("M909 %c%lu\n", designator, microsteps);
             gcode->stream->printf("M910 %c%d\n", designator, decay_mode);
-            if(torque >= 0 && gain >= 0) {
-                gcode->stream->printf("M911.1 %c%1.5f\n", designator, torque);
-                gcode->stream->printf("M911.2 %c%1.5f\n", designator, gain);
-            }else{
-                gcode->stream->printf("M906 %c%lu\n", designator, current);
-            }
+            gcode->stream->printf("M906 %c%lu\n", designator, current);
          }
     }
 }
@@ -258,7 +265,7 @@ uint32_t MotorDriverControl::set_microstep( uint32_t n )
     uint32_t m= n;
     switch(chip) {
         case DRV8711:
-            drv8711->init(current, microsteps);
+            drv8711->init(current, n);
             break;
 
         case TMC2660:
@@ -269,6 +276,7 @@ uint32_t MotorDriverControl::set_microstep( uint32_t n )
     return m;
 }
 
+// TODO how to handle this? SO many options
 void MotorDriverControl::set_decay_mode( uint8_t dm )
 {
     switch(chip) {
@@ -303,7 +311,7 @@ void MotorDriverControl::dump_status(StreamOutput *stream)
     }
 }
 
-
+// Called by the drivers codes to send and receive SPI data to/from the chip
 int MotorDriverControl::sendSPI(uint8_t *b, int cnt, uint8_t *r)
 {
     spi_cs_pin.set(0);
