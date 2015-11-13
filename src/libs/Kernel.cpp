@@ -24,9 +24,11 @@
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
+#include "StepperMotor.h"
 
 #include <malloc.h>
 #include <array>
+#include <string>
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
@@ -143,6 +145,31 @@ Kernel::Kernel(){
 
     this->planner = new Planner();
 
+}
+
+// return a GRBL-like query string for serial ?
+std::string Kernel::get_query_string()
+{
+    std::string str;
+    str.append("<");
+    if(halted) {
+        str.append("Alarm,");
+    }else if(this->conveyor->is_queue_empty()) {
+        str.append("Idle,");
+    }else{
+        str.append("Run,");
+    }
+
+    char buf[64];
+    size_t n= snprintf(buf, sizeof(buf), "%f,%f,%f,", this->robot->actuators[X_AXIS]->get_current_position(), this->robot->actuators[Y_AXIS]->get_current_position(), this->robot->actuators[Z_AXIS]->get_current_position());
+    str.append("MPos:").append(buf, n);
+
+    float pos[3];
+    this->robot->get_axis_position(pos);
+    n= snprintf(buf, sizeof(buf), "%f,%f,%f", pos[0], pos[1], pos[2]);
+    str.append("WPos:").append(buf, n);
+    str.append(">\r\n");
+    return str;
 }
 
 // Add a module to Kernel. We don't actually hold a list of modules we just call its on_module_loaded
