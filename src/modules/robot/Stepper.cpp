@@ -35,7 +35,6 @@ using namespace std;
 Stepper::Stepper()
 {
     this->current_block = NULL;
-    this->paused = false;
     this->force_speed_update = false;
     this->halted= false;
 }
@@ -47,8 +46,6 @@ void Stepper::on_module_loaded()
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_PLAY);
-    this->register_for_event(ON_PAUSE);
     this->register_for_event(ON_HALT);
 
     // Get onfiguration
@@ -67,23 +64,6 @@ void Stepper::on_config_reload(void *argument)
 {
     // Steppers start off by default
     this->turn_enable_pins_off();
-}
-
-// When the play/pause button is set to pause, or a module calls the ON_PAUSE event
-void Stepper::on_pause(void *argument)
-{
-    this->paused = true;
-    for (auto actuator : THEKERNEL->robot->actuators)
-        actuator->pause();
-}
-
-// When the play/pause button is set to play, or a module calls the ON_PLAY event
-void Stepper::on_play(void *argument)
-{
-    // TODO: Re-compute the whole queue for a cold-start
-    this->paused = false;
-    for (auto actuator : THEKERNEL->robot->actuators)
-        actuator->unpause();
 }
 
 void Stepper::on_halt(void *argument)
@@ -229,7 +209,7 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
 void Stepper::trapezoid_generator_tick(void)
 {
     // Do not do the accel math for nothing
-    if(this->current_block && !this->paused && this->main_stepper->moving ) {
+    if(this->current_block && this->main_stepper->moving ) {
 
         // Store this here because we use it a lot down there
         uint32_t current_steps_completed = this->main_stepper->stepped;

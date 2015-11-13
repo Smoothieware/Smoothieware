@@ -17,7 +17,6 @@
 #include "libs/StreamOutput.h"
 #include "Gcode.h"
 #include "checksumm.h"
-#include "Pauser.h"
 #include "Config.h"
 #include "ConfigValue.h"
 #include "SDFAT.h"

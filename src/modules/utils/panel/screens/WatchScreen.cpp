@@ -21,7 +21,6 @@
 #include "PublicData.h"
 #include "SwitchPublicAccess.h"
 #include "checksumm.h"
-#include "Pauser.h"
 #include "TemperatureControlPool.h"
 
 
@@ -277,9 +276,6 @@ const char *WatchScreen::get_status()
 
     if (THEKERNEL->is_halted())
         return "HALTED Reset or M999";
-
-    if (THEKERNEL->pauser->paused())
-        return "Paused";
 
     if (THEPANEL->is_suspended())
         return "Suspended";
