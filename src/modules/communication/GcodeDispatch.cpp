@@ -9,7 +9,6 @@
 
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
-#include "Pauser.h"
 #include "libs/nuts_bolts.h"
 #include "modules/robot/Conveyor.h"
 #include "libs/SerialMessage.h"

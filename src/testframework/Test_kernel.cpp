@@ -28,7 +28,6 @@ This is aprt of the Smoothie test framework, it generates a Mockable Kernl so ke
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
-#include "modules/robot/Pauser.h"
 
 #include "Config.h"
 #include "FirmConfigSource.h"
