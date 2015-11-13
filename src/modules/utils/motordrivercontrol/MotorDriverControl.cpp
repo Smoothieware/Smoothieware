@@ -27,7 +27,7 @@
 
 #define current_checksum               CHECKSUM("current")
 #define max_current_checksum           CHECKSUM("max_current")
-#define current_factor_checksum        CHECKSUM("current_factor")
+//#define current_factor_checksum        CHECKSUM("current_factor")
 
 #define microsteps_checksum            CHECKSUM("microsteps")
 #define decay_mode_checksum            CHECKSUM("decay_mode")
@@ -123,11 +123,11 @@ bool MotorDriverControl::config_module(uint16_t cs)
     this->spi->frequency(spi_frequency);
     this->spi->format(8, 3); // 8bit, mode3
 
-    max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default(2.0f)->as_number();
-    current_factor= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_factor_checksum )->by_default(1.0F)->as_number();
+    max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default(2000)->as_number(); // in mA
+    //current_factor= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_factor_checksum )->by_default(1.0F)->as_number();
 
-    current= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_checksum )->by_default(1.0F)->as_number();
-    microsteps= THEKERNEL->config->value(motor_driver_control_checksum, cs, microsteps_checksum )->by_default(4)->as_number(); // 2^n
+    current= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_checksum )->by_default(1000)->as_number(); // in mA
+    microsteps= THEKERNEL->config->value(motor_driver_control_checksum, cs, microsteps_checksum )->by_default(16)->as_number(); // 1/n
     decay_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, decay_mode_checksum )->by_default(1)->as_number();
 
     // setup the chip via SPI
@@ -188,14 +188,10 @@ void MotorDriverControl::on_gcode_received(void *argument)
 
     if (gcode->has_m) {
         if(gcode->m == 906) {
-            if(gcode->subcode == 1) {
-                // M906.1 dump status for all drivers
-                gcode->stream->printf("Motor %d (%c)...\n", id, designator);
-                dump_status(gcode->stream);
-
-            }else if (gcode->has_letter(designator)) {
+            if (gcode->has_letter(designator)) {
                 // set motor currents in mA (Note not using M907 as digipots use that)
                 current= gcode->get_value(designator);
+                current= std::min(current, max_current);
                 set_current(current);
             }
 
@@ -221,11 +217,22 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 set_decay_mode(decay_mode);
             }
 
+        } else if(gcode->m == 911) {
+            // set or get raw registers M911 Pnnn Rxxx Vyyy sets Register xxx to value yyy for motor nnn, xxx == 0 writes the registers, xxx == 255 shows what registers are
+            if(gcode->subcode == 1 || gcode->get_num_args() == 0) {
+                // M911.1 dump status for all drivers
+                gcode->stream->printf("Motor %d (%c)...\n", id, designator);
+                dump_status(gcode->stream);
+
+            }else if(gcode->get_value('P') == id) {
+                set_raw_register(gcode->stream, gcode->get_value('R'), gcode->get_value('V'));
+            }
+
         } else if(gcode->m == 500 || gcode->m == 503) {
-            gcode->stream->printf(";Motor id %d microsteps, decay mode, current mA:\n", id);
+            gcode->stream->printf(";Motor id %d  current mA, microsteps, decay mode:\n", id);
+            gcode->stream->printf("M906 %c%lu\n", designator, current);
             gcode->stream->printf("M909 %c%lu\n", designator, microsteps);
             gcode->stream->printf("M910 %c%d\n", designator, decay_mode);
-            gcode->stream->printf("M906 %c%lu\n", designator, current);
          }
     }
 }
@@ -308,6 +315,19 @@ void MotorDriverControl::dump_status(StreamOutput *stream)
         case TMC2660:
             tmc26x->dumpStatus(stream);
             break;
+    }
+}
+void MotorDriverControl::set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val)
+{
+    bool ok= false;
+    switch(chip) {
+        case DRV8711: ok= drv8711->setRawRegister(stream, reg, val); break;
+        case TMC2660: ok= tmc26x->setRawRegister(stream, reg, val); break;
+    }
+    if(ok) {
+        stream->printf("register operation ok\n");
+    }else{
+        stream->printf("register operation failed\n");
     }
 }
 

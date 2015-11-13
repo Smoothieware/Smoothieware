@@ -31,6 +31,8 @@ class MotorDriverControl : public Module {
         uint32_t set_microstep( uint32_t ms );
         void set_decay_mode( uint8_t dm );
         void dump_status(StreamOutput*);
+        void set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
+
         void enable(bool on);
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);
 
@@ -49,7 +51,7 @@ class MotorDriverControl : public Module {
             TMC26X *tmc26x;
         };
 
-        float current_factor;
+        //float current_factor;
         uint32_t max_current; // in milliamps
         uint32_t current; // in milliamps
         uint32_t microsteps;
