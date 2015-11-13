@@ -38,7 +38,6 @@ void StepperMotor::init()
     // register this motor with the step ticker, and get its index in that array and bit position
     this->index= THEKERNEL->step_ticker->register_motor(this);
     this->moving = false;
-    this->paused = false;
     this->fx_counter = 0;
     this->fx_ticks_per_step = 0xFFFFF000UL; // some big number so we don't start stepping before it is set
     this->stepped = 0;
@@ -115,10 +114,10 @@ void StepperMotor::signal_move_finished()
     this->is_move_finished = false;
 }
 
-// This is just a way not to check for ( !this->moving || this->paused || this->fx_ticks_per_step == 0 ) at every tick()
+// This is just a way not to check for ( !this->moving || this->fx_ticks_per_step == 0 ) at every tick()
 void StepperMotor::update_exit_tick()
 {
-    if( !this->moving || this->paused || this->steps_to_move == 0 ) {
+    if( !this->moving || this->steps_to_move == 0 ) {
         // No more ticks will be recieved and no more events from StepTicker
         THEKERNEL->step_ticker->remove_motor_from_active_list(this);
     } else {
@@ -187,21 +186,6 @@ StepperMotor* StepperMotor::set_speed( float speed )
     this->fx_ticks_per_step= floor(fx_increment * THEKERNEL->step_ticker->get_frequency() / speed);
     return this;
 }
-
-// Pause this stepper motor
-void StepperMotor::pause()
-{
-    this->paused = true;
-    this->update_exit_tick();
-}
-
-// Unpause this stepper motor
-void StepperMotor::unpause()
-{
-    this->paused = false;
-    this->update_exit_tick();
-}
-
 
 void StepperMotor::change_steps_per_mm(float new_steps)
 {

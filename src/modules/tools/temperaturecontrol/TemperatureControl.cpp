@@ -23,7 +23,6 @@
 #include "checksumm.h"
 #include "Gcode.h"
 #include "SlowTicker.h"
-#include "Pauser.h"
 #include "ConfigValue.h"
 #include "PID_Autotuner.h"
 #include "SerialMessage.h"

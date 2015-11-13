@@ -34,8 +34,6 @@ class StepperMotor {
         StepperMotor* set_speed( float speed );
         void set_moved_last_block(bool flg) { last_step_tick_valid= flg; }
         void update_exit_tick();
-        void pause();
-        void unpause();
 
         float get_steps_per_second()  const { return steps_per_second; }
         float get_steps_per_mm()  const { return steps_per_mm; }
@@ -97,7 +95,6 @@ class StepperMotor {
         struct {
             bool direction:1;
             volatile bool is_move_finished:1; // Whether the move just finished
-            bool paused:1;
             volatile bool moving:1;
             bool last_step_tick_valid:1; // set if the last step tick time is valid (ie the motor moved last block)
         };

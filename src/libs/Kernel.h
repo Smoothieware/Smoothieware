@@ -20,7 +20,6 @@ class Config;
 class Module;
 class Conveyor;
 class SlowTicker;
-class Pauser;
 class SerialConsole;
 class StreamOutputPool;
 class GcodeDispatch;
@@ -56,7 +55,6 @@ class Kernel {
         Planner*          planner;
         Config*           config;
         Conveyor*         conveyor;
-        Pauser*           pauser;
 
         int debug;
         SlowTicker*       slow_ticker;
