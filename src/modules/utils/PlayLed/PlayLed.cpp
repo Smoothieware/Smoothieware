@@ -3,12 +3,15 @@
 /*
  * LED indicator:
  * off   = not paused, nothing to do
+ * slow flash = suspended
  * fast flash = halted
  * on    = a block is being executed
  */
 
 #include "KillButton.h"
 #include "modules/robot/Conveyor.h"
+#include "PublicData.h"
+#include "modules/utils/player/PlayerPublicAccess.h"
 #include "SlowTicker.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -54,8 +57,25 @@ uint32_t PlayLed::led_tick(uint32_t)
 
     if(++cnt >= 6) { // 6 ticks ~ 500ms
         cnt= 0;
-        led.set(!THEKERNEL->conveyor->is_queue_empty());
+
+        if (this->is_suspended()) {
+            led.set(!led.get());
+        } else {
+            led.set(!THEKERNEL->conveyor->is_queue_empty());
+        }
     }
 
     return 0;
+}
+
+bool PlayLed::is_suspended()
+{
+    void *returned_data;
+
+    bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
+    if (ok) {
+        bool b = *static_cast<bool *>(returned_data);
+        return b;
+    }
+    return false;
 }
