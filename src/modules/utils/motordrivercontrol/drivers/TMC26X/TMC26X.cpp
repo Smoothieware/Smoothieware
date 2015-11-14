@@ -229,7 +229,7 @@ int8_t TMC26X::getStallGuardThreshold(void)
     //convert the value to an int to correctly handle the negative numbers
     int8_t result = stall_guard_threshold;
     //check if it is negative and fill it up with leading 1 for proper negative number representation
-    if (result & (1<<6)) {
+    if (result & (1 << 6)) {
         result |= 0xC0;
     }
     return result;
@@ -492,7 +492,7 @@ void TMC26X::setRandomOffTime(int8_t value)
 }
 
 void TMC26X::setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size,
-        uint8_t current_increment_step_size, uint8_t lower_current_limit)
+                                      uint8_t current_increment_step_size, uint8_t lower_current_limit)
 {
     //sanitize the input values
     if (lower_SG_threshold > 480) {
@@ -830,7 +830,7 @@ void TMC26X::dumpStatus(StreamOutput *stream)
 bool TMC26X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
 {
     switch(reg) {
-        case 0:
+        case 255:
             send262(driver_control_register_value);
             send262(chopper_config_register);
             send262(cool_step_register_value);
@@ -839,21 +839,21 @@ bool TMC26X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
             stream->printf("Registers written\n");
             break;
 
-        case 255:
-            stream->printf("0: write registers to chip\n");
+
+        case 1: driver_control_register_value = val; stream->printf("driver control register set to %lu\n", val); break;
+        case 2: chopper_config_register = val; stream->printf("chopper config register set to %lu\n", val); break;
+        case 3: cool_step_register_value = val; stream->printf("cool step register set to %lu\n", val); break;
+        case 4: stall_guard2_current_register_value = val; stream->printf("stall guard2 current register set to %lu\n", val); break;
+        case 5: driver_configuration_register_value = val; stream->printf("driver configuration register set to %lu\n", val); break;
+
+        default:
             stream->printf("1: driver control register\n");
             stream->printf("2: chopper config register\n");
             stream->printf("3: cool step register\n");
             stream->printf("4: stall guard2 current register\n");
             stream->printf("5: driver configuration register\n");
-            break;
-
-        case 1: driver_control_register_value= val; stream->printf("driver control register set to %lu\n", val); break;
-        case 2: chopper_config_register= val; stream->printf("chopper config register set to %lu\n", val); break;
-        case 3: cool_step_register_value= val; stream->printf("cool step register set to %lu\n", val); break;
-        case 4: stall_guard2_current_register_value= val; stream->printf("stall guard2 current register set to %lu\n", val); break;
-        case 5: driver_configuration_register_value= val; stream->printf("driver configuration register set to %lu\n", val); break;
-        default: stream->printf("No such register\n");
+            stream->printf("255: update all registers\n");
+            return false;
     }
     return true;
 }
@@ -865,7 +865,7 @@ bool TMC26X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
  */
 void TMC26X::send262(unsigned long datagram)
 {
-    uint8_t buf[]{(uint8_t)(datagram >> 16), (uint8_t)(datagram >>  8), (uint8_t)(datagram & 0xff)};
+    uint8_t buf[] {(uint8_t)(datagram >> 16), (uint8_t)(datagram >>  8), (uint8_t)(datagram & 0xff)};
     uint8_t rbuf[3];
 
     //write/read the values
@@ -878,4 +878,40 @@ void TMC26X::send262(unsigned long datagram)
     driver_status_result = i_datagram;
 
     //THEKERNEL->streams->printf("sent: %02X, %02X, %02X received: %02X, %02X, %02X \n", buf[0], buf[1], buf[2], rbuf[0], rbuf[1], rbuf[2]);
+}
+
+#define HAS_A(X) (options.find(X) != options.end())
+bool TMC26X::set_options(const options_t& options)
+{
+    bool set= false;
+    if(HAS_A('O') && HAS_A('Q')) {
+        // void TMC26X::setStallGuardThreshold(int8_t stall_guard_threshold, int8_t stall_guard_filter_enabled)
+        setStallGuardThreshold(options.at('O'), options.at('Q'));
+        set= true;
+    }
+
+    if(HAS_A('R') && HAS_A('U') && HAS_A('V') && HAS_A('W') && HAS_A('X') && HAS_A('Y')) {
+        //void TMC26X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_time, int8_t fast_decay_time_setting, int8_t sine_wave_offset, uint8_t use_current_comparator)
+        setConstantOffTimeChopper(options.at('U'), options.at('V'), options.at('W'), options.at('X'), options.at('Y'));
+        set= true;
+
+    }else if(HAS_A('S') && HAS_A('U') && HAS_A('V') && HAS_A('W') && HAS_A('X') && HAS_A('Y')) {
+        //void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end, int8_t hysteresis_decrement);
+        setSpreadCycleChopper(options.at('U'), options.at('V'), options.at('W'), options.at('X'), options.at('Y'));
+        set= true;
+    }
+
+    if(HAS_A('Z')) {
+        // void TMC26X::setRandomOffTime(int8_t value)
+        setRandomOffTime(options.at('Z'));
+        set= true;
+    }
+
+    if(HAS_A('H') && HAS_A('I') && HAS_A('J') && HAS_A('K') && HAS_A('L')) {
+        //void TMC26X::setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size, uint8_t current_increment_step_size, uint8_t lower_current_limit)
+        setCoolStepConfiguration(options.at('H'), options.at('I'), options.at('J'), options.at('K'), options.at('L'));
+        set= true;
+    }
+
+    return set;
 }

@@ -155,6 +155,19 @@ std::map<char,float> Gcode::get_args() const
     return m;
 }
 
+std::map<char,int> Gcode::get_args_int() const
+{
+    std::map<char,int> m;
+    for(size_t i = stripped?0:1; i < strlen(command); i++) {
+        char c= this->command[i];
+        if( c >= 'A' && c <= 'Z' ) {
+            if(c == 'T') continue;
+            m[c]= get_int(c);
+        }
+    }
+    return m;
+}
+
 // Cache some of this command's properties, so we don't have to parse the string every time we want to look at them
 void Gcode::prepare_cached_values(bool strip)
 {

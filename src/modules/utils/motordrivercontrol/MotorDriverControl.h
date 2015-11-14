@@ -12,6 +12,7 @@ namespace mbed {
 class DRV8711DRV;
 class TMC26X;
 class StreamOutput;
+class Gcode;
 
 class MotorDriverControl : public Module {
     public:
@@ -32,6 +33,7 @@ class MotorDriverControl : public Module {
         void set_decay_mode( uint8_t dm );
         void dump_status(StreamOutput*);
         void set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
+        void set_options(Gcode *gcode);
 
         void enable(bool on);
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);

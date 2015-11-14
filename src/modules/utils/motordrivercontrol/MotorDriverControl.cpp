@@ -134,7 +134,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     current= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_checksum )->by_default(1000)->as_number(); // in mA
     microsteps= THEKERNEL->config->value(motor_driver_control_checksum, cs, microsteps_checksum )->by_default(16)->as_number(); // 1/n
-    decay_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, decay_mode_checksum )->by_default(1)->as_number();
+    //decay_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, decay_mode_checksum )->by_default(1)->as_number();
 
     // setup the chip via SPI
     initialize_chip();
@@ -218,28 +218,40 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 }
             }
 
-        } else if(gcode->m == 910) { // set decay mode
-            if (gcode->has_letter(designator)) {
-                decay_mode= gcode->get_value(designator);
-                set_decay_mode(decay_mode);
-            }
+        // } else if(gcode->m == 910) { // set decay mode
+        //     if (gcode->has_letter(designator)) {
+        //         decay_mode= gcode->get_value(designator);
+        //         set_decay_mode(decay_mode);
+        //     }
 
         } else if(gcode->m == 911) {
-            // set or get raw registers M911 Pnnn Rxxx Vyyy sets Register xxx to value yyy for motor nnn, xxx == 0 writes the registers, xxx == 255 shows what registers are
-            if(gcode->subcode == 1 || gcode->get_num_args() == 0) {
-                // M911.1 dump status for all drivers
+            // set or get raw registers
+            // M911 will dump all the registers of all the motors
+            // M911.1 Pn (or A0) will dump the registers of the selected motor
+            // M911.2 Pn (or B0) Rxxx Vyyy sets Register xxx to value yyy for motor nnn, xxx == 255 writes the registers, xxx == 0 shows what registers are mapped to what
+            // M911.3 Pn (or C0) will set the options based on the parameters passed
+            if(gcode->subcode == 0 && gcode->get_num_args() == 0) {
+                // M911 no args dump status for all drivers, M911.1 P0|A0 dump for specific driver
                 gcode->stream->printf("Motor %d (%c)...\n", id, designator);
                 dump_status(gcode->stream);
 
-            }else if(gcode->get_value('P') == id) {
-                set_raw_register(gcode->stream, gcode->get_value('R'), gcode->get_value('V'));
+            }else if(gcode->get_value('P') == id || gcode->has_letter(designator)) {
+                if(gcode->subcode == 1) {
+                    dump_status(gcode->stream);
+
+                }else if(gcode->subcode == 2 && gcode->has_letter('R') && gcode->has_letter('V')) {
+                    set_raw_register(gcode->stream, gcode->get_value('R'), gcode->get_value('V'));
+
+                }else if(gcode->subcode == 3 ) {
+                    set_options(gcode);
+                }
             }
 
         } else if(gcode->m == 500 || gcode->m == 503) {
             gcode->stream->printf(";Motor %c id %d  current mA, microsteps, decay mode:\n", designator, id);
             gcode->stream->printf("M906 %c%lu\n", designator, current);
             gcode->stream->printf("M909 %c%lu\n", designator, microsteps);
-            gcode->stream->printf("M910 %c%d\n", designator, decay_mode);
+            //gcode->stream->printf("M910 %c%d\n", designator, decay_mode);
          }
     }
 }
@@ -324,6 +336,7 @@ void MotorDriverControl::dump_status(StreamOutput *stream)
             break;
     }
 }
+
 void MotorDriverControl::set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val)
 {
     bool ok= false;
@@ -332,9 +345,37 @@ void MotorDriverControl::set_raw_register(StreamOutput *stream, uint32_t reg, ui
         case TMC2660: ok= tmc26x->setRawRegister(stream, reg, val); break;
     }
     if(ok) {
-        stream->printf("register operation ok\n");
+        stream->printf("register operation succeeded\n");
     }else{
         stream->printf("register operation failed\n");
+    }
+}
+
+void MotorDriverControl::set_options(Gcode *gcode)
+{
+    switch(chip) {
+        case DRV8711: break;
+
+        case TMC2660: {
+            TMC26X::options_t options= gcode->get_args_int();
+            if(options.size() > 0) {
+                if(tmc26x->set_options(options)) {
+                    gcode->stream->printf("options set\n");
+                }else{
+                    gcode->stream->printf("failed to set any options\n");
+                }
+            }
+            // options.clear();
+            // if(tmc26x->get_optional(options)) {
+            //     // foreach optional value
+            //     for(auto &i : options) {
+            //         // print all current values of supported options
+            //         gcode->stream->printf("%c: %d ", i.first, i.second);
+            //         gcode->add_nl = true;
+            //     }
+            // }
+        }
+        break;
     }
 }
 

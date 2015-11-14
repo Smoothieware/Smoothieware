@@ -31,6 +31,7 @@
 #pragma once
 
 #include <functional>
+#include <map>
 
 //! return value for TMC26X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -447,8 +448,11 @@ public:
      * The result is printed via Serial
      */
     void dumpStatus(StreamOutput *stream);
-
     bool setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val);
+
+    using options_t= std::map<char,int>;
+
+    bool set_options(const options_t& options);
 
 private:
     unsigned int resistor{50}; // current sense resitor value in milliohm
