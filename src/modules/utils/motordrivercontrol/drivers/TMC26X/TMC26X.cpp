@@ -92,12 +92,12 @@
 #define REGISTER_BIT_PATTERN               0xFFFFFul
 
 //definitions for the driver control register DRVCTL
-#define MICROSTEPPING_PATTERN 0x000Ful
-#define STEP_INTERPOLATION    0x0200ul
-#define DOUBLE_EDGE_STEP      0x0100ul
+#define MICROSTEPPING_PATTERN          0x000Ful
+#define STEP_INTERPOLATION             0x0200ul
+#define DOUBLE_EDGE_STEP               0x0100ul
 
 //definitions for the driver config register DRVCONF
-#define READ_MICROSTEP_POSTION         0x0000ul
+#define READ_MICROSTEP_POSITION        0x0000ul
 #define READ_STALL_GUARD_READING       0x0010ul
 #define READ_STALL_GUARD_AND_COOL_STEP 0x0020ul
 #define READ_SELECTION_PATTERN         0x0030ul
@@ -961,24 +961,31 @@ bool TMC26X::set_options(const options_t& options)
         set= true;
     }
 
-    if(HAS_A('R') && HAS_A('U') && HAS_A('V') && HAS_A('W') && HAS_A('X') && HAS_A('Y')) {
-        //void TMC26X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_time, int8_t fast_decay_time_setting, int8_t sine_wave_offset, uint8_t use_current_comparator)
-        setConstantOffTimeChopper(options.at('U'), options.at('V'), options.at('W'), options.at('X'), options.at('Y'));
-        set= true;
+    if(HAS_A('S')) {
+        if(options.at('S')==0 && HAS_A('U') && HAS_A('V') && HAS_A('W') && HAS_A('X') && HAS_A('Y')) {
+            //void TMC26X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_time, int8_t fast_decay_time_setting, int8_t sine_wave_offset, uint8_t use_current_comparator)
+            setConstantOffTimeChopper(options.at('U'), options.at('V'), options.at('W'), options.at('X'), options.at('Y'));
+            set= true;
 
-    }else if(HAS_A('S') && HAS_A('U') && HAS_A('V') && HAS_A('W') && HAS_A('X') && HAS_A('Y')) {
-        //void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end, int8_t hysteresis_decrement);
-        setSpreadCycleChopper(options.at('U'), options.at('V'), options.at('W'), options.at('X'), options.at('Y'));
-        set= true;
-    }
+        }else if(options.at('S')==1 && HAS_A('U') && HAS_A('V') && HAS_A('W') && HAS_A('X') && HAS_A('Y')) {
+            //void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end, int8_t hysteresis_decrement);
+            setSpreadCycleChopper(options.at('U'), options.at('V'), options.at('W'), options.at('X'), options.at('Y'));
+            set= true;
 
-    if(HAS_A('Z')) {
-        // void TMC26X::setRandomOffTime(int8_t value)
-        setRandomOffTime(options.at('Z'));
-        set= true;
-    }
+        }else if(options.at('S')==2 && HAS_A('Z')) {
+            setRandomOffTime(options.at('Z'));
+            set= true;
 
-    if(HAS_A('H') && HAS_A('I') && HAS_A('J') && HAS_A('K') && HAS_A('L')) {
+        }else if(options.at('S')==3 && HAS_A('Z')) {
+            setDoubleEdge(options.at('Z'));
+            set= true;
+
+        }else if(options.at('S')==4 && HAS_A('Z')) {
+            setStepInterpolation(options.at('Z'));
+            set= true;
+        }
+
+    }else if(HAS_A('H') && HAS_A('I') && HAS_A('J') && HAS_A('K') && HAS_A('L')) {
         //void TMC26X::setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size, uint8_t current_increment_step_size, uint8_t lower_current_limit)
         setCoolStepConfiguration(options.at('H'), options.at('I'), options.at('J'), options.at('K'), options.at('L'));
         set= true;

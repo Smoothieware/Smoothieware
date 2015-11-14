@@ -181,8 +181,8 @@ public:
      * \param stall_guard_filter_enabled 0 if the filter is disabled, -1 if it is enabled
      *
      * The StallGuard threshold is used to optimize the StallGuard reading to sensible values. It should be at 0 at
-     * the maximum allowable load on the otor (but not before). = is a good starting point (and the default)
-     * If you get Stall Gaurd readings of 0 without any load or with too little laod increase the value.
+     * the maximum allowable load on the motor (but not before). = is a good starting point (and the default)
+     * If you get Stall Gaurd readings of 0 without any load or with too little load increase the value.
      * If you get readings of 1023 even with load decrease the setting.
      *
      * If you switch on the filter the StallGuard reading is only updated each 4th full step to reduce the noise in the
