@@ -951,44 +951,46 @@ void TMC26X::send262(unsigned long datagram)
     //THEKERNEL->streams->printf("sent: %02X, %02X, %02X received: %02X, %02X, %02X \n", buf[0], buf[1], buf[2], rbuf[0], rbuf[1], rbuf[2]);
 }
 
-#define HAS_A(X) (options.find(X) != options.end())
+#define HAS(X) (options.find(X) != options.end())
+#define GET(X) (options.at(X))
 bool TMC26X::set_options(const options_t& options)
 {
     bool set= false;
-    if(HAS_A('O') && HAS_A('Q')) {
+    if(HAS('O') && HAS('Q')) {
         // void TMC26X::setStallGuardThreshold(int8_t stall_guard_threshold, int8_t stall_guard_filter_enabled)
-        setStallGuardThreshold(options.at('O'), options.at('Q'));
+        setStallGuardThreshold(GET('O'), GET('Q'));
         set= true;
     }
 
-    if(HAS_A('S')) {
-        if(options.at('S')==0 && HAS_A('U') && HAS_A('V') && HAS_A('W') && HAS_A('X') && HAS_A('Y')) {
+    if(HAS('H') && HAS('I') && HAS('J') && HAS('K') && HAS('L')) {
+        //void TMC26X::setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size, uint8_t current_increment_step_size, uint8_t lower_current_limit)
+        setCoolStepConfiguration(GET('H'), GET('I'), GET('J'), GET('K'), GET('L'));
+        set= true;
+    }
+
+    if(HAS('S')) {
+        if(GET('S')==0 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
             //void TMC26X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_time, int8_t fast_decay_time_setting, int8_t sine_wave_offset, uint8_t use_current_comparator)
-            setConstantOffTimeChopper(options.at('U'), options.at('V'), options.at('W'), options.at('X'), options.at('Y'));
+            setConstantOffTimeChopper(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'));
             set= true;
 
-        }else if(options.at('S')==1 && HAS_A('U') && HAS_A('V') && HAS_A('W') && HAS_A('X') && HAS_A('Y')) {
+        }else if(GET('S')==1 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
             //void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end, int8_t hysteresis_decrement);
-            setSpreadCycleChopper(options.at('U'), options.at('V'), options.at('W'), options.at('X'), options.at('Y'));
+            setSpreadCycleChopper(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'));
             set= true;
 
-        }else if(options.at('S')==2 && HAS_A('Z')) {
-            setRandomOffTime(options.at('Z'));
+        }else if(GET('S')==2 && HAS('Z')) {
+            setRandomOffTime(GET('Z'));
             set= true;
 
-        }else if(options.at('S')==3 && HAS_A('Z')) {
-            setDoubleEdge(options.at('Z'));
+        }else if(GET('S')==3 && HAS('Z')) {
+            setDoubleEdge(GET('Z'));
             set= true;
 
-        }else if(options.at('S')==4 && HAS_A('Z')) {
-            setStepInterpolation(options.at('Z'));
+        }else if(GET('S')==4 && HAS('Z')) {
+            setStepInterpolation(GET('Z'));
             set= true;
         }
-
-    }else if(HAS_A('H') && HAS_A('I') && HAS_A('J') && HAS_A('K') && HAS_A('L')) {
-        //void TMC26X::setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size, uint8_t current_increment_step_size, uint8_t lower_current_limit)
-        setCoolStepConfiguration(options.at('H'), options.at('I'), options.at('J'), options.at('K'), options.at('L'));
-        set= true;
     }
 
     return set;
