@@ -14,6 +14,8 @@ public:
     void on_config_reload(void *);
 
 private:
+    bool is_suspended(void);
+
     uint32_t led_tick(uint32_t);
     Pin  led;
     struct {
