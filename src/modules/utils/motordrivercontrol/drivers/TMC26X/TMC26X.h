@@ -33,50 +33,6 @@
 #include <functional>
 #include <map>
 
-//! return value for TMC26X.getOverTemperature() if there is a overtemperature situation in the TMC chip
-/*!
- * This warning indicates that the TCM chip is too warm.
- * It is still working but some parameters may be inferior.
- * You should do something against it.
- */
-#define TMC26X_OVERTEMPERATURE_PREWARING 1
-//! return value for TMC26X.getOverTemperature() if there is a overtemperature shutdown in the TMC chip
-/*!
- * This warning indicates that the TCM chip is too warm to operate and has shut down to prevent damage.
- * It will stop working until it cools down again.
- * If you encouter this situation you must do something against it. Like reducing the current or improving the PCB layout
- * and/or heat management.
- */
-#define TMC26X_OVERTEMPERATURE_SHUTDOWN 2
-
-//which values can be read out
-/*!
- * Selects to readout the microstep position from the motor.
- *\sa readStatus()
- */
-#define TMC26X_READOUT_POSITION 0
-/*!
- * Selects to read out the StallGuard value of the motor.
- *\sa readStatus()
- */
-#define TMC26X_READOUT_STALLGUARD 1
-/*!
- * Selects to read out the current current setting (acc. to CoolStep) and the upper bits of the StallGuard value from the motor.
- *\sa readStatus(), setCurrent()
- */
-#define TMC26X_READOUT_CURRENT 3
-
-/*!
- * Define to set the minimum current for CoolStep operation to 1/2 of the selected CS minium.
- *\sa setCoolStepConfiguration()
- */
-#define COOL_STEP_HALF_CS_LIMIT 0
-/*!
- * Define to set the minimum current for CoolStep operation to 1/4 of the selected CS minium.
- *\sa setCoolStepConfiguration()
- */
-#define COOL_STEP_QUARTDER_CS_LIMIT 1
-
 class StreamOutput;
 
 /*!
@@ -133,6 +89,9 @@ public:
      * \sa setMicrosteps()
      */
     int getMicrosteps(void);
+
+    void setStepInterpolation(int8_t value);
+    void setDoubleEdge(int8_t value);
 
     /*!
      * \brief Sets and configure the classical Constant Off Timer Chopper
@@ -339,7 +298,7 @@ public:
      * may not be the fastest.
      * \sa getCurrentCSReading(), getResistor(), isCurrentScalingHalfed(), getCurrent()
      */
-    unsigned int getCurrentCurrent(void);
+    unsigned int getCoolstepCurrent(void);
 
     /*!
      * \brief checks if there is a StallGuard warning in the last status

@@ -33,70 +33,115 @@
 #include "Kernel.h"
 #include "libs/StreamOutputPool.h"
 
+
+//! return value for TMC26X.getOverTemperature() if there is a overtemperature situation in the TMC chip
+/*!
+ * This warning indicates that the TCM chip is too warm.
+ * It is still working but some parameters may be inferior.
+ * You should do something against it.
+ */
+#define TMC26X_OVERTEMPERATURE_PREWARING 1
+//! return value for TMC26X.getOverTemperature() if there is a overtemperature shutdown in the TMC chip
+/*!
+ * This warning indicates that the TCM chip is too warm to operate and has shut down to prevent damage.
+ * It will stop working until it cools down again.
+ * If you encouter this situation you must do something against it. Like reducing the current or improving the PCB layout
+ * and/or heat management.
+ */
+#define TMC26X_OVERTEMPERATURE_SHUTDOWN 2
+
+//which values can be read out
+/*!
+ * Selects to readout the microstep position from the motor.
+ *\sa readStatus()
+ */
+#define TMC26X_READOUT_POSITION 0
+/*!
+ * Selects to read out the StallGuard value of the motor.
+ *\sa readStatus()
+ */
+#define TMC26X_READOUT_STALLGUARD 1
+/*!
+ * Selects to read out the current current setting (acc. to CoolStep) and the upper bits of the StallGuard value from the motor.
+ *\sa readStatus(), setCurrent()
+ */
+#define TMC26X_READOUT_CURRENT 3
+
+/*!
+ * Define to set the minimum current for CoolStep operation to 1/2 of the selected CS minium.
+ *\sa setCoolStepConfiguration()
+ */
+#define COOL_STEP_HALF_CS_LIMIT 0
+/*!
+ * Define to set the minimum current for CoolStep operation to 1/4 of the selected CS minium.
+ *\sa setCoolStepConfiguration()
+ */
+#define COOL_STEP_QUARTDER_CS_LIMIT 1
+
+
 //some default values used in initialization
 #define DEFAULT_MICROSTEPPING_VALUE 32
 
 //TMC26X register definitions
-#define DRIVER_CONTROL_REGISTER 0x0ul
-#define CHOPPER_CONFIG_REGISTER 0x80000ul
-#define COOL_STEP_REGISTER  0xA0000ul
+#define DRIVER_CONTROL_REGISTER            0x00000ul
+#define CHOPPER_CONFIG_REGISTER            0x80000ul
+#define COOL_STEP_REGISTER                 0xA0000ul
 #define STALL_GUARD2_LOAD_MEASURE_REGISTER 0xC0000ul
-#define DRIVER_CONFIG_REGISTER 0xE0000ul
+#define DRIVER_CONFIG_REGISTER             0xE0000ul
 
-#define REGISTER_BIT_PATTERN 0xFFFFFul
+#define REGISTER_BIT_PATTERN               0xFFFFFul
 
-//definitions for the driver control register
-#define MICROSTEPPING_PATTERN 0xFul
-#define STEP_INTERPOLATION 0x200ul
-#define DOUBLE_EDGE_STEP 0x100ul
-#define VSENSE 0x40ul
-#define READ_MICROSTEP_POSTION 0x0ul
-#define READ_STALL_GUARD_READING 0x10ul
-#define READ_STALL_GUARD_AND_COOL_STEP 0x20ul
-#define READ_SELECTION_PATTERN 0x30ul
+//definitions for the driver control register DRVCTL
+#define MICROSTEPPING_PATTERN 0x000Ful
+#define STEP_INTERPOLATION    0x0200ul
+#define DOUBLE_EDGE_STEP      0x0100ul
+
+//definitions for the driver config register DRVCONF
+#define READ_MICROSTEP_POSTION         0x0000ul
+#define READ_STALL_GUARD_READING       0x0010ul
+#define READ_STALL_GUARD_AND_COOL_STEP 0x0020ul
+#define READ_SELECTION_PATTERN         0x0030ul
+#define VSENSE                         0x0040ul
 
 //definitions for the chopper config register
-#define CHOPPER_MODE_STANDARD 0x0ul
-#define CHOPPER_MODE_T_OFF_FAST_DECAY 0x4000ul
-#define T_OFF_PATTERN 0xful
-#define RANDOM_TOFF_TIME 0x2000ul
-#define BLANK_TIMING_PATTERN 0x18000ul
-#define BLANK_TIMING_SHIFT 15
-#define HYSTERESIS_DECREMENT_PATTERN 0x1800ul
-#define HYSTERESIS_DECREMENT_SHIFT 11
-#define HYSTERESIS_LOW_VALUE_PATTERN 0x780ul
-#define HYSTERESIS_LOW_SHIFT 7
-#define HYSTERESIS_START_VALUE_PATTERN 0x78ul
-#define HYSTERESIS_START_VALUE_SHIFT 4
-#define T_OFF_TIMING_PATERN 0xFul
+#define CHOPPER_MODE_STANDARD          0x00000ul
+#define CHOPPER_MODE_T_OFF_FAST_DECAY  0x04000ul
+#define T_OFF_PATTERN                  0x0000ful
+#define RANDOM_TOFF_TIME               0x02000ul
+#define BLANK_TIMING_PATTERN           0x18000ul
+#define BLANK_TIMING_SHIFT             15
+#define HYSTERESIS_DECREMENT_PATTERN   0x01800ul
+#define HYSTERESIS_DECREMENT_SHIFT     11
+#define HYSTERESIS_LOW_VALUE_PATTERN   0x00780ul
+#define HYSTERESIS_LOW_SHIFT           7
+#define HYSTERESIS_START_VALUE_PATTERN 0x00078ul
+#define HYSTERESIS_START_VALUE_SHIFT   4
+#define T_OFF_TIMING_PATERN            0x0000Ful
 
 //definitions for cool step register
-#define MINIMUM_CURRENT_FOURTH 0x8000ul
+#define MINIMUM_CURRENT_FOURTH          0x8000ul
 #define CURRENT_DOWN_STEP_SPEED_PATTERN 0x6000ul
-#define SE_MAX_PATTERN 0xF00ul
-#define SE_CURRENT_STEP_WIDTH_PATTERN 0x60ul
-#define SE_MIN_PATTERN 0xful
+#define SE_MAX_PATTERN                  0x0F00ul
+#define SE_CURRENT_STEP_WIDTH_PATTERN   0x0060ul
+#define SE_MIN_PATTERN                  0x000Ful
 
 //definitions for stall guard2 current register
-#define STALL_GUARD_FILTER_ENABLED 0x10000ul
+#define STALL_GUARD_FILTER_ENABLED          0x10000ul
 #define STALL_GUARD_TRESHHOLD_VALUE_PATTERN 0x17F00ul
-#define CURRENT_SCALING_PATTERN 0x1Ful
-#define STALL_GUARD_CONFIG_PATTERN 0x17F00ul
-#define STALL_GUARD_VALUE_PATTERN 0x7F00ul
+#define CURRENT_SCALING_PATTERN             0x0001Ful
+#define STALL_GUARD_CONFIG_PATTERN          0x17F00ul
+#define STALL_GUARD_VALUE_PATTERN           0x07F00ul
 
 //definitions for the input from the TCM260
-#define STATUS_STALL_GUARD_STATUS 0x1ul
-#define STATUS_OVER_TEMPERATURE_SHUTDOWN 0x2ul
-#define STATUS_OVER_TEMPERATURE_WARNING 0x4ul
-#define STATUS_SHORT_TO_GROUND_A 0x8ul
-#define STATUS_SHORT_TO_GROUND_B 0x10ul
-#define STATUS_OPEN_LOAD_A 0x20ul
-#define STATUS_OPEN_LOAD_B 0x40ul
-#define STATUS_STAND_STILL 0x80ul
-#define READOUT_VALUE_PATTERN 0xFFC00ul
-
-//default values
-#define INITIAL_MICROSTEPPING 0x3ul //32th microstepping
+#define STATUS_STALL_GUARD_STATUS        0x00001ul
+#define STATUS_OVER_TEMPERATURE_SHUTDOWN 0x00002ul
+#define STATUS_OVER_TEMPERATURE_WARNING  0x00004ul
+#define STATUS_SHORT_TO_GROUND_A         0x00008ul
+#define STATUS_SHORT_TO_GROUND_B         0x00010ul
+#define STATUS_OPEN_LOAD_A               0x00020ul
+#define STATUS_OPEN_LOAD_B               0x00040ul
+#define STATUS_STAND_STILL               0x00080ul
+#define READOUT_VALUE_PATTERN            0xFFC00ul
 
 //debuging output
 //#define DEBUG
@@ -125,8 +170,7 @@ void TMC26X::setResistor(unsigned int resistor)
 void TMC26X::init()
 {
     //setting the default register values
-    driver_control_register_value = DRIVER_CONTROL_REGISTER | INITIAL_MICROSTEPPING;
-    microsteps = (1 << INITIAL_MICROSTEPPING);
+    driver_control_register_value = DRIVER_CONTROL_REGISTER;
     chopper_config_register = CHOPPER_CONFIG_REGISTER;
     cool_step_register_value = COOL_STEP_REGISTER;
     stall_guard2_current_register_value = STALL_GUARD2_LOAD_MEASURE_REGISTER;
@@ -139,7 +183,6 @@ void TMC26X::init()
     send262(stall_guard2_current_register_value);
     send262(driver_configuration_register_value);
 
-    //save that we are in running mode
     started = true;
 
     //set to a conservative start value
@@ -300,6 +343,32 @@ void TMC26X::setMicrosteps(int number_of_steps)
 int TMC26X::getMicrosteps(void)
 {
     return microsteps;
+}
+
+void TMC26X::setStepInterpolation(int8_t value)
+{
+    if (value) {
+        driver_control_register_value |= STEP_INTERPOLATION;
+    } else {
+        driver_control_register_value &= ~(STEP_INTERPOLATION);
+    }
+    //if started we directly send it to the motor
+    if (started) {
+        send262(driver_control_register_value);
+    }
+}
+
+void TMC26X::setDoubleEdge(int8_t value)
+{
+    if (value) {
+        driver_control_register_value |= DOUBLE_EDGE_STEP;
+    } else {
+        driver_control_register_value &= ~(DOUBLE_EDGE_STEP);
+    }
+    //if started we directly send it to the motor
+    if (started) {
+        send262(driver_control_register_value);
+    }
 }
 
 /*
@@ -654,7 +723,7 @@ uint8_t TMC26X::getCurrentCSReading(void)
     return (getReadoutValue() & 0x1f);
 }
 
-unsigned int TMC26X::getCurrentCurrent(void)
+unsigned int TMC26X::getCoolstepCurrent(void)
 {
     float result = (float)getCurrentCSReading();
     float resistor_value = (float)this->resistor;
@@ -780,21 +849,27 @@ void TMC26X::dumpStatus(StreamOutput *stream)
         } else if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_SHUTDOWN) {
             stream->printf("ERROR: Overtemperature Shutdown!\n");
         }
+
         if (this->isShortToGroundA()) {
             stream->printf("ERROR: SHORT to ground on channel A!\n");
         }
+
         if (this->isShortToGroundB()) {
             stream->printf("ERROR: SHORT to ground on channel A!\n");
         }
+
         if (this->isOpenLoadA()) {
             stream->printf("ERROR: Channel A seems to be unconnected!\n");
         }
+
         if (this->isOpenLoadB()) {
             stream->printf("ERROR: Channel B seems to be unconnected!\n");
         }
+
         if (this->isStallGuardReached()) {
             stream->printf("INFO: Stall Guard level reached!\n");
         }
+
         if (this->isStandStill()) {
             stream->printf("INFO: Motor is standing still.\n");
         }
@@ -802,16 +877,11 @@ void TMC26X::dumpStatus(StreamOutput *stream)
         int value = getReadoutValue();
         stream->printf("Microstep postion phase A: %d\n", value);
 
-        readStatus(TMC26X_READOUT_STALLGUARD); // get the status bits
-        value = getReadoutValue();
+        value = getCurrentStallGuardReading();
         stream->printf("Stall Guard value: %d\n", value);
 
-        stream->printf("Current current: %dmA, current setting: %dmA\n", getCurrentCurrent(), getCurrent());
-        value = getReadoutValue();
-        int stallGuard = value & 0xf;
-        int current = value & 0x1F0;
-        stream->printf("Approx Stall Guard: %d\n", stallGuard);
-        stream->printf("Current level %d\n", current);
+        stream->printf("Current setting: %dmA\n", getCurrent());
+        stream->printf("Coolstep current: %dmA\n", getCoolstepCurrent());
 
         stream->printf("Microsteps: 1/%d\n", microsteps);
 
@@ -821,6 +891,7 @@ void TMC26X::dumpStatus(StreamOutput *stream)
         stream->printf(" cool step register: %08lX(%ld)\n", cool_step_register_value, cool_step_register_value);
         stream->printf(" stall guard2 current register: %08lX(%ld)\n", stall_guard2_current_register_value, stall_guard2_current_register_value);
         stream->printf(" driver configuration register: %08lX(%ld)\n", driver_configuration_register_value, driver_configuration_register_value);
+        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX\n", driver_configuration_register_value, chopper_config_register, cool_step_register_value, stall_guard2_current_register_value, driver_configuration_register_value);
     }
 }
 

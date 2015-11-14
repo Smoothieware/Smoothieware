@@ -229,7 +229,14 @@ void MotorDriverControl::on_gcode_received(void *argument)
             // M911 will dump all the registers of all the motors
             // M911.1 Pn (or A0) will dump the registers of the selected motor
             // M911.2 Pn (or B0) Rxxx Vyyy sets Register xxx to value yyy for motor nnn, xxx == 255 writes the registers, xxx == 0 shows what registers are mapped to what
-            // M911.3 Pn (or C0) will set the options based on the parameters passed
+            // M911.3 Pn (or C0) will set the options based on the parameters passed as below...
+            // TMC2660:-
+            // M911.3 Onnn Qnnn setStallGuardThreshold O=stall_guard_threshold, Q=stall_guard_filter_enabled
+            // M911.3 R0 Unnn Vnnn Wnnn Xnnn Ynnn setConstantOffTimeChopper  U=constant_off_time, V=blank_time, W=fast_decay_time_setting, X=sine_wave_offset, Y=use_current_comparator
+            // M911.3 S0 Unnn Vnnn Wnnn Xnnn Ynnn setSpreadCycleChopper  U=constant_off_time, V=blank_time, W=hysteresis_start, X=hysteresis_end, Y=hysteresis_decrement
+            // M911.3 Hnnn Innn Jnnn Knnn Lnnn setCoolStepConfiguration H=lower_SG_threshold, I=SG_hysteresis, J=current_decrement_step_size, K=current_increment_step_size, L=lower_current_limit
+            // M911.3 Zn setRandomOffTime Z=on|off Z1 is on Z0 is off
+
             if(gcode->subcode == 0 && gcode->get_num_args() == 0) {
                 // M911 no args dump status for all drivers, M911.1 P0|A0 dump for specific driver
                 gcode->stream->printf("Motor %d (%c)...\n", id, designator);
