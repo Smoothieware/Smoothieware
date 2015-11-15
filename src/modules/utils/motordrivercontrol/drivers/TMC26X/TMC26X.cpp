@@ -185,8 +185,15 @@ void TMC26X::init()
 
     started = true;
 
+#if 0
     //set to a conservative start value
     setConstantOffTimeChopper(7, 54, 13, 12, 1);
+#else
+    // for 1.5amp kysan @ 12v
+    setSpreadCycleChopper(5, 2, 5, 0, 0);
+    // for 4amp Nema24 @ 12v
+    //setSpreadCycleChopper(5, 2, 4, 0, 0);
+#endif
 
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
@@ -528,7 +535,7 @@ void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, 
     //set the hysteresis end
     chopper_config_register |= ((unsigned long)hysteresis_end) << HYSTERESIS_LOW_SHIFT;
     //set the hystereis decrement
-    chopper_config_register |= ((unsigned long)blank_value) << BLANK_TIMING_SHIFT;
+    chopper_config_register |= ((unsigned long)hysteresis_decrement) << HYSTERESIS_DECREMENT_SHIFT;
     //if started we directly send it to the motor
     if (started) {
         send262(chopper_config_register);
@@ -891,7 +898,7 @@ void TMC26X::dumpStatus(StreamOutput *stream)
         stream->printf(" cool step register: %08lX(%ld)\n", cool_step_register_value, cool_step_register_value);
         stream->printf(" stall guard2 current register: %08lX(%ld)\n", stall_guard2_current_register_value, stall_guard2_current_register_value);
         stream->printf(" driver configuration register: %08lX(%ld)\n", driver_configuration_register_value, driver_configuration_register_value);
-        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX\n", driver_configuration_register_value, chopper_config_register, cool_step_register_value, stall_guard2_current_register_value, driver_configuration_register_value);
+        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX\n", driver_control_register_value, chopper_config_register, cool_step_register_value, stall_guard2_current_register_value, driver_configuration_register_value);
     }
 }
 
@@ -969,25 +976,26 @@ bool TMC26X::set_options(const options_t& options)
     }
 
     if(HAS('S')) {
-        if(GET('S')==0 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
+        uint32_t s= GET('S');
+        if(s==0 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
             //void TMC26X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_time, int8_t fast_decay_time_setting, int8_t sine_wave_offset, uint8_t use_current_comparator)
             setConstantOffTimeChopper(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'));
             set= true;
 
-        }else if(GET('S')==1 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
+        }else if(s==1 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
             //void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end, int8_t hysteresis_decrement);
             setSpreadCycleChopper(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'));
             set= true;
 
-        }else if(GET('S')==2 && HAS('Z')) {
+        }else if(s==2 && HAS('Z')) {
             setRandomOffTime(GET('Z'));
             set= true;
 
-        }else if(GET('S')==3 && HAS('Z')) {
+        }else if(s==3 && HAS('Z')) {
             setDoubleEdge(GET('Z'));
             set= true;
 
-        }else if(GET('S')==4 && HAS('Z')) {
+        }else if(s==4 && HAS('Z')) {
             setStepInterpolation(GET('Z'));
             set= true;
         }

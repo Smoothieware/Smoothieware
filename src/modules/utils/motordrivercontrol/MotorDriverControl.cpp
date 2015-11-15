@@ -41,6 +41,8 @@
 MotorDriverControl::MotorDriverControl(uint8_t id) : id(id)
 {
     enable_event= false;
+    current_override= false;
+    microstep_override= false;
 }
 
 MotorDriverControl::~MotorDriverControl()
@@ -199,6 +201,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 current= gcode->get_value(designator);
                 current= std::min(current, max_current);
                 set_current(current);
+                current_override= true;
             }
 
         } else if(gcode->m == 909) { // M909 Annn set microstepping, M909.1 also change steps/mm
@@ -216,6 +219,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
                         THEKERNEL->robot->check_max_actuator_speeds();
                     }
                 }
+                microstep_override= true;
             }
 
         // } else if(gcode->m == 910) { // set decay mode
@@ -257,11 +261,16 @@ void MotorDriverControl::on_gcode_received(void *argument)
             }
 
         } else if(gcode->m == 500 || gcode->m == 503) {
-            gcode->stream->printf(";Motor %c id %d  current mA, microsteps, decay mode:\n", designator, id);
-            gcode->stream->printf("M906 %c%lu\n", designator, current);
-            gcode->stream->printf("M909 %c%lu\n", designator, microsteps);
+            if(current_override) {
+                gcode->stream->printf(";Motor %c id %d  current mA:\n", designator, id);
+                gcode->stream->printf("M906 %c%lu\n", designator, current);
+            }
+            if(microstep_override) {
+                gcode->stream->printf(";Motor %c id %d  microsteps:\n", designator, id);
+                gcode->stream->printf("M909 %c%lu\n", designator, microsteps);
+            }
             //gcode->stream->printf("M910 %c%d\n", designator, decay_mode);
-         }
+        }
     }
 }
 

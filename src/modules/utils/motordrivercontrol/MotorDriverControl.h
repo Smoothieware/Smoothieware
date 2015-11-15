@@ -66,6 +66,8 @@ class MotorDriverControl : public Module {
             bool rawreg:1;
             bool enable_event:1;
             bool enable_flg:1;
+            bool current_override:1;
+            bool microstep_override:1;
         };
 
 };
