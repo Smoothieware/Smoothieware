@@ -14,7 +14,6 @@ using namespace std;
 #include "StepTicker.h"
 #include "libs/Hook.h"
 #include "modules/robot/Conveyor.h"
-#include "Pauser.h"
 #include "Gcode.h"
 
 #include <mri.h>

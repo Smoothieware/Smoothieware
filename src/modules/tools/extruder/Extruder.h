@@ -28,8 +28,6 @@ class Extruder : public Tool {
         void     on_gcode_execute(void* argument);
         void     on_block_begin(void* argument);
         void     on_block_end(void* argument);
-        void     on_play(void* argument);
-        void     on_pause(void* argument);
         void     on_halt(void* argument);
         void     on_speed_change(void* argument);
         void     acceleration_tick(void);
@@ -80,7 +78,6 @@ class Extruder : public Tool {
             char mode:3;        // extruder motion mode,  OFF, SOLO, or FOLLOW
             bool absolute_mode:1; // absolute/relative coordinate mode switch
             bool saved_absolute_mode:1;
-            bool paused:1;
             bool single_config:1;
             bool retracted:1;
             bool cancel_zlift_restore:1; // hack to stop a G11 zlift restore from overring an absolute Z setting

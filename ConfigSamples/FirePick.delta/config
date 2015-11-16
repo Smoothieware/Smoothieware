@@ -81,10 +81,11 @@ gamma_max_rate                               3000.0           # mm/min
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface
                                                               # and a terminal connected)
+
 #leds_disable                                true             # disable using leds after config loaded
 #msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
-
 #dfu_enable                                  false            # for linux developers, set to true to enable DFU
+#watchdog_timeout                            10               # watchdog timeout in seconds, default is 10, set to 0 to disable the watchdog
 
 # Extruder module configuration
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -264,8 +265,8 @@ zprobe.probe_height                          5               # how much above be
 #leveling-strategy.delta-calibration.enable   true            # basic delta calibration
 #leveling-strategy.delta-calibration.radius   100             # the probe radius
 
-# Pause button
-pause_button_enable                          true             #
+# Kill button
+kill_button_enable                          true             #
 
 # Panel
 panel.enable                                 false             # set to true to enable the panel code

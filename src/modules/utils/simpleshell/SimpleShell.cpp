@@ -336,6 +336,8 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
             stream->puts(buffer.c_str());
             buffer.clear();
             if(linecnt > 80) linecnt = 0;
+            // we need to kick things or they die
+            THEKERNEL->call_event(ON_IDLE);
         }
         if ( newlines == limit ) {
             break;
@@ -395,6 +397,8 @@ void SimpleShell::upload_command( string parameters, StreamOutput *stream )
                     // HACK ALERT to get around fwrite corruption close and re open for append
                     fclose(fd);
                     fd = fopen(upload_filename.c_str(), "a");
+                    // we need to kick things or they die
+                    THEKERNEL->call_event(ON_IDLE);
                 }
             }
         }

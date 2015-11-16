@@ -74,8 +74,6 @@ void Laser::on_module_loaded() {
     //register for events
     this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_SPEED_CHANGE);
-    this->register_for_event(ON_PLAY);
-    this->register_for_event(ON_PAUSE);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
 }
@@ -87,16 +85,6 @@ void  Laser::on_block_end(void* argument){
 
 // Set laser power at the beginning of a block
 void Laser::on_block_begin(void* argument){
-    this->set_proportional_power();
-}
-
-// When the play/pause button is set to pause, or a module calls the ON_PAUSE event
-void Laser::on_pause(void* argument){
-    this->laser_pin->write(this->laser_inverting ? 1 : 0);
-}
-
-// When the play/pause button is set to play, or a module calls the ON_PLAY event
-void Laser::on_play(void* argument){
     this->set_proportional_power();
 }
 
