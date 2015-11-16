@@ -242,6 +242,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
             // M911.3 S2 Zn setRandomOffTime Z=on|off Z1 is on Z0 is off
             // M911.3 S3 Zn setDoubleEdge Z=on|off Z1 is on Z0 is off
             // M911.3 S4 Zn setStepInterpolation Z=on|off Z1 is on Z0 is off
+            // M911.3 S5 Zn setCoolStepEnabled Z=on|off Z1 is on Z0 is off
 
             if(gcode->subcode == 0 && gcode->get_num_args() == 0) {
                 // M911 no args dump status for all drivers, M911.1 P0|A0 dump for specific driver

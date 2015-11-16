@@ -195,6 +195,7 @@ void TMC26X::init()
     //setSpreadCycleChopper(5, 2, 4, 0, 0);
 #endif
 
+    setEnabled(false);
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
 }
@@ -963,9 +964,11 @@ void TMC26X::send262(unsigned long datagram)
 bool TMC26X::set_options(const options_t& options)
 {
     bool set= false;
-    if(HAS('O') && HAS('Q')) {
+    if(HAS('O') || HAS('Q')) {
         // void TMC26X::setStallGuardThreshold(int8_t stall_guard_threshold, int8_t stall_guard_filter_enabled)
-        setStallGuardThreshold(GET('O'), GET('Q'));
+        int8_t o= HAS('O') ? GET('O') : getStallGuardThreshold();
+        int8_t q= HAS('Q') ? GET('Q') : getStallGuardFilter();
+        setStallGuardThreshold(o, q);
         set= true;
     }
 
@@ -997,6 +1000,10 @@ bool TMC26X::set_options(const options_t& options)
 
         }else if(s==4 && HAS('Z')) {
             setStepInterpolation(GET('Z'));
+            set= true;
+
+        }else if(s==5 && HAS('Z')) {
+            setCoolStepEnabled(GET('Z') == 1);
             set= true;
         }
     }
