@@ -231,7 +231,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
         } else if(gcode->m == 911) {
             // set or get raw registers
             // M911 will dump all the registers and status of all the motors
-            // M911.1 Pn (or A0) will dump the registers and status of the selected motor
+            // M911.1 Pn (or A0) will dump the registers and status of the selected motor. X0 will request format in processing machine readable format
             // M911.2 Pn (or B0) Rxxx Vyyy sets Register xxx to value yyy for motor nnn, xxx == 255 writes the registers, xxx == 0 shows what registers are mapped to what
             // M911.3 Pn (or C0) will set the options based on the parameters passed as below...
             // TMC2660:-
@@ -247,11 +247,11 @@ void MotorDriverControl::on_gcode_received(void *argument)
             if(gcode->subcode == 0 && gcode->get_num_args() == 0) {
                 // M911 no args dump status for all drivers, M911.1 P0|A0 dump for specific driver
                 gcode->stream->printf("Motor %d (%c)...\n", id, designator);
-                dump_status(gcode->stream);
+                dump_status(gcode->stream, true);
 
             }else if(gcode->get_value('P') == id || gcode->has_letter(designator)) {
                 if(gcode->subcode == 1) {
-                    dump_status(gcode->stream);
+                    dump_status(gcode->stream, !gcode->has_letter('X'));
 
                 }else if(gcode->subcode == 2 && gcode->has_letter('R') && gcode->has_letter('V')) {
                     set_raw_register(gcode->stream, gcode->get_value('R'), gcode->get_value('V'));
@@ -343,7 +343,7 @@ void MotorDriverControl::enable(bool on)
     }
 }
 
-void MotorDriverControl::dump_status(StreamOutput *stream)
+void MotorDriverControl::dump_status(StreamOutput *stream, bool b)
 {
     switch(chip) {
         case DRV8711:
@@ -351,7 +351,7 @@ void MotorDriverControl::dump_status(StreamOutput *stream)
             break;
 
         case TMC2660:
-            tmc26x->dumpStatus(stream);
+            tmc26x->dumpStatus(stream, b);
             break;
     }
 }

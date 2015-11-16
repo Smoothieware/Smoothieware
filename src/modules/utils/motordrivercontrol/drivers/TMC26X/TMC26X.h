@@ -406,7 +406,7 @@ public:
      * \brief Prints out all the information that can be found in the last status read out - it does not force a status readout.
      * The result is printed via Serial
      */
-    void dumpStatus(StreamOutput *stream);
+    void dumpStatus(StreamOutput *stream, bool readable= true);
     bool setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val);
 
     using options_t= std::map<char,int>;
@@ -414,6 +414,12 @@ public:
     bool set_options(const options_t& options);
 
 private:
+    //helper routione to get the top 10 bit of the readout
+    inline int getReadoutValue();
+    // SPI sender
+    inline void send262(unsigned long datagram);
+    std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
+
     unsigned int resistor{50}; // current sense resitor value in milliohm
 
     //driver control register copies to easily set & modify the registers
@@ -425,18 +431,20 @@ private:
     //the driver status result
     unsigned long driver_status_result;
 
-    //helper routione to get the top 10 bit of the readout
-    inline int getReadoutValue();
-
     //status values
-    bool started; //if the stepper has been started yet
     int microsteps; //the current number of micro steps
-    int8_t constant_off_time; //we need to remember this value in order to enable and disable the motor
-    uint8_t cool_step_lower_threshold; // we need to remember the threshold to enable and disable the CoolStep feature
-    bool cool_step_enabled; //we need to remember this to configure the coolstep if it si enabled
 
-    // SPI sender
-    std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
-    inline void send262(unsigned long datagram);
+    // only beeded for the tuning app report
+    struct {
+        int8_t blank_time:8;
+        int8_t constant_off_time:5; //we need to remember this value in order to enable and disable the motor
+        int8_t h_start:4;
+        int8_t h_end:4;
+        int8_t h_decrement:3;
+        bool cool_step_enabled:1; //we need to remember this to configure the coolstep if it si enabled
+        bool started:1; //if the stepper has been started yet
+    };
+
+    uint8_t cool_step_lower_threshold; // we need to remember the threshold to enable and disable the CoolStep feature
 };
 

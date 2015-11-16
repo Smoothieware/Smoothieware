@@ -31,7 +31,7 @@ class MotorDriverControl : public Module {
         void set_current( uint32_t current );
         uint32_t set_microstep( uint32_t ms );
         void set_decay_mode( uint8_t dm );
-        void dump_status(StreamOutput*);
+        void dump_status(StreamOutput*, bool);
         void set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
         void set_options(Gcode *gcode);
 

@@ -32,7 +32,8 @@
 #include "StreamOutput.h"
 #include "Kernel.h"
 #include "libs/StreamOutputPool.h"
-
+#include "Robot.h"
+#include "StepperMotor.h"
 
 //! return value for TMC26X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -190,7 +191,7 @@ void TMC26X::init()
     setConstantOffTimeChopper(7, 54, 13, 12, 1);
 #else
     // for 1.5amp kysan @ 12v
-    setSpreadCycleChopper(5, 2, 5, 0, 0);
+    setSpreadCycleChopper(5, 54, 5, 0, 0);
     // for 4amp Nema24 @ 12v
     //setSpreadCycleChopper(5, 2, 4, 0, 0);
 #endif
@@ -423,6 +424,8 @@ void TMC26X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_ti
     } else {
         blank_value = 0;
     }
+    this->blank_time = blank_time;
+
     if (fast_decay_time_setting < 0) {
         fast_decay_time_setting = 0;
     } else if (fast_decay_time_setting > 15) {
@@ -484,6 +487,11 @@ void TMC26X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_ti
 
 void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end, int8_t hysteresis_decrement)
 {
+    h_start = hysteresis_start;
+    h_end = hysteresis_end;
+    h_decrement = hysteresis_decrement;
+    this->blank_time = blank_time;
+
     //perform some sanity checks
     if (constant_off_time < 2) {
         constant_off_time = 2;
@@ -503,6 +511,7 @@ void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, 
     } else {
         blank_value = 0;
     }
+
     if (hysteresis_start < 1) {
         hysteresis_start = 1;
     } else if (hysteresis_start > 8) {
@@ -537,6 +546,7 @@ void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, 
     chopper_config_register |= ((unsigned long)hysteresis_end) << HYSTERESIS_LOW_SHIFT;
     //set the hystereis decrement
     chopper_config_register |= ((unsigned long)hysteresis_decrement) << HYSTERESIS_DECREMENT_SHIFT;
+
     //if started we directly send it to the motor
     if (started) {
         send262(chopper_config_register);
@@ -846,9 +856,9 @@ bool TMC26X::isCurrentScalingHalfed()
     }
 }
 
-void TMC26X::dumpStatus(StreamOutput *stream)
+void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
 {
-    if (this->started) {
+    if (readable) {
         readStatus(TMC26X_READOUT_POSITION); // get the status bits
 
         stream->printf("Chip type TMC26X\n");
@@ -900,6 +910,70 @@ void TMC26X::dumpStatus(StreamOutput *stream)
         stream->printf(" stall guard2 current register: %08lX(%ld)\n", stall_guard2_current_register_value, stall_guard2_current_register_value);
         stream->printf(" driver configuration register: %08lX(%ld)\n", driver_configuration_register_value, driver_configuration_register_value);
         stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX\n", driver_control_register_value, chopper_config_register, cool_step_register_value, stall_guard2_current_register_value, driver_configuration_register_value);
+
+    } else {
+        // TODO hardcoded for X need to select ABC as needed
+        bool moving = THEKERNEL->robot->actuators[0]->is_moving();
+        // dump out in the format that the processing script needs
+        if (moving) {
+            stream->printf("#sg%d,p%lu,k%u,r,", getCurrentStallGuardReading(), THEKERNEL->robot->actuators[0]->get_stepped(), getCoolstepCurrent());
+        } else {
+            readStatus(TMC26X_READOUT_POSITION); // get the status bits
+            stream->printf("#s,");
+        }
+        stream->printf("d%d,", THEKERNEL->robot->actuators[0]->which_direction() ? 1 : -1);
+        stream->printf("c%u,m%d,", getCurrent(), getMicrosteps());
+        // stream->printf('S');
+        // stream->printf(tmc26XStepper.getSpeed(), DEC);
+        stream->printf("t%d,f%d,", getStallGuardThreshold(), getStallGuardFilter());
+
+        //print out the general cool step config
+        if (isCoolStepEnabled()) stream->printf("Ke+,");
+        else stream->printf("Ke-,");
+
+        stream->printf("Kl%u,Ku%u,Kn%u,Ki%u,Km%u,",
+                       getCoolStepLowerSgThreshold(), getCoolStepUpperSgThreshold(), getCoolStepNumberOfSGReadings(), getCoolStepCurrentIncrementSize(), getCoolStepLowerCurrentLimit());
+
+        //detect the winding status
+        if (isOpenLoadA()) {
+            stream->printf("ao,");
+        } else if(isShortToGroundA()) {
+            stream->printf("ag,");
+        } else {
+            stream->printf("a-,");
+        }
+        //detect the winding status
+        if (isOpenLoadB()) {
+            stream->printf("bo,");
+        } else if(isShortToGroundB()) {
+            stream->printf("bg,");
+        } else {
+            stream->printf("b-,");
+        }
+
+        char temperature = getOverTemperature();
+        if (temperature == 0) {
+            stream->printf("x-,");
+        } else if (temperature == TMC26X_OVERTEMPERATURE_PREWARING) {
+            stream->printf("xw,");
+        } else {
+            stream->printf("xe,");
+        }
+
+        if (isEnabled()) {
+            stream->printf("e1,");
+        } else {
+            stream->printf("e0,");
+        }
+
+        //write out the current chopper config
+        // stream->printf("Cm");
+        // stream->printf(chopperMode, DEC);
+        stream->printf("Co%d,Cb%d,", constant_off_time, blank_time);
+        if ((chopper_config_register & CHOPPER_MODE_T_OFF_FAST_DECAY) == 0) {
+            stream->printf("Cs%d,Ce%d,Cd%d,", h_start, h_end, h_decrement);
+        }
+        stream->printf("\n");
     }
 }
 
@@ -963,48 +1037,48 @@ void TMC26X::send262(unsigned long datagram)
 #define GET(X) (options.at(X))
 bool TMC26X::set_options(const options_t& options)
 {
-    bool set= false;
+    bool set = false;
     if(HAS('O') || HAS('Q')) {
         // void TMC26X::setStallGuardThreshold(int8_t stall_guard_threshold, int8_t stall_guard_filter_enabled)
-        int8_t o= HAS('O') ? GET('O') : getStallGuardThreshold();
-        int8_t q= HAS('Q') ? GET('Q') : getStallGuardFilter();
+        int8_t o = HAS('O') ? GET('O') : getStallGuardThreshold();
+        int8_t q = HAS('Q') ? GET('Q') : getStallGuardFilter();
         setStallGuardThreshold(o, q);
-        set= true;
+        set = true;
     }
 
     if(HAS('H') && HAS('I') && HAS('J') && HAS('K') && HAS('L')) {
         //void TMC26X::setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size, uint8_t current_increment_step_size, uint8_t lower_current_limit)
         setCoolStepConfiguration(GET('H'), GET('I'), GET('J'), GET('K'), GET('L'));
-        set= true;
+        set = true;
     }
 
     if(HAS('S')) {
-        uint32_t s= GET('S');
-        if(s==0 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
+        uint32_t s = GET('S');
+        if(s == 0 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
             //void TMC26X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_time, int8_t fast_decay_time_setting, int8_t sine_wave_offset, uint8_t use_current_comparator)
             setConstantOffTimeChopper(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'));
-            set= true;
+            set = true;
 
-        }else if(s==1 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
+        } else if(s == 1 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
             //void TMC26X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end, int8_t hysteresis_decrement);
             setSpreadCycleChopper(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'));
-            set= true;
+            set = true;
 
-        }else if(s==2 && HAS('Z')) {
+        } else if(s == 2 && HAS('Z')) {
             setRandomOffTime(GET('Z'));
-            set= true;
+            set = true;
 
-        }else if(s==3 && HAS('Z')) {
+        } else if(s == 3 && HAS('Z')) {
             setDoubleEdge(GET('Z'));
-            set= true;
+            set = true;
 
-        }else if(s==4 && HAS('Z')) {
+        } else if(s == 4 && HAS('Z')) {
             setStepInterpolation(GET('Z'));
-            set= true;
+            set = true;
 
-        }else if(s==5 && HAS('Z')) {
+        } else if(s == 5 && HAS('Z')) {
             setCoolStepEnabled(GET('Z') == 1);
-            set= true;
+            set = true;
         }
     }
 
