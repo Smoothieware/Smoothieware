@@ -193,7 +193,7 @@ void TMC26X::init()
     // for 1.5amp kysan @ 12v
     setSpreadCycleChopper(5, 54, 5, 0, 0);
     // for 4amp Nema24 @ 12v
-    //setSpreadCycleChopper(5, 2, 4, 0, 0);
+    //setSpreadCycleChopper(5, 54, 4, 0, 0);
 #endif
 
     setEnabled(false);
@@ -967,8 +967,7 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
         }
 
         //write out the current chopper config
-        // stream->printf("Cm");
-        // stream->printf(chopperMode, DEC);
+        stream->printf("Cm%d,", (chopper_config_register & CHOPPER_MODE_T_OFF_FAST_DECAY) != 0);
         stream->printf("Co%d,Cb%d,", constant_off_time, blank_time);
         if ((chopper_config_register & CHOPPER_MODE_T_OFF_FAST_DECAY) == 0) {
             stream->printf("Cs%d,Ce%d,Cd%d,", h_start, h_end, h_decrement);
