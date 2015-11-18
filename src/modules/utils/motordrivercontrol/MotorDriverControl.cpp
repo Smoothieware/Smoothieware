@@ -27,7 +27,6 @@
 
 #define current_checksum               CHECKSUM("current")
 #define max_current_checksum           CHECKSUM("max_current")
-//#define current_factor_checksum        CHECKSUM("current_factor")
 
 #define microsteps_checksum            CHECKSUM("microsteps")
 #define decay_mode_checksum            CHECKSUM("decay_mode")
@@ -279,13 +278,15 @@ void MotorDriverControl::initialize_chip()
 {
     // send initialization sequence to chips
     if(chip == DRV8711) {
-        drv8711->init(current, microsteps);
+        drv8711->init();
+        set_current(current);
+        set_microstep(microsteps);
 
     }else if(chip == TMC2660){
         tmc26x->init();
         set_current(current);
         set_microstep(microsteps);
-        set_decay_mode(decay_mode);
+        //set_decay_mode(decay_mode);
     }
 
 }
@@ -295,7 +296,7 @@ void MotorDriverControl::set_current(uint32_t c)
 {
     switch(chip) {
         case DRV8711:
-            drv8711->init(c, microsteps);
+            drv8711->set_current(c);
             break;
 
         case TMC2660:
@@ -310,7 +311,7 @@ uint32_t MotorDriverControl::set_microstep( uint32_t n )
     uint32_t m= n;
     switch(chip) {
         case DRV8711:
-            drv8711->init(current, n);
+            m= drv8711->set_microsteps(n);
             break;
 
         case TMC2660:

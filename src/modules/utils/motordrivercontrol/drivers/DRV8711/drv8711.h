@@ -9,15 +9,19 @@ class DRV8711DRV
 public:
   DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi);
 
-  void init(unsigned int current, unsigned int microsteps, unsigned int gain = 20) ;
+  void init(uint16_t gain = 20) ;
 
   void set_enable(bool enable) ;
+  int set_microsteps(int number_of_steps);
+  void set_current(uint32_t currentma);
+
   void dump_status(StreamOutput *stream) ;
   bool setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val);
 
 private:
 
-  unsigned int SPI_DRV8711_ReadWrite(unsigned char dataHi, unsigned char dataLo);
+  uint16_t ReadWriteRegister(uint8_t dataHi, uint8_t dataLo);
+  uint16_t ReadRegister(uint8_t addr);
   void ReadAllRegisters () ;
   void WriteAllRegisters () ;
 
@@ -132,8 +136,10 @@ private:
   DRIVE_Register_t   G_DRIVE_REG;
   STATUS_Register_t  G_STATUS_REG;
 
-  float resistor{0.05};
   std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
+  float resistor{0.05};
+  uint8_t gain{20};
+
 
   // float _amps;
   // uint8_t _microstepreg;
