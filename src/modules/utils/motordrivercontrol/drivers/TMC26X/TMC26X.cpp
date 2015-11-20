@@ -859,30 +859,9 @@ bool TMC26X::isCurrentScalingHalfed()
 void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
 {
     if (readable) {
-        readStatus(TMC26X_READOUT_POSITION); // get the status bits
-
         stream->printf("Chip type TMC26X\n");
-        if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_PREWARING) {
-            stream->printf("WARNING: Overtemperature Prewarning!\n");
-        } else if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_SHUTDOWN) {
-            stream->printf("ERROR: Overtemperature Shutdown!\n");
-        }
 
-        if (this->isShortToGroundA()) {
-            stream->printf("ERROR: SHORT to ground on channel A!\n");
-        }
-
-        if (this->isShortToGroundB()) {
-            stream->printf("ERROR: SHORT to ground on channel A!\n");
-        }
-
-        if (this->isOpenLoadA()) {
-            stream->printf("ERROR: Channel A seems to be unconnected!\n");
-        }
-
-        if (this->isOpenLoadB()) {
-            stream->printf("ERROR: Channel B seems to be unconnected!\n");
-        }
+        check_error_status_bits(stream);
 
         if (this->isStallGuardReached()) {
             stream->printf("INFO: Stall Guard level reached!\n");
@@ -974,6 +953,47 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
         }
         stream->printf("\n");
     }
+}
+
+bool TMC26X::check_error_status_bits(StreamOutput *stream)
+{
+    bool error= false;
+    readStatus(TMC26X_READOUT_POSITION); // get the status bits
+
+    if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_PREWARING) {
+        stream->printf("WARNING: Overtemperature Prewarning!\n");
+
+    } else if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_SHUTDOWN) {
+        stream->printf("ERROR: Overtemperature Shutdown!\n");
+        error=true;
+    }
+
+    if (this->isShortToGroundA()) {
+        stream->printf("ERROR: SHORT to ground on channel A!\n");
+        error=true;
+    }
+
+    if (this->isShortToGroundB()) {
+        stream->printf("ERROR: SHORT to ground on channel A!\n");
+        error=true;
+    }
+
+    if (this->isOpenLoadA()) {
+        stream->printf("ERROR: Channel A seems to be unconnected!\n");
+        error=true;
+    }
+
+    if (this->isOpenLoadB()) {
+        stream->printf("ERROR: Channel B seems to be unconnected!\n");
+        error=true;
+    }
+
+    return error;
+}
+
+bool TMC26X::checkAlarm()
+{
+    return check_error_status_bits(THEKERNEL->streams);
 }
 
 // sets a raw register to the value specified, for advanced settings

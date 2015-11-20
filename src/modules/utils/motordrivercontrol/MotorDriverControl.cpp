@@ -24,6 +24,8 @@
 #define enable_checksum                CHECKSUM("enable")
 #define chip_checksum                  CHECKSUM("chip")
 #define designator_checksum            CHECKSUM("designator")
+#define alarm_checksum                 CHECKSUM("alarm")
+#define halt_on_alarm_checksum         CHECKSUM("halt_on_alarm")
 
 #define current_checksum               CHECKSUM("current")
 #define max_current_checksum           CHECKSUM("max_current")
@@ -148,7 +150,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         uint32_t reg= 0;
         for(auto i : regs) {
             switch(chip) {
-                case DRV8711: drv8711->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
+                case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, ++reg, i); break;
                 case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
             }
         }
@@ -160,6 +162,12 @@ bool MotorDriverControl::config_module(uint16_t cs)
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_ENABLE);
     this->register_for_event(ON_IDLE);
+
+    if( THEKERNEL->config->value(motor_driver_control_checksum, cs, alarm_checksum )->by_default(false)->as_bool() ) {
+        halt_on_alarm= THEKERNEL->config->value(motor_driver_control_checksum, cs, halt_on_alarm_checksum )->by_default(false)->as_bool();
+        // enable alarm monitoring for the chip
+        this->register_for_event(ON_SECOND_TICK);
+    }
 
     THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", designator, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
 
@@ -186,6 +194,26 @@ void MotorDriverControl::on_halt(void *argument)
 {
     if(argument == nullptr) {
         enable(false);
+    }
+}
+
+// runs in on_idle
+void MotorDriverControl::on_second_tick(void *argument)
+{
+    bool alarm=false;;
+    switch(chip) {
+        case DRV8711:
+            alarm= drv8711->check_alarm();
+            break;
+
+        case TMC2660:
+            alarm= tmc26x->checkAlarm();
+            break;
+    }
+
+    if(halt_on_alarm && alarm) {
+        THEKERNEL->call_event(ON_HALT, nullptr);
+        THEKERNEL->streams->printf("Motor Driver alarm - reset or M999 required to continue\r\n");
     }
 }
 
@@ -361,7 +389,7 @@ void MotorDriverControl::set_raw_register(StreamOutput *stream, uint32_t reg, ui
 {
     bool ok= false;
     switch(chip) {
-        case DRV8711: ok= drv8711->setRawRegister(stream, reg, val); break;
+        case DRV8711: ok= drv8711->set_raw_register(stream, reg, val); break;
         case TMC2660: ok= tmc26x->setRawRegister(stream, reg, val); break;
     }
     if(ok) {

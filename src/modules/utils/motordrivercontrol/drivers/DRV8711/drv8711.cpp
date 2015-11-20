@@ -315,7 +315,7 @@ void DRV8711DRV::WriteAllRegisters()
 
 // sets a raw register to the value specified, for advanced settings
 // register 255 writes them, 0 displays what registers are mapped to what
-bool DRV8711DRV::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
+bool DRV8711DRV::set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val)
 {
     switch(reg) {
         case 255:
@@ -356,7 +356,7 @@ uint16_t DRV8711DRV::ReadWriteRegister(uint8_t dataHi, uint8_t dataLo)
     uint8_t rbuf[2];
 
     spi(buf, 2, rbuf);
-    THEKERNEL->streams->printf("sent: %02X, %02X received:%02X, %02X\n", buf[0], buf[1], rbuf[0], rbuf[1]);
+    //THEKERNEL->streams->printf("sent: %02X, %02X received:%02X, %02X\n", buf[0], buf[1], rbuf[0], rbuf[1]);
     uint16_t readData = (rbuf[0] << 8) | rbuf[1];
     return readData;
 }

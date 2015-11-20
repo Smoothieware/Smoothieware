@@ -408,6 +408,7 @@ public:
      */
     void dumpStatus(StreamOutput *stream, bool readable= true);
     bool setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val);
+    bool checkAlarm();
 
     using options_t= std::map<char,int>;
 
@@ -416,6 +417,8 @@ public:
 private:
     //helper routione to get the top 10 bit of the readout
     inline int getReadoutValue();
+    bool check_error_status_bits(StreamOutput *stream);
+
     // SPI sender
     inline void send262(unsigned long datagram);
     std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;

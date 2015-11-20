@@ -16,7 +16,8 @@ public:
   void set_current(uint32_t currentma);
 
   void dump_status(StreamOutput *stream) ;
-  bool setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val);
+  bool set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
+  bool check_alarm() { return false; }
 
 private:
 

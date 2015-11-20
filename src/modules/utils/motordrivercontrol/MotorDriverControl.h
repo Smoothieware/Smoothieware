@@ -24,6 +24,7 @@ class MotorDriverControl : public Module {
         void on_halt(void *argument);
         void on_enable(void *argument);
         void on_idle(void *argument);
+        void on_second_tick(void *argument);
 
     private:
         bool config_module(uint16_t cs);
@@ -68,6 +69,7 @@ class MotorDriverControl : public Module {
             bool enable_flg:1;
             bool current_override:1;
             bool microstep_override:1;
+            bool halt_on_alarm:1;
         };
 
 };
