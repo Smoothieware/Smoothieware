@@ -17,7 +17,7 @@ public:
 
   void dump_status(StreamOutput *stream) ;
   bool set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
-  bool check_alarm() { return false; }
+  bool check_alarm();
 
 private:
 

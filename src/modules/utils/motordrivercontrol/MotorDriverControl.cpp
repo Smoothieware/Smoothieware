@@ -197,7 +197,7 @@ void MotorDriverControl::on_halt(void *argument)
     }
 }
 
-// runs in on_idle
+// runs in on_idle, does SPI transaction
 void MotorDriverControl::on_second_tick(void *argument)
 {
     bool alarm=false;;

@@ -313,6 +313,42 @@ void DRV8711DRV::WriteAllRegisters()
     ReadWriteRegister(dataHi, dataLo);
 }
 
+bool DRV8711DRV::check_alarm()
+{
+    bool error= false;
+    STATUS_Register_t  R_STATUS_REG;
+    // Read STATUS Register
+    R_STATUS_REG.raw= ReadRegister(G_STATUS_REG.Address);
+
+    if(R_STATUS_REG.OTS) {
+        THEKERNEL->streams->printf("ERROR: Overtemperature shutdown\n");
+        error= true;
+    }
+
+    if(R_STATUS_REG.AOCP) {
+        THEKERNEL->streams->printf("ERROR: Channel A over current shutdown\n");
+        error= true;
+    }
+
+    if(R_STATUS_REG.BOCP) {
+        THEKERNEL->streams->printf("ERROR: Channel B over current shutdown\n");
+        error= true;
+    }
+
+    if(R_STATUS_REG.APDF) {
+        THEKERNEL->streams->printf("ERROR: Channel A predriver fault\n");
+        error= true;
+    }
+
+    if(R_STATUS_REG.BPDF) {
+        THEKERNEL->streams->printf("ERROR: Channel B predriver fault\n");
+        error= true;
+    }
+
+    return error;
+}
+
+
 // sets a raw register to the value specified, for advanced settings
 // register 255 writes them, 0 displays what registers are mapped to what
 bool DRV8711DRV::set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val)
