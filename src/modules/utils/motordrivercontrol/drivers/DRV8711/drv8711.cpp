@@ -15,53 +15,52 @@ void DRV8711DRV::init (uint16_t gain)
 {
     this->gain= gain;
 
+    // initialize the in memory mirror of the registers
+
     // CTRL Register
+    G_CTRL_REG.raw      = 0x0000;
     G_CTRL_REG.Address  = 0x00;
     G_CTRL_REG.DTIME    = 0x03;  //850ns
     G_CTRL_REG.EXSTALL  = 0x00;  //Internal Stall Detect
     G_CTRL_REG.ISGAIN   = 0x02;  //Gain of 20
-    G_CTRL_REG.MODE     = 0x04;  // 1/8 Step   0x03=1/8, 0x08=1256, 0x05=1/32 set by set_microstep()
+    G_CTRL_REG.MODE     = 0x04;  // also set by set_microstep()
     G_CTRL_REG.RSTEP    = 0x00;  //No Action
     G_CTRL_REG.RDIR     = 0x00;  //Direction set by DIR Pin
     G_CTRL_REG.ENBL     = 0x00;  //enable motor, start disabled
-    //1000 11 01 0 0011 0 0 1
 
     /// TORQUE Register
+    G_TORQUE_REG.raw     = 0x0000;
     G_TORQUE_REG.Address = 0x01;
     G_TORQUE_REG.SIMPLTH = 0x01;  //100uS Back EMF Sample Threshold
     G_TORQUE_REG.TORQUE  = 0x01; // low default set by set_current()
-    G_TORQUE_REG.Reserved = 0;
-    //1000 0 000  01000110
 
     // OFF Register
+    G_OFF_REG.raw       = 0x0000;
     G_OFF_REG.Address   = 0x02;
     G_OFF_REG.PWMMODE   = 0x00;  //Internal Indexer
     G_OFF_REG.TOFF      = 0x32;  //Default
-    G_OFF_REG.Reserved = 0;
-    //1000 000 0 00110000
 
     // BLANK Register
+    G_BLANK_REG.raw     = 0x0000;
     G_BLANK_REG.Address = 0x03;
     G_BLANK_REG.ABT     = 0x01;  //enable adaptive blanking time
     G_BLANK_REG.TBLANK  = 0x00;  //no idea what this should be but the
-    G_BLANK_REG.Reserved = 0;
-    //1000 000 1 00001000            //user guide shows it set to this
 
     // DECAY Register.
+    G_DECAY_REG.raw     = 0x0000;
     G_DECAY_REG.Address = 0x04;
     G_DECAY_REG.DECMOD  = 0x05;  // auto mixed decay
     G_DECAY_REG.TDECAY  = 0x10;  //default
-    G_DECAY_REG.Reserved = 0;
-    //1000001100010000
 
     // STALL Register
+    G_STALL_REG.raw     = 0x0000;
     G_STALL_REG.Address = 0x05;
     G_STALL_REG.VDIV    = 0x02;  //Back EMF is divided by 8
     G_STALL_REG.SDCNT   = 0x01;  //stalln asserted after 2 steps
     G_STALL_REG.SDTHR   = 0x02;  //recommended
-    //1000111101000000
 
     // DRIVE Register
+    G_DRIVE_REG.raw     = 0x0000;
     G_DRIVE_REG.Address = 0x06;
     G_DRIVE_REG.IDRIVEP = 0x00;  //High Side 50mA peak (source)
     G_DRIVE_REG.IDRIVEN = 0x00;  //Low Side 100mA peak (sink)
@@ -69,9 +68,9 @@ void DRV8711DRV::init (uint16_t gain)
     G_DRIVE_REG.TDRIVEN = 0x00;  //Low Side Gate Drive 500nS
     G_DRIVE_REG.OCPDEG =  0x00;  //OCP Deglitch Time 2uS
     G_DRIVE_REG.OCPTH =   0x00;  //OCP Threshold 500mV
-    //1000000001010101
 
     // STATUS Register
+    G_STATUS_REG.raw     = 0x0000;
     G_STATUS_REG.Address = 0x07;
     G_STATUS_REG.STDLAT  = 0x00;
     G_STATUS_REG.STD     = 0x00;
@@ -81,7 +80,6 @@ void DRV8711DRV::init (uint16_t gain)
     G_STATUS_REG.BOCP    = 0x00;
     G_STATUS_REG.AOCP    = 0x00;
     G_STATUS_REG.OTS     = 0x00;
-    G_STATUS_REG.Reserved = 0;
 
     WriteAllRegisters();
 }
@@ -134,13 +132,15 @@ void DRV8711DRV::set_current(uint32_t currentma)
             break;
     }
 
-    THEKERNEL->streams->printf("for requested current of %lumA, torque= %u, gain= %u, actual current= %fA\n", currentma, G_TORQUE_REG.TORQUE, gain, (2.75F * t) / (256.0F * gain * resistor));
+    //THEKERNEL->streams->printf("for requested current of %lumA, torque= %u, gain= %u, actual current= %fA\n", currentma, G_TORQUE_REG.TORQUE, gain, (2.75F * t) / (256.0F * gain * resistor));
     // for current of 1.500000A, torque= 139, gain= 20
 
+    // set GAIN
     uint8_t dataHi = REGWRITE | ((G_CTRL_REG.raw >> 8) & 0x7F);
     uint8_t dataLo = (G_CTRL_REG.raw & 0x00FF);
     ReadWriteRegister(dataHi, dataLo);
 
+    // set TORQUE
     dataHi = REGWRITE | ((G_TORQUE_REG.raw >> 8) & 0x7F);
     dataLo = (G_TORQUE_REG.raw & 0x00FF);
     ReadWriteRegister(dataHi, dataLo);
@@ -323,13 +323,13 @@ bool DRV8711DRV::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val
             stream->printf("Registers written\n");
             break;
 
-        case 1: G_CTRL_REG.raw &= 0xF000; G_CTRL_REG.raw |= (val & 0x0FFF); break;
+        case 1: G_CTRL_REG.raw   &= 0xF000; G_CTRL_REG.raw   |= (val & 0x0FFF); break;
         case 2: G_TORQUE_REG.raw &= 0xF000; G_TORQUE_REG.raw |= (val & 0x0FFF); break;
-        case 3: G_OFF_REG.raw &= 0xF000; G_OFF_REG.raw |= (val & 0x0FFF); break;
-        case 4: G_BLANK_REG.raw &= 0xF000; G_BLANK_REG.raw |= (val & 0x0FFF); break;
-        case 5: G_DECAY_REG.raw &= 0xF000; G_DECAY_REG.raw |= (val & 0x0FFF); break;
-        case 6: G_STALL_REG.raw &= 0xF000; G_STALL_REG.raw |= (val & 0x0FFF); break;
-        case 7: G_DRIVE_REG.raw &= 0xF000; G_DRIVE_REG.raw |= (val & 0x0FFF); break;
+        case 3: G_OFF_REG.raw    &= 0xF000; G_OFF_REG.raw    |= (val & 0x0FFF); break;
+        case 4: G_BLANK_REG.raw  &= 0xF000; G_BLANK_REG.raw  |= (val & 0x0FFF); break;
+        case 5: G_DECAY_REG.raw  &= 0xF000; G_DECAY_REG.raw  |= (val & 0x0FFF); break;
+        case 6: G_STALL_REG.raw  &= 0xF000; G_STALL_REG.raw  |= (val & 0x0FFF); break;
+        case 7: G_DRIVE_REG.raw  &= 0xF000; G_DRIVE_REG.raw  |= (val & 0x0FFF); break;
 
         default:
             stream->printf("1: CTRL Register\n");
@@ -340,7 +340,7 @@ bool DRV8711DRV::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val
             stream->printf("6: STALL Register\n");
             stream->printf("7: DRIVE Register\n");
             stream->printf("255: write registers to chip\n");
-            break;
+            return false;
     }
     return true;
 }
@@ -356,7 +356,7 @@ uint16_t DRV8711DRV::ReadWriteRegister(uint8_t dataHi, uint8_t dataLo)
     uint8_t rbuf[2];
 
     spi(buf, 2, rbuf);
-    //THEKERNEL->streams->printf("sent: %02X, %02X received:%02X, %02X\n", buf[0], buf[1], rbuf[0], rbuf[1]);
+    THEKERNEL->streams->printf("sent: %02X, %02X received:%02X, %02X\n", buf[0], buf[1], rbuf[0], rbuf[1]);
     uint16_t readData = (rbuf[0] << 8) | rbuf[1];
     return readData;
 }
