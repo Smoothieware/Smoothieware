@@ -156,6 +156,7 @@ TMC26X::TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi) : spi(sp
     started = false;
     //by default cool step is not enabled
     cool_step_enabled = false;
+    error_reported.reset();
 }
 
 void TMC26X::setResistor(unsigned int resistor)
@@ -186,7 +187,7 @@ void TMC26X::init()
 
     started = true;
 
-#if 0
+#if 1
     //set to a conservative start value
     setConstantOffTimeChopper(7, 54, 13, 12, 1);
 #else
@@ -955,39 +956,63 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
     }
 }
 
+// check error bits and report, only report once
 bool TMC26X::check_error_status_bits(StreamOutput *stream)
 {
     bool error= false;
     readStatus(TMC26X_READOUT_POSITION); // get the status bits
 
     if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_PREWARING) {
-        stream->printf("WARNING: Overtemperature Prewarning!\n");
+        if(!error_reported.test(0)) stream->printf("WARNING: Overtemperature Prewarning!\n");
+        error_reported.set(0);
+    }else{
+        error_reported.reset(0);
+    }
 
-    } else if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_SHUTDOWN) {
-        stream->printf("ERROR: Overtemperature Shutdown!\n");
+    if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_SHUTDOWN) {
+        if(!error_reported.test(1)) stream->printf("ERROR: Overtemperature Shutdown!\n");
         error=true;
+        error_reported.set(1);
+    }else{
+        error_reported.reset(1);
     }
 
     if (this->isShortToGroundA()) {
-        stream->printf("ERROR: SHORT to ground on channel A!\n");
+        if(!error_reported.test(2)) stream->printf("ERROR: SHORT to ground on channel A!\n");
         error=true;
+        error_reported.set(2);
+    }else{
+        error_reported.reset(2);
     }
 
     if (this->isShortToGroundB()) {
-        stream->printf("ERROR: SHORT to ground on channel A!\n");
+        if(!error_reported.test(3)) stream->printf("ERROR: SHORT to ground on channel B!\n");
         error=true;
+        error_reported.set(3);
+    }else{
+        error_reported.reset(3);
     }
 
+    // these seem to be triggered when moving so ignore them for now
     if (this->isOpenLoadA()) {
-        stream->printf("ERROR: Channel A seems to be unconnected!\n");
+        if(!error_reported.test(4)) stream->printf("ERROR: Channel A seems to be unconnected!\n");
         error=true;
+        error_reported.set(4);
+    }else{
+        error_reported.reset(4);
     }
 
     if (this->isOpenLoadB()) {
-        stream->printf("ERROR: Channel B seems to be unconnected!\n");
+        if(!error_reported.test(5)) stream->printf("ERROR: Channel B seems to be unconnected!\n");
         error=true;
+        error_reported.set(5);
+    }else{
+        error_reported.reset(5);
     }
 
+    // if(error) {
+    //     stream->printf("%08X\n", driver_status_result);
+    // }
     return error;
 }
 
@@ -1012,11 +1037,11 @@ bool TMC26X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
             break;
 
 
-        case 1: driver_control_register_value = val; stream->printf("driver control register set to %lu\n", val); break;
-        case 2: chopper_config_register = val; stream->printf("chopper config register set to %lu\n", val); break;
-        case 3: cool_step_register_value = val; stream->printf("cool step register set to %lu\n", val); break;
-        case 4: stall_guard2_current_register_value = val; stream->printf("stall guard2 current register set to %lu\n", val); break;
-        case 5: driver_configuration_register_value = val; stream->printf("driver configuration register set to %lu\n", val); break;
+        case 1: driver_control_register_value = val; stream->printf("driver control register set to %08lX\n", val); break;
+        case 2: chopper_config_register = val; stream->printf("chopper config register set to %08lX\n", val); break;
+        case 3: cool_step_register_value = val; stream->printf("cool step register set to %08lX\n", val); break;
+        case 4: stall_guard2_current_register_value = val; stream->printf("stall guard2 current register set to %08lX\n", val); break;
+        case 5: driver_configuration_register_value = val; stream->printf("driver configuration register set to %08lX\n", val); break;
 
         default:
             stream->printf("1: driver control register\n");

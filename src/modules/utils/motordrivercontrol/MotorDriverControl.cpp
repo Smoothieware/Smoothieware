@@ -200,6 +200,9 @@ void MotorDriverControl::on_halt(void *argument)
 // runs in on_idle, does SPI transaction
 void MotorDriverControl::on_second_tick(void *argument)
 {
+    // we don't want to keep checking once we have been halted by an error
+    if(THEKERNEL->is_halted()) return;
+
     bool alarm=false;;
     switch(chip) {
         case DRV8711:

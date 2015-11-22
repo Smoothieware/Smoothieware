@@ -32,6 +32,7 @@
 
 #include <functional>
 #include <map>
+#include <bitset>
 
 class StreamOutput;
 
@@ -436,6 +437,8 @@ private:
 
     //status values
     int microsteps; //the current number of micro steps
+
+    std::bitset<8> error_reported;
 
     // only beeded for the tuning app report
     struct {
