@@ -198,8 +198,12 @@ void TMC26X::init()
 #endif
 
     setEnabled(false);
+
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
+
+    // set stallguard to a conservative value so it doesn't trigger immediately
+    setStallGuardThreshold(10, 1);
 }
 
 void TMC26X::setCurrent(unsigned int current)
