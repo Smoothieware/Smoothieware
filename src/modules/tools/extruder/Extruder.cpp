@@ -544,7 +544,7 @@ void Extruder::on_gcode_execute(void *argument)
             this->target_position += this->travel_distance;
             this->en_pin.set(0);
 
-        } else if (gcode->g == 0 || gcode->g == 1) {
+        } else if (gcode->g <= 3) {
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )) {
                 // Get relative extrusion distance depending on mode ( in absolute mode we must subtract target_position )
