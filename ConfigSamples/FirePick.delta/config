@@ -265,8 +265,8 @@ zprobe.probe_height                          5               # how much above be
 #leveling-strategy.delta-calibration.enable   true            # basic delta calibration
 #leveling-strategy.delta-calibration.radius   100             # the probe radius
 
-# Pause button
-pause_button_enable                          true             #
+# Kill button
+kill_button_enable                          true             #
 
 # Panel
 panel.enable                                 false             # set to true to enable the panel code

@@ -26,7 +26,6 @@
 #include "PublicDataRequest.h"
 #include "EndstopsPublicAccess.h"
 #include "StreamOutputPool.h"
-#include "Pauser.h"
 #include "StepTicker.h"
 #include "BaseSolution.h"
 

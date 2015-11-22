@@ -82,7 +82,6 @@ Extruder::Extruder( uint16_t config_identifier, bool single )
     this->absolute_mode = true;
     this->milestone_absolute_mode = true;
     this->enabled = false;
-    this->paused = false;
     this->single_config = single;
     this->identifier = config_identifier;
     this->retracted = false;
@@ -125,8 +124,6 @@ void Extruder::on_module_loaded()
     this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GCODE_EXECUTE);
-    this->register_for_event(ON_PLAY);
-    this->register_for_event(ON_PAUSE);
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_GET_PUBLIC_DATA);
@@ -291,20 +288,6 @@ void Extruder::on_set_public_data(void *argument)
         this->milestone_absolute_mode= this->absolute_mode = this->saved_absolute_mode;
         pdr->set_taken();
     }
-}
-
-// When the play/pause button is set to pause, or a module calls the ON_PAUSE event
-void Extruder::on_pause(void *argument)
-{
-    this->paused = true;
-    this->stepper_motor->pause();
-}
-
-// When the play/pause button is set to play, or a module calls the ON_PLAY event
-void Extruder::on_play(void *argument)
-{
-    this->paused = false;
-    this->stepper_motor->unpause();
 }
 
 void Extruder::on_gcode_received(void *argument)
@@ -561,7 +544,7 @@ void Extruder::on_gcode_execute(void *argument)
             this->target_position += this->travel_distance;
             this->en_pin.set(0);
 
-        } else if (gcode->g == 0 || gcode->g == 1) {
+        } else if (gcode->g <= 3) {
             // Extrusion length from 'G' Gcode
             if( gcode->has_letter('E' )) {
                 // Get relative extrusion distance depending on mode ( in absolute mode we must subtract target_position )
@@ -668,7 +651,7 @@ uint32_t Extruder::rate_increase() const
 void Extruder::acceleration_tick(void)
 {
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if(!this->enabled || this->mode != SOLO || this->current_block == NULL || !this->stepper_motor->is_moving() || this->paused ) {
+    if(!this->enabled || this->mode != SOLO || this->current_block == NULL || !this->stepper_motor->is_moving() ) {
         return;
     }
 
@@ -688,7 +671,7 @@ void Extruder::acceleration_tick(void)
 void Extruder::on_speed_change( void *argument )
 {
     // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if(!this->enabled || this->current_block == NULL ||  this->paused || this->mode != FOLLOW || !this->stepper_motor->is_moving()) {
+    if(!this->enabled || this->current_block == NULL || this->mode != FOLLOW || !this->stepper_motor->is_moving()) {
         return;
     }
 
