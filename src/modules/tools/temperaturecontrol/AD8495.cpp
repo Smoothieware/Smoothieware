@@ -22,7 +22,6 @@
 
 #define UNDEFINED -1
 
-#define AD8495_checksum                CHECKSUM("AD8495")
 #define AD8495_pin_checksum            CHECKSUM("AD8495_pin")
 #define AD8495_offset_checksum         CHECKSUM("AD8495_offset")
 
