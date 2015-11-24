@@ -9,6 +9,7 @@
 
 DRV8711DRV::DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi) : spi(spi)
 {
+    error_reported.reset();
 }
 
 void DRV8711DRV::init (uint16_t gain)
@@ -321,29 +322,48 @@ bool DRV8711DRV::check_alarm()
     R_STATUS_REG.raw= ReadRegister(G_STATUS_REG.Address);
 
     if(R_STATUS_REG.OTS) {
-        THEKERNEL->streams->printf("ERROR: Overtemperature shutdown\n");
+        if(!error_reported.test(0)) THEKERNEL->streams->printf("ERROR: Overtemperature shutdown\n");
         error= true;
+        error_reported.set(0);
+    }else{
+        error_reported.reset(0);
     }
+
 
     if(R_STATUS_REG.AOCP) {
-        THEKERNEL->streams->printf("ERROR: Channel A over current shutdown\n");
+        if(!error_reported.test(1)) THEKERNEL->streams->printf("ERROR: Channel A over current shutdown\n");
         error= true;
+        error_reported.set(1);
+    }else{
+        error_reported.reset(1);
     }
 
+
     if(R_STATUS_REG.BOCP) {
-        THEKERNEL->streams->printf("ERROR: Channel B over current shutdown\n");
+        if(!error_reported.test(2)) THEKERNEL->streams->printf("ERROR: Channel B over current shutdown\n");
         error= true;
+        error_reported.set(2);
+    }else{
+        error_reported.reset(2);
     }
 
     if(R_STATUS_REG.APDF) {
-        THEKERNEL->streams->printf("ERROR: Channel A predriver fault\n");
+        if(!error_reported.test(3)) THEKERNEL->streams->printf("ERROR: Channel A predriver fault\n");
         error= true;
+        error_reported.set(3);
+    }else{
+        error_reported.reset(3);
     }
 
+
     if(R_STATUS_REG.BPDF) {
-        THEKERNEL->streams->printf("ERROR: Channel B predriver fault\n");
+        if(!error_reported.test(4)) THEKERNEL->streams->printf("ERROR: Channel B predriver fault\n");
         error= true;
+        error_reported.set(4);
+    }else{
+        error_reported.reset(4);
     }
+
 
     return error;
 }

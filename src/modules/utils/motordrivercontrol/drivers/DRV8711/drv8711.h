@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <bitset>
 
 class StreamOutput;
 
@@ -139,6 +140,7 @@ private:
 
   std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
   float resistor{0.05};
+  std::bitset<8> error_reported;
   uint8_t gain{20};
 
 
