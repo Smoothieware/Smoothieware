@@ -48,7 +48,7 @@ void SerialConsole::on_serial_char_received(){
             query_flag= true;
             continue;
         }
-        if(received == 26) { // ^X
+        if(received == 'X'-'A') { // ^X
             halt_flag= true;
             continue;
         }
