@@ -31,6 +31,7 @@ using std::string;
 #include "arm_solutions/HBotSolution.h"
 #include "arm_solutions/CoreXZSolution.h"
 #include "arm_solutions/MorganSCARASolution.h"
+#include "arm_solutions/GUSDeltaSolution.h"
 #include "StepTicker.h"
 #include "checksumm.h"
 #include "utils.h"
@@ -62,6 +63,7 @@ using std::string;
 #define  corexz_checksum                     CHECKSUM("corexz")
 #define  kossel_checksum                     CHECKSUM("kossel")
 #define  morgan_checksum                     CHECKSUM("morgan")
+#define  GUSDelta_checksum                   CHECKSUM("GUSDelta")
 
 // stepper motor stuff
 #define  alpha_step_pin_checksum             CHECKSUM("alpha_step_pin")
@@ -175,7 +177,10 @@ void Robot::on_config_reload(void *argument)
     } else if(solution_checksum == morgan_checksum) {
         this->arm_solution = new MorganSCARASolution(THEKERNEL->config);
 
-    } else if(solution_checksum == cartesian_checksum) {
+    } else if(solution_checksum == GUSDelta_checksum) {
+        this->arm_solution = new GUSDeltaSolution(THEKERNEL->config);
+		
+	}else if(solution_checksum == cartesian_checksum) {
         this->arm_solution = new CartesianSolution(THEKERNEL->config);
 
     } else {

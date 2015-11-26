@@ -20,8 +20,8 @@
        leveling-strategy.ZGrid-leveling.bed_y           200
 
     Machine height, used to determine probe attachment point (bed_z / 2)
-
        leveling-strategy.ZGrid-leveling.bed_z           20
+
 
     Configure for Machines with bed 0:0 at center of platform
        leveling-strategy.ZGrid-leveling.bed_zero        false
@@ -38,7 +38,7 @@
 
     The probe offset should be defined, default to zero offset
 
-       leveling-strategy.ZGrid-leveling.probe_offsets  0,0,16.3
+       leveling-strategy.ZGrid-leveling.probe_offsets  0,0,       16.3
 
     The machine can be told to wait for probe attachment and confirmation
 
@@ -510,7 +510,7 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
         int pindex = 0;
 
         // z = z home offset - probed distance
-        float z = getZhomeoffset() -zprobe->probeDistance((this->cal[X_AXIS] + this->cal_offset_x)-std::get<X_AXIS>(this->probe_offsets),
+        float z = getZhomeoffset() - zprobe->probeDistance((this->cal[X_AXIS] + this->cal_offset_x)-std::get<X_AXIS>(this->probe_offsets),
                                                (this->cal[Y_AXIS] + this->cal_offset_y)-std::get<Y_AXIS>(this->probe_offsets));
 
         pindex = int(this->cal[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(this->cal[Y_AXIS]/this->bed_div_y + 0.25);
@@ -521,7 +521,7 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
     }
 
     stream->printf("\nCalibration done.\n");
-    if (this->wait_for_probe) {                                  // Only do this it the config calls for probe removal position
+   /*  if (this->wait_for_probe) {                                  // Only do this it the config calls for probe removal position
         this->cal[X_AXIS] = this->bed_x/2.0f;
         this->cal[Y_AXIS] = this->bed_y/2.0f;
         this->cal[Z_AXIS] = this->bed_z/2.0f;                    // Position head for probe removal
@@ -529,7 +529,7 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 
         stream->printf("Please remove probe\n");
 
-    }
+    } */
 
     // activate correction
     this->normalize_grid();
