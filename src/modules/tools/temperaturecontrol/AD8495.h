@@ -34,7 +34,8 @@ class AD8495 : public TempSensor
         float adc_value_to_temperature(uint32_t adc_value);
 
         Pin  AD8495_pin;
-
+        float AD8495_offset;
+        
         float min_temp, max_temp;
 };
 

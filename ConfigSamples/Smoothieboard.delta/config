@@ -152,8 +152,8 @@ temperature_control.hotend.designator        T                #
 #temperature_control.hotend2.thermistor        EPCOS100K        # http://smoothieware.org/temperaturecontrol#toc5
 ##temperature_control.hotend2.beta             4066             # or set the beta value
 
-#temperature_control.hotend2.set_m_code        884              #
-#temperature_control.hotend2.set_and_wait_m_code 889            #
+#temperature_control.hotend2.set_m_code        104              #
+#temperature_control.hotend2.set_and_wait_m_code 109            #
 #temperature_control.hotend2.designator        T1               #
 
 #temperature_control.hotend2.p_factor          13.7           # permanently set the PID values after an auto pid

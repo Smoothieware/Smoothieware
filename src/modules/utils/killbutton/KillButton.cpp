@@ -42,15 +42,14 @@ void KillButton::on_module_loaded()
         this->kill_button = pause_button;
     }
 
-    this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-
     if(!this->kill_button.connected()) {
         delete this;
         return;
     }
 
-    THEKERNEL->slow_ticker->attach( 10, this, &KillButton::button_tick );
+    this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_IDLE);
+    THEKERNEL->slow_ticker->attach( 10, this, &KillButton::button_tick );
 }
 
 void KillButton::on_idle(void *argument)
