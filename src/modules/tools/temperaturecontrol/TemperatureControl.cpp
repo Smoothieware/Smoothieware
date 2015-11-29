@@ -510,8 +510,48 @@ void TemperatureControl::pid_process(float temperature)
 
 void TemperatureControl::on_second_tick(void *argument)
 {
+
+    // If waiting for a temperature to be reach, display it to keep host programs up to date on the progress
     if (waiting)
         THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), o);
+
+    // Check whether or not there is a temperature runaway issue, if so stop everything and report it
+    if( this->target_temperature <= 0 ){ // If we are not trying to heat, state is 0
+        this->runaway_state = 0;
+        this->runaway_timer = 0;
+    }else{
+        switch( this->runaway_state ){
+            case 0: // If we were previously not trying to heat, but we are now, change to state 1
+                if( this->target_temperature > 0 ){
+                    this->runaway_state = 1;
+                }
+                break;
+            case 1: // In we are in state 1 ( waiting for temperature to be reached ), and the temperature has been reached, change to state 2
+                if( this->get_temperature() >= this->target_temperature ){
+                    this->runaway_state = 2;
+                }
+                break;
+            case 2: // If we are in state 2 ( target temperature reached ), check for thermal runaway
+                // If the temperature is outside the acceptable range
+                if( fabs( this->get_temperature() - this->target_temperature ) > 10 ){ // 10 degrees, should be a configurable value
+                    // Increase the timer, aka « One more second with a problem maybe occuring »
+                    this->runaway_timer++;
+
+                    // If the timer has a too large value ( we have been too long outside the desired temperature range )
+                    if( this->runaway_timer > 15 ){ // 15 seconds, should be a configurable value
+                    
+                        THEKERNEL->streams->printf("Error: Temperature runaway ! Check whether the heater controller is failing HIGH, or the temperature sensor is detached. IMMEDIATELY TURN OFF POWER\n");
+                        THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
+                        THEKERNEL->call_event(ON_HALT, nullptr);
+
+                    }
+                }else{
+                    // The temperature was inside the acceptable range, reset the timer
+                    this->runaway_timer = 0;
+                }
+                break;
+        }
+    }
 }
 
 void TemperatureControl::setPIDp(float p)

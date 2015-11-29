@@ -80,6 +80,10 @@ class TemperatureControl : public Module {
         float d_factor;
         float PIDdt;
 
+        // Temperature runaway values
+        uint16_t runaway_timer;
+        uint8_t  runaway_state;
+
         struct {
             bool use_bangbang:1;
             bool waiting:1;
