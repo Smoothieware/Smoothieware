@@ -224,8 +224,19 @@ vector<float> parse_number_list(const char *str)
 {
     vector<string> l= split(str, ',');
     vector<float> r;
-    for(auto& s : l) {
+    for(auto& s : l){
         float x = strtof(s.c_str(), nullptr);
+        r.push_back(x);
+    }
+    return r;
+}
+
+vector<uint32_t> parse_number_list(const char *str, uint8_t radix)
+{
+    vector<string> l= split(str, ',');
+    vector<uint32_t> r;
+    for(auto& s : l){
+        uint32_t x = strtol(s.c_str(), nullptr, radix);
         r.push_back(x);
     }
     return r;
