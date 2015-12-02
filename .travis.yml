@@ -1,5 +1,5 @@
 before_script: 
- - sudo apt-add-repository 'deb http://archive.ubuntu.com/ubuntu trusty main universe multiverse restricted'
+ - sudo add-apt-repository ppa:terry.guo/gcc-arm-embedded
  - sudo apt-get update -qq
  - sudo apt-get install -y gcc-arm-none-eabi
 
