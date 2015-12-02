@@ -6,5 +6,4 @@ script: make
 # whitelist
 branches:
   only:
-    - master
     - edge
