@@ -1,6 +1,6 @@
 before_install: 
  - ./travis_install
- - export PATH=$PATH:$PWD/gcc-arm-none-eabi/bin:$PATH
+ - export PATH=$PATH:$PWD/gcc-arm-none-eabi/bin
 
 script: make
 
