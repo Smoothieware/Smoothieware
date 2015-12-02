@@ -9,3 +9,4 @@ script: make
 branches:
   only:
     - edge
+ 
