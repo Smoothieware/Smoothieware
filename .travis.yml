@@ -1,0 +1,9 @@
+before_install: ./linux_install
+install: ./BuildShell
+script: make
+
+# whitelist
+branches:
+  only:
+    - master
+    - edge
