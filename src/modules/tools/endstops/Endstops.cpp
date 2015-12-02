@@ -349,19 +349,23 @@ void Endstops::back_off_home(char axes_to_move)
     this->status = NOT_HOMING;
 }
 
-// If enabled will move the head to 0,0 after homing, but only if X and Y were set to home
+// If enabled will move the head to 0 along any axis which was homed
 void Endstops::move_to_origin(char axes_to_move)
 {
-    if( (axes_to_move&0x03) != 3 ) return; // ignore if X and Y not homing
-
     // Do we need to check if we are already at 0,0? probably not as the G0 will not do anything if we are
     // float pos[3]; THEKERNEL->robot->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
 
     this->status = MOVE_TO_ORIGIN;
     // Move to center using a regular move, use slower of X and Y fast rate
     float rate= std::min(this->fast_rates[0], this->fast_rates[1])*60.0F;
-    char buf[32];
-    snprintf(buf, sizeof(buf), "G0 X0 Y0 F%1.4f", rate);
+    char buf[32] = "G0";
+    if (axes_to_move & (1 << X_AXIS))
+      strcat(buf, " X0");
+    if (axes_to_move & (1 << Y_AXIS))
+      strcat(buf, " Y0");
+    if (axes_to_move & (1 << Z_AXIS))
+      strcat(buf, " Z0");
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), " F%1.4f", rate);
     Gcode gc(buf, &(StreamOutput::NullStream));
     THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
 
