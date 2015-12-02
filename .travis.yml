@@ -1,4 +1,4 @@
-before_install: ./linux_install
+before_install: ./travis_install
 install: ./BuildShell
 script: make
 
