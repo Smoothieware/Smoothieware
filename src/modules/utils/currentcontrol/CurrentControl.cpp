@@ -91,11 +91,18 @@ void CurrentControl::on_gcode_received(void *argument)
             }
 
         } else if(gcode->m == 500 || gcode->m == 503) {
-            gcode->stream->printf(";Motor currents:\nM907 ");
+            float currents[8];
+            bool has_setting= false;
             for (int i = 0; i < 8; i++) {
-                float c = this->digipot->get_current(i);
-                if(c >= 0)
-                    gcode->stream->printf("%c%1.5f ", alpha[i], c);
+                currents[i]= this->digipot->get_current(i);
+                if(currents[i] >= 0) has_setting= true;
+            }
+            if(!has_setting) return; // don't oupuit anything if none are set using this current control
+
+            gcode->stream->printf(";Digipot Motor currents:\nM907 ");
+            for (int i = 0; i < 8; i++) {
+                if(currents[i] >= 0)
+                    gcode->stream->printf("%c%1.5f ", alpha[i], currents[i]);
             }
             gcode->stream->printf("\n");
         }

@@ -18,6 +18,7 @@
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
 #include "FilamentDetector.h"
+#include "MotorDriverControl.h"
 
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -186,7 +187,9 @@ void init() {
     #ifndef NO_TOOLS_FILAMENTDETECTOR
     kernel->add_module( new FilamentDetector() );
     #endif
-
+    #ifndef NO_UTILS_MOTORDRIVERCONTROL
+    kernel->add_module( new MotorDriverControl(0) );
+    #endif
     // Create and initialize USB stuff
     u.init();
 

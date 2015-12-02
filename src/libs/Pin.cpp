@@ -16,6 +16,11 @@ Pin::Pin(){
 
 // Make a new pin object from a string
 Pin* Pin::from_string(std::string value){
+    if(value == "nc") {
+        this->valid= false;
+        return this; // optimize the nc case
+    }
+
     LPC_GPIO_TypeDef* gpios[5] ={LPC_GPIO0,LPC_GPIO1,LPC_GPIO2,LPC_GPIO3,LPC_GPIO4};
 
     // cs is the current position in the string

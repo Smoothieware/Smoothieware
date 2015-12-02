@@ -107,6 +107,7 @@ void Stepper::turn_enable_pins_on()
     for (StepperMotor *m : THEKERNEL->robot->actuators)
         m->enable(true);
     this->enable_pins_status = true;
+    THEKERNEL->call_event(ON_ENABLE, (void*)1);
 }
 
 // Disable steppers
@@ -115,6 +116,7 @@ void Stepper::turn_enable_pins_off()
     for (StepperMotor *m : THEKERNEL->robot->actuators)
         m->enable(false);
     this->enable_pins_status = false;
+    THEKERNEL->call_event(ON_ENABLE, nullptr);
 }
 
 // A new block is popped from the queue

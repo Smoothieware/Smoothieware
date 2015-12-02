@@ -39,6 +39,7 @@ class Robot : public Module {
         float get_feed_rate() const { return feed_rate; }
         void  push_state();
         void  pop_state();
+        void check_max_actuator_speeds();
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
@@ -63,7 +64,6 @@ class Robot : public Module {
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
         void clearToolOffset();
-        void check_max_actuator_speeds();
 
         typedef std::tuple<float, float, bool, bool> saved_state_t; // save current feedrate and absolute mode, inch mode
         std::stack<saved_state_t> state_stack;               // saves state from M120
