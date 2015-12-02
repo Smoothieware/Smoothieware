@@ -74,39 +74,5 @@ rm -r $GCC4ARM_DIR >/dev/null 2>/dev/null
 RunAndLog tar xf $GCC4ARM_TAR
 RunAndLog mv $GCC4ARM_EXTRACT $GCC4ARM_DIR
 
-echo Creating helper scripts...
-echo "#! /usr/bin/env bash">$BUILDSHELL_CMD
-echo "# Modify next line and set destination drive to match mbed device">>$BUILDSHELL_CMD
-echo "export LPC_DEPLOY='cp PROJECT.bin /media/MBED/ ; sync'">>$BUILDSHELL_CMD
-echo>>$BUILDSHELL_CMD
-echo "SCRIPT_PATH=\$0">>$BUILDSHELL_CMD
-echo "SCRIPT_PATH=\${SCRIPT_PATH%/*}">>$BUILDSHELL_CMD
-echo "cd \$SCRIPT_PATH">>$BUILDSHELL_CMD
-echo "SCRIPT_PATH=\$PWD">>$BUILDSHELL_CMD
-echo "export PATH=\$SCRIPT_PATH/gcc-arm-none-eabi/bin:\$PATH">>$BUILDSHELL_CMD
-echo "exec bash">>$BUILDSHELL_CMD
-chmod +x $BUILDSHELL_CMD
-
 echo Cleaning up intermediate files...
 RunAndLog rm $GCC4ARM_TAR
-
-echo
-echo To build Smoothie, you will first need to run the following script
-echo so that your environment variables are set correctly:
-echo  $BUILDSHELL_CMD
-echo You will want to run this each time you start a new Terminal.  You
-echo can simply double-click on this script file from Finder to launch a
-echo bash Terminal that has been properly initialized for building.  Feel
-echo free to customize it as you desire.
-echo
-echo You can also just edit your existing setup script such as \~/.profile
-echo to update the PATH environment variable to include:
-echo  $GCC4ARM_BINDIR
-
-
-# Restore current directory and exit script on success.
-echo `date` Finished successfully>>$LOGFILE
-echo Finished successfully
-rm -f $ERRORFILE
-popd >/dev/null
-#read -n 1 -sp "Press any key to continue..." dummy ; echo
