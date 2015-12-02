@@ -1,7 +1,8 @@
 before_install: ./travis_install
-install: ./BuildShell
+env:
+- PATH=./gcc-arm-none-eabi/bin:$PATH
 script: make
-
+- 
 # whitelist
 branches:
   only:
