@@ -76,3 +76,4 @@ RunAndLog mv $GCC4ARM_EXTRACT $GCC4ARM_DIR
 
 echo Cleaning up intermediate files...
 RunAndLog rm $GCC4ARM_TAR
+echo Installed build tools to $GCC4ARM_DIR
