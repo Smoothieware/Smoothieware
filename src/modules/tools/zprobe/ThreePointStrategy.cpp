@@ -168,8 +168,9 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
                 this->plane= nullptr;
                 // delete the compensationTransform in robot
                 setAdjustFunction(false);
+                gcode->stream->printf("saved plane cleared\n");
             }else{
-                // smoothie specific way to restire a saved plane
+                // smoothie specific way to restore a saved plane
                 uint32_t a,b,c,d;
                 a=b=c=d= 0;
                 if(gcode->has_letter('A')) a = gcode->get_uint('A');
