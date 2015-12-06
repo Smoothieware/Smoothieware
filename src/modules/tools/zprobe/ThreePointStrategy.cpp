@@ -39,6 +39,7 @@
 
     Usage
     -----
+    G29 probes the three probe points and reports the Z at each point, if a plane is active it will be used to level the probe.
     G32 probes the three probe points and defines the bed plane, this will remain in effect until reset or M561
     G31 reports the status
 
