@@ -76,6 +76,7 @@ uint32_t KillButton::button_tick(uint32_t dummy)
     switch(state) {
             case IDLE:
                 if(!this->kill_button.get()) state= KILL_BUTTON_DOWN;
+                else if(unkill_enable && killed) state= KILLED_BUTTON_UP; // allow kill button to unkill if kill was created fromsome other source
                 break;
             case KILL_BUTTON_DOWN:
                 if(killed) state= KILLED_BUTTON_DOWN;
