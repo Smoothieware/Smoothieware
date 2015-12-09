@@ -28,7 +28,6 @@ using namespace std;
 
 #define acceleration_checksum          CHECKSUM("acceleration")
 #define z_acceleration_checksum        CHECKSUM("z_acceleration")
-#define max_jerk_checksum              CHECKSUM("max_jerk")
 #define junction_deviation_checksum    CHECKSUM("junction_deviation")
 #define z_junction_deviation_checksum  CHECKSUM("z_junction_deviation")
 #define minimum_planner_speed_checksum CHECKSUM("minimum_planner_speed")

@@ -27,7 +27,8 @@ class StepperMotor {
 
         inline void enable(bool state) { en_pin.set(!state); };
 
-        bool is_moving() { return moving; }
+        bool is_moving() const { return moving; }
+        bool which_direction() const { return direction; }
         void move_finished();
         StepperMotor* move( bool direction, unsigned int steps, float initial_speed= -1.0F);
         void signal_move_finished();

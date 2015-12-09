@@ -30,6 +30,7 @@ class Gcode {
         uint32_t get_uint ( char letter, char **ptr= nullptr ) const;
         int get_num_args() const;
         std::map<char,float> get_args() const;
+        std::map<char,int> get_args_int() const;
         void strip_parameters();
 
         // FIXME these should be private
