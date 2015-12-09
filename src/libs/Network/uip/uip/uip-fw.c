@@ -438,7 +438,7 @@ uip_fw_forward(void)
       fw->srcipaddr[1] == BUF->srcipaddr[1] &&
       fw->destipaddr[0] == BUF->destipaddr[0] &&
       fw->destipaddr[1] == BUF->destipaddr[1] &&
-	  fw->proto == BUF->proto;
+      fw->proto == BUF->proto;
     
 #if UIP_REASSEMBLY > 0
     test_buf = test_buf &&
