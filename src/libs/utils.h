@@ -18,6 +18,7 @@ bool is_whitespace( int );
 
 vector<string> split(const char *str, char c = ',');
 vector<float> parse_number_list(const char *str);
+vector<uint32_t> parse_number_list(const char *str, uint8_t radix);
 
 string remove_non_number( string str );
 

@@ -783,25 +783,33 @@ void Endstops::on_gcode_received(void *argument)
             break;
 
             // NOTE this is to test accuracy of lead screws etc.
-            case 910: { // M910 - move specific number of raw steps
-                // Enable the motors
-                THEKERNEL->stepper->turn_enable_pins_on();
+            case 1910: { // M1910 - move specific number of raw steps
+                if(gcode->subcode == 0) {
+                    // Enable the motors
+                    THEKERNEL->stepper->turn_enable_pins_on();
 
-                int x= 0, y=0 , z= 0, f= 200*16;
-                if (gcode->has_letter('F')) f = gcode->get_value('F');
-                if (gcode->has_letter('X')) {
-                    x = gcode->get_value('X');
-                    STEPPER[X_AXIS]->move(x<0, abs(x), f);
+                    int x= 0, y=0 , z= 0, f= 200*16;
+                    if (gcode->has_letter('F')) f = gcode->get_value('F');
+                    if (gcode->has_letter('X')) {
+                        x = gcode->get_value('X');
+                        STEPPER[X_AXIS]->move(x<0, abs(x), f);
+                    }
+                    if (gcode->has_letter('Y')) {
+                        y = gcode->get_value('Y');
+                        STEPPER[Y_AXIS]->move(y<0, abs(y), f);
+                    }
+                    if (gcode->has_letter('Z')) {
+                        z = gcode->get_value('Z');
+                        STEPPER[Z_AXIS]->move(z<0, abs(z), f);
+                    }
+                    gcode->stream->printf("Moving X %d Y %d Z %d steps at F %d steps/sec\n", x, y, z, f);
+
+                }else if(gcode->subcode == 1) {
+                    // stop any that are moving
+                    for (int i = 0; i < 3; ++i) {
+                         if(STEPPER[i]->is_moving()) STEPPER[i]->move(0, 0);
+                     }
                 }
-                if (gcode->has_letter('Y')) {
-                    y = gcode->get_value('Y');
-                    STEPPER[Y_AXIS]->move(y<0, abs(y), f);
-                }
-                if (gcode->has_letter('Z')) {
-                    z = gcode->get_value('Z');
-                    STEPPER[Z_AXIS]->move(z<0, abs(z), f);
-                }
-                gcode->stream->printf("Moved X %d Y %d Z %d F %d steps\n", x, y, z, f);
                 break;
             }
         }

@@ -14,24 +14,24 @@ using namespace std;
 
 #define pause_button_enable_checksum CHECKSUM("pause_button_enable")
 #define kill_button_enable_checksum  CHECKSUM("kill_button_enable")
+#define unkill_checksum              CHECKSUM("unkill_enable")
 #define pause_button_pin_checksum    CHECKSUM("pause_button_pin")
 #define kill_button_pin_checksum     CHECKSUM("kill_button_pin")
 
 KillButton::KillButton()
 {
-    this->button_state = true;
-    this->killed = false;
-    this->do_kill= false;
+    this->state= IDLE;
 }
 
 void KillButton::on_module_loaded()
 {
     bool pause_enable = THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool(); // @deprecated
-    this->kill_enable = pause_enable || THEKERNEL->config->value( kill_button_enable_checksum )->by_default(false)->as_bool();
-    if(!this->kill_enable) {
+    bool kill_enable = pause_enable || THEKERNEL->config->value( kill_button_enable_checksum )->by_default(false)->as_bool();
+    if(!kill_enable) {
         delete this;
         return;
     }
+    this->unkill_enable = THEKERNEL->config->value( unkill_checksum )->by_default(true)->as_bool();
 
     Pin pause_button;
     pause_button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input(); // @DEPRECATED
@@ -47,43 +47,63 @@ void KillButton::on_module_loaded()
         return;
     }
 
-    this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_IDLE);
-    THEKERNEL->slow_ticker->attach( 10, this, &KillButton::button_tick );
+    THEKERNEL->slow_ticker->attach( 5, this, &KillButton::button_tick );
 }
 
 void KillButton::on_idle(void *argument)
 {
-    if(do_kill) {
-        do_kill= false;
-        THEKERNEL->call_event(ON_HALT, nullptr);
-        THEKERNEL->streams->printf("Kill button pressed - reset or M999 to continue\r\n");
+    if(state == KILL_BUTTON_DOWN) {
+        if(!THEKERNEL->is_halted()) {
+            THEKERNEL->call_event(ON_HALT, nullptr);
+            THEKERNEL->streams->printf("Kill button pressed - reset or M999 to continue\r\n");
+        }
+
+    }else if(state == UNKILL_FIRE) {
+        if(THEKERNEL->is_halted()) {
+            THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
+            THEKERNEL->streams->printf("UnKill button pressed Halt cleared\r\n");
+        }
     }
 }
 
-//TODO: Make this use InterruptIn
-//Check the state of the button and act accordingly based on current pause state
+// Check the state of the button and act accordingly using the following FSM
 // Note this is ISR so don't do anything nasty in here
 uint32_t KillButton::button_tick(uint32_t dummy)
 {
-    if(!this->killed && this->kill_enable && this->kill_button.connected() && !this->kill_button.get()) {
-        this->killed = true;
-        // we can't call this in ISR, and we need to block on_main_loop so do it in on_idle
-        // THEKERNEL->call_event(ON_HALT);
-        this->do_kill= true;
+    bool killed= THEKERNEL->is_halted();
+
+    switch(state) {
+            case IDLE:
+                if(!this->kill_button.get()) state= KILL_BUTTON_DOWN;
+                else if(unkill_enable && killed) state= KILLED_BUTTON_UP; // allow kill button to unkill if kill was created fromsome other source
+                break;
+            case KILL_BUTTON_DOWN:
+                if(killed) state= KILLED_BUTTON_DOWN;
+                break;
+            case KILLED_BUTTON_DOWN:
+                if(this->kill_button.get()) state= KILLED_BUTTON_UP;
+                break;
+            case KILLED_BUTTON_UP:
+                if(!killed) state= IDLE;
+                else if(unkill_enable && !this->kill_button.get()) state= UNKILL_BUTTON_DOWN;
+                break;
+            case UNKILL_BUTTON_DOWN:
+                unkill_timer= 0;
+                state= UNKILL_TIMING_BUTTON_DOWN;
+                break;
+            case UNKILL_TIMING_BUTTON_DOWN:
+                if(++unkill_timer > 5*2) state= UNKILL_FIRE;
+                else if(this->kill_button.get()) unkill_timer= 0;
+                if(!killed) state= IDLE;
+                break;
+            case UNKILL_FIRE:
+                 if(!killed) state= UNKILLED_BUTTON_DOWN;
+                 break;
+            case UNKILLED_BUTTON_DOWN:
+                if(this->kill_button.get()) state= IDLE;
+                break;
     }
 
     return 0;
 }
-
-// When a new line is received, check if it is a command, and if it is, act upon it
-void KillButton::on_console_line_received( void *argument )
-{
-    SerialMessage new_message = *static_cast<SerialMessage *>(argument);
-
-    if(this->killed && new_message.message == "M999") {
-        this->killed= false;
-        return;
-    }
-}
-
