@@ -411,7 +411,7 @@ u8_t
 uip_fw_forward(void)
 {
   struct fwcache_entry *fw;
-
+  int test_buf;
   /* First check if the packet is destined for ourselves and return 0
      to indicate that the packet should be processed locally. */
   if(BUF->destipaddr[0] == uip_hostaddr[0] &&
@@ -433,21 +433,25 @@ uip_fw_forward(void)
      we drop it. */
 
   for(fw = fwcache; fw < &fwcache[FWCACHE_SIZE]; ++fw) {
-    if(fw->timer != 0 &&
-#if UIP_REASSEMBLY > 0
-       fw->len == BUF->len &&
-       fw->offset == BUF->ipoffset &&
-#endif
-       fw->ipid == BUF->ipid &&
+	   test_buf = fw->ipid == BUF->ipid &&
        fw->srcipaddr[0] == BUF->srcipaddr[0] &&
        fw->srcipaddr[1] == BUF->srcipaddr[1] &&
        fw->destipaddr[0] == BUF->destipaddr[0] &&
        fw->destipaddr[1] == BUF->destipaddr[1] &&
-#if notdef
-       fw->payload[0] == BUF->srcport &&
-       fw->payload[1] == BUF->destport &&
+	   fw->proto == BUF->proto;
+    
+#if UIP_REASSEMBLY > 0
+       test_buf = test_buf &&
+       fw->len == BUF->len &&
+       fw->offset == BUF->ipoffset;
 #endif
-       fw->proto == BUF->proto) {
+       
+#if notdef
+       test_buf = test_buf &&
+       fw->payload[0] == BUF->srcport &&
+       fw->payload[1] == BUF->destport;
+#endif
+    if(fw->timer != 0 && test_buf) {
       /* Drop packet. */
       return UIP_FW_FORWARDED;
     }
