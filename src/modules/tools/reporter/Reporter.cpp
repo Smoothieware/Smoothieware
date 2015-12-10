@@ -42,18 +42,45 @@ void Reporter::on_gcode_received(void *argument){
                               bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
                               if (ok) {
                                 for (auto &c : controllers) {
+                                  if(&c == &controllers.back()){
                                     printf("%f,", c.current_temperature);
+                                  }else{
+                                    printf("%f,", c.current_temperature);
+                                  }
                                 }
 
                                 gcode->stream->printf("],\"active\":[");
                                 for (auto &c : controllers) {
+                                  if(&c == &controllers.back()){
+                                    printf("%f", c.target_temperature);
+                                  }else{
                                     printf("%f,", c.target_temperature);
+                                  }
+                                }
+
+                              // Smoothieware has no concept of a standby temperature.
+                              gcode->stream->printf("],\"standby\":[0,0,0],");
+
+                              // Heater status
+                              // status of the heaters, 0=off, 1=standby, 2=active, 3=fault
+                              gcode->stream->printf("\"hstat\":[");
+                              for(auto &c : controllers){
+                                // off
+                                if(c.target_temperature == 0){
+                                  gcode->stream->printf("0");
+                                }
+                                // active
+                                if(c.target_temperature>c.current_temperature){
+                                  gcode->stream->printf("2");
+                                }
+                                if(&c != &controllers.back()){
+                                  gcode->stream->printf(",");
                                 }
                               }
-
-                              gcode->stream->printf("],\"standby\":[202,404,606],\"hstat\":[0,2,1],\"pos\":[");
+                            }
 
                               // Get position
+                              gcode->stream->printf("]\"pos\":[");
                               float pos[3];
                               THEKERNEL->robot->get_axis_position(pos);
                               gcode->stream->printf("%f,%f,%f", pos[0], pos[1], pos[2]);
