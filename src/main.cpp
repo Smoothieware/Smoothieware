@@ -17,6 +17,7 @@
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
+#include "modules/tools/reporter/Reporter.h"
 #include "FilamentDetector.h"
 
 #include "modules/robot/Conveyor.h"

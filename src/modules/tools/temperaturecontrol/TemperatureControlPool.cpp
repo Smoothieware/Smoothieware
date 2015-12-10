@@ -29,6 +29,7 @@ void TemperatureControlPool::load_tools()
         // If module is enabled
         if( THEKERNEL->config->value(temperature_control_checksum, cs, enable_checksum )->as_bool() ) {
             TemperatureControl *controller = new TemperatureControl(cs, cnt++);
+            controllers.push_back( cs );
             THEKERNEL->add_module(controller);
         }
     }
