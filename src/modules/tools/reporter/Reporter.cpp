@@ -45,7 +45,6 @@ void Reporter::on_gcode_received(void *argument){
                                     printf("%f,", c.current_temperature);
                                 }
 
-
                                 gcode->stream->printf("],\"active\":[");
                                 for (auto &c : controllers) {
                                     printf("%f,", c.target_temperature);
