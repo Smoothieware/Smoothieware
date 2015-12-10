@@ -38,29 +38,21 @@ void Reporter::on_gcode_received(void *argument){
                               // Beginning
                               gcode->stream->printf("{\"status\":\"I\",");
                               gcode->stream->printf("\"heaters{{\":[");
-                              for(auto it = THEKERNEL->temperature_control_pool->get_controllers().begin();
-                                      it != THEKERNEL->temperature_control_pool->get_controllers().end();
-                                      it++) {
-                                        auto & id = *it;
-                                TemperatureControl *temp_control;
-                                void *returned_data;
-                                bool ok = PublicData::get_value( temperature_control_checksum, pool_index_checksum, id, &returned_data );
-
-                                if (ok) {
-                                    temp_control =  *static_cast<TemperatureControl **>(returned_data);
-
-                                } else {
-                                    gcode->stream->printf("No temperature control with index %d found\r\n", id);
-                                    return;
+                              std::vector<struct pad_temperature> controllers;
+                              bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+                              if (ok) {
+                                for (auto &c : controllers) {
+                                    printf("%f,", c.current_temperature);
                                 }
-                                    if(std::next(it) == THEKERNEL->temperature_control_pool->get_controllers().end()){
-                                      printf("%f", temp_control->get_temperature());
-                                    }else{
-                                      printf("%f,", temp_control->get_temperature());
-                                    }
+
+
+                                gcode->stream->printf("],\"active\":[");
+                                for (auto &c : controllers) {
+                                    printf("%f,", c.target_temperature);
+                                }
                               }
 
-                              gcode->stream->printf("],\"active\":[101,102,103],\"standby\":[202,404,606],\"hstat\":[0,2,1],\"pos\":[");
+                              gcode->stream->printf("],\"standby\":[202,404,606],\"hstat\":[0,2,1],\"pos\":[");
 
                               // Get position
                               float pos[3];
