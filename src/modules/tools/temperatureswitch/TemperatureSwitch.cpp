@@ -107,6 +107,7 @@ TemperatureSwitch* TemperatureSwitch::load_config(uint16_t modcs)
 
     // if we don't have any matching controllers, then not valid
     if (ts->temp_controllers.empty()) {
+        THEKERNEL->streams->printf("WARNING TEMPERATURESWITCH: no controllers matching: %c\n", designator);
         delete ts;
         return nullptr;
     }
@@ -118,6 +119,7 @@ TemperatureSwitch* TemperatureSwitch::load_config(uint16_t modcs)
         s = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_type_checksum)->by_default("")->as_string();
         if(s.empty()) {
             // no switch specified so invalid entry
+            THEKERNEL->streams->printf("WARNING TEMPERATURESWITCH: no switch specified\n");
             delete this;
             return nullptr;
         }
@@ -147,14 +149,14 @@ TemperatureSwitch* TemperatureSwitch::load_config(uint16_t modcs)
 
     // set initial state
     ts->current_state= NONE;
-    this->second_counter = ts->current_delay; // do test immediately on first second_tick
+    ts->second_counter = ts->current_delay; // do test immediately on first second_tick
     // if not defined then always armed, otherwise start out disarmed
     ts->armed= (ts->arm_mcode == 0);
 
     // Register for events
     ts->register_for_event(ON_SECOND_TICK);
 
-    if(this->arm_mcode != 0) {
+    if(ts->arm_mcode != 0) {
         ts->register_for_event(ON_GCODE_RECEIVED);
     }
     return ts;

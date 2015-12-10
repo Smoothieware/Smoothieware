@@ -1,0 +1,79 @@
+#! /usr/bin/env bash
+# Copyright 2012 Adam Green (http://mbed.org/users/AdamGreen/)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+# Logs the command to be run and then executes the command while logging the results.
+RunAndLog () {
+    echo `date` Executing $@>>$LOGFILE
+    $@ 1>>$LOGFILE 2>$ERRORFILE
+    if [ "$?" != "0" ] ; then
+        cat $ERRORFILE >>$LOGFILE
+        echo `date` Failure forced early exit>>$LOGFILE
+        cat $LOGFILE
+        rm -f $ERRORFILE
+        popd >/dev/null
+        read -n 1 -sp "Press any key to continue..." dummy ; echo
+        exit 1
+    fi
+}
+
+
+# Setup script variables.
+ROOTDIR=$0
+ROOTDIR=${ROOTDIR%/*}
+pushd $ROOTDIR
+ROOTDIR=$PWD
+LOGFILE=$ROOTDIR/linux_install.log
+ERRORFILE=$ROOTDIR/linux_install.err
+GCC4ARM_VERSION=gcc-arm-none-eabi-4_8-2014q1
+GCC4ARM_FILENAME=gcc-arm-none-eabi-4_8-2014q1-20140314-linux.tar.bz2
+GCC4ARM_URL=https://launchpad.net/gcc-arm-embedded/4.8/4.8-2014-q1-update/+download/$GCC4ARM_FILENAME
+GCC4ARM_TAR=$ROOTDIR/$GCC4ARM_FILENAME
+GCC4ARM_MD5=72b0d06ae16b303c25fd70b2883d3950
+GCC4ARM_EXTRACT=$ROOTDIR/$GCC4ARM_VERSION
+GCC4ARM_DIR=$ROOTDIR/gcc-arm-none-eabi
+GCC4ARM_BINDIR=$GCC4ARM_DIR/bin
+BUILDSHELL_CMD=$ROOTDIR/BuildShell
+
+
+echo Logging install results to $LOGFILE
+echo `date` Starting $0 $*>$LOGFILE
+
+echo Downloading GNU Tools for ARM Embedded Processors...
+rm $GCC4ARM_FILENAME >/dev/null 2>/dev/null
+echo `date` Executing wget $GCC4ARM_URL>>$LOGFILE
+wget $GCC4ARM_URL
+
+echo Validating md5 signature of GNU Tools for ARM Embedded Processors...
+echo `date` Validating md5 signature of GNU Tools for ARM Embedded Processors>>$LOGFILE
+archive_match=`md5sum $GCC4ARM_FILENAME | grep -c $GCC4ARM_MD5`
+if [ "$archive_match" != "1" ] ; then
+    echo $GCC4ARM_FILENAME failed MD5 signature check.>>$LOGFILE
+    echo `date` Failure forced early exit>>$LOGFILE
+    cat $LOGFILE
+    rm -f $ERRORFILE
+    popd >/dev/null
+    read -n 1 -sp "Press any key to continue..." dummy ; echo
+    exit 1
+fi
+
+echo Extracting GNU Tools for ARM Embedded Processors...
+rm -r $GCC4ARM_DIR >/dev/null 2>/dev/null
+RunAndLog tar xf $GCC4ARM_TAR
+RunAndLog mv $GCC4ARM_EXTRACT $GCC4ARM_DIR
+
+echo Cleaning up intermediate files...
+RunAndLog rm $GCC4ARM_TAR
+echo Installed build tools to $GCC4ARM_DIR
