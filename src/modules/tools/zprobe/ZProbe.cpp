@@ -200,6 +200,9 @@ bool ZProbe::run_probe_feed(int& steps, float feedrate)
 
     bool r = wait_for_probe(steps);
     this->running = false;
+    STEPPER[X_AXIS]->move(0, 0);
+    STEPPER[Y_AXIS]->move(0, 0);
+    STEPPER[Z_AXIS]->move(0, 0);
     return r;
 }
 
@@ -238,9 +241,16 @@ bool ZProbe::return_probe(int steps)
     while(STEPPER[Z_AXIS]->is_moving() || (is_delta && (STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving())) ) {
         // wait for it to complete
         THEKERNEL->call_event(ON_IDLE);
+         if(THEKERNEL->is_halted()){
+            // aborted by kill
+            break;
+        }
     }
 
     this->running = false;
+    STEPPER[X_AXIS]->move(0, 0);
+    STEPPER[Y_AXIS]->move(0, 0);
+    STEPPER[Z_AXIS]->move(0, 0);
 
     return true;
 }
