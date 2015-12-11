@@ -603,6 +603,12 @@ void Endstops::home(char axes_to_move)
         // cartesian/delta homing
         do_homing_cartesian(axes_to_move);
     }
+
+    // make sure all steppers are off (especially if aborted)
+    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        STEPPER[c]->move(0, 0);
+    }
+
 }
 
 // Start homing sequences by response to GCode commands
