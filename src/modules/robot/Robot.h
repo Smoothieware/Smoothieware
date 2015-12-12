@@ -104,10 +104,10 @@ class Robot : public Module {
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed
 inline float Robot::to_millimeters( float value ){
-    return this->inch_mode ? value * 25.4 : value;
+    return this->inch_mode ? value * 25.4F : value;
 }
 inline float Robot::from_millimeters( float value){
-    return this->inch_mode ? value/25.4 : value;
+    return this->inch_mode ? value/25.4F : value;
 }
 inline void Robot::get_axis_position(float position[]){
     memcpy(position, this->last_milestone, sizeof(float)*3 );
