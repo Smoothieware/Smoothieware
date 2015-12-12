@@ -373,9 +373,9 @@ void Robot::on_gcode_received(void *argument)
                 }else if(gcode->subcode == 1) { // M114.1 print Machine coordinate system
                     // TODO figure this out
                      n = snprintf(buf, sizeof(buf), "X:%1.3f Y:%1.3f Z:%1.3f",
-                                 from_millimeters(this->last_milestone[0]),
-                                 from_millimeters(this->last_milestone[1]),
-                                 from_millimeters(this->last_milestone[2]));
+                                 from_millimeters(this->last_milestone[0]) - (std::get<0>(wcs_offsets[current_wcs]) + std::get<0>(g92_offset)),
+                                 from_millimeters(this->last_milestone[1]) - (std::get<1>(wcs_offsets[current_wcs]) + std::get<1>(g92_offset)),
+                                 from_millimeters(this->last_milestone[2]) - (std::get<2>(wcs_offsets[current_wcs]) + std::get<2>(g92_offset)) );
 
                 }else if(gcode->subcode == 2) { // M114.2 print realtime actuator position
                     n = snprintf(buf, sizeof(buf), "A:%1.3f B:%1.3f C:%1.3f",
