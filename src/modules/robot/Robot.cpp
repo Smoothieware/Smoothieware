@@ -329,9 +329,9 @@ void Robot::on_gcode_received(void *argument)
                 } else {
                     float x, y, z;
                     std::tie(x, y, z)= g92_offset;
-                    if(gcode->has_letter('X')) x= to_millimeters(gcode->get_value('X')) - last_milestone[0];
-                    if(gcode->has_letter('Y')) y= to_millimeters(gcode->get_value('Y')) - last_milestone[1];
-                    if(gcode->has_letter('Z')) z= to_millimeters(gcode->get_value('Z')) - last_milestone[2];
+                    if(gcode->has_letter('X')) x= last_milestone[0] - to_millimeters(gcode->get_value('X'));
+                    if(gcode->has_letter('Y')) y= last_milestone[1] - to_millimeters(gcode->get_value('Y'));
+                    if(gcode->has_letter('Z')) z= last_milestone[2] - to_millimeters(gcode->get_value('Z'));
                     g92_offset= wcs_t(x, y, z);
                 }
                 return;
