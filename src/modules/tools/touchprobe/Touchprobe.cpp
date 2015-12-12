@@ -42,12 +42,15 @@ void Touchprobe::on_module_loaded() {
 }
 
 void Touchprobe::on_config_reload(void* argument){
+    if (THEKERNEL->robot->actuators.size() > 3) {
+        THEKERNEL->streams->printf("Touchpprobe in use withmore than 3 motors - may need port\n");
+    }
     this->pin.from_string(  THEKERNEL->config->value(touchprobe_pin_checksum)->by_default("nc" )->as_string())->as_input();
     this->debounce_count =  THEKERNEL->config->value(touchprobe_debounce_count_checksum)->by_default(100  )->as_number();
 
-    this->steppers[0] = THEKERNEL->robot->alpha_stepper_motor;
-    this->steppers[1] = THEKERNEL->robot->beta_stepper_motor;
-    this->steppers[2] = THEKERNEL->robot->gamma_stepper_motor;
+    this->steppers[0] = THEKERNEL->robot->actuators[0];
+    this->steppers[1] = THEKERNEL->robot->actuators[1];
+    this->steppers[2] = THEKERNEL->robot->actuators[2];
 
     this->should_log = this->enabled = THEKERNEL->config->value( touchprobe_log_enable_checksum )->by_default(false)->as_bool();
     if( this->should_log){
@@ -113,7 +116,8 @@ void Touchprobe::on_gcode_received(void* argument)
 
     if( gcode->has_g) {
         if( gcode->g == 31 ) {
-            float tmp[3], pos[3], mm[3];
+            float tmp[3], pos[3];
+            ActuatorCoordinates mm;
             int steps[3];
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();

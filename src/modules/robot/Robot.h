@@ -91,10 +91,6 @@ class Robot : public Module {
         // Used by Stepper, Planner
         friend class Planner;
         friend class Stepper;
-
-        StepperMotor* alpha_stepper_motor;
-        StepperMotor* beta_stepper_motor;
-        StepperMotor* gamma_stepper_motor;
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed

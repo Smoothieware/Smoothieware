@@ -53,7 +53,7 @@ void Planner::config_load(){
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( float actuator_pos[], float rate_mm_s, float distance, float unit_vec[] )
+void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, float distance, float unit_vec[] )
 {
     float acceleration, junction_deviation;
 
@@ -62,7 +62,7 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
 
 
     // Direction bits
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < THEKERNEL->robot->actuators.size(); i++)
     {
         int steps = THEKERNEL->robot->actuators[i]->steps_to_target(actuator_pos[i]);
 
@@ -88,7 +88,10 @@ void Planner::append_block( float actuator_pos[], float rate_mm_s, float distanc
     block->acceleration= acceleration; // save in block
 
     // Max number of steps, for all axes
-    block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
+    int steps_event_count = 0;
+    for (size_t s = 0; s < THEKERNEL->robot->actuators.size(); s++)
+        steps_event_count = std::max(steps_event_count, block->steps[s]);
+    block->steps_event_count = steps_event_count;
 
     block->millimeters = distance;
 

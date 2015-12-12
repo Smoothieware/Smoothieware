@@ -1,6 +1,7 @@
 #include "ExperimentalDeltaSolution.h"
 
 #include <fastmath.h>
+#include "ActuatorCoordinates.h"
 #include "ConfigValue.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
@@ -37,7 +38,7 @@ ExperimentalDeltaSolution::ExperimentalDeltaSolution(Config* config)
     arm_length_squared = powf(arm_length, 2);
 }
 
-void ExperimentalDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], float actuator_mm[] ){
+void ExperimentalDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm ){
     float alpha_rotated[3], rotated[3];
 
     if( sin_alpha == 0 && cos_alpha == 1){
@@ -56,7 +57,7 @@ void ExperimentalDeltaSolution::cartesian_to_actuator(const float cartesian_mm[]
     actuator_mm[GAMMA_STEPPER] = solve_arm( rotated );
 }
 
-void ExperimentalDeltaSolution::actuator_to_cartesian(const float actuator_mm[], float cartesian_mm[] ){
+void ExperimentalDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ){
     // unimplemented
 }
 
