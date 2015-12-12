@@ -245,6 +245,7 @@ void Robot::on_config_reload(void *argument)
     // so the first move can be correct if homing is not performed
     float actuator_pos[3];
     arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
+    // TODO: transformed_milestone???
     for (int i = 0; i < 3; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 
@@ -593,8 +594,14 @@ void Robot::reset_axis_position(float x, float y, float z)
     this->transformed_last_milestone[Y_AXIS] = y;
     this->transformed_last_milestone[Z_AXIS] = z;
 
+    // check function pointer and call if set to transform the target to compensate for bed
+    if(compensationTransform) {
+        // some compensation strategies can transform XYZ, some just change Z
+        compensationTransform(transformed_last_milestone);
+    }
+
     float actuator_pos[3];
-    arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
+    arm_solution->cartesian_to_actuator(this->transformed_last_milestone, actuator_pos);
     for (int i = 0; i < 3; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
@@ -603,10 +610,17 @@ void Robot::reset_axis_position(float x, float y, float z)
 void Robot::reset_axis_position(float position, int axis)
 {
     this->last_milestone[axis] = position;
-    this->transformed_last_milestone[axis] = position;
+    for (int i = 0; i < 3; i++)
+        this->transformed_last_milestone[i] = this->last_milestone[i];
+
+    // check function pointer and call if set to transform the target to compensate for bed
+    if(compensationTransform) {
+        // some compensation strategies can transform XYZ, some just change Z
+        compensationTransform(transformed_last_milestone);
+    }
 
     float actuator_pos[3];
-    arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
+    arm_solution->cartesian_to_actuator(this->transformed_last_milestone, actuator_pos);
 
     for (int i = 0; i < 3; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
@@ -616,11 +630,14 @@ void Robot::reset_axis_position(float position, int axis)
 void Robot::reset_position_from_current_actuator_position()
 {
     float actuator_pos[]= {actuators[X_AXIS]->get_current_position(), actuators[Y_AXIS]->get_current_position(), actuators[Z_AXIS]->get_current_position()};
-    arm_solution->actuator_to_cartesian(actuator_pos, this->last_milestone);
-    memcpy(this->transformed_last_milestone, this->last_milestone, sizeof(this->transformed_last_milestone));
+    arm_solution->actuator_to_cartesian(actuator_pos, this->transformed_last_milestone);
+    memcpy(this->last_milestone, this->transformed_last_milestone, sizeof(this->transformed_last_milestone));
+    if (compensationTransformInverse) {
+        compensationTransformInverse(last_milestone);
+    }
 
     // now reset actuator correctly, NOTE this may lose a little precision
-    arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
+    //arm_solution->cartesian_to_actuator(this->transformed_last_milestone, actuator_pos);
     for (int i = 0; i < 3; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }

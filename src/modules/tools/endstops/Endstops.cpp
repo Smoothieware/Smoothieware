@@ -661,6 +661,10 @@ void Endstops::on_gcode_received(void *argument)
 
             if(home_all) {
                 // for deltas this may be important rather than setting each individually
+                float actuators_before[3];
+                for (int i = 0; i < 3; i++) {
+                    actuators_before[i] = THEKERNEL->robot->actuators[i]->get_current_position();
+                }
 
                 // Here's where we would have been if the endstops were perfectly trimmed
                 float ideal_position[3] = {
@@ -690,6 +694,15 @@ void Endstops::on_gcode_received(void *argument)
                     // Reset the actuator positions to correspond our real position
                     THEKERNEL->robot->reset_axis_position(ideal_position[0], ideal_position[1], ideal_position[2]);
                 }
+
+                float actuators_after[3];
+                for (int i = 0; i < 3; i++) {
+                    actuators_after[i] = THEKERNEL->robot->actuators[i]->get_current_position();
+                }
+                gcode->stream->printf("Adjusting actuator positions (mm): %.5f %.5f %.5f\n",
+                                      actuators_after[0] - actuators_before[0],
+                                      actuators_after[1] - actuators_before[1],
+                                      actuators_after[2] - actuators_before[2]);
             } else {
                 // Zero the ax(i/e)s position, add in the home offset
                 for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
@@ -855,6 +868,9 @@ void Endstops::on_get_public_data(void* argument){
 
     }else if(pdr->second_element_is(home_offset_checksum)) {
         pdr->set_data_ptr(&this->home_offset);
+        pdr->set_taken();
+    }else if(pdr->second_element_is(homing_position_checksum)) {
+        pdr->set_data_ptr(&this->homing_position);
         pdr->set_taken();
     }
 }

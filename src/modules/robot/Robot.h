@@ -48,6 +48,7 @@ class Robot : public Module {
 
         // set by a leveling strategy to transform the target of a move according to the current plan
         std::function<void(float[3])> compensationTransform;
+        std::function<void(float[3])> compensationTransformInverse;
 
         struct {
             bool inch_mode:1;                                 // true for inch mode, false for millimeter mode ( default )

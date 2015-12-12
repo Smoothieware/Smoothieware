@@ -18,7 +18,6 @@
 #include <algorithm>
 
 #define radius_checksum         CHECKSUM("radius")
-#define initial_height_checksum CHECKSUM("initial_height")
 
 // deprecated
 #define probe_radius_checksum CHECKSUM("probe_radius")
@@ -33,9 +32,6 @@ bool DeltaCalibrationStrategy::handleConfig()
     }
     this->probe_radius= r;
 
-    // the initial height above the bed we stop the intial move down after home to find the bed
-    // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
-    this->initial_height= THEKERNEL->config->value(leveling_strategy_checksum, delta_calibration_strategy_checksum, initial_height_checksum)->by_default(10)->as_number();
     return true;
 }
 
@@ -103,7 +99,8 @@ bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
     float last_z= NAN;
     for(auto& i : pp) {
         int s;
-        if(!zprobe->doProbeAt(s, i[0], i[1])) return false;
+        float actuator[3];
+        if(!zprobe->doProbeAt(s, i[0], i[1], actuator)) return false;
         float z = zprobe->zsteps_to_mm(s);
         gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f (%d) A:%1.4f B:%1.4f C:%1.4f\n",
             i[0], i[1], z, s,
@@ -121,22 +118,6 @@ bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
     gcode->stream->printf("max delta: %f\n", max_delta);
 
     return true;
-}
-
-float DeltaCalibrationStrategy::findBed()
-{
-    // home
-    zprobe->home();
-
-    // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
-    float deltaz= zprobe->getMaxZ() - initial_height;
-    zprobe->coordinated_move(NAN, NAN, -deltaz, zprobe->getFastFeedrate(), true);
-
-    // find bed, run at slow rate so as to not hit bed hard
-    int s;
-    if(!zprobe->run_probe(s, false)) return NAN;
-
-    return zprobe->zsteps_to_mm(s) + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
 }
 
 /* Run a calibration routine for a delta
@@ -182,13 +163,9 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
 
     // find the bed, as we potentially have a temporary z probe we don't know how low under the nozzle it is
     // so we need to find the initial place that the probe triggers when it hits the bed
-    float bedht= findBed();
+    float bedht= zprobe->find_bed();
     if(isnan(bedht)) return false;
     gcode->stream->printf("initial Bed ht is %f mm\n", bedht);
-
-    // move to start position
-    zprobe->home();
-    zprobe->coordinated_move(NAN, NAN, -bedht, zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
 
     // get initial probes
     // probe the base of the X tower
@@ -284,12 +261,9 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
 
     // find the bed, as we potentially have a temporary z probe we don't know how low under the nozzle it is
     // so we need to find thr initial place that the probe triggers when it hits the bed
-    float bedht= findBed();
+    float bedht= zprobe->find_bed();
     if(isnan(bedht)) return false;
     gcode->stream->printf("initial Bed ht is %f mm\n", bedht);
-
-    zprobe->home();
-    zprobe->coordinated_move(NAN, NAN, -bedht, zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
 
     // probe center to get reference point at this Z height
     int dc;

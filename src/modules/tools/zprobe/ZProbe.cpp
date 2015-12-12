@@ -26,11 +26,13 @@
 #include "PublicData.h"
 #include "LevelingStrategy.h"
 #include "StepTicker.h"
+#include <algorithm>
 
 // strategies we know about
 #include "DeltaCalibrationStrategy.h"
 #include "ThreePointStrategy.h"
 #include "ZGridStrategy.h"
+#include "CalibrationStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
@@ -40,7 +42,7 @@
 #define return_feedrate_checksum CHECKSUM("return_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
 #define gamma_max_checksum       CHECKSUM("gamma_max")
-
+#define initial_height_checksum  CHECKSUM("initial_height")
 // from endstop section
 #define delta_homing_checksum    CHECKSUM("delta_homing")
 
@@ -101,6 +103,11 @@ void ZProbe::on_config_reload(void *argument)
                      found= true;
                      break;
 
+                case calibration_strategy_checksum:
+                    this->strategies.push_back(new CalibrationStrategy(this));
+                    found= true;
+                    break;
+
                 // add other strategies here
                 //case zheight_map_strategy:
                 //     this->strategies.push_back(new ZHeightMapStrategy(this));
@@ -110,6 +117,10 @@ void ZProbe::on_config_reload(void *argument)
             if(found) this->strategies.back()->handleConfig();
         }
     }
+
+    // the initial height above the bed we stop the intial move down after home to find the bed
+    // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
+    this->initial_height= THEKERNEL->config->value(zprobe_checksum, initial_height_checksum)->by_default(20)->as_number();
 
     // need to know if we need to use delta kinematics for homing
     this->is_delta = THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
@@ -255,17 +266,73 @@ bool ZProbe::return_probe(int steps)
     return true;
 }
 
-bool ZProbe::doProbeAt(int &steps, float x, float y)
+bool ZProbe::doProbeAt(int &steps, float x, float y, float actuator_positions[], int repeats, class StreamOutput *output)
 {
+    repeats = std::max(repeats,1);
+    int current_s = 0;
     int s;
+    // TODO: 0.3 mm -> config variable
+    int repeat_jump_height = (int)(Z_STEPS_PER_MM * 0.3 + 0.999);
+    int num_actuators = (int)THEKERNEL->robot->actuators.size();
+
+    std::vector<float> stored_actuator_positions;
+    std::vector<std::pair<int,int>> stored_probe_steps(repeats);
+
+    if (actuator_positions != nullptr) {
+        stored_actuator_positions.resize(THEKERNEL->robot->actuators.size() * repeats);
+    }
+
     // move to xy
     coordinated_move(x, y, NAN, getFastFeedrate());
-    if(!run_probe(s)) return false;
 
-    // return to original Z
-    return_probe(s);
-    steps = s;
+    if (output) {
+        output->printf("Probing: ");
+        if (repeats > 1)
+            output->printf(" samples [ ");
+    }
 
+    for (int r = 0; r < repeats; r++) {
+        if(!run_probe(s)) return false;
+
+        // Store actuator positions of trigger point
+        if (actuator_positions != nullptr) {
+            for (int i = 0; i < num_actuators; i++) {
+                stored_actuator_positions[r*THEKERNEL->robot->actuators.size() + i] = THEKERNEL->robot->actuators[i]->get_current_position();
+            }
+        }
+        if (output) {
+            output->printf("%3d ", current_s + s);
+        }
+
+        current_s += s;
+        stored_probe_steps[r] = std::make_pair(current_s,r);
+
+        if (r == repeats-1) {
+            // after the last probe, return to original Z
+            return_probe(current_s);
+        } else {
+            current_s -= repeat_jump_height;
+            return_probe(repeat_jump_height);
+        }
+        THEKERNEL->call_event(ON_IDLE);
+    }
+    if (output && repeats > 1) {
+        output->printf("] median: ");
+    }
+
+    // Find the median (std::pair sorts lexicographically)
+    std::nth_element(stored_probe_steps.begin(), stored_probe_steps.begin() + repeats/2, stored_probe_steps.end());
+    int median_index = stored_probe_steps[repeats/2].second;
+
+    steps = stored_probe_steps[repeats/2].first;
+    output->printf(" %d steps,",steps);
+    if (actuator_positions) {
+        for (int i = 0; i < num_actuators; i++) {
+            actuator_positions[i] = stored_actuator_positions[median_index * num_actuators + i];
+            output->printf(" %f", actuator_positions[i]);
+        }
+    }
+    output->printf("\n");
     return true;
 }
 
@@ -274,6 +341,23 @@ float ZProbe::probeDistance(float x, float y)
     int s;
     if(!doProbeAt(s, x, y)) return NAN;
     return zsteps_to_mm(s);
+}
+
+float ZProbe::find_bed()
+{
+    // home
+    home();
+
+    // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
+    coordinated_move(NAN, NAN, -getMaxZ() + initial_height, getFastFeedrate(), true);
+
+    // find bed, run at slow rate so as to not hit bed hard
+    int s;
+    if(!run_probe(s, false)) return NAN;
+
+    THEKERNEL->robot->reset_position_from_current_actuator_position();
+    coordinated_move(NAN, NAN, getProbeHeight(), getFastFeedrate(), true); // do a relative move from home to the point above the bed
+    return -(-getMaxZ() + initial_height - zsteps_to_mm(s) + getProbeHeight());
 }
 
 void ZProbe::on_gcode_received(void *argument)
