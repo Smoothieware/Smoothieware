@@ -12,8 +12,12 @@
 #include "StreamOutput.h"
 #include "TemperatureControlPublicAccess.h"
 #include "TemperatureControl.h"
+#include "PlayerPublicAccess.h"
+#include "Player.h"
+#include "ExtruderPublicAccess.h"
 #include "PublicData.h"
 #include "Robot.h"
+#include "modules/robot/Conveyor.h"
 
 #include "version.h"
 #include "checksumm.h"
@@ -23,10 +27,8 @@
 #include <math.h>
 #include <vector>
 
-#define reporter_checksum             CHECKSUM("reporter")
+#define reporter_checksum          CHECKSUM("reporter")
 #define enable_checksum            CHECKSUM("enable")
-
-#define extruder_checksum CHECKSUM("extruder")
 
 Reporter::Reporter(){}
 
@@ -63,8 +65,7 @@ void Reporter::on_gcode_received(void *argument){
                                 gcode->stream->printf("S");
                               }
                               void *returned_data;
-                              bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
-                              if (ok) {
+                              if (PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data )) {
                                 bool b = *static_cast<bool *>(returned_data);
                                 if(b){
                                   gcode->stream->printf("A");
@@ -72,8 +73,7 @@ void Reporter::on_gcode_received(void *argument){
                               }
                               gcode->stream->printf("\",\"heaters{{\":[");
                               std::vector<struct pad_temperature> controllers;
-                              bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
-                              if (ok) {
+                              if (PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers)) {
                                 for (auto &c : controllers) {
                                   if(&c == &controllers.back()){
                                     printf("%f,", c.current_temperature);
@@ -128,7 +128,18 @@ void Reporter::on_gcode_received(void *argument){
                                 gcode->stream->printf("0");
                               }
                               gcode->stream->printf("],\"sfactor\":100.00,\"efactor\":[100.00,100.00],\"tool\":1,");
-                              gcode->stream->printf("\"probe\":\"535\",\"fanRPM\":0,\"homed\":[0,0,0],\"fraction_printed\":0.572}\n");
+                              gcode->stream->printf("\"probe\":\"535\",\"fanRPM\":0,\"homed\":[0,0,0],\"fraction_printed\":");
+                              // Get fraction printed
+                              void *completed_data;
+                              if (PublicData::get_value( player_checksum, get_progress_checksum, &completed_data )) {
+                                struct pad_progress p =  *static_cast<struct pad_progress *>(completed_data);
+                                gcode->stream->printf("%d",p.percent_complete);
+                              }else{
+                                gcode->stream->printf("0");
+                              }
+
+                              // JSon must have an EOL
+                              gcode->stream->printf("}\n");
                 }
             }
         }
