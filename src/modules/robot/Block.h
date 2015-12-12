@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <bitset>
+#include "ActuatorCoordinates.h"
 
 class Gcode;
 
@@ -41,14 +42,14 @@ class Block {
 
         std::vector<Gcode> gcodes;
 
-        unsigned int   steps[3];           // Number of steps for each axis for this block
+        std::array<int, k_max_actuators>   steps; // Number of steps for each axis for this block
         unsigned int   steps_event_count;  // Steps for the longest axis
         unsigned int   nominal_rate;       // Nominal rate in steps per second
         float          nominal_speed;      // Nominal speed in mm per second
         float          millimeters;        // Distance for this move
         float          entry_speed;
         float          exit_speed;
-        float          rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
+        float          rate_delta;         // Number of steps to add to the speed for each acceleration tick
         float          acceleration;       // the acceleratoin for this block
         unsigned int   initial_rate;       // Initial speed in steps per second
         unsigned int   final_rate;         // Final speed in steps per second
@@ -59,7 +60,7 @@ class Block {
 
         short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
 
-        std::bitset<3> direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
+        std::bitset<k_max_actuators> direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
         struct {
             bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
             bool nominal_length_flag:1;          // Planner flag for nominal speed always reached

@@ -15,6 +15,7 @@ using std::string;
 #include <stack>
 
 #include "libs/Module.h"
+#include "ActuatorCoordinates.h"
 
 class Gcode;
 class BaseSolution;
@@ -24,7 +25,6 @@ class Robot : public Module {
     public:
         Robot();
         void on_module_loaded();
-        void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
 
         void reset_axis_position(float position, int axis);
@@ -44,7 +44,7 @@ class Robot : public Module {
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
         // gets accessed by Panel, Endstops, ZProbe
-        std::vector<StepperMotor*> actuators;
+        std::array<StepperMotor*, k_max_actuators> actuators;
 
         // set by a leveling strategy to transform the target of a move according to the current plan
         std::function<void(float[3])> compensationTransform;
@@ -55,6 +55,7 @@ class Robot : public Module {
         };
 
     private:
+        void load_config();
         void distance_in_gcode_is_known(Gcode* gcode);
         void append_milestone( Gcode *gcode, float target[], float rate_mm_s);
         void append_line( Gcode* gcode, float target[], float rate_mm_s);
@@ -65,8 +66,16 @@ class Robot : public Module {
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
         void clearToolOffset();
 
-        typedef std::tuple<float, float, bool, bool> saved_state_t; // save current feedrate and absolute mode, inch mode
+        // Workspace coordinate systems
+        using wcs_t= std::tuple<float, float, float>;
+        static const size_t k_max_wcs= 9; // setup 9 WCS offsets
+        std::array<wcs_t, k_max_wcs> wcs_offsets; // these are persistent once set
+        uint8_t current_wcs{0}; // 0 means G54 in enabled this is persistent
+        wcs_t g92_offset;
+
+        using saved_state_t= std::tuple<float, float, bool, bool>; // save current feedrate and absolute mode, inch mode
         std::stack<saved_state_t> state_stack;               // saves state from M120
+
         float last_milestone[3];                             // Last position, in millimeters
         float transformed_last_milestone[3];                 // Last transformed position
         int8_t motion_mode;                                  // Motion mode for the current received Gcode
@@ -91,18 +100,14 @@ class Robot : public Module {
         // Used by Stepper, Planner
         friend class Planner;
         friend class Stepper;
-
-        StepperMotor* alpha_stepper_motor;
-        StepperMotor* beta_stepper_motor;
-        StepperMotor* gamma_stepper_motor;
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed
 inline float Robot::to_millimeters( float value ){
-    return this->inch_mode ? value * 25.4 : value;
+    return this->inch_mode ? value * 25.4F : value;
 }
 inline float Robot::from_millimeters( float value){
-    return this->inch_mode ? value/25.4 : value;
+    return this->inch_mode ? value/25.4F : value;
 }
 inline void Robot::get_axis_position(float position[]){
     memcpy(position, this->last_milestone, sizeof(float)*3 );

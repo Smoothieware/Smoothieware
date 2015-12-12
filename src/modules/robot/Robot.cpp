@@ -63,26 +63,6 @@ using std::string;
 #define  kossel_checksum                     CHECKSUM("kossel")
 #define  morgan_checksum                     CHECKSUM("morgan")
 
-// stepper motor stuff
-#define  alpha_step_pin_checksum             CHECKSUM("alpha_step_pin")
-#define  beta_step_pin_checksum              CHECKSUM("beta_step_pin")
-#define  gamma_step_pin_checksum             CHECKSUM("gamma_step_pin")
-#define  alpha_dir_pin_checksum              CHECKSUM("alpha_dir_pin")
-#define  beta_dir_pin_checksum               CHECKSUM("beta_dir_pin")
-#define  gamma_dir_pin_checksum              CHECKSUM("gamma_dir_pin")
-#define  alpha_en_pin_checksum               CHECKSUM("alpha_en_pin")
-#define  beta_en_pin_checksum                CHECKSUM("beta_en_pin")
-#define  gamma_en_pin_checksum               CHECKSUM("gamma_en_pin")
-
-#define  alpha_steps_per_mm_checksum         CHECKSUM("alpha_steps_per_mm")
-#define  beta_steps_per_mm_checksum          CHECKSUM("beta_steps_per_mm")
-#define  gamma_steps_per_mm_checksum         CHECKSUM("gamma_steps_per_mm")
-
-#define  alpha_max_rate_checksum             CHECKSUM("alpha_max_rate")
-#define  beta_max_rate_checksum              CHECKSUM("beta_max_rate")
-#define  gamma_max_rate_checksum             CHECKSUM("gamma_max_rate")
-
-
 // new-style actuator stuff
 #define  actuator_checksum                   CHEKCSUM("actuator")
 
@@ -134,7 +114,9 @@ Robot::Robot()
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
-    this->compensationTransform= nullptr;
+    this->compensationTransform = nullptr;
+    this->wcs_offsets.fill(wcs_t(0.0F, 0.0F, 0.0F));
+    this->g92_offset = wcs_t(0.0F, 0.0F, 0.0F);
 }
 
 //Called when the module has just been loaded
@@ -143,12 +125,19 @@ void Robot::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
 
     // Configuration
-    this->on_config_reload(this);
+    this->load_config();
 }
 
-void Robot::on_config_reload(void *argument)
-{
+#define ACTUATOR_CHECKSUMS(X) {     \
+    CHECKSUM(X "_step_pin"),        \
+    CHECKSUM(X "_dir_pin"),         \
+    CHECKSUM(X "_en_pin"),          \
+    CHECKSUM(X "_steps_per_mm"),    \
+    CHECKSUM(X "_max_rate")         \
+}
 
+void Robot::load_config()
+{
     // Arm solutions are used to convert positions in millimeters into position in steps for each stepper motor.
     // While for a cartesian arm solution, this is a simple multiplication, in other, less simple cases, there is some serious math to be done.
     // To make adding those solution easier, they have their own, separate object.
@@ -171,7 +160,6 @@ void Robot::on_config_reload(void *argument)
     } else if(solution_checksum == rotatable_delta_checksum) {
         this->arm_solution = new RotatableDeltaSolution(THEKERNEL->config);
 
-
     } else if(solution_checksum == morgan_checksum) {
         this->arm_solution = new MorganSCARASolution(THEKERNEL->config);
 
@@ -181,7 +169,6 @@ void Robot::on_config_reload(void *argument)
     } else {
         this->arm_solution = new CartesianSolution(THEKERNEL->config);
     }
-
 
     this->feed_rate           = THEKERNEL->config->value(default_feed_rate_checksum   )->by_default(  100.0F)->as_number();
     this->seek_rate           = THEKERNEL->config->value(default_seek_rate_checksum   )->by_default(  100.0F)->as_number();
@@ -194,58 +181,39 @@ void Robot::on_config_reload(void *argument)
     this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
-    Pin alpha_step_pin;
-    Pin alpha_dir_pin;
-    Pin alpha_en_pin;
-    Pin beta_step_pin;
-    Pin beta_dir_pin;
-    Pin beta_en_pin;
-    Pin gamma_step_pin;
-    Pin gamma_dir_pin;
-    Pin gamma_en_pin;
-
-    alpha_step_pin.from_string( THEKERNEL->config->value(alpha_step_pin_checksum )->by_default("2.0"  )->as_string())->as_output();
-    alpha_dir_pin.from_string(  THEKERNEL->config->value(alpha_dir_pin_checksum  )->by_default("0.5"  )->as_string())->as_output();
-    alpha_en_pin.from_string(   THEKERNEL->config->value(alpha_en_pin_checksum   )->by_default("0.4"  )->as_string())->as_output();
-    beta_step_pin.from_string(  THEKERNEL->config->value(beta_step_pin_checksum  )->by_default("2.1"  )->as_string())->as_output();
-    beta_dir_pin.from_string(   THEKERNEL->config->value(beta_dir_pin_checksum   )->by_default("0.11" )->as_string())->as_output();
-    beta_en_pin.from_string(    THEKERNEL->config->value(beta_en_pin_checksum    )->by_default("0.10" )->as_string())->as_output();
-    gamma_step_pin.from_string( THEKERNEL->config->value(gamma_step_pin_checksum )->by_default("2.2"  )->as_string())->as_output();
-    gamma_dir_pin.from_string(  THEKERNEL->config->value(gamma_dir_pin_checksum  )->by_default("0.20" )->as_string())->as_output();
-    gamma_en_pin.from_string(   THEKERNEL->config->value(gamma_en_pin_checksum   )->by_default("0.19" )->as_string())->as_output();
-
-    float steps_per_mm[3] = {
-        THEKERNEL->config->value(alpha_steps_per_mm_checksum)->by_default(  80.0F)->as_number(),
-        THEKERNEL->config->value(beta_steps_per_mm_checksum )->by_default(  80.0F)->as_number(),
-        THEKERNEL->config->value(gamma_steps_per_mm_checksum)->by_default(2560.0F)->as_number(),
-    };
-
-    // TODO: delete or detect old steppermotors
     // Make our 3 StepperMotors
-    this->alpha_stepper_motor  = new StepperMotor(alpha_step_pin, alpha_dir_pin, alpha_en_pin);
-    this->beta_stepper_motor   = new StepperMotor(beta_step_pin,  beta_dir_pin,  beta_en_pin );
-    this->gamma_stepper_motor  = new StepperMotor(gamma_step_pin, gamma_dir_pin, gamma_en_pin);
+    uint16_t const checksums[][5] = {
+        ACTUATOR_CHECKSUMS("alpha"),
+        ACTUATOR_CHECKSUMS("beta"),
+        ACTUATOR_CHECKSUMS("gamma"),
+#if MAX_ROBOT_ACTUATORS > 3
+        ACTUATOR_CHECKSUMS("delta"),
+        ACTUATOR_CHECKSUMS("epsilon"),
+        ACTUATOR_CHECKSUMS("zeta")
+#endif
+    };
+    constexpr size_t actuator_checksum_count = sizeof(checksums) / sizeof(checksums[0]);
+    static_assert(actuator_checksum_count >= k_max_actuators, "Robot checksum array too small for k_max_actuators");
 
-    alpha_stepper_motor->change_steps_per_mm(steps_per_mm[0]);
-    beta_stepper_motor->change_steps_per_mm(steps_per_mm[1]);
-    gamma_stepper_motor->change_steps_per_mm(steps_per_mm[2]);
+    size_t motor_count = std::min(this->arm_solution->get_actuator_count(), k_max_actuators);
+    for (size_t a = 0; a < motor_count; a++) {
+        Pin pins[3]; //step, dir, enable
+        for (size_t i = 0; i < 3; i++) {
+            pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
+        }
+        actuators[a] = new StepperMotor(pins[0], pins[1], pins[2]);
 
-    alpha_stepper_motor->set_max_rate(THEKERNEL->config->value(alpha_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
-    beta_stepper_motor->set_max_rate(THEKERNEL->config->value(beta_max_rate_checksum )->by_default(30000.0F)->as_number() / 60.0F);
-    gamma_stepper_motor->set_max_rate(THEKERNEL->config->value(gamma_max_rate_checksum)->by_default(30000.0F)->as_number() / 60.0F);
+        actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
+        actuators[a]->set_max_rate(THEKERNEL->config->value(checksums[a][4])->by_default(30000.0F)->as_number());
+    }
+
     check_max_actuator_speeds(); // check the configs are sane
-
-    actuators.clear();
-    actuators.push_back(alpha_stepper_motor);
-    actuators.push_back(beta_stepper_motor);
-    actuators.push_back(gamma_stepper_motor);
-
 
     // initialise actuator positions to current cartesian position (X0 Y0 Z0)
     // so the first move can be correct if homing is not performed
-    float actuator_pos[3];
+    ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator(last_milestone, actuator_pos);
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < actuators.size(); i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 
     //this->clearToolOffset();
@@ -253,21 +221,21 @@ void Robot::on_config_reload(void *argument)
 
 void  Robot::push_state()
 {
-    bool am= this->absolute_mode;
-    bool im= this->inch_mode;
+    bool am = this->absolute_mode;
+    bool im = this->inch_mode;
     saved_state_t s(this->feed_rate, this->seek_rate, am, im);
     state_stack.push(s);
 }
 
 void Robot::pop_state()
 {
-   if(!state_stack.empty()) {
-        auto s= state_stack.top();
+    if(!state_stack.empty()) {
+        auto s = state_stack.top();
         state_stack.pop();
-        this->feed_rate= std::get<0>(s);
-        this->seek_rate= std::get<1>(s);
-        this->absolute_mode= std::get<2>(s);
-        this->inch_mode= std::get<3>(s);
+        this->feed_rate = std::get<0>(s);
+        this->seek_rate = std::get<1>(s);
+        this->absolute_mode = std::get<2>(s);
+        this->inch_mode = std::get<3>(s);
     }
 }
 
@@ -275,22 +243,12 @@ void Robot::pop_state()
 // we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
 void Robot::check_max_actuator_speeds()
 {
-    float step_freq= alpha_stepper_motor->get_max_rate() * alpha_stepper_motor->get_steps_per_mm();
-    if(step_freq > THEKERNEL->base_stepping_frequency) {
-        alpha_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / alpha_stepper_motor->get_steps_per_mm()));
-        THEKERNEL->streams->printf("WARNING: alpha_max_rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", step_freq, alpha_stepper_motor->max_rate);
-    }
-
-    step_freq= beta_stepper_motor->get_max_rate() * beta_stepper_motor->get_steps_per_mm();
-    if(step_freq > THEKERNEL->base_stepping_frequency) {
-        beta_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / beta_stepper_motor->get_steps_per_mm()));
-        THEKERNEL->streams->printf("WARNING: beta_max_rate exceeds base_stepping_frequency * beta_steps_per_mm: %f, setting to %f\n", step_freq, beta_stepper_motor->max_rate);
-    }
-
-    step_freq= gamma_stepper_motor->get_max_rate() * gamma_stepper_motor->get_steps_per_mm();
-    if(step_freq > THEKERNEL->base_stepping_frequency) {
-        gamma_stepper_motor->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / gamma_stepper_motor->get_steps_per_mm()));
-        THEKERNEL->streams->printf("WARNING: gamma_max_rate exceeds base_stepping_frequency * gamma_steps_per_mm: %f, setting to %f\n", step_freq, gamma_stepper_motor->max_rate);
+    for (size_t i = 0; i < actuators.size(); i++) {
+        float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
+        if (step_freq > THEKERNEL->base_stepping_frequency) {
+            actuators[i]->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm()));
+            THEKERNEL->streams->printf("WARNING: actuator %c rate exceeds base_stepping_frequency * alpha_steps_per_mm: %f, setting to %f\n", 'A' + i, step_freq, actuators[i]->max_rate);
+        }
     }
 }
 
@@ -310,49 +268,112 @@ void Robot::on_gcode_received(void *argument)
             case 2:  this->motion_mode = MOTION_MODE_CW_ARC;   break;
             case 3:  this->motion_mode = MOTION_MODE_CCW_ARC;   break;
             case 4: {
-                uint32_t delay_ms= 0;
+                uint32_t delay_ms = 0;
                 if (gcode->has_letter('P')) {
-                    delay_ms= gcode->get_int('P');
+                    delay_ms = gcode->get_int('P');
                 }
                 if (gcode->has_letter('S')) {
                     delay_ms += gcode->get_int('S') * 1000;
                 }
-                if (delay_ms > 0){
+                if (delay_ms > 0) {
                     // drain queue
                     THEKERNEL->conveyor->wait_for_empty_queue();
                     // wait for specified time
-                    uint32_t start= us_ticker_read(); // mbed call
-                    while ((us_ticker_read() - start) < delay_ms*1000) {
+                    uint32_t start = us_ticker_read(); // mbed call
+                    while ((us_ticker_read() - start) < delay_ms * 1000) {
                         THEKERNEL->call_event(ON_IDLE, this);
                     }
                 }
             }
             break;
+
+            case 10: // G10 L2 Pn Xn Yn Zn set WCS
+                // TODO implement G10 L20
+                if(gcode->has_letter('L') && gcode->get_int('L') == 2 && gcode->has_letter('P')) {
+                    size_t n = gcode->get_uint('P');
+                    if(n == 0) n = current_wcs; // set current coordinate system
+                    else --n;
+                    if(n < k_max_wcs) {
+                        float x, y, z;
+                        std::tie(x, y, z) = wcs_offsets[n];
+                        if(gcode->has_letter('X')) x = this->to_millimeters(gcode->get_value('X'));
+                        if(gcode->has_letter('Y')) y = this->to_millimeters(gcode->get_value('Y'));
+                        if(gcode->has_letter('Z')) z = this->to_millimeters(gcode->get_value('Z'));
+                        wcs_offsets[n] = wcs_t(x, y, z);
+                    }
+                }
+                break;
+
             case 17: this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);   break;
             case 18: this->select_plane(X_AXIS, Z_AXIS, Y_AXIS);   break;
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS);   break;
             case 20: this->inch_mode = true;   break;
             case 21: this->inch_mode = false;   break;
+
+            case 54: case 55: case 56: case 57: case 58: case 59:
+                // select WCS 0-8: G54..G59, G59.1, G59.2, G59.3
+                current_wcs = gcode->g - 54;
+                if(gcode->g == 59 && gcode->subcode > 0) {
+                    current_wcs += gcode->subcode;
+                    if(current_wcs >= k_max_wcs) current_wcs = k_max_wcs - 1;
+                }
+                break;
+
             case 90: this->absolute_mode = true;   break;
             case 91: this->absolute_mode = false;   break;
+
             case 92: {
-                if(gcode->get_num_args() == 0) {
-                    for (int i = X_AXIS; i <= Z_AXIS; ++i) {
-                        reset_axis_position(0, i);
+                if(gcode->subcode == 1 || gcode->subcode == 2 || gcode->get_num_args() == 0) {
+                    // reset G92 offsets to 0
+                    g92_offset = wcs_t(0, 0, 0);
+
+                } else if(gcode->subcode == 3) {
+                    // non-standard - set machine coordinates (like old G92 would do) basically a manual home
+                    if(gcode->get_num_args() == 0) {
+                        // sets current position to 0,0,0 in machine coordinates
+                        for (int i = X_AXIS; i <= Z_AXIS; ++i) reset_axis_position(0, i);
+
+                        // now we need to clear the g92 offsets, and set last_milestone
+                        // TODO is this correct? What about the compensationTransform? do we need the dreaded inverseCompensation Transform?
+                        g92_offset = wcs_t(0, 0, 0);
+                        this->last_milestone[0] -= std::get<0>(wcs_offsets[current_wcs]);
+                        this->last_milestone[1] -= std::get<1>(wcs_offsets[current_wcs]);
+                        this->last_milestone[2] -= std::get<2>(wcs_offsets[current_wcs]);
+
+                    } else {
+                        // sets the given axis to the provided value
+                        float x, y, z;
+                        std::tie(x, y, z) = g92_offset;
+                        if(gcode->has_letter('X')) { reset_axis_position(this->to_millimeters(gcode->get_value('X')), X_AXIS); this->last_milestone[0] -= std::get<0>(wcs_offsets[current_wcs]); x= 0; }
+                        if(gcode->has_letter('Y')) { reset_axis_position(this->to_millimeters(gcode->get_value('Y')), Y_AXIS); this->last_milestone[1] -= std::get<1>(wcs_offsets[current_wcs]); y= 0; }
+                        if(gcode->has_letter('Z')) { reset_axis_position(this->to_millimeters(gcode->get_value('Z')), Z_AXIS); this->last_milestone[2] -= std::get<2>(wcs_offsets[current_wcs]); z= 0; }
+
+                        // reset the g92 offset
+                        g92_offset = wcs_t(x, y, z);
                     }
 
+
                 } else {
-                    for (char letter = 'X'; letter <= 'Z'; letter++) {
-                        if ( gcode->has_letter(letter) ) {
-                            reset_axis_position(this->to_millimeters(gcode->get_value(letter)), letter - 'X');
-                        }
-                    }
+                    // standard setting of the g92 offsets, making current position whatever the coordinate arguments are
+                    float x, y, z;
+                    std::tie(x, y, z) = g92_offset;
+                    if(gcode->has_letter('X')) x = last_milestone[0] - to_millimeters(gcode->get_value('X'));
+                    if(gcode->has_letter('Y')) y = last_milestone[1] - to_millimeters(gcode->get_value('Y'));
+                    if(gcode->has_letter('Z')) z = last_milestone[2] - to_millimeters(gcode->get_value('Z'));
+                    g92_offset = wcs_t(x, y, z);
                 }
                 return;
             }
         }
+
     } else if( gcode->has_m) {
         switch( gcode->m ) {
+            case 2: // M2 end of program
+                current_wcs = 0;
+                absolute_mode = true;
+                motion_mode = MOTION_MODE_LINEAR; // feed
+                break;
+
             case 92: // M92 - set steps per mm
                 if (gcode->has_letter('X'))
                     actuators[0]->change_steps_per_mm(this->to_millimeters(gcode->get_value('X')));
@@ -370,14 +391,28 @@ void Robot::on_gcode_received(void *argument)
 
             case 114: {
                 char buf[64];
-                int n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f A:%1.3f B:%1.3f C:%1.3f ",
+                int n = 0;
+                if(gcode->subcode == 0) { // M114 print WCS
+                    n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f",
                                  from_millimeters(this->last_milestone[0]),
                                  from_millimeters(this->last_milestone[1]),
-                                 from_millimeters(this->last_milestone[2]),
+                                 from_millimeters(this->last_milestone[2]));
+
+                } else if(gcode->subcode == 1) { // M114.1 print Machine coordinate system
+                    // TODO figure this out
+                    n = snprintf(buf, sizeof(buf), "X:%1.3f Y:%1.3f Z:%1.3f",
+                                 from_millimeters(this->last_milestone[0]) + (std::get<0>(wcs_offsets[current_wcs]) + std::get<0>(g92_offset)),
+                                 from_millimeters(this->last_milestone[1]) + (std::get<1>(wcs_offsets[current_wcs]) + std::get<1>(g92_offset)),
+                                 from_millimeters(this->last_milestone[2]) + (std::get<2>(wcs_offsets[current_wcs]) + std::get<2>(g92_offset)) );
+
+                } else if(gcode->subcode == 2) { // M114.2 print realtime actuator position
+                    n = snprintf(buf, sizeof(buf), "A:%1.3f B:%1.3f C:%1.3f",
                                  actuators[X_AXIS]->get_current_position(),
                                  actuators[Y_AXIS]->get_current_position(),
                                  actuators[Z_AXIS]->get_current_position() );
-                gcode->txt_after_ok.append(buf, n);
+                }
+                if(n > 0)
+                    gcode->txt_after_ok.append(buf, n);
             }
             return;
 
@@ -396,22 +431,20 @@ void Robot::on_gcode_received(void *argument)
                     this->max_speeds[Y_AXIS] = gcode->get_value('Y');
                 if (gcode->has_letter('Z'))
                     this->max_speeds[Z_AXIS] = gcode->get_value('Z');
-                if (gcode->has_letter('A'))
-                    alpha_stepper_motor->set_max_rate(gcode->get_value('A'));
-                if (gcode->has_letter('B'))
-                    beta_stepper_motor->set_max_rate(gcode->get_value('B'));
-                if (gcode->has_letter('C'))
-                    gamma_stepper_motor->set_max_rate(gcode->get_value('C'));
-
+                for (size_t i = 0; i < 3 && i < actuators.size(); i++) {
+                    if (gcode->has_letter('A' + i))
+                        actuators[i]->set_max_rate(gcode->get_value('A' + i));
+                }
                 check_max_actuator_speeds();
 
                 if(gcode->get_num_args() == 0) {
-                    gcode->stream->printf("X:%g Y:%g Z:%g  A:%g B:%g C:%g ",
-                                          this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
-                                          alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
+                    gcode->stream->printf("X:%g Y:%g Z:%g",
+                                          this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+                    for (size_t i = 0; i < 3 && i < actuators.size(); i++) {
+                        gcode->stream->printf(" %c : %g", 'A' + i, actuators[i]->get_max_rate()); //xxx
+                    }
                     gcode->add_nl = true;
                 }
-
                 break;
 
             case 204: // M204 Snnn - set acceleration to nnn, Znnn sets z acceleration
@@ -454,7 +487,7 @@ void Robot::on_gcode_received(void *argument)
                     THEKERNEL->planner->minimum_planner_speed = mps;
                 }
                 if (gcode->has_letter('Y')) {
-                    alpha_stepper_motor->default_minimum_actuator_rate = gcode->get_value('Y');
+                    actuators[0]->default_minimum_actuator_rate = gcode->get_value('Y');
                 }
                 break;
 
@@ -469,7 +502,7 @@ void Robot::on_gcode_received(void *argument)
                         factor = 1000.0F;
 
                     seconds_per_minute = 6000.0F / factor;
-                }else{
+                } else {
                     gcode->stream->printf("Speed factor at %6.2f %%\n", 6000.0F / seconds_per_minute);
                 }
                 break;
@@ -483,9 +516,12 @@ void Robot::on_gcode_received(void *argument)
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f Z%1.5f\n", THEKERNEL->planner->acceleration, THEKERNEL->planner->z_acceleration);
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
-                gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
-                                      this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
-                                      alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
+                gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f",
+                                      this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+                for (size_t i = 0; i < 3 && i < actuators.size(); i++) {
+                    gcode->stream->printf(" %c%1.5f", 'A' + i, actuators[i]->get_max_rate());
+                }
+                gcode->stream->printf("\n");
 
                 // get or save any arm solution specific optional values
                 BaseSolution::arm_options_t options;
@@ -497,12 +533,39 @@ void Robot::on_gcode_received(void *argument)
                     gcode->stream->printf("\n");
                 }
 
-                break;
+                // save wcs_offsets and current_wcs
+                // TODO this may need to be done whenever they change to be compliant
+                gcode->stream->printf(";WCS settings\n");
+                gcode->stream->printf("G5%c", std::min(current_wcs, (uint8_t)(5 + '4')));
+                if(current_wcs >= 6) {
+                    gcode->stream->printf(".%c\n",  '1' + (current_wcs - 5));
+                } else {
+                    gcode->stream->printf("\n");
+                }
+                int n = 1;
+                for(auto &i : wcs_offsets) {
+                    if(i != wcs_t(0, 0, 0)) {
+                        float x, y, z;
+                        std::tie(x, y, z) = i;
+                        gcode->stream->printf("G10 L2 P%d X%f Y%f Z%f\n", n, x, y, z);
+                    }
+                    ++n;
+                }
             }
+
+            if(gcode->m == 503) {
+                // just print the G92 setting as it is not saved
+                if(g92_offset != wcs_t(0, 0, 0)) {
+                    float x, y, z;
+                    std::tie(x, y, z) = g92_offset;
+                    gcode->stream->printf("G92 X%f Y%f Z%f ; NOT SAVED\n", x, y, z);
+                }
+            }
+            break;
 
             case 665: { // M665 set optional arm solution variables based on arm solution.
                 // the parameter args could be any letter each arm solution only accepts certain ones
-                BaseSolution::arm_options_t options= gcode->get_args();
+                BaseSolution::arm_options_t options = gcode->get_args();
                 options.erase('S'); // don't include the S
                 options.erase('U'); // don't include the U
                 if(options.size() > 0) {
@@ -523,7 +586,7 @@ void Robot::on_gcode_received(void *argument)
                     this->delta_segments_per_second = gcode->get_value('S');
                     gcode->stream->printf("Delta segments set to %8.4f segs/sec\n", this->delta_segments_per_second);
 
-                }else if(gcode->has_letter('U')) { // or set mm_per_line_segment, not saved by M500
+                } else if(gcode->has_letter('U')) { // or set mm_per_line_segment, not saved by M500
                     this->mm_per_line_segment = gcode->get_value('U');
                     this->delta_segments_per_second = 0;
                     gcode->stream->printf("mm per line segment set to %8.4f\n", this->mm_per_line_segment);
@@ -537,7 +600,7 @@ void Robot::on_gcode_received(void *argument)
     if( this->motion_mode < 0)
         return;
 
-    //Get parameters
+//Get parameters
     float target[3], offset[3];
     clear_vector(offset);
 
@@ -561,7 +624,7 @@ void Robot::on_gcode_received(void *argument)
             this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
 
-    //Perform any physical actions
+//Perform any physical actions
     switch(this->motion_mode) {
         case MOTION_MODE_CANCEL: break;
         case MOTION_MODE_SEEK  : this->append_line(gcode, target, this->seek_rate / seconds_per_minute ); break;
@@ -570,14 +633,14 @@ void Robot::on_gcode_received(void *argument)
         case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, target ); break;
     }
 
-    // last_milestone was set to target in append_milestone, no need to do it again
+// last_milestone was set to target in append_milestone, no need to do it again
 
 }
 
 // We received a new gcode, and one of the functions
 // determined the distance for that given gcode. So now we can attach this gcode to the right block
 // and continue
-void Robot::distance_in_gcode_is_known(Gcode *gcode)
+void Robot::distance_in_gcode_is_known(Gcode * gcode)
 {
     //If the queue is empty, execute immediatly, otherwise attach to the last added block
     THEKERNEL->conveyor->append_gcode(gcode);
@@ -593,45 +656,60 @@ void Robot::reset_axis_position(float x, float y, float z)
     this->transformed_last_milestone[Y_AXIS] = y;
     this->transformed_last_milestone[Z_AXIS] = z;
 
-    float actuator_pos[3];
+    ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < actuators.size(); i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
+
+    // we also reset G92 offsets
+    g92_offset = wcs_t(0, 0, 0);
 }
 
-// Reset the position for an axis (used in homing and G92)
+// Reset the position for an axis (used in homing)
 void Robot::reset_axis_position(float position, int axis)
 {
     this->last_milestone[axis] = position;
     this->transformed_last_milestone[axis] = position;
 
-    float actuator_pos[3];
+    ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
 
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < actuators.size(); i++){
         actuators[i]->change_last_milestone(actuator_pos[i]);
+    }
+
+    // we also reset G92 offsets
+    switch(axis) {
+        case X_AXIS: std::get<0>(g92_offset)= 0; break;
+        case Y_AXIS: std::get<1>(g92_offset)= 0; break;
+        case Z_AXIS: std::get<2>(g92_offset)= 0; break;
+    }
+
 }
 
 // Use FK to find out where actuator is and reset lastmilestone to match
 void Robot::reset_position_from_current_actuator_position()
 {
-    float actuator_pos[]= {actuators[X_AXIS]->get_current_position(), actuators[Y_AXIS]->get_current_position(), actuators[Z_AXIS]->get_current_position()};
+    ActuatorCoordinates actuator_pos;
+    for (size_t i = 0; i < actuators.size(); i++) {
+        actuator_pos[i] = actuators[i]->get_current_position();
+    }
     arm_solution->actuator_to_cartesian(actuator_pos, this->last_milestone);
     memcpy(this->transformed_last_milestone, this->last_milestone, sizeof(this->transformed_last_milestone));
 
     // now reset actuator correctly, NOTE this may lose a little precision
     arm_solution->cartesian_to_actuator(this->last_milestone, actuator_pos);
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < actuators.size(); i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
 // Convert target from millimeters to steps, and append this to the planner
-void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s)
+void Robot::append_milestone(Gcode * gcode, float target[], float rate_mm_s)
 {
     float deltas[3];
     float unit_vec[3];
-    float actuator_pos[3];
-    float transformed_target[3]; // adjust target for bed compensation
+    ActuatorCoordinates actuator_pos;
+    float transformed_target[3]; // adjust target for bed compensation and WCS offsets
     float millimeters_of_travel;
 
     // unity transform by default
@@ -643,8 +721,13 @@ void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s)
         compensationTransform(transformed_target);
     }
 
+    // apply wcs offsets and g92 offset
+    transformed_target[0] += (std::get<0>(wcs_offsets[current_wcs]) + std::get<0>(g92_offset));
+    transformed_target[1] += (std::get<1>(wcs_offsets[current_wcs]) + std::get<1>(g92_offset));
+    transformed_target[2] += (std::get<2>(wcs_offsets[current_wcs]) + std::get<2>(g92_offset));
+
     // find distance moved by each axis, use transformed target from last_transformed_target
-    for (int axis = X_AXIS; axis <= Z_AXIS; axis++){
+    for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
         deltas[axis] = transformed_target[axis] - transformed_last_milestone[axis];
     }
     // store last transformed
@@ -670,13 +753,13 @@ void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s)
     // find actuator position given cartesian position, use actual adjusted target
     arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
 
-    float isecs= rate_mm_s / millimeters_of_travel;
+    float isecs = rate_mm_s / millimeters_of_travel;
     // check per-actuator speed limits
-    for (int actuator = 0; actuator <= 2; actuator++) {
+    for (size_t actuator = 0; actuator < actuators.size(); actuator++) {
         float actuator_rate  = fabsf(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * isecs;
-        if (actuator_rate > actuators[actuator]->get_max_rate()){
+        if (actuator_rate > actuators[actuator]->get_max_rate()) {
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
-            isecs= rate_mm_s / millimeters_of_travel;
+            isecs = rate_mm_s / millimeters_of_travel;
         }
     }
 
@@ -689,7 +772,7 @@ void Robot::append_milestone(Gcode *gcode, float target[], float rate_mm_s)
 }
 
 // Append a move to the queue ( cutting it into segments if needed )
-void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
+void Robot::append_line(Gcode * gcode, float target[], float rate_mm_s )
 {
     // Find out the distance for this gcode
     // NOTE we need to do sqrt here as this setting of millimeters_of_travel is used by extruder and other modules even if there is no XYZ move
@@ -711,8 +794,8 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
     // NOTE we need to do this before we segment the line (for deltas)
     if(gcode->has_letter('E')) {
         float data[2];
-        data[0]= gcode->get_value('E'); // E target (maybe absolute or relative)
-        data[1]= rate_mm_s / gcode->millimeters_of_travel; // inverted seconds for the move
+        data[0] = gcode->get_value('E'); // E target (maybe absolute or relative)
+        data[1] = rate_mm_s / gcode->millimeters_of_travel; // inverted seconds for the move
         if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
             rate_mm_s *= data[1];
             //THEKERNEL->streams->printf("Extruder has changed the rate by %f to %f\n", data[1], rate_mm_s);
@@ -772,7 +855,7 @@ void Robot::append_line(Gcode *gcode, float target[], float rate_mm_s )
 
 
 // Append an arc to the queue ( cutting it into segments as needed )
-void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radius, bool is_clockwise )
+void Robot::append_arc(Gcode * gcode, float target[], float offset[], float radius, bool is_clockwise )
 {
 
     // Scary math
@@ -786,11 +869,11 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
 
     // Patch from GRBL Firmware - Christoph Baumann 04072015
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
-    float angular_travel = atan2(r_axis0*rt_axis1-r_axis1*rt_axis0, r_axis0*rt_axis0+r_axis1*rt_axis1);
+    float angular_travel = atan2(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
     if (is_clockwise) { // Correct atan2 output per direction
-        if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= 2*M_PI; }
+        if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= 2 * M_PI; }
     } else {
-        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel += 2*M_PI; }
+        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel += 2 * M_PI; }
     }
 
     // Find the distance for this gcode
@@ -881,7 +964,7 @@ void Robot::append_arc(Gcode *gcode, float target[], float offset[], float radiu
 }
 
 // Do the math for an arc and add it to the queue
-void Robot::compute_arc(Gcode *gcode, float offset[], float target[])
+void Robot::compute_arc(Gcode * gcode, float offset[], float target[])
 {
 
     // Find the radius
