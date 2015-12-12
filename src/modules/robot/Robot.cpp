@@ -329,14 +329,15 @@ void Robot::on_gcode_received(void *argument)
                 } else {
                     float x, y, z;
                     std::tie(x, y, z)= g92_offset;
-                    if(gcode->has_letter('X')) x= this->to_millimeters(gcode->get_value('X'));
-                    if(gcode->has_letter('Y')) y= this->to_millimeters(gcode->get_value('Y'));
-                    if(gcode->has_letter('Z')) z= this->to_millimeters(gcode->get_value('Z'));
+                    if(gcode->has_letter('X')) x= to_millimeters(gcode->get_value('X')) - last_milestone[0];
+                    if(gcode->has_letter('Y')) y= to_millimeters(gcode->get_value('Y')) - last_milestone[1];
+                    if(gcode->has_letter('Z')) z= to_millimeters(gcode->get_value('Z')) - last_milestone[2];
                     g92_offset= wcs_t(x, y, z);
                 }
                 return;
             }
         }
+
     } else if( gcode->has_m) {
         switch( gcode->m ) {
             case 2: // M2 end of program
@@ -521,6 +522,15 @@ void Robot::on_gcode_received(void *argument)
                         gcode->stream->printf("G10 L2 P%d X%f Y%f Z%f\n", n, x, y, z);
                     }
                     ++n;
+                }
+            }
+
+            if(gcode->m == 503) {
+                // just print the G92 setting as it is not saved
+                if(g92_offset != wcs_t(0,0,0)) {
+                    float x, y, z;
+                    std::tie(x, y, z) = g92_offset;
+                    gcode->stream->printf("G92 X%f Y%f Z%f ; NOT SAVED\n", x, y, z);
                 }
             }
             break;
