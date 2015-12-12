@@ -166,6 +166,9 @@ void init() {
     #ifndef NO_UTILS_PANEL
     kernel->add_module( new Panel() );
     #endif
+    #ifndef NO_UTILS_REPORTER
+    kernel->add_module( new Reporter() );
+    #endif
     #ifndef NO_TOOLS_TOUCHPROBE
     kernel->add_module( new Touchprobe() );
     #endif

@@ -11,21 +11,35 @@
 #include "Gcode.h"
 #include "StreamOutput.h"
 #include "TemperatureControlPublicAccess.h"
-#include "TemperatureControlPool.h"
 #include "TemperatureControl.h"
 #include "PublicData.h"
 #include "Robot.h"
 
+#include "version.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
+#include "Config.h"
+
 #include <math.h>
 #include <vector>
 
+#define reporter_checksum             CHECKSUM("reporter")
+#define enable_checksum            CHECKSUM("enable")
+
+#define extruder_checksum CHECKSUM("extruder")
 
 Reporter::Reporter(){}
 
 Reporter::~Reporter(){}
 
 void Reporter::on_module_loaded(){
-    this->register_for_event(ON_GCODE_RECEIVED);
+  // Exit if this module is not enabled
+  if ( !THEKERNEL->config->value( reporter_checksum, enable_checksum )->by_default(false)->as_bool() ) {
+      delete this;
+      return;
+  }
+
+  this->register_for_event(ON_GCODE_RECEIVED);
 }
 
 void Reporter::on_gcode_received(void *argument){
@@ -36,8 +50,27 @@ void Reporter::on_gcode_received(void *argument){
                 switch(static_cast<int>(gcode->get_value('S'))){
                         case 0:
                               // Beginning
-                              gcode->stream->printf("{\"status\":\"I\",");
-                              gcode->stream->printf("\"heaters{{\":[");
+                              // Find the status
+                              //I=idle, P=printing from SD card, S=stopped (i.e. needs a reset),
+                              //C=running config file, A=paused, D=pausing, R=resuming, B=busy (running a macro)
+                              gcode->stream->printf("{\"status\":\"");
+                              if(THEKERNEL->conveyor->is_queue_empty()){
+                                gcode->stream->printf("I");
+                              }else{
+                                gcode->stream->printf("P");
+                              }
+                              if (THEKERNEL->is_halted()){
+                                gcode->stream->printf("S");
+                              }
+                              void *returned_data;
+                              bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
+                              if (ok) {
+                                bool b = *static_cast<bool *>(returned_data);
+                                if(b){
+                                  gcode->stream->printf("A");
+                                }
+                              }
+                              gcode->stream->printf("\",\"heaters{{\":[");
                               std::vector<struct pad_temperature> controllers;
                               bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
                               if (ok) {
@@ -86,7 +119,16 @@ void Reporter::on_gcode_received(void *argument){
                               gcode->stream->printf("%f,%f,%f", pos[0], pos[1], pos[2]);
 
                               // End
-                              gcode->stream->printf("],\"extr\":[12,34],\"sfactor\":100.00,\"efactor\":[100.00,100.00],\"tool\":1,\"probe\":\"535\",\"fanRPM\":0,\"homed\":[0,0,0],\"fraction_printed\":0.572}\n");
+                              //Extruder information
+                              gcode->stream->printf("],\"extr\":[");
+                              float *rd;
+                              if(PublicData::get_value( extruder_checksum, (void **)&rd )){
+                                gcode->stream->printf("%f", *(rd+5));
+                              } else {
+                                gcode->stream->printf("0");
+                              }
+                              gcode->stream->printf("],\"sfactor\":100.00,\"efactor\":[100.00,100.00],\"tool\":1,");
+                              gcode->stream->printf("\"probe\":\"535\",\"fanRPM\":0,\"homed\":[0,0,0],\"fraction_printed\":0.572}\n");
                 }
             }
         }
