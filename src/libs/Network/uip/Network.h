@@ -22,7 +22,7 @@ public:
 
 private:
     void init();
-    uint32_t tick(uint32_t dummy);
+    void tick();
     void handlePacket();
 
     static Network *instance;

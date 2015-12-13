@@ -1,7 +1,7 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
-#include "libs/Hook.h"
+#include <functional>
 
 class Pin;
 
@@ -17,24 +17,12 @@ public:
 	void set_longpress_delay(int delay);
     bool get();
 
-
-    template<typename T> Button *up_attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) )
-    {
-        this->up_hook = new Hook();
-        this->up_hook->attach(optr, fptr);
-        return this;
-    }
-
-    template<typename T> Button *down_attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) )
-    {
-        this->down_hook = new Hook();
-        this->down_hook->attach(optr, fptr);
-        return this;
-    }
-
+    void up_attach( std::function<void(void)> f);
+    void down_attach( std::function<void(void)> f);
+    
 private:
-    Hook *up_hook;
-    Hook *down_hook;
+    std::function<void(void)> up_hook;
+    std::function<void(void)> down_hook;
     bool value;
     char counter;
     Pin *button_pin;

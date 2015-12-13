@@ -14,7 +14,7 @@ public:
     void on_config_reload(void *);
 
 private:
-    uint32_t led_tick(uint32_t);
+    void led_tick();
     Pin  led;
     struct {
         uint8_t cnt:4;

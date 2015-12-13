@@ -9,7 +9,7 @@ class KillButton : public Module {
         void on_module_loaded();
         void on_console_line_received( void *argument );
         void on_idle(void *argument);
-        uint32_t button_tick(uint32_t dummy);
+        void button_tick();
 
     private:
         Pin kill_button;

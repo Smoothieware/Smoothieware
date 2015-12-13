@@ -49,7 +49,7 @@ void KillButton::on_module_loaded()
 
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_IDLE);
-    THEKERNEL->slow_ticker->attach( 10, this, &KillButton::button_tick );
+    THEKERNEL->slow_ticker->attach( 10, std::bind( &KillButton::button_tick, this) );
 }
 
 void KillButton::on_idle(void *argument)
@@ -64,7 +64,7 @@ void KillButton::on_idle(void *argument)
 //TODO: Make this use InterruptIn
 //Check the state of the button and act accordingly based on current pause state
 // Note this is ISR so don't do anything nasty in here
-uint32_t KillButton::button_tick(uint32_t dummy)
+void KillButton::button_tick()
 {
     if(!this->killed && this->kill_enable && this->kill_button.connected() && !this->kill_button.get()) {
         this->killed = true;
@@ -72,8 +72,6 @@ uint32_t KillButton::button_tick(uint32_t dummy)
         // THEKERNEL->call_event(ON_HALT);
         this->do_kill= true;
     }
-
-    return 0;
 }
 
 // When a new line is received, check if it is a command, and if it is, act upon it

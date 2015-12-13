@@ -25,7 +25,6 @@
 using namespace std;
 
 #include "libs/nuts_bolts.h"
-#include "libs/Hook.h"
 
 #include <mri.h>
 
@@ -55,9 +54,9 @@ void Stepper::on_module_loaded()
     THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){trapezoid_generator_tick(); });
 
     // Attach to the end_of_move stepper event
-    THEKERNEL->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
-    THEKERNEL->robot->beta_stepper_motor->attach( this, &Stepper::stepper_motor_finished_move );
-    THEKERNEL->robot->gamma_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move );
+    THEKERNEL->robot->alpha_stepper_motor->attach(std::bind(&Stepper::stepper_motor_finished_move,this) );
+    THEKERNEL->robot->beta_stepper_motor->attach( std::bind(&Stepper::stepper_motor_finished_move,this) );
+    THEKERNEL->robot->gamma_stepper_motor->attach(std::bind(&Stepper::stepper_motor_finished_move,this) );
 }
 
 // Get configuration from the config file
@@ -191,19 +190,17 @@ void Stepper::on_block_end(void *argument)
 }
 
 // When a stepper motor has finished it's assigned movement
-uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
+void Stepper::stepper_motor_finished_move()
 {
     // We care only if none is still moving
     if( THEKERNEL->robot->alpha_stepper_motor->moving || THEKERNEL->robot->beta_stepper_motor->moving || THEKERNEL->robot->gamma_stepper_motor->moving ) {
-        return 0;
+        return;
     }
 
     // This block is finished, release it
     if( this->current_block != NULL ) {
         this->current_block->release();
     }
-
-    return 0;
 }
 
 

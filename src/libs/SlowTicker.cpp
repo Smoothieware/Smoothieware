@@ -12,7 +12,6 @@ using namespace std;
 #include "libs/Kernel.h"
 #include "SlowTicker.h"
 #include "StepTicker.h"
-#include "libs/Hook.h"
 #include "modules/robot/Conveyor.h"
 #include "Gcode.h"
 
@@ -60,12 +59,12 @@ void SlowTicker::set_frequency( int frequency ){
 void SlowTicker::tick(){
 
     // Call all hooks that need to be called ( bresenham )
-    for (Hook* hook : this->hooks){
-        hook->countdown -= this->interval;
-        if (hook->countdown < 0)
+    for (ticker& hook : this->hooks){
+        hook.countdown -= this->interval;
+        if (hook.countdown < 0)
         {
-            hook->countdown += hook->interval;
-            hook->call();
+            hook.countdown += hook.interval;
+            hook.f();
         }
     }
 
