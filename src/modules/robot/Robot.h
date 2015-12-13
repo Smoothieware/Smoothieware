@@ -58,10 +58,10 @@ class Robot : public Module {
     private:
         void load_config();
         void distance_in_gcode_is_known(Gcode* gcode);
-        void append_milestone( Gcode *gcode, float target[], float rate_mm_s);
-        void append_line( Gcode* gcode, float target[], float rate_mm_s);
-        void append_arc( Gcode* gcode, float target[], float offset[], float radius, bool is_clockwise );
-        void compute_arc(Gcode* gcode, float offset[], float target[]);
+        void append_milestone( Gcode *gcode, const float target[], float rate_mm_s);
+        void append_line( Gcode* gcode, const float target[], float rate_mm_s);
+        void append_arc( Gcode* gcode, const float target[], const float offset[], float radius, bool is_clockwise );
+        void compute_arc(Gcode* gcode, const float offset[], const float target[]);
 
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
@@ -69,16 +69,17 @@ class Robot : public Module {
 
         // Workspace coordinate systems
         using wcs_t= std::tuple<float, float, float>;
+        wcs_t mcs2wcs();
         static const size_t k_max_wcs= 9; // setup 9 WCS offsets
         std::array<wcs_t, k_max_wcs> wcs_offsets; // these are persistent once set
         uint8_t current_wcs{0}; // 0 means G54 in enabled this is persistent
         wcs_t g92_offset;
 
-        using saved_state_t= std::tuple<float, float, bool, bool>; // save current feedrate and absolute mode, inch mode
+        using saved_state_t= std::tuple<float, float, bool, bool, uint8_t>; // save current feedrate and absolute mode, inch mode, current_wcs
         std::stack<saved_state_t> state_stack;               // saves state from M120
 
-        float last_milestone[3];                             // Last position, in millimeters
-        float transformed_last_milestone[3];                 // Last transformed position
+        float last_milestone[3];                             // Last requested position, in millimeters, which is what we were requested to move to in the gcode
+        float machine_position[3];                           // Last machine position, which is th eposition before converting to actuator coordinates
         int8_t motion_mode;                                  // Motion mode for the current received Gcode
         uint8_t plane_axis_0, plane_axis_1, plane_axis_2;    // Current plane ( XY, XZ, YZ )
         float seek_rate;                                     // Current rate for seeking moves ( mm/s )
