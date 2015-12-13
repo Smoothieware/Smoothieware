@@ -64,6 +64,7 @@ void Switch::on_halt(void *arg)
             case HWPWM: this->pwm_pin->write(0); break;
             case NONE: break;
         }
+        this->switch_state= this->failsafe;
     }
 }
 

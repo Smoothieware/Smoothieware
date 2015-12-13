@@ -436,6 +436,7 @@ void Endstops::do_homing_cartesian(char axes_to_move)
         if (  ( axes_to_move >> c ) & 1 ) {
             while ( STEPPER[c]->is_moving() ) {
                 THEKERNEL->call_event(ON_IDLE);
+                if(THEKERNEL->is_halted()) return;
             }
         }
     }
@@ -451,9 +452,6 @@ void Endstops::do_homing_cartesian(char axes_to_move)
 
     // Wait for all axes to have homed
     if(!this->wait_for_homed(axes_to_move)) return;
-
-    // Homing is done
-    this->status = NOT_HOMING;
 }
 
 bool Endstops::wait_for_homed_corexy(int axis)
@@ -509,6 +507,7 @@ void Endstops::corexy_home(int home_axis, bool dirx, bool diry, float fast_rate,
     // wait until done
     while ( STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving()) {
         THEKERNEL->call_event(ON_IDLE);
+        if(THEKERNEL->is_halted()) return;
     }
 
     // Start moving the axes to the origin slowly
@@ -559,6 +558,7 @@ void Endstops::do_homing_corexy(char axes_to_move)
         bool running= true;
         while (running) {
             THEKERNEL->call_event(ON_IDLE);
+            if(THEKERNEL->is_halted()) return;
             for(int m=X_AXIS;m<=Y_AXIS;m++) {
                 if(this->pins[m + (this->home_direction[m] ? 0 : 3)].get()) {
                     // turn off motor
@@ -584,9 +584,6 @@ void Endstops::do_homing_corexy(char axes_to_move)
     if (axes_to_move & 0x04) { // move Z
         do_homing_cartesian(0x04); // just home normally for Z
     }
-
-    // Homing is done
-    this->status = NOT_HOMING;
 }
 
 void Endstops::home(char axes_to_move)
@@ -603,6 +600,12 @@ void Endstops::home(char axes_to_move)
         // cartesian/delta homing
         do_homing_cartesian(axes_to_move);
     }
+
+    // make sure all steppers are off (especially if aborted)
+    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        STEPPER[c]->move(0, 0);
+    }
+    this->status = NOT_HOMING;
 }
 
 // Start homing sequences by response to GCode commands

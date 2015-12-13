@@ -7,7 +7,6 @@
  * on    = a block is being executed
  */
 
-#include "KillButton.h"
 #include "modules/robot/Conveyor.h"
 #include "SlowTicker.h"
 #include "Config.h"

@@ -202,8 +202,8 @@ void Player::on_gcode_received(void *argument)
             this->played_cnt = 0;
             this->elapsed_secs = 0;
 
-        } else if (gcode->m == 600) { // suspend print, Not entirely Marlin compliant
-            this->suspend_command("", gcode->stream);
+        } else if (gcode->m == 600) { // suspend print, Not entirely Marlin compliant, M600.1 will leave the heaters on
+            this->suspend_command((gcode->subcode == 1)?"h":"", gcode->stream);
 
         } else if (gcode->m == 601) { // resume print
             this->resume_command("", gcode->stream);
@@ -488,6 +488,9 @@ void Player::suspend_command(string parameters, StreamOutput *stream )
 
     stream->printf("Suspending print, waiting for queue to empty...\n");
 
+    // override the leave_heaters_on setting
+    this->override_leave_heaters_on= (parameters == "h");
+
     suspended= true;
     if( this->playing_file ) {
         // pause an sd print
@@ -525,7 +528,7 @@ void Player::suspend_part2()
     // TODO retract by optional amount...
 
     this->saved_temperatures.clear();
-    if(!this->leave_heaters_on) {
+    if(!this->leave_heaters_on && !this->override_leave_heaters_on) {
         // save current temperatures, get a vector of all the controllers data
         std::vector<struct pad_temperature> controllers;
         bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);

@@ -58,6 +58,10 @@ void ProbeScreen::on_refresh()
             THEPANEL->lcd->setCursor(0, 4);
             THEPANEL->lcd->printf("%20s", this->result.substr(20, 20).c_str());
         }
+        if(this->result.size() > 40 && THEPANEL->get_screen_lines() > 5) {
+            THEPANEL->lcd->setCursor(0, 5);
+            THEPANEL->lcd->printf("%20s", this->result.substr(40, 20).c_str());
+        }
     }
 }
 
