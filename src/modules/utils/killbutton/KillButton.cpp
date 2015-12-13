@@ -48,7 +48,7 @@ void KillButton::on_module_loaded()
     }
 
     this->register_for_event(ON_IDLE);
-    THEKERNEL->slow_ticker->attach( 5, this, &KillButton::button_tick );
+    THEKERNEL->slow_ticker->attach( 5, std::bind( &KillButton::button_tick, this) );
 }
 
 void KillButton::on_idle(void *argument)
@@ -69,7 +69,7 @@ void KillButton::on_idle(void *argument)
 
 // Check the state of the button and act accordingly using the following FSM
 // Note this is ISR so don't do anything nasty in here
-uint32_t KillButton::button_tick(uint32_t dummy)
+void KillButton::button_tick()
 {
     bool killed= THEKERNEL->is_halted();
 
@@ -104,6 +104,4 @@ uint32_t KillButton::button_tick(uint32_t dummy)
                 if(this->kill_button.get()) state= IDLE;
                 break;
     }
-
-    return 0;
 }

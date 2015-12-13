@@ -188,7 +188,7 @@ void Extruder::on_config_reload(void *argument)
 
     // Stepper motor object for the extruder
     this->stepper_motor = new StepperMotor(step_pin, dir_pin, en_pin);
-    this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
+    this->stepper_motor->attach(std::bind(&Extruder::stepper_motor_finished_move,this) );
     if( this->single_config ) {
         this->stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_max_speed_checksum)->by_default(1000)->as_number());
     } else {
@@ -697,9 +697,9 @@ void Extruder::on_speed_change( void *argument )
 }
 
 // When the stepper has finished it's move
-uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy)
+void Extruder::stepper_motor_finished_move()
 {
-    if(!this->enabled) return 0;
+    if(!this->enabled) return;
 
     //printf("extruder releasing\r\n");
 
@@ -708,6 +708,4 @@ uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy)
         this->current_block = NULL;
         block->release();
     }
-    return 0;
-
 }

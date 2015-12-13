@@ -180,12 +180,12 @@ void TemperatureControl::load_config()
         this->heater_pin.set(0);
         set_low_on_debug(heater_pin.port_number, heater_pin.pin);
         // activate SD-DAC timer
-        THEKERNEL->slow_ticker->attach( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number(), &heater_pin, &Pwm::on_tick);
+        THEKERNEL->slow_ticker->attach( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number(), std::bind(&Pwm::on_tick, &heater_pin));
     }
 
 
     // reading tick
-    THEKERNEL->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
+    THEKERNEL->slow_ticker->attach( this->readings_per_second, std::bind( &TemperatureControl::thermistor_read_tick,this) );
     this->PIDdt = 1.0 / this->readings_per_second;
 
     // PID
@@ -440,7 +440,7 @@ float TemperatureControl::get_temperature()
     return last_reading;
 }
 
-uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
+void TemperatureControl::thermistor_read_tick()
 {
     float temperature = sensor->get_temperature();
     if(!this->readonly && target_temperature > 2) {
@@ -454,7 +454,6 @@ uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
     }
 
     last_reading = temperature;
-    return 0;
 }
 
 /**

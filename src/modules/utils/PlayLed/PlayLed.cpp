@@ -31,7 +31,7 @@ void PlayLed::on_module_loaded()
 
     on_config_reload(this);
 
-    THEKERNEL->slow_ticker->attach(12, this, &PlayLed::led_tick);
+    THEKERNEL->slow_ticker->attach(12, std::bind( &PlayLed::led_tick,this));
 }
 
 void PlayLed::on_config_reload(void *argument)
@@ -44,17 +44,15 @@ void PlayLed::on_config_reload(void *argument)
     led.from_string(ledpin)->as_output()->set(false);
 }
 
-uint32_t PlayLed::led_tick(uint32_t)
+void PlayLed::led_tick()
 {
     if(THEKERNEL->is_halted()) {
         led.set(!led.get());
-        return 0;
+        return;
     }
 
     if(++cnt >= 6) { // 6 ticks ~ 500ms
         cnt= 0;
         led.set(!THEKERNEL->conveyor->is_queue_empty());
     }
-
-    return 0;
 }

@@ -189,7 +189,7 @@ void Network::on_module_loaded()
     }
 
     THEKERNEL->add_module( ethernet );
-    THEKERNEL->slow_ticker->attach( 100, this, &Network::tick );
+    THEKERNEL->slow_ticker->attach( 100, std::bind(&Network::tick, this) );
 
     // Register for events
     this->register_for_event(ON_IDLE);
@@ -224,11 +224,10 @@ void Network::on_get_public_data(void* argument) {
     }
 }
 
-uint32_t Network::tick(uint32_t dummy)
+void Network::tick()
 {
     do_tick();
     tickcnt++;
-    return 0;
 }
 
 void Network::on_idle(void *argument)

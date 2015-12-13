@@ -31,7 +31,7 @@ class Extruder : public Tool {
         void     on_halt(void* argument);
         void     on_speed_change(void* argument);
         void     acceleration_tick(void);
-        uint32_t stepper_motor_finished_move(uint32_t dummy);
+        void     stepper_motor_finished_move();
         Block*   append_empty_block();
 
     private:

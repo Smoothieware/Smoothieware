@@ -104,7 +104,7 @@ void StepperMotor::signal_move_finished()
 
     // signal it to whatever cares
     // in this call a new block may start, new moves set and new speeds
-    this->end_hook->call();
+    this->end_hook();
 
     // We only need to do this if we were not instructed to move
     if( !this->moving ) {
@@ -205,4 +205,8 @@ int  StepperMotor::steps_to_target(float target)
 {
     int target_steps = lround(target * steps_per_mm);
     return target_steps - last_milestone_steps;
+}
+
+void StepperMotor::attach( const std::function<void(void)>& f) {
+  end_hook = f;
 }
