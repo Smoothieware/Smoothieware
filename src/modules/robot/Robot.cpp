@@ -117,6 +117,7 @@ Robot::Robot()
     this->compensationTransform = nullptr;
     this->wcs_offsets.fill(wcs_t(0.0F, 0.0F, 0.0F));
     this->g92_offset = wcs_t(0.0F, 0.0F, 0.0F);
+    this->next_command_is_MCS= false;
 }
 
 //Called when the module has just been loaded
@@ -289,16 +290,24 @@ void Robot::on_gcode_received(void *argument)
 
             case 10: // G10 L2 Pn Xn Yn Zn set WCS
                 // TODO implement G10 L20
-                if(gcode->has_letter('L') && gcode->get_int('L') == 2 && gcode->has_letter('P')) {
+                if(gcode->has_letter('L') && (gcode->get_int('L') == 2 || gcode->get_int('L') == 20) && gcode->has_letter('P')) {
                     size_t n = gcode->get_uint('P');
                     if(n == 0) n = current_wcs; // set current coordinate system
                     else --n;
                     if(n < k_max_wcs) {
                         float x, y, z;
                         std::tie(x, y, z) = wcs_offsets[n];
-                        if(gcode->has_letter('X')) x = this->to_millimeters(gcode->get_value('X'));
-                        if(gcode->has_letter('Y')) y = this->to_millimeters(gcode->get_value('Y'));
-                        if(gcode->has_letter('Z')) z = this->to_millimeters(gcode->get_value('Z'));
+                        if(gcode->get_int('L') == 20) {
+                            // this makes the current position the offset
+                            if(gcode->has_letter('X')){ x = last_milestone[X_AXIS] - to_millimeters(gcode->get_value('X')); }
+                            if(gcode->has_letter('Y')){ x = last_milestone[Y_AXIS] - to_millimeters(gcode->get_value('Y')); }
+                            if(gcode->has_letter('Z')){ x = last_milestone[Z_AXIS] - to_millimeters(gcode->get_value('Z')); }
+                        }else{
+                            // the value is the offset from machine zero
+                            if(gcode->has_letter('X')) x = to_millimeters(gcode->get_value('X'));
+                            if(gcode->has_letter('Y')) y = to_millimeters(gcode->get_value('Y'));
+                            if(gcode->has_letter('Z')) z = to_millimeters(gcode->get_value('Z'));
+                        }
                         wcs_offsets[n] = wcs_t(x, y, z);
                     }
                 }
@@ -371,7 +380,6 @@ void Robot::on_gcode_received(void *argument)
             case 2: // M2 end of program
                 current_wcs = 0;
                 absolute_mode = true;
-                motion_mode = MOTION_MODE_LINEAR; // feed
                 break;
 
             case 92: // M92 - set steps per mm
@@ -597,23 +605,25 @@ void Robot::on_gcode_received(void *argument)
         }
     }
 
-    if( this->motion_mode < 0)
+    if( this->motion_mode < 0) {
+        next_command_is_MCS= false; // must be on same line as G0 or G1
         return;
+    }
 
-//Get parameters
+    // Get parameters
     float target[3], offset[3];
+
     clear_vector(offset);
-
-    memcpy(target, this->last_milestone, sizeof(target));    //default to last target
-
     for(char letter = 'I'; letter <= 'K'; letter++) {
         if( gcode->has_letter(letter) ) {
             offset[letter - 'I'] = this->to_millimeters(gcode->get_value(letter));
         }
     }
+
+    memcpy(target, this->last_milestone, sizeof(target));    //default to last target
     for(char letter = 'X'; letter <= 'Z'; letter++) {
         if( gcode->has_letter(letter) ) {
-            target[letter - 'X'] = this->to_millimeters(gcode->get_value(letter)) + (this->absolute_mode ? this->toolOffset[letter - 'X'] : target[letter - 'X']);
+            target[letter - 'X'] = this->to_millimeters(gcode->get_value(letter)) + (this->absolute_mode ? this->toolOffset[letter - 'X'] : last_milestone[letter - 'X']);
         }
     }
 
@@ -721,10 +731,12 @@ void Robot::append_milestone(Gcode * gcode, float target[], float rate_mm_s)
         compensationTransform(transformed_target);
     }
 
-    // apply wcs offsets and g92 offset
-    transformed_target[0] += (std::get<0>(wcs_offsets[current_wcs]) + std::get<0>(g92_offset));
-    transformed_target[1] += (std::get<1>(wcs_offsets[current_wcs]) + std::get<1>(g92_offset));
-    transformed_target[2] += (std::get<2>(wcs_offsets[current_wcs]) + std::get<2>(g92_offset));
+    if(!next_command_is_MCS) {
+        // apply wcs offsets and g92 offset
+        transformed_target[0] += (std::get<0>(wcs_offsets[current_wcs]) + std::get<0>(g92_offset));
+        transformed_target[1] += (std::get<1>(wcs_offsets[current_wcs]) + std::get<1>(g92_offset));
+        transformed_target[2] += (std::get<2>(wcs_offsets[current_wcs]) + std::get<2>(g92_offset));
+    }
 
     // find distance moved by each axis, use transformed target from last_transformed_target
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
@@ -848,6 +860,8 @@ void Robot::append_line(Gcode * gcode, float target[], float rate_mm_s )
 
     // Append the end of this full move to the queue
     this->append_milestone(gcode, target, rate_mm_s);
+
+    this->next_command_is_MCS= false; // always reset this
 
     // if adding these blocks didn't start executing, do that now
     THEKERNEL->conveyor->ensure_running();

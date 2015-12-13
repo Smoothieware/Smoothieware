@@ -52,6 +52,7 @@ class Robot : public Module {
         struct {
             bool inch_mode:1;                                 // true for inch mode, false for millimeter mode ( default )
             bool absolute_mode:1;                             // true for absolute mode ( default ), false for relative mode
+            bool next_command_is_MCS:1;                       // set by G53
         };
 
     private:
