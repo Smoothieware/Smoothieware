@@ -613,6 +613,7 @@ void Robot::on_gcode_received(void *argument)
     next_command_is_MCS = false; // must be on same line as G0 or G1
 }
 
+// process a G0/G1/G2/G3
 void Robot::process_move(Gcode *gcode)
 {
         // we have a G0/G1/G2/G3 so extract parameters and apply offsets to get machine coordinate target
