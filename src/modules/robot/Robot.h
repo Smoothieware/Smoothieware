@@ -62,6 +62,7 @@ class Robot : public Module {
         bool append_line( Gcode* gcode, const float target[], float rate_mm_s);
         bool append_arc( Gcode* gcode, const float target[], const float offset[], float radius, bool is_clockwise );
         bool compute_arc(Gcode* gcode, const float offset[], const float target[]);
+        void process_move(Gcode *gcode);
 
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
@@ -69,17 +70,20 @@ class Robot : public Module {
 
         // Workspace coordinate systems
         using wcs_t= std::tuple<float, float, float>;
-        wcs_t mcs2wcs();
+        wcs_t mcs2wcs(const float *pos) const;
+        wcs_t mcs2wcs() const { return mcs2wcs(last_machine_position); }
+
         static const size_t k_max_wcs= 9; // setup 9 WCS offsets
         std::array<wcs_t, k_max_wcs> wcs_offsets; // these are persistent once set
         uint8_t current_wcs{0}; // 0 means G54 in enabled this is persistent
         wcs_t g92_offset;
+        wcs_t tool_offset; // used for multiple extruders, sets the tool offset for the current extruder applied first
 
         using saved_state_t= std::tuple<float, float, bool, bool, uint8_t>; // save current feedrate and absolute mode, inch mode, current_wcs
         std::stack<saved_state_t> state_stack;               // saves state from M120
 
-        float last_milestone[3];                             // Last requested position, in millimeters, which is what we were requested to move to in the gcode
-        float machine_position[3];                           // Last machine position, which is th eposition before converting to actuator coordinates
+        float last_milestone[3]; // Last requested position, in millimeters, which is what we were requested to move to in the gcode after offsets applied but before compensation transform
+        float last_machine_position[3]; // Last machine position, which is the position before converting to actuator coordinates (includes compensation transform)
         int8_t motion_mode;                                  // Motion mode for the current received Gcode
         uint8_t plane_axis_0, plane_axis_1, plane_axis_2;    // Current plane ( XY, XZ, YZ )
         float seek_rate;                                     // Current rate for seeking moves ( mm/s )
@@ -97,8 +101,6 @@ class Robot : public Module {
         int arc_correction;                                   // Setting : how often to rectify arc computation
         float max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
 
-        float toolOffset[3];
-
         // Used by Stepper, Planner
         friend class Planner;
         friend class Stepper;
@@ -112,7 +114,7 @@ inline float Robot::from_millimeters( float value){
     return this->inch_mode ? value/25.4F : value;
 }
 inline void Robot::get_axis_position(float position[]){
-    memcpy(position, this->last_milestone, sizeof(float)*3 );
+    memcpy(position, this->last_milestone, sizeof this->last_milestone);
 }
 
 #endif

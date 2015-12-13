@@ -20,7 +20,6 @@ public:
 
     void on_module_loaded();
     void on_gcode_received(void *);
-    void on_config_reload(void *);
     void on_get_public_data(void *argument);
     void on_set_public_data(void *argument);
     void add_tool(Tool *tool_to_add);
@@ -30,7 +29,6 @@ private:
 
     int active_tool;
     uint16_t current_tool_name;
-    bool return_error_on_unhandled_gcode;
 };
 
 
