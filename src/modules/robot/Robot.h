@@ -58,10 +58,10 @@ class Robot : public Module {
     private:
         void load_config();
         void distance_in_gcode_is_known(Gcode* gcode);
-        void append_milestone( Gcode *gcode, const float target[], float rate_mm_s);
-        void append_line( Gcode* gcode, const float target[], float rate_mm_s);
-        void append_arc( Gcode* gcode, const float target[], const float offset[], float radius, bool is_clockwise );
-        void compute_arc(Gcode* gcode, const float offset[], const float target[]);
+        bool append_milestone( Gcode *gcode, const float target[], float rate_mm_s);
+        bool append_line( Gcode* gcode, const float target[], float rate_mm_s);
+        bool append_arc( Gcode* gcode, const float target[], const float offset[], float radius, bool is_clockwise );
+        bool compute_arc(Gcode* gcode, const float offset[], const float target[]);
 
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);

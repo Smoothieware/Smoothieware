@@ -259,9 +259,9 @@ Robot::wcs_t Robot::mcs2wcs()
 {
     // FIXME this will be incorrect if there is a compensation transform in effect
     return std::make_tuple(
-        machine_position[X_AXIS] - (std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset)),
-        machine_position[Y_AXIS] - (std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset)),
-        machine_position[Z_AXIS] - (std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset)));
+        machine_position[X_AXIS] - (std::get<X_AXIS>(wcs_offsets[current_wcs]) - std::get<X_AXIS>(g92_offset)),
+        machine_position[Y_AXIS] - (std::get<Y_AXIS>(wcs_offsets[current_wcs]) - std::get<Y_AXIS>(g92_offset)),
+        machine_position[Z_AXIS] - (std::get<Z_AXIS>(wcs_offsets[current_wcs]) - std::get<Z_AXIS>(g92_offset)));
 }
 
 //A GCode has been received
@@ -410,9 +410,9 @@ void Robot::on_gcode_received(void *argument)
                     // Note this is workspace coordinates after any bed level compensation has been applied, currently there is no way to get
                     // the position we were asked for (although it should be last_milestone) without doing an inverse compensation, which is probably not a big deal.
                     n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f",
-                                 from_millimeters(mpos[X_AXIS] - (std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset))),
-                                 from_millimeters(mpos[Y_AXIS] - (std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset))),
-                                 from_millimeters(mpos[Z_AXIS] - (std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset))) );
+                                 from_millimeters(mpos[X_AXIS] - (std::get<X_AXIS>(wcs_offsets[current_wcs]) - std::get<X_AXIS>(g92_offset))),
+                                 from_millimeters(mpos[Y_AXIS] - (std::get<Y_AXIS>(wcs_offsets[current_wcs]) - std::get<Y_AXIS>(g92_offset))),
+                                 from_millimeters(mpos[Z_AXIS] - (std::get<Z_AXIS>(wcs_offsets[current_wcs]) - std::get<Z_AXIS>(g92_offset))) );
 
 
                 } else if(gcode->subcode == 1) { // M114.1 print Machine coordinate system
@@ -422,10 +422,10 @@ void Robot::on_gcode_received(void *argument)
                     n = snprintf(buf, sizeof(buf), "APOS: A:%1.3f B:%1.3f C:%1.3f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
 
                 } else if(gcode->subcode == 3) { // M114.3 print last milestone (which should be the same as M114 if axis are not moving and no level compensation)
-                    n = snprintf(buf, sizeof(buf), "LM: X:%1.3f Y:%1.3f Z:%1.3f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
+                    n = snprintf(buf, sizeof(buf), "LWCS: X:%1.3f Y:%1.3f Z:%1.3f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 
                 } else if(gcode->subcode == 4) { // M114.4 print last machins position (which should be the same as M114.1 if axis are not moving)
-                    n = snprintf(buf, sizeof(buf), "LMPOS: X:%1.3f Y:%1.3f Z:%1.3f", machine_position[X_AXIS], machine_position[Y_AXIS], machine_position[Z_AXIS]);
+                    n = snprintf(buf, sizeof(buf), "LMCS: X:%1.3f Y:%1.3f Z:%1.3f", machine_position[X_AXIS], machine_position[Y_AXIS], machine_position[Z_AXIS]);
                 }
 
                 if(n > 0)
@@ -553,19 +553,19 @@ void Robot::on_gcode_received(void *argument)
                 // save wcs_offsets and current_wcs
                 // TODO this may need to be done whenever they change to be compliant
                 gcode->stream->printf(";WCS settings\n");
-                gcode->stream->printf("G5%c", std::min(current_wcs, (uint8_t)(5 + '4')));
+                gcode->stream->printf("G5%c", std::min(current_wcs, (uint8_t)5) + '4');
                 if(current_wcs >= 6) {
-                    gcode->stream->printf(".%c\n",  '1' + (current_wcs - 5));
+                    gcode->stream->printf(".%c\n",  '1' + (current_wcs - 6));
                 } else {
                     gcode->stream->printf("\n");
                 }
                 int n = 1;
                 for(auto &i : wcs_offsets) {
-                    if(i != wcs_t(0, 0, 0)) {
+                    //if(i != wcs_t(0, 0, 0)) {
                         float x, y, z;
                         std::tie(x, y, z) = i;
                         gcode->stream->printf("G10 L2 P%d X%f Y%f Z%f\n", n, x, y, z);
-                    }
+                    //}
                     ++n;
                 }
             }
@@ -620,7 +620,16 @@ void Robot::on_gcode_received(void *argument)
     }
 
     // Get parameters
-    float target[3], offset[3];
+    float param[3], target[3], offset[3];
+
+    for(int i= X_AXIS; i <= Z_AXIS; ++i) {
+        char letter= 'X'+i;
+        if( gcode->has_letter(letter) ) {
+            param[i] = this->to_millimeters(gcode->get_value(letter));
+        }else{
+            param[i] = next_command_is_MCS ? machine_position[i] : last_milestone[i];
+        }
+    }
 
     clear_vector(offset);
     for(char letter = 'I'; letter <= 'K'; letter++) {
@@ -629,22 +638,24 @@ void Robot::on_gcode_received(void *argument)
         }
     }
 
-    if(next_command_is_MCS) {
-        // we are getting different coordinates here MCS instead of WCS
-        memcpy(target, this->machine_position, sizeof(target));    //default to last machine position instead of last milestone
-        for(char letter = 'X'; letter <= 'Z'; letter++) {
-            if( gcode->has_letter(letter) ) {
-                target[letter - 'X'] = this->to_millimeters(gcode->get_value(letter));
+    if(!next_command_is_MCS) {
+        if(this->absolute_mode) {
+            // apply wcs offsets and g92 offset
+            target[X_AXIS]= param[X_AXIS] + std::get<X_AXIS>(wcs_offsets[current_wcs]) - std::get<X_AXIS>(g92_offset);
+            target[Y_AXIS]= param[Y_AXIS] + std::get<Y_AXIS>(wcs_offsets[current_wcs]) - std::get<Y_AXIS>(g92_offset);
+            target[Z_AXIS]= param[Z_AXIS] + std::get<Z_AXIS>(wcs_offsets[current_wcs]) - std::get<Z_AXIS>(g92_offset);
+
+        }else{
+            // they are deltas from the last_milestone if specified
+            for(int i= X_AXIS; i <= Z_AXIS; ++i) {
+                if(gcode->has_letter('X'+i)) target[i] = param[i] + last_milestone[i];
+                else target[i] = param[i];
             }
         }
 
-    } else {
-        memcpy(target, this->last_milestone, sizeof(target));    //default to last target
-        for(char letter = 'X'; letter <= 'Z'; letter++) {
-            if( gcode->has_letter(letter) ) {
-                target[letter - 'X'] = this->to_millimeters(gcode->get_value(letter)) + (this->absolute_mode ? this->toolOffset[letter - 'X'] : last_milestone[letter - 'X']);
-            }
-        }
+    }else{
+        // already in machine coordinates
+        memcpy(target, param, sizeof target);
     }
 
     if( gcode->has_letter('F') ) {
@@ -654,17 +665,34 @@ void Robot::on_gcode_received(void *argument)
             this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
 
-//Perform any physical actions
+    bool moved= false;
+    //Perform any physical actions
     switch(this->motion_mode) {
-        case MOTION_MODE_CANCEL: break;
-        case MOTION_MODE_SEEK  : this->append_line(gcode, target, this->seek_rate / seconds_per_minute ); break;
-        case MOTION_MODE_LINEAR: this->append_line(gcode, target, this->feed_rate / seconds_per_minute ); break;
+        case MOTION_MODE_CANCEL:
+            break;
+        case MOTION_MODE_SEEK:
+            moved= this->append_line(gcode, target, this->seek_rate / seconds_per_minute );
+            break;
+        case MOTION_MODE_LINEAR:
+            moved= this->append_line(gcode, target, this->feed_rate / seconds_per_minute );
+            break;
         case MOTION_MODE_CW_ARC:
-        case MOTION_MODE_CCW_ARC: this->compute_arc(gcode, offset, target ); break;
+        case MOTION_MODE_CCW_ARC:
+            moved= this->compute_arc(gcode, offset, target );
+            break;
     }
 
-// last_milestone was set to target in append_milestone, no need to do it again
+    if(!moved) return; // do not update last_milestone if no movement was queued
 
+    // Update the last_milestone to the current target for the next time we use last_milestone, use the requested target not the adjusted one
+    if(next_command_is_MCS) {
+        // as the target was in machine coordinates we need to add inverse wcs offsets and g92 offset to get a reasonable equivalent last_milestone
+        std::tie(this->last_milestone[X_AXIS], this->last_milestone[Y_AXIS], this->last_milestone[Z_AXIS]) = mcs2wcs();
+
+    } else {
+        // set last_milestome to the requested position, or what it was before
+        memcpy(this->last_milestone, param, sizeof(this->last_milestone)); // this->last_milestone[] = params[];
+    }
 }
 
 // We received a new gcode, and one of the functions
@@ -720,7 +748,7 @@ void Robot::reset_position_from_current_actuator_position()
 }
 
 // Convert target from millimeters to steps, and append this to the planner
-void Robot::append_milestone(Gcode * gcode, const float target[], float rate_mm_s)
+bool Robot::append_milestone(Gcode * gcode, const float target[], float rate_mm_s)
 {
     float deltas[3];
     float unit_vec[3];
@@ -731,18 +759,10 @@ void Robot::append_milestone(Gcode * gcode, const float target[], float rate_mm_
     // unity transform by default
     memcpy(transformed_target, target, sizeof(transformed_target));
 
-    // if the target is in machine coordinates we do not apply any translations (G53)
-    if(!next_command_is_MCS) {
-        // check function pointer and call if set to transform the target to compensate for bed
-        if(compensationTransform) {
-            // some compensation strategies can transform XYZ, some just change Z
-            compensationTransform(transformed_target);
-        }
-
-        // apply wcs offsets and g92 offset
-        transformed_target[X_AXIS] += (std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset));
-        transformed_target[Y_AXIS] += (std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset));
-        transformed_target[Z_AXIS] += (std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset));
+    // check function pointer and call if set to transform the target to compensate for bed
+    if(compensationTransform) {
+        // some compensation strategies can transform XYZ, some just change Z
+        compensationTransform(transformed_target);
     }
 
     // find distance moved by each axis, use transformed target from the current machine position
@@ -755,7 +775,7 @@ void Robot::append_milestone(Gcode * gcode, const float target[], float rate_mm_
 
     // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
     // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
-    if(millimeters_of_travel < 0.00001F) return;
+    if(millimeters_of_travel < 0.00001F) return false;
 
     // this is the machine position
     memcpy(this->machine_position, transformed_target, sizeof(this->machine_position));
@@ -791,19 +811,11 @@ void Robot::append_milestone(Gcode * gcode, const float target[], float rate_mm_
     // Append the block to the planner
     THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
 
-    // Update the last_milestone to the current target for the next time we use last_milestone, use the requested target not the adjusted one
-    if(next_command_is_MCS) {
-        // as the target was in machine coordinates we need to add inverse wcs offsets and g92 offset to get a reasonable equivalent last_milestone
-        std::tie(this->last_milestone[X_AXIS], this->last_milestone[Y_AXIS], this->last_milestone[Z_AXIS]) = mcs2wcs();
-
-    } else {
-        memcpy(this->last_milestone, target, sizeof(this->last_milestone)); // this->last_milestone[] = target[];
-    }
-
+    return true;
 }
 
 // Append a move to the queue ( cutting it into segments if needed )
-void Robot::append_line(Gcode * gcode, const float target[], float rate_mm_s )
+bool Robot::append_line(Gcode * gcode, const float target[], float rate_mm_s )
 {
     float last_target[]{last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]};
 
@@ -817,7 +829,7 @@ void Robot::append_line(Gcode * gcode, const float target[], float rate_mm_s )
     gcode->millimeters_of_travel = sqrtf(powf( target[X_AXIS] - last_target[X_AXIS], 2 ) +  powf( target[Y_AXIS] - last_target[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - last_target[Z_AXIS], 2 ));
 
     // We ignore non- XYZ moves ( for example, extruder moves are not XYZ moves )
-    if( gcode->millimeters_of_travel < 0.00001F ) return;
+    if( gcode->millimeters_of_travel < 0.00001F ) return false;
 
     // Mark the gcode as having a known distance
     this->distance_in_gcode_is_known( gcode );
@@ -861,6 +873,7 @@ void Robot::append_line(Gcode * gcode, const float target[], float rate_mm_s )
         }
     }
 
+    bool moved= false;
     if (segments > 1) {
         // A vector to keep track of the endpoint of each segment
         float segment_delta[3];
@@ -873,27 +886,32 @@ void Robot::append_line(Gcode * gcode, const float target[], float rate_mm_s )
         // segment 0 is already done - it's the end point of the previous move so we start at segment 1
         // We always add another point after this loop so we stop at segments-1, ie i < segments
         for (int i = 1; i < segments; i++) {
-            if(THEKERNEL->is_halted()) return; // don't queue any more segments
+            if(THEKERNEL->is_halted()) return false; // don't queue any more segments
             for(int axis = X_AXIS; axis <= Z_AXIS; axis++ )
                 segment_end[axis] = last_target[axis] + segment_delta[axis];
 
             // Append the end of this segment to the queue
-            this->append_milestone(gcode, segment_end, rate_mm_s);
+            bool b= this->append_milestone(gcode, segment_end, rate_mm_s);
+            moved= moved || b;
         }
     }
 
     // Append the end of this full move to the queue
-    this->append_milestone(gcode, target, rate_mm_s);
+    if(this->append_milestone(gcode, target, rate_mm_s)) moved= true;
 
     this->next_command_is_MCS = false; // always reset this
 
-    // if adding these blocks didn't start executing, do that now
-    THEKERNEL->conveyor->ensure_running();
+    if(moved) {
+        // if adding these blocks didn't start executing, do that now
+        THEKERNEL->conveyor->ensure_running();
+    }
+
+    return moved;
 }
 
 
 // Append an arc to the queue ( cutting it into segments as needed )
-void Robot::append_arc(Gcode * gcode, const float target[], const float offset[], float radius, bool is_clockwise )
+bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[], float radius, bool is_clockwise )
 {
 
     // Scary math
@@ -919,7 +937,7 @@ void Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
 
     // We don't care about non-XYZ moves ( for example the extruder produces some of those )
     if( gcode->millimeters_of_travel < 0.00001F ) {
-        return;
+        return false;
     }
 
     // Mark the gcode as having a known distance
@@ -968,8 +986,9 @@ void Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     // Initialize the linear axis
     arc_target[this->plane_axis_2] = this->last_milestone[this->plane_axis_2];
 
+    bool moved= false;
     for (i = 1; i < segments; i++) { // Increment (segments-1)
-        if(THEKERNEL->is_halted()) return; // don't queue any more segments
+        if(THEKERNEL->is_halted()) return false; // don't queue any more segments
 
         if (count < this->arc_correction ) {
             // Apply vector rotation matrix
@@ -993,16 +1012,18 @@ void Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         arc_target[this->plane_axis_2] += linear_per_segment;
 
         // Append this segment to the queue
-        this->append_milestone(gcode, arc_target, this->feed_rate / seconds_per_minute);
-
+        bool b= this->append_milestone(gcode, arc_target, this->feed_rate / seconds_per_minute);
+        moved= moved || b;
     }
 
     // Ensure last segment arrives at target location.
-    this->append_milestone(gcode, target, this->feed_rate / seconds_per_minute);
+    if(this->append_milestone(gcode, target, this->feed_rate / seconds_per_minute)) moved= true;
+
+    return moved;
 }
 
 // Do the math for an arc and add it to the queue
-void Robot::compute_arc(Gcode * gcode, const float offset[], const float target[])
+bool Robot::compute_arc(Gcode * gcode, const float offset[], const float target[])
 {
 
     // Find the radius
@@ -1015,7 +1036,7 @@ void Robot::compute_arc(Gcode * gcode, const float offset[], const float target[
     }
 
     // Append arc
-    this->append_arc(gcode, target, offset,  radius, is_clockwise );
+    return this->append_arc(gcode, target, offset,  radius, is_clockwise );
 }
 
 
