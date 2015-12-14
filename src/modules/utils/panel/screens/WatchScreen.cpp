@@ -14,14 +14,16 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
-#include "modules/robot/RobotPublicAccess.h"
+#include "Robot.h"
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "PublicData.h"
 #include "SwitchPublicAccess.h"
 #include "checksumm.h"
-#include "Pauser.h"
+#include "TemperatureControlPool.h"
+
+
 #include <math.h>
 #include <string.h>
 #include <string>
@@ -51,8 +53,6 @@ static const uint8_t icons[] = { // 115x19 - 3 bytes each: he1, he2, he3, bed, f
     0x0C, 0x00, 0x00, 0x06, 0x00, 0x00, 0x06, 0x00, 0x01, 0xFF, 0xFF, 0x80, 0x00, 0x00, 0x00
 };
 
-
-
 WatchScreen::WatchScreen()
 {
     speed_changed = false;
@@ -77,6 +77,23 @@ void WatchScreen::on_enter()
     this->refresh_screen(false);
     THEPANEL->enter_control_mode(1, 0.5);
     THEPANEL->set_control_value(this->current_speed);
+
+    // enumerate temperature controls
+    temp_controllers.clear();
+    std::vector<struct pad_temperature> controllers;
+    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+    if (ok) {
+        for (auto &c : controllers) {
+            temp_controllers.push_back(c.id);
+        }
+    }
+}
+
+static struct pad_temperature getTemperatures(uint16_t heater_cs)
+{
+    struct pad_temperature temp;
+    PublicData::get_value( temperature_control_checksum, current_temperature_checksum, heater_cs, &temp );
+    return temp;
 }
 
 void WatchScreen::on_refresh()
@@ -123,22 +140,19 @@ void WatchScreen::on_refresh()
         // for LCDs with leds set them according to heater status
         bool bed_on= false, hotend_on= false, is_hot= false;
         uint8_t heon=0, hemsk= 0x01; // bit set for which hotend is on bit0: hotend1, bit1: hotend2 etc
-        for(auto m : THEPANEL->temperature_modules) {
-            // query each heater
-            void *p= getTemperatures(m);
-            struct pad_temperature *temp= static_cast<struct pad_temperature *>(p);
-            if(temp != nullptr) {
-                if(temp->current_temperature > 50) is_hot= true; // anything is hot
-                if(temp->designator.front() == 'B' && temp->target_temperature > 0) bed_on= true;   // bed on/off
-                if(temp->designator.front() == 'T') { // a hotend by convention
-                    if(temp->target_temperature > 0){
-                        hotend_on= true;// hotend on/off (anyone)
-                        heon |= hemsk;
-                    }
-                    hemsk <<= 1;
+        for(auto id : temp_controllers) {
+            struct pad_temperature c= getTemperatures(id);
+            if(c.current_temperature > 50) is_hot= true; // anything is hot
+            if(c.designator.front() == 'B' && c.target_temperature > 0) bed_on= true;   // bed on/off
+            if(c.designator.front() == 'T') { // a hotend by convention
+                if(c.target_temperature > 0){
+                    hotend_on= true;// hotend on/off (anyone)
+                    heon |= hemsk;
                 }
+                hemsk <<= 1;
             }
         }
+
         THEPANEL->lcd->setLed(LED_BED_ON, bed_on);
         THEPANEL->lcd->setLed(LED_HOTEND_ON, hotend_on);
         THEPANEL->lcd->setLed(LED_HOT, is_hot);
@@ -171,30 +185,16 @@ void WatchScreen::on_main_loop()
         this->issue_change_speed = false;
         set_speed();
     }
-}
-
-void *WatchScreen::getTemperatures(uint16_t heater_cs)
-{
-    void *returned_data;
-    bool ok = PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
-
-    if (ok) {
-        return returned_data;
-    }
-
-    return nullptr;
+    PanelScreen::on_main_loop(); // in case any queued commands left
 }
 
 // fetch the data we are displaying
 void WatchScreen::get_current_status()
 {
-    void *returned_data;
-    bool ok;
-
     // get fan status
-    ok = PublicData::get_value( switch_checksum, fan_checksum, 0, &returned_data );
+    struct pad_switch s;
+    bool ok = PublicData::get_value( switch_checksum, fan_checksum, 0, &s );
     if (ok) {
-        struct pad_switch s = *static_cast<struct pad_switch *>(returned_data);
         this->fan_state = s.state;
     } else {
         // fan probably disabled
@@ -205,27 +205,13 @@ void WatchScreen::get_current_status()
 // fetch the data we are displaying
 float WatchScreen::get_current_speed()
 {
-    void *returned_data;
-
-    bool ok = PublicData::get_value( robot_checksum, speed_override_percent_checksum, &returned_data );
-    if (ok) {
-        float cs = *static_cast<float *>(returned_data);
-        return cs;
-    }
-    return 0.0;
+    // in percent
+    return 6000.0F / THEKERNEL->robot->get_seconds_per_minute();
 }
 
 void WatchScreen::get_current_pos(float *cp)
 {
-    void *returned_data;
-
-    bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &returned_data );
-    if (ok) {
-        float *p = static_cast<float *>(returned_data);
-        cp[0] = p[0];
-        cp[1] = p[1];
-        cp[2] = p[2];
-    }
+    THEKERNEL->robot->get_axis_position(cp);
 }
 
 void WatchScreen::get_sd_play_info()
@@ -249,9 +235,10 @@ void WatchScreen::display_menu_line(uint16_t line)
     // in menu mode
     switch ( line ) {
         case 0:
-            if(THEPANEL->temperature_modules.size() > 0) {
+        {
+            auto& tm= this->temp_controllers;
+            if(tm.size() > 0) {
                 // only if we detected heaters in config
-                auto tm= THEPANEL->temperature_modules;
                 int n= 0;
                 if(tm.size() > 2) {
                     // more than two temps we need to cycle between them
@@ -264,18 +251,18 @@ void WatchScreen::display_menu_line(uint16_t line)
                 for (size_t i = 0; i < 2; ++i) {
                     size_t o= i+(n*2);
                     if(o>tm.size()-1) break;
-                    struct pad_temperature *temp= static_cast<struct pad_temperature *>(getTemperatures(tm[o]));
-                    if(temp == nullptr) continue;
-                    int t= std::min(999, (int)roundf(temp->current_temperature));
-                    int tt= roundf(temp->target_temperature);
+                    struct pad_temperature temp= getTemperatures(tm[o]);
+                    int t= std::min(999, (int)roundf(temp.current_temperature));
+                    int tt= roundf(temp.target_temperature);
                     THEPANEL->lcd->setCursor(off, 0); // col, row
-                    off += THEPANEL->lcd->printf("%s:%03d/%03d ", temp->designator.substr(0, 2).c_str(), t, tt);
+                    off += THEPANEL->lcd->printf("%s:%03d/%03d ", temp.designator.substr(0, 2).c_str(), t, tt);
                 }
 
             }else{
                 //THEPANEL->lcd->printf("No Heaters");
             }
             break;
+        }
         case 1: THEPANEL->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]); break;
         case 2: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
         case 3: THEPANEL->lcd->printf("%19s", this->get_status()); break;
@@ -284,23 +271,20 @@ void WatchScreen::display_menu_line(uint16_t line)
 
 const char *WatchScreen::get_status()
 {
-    if (THEPANEL->hasMessage()) {
+    if (THEPANEL->hasMessage())
         return THEPANEL->getMessage().c_str();
-    }
 
-    if (THEPANEL->is_halted()) {
+    if (THEKERNEL->is_halted())
         return "HALTED Reset or M999";
-    }
 
-    if (THEKERNEL->pauser->paused())
-        return "Paused";
+    if (THEPANEL->is_suspended())
+        return "Suspended";
 
     if (THEPANEL->is_playing())
         return THEPANEL->get_playing_file();
 
-    if (!THEKERNEL->conveyor->is_queue_empty()) {
+    if (!THEKERNEL->conveyor->is_queue_empty())
         return "Printing";
-    }
 
     const char *ip = get_network();
     if (ip == NULL) {

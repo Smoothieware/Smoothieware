@@ -5,27 +5,32 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <string>
-using std::string;
-#include "libs/Module.h"
+#include "GcodeDispatch.h"
+
 #include "libs/Kernel.h"
 #include "utils/Gcode.h"
-#include "Pauser.h"
 #include "libs/nuts_bolts.h"
-#include "GcodeDispatch.h"
 #include "modules/robot/Conveyor.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "libs/StreamOutputPool.h"
 #include "libs/FileStream.h"
+#include "libs/AppendFileStream.h"
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "PublicDataRequest.h"
+#include "PublicData.h"
+#include "SimpleShell.h"
+#include "utils.h"
+#include "LPC17xx.h"
 
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+#define panel_display_message_checksum CHECKSUM("display_message")
+#define panel_checksum             CHECKSUM("panel")
 
 // goes in Flash, list of Mxxx codes that are allowed when in Halted state
-static const int allowed_mcodes[]= {105,114}; // get temp, get pos
+static const int allowed_mcodes[]= {105,114,119,80,81,911,503,106,107}; // get temp, get pos, get endstops etc
 static bool is_allowed_mcode(int m) {
     for (size_t i = 0; i < sizeof(allowed_mcodes)/sizeof(int); ++i) {
         if(allowed_mcodes[i] == m) return true;
@@ -35,7 +40,6 @@ static bool is_allowed_mcode(int m) {
 
 GcodeDispatch::GcodeDispatch()
 {
-    halted= false;
     uploading = false;
     currentline = -1;
     last_g= 255;
@@ -44,15 +48,7 @@ GcodeDispatch::GcodeDispatch()
 // Called when the module has just been loaded
 void GcodeDispatch::on_module_loaded()
 {
-    return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    this->register_for_event(ON_HALT);
-}
-
-void GcodeDispatch::on_halt(void *arg)
-{
-    // set halt stream and ignore everything until M999
-    this->halted= (arg == nullptr);
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -119,7 +115,8 @@ try_again:
             }
 
             while(possible_command.size() > 0) {
-                size_t nextcmd = possible_command.find_first_of("GM", possible_command.find_first_of("GM") + 1);
+                // assumes G or M are always the first on the line
+                size_t nextcmd = possible_command.find_first_of("GM", 2);
                 string single_command;
                 if(nextcmd == string::npos) {
                     single_command = possible_command;
@@ -134,11 +131,11 @@ try_again:
                     //Prepare gcode for dispatch
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
 
-                    if(halted) {
+                    if(THEKERNEL->is_halted()) {
                         // we ignore all commands until M999, unless it is in the exceptions list (like M105 get temp)
                         if(gcode->has_m && gcode->m == 999) {
                             THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
-                            halted= false;
+
                             // fall through and pass onto other modules
 
                         }else if(!is_allowed_mcode(gcode->m)) {
@@ -163,9 +160,9 @@ try_again:
                                 upload_fd = fopen(this->upload_filename.c_str(), "w");
                                 if(upload_fd != NULL) {
                                     this->uploading = true;
-                                    new_message.stream->printf("Writing to file: %s\r\n", this->upload_filename.c_str());
+                                    new_message.stream->printf("Writing to file: %s\r\nok\r\n", this->upload_filename.c_str());
                                 } else {
-                                    new_message.stream->printf("open failed, File: %s.\r\n", this->upload_filename.c_str());
+                                    new_message.stream->printf("open failed, File: %s.\r\nok\r\n", this->upload_filename.c_str());
                                 }
                                 //printf("Start Uploading file: %s, %p\n", upload_filename.c_str(), upload_fd);
                                 continue;
@@ -178,20 +175,62 @@ try_again:
                                 delete gcode;
                                 return;
 
+                            case 117: // M117 is a special non compliant Gcode as it allows arbitrary text on the line following the command
+                            {    // concatenate the command again and send to panel if enabled
+                                string str= single_command.substr(4) + possible_command;
+                                PublicData::set_value( panel_checksum, panel_display_message_checksum, &str );
+                                delete gcode;
+                                new_message.stream->printf("ok\r\n");
+                                return;
+                            }
+
+                            case 1000: // M1000 is a special comanad that will pass thru the raw lowercased command to the simpleshell (for hosts that do not allow such things)
+                            {
+                                // reconstruct entire command line again
+                                string str= single_command.substr(5) + possible_command;
+                                while(is_whitespace(str.front())){ str= str.substr(1); } // strip leading whitespace
+
+                                delete gcode;
+
+                                if(str.empty()) {
+                                    SimpleShell::parse_command("help", "", new_message.stream);
+
+                                }else{
+                                    string args= lc(str);
+                                    string cmd = shift_parameter(args);
+                                    // find command and execute it
+                                    if(!SimpleShell::parse_command(cmd.c_str(), args, new_message.stream)) {
+                                        new_message.stream->printf("Command not found: %s\n", cmd.c_str());
+                                    }
+                                }
+
+                                new_message.stream->printf("ok\r\n");
+                                return;
+                            }
+
                             case 500: // M500 save volatile settings to config-override
+                                THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
+                                //remove(THEKERNEL->config_override_filename()); // seems to cause a hang every now and then
+                                __disable_irq();
+                                {
+                                    FileStream fs(THEKERNEL->config_override_filename());
+                                    fs.printf("; DO NOT EDIT THIS FILE\n");
+                                    // this also will truncate the existing file instead of deleting it
+                                }
                                 // replace stream with one that writes to config-override file
-                                gcode->stream = new FileStream(THEKERNEL->config_override_filename());
+                                gcode->stream = new AppendFileStream(THEKERNEL->config_override_filename());
                                 // dispatch the M500 here so we can free up the stream when done
                                 THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
                                 delete gcode->stream;
                                 delete gcode;
+                                __enable_irq();
                                 new_message.stream->printf("Settings Stored to %s\r\nok\r\n", THEKERNEL->config_override_filename());
                                 continue;
 
                             case 502: // M502 deletes config-override so everything defaults to what is in config
                                 remove(THEKERNEL->config_override_filename());
-                                new_message.stream->printf("config override file deleted %s, reboot needed\r\nok\r\n", THEKERNEL->config_override_filename());
                                 delete gcode;
+                                new_message.stream->printf("config override file deleted %s, reboot needed\r\nok\r\n", THEKERNEL->config_override_filename());
                                 continue;
 
                             case 503: { // M503 display live settings and indicates if there is an override file
@@ -215,9 +254,7 @@ try_again:
                     if(gcode->add_nl)
                         new_message.stream->printf("\r\n");
 
-                    if( return_error_on_unhandled_gcode == true && gcode->accepted_by_module == false)
-                        new_message.stream->printf("ok (command unclaimed)\r\n");
-                    else if(!gcode->txt_after_ok.empty()) {
+                    if(!gcode->txt_after_ok.empty()) {
                         new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
                         gcode->txt_after_ok.clear();
                     } else
@@ -233,7 +270,7 @@ try_again:
                         upload_fd = NULL;
                         uploading = false;
                         upload_filename.clear();
-                        new_message.stream->printf("Done saving file.\r\n");
+                        new_message.stream->printf("Done saving file.\r\nok\r\n");
                         continue;
                     }
 

@@ -20,7 +20,6 @@
 #include "screens/MainMenuScreen.h"
 #include "SlowTicker.h"
 #include "Gcode.h"
-#include "Pauser.h"
 #include "TemperatureControlPublicAccess.h"
 #include "ModifyValuesScreen.h"
 #include "PublicDataRequest.h"
@@ -36,6 +35,7 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "Config.h"
+#include "TemperatureControlPool.h"
 
 // for parse_pins in mbed
 #include "pinmap.h"
@@ -63,6 +63,7 @@
 
 #define hotend_temp_checksum CHECKSUM("hotend_temperature")
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
+#define panel_display_message_checksum CHECKSUM("display_message")
 
 Panel* Panel::instance= nullptr;
 
@@ -82,7 +83,6 @@ Panel::Panel()
     this->sd= nullptr;
     this->extmounter= nullptr;
     this->external_sd_enable= false;
-    this->halted= false;
     strcpy(this->playing_file, "Playing file");
 }
 
@@ -136,7 +136,6 @@ void Panel::on_module_loaded()
 
     // these need to be called here as they need the config cache loaded as they enumerate modules
     this->custom_screen= new CustomScreen();
-    setup_temperature_screen();
 
     // some panels may need access to this global info
     this->lcd->setPanel(this);
@@ -165,7 +164,6 @@ void Panel::on_module_loaded()
     this->down_button.up_attach(  this, &Panel::on_down );
     this->click_button.up_attach( this, &Panel::on_select );
     this->back_button.up_attach(  this, &Panel::on_back );
-    this->pause_button.up_attach( this, &Panel::on_pause );
 
 
     //setting longpress_delay
@@ -189,8 +187,7 @@ void Panel::on_module_loaded()
     // Register for events
     this->register_for_event(ON_IDLE);
     this->register_for_event(ON_MAIN_LOOP);
-    this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_HALT);
+    this->register_for_event(ON_SET_PUBLIC_DATA);
 
     // Refresh timer
     THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
@@ -261,15 +258,19 @@ uint32_t Panel::encoder_tick(uint32_t dummy)
     return 0;
 }
 
-void Panel::on_gcode_received(void *argument)
+void Panel::on_set_public_data(void *argument)
 {
-    Gcode *gcode = static_cast<Gcode *>(argument);
-    if ( gcode->has_m) {
-        if ( gcode->m == 117 ) { // set LCD message
-            this->message = get_arguments(gcode->get_command());
-            if (this->message.size() > 20) this->message = this->message.substr(0, 20);
-            gcode->mark_as_taken();
-        }
+     PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
+
+    if(!pdr->starts_with(panel_checksum)) return;
+
+    if(!pdr->second_element_is(panel_display_message_checksum)) return;
+
+    string *s = static_cast<string *>(pdr->get_data_ptr());
+    if (s->size() > 20) {
+        this->message = s->substr(0, 20);
+    } else {
+        this->message= *s;
     }
 }
 
@@ -369,7 +370,6 @@ void Panel::on_idle(void *argument)
         this->down_button.check_signal(but & BUTTON_DOWN);
         this->back_button.check_signal(but & BUTTON_LEFT);
         this->click_button.check_signal(but & BUTTON_SELECT);
-        this->pause_button.check_signal(but & BUTTON_PAUSE);
     }
 
     // If we are in menu mode and the position has changed
@@ -427,16 +427,6 @@ uint32_t Panel::on_select(uint32_t dummy)
     this->click_changed = true;
     this->idle_time = 0;
     lcd->buzz(60, 300); // 50ms 300Hz
-    return 0;
-}
-
-uint32_t Panel::on_pause(uint32_t dummy)
-{
-    if (!THEKERNEL->pauser->paused()) {
-        THEKERNEL->pauser->take();
-    } else {
-        THEKERNEL->pauser->release();
-    }
     return 0;
 }
 
@@ -594,6 +584,18 @@ bool Panel::is_playing() const
     return false;
 }
 
+bool Panel::is_suspended() const
+{
+    void *returned_data;
+
+    bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
+    if (ok) {
+        bool b = *static_cast<bool *>(returned_data);
+        return b;
+    }
+    return false;
+}
+
 void  Panel::set_playing_file(string f)
 {
     // just copy the first 20 characters after the first / if there
@@ -601,62 +603,6 @@ void  Panel::set_playing_file(string f)
     if (n == string::npos) n = 0;
     strncpy(playing_file, f.substr(n + 1, 19).c_str(), sizeof(playing_file));
     playing_file[sizeof(playing_file) - 1] = 0;
-}
-
-static float getTargetTemperature(uint16_t heater_cs)
-{
-    void *returned_data;
-    bool ok = PublicData::get_value( temperature_control_checksum, heater_cs, current_temperature_checksum, &returned_data );
-
-    if (ok) {
-        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
-        return temp.target_temperature;
-    }
-
-    return 0.0F;
-}
-
-void Panel::setup_temperature_screen()
-{
-    // setup temperature screen
-    auto mvs= new ModifyValuesScreen(false); // does not delete itself on exit
-    this->temperature_screen= mvs;
-
-    // enumerate heaters and add a menu item for each one
-    vector<uint16_t> modules;
-    THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
-
-    int cnt= 0;
-    for(auto i : modules) {
-        if (!THEKERNEL->config->value(temperature_control_checksum, i, enable_checksum )->as_bool()) continue;
-        void *returned_data;
-        bool ok = PublicData::get_value( temperature_control_checksum, i, current_temperature_checksum, &returned_data );
-        if (!ok) continue;
-
-        this->temperature_modules.push_back(i);
-        struct pad_temperature t =  *static_cast<struct pad_temperature *>(returned_data);
-
-        // rename if two of the known types
-        const char *name;
-        if(t.designator == "T") name= "Hotend";
-        else if(t.designator == "B") name= "Bed";
-        else name= t.designator.c_str();
-
-        mvs->addMenuItem(name, // menu name
-            [i]() -> float { return getTargetTemperature(i); }, // getter
-            [i](float t) { PublicData::set_value( temperature_control_checksum, i, &t ); }, // setter
-            1.0F, // increment
-            0.0F, // Min
-            500.0F // Max
-        );
-        cnt++;
-    }
-
-    if(cnt== 0) {
-        // no heaters and probably no extruders either
-        delete mvs;
-        this->temperature_screen= nullptr;
-    }
 }
 
 bool Panel::mount_external_sd(bool on)
@@ -714,9 +660,4 @@ void Panel::on_second_tick(void *arg)
     }else{
         // TODO for panels with no sd card detect we need to poll to see if card is inserted - or not
     }
-}
-
-void Panel::on_halt(void *arg)
-{
-    halted= (arg == nullptr);
 }

@@ -39,6 +39,7 @@
 
     Usage
     -----
+    G29 probes the three probe points and reports the Z at each point, if a plane is active it will be used to level the probe.
     G32 probes the three probe points and defines the bed plane, this will remain in effect until reset or M561
     G31 reports the status
 
@@ -115,7 +116,13 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 {
     if(gcode->has_g) {
         // G code processing
-        if( gcode->g == 31 ) { // report status
+        if(gcode->g == 29) { // test probe points for level
+            if(!test_probe_points(gcode)) {
+                gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
+            }
+            return true;
+
+        } else if( gcode->g == 31 ) { // report status
             if(this->plane == nullptr) {
                  gcode->stream->printf("Bed leveling plane is not set\n");
             }else{
@@ -127,6 +134,12 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
         } else if( gcode->g == 32 ) { // three point probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
+            if(!gcode->has_letter('K')) { // K will keep current compensation to test plane
+                // clear any existing plane and compensation
+                delete this->plane;
+                this->plane= nullptr;
+                setAdjustFunction(false);
+            }
             if(!doProbing(gcode->stream)) {
                 gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
             } else {
@@ -155,8 +168,9 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
                 this->plane= nullptr;
                 // delete the compensationTransform in robot
                 setAdjustFunction(false);
+                gcode->stream->printf("saved plane cleared\n");
             }else{
-                // smoothie specific way to restire a saved plane
+                // smoothie specific way to restore a saved plane
                 uint32_t a,b,c,d;
                 a=b=c=d= 0;
                 if(gcode->has_letter('A')) a = gcode->get_uint('A');
@@ -282,7 +296,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         if(isnan(z)) return false; // probe failed
         z= zprobe->getProbeHeight() - z; // relative distance between the probe points, lower is negative z
         stream->printf("DEBUG: P%d:%1.4f\n", i, z);
-        v[i].set(x, y, z);
+        v[i] = Vector3(x, y, z);
     }
 
     // if first point is not within tolerance report it, it should ideally be 0
@@ -305,6 +319,36 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
         stream->printf("DEBUG: plane normal= %f, %f, %f\n", plane->getNormal()[0], plane->getNormal()[1], plane->getNormal()[2]);
         setAdjustFunction(true);
     }
+
+    return true;
+}
+
+// Probes the 3 points and reports heights
+bool ThreePointStrategy::test_probe_points(Gcode *gcode)
+{
+    // check the probe points have been defined
+    float max_delta= 0;
+    float last_z= NAN;
+    for (int i = 0; i < 3; ++i) {
+        float x, y;
+        std::tie(x, y) = probe_points[i];
+        if(isnan(x) || isnan(y)) {
+            gcode->stream->printf("Probe point P%d has not been defined, use M557 P%d Xnnn Ynnn to define it\n", i, i);
+            return false;
+        }
+
+        float z = zprobe->probeDistance(x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets));
+        if(isnan(z)) return false; // probe failed
+        gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f\n", x, y, z);
+
+        if(isnan(last_z)) {
+            last_z= z;
+        }else{
+            max_delta= std::max(max_delta, fabsf(z-last_z));
+        }
+    }
+
+    gcode->stream->printf("max delta: %f\n", max_delta);
 
     return true;
 }

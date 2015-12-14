@@ -26,6 +26,7 @@ public:
     void on_console_line_received( void *argument );
     void on_gcode_received(void *argument);
     void on_second_tick(void *);
+    static bool parse_command(const char *cmd, string args, StreamOutput *stream);
 
 private:
     static void ls_command(string parameters, StreamOutput *stream );
@@ -43,6 +44,10 @@ private:
     static void version_command(string parameters, StreamOutput *stream );
     static void get_command(string parameters, StreamOutput *stream );
     static void set_temp_command(string parameters, StreamOutput *stream );
+    static void calc_thermistor_command( string parameters, StreamOutput *stream);
+    static void print_thermistors_command( string parameters, StreamOutput *stream);
+    static void md5sum_command( string parameters, StreamOutput *stream);
+
     static void switch_command(string parameters, StreamOutput *stream );
     static void mem_command(string parameters, StreamOutput *stream );
 
@@ -53,7 +58,6 @@ private:
 
     static void remount_command( string parameters, StreamOutput *stream);
 
-    bool parse_command(const char *cmd, string args, StreamOutput *stream);
 
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {

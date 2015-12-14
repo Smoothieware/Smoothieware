@@ -21,8 +21,6 @@ class Laser : public Module{
         void on_module_loaded();
         void on_block_end(void* argument);
         void on_block_begin(void* argument);
-        void on_play(void* argument);
-        void on_pause(void* argument);
         void on_gcode_execute(void* argument);
         void on_speed_change(void* argument);
 
@@ -33,8 +31,9 @@ class Laser : public Module{
             bool laser_on:1;     // Laser status
             bool laser_inverting:1; // stores whether the pwm period should be inverted
         };
-        float            laser_max_power; // maximum allowed laser power to be output on the pwm pin
-        float            laser_tickle_power; // value used to tickle the laser on moves
+        float            laser_maximum_power; // maximum allowed laser power to be output on the pwm pin
+        float            laser_minimum_power; // value used to tickle the laser on moves.  Also minimum value for auto-scaling
+        float            laser_power;     // current laser power
 };
 
 #endif

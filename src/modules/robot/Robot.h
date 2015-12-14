@@ -12,6 +12,7 @@
 using std::string;
 #include <string.h>
 #include <functional>
+#include <stack>
 
 #include "libs/Module.h"
 
@@ -25,9 +26,6 @@ class Robot : public Module {
         void on_module_loaded();
         void on_config_reload(void* argument);
         void on_gcode_received(void* argument);
-        void on_get_public_data(void* argument);
-        void on_set_public_data(void* argument);
-        void on_halt(void *arg);
 
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
@@ -37,10 +35,13 @@ class Robot : public Module {
         float from_millimeters(float value);
         float get_seconds_per_minute() const { return seconds_per_minute; }
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }
+        void setToolOffset(const float offset[3]);
+        float get_feed_rate() const { return feed_rate; }
+        void  push_state();
+        void  pop_state();
+        void check_max_actuator_speeds();
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
-        bool absolute_mode;                                   // true for absolute mode ( default ), false for relative mode
-        void setToolOffset(const float offset[3]);
 
         // gets accessed by Panel, Endstops, ZProbe
         std::vector<StepperMotor*> actuators;
@@ -48,21 +49,24 @@ class Robot : public Module {
         // set by a leveling strategy to transform the target of a move according to the current plan
         std::function<void(float[3])> compensationTransform;
 
+        struct {
+            bool inch_mode:1;                                 // true for inch mode, false for millimeter mode ( default )
+            bool absolute_mode:1;                             // true for absolute mode ( default ), false for relative mode
+        };
+
     private:
         void distance_in_gcode_is_known(Gcode* gcode);
-        void append_milestone( float target[], float rate_mm_s);
+        void append_milestone( Gcode *gcode, float target[], float rate_mm_s);
         void append_line( Gcode* gcode, float target[], float rate_mm_s);
-        //void append_arc(float theta_start, float angular_travel, float radius, float depth, float rate);
         void append_arc( Gcode* gcode, float target[], float offset[], float radius, bool is_clockwise );
-
-
         void compute_arc(Gcode* gcode, float offset[], float target[]);
 
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
         void clearToolOffset();
-        void check_max_actuator_speeds();
 
+        typedef std::tuple<float, float, bool, bool> saved_state_t; // save current feedrate and absolute mode, inch mode
+        std::stack<saved_state_t> state_stack;               // saves state from M120
         float last_milestone[3];                             // Last position, in millimeters
         float transformed_last_milestone[3];                 // Last transformed position
         int8_t motion_mode;                                  // Motion mode for the current received Gcode
@@ -91,11 +95,6 @@ class Robot : public Module {
         StepperMotor* alpha_stepper_motor;
         StepperMotor* beta_stepper_motor;
         StepperMotor* gamma_stepper_motor;
-
-        struct {
-            bool halted:1;
-            bool inch_mode:1;                                     // true for inch mode, false for millimeter mode ( default )
-        };
 };
 
 // Convert from inches to millimeters ( our internal storage unit ) if needed

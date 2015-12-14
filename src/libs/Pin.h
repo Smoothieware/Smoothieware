@@ -10,6 +10,7 @@
 
 namespace mbed {
     class PwmOut;
+    class InterruptIn;
 }
 
 class Pin {
@@ -19,7 +20,7 @@ class Pin {
         Pin* from_string(std::string value);
 
         inline bool connected(){
-            return this->pin < 32;
+            return this->valid;
         }
 
         inline bool equals(const Pin& other) const {
@@ -27,13 +28,13 @@ class Pin {
         }
 
         inline Pin* as_output(){
-            if (this->pin < 32)
+            if (this->valid)
                 this->port->FIODIR |= 1<<this->pin;
             return this;
         }
 
         inline Pin* as_input(){
-            if (this->pin < 32)
+            if (this->valid)
                 this->port->FIODIR &= ~(1<<this->pin);
             return this;
         }
@@ -49,14 +50,13 @@ class Pin {
         Pin* pull_none(void);
 
         inline bool get(){
-
-            if (this->pin >= 32) return false;
+            if (!this->valid) return false;
             return this->inverting ^ (( this->port->FIOPIN >> this->pin ) & 1);
         }
 
         inline void set(bool value)
         {
-            if (this->pin >= 32) return;
+            if (!this->valid) return;
             if ( this->inverting ^ value )
                 this->port->FIOSET = 1 << this->pin;
             else
@@ -64,11 +64,18 @@ class Pin {
         }
 
         mbed::PwmOut *hardware_pwm();
-        
+
+        mbed::InterruptIn *interrupt_pin();
+
+        // these should be private, and use getters
         LPC_GPIO_TypeDef* port;
-        bool inverting;
-        char port_number;
+
         unsigned char pin;
+        char port_number;
+        struct {
+            bool inverting:1;
+            bool valid:1;
+        };
 };
 
 

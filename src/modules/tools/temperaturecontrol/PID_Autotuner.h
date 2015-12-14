@@ -10,7 +10,6 @@
 #include "Module.h"
 
 class TemperatureControl;
-class StreamOutput;
 
 class PID_Autotuner : public Module
 {
@@ -23,15 +22,12 @@ public:
     void on_gcode_received(void *);
 
 private:
-    void begin(float, StreamOutput *, int );
+    void begin(float, int );
     void abort();
     void finishUp();
 
     TemperatureControl *temp_control;
     float target_temperature;
-    StreamOutput *s;
-
-    volatile bool tick;
 
     float *peaks;
     int requested_cycles;
@@ -43,11 +39,15 @@ private:
     int peakType;
     float *lastInputs;
     int peakCount;
-    bool justchanged;
     float absMax, absMin;
     float oStep;
     int output;
-    unsigned long tickCnt;
+    volatile unsigned long tickCnt;
+    struct {
+        bool justchanged:1;
+        volatile bool tick:1;
+        bool firstPeak:1;
+    };
 };
 
 #endif /* _PID_AUTOTUNE_H */

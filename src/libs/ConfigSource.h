@@ -18,6 +18,7 @@ class ConfigCache;
 class ConfigSource {
     public:
         ConfigSource(){}
+        virtual ~ConfigSource(){}
 
         // Read each value, and append it as a ConfigValue to the config_cache we were passed
         virtual void transfer_values_to_cache( ConfigCache* ) = 0;

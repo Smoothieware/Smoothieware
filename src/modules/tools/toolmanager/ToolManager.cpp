@@ -26,8 +26,6 @@ using namespace std;
 #include "libs/StreamOutput.h"
 #include "FileStream.h"
 
-#include "modules/robot/RobotPublicAccess.h"
-
 #define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
 
 ToolManager::ToolManager(){
@@ -52,7 +50,6 @@ void ToolManager::on_gcode_received(void *argument){
 
     if( gcode->has_letter('T') ){
         int new_tool = gcode->get_value('T');
-        gcode->mark_as_taken();
         if(new_tool >= (int)this->tools.size() || new_tool < 0){
             // invalid tool
             if( return_error_on_unhandled_gcode ) {

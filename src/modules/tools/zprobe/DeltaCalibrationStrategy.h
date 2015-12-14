@@ -20,8 +20,11 @@ private:
     bool get_trim(float& x, float& y, float& z);
     bool calibrate_delta_endstops(Gcode *gcode);
     bool calibrate_delta_radius(Gcode *gcode);
+    bool probe_delta_points(Gcode *gcode);
+    float findBed();
 
     float probe_radius;
+    float initial_height;
 };
 
 #endif

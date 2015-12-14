@@ -116,11 +116,14 @@ void FileScreen::clicked_line(uint16_t line)
     }
 }
 
-// only filter files that have a .g in them
+// only filter files that have a .g, .ngc or .nc in them and does not start with a .
 bool FileScreen::filter_file(const char *f)
 {
     string fn= lc(f);
-    return (fn.find(".g") != string::npos);
+    return (fn.at(0) != '.') &&
+             ((fn.find(".g") != string::npos) ||
+              (fn.find(".ngc") != string::npos) ||
+              (fn.find(".nc") != string::npos));
 }
 
 // Find the "line"th file in the current folder
@@ -132,8 +135,8 @@ string FileScreen::file_at(uint16_t line, bool& isdir)
     d = opendir(THEKERNEL->current_path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            // only filter files that have a .g in them and directories
-            if((p->d_isdir || filter_file(p->d_name)) && count++ == line ) {
+            // only filter files that have a .g in them and directories not starting with a .
+          if(((p->d_isdir && p->d_name[0] != '.') || filter_file(p->d_name)) && count++ == line ) {
                 isdir= p->d_isdir;
                 string fn= p->d_name;
                 closedir(d);
@@ -147,7 +150,7 @@ string FileScreen::file_at(uint16_t line, bool& isdir)
     return "";
 }
 
-// Count how many files there are in the current folder that have a .g in them
+// Count how many files there are in the current folder that have a .g in them and does not start with a .
 uint16_t FileScreen::count_folder_content()
 {
     DIR *d;
@@ -156,7 +159,7 @@ uint16_t FileScreen::count_folder_content()
     d = opendir(THEKERNEL->current_path.c_str());
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
-            if(p->d_isdir || filter_file(p->d_name)) count++;
+            if((p->d_isdir && p->d_name[0] != '.') || filter_file(p->d_name)) count++;
         }
         closedir(d);
         return count;

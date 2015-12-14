@@ -24,21 +24,26 @@
 #include "modules/robot/Robot.h"
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
-#include "modules/robot/Pauser.h"
+#include "StepperMotor.h"
 
 #include <malloc.h>
 #include <array>
+#include <string>
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
 
 #define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
+#define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
+#define disable_leds_checksum                       CHECKSUM("leds_disable")
 
 Kernel* Kernel::instance;
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
+    halted= false;
+
     instance= this; // setup the Singleton instance of the kernel
 
     // serial first at fixed baud rate (DEFAULT_SERIAL_BAUD_RATE) so config can report errors to serial
@@ -46,7 +51,7 @@ Kernel::Kernel(){
     this->serial = new SerialConsole(USBTX, USBRX, DEFAULT_SERIAL_BAUD_RATE);
 
     // Config next, but does not load cache yet
-    this->config         = new Config();
+    this->config = new Config();
 
     // Pre-load the config cache, do after setting up serial so we can report errors to serial
     this->config->config_cache_load();
@@ -55,7 +60,7 @@ Kernel::Kernel(){
     delete this->serial;
     this->serial= NULL;
 
-    this->streams        = new StreamOutputPool();
+    this->streams = new StreamOutputPool();
 
     this->current_path   = "/";
 
@@ -84,58 +89,90 @@ Kernel::Kernel(){
         this->serial = new SerialConsole(USBTX, USBRX, this->config->value(uart0_checksum,baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number());
     }
 
+    //some boards don't have leds.. TOO BAD!
+    this->use_leds= !this->config->value( disable_leds_checksum )->by_default(false)->as_bool();
+
     this->add_module( this->config );
     this->add_module( this->serial );
 
     // HAL stuff
-    add_module( this->slow_ticker          = new SlowTicker());
-    this->step_ticker          = new StepTicker();
-    this->adc                  = new Adc();
+    add_module( this->slow_ticker = new SlowTicker());
+
+    this->step_ticker = new StepTicker();
+    this->adc = new Adc();
 
     // TODO : These should go into platform-specific files
     // LPC17xx-specific
     NVIC_SetPriorityGrouping(0);
     NVIC_SetPriority(TIMER0_IRQn, 2);
     NVIC_SetPriority(TIMER1_IRQn, 1);
-    NVIC_SetPriority(TIMER2_IRQn, 3);
+    NVIC_SetPriority(TIMER2_IRQn, 4);
+    NVIC_SetPriority(PendSV_IRQn, 3);
+    NVIC_SetPriority(RIT_IRQn, 3); // we make acceleration tick the same prio as pendsv so it can't be pre-empted by end of block
 
     // Set other priorities lower than the timers
-    NVIC_SetPriority(ADC_IRQn, 4);
-    NVIC_SetPriority(USB_IRQn, 4);
+    NVIC_SetPriority(ADC_IRQn, 5);
+    NVIC_SetPriority(USB_IRQn, 5);
 
     // If MRI is enabled
     if( MRI_ENABLE ){
-        if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 4); }
-        if( NVIC_GetPriority(UART1_IRQn) > 0 ){ NVIC_SetPriority(UART1_IRQn, 4); }
-        if( NVIC_GetPriority(UART2_IRQn) > 0 ){ NVIC_SetPriority(UART2_IRQn, 4); }
-        if( NVIC_GetPriority(UART3_IRQn) > 0 ){ NVIC_SetPriority(UART3_IRQn, 4); }
+        if( NVIC_GetPriority(UART0_IRQn) > 0 ){ NVIC_SetPriority(UART0_IRQn, 5); }
+        if( NVIC_GetPriority(UART1_IRQn) > 0 ){ NVIC_SetPriority(UART1_IRQn, 5); }
+        if( NVIC_GetPriority(UART2_IRQn) > 0 ){ NVIC_SetPriority(UART2_IRQn, 5); }
+        if( NVIC_GetPriority(UART3_IRQn) > 0 ){ NVIC_SetPriority(UART3_IRQn, 5); }
     }else{
-        NVIC_SetPriority(UART0_IRQn, 4);
-        NVIC_SetPriority(UART1_IRQn, 4);
-        NVIC_SetPriority(UART2_IRQn, 4);
-        NVIC_SetPriority(UART3_IRQn, 4);
+        NVIC_SetPriority(UART0_IRQn, 5);
+        NVIC_SetPriority(UART1_IRQn, 5);
+        NVIC_SetPriority(UART2_IRQn, 5);
+        NVIC_SetPriority(UART3_IRQn, 5);
     }
 
     // Configure the step ticker
-    this->base_stepping_frequency       =  this->config->value(base_stepping_frequency_checksum      )->by_default(100000)->as_number();
-    float microseconds_per_step_pulse   =  this->config->value(microseconds_per_step_pulse_checksum  )->by_default(5     )->as_number();
+    this->base_stepping_frequency = this->config->value(base_stepping_frequency_checksum)->by_default(100000)->as_number();
+    float microseconds_per_step_pulse = this->config->value(microseconds_per_step_pulse_checksum)->by_default(5)->as_number();
+    this->acceleration_ticks_per_second = THEKERNEL->config->value(acceleration_ticks_per_second_checksum)->by_default(1000)->as_number();
 
     // Configure the step ticker ( TODO : shouldnt this go into stepticker's code ? )
-    this->step_ticker->set_reset_delay( microseconds_per_step_pulse / 1000000L );
+    this->step_ticker->set_reset_delay( microseconds_per_step_pulse );
     this->step_ticker->set_frequency( this->base_stepping_frequency );
+    this->step_ticker->set_acceleration_ticks_per_second(acceleration_ticks_per_second); // must be set after set_frequency
 
     // Core modules
     this->add_module( new GcodeDispatch() );
     this->add_module( this->robot          = new Robot()         );
     this->add_module( this->stepper        = new Stepper()       );
     this->add_module( this->conveyor       = new Conveyor()      );
-    this->add_module( this->pauser         = new Pauser()        );
 
     this->planner = new Planner();
 
 }
 
-// Add a module to Kernel. We don't actually hold a list of modules, we just tell it where Kernel is
+// return a GRBL-like query string for serial ?
+std::string Kernel::get_query_string()
+{
+    std::string str;
+    str.append("<");
+    if(halted) {
+        str.append("Alarm,");
+    }else if(this->conveyor->is_queue_empty()) {
+        str.append("Idle,");
+    }else{
+        str.append("Run,");
+    }
+
+    char buf[64];
+    size_t n= snprintf(buf, sizeof(buf), "%f,%f,%f,", this->robot->actuators[X_AXIS]->get_current_position(), this->robot->actuators[Y_AXIS]->get_current_position(), this->robot->actuators[Z_AXIS]->get_current_position());
+    str.append("MPos:").append(buf, n);
+
+    float pos[3];
+    this->robot->get_axis_position(pos);
+    n= snprintf(buf, sizeof(buf), "%f,%f,%f", pos[0], pos[1], pos[2]);
+    str.append("WPos:").append(buf, n);
+    str.append(">\r\n");
+    return str;
+}
+
+// Add a module to Kernel. We don't actually hold a list of modules we just call its on_module_loaded
 void Kernel::add_module(Module* module){
     module->on_module_loaded();
 }
@@ -145,16 +182,32 @@ void Kernel::register_for_event(_EVENT_ENUM id_event, Module *mod){
     this->hooks[id_event].push_back(mod);
 }
 
-// Call a specific event without arguments
-void Kernel::call_event(_EVENT_ENUM id_event){
-    for (auto m : hooks[id_event]) {
-        (m->*kernel_callback_functions[id_event])(this);
-    }
-}
-
 // Call a specific event with an argument
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
+    if(id_event == ON_HALT) {
+        this->halted= (argument == nullptr);
+    }
     for (auto m : hooks[id_event]) {
         (m->*kernel_callback_functions[id_event])(argument);
     }
 }
+
+// These are used by tests to test for various things. basically mocks
+bool Kernel::kernel_has_event(_EVENT_ENUM id_event, Module *mod)
+{
+    for (auto m : hooks[id_event]) {
+        if(m == mod) return true;
+    }
+    return false;
+}
+
+void Kernel::unregister_for_event(_EVENT_ENUM id_event, Module *mod)
+{
+    for (auto i = hooks[id_event].begin(); i != hooks[id_event].end(); ++i) {
+        if(*i == mod) {
+            hooks[id_event].erase(i);
+            return;
+        }
+    }
+}
+

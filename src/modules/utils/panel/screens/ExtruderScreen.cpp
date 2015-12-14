@@ -25,7 +25,6 @@ using namespace std;
 
 ExtruderScreen::ExtruderScreen()
 {
-    this->command= nullptr;
 }
 
 void ExtruderScreen::on_enter()
@@ -59,18 +58,10 @@ void ExtruderScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); return;
-        case 1: command = "G91\nG1 E5 F100\nG90"; break;
-        case 2: command = "G91\nG1 E-5 F100\nG90"; break;
+        case 1: send_command("M120\nG91\nG1 E5 F100\nM121"); break;
+        case 2: send_command("M120\nG91\nG1 E-5 F100\nM121"); break;
         case 3: setupConfigSettings(); break; // lazy load
     }
-}
-
-// queuing commands needs to be done from main loop
-void ExtruderScreen::on_main_loop()
-{
-    if (this->command == nullptr) return;
-    send_command(this->command);
-    this->command= nullptr;
 }
 
 void ExtruderScreen::setupConfigSettings()

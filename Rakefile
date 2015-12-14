@@ -2,6 +2,10 @@ require 'rake'
 require 'pathname'
 require 'fileutils'
 
+verbose(ENV['verbose'] == '1')
+DEBUG = ENV['debug'] == '1'
+TESTING = ENV['testing'] == '1'
+
 def pop_path(path)
   Pathname(path).each_filename.to_a[1..-1]
 end
@@ -70,6 +74,13 @@ SIZE = "#{TOOLSBIN}size"
 
 # include a defaults file if present
 load 'rakefile.defaults' if File.exists?('rakefile.defaults')
+if TESTING
+  BUILDTYPE= 'Testing'
+
+elsif DEBUG
+  BUILDTYPE= 'Debug'
+  ENABLE_DEBUG_MONITOR= '0'
+end
 
 # Set build type
 BUILDTYPE= ENV['BUILDTYPE'] || 'Checked' unless defined? BUILDTYPE
@@ -81,7 +92,9 @@ ENABLE_DEBUG_MONITOR = ENV['ENABLE_DEBUG_MONITOR'] || '0' unless defined? ENABLE
 DEFAULT_SERIAL_BAUD_RATE= ENV['BAUDRATE'] || '115200' unless defined? DEFAULT_SERIAL_BAUD_RATE
 
 # set to true to eliminate all the network code
-NONETWORK= false unless defined? NONETWORK
+unless defined? NONETWORK
+  NONETWORK= false || TESTING
+end
 
 # list of modules to exclude, include directory it is in
 EXCLUDE_MODULES= %w(tools/touchprobe) unless defined? EXCLUDE_MODULES
@@ -101,9 +114,21 @@ else
   nonetwork= false
 end
 
-SRC = FileList['src/**/*.{c,cpp}'].exclude(/#{excludes.join('|')}/)
+if TESTING
+  # add modules to be tested here
+  TESTMODULES= %w(tools/temperatureswitch) unless defined? EXCLUDE_MODULES
+  puts "Modules under test: #{TESTMODULES}"
+  excludes << %w(Kernel.cpp main.cpp) # we replace these with mock versions in testframework
 
-puts "WARNING Excluding modules: #{EXCLUDE_MODULES.join(' ')}" unless exclude_defines.empty?
+  frameworkfiles= FileList['src/testframework/*.{c,cpp}', 'src/testframework/easyunit/*.{c,cpp}']
+  extrafiles= FileList['src/modules/communication/SerialConsole.cpp', 'src/modules/communication/utils/Gcode.cpp', 'src/modules/robot/Conveyor.cpp', 'src/modules/robot/Block.cpp']
+  testmodules= FileList['src/libs/**/*.{c,cpp}'].include(TESTMODULES.collect { |e| "src/modules/#{e}/**/*.{c,cpp}"}).include(TESTMODULES.collect { |e| "src/testframework/unittests/#{e}/*.{c,cpp}"}).exclude(/#{excludes.join('|')}/)
+  SRC =  frameworkfiles + extrafiles + testmodules
+else
+  excludes << %w(testframework)
+  SRC = FileList['src/**/*.{c,cpp}'].exclude(/#{excludes.join('|')}/)
+  puts "WARNING Excluding modules: #{EXCLUDE_MODULES.join(' ')}" unless exclude_defines.empty?
+end
 
 OBJDIR = 'OBJ'
 OBJ = SRC.collect { |fn| File.join(OBJDIR, pop_path(File.dirname(fn)), File.basename(fn).ext('o')) } +
@@ -147,6 +172,10 @@ when 'checked'
   OPTIMIZATION = 2
   MRI_ENABLE = 1
   MRI_SEMIHOST_STDIO = 1 unless defined? MRI_SEMIHOST_STDIO
+when 'testing'
+  OPTIMIZATION = 0
+  MRI_ENABLE = 1
+  MRI_SEMIHOST_STDIO = 0 unless defined? MRI_SEMIHOST_STDIO
 end
 
 MRI_ENABLE = 1  unless defined? MRI_ENABLE # set to 0 to disable MRI
@@ -169,8 +198,9 @@ DEFINES= defines.join(' ')
 
 # Compiler flags used to enable creation of header dependencies.
 DEPFLAGS = '-MMD '
-CFLAGS = DEPFLAGS + "-Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wredundant-decls -Wcast-qual -Wcast-align -O#{OPTIMIZATION} -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork -ffunction-sections -fdata-sections  -fno-exceptions -fno-delete-null-pointer-checks"
-CPPFLAGS = CFLAGS + ' -fno-rtti -std=gnu++11'
+CFLAGS = DEPFLAGS + "-Wall -Wextra -Wno-unused-parameter -Wcast-align -Wpointer-arith -Wredundant-decls -Wcast-qual -Wcast-align -O#{OPTIMIZATION} -g3 -mcpu=cortex-m3 -mthumb -mthumb-interwork -ffunction-sections -fdata-sections -fno-delete-null-pointer-checks"
+CPPFLAGS = CFLAGS + ' -fno-rtti -std=gnu++11 -fno-exceptions'
+CXXFLAGS = CFLAGS + ' -fno-rtti -std=gnu++11 -fexceptions' # used for a .cxx file that needs to be compiled with exceptions
 
 MRI_WRAPS = MRI_ENABLE == 1 ? ',--wrap=_read,--wrap=_write,--wrap=semihost_connected' : ''
 
@@ -243,7 +273,7 @@ file MBED_LIB do
 end
 
 file "#{OBJDIR}/mbed_custom.o" => ['./build/mbed_custom.cpp'] do |t|
-  puts "Compiling #{t.source}"
+  puts "Compiling mbed_custom.cpp"
   sh "#{CCPP} #{CPPFLAGS} #{INCLUDE} #{DEFINES} -c -o #{t.name} #{t.prerequisites[0]}"
 end
 
@@ -266,6 +296,11 @@ end
 rule '.o' => lambda{ |objfile| obj2src(objfile, 'cpp') } do |t|
   puts "Compiling #{t.source}"
   sh "#{CCPP} #{CPPFLAGS} #{INCLUDE} #{DEFINES} #{VERSION} -c -o #{t.name} #{t.source}"
+end
+
+rule '.o' => lambda{ |objfile| obj2src(objfile, 'cxx') } do |t|
+  puts "Compiling #{t.source}"
+  sh "#{CCPP} #{CXXFLAGS} #{INCLUDE} #{DEFINES} #{VERSION} -c -o #{t.name} #{t.source}"
 end
 
 rule '.o' => lambda{ |objfile| obj2src(objfile, 'c') } do |t|

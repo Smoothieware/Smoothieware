@@ -5,8 +5,8 @@
       you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef temperaturecontrol_h
-#define temperaturecontrol_h
+#ifndef TEMPERATURECONTROL_H
+#define TEMPERATURECONTROL_H
 
 #include "Module.h"
 #include "Pwm.h"
@@ -21,7 +21,6 @@ class TemperatureControl : public Module {
 
         void on_module_loaded();
         void on_main_loop(void* argument);
-        void on_gcode_execute(void* argument);
         void on_gcode_received(void* argument);
         void on_second_tick(void* argument);
         void on_get_public_data(void* argument);
@@ -42,7 +41,7 @@ class TemperatureControl : public Module {
         int pool_index;
 
         float target_temperature;
-        float max_temp;
+        float max_temp, min_temp;
 
         float preset1;
         float preset2;
@@ -62,19 +61,9 @@ class TemperatureControl : public Module {
 
         Pwm  heater_pin;
 
-        struct {
-            bool use_bangbang:1;
-            bool waiting:1;
-            bool min_temp_violated:1;
-            bool link_to_tool:1;
-            bool active:1;
-            bool readonly:1;
-        };
-
         uint16_t set_m_code;
         uint16_t set_and_wait_m_code;
         uint16_t get_m_code;
-        struct pad_temperature public_data_return;
 
         std::string designator;
 
@@ -90,6 +79,17 @@ class TemperatureControl : public Module {
         float i_factor;
         float d_factor;
         float PIDdt;
+
+        struct {
+            bool use_bangbang:1;
+            bool waiting:1;
+            bool temp_violated:1;
+            bool link_to_tool:1;
+            bool active:1;
+            bool readonly:1;
+            bool windup:1;
+            bool sensor_settings:1;
+        };
 };
 
 #endif

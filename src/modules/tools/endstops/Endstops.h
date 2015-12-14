@@ -21,20 +21,21 @@ class Endstops : public Module{
         void on_module_loaded();
         void on_gcode_received(void* argument);
         void on_config_reload(void* argument);
-        uint32_t acceleration_tick(uint32_t dummy);
+        void acceleration_tick(void);
 
     private:
         void home(char axes_to_move);
         void do_homing_cartesian(char axes_to_move);
         void do_homing_corexy(char axes_to_move);
-        void wait_for_homed(char axes_to_move);
-        void wait_for_homed_corexy(int axis);
+        bool wait_for_homed(char axes_to_move);
+        bool wait_for_homed_corexy(int axis);
         void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
         void back_off_home(char axes_to_move);
         void move_to_origin(char);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
+        bool debounced_get(int pin);
 
         float homing_position[3];
         float home_offset[3];

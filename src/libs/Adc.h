@@ -10,22 +10,48 @@
 #ifndef ADC_H
 #define ADC_H
 
-#include "libs/Module.h"
 #include "PinNames.h" // mbed.h lib
-#include "libs/ADC/adc.h"
+
+#include <cmath>
 
 class Pin;
+namespace mbed {
+    class ADC;
+}
 
-class Adc : public Module{
-    public:
-        Adc();
-        void enable_pin(Pin* pin);
-        unsigned int read(Pin* pin);
-        PinName _pin_to_pinname(Pin* pin);
+// define how many bits of extra resolution required
+// 2 bits means the 12bit ADC is 14 bits of resolution
+#define OVERSAMPLE 2
 
-        ADC* adc;
+class Adc
+{
+public:
+    Adc();
+    void enable_pin(Pin *pin);
+    unsigned int read(Pin *pin);
+
+    static Adc *instance;
+    void new_sample(int chan, uint32_t value);
+    // return the maximum ADC value, base is 12bits 4095.
+#ifdef OVERSAMPLE
+    int get_max_value() const { return 4095 << OVERSAMPLE;}
+#else
+    int get_max_value() const { return 4095;}
+#endif
+
+private:
+    PinName _pin_to_pinname(Pin *pin);
+    mbed::ADC *adc;
+
+    static const int num_channels= 6;
+#ifdef OVERSAMPLE
+    // we need 4^n sample to oversample and we get double that to filter out spikes
+    static const int num_samples= powf(4, OVERSAMPLE)*2;
+#else
+    static const int num_samples= 8;
+#endif
+    // buffers storing the last num_samples readings for each channel
+    uint16_t sample_buffers[num_channels][num_samples];
 };
-
-
 
 #endif

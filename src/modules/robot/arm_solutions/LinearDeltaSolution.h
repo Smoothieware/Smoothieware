@@ -8,11 +8,11 @@ class Config;
 class LinearDeltaSolution : public BaseSolution {
     public:
         LinearDeltaSolution(Config*);
-        void cartesian_to_actuator( float[], float[] );
-        void actuator_to_cartesian( float[], float[] );
+        void cartesian_to_actuator(const float[], float[] );
+        void actuator_to_cartesian(const float[], float[] );
 
         bool set_optional(const arm_options_t& options);
-        bool get_optional(arm_options_t& options);
+        bool get_optional(arm_options_t& options, bool force_all);
 
     private:
         void init();
@@ -21,11 +21,17 @@ class LinearDeltaSolution : public BaseSolution {
         float arm_radius;
         float arm_length_squared;
 
-        float DELTA_TOWER1_X;
-        float DELTA_TOWER1_Y;
-        float DELTA_TOWER2_X;
-        float DELTA_TOWER2_Y;
-        float DELTA_TOWER3_X;
-        float DELTA_TOWER3_Y;
+        float delta_tower1_x;
+        float delta_tower1_y;
+        float delta_tower2_x;
+        float delta_tower2_y;
+        float delta_tower3_x;
+        float delta_tower3_y;
+        float tower1_offset;
+        float tower2_offset;
+        float tower3_offset;
+        float tower1_angle;
+        float tower2_angle;
+        float tower3_angle;
 };
 #endif // LINEARDELTASOLUTION_H

@@ -5,6 +5,7 @@
 #include "mbed.h"
 #include "adc.h"
 
+using namespace mbed;
 
 ADC *ADC::instance;
 
@@ -39,7 +40,7 @@ ADC::ADC(int sample_rate, int cclk_div)
             LPC_SC->PCLKSEL0 |= 0x3 << 24;
             break;
         default:
-            printf("Warning: ADC CCLK clock divider must be 1, 2, 4 or 8. %u supplied.\n",
+            printf("ADC Warning: ADC CCLK clock divider must be 1, 2, 4 or 8. %u supplied.\n",
                 cclk_div);
             printf("Defaulting to 1.\n");
             LPC_SC->PCLKSEL0 |= 0x1 << 24;
@@ -49,21 +50,20 @@ ADC::ADC(int sample_rate, int cclk_div)
     clock_div=pclk / adc_clk_freq;
 
     if (clock_div > 0xFF) {
-        //printf("Warning: Clock division is %u which is above 255 limit. Re-Setting at limit.\n",
-        //    clock_div);
+        printf("ADC Warning: Clock division is %u which is above 255 limit. Re-Setting at limit.\n", clock_div);
         clock_div=0xFF;
     }
     if (clock_div == 0) {
-        printf("Warning: Clock division is 0. Re-Setting to 1.\n");
+        printf("ADC Warning: Clock division is 0. Re-Setting to 1.\n");
         clock_div=1;
     }
 
     _adc_clk_freq=pclk / clock_div;
     if (_adc_clk_freq > MAX_ADC_CLOCK) {
-        printf("Warning: Actual ADC sample rate of %u which is above %u limit\n",
+        printf("ADC Warning: Actual ADC sample rate of %u which is above %u limit\n",
             _adc_clk_freq / CLKS_PER_SAMPLE, MAX_ADC_CLOCK / CLKS_PER_SAMPLE);
         while ((pclk / max_div) > MAX_ADC_CLOCK) max_div++;
-        printf("Maximum recommended sample rate is %u\n", (pclk / max_div) / CLKS_PER_SAMPLE);
+        printf("ADC Warning: Maximum recommended sample rate is %u\n", (pclk / max_div) / CLKS_PER_SAMPLE);
     }
 
     LPC_ADC->ADCR =
@@ -151,7 +151,7 @@ int ADC::_pin_to_channel(PinName pin) {
 
 PinName ADC::channel_to_pin(int chan) {
     const PinName pin[8]={p15, p16, p17, p18, p19, p20, p15, p15};
-    
+
     if ((chan < 0) || (chan > 5))
         fprintf(stderr, "ADC channel %u is outside range available to MBED pins.\n", chan);
     return(pin[chan & 0x07]);
@@ -160,7 +160,7 @@ PinName ADC::channel_to_pin(int chan) {
 
 int ADC::channel_to_pin_number(int chan) {
     const int pin[8]={15, 16, 17, 18, 19, 20, 0, 0};
-    
+
     if ((chan < 0) || (chan > 5))
         fprintf(stderr, "ADC channel %u is outside range available to MBED pins.\n", chan);
     return(pin[chan & 0x07]);
@@ -275,7 +275,7 @@ void ADC::setup(PinName pin, int state) {
 //Return channel enabled/disabled state
 int ADC::setup(PinName pin) {
     int chan;
-    
+
     chan = _pin_to_channel(pin);
     return((LPC_ADC->ADCR & (1 << chan)) >> chan);
 }
@@ -283,7 +283,7 @@ int ADC::setup(PinName pin) {
 //Select channel already setup
 void ADC::select(PinName pin) {
     int chan;
-    
+
     //Only one channel can be selected at a time if not in burst mode
     if (!burst()) LPC_ADC->ADCR &= ~0xFF;
     //Select channel
@@ -295,7 +295,7 @@ void ADC::select(PinName pin) {
 void ADC::burst(int state) {
     if ((state & 1) == 1) {
         if (startmode(0) != 0)
-            fprintf(stderr, "Warning. startmode is %u. Must be 0 for burst mode.\n", startmode(0));
+            fprintf(stderr, "ADC Warning. startmode is %u. Must be 0 for burst mode.\n", startmode(0));
         LPC_ADC->ADCR |= (1 << 16);
     }
     else
@@ -309,7 +309,7 @@ int  ADC::burst(void) {
 //Set startmode and edge
 void ADC::startmode(int mode, int edge) {
     int lpc_adc_temp;
-    
+
     //Reset start mode and edge bit,
     lpc_adc_temp = LPC_ADC->ADCR & ~(0x0F << 24);
     //Write with new values
@@ -337,7 +337,7 @@ void ADC::start(void) {
 //Set interrupt enable/disable for pin to state
 void ADC::interrupt_state(PinName pin, int state) {
     int chan;
-    
+
     chan = _pin_to_channel(pin);
     if (state == 1) {
         LPC_ADC->ADINTEN &= ~0x100;
@@ -355,7 +355,7 @@ void ADC::interrupt_state(PinName pin, int state) {
 //Return enable/disable state of interrupt for pin
 int ADC::interrupt_state(PinName pin) {
     int chan;
-        
+
     chan = _pin_to_channel(pin);
     return((LPC_ADC->ADINTEN >> chan) & 0x01);
 }
@@ -378,7 +378,7 @@ void ADC::detach(void) {
 //Append interrupt handler for pin to function isr
 void ADC::append(PinName pin, void(*fptr)(uint32_t value)) {
     int chan;
-        
+
     chan = _pin_to_channel(pin);
     _adc_isr[chan] = fptr;
 }
@@ -386,7 +386,7 @@ void ADC::append(PinName pin, void(*fptr)(uint32_t value)) {
 //Append interrupt handler for pin to function isr
 void ADC::unappend(PinName pin) {
     int chan;
-        
+
     chan = _pin_to_channel(pin);
     _adc_isr[chan] = NULL;
 }
@@ -402,13 +402,13 @@ void ADC::unappend() {
 }
 
 //Set ADC offset
-void offset(int offset) {
+void ADC::offset(int offset) {
     LPC_ADC->ADTRM &= ~(0x07 << 4);
     LPC_ADC->ADTRM |= (offset & 0x07) << 4;
 }
 
 //Return current ADC offset
-int offset(void) {
+int ADC::offset(void) {
     return((LPC_ADC->ADTRM >> 4) & 0x07);
 }
 
