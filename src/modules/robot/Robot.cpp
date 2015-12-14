@@ -395,12 +395,19 @@ void Robot::on_gcode_received(void *argument)
                     g92_offset = wcs_t(0, 0, 0);
 
                 } else {
-                    // standard setting of the g92 offsets, making current machine position whatever the coordinate arguments are
+                    // standard setting of the g92 offsets, making current WCS position whatever the coordinate arguments are
                     float x, y, z;
                     std::tie(x, y, z) = g92_offset;
-                    if(gcode->has_letter('X')) x = to_millimeters(gcode->get_value('X')) - last_milestone[X_AXIS];
-                    if(gcode->has_letter('Y')) y = to_millimeters(gcode->get_value('Y')) - last_milestone[Y_AXIS];
-                    if(gcode->has_letter('Z')) z = to_millimeters(gcode->get_value('Z')) - last_milestone[Z_AXIS];
+                    // get current position in WCS
+                    wcs_t pos= mcs2wcs(last_milestone);
+
+                    // adjust g92 offset to make the current wpos == the value requested
+                    if(gcode->has_letter('X')){
+                        x += to_millimeters(gcode->get_value('X')) - std::get<X_AXIS>(pos);
+                    }
+
+                    if(gcode->has_letter('Y')) y = to_millimeters(gcode->get_value('Y')) - last_milestone[Y_AXIS] - std::get<Y_AXIS>(wcs_offsets[current_wcs]) - std::get<Y_AXIS>(tool_offset);
+                    if(gcode->has_letter('Z')) z = to_millimeters(gcode->get_value('Z')) - last_milestone[Z_AXIS] - std::get<Z_AXIS>(wcs_offsets[current_wcs]) - std::get<Z_AXIS>(tool_offset);
                     g92_offset = wcs_t(x, y, z);
                 }
 
