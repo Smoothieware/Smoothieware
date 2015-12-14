@@ -3,7 +3,6 @@
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include "libs/Pin.h"
-#include "libs/Hook.h"
 
 Button::Button()
 {
@@ -51,14 +50,14 @@ void Button::check_signal(int val)
     if ( start_value != this->value ) {
         if ( this->value ) {
             if ( this->up_hook != NULL ) {
-                this->up_hook->call();
+                this->up_hook();
                 this->first_timer = 0;
                 this->second_timer = 0;
                 this->repeat = false;
             }
         } else {
             if ( this->down_hook != NULL ) {
-                this->down_hook->call();
+                this->down_hook();
             }
         }
     }
@@ -68,7 +67,7 @@ void Button::check_signal(int val)
             if(this->repeat) {
                 this->second_timer++;
                 if(this->second_timer == 10) {
-                    this->up_hook->call();
+                    this->up_hook();
                     this->second_timer = 0;
                 }
             } else {
@@ -90,4 +89,12 @@ void Button::set_longpress_delay(int delay)
 bool Button::get()
 {
     return this->value;
+}
+
+void Button::up_attach( std::function<void(void)> f) {
+  this->up_hook = f;
+}
+
+void Button::down_attach( std::function<void(void)> f) {
+  this->down_hook = f;
 }

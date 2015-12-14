@@ -37,18 +37,18 @@ void Pwm::set(bool value)
     Pin::set(value);
 }
 
-uint32_t Pwm::on_tick(uint32_t dummy)
+void Pwm::on_tick()
 {
     if ((_pwm < 0) || _pwm >= PID_PWM_MAX) {
-        return dummy;
+        return;
     }
     else if (_pwm == 0) {
         Pin::set(false);
-        return dummy;
+        return;
     }
     else if (_pwm == PID_PWM_MAX - 1) {
         Pin::set(true);
-        return dummy;
+        return;
     }
 
     /*
@@ -131,5 +131,5 @@ uint32_t Pwm::on_tick(uint32_t dummy)
     }
     Pin::set(_sd_direction);
 
-    return dummy;
+    return;
 }

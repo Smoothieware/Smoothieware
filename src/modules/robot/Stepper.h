@@ -29,7 +29,7 @@ public:
     void trapezoid_generator_reset();
     void set_step_events_per_second(float);
     void trapezoid_generator_tick(void);
-    uint32_t stepper_motor_finished_move(uint32_t dummy);
+    void stepper_motor_finished_move();
     int config_step_timer( int cycles );
     void turn_enable_pins_on();
     void turn_enable_pins_off();
