@@ -616,10 +616,14 @@ void Endstops::on_gcode_received(void *argument)
     if ( gcode->has_g) {
         if ( gcode->g == 28 ) {
             if(gcode->subcode == 1) { // G28.1
-                // do a manual homing based on current position, no endstops required
-                if(gcode->has_letter('X')) THEKERNEL->robot->reset_axis_position(gcode->get_value('X'), X_AXIS);
-                if(gcode->has_letter('Y')) THEKERNEL->robot->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
-                if(gcode->has_letter('Z')) THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+                if(gcode->get_num_args() == 0) {
+                    THEKERNEL->robot->reset_axis_position(0, 0, 0);
+                }else{
+                    // do a manual homing based on current position, no endstops required
+                    if(gcode->has_letter('X')) THEKERNEL->robot->reset_axis_position(gcode->get_value('X'), X_AXIS);
+                    if(gcode->has_letter('Y')) THEKERNEL->robot->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
+                    if(gcode->has_letter('Z')) THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+                }
                 return;
             }
 
