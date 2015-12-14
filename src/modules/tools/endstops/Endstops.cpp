@@ -594,10 +594,6 @@ void Endstops::home(char axes_to_move)
         STEPPER[c]->set_moved_last_block(false);
     }
 
-    // disable bed compensation so we move in uncompensated machine coordinates
-    auto saveit= THEKERNEL->robot->compensationTransform;
-    THEKERNEL->robot->compensationTransform= nullptr;
-
     if (is_corexy){
         // corexy/HBot homing
         do_homing_corexy(axes_to_move);
@@ -611,7 +607,6 @@ void Endstops::home(char axes_to_move)
         STEPPER[c]->move(0, 0);
     }
     this->status = NOT_HOMING;
-    THEKERNEL->robot->compensationTransform= saveit;
 }
 
 // Start homing sequences by response to GCode commands
