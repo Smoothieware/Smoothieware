@@ -30,9 +30,6 @@ class Robot : public Module {
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
         void reset_position_from_current_actuator_position();
-        void get_axis_position(float position[]);
-        float to_millimeters(float value);
-        float from_millimeters(float value);
         float get_seconds_per_minute() const { return seconds_per_minute; }
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }
         void setToolOffset(const float offset[3]);
@@ -40,6 +37,9 @@ class Robot : public Module {
         void  push_state();
         void  pop_state();
         void check_max_actuator_speeds();
+        float to_millimeters( float value ) const { return this->inch_mode ? value * 25.4F : value; }
+        float from_millimeters( float value) const { return this->inch_mode ? value/25.4F : value;  }
+        void get_axis_position(float position[]) const { memcpy(position, this->last_milestone, sizeof this->last_milestone); }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
@@ -67,11 +67,11 @@ class Robot : public Module {
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
         void clearToolOffset();
+        void print_position(Gcode *gcode) const;
 
         // Workspace coordinate systems
         using wcs_t= std::tuple<float, float, float>;
         wcs_t mcs2wcs(const float *pos) const;
-        wcs_t mcs2wcs() const { return mcs2wcs(last_machine_position); }
 
         static const size_t k_max_wcs= 9; // setup 9 WCS offsets
         std::array<wcs_t, k_max_wcs> wcs_offsets; // these are persistent once set
@@ -106,15 +106,5 @@ class Robot : public Module {
         friend class Stepper;
 };
 
-// Convert from inches to millimeters ( our internal storage unit ) if needed
-inline float Robot::to_millimeters( float value ){
-    return this->inch_mode ? value * 25.4F : value;
-}
-inline float Robot::from_millimeters( float value){
-    return this->inch_mode ? value/25.4F : value;
-}
-inline void Robot::get_axis_position(float position[]){
-    memcpy(position, this->last_milestone, sizeof this->last_milestone);
-}
 
 #endif
