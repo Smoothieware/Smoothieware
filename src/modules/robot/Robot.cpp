@@ -720,18 +720,14 @@ void Robot::distance_in_gcode_is_known(Gcode * gcode)
 }
 
 // reset the machine position for all axis. Used for homing.
-// NOTE this sets the last_milestone which is machine position before compensation transform
+// During homing compensation is turned off, so the final position is uncompensated machine coordinates
+// if not we don't really know where everything is, and you can't compensate until you know where the head is.
+// once homed compensation is turned back on and the first move will be compensated.
 void Robot::reset_axis_position(float x, float y, float z)
 {
     last_machine_position[X_AXIS]= last_milestone[X_AXIS] = x;
     last_machine_position[Y_AXIS]= last_milestone[Y_AXIS] = y;
     last_machine_position[Z_AXIS]= last_milestone[Z_AXIS] = z;
-
-    // calculate what the last_machine_position would be by applying compensation transform if enabled
-    // otherwise it is the same as last_milestone
-    if(compensationTransform) {
-        compensationTransform(last_machine_position);
-    }
 
     // now set the actuator positions to match
     ActuatorCoordinates actuator_pos;
