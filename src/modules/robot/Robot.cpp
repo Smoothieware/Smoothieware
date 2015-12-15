@@ -241,6 +241,18 @@ void Robot::pop_state()
     }
 }
 
+std::vector<Robot::wcs_t> Robot::get_wcs_state() const
+{
+    std::vector<wcs_t> v;
+    v.push_back(wcs_t(current_wcs, k_max_wcs, 0));
+    for(auto& i : wcs_offsets) {
+        v.push_back(i);
+    }
+    v.push_back(g92_offset);
+    v.push_back(tool_offset);
+    return v;
+}
+
 int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
 {
     // M114.1 is a new way to do this (similar to how GRBL does it).
@@ -309,6 +321,7 @@ Robot::wcs_t Robot::mcs2wcs(const float *pos) const
         pos[Z_AXIS] - std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset) - std::get<Z_AXIS>(tool_offset)
     );
 }
+
 
 //A GCode has been received
 //See if the current Gcode line has some orders for us
