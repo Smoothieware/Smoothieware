@@ -315,7 +315,7 @@ void Endstops::back_off_home(char axes_to_move)
     this->status = BACK_OFF_HOME;
 
     // these are handled differently
-    if((is_delta || is_scara) && this->limit_enable[X_AXIS]) {
+    if(is_delta || is_scara) {
         // Move off of the endstop using a regular relative move in Z only
          params.push_back({'Z', this->retract_mm[Z_AXIS]*(this->home_direction[Z_AXIS]?1:-1)});
 
@@ -672,8 +672,6 @@ void Endstops::on_gcode_received(void *argument)
             }
 
             if(home_all) {
-                // for deltas this may be important rather than setting each individually
-
                 // Here's where we would have been if the endstops were perfectly trimmed
                 float ideal_position[3] = {
                     this->homing_position[X_AXIS] + this->home_offset[X_AXIS],
@@ -711,15 +709,19 @@ void Endstops::on_gcode_received(void *argument)
                 }
             }
 
-            // on some systems where 0,0 is bed center it is noce to have home goto 0,0 after homing
+            // on some systems where 0,0 is bed center it is nice to have home goto 0,0 after homing
             // default is off
-            if(!is_delta && this->move_to_origin_after_home) move_to_origin(axes_to_move);
+            if(!is_delta) {
+                if(this->move_to_origin_after_home) move_to_origin(axes_to_move);
+                // if limit switches are enabled we must back off endstop after setting home
+                back_off_home(axes_to_move);
 
-            // if limit switches are enabled we must back off endstop after setting home
-            back_off_home(axes_to_move);
-
-            // deltas are not left at 0,0 becuase of the trim settings, so move to 0,0 if requested
-            if(is_delta && this->move_to_origin_after_home) move_to_origin(axes_to_move);
+            }else if(this->move_to_origin_after_home || this->limit_enable[X_AXIS]) {
+                // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
+                // also need to back off endstops if limits are enabled
+                back_off_home(axes_to_move);
+                if(this->move_to_origin_after_home) move_to_origin(axes_to_move);
+            }
         }
 
     } else if (gcode->has_m) {

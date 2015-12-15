@@ -913,7 +913,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s )
     if (segments > 1) {
         // A vector to keep track of the endpoint of each segment
         float segment_delta[3];
-        float segment_end[3];
+        float segment_end[3]{last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]};
 
         // How far do we move each segment?
         for (int i = X_AXIS; i <= Z_AXIS; i++)
@@ -924,7 +924,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s )
         for (int i = 1; i < segments; i++) {
             if(THEKERNEL->is_halted()) return false; // don't queue any more segments
             for(int axis = X_AXIS; axis <= Z_AXIS; axis++ )
-                segment_end[axis] = last_milestone[axis] + segment_delta[axis];
+                segment_end[axis] += segment_delta[axis];
 
             // Append the end of this segment to the queue
             bool b= this->append_milestone(gcode, segment_end, rate_mm_s);
