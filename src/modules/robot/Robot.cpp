@@ -241,24 +241,23 @@ void Robot::pop_state()
     }
 }
 
-void Robot::print_position(Gcode *gcode) const
+int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
 {
     // M114.1 is a new way to do this (similar to how GRBL does it).
     // it returns the realtime position based on the current step position of the actuators.
     // this does require a FK to get a machine position from the actuator position
     // and then invert all the transforms to get a workspace position from machine position
     // M114 just does it the old way uses last_milestone and does inversse tranfroms to get the requested position
-    char buf[64];
     int n = 0;
-    if(gcode->subcode == 0) { // M114 print WCS
+    if(subcode == 0) { // M114 print WCS
         wcs_t pos= mcs2wcs(last_milestone);
-        n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+        n = snprintf(buf, bufsize, "C: X:%1.3f Y:%1.3f Z:%1.3f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
-    } else if(gcode->subcode == 4) { // M114.3 print last milestone (which should be the same as machine position if axis are not moving and no level compensation)
-        n = snprintf(buf, sizeof(buf), "LMS: X:%1.3f Y:%1.3f Z:%1.3f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
+    } else if(subcode == 4) { // M114.3 print last milestone (which should be the same as machine position if axis are not moving and no level compensation)
+        n = snprintf(buf, bufsize, "LMS: X:%1.3f Y:%1.3f Z:%1.3f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 
-    } else if(gcode->subcode == 5) { // M114.4 print last machine position (which should be the same as M114.1 if axis are not moving and no level compensation)
-        n = snprintf(buf, sizeof(buf), "LMCS: X:%1.3f Y:%1.3f Z:%1.3f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
+    } else if(subcode == 5) { // M114.4 print last machine position (which should be the same as M114.1 if axis are not moving and no level compensation)
+        n = snprintf(buf, bufsize, "LMCS: X:%1.3f Y:%1.3f Z:%1.3f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
 
     } else {
         // get real time positions
@@ -273,20 +272,19 @@ void Robot::print_position(Gcode *gcode) const
         float mpos[3];
         arm_solution->actuator_to_cartesian(current_position, mpos);
 
-        if(gcode->subcode == 1) { // M114.1 print realtime WCS
+        if(subcode == 1) { // M114.1 print realtime WCS
             // FIXME this currently includes the compensation transform which is incorrect so will be slightly off if it is in effect (but by very little)
             wcs_t pos= mcs2wcs(mpos);
-            n = snprintf(buf, sizeof(buf), "C: X:%1.3f Y:%1.3f Z:%1.3f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+            n = snprintf(buf, bufsize, "C: X:%1.3f Y:%1.3f Z:%1.3f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
-        } else if(gcode->subcode == 2) { // M114.1 print realtime Machine coordinate system
-            n = snprintf(buf, sizeof(buf), "MPOS: X:%1.3f Y:%1.3f Z:%1.3f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
+        } else if(subcode == 2) { // M114.1 print realtime Machine coordinate system
+            n = snprintf(buf, bufsize, "MPOS: X:%1.3f Y:%1.3f Z:%1.3f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
 
-        } else if(gcode->subcode == 3) { // M114.2 print realtime actuator position
-            n = snprintf(buf, sizeof(buf), "APOS: A:%1.3f B:%1.3f C:%1.3f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
+        } else if(subcode == 3) { // M114.2 print realtime actuator position
+            n = snprintf(buf, bufsize, "APOS: A:%1.3f B:%1.3f C:%1.3f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
         }
     }
-    if(n > 0)
-        gcode->txt_after_ok.append(buf, n);
+    return n;
 }
 
 // this does a sanity check that actuator speeds do not exceed steps rate capability
@@ -437,9 +435,12 @@ void Robot::on_gcode_received(void *argument)
                 check_max_actuator_speeds();
                 return;
 
-            case 114:
-                print_position(gcode);
+            case 114:{
+                char buf[64];
+                int n= print_position(gcode->subcode, buf, sizeof buf);
+                if(n > 0) gcode->txt_after_ok.append(buf, n);
                 return;
+            }
 
             case 120: // push state
                 push_state();

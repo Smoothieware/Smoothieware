@@ -40,6 +40,7 @@ class Robot : public Module {
         float to_millimeters( float value ) const { return this->inch_mode ? value * 25.4F : value; }
         float from_millimeters( float value) const { return this->inch_mode ? value/25.4F : value;  }
         void get_axis_position(float position[]) const { memcpy(position, this->last_milestone, sizeof this->last_milestone); }
+        int print_position(uint8_t subcode, char *buf, size_t bufsize) const;
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
@@ -67,7 +68,6 @@ class Robot : public Module {
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
         void clearToolOffset();
-        void print_position(Gcode *gcode) const;
 
         // Workspace coordinate systems
         using wcs_t= std::tuple<float, float, float>;

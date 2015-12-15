@@ -591,9 +591,14 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
     } else if (what == "pos") {
-        float pos[3];
-        THEKERNEL->robot->get_axis_position(pos);
-        stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
+        // convenience to call all the various M114 variants
+        char buf[64];
+        THEKERNEL->robot->print_position(0, buf, sizeof buf); stream->printf("last %s\n", buf);
+        THEKERNEL->robot->print_position(1, buf, sizeof buf); stream->printf("realtime %s\n", buf);
+        THEKERNEL->robot->print_position(2, buf, sizeof buf); stream->printf("%s\n", buf);
+        THEKERNEL->robot->print_position(3, buf, sizeof buf); stream->printf("%s\n", buf);
+        THEKERNEL->robot->print_position(4, buf, sizeof buf); stream->printf("%s\n", buf);
+        THEKERNEL->robot->print_position(5, buf, sizeof buf); stream->printf("%s\n", buf);
     }
 }
 
