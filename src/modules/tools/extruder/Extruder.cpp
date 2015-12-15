@@ -296,7 +296,7 @@ void Extruder::on_gcode_received(void *argument)
 
     // M codes most execute immediately, most only execute if enabled
     if (gcode->has_m) {
-        if (gcode->m == 114 && this->enabled) {
+        if (gcode->m == 114 && gcode->subcode == 0 && this->enabled) {
             char buf[16];
             int n = snprintf(buf, sizeof(buf), " E:%1.3f ", this->current_position);
             gcode->txt_after_ok.append(buf, n);

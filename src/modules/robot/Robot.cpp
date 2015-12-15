@@ -426,7 +426,6 @@ void Robot::on_gcode_received(void *argument)
                     if(gcode->has_letter('X')){
                         x += to_millimeters(gcode->get_value('X')) - std::get<X_AXIS>(pos);
                     }
-
                     if(gcode->has_letter('Y')){
                         y += to_millimeters(gcode->get_value('Y')) - std::get<Y_AXIS>(pos);
                     }

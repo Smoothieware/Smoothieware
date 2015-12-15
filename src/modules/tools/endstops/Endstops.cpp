@@ -711,7 +711,7 @@ void Endstops::on_gcode_received(void *argument)
             }
 
             // on some systems where 0,0 is bed center it is nice to have home goto 0,0 after homing
-            // default is off
+            // default is off for cartesian on for deltas
             if(!is_delta) {
                 if(this->move_to_origin_after_home) move_to_origin(axes_to_move);
                 // if limit switches are enabled we must back off endstop after setting home
@@ -745,7 +745,7 @@ void Endstops::on_gcode_received(void *argument)
 
                 break;
 
-            case 306: // Similar to M206 and G92 but sets Homing offsets based on current position, Would be M207 but that is taken
+            case 306: // Similar to M206 and G92 but sets Homing offsets based on current position
                 {
                     float cartesian[3];
                     THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
