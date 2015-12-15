@@ -299,6 +299,16 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
     return n;
 }
 
+// converts current last milestone (machine position without compensation transform) to work coordinate system (inverse transform)
+Robot::wcs_t Robot::mcs2wcs(const float *pos) const
+{
+    return std::make_tuple(
+        pos[X_AXIS] - std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset) - std::get<X_AXIS>(tool_offset),
+        pos[Y_AXIS] - std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset) - std::get<Y_AXIS>(tool_offset),
+        pos[Z_AXIS] - std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset) - std::get<Z_AXIS>(tool_offset)
+    );
+}
+
 // this does a sanity check that actuator speeds do not exceed steps rate capability
 // we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
 void Robot::check_max_actuator_speeds()
@@ -311,17 +321,6 @@ void Robot::check_max_actuator_speeds()
         }
     }
 }
-
-// converts current last milestone (machine position without compensation transform) to work coordinate system (inverse transform)
-Robot::wcs_t Robot::mcs2wcs(const float *pos) const
-{
-    return std::make_tuple(
-        pos[X_AXIS] - std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset) - std::get<X_AXIS>(tool_offset),
-        pos[Y_AXIS] - std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset) - std::get<Y_AXIS>(tool_offset),
-        pos[Z_AXIS] - std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset) - std::get<Z_AXIS>(tool_offset)
-    );
-}
-
 
 //A GCode has been received
 //See if the current Gcode line has some orders for us
@@ -368,9 +367,20 @@ void Robot::on_gcode_received(void *argument)
                         std::tie(x, y, z) = wcs_offsets[n];
                         if(gcode->get_int('L') == 20) {
                             // this makes the current machine position (less compensation transform) the offset
-                            if(gcode->has_letter('X')) { x =  to_millimeters(gcode->get_value('X')) - last_milestone[X_AXIS]; }
-                            if(gcode->has_letter('Y')) { x =  to_millimeters(gcode->get_value('Y')) - last_milestone[Y_AXIS]; }
-                            if(gcode->has_letter('Z')) { x =  to_millimeters(gcode->get_value('Z')) - last_milestone[Z_AXIS]; }
+                            // get current position in WCS
+                            wcs_t pos= mcs2wcs(last_milestone);
+
+                            if(gcode->has_letter('X')){
+                                x -= to_millimeters(gcode->get_value('X')) - std::get<X_AXIS>(pos);
+                            }
+
+                            if(gcode->has_letter('Y')){
+                                y -= to_millimeters(gcode->get_value('Y')) - std::get<Y_AXIS>(pos);
+                            }
+                            if(gcode->has_letter('Z')) {
+                                z -= to_millimeters(gcode->get_value('Z')) - std::get<Z_AXIS>(pos);
+                            }
+
                         } else {
                             // the value is the offset from machine zero
                             if(gcode->has_letter('X')) x = to_millimeters(gcode->get_value('X'));
@@ -417,8 +427,12 @@ void Robot::on_gcode_received(void *argument)
                         x += to_millimeters(gcode->get_value('X')) - std::get<X_AXIS>(pos);
                     }
 
-                    if(gcode->has_letter('Y')) y = to_millimeters(gcode->get_value('Y')) - last_milestone[Y_AXIS] - std::get<Y_AXIS>(wcs_offsets[current_wcs]) - std::get<Y_AXIS>(tool_offset);
-                    if(gcode->has_letter('Z')) z = to_millimeters(gcode->get_value('Z')) - last_milestone[Z_AXIS] - std::get<Z_AXIS>(wcs_offsets[current_wcs]) - std::get<Z_AXIS>(tool_offset);
+                    if(gcode->has_letter('Y')){
+                        y += to_millimeters(gcode->get_value('Y')) - std::get<Y_AXIS>(pos);
+                    }
+                    if(gcode->has_letter('Z')) {
+                        z += to_millimeters(gcode->get_value('Z')) - std::get<Z_AXIS>(pos);
+                    }
                     g92_offset = wcs_t(x, y, z);
                 }
 
