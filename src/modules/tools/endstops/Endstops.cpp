@@ -222,7 +222,8 @@ void Endstops::on_config_reload(void *argument)
     this->limit_enable[Y_AXIS]= THEKERNEL->config->value(beta_limit_enable_checksum)->by_default(false)->as_bool();
     this->limit_enable[Z_AXIS]= THEKERNEL->config->value(gamma_limit_enable_checksum)->by_default(false)->as_bool();
 
-    this->move_to_origin_after_home= THEKERNEL->config->value(move_to_origin_checksum)->by_default(false)->as_bool();
+    //s et to true by default for deltas duwe to trim, false on cartesians
+    this->move_to_origin_after_home= THEKERNEL->config->value(move_to_origin_checksum)->by_default(is_delta)->as_bool();
 
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]){
         register_for_event(ON_IDLE);
