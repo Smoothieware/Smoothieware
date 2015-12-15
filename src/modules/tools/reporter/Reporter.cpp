@@ -71,49 +71,50 @@ void Reporter::on_gcode_received(void *argument){
                                   gcode->stream->printf("A");
                                 }
                               }
-                              gcode->stream->printf("\",\"heaters{{\":[");
+
+                              gcode->stream->printf("\",\"heaters\":[");
                               std::vector<struct pad_temperature> controllers;
                               if (PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers)) {
-                                for (auto &c : controllers) {
-                                  if(&c == &controllers.back()){
-                                    printf("%f,", c.current_temperature);
+                                for (unsigned i=0; i<controllers.size(); i++){
+                                  if(i == controllers.size()-1){
+                                    printf("%f", controllers[i].current_temperature);
                                   }else{
-                                    printf("%f,", c.current_temperature);
+                                    printf("%f,", controllers[i].current_temperature);
                                   }
                                 }
 
                                 gcode->stream->printf("],\"active\":[");
-                                for (auto &c : controllers) {
-                                  if(&c == &controllers.back()){
-                                    printf("%f", c.target_temperature);
+                                for (unsigned i=0; i<controllers.size(); i++) {
+                                  if(i == controllers.size()-1){
+                                    printf("%f", controllers[i].target_temperature);
                                   }else{
-                                    printf("%f,", c.target_temperature);
+                                    printf("%f,", controllers[i].target_temperature);
                                   }
                                 }
 
                               // Smoothieware has no concept of a standby temperature.
-                              gcode->stream->printf("],\"standby\":[0,0,0],");
+                              gcode->stream->printf("],\"standby\":[],");
 
                               // Heater status
                               // status of the heaters, 0=off, 1=standby, 2=active, 3=fault
                               gcode->stream->printf("\"hstat\":[");
-                              for(auto &c : controllers){
-                                // off
-                                if(c.target_temperature == 0){
-                                  gcode->stream->printf("0");
-                                }
-                                // active
-                                if(c.target_temperature>c.current_temperature){
-                                  gcode->stream->printf("2");
-                                }
-                                if(&c != &controllers.back()){
-                                  gcode->stream->printf(",");
+                              if(controllers.size() > 0){
+                                for(unsigned i=0; i<controllers.size(); i++){
+                                  // off
+                                  if(controllers[i].target_temperature == 0){
+                                    gcode->stream->printf("0");
+                                  }else if(controllers[i].target_temperature > 0){
+                                    gcode->stream->printf("2");
+                                  }
+                                  if(i != controllers.size()-1){
+                                    gcode->stream->printf(",");
+                                  }
                                 }
                               }
                             }
 
                               // Get position
-                              gcode->stream->printf("]\"pos\":[");
+                              gcode->stream->printf("],\"pos\":[");
                               float pos[3];
                               THEKERNEL->robot->get_axis_position(pos);
                               gcode->stream->printf("%f,%f,%f", pos[0], pos[1], pos[2]);
