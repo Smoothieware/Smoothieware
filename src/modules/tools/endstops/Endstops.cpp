@@ -29,6 +29,7 @@
 #include "StreamOutputPool.h"
 #include "StepTicker.h"
 #include "BaseSolution.h"
+#include "SerialMessage.h"
 
 #include <ctype.h>
 
@@ -363,10 +364,11 @@ void Endstops::move_to_origin(char axes_to_move)
     // Move to center using a regular move, use slower of X and Y fast rate
     float rate= std::min(this->fast_rates[0], this->fast_rates[1])*60.0F;
     char buf[32];
-    snprintf(buf, sizeof(buf), "G0 X0 Y0 F%1.4f", rate);
-    Gcode gc(buf, &(StreamOutput::NullStream));
-    THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-
+    snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
+    struct SerialMessage message;
+    message.message = buf;
+    message.stream = &(StreamOutput::NullStream);
+    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
     // Wait for above to finish
     THEKERNEL->conveyor->wait_for_empty_queue();
     this->status = NOT_HOMING;
