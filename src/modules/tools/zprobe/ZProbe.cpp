@@ -414,13 +414,14 @@ void ZProbe::accelerate(int c)
 
 // issue a coordinated move directly to robot, and return when done
 // Only move the coordinates that are passed in as not nan
+// NOTE must use G53 to force move in machine coordiantes and ignore any WCS offsetts
 void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool relative)
 {
     char buf[32];
     char cmd[64];
 
     if(relative) strcpy(cmd, "G91 G0 ");
-    else strcpy(cmd, "G0 ");
+    else strcpy(cmd, "G53 G0 "); // G53 forces movement in machine coordinate system
 
     if(!isnan(x)) {
         int n = snprintf(buf, sizeof(buf), " X%1.3f", x);
