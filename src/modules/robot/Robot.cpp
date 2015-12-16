@@ -588,18 +588,13 @@ void Robot::on_gcode_received(void *argument)
                 // save wcs_offsets and current_wcs
                 // TODO this may need to be done whenever they change to be compliant
                 gcode->stream->printf(";WCS settings\n");
-                gcode->stream->printf("G5%c", std::min(current_wcs, (uint8_t)5) + '4');
-                if(current_wcs >= 6) {
-                    gcode->stream->printf(".%c\n",  '1' + (current_wcs - 6));
-                } else {
-                    gcode->stream->printf("\n");
-                }
+                gcode->stream->printf("%s\n", wcs2gcode(current_wcs).c_str());
                 int n = 1;
                 for(auto &i : wcs_offsets) {
                     if(i != wcs_t(0, 0, 0)) {
                         float x, y, z;
                         std::tie(x, y, z) = i;
-                        gcode->stream->printf("G10 L2 P%d X%f Y%f Z%f\n", n, x, y, z);
+                        gcode->stream->printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, wcs2gcode(n-1).c_str());
                     }
                     ++n;
                 }

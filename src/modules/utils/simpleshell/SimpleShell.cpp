@@ -604,14 +604,10 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         // print the wcs state
         std::vector<Robot::wcs_t> v= THEKERNEL->robot->get_wcs_state();
         char current_wcs= std::get<0>(v[0]);
-        stream->printf("current WCS: %d (G5%c", current_wcs, std::min(current_wcs, (char)5) + '4');
-        if(current_wcs >= 6) {
-            stream->printf(".%c",  '1' + (current_wcs - 6));
-        }
-        stream->printf(")\n");
+        stream->printf("current WCS: %s\n", wcs2gcode(current_wcs).c_str());
         int n= std::get<1>(v[0]);
         for (int i = 1; i <= n; ++i) {
-            stream->printf("WCS%d: %1.4f, %1.4f, %1.4f\n", i, std::get<0>(v[i]), std::get<1>(v[i]), std::get<2>(v[i]));
+            stream->printf("%s: %1.4f, %1.4f, %1.4f\n", wcs2gcode(i-1).c_str(), std::get<0>(v[i]), std::get<1>(v[i]), std::get<2>(v[i]));
         }
 
         stream->printf("G92: %1.4f, %1.4f, %1.4f\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
