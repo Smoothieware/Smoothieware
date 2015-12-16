@@ -138,7 +138,7 @@ Kernel::Kernel(){
     this->step_ticker->set_acceleration_ticks_per_second(acceleration_ticks_per_second); // must be set after set_frequency
 
     // Core modules
-    this->add_module( new GcodeDispatch() );
+    this->add_module( this->gcode_dispatch = new GcodeDispatch() );
     this->add_module( this->robot          = new Robot()         );
     this->add_module( this->stepper        = new Stepper()       );
     this->add_module( this->conveyor       = new Conveyor()      );

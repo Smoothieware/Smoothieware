@@ -8,6 +8,7 @@
 #include "GcodeDispatch.h"
 
 #include "libs/Kernel.h"
+#include "Robot.h"
 #include "utils/Gcode.h"
 #include "libs/nuts_bolts.h"
 #include "modules/robot/Conveyor.h"
@@ -147,6 +148,38 @@ try_again:
                     }
 
                     if(gcode->has_g) {
+                        if(gcode->g == 53) { // G53 makes next movement command use machine coordinates
+                            // this is ugly to implement as there may or may not be a G0/G1 on the same line
+                            // valid vesion seem to include G53 G0 X1 Y2 Z3 G53 X1 Y2
+                            if(possible_command.empty()) {
+                                // use last gcode G1 or G0 if none on the line, and pass through as if it was a G0/G1
+                                // TODO it is really an error if the last is not G0 or G1
+                                if(last_g != 0 && last_g != 1) {
+                                    delete gcode;
+                                    new_message.stream->printf("ok - Invalid G53\r\n");
+                                    return;
+                                }
+                                // use last G0 or G1
+                                gcode->g= last_g;
+
+                            }else{
+                                delete gcode;
+                                // extract next G0/G1 from the rest of the line, ignore if it is not one of these
+                                gcode = new Gcode(possible_command, new_message.stream);
+                                possible_command= "";
+                                if(!gcode->has_g || gcode->g > 1) {
+                                    // not G0 or G1 so ignore it as it is invalid
+                                    delete gcode;
+                                    new_message.stream->printf("ok - Invalid G53\r\n");
+                                    return;
+                                }
+                            }
+                            // makes it handle the parameters as a machine position
+                            THEKERNEL->robot->next_command_is_MCS= true;
+
+                        }
+
+                        // remember last modal g code
                         last_g= gcode->g;
                     }
 

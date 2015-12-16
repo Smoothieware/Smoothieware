@@ -8,13 +8,14 @@
 #ifndef PLANNER_H
 #define PLANNER_H
 
+#include "ActuatorCoordinates.h"
 class Block;
 
 class Planner
 {
 public:
     Planner();
-    void append_block( float target[], float rate_mm_s, float distance, float unit_vec[] );
+    void append_block(ActuatorCoordinates &target, float rate_mm_s, float distance, float unit_vec[] );
     float max_allowable_speed( float acceleration, float target_velocity, float distance);
     void recalculate();
     Block *get_current_block();

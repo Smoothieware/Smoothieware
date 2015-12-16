@@ -170,6 +170,13 @@ alpha_trim                                   0                 # software trim f
 beta_trim                                    0                 # software trim for beta stepper endstop (in mm)
 gamma_trim                                   0                 # software trim for gamma stepper endstop (in mm)
 
+# optional enable limit switches, actions will stop if any enabled limit switch is triggered
+#alpha_limit_enable                          false            # set to true to enable X min and max limit switches
+#beta_limit_enable                           false            # set to true to enable Y min and max limit switches
+#gamma_limit_enable                          false            # set to true to enable Z min and max limit switches
+
+#move_to_origin_after_home                    true             # move XY to 0,0 after homing
+
 # optional Z probe http://smoothieware.org/zprobe
 zprobe.enable                                false           # set to true to enable a zprobe
 zprobe.probe_pin                             1.29!^          # pin probe is attached to if NC remove the !
@@ -233,5 +240,3 @@ panel.bed_temperature                        60                # temp to set bed
 currentcontrol_module_enable                 true            #
 digipot_max_current                          2.4             # max current
 digipot_factor                               106.0           # factor for converting current to digipot value
-
-return_error_on_unhandled_gcode              false            #

@@ -26,39 +26,34 @@ using namespace std;
 #include "libs/StreamOutput.h"
 #include "FileStream.h"
 
-#define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
-
-ToolManager::ToolManager(){
+ToolManager::ToolManager()
+{
     active_tool = 0;
     current_tool_name = CHECKSUM("hotend");
 }
 
-void ToolManager::on_module_loaded(){
-    this->on_config_reload(this);
+void ToolManager::on_module_loaded()
+{
 
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
 }
 
-void ToolManager::on_config_reload(void *argument){
-    return_error_on_unhandled_gcode = THEKERNEL->config->value( return_error_on_unhandled_gcode_checksum )->by_default(false)->as_bool();
-}
-
-void ToolManager::on_gcode_received(void *argument){
+void ToolManager::on_gcode_received(void *argument)
+{
     Gcode *gcode = static_cast<Gcode*>(argument);
 
-    if( gcode->has_letter('T') ){
+    if( gcode->has_letter('T') ) {
         int new_tool = gcode->get_value('T');
-        if(new_tool >= (int)this->tools.size() || new_tool < 0){
+        if(new_tool >= (int)this->tools.size() || new_tool < 0) {
             // invalid tool
-            if( return_error_on_unhandled_gcode ) {
-                char buf[32]; // should be big enough for any status
-                int n= snprintf(buf, sizeof(buf), "T%d invalid tool ", new_tool);
-                gcode->txt_after_ok.append(buf, n);
-            }
+            char buf[32]; // should be big enough for any status
+            int n = snprintf(buf, sizeof(buf), "T%d invalid tool ", new_tool);
+            gcode->txt_after_ok.append(buf, n);
+
         } else {
-            if(new_tool != this->active_tool){
+            if(new_tool != this->active_tool) {
                 // We must wait for an empty queue before we can disable the current extruder
                 THEKERNEL->conveyor->wait_for_empty_queue();
                 this->tools[active_tool]->disable();
@@ -74,30 +69,38 @@ void ToolManager::on_gcode_received(void *argument){
     }
 }
 
-void ToolManager::on_get_public_data(void* argument){
+void ToolManager::on_get_public_data(void* argument)
+{
     PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
 
     if(!pdr->starts_with(tool_manager_checksum)) return;
-    if(!pdr->second_element_is(is_active_tool_checksum)) return;
 
-    // check that we control the given tool
-    bool managed= false;
-    for(auto t : tools) {
-        uint16_t n= t->get_name();
-        if(pdr->third_element_is(n)){
-            managed= true;
-            break;
+    if(pdr->second_element_is(is_active_tool_checksum)) {
+
+        // check that we control the given tool
+        bool managed = false;
+        for(auto t : tools) {
+            uint16_t n = t->get_name();
+            if(pdr->third_element_is(n)) {
+                managed = true;
+                break;
+            }
         }
+
+        // we are not managing this tool so do not answer
+        if(!managed) return;
+
+        pdr->set_data_ptr(&this->current_tool_name);
+        pdr->set_taken();
+
+    }else if(pdr->second_element_is(get_active_tool_checksum)) {
+        pdr->set_data_ptr(&this->active_tool);
+        pdr->set_taken();
     }
-
-    // we are not managing this tool so do not answer
-    if(!managed) return;
-
-    pdr->set_data_ptr(&this->current_tool_name);
-    pdr->set_taken();
 }
 
-void ToolManager::on_set_public_data(void* argument){
+void ToolManager::on_set_public_data(void* argument)
+{
     PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
 
     if(!pdr->starts_with(tool_manager_checksum)) return;
@@ -109,8 +112,9 @@ void ToolManager::on_set_public_data(void* argument){
 }
 
 // Add a tool to the tool list
-void ToolManager::add_tool(Tool* tool_to_add){
-    if(this->tools.size() == 0){
+void ToolManager::add_tool(Tool* tool_to_add)
+{
+    if(this->tools.size() == 0) {
         tool_to_add->enable();
         this->current_tool_name = tool_to_add->get_name();
         //send new_tool_offsets to robot
