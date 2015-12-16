@@ -74,23 +74,29 @@ void ToolManager::on_get_public_data(void* argument)
     PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
 
     if(!pdr->starts_with(tool_manager_checksum)) return;
-    if(!pdr->second_element_is(is_active_tool_checksum)) return;
 
-    // check that we control the given tool
-    bool managed = false;
-    for(auto t : tools) {
-        uint16_t n = t->get_name();
-        if(pdr->third_element_is(n)) {
-            managed = true;
-            break;
+    if(pdr->second_element_is(is_active_tool_checksum)) {
+
+        // check that we control the given tool
+        bool managed = false;
+        for(auto t : tools) {
+            uint16_t n = t->get_name();
+            if(pdr->third_element_is(n)) {
+                managed = true;
+                break;
+            }
         }
+
+        // we are not managing this tool so do not answer
+        if(!managed) return;
+
+        pdr->set_data_ptr(&this->current_tool_name);
+        pdr->set_taken();
+
+    }else if(pdr->second_element_is(get_active_tool_checksum)) {
+        pdr->set_data_ptr(&this->active_tool);
+        pdr->set_taken();
     }
-
-    // we are not managing this tool so do not answer
-    if(!managed) return;
-
-    pdr->set_data_ptr(&this->current_tool_name);
-    pdr->set_taken();
 }
 
 void ToolManager::on_set_public_data(void* argument)

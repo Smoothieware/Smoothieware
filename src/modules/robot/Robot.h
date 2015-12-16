@@ -41,6 +41,7 @@ class Robot : public Module {
         float from_millimeters( float value) const { return this->inch_mode ? value/25.4F : value;  }
         void get_axis_position(float position[]) const { memcpy(position, this->last_milestone, sizeof this->last_milestone); }
         int print_position(uint8_t subcode, char *buf, size_t bufsize) const;
+        uint8_t get_current_wcs() const { return current_wcs; }
 
         using wcs_t= std::tuple<float, float, float>;
         std::vector<wcs_t> get_wcs_state() const;
@@ -57,6 +58,9 @@ class Robot : public Module {
             bool inch_mode:1;                                 // true for inch mode, false for millimeter mode ( default )
             bool absolute_mode:1;                             // true for absolute mode ( default ), false for relative mode
             bool next_command_is_MCS:1;                       // set by G53
+            uint8_t plane_axis_0:2;                           // Current plane ( XY, XZ, YZ )
+            uint8_t plane_axis_1:2;
+            uint8_t plane_axis_2:2;
         };
 
     private:
@@ -87,7 +91,6 @@ class Robot : public Module {
         float last_milestone[3]; // Last requested position, in millimeters, which is what we were requested to move to in the gcode after offsets applied but before compensation transform
         float last_machine_position[3]; // Last machine position, which is the position before converting to actuator coordinates (includes compensation transform)
         int8_t motion_mode;                                  // Motion mode for the current received Gcode
-        uint8_t plane_axis_0, plane_axis_1, plane_axis_2;    // Current plane ( XY, XZ, YZ )
         float seek_rate;                                     // Current rate for seeking moves ( mm/s )
         float feed_rate;                                     // Current rate for feeding moves ( mm/s )
         float mm_per_line_segment;                           // Setting : Used to split lines into segments

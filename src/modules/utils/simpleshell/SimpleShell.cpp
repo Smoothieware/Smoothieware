@@ -23,8 +23,10 @@
 #include "PublicData.h"
 #include "Gcode.h"
 #include "Robot.h"
+#include "ToolManagerPublicAccess.h"
+#include "GcodeDispatch.h"
 
-#include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
+#include "TemperatureControlPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
@@ -559,6 +561,17 @@ void SimpleShell::break_command( string parameters, StreamOutput *stream)
     __debugbreak();
 }
 
+static int get_active_tool()
+{
+    int returned_data= 0;
+    bool ok = PublicData::get_value(tool_manager_checksum, get_active_tool_checksum, &returned_data);
+    if (ok) {
+        return returned_data;
+    } else {
+        return 0;
+    }
+}
+
 // used to test out the get public data events
 void SimpleShell::get_command( string parameters, StreamOutput *stream)
 {
@@ -612,6 +625,19 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
         stream->printf("G92: %1.4f, %1.4f, %1.4f\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
         stream->printf("ToolOffset: %1.4f, %1.4f, %1.4f\n", std::get<0>(v[n+2]), std::get<1>(v[n+2]), std::get<2>(v[n+2]));
+
+    } else if (what == "state") {
+        // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
+        stream->printf("[G%d %s G%d G%d G%d G94 T%d F%1.1f]\n",
+            THEKERNEL->gcode_dispatch->get_modal_command(),
+            wcs2gcode(THEKERNEL->robot->get_current_wcs()).c_str(),
+            THEKERNEL->robot->plane_axis_0 == X_AXIS && THEKERNEL->robot->plane_axis_1 == Y_AXIS && THEKERNEL->robot->plane_axis_2 == Z_AXIS ? 17 :
+              THEKERNEL->robot->plane_axis_0 == X_AXIS && THEKERNEL->robot->plane_axis_1 == Z_AXIS && THEKERNEL->robot->plane_axis_2 == Y_AXIS ? 18 :
+              THEKERNEL->robot->plane_axis_0 == Y_AXIS && THEKERNEL->robot->plane_axis_1 == Z_AXIS && THEKERNEL->robot->plane_axis_2 == X_AXIS ? 19 : 17,
+            THEKERNEL->robot->inch_mode ? 20 : 21,
+            THEKERNEL->robot->absolute_mode ? 90 : 91,
+            get_active_tool(),
+            THEKERNEL->robot->get_feed_rate());
     }
 }
 

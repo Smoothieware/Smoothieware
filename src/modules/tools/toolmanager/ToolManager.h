@@ -23,6 +23,7 @@ public:
     void on_get_public_data(void *argument);
     void on_set_public_data(void *argument);
     void add_tool(Tool *tool_to_add);
+    int get_active_tool() const { return active_tool; }
 
 private:
     vector<Tool *> tools;

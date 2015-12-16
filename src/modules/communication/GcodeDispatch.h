@@ -22,6 +22,7 @@ public:
     virtual void on_module_loaded();
     virtual void on_console_line_received(void *line);
 
+    uint8_t get_modal_command() const { return last_g<4 ? last_g : 0; }
 private:
     int currentline;
     string upload_filename;
