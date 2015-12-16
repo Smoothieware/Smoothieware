@@ -563,10 +563,11 @@ void SimpleShell::break_command( string parameters, StreamOutput *stream)
 
 static int get_active_tool()
 {
-    int returned_data= 0;
+    void *returned_data;
     bool ok = PublicData::get_value(tool_manager_checksum, get_active_tool_checksum, &returned_data);
     if (ok) {
-        return returned_data;
+         int active_tool=  *static_cast<int *>(returned_data);
+        return active_tool;
     } else {
         return 0;
     }
