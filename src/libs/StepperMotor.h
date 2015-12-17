@@ -8,6 +8,7 @@
 #ifndef STEPPERMOTOR_H
 #define STEPPERMOTOR_H
 
+#include "FunctionPointer.h"
 #include "Pin.h"
 #include <atomic>
 #include <functional>
@@ -49,7 +50,9 @@ class StepperMotor {
         uint32_t get_steps_to_move() const { return steps_to_move; }
         uint32_t get_stepped() const { return stepped; }
 
-        void attach( const std::function<void(void)>& f);
+        template<typename T> void attach( T *optr, void ( T::*fptr )( ) ){
+            this->end_hook.attach(optr, fptr);
+        }
 
         friend class StepTicker;
         friend class Stepper;
@@ -60,7 +63,7 @@ class StepperMotor {
         void init();
 
         int index;
-        std::function<void(void)> end_hook;
+        mbed::FunctionPointer end_hook;
 
         Pin step_pin;
         Pin dir_pin;

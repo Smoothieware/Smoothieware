@@ -160,10 +160,10 @@ void Panel::on_module_loaded()
     default_bed_temperature    = THEKERNEL->config->value( panel_checksum, bed_temp_checksum    )->by_default(60.0f  )->as_number();
 
 
-    this->up_button.up_attach(    [this](){this->on_up();});
-    this->down_button.up_attach(  [this](){this->on_down();});
-    this->click_button.up_attach( [this](){this->on_select();});
-    this->back_button.up_attach(  [this](){this->on_back();});
+    this->up_button.up_attach(    this, &Panel::on_up );
+    this->down_button.up_attach(  this, &Panel::on_down );
+    this->click_button.up_attach( this, &Panel::on_select );
+    this->back_button.up_attach(  this, &Panel::on_back );
 
 
     //setting longpress_delay
@@ -175,13 +175,13 @@ void Panel::on_module_loaded()
 //    this->pause_button.set_longpress_delay(longpress_delay);
 
 
-    THEKERNEL->slow_ticker->attach( 50,  [this](){this->button_tick();});
+    THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
     if(lcd->encoderReturnsDelta()) {
         // panel handles encoder pins and returns a delta
-      THEKERNEL->slow_ticker->attach( 10, [this](){this->encoder_tick();});
+        THEKERNEL->slow_ticker->attach( 10, this, &Panel::encoder_tick );
     }else{
         // read encoder pins
-      THEKERNEL->slow_ticker->attach( 1000, [this](){this->encoder_check();});
+        THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
     }
 
     // Register for events
@@ -190,7 +190,7 @@ void Panel::on_module_loaded()
     this->register_for_event(ON_SET_PUBLIC_DATA);
 
     // Refresh timer
-    THEKERNEL->slow_ticker->attach( 20, [this](){this->refresh_tick(); });
+    THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
 }
 
 // Enter a screen, we only care about it now

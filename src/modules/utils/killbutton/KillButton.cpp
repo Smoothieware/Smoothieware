@@ -48,7 +48,7 @@ void KillButton::on_module_loaded()
     }
 
     this->register_for_event(ON_IDLE);
-    THEKERNEL->slow_ticker->attach( 5, [this] () {this->button_tick(); });
+    THEKERNEL->slow_ticker->attach( 5, this, &KillButton::button_tick );
 }
 
 void KillButton::on_idle(void *argument)

@@ -188,7 +188,7 @@ void Extruder::on_config_reload(void *argument)
 
     // Stepper motor object for the extruder
     this->stepper_motor = new StepperMotor(step_pin, dir_pin, en_pin);
-    this->stepper_motor->attach([this](){this->stepper_motor_finished_move(); });
+    this->stepper_motor->attach(this, &Extruder::stepper_motor_finished_move );
     if( this->single_config ) {
         this->stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_max_speed_checksum)->by_default(1000)->as_number());
     } else {

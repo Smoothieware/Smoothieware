@@ -203,12 +203,12 @@ void Switch::on_config_reload(void *argument)
         // set to initial state
         this->input_pin_state = this->input_pin.get();
         // input pin polling
-        THEKERNEL->slow_ticker->attach( 100, [this] () {this->pinpoll_tick(); });
+        THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
     }
 
     if(this->output_type == SIGMADELTA) {
         // SIGMADELTA
-      THEKERNEL->slow_ticker->attach(1000, [this](){this->sigmadelta_pin->on_tick(); });
+        THEKERNEL->slow_ticker->attach(1000, this->sigmadelta_pin, &Pwm::on_tick);
     }
 }
 

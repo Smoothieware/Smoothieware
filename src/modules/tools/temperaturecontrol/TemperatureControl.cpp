@@ -180,12 +180,12 @@ void TemperatureControl::load_config()
         this->heater_pin.set(0);
         set_low_on_debug(heater_pin.port_number, heater_pin.pin);
         // activate SD-DAC timer
-        THEKERNEL->slow_ticker->attach( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number(), [this] () {this->heater_pin.on_tick(); });
+        THEKERNEL->slow_ticker->attach( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, pwm_frequency_checksum)->by_default(2000)->as_number(), &heater_pin, &Pwm::on_tick);
     }
 
 
     // reading tick
-    THEKERNEL->slow_ticker->attach( this->readings_per_second, [this] () {this->thermistor_read_tick(); } );
+    THEKERNEL->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
     this->PIDdt = 1.0 / this->readings_per_second;
 
     // PID

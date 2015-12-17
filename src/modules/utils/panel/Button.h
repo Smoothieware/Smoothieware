@@ -1,7 +1,7 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
-#include <functional>
+#include "FunctionPointer.h"
 
 class Pin;
 
@@ -17,12 +17,18 @@ public:
 	void set_longpress_delay(int delay);
     bool get();
 
-    void up_attach( std::function<void(void)> f);
-    void down_attach( std::function<void(void)> f);
+    template<typename T>
+    void up_attach( T* object, void (T::*member)(void)) {
+      up_hook.attach(object, member);
+    }
+    template<typename T>
+    void down_attach( T* object, void (T::*member)(void)) {
+      down_hook.attach(object, member);
+    }
     
 private:
-    std::function<void(void)> up_hook;
-    std::function<void(void)> down_hook;
+    mbed::FunctionPointer up_hook;
+    mbed::FunctionPointer down_hook;
     bool value;
     char counter;
     Pin *button_pin;

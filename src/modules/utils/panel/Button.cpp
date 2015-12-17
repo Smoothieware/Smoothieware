@@ -49,16 +49,14 @@ void Button::check_signal(int val)
 
     if ( start_value != this->value ) {
         if ( this->value ) {
-            if ( this->up_hook != NULL ) {
-                this->up_hook();
+            if ( this->up_hook.valid() ) {
+                this->up_hook.call();
                 this->first_timer = 0;
                 this->second_timer = 0;
                 this->repeat = false;
             }
         } else {
-            if ( this->down_hook != NULL ) {
-                this->down_hook();
-            }
+          this->down_hook.call(); //may be null, filtered by impl
         }
     }
     //auto repeat button presses
@@ -67,7 +65,7 @@ void Button::check_signal(int val)
             if(this->repeat) {
                 this->second_timer++;
                 if(this->second_timer == 10) {
-                    this->up_hook();
+                    this->up_hook.call();
                     this->second_timer = 0;
                 }
             } else {
@@ -89,12 +87,4 @@ void Button::set_longpress_delay(int delay)
 bool Button::get()
 {
     return this->value;
-}
-
-void Button::up_attach( std::function<void(void)> f) {
-  this->up_hook = f;
-}
-
-void Button::down_attach( std::function<void(void)> f) {
-  this->down_hook = f;
 }

@@ -64,7 +64,7 @@ void SlowTicker::tick(){
         if (hook.countdown < 0)
         {
             hook.countdown += hook.interval;
-            hook.f();
+            hook.f.call();
         }
     }
 

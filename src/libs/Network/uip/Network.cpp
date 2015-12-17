@@ -189,7 +189,7 @@ void Network::on_module_loaded()
     }
 
     THEKERNEL->add_module( ethernet );
-    THEKERNEL->slow_ticker->attach( 100, [this] () {this->tick(); });
+    THEKERNEL->slow_ticker->attach( 100, this, &Network::tick );
 
     // Register for events
     this->register_for_event(ON_IDLE);

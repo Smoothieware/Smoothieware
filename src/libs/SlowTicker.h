@@ -14,8 +14,8 @@
 
 using namespace std;
 #include <vector>
-#include <functional>
 
+#include "FunctionPointer.h"
 #include "libs/Pin.h"
 
 #include "system_LPC17xx.h" // for SystemCoreClock
@@ -23,11 +23,12 @@ using namespace std;
 
 class SlowTicker : public Module{
   struct ticker {
-    std::function<void(void)> f;
+    mbed::FunctionPointer f;
     int interval;
     int countdown;
-    ticker(const std::function<void(void)>& _f,
-           int i, int c) : f(_f), interval(i), countdown(c) {}
+    template<typename T>
+    ticker(T *object, void (T::*member)(void),
+           int i, int c) : f(object, member), interval(i), countdown(c) {}
   };
     public:
         SlowTicker();
@@ -37,9 +38,8 @@ class SlowTicker : public Module{
 
         void set_frequency( int frequency );
         void tick();
-        // For some reason this can't go in the .cpp, see :  http://mbed.org/forum/mbed/topic/2774/?page=1#comment-14221
-        // TODO replace this with std::function()
-        void attach( uint32_t frequency, std::function<void(void)> f ){
+        template<typename T>
+        void attach( uint32_t frequency, T* object, void (T::*member)(void) ){
             int interval = floorf((SystemCoreClock/4)/frequency);
             
             // to avoid race conditions we must stop the interupts before updating this non thread safe vector
@@ -48,9 +48,8 @@ class SlowTicker : public Module{
                 this->max_frequency = frequency;
                 this->set_frequency(frequency);
             }
-            this->hooks.emplace_back(f,interval, interval);
+            this->hooks.emplace_back(object,member,interval, interval);
             __enable_irq();
-            //            return hook;
         }
 
     private:

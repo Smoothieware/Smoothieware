@@ -54,9 +54,9 @@ void Stepper::on_module_loaded()
     THEKERNEL->step_ticker->register_acceleration_tick_handler([this](){trapezoid_generator_tick(); });
 
     // Attach to the end_of_move stepper event
-    THEKERNEL->robot->alpha_stepper_motor->attach([this]() { this->stepper_motor_finished_move(); });
-    THEKERNEL->robot->beta_stepper_motor->attach( [this]() { this->stepper_motor_finished_move(); });
-    THEKERNEL->robot->gamma_stepper_motor->attach([this]() { this->stepper_motor_finished_move(); });
+    THEKERNEL->robot->alpha_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move);
+    THEKERNEL->robot->beta_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move);
+    THEKERNEL->robot->gamma_stepper_motor->attach(this, &Stepper::stepper_motor_finished_move);
 }
 
 // Get configuration from the config file

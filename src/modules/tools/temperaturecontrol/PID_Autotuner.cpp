@@ -27,7 +27,7 @@ PID_Autotuner::PID_Autotuner()
 void PID_Autotuner::on_module_loaded()
 {
     tick = false;
-    THEKERNEL->slow_ticker->attach(20, [this] () { this->on_tick(); });
+    THEKERNEL->slow_ticker->attach(20, this, &PID_Autotuner::on_tick );
     register_for_event(ON_IDLE);
     register_for_event(ON_GCODE_RECEIVED);
 }

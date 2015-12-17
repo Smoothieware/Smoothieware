@@ -31,7 +31,7 @@ void PlayLed::on_module_loaded()
 
     on_config_reload(this);
 
-    THEKERNEL->slow_ticker->attach(12, [this] () {this->led_tick(); });
+    THEKERNEL->slow_ticker->attach(12, this, &PlayLed::led_tick);
 }
 
 void PlayLed::on_config_reload(void *argument)
