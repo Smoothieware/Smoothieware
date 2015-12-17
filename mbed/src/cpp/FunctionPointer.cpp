@@ -22,12 +22,12 @@ FunctionPointer::FunctionPointer(void (*function)(void)) {
 }
 
 void FunctionPointer::attach(void (*function)(void)) {
-    _function = function;
     _object = 0;
+    _function = function;
 }
 
 void FunctionPointer::call(void) {
-    if (_function) {
+    if (_function && !_object) {
         _function();
     } else if (_object) {
         _membercaller(_object, _member);

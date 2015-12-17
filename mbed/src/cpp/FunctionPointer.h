@@ -20,6 +20,8 @@
 
 namespace mbed {
 
+  class Undefined; // foward decl for worst-case member function size
+  
 /** A class for storing and calling a pointer to a static or member void function
  */
 class FunctionPointer {
@@ -54,15 +56,26 @@ public:
      */
     template<typename T>
     void attach(T *object, void (T::*member)(void)) {
+        _function = 0;
         _object = static_cast<void*>(object);
         memcpy(_member, (char*)&member, sizeof(member));
         _membercaller = &FunctionPointer::membercaller<T>;
-        _function = 0;
     }
 
     /** Call the attached static or member function
      */
     void call();
+
+
+    /** Test for null
+     */
+    bool valid() const {
+      return _function || _object;
+    }
+    //Use when mbed is compiled with c++11
+    //explicit operator bool() const {
+    //  return _function || _object;
+    //}
 
 private:
     template<typename T>
@@ -73,10 +86,12 @@ private:
         (o->*m)();
     }
 
-    void (*_function)(void);                // static function pointer - 0 if none attached
+    union {
+      void (*_function)(void);                // static function pointer - 0 if none attached
+      void (*_membercaller)(void*, char*);    // registered membercaller function to convert back and call _member on _object
+    };
     void *_object;                            // object this pointer - 0 if none attached
-    char _member[16];                        // raw member function pointer storage - converted back by registered _membercaller
-    void (*_membercaller)(void*, char*);    // registered membercaller function to convert back and call _member on _object
+    char _member[sizeof(void (Undefined::*)(void))];                        // raw member function pointer storage - converted back by registered _membercaller
 };
 
 } // namespace mbed
