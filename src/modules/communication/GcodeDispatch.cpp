@@ -43,7 +43,7 @@ GcodeDispatch::GcodeDispatch()
 {
     uploading = false;
     currentline = -1;
-    last_g= 255;
+    modal_group_1= 0;
 }
 
 // Called when the module has just been loaded
@@ -153,14 +153,14 @@ try_again:
                             // valid vesion seem to include G53 G0 X1 Y2 Z3 G53 X1 Y2
                             if(possible_command.empty()) {
                                 // use last gcode G1 or G0 if none on the line, and pass through as if it was a G0/G1
-                                // TODO it is really an error if the last is not G0 or G1
-                                if(last_g != 0 && last_g != 1) {
+                                // TODO it is really an error if the last is not G0 thru G3
+                                if(modal_group_1 > 3) {
                                     delete gcode;
                                     new_message.stream->printf("ok - Invalid G53\r\n");
                                     return;
                                 }
                                 // use last G0 or G1
-                                gcode->g= last_g;
+                                gcode->g= modal_group_1;
 
                             }else{
                                 delete gcode;
@@ -179,8 +179,10 @@ try_again:
 
                         }
 
-                        // remember last modal g code
-                        last_g= gcode->g;
+                        // remember last modal group 1 code
+                        if(gcode->g < 4) {
+                            modal_group_1= gcode->g;
+                        }
                     }
 
                     if(gcode->has_m) {
@@ -342,14 +344,9 @@ try_again:
         }
 
     } else if( (n=possible_command.find_first_of("XYZF")) == 0 || (first_char == ' ' && n != string::npos) ) {
-        // handle pycam syntax, use last G0 or G1 and resubmit if an X Y Z or F is found on its own line
-        if(last_g != 0 && last_g != 1) {
-            //if no last G1 or G0 ignore
-            //THEKERNEL->streams->printf("ignored: %s\r\n", possible_command.c_str());
-            return;
-        }
+        // handle pycam syntax, use last modal group 1 command and resubmit if an X Y Z or F is found on its own line
         char buf[6];
-        snprintf(buf, sizeof(buf), "G%d ", last_g);
+        snprintf(buf, sizeof(buf), "G%d ", modal_group_1);
         possible_command.insert(0, buf);
         goto try_again;
 
