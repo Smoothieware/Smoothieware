@@ -38,6 +38,8 @@ using std::string;
 #include "libs/StreamOutput.h"
 #include "StreamOutputPool.h"
 #include "ExtruderPublicAccess.h"
+#include "GcodeDispatch.h"
+
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
@@ -1101,3 +1103,7 @@ void Robot::setToolOffset(const float offset[3])
     this->tool_offset= wcs_t(offset[0], offset[1], offset[2]);
 }
 
+float Robot::get_feed_rate() const
+{
+    return THEKERNEL->gcode_dispatch->get_modal_command() == 0 ? seek_rate : feed_rate;
+}
