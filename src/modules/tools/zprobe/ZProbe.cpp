@@ -305,7 +305,7 @@ void ZProbe::on_gcode_received(void *argument)
             }
 
             if(probe_result) {
-                gcode->stream->printf("Z:%1.4f C:%d\n", steps / Z_STEPS_PER_MM, steps);
+                gcode->stream->printf("Z:%1.4f C:%d\n", zsteps_to_mm(steps), steps);
                 // move back to where it started, unless a Z is specified
                 if(gcode->has_letter('Z')) {
                     // set Z to the specified value, and leave probe where it is
@@ -389,7 +389,7 @@ void ZProbe::on_gcode_received(void *argument)
             }
 
             // set position to where it stopped
-            THEKERNEL->robot->reset_axis_position(current_machine_pos[Z_AXIS] + (steps/Z_STEPS_PER_MM), Z_AXIS);
+            THEKERNEL->robot->reset_axis_position(current_machine_pos[Z_AXIS] + zsteps_to_mm(steps), Z_AXIS);
 
         }else{
             gcode->stream->printf("ERROR: at least one of X Y or Z must be specified\n");
