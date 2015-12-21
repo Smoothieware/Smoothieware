@@ -384,12 +384,12 @@ void ZProbe::on_gcode_received(void *argument)
             if(probe_result) {
                 gcode->stream->printf("INFO: delta Z %1.4f (Steps %d)\n", steps / Z_STEPS_PER_MM, steps);
 
+                // set position to where it stopped
+                THEKERNEL->robot->reset_axis_position(current_machine_pos[Z_AXIS] - zsteps_to_mm(steps), Z_AXIS);
+
             } else {
                 gcode->stream->printf("ERROR: ZProbe not triggered\n");
             }
-
-            // set position to where it stopped
-            THEKERNEL->robot->reset_axis_position(current_machine_pos[Z_AXIS] + zsteps_to_mm(steps), Z_AXIS);
 
         }else{
             gcode->stream->printf("ERROR: at least one of X Y or Z must be specified\n");
