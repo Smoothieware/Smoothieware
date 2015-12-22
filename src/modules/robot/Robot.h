@@ -33,7 +33,7 @@ class Robot : public Module {
         float get_seconds_per_minute() const { return seconds_per_minute; }
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }
         void setToolOffset(const float offset[3]);
-        float get_feed_rate() const { return feed_rate; }
+        float get_feed_rate() const;
         void  push_state();
         void  pop_state();
         void check_max_actuator_speeds();

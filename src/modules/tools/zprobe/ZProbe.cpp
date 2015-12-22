@@ -175,7 +175,7 @@ bool ZProbe::wait_for_probe(int& steps)
 
 // single probe with custom feedrate
 // returns boolean value indicating if probe was triggered
-bool ZProbe::run_probe_feed(int& steps, float feedrate)
+bool ZProbe::run_probe_feed(int& steps, float feedrate, float max_dist)
 {
     // not a block move so disable the last tick setting
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
@@ -185,7 +185,7 @@ bool ZProbe::run_probe_feed(int& steps, float feedrate)
     // Enable the motors
     THEKERNEL->stepper->turn_enable_pins_on();
     this->current_feedrate = feedrate * Z_STEPS_PER_MM; // steps/sec
-    float maxz= this->max_z*2;
+    float maxz= max_dist < 0 ? this->max_z*2 : max_dist;
 
     // move Z down
     STEPPER[Z_AXIS]->move(true, maxz * Z_STEPS_PER_MM, 0); // always probes down, no more than 2*maxz
@@ -281,8 +281,9 @@ void ZProbe::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     if( gcode->has_g && gcode->g >= 29 && gcode->g <= 32) {
+
         // make sure the probe is defined and not already triggered before moving motors
-       if(!this->pin.connected()) {
+        if(!this->pin.connected()) {
             gcode->stream->printf("ZProbe not connected.\n");
             return;
         }
@@ -304,7 +305,7 @@ void ZProbe::on_gcode_received(void *argument)
             }
 
             if(probe_result) {
-                gcode->stream->printf("Z:%1.4f C:%d\n", steps / Z_STEPS_PER_MM, steps);
+                gcode->stream->printf("Z:%1.4f C:%d\n", zsteps_to_mm(steps), steps);
                 // move back to where it started, unless a Z is specified
                 if(gcode->has_letter('Z')) {
                     // set Z to the specified value, and leave probe where it is
@@ -341,6 +342,60 @@ void ZProbe::on_gcode_received(void *argument)
                 }
             }
         }
+
+    } else if(gcode->has_g && gcode->g == 38 ) { // G38.2 Straight Probe
+        // linuxcnc/grbl style probe http://www.linuxcnc.org/docs/2.5/html/gcode/gcode.html#sec:G38-probe
+        if(gcode->subcode != 2 && gcode->subcode != 3) {
+            gcode->stream->printf("ERROR: Only G38.2 and G38.3 are supported\n");
+            return;
+        }
+
+        // make sure the probe is defined and not already triggered before moving motors
+        if(!this->pin.connected()) {
+            gcode->stream->printf("ZProbe not connected.\n");
+            return;
+        }
+        if(this->pin.get()) {
+            gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+            return;
+        }
+
+        // first wait for an empty queue i.e. no moves left
+        THEKERNEL->conveyor->wait_for_empty_queue();
+
+        if(gcode->has_letter('X')) {
+            // probe in the X axis
+            gcode->stream->printf("Not currently supported.\n");
+
+        }else if(gcode->has_letter('Y')) {
+            // probe in the Y axis
+            gcode->stream->printf("Not currently supported.\n");
+
+        }else if(gcode->has_letter('Z')) {
+            // we need to know where we started the probe from
+            float current_machine_pos[3];
+            THEKERNEL->robot->get_axis_position(current_machine_pos);
+
+            // probe down in the Z axis no more than the Z value in mm
+            float rate = (gcode->has_letter('F')) ? gcode->get_value('F') / 60 : this->slow_feedrate;
+            int steps;
+            bool probe_result = run_probe_feed(steps, rate, gcode->get_value('Z'));
+
+            if(probe_result) {
+                gcode->stream->printf("INFO: delta Z %1.4f (Steps %d)\n", steps / Z_STEPS_PER_MM, steps);
+
+                // set position to where it stopped
+                THEKERNEL->robot->reset_axis_position(current_machine_pos[Z_AXIS] - zsteps_to_mm(steps), Z_AXIS);
+
+            } else {
+                gcode->stream->printf("ERROR: ZProbe not triggered\n");
+            }
+
+        }else{
+            gcode->stream->printf("ERROR: at least one of X Y or Z must be specified\n");
+
+        }
+        return;
 
     } else if(gcode->has_m) {
         // M code processing here
