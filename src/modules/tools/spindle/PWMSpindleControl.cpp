@@ -176,7 +176,7 @@ uint32_t PWMSpindleControl::on_update_speed(uint32_t dummy)
         pwm_pin->write(1.0f - current_pwm_value);
     else
         pwm_pin->write(current_pwm_value);
-
+    
     return 0;
 }
 
