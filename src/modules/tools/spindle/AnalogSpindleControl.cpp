@@ -17,6 +17,7 @@
 
 #define spindle_checksum                    CHECKSUM("spindle")
 #define spindle_max_rpm_checksum            CHECKSUM("max_rpm")
+#define spindle_min_rpm_checksum            CHECKSUM("min_rpm")
 #define spindle_pwm_pin_checksum            CHECKSUM("pwm_pin")
 #define spindle_pwm_period_checksum         CHECKSUM("pwm_period")
 #define spindle_switch_on_pin_checksum      CHECKSUM("switch_on_pin")
@@ -26,6 +27,7 @@ void AnalogSpindleControl::on_module_loaded()
 
     spindle_on = false;
     target_rpm = 0;
+    min_rpm = THEKERNEL->config->value(spindle_checksum, spindle_min_rpm_checksum)->by_default(100)->as_int();
     max_rpm = THEKERNEL->config->value(spindle_checksum, spindle_max_rpm_checksum)->by_default(5000)->as_int();
 
     // Get the pin for hardware pwm
@@ -52,9 +54,11 @@ void AnalogSpindleControl::on_module_loaded()
 
     // Get digital out pin for switching the VFD on and off (wired to a digital input on the VFD via an optocoupler)
     std::string switch_on_pin = THEKERNEL->config->value(spindle_checksum, spindle_switch_on_pin_checksum)->by_default("nc")->as_string();
-    switch_on = new Pin();
-    switch_on->from_string(switch_on_pin)->as_output()->set(false);
-   
+    switch_on == NULL;
+    if(switch_on_pin.compare("nc") != 0) {
+        switch_on = new Pin();
+        switch_on->from_string(switch_on_pin)->as_output()->set(false);
+    }
     // register for events
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GCODE_EXECUTE);
@@ -63,8 +67,9 @@ void AnalogSpindleControl::on_module_loaded()
 
 void AnalogSpindleControl::turn_on() 
 {
-    // set the output for switching the VFD on 
-    switch_on->set(true); 
+    // set the output for switching the VFD on
+    if(switch_on != NULL) 
+        switch_on->set(true); 
     spindle_on = true;
 
 }
@@ -73,7 +78,8 @@ void AnalogSpindleControl::turn_on()
 void AnalogSpindleControl::turn_off() 
 {
     // clear the output for switching the VFD on 
-    switch_on->set(false); 
+    if(switch_on != NULL) 
+        switch_on->set(false);
     spindle_on = false;
     // set the PWM value to 0 to make sure it stops
     update_pwm(0);
@@ -88,6 +94,8 @@ void AnalogSpindleControl::set_speed(int rpm)
         target_rpm = 0;
     } else if (rpm > max_rpm) {
         target_rpm = max_rpm;
+    } else if (rpm > 0 && rpm < min_rpm){
+        target_rpm = min_rpm;
     } else {
         target_rpm = rpm;
     }
@@ -109,7 +117,7 @@ void AnalogSpindleControl::report_speed()
 void AnalogSpindleControl::update_pwm(float value) 
 {
     // set the requested PWM value, invert it if necessary
-    if (output_inverted)
+    if(output_inverted)
         pwm_pin->write(1.0f - value);
     else
         pwm_pin->write(value);

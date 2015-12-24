@@ -31,6 +31,7 @@ class AnalogSpindleControl: public SpindleControl {
         bool output_inverted;
         
         int target_rpm;
+        int min_rpm;
         int max_rpm;
 
         void turn_on(void);
