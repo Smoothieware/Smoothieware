@@ -39,7 +39,7 @@ void Block::clear()
     gcodes.clear();
     std::vector<Gcode>().swap(gcodes); // this resizes the vector releasing its memory
 
-    clear_vector(this->steps);
+    this->steps.fill(0);
 
     steps_event_count   = 0;
     nominal_rate        = 0;
@@ -63,27 +63,27 @@ void Block::clear()
 
 void Block::debug()
 {
-    THEKERNEL->streams->printf("%p: steps:X%04d Y%04d Z%04d(max:%4d) nominal:r%10d/s%6.1f mm:%9.6f rdelta:%8f acc:%5d dec:%5d rates:%10d>%10d  entry/max: %10.4f/%10.4f taken:%d ready:%d recalc:%d nomlen:%d\r\n",
+    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%10lu/s%6.1f mm:%9.6f rdelta:%8f acc:%5lu dec:%5lu rates:%10lu>%10lu  entry/max: %10.4f/%10.4f taken:%d ready:%d recalc:%d nomlen:%d\r\n",
                                this,
-                                         this->steps[0],
-                                               this->steps[1],
-                                                      this->steps[2],
-                                                               this->steps_event_count,
-                                                                             this->nominal_rate,
-                                                                                   this->nominal_speed,
-                                                                                            this->millimeters,
-                                                                                                         this->rate_delta,
-                                                                                                                 this->accelerate_until,
-                                                                                                                         this->decelerate_after,
-                                                                                                                                   this->initial_rate,
-                                                                                                                                        this->final_rate,
-                                                                                                                                                          this->entry_speed,
-                                                                                                                                                                this->max_entry_speed,
-                                                                                                                                                                             this->times_taken,
-                                                                                                                                                                                      this->is_ready,
-                                                                                                                                                                                                recalculate_flag?1:0,
-                                                                                                                                                                                                          nominal_length_flag?1:0
-                             );
+                               this->steps[0],
+                               this->steps[1],
+                               this->steps[2],
+                               this->steps_event_count,
+                               this->nominal_rate,
+                               this->nominal_speed,
+                               this->millimeters,
+                               this->rate_delta,
+                               this->accelerate_until,
+                               this->decelerate_after,
+                               this->initial_rate,
+                               this->final_rate,
+                               this->entry_speed,
+                               this->max_entry_speed,
+                               this->times_taken,
+                               this->is_ready,
+                               recalculate_flag ? 1 : 0,
+                               nominal_length_flag ? 1 : 0
+                              );
 }
 
 
@@ -169,19 +169,16 @@ float Block::reverse_pass(float exit_speed)
     // If entry speed is already at the maximum entry speed, no need to recheck. Block is cruising.
     // If not, block in state of acceleration or deceleration. Reset entry speed to maximum and
     // check for maximum allowable speed reductions to ensure maximum possible planned speed.
-    if (this->entry_speed != this->max_entry_speed)
-    {
+    if (this->entry_speed != this->max_entry_speed) {
         // If nominal length true, max junction speed is guaranteed to be reached. Only compute
         // for max allowable speed if block is decelerating and nominal length is false.
-        if ((!this->nominal_length_flag) && (this->max_entry_speed > exit_speed))
-        {
+        if ((!this->nominal_length_flag) && (this->max_entry_speed > exit_speed)) {
             float max_entry_speed = max_allowable_speed(-this->acceleration, exit_speed, this->millimeters);
 
             this->entry_speed = min(max_entry_speed, this->max_entry_speed);
 
             return this->entry_speed;
-        }
-        else
+        } else
             this->entry_speed = this->max_entry_speed;
     }
 
@@ -204,8 +201,7 @@ float Block::forward_pass(float prev_max_exit_speed)
     if (prev_max_exit_speed > max_entry_speed)
         prev_max_exit_speed = max_entry_speed;
 
-    if (prev_max_exit_speed <= entry_speed)
-    {
+    if (prev_max_exit_speed <= entry_speed) {
         // accel limited
         entry_speed = prev_max_exit_speed;
         // since we're now acceleration or cruise limited

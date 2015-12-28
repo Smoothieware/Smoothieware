@@ -23,8 +23,10 @@
 #include "PublicData.h"
 #include "Gcode.h"
 #include "Robot.h"
+#include "ToolManagerPublicAccess.h"
+#include "GcodeDispatch.h"
 
-#include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
+#include "TemperatureControlPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
@@ -559,6 +561,18 @@ void SimpleShell::break_command( string parameters, StreamOutput *stream)
     __debugbreak();
 }
 
+static int get_active_tool()
+{
+    void *returned_data;
+    bool ok = PublicData::get_value(tool_manager_checksum, get_active_tool_checksum, &returned_data);
+    if (ok) {
+         int active_tool=  *static_cast<int *>(returned_data);
+        return active_tool;
+    } else {
+        return 0;
+    }
+}
+
 // used to test out the get public data events
 void SimpleShell::get_command( string parameters, StreamOutput *stream)
 {
@@ -591,9 +605,40 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
     } else if (what == "pos") {
-        float pos[3];
-        THEKERNEL->robot->get_axis_position(pos);
-        stream->printf("Position X: %f, Y: %f, Z: %f\r\n", pos[0], pos[1], pos[2]);
+        // convenience to call all the various M114 variants
+        char buf[64];
+        THEKERNEL->robot->print_position(0, buf, sizeof buf); stream->printf("last %s\n", buf);
+        THEKERNEL->robot->print_position(1, buf, sizeof buf); stream->printf("realtime %s\n", buf);
+        THEKERNEL->robot->print_position(2, buf, sizeof buf); stream->printf("%s\n", buf);
+        THEKERNEL->robot->print_position(3, buf, sizeof buf); stream->printf("%s\n", buf);
+        THEKERNEL->robot->print_position(4, buf, sizeof buf); stream->printf("%s\n", buf);
+        THEKERNEL->robot->print_position(5, buf, sizeof buf); stream->printf("%s\n", buf);
+
+    } else if (what == "wcs") {
+        // print the wcs state
+        std::vector<Robot::wcs_t> v= THEKERNEL->robot->get_wcs_state();
+        char current_wcs= std::get<0>(v[0]);
+        stream->printf("current WCS: %s\n", wcs2gcode(current_wcs).c_str());
+        int n= std::get<1>(v[0]);
+        for (int i = 1; i <= n; ++i) {
+            stream->printf("%s: %1.4f, %1.4f, %1.4f\n", wcs2gcode(i-1).c_str(), std::get<0>(v[i]), std::get<1>(v[i]), std::get<2>(v[i]));
+        }
+
+        stream->printf("G92: %1.4f, %1.4f, %1.4f\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
+        stream->printf("ToolOffset: %1.4f, %1.4f, %1.4f\n", std::get<0>(v[n+2]), std::get<1>(v[n+2]), std::get<2>(v[n+2]));
+
+    } else if (what == "state") {
+        // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
+        stream->printf("[G%d %s G%d G%d G%d G94 T%d F%1.1f]\n",
+            THEKERNEL->gcode_dispatch->get_modal_command(),
+            wcs2gcode(THEKERNEL->robot->get_current_wcs()).c_str(),
+            THEKERNEL->robot->plane_axis_0 == X_AXIS && THEKERNEL->robot->plane_axis_1 == Y_AXIS && THEKERNEL->robot->plane_axis_2 == Z_AXIS ? 17 :
+              THEKERNEL->robot->plane_axis_0 == X_AXIS && THEKERNEL->robot->plane_axis_1 == Z_AXIS && THEKERNEL->robot->plane_axis_2 == Y_AXIS ? 18 :
+              THEKERNEL->robot->plane_axis_0 == Y_AXIS && THEKERNEL->robot->plane_axis_1 == Z_AXIS && THEKERNEL->robot->plane_axis_2 == X_AXIS ? 19 : 17,
+            THEKERNEL->robot->inch_mode ? 20 : 21,
+            THEKERNEL->robot->absolute_mode ? 90 : 91,
+            get_active_tool(),
+            THEKERNEL->robot->get_feed_rate());
     }
 }
 

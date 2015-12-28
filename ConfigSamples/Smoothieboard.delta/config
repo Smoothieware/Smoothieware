@@ -234,6 +234,12 @@ alpha_trim                                   0                 # software trim f
 beta_trim                                    0                 # software trim for beta stepper endstop (in mm)
 gamma_trim                                   0                 # software trim for gamma stepper endstop (in mm)
 
+# optional enable limit switches, actions will stop if any enabled limit switch is triggered (all are set for delta)
+#alpha_limit_enable                          false            # set to true to enable X min and max limit switches
+#beta_limit_enable                           false            # set to true to enable Y min and max limit switches
+#gamma_limit_enable                          false            # set to true to enable Z min and max limit switches
+
+#move_to_origin_after_home                    true             # move XY to 0,0 after homing
 #endstop_debounce_count                       100              # uncomment if you get noise on your endstops
 
 # optional Z probe

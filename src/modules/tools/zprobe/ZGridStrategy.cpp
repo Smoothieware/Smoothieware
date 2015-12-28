@@ -584,15 +584,10 @@ void ZGridStrategy::homexyz()
 
 void ZGridStrategy::move(float *position, float feed)
 {
-    char cmd[64];
-
-    // Assemble Gcode to add onto the queue.  Also translate the position for non standard cartesian spaces (cal_offset)
-    snprintf(cmd, sizeof(cmd), "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", position[0] + this->cal_offset_x, position[1] + this->cal_offset_y, position[2], feed * 60); // use specified feedrate (mm/sec)
+    // translate the position for non standard cartesian spaces (cal_offset)
+    zprobe->coordinated_move(position[0] + this->cal_offset_x, position[1] + this->cal_offset_y, position[2], feed); // use specified feedrate (mm/sec)
 
     //THEKERNEL->streams->printf("DEBUG: move: %s cent: %i\n", cmd, this->center_zero);
-
-    Gcode gc(cmd, &(StreamOutput::NullStream));
-    THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
 }
 
 

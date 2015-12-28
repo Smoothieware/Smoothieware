@@ -296,7 +296,7 @@ void Extruder::on_gcode_received(void *argument)
 
     // M codes most execute immediately, most only execute if enabled
     if (gcode->has_m) {
-        if (gcode->m == 114 && this->enabled) {
+        if (gcode->m == 114 && gcode->subcode == 0 && this->enabled) {
             char buf[16];
             int n = snprintf(buf, sizeof(buf), " E:%1.3f ", this->current_position);
             gcode->txt_after_ok.append(buf, n);
@@ -409,7 +409,7 @@ void Extruder::on_gcode_received(void *argument)
             THEKERNEL->conveyor->append_gcode(gcode);
             THEKERNEL->conveyor->queue_head_block();
 
-        } else if( this->enabled && (gcode->g == 10 || gcode->g == 11) ) { // firmware retract command
+        } else if( this->enabled && (gcode->g == 10 || gcode->g == 11) && !gcode->has_letter('L') ) { // firmware retract command (Ignore if has L parameter that is not for us)
             // check we are in the correct state of retract or unretract
             if(gcode->g == 10 && !retracted) {
                 this->retracted = true;

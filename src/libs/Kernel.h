@@ -50,7 +50,7 @@ class Kernel {
         // These modules are available to all other modules
         SerialConsole*    serial;
         StreamOutputPool* streams;
-
+        GcodeDispatch*    gcode_dispatch;
         Robot*            robot;
         Stepper*          stepper;
         Planner*          planner;
