@@ -17,6 +17,7 @@
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
+#include "modules/tools/reporter/Reporter.h"
 #include "FilamentDetector.h"
 #include "MotorDriverControl.h"
 
@@ -164,6 +165,9 @@ void init() {
     #endif
     #ifndef NO_UTILS_PANEL
     kernel->add_module( new Panel() );
+    #endif
+    #ifndef NO_UTILS_REPORTER
+    kernel->add_module( new Reporter() );
     #endif
     #ifndef NO_TOOLS_TOUCHPROBE
     kernel->add_module( new Touchprobe() );
