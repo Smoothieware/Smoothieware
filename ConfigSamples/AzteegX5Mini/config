@@ -156,6 +156,7 @@ gamma_max                                    200              #
 #alpha_limit_enable                          false            # set to true to enable X min and max limit switches
 #beta_limit_enable                           false            # set to true to enable Y min and max limit switches
 #gamma_limit_enable                          false            # set to true to enable Z min and max limit switches
+#move_to_origin_after_home                   false            # move XY to 0,0 after homing
 
 #probe endstop
 #probe_pin                                   1.29             # optional pin for probe
@@ -253,5 +254,3 @@ custom_menu.power_off.command              M81               #
 currentcontrol_module_enable                 true            #
 digipot_max_current                          2.4             # max current
 digipot_factor                               106.0           # factor for converting current to digipot value
-
-return_error_on_unhandled_gcode              false            #

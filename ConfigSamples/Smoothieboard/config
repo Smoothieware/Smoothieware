@@ -223,6 +223,7 @@ gamma_max                                    200              #
 # optional order in which axis will home, default is they all home at the same time,
 # if this is set it will force each axis to home one at a time in the specified order
 #homing_order                                 XYZ              # x axis followed by y then z last
+#move_to_origin_after_home                    false            # move XY to 0,0 after homing
 
 # optional enable limit switches, actions will stop if any enabled limit switch is triggered
 #alpha_limit_enable                          false            # set to true to enable X min and max limit switches

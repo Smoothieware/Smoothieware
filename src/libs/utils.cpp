@@ -252,3 +252,12 @@ int append_parameters(char *buf, std::vector<std::pair<char,float>> params, size
     }
     return n;
 }
+
+string wcs2gcode(int wcs) {
+    string str= "G5";
+    str.append(1, std::min(wcs, 5) + '4');
+    if(wcs >= 6) {
+        str.append(".").append(1, '1' + (wcs - 6));
+    }
+    return str;
+}

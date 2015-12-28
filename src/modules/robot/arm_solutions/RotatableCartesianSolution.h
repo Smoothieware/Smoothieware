@@ -12,10 +12,11 @@
 class RotatableCartesianSolution : public BaseSolution {
     public:
         RotatableCartesianSolution(Config*);
-        void cartesian_to_actuator(const float[], float[] );
-        void actuator_to_cartesian(const float[], float[] );
+        void cartesian_to_actuator(const float[], ActuatorCoordinates &) override;
+        void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) override;
 
-        void rotate(const float in[], float out[], float sin, float cos );
+    private:
+        void rotate(const float in[], float out[], float sin, float cos);
 
         float sin_alpha;
         float cos_alpha;
