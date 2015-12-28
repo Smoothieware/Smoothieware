@@ -47,9 +47,6 @@ class TemperatureSwitch : public Module
         // temperature has changed state
         void set_state(STATE state);
 
-        // the set of temperature controllers that match the required designator prefix
-        vector<uint16_t> temp_controllers;
-
         // temperatureswitch.hotend.threshold_temp
         float temperatureswitch_threshold_temp;
 
@@ -74,6 +71,7 @@ class TemperatureSwitch : public Module
         uint16_t arm_mcode;
 
         struct {
+            char designator:8;
             bool inverted:1;
             bool armed:1;
             TRIGGER_TYPE trigger:2;

@@ -5,32 +5,17 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef GCODE_DISPATCH_H
-#define GCODE_DISPATCH_H
+#ifndef ACTUATOR_COORDINATES_H
+#define ACTUATOR_COORDINATES_H
+#include <array>
 
-#include "libs/Module.h"
+#ifndef MAX_ROBOT_ACTUATORS
+#define MAX_ROBOT_ACTUATORS 3
+#endif
 
-#include <stdio.h>
-#include <string>
-using std::string;
-
-class GcodeDispatch : public Module
-{
-public:
-    GcodeDispatch();
-
-    virtual void on_module_loaded();
-    virtual void on_console_line_received(void *line);
-
-    uint8_t get_modal_command() const { return modal_group_1<4 ? modal_group_1 : 0; }
-private:
-    int currentline;
-    string upload_filename;
-    FILE *upload_fd;
-    uint8_t modal_group_1;
-    struct {
-        bool uploading: 1;
-    };
-};
+//The subset in use is determined by the arm solution's get_actuator_count().
+//Keep MAX_ROBOT_ACTUATORS as small as practical it impacts block size and therefore free memory.
+const size_t k_max_actuators = MAX_ROBOT_ACTUATORS;
+typedef struct std::array<float, k_max_actuators> ActuatorCoordinates;
 
 #endif

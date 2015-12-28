@@ -1,4 +1,5 @@
 #include "LinearDeltaSolution.h"
+#include "ActuatorCoordinates.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "libs/Kernel.h"
@@ -54,7 +55,7 @@ void LinearDeltaSolution::init() {
     delta_tower3_y = (delta_radius + tower3_offset) * sinf((90.0F  + tower3_angle) * PIOVER180);
 }
 
-void LinearDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], float actuator_mm[] )
+void LinearDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm )
 {
 
     actuator_mm[ALPHA_STEPPER] = sqrtf(this->arm_length_squared
@@ -71,7 +72,7 @@ void LinearDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], floa
                                       ) + cartesian_mm[Z_AXIS];
 }
 
-void LinearDeltaSolution::actuator_to_cartesian(const float actuator_mm[], float cartesian_mm[] )
+void LinearDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] )
 {
     // from http://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates_from_cross-_and_dot-products
     // based on https://github.com/ambrop72/aprinter/blob/2de69a/aprinter/printer/DeltaTransform.h#L81

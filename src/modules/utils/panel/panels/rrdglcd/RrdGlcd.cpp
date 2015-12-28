@@ -277,9 +277,9 @@ void RrdGlcd::renderGlyph(int xp, int yp, const uint8_t *g, int pixelWidth, int 
     }
 
     // if xp is not on a byte boundary we do the slow pixel by pixel copy
+    int b= *g++;
     for(int y=0;y<pixelHeight;y++) {
         int m= 0x80;
-        int b= *g++;
         for(int x=0;x<pixelWidth;x++) {
             a= (y+yp)*16 + (x+xp)/8;
             int p= 1<<(7-(x+xp)%8);

@@ -33,7 +33,7 @@ public:
 
     bool wait_for_probe(int& steps);
     bool run_probe(int& steps, bool fast= false);
-    bool run_probe_feed(int& steps, float feedrate);
+    bool run_probe_feed(int& steps, float feedrate, float max_dist= -1);
     bool return_probe(int steps);
     bool doProbeAt(int &steps, float x, float y);
     float probeDistance(float x, float y);
