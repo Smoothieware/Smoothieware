@@ -128,8 +128,22 @@ void Reporter::on_gcode_received(void *argument){
                               } else {
                                 gcode->stream->printf("0");
                               }
-                              gcode->stream->printf("],\"sfactor\":100.00,\"efactor\":[100.00,100.00],\"tool\":1,");
-                              gcode->stream->printf("\"probe\":\"535\",\"fanRPM\":0,\"homed\":[0,0,0],\"fraction_printed\":");
+                              gcode->stream->printf("],\"sfactor\":");
+                              gcode->stream->printf("%f", 6000.0F / THEKERNEL->robot->get_seconds_per_minute());
+                              gcode->stream->printf(",\"efactor\":[");
+                              if(PublicData::get_value( extruder_checksum, (void **)&rd )){
+                                gcode->stream->printf("%f", *(rd+2)*100.0F);
+                              }
+                              // Tool index
+                              gcode->stream->printf("],\"tool\":1,");
+
+                              // Probe height
+                              gcode->stream->printf("\"probe\":\"");
+                              if(THEKERNEL->config->value( zprobe_checksum, enable_checksum )->by_default(false)->as_bool() )
+                              {
+                                printf("%s\n", THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_string());
+                              }
+                              gcode->stream->printf("\",\"fanRPM\":0,\"homed\":[0,0,0],\"fraction_printed\":");
                               // Get fraction printed
                               void *completed_data;
                               if (PublicData::get_value( player_checksum, get_progress_checksum, &completed_data )) {
