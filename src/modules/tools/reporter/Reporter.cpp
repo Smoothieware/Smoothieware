@@ -17,6 +17,7 @@
 #include "ExtruderPublicAccess.h"
 #include "PublicData.h"
 #include "Robot.h"
+#include "ZProbe.h"
 #include "modules/robot/Conveyor.h"
 
 #include "version.h"
@@ -29,6 +30,8 @@
 
 #define reporter_checksum          CHECKSUM("reporter")
 #define enable_checksum            CHECKSUM("enable")
+
+#define probe_height_checksum      CHECKSUM("probe_height")
 
 Reporter::Reporter(){}
 
@@ -141,7 +144,7 @@ void Reporter::on_gcode_received(void *argument){
                               gcode->stream->printf("\"probe\":\"");
                               if(THEKERNEL->config->value( zprobe_checksum, enable_checksum )->by_default(false)->as_bool() )
                               {
-                                printf("%s\n", THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_string());
+                                printf("%f\n", THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number());
                               }
                               gcode->stream->printf("\",\"fanRPM\":0,\"homed\":[0,0,0],\"fraction_printed\":");
                               // Get fraction printed
