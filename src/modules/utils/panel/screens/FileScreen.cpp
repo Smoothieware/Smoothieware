@@ -39,6 +39,8 @@ void FileScreen::on_exit()
 {
     // reset to root directory, I think this is less confusing
     THEKERNEL->current_path= "/";
+
+    delete this;
 }
 
 // For every ( potential ) refresh of the screen

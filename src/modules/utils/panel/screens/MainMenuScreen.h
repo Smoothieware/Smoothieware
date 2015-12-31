@@ -21,12 +21,12 @@ class MainMenuScreen : public PanelScreen {
         friend class Panel;
     private:
         PanelScreen* watch_screen;
-        PanelScreen* file_screen;
         PanelScreen* jog_screen;
         PanelScreen* prepare_screen;
 
         void abort_playing();
         void setupConfigureScreen();
+        void setupFileScreen();
 };
 
 

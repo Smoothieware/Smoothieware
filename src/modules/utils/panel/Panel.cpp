@@ -652,7 +652,7 @@ void Panel::on_second_tick(void *arg)
             // TODO we don't want to do this if we just booted and card was already in
             THEKERNEL->current_path= "/ext";
             MainMenuScreen *mms= static_cast<MainMenuScreen*>(this->top_screen);
-            THEPANEL->enter_screen(mms->file_screen);
+            mms->setupFileScreen();
 
         }else if(this->extmounter != nullptr && !this->sdcd_pin.get()){
             mount_external_sd(false);
