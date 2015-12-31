@@ -60,6 +60,7 @@ class Panel : public Module {
         bool menu_change();
         uint16_t max_screen_lines() { return screen_lines; }
         uint16_t get_menu_current_line() { return menu_current_line; }
+        uint16_t get_menu_start_line() { return menu_start_line; }
 
         // Control
         bool enter_control_mode(float passed_normal_increment, float passed_pressed_increment);

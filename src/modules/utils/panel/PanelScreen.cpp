@@ -30,10 +30,9 @@ void PanelScreen::on_enter() {}
 void PanelScreen::refresh_menu(bool clear)
 {
     if (clear) THEPANEL->lcd->clear();
-    for (uint16_t i = THEPANEL->menu_start_line; i < THEPANEL->menu_start_line + min( THEPANEL->menu_rows, THEPANEL->panel_lines ); i++ ) {
-        THEPANEL->lcd->setCursor(2, i - THEPANEL->menu_start_line );
-        this->display_menu_line(i);
-    }
+    
+    this->display_menu_lines(THEPANEL->menu_start_line, min( THEPANEL->menu_rows, THEPANEL->panel_lines )),
+    
     THEPANEL->lcd->setCursor(0, THEPANEL->menu_current_line - THEPANEL->menu_start_line );
     THEPANEL->lcd->printf(">");
 }
@@ -93,5 +92,13 @@ void PanelScreen::on_main_loop()
         command_queue.pop_front();
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+    }
+}
+    
+void PanelScreen::display_menu_lines(uint16_t line, uint16_t num)
+{
+    for(uint16_t i = line; i < line + num; ++i) {
+        THEPANEL->lcd->setCursor(2, i - THEPANEL->menu_start_line );
+        this->display_menu_line(i);
     }
 }
