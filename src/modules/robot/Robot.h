@@ -23,6 +23,7 @@ class StepperMotor;
 
 class Robot : public Module {
     public:
+        using wcs_t= std::tuple<float, float, float>;
         Robot();
         void on_module_loaded();
         void on_gcode_received(void* argument);
@@ -40,10 +41,10 @@ class Robot : public Module {
         float to_millimeters( float value ) const { return this->inch_mode ? value * 25.4F : value; }
         float from_millimeters( float value) const { return this->inch_mode ? value/25.4F : value;  }
         void get_axis_position(float position[]) const { memcpy(position, this->last_milestone, sizeof this->last_milestone); }
+        wcs_t get_axis_position() const { return wcs_t(last_milestone[0], last_milestone[1], last_milestone[2]); }
         int print_position(uint8_t subcode, char *buf, size_t bufsize) const;
         uint8_t get_current_wcs() const { return current_wcs; }
 
-        using wcs_t= std::tuple<float, float, float>;
         std::vector<wcs_t> get_wcs_state() const;
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
