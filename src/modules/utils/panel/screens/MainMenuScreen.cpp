@@ -142,7 +142,7 @@ void MainMenuScreen::clicked_menu_entry(uint16_t line)
                 send_command("M999");
                 THEPANEL->enter_screen(this->watch_screen);
             }else if(THEPANEL->is_playing()) abort_playing();
-             else THEPANEL->enter_screen((new FileScreen())->set_parent(this)); break;
+             else setupFileScreen(); break;
         case 2: THEPANEL->enter_screen(this->jog_screen     ); break;
         case 3: THEPANEL->enter_screen(this->prepare_screen ); break;
         case 4: THEPANEL->enter_screen(THEPANEL->custom_screen ); break;
