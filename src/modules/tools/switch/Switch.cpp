@@ -32,6 +32,7 @@
 #define    input_pin_behavior_checksum  CHECKSUM("input_pin_behavior")
 #define    toggle_checksum              CHECKSUM("toggle")
 #define    momentary_checksum           CHECKSUM("momentary")
+#define    command_subcode_checksum     CHECKSUM("subcode")
 #define    input_on_command_checksum    CHECKSUM("input_on_command")
 #define    input_off_command_checksum   CHECKSUM("input_off_command")
 #define    output_pin_checksum          CHECKSUM("output_pin")
@@ -87,6 +88,7 @@ void Switch::on_config_reload(void *argument)
 {
     this->input_pin.from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
     this->input_pin_behavior = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default(momentary_checksum)->as_number();
+    this->subcode = THEKERNEL->config->value(switch_checksum, this->name_checksum, command_subcode_checksum )->by_default(0)->as_number();
     std::string input_on_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
     std::string input_off_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
     this->output_on_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
@@ -214,14 +216,17 @@ void Switch::on_config_reload(void *argument)
 
 bool Switch::match_input_on_gcode(const Gcode *gcode) const
 {
-    return ((input_on_command_letter == 'M' && gcode->has_m && gcode->m == input_on_command_code) ||
+    bool b= ((input_on_command_letter == 'M' && gcode->has_m && gcode->m == input_on_command_code) ||
             (input_on_command_letter == 'G' && gcode->has_g && gcode->g == input_on_command_code));
+
+    return (b && gcode->subcode == this->subcode);
 }
 
 bool Switch::match_input_off_gcode(const Gcode *gcode) const
 {
-    return ((input_off_command_letter == 'M' && gcode->has_m && gcode->m == input_off_command_code) ||
+    bool b= ((input_off_command_letter == 'M' && gcode->has_m && gcode->m == input_off_command_code) ||
             (input_off_command_letter == 'G' && gcode->has_g && gcode->g == input_off_command_code));
+    return (b && gcode->subcode == this->subcode);
 }
 
 void Switch::on_gcode_received(void *argument)
