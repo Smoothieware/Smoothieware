@@ -71,11 +71,6 @@ void FileScreen::enter_folder(const char *folder)
     this->refresh_menu();
 }
 
-
-void FileScreen::display_menu_line(uint16_t line)
-{
-}
-
 // Called by the panel when refreshing the menu, display .. then all files in the current dir
 void FileScreen::display_menu_lines(uint16_t line, uint16_t num)
 {
