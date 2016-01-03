@@ -88,6 +88,7 @@ void FileScreen::display_menu_lines(uint16_t line, uint16_t num)
             while ((p = readdir(d)) != NULL) {
                 if(((p->d_isdir && p->d_name[0] != '.') || filter_file(p->d_name)) && count++ == i-1 ) {
                     string fn= p->d_name;
+                    fn = fn.substr(0, 18);
                     
                     if(p->d_isdir) {
                         if(fn.size() >= 18) fn.back()= '/';
