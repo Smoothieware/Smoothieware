@@ -208,6 +208,18 @@ void Player::on_gcode_received(void *argument)
         } else if (gcode->m == 601) { // resume print
             this->resume_command("", gcode->stream);
         }
+
+    }else if(gcode->has_g) {
+        if(gcode->g == 28) { // homing cancels suspend
+            if(this->suspended) {
+                // clean up
+                this->suspended= false;
+                THEKERNEL->robot->pop_state();
+                this->saved_temperatures.clear();
+                this->was_playing_file= false;
+                this->suspend_loops= 0;
+            }
+        }
     }
 }
 

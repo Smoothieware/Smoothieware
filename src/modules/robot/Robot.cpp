@@ -780,10 +780,11 @@ void Robot::reset_position_from_current_actuator_position()
     memcpy(last_milestone, last_machine_position, sizeof last_milestone);
 
     // now reset actuator correctly, NOTE this may lose a little precision
-    // NOTE I do not recall why this was necessary, maybe to correct for small errors in FK
-    // arm_solution->cartesian_to_actuator(last_machine_position, actuator_pos);
-    // for (size_t i = 0; i < actuators.size(); i++)
-    //     actuators[i]->change_last_milestone(actuator_pos[i]);
+    // NOTE This is required to sync the machine position with the actuator position, not entirely sure why though
+    // without it the first move after an abort will jump violently.
+    arm_solution->cartesian_to_actuator(last_machine_position, actuator_pos);
+    for (size_t i = 0; i < actuators.size(); i++)
+        actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
 // Convert target (in machine coordinates) from millimeters to steps, and append this to the planner
