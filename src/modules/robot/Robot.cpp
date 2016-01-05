@@ -773,15 +773,18 @@ void Robot::reset_position_from_current_actuator_position()
 {
     ActuatorCoordinates actuator_pos;
     for (size_t i = 0; i < actuators.size(); i++) {
+        // NOTE actuator::current_position is curently NOT the same as actuator::last_milestone after an abrupt abort
         actuator_pos[i] = actuators[i]->get_current_position();
     }
+
+    // discover machine position from where actuators actually are
     arm_solution->actuator_to_cartesian(actuator_pos, last_machine_position);
     // FIXME problem is this includes any compensation transform, and without an inverse compensation we cannot get a correct last_milestone
     memcpy(last_milestone, last_machine_position, sizeof last_milestone);
 
-    // now reset actuator correctly, NOTE this may lose a little precision
-    // NOTE This is required to sync the machine position with the actuator position, not entirely sure why though
-    // without it the first move after an abort will jump violently.
+    // now reset actuator::last_milestone, NOTE this may lose a little precision as FK is not always entirely accurate.
+    // NOTE This is required to sync the machine position with the actuator position, we do a somewhat redundant cartesian_to_actuator() call
+    // to get everything in perfect sync.
     arm_solution->cartesian_to_actuator(last_machine_position, actuator_pos);
     for (size_t i = 0; i < actuators.size(); i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
