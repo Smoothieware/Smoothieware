@@ -111,7 +111,11 @@ void init() {
     kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
 
     bool sdok= (sd.disk_initialize() == 0);
-    if(!sdok) kernel->streams->printf("SDCard is disabled\r\n");
+    if(!sdok) kernel->streams->printf("SDCard failed to initialize\r\n");
+
+    #ifdef NONETWORK
+        kernel->streams->printf("NETWORK is disabled\r\n");
+    #endif
 
 #ifdef DISABLEMSD
     // attempt to be able to disable msd in config
