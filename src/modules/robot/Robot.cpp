@@ -455,10 +455,8 @@ void Robot::on_gcode_received(void *argument)
                     actuators[1]->change_steps_per_mm(this->to_millimeters(gcode->get_value('Y')));
                 if (gcode->has_letter('Z'))
                     actuators[2]->change_steps_per_mm(this->to_millimeters(gcode->get_value('Z')));
-                if (gcode->has_letter('F'))
-                    seconds_per_minute = gcode->get_value('F');
 
-                gcode->stream->printf("X:%g Y:%g Z:%g F:%g ", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm, seconds_per_minute);
+                gcode->stream->printf("X:%f Y:%f Z:%f ", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
                 gcode->add_nl = true;
                 check_max_actuator_speeds();
                 return;
