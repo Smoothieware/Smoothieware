@@ -62,6 +62,7 @@ class Robot : public Module {
             uint8_t plane_axis_0:2;                           // Current plane ( XY, XZ, YZ )
             uint8_t plane_axis_1:2;
             uint8_t plane_axis_2:2;
+            bool software_limits:1;                           // true if system is bound by software limits: default is false
         };
 
     private:
@@ -98,6 +99,8 @@ class Robot : public Module {
         float mm_per_arc_segment;                            // Setting : Used to split arcs into segmentrs
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
         float seconds_per_minute;                            // for realtime speed change
+
+        float softlimits[3][2];                              // minimum and maximum movement limits
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
