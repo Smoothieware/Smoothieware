@@ -105,6 +105,8 @@ using std::string;
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
 
+const size_t Robot::k_max_wcs; // a static member requires definition
+
 Robot::Robot()
 {
     this->inch_mode = false;
