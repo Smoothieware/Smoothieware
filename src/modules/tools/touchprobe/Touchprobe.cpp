@@ -43,7 +43,7 @@ void Touchprobe::on_module_loaded() {
 
 void Touchprobe::on_config_reload(void* argument){
     if (THEKERNEL->robot->actuators.size() > 3) {
-        THEKERNEL->streams->printf("Touchpprobe in use withmore than 3 motors - may need port\n");
+        THEKERNEL->streams->printf("Touch probe in use with more than 3 motors - may need port\n");
     }
     this->pin.from_string(  THEKERNEL->config->value(touchprobe_pin_checksum)->by_default("nc" )->as_string())->as_input();
     this->debounce_count =  THEKERNEL->config->value(touchprobe_debounce_count_checksum)->by_default(100  )->as_number();
