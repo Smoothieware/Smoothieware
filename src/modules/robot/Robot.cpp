@@ -246,7 +246,7 @@ void Robot::pop_state()
 std::vector<Robot::wcs_t> Robot::get_wcs_state() const
 {
     std::vector<wcs_t> v;
-    v.push_back(wcs_t(current_wcs, k_max_wcs, 0));
+    v.push_back(wcs_t(current_wcs, MAX_WCS, 0));
     for(auto& i : wcs_offsets) {
         v.push_back(i);
     }
@@ -364,7 +364,7 @@ void Robot::on_gcode_received(void *argument)
                     size_t n = gcode->get_uint('P');
                     if(n == 0) n = current_wcs; // set current coordinate system
                     else --n;
-                    if(n < k_max_wcs) {
+                    if(n < MAX_WCS) {
                         float x, y, z;
                         std::tie(x, y, z) = wcs_offsets[n];
                         if(gcode->get_int('L') == 20) {
@@ -405,7 +405,7 @@ void Robot::on_gcode_received(void *argument)
                 current_wcs = gcode->g - 54;
                 if(gcode->g == 59 && gcode->subcode > 0) {
                     current_wcs += gcode->subcode;
-                    if(current_wcs >= k_max_wcs) current_wcs = k_max_wcs - 1;
+                    if(current_wcs >= MAX_WCS) current_wcs = MAX_WCS - 1;
                 }
                 break;
 
