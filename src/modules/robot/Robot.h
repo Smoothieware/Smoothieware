@@ -21,6 +21,9 @@ class Gcode;
 class BaseSolution;
 class StepperMotor;
 
+// 9 WCS offsets
+#define MAX_WCS 9UL
+
 class Robot : public Module {
     public:
         using wcs_t= std::tuple<float, float, float>;
@@ -80,8 +83,7 @@ class Robot : public Module {
         // Workspace coordinate systems
         wcs_t mcs2wcs(const float *pos) const;
 
-        static const size_t k_max_wcs= 9; // setup 9 WCS offsets
-        std::array<wcs_t, k_max_wcs> wcs_offsets; // these are persistent once saved with M500
+        std::array<wcs_t, MAX_WCS> wcs_offsets; // these are persistent once saved with M500
         uint8_t current_wcs{0}; // 0 means G54 is enabled this is persistent once saved with M500
         wcs_t g92_offset;
         wcs_t tool_offset; // used for multiple extruders, sets the tool offset for the current extruder applied first
