@@ -36,6 +36,8 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256 + 8), txbuf(128 + 8)
     nl_in_rx = 0;
     attach = attached = false;
     flush_to_nl = false;
+    halt_flag= false;
+    query_flag= false;
 }
 
 void USBSerial::ensure_tx_space(int space)
@@ -195,6 +197,15 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
     readEP(c, &size);
     iprintf("Read %ld bytes:\n\t", size);
     for (uint8_t i = 0; i < size; i++) {
+        if(c[i] == 'X'-'A'+1){ // ^X
+            halt_flag= true;
+            continue;
+        }
+
+        if(c[i] == '?'){ // ?
+            query_flag= true;
+            continue;
+        }
 
         if (flush_to_nl == false)
             rxbuf.queue(c[i]);
@@ -259,6 +270,22 @@ bool USBSerial::ready()
 void USBSerial::on_module_loaded()
 {
     this->register_for_event(ON_MAIN_LOOP);
+    this->register_for_event(ON_IDLE);
+}
+
+void USBSerial::on_idle(void *argument)
+{
+    if(halt_flag) {
+        halt_flag= false;
+        THEKERNEL->call_event(ON_HALT, nullptr);
+        puts("ALARM: Abort during cycle, M999 to exit Alarm state\r\n");
+    }
+
+    if(query_flag) {
+        query_flag= false;
+        puts(THEKERNEL->get_query_string().c_str());
+    }
+
 }
 
 void USBSerial::on_main_loop(void *argument)

@@ -58,6 +58,9 @@ class Robot : public Module {
         // set by a leveling strategy to transform the target of a move according to the current plan
         std::function<void(float[3])> compensationTransform;
 
+        // Workspace coordinate systems
+        wcs_t mcs2wcs(const float *pos) const;
+
         struct {
             bool inch_mode:1;                                 // true for inch mode, false for millimeter mode ( default )
             bool absolute_mode:1;                             // true for absolute mode ( default ), false for relative mode
@@ -80,8 +83,6 @@ class Robot : public Module {
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
         void clearToolOffset();
 
-        // Workspace coordinate systems
-        wcs_t mcs2wcs(const float *pos) const;
 
         std::array<wcs_t, MAX_WCS> wcs_offsets; // these are persistent once saved with M500
         uint8_t current_wcs{0}; // 0 means G54 is enabled this is persistent once saved with M500
