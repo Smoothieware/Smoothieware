@@ -311,13 +311,29 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 {
     // Get parameters ( filename and line limit )
     string filename          = absolute_from_relative(shift_parameter( parameters ));
-    string limit_paramater   = shift_parameter( parameters );
+    string limit_parameter   = shift_parameter( parameters );
     int limit = -1;
-    if ( limit_paramater != "" ) {
+    int delay= 0;
+    if ( limit_parameter == "-d" ) {
+        string d= shift_parameter( parameters );
         char *e = NULL;
-        limit = strtol(limit_paramater.c_str(), &e, 10);
-        if (e <= limit_paramater.c_str())
+        delay = strtol(d.c_str(), &e, 10);
+        if (e <= limit_parameter.c_str())
+            delay = 0;
+
+    }else if ( limit_parameter != "" ) {
+        char *e = NULL;
+        limit = strtol(limit_parameter.c_str(), &e, 10);
+        if (e <= limit_parameter.c_str())
             limit = -1;
+    }
+
+    // we have been asked to delay before cat, probably to allow time to issue upload command
+    while(delay-- > 0) {
+        for (int i = 0; i < 10; ++i) {
+            wait_ms(100);
+            THEKERNEL->call_event(ON_IDLE);
+        }
     }
 
     // Open file
