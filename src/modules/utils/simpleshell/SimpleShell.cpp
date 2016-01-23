@@ -319,8 +319,12 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
         string d= shift_parameter( parameters );
         char *e = NULL;
         delay = strtol(d.c_str(), &e, 10);
-        if (e <= d.c_str())
+        if (e <= d.c_str()) {
             delay = 0;
+
+        } else {
+            send_eof= true; // we need to terminate file send with an eof
+        }
 
     }else if ( limit_parameter != "" ) {
         char *e = NULL;
@@ -335,7 +339,6 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
             wait_ms(100);
             THEKERNEL->call_event(ON_IDLE);
         }
-        send_eof= true; // we need to terminate file send with an eof
     }
 
     // Open file
