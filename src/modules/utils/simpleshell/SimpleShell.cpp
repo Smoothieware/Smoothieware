@@ -314,11 +314,12 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     string limit_parameter   = shift_parameter( parameters );
     int limit = -1;
     int delay= 0;
+    bool send_eof= false;
     if ( limit_parameter == "-d" ) {
         string d= shift_parameter( parameters );
         char *e = NULL;
         delay = strtol(d.c_str(), &e, 10);
-        if (e <= limit_parameter.c_str())
+        if (e <= d.c_str())
             delay = 0;
 
     }else if ( limit_parameter != "" ) {
@@ -334,6 +335,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
             wait_ms(100);
             THEKERNEL->call_event(ON_IDLE);
         }
+        send_eof= true; // we need to terminate file send with an eof
     }
 
     // Open file
@@ -349,8 +351,8 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     // Print each line of the file
     while ((c = fgetc (lp)) != EOF) {
         buffer.append((char *)&c, 1);
-        if ( char(c) == '\n' || ++linecnt > 80) {
-            newlines++;
+        if ( c == '\n' || ++linecnt > 80) {
+            if(c == '\n') newlines++;
             stream->puts(buffer.c_str());
             buffer.clear();
             if(linecnt > 80) linecnt = 0;
@@ -362,6 +364,10 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
         }
     };
     fclose(lp);
+
+    if(send_eof) {
+        stream->puts("\032"); // ^Z terminates the upload
+    }
 }
 
 void SimpleShell::upload_command( string parameters, StreamOutput *stream )
