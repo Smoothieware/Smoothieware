@@ -65,7 +65,7 @@ extruder_max_speed                           25               # mm/sec NOTE only
 
 extruder_step_pin                            2.0              # Pin for extruder step signal
 extruder_dir_pin                             0.5              # Pin for extruder dir signal
-extruder_en_pin                              0.4              # Pin for extruder enable signal
+extruder_en_pin                              0.4!             # Pin for extruder enable signal
 delta_current                                0.7              # Extruder stepper motor current
 
 # Laser module configuration
