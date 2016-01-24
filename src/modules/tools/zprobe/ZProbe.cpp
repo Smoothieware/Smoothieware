@@ -318,7 +318,7 @@ void ZProbe::on_gcode_received(void *argument)
             }
 
         } else {
-            if(gcode->subcode == 0) {
+            if(!gcode->has_letter('P')) {
                 // find the first strategy to handle the gcode
                 for(auto s : strategies){
                     if(s->handleGcode(gcode)) {
@@ -328,17 +328,17 @@ void ZProbe::on_gcode_received(void *argument)
                 gcode->stream->printf("No strategy found to handle G%d\n", gcode->g);
 
             }else{
-                // subcode selects which strategy to send the code to
-                // they are loaded in the order they are defined in config, 1 being the first, 2 being the second and so on.
-                int i= gcode->subcode-1;
-                if(gcode->subcode < strategies.size()) {
+                // P paramater selects which strategy to send the code to
+                // they are loaded in the order they are defined in config, 0 being the first, 1 being the second and so on.
+                uint16_t i= gcode->get_value('P');
+                if(i < strategies.size()) {
                     if(!strategies[i]->handleGcode(gcode)){
-                        gcode->stream->printf("strategy #%d did not handle G%d\n", i+1, gcode->g);
+                        gcode->stream->printf("strategy #%d did not handle G%d\n", i, gcode->g);
                     }
                     return;
 
                 }else{
-                    gcode->stream->printf("strategy #%d is not loaded\n", i+1);
+                    gcode->stream->printf("strategy #%d is not loaded\n", i);
                 }
             }
         }

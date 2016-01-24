@@ -101,15 +101,24 @@ bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
 
     float max_delta= 0;
     float last_z= NAN;
+    float start_z;
+    std::tie(std::ignore, std::ignore, start_z)= THEKERNEL->robot->get_axis_position();
+
     for(auto& i : pp) {
         int s;
         if(!zprobe->doProbeAt(s, i[0], i[1])) return false;
         float z = zprobe->zsteps_to_mm(s);
-        gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f (%d) A:%1.4f B:%1.4f C:%1.4f\n",
-            i[0], i[1], z, s,
-            THEKERNEL->robot->actuators[0]->get_current_position()+z,
-            THEKERNEL->robot->actuators[1]->get_current_position()+z,
-            THEKERNEL->robot->actuators[2]->get_current_position()+z);
+        if(gcode->subcode == 0) {
+            gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f (%d) A:%1.4f B:%1.4f C:%1.4f\n",
+                i[0], i[1], z, s,
+                THEKERNEL->robot->actuators[0]->get_current_position()+z,
+                THEKERNEL->robot->actuators[1]->get_current_position()+z,
+                THEKERNEL->robot->actuators[2]->get_current_position()+z);
+
+        }else if(gcode->subcode == 1) {
+            // format that can be pasted here http://escher3d.com/pages/wizards/wizarddelta.php
+            gcode->stream->printf("X%1.4f Y%1.4f Z%1.4f\n", i[0], i[1], start_z - z);
+        }
 
         if(isnan(last_z)) {
             last_z= z;

@@ -14,6 +14,8 @@
 #include <string>
 using std::string;
 
+class StreamOutput;
+
 class GcodeDispatch : public Module
 {
 public:
@@ -27,6 +29,7 @@ private:
     int currentline;
     string upload_filename;
     FILE *upload_fd;
+    StreamOutput* upload_stream{nullptr};
     uint8_t modal_group_1;
     struct {
         bool uploading: 1;

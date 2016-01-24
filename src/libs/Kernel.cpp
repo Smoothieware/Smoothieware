@@ -25,6 +25,7 @@
 #include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
 #include "StepperMotor.h"
+#include "BaseSolution.h"
 
 #include <malloc.h>
 #include <array>
@@ -160,13 +161,25 @@ std::string Kernel::get_query_string()
         str.append("Run,");
     }
 
+    // get real time current actuator position in mm
+    ActuatorCoordinates current_position{
+        robot->actuators[X_AXIS]->get_current_position(),
+        robot->actuators[Y_AXIS]->get_current_position(),
+        robot->actuators[Z_AXIS]->get_current_position()
+    };
+
+    // get machine position from the actuator position using FK
+    float mpos[3];
+    robot->arm_solution->actuator_to_cartesian(current_position, mpos);
+
     char buf[64];
-    size_t n= snprintf(buf, sizeof(buf), "%f,%f,%f,", this->robot->actuators[X_AXIS]->get_current_position(), this->robot->actuators[Y_AXIS]->get_current_position(), this->robot->actuators[Z_AXIS]->get_current_position());
+    // machine position
+    size_t n= snprintf(buf, sizeof(buf), "%f,%f,%f,", mpos[0], mpos[1], mpos[2]);
     str.append("MPos:").append(buf, n);
 
-    float pos[3];
-    this->robot->get_axis_position(pos);
-    n= snprintf(buf, sizeof(buf), "%f,%f,%f", pos[0], pos[1], pos[2]);
+    // work space position
+    Robot::wcs_t pos= robot->mcs2wcs(mpos);
+    n= snprintf(buf, sizeof(buf), "%f,%f,%f", robot->from_millimeters(std::get<X_AXIS>(pos)), robot->from_millimeters(std::get<Y_AXIS>(pos)), robot->from_millimeters(std::get<Z_AXIS>(pos)));
     str.append("WPos:").append(buf, n);
     str.append(">\r\n");
     return str;
