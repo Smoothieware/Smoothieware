@@ -128,8 +128,8 @@ try_again:
                 }
 
 
-                if(!uploading) {
-                    //Prepare gcode for dispatch
+                if(!uploading || upload_stream != new_message.stream) {
+                    // Prepare gcode for dispatch
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
 
                     if(THEKERNEL->is_halted()) {
@@ -199,6 +199,10 @@ try_again:
                                 } else {
                                     new_message.stream->printf("open failed, File: %s.\r\nok\r\n", this->upload_filename.c_str());
                                 }
+
+                                // only save stuff from this stream
+                                upload_stream= new_message.stream;
+
                                 //printf("Start Uploading file: %s, %p\n", upload_filename.c_str(), upload_fd);
                                 continue;
 
@@ -298,13 +302,14 @@ try_again:
                     delete gcode;
 
                 } else {
-                    // we are uploading a file so save it
+                    // we are uploading and it is the upload stream so so save it
                     if(single_command.substr(0, 3) == "M29") {
                         // done uploading, close file
                         fclose(upload_fd);
                         upload_fd = NULL;
                         uploading = false;
                         upload_filename.clear();
+                        upload_stream= nullptr;
                         new_message.stream->printf("Done saving file.\r\nok\r\n");
                         continue;
                     }
