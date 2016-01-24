@@ -54,6 +54,7 @@ void Reporter::on_gcode_received(void *argument){
             if (gcode->has_letter('S')) {
                 switch(static_cast<int>(gcode->get_value('S'))){
                         case 0:
+                              gcode->stream->printf("Getting M408 S0 status");
                               // Beginning
                               // Find the status
                               //I=idle, P=printing from SD card, S=stopped (i.e. needs a reset),
@@ -77,28 +78,27 @@ void Reporter::on_gcode_received(void *argument){
 
                               gcode->stream->printf("\",\"heaters\":[");
                               std::vector<struct pad_temperature> controllers;
-                              if (PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers)) {
+                              bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+                              if (ok) {
                                 for (unsigned i=0; i<controllers.size(); i++){
                                   if(i == controllers.size()-1){
-                                    printf("%f", controllers[i].current_temperature);
+                                    gcode->stream->printf("%f", controllers[i].current_temperature);
                                   }else{
-                                    printf("%f,", controllers[i].current_temperature);
+                                    gcode->stream->printf("%f,", controllers[i].current_temperature);
                                   }
                                 }
 
                                 gcode->stream->printf("],\"active\":[");
                                 for (unsigned i=0; i<controllers.size(); i++) {
                                   if(i == controllers.size()-1){
-                                    printf("%f", controllers[i].target_temperature);
+                                    gcode->stream->printf("%f", controllers[i].target_temperature);
                                   }else{
-                                    printf("%f,", controllers[i].target_temperature);
+                                    gcode->stream->printf("%f,", controllers[i].target_temperature);
                                   }
                                 }
 
                               // Smoothieware has no concept of a standby temperature.
                               gcode->stream->printf("],\"standby\":[],");
-
-                              // Heater status
                               // status of the heaters, 0=off, 1=standby, 2=active, 3=fault
                               gcode->stream->printf("\"hstat\":[");
                               if(controllers.size() > 0){
@@ -142,10 +142,11 @@ void Reporter::on_gcode_received(void *argument){
 
                               // Probe height
                               gcode->stream->printf("\"probe\":\"");
-                              if(THEKERNEL->config->value( zprobe_checksum, enable_checksum )->by_default(false)->as_bool() )
-                              {
-                                printf("%f\n", THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number());
-                              }
+                              // This seems to crash Smoothieware.....
+                              // if(THEKERNEL->config->value( zprobe_checksum, enable_checksum )->by_default(false)->as_bool() )
+                              // {
+                              //   gcode->stream->printf("%f\n", THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number());
+                              // }
                               gcode->stream->printf("\",\"fanRPM\":0,\"homed\":[0,0,0],\"fraction_printed\":");
                               // Get fraction printed
                               void *completed_data;
