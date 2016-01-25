@@ -45,6 +45,8 @@ class Kernel {
 
         bool is_using_leds() const { return use_leds; }
         bool is_halted() const { return halted; }
+        bool is_grbl_mode() const { return grbl_mode; }
+
         std::string get_query_string();
 
         // These modules are available to all other modules
@@ -71,6 +73,7 @@ class Kernel {
         struct {
             bool use_leds:1;
             bool halted:1;
+            bool grbl_mode:1;
         };
 
 };

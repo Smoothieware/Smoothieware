@@ -65,6 +65,16 @@ try_again:
 
     char first_char = possible_command[0];
     unsigned int n;
+
+    if(first_char == '$') {
+        // ignore as simpleshell will handle it
+        return;
+
+    }else if(islower(first_char)) {
+        // ignore all lowercase as they are simpleshell commands
+        return;
+    }
+
     if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'N' ) {
 
         //Get linenumber
@@ -141,7 +151,12 @@ try_again:
 
                         }else if(!is_allowed_mcode(gcode->m)) {
                             // ignore everything, return error string to host
-                            new_message.stream->printf("!!\r\n");
+                            if(THEKERNEL->is_grbl_mode()) {
+                                new_message.stream->printf("error: Alarm lock\n");
+
+                            }else{
+                                new_message.stream->printf("!!\r\n");
+                            }
                             delete gcode;
                             continue;
                         }
