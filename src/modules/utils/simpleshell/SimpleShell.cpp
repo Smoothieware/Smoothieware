@@ -231,7 +231,7 @@ void SimpleShell::on_console_line_received( void *argument )
 
             case 'H':
                 {
-                    // issue G28.3 which is force homing cycle
+                    // issue G28.2 which is force homing cycle
                     Gcode gcode("G28.2", new_message.stream);
                     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
                 }

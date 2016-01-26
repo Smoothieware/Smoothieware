@@ -221,6 +221,17 @@ try_again:
                                 //printf("Start Uploading file: %s, %p\n", upload_filename.c_str(), upload_fd);
                                 continue;
 
+                            case 2: case 30: // end of program
+                                {
+                                    modal_group_1= 1; // set to G1
+                                    // issue M5 and M9 in case spindle and coolant are being used
+                                    Gcode gc1("M5", &StreamOutput::NullStream);
+                                    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc1);
+                                    Gcode gc2("M9", &StreamOutput::NullStream);
+                                    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc2);
+                                }
+                                break;
+
                             case 112: // emergency stop, do the best we can with this
                                 // TODO this really needs to be handled out-of-band
                                 // disables heaters and motors, ignores further incoming Gcode and clears block queue
