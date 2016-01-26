@@ -278,7 +278,11 @@ void USBSerial::on_idle(void *argument)
     if(halt_flag) {
         halt_flag= false;
         THEKERNEL->call_event(ON_HALT, nullptr);
-        puts("ALARM: Abort during cycle, M999 to exit Alarm state\r\n");
+        if(THEKERNEL->is_grbl_mode()) {
+            puts("ALARM: Abort during cycle\r\n");
+        }else{
+            puts("HALTED, M999 or $X to exit HALT state\r\n");
+        }
     }
 
     if(query_flag) {

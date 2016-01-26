@@ -233,10 +233,10 @@ try_again:
                                 break;
 
                             case 112: // emergency stop, do the best we can with this
-                                // TODO this really needs to be handled out-of-band
+                                // this is also handled out-of-band (it is now with ^X in the serial driver)
                                 // disables heaters and motors, ignores further incoming Gcode and clears block queue
                                 THEKERNEL->call_event(ON_HALT, nullptr);
-                                THEKERNEL->streams->printf("ok Emergency Stop Requested - reset or M999 required to continue\r\n");
+                                THEKERNEL->streams->printf("ok Emergency Stop Requested - reset or M999 required to exit HALT state\r\n");
                                 delete gcode;
                                 return;
 
@@ -249,7 +249,7 @@ try_again:
                                 return;
                             }
 
-                            case 1000: // M1000 is a special comanad that will pass thru the raw lowercased command to the simpleshell (for hosts that do not allow such things)
+                            case 1000: // M1000 is a special command that will pass thru the raw lowercased command to the simpleshell (for hosts that do not allow such things)
                             {
                                 // reconstruct entire command line again
                                 string str= single_command.substr(5) + possible_command;

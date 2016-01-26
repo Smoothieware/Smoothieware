@@ -352,11 +352,11 @@ void ZProbe::on_gcode_received(void *argument)
 
         // make sure the probe is defined and not already triggered before moving motors
         if(!this->pin.connected()) {
-            gcode->stream->printf("ZProbe not connected.\n");
+            gcode->stream->printf("error:ZProbe not connected.\n");
             return;
         }
         if(this->pin.get()) {
-            gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+            gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
             return;
         }
 
@@ -365,11 +365,11 @@ void ZProbe::on_gcode_received(void *argument)
 
         if(gcode->has_letter('X')) {
             // probe in the X axis
-            gcode->stream->printf("error: Not currently supported.\n");
+            gcode->stream->printf("error:Not currently supported.\n");
 
         }else if(gcode->has_letter('Y')) {
             // probe in the Y axis
-            gcode->stream->printf("error: Not currently supported.\n");
+            gcode->stream->printf("error:Not currently supported.\n");
 
         }else if(gcode->has_letter('Z')) {
             // we need to know where we started the probe from
@@ -402,12 +402,12 @@ void ZProbe::on_gcode_received(void *argument)
                     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:0]\n", current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], current_machine_pos[Z_AXIS]);
 
                 }else{
-                    gcode->stream->printf("error: ZProbe not triggered\n");
+                    gcode->stream->printf("error:ZProbe not triggered\n");
                 }
             }
 
         }else{
-            gcode->stream->printf("error: at least one of X Y or Z must be specified\n");
+            gcode->stream->printf("error:at least one of X Y or Z must be specified\n");
 
         }
         return;

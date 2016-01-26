@@ -659,7 +659,7 @@ void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
     stream->printf("[G92:%1.3f,%1.3f,%1.3f]\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
     stream->printf("[TL0:%1.3f]\n", std::get<2>(v[n+2]));
 
-    // TODO this shoul dbe the last probe position, which will be this if probe was the last thing done
+    // TODO this should be the last probe position, which will be this if probe was the last thing done
     float current_machine_pos[3];
     THEKERNEL->robot->get_axis_position(current_machine_pos);
     stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], current_machine_pos[Z_AXIS], 0);
