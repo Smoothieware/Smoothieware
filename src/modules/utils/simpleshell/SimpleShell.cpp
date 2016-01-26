@@ -231,15 +231,17 @@ void SimpleShell::on_console_line_received( void *argument )
                 break;
 
             case 'H':
-                {
+                if(THEKERNEL->is_grbl_mode()) {
                     // issue G28.2 which is force homing cycle
                     Gcode gcode("G28.2", new_message.stream);
                     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
+                }else{
+                    new_message.stream->printf("error:only supported in GRBL mode\n");
                 }
                 break;
 
             default:
-                new_message.stream->printf("error: Invalid statement\n");
+                new_message.stream->printf("error:Invalid statement\n");
                 break;
         }
 
@@ -250,7 +252,7 @@ void SimpleShell::on_console_line_received( void *argument )
 
         // find command and execute it
         if(!parse_command(cmd.c_str(), possible_command, new_message.stream)) {
-            new_message.stream->printf("error: Unsupported command\n");
+            new_message.stream->printf("error:Unsupported command\n");
         }
     }
 }
@@ -738,7 +740,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             THEKERNEL->robot->get_feed_rate());
 
     } else {
-        stream->printf("error: unknown option %s\n", what.c_str());
+        stream->printf("error:unknown option %s\n", what.c_str());
     }
 }
 

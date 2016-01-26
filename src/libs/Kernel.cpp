@@ -26,6 +26,7 @@
 #include "modules/robot/Conveyor.h"
 #include "StepperMotor.h"
 #include "BaseSolution.h"
+#include "EndstopsPublicAccess.h"
 
 #include <malloc.h>
 #include <array>
@@ -154,9 +155,15 @@ Kernel::Kernel(){
 std::string Kernel::get_query_string()
 {
     std::string str;
+    bool homing;
+    bool ok = PublicData::get_value(endstops_checksum, get_homing_status_checksum, 0, &homing);
+    if(!ok) homing= false;
+
     str.append("<");
     if(halted) {
         str.append("Alarm,");
+    }else if(homing) {
+        str.append("Home,");
     }else if(this->conveyor->is_queue_empty()) {
         str.append("Idle,");
     }else{

@@ -152,7 +152,7 @@ try_again:
                         }else if(!is_allowed_mcode(gcode->m)) {
                             // ignore everything, return error string to host
                             if(THEKERNEL->is_grbl_mode()) {
-                                new_message.stream->printf("error: Alarm lock\n");
+                                new_message.stream->printf("error:Alarm lock\n");
 
                             }else{
                                 new_message.stream->printf("!!\r\n");

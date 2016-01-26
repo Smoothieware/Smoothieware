@@ -346,7 +346,7 @@ void ZProbe::on_gcode_received(void *argument)
     } else if(gcode->has_g && gcode->g == 38 ) { // G38.2 Straight Probe with error, G38.3 straight probe without error
         // linuxcnc/grbl style probe http://www.linuxcnc.org/docs/2.5/html/gcode/gcode.html#sec:G38-probe
         if(gcode->subcode != 2 && gcode->subcode != 3) {
-            gcode->stream->printf("error: Only G38.2 and G38.3 are supported\n");
+            gcode->stream->printf("error:Only G38.2 and G38.3 are supported\n");
             return;
         }
 
@@ -396,7 +396,7 @@ void ZProbe::on_gcode_received(void *argument)
             } else {
                 if(THEKERNEL->is_grbl_mode()) {
                     if(gcode->subcode == 2) {
-                        gcode->stream->printf("ALARM: Probe fail\n");
+                        gcode->stream->printf("ALARM:get_homing_status_checksumProbe fail\n");
                         THEKERNEL->call_event(ON_HALT, nullptr);
                     }
                     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:0]\n", current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], current_machine_pos[Z_AXIS]);

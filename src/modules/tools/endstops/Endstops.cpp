@@ -692,7 +692,9 @@ void Endstops::on_gcode_received(void *argument)
 
         // check if on_halt (eg kill)
         if(THEKERNEL->is_halted()) {
-            THEKERNEL->streams->printf("Homing cycle aborted by kill\n");
+            if(!THEKERNEL->is_grbl_mode()) {
+                THEKERNEL->streams->printf("Homing cycle aborted by kill\n");
+            }
             return;
         }
 
@@ -901,6 +903,11 @@ void Endstops::on_get_public_data(void* argument)
 
     } else if(pdr->second_element_is(saved_position_checksum)) {
         pdr->set_data_ptr(&this->saved_position);
+        pdr->set_taken();
+
+    } else if(pdr->second_element_is(get_homing_status_checksum)) {
+        bool *homing= static_cast<bool *>(pdr->get_data_ptr());
+        *homing= this->status != NOT_HOMING;
         pdr->set_taken();
     }
 }
