@@ -27,6 +27,7 @@
 #include "GcodeDispatch.h"
 
 #include "TemperatureControlPublicAccess.h"
+#include "EndstopsPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
@@ -654,8 +655,11 @@ void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
         stream->printf("[%s:%1.3f,%1.3f,%1.3f]\n", wcs2gcode(i-1).c_str(), std::get<0>(v[i]), std::get<1>(v[i]), std::get<2>(v[i]));
     }
 
-    stream->printf("[G28:%1.3f,%1.3f,%1.3f]\n",  0.0F, 0.0F, 0.0F);
-    stream->printf("[G30:%1.3f,%1.3f,%1.3f]\n",  0.0F, 0.0F, 0.0F);
+    float *rd;
+    PublicData::get_value( endstops_checksum, saved_position_checksum, &rd );
+    stream->printf("[G28:%1.3f,%1.3f,%1.3f]\n",  rd[0], rd[1], rd[2]);
+    stream->printf("[G30:%1.3f,%1.3f,%1.3f]\n",  0.0F, 0.0F, 0.0F); // not implemented
+
     stream->printf("[G92:%1.3f,%1.3f,%1.3f]\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
     stream->printf("[TL0:%1.3f]\n", std::get<2>(v[n+2]));
 
