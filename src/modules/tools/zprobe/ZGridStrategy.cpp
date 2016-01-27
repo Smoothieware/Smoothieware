@@ -23,6 +23,12 @@
 
        leveling-strategy.ZGrid-leveling.bed_z           20
 
+    Probe attachement point, if defined, overrides the calculated point
+       leveling-strategy.ZGrid-leveling.probe_x         0
+       leveling-strategy.ZGrid-leveling.probe_y         0
+       leveling-strategy.ZGrid-leveling.probe_z         30
+
+
     Configure for Machines with bed 0:0 at center of platform
        leveling-strategy.ZGrid-leveling.bed_zero        false
 
@@ -108,6 +114,10 @@
 #define bed_y_checksum               CHECKSUM("bed_y")
 #define bed_z_checksum               CHECKSUM("bed_z")
 
+#define probe_x_checksum             CHECKSUM("probe_x")
+#define probe_y_checksum             CHECKSUM("probe_y")
+#define probe_z_checksum             CHECKSUM("probe_z")
+
 #define slow_feedrate_checksum       CHECKSUM("slow_feedrate")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define wait_for_probe_checksum      CHECKSUM("wait_for_probe")
@@ -150,6 +160,10 @@ bool ZGridStrategy::handleConfig()
     this->bed_y = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_y_checksum)->by_default(200.0F)->as_number();
     this->bed_z = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, bed_z_checksum)->by_default(20.0F)->as_number();
 
+    this->probe_x = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, probe_x_checksum)->by_default(this->center_zero ? this->bed_x / 2.0F : 0.0F)->as_number();
+    this->probe_y = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, probe_y_checksum)->by_default(this->center_zero ? this->bed_y / 2.0F : 0.0F)->as_number();
+    this->probe_z = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, probe_z_checksum)->by_default(this->bed_z / 2.0F)->as_number();  // Do this to keep default settings the same
+
     this->slow_rate = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, slow_feedrate_checksum)->by_default(20.0F)->as_number();
 
     this->numRows = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, rows_checksum)->by_default(5)->as_number();
@@ -168,8 +182,6 @@ bool ZGridStrategy::handleConfig()
         this->home_before_probe = HOMEXYZ;
     }
 
-
-    //this->home_before_probe = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, home_before_probe_checksum)->by_default(HOMEXYZ)->as_number();  // Morgan default = HOMEXYZ
 
     this->center_zero = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, center_zero_checksum)->by_default(false)->as_bool();
     this->circular_bed = THEKERNEL->config->value(leveling_strategy_checksum, ZGrid_leveling_checksum, circular_bed_checksum)->by_default(false)->as_bool();
@@ -296,7 +308,8 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             // M373: finalize calibration
             case 373: {
                  // normalize the grid
-                 this->normalize_grid();
+                 //this->normalize_grid();
+                 this->normalize_grid_2home();
 
                  this->in_cal = false;
                  this->setAdjustFunction(true); // Enable leveling code
@@ -340,7 +353,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             }
             return true;
 
-/*          case 376: { // Check grid value calculations: For debug only.
+          case 376: { // Check grid value calculations: For debug only.
                 float target[3];
 
                 for(char letter = 'X'; letter <= 'Z'; letter++) {
@@ -352,7 +365,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
 
             }
             return true;
-*/
+
             case 565: { // M565: Set Z probe offsets
                 float x= 0, y= 0, z= 0;
                 if(gcode->has_letter('X')) x = gcode->get_value('X');
@@ -486,10 +499,10 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
 
     if (this->wait_for_probe){
 
-        this->cal[X_AXIS] = this->bed_x/2.0f;
-        this->cal[Y_AXIS] = this->bed_y/2.0f;
-        this->cal[Z_AXIS] = this->bed_z/2.0f;           // Position head for probe attachment
-        this->move(this->cal, slow_rate);               // Move to probe attachment point
+        this->cal[X_AXIS] = this->probe_x;  //bed_x/2.0f;
+        this->cal[Y_AXIS] = this->probe_y;  //bed_y/2.0f;
+        this->cal[Z_AXIS] = this->probe_z;  //bed_z/2.0f;           // Position head for probe attachment
+        this->move(this->cal, slow_rate);                           // Move to probe attachment point
 
         stream->printf("*** Ensure probe is attached and press probe when done ***\n");
 
@@ -532,7 +545,8 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
     }
 
     // activate correction
-    this->normalize_grid();
+    //this->normalize_grid();
+    this->normalize_grid_2home();
     this->setAdjustFunction(true);
 
     this->in_cal = false;
@@ -540,7 +554,7 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
     return true;
 }
 
-
+//TODO: normalize to set home position zero - this required to prevent the large z movement bug when home position is off print area
 void ZGridStrategy::normalize_grid()
 {
     float min = 100.0F,    // set large start value
@@ -559,7 +573,34 @@ void ZGridStrategy::normalize_grid()
         this->pData[i] += norm_offset;
 
    // add the offset to the current Z homing offset to preserve full probed offset.
-   this->setZoffset(getZhomeoffset() + norm_offset);
+   this->setZoffset(this->getZhomeoffset() - norm_offset);
+
+}
+
+
+void ZGridStrategy::normalize_grid_2home()
+{
+    void* rd;
+    float home_Z_comp;
+
+    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &rd );
+
+    if (ok) {
+       home_Z_comp = this->getZOffset(((float*)rd)[0],((float*)rd)[1]);   // find the Z compensation at home position
+    }
+    else {
+       home_Z_comp = 0;
+    }
+
+    // subtracts the home compensation offset to create a table of deltas, normalized to home compensation zero
+    for (int i = 0; i < probe_points; i++)
+        this->pData[i] -= home_Z_comp;
+
+    // Doing this removes the need to change homing offset in Z because the reference remains unchanged.
+
+    // add the offset to the current Z homing offset to preserve full probed offset.
+    // this->setZoffset(this->getZhomeoffset() + home_Z_comp);
+
 }
 
 void ZGridStrategy::homexyz()
