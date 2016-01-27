@@ -717,7 +717,8 @@ void Endstops::on_gcode_received(void *argument)
             if(!is_delta) {
                 if(this->move_to_origin_after_home) move_to_origin(axes_to_move);
                 // if limit switches are enabled we must back off endstop after setting home
-                back_off_home(axes_to_move);
+                if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS])
+                      back_off_home(axes_to_move);
 
             }else if(this->move_to_origin_after_home || this->limit_enable[X_AXIS]) {
                 // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
