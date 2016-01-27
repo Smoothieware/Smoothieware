@@ -30,7 +30,6 @@ private:
 
     void setAdjustFunction(bool);
     bool doProbing(StreamOutput *stream);
-    void normalize_grid();
     void normalize_grid_2home();
 
     bool loadGrid(std::string args);

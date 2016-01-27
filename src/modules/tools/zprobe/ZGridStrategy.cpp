@@ -308,7 +308,6 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             // M373: finalize calibration
             case 373: {
                  // normalize the grid
-                 //this->normalize_grid();
                  this->normalize_grid_2home();
 
                  this->in_cal = false;
@@ -353,7 +352,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
             }
             return true;
 
-          case 376: { // Check grid value calculations: For debug only.
+/*          case 376: { // Check grid value calculations: For debug only.
                 float target[3];
 
                 for(char letter = 'X'; letter <= 'Z'; letter++) {
@@ -365,7 +364,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
 
             }
             return true;
-
+*/
             case 565: { // M565: Set Z probe offsets
                 float x= 0, y= 0, z= 0;
                 if(gcode->has_letter('X')) x = gcode->get_value('X');
@@ -552,29 +551,6 @@ bool ZGridStrategy::doProbing(StreamOutput *stream)  // probed calibration
     this->in_cal = false;
 
     return true;
-}
-
-//TODO: normalize to set home position zero - this required to prevent the large z movement bug when home position is off print area
-void ZGridStrategy::normalize_grid()
-{
-    float min = 100.0F,    // set large start value
-          norm_offset = 0;
-
-    // find minimum value in offset grid
-    for (int i = 0; i < probe_points; i++)
-        if (this->pData[i] < min)
-          min = this->pData[i];
-
-    // creates addition offset to set minimum value to zero.
-    norm_offset = -min;
-
-    // adds the offset to create a table of deltas, normalzed to minimum zero
-    for (int i = 0; i < probe_points; i++)
-        this->pData[i] += norm_offset;
-
-   // add the offset to the current Z homing offset to preserve full probed offset.
-   this->setZoffset(this->getZhomeoffset() - norm_offset);
-
 }
 
 
