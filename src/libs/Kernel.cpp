@@ -46,6 +46,7 @@ Kernel* Kernel::instance;
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
     halted= false;
+    feed_hold= false;
 
     instance= this; // setup the Singleton instance of the kernel
 
@@ -164,6 +165,8 @@ std::string Kernel::get_query_string()
         str.append("Alarm,");
     }else if(homing) {
         str.append("Home,");
+    }else if(feed_hold) {
+        str.append("Hold,");
     }else if(this->conveyor->is_queue_empty()) {
         str.append("Idle,");
     }else{

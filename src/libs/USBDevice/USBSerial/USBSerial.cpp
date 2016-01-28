@@ -207,6 +207,16 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
             continue;
         }
 
+        if(c[i] == '!'){ // safe pause
+            THEKERNEL->set_feed_hold(true);
+            continue;
+        }
+
+        if(c[i] == '~'){ // safe resume
+            THEKERNEL->set_feed_hold(false);
+            continue;
+        }
+
         if (flush_to_nl == false)
             rxbuf.queue(c[i]);
 
@@ -315,6 +325,10 @@ void USBSerial::on_main_loop(void *argument)
             nl_in_rx = 0;
         }
     }
+
+    // if we are in feed hold we do not process anything
+    if(THEKERNEL->get_feed_hold()) return;
+
     if (nl_in_rx)
     {
         string received;
