@@ -317,7 +317,7 @@ void Endstops::back_off_home(char axes_to_move)
     this->status = BACK_OFF_HOME;
 
     // these are handled differently
-    if(is_delta || is_scara) {
+    if(is_delta) {
         // Move off of the endstop using a regular relative move in Z only
          params.push_back({'Z', this->retract_mm[Z_AXIS]*(this->home_direction[Z_AXIS]?1:-1)});
 
