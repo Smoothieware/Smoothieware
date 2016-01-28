@@ -207,14 +207,16 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
             continue;
         }
 
-        if(c[i] == '!'){ // safe pause
-            THEKERNEL->set_feed_hold(true);
-            continue;
-        }
+        if(THEKERNEL->is_grbl_mode()) {
+            if(c[i] == '!'){ // safe pause
+                THEKERNEL->set_feed_hold(true);
+                continue;
+            }
 
-        if(c[i] == '~'){ // safe resume
-            THEKERNEL->set_feed_hold(false);
-            continue;
+            if(c[i] == '~'){ // safe resume
+                THEKERNEL->set_feed_hold(false);
+                continue;
+            }
         }
 
         if (flush_to_nl == false)
