@@ -322,8 +322,17 @@ try_again:
                     if(!gcode->txt_after_ok.empty()) {
                         new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
                         gcode->txt_after_ok.clear();
-                    } else
-                        new_message.stream->printf("ok\r\n");
+
+                    } else {
+                        if(THEKERNEL->is_grbl_mode()) {
+                            // only send ok once per line if this is a multi g code line send ok on the last one
+                            if(possible_command.empty())
+                                new_message.stream->printf("ok\r\n");
+                        } else {
+                            // TODO maybe should do the above for all hosts?
+                            new_message.stream->printf("ok\r\n");
+                        }
+                    }
 
                     delete gcode;
 
