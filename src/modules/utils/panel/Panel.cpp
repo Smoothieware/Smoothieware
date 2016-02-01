@@ -28,6 +28,7 @@
 #include "platform_memory.h"
 
 #include "panels/ReprapDiscountGLCD.h"
+#include "panels/ReprapDiscountTxtLCD.h"
 #include "panels/ST7565.h"
 #include "panels/UniversalAdapter.h"
 
@@ -44,6 +45,7 @@
 #define enable_checksum            CHECKSUM("enable")
 #define lcd_checksum               CHECKSUM("lcd")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
+#define rrd_txtlcd_checksum        CHECKSUM("reprap_discount_txtlcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
 #define viki2_checksum             CHECKSUM("viki2")
 #define mini_viki2_checksum        CHECKSUM("mini_viki2")
@@ -108,6 +110,8 @@ void Panel::on_module_loaded()
     // Note checksums are not const expressions when in debug mode, so don't use switch
     if (lcd_cksm == rrd_glcd_checksum) {
         this->lcd = new ReprapDiscountGLCD();
+    } else if (lcd_cksm == rrd_txtlcd_checksum) {
+        this->lcd = new ReprapDiscountTxtLCD();
     } else if (lcd_cksm == st7565_glcd_checksum) {
         this->lcd = new ST7565();
     } else if (lcd_cksm == viki2_checksum) {
