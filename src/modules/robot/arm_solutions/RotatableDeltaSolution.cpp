@@ -10,14 +10,14 @@
 #include "StreamOutputPool.h"
 #include <fastmath.h>
 
-#define delta_e_checksum                CHECKSUM("delta_e_checksum")
-#define delta_f_checksum                CHECKSUM("delta_f_checksum")
-#define delta_re_checksum               CHECKSUM("delta_re_checksum")
-#define delta_rf_checksum               CHECKSUM("delta_rf_checksum")
-#define delta_z_offset_checksum         CHECKSUM("delta_z_offset_checksum")
+#define delta_e_checksum                CHECKSUM("delta_e")
+#define delta_f_checksum                CHECKSUM("delta_f")
+#define delta_re_checksum               CHECKSUM("delta_re")
+#define delta_rf_checksum               CHECKSUM("delta_rf")
+#define delta_z_offset_checksum         CHECKSUM("delta_z_offset")
 
-#define delta_ee_offs_checksum          CHECKSUM("delta_ee_offs_checksum")
-#define tool_offset_checksum            CHECKSUM("tool_offset_checksum")
+#define delta_ee_offs_checksum          CHECKSUM("delta_ee_offs")
+#define tool_offset_checksum            CHECKSUM("tool_offset")
 
 const static float pi     = 3.14159265358979323846;    // PI
 const static float two_pi = 2 * pi;
@@ -132,7 +132,7 @@ void RotatableDeltaSolution::init()
 {
 
     //these are calculated here and not in the config() as these variables can be fine tuned by the user.
-    z_calc_offset  = (delta_z_offset - tool_offset - delta_ee_offs) * -1.0F;
+    z_calc_offset  = -(delta_z_offset - tool_offset - delta_ee_offs);
 }
 
 void RotatableDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm )
