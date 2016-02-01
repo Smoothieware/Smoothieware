@@ -29,5 +29,7 @@ class RotatableDeltaSolution : public BaseSolution {
         float delta_ee_offs;		// Ball joint plane to bottom of end effector surface
         float tool_offset;		// Distance between end effector ball joint plane and tip of tool
         float z_calc_offset;
+
+        bool debug_flag{false};
 };
 #endif // RotatableDeltaSolution_H

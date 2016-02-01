@@ -159,24 +159,28 @@ void RotatableDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], A
         actuator_mm[GAMMA_STEPPER] = 0;
 
         //DEBUG CODE, uncomment the following to help determine what may be happening if you are trying to adapt this to your own different roational delta.
-        //      THEKERNEL->streams->printf("ERROR: Delta calculation fail!  Unable to move to:\n");
-        //      THEKERNEL->streams->printf("    x= %f\n",cartesian_mm[X_AXIS]);
-        //      THEKERNEL->streams->printf("    y= %f\n",cartesian_mm[Y_AXIS]);
-        //      THEKERNEL->streams->printf("    z= %f\n",cartesian_mm[Z_AXIS]);
-        //      THEKERNEL->streams->printf(" CalcZ= %f\n",z_calc_offset);
-        //      THEKERNEL->streams->printf(" Offz= %f\n",z_with_offset);
+        if(debug_flag) {
+            THEKERNEL->streams->printf("//ERROR: Delta calculation fail!  Unable to move to:\n");
+            THEKERNEL->streams->printf("//    x= %f\n", cartesian_mm[X_AXIS]);
+            THEKERNEL->streams->printf("//    y= %f\n", cartesian_mm[Y_AXIS]);
+            THEKERNEL->streams->printf("//    z= %f\n", cartesian_mm[Z_AXIS]);
+            THEKERNEL->streams->printf("// CalcZ= %f\n", z_calc_offset);
+            THEKERNEL->streams->printf("// Offz= %f\n", z_with_offset);
+        }
     } else {
         actuator_mm[ALPHA_STEPPER] = alpha_theta;
         actuator_mm[BETA_STEPPER ] = beta_theta;
         actuator_mm[GAMMA_STEPPER] = gamma_theta;
 
-        //        THEKERNEL->streams->printf("cartesian x= %f\n\r",cartesian_mm[X_AXIS]);
-        //        THEKERNEL->streams->printf(" y= %f\n\r",cartesian_mm[Y_AXIS]);
-        //        THEKERNEL->streams->printf(" z= %f\n\r",cartesian_mm[Z_AXIS]);
-        //        THEKERNEL->streams->printf(" Offz= %f\n\r",z_with_offset);
-        //        THEKERNEL->streams->printf(" delta x= %f\n\r",delta[X_AXIS]);
-        //        THEKERNEL->streams->printf(" y= %f\n\r",delta[Y_AXIS]);
-        //        THEKERNEL->streams->printf(" z= %f\n\r",delta[Z_AXIS]);
+        if(debug_flag) {
+            THEKERNEL->streams->printf("//cartesian x= %f\n\r", cartesian_mm[X_AXIS]);
+            THEKERNEL->streams->printf("// y= %f\n\r", cartesian_mm[Y_AXIS]);
+            THEKERNEL->streams->printf("// z= %f\n\r", cartesian_mm[Z_AXIS]);
+            THEKERNEL->streams->printf("// Offz= %f\n\r", z_with_offset);
+            THEKERNEL->streams->printf("// actuator x= %f\n\r", actuator_mm[X_AXIS]);
+            THEKERNEL->streams->printf("// y= %f\n\r", actuator_mm[Y_AXIS]);
+            THEKERNEL->streams->printf("// z= %f\n\r", actuator_mm[Z_AXIS]);
+        }
     }
 
 }
@@ -196,9 +200,10 @@ bool RotatableDeltaSolution::set_optional(const arm_options_t &options)
             case 'B': delta_f           = i.second; break;
             case 'C': delta_re          = i.second; break;
             case 'D': delta_rf          = i.second; break;
-            case 'E': delta_z_offset        = i.second; break;
-            case 'F': delta_ee_offs     = i.second; break;
+            case 'E': delta_z_offset    = i.second; break;
+            case 'I': delta_ee_offs     = i.second; break;
             case 'H': tool_offset       = i.second; break;
+            case 'W': debug_flag        = i.second != 0; break;
         }
     }
     init();
@@ -207,20 +212,13 @@ bool RotatableDeltaSolution::set_optional(const arm_options_t &options)
 
 bool RotatableDeltaSolution::get_optional(arm_options_t &options, bool force_all)
 {
-
-    // don't report these if none of them are set
-    if(force_all || (this->delta_e     != 0.0F || this->delta_f        != 0.0F || this->delta_re               != 0.0F ||
-                     this->delta_rf    != 0.0F || this->delta_z_offset != 0.0F || this->delta_ee_offs          != 0.0F ||
-                     this->tool_offset != 0.0F) ) {
-
-        options['A'] = this->delta_e;
-        options['B'] = this->delta_f;
-        options['C'] = this->delta_re;
-        options['D'] = this->delta_rf;
-        options['E'] = this->delta_z_offset;
-        options['F'] = this->delta_ee_offs;
-        options['H'] = this->tool_offset;
-    }
+    options['A'] = this->delta_e;
+    options['B'] = this->delta_f;
+    options['C'] = this->delta_re;
+    options['D'] = this->delta_rf;
+    options['E'] = this->delta_z_offset;
+    options['I'] = this->delta_ee_offs;
+    options['H'] = this->tool_offset;
 
     return true;
 };
