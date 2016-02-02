@@ -43,6 +43,7 @@
 #define endstops_module_enable_checksum         CHECKSUM("endstops_enable")
 #define corexy_homing_checksum                  CHECKSUM("corexy_homing")
 #define delta_homing_checksum                   CHECKSUM("delta_homing")
+#define rdelta_homing_checksum                  CHECKSUM("rdelta_homing")
 #define scara_homing_checksum                   CHECKSUM("scara_homing")
 
 #define alpha_min_endstop_checksum       CHECKSUM("alpha_min_endstop")
@@ -194,6 +195,7 @@ void Endstops::on_config_reload(void *argument)
 
     this->is_corexy                 =  THEKERNEL->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
     this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
+    this->is_rdelta                 =  THEKERNEL->config->value(rdelta_homing_checksum)->by_default(false)->as_bool();
     this->is_scara                  =  THEKERNEL->config->value(scara_homing_checksum)->by_default(false)->as_bool();
 
     // see if an order has been specified, must be three characters, XYZ or YXZ etc
@@ -236,8 +238,8 @@ void Endstops::on_config_reload(void *argument)
         }
     }
 
-    // NOTE this may also be true of scara. TBD
-    if(this->is_delta) {
+    //
+    if(this->is_delta || this->is_rdelta) {
         // some things must be the same or they will die, so force it here to avoid config errors
         this->fast_rates[1]= this->fast_rates[2]= this->fast_rates[0];
         this->slow_rates[1]= this->slow_rates[2]= this->slow_rates[0];
@@ -638,7 +640,7 @@ void Endstops::on_gcode_received(void *argument)
             // Do we move select axes or all of them
             char axes_to_move = 0;
             // only enable homing if the endstop is defined, deltas, scaras always home all axis
-            bool home_all = this->is_delta || this->is_scara || !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
+            bool home_all = this->is_delta || this->is_rdelta || this->is_scara || !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
 
             for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
                 if ( (home_all || gcode->has_letter(c+'X')) && this->pins[c + (this->home_direction[c] ? 0 : 3)].connected() ) {
@@ -773,7 +775,7 @@ void Endstops::on_gcode_received(void *argument)
             case 503: // print settings
                 gcode->stream->printf(";Home offset (mm):\nM206 X%1.2f Y%1.2f Z%1.2f\n", home_offset[0], home_offset[1], home_offset[2]);
                 if (this->is_delta || this->is_scara) {
-                    gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
+                    if(!this->is_rdelta) gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
                     gcode->stream->printf(";Max Z\nM665 Z%1.3f\n", this->homing_position[2]);
                 }
                 break;
