@@ -12,7 +12,7 @@ delta_segments_per_second                    100              # for deltas only 
 
 
 # Arm solution configuration : Rotatable Delta robot. Translates mm positions into stepper positions
-arm_solution                                 rotatable_delta  # selects the delta arm solution
+arm_solution                                 rotary_delta  # selects the delta arm solution
 
 delta_e						131.636		  # End effector length
 delta_f						190.526		  # Base length
@@ -29,14 +29,32 @@ delta_printable_radius			        150.0		  # Print surface diameter/2 minus unrea
 xyz_full_steps_per_rotation			400.0		  # stepper motor steps per 360 full rotation
 								  # for 1.8 degree this is 200 for 0.9 degree this is 400
 
-#the steps per mm are calculated as (xyz_full_steps_per_rotation*xyz_microsteps*(big_pulley_teeth/small_pulley_teeth))/360
-# for a 0.9 degree stepper motor (400 steps per rotation) and an a4988   driver set for 16 microsteps = (400 * 16 * (150/16))/360 = 166.67
-# for a 1.8 degree stepper motor (200 steps per rotation) and an a4988   driver set for 16 microsteps = (200 * 16 * (150/16))/360 =  81.10
-# for a 0.9 degree stepper motor (400 steps per rotation) and an drv8825 driver set for 32 microsteps = (400 * 32 * (150/16))/360 = 331.49
-# for a 1.8 degree stepper motor (200 steps per rotation) and an drv8825 driver set for 32 microsteps = (200 * 32 * (150/16))/360 = 165.29
-alpha_steps_per_mm                            331.49           # Steps per mm for alpha stepper
-beta_steps_per_mm                             331.49           # Steps per mm for beta stepper
-gamma_steps_per_mm                            331.49           # Steps per mm for gamma stepper
+#The steps per mm are calculated as:
+#
+# (1) First determine the circumference of the big pulley, which has a smooth surface, and calculate the 'teeth it would have'
+# (2) Determine the GT2 belt thickness and tooth depth
+# (3) Calculate the ACTUAL big pulley circumference taking into account that the GT2 belt affects this as
+#     it rests on the big pulley and not into teeth cut into the pulley, the formula is:
+#     BIG_PULLEY_CIRCUMFERENCE = BIG_PULLEY_TEETH * TOOTH_SPACING + (BELT_THICKNESS - TOOTH_DEPTH)*6.283185
+# (4) Calculate the ACTUAL small pulley circumference taking into account that the GT2 belt affects this as
+#     rests into the small pulley as it has teeth cut into the pulley, the formula is:
+#     SMALL_PULLEY_CIRCUMFERENCE = SMALL_PULLEY_TEETH * TOOTH_SPACING
+# (5) Now determine the pulley reduction which is:
+#     PULLEY_REDUCTION = BIG_PULLEY_CIRCUMFERENCE / SMALL_PULLEY_CIRCUMFERENCE
+# (6) Finally, given the number of steps a stepper motor needs for a full 360 degree rotation, and the number of microsteps your
+#     stepper motor driver chip is set for, you can calculate the STEPS_PER_MM for each axis, which for a Rotary Delta, are the same:
+#    [ALPHA/BETA/GAMMA]_STEPS_PER_MM = (XYZ_STEPS_PER_ROTATION*XYZ_MICROSTEPS*PULLEY_REDUCTION)/360
+# Now for a FirePick Delta (http://delta.firepick.org ) mechanism, we can calulate:
+#    BIG_PULLEY_CIRCUMFERENCE = 150 * 2 + (1.49 - 0.74) * 6.283185 = 304.712389
+#    SMALL_PULLEY_CIRCUMFERENCE = 16 * 2 = 32
+#    PULLEY_REDUCTION = 304.712389 / 32 = 9.52226215
+#    For a 0.9 degree stepper motor and an a4988   driver set for 16 microsteps = (400 * 16 * 9.52226215)/360 = 169.2846604
+#    For a 1.8 degree stepper motor and an a4988   driver set for 16 microsteps = (200 * 16 * 9.52226215)/360 =  84.6423302
+#    For a 0.9 degree stepper motor and an drv8825 driver set for 32 microsteps = (400 * 32 * 9.52226215)/360 = 338.5693208
+#    For a 1.8 degree stepper motor and an drv8825 driver set for 32 microsteps = (200 * 32 * 9.52226215)/360 = 169.2846604
+alpha_steps_per_mm                            338.5693208      # Steps per mm for alpha stepper
+beta_steps_per_mm                             338.5693208      # Steps per mm for beta stepper
+gamma_steps_per_mm                            338.5693208      # Steps per mm for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING
