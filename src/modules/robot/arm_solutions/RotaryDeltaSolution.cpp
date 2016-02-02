@@ -1,4 +1,4 @@
-#include "RotatableDeltaSolution.h"
+#include "RotaryDeltaSolution.h"
 #include "ActuatorCoordinates.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
@@ -27,7 +27,7 @@ const static float tan60  = 1.7320508075688772935274463415059; //sqrt3;
 const static float sin30  = 0.5;
 const static float tan30  = 0.57735026918962576450914878050196; //1/sqrt3
 
-RotatableDeltaSolution::RotatableDeltaSolution(Config *config)
+RotaryDeltaSolution::RotaryDeltaSolution(Config *config)
 {
     // End effector length
     delta_e = config->value(delta_e_checksum)->by_default(131.636F)->as_number();
@@ -56,7 +56,7 @@ RotatableDeltaSolution::RotatableDeltaSolution(Config *config)
 
 // inverse kinematics
 // helper functions, calculates angle theta1 (for YZ-pane)
-int RotatableDeltaSolution::delta_calcAngleYZ(float x0, float y0, float z0, float &theta)
+int RotaryDeltaSolution::delta_calcAngleYZ(float x0, float y0, float z0, float &theta)
 {
     float y1 = -0.5F * tan30 * delta_f; // f/2 * tan 30
     y0      -=  0.5F * tan30 * delta_e; // shift center to edge
@@ -76,7 +76,7 @@ int RotatableDeltaSolution::delta_calcAngleYZ(float x0, float y0, float z0, floa
 
 // forward kinematics: (theta1, theta2, theta3) -> (x0, y0, z0)
 // returned status: 0=OK, -1=non-existing position
-int RotatableDeltaSolution::delta_calcForward(float theta1, float theta2, float theta3, float &x0, float &y0, float &z0)
+int RotaryDeltaSolution::delta_calcForward(float theta1, float theta2, float theta3, float &x0, float &y0, float &z0)
 {
     float t = (delta_f - delta_e) * tan30 / 2.0F;
     float degrees_to_radians = pi / 180.0F;
@@ -128,14 +128,14 @@ int RotatableDeltaSolution::delta_calcForward(float theta1, float theta2, float 
 }
 
 
-void RotatableDeltaSolution::init()
+void RotaryDeltaSolution::init()
 {
 
     //these are calculated here and not in the config() as these variables can be fine tuned by the user.
     z_calc_offset  = -(delta_z_offset - tool_offset - delta_ee_offs);
 }
 
-void RotatableDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm )
+void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm )
 {
     //We need to translate the Cartesian coordinates in mm to the actuator position required in mm so the stepper motor  functions
     float alpha_theta = 0.0F;
@@ -185,13 +185,13 @@ void RotatableDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], A
 
 }
 
-void RotatableDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] )
+void RotaryDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] )
 {
     //Use forward kinematics
     delta_calcForward(actuator_mm[ALPHA_STEPPER], actuator_mm[BETA_STEPPER ], actuator_mm[GAMMA_STEPPER], cartesian_mm[X_AXIS], cartesian_mm[Y_AXIS], cartesian_mm[Z_AXIS]);
 }
 
-bool RotatableDeltaSolution::set_optional(const arm_options_t &options)
+bool RotaryDeltaSolution::set_optional(const arm_options_t &options)
 {
 
     for(auto &i : options) {
@@ -210,7 +210,7 @@ bool RotatableDeltaSolution::set_optional(const arm_options_t &options)
     return true;
 }
 
-bool RotatableDeltaSolution::get_optional(arm_options_t &options, bool force_all)
+bool RotaryDeltaSolution::get_optional(arm_options_t &options, bool force_all)
 {
     options['A'] = this->delta_e;
     options['B'] = this->delta_f;

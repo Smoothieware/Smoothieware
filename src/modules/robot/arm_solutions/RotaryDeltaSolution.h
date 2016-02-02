@@ -1,13 +1,13 @@
-#ifndef RotatableDeltaSolution_H
-#define RotatableDeltaSolution_H
+#ifndef RotaryDeltaSolution_H
+#define RotaryDeltaSolution_H
 #include "libs/Module.h"
 #include "BaseSolution.h"
 
 class Config;
 
-class RotatableDeltaSolution : public BaseSolution {
+class RotaryDeltaSolution : public BaseSolution {
     public:
-        RotatableDeltaSolution(Config*);
+        RotaryDeltaSolution(Config*);
         void cartesian_to_actuator(const float[], ActuatorCoordinates &) override;
         void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) override;
 
@@ -32,4 +32,4 @@ class RotatableDeltaSolution : public BaseSolution {
 
         bool debug_flag{false};
 };
-#endif // RotatableDeltaSolution_H
+#endif // RotaryDeltaSolution_H
