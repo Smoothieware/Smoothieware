@@ -12,24 +12,18 @@ delta_segments_per_second                    100              # for deltas only 
 
 
 # Arm solution configuration : Rotatable Delta robot. Translates mm positions into stepper positions
-arm_solution                                 rotary_delta  # selects the delta arm solution
+arm_solution      rotary_delta  # selects the delta arm solution
 
-delta_e						131.636		  # End effector length
-delta_f						190.526		  # Base length
-delta_re					270.000		  # Carbon rod length
-delta_rf					 90.000		  # Servo horn length
+delta_e           131.636     # End effector length, triangle side length in mm
+delta_f           190.526     # Base length, triangle side length in mm
+delta_re          270.000     # Carbon rod length
+delta_rf          90.000      # Servo horn length
 
-delta_z_offset					268.0  		  # Distance from delta 8mm rod/pulley to table/bed
-								  # NOTE: For OpenPnP, set the zero to be about 25mm above the bed.
-delta_ee_offs					15.000		  # Ball joint plane to bottom of end effector surface
-tool_offset					30.500		  # Distance between end effector ball joint plane and tip of tool (PnP)
-z_home_angle				       -67.200		  # This is the angle where the arms hit the endstop sensor
-delta_printable_radius			        150.0		  # Print surface diameter/2 minus unreachable space
+delta_z_offset    268.0        # Distance from big pulley shaft to table/bed
+delta_ee_offs     15.000       # Ball joint plane to bottom of end effector surface
+tool_offset       30.500       # Distance between end effector ball joint plane and tip of tool (PnP)
 
-xyz_full_steps_per_rotation			400.0		  # stepper motor steps per 360 full rotation
-								  # for 1.8 degree this is 200 for 0.9 degree this is 400
-
-#The steps per mm are calculated as:
+#The steps per degree are calculated as:
 #
 # (1) First determine the circumference of the big pulley, which has a smooth surface, and calculate the 'teeth it would have'
 # (2) Determine the GT2 belt thickness and tooth depth
@@ -44,7 +38,7 @@ xyz_full_steps_per_rotation			400.0		  # stepper motor steps per 360 full rotati
 # (6) Finally, given the number of steps a stepper motor needs for a full 360 degree rotation, and the number of microsteps your
 #     stepper motor driver chip is set for, you can calculate the STEPS_PER_MM for each axis, which for a Rotary Delta, are the same:
 #    [ALPHA/BETA/GAMMA]_STEPS_PER_MM = (XYZ_STEPS_PER_ROTATION*XYZ_MICROSTEPS*PULLEY_REDUCTION)/360
-# Now for a FirePick Delta (http://delta.firepick.org ) mechanism, we can calulate:
+#    e.g. a FirePick Delta mechanism, we can calulate:
 #    BIG_PULLEY_CIRCUMFERENCE = 150 * 2 + (1.49 - 0.74) * 6.283185 = 304.712389
 #    SMALL_PULLEY_CIRCUMFERENCE = 16 * 2 = 32
 #    PULLEY_REDUCTION = 304.712389 / 32 = 9.52226215
@@ -52,9 +46,10 @@ xyz_full_steps_per_rotation			400.0		  # stepper motor steps per 360 full rotati
 #    For a 1.8 degree stepper motor and an a4988   driver set for 16 microsteps = (200 * 16 * 9.52226215)/360 =  84.6423302
 #    For a 0.9 degree stepper motor and an drv8825 driver set for 32 microsteps = (400 * 32 * 9.52226215)/360 = 338.5693208
 #    For a 1.8 degree stepper motor and an drv8825 driver set for 32 microsteps = (200 * 32 * 9.52226215)/360 = 169.2846604
-alpha_steps_per_mm                            338.5693208      # Steps per mm for alpha stepper
-beta_steps_per_mm                             338.5693208      # Steps per mm for beta stepper
-gamma_steps_per_mm                            338.5693208      # Steps per mm for gamma stepper
+
+alpha_steps_per_mm    338.5693208      # Steps per degree for alpha stepper
+beta_steps_per_mm     338.5693208      # Steps per degree for beta stepper
+gamma_steps_per_mm    338.5693208      # Steps per degree for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING
