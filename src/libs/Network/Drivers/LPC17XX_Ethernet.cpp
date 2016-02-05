@@ -200,9 +200,10 @@ LPC17XX_Ethernet::LPC17XX_Ethernet()
 
 void LPC17XX_Ethernet::on_module_loaded()
 {
-    LPC_PINCON->PINSEL2 = (1 << 0) | (1 << 2) | (1 << 8) | (1 << 16) | (1 << 18) | (1 << 20) | (1 << 28) | (1 << 30);
-    LPC_PINCON->PINSEL3 &= (2 << 0) | (2 << 2);
-    LPC_PINCON->PINSEL3 |= (1 << 0) | (1 << 2);
+    LPC_PINCON->PINSEL2 |=   (1 << 0) | (1 << 2) | (1 << 8) | (1 << 16) | (1 << 18) | (1 << 20) | (1 << 28) | (1 << 30);
+    LPC_PINCON->PINSEL2 &= ~((1 << 1) | (1 << 3) | (1 << 9) | (1 << 17) | (1 << 19) | (1 << 21) | (1 << 29) | (1 << 31));
+    LPC_PINCON->PINSEL3 |=   (1 << 0) | (1 << 2);
+    LPC_PINCON->PINSEL3 &= ~((1 << 1) | (1 << 3));
 
     DEBUG_PRINTF("EMAC_INIT\n");
     emac_init();
