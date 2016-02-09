@@ -757,6 +757,7 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
     do {
         size_t n= fread(buf, 1, sizeof buf, lp);
         if(n > 0) md5.update(buf, n);
+        THEKERNEL->call_event(ON_IDLE);
     } while(!feof(lp));
 
     stream->printf("%s %s\n", md5.finalize().hexdigest().c_str(), filename.c_str());
