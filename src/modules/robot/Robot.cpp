@@ -444,6 +444,7 @@ void Robot::on_gcode_received(void *argument)
     } else if( gcode->has_m) {
         switch( gcode->m ) {
             case 2: // M2 end of program
+            case 30: // M30 end of program
                 current_wcs = 0;
                 absolute_mode = true;
                 break;

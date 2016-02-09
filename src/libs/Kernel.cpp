@@ -26,6 +26,7 @@
 #include "modules/robot/Conveyor.h"
 #include "StepperMotor.h"
 #include "BaseSolution.h"
+#include "EndstopsPublicAccess.h"
 
 #include <malloc.h>
 #include <array>
@@ -38,12 +39,14 @@
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
 #define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
 #define disable_leds_checksum                       CHECKSUM("leds_disable")
+#define grbl_mode_checksum                          CHECKSUM("grbl_mode")
 
 Kernel* Kernel::instance;
 
 // The kernel is the central point in Smoothie : it stores modules, and handles event calls
 Kernel::Kernel(){
     halted= false;
+    feed_hold= false;
 
     instance= this; // setup the Singleton instance of the kernel
 
@@ -92,6 +95,7 @@ Kernel::Kernel(){
 
     //some boards don't have leds.. TOO BAD!
     this->use_leds= !this->config->value( disable_leds_checksum )->by_default(false)->as_bool();
+    this->grbl_mode= this->config->value( grbl_mode_checksum )->by_default(false)->as_bool();
 
     this->add_module( this->config );
     this->add_module( this->serial );
@@ -152,9 +156,17 @@ Kernel::Kernel(){
 std::string Kernel::get_query_string()
 {
     std::string str;
+    bool homing;
+    bool ok = PublicData::get_value(endstops_checksum, get_homing_status_checksum, 0, &homing);
+    if(!ok) homing= false;
+
     str.append("<");
     if(halted) {
         str.append("Alarm,");
+    }else if(homing) {
+        str.append("Home,");
+    }else if(feed_hold) {
+        str.append("Hold,");
     }else if(this->conveyor->is_queue_empty()) {
         str.append("Idle,");
     }else{

@@ -42,6 +42,7 @@ class Endstops : public Module{
         uint8_t homing_order;
         std::bitset<3> home_direction;
         std::bitset<3> limit_enable;
+        float saved_position[3]{0}; // save G28 (in grbl mode)
 
         unsigned int  debounce_count;
         float  retract_mm[3];
