@@ -92,6 +92,15 @@ static std::tuple<float, float, float, float, float, float> getCoordinates(float
 // Probes the 7 points on a delta can be used for off board calibration
 bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
 {
+    float bedht= findBed();
+    if(isnan(bedht)) return false;
+
+    gcode->stream->printf("initial Bed ht is %f mm\n", bedht);
+
+    // move to start position
+    zprobe->home();
+    zprobe->coordinated_move(NAN, NAN, -bedht, zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
+
     // get probe points
     float t1x, t1y, t2x, t2y, t3x, t3y;
     std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
