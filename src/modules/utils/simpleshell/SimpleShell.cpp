@@ -703,19 +703,50 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             }
         }
 
-    } else if (what == "fk") {
+    } else if (what == "fk" || what == "ik") {
         // do forward kinematics on the given actuator position and display the cartesian coordinates
         string p= shift_parameter( parameters );
-        float x= strtof(p.c_str(), NULL);
-        p= shift_parameter( parameters );
-        float y= strtof(p.c_str(), NULL);
-        p= shift_parameter( parameters );
-        float z= strtof(p.c_str(), NULL);
+        bool move= false;
+        if(p[0] == '-') {
+            move= true;
+            p= shift_parameter( parameters );
+        }
 
-        ActuatorCoordinates apos{x, y, z};
-        float pos[3];
-        THEKERNEL->robot->arm_solution->actuator_to_cartesian(apos, pos);
-        stream->printf("cartesian= X %1.4f, Y %1.4f, Z %1.4f\n", pos[0], pos[1], pos[2]);
+        std::vector<float> v= parse_number_list(p.c_str());
+        if(p.empty() || v.size() != 3) {
+            stream->printf("error:usage: get [fk|ik] [-m] x,y,z\n");
+            return;
+        }
+
+        float x= v[0];
+        float y= v[1];
+        float z= v[2];
+
+        if(what == "fk") {
+            ActuatorCoordinates apos{x, y, z};
+            float pos[3];
+            THEKERNEL->robot->arm_solution->actuator_to_cartesian(apos, pos);
+            stream->printf("cartesian= X %f, Y %f, Z %f\n", pos[0], pos[1], pos[2]);
+            x= pos[0];
+            y= pos[1];
+            z= pos[2];
+        }else{
+            float pos[3]{x, y, z};
+            ActuatorCoordinates apos;
+            THEKERNEL->robot->arm_solution->cartesian_to_actuator(pos, apos);
+            stream->printf("actuator= A %f, B %f, C %f\n", apos[0], apos[1], apos[2]);
+        }
+
+        if(move) {
+            // move to the calculated of given XYZ
+            char cmd[64];
+            snprintf(cmd, sizeof(cmd), "G53 G0 X%f Y%f Z%f", x, y, z);
+            struct SerialMessage message;
+            message.message = cmd;
+            message.stream = &(StreamOutput::NullStream);
+            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            THEKERNEL->conveyor->wait_for_empty_queue();
+        }
 
    } else if (what == "pos") {
         // convenience to call all the various M114 variants
@@ -878,11 +909,9 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("break - break into debugger\r\n");
     stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
+    stream->printf("get [pos|wcs|state|fk|ik]\r\n");
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
-    stream->printf("get pos\r\n");
-    stream->printf("get wcs\r\n");
-    stream->printf("get state\r\n");
     stream->printf("net\r\n");
     stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");
