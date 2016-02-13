@@ -704,10 +704,9 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
     } else if (what == "fk" || what == "ik") {
-        // do forward kinematics on the given actuator position and display the cartesian coordinates
         string p= shift_parameter( parameters );
         bool move= false;
-        if(p[0] == '-') {
+        if(p == "-m") {
             move= true;
             p= shift_parameter( parameters );
         }
@@ -723,6 +722,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         float z= v[2];
 
         if(what == "fk") {
+            // do forward kinematics on the given actuator position and display the cartesian coordinates
             ActuatorCoordinates apos{x, y, z};
             float pos[3];
             THEKERNEL->robot->arm_solution->actuator_to_cartesian(apos, pos);
@@ -730,7 +730,9 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             x= pos[0];
             y= pos[1];
             z= pos[2];
+
         }else{
+            // do inverse kinematics on the given cartesian position and display the actuator coordinates
             float pos[3]{x, y, z};
             ActuatorCoordinates apos;
             THEKERNEL->robot->arm_solution->cartesian_to_actuator(pos, apos);
@@ -738,7 +740,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
         if(move) {
-            // move to the calculated of given XYZ
+            // move to the calculated, or given, XYZ
             char cmd[64];
             snprintf(cmd, sizeof(cmd), "G53 G0 X%f Y%f Z%f", x, y, z);
             struct SerialMessage message;
