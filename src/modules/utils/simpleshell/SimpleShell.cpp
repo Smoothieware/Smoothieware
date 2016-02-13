@@ -25,6 +25,7 @@
 #include "Robot.h"
 #include "ToolManagerPublicAccess.h"
 #include "GcodeDispatch.h"
+#include "BaseSolution.h"
 
 #include "TemperatureControlPublicAccess.h"
 #include "EndstopsPublicAccess.h"
@@ -702,7 +703,21 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             }
         }
 
-    } else if (what == "pos") {
+    } else if (what == "fk") {
+        // do forward kinematics on the given actuator position and display the cartesian coordinates
+        string p= shift_parameter( parameters );
+        float x= strtof(p.c_str(), NULL);
+        p= shift_parameter( parameters );
+        float y= strtof(p.c_str(), NULL);
+        p= shift_parameter( parameters );
+        float z= strtof(p.c_str(), NULL);
+
+        ActuatorCoordinates apos{x, y, z};
+        float pos[3];
+        THEKERNEL->robot->arm_solution->actuator_to_cartesian(apos, pos);
+        stream->printf("cartesian= X %1.4f, Y %1.4f, Z %1.4f\n", pos[0], pos[1], pos[2]);
+
+   } else if (what == "pos") {
         // convenience to call all the various M114 variants
         char buf[64];
         THEKERNEL->robot->print_position(0, buf, sizeof buf); stream->printf("last %s\n", buf);
