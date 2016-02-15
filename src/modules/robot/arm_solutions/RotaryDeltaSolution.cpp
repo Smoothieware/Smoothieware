@@ -158,7 +158,7 @@ void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
         actuator_mm[BETA_STEPPER ] = 0;
         actuator_mm[GAMMA_STEPPER] = 0;
 
-        //DEBUG CODE, uncomment the following to help determine what may be happening if you are trying to adapt this to your own different roational delta.
+        //DEBUG CODE, uncomment the following to help determine what may be happening if you are trying to adapt this to your own different rotary delta.
         if(debug_flag) {
             THEKERNEL->streams->printf("//ERROR: Delta calculation fail!  Unable to move to:\n");
             THEKERNEL->streams->printf("//    x= %f\n", cartesian_mm[X_AXIS]);
