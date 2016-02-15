@@ -23,6 +23,7 @@
 
 #define laser_module_enable_checksum        CHECKSUM("laser_module_enable")
 #define laser_module_pin_checksum           CHECKSUM("laser_module_pin")
+#define laser_module_pwm_pin_checksum       CHECKSUM("laser_module_pwm_pin")
 #define laser_module_ttl_pin_checksum    	CHECKSUM("laser_module_ttl_pin")
 #define laser_module_pwm_period_checksum    CHECKSUM("laser_module_pwm_period")
 #define laser_module_maximum_power_checksum CHECKSUM("laser_module_maximum_power")
@@ -44,6 +45,10 @@ void Laser::on_module_loaded() {
     // Get smoothie-style pin from config
     Pin* dummy_pin = new Pin();
     dummy_pin->from_string(THEKERNEL->config->value(laser_module_pin_checksum)->by_default("nc")->as_string())->as_output();
+
+    // Alternative less ambiguous name for pwm_pin
+    if (!dummy_pin->connected())
+        dummy_pin->from_string(THEKERNEL->config->value(laser_module_pwm_pin_checksum)->by_default("nc")->as_string())->as_output();
 
     pwm_pin = dummy_pin->hardware_pwm();
 
