@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <cstdlib>
 
+#include "mbed.h"
+
 using std::string;
 
 uint16_t get_checksum(const string &to_check)
@@ -260,4 +262,13 @@ string wcs2gcode(int wcs) {
         str.append(".").append(1, '1' + (wcs - 6));
     }
     return str;
+}
+
+void safe_delay(uint32_t delayms)
+{
+    uint32_t dus= delayms*1000; //convert ms to us
+    uint32_t start = us_ticker_read();
+    while ((us_ticker_read() - start) < dus) {
+        THEKERNEL->call_event(ON_IDLE);
+    }
 }
