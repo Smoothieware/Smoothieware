@@ -39,5 +39,6 @@ string absolute_from_relative( string path );
 
 int append_parameters(char *buf, std::vector<std::pair<char,float>> params, size_t bufsize);
 string wcs2gcode(int wcs);
+void safe_delay(uint32_t delay);
 
 #endif
