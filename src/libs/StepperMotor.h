@@ -50,6 +50,7 @@ class StepperMotor {
         int  steps_to_target(float);
         uint32_t get_steps_to_move() const { return steps_to_move; }
         uint32_t get_stepped() const { return stepped; }
+        void force_finish_move();
 
         template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
             Hook* hook = new Hook();

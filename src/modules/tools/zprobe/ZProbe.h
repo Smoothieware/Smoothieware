@@ -50,6 +50,7 @@ public:
 
 private:
     void accelerate(int c);
+    void probe_XY(Gcode *gc, int axis);
 
     volatile float current_feedrate;
     float slow_feedrate;

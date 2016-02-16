@@ -46,6 +46,8 @@ class StepTicker{
 
         void start();
 
+        std::function<bool(void)> probe_fnc;
+
         friend class StepperMotor;
 
     private:
@@ -57,6 +59,7 @@ class StepTicker{
         std::bitset<32> active_motor; // limit to 32 motors
         std::bitset<32> unstep;       // limit to 32 motors
         std::atomic_uchar do_move_finished;
+
         uint8_t num_motors;
         volatile bool a_move_finished;
 };

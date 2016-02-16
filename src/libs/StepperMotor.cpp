@@ -93,6 +93,13 @@ void StepperMotor::step()
     }
 }
 
+void StepperMotor::force_finish_move()
+{
+    this->is_move_finished = true;
+    THEKERNEL->step_ticker->a_move_finished= true;
+    this->last_step_tick= THEKERNEL->step_ticker->get_tick_cnt(); // remember when last step was
+    this->steps_to_move= this->stepped;
+}
 
 // If the move is finished, the StepTicker will call this ( because we asked it to in tick() )
 void StepperMotor::signal_move_finished()

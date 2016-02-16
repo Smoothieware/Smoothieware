@@ -26,6 +26,7 @@
 #include "PublicData.h"
 #include "LevelingStrategy.h"
 #include "StepTicker.h"
+#include "utils.h"
 
 // strategies we know about
 #include "DeltaCalibrationStrategy.h"
@@ -365,11 +366,11 @@ void ZProbe::on_gcode_received(void *argument)
 
         if(gcode->has_letter('X')) {
             // probe in the X axis
-            gcode->stream->printf("error:Not currently supported.\n");
+            probe_XY(gcode, X_AXIS);
 
         }else if(gcode->has_letter('Y')) {
             // probe in the Y axis
-            gcode->stream->printf("error:Not currently supported.\n");
+            probe_XY(gcode, Y_AXIS);
 
         }else if(gcode->has_letter('Z')) {
             // we need to know where we started the probe from
@@ -396,7 +397,7 @@ void ZProbe::on_gcode_received(void *argument)
             } else {
                 if(THEKERNEL->is_grbl_mode()) {
                     if(gcode->subcode == 2) {
-                        gcode->stream->printf("ALARM:get_homing_status_checksumProbe fail\n");
+                        gcode->stream->printf("ALARM:Probe fail\n");
                         THEKERNEL->call_event(ON_HALT, nullptr);
                     }
                     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:0]\n", current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], current_machine_pos[Z_AXIS]);
@@ -445,6 +446,60 @@ void ZProbe::on_gcode_received(void *argument)
                 }
         }
     }
+}
+
+// special way to probe in the X or Y direction
+void ZProbe::probe_XY(Gcode *gcode, int axis)
+{
+    // enable the probe checking in the stepticker
+    THEKERNEL->step_ticker->probe_fnc= [this]() { return this->pin.get(); };
+
+    // get probe feedrate if specified
+    float rate = (gcode->has_letter('F')) ? gcode->get_value('F')*60 : this->slow_feedrate;
+
+     // do a regular move which will stop as soon as the probe is triggered, or the distance is reached
+    if(axis == X_AXIS) {
+        coordinated_move(gcode->get_value('X'), 0, 0, rate, true);
+
+    }else if(axis == Y_AXIS) {
+        coordinated_move(0, gcode->get_value('Y'), 0, rate, true);
+
+    }else{
+        // this is an error
+        THEKERNEL->step_ticker->probe_fnc= nullptr;
+        return;
+    }
+
+    // now wait for the move to finish
+    THEKERNEL->conveyor->wait_for_empty_queue();
+
+    float pos[3];
+    {
+        // get the current position
+        ActuatorCoordinates current_position{
+            THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
+            THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
+            THEKERNEL->robot->actuators[Z_AXIS]->get_current_position()
+        };
+
+        // get machine position from the actuator position using FK
+        THEKERNEL->robot->arm_solution->actuator_to_cartesian(current_position, pos);
+    }
+
+    // see if probe was triggered
+    // handle debounce here, 200ms should be enough
+    safe_delay(200);
+    int probeok= this->pin.get() ? 1 : 0;
+    if(gcode->subcode == 2) {
+        // issue error if probe was not triggered and subcode == 2
+        gcode->stream->printf("ALARM:Probe fail\n");
+        THEKERNEL->call_event(ON_HALT, nullptr);
+    }
+
+    gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok);
+
+    // disable probe checking
+    THEKERNEL->step_ticker->probe_fnc= nullptr;
 }
 
 // Called periodically to change the speed to match acceleration
