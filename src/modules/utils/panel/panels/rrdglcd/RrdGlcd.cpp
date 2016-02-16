@@ -183,11 +183,11 @@ void RrdGlcd::initDisplay() {
     if(fb == NULL) return;
     ST7920_CS();
     clearScreen();  // clear framebuffer
-    wait_ms(90);                 //initial delay for boot up
+    safe_delay(90);                 //initial delay for boot up
     ST7920_SET_CMD();
     ST7920_WRITE_BYTE(0x08);       //display off, cursor+blink off
     ST7920_WRITE_BYTE(0x01);       //clear CGRAM ram
-    wait_ms(10);                 //delay for cgram clear
+    safe_delay(10);                 //delay for cgram clear
     ST7920_WRITE_BYTE(0x3E);       //extended mode + gdram active
     for(int y=0;y<HEIGHT/2;y++)        //clear GDRAM
     {

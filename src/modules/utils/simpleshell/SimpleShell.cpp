@@ -35,6 +35,7 @@
 #include "SDFAT.h"
 #include "Thermistor.h"
 #include "md5.h"
+#include "utils.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -373,11 +374,8 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     }
 
     // we have been asked to delay before cat, probably to allow time to issue upload command
-    while(delay-- > 0) {
-        for (int i = 0; i < 10; ++i) {
-            wait_ms(100);
-            THEKERNEL->call_event(ON_IDLE);
-        }
+    if(delay > 0) {
+        safe_delay(delay*1000);
     }
 
     // Open file
