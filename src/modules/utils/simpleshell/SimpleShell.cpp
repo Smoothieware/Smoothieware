@@ -26,6 +26,7 @@
 #include "ToolManagerPublicAccess.h"
 #include "GcodeDispatch.h"
 #include "BaseSolution.h"
+#include "StepperMotor.h"
 
 #include "TemperatureControlPublicAccess.h"
 #include "EndstopsPublicAccess.h"
@@ -35,6 +36,7 @@
 #include "SDFAT.h"
 #include "Thermistor.h"
 #include "md5.h"
+#include "utils.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -373,11 +375,8 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     }
 
     // we have been asked to delay before cat, probably to allow time to issue upload command
-    while(delay-- > 0) {
-        for (int i = 0; i < 10; ++i) {
-            wait_ms(100);
-            THEKERNEL->call_event(ON_IDLE);
-        }
+    if(delay > 0) {
+        safe_delay(delay*1000);
     }
 
     // Open file
@@ -712,21 +711,25 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
         std::vector<float> v= parse_number_list(p.c_str());
-        if(p.empty() || v.size() != 3) {
-            stream->printf("error:usage: get [fk|ik] [-m] x,y,z\n");
+        if(p.empty() || v.size() < 1) {
+            stream->printf("error:usage: get [fk|ik] [-m] x[,y,z]\n");
             return;
         }
 
         float x= v[0];
-        float y= v[1];
-        float z= v[2];
+        float y= (v.size() > 1) ? v[1] : x;
+        float z= (v.size() > 2) ? v[2] : y;
 
         if(what == "fk") {
             // do forward kinematics on the given actuator position and display the cartesian coordinates
             ActuatorCoordinates apos{x, y, z};
             float pos[3];
             THEKERNEL->robot->arm_solution->actuator_to_cartesian(apos, pos);
-            stream->printf("cartesian= X %f, Y %f, Z %f\n", pos[0], pos[1], pos[2]);
+            stream->printf("cartesian= X %f, Y %f, Z %f, Steps= A %lu, B %lu, C %lu\n",
+                pos[0], pos[1], pos[2],
+                lroundf(x*THEKERNEL->robot->actuators[0]->get_steps_per_mm()),
+                lroundf(y*THEKERNEL->robot->actuators[1]->get_steps_per_mm()),
+                lroundf(z*THEKERNEL->robot->actuators[2]->get_steps_per_mm()));
             x= pos[0];
             y= pos[1];
             z= pos[2];
