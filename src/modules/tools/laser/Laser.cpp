@@ -71,8 +71,13 @@ void Laser::on_module_loaded() {
     ttl_pin->from_string( THEKERNEL->config->value(laser_module_ttl_pin_checksum)->by_default("nc" )->as_string())->as_output();
     this->ttl_used = ttl_pin->connected();
     this->ttl_inverting = ttl_pin->inverting;
-    if (ttl_used)
+    if (ttl_used) {
     	ttl_pin->set(0);
+    } else {
+    	delete ttl_pin;
+    	ttl_pin = NULL;
+    }
+
 
     this->pwm_pin->period_us(THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number());
     this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
