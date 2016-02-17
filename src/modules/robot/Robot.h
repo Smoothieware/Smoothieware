@@ -33,6 +33,7 @@ class Robot : public Module {
 
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
+        void reset_actuator_position(float a, float b, float c);
         void reset_position_from_current_actuator_position();
         float get_seconds_per_minute() const { return seconds_per_minute; }
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }

@@ -642,11 +642,20 @@ void Endstops::on_gcode_received(void *argument)
             if(gcode->get_num_args() == 0) {
                 THEKERNEL->robot->reset_axis_position(0, 0, 0);
             } else {
-                // do a manual homing based on current position, no endstops required
+                // do a manual homing based on given coordinates, no endstops required
                 if(gcode->has_letter('X')) THEKERNEL->robot->reset_axis_position(gcode->get_value('X'), X_AXIS);
                 if(gcode->has_letter('Y')) THEKERNEL->robot->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
                 if(gcode->has_letter('Z')) THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
             }
+            return;
+
+       } else if(gcode->subcode == 4) { // G28.4 is a smoothie special it sets manual homing based on the actuator position (used for rotary delta)
+            // do a manual homing based on given coordinates, no endstops required
+            float a=NAN, b=NAN, c=NAN;
+            if(gcode->has_letter('A')) a=  gcode->get_value('A');
+            if(gcode->has_letter('B')) b=  gcode->get_value('B');
+            if(gcode->has_letter('C')) c=  gcode->get_value('C');
+            THEKERNEL->robot->reset_actuator_position(a, b, c);
             return;
 
         } else if(THEKERNEL->is_grbl_mode()) {
@@ -831,26 +840,33 @@ void Endstops::on_gcode_received(void *argument)
                 break;
 
             // NOTE this is to test accuracy of lead screws etc.
-            case 1910: { // M1910 - move specific number of raw steps
-                if(gcode->subcode == 0) {
+            case 1910: {
+                // M1910.0 - move specific number of raw steps
+                // M1910.1 - stop any moves
+                // M1910.2 - move specific number of actuator coordinates (usually mm but is degrees for a rotary delta)
+                if(gcode->subcode == 0 || gcode->subcode == 2) {
                     // Enable the motors
                     THEKERNEL->stepper->turn_enable_pins_on();
 
-                    int x = 0, y = 0 , z = 0, f = 200 * 16;
+                    int32_t x = 0, y = 0 , z = 0, f = 200 * 16;
                     if (gcode->has_letter('F')) f = gcode->get_value('F');
+
                     if (gcode->has_letter('X')) {
                         x = gcode->get_value('X');
+                        if(gcode->subcode == 2) x= lroundf(x * STEPS_PER_MM(X_AXIS));
                         STEPPER[X_AXIS]->move(x < 0, abs(x), f);
                     }
                     if (gcode->has_letter('Y')) {
                         y = gcode->get_value('Y');
+                        if(gcode->subcode == 2) y= lroundf(y * STEPS_PER_MM(Y_AXIS));
                         STEPPER[Y_AXIS]->move(y < 0, abs(y), f);
                     }
                     if (gcode->has_letter('Z')) {
                         z = gcode->get_value('Z');
+                        if(gcode->subcode == 2) z= lroundf(z * STEPS_PER_MM(Z_AXIS));
                         STEPPER[Z_AXIS]->move(z < 0, abs(z), f);
                     }
-                    gcode->stream->printf("Moving X %d Y %d Z %d steps at F %d steps/sec\n", x, y, z, f);
+                    gcode->stream->printf("Moving X %ld Y %ld Z %ld steps at F %ld steps/sec\n", x, y, z, f);
 
                 } else if(gcode->subcode == 1) {
                     // stop any that are moving

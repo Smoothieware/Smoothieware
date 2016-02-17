@@ -197,19 +197,19 @@ StepperMotor* StepperMotor::set_speed( float speed )
 void StepperMotor::change_steps_per_mm(float new_steps)
 {
     steps_per_mm = new_steps;
-    last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+    last_milestone_steps = lroundf(last_milestone_mm * steps_per_mm);
     current_position_steps = last_milestone_steps;
 }
 
 void StepperMotor::change_last_milestone(float new_milestone)
 {
     last_milestone_mm = new_milestone;
-    last_milestone_steps = lround(last_milestone_mm * steps_per_mm);
+    last_milestone_steps = lroundf(last_milestone_mm * steps_per_mm);
     current_position_steps = last_milestone_steps;
 }
 
 int  StepperMotor::steps_to_target(float target)
 {
-    int target_steps = lround(target * steps_per_mm);
+    int target_steps = lroundf(target * steps_per_mm);
     return target_steps - last_milestone_steps;
 }
