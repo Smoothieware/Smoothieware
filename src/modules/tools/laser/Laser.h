@@ -13,6 +13,7 @@
 namespace mbed {
     class PwmOut;
 }
+class Pin;
 
 class Laser : public Module{
     public:
@@ -26,10 +27,13 @@ class Laser : public Module{
 
     private:
         void set_proportional_power();
-        mbed::PwmOut *laser_pin;    // PWM output to regulate the laser power
+        mbed::PwmOut *pwm_pin;    // PWM output to regulate the laser power
+        Pin *ttl_pin;				// TTL output to fire laser
         struct {
-            bool laser_on:1;     // Laser status
-            bool laser_inverting:1; // stores whether the pwm period should be inverted
+            bool laser_on:1;        // Laser status
+            bool pwm_inverting:1; // stores whether the PWM period should be inverted
+            bool ttl_used:1;		// stores whether we have a TTL output
+            bool ttl_inverting:1;   // stores whether the TTL output should be inverted
         };
         float            laser_maximum_power; // maximum allowed laser power to be output on the pwm pin
         float            laser_minimum_power; // value used to tickle the laser on moves.  Also minimum value for auto-scaling
