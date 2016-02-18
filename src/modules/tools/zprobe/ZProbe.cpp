@@ -490,13 +490,18 @@ void ZProbe::probe_XY(Gcode *gcode, int axis)
     // handle debounce here, 200ms should be enough
     safe_delay(200);
     int probeok= this->pin.get() ? 1 : 0;
-    if(gcode->subcode == 2) {
+
+    // print results
+    gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok);
+
+    if(!probeok && gcode->subcode == 2) {
         // issue error if probe was not triggered and subcode == 2
         gcode->stream->printf("ALARM:Probe fail\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
 
-    gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok);
+    // if the probe stopped the move we need to correct the last_milestone as it did not reach where it thought
+    THEKERNEL->robot->reset_position_from_current_actuator_position();
 
     // disable probe checking
     THEKERNEL->step_ticker->probe_fnc= nullptr;
