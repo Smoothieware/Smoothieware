@@ -255,7 +255,7 @@ void SimpleShell::on_console_line_received( void *argument )
 
         // find command and execute it
         if(!parse_command(cmd.c_str(), possible_command, new_message.stream)) {
-            new_message.stream->printf("error:Unsupported command\n");
+            new_message.stream->printf("error:Unsupported command - %s\n", cmd.c_str());
         }
     }
 }

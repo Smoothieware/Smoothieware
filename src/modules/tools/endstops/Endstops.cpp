@@ -225,7 +225,7 @@ void Endstops::on_config_reload(void *argument)
     this->limit_enable[Y_AXIS] = THEKERNEL->config->value(beta_limit_enable_checksum)->by_default(false)->as_bool();
     this->limit_enable[Z_AXIS] = THEKERNEL->config->value(gamma_limit_enable_checksum)->by_default(false)->as_bool();
 
-    //s et to true by default for deltas duwe to trim, false on cartesians
+    // set to true by default for deltas duwe to trim, false on cartesians
     this->move_to_origin_after_home = THEKERNEL->config->value(move_to_origin_checksum)->by_default(is_delta)->as_bool();
 
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]) {
@@ -245,7 +245,8 @@ void Endstops::on_config_reload(void *argument)
         this->slow_rates[1] = this->slow_rates[2] = this->slow_rates[0];
         this->retract_mm[1] = this->retract_mm[2] = this->retract_mm[0];
         this->home_direction[1] = this->home_direction[2] = this->home_direction[0];
-        this->homing_position[0] = this->homing_position[1] = 0;
+        // NOTE homing_position for rdelta is the angle of the actuator not the cartesian position
+        if(!this->is_rdelta) this->homing_position[0] = this->homing_position[1] = 0;
     }
 }
 
@@ -711,6 +712,8 @@ void Endstops::on_gcode_received(void *argument)
 
         if(home_all) {
             // Here's where we would have been if the endstops were perfectly trimmed
+            // NOTE on a rotary delta home_offset is actuator position in degrees when homed and
+            // home_offset is the theta offset for each actuator, so M206 is used to set theta offset for each actuator in degrees
             float ideal_position[3] = {
                 this->homing_position[X_AXIS] + this->home_offset[X_AXIS],
                 this->homing_position[Y_AXIS] + this->home_offset[Y_AXIS],
@@ -733,11 +736,19 @@ void Endstops::on_gcode_received(void *argument)
                 THEKERNEL->robot->arm_solution->actuator_to_cartesian(real_actuator_position, real_position);
                 // Reset the actuator positions to correspond our real position
                 THEKERNEL->robot->reset_axis_position(real_position[0], real_position[1], real_position[2]);
+
             } else {
                 // without endstop trim, real_position == ideal_position
-                // Reset the actuator positions to correspond our real position
-                THEKERNEL->robot->reset_axis_position(ideal_position[0], ideal_position[1], ideal_position[2]);
+                if(is_rdelta) {
+                    // with a rotary delta we set the actuators angle then use the FK to calculate the resulting cartesian coordinates
+                    THEKERNEL->robot->reset_actuator_position(ideal_position[0], ideal_position[1], ideal_position[2]);
+
+                }else{
+                    // Reset the actuator positions to correspond our real position
+                    THEKERNEL->robot->reset_axis_position(ideal_position[0], ideal_position[1], ideal_position[2]);
+                }
             }
+
         } else {
             // Zero the ax(i/e)s position, add in the home offset
             for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
@@ -750,6 +761,7 @@ void Endstops::on_gcode_received(void *argument)
         // on some systems where 0,0 is bed center it is nice to have home goto 0,0 after homing
         // default is off for cartesian on for deltas
         if(!is_delta) {
+            // NOTE a rotary delta usually has optical or hall-effect endstops so it is safe to go past them a little bit
             if(this->move_to_origin_after_home) move_to_origin(axes_to_move);
             // if limit switches are enabled we must back off endstop after setting home
             back_off_home(axes_to_move);
@@ -779,35 +791,37 @@ void Endstops::on_gcode_received(void *argument)
                 if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
                 if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
                 gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
-
                 break;
 
-            case 306: { // Similar to M206 and G92 but sets Homing offsets based on current position
-                float cartesian[3];
-                THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
-                if (gcode->has_letter('X')) {
-                    home_offset[0] -= (cartesian[X_AXIS] - gcode->get_value('X'));
-                    THEKERNEL->robot->reset_axis_position(gcode->get_value('X'), X_AXIS);
-                }
-                if (gcode->has_letter('Y')) {
-                    home_offset[1] -= (cartesian[Y_AXIS] - gcode->get_value('Y'));
-                    THEKERNEL->robot->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
-                }
-                if (gcode->has_letter('Z')) {
-                    home_offset[2] -= (cartesian[Z_AXIS] - gcode->get_value('Z'));
-                    THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
-                }
+            case 306:
+                if(!is_rdelta) { // Similar to M206 and G92 but sets Homing offsets based on current position
+                    float cartesian[3];
+                    THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
+                    if (gcode->has_letter('X')) {
+                        home_offset[0] -= (cartesian[X_AXIS] - gcode->get_value('X'));
+                        THEKERNEL->robot->reset_axis_position(gcode->get_value('X'), X_AXIS);
+                    }
+                    if (gcode->has_letter('Y')) {
+                        home_offset[1] -= (cartesian[Y_AXIS] - gcode->get_value('Y'));
+                        THEKERNEL->robot->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
+                    }
+                    if (gcode->has_letter('Z')) {
+                        home_offset[2] -= (cartesian[Z_AXIS] - gcode->get_value('Z'));
+                        THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+                    }
 
-                gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+                    gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
 
-            }
-            break;
+                }else{
+                    gcode->stream->printf("//M306 is not supported on rotary delta, use G92 Zxxx or G5x to set z height\n");
+                }
+                break;
 
             case 500: // save settings
             case 503: // print settings
                 gcode->stream->printf(";Home offset (mm):\nM206 X%1.2f Y%1.2f Z%1.2f\n", home_offset[0], home_offset[1], home_offset[2]);
                 if (this->is_delta || this->is_scara) {
-                    if(!this->is_rdelta) gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
+                    gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
                     gcode->stream->printf(";Max Z\nM665 Z%1.3f\n", this->homing_position[2]);
                 }
                 if(saved_position[X_AXIS] != 0 || saved_position[Y_AXIS] != 0) {
@@ -815,17 +829,16 @@ void Endstops::on_gcode_received(void *argument)
                 }
                 break;
 
-            case 665: { // M665 - set max gamma/z height
-
-                float gamma_max = this->homing_position[2];
-                if (gcode->has_letter('Z')) {
-                    this->homing_position[2] = gamma_max = gcode->get_value('Z');
+            case 665:
+                if (this->is_delta || this->is_scara) { // M665 - set max gamma/z height
+                    float gamma_max = this->homing_position[2];
+                    if (gcode->has_letter('Z')) {
+                        this->homing_position[2] = gamma_max = gcode->get_value('Z');
+                    }
+                    gcode->stream->printf("Max Z %8.3f ", gamma_max);
+                    gcode->add_nl = true;
                 }
-                gcode->stream->printf("Max Z %8.3f ", gamma_max);
-                gcode->add_nl = true;
-            }
-            break;
-
+                break;
 
             case 666:
                 if(this->is_delta || this->is_scara) { // M666 - set trim for each axis in mm, NB negative mm trim is down
