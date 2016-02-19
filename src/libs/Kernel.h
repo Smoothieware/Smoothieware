@@ -46,6 +46,7 @@ class Kernel {
         bool is_using_leds() const { return use_leds; }
         bool is_halted() const { return halted; }
         bool is_grbl_mode() const { return grbl_mode; }
+        bool is_ok_per_line() const { return ok_per_line; }
 
         void set_feed_hold(bool f) { feed_hold= f; }
         bool get_feed_hold() const { return feed_hold; }
@@ -78,6 +79,7 @@ class Kernel {
             bool halted:1;
             bool grbl_mode:1;
             bool feed_hold:1;
+            bool ok_per_line:1;
         };
 
 };

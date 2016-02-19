@@ -40,6 +40,7 @@
 #define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
 #define disable_leds_checksum                       CHECKSUM("leds_disable")
 #define grbl_mode_checksum                          CHECKSUM("grbl_mode")
+#define ok_per_line_checksum                        CHECKSUM("ok_per_line")
 
 Kernel* Kernel::instance;
 
@@ -96,6 +97,7 @@ Kernel::Kernel(){
     //some boards don't have leds.. TOO BAD!
     this->use_leds= !this->config->value( disable_leds_checksum )->by_default(false)->as_bool();
     this->grbl_mode= this->config->value( grbl_mode_checksum )->by_default(false)->as_bool();
+    this->ok_per_line= this->config->value( ok_per_line_checksum )->by_default(true)->as_bool();
 
     this->add_module( this->config );
     this->add_module( this->serial );

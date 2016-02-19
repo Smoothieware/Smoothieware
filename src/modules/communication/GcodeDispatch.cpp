@@ -324,12 +324,12 @@ try_again:
                         gcode->txt_after_ok.clear();
 
                     } else {
-                        if(THEKERNEL->is_grbl_mode()) {
+                        if(THEKERNEL->is_ok_per_line() || THEKERNEL->is_grbl_mode()) {
                             // only send ok once per line if this is a multi g code line send ok on the last one
                             if(possible_command.empty())
                                 new_message.stream->printf("ok\r\n");
                         } else {
-                            // TODO maybe should do the above for all hosts?
+                            // maybe should do the above for all hosts?
                             new_message.stream->printf("ok\r\n");
                         }
                     }
