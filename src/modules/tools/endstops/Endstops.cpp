@@ -787,10 +787,19 @@ void Endstops::on_gcode_received(void *argument)
             break;
 
             case 206: // M206 - set homing offset
-                if (gcode->has_letter('X')) home_offset[0] = gcode->get_value('X');
-                if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
-                if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
-                gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+                if(!is_rdelta) {
+                    if (gcode->has_letter('X')) home_offset[0] = gcode->get_value('X');
+                    if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
+                    if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
+                    gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+
+                }else{
+                    // set theta offset
+                    if (gcode->has_letter('A')) home_offset[0] = gcode->get_value('A');
+                    if (gcode->has_letter('B')) home_offset[1] = gcode->get_value('B');
+                    if (gcode->has_letter('C')) home_offset[2] = gcode->get_value('C');
+                    gcode->stream->printf("Theta offset A %8.5f B %8.5f C %8.5f\n", home_offset[0], home_offset[1], home_offset[2]);
+                }
                 break;
 
             case 306:
@@ -813,13 +822,44 @@ void Endstops::on_gcode_received(void *argument)
                     gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
 
                 }else{
-                    gcode->stream->printf("//M306 is not supported on rotary delta, use G92 Zxxx or G5x to set z height\n");
+                    // for a rotary delta M306 calibrates the homing angle
+                    // by doing M306 A-56.17 it will calculate the M206 A value (the theta offset for actuator A) based on the difference
+                    // between what it thinks is the current angle and what the current angle actually is specified by A (ditto for B and C)
+
+                    // get the current angle for each actuator
+                    ActuatorCoordinates current_angle{
+                        THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
+                        THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
+                        THEKERNEL->robot->actuators[Z_AXIS]->get_current_position()
+                    };
+
+                    if (gcode->has_letter('A')) {
+                        float a= gcode->get_value('A');
+                        home_offset[0] -= (current_angle[0] - a);
+                        THEKERNEL->robot->reset_actuator_position(a, NAN, NAN);
+                    }
+                    if (gcode->has_letter('B')) {
+                        float b= gcode->get_value('B');
+                        home_offset[1] -= (current_angle[1] - b);
+                        THEKERNEL->robot->reset_actuator_position(NAN, b, NAN);
+                    }
+                    if (gcode->has_letter('C')) {
+                        float c= gcode->get_value('C');
+                        home_offset[2] -= (current_angle[2] - c);
+                        THEKERNEL->robot->reset_actuator_position(NAN, NAN, c);
+                    }
+
+                    gcode->stream->printf("Theta Offset: A %8.5f B %8.5f C %8.5f\n", home_offset[0], home_offset[1], home_offset[2]);
                 }
                 break;
 
             case 500: // save settings
             case 503: // print settings
-                gcode->stream->printf(";Home offset (mm):\nM206 X%1.2f Y%1.2f Z%1.2f\n", home_offset[0], home_offset[1], home_offset[2]);
+                if(!is_rdelta)
+                    gcode->stream->printf(";Home offset (mm):\nM206 X%1.2f Y%1.2f Z%1.2f\n", home_offset[0], home_offset[1], home_offset[2]);
+                else
+                    gcode->stream->printf(";Theta offset (degrees):\nM206 A%1.5f B%1.5f C%1.5f\n", home_offset[0], home_offset[1], home_offset[2]);
+
                 if (this->is_delta || this->is_scara) {
                     gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
                     gcode->stream->printf(";Max Z\nM665 Z%1.3f\n", this->homing_position[2]);
