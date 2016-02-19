@@ -90,9 +90,9 @@ void FilamentDetector::on_module_loaded()
     // register event-handlers
     if (this->encoder_pin != nullptr) {
         //This event is only valid if we are using the encodeer.
-        register_for_event(ON_SECOND_TICK); 
+        register_for_event(ON_SECOND_TICK);
     }
-    
+
     register_for_event(ON_MAIN_LOOP);
     register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_GCODE_RECEIVED);
@@ -115,7 +115,7 @@ void FilamentDetector::on_console_line_received( void *argument )
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
     string possible_command = new_message.message;
     string cmd = shift_parameter(possible_command);
-    if(cmd == "resume") {
+    if(cmd == "resume" || cmd == "M601") {
         this->pulses= 0;
         e_last_moved= NAN;
         suspended= false;

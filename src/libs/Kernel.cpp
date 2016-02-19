@@ -27,6 +27,8 @@
 #include "StepperMotor.h"
 #include "BaseSolution.h"
 #include "EndstopsPublicAccess.h"
+#include "Configurator.h"
+#include "SimpleShell.h"
 
 #include <malloc.h>
 #include <array>
@@ -147,6 +149,8 @@ Kernel::Kernel(){
     this->add_module( this->robot          = new Robot()         );
     this->add_module( this->stepper        = new Stepper()       );
     this->add_module( this->conveyor       = new Conveyor()      );
+    this->add_module( this->configurator   = new Configurator()  );
+    this->add_module( this->simpleshell    = new SimpleShell()   );
 
     this->planner = new Planner();
 

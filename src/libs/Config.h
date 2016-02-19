@@ -23,8 +23,6 @@ class Config : public Module {
         Config(ConfigSource*);
         ~Config();
 
-        void on_module_loaded();
-        void on_console_line_received( void* argument );
         void config_cache_load(bool parse= true);
         void config_cache_clear();
         void set_string( string setting , string value);

@@ -133,8 +133,6 @@ void init() {
 
 
     // Create and add main modules
-    kernel->add_module( new SimpleShell() );
-    kernel->add_module( new Configurator() );
     kernel->add_module( new CurrentControl() );
     kernel->add_module( new KillButton() );
     kernel->add_module( new PlayLed() );

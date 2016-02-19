@@ -27,6 +27,7 @@
 #include "GcodeDispatch.h"
 #include "BaseSolution.h"
 #include "StepperMotor.h"
+#include "Configurator.h"
 
 #include "TemperatureControlPublicAccess.h"
 #include "EndstopsPublicAccess.h"
@@ -253,8 +254,20 @@ void SimpleShell::on_console_line_received( void *argument )
         //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
         string cmd = shift_parameter(possible_command);
 
-        // find command and execute it
-        if(!parse_command(cmd.c_str(), possible_command, new_message.stream)) {
+        // Configurator commands
+        if (cmd == "config-get"){
+            THEKERNEL->configurator->config_get_command(  possible_command, new_message.stream );
+
+        } else if (cmd == "config-set"){
+            THEKERNEL->configurator->config_set_command(  possible_command, new_message.stream );
+
+        } else if (cmd == "config-load"){
+            THEKERNEL->configurator->config_load_command(  possible_command, new_message.stream );
+
+        } else if (cmd == "play" || cmd == "progress" || cmd == "abort" || cmd == "suspend" || cmd == "resume") {
+            // handled in the Player.cpp module
+
+        }else if(!parse_command(cmd.c_str(), possible_command, new_message.stream)) {
             new_message.stream->printf("error:Unsupported command - %s\n", cmd.c_str());
         }
     }
