@@ -833,19 +833,20 @@ void Endstops::on_gcode_received(void *argument)
                         THEKERNEL->robot->actuators[Z_AXIS]->get_current_position()
                     };
 
+                    //figure out what home_offset needs to be to correct the homing_position
                     if (gcode->has_letter('A')) {
-                        float a= gcode->get_value('A');
-                        home_offset[0] -= (current_angle[0] - a);
+                        float a= gcode->get_value('A'); // what actual angle is
+                        home_offset[0]= (a - current_angle[0]);
                         THEKERNEL->robot->reset_actuator_position(a, NAN, NAN);
                     }
                     if (gcode->has_letter('B')) {
                         float b= gcode->get_value('B');
-                        home_offset[1] -= (current_angle[1] - b);
+                        home_offset[1]= (b - current_angle[1]);
                         THEKERNEL->robot->reset_actuator_position(NAN, b, NAN);
                     }
                     if (gcode->has_letter('C')) {
                         float c= gcode->get_value('C');
-                        home_offset[2] -= (current_angle[2] - c);
+                        home_offset[2]= (c - current_angle[2]);
                         THEKERNEL->robot->reset_actuator_position(NAN, NAN, c);
                     }
 
@@ -901,22 +902,25 @@ void Endstops::on_gcode_received(void *argument)
                     // Enable the motors
                     THEKERNEL->stepper->turn_enable_pins_on();
 
-                    int32_t x = 0, y = 0 , z = 0, f = 200 * 16;
+                    int32_t x = 0, y = 0, z = 0, f = 200 * 16;
                     if (gcode->has_letter('F')) f = gcode->get_value('F');
 
                     if (gcode->has_letter('X')) {
-                        x = gcode->get_value('X');
-                        if(gcode->subcode == 2) x= lroundf(x * STEPS_PER_MM(X_AXIS));
+                        float v = gcode->get_value('X');
+                        if(gcode->subcode == 2) x= lroundf(v * STEPS_PER_MM(X_AXIS));
+                        else x= roundf(v);
                         STEPPER[X_AXIS]->move(x < 0, abs(x), f);
                     }
                     if (gcode->has_letter('Y')) {
-                        y = gcode->get_value('Y');
-                        if(gcode->subcode == 2) y= lroundf(y * STEPS_PER_MM(Y_AXIS));
+                        float v = gcode->get_value('Y');
+                        if(gcode->subcode == 2) y= lroundf(v * STEPS_PER_MM(Y_AXIS));
+                        else y= roundf(v);
                         STEPPER[Y_AXIS]->move(y < 0, abs(y), f);
                     }
                     if (gcode->has_letter('Z')) {
-                        z = gcode->get_value('Z');
-                        if(gcode->subcode == 2) z= lroundf(z * STEPS_PER_MM(Z_AXIS));
+                        float v = gcode->get_value('Z');
+                        if(gcode->subcode == 2) z= lroundf(v * STEPS_PER_MM(Z_AXIS));
+                        else z= roundf(v);
                         STEPPER[Z_AXIS]->move(z < 0, abs(z), f);
                     }
                     gcode->stream->printf("Moving X %ld Y %ld Z %ld steps at F %ld steps/sec\n", x, y, z, f);
