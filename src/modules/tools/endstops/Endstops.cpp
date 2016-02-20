@@ -680,6 +680,13 @@ void Endstops::on_gcode_received(void *argument)
             }
         }
 
+        // save current actuator position so we can report how far we moved
+        ActuatorCoordinates start_pos{
+            THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
+            THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
+            THEKERNEL->robot->actuators[Z_AXIS]->get_current_position()
+        };
+
         // Enable the motors
         THEKERNEL->stepper->turn_enable_pins_on();
 
@@ -711,7 +718,12 @@ void Endstops::on_gcode_received(void *argument)
         }
 
         // set the last probe position to the actuator units moved during this home
-        THEKERNEL->robot->set_last_probe_position(std::make_tuple(STEPPER[0]->get_stepped()/STEPS_PER_MM(0), STEPPER[1]->get_stepped()/STEPS_PER_MM(1), STEPPER[2]->get_stepped()/STEPS_PER_MM(2), 0));
+        THEKERNEL->robot->set_last_probe_position(
+            std::make_tuple(
+                start_pos[0]-THEKERNEL->robot->actuators[0]->get_current_position(),
+                start_pos[1]-THEKERNEL->robot->actuators[1]->get_current_position(),
+                start_pos[2]-THEKERNEL->robot->actuators[2]->get_current_position(),
+                0));
 
         if(home_all) {
             // Here's where we would have been if the endstops were perfectly trimmed

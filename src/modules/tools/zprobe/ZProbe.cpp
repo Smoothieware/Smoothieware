@@ -364,6 +364,10 @@ void ZProbe::on_gcode_received(void *argument)
         // first wait for an empty queue i.e. no moves left
         THEKERNEL->conveyor->wait_for_empty_queue();
 
+        // turn off any compensation transform
+        auto savect= THEKERNEL->robot->compensationTransform;
+        THEKERNEL->robot->compensationTransform= nullptr;
+
         if(gcode->has_letter('X')) {
             // probe in the X axis
             probe_XY(gcode, X_AXIS);
@@ -414,6 +418,10 @@ void ZProbe::on_gcode_received(void *argument)
             gcode->stream->printf("error:at least one of X Y or Z must be specified\n");
 
         }
+
+        // restore compensationTransform
+        THEKERNEL->robot->compensationTransform= savect;
+
         return;
 
     } else if(gcode->has_m) {
