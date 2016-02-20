@@ -384,6 +384,8 @@ void ZProbe::on_gcode_received(void *argument)
 
             if(probe_result) {
                 float z= current_machine_pos[Z_AXIS] - zsteps_to_mm(steps);
+                THEKERNEL->robot->set_last_probe_position(std::make_tuple(current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], z, 1));
+
                 if(THEKERNEL->is_grbl_mode()) {
                     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:1]\n", current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], z);
 
@@ -395,6 +397,7 @@ void ZProbe::on_gcode_received(void *argument)
                 THEKERNEL->robot->reset_axis_position(z, Z_AXIS);
 
             } else {
+                THEKERNEL->robot->set_last_probe_position(std::make_tuple(current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], current_machine_pos[Z_AXIS], 0));
                 if(THEKERNEL->is_grbl_mode()) {
                     if(gcode->subcode == 2) {
                         gcode->stream->printf("ALARM:Probe fail\n");
@@ -489,10 +492,11 @@ void ZProbe::probe_XY(Gcode *gcode, int axis)
     // see if probe was triggered
     // handle debounce here, 200ms should be enough
     safe_delay(200);
-    int probeok= this->pin.get() ? 1 : 0;
+    uint8_t probeok= this->pin.get() ? 1 : 0;
 
     // print results
     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok);
+    THEKERNEL->robot->set_last_probe_position(std::make_tuple(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok));
 
     if(!probeok && gcode->subcode == 2) {
         // issue error if probe was not triggered and subcode == 2

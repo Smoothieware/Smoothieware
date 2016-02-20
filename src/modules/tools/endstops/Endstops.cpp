@@ -710,6 +710,9 @@ void Endstops::on_gcode_received(void *argument)
             return;
         }
 
+        // set the last probe position to the actuator units moved during this home
+        THEKERNEL->robot->set_last_probe_position(std::make_tuple(STEPPER[0]->get_stepped()/STEPS_PER_MM(0), STEPPER[1]->get_stepped()/STEPS_PER_MM(1), STEPPER[2]->get_stepped()/STEPS_PER_MM(2), 0));
+
         if(home_all) {
             // Here's where we would have been if the endstops were perfectly trimmed
             // NOTE on a rotary delta home_offset is actuator position in degrees when homed and
