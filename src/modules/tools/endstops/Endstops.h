@@ -14,6 +14,7 @@
 #include <bitset>
 
 class StepperMotor;
+class Gcode;
 
 class Endstops : public Module{
     public:
@@ -36,6 +37,7 @@ class Endstops : public Module{
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
         bool debounced_get(int pin);
+        void process_home_command(Gcode* gcode);
 
         float homing_position[3];
         float home_offset[3];

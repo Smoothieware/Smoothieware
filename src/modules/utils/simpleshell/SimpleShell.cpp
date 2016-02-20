@@ -685,7 +685,6 @@ void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
     stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", px, py, pz, ps);
 }
 
-// used to test out the get public data events
 void SimpleShell::get_command( string parameters, StreamOutput *stream)
 {
     string what = shift_parameter( parameters );

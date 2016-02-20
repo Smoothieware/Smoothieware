@@ -370,53 +370,18 @@ void ZProbe::on_gcode_received(void *argument)
 
         if(gcode->has_letter('X')) {
             // probe in the X axis
-            probe_XY(gcode, X_AXIS);
+            probe_XYZ(gcode, X_AXIS);
 
         }else if(gcode->has_letter('Y')) {
             // probe in the Y axis
-            probe_XY(gcode, Y_AXIS);
+            probe_XYZ(gcode, Y_AXIS);
 
         }else if(gcode->has_letter('Z')) {
-            // we need to know where we started the probe from
-            float current_machine_pos[3];
-            THEKERNEL->robot->get_axis_position(current_machine_pos);
-
-            // probe down in the Z axis no more than the Z value in mm
-            float rate = (gcode->has_letter('F')) ? gcode->get_value('F') / 60 : this->slow_feedrate;
-            int steps;
-            bool probe_result = run_probe_feed(steps, rate, gcode->get_value('Z'));
-
-            if(probe_result) {
-                float z= current_machine_pos[Z_AXIS] - zsteps_to_mm(steps);
-                THEKERNEL->robot->set_last_probe_position(std::make_tuple(current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], z, 1));
-
-                if(THEKERNEL->is_grbl_mode()) {
-                    gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:1]\n", current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], z);
-
-                }else{
-                    gcode->stream->printf("INFO: delta Z %1.4f (Steps %d)\n", steps / Z_STEPS_PER_MM, steps);
-                }
-
-                // set position to where it stopped
-                THEKERNEL->robot->reset_axis_position(z, Z_AXIS);
-
-            } else {
-                THEKERNEL->robot->set_last_probe_position(std::make_tuple(current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], current_machine_pos[Z_AXIS], 0));
-                if(THEKERNEL->is_grbl_mode()) {
-                    if(gcode->subcode == 2) {
-                        gcode->stream->printf("ALARM:Probe fail\n");
-                        THEKERNEL->call_event(ON_HALT, nullptr);
-                    }
-                    gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:0]\n", current_machine_pos[X_AXIS], current_machine_pos[Y_AXIS], current_machine_pos[Z_AXIS]);
-
-                }else{
-                    gcode->stream->printf("error:ZProbe not triggered\n");
-                }
-            }
+            // probe in the Z axis
+            probe_XYZ(gcode, Z_AXIS);
 
         }else{
             gcode->stream->printf("error:at least one of X Y or Z must be specified\n");
-
         }
 
         // restore compensationTransform
@@ -459,8 +424,8 @@ void ZProbe::on_gcode_received(void *argument)
     }
 }
 
-// special way to probe in the X or Y direction
-void ZProbe::probe_XY(Gcode *gcode, int axis)
+// special way to probe in the X or Y or Z direction using planned moves
+void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 {
     // enable the probe checking in the stepticker
     THEKERNEL->step_ticker->probe_fnc= [this]() { return this->pin.get(); };
@@ -474,6 +439,9 @@ void ZProbe::probe_XY(Gcode *gcode, int axis)
 
     }else if(axis == Y_AXIS) {
         coordinated_move(0, gcode->get_value('Y'), 0, rate, true);
+
+    }else if(axis == Z_AXIS) {
+        coordinated_move(0, 0, gcode->get_value('Z'), rate, true);
 
     }else{
         // this is an error
