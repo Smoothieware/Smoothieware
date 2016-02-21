@@ -33,6 +33,7 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "StepTicker.h"
+#include "SlowTicker.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/nuts_bolts.h"
@@ -249,7 +250,9 @@ void init() {
         }
     }
 
+    // start the timers and interrupts
     THEKERNEL->step_ticker->start();
+    THEKERNEL->slow_ticker->start();
 }
 
 int main()
