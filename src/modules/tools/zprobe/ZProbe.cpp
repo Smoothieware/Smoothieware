@@ -294,6 +294,7 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         if( gcode->g == 30 ) { // simple Z probe
+            // NOTE currently this will not work for rotary deltas, use G38.2/3 Z instead
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
@@ -356,6 +357,7 @@ void ZProbe::on_gcode_received(void *argument)
             gcode->stream->printf("error:ZProbe not connected.\n");
             return;
         }
+
         if(this->pin.get()) {
             gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
             return;
@@ -424,7 +426,7 @@ void ZProbe::on_gcode_received(void *argument)
     }
 }
 
-// special way to probe in the X or Y or Z direction using planned moves
+// special way to probe in the X or Y or Z direction using planned moves, shoul dwork with any kinematics
 void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 {
     // enable the probe checking in the stepticker
@@ -466,11 +468,11 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
     }
 
     // see if probe was triggered
-    // handle debounce here, 200ms should be enough
+    // handle debounce here, 200ms should be enough Note this won't filter noise just handles real debounce after hit
     safe_delay(200);
     uint8_t probeok= this->pin.get() ? 1 : 0;
 
-    // print results
+    // print results using the GRBL format
     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok);
     THEKERNEL->robot->set_last_probe_position(std::make_tuple(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok));
 
