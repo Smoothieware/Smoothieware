@@ -30,6 +30,8 @@
 #include "Configurator.h"
 #include "SimpleShell.h"
 
+#include "platform_memory.h"
+
 #include <malloc.h>
 #include <array>
 #include <string>
