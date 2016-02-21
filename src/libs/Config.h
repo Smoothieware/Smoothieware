@@ -17,7 +17,7 @@ class ConfigValue;
 class ConfigSource;
 class ConfigCache;
 
-class Config : public Module {
+class Config  {
     public:
         Config();
         Config(ConfigSource*);

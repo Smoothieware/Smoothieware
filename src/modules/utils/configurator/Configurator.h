@@ -9,14 +9,12 @@
 #ifndef configurator_h
 #define configurator_h
 
-#include "Module.h"
-
 #include <string>
 using std::string;
 
 class StreamOutput;
 
-class Configurator : public Module
+class Configurator
 {
 public:
     Configurator() {}
