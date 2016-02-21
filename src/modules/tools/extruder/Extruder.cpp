@@ -409,7 +409,8 @@ void Extruder::on_gcode_received(void *argument)
             THEKERNEL->conveyor->append_gcode(gcode);
             THEKERNEL->conveyor->queue_head_block();
 
-        } else if( this->enabled && (gcode->g == 10 || gcode->g == 11) && !gcode->has_letter('L') ) { // firmware retract command (Ignore if has L parameter that is not for us)
+        } else if( this->enabled && (gcode->g == 10 || gcode->g == 11) && !gcode->has_letter('L') ) {
+            // firmware retract command (Ignore if has L parameter that is not for us)
             // check we are in the correct state of retract or unretract
             if(gcode->g == 10 && !retracted) {
                 this->retracted = true;
@@ -428,10 +429,10 @@ void Extruder::on_gcode_received(void *argument)
                 int n = snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", -retract_zlift_length, retract_zlift_feedrate);
                 string cmd(buf, n);
                 Gcode gc(cmd, &(StreamOutput::NullStream));
-                bool oldmode = THEKERNEL->robot->absolute_mode;
+                THEKERNEL->robot->push_state(); // save state includes feed rates etc
                 THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
                 THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-                THEKERNEL->robot->absolute_mode = oldmode; // restore mode
+                THEKERNEL->robot->pop_state(); // restore state includes feed rates etc
             }
 
             // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
@@ -443,10 +444,10 @@ void Extruder::on_gcode_received(void *argument)
                 int n = snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", retract_zlift_length, retract_zlift_feedrate);
                 string cmd(buf, n);
                 Gcode gc(cmd, &(StreamOutput::NullStream));
-                bool oldmode = THEKERNEL->robot->absolute_mode;
+                THEKERNEL->robot->push_state(); // save state includes feed rates etc
                 THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
                 THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-                THEKERNEL->robot->absolute_mode = oldmode; // restore mode
+                THEKERNEL->robot->pop_state(); // restore state includes feed rates etc
             }
 
         } else if( this->enabled && this->retracted && (gcode->g == 0 || gcode->g == 1) && gcode->has_letter('Z')) {
