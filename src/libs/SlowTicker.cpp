@@ -24,21 +24,23 @@ using namespace std;
 SlowTicker* global_slow_ticker;
 
 SlowTicker::SlowTicker(){
-    max_frequency = 0;
     global_slow_ticker = this;
-
 
     // ISP button FIXME: WHy is this here?
     ispbtn.from_string("2.10")->as_input()->pull_up();
 
-    // TODO: What is this ??
-    flag_1s_flag = 0;
-    flag_1s_count = SystemCoreClock>>2;
-
-    // Configure the actual timer after setup to avoid race conditions
     LPC_SC->PCONP |= (1 << 22);     // Power Ticker ON
-    LPC_TIM2->MR0 = 10000;          // Initial dummy value for Match Register
     LPC_TIM2->MCR = 3;              // Match on MR0, reset on MR0
+    // do not enable interrupt until setup is complete
+    LPC_TIM2->TCR = 0;              // Disable interrupt
+
+    max_frequency = 5;  // initial max frequency is set to 5Hz
+    set_frequency(max_frequency);
+    flag_1s_flag = 0;
+}
+
+void SlowTicker::start()
+{
     LPC_TIM2->TCR = 1;              // Enable interrupt
     NVIC_EnableIRQ(TIMER2_IRQn);    // Enable interrupt handler
 }
