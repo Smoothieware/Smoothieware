@@ -63,7 +63,6 @@ void ZProbe::on_module_loaded()
         delete this;
         return;
     }
-    this->running = false;
 
     // load settings
     this->on_config_reload(this);

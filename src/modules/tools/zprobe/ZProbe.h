@@ -26,8 +26,9 @@ class ZProbe: public Module
 {
 
 public:
+    ZProbe() : running(false){};
+
     void on_module_loaded();
-    void on_config_reload(void *argument);
     void on_gcode_received(void *argument);
     void acceleration_tick(void);
 
@@ -49,6 +50,7 @@ public:
     float zsteps_to_mm(float steps);
 
 private:
+    void on_config_reload(void *argument);
     void accelerate(int c);
     void probe_XYZ(Gcode *gc, int axis);
 

@@ -63,7 +63,7 @@ StepTicker::StepTicker(){
     this->num_motors= 0;
     this->active_motor.reset();
     this->tick_cnt= 0;
-    probe_fnc= nullptr;
+    this->probe_fnc= nullptr;
 }
 
 StepTicker::~StepTicker() {
