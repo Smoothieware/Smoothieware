@@ -27,6 +27,8 @@
 #include "StepperMotor.h"
 #include "BaseSolution.h"
 #include "EndstopsPublicAccess.h"
+#include "Configurator.h"
+#include "SimpleShell.h"
 
 #include <malloc.h>
 #include <array>
@@ -99,7 +101,6 @@ Kernel::Kernel(){
     this->grbl_mode= this->config->value( grbl_mode_checksum )->by_default(false)->as_bool();
     this->ok_per_line= this->config->value( ok_per_line_checksum )->by_default(true)->as_bool();
 
-    this->add_module( this->config );
     this->add_module( this->serial );
 
     // HAL stuff
@@ -149,9 +150,10 @@ Kernel::Kernel(){
     this->add_module( this->robot          = new Robot()         );
     this->add_module( this->stepper        = new Stepper()       );
     this->add_module( this->conveyor       = new Conveyor()      );
+    this->add_module( this->simpleshell    = new SimpleShell()   );
 
     this->planner = new Planner();
-
+    this->configurator   = new Configurator();
 }
 
 // return a GRBL-like query string for serial ?

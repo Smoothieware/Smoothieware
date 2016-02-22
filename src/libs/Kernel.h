@@ -29,6 +29,8 @@ class Planner;
 class StepTicker;
 class Adc;
 class PublicData;
+class SimpleShell;
+class Configurator;
 
 class Kernel {
     public:
@@ -62,6 +64,8 @@ class Kernel {
         Planner*          planner;
         Config*           config;
         Conveyor*         conveyor;
+        Configurator*     configurator;
+        SimpleShell*      simpleshell;
 
         int debug;
         SlowTicker*       slow_ticker;
