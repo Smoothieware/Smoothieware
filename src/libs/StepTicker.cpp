@@ -63,7 +63,6 @@ StepTicker::StepTicker(){
     this->num_motors= 0;
     this->active_motor.reset();
     this->tick_cnt= 0;
-    this->probe_fnc= nullptr;
 }
 
 StepTicker::~StepTicker() {
@@ -192,24 +191,12 @@ void StepTicker::TIMER0_IRQHandler (void){
     LPC_TIM0->IR |= 1 << 0;
     tick_cnt++; // count number of ticks
 
-    // check if we are probing and if so check the probe status and force an end of move if it is triggered
-    if(probe_fnc && probe_fnc()) {
-        // we do exactly what we would do if stepping had finished
-        for (uint32_t motor = 0; motor < num_motors; motor++){
-            if(this->active_motor[motor]){
-                 this->motor[motor]->force_finish_move();
-             }
-        }
-
-    }else{
-
-        // Step pins NOTE takes 1.2us when nothing to step, 1.8-2us for one motor stepped and 2.6us when two motors stepped, 3.167us when three motors stepped
-        for (uint32_t motor = 0; motor < num_motors; motor++){
-            // send tick to all active motors
-            if(this->active_motor[motor] && this->motor[motor]->tick()){
-                // we stepped so schedule an unstep
-                this->unstep[motor]= 1;
-            }
+    // Step pins NOTE takes 1.2us when nothing to step, 1.8-2us for one motor stepped and 2.6us when two motors stepped, 3.167us when three motors stepped
+    for (uint32_t motor = 0; motor < num_motors; motor++){
+        // send tick to all active motors
+        if(this->active_motor[motor] && this->motor[motor]->tick()){
+            // we stepped so schedule an unstep
+            this->unstep[motor]= 1;
         }
     }
 

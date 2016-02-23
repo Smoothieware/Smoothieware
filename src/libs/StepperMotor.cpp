@@ -45,6 +45,7 @@ void StepperMotor::init()
     this->is_move_finished = false;
     this->last_step_tick_valid= false;
     this->last_step_tick= 0;
+    this->force_finish= false;
 
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
@@ -65,40 +66,35 @@ void StepperMotor::step()
     // ignore if we are still processing the end of a block
     if(this->is_move_finished) return;
 
-    // output to pins 37t
-    this->step_pin.set( 1 );
+    if(!this->force_finish) {
+        // output to pins 37t
+        this->step_pin.set( 1 );
 
-    // move counter back 11t
-    this->fx_counter -= this->fx_ticks_per_step;
+        // move counter back 11t
+        this->fx_counter -= this->fx_ticks_per_step;
 
-    // we have moved a step 9t
-    this->stepped++;
+        // we have moved a step 9t
+        this->stepped++;
 
-    // keep track of actuators actual position in steps
-    this->current_position_steps += (this->direction ? -1 : 1);
+        // keep track of actuators actual position in steps
+        this->current_position_steps += (this->direction ? -1 : 1);
 
-    // we may need to callback on a specific step, usually used to synchronize deceleration timer
-    if(this->signal_step != 0 && this->stepped == this->signal_step) {
-        THEKERNEL->step_ticker->synchronize_acceleration(true);
-        this->signal_step= 0;
+        // we may need to callback on a specific step, usually used to synchronize deceleration timer
+        if(this->signal_step != 0 && this->stepped == this->signal_step) {
+            THEKERNEL->step_ticker->synchronize_acceleration(true);
+            this->signal_step= 0;
+        }
     }
 
     // Is this move finished ?
-    if( this->stepped == this->steps_to_move ) {
-        // Mark it as finished, then StepTicker will call signal_mode_finished()
+    if( this->force_finish || this->stepped == this->steps_to_move) {
+        // Mark it as finished, then StepTicker will call signal_move_finished()
         // This is so we don't call that before all the steps have been generated for this tick()
         this->is_move_finished = true;
         THEKERNEL->step_ticker->a_move_finished= true;
         this->last_step_tick= THEKERNEL->step_ticker->get_tick_cnt(); // remember when last step was
+        if(this->force_finish) this->steps_to_move = stepped;
     }
-}
-
-void StepperMotor::force_finish_move()
-{
-    this->is_move_finished = true;
-    THEKERNEL->step_ticker->a_move_finished= true;
-    this->last_step_tick= THEKERNEL->step_ticker->get_tick_cnt(); // remember when last step was
-    this->steps_to_move= this->stepped;
 }
 
 // If the move is finished, the StepTicker will call this ( because we asked it to in tick() )
@@ -138,6 +134,7 @@ StepperMotor* StepperMotor::move( bool direction, unsigned int steps, float init
 {
     this->dir_pin.set(direction);
     this->direction = direction;
+    this->force_finish= false;
 
     // How many steps we have to move until the move is done
     this->steps_to_move = steps;
