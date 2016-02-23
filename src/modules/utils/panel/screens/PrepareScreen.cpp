@@ -95,9 +95,14 @@ void PrepareScreen::preheat()
 void PrepareScreen::cooldown()
 {
     float t = 0;
-    PublicData::set_value( temperature_control_checksum, hotend_checksum, &t );
-    PublicData::set_value( temperature_control_checksum, bed_checksum, &t );
-}
+    std::vector<struct pad_temperature> controllers;
+    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+    if (ok) {
+        for (auto &c : controllers) {
+            PublicData::set_value( temperature_control_checksum, c.id, &t );
+        }
+    }
+ }
 
 static float getTargetTemperature(uint16_t heater_cs)
 {
