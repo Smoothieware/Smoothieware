@@ -53,21 +53,24 @@ private:
     void on_config_reload(void *argument);
     void accelerate(int c);
     void probe_XYZ(Gcode *gc, int axis);
-
+    uint32_t read_probe(uint32_t dummy);
     volatile float current_feedrate;
     float slow_feedrate;
     float fast_feedrate;
     float return_feedrate;
     float probe_height;
     float max_z;
+
+    Pin pin;
+    std::vector<LevelingStrategy*> strategies;
+    uint8_t debounce_count;
+
     volatile struct {
         volatile bool running:1;
         bool is_delta:1;
+        bool probing:1;
+        volatile bool probe_detected:1;
     };
-
-    Pin pin;
-    uint8_t debounce_count;
-    std::vector<LevelingStrategy*> strategies;
 };
 
 #endif /* ZPROBE_H_ */

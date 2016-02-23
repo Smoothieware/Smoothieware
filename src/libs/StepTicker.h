@@ -46,8 +46,6 @@ class StepTicker{
 
         void start();
 
-        std::function<bool(void)> probe_fnc;
-
         friend class StepperMotor;
 
     private:
