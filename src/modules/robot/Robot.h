@@ -61,7 +61,8 @@ class Robot : public Module {
         std::function<void(float[3])> compensationTransform;
 
         // Workspace coordinate systems
-        wcs_t mcs2wcs(const float *pos) const;
+        wcs_t mcs2wcs(const wcs_t &pos) const;
+        wcs_t mcs2wcs(const float *pos) const { return mcs2wcs(wcs_t(pos[0], pos[1], pos[2])); }
 
         struct {
             bool inch_mode:1;                                 // true for inch mode, false for millimeter mode ( default )

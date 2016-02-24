@@ -38,6 +38,7 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256 + 8), txbuf(128 + 8)
     flush_to_nl = false;
     halt_flag= false;
     query_flag= false;
+    last_char_was_dollar= false;
 }
 
 void USBSerial::ensure_tx_space(int space)
@@ -198,6 +199,7 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
     iprintf("Read %ld bytes:\n\t", size);
     for (uint8_t i = 0; i < size; i++) {
         if(c[i] == 'X'-'A'+1){ // ^X
+            THEKERNEL->set_feed_hold(false); // required to free stuff up
             halt_flag= true;
             continue;
         }
@@ -217,19 +219,25 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
                 THEKERNEL->set_feed_hold(false);
                 continue;
             }
+            if(last_char_was_dollar && (c[i] == 'X' || c[i] == 'H')) {
+                // we need to do this otherwise $X/$H won't work if there was a feed hold like when stop is clicked in bCNC
+                THEKERNEL->set_feed_hold(false);
+            }
         }
+
+        last_char_was_dollar= (c[i] == '$');
 
         if (flush_to_nl == false)
             rxbuf.queue(c[i]);
 
-        if (c[i] >= 32 && c[i] < 128)
-        {
-            iprintf("%c", c[i]);
-        }
-        else
-        {
-            iprintf("\\x%02X", c[i]);
-        }
+        // if (c[i] >= 32 && c[i] < 128)
+        // {
+        //     iprintf("%c", c[i]);
+        // }
+        // else
+        // {
+        //     iprintf("\\x%02X", c[i]);
+        // }
 
         if (c[i] == '\n' || c[i] == '\r')
         {

@@ -27,6 +27,7 @@ class ZProbe: public Module
 
 public:
     ZProbe() : running(false){};
+    virtual ~ZProbe() {};
 
     void on_module_loaded();
     void on_gcode_received(void *argument);

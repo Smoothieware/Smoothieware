@@ -266,13 +266,13 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
     int n = 0;
     if(subcode == 0) { // M114 print WCS
         wcs_t pos= mcs2wcs(last_milestone);
-        n = snprintf(buf, bufsize, "C: X:%1.3f Y:%1.3f Z:%1.3f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+        n = snprintf(buf, bufsize, "C: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
     } else if(subcode == 4) { // M114.3 print last milestone (which should be the same as machine position if axis are not moving and no level compensation)
-        n = snprintf(buf, bufsize, "LMS: X:%1.3f Y:%1.3f Z:%1.3f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
+        n = snprintf(buf, bufsize, "LMS: X:%1.4f Y:%1.4f Z:%1.4f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 
     } else if(subcode == 5) { // M114.4 print last machine position (which should be the same as M114.1 if axis are not moving and no level compensation)
-        n = snprintf(buf, bufsize, "LMCS: X:%1.3f Y:%1.3f Z:%1.3f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
+        n = snprintf(buf, bufsize, "LMCS: X:%1.4f Y:%1.4f Z:%1.4f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
 
     } else {
         // get real time positions
@@ -290,25 +290,25 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
         if(subcode == 1) { // M114.1 print realtime WCS
             // FIXME this currently includes the compensation transform which is incorrect so will be slightly off if it is in effect (but by very little)
             wcs_t pos= mcs2wcs(mpos);
-            n = snprintf(buf, bufsize, "C: X:%1.3f Y:%1.3f Z:%1.3f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+            n = snprintf(buf, bufsize, "C: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
         } else if(subcode == 2) { // M114.1 print realtime Machine coordinate system
-            n = snprintf(buf, bufsize, "MPOS: X:%1.3f Y:%1.3f Z:%1.3f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
+            n = snprintf(buf, bufsize, "MPOS: X:%1.4f Y:%1.4f Z:%1.4f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
 
         } else if(subcode == 3) { // M114.2 print realtime actuator position
-            n = snprintf(buf, bufsize, "APOS: A:%1.3f B:%1.3f C:%1.3f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
+            n = snprintf(buf, bufsize, "APOS: A:%1.4f B:%1.4f C:%1.4f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
         }
     }
     return n;
 }
 
 // converts current last milestone (machine position without compensation transform) to work coordinate system (inverse transform)
-Robot::wcs_t Robot::mcs2wcs(const float *pos) const
+Robot::wcs_t Robot::mcs2wcs(const Robot::wcs_t& pos) const
 {
     return std::make_tuple(
-        pos[X_AXIS] - std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset) - std::get<X_AXIS>(tool_offset),
-        pos[Y_AXIS] - std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset) - std::get<Y_AXIS>(tool_offset),
-        pos[Z_AXIS] - std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset) - std::get<Z_AXIS>(tool_offset)
+        std::get<X_AXIS>(pos) - std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset) - std::get<X_AXIS>(tool_offset),
+        std::get<Y_AXIS>(pos) - std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset) - std::get<Y_AXIS>(tool_offset),
+        std::get<Z_AXIS>(pos) - std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset) - std::get<Z_AXIS>(tool_offset)
     );
 }
 
