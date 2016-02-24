@@ -344,12 +344,12 @@ void Endstops::back_off_home(char axes_to_move)
         char gcode_buf[64];
         append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
-        bool oldmode = THEKERNEL->robot->absolute_mode;
+        THEKERNEL->robot->push_state();
         THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
         THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-        THEKERNEL->robot->absolute_mode = oldmode; // restore mode
         // Wait for above to finish
         THEKERNEL->conveyor->wait_for_empty_queue();
+        THEKERNEL->robot->pop_state();
     }
 
     this->status = NOT_HOMING;
@@ -368,12 +368,14 @@ void Endstops::move_to_origin(char axes_to_move)
     float rate = std::min(this->fast_rates[0], this->fast_rates[1]) * 60.0F;
     char buf[32];
     snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
+    THEKERNEL->robot->push_state();
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
     // Wait for above to finish
     THEKERNEL->conveyor->wait_for_empty_queue();
+    THEKERNEL->robot->pop_state();
     this->status = NOT_HOMING;
 }
 

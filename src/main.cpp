@@ -166,10 +166,10 @@ void init() {
     kernel->add_module( new Spindle() );
     #endif
     #ifndef NO_UTILS_PANEL
-    kernel->add_module( new(AHB0) Panel() );
+    kernel->add_module( new Panel() );
     #endif
     #ifndef NO_TOOLS_ZPROBE
-    kernel->add_module( new(AHB0) ZProbe() );
+    kernel->add_module( new ZProbe() );
     #endif
     #ifndef NO_TOOLS_SCARACAL
     kernel->add_module( new SCARAcal() );
