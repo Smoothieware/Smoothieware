@@ -134,11 +134,12 @@ void init() {
 
 
     // Create and add main modules
-    kernel->add_module( new(AHB0) CurrentControl() );
-    kernel->add_module( new(AHB0) KillButton() );
-    kernel->add_module( new(AHB0) PlayLed() );
-    kernel->add_module( new(AHB0) Endstops() );
     kernel->add_module( new(AHB0) Player() );
+
+    kernel->add_module( new CurrentControl() );
+    kernel->add_module( new KillButton() );
+    kernel->add_module( new PlayLed() );
+    kernel->add_module( new Endstops() );
 
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
