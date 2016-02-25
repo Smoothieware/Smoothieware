@@ -795,7 +795,7 @@ void Endstops::on_gcode_received(void *argument)
     if ( gcode->has_g && gcode->g == 28) {
         process_home_command(gcode);
 
-    }else if (gcode->has_m) {
+    } else if (gcode->has_m) {
 
         switch (gcode->m) {
             case 119: {

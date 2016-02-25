@@ -27,6 +27,7 @@ public:
     void on_gcode_received(void *argument);
     void on_second_tick(void *);
     static bool parse_command(const char *cmd, string args, StreamOutput *stream);
+    static void print_mem(StreamOutput *stream) { mem_command("", stream); }
 
 private:
     static void ls_command(string parameters, StreamOutput *stream );

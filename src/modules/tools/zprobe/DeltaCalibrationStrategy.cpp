@@ -344,7 +344,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
         float d = cmm - m;
         gcode->stream->printf("C-%d Z-ave:%1.4f delta: %1.3f\n", i, m, d);
 
-        if(abs(d) <= target){
+        if(fabsf(d) <= target){
             good= true;
             break; // resolution of success
         }

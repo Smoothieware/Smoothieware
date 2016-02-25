@@ -602,7 +602,7 @@ void Extruder::on_block_begin(void *argument)
     this->current_position += this->travel_distance ;
 
     // round down, we take care of the fractional part next time
-    int steps_to_step = abs(floorf(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) ));
+    int steps_to_step = abs((int)floorf(this->steps_per_millimeter * (this->travel_distance + this->unstepped_distance) ));
 
     // accumulate the fractional part
     if ( this->travel_distance > 0 ) {
