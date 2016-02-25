@@ -69,6 +69,7 @@ private:
     volatile struct {
         volatile bool running:1;
         bool is_delta:1;
+        bool is_rdelta:1;
         bool probing:1;
         volatile bool probe_detected:1;
     };

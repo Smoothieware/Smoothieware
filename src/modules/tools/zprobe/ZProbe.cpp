@@ -44,6 +44,7 @@
 
 // from endstop section
 #define delta_homing_checksum    CHECKSUM("delta_homing")
+#define rdelta_homing_checksum    CHECKSUM("rdelta_homing")
 
 #define X_AXIS 0
 #define Y_AXIS 1
@@ -117,6 +118,7 @@ void ZProbe::on_config_reload(void *argument)
 
     // need to know if we need to use delta kinematics for homing
     this->is_delta = THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
+    this->is_rdelta = THEKERNEL->config->value(rdelta_homing_checksum)->by_default(false)->as_bool();
 
     // default for backwards compatibility add DeltaCalibrationStrategy if a delta
     // will be deprecated
@@ -144,12 +146,14 @@ bool ZProbe::wait_for_probe(int& steps)
             return false;
         }
 
+        bool delta= is_delta || is_rdelta;
+
         // if no stepper is moving, moves are finished and there was no touch
-        if( !STEPPER[Z_AXIS]->is_moving() && (!is_delta || (!STEPPER[Y_AXIS]->is_moving() && !STEPPER[Z_AXIS]->is_moving())) ) {
+        if( !STEPPER[Z_AXIS]->is_moving() && (!delta || (!STEPPER[Y_AXIS]->is_moving() && !STEPPER[Z_AXIS]->is_moving())) ) {
             return false;
         }
 
-        // if the touchprobe is active...
+        // if the probe is active...
         if( this->pin.get() ) {
             //...increase debounce counter...
             if( debounce < debounce_count) {
@@ -161,7 +165,7 @@ bool ZProbe::wait_for_probe(int& steps)
                     steps= STEPPER[Z_AXIS]->get_stepped();
                     STEPPER[Z_AXIS]->move(0, 0);
                 }
-                if(is_delta) {
+                if(delta) {
                     for( int i = X_AXIS; i <= Y_AXIS; i++ ) {
                         if ( STEPPER[i]->is_moving() ) {
                             STEPPER[i]->move(0, 0);
@@ -193,7 +197,7 @@ bool ZProbe::run_probe_feed(int& steps, float feedrate, float max_dist)
 
     // move Z down
     STEPPER[Z_AXIS]->move(true, maxz * Z_STEPS_PER_MM, 0); // always probes down, no more than 2*maxz
-    if(this->is_delta) {
+    if(this->is_delta || this->is_rdelta) {
         // for delta need to move all three actuators
         STEPPER[X_AXIS]->move(true, maxz * STEPS_PER_MM(X_AXIS), 0);
         STEPPER[Y_AXIS]->move(true, maxz * STEPS_PER_MM(Y_AXIS), 0);
@@ -234,14 +238,15 @@ bool ZProbe::return_probe(int steps)
     bool dir= steps < 0;
     steps= abs(steps);
 
+    bool delta= (this->is_delta || this->is_rdelta);
     STEPPER[Z_AXIS]->move(dir, steps, 0);
-    if(this->is_delta) {
+    if(delta) {
         STEPPER[X_AXIS]->move(dir, steps, 0);
         STEPPER[Y_AXIS]->move(dir, steps, 0);
     }
 
     this->running = true;
-    while(STEPPER[Z_AXIS]->is_moving() || (is_delta && (STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving())) ) {
+    while(STEPPER[Z_AXIS]->is_moving() || (delta && (STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving())) ) {
         // wait for it to complete
         THEKERNEL->call_event(ON_IDLE);
          if(THEKERNEL->is_halted()){
@@ -296,7 +301,6 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         if( gcode->g == 30 ) { // simple Z probe
-            // NOTE currently this will not work for rotary deltas, use G38.2/3 Z instead
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
@@ -503,7 +507,7 @@ void ZProbe::acceleration_tick(void)
     if(!this->running) return; // nothing to do
     if(STEPPER[Z_AXIS]->is_moving()) accelerate(Z_AXIS);
 
-    if(is_delta) {
+    if(is_delta || is_rdelta) {
          // deltas needs to move all actuators
         for ( int c = X_AXIS; c <= Y_AXIS; c++ ) {
             if( !STEPPER[c]->is_moving() ) continue;
