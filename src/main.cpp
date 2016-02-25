@@ -55,6 +55,7 @@
 
 #include "version.h"
 #include "system_LPC17xx.h"
+#include "platform_memory.h"
 
 #include "mbed.h"
 
@@ -136,10 +137,10 @@ void init() {
     // Create and add main modules
     kernel->add_module( new(AHB0) Player() );
 
-    kernel->add_module( new CurrentControl() );
-    kernel->add_module( new KillButton() );
-    kernel->add_module( new PlayLed() );
-    kernel->add_module( new Endstops() );
+    kernel->add_module( new(AHB0) CurrentControl() );
+    kernel->add_module( new(AHB0) KillButton() );
+    kernel->add_module( new(AHB0) PlayLed() );
+    kernel->add_module( new(AHB0) Endstops() );
 
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
@@ -167,13 +168,13 @@ void init() {
     kernel->add_module( new Spindle() );
     #endif
     #ifndef NO_UTILS_PANEL
-    kernel->add_module( new Panel() );
+    kernel->add_module( new(AHB0) Panel() );
     #endif
     #ifndef NO_TOOLS_ZPROBE
-    kernel->add_module( new ZProbe() );
+    kernel->add_module( new(AHB0) ZProbe() );
     #endif
     #ifndef NO_TOOLS_SCARACAL
-    kernel->add_module( new SCARAcal() );
+    kernel->add_module( new(AHB0) SCARAcal() );
     #endif
     #ifndef NONETWORK
     kernel->add_module( new Network() );
@@ -223,6 +224,9 @@ void init() {
 
 
     kernel->add_module( &u );
+
+    // memory before cache is cleared
+    //SimpleShell::print_mem(kernel->streams);
 
     // clear up the config cache to save some memory
     kernel->config->config_cache_clear();

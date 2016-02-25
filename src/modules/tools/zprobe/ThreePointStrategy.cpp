@@ -300,8 +300,8 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     }
 
     // if first point is not within tolerance report it, it should ideally be 0
-    if(abs(v[0][2]) > this->tolerance) {
-        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", abs(v[0][2]), this->tolerance);
+    if(fabsf(v[0][2]) > this->tolerance) {
+        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", fabsf(v[0][2]), this->tolerance);
     }
 
     // define the plane
