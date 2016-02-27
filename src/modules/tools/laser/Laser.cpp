@@ -96,19 +96,25 @@ void Laser::on_module_loaded() {
     this->register_for_event(ON_SPEED_CHANGE);
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
+    this->register_for_event(ON_HALT);
 }
 
 // Turn laser off laser at the end of a move
 void  Laser::on_block_end(void* argument){
     this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
 
-    if (this->ttl_used)
-        this->ttl_pin->set(0);
+    if (this->ttl_used) {
+    	Block* block = static_cast<Block*>(argument);
+    	// Only switch TTL off if this is the last block for this move - G2/3 are multiple blocks
+    	if (block->final_rate == 0)
+    		this->ttl_pin->set(0);
+    }
 }
 
 // Set laser power at the beginning of a block
 void Laser::on_block_begin(void* argument){
     this->set_proportional_power();
+
 }
 
 // Turn laser on/off depending on received GCodes
@@ -145,5 +151,15 @@ void Laser::set_proportional_power(){
         // adjust power to maximum power and actual velocity
         float proportional_power = (((this->laser_maximum_power-this->laser_minimum_power)*(this->laser_power * THEKERNEL->stepper->get_trapezoid_adjusted_rate() / THEKERNEL->stepper->get_current_block()->nominal_rate))+this->laser_minimum_power);
         this->pwm_pin->write(this->pwm_inverting ? 1 - proportional_power : proportional_power);
+    }
+}
+
+void Laser::on_halt(void *argument)
+{
+    if(argument == nullptr) {
+    	// Safety check - turn laser off on halt
+    	this->laser_on = false;
+    	if (this->ttl_used)
+    	        this->ttl_pin->set(this->laser_on);
     }
 }

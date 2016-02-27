@@ -24,6 +24,7 @@ class Laser : public Module{
         void on_block_begin(void* argument);
         void on_gcode_execute(void* argument);
         void on_speed_change(void* argument);
+        void on_halt(void* argument);
 
     private:
         void set_proportional_power();
