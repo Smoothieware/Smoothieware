@@ -8,8 +8,6 @@
 #ifndef MODULE_H
 #define MODULE_H
 
-#include "platform_memory.h" // needed in case the mdouke is loaded in AHB0 so it can delete itself properly
-
 // See : http://smoothieware.org/listofevents
 // When adding a new event the virtual method needs to be defined in class Module and the method pointer need to be defined in
 // Module.cpp:16 in the same order
