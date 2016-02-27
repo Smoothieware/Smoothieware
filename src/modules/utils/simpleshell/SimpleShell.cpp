@@ -266,7 +266,10 @@ void SimpleShell::on_console_line_received( void *argument )
             THEKERNEL->configurator->config_load_command(  possible_command, new_message.stream );
 
         } else if (cmd == "play" || cmd == "progress" || cmd == "abort" || cmd == "suspend" || cmd == "resume") {
-            // handled in the Player.cpp module
+
+        } else if (cmd == "ok") {
+            // probably an echo so reply ok
+            new_message.stream->printf("ok\n");
 
         }else if(!parse_command(cmd.c_str(), possible_command, new_message.stream)) {
             new_message.stream->printf("error:Unsupported command - %s\n", cmd.c_str());

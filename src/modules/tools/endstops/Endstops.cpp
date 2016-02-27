@@ -650,12 +650,12 @@ void Endstops::process_home_command(Gcode* gcode)
         return;
 
     } else if(gcode->subcode == 4) { // G28.4 is a smoothie special it sets manual homing based on the actuator position (used for rotary delta)
-        // do a manual homing based on given coordinates, no endstops required
-        float a = NAN, b = NAN, c = NAN;
-        if(gcode->has_letter('A')) a =  gcode->get_value('A');
-        if(gcode->has_letter('B')) b =  gcode->get_value('B');
-        if(gcode->has_letter('C')) c =  gcode->get_value('C');
-        THEKERNEL->robot->reset_actuator_position(a, b, c);
+        // do a manual homing based on given coordinates, no endstops required, NOTE does not support the multi actuator hack
+        ActuatorCoordinates ac;
+        if(gcode->has_letter('A')) ac[0] =  gcode->get_value('A');
+        if(gcode->has_letter('B')) ac[1] =  gcode->get_value('B');
+        if(gcode->has_letter('C')) ac[2] =  gcode->get_value('C');
+        THEKERNEL->robot->reset_actuator_position(ac);
         return;
 
     } else if(THEKERNEL->is_grbl_mode()) {
@@ -755,7 +755,8 @@ void Endstops::process_home_command(Gcode* gcode)
             // without endstop trim, real_position == ideal_position
             if(is_rdelta) {
                 // with a rotary delta we set the actuators angle then use the FK to calculate the resulting cartesian coordinates
-                THEKERNEL->robot->reset_actuator_position(ideal_position[0], ideal_position[1], ideal_position[2]);
+                ActuatorCoordinates real_actuator_position = {ideal_position[0], ideal_position[1], ideal_position[2]};
+                THEKERNEL->robot->reset_actuator_position(real_actuator_position);
 
             } else {
                 // Reset the actuator positions to correspond our real position
@@ -848,29 +849,31 @@ void Endstops::on_gcode_received(void *argument)
                     // by doing M306 A-56.17 it will calculate the M206 A value (the theta offset for actuator A) based on the difference
                     // between what it thinks is the current angle and what the current angle actually is specified by A (ditto for B and C)
 
-                    // get the current angle for each actuator
-                    ActuatorCoordinates current_angle{
-                        THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
-                        THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
-                        THEKERNEL->robot->actuators[Z_AXIS]->get_current_position()
-                    };
+                    // get the current angle for each actuator, NOTE we only deal with  ABC so if there are more than 3 actuators this will probably go wonky
+                    ActuatorCoordinates current_angle;
+                    for (size_t i = 0; i < THEKERNEL->robot->actuators.size(); i++) {
+                        current_angle[i]= THEKERNEL->robot->actuators[i]->get_current_position();
+                    }
 
                     //figure out what home_offset needs to be to correct the homing_position
                     if (gcode->has_letter('A')) {
                         float a = gcode->get_value('A'); // what actual angle is
-                        home_offset[0] = (a - current_angle[0]);
-                        THEKERNEL->robot->reset_actuator_position(a, NAN, NAN);
+                        home_offset[0] += (current_angle[0] - a);
+                        current_angle[0]= a;
                     }
                     if (gcode->has_letter('B')) {
                         float b = gcode->get_value('B');
-                        home_offset[1] = (b - current_angle[1]);
-                        THEKERNEL->robot->reset_actuator_position(NAN, b, NAN);
+                        home_offset[1] += (current_angle[1] - b);
+                        current_angle[1]= b;
                     }
                     if (gcode->has_letter('C')) {
                         float c = gcode->get_value('C');
-                        home_offset[2] = (c - current_angle[2]);
-                        THEKERNEL->robot->reset_actuator_position(NAN, NAN, c);
+                        home_offset[2] += (current_angle[2] - c);
+                        current_angle[2]= c;
                     }
+
+                    // reset the actuator positions (and machine position accordingly)
+                    THEKERNEL->robot->reset_actuator_position(current_angle);
 
                     gcode->stream->printf("Theta Offset: A %8.5f B %8.5f C %8.5f\n", home_offset[0], home_offset[1], home_offset[2]);
                 }
@@ -919,7 +922,7 @@ void Endstops::on_gcode_received(void *argument)
             case 1910: {
                 // M1910.0 - move specific number of raw steps
                 // M1910.1 - stop any moves
-                // M1910.2 - move specific number of actuator coordinates (usually mm but is degrees for a rotary delta)
+                // M1910.2 - move specific number of actuator units (usually mm but is degrees for a rotary delta)
                 if(gcode->subcode == 0 || gcode->subcode == 2) {
                     // Enable the motors
                     THEKERNEL->stepper->turn_enable_pins_on();
