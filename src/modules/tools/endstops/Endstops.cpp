@@ -855,25 +855,32 @@ void Endstops::on_gcode_received(void *argument)
                         current_angle[i]= THEKERNEL->robot->actuators[i]->get_current_position();
                     }
 
+                    int cnt= 0;
                     //figure out what home_offset needs to be to correct the homing_position
                     if (gcode->has_letter('A')) {
                         float a = gcode->get_value('A'); // what actual angle is
                         home_offset[0] += (current_angle[0] - a);
                         current_angle[0]= a;
+                        cnt++;
                     }
                     if (gcode->has_letter('B')) {
                         float b = gcode->get_value('B');
                         home_offset[1] += (current_angle[1] - b);
                         current_angle[1]= b;
+                        cnt++;
                     }
                     if (gcode->has_letter('C')) {
                         float c = gcode->get_value('C');
                         home_offset[2] += (current_angle[2] - c);
                         current_angle[2]= c;
+                        cnt++;
                     }
 
                     // reset the actuator positions (and machine position accordingly)
-                    THEKERNEL->robot->reset_actuator_position(current_angle);
+                    // But only if all three actuators have been specified at the same time
+                    if(cnt == 3 || (gcode->has_letter('R') && gcode->get_value('R') != 0)) {
+                        THEKERNEL->robot->reset_actuator_position(current_angle);
+                    }
 
                     gcode->stream->printf("Theta Offset: A %8.5f B %8.5f C %8.5f\n", home_offset[0], home_offset[1], home_offset[2]);
                 }
