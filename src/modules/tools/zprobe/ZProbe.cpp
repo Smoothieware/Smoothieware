@@ -32,6 +32,7 @@
 #include "DeltaCalibrationStrategy.h"
 #include "ThreePointStrategy.h"
 #include "ZGridStrategy.h"
+#include "DeltaGridStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
@@ -107,11 +108,10 @@ void ZProbe::on_config_reload(void *argument)
                      found= true;
                      break;
 
-                // add other strategies here
-                //case zheight_map_strategy:
-                //     this->strategies.push_back(new ZHeightMapStrategy(this));
-                //     found= true;
-                //     break;
+                case delta_grid_leveling_strategy_checksum:
+                    this->strategies.push_back(new DeltaGridStrategy(this));
+                    found= true;
+                    break;
             }
             if(found) this->strategies.back()->handleConfig();
         }
