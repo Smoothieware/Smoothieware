@@ -27,6 +27,13 @@ void RotaryDeltaCalibration::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
 }
 
+float *RotaryDeltaCalibration::get_homing_offset()
+{
+    float *theta_offset; // points to theta offset in Endstop module
+    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &theta_offset );
+    return ok ? theta_offset : nullptr;
+}
+
 void RotaryDeltaCalibration::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
@@ -34,9 +41,8 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
     if( gcode->has_m) {
         switch( gcode->m ) {
             case 206: {
-                float *theta_offset; // points to theta offset in Endstop module
-                bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &theta_offset );
-                if (!ok) {
+                float *theta_offset= get_homing_offset(); // points to theta offset in Endstop module
+                if (theta_offset == nullptr) {
                     gcode->stream->printf("error:no endstop module found\n");
                     return;
                 }
@@ -73,9 +79,8 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                     }
                 }
 
-                float *theta_offset; // points to theta offset in Endstop module
-                bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &theta_offset );
-                if (!ok) {
+                float *theta_offset= get_homing_offset(); // points to theta offset in Endstop module
+                if (theta_offset == nullptr) {
                     gcode->stream->printf("error:no endstop module found\n");
                     return;
                 }

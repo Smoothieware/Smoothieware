@@ -831,7 +831,7 @@ void Endstops::on_gcode_received(void *argument)
             break;
 
             case 206: // M206 - set homing offset
-                if(is_rdelta) break; // RotaryDeltaCalibration module will handle this
+                if(is_rdelta) return; // RotaryDeltaCalibration module will handle this
 
                 if (gcode->has_letter('X')) home_offset[0] = gcode->get_value('X');
                 if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
@@ -840,7 +840,8 @@ void Endstops::on_gcode_received(void *argument)
                 break;
 
             case 306: // set homing offset based on current position
-                if(is_rdelta) break; // RotaryDeltaCalibration module will handle this
+                if(is_rdelta) return; // RotaryDeltaCalibration module will handle this
+
                 set_homing_offset(gcode);
                 break;
 
