@@ -21,10 +21,10 @@ class Endstops : public Module{
         Endstops();
         void on_module_loaded();
         void on_gcode_received(void* argument);
-        void on_config_reload(void* argument);
         void acceleration_tick(void);
 
     private:
+        void load_config();
         void home(char axes_to_move);
         void do_homing_cartesian(char axes_to_move);
         void do_homing_corexy(char axes_to_move);

@@ -142,11 +142,11 @@ void Endstops::on_module_loaded()
     THEKERNEL->step_ticker->register_acceleration_tick_handler([this]() {acceleration_tick(); });
 
     // Settings
-    this->on_config_reload(this);
+    this->load_config();
 }
 
 // Get config
-void Endstops::on_config_reload(void *argument)
+void Endstops::load_config()
 {
     this->pins[0].from_string( THEKERNEL->config->value(alpha_min_endstop_checksum          )->by_default("nc" )->as_string())->as_input();
     this->pins[1].from_string( THEKERNEL->config->value(beta_min_endstop_checksum           )->by_default("nc" )->as_string())->as_input();
@@ -791,79 +791,23 @@ void Endstops::process_home_command(Gcode* gcode)
 
 void Endstops::set_homing_offset(Gcode *gcode)
 {
-    if(!is_rdelta) {
-        // Similar to M206 and G92 but sets Homing offsets based on current position
-        float cartesian[3];
-        THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
-        if (gcode->has_letter('X')) {
-            home_offset[0] -= (cartesian[X_AXIS] - gcode->get_value('X'));
-            THEKERNEL->robot->reset_axis_position(gcode->get_value('X'), X_AXIS);
-        }
-        if (gcode->has_letter('Y')) {
-            home_offset[1] -= (cartesian[Y_AXIS] - gcode->get_value('Y'));
-            THEKERNEL->robot->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
-        }
-        if (gcode->has_letter('Z')) {
-            home_offset[2] -= (cartesian[Z_AXIS] - gcode->get_value('Z'));
-            THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
-        }
-
-        gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
-
-    } else {
-        // for a rotary delta M306 calibrates the homing angle
-        // by doing M306 A-56.17 it will calculate the M206 A value (the theta offset for actuator A) based on the difference
-        // between what it thinks is the current angle and what the current angle actually is specified by A (ditto for B and C)
-
-        ActuatorCoordinates current_angle;
-        // get the current angle for each actuator, NOTE we only deal with  ABC so if there are more than 3 actuators this will probably go wonky
-        for (size_t i = 0; i < THEKERNEL->robot->actuators.size(); i++) {
-            current_angle[i]= THEKERNEL->robot->actuators[i]->get_current_position();
-        }
-
-        if (gcode->has_letter('L') && gcode->get_value('L') != 0) {
-            // specifying L1 it will take the last probe position (set by G30 or G38.x ) and set the home offset based on that
-            // this allows the use of G30 to find the angle tool
-            uint8_t ok;
-            std::tie(current_angle[0], current_angle[1], current_angle[2], ok) = THEKERNEL->robot->get_last_probe_position();
-            if(ok == 0) {
-                gcode->stream->printf("error:Nothing set as probe failed or not run\n");
-                return;
-            }
-        }
-
-        int cnt= 0;
-        //figure out what home_offset needs to be to correct the homing_position
-        if (gcode->has_letter('A')) {
-            float a = gcode->get_value('A'); // what actual angle is
-            home_offset[0] -= (current_angle[0] - a);
-            current_angle[0]= a;
-            cnt++;
-        }
-        if (gcode->has_letter('B')) {
-            float b = gcode->get_value('B');
-            home_offset[1] -= (current_angle[1] - b);
-            current_angle[1]= b;
-            cnt++;
-        }
-        if (gcode->has_letter('C')) {
-            float c = gcode->get_value('C');
-            home_offset[2] -= (current_angle[2] - c);
-            current_angle[2]= c;
-            cnt++;
-        }
-
-        // reset the actuator positions (and machine position accordingly)
-        // But only if all three actuators have been specified at the same time
-        if(cnt == 3 || (gcode->has_letter('R') && gcode->get_value('R') != 0)) {
-            THEKERNEL->robot->reset_actuator_position(current_angle);
-            gcode->stream->printf("NOTE: actuator position reset\n");
-        }else{
-            gcode->stream->printf("NOTE: actuator position NOT reset\n");
-        }
-
-        gcode->stream->printf("Theta Offset: A %8.5f B %8.5f C %8.5f\n", home_offset[0], home_offset[1], home_offset[2]);
+    // Similar to M206 and G92 but sets Homing offsets based on current position
+    float cartesian[3];
+    THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
+    if (gcode->has_letter('X')) {
+        home_offset[0] -= (cartesian[X_AXIS] - gcode->get_value('X'));
+        THEKERNEL->robot->reset_axis_position(gcode->get_value('X'), X_AXIS);
     }
+    if (gcode->has_letter('Y')) {
+        home_offset[1] -= (cartesian[Y_AXIS] - gcode->get_value('Y'));
+        THEKERNEL->robot->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
+    }
+    if (gcode->has_letter('Z')) {
+        home_offset[2] -= (cartesian[Z_AXIS] - gcode->get_value('Z'));
+        THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+    }
+
+    gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
 }
 
 // Start homing sequences by response to GCode commands
@@ -887,22 +831,16 @@ void Endstops::on_gcode_received(void *argument)
             break;
 
             case 206: // M206 - set homing offset
-                if(!is_rdelta) {
-                    if (gcode->has_letter('X')) home_offset[0] = gcode->get_value('X');
-                    if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
-                    if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
-                    gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+                if(is_rdelta) break; // RotaryDeltaCalibration module will handle this
 
-                } else {
-                    // set theta offset
-                    if (gcode->has_letter('A')) home_offset[0] = gcode->get_value('A');
-                    if (gcode->has_letter('B')) home_offset[1] = gcode->get_value('B');
-                    if (gcode->has_letter('C')) home_offset[2] = gcode->get_value('C');
-                    gcode->stream->printf("Theta offset A %8.5f B %8.5f C %8.5f\n", home_offset[0], home_offset[1], home_offset[2]);
-                }
+                if (gcode->has_letter('X')) home_offset[0] = gcode->get_value('X');
+                if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
+                if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
+                gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
                 break;
 
             case 306: // set homing offset based on current position
+                if(is_rdelta) break; // RotaryDeltaCalibration module will handle this
                 set_homing_offset(gcode);
                 break;
 
