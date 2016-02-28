@@ -34,9 +34,9 @@ public:
     void acceleration_tick(void);
 
     bool wait_for_probe(int& steps);
-    bool run_probe(int& steps, bool fast= false);
-    bool run_probe_feed(int& steps, float feedrate, float max_dist= -1);
-    bool return_probe(int steps);
+    bool run_probe(int& steps, float feedrate, float max_dist= -1, bool reverse= false);
+    bool run_probe(int& steps, bool fast= false) { return run_probe(steps, fast ? this->fast_feedrate : this->slow_feedrate); }
+    bool return_probe(int steps, bool reverse= false);
     bool doProbeAt(int &steps, float x, float y);
     float probeDistance(float x, float y);
 
@@ -69,7 +69,9 @@ private:
     volatile struct {
         volatile bool running:1;
         bool is_delta:1;
+        bool is_rdelta:1;
         bool probing:1;
+        bool reverse_z:1;
         volatile bool probe_detected:1;
     };
 };

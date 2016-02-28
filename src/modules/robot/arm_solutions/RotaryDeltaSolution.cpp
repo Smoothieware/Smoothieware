@@ -17,7 +17,9 @@
 #define delta_z_offset_checksum         CHECKSUM("delta_z_offset")
 
 #define delta_ee_offs_checksum          CHECKSUM("delta_ee_offs")
-#define tool_offset_checksum            CHECKSUM("tool_offset")
+#define tool_offset_checksum            CHECKSUM("delta_tool_offset")
+
+#define delta_mirror_xy_checksum        CHECKSUM("delta_mirror_xy")
 
 const static float pi     = 3.14159265358979323846;    // PI
 const static float two_pi = 2 * pi;
@@ -51,6 +53,10 @@ RotaryDeltaSolution::RotaryDeltaSolution(Config *config)
     // Distance between end effector ball joint plane and tip of tool (PnP)
     tool_offset = config->value(tool_offset_checksum)->by_default(30.500F)->as_number();
 
+    // mirror the XY axis
+    mirror_xy= config->value(delta_mirror_xy_checksum)->by_default(true)->as_bool();
+
+    debug_flag= false;
     init();
 }
 
@@ -130,7 +136,6 @@ int RotaryDeltaSolution::delta_calcForward(float theta1, float theta2, float the
 
 void RotaryDeltaSolution::init()
 {
-
     //these are calculated here and not in the config() as these variables can be fine tuned by the user.
     z_calc_offset  = -(delta_z_offset - tool_offset - delta_ee_offs);
 }
@@ -142,10 +147,16 @@ void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
     float beta_theta  = 0.0F;
     float gamma_theta = 0.0F;
 
-    //Code from Trossen Robotics tutorial, note we put the X axis at the back and not the front of the robot.
+    //Code from Trossen Robotics tutorial, has X in front Y to the right and Z to the left
+    // firepick is X at the back and negates X0 X0
+    // selected by a config option
+    float x0 = cartesian_mm[X_AXIS];
+    float y0 = cartesian_mm[Y_AXIS];
+    if(mirror_xy) {
+        x0= -x0;
+        y0= -y0;
+    }
 
-    float x0 = -cartesian_mm[X_AXIS];
-    float y0 = -cartesian_mm[Y_AXIS];
     float z_with_offset = cartesian_mm[Z_AXIS] + z_calc_offset; //The delta calculation below places zero at the top.  Subtract the Z offset to make zero at the bottom.
 
     int status =              delta_calcAngleYZ(x0,                    y0,                  z_with_offset, alpha_theta);
@@ -187,8 +198,18 @@ void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
 
 void RotaryDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] )
 {
+    float x, y, z;
     //Use forward kinematics
-    delta_calcForward(actuator_mm[ALPHA_STEPPER], actuator_mm[BETA_STEPPER ], actuator_mm[GAMMA_STEPPER], cartesian_mm[X_AXIS], cartesian_mm[Y_AXIS], cartesian_mm[Z_AXIS]);
+    delta_calcForward(actuator_mm[ALPHA_STEPPER], actuator_mm[BETA_STEPPER ], actuator_mm[GAMMA_STEPPER], x, y, z);
+    if(mirror_xy) {
+        cartesian_mm[X_AXIS]= -x;
+        cartesian_mm[Y_AXIS]= -y;
+        cartesian_mm[Z_AXIS]= z;
+    }else{
+        cartesian_mm[X_AXIS]= x;
+        cartesian_mm[Y_AXIS]= y;
+        cartesian_mm[Z_AXIS]= z;
+    }
 }
 
 bool RotaryDeltaSolution::set_optional(const arm_options_t &options)

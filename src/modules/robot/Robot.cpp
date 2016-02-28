@@ -772,13 +772,11 @@ void Robot::reset_axis_position(float position, int axis)
 }
 
 // similar to reset_axis_position but directly sets the actuator positions in actuators units (eg mm for cartesian, degrees for rotary delta)
-// then sets the axis postions to match. currently only called from G28.4 and M306 in Endstops.cpp
-void Robot::reset_actuator_position(float a, float b, float c)
+// then sets the axis positions to match. currently only called from Endstops.cpp
+void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
 {
-    // NOTE this does NOT support the multiple actuator HACK. so if there are more than 3 actuators this will probably not work
-    if(!isnan(a)) actuators[0]->change_last_milestone(a);
-    if(!isnan(b)) actuators[1]->change_last_milestone(b);
-    if(!isnan(c)) actuators[2]->change_last_milestone(c);
+    for (size_t i = 0; i < actuators.size(); i++)
+        actuators[i]->change_last_milestone(ac[i]);
 
     // now correct axis positions then recorrect actuator to account for rounding
     reset_position_from_current_actuator_position();

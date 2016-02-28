@@ -19,7 +19,11 @@ delta_rf          90.000      # Servo horn length
 
 delta_z_offset    268.0        # Distance from big pulley shaft to table/bed
 delta_ee_offs     15.000       # Ball joint plane to bottom of end effector surface
-tool_offset       30.500       # Distance between end effector ball joint plane and tip of tool (PnP)
+delta_tool_offset 30.500       # Distance between end effector ball joint plane and tip of tool (PnP)
+
+delta_mirror_xy   true         # true for firepick
+
+rotary_delta_calibration.enable  true  # enable the calibration routines for rotary delta
 
 #The steps per degree are calculated as:
 #

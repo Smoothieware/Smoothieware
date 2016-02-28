@@ -33,7 +33,7 @@ class Robot : public Module {
 
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
-        void reset_actuator_position(float a, float b, float c);
+        void reset_actuator_position(const ActuatorCoordinates &ac);
         void reset_position_from_current_actuator_position();
         float get_seconds_per_minute() const { return seconds_per_minute; }
         float get_z_maxfeedrate() const { return this->max_speeds[2]; }
@@ -92,7 +92,7 @@ class Robot : public Module {
         uint8_t current_wcs{0}; // 0 means G54 is enabled this is persistent once saved with M500
         wcs_t g92_offset;
         wcs_t tool_offset; // used for multiple extruders, sets the tool offset for the current extruder applied first
-        std::tuple<float, float, float, uint8_t> last_probe_position;
+        std::tuple<float, float, float, uint8_t> last_probe_position{0,0,0,0};
 
         using saved_state_t= std::tuple<float, float, bool, bool, uint8_t>; // save current feedrate and absolute mode, inch mode, current_wcs
         std::stack<saved_state_t> state_stack;               // saves state from M120

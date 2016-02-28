@@ -14,6 +14,7 @@
 #include "modules/tools/endstops/Endstops.h"
 #include "modules/tools/zprobe/ZProbe.h"
 #include "modules/tools/scaracal/SCARAcal.h"
+#include "RotaryDeltaCalibration.h"
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
@@ -175,6 +176,9 @@ void init() {
     #endif
     #ifndef NO_TOOLS_SCARACAL
     kernel->add_module( new(AHB0) SCARAcal() );
+    #endif
+    #ifndef NO_TOOLS_ROTARYDELTACALIBRATION
+    kernel->add_module( new RotaryDeltaCalibration() );
     #endif
     #ifndef NONETWORK
     kernel->add_module( new Network() );
