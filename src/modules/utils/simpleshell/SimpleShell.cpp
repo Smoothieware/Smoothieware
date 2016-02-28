@@ -563,7 +563,7 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
 // show free memory
 void SimpleShell::mem_command( string parameters, StreamOutput *stream)
 {
-    bool verbose = shift_parameter( parameters ).find_first_of("Vv") != string::npos ;
+    bool verbose = shift_parameter( parameters ).find_first_of("Vv") != string::npos;
     unsigned long heap = (unsigned long)_sbrk(0);
     unsigned long m = g_maximumHeapAddress - heap;
     stream->printf("Unused Heap: %lu bytes\r\n", m);
@@ -668,7 +668,15 @@ void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
     [TLO:0.000]
     [PRB:0.000,0.000,0.000:0]
     */
+
+    bool verbose = shift_parameter( parameters ).find_first_of("Vv") != string::npos;
+
     std::vector<Robot::wcs_t> v= THEKERNEL->robot->get_wcs_state();
+    if(verbose) {
+        char current_wcs= std::get<0>(v[0]);
+        stream->printf("[current WCS: %s]\n", wcs2gcode(current_wcs).c_str());
+    }
+
     int n= std::get<1>(v[0]);
     for (int i = 1; i <= n; ++i) {
         stream->printf("[%s:%1.4f,%1.4f,%1.4f]\n", wcs2gcode(i-1).c_str(), std::get<0>(v[i]), std::get<1>(v[i]), std::get<2>(v[i]));
@@ -680,7 +688,11 @@ void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
     stream->printf("[G30:%1.4f,%1.4f,%1.4f]\n",  0.0F, 0.0F, 0.0F); // not implemented
 
     stream->printf("[G92:%1.4f,%1.4f,%1.4f]\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
-    stream->printf("[TL0:%1.4f]\n", std::get<2>(v[n+2]));
+    if(verbose) {
+        stream->printf("[Tool Offset:%1.4f,%1.4f,%1.4f]\n", std::get<0>(v[n+2]), std::get<1>(v[n+2]), std::get<2>(v[n+2]));
+    }else{
+        stream->printf("[TL0:%1.4f]\n", std::get<2>(v[n+2]));
+    }
 
     // this is the last probe position, updated when a probe completes, also stores the number of steps moved after a homing cycle
     float px, py, pz;
@@ -782,16 +794,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     } else if (what == "wcs") {
         // print the wcs state
-        std::vector<Robot::wcs_t> v= THEKERNEL->robot->get_wcs_state();
-        char current_wcs= std::get<0>(v[0]);
-        stream->printf("current WCS: %s\n", wcs2gcode(current_wcs).c_str());
-        int n= std::get<1>(v[0]);
-        for (int i = 1; i <= n; ++i) {
-            stream->printf("%s: %f, %f, %f\n", wcs2gcode(i-1).c_str(), std::get<0>(v[i]), std::get<1>(v[i]), std::get<2>(v[i]));
-        }
-
-        stream->printf("G92: %f, %f, %f\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
-        stream->printf("ToolOffset: %f, %f, %f\n", std::get<0>(v[n+2]), std::get<1>(v[n+2]), std::get<2>(v[n+2]));
+        grblDP_command("-v", stream);
 
     } else if (what == "state") {
         // also $G

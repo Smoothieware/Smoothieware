@@ -38,6 +38,7 @@ class Endstops : public Module{
         void on_idle(void *argument);
         bool debounced_get(int pin);
         void process_home_command(Gcode* gcode);
+        void set_homing_offset(Gcode* gcode);
 
         float homing_position[3];
         float home_offset[3];

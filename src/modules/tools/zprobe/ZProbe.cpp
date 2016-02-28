@@ -308,16 +308,33 @@ void ZProbe::on_gcode_received(void *argument)
             probe_result = run_probe(steps, rate, -1, reverse);
 
             if(probe_result) {
+                // the result is in actuator coordinates and raw steps
                 gcode->stream->printf("Z:%1.4f C:%d\n", zsteps_to_mm(steps), steps);
+
+                // set the last probe position to the current actuator units
+                THEKERNEL->robot->set_last_probe_position(std::make_tuple(
+                    THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
+                    THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
+                    THEKERNEL->robot->actuators[Z_AXIS]->get_current_position(),
+                    1));
+
                 // move back to where it started, unless a Z is specified
                 if(gcode->has_letter('Z') && !is_rdelta) {
                     // set Z to the specified value, and leave probe where it is
                     THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+
                 } else {
+                    // return to pre probe position
                     return_probe(steps, reverse);
                 }
+
             } else {
                 gcode->stream->printf("ZProbe not triggered\n");
+                THEKERNEL->robot->set_last_probe_position(std::make_tuple(
+                    THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
+                    THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
+                    THEKERNEL->robot->actuators[Z_AXIS]->get_current_position(),
+                    0));
             }
 
         } else {
