@@ -33,6 +33,8 @@ private:
 
     float initial_height;
     float tolerance;
+
+    // TODO make this configurable once it all works
     #define AUTO_BED_LEVELING_GRID_POINTS 7
     float grid[AUTO_BED_LEVELING_GRID_POINTS][AUTO_BED_LEVELING_GRID_POINTS];
     //uint8_t grid_resolution;

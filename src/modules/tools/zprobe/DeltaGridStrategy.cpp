@@ -35,7 +35,6 @@ DeltaGridStrategy::DeltaGridStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
     // TODO allocate grid in AHB0 or AHB1
     //grid = nullptr;
-    reset_bed_level();
 }
 
 DeltaGridStrategy::~DeltaGridStrategy()
@@ -61,6 +60,10 @@ bool DeltaGridStrategy::handleConfig()
             this->probe_offsets = std::make_tuple(v[0], v[1], v[2]);
         }
     }
+
+    reset_bed_level();
+    // load the saved grid file
+    if(save) load_grid(nullptr);
 
     return true;
 }
@@ -89,14 +92,14 @@ void DeltaGridStrategy::load_grid(StreamOutput *stream)
 {
     FILE *fp= fopen(GRIDFILE, "r");
     if(fp == NULL) {
-        stream->printf("error:Failed to open grid\n");
+        if(stream != nullptr) stream->printf("error:Failed to open grid\n");
         return;
     }
 
     for (int y = 0; y < AUTO_BED_LEVELING_GRID_POINTS; y++) {
         for (int x = 0; x < AUTO_BED_LEVELING_GRID_POINTS; x++) {
             if(fread(&grid[x][y], sizeof(float), 1, fp) != 1) {
-                stream->printf("error:Failed to read grid\n");
+                if(stream != nullptr) stream->printf("error:Failed to read grid\n");
                 fclose(fp);
                 return;
             }
@@ -128,7 +131,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             return true;
 
         } else if(gcode->m == 374) { // M374: Save grid, M374.1: delete saved grid
-            if(subcode == 1) {
+            if(gcode->subcode == 1) {
                 remove(GRIDFILE);
             }else{
                 save_grid(gcode->stream);
@@ -165,6 +168,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
     return false;
 }
 
+// These are convenience defines to keep the code as close to the original as possible
 // set the rectangle in which to probe
 #define DELTA_PROBABLE_RADIUS (grid_radius)
 #define LEFT_PROBE_BED_POSITION (-DELTA_PROBABLE_RADIUS)
