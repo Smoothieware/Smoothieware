@@ -29,6 +29,8 @@
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define initial_height_checksum      CHECKSUM("initial_height")
 
+#define GRIDFILE "/sd/delta.grid"
+
 DeltaGridStrategy::DeltaGridStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
     // TODO allocate grid in AHB0 or AHB1
@@ -65,7 +67,7 @@ bool DeltaGridStrategy::handleConfig()
 
 void DeltaGridStrategy::save_grid(StreamOutput *stream)
 {
-    FILE *fp= fopen("/sd/delta.grid", "w");
+    FILE *fp= fopen(GRIDFILE, "w");
     if(fp == NULL) {
         stream->printf("error:Failed to open grid\n");
         return;
@@ -85,7 +87,7 @@ void DeltaGridStrategy::save_grid(StreamOutput *stream)
 
 void DeltaGridStrategy::load_grid(StreamOutput *stream)
 {
-    FILE *fp= fopen("/sd/delta.grid", "r");
+    FILE *fp= fopen(GRIDFILE, "r");
     if(fp == NULL) {
         stream->printf("error:Failed to open grid\n");
         return;
@@ -123,11 +125,15 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             // delete the compensationTransform in robot
             setAdjustFunction(false);
             reset_bed_level();
-            remove("delta.grid");
             return true;
 
-        } else if(gcode->m == 374) { // M374: Save grid
-            save_grid(gcode->stream);
+        } else if(gcode->m == 374) { // M374: Save grid, M374.1: delete saved grid
+            if(subcode == 1) {
+                remove(GRIDFILE);
+            }else{
+                save_grid(gcode->stream);
+            }
+
             return true;
 
         } else if(gcode->m == 375) { // M375: load grid, M375.1 display grid
