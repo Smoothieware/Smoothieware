@@ -135,8 +135,14 @@ void Laser::on_gcode_execute(void* argument){
             this->laser_on =  true;
         }
     }
+
     if ( gcode->has_letter('S' )){
-        this->laser_power = gcode->get_value('S');
+    	float requested_power = gcode->get_value('S') / this->laser_maximum_s_value;
+    	// Ensure we can't exceed maximum power
+    	if (requested_power > 1)
+    		requested_power = 1;
+
+        this->laser_power = requested_power;
     }
 
     if (this->ttl_used)
