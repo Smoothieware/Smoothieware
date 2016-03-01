@@ -29,7 +29,7 @@ private:
     void doCompensation(float target[3]);
     void reset_bed_level();
     void save_grid(StreamOutput *stream);
-    void load_grid(StreamOutput *stream);
+    bool load_grid(StreamOutput *stream);
 
     float initial_height;
     float tolerance;

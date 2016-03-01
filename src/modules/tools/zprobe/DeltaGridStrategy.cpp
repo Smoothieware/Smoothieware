@@ -85,15 +85,16 @@ void DeltaGridStrategy::save_grid(StreamOutput *stream)
             }
         }
     }
+    stream->printf("grid saved to %s\n", GRIDFILE);
     fclose(fp);
 }
 
-void DeltaGridStrategy::load_grid(StreamOutput *stream)
+bool DeltaGridStrategy::load_grid(StreamOutput *stream)
 {
     FILE *fp= fopen(GRIDFILE, "r");
     if(fp == NULL) {
         if(stream != nullptr) stream->printf("error:Failed to open grid\n");
-        return;
+        return false;
     }
 
     for (int y = 0; y < AUTO_BED_LEVELING_GRID_POINTS; y++) {
@@ -101,11 +102,13 @@ void DeltaGridStrategy::load_grid(StreamOutput *stream)
             if(fread(&grid[x][y], sizeof(float), 1, fp) != 1) {
                 if(stream != nullptr) stream->printf("error:Failed to read grid\n");
                 fclose(fp);
-                return;
+                return false;
             }
         }
     }
+    stream->printf("grid loaded from %s\n", GRIDFILE);
     fclose(fp);
+    return true;
 }
 
 bool DeltaGridStrategy::handleGcode(Gcode *gcode)
@@ -133,6 +136,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
         } else if(gcode->m == 374) { // M374: Save grid, M374.1: delete saved grid
             if(gcode->subcode == 1) {
                 remove(GRIDFILE);
+                gcode->stream->printf("%s deleted\n", GRIDFILE);
             }else{
                 save_grid(gcode->stream);
             }
@@ -143,8 +147,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             if(gcode->subcode == 1) {
                 print_bed_level(gcode->stream);
             }else{
-                load_grid(gcode->stream);
-                setAdjustFunction(true);
+                if(load_grid(gcode->stream)) setAdjustFunction(true);
             }
 
         } else if(gcode->m == 565) { // M565: Set Z probe offsets
@@ -157,10 +160,9 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
 
         } else if(gcode->m == 500 || gcode->m == 503) { // M500 save, M503 display
             float x, y, z;
-            gcode->stream->printf(";Probe offsets:\n");
             std::tie(x, y, z) = probe_offsets;
-            gcode->stream->printf("M565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
-            if(save && gcode->m == 500) gcode->stream->printf(";Load default grid\nM375\n");
+            gcode->stream->printf(";Probe offsets:\nM565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
+            if(save && gcode->m == 500) gcode->stream->printf(";Load saved grid\nM375\n");
             return true;
         }
     }
@@ -226,6 +228,12 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
     zprobe->home();
     zprobe->coordinated_move(NAN, NAN, -initial_z, zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
 
+    // do first probe for 0,0
+    int s;
+    if(!zprobe->doProbeAt(s, -X_PROBE_OFFSET_FROM_EXTRUDER, -Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
+    float z_reference = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s); // this should be zero
+    gc->stream->printf("probe at 0,0 is %f mm\n", z_reference);
+
     float radius= DELTA_PROBABLE_RADIUS;
     if(gc->has_letter('J')) radius = gc->get_value('J'); // override default probe radius
 
@@ -249,9 +257,9 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
             float distance_from_center = sqrtf(xProbe * xProbe + yProbe * yProbe);
             if (distance_from_center > radius) continue;
 
-            int s;
             if(!zprobe->doProbeAt(s, xProbe-X_PROBE_OFFSET_FROM_EXTRUDER, yProbe-Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
-            float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s); // this is the delta z from bed at 0,0
+            float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s) - z_reference; // this is the delta z from bed at 0,0
+            gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe-X_PROBE_OFFSET_FROM_EXTRUDER, yProbe-Y_PROBE_OFFSET_FROM_EXTRUDER, measured_z);
             grid[xCount][yCount] = measured_z;
         }
     }
