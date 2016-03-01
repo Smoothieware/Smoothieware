@@ -35,12 +35,10 @@ private:
     float initial_height;
     float tolerance;
 
-    // TODO make this configurable once it all works
-    #define AUTO_BED_LEVELING_GRID_POINTS 7
-    float grid[AUTO_BED_LEVELING_GRID_POINTS][AUTO_BED_LEVELING_GRID_POINTS];
-    //uint8_t grid_resolution;
+    float *grid;
     float grid_radius;
     std::tuple<float, float, float> probe_offsets;
+    uint8_t grid_size;
 
     struct {
         bool save:1;

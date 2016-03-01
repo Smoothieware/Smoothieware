@@ -16,6 +16,7 @@
 #include "ZProbe.h"
 #include "nuts_bolts.h"
 #include "utils.h"
+#include "platform_memory.h"
 
 #include <string>
 #include <algorithm>
@@ -23,7 +24,7 @@
 #include <cmath>
 
 #define grid_radius_checksum         CHECKSUM("radius")
-#define grid_resolution_checksum     CHECKSUM("resolution")
+#define grid_size_checksum           CHECKSUM("size")
 #define tolerance_checksum           CHECKSUM("tolerance")
 #define save_checksum                CHECKSUM("save")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
@@ -33,21 +34,21 @@
 
 DeltaGridStrategy::DeltaGridStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
-    // TODO allocate grid in AHB0 or AHB1
-    //grid = nullptr;
+    grid= nullptr;
 }
 
 DeltaGridStrategy::~DeltaGridStrategy()
 {
-    //delete[] grid;
+    if(grid != nullptr) AHB0.dealloc(grid);
 }
 
 bool DeltaGridStrategy::handleConfig()
 {
     grid_radius = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, grid_radius_checksum)->by_default(50.0F)->as_number();
-    //grid_resolution = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, grid_radius_checksum)->by_default(7)->as_number();
+    grid_size = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, grid_size_checksum)->by_default(7)->as_number();
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
+
     // the initial height above the bed we stop the intial move down after home to find the bed
     // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
     this->initial_height = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, initial_height_checksum)->by_default(10)->as_number();
@@ -60,6 +61,9 @@ bool DeltaGridStrategy::handleConfig()
             this->probe_offsets = std::make_tuple(v[0], v[1], v[2]);
         }
     }
+
+    // allocate in AHB0
+    grid= (float *)AHB0.alloc(grid_size * grid_size * sizeof(float));
 
     reset_bed_level();
     // load the saved grid file
@@ -76,9 +80,9 @@ void DeltaGridStrategy::save_grid(StreamOutput *stream)
         return;
     }
 
-    for (int y = 0; y < AUTO_BED_LEVELING_GRID_POINTS; y++) {
-        for (int x = 0; x < AUTO_BED_LEVELING_GRID_POINTS; x++) {
-            if(fwrite(&grid[x][y], sizeof(float), 1, fp) != 1) {
+    for (int y = 0; y < grid_size; y++) {
+        for (int x = 0; x < grid_size; x++) {
+            if(fwrite(&grid[x + (grid_size*y)], sizeof(float), 1, fp) != 1) {
                 stream->printf("error:Failed to write grid\n");
                 fclose(fp);
                 return;
@@ -97,9 +101,9 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
         return false;
     }
 
-    for (int y = 0; y < AUTO_BED_LEVELING_GRID_POINTS; y++) {
-        for (int x = 0; x < AUTO_BED_LEVELING_GRID_POINTS; x++) {
-            if(fread(&grid[x][y], sizeof(float), 1, fp) != 1) {
+    for (int y = 0; y < grid_size; y++) {
+        for (int x = 0; x < grid_size; x++) {
+            if(fread(&grid[x + (grid_size*y)], sizeof(float), 1, fp) != 1) {
                 if(stream != nullptr) stream->printf("error:Failed to read grid\n");
                 fclose(fp);
                 return false;
@@ -111,6 +115,7 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
     return true;
 }
 
+// taken from Oskars PR #713
 bool DeltaGridStrategy::probe_spiral(int n, StreamOutput *stream)
 {
     float a = grid_radius / (2 * sqrtf(n * M_PI));
@@ -205,18 +210,16 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
     return false;
 }
 
-// These are convenience defines to keep the code as close to the original as possible
+// These are convenience defines to keep the code as close to the original as possible it also saves memory and flash
 // set the rectangle in which to probe
-#define DELTA_PROBABLE_RADIUS (grid_radius)
-#define LEFT_PROBE_BED_POSITION (-DELTA_PROBABLE_RADIUS)
-#define RIGHT_PROBE_BED_POSITION (DELTA_PROBABLE_RADIUS)
-#define BACK_PROBE_BED_POSITION (DELTA_PROBABLE_RADIUS)
-#define FRONT_PROBE_BED_POSITION (-DELTA_PROBABLE_RADIUS)
+#define LEFT_PROBE_BED_POSITION (-grid_radius)
+#define RIGHT_PROBE_BED_POSITION (grid_radius)
+#define BACK_PROBE_BED_POSITION (grid_radius)
+#define FRONT_PROBE_BED_POSITION (-grid_radius)
 
 // probe at the points of a lattice grid
-//#define AUTO_BED_LEVELING_GRID_POINTS (grid_resolution)
-#define AUTO_BED_LEVELING_GRID_X ((RIGHT_PROBE_BED_POSITION - LEFT_PROBE_BED_POSITION) / (AUTO_BED_LEVELING_GRID_POINTS - 1))
-#define AUTO_BED_LEVELING_GRID_Y ((BACK_PROBE_BED_POSITION - FRONT_PROBE_BED_POSITION) / (AUTO_BED_LEVELING_GRID_POINTS - 1))
+#define AUTO_BED_LEVELING_GRID_X ((RIGHT_PROBE_BED_POSITION - LEFT_PROBE_BED_POSITION) / (grid_size - 1))
+#define AUTO_BED_LEVELING_GRID_Y ((BACK_PROBE_BED_POSITION - FRONT_PROBE_BED_POSITION) / (grid_size - 1))
 
 #define X_PROBE_OFFSET_FROM_EXTRUDER std::get<0>(probe_offsets)
 #define Y_PROBE_OFFSET_FROM_EXTRUDER std::get<1>(probe_offsets)
@@ -246,7 +249,8 @@ float DeltaGridStrategy::findBed()
     // find bed at 0,0 run at slow rate so as to not hit bed hard
     int s;
     if(!zprobe->run_probe(s, false)) return NAN;
-    // leave zprobe->getProbeHeight() above bed
+
+    // leave the probe zprobe->getProbeHeight() above bed
     zprobe->return_probe(s);
     zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight()-zprobe->zsteps_to_mm(s), zprobe->getFastFeedrate(), true); // relative move
 
@@ -262,28 +266,24 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
     if(isnan(initial_z)) return false;
     gc->stream->printf("initial Bed ht is %f mm\n", initial_z);
 
-    // we start the probe zprobe->getProbeHeight() above the bed
-    zprobe->home();
-    zprobe->coordinated_move(NAN, NAN, -initial_z, zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
-
     // do first probe for 0,0
     int s;
     if(!zprobe->doProbeAt(s, -X_PROBE_OFFSET_FROM_EXTRUDER, -Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
     float z_reference = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s); // this should be zero
     gc->stream->printf("probe at 0,0 is %f mm\n", z_reference);
 
-    float radius = DELTA_PROBABLE_RADIUS;
+    float radius = grid_radius;
     if(gc->has_letter('J')) radius = gc->get_value('J'); // override default probe radius
 
-    for (int yCount = 0; yCount < AUTO_BED_LEVELING_GRID_POINTS; yCount++) {
+    for (int yCount = 0; yCount < grid_size; yCount++) {
         float yProbe = FRONT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_Y * yCount;
         int xStart, xStop, xInc;
         if (yCount % 2) {
             xStart = 0;
-            xStop = AUTO_BED_LEVELING_GRID_POINTS;
+            xStop = grid_size;
             xInc = 1;
         } else {
-            xStart = AUTO_BED_LEVELING_GRID_POINTS - 1;
+            xStart = grid_size - 1;
             xStop = -1;
             xInc = -1;
         }
@@ -298,7 +298,7 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
             if(!zprobe->doProbeAt(s, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s) - z_reference; // this is the delta z from bed at 0,0
             gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER, measured_z);
-            grid[xCount][yCount] = measured_z;
+            grid[xCount + (grid_size * yCount)] = measured_z;
         }
     }
 
@@ -312,12 +312,12 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
 
 void DeltaGridStrategy::extrapolate_one_point(int x, int y, int xdir, int ydir)
 {
-    if (!isnan(grid[x][y])) {
+    if (!isnan(grid[x + (grid_size*y)])) {
         return;  // Don't overwrite good values.
     }
-    float a = 2 * grid[x + xdir][y] - grid[x + xdir * 2][y]; // Left to right.
-    float b = 2 * grid[x][y + ydir] - grid[x][y + ydir * 2]; // Front to back.
-    float c = 2 * grid[x + xdir][y + ydir] - grid[x + xdir * 2][y + ydir * 2]; // Diagonal.
+    float a = 2 * grid[(x + xdir) + (y*grid_size)] - grid[(x + xdir * 2) + (y*grid_size)]; // Left to right.
+    float b = 2 * grid[x + ((y + ydir) * grid_size)] - grid[x + ((y + ydir * 2) * grid_size)]; // Front to back.
+    float c = 2 * grid[(x + xdir) + ((y + ydir) * grid_size)] - grid[(x + xdir * 2) + ((y + ydir * 2) * grid_size)]; // Diagonal.
     float median = c;  // Median is robust (ignores outliers).
     if (a < b) {
         if (b < c) median = b;
@@ -326,14 +326,14 @@ void DeltaGridStrategy::extrapolate_one_point(int x, int y, int xdir, int ydir)
         if (c < b) median = b;
         if (a < c) median = a;
     }
-    grid[x][y] = median;
+    grid[x + (grid_size*y)] = median;
 }
 
 // Fill in the unprobed points (corners of circular print surface)
 // using linear extrapolation, away from the center.
 void DeltaGridStrategy::extrapolate_unprobed_bed_level()
 {
-    int half = (AUTO_BED_LEVELING_GRID_POINTS - 1) / 2;
+    int half = (grid_size - 1) / 2;
     for (int y = 0; y <= half; y++) {
         for (int x = 0; x <= half; x++) {
             if (x + y < 3) continue;
@@ -348,17 +348,17 @@ void DeltaGridStrategy::extrapolate_unprobed_bed_level()
 void DeltaGridStrategy::doCompensation(float target[3])
 {
     // Adjust print surface height by linear interpolation over the bed_level array.
-    int half = (AUTO_BED_LEVELING_GRID_POINTS - 1) / 2;
+    int half = (grid_size - 1) / 2;
     float grid_x = std::max(0.001F - half, std::min(half - 0.001F, target[X_AXIS] / AUTO_BED_LEVELING_GRID_X));
     float grid_y = std::max(0.001F - half, std::min(half - 0.001F, target[Y_AXIS] / AUTO_BED_LEVELING_GRID_Y));
     int floor_x = floorf(grid_x);
     int floor_y = floorf(grid_y);
     float ratio_x = grid_x - floor_x;
     float ratio_y = grid_y - floor_y;
-    float z1 = grid[floor_x + half][floor_y + half];
-    float z2 = grid[floor_x + half][floor_y + half + 1];
-    float z3 = grid[floor_x + half + 1][floor_y + half];
-    float z4 = grid[floor_x + half + 1][floor_y + half + 1];
+    float z1 = grid[(floor_x + half) + ((floor_y + half) * grid_size)];
+    float z2 = grid[(floor_x + half) + ((floor_y + half + 1) * grid_size)];
+    float z3 = grid[(floor_x + half + 1) + ((floor_y + half) * grid_size)];
+    float z4 = grid[(floor_x + half + 1) + ((floor_y + half + 1) * grid_size)];
     float left = (1 - ratio_y) * z1 + ratio_y * z2;
     float right = (1 - ratio_y) * z3 + ratio_y * z4;
     float offset = (1 - ratio_x) * left + ratio_x * right;
@@ -388,9 +388,9 @@ void DeltaGridStrategy::doCompensation(float target[3])
 // Print calibration results for plotting or manual frame adjustment.
 void DeltaGridStrategy::print_bed_level(StreamOutput *stream)
 {
-    for (int y = 0; y < AUTO_BED_LEVELING_GRID_POINTS; y++) {
-        for (int x = 0; x < AUTO_BED_LEVELING_GRID_POINTS; x++) {
-            stream->printf("%1.4f ", grid[x][y]);
+    for (int y = 0; y < grid_size; y++) {
+        for (int x = 0; x < grid_size; x++) {
+            stream->printf("%1.4f ", grid[x + (grid_size*y)]);
         }
         stream->printf("\n");
     }
@@ -399,9 +399,9 @@ void DeltaGridStrategy::print_bed_level(StreamOutput *stream)
 // Reset calibration results to zero.
 void DeltaGridStrategy::reset_bed_level()
 {
-    for (int y = 0; y < AUTO_BED_LEVELING_GRID_POINTS; y++) {
-        for (int x = 0; x < AUTO_BED_LEVELING_GRID_POINTS; x++) {
-            grid[x][y] = NAN;
+    for (int y = 0; y < grid_size; y++) {
+        for (int x = 0; x < grid_size; x++) {
+            grid[x + (grid_size*y)] = NAN;
         }
     }
 }
