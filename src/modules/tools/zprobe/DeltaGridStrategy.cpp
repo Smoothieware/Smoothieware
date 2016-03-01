@@ -1,5 +1,63 @@
-// This code is derived from (and mostly copied from) Johann Rocholls code at https://github.com/jcrocholl/Marlin/blob/deltabot/Marlin/Marlin_main.cpp
-// license is the same as his code.
+/*
+ This code is derived from (and mostly copied from) Johann Rocholls code at https://github.com/jcrocholl/Marlin/blob/deltabot/Marlin/Marlin_main.cpp
+ license is the same as his code.
+
+    Summary
+    -------
+    Probes grid_size points in X and Y (total probes grid_size * grid_size) and stores the relative offsets from the 0,0 Z height
+    When enabled everymove will calcualte the Z offset based on interpolating the height offset within the grids nearest 4 points.
+
+    Configuration
+    -------------
+    The strategy must be enabled in the config as well as zprobe.
+
+      leveling-strategy.delta-grid.enable         true
+
+    The radius of the bed must be specified with...
+
+      leveling-strategy.delta-grid.radius        50
+
+      this needs to be at least as big as the maximum printing radius as moves outside of this will not be compensated for correctly
+
+    The size of the grid can be set with...
+
+      leveling-strategy.delta-grid.size        7
+
+      this is the X and Y size of the grid, it must be an odd number, the default is 7 which is 49 probe points
+
+   Optionally probe offsets from the nozzle or tool head can be defined with...
+
+      leveling-strategy.delta-grid.probe_offsets  0,0,0  # probe offsetrs x,y,z
+
+      they may also be set with M565 X0 Y0 Z0
+
+    If the saved grid is to be loaded on boot then this must be set in the config...
+
+      leveling-strategy.delta-grid.save        true
+
+      Then when M500 is issued it will save M375 which will cause the grid to be loaded on boot. The default is to not autoload the grid on boot
+
+    Optionally an initial_height can be set that tell the intial probe where to stop the fast decent before it probes, this should be around 5-10mm above the bed
+      leveling-strategy.delta-grid.initial_height  10
+
+
+    Usage
+    -----
+    G29 test probes in a spiral pattern within the radius producing a map of offsets, this can be imported into a graphing program to visualize the bed heights
+    G31 probes the grid and turns the compensation on, this will remain in effect until reset or M561/M370
+
+    M370 clears the grid and turns off compensation
+    M374 Save grid to /sd/delta.grid
+    M374.1 delete /sd/delta.grid
+    M375 Load the grid from /sd/delta.grid and enable compensation
+    M375.1 display the current grid
+    M561 clears the grid and turns off compensation
+    M565 defines the probe offsets from the nozzle or tool head
+
+
+    M500 saves the probe points
+    M503 displays the current settings
+*/
 
 #include "DeltaGridStrategy.h"
 
