@@ -67,9 +67,6 @@ bool DeltaGridStrategy::handleConfig()
 
     reset_bed_level();
 
-    // load the saved grid file
-    if(save) load_grid(nullptr);
-
     return true;
 }
 
@@ -203,7 +200,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             float x, y, z;
             std::tie(x, y, z) = probe_offsets;
             gcode->stream->printf(";Probe offsets:\nM565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
-            if(save && gcode->m == 500) gcode->stream->printf(";Load saved grid\nM375\n");
+            if(save && !isnan(grid[0])) gcode->stream->printf(";Load saved grid\nM375\n");
             return true;
         }
     }
