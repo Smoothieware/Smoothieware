@@ -32,6 +32,7 @@
 #include "DeltaCalibrationStrategy.h"
 #include "ThreePointStrategy.h"
 #include "ZGridStrategy.h"
+#include "DeltaGridStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
@@ -107,11 +108,10 @@ void ZProbe::on_config_reload(void *argument)
                      found= true;
                      break;
 
-                // add other strategies here
-                //case zheight_map_strategy:
-                //     this->strategies.push_back(new ZHeightMapStrategy(this));
-                //     found= true;
-                //     break;
+                case delta_grid_leveling_strategy_checksum:
+                    this->strategies.push_back(new DeltaGridStrategy(this));
+                    found= true;
+                    break;
             }
             if(found) this->strategies.back()->handleConfig();
         }
@@ -134,8 +134,8 @@ void ZProbe::on_config_reload(void *argument)
     this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(5)->as_number(); // feedrate in mm/sec
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
     this->return_feedrate = THEKERNEL->config->value(zprobe_checksum, return_feedrate_checksum)->by_default(0)->as_number(); // feedrate in mm/sec
+    this->reverse_z     = THEKERNEL->config->value(zprobe_checksum, reverse_z_direction_checksum)->by_default(false)->as_bool(); // Z probe moves in reverse direction
     this->max_z         = THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number(); // maximum zprobe distance
-    this->reverse_z     = THEKERNEL->config->value(reverse_z_direction_checksum)->by_default(false)->as_bool(); // Z probe moves in reverse direction (upside down rdelta)
 }
 
 bool ZProbe::wait_for_probe(int& steps)
@@ -198,8 +198,7 @@ bool ZProbe::run_probe(int& steps, float feedrate, float max_dist, bool reverse)
     float maxz= max_dist < 0 ? this->max_z*2 : max_dist;
 
     // move Z down
-    bool dir= !reverse_z;
-    if(reverse) dir= !dir;  // specified to move in opposite Z direction
+    bool dir= (!reverse_z != reverse); // xor
     STEPPER[Z_AXIS]->move(dir, maxz * Z_STEPS_PER_MM, 0); // probe in specified direction, no more than maxz
     if(this->is_delta || this->is_rdelta) {
         // for delta need to move all three actuators
@@ -231,7 +230,8 @@ bool ZProbe::return_probe(int steps, bool reverse)
     }
 
     this->current_feedrate = fr * Z_STEPS_PER_MM; // feedrate in steps/sec
-    bool dir= steps < 0;
+    bool dir= ((steps < 0) != reverse_z); // xor
+
     if(reverse) dir= !dir;
     steps= abs(steps);
 

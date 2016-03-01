@@ -47,6 +47,9 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
+            // turn off any compensation transform as it will be invalidated anyway by this
+            THEKERNEL->robot->compensationTransform= nullptr;
+
             if(!gcode->has_letter('R')) {
                 if(!calibrate_delta_endstops(gcode)) {
                     gcode->stream->printf("Calibration failed to complete, probe not triggered\n");

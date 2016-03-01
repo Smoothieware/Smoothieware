@@ -272,7 +272,7 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
         n = snprintf(buf, bufsize, "LMS: X:%1.4f Y:%1.4f Z:%1.4f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 
     } else if(subcode == 5) { // M114.4 print last machine position (which should be the same as M114.1 if axis are not moving and no level compensation)
-        n = snprintf(buf, bufsize, "LMCS: X:%1.4f Y:%1.4f Z:%1.4f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
+        n = snprintf(buf, bufsize, "LMP: X:%1.4f Y:%1.4f Z:%1.4f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
 
     } else {
         // get real time positions
@@ -603,15 +603,12 @@ void Robot::on_gcode_received(void *argument)
                     }
                     ++n;
                 }
-            }
-
-            if(gcode->m == 503) {
-                // just print the G92 setting as it is not saved
-                // TODO linuxcnc does seem to save G92, so maybe we should here too
+                // linuxcnc does seem to save G92, so we do too
+                // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used
                 if(g92_offset != wcs_t(0, 0, 0)) {
                     float x, y, z;
                     std::tie(x, y, z) = g92_offset;
-                    gcode->stream->printf("G92 X%f Y%f Z%f ; NOT SAVED\n", x, y, z);
+                    gcode->stream->printf("G92 X%f Y%f Z%f\n", x, y, z);
                 }
             }
             break;
