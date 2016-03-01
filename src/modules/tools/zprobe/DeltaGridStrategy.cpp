@@ -66,6 +66,7 @@ bool DeltaGridStrategy::handleConfig()
     grid= (float *)AHB0.alloc(grid_size * grid_size * sizeof(float));
 
     reset_bed_level();
+
     // load the saved grid file
     if(save) load_grid(nullptr);
 
@@ -110,7 +111,7 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
             }
         }
     }
-    stream->printf("grid loaded from %s\n", GRIDFILE);
+    if(stream != nullptr) stream->printf("grid loaded from %s\n", GRIDFILE);
     fclose(fp);
     return true;
 }
