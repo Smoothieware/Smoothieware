@@ -198,8 +198,7 @@ bool ZProbe::run_probe(int& steps, float feedrate, float max_dist, bool reverse)
     float maxz= max_dist < 0 ? this->max_z*2 : max_dist;
 
     // move Z down
-    bool dir= !reverse_z;
-    if(reverse) dir= !dir;  // specified to move in opposite Z direction
+    bool dir= (!reverse_z != reverse); // xor
     STEPPER[Z_AXIS]->move(dir, maxz * Z_STEPS_PER_MM, 0); // probe in specified direction, no more than maxz
     if(this->is_delta || this->is_rdelta) {
         // for delta need to move all three actuators
@@ -231,7 +230,8 @@ bool ZProbe::return_probe(int steps, bool reverse)
     }
 
     this->current_feedrate = fr * Z_STEPS_PER_MM; // feedrate in steps/sec
-    bool dir= steps < 0;
+    bool dir= ((steps < 0) != reverse_z); // xor
+
     if(reverse) dir= !dir;
     steps= abs(steps);
 
