@@ -603,15 +603,12 @@ void Robot::on_gcode_received(void *argument)
                     }
                     ++n;
                 }
-            }
-
-            if(gcode->m == 503) {
-                // just print the G92 setting as it is not saved
-                // TODO linuxcnc does seem to save G92, so maybe we should here too
+                // linuxcnc does seem to save G92, so we do too
+                // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used
                 if(g92_offset != wcs_t(0, 0, 0)) {
                     float x, y, z;
                     std::tie(x, y, z) = g92_offset;
-                    gcode->stream->printf("G92 X%f Y%f Z%f ; NOT SAVED\n", x, y, z);
+                    gcode->stream->printf("G92 X%f Y%f Z%f\n", x, y, z);
                 }
             }
             break;
