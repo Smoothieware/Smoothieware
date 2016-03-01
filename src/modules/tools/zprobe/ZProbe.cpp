@@ -134,8 +134,8 @@ void ZProbe::on_config_reload(void *argument)
     this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(5)->as_number(); // feedrate in mm/sec
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
     this->return_feedrate = THEKERNEL->config->value(zprobe_checksum, return_feedrate_checksum)->by_default(0)->as_number(); // feedrate in mm/sec
+    this->reverse_z     = THEKERNEL->config->value(zprobe_checksum, reverse_z_direction_checksum)->by_default(false)->as_bool(); // Z probe moves in reverse direction
     this->max_z         = THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number(); // maximum zprobe distance
-    this->reverse_z     = THEKERNEL->config->value(reverse_z_direction_checksum)->by_default(false)->as_bool(); // Z probe moves in reverse direction (upside down rdelta)
 }
 
 bool ZProbe::wait_for_probe(int& steps)
