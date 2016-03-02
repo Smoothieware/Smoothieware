@@ -24,6 +24,7 @@ class Laser : public Module{
         void on_block_begin(void* argument);
         void on_gcode_execute(void* argument);
         void on_speed_change(void* argument);
+        void on_halt(void* argument);
 
     private:
         void set_proportional_power();
@@ -38,6 +39,7 @@ class Laser : public Module{
         float            laser_maximum_power; // maximum allowed laser power to be output on the pwm pin
         float            laser_minimum_power; // value used to tickle the laser on moves.  Also minimum value for auto-scaling
         float            laser_power;     // current laser power
+        float            laser_maximum_s_value; // Value of S code that will represent max power
 };
 
 #endif
