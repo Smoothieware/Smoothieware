@@ -1,13 +1,13 @@
-#ifndef RotatableDeltaSolution_H
-#define RotatableDeltaSolution_H
+#ifndef RotaryDeltaSolution_H
+#define RotaryDeltaSolution_H
 #include "libs/Module.h"
 #include "BaseSolution.h"
 
 class Config;
 
-class RotatableDeltaSolution : public BaseSolution {
+class RotaryDeltaSolution : public BaseSolution {
     public:
-        RotatableDeltaSolution(Config*);
+        RotaryDeltaSolution(Config*);
         void cartesian_to_actuator(const float[], ActuatorCoordinates &) override;
         void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) override;
 
@@ -29,5 +29,10 @@ class RotatableDeltaSolution : public BaseSolution {
         float delta_ee_offs;		// Ball joint plane to bottom of end effector surface
         float tool_offset;		// Distance between end effector ball joint plane and tip of tool
         float z_calc_offset;
+
+        struct {
+            bool debug_flag:1;
+            bool mirror_xy:1;
+        };
 };
-#endif // RotatableDeltaSolution_H
+#endif // RotaryDeltaSolution_H

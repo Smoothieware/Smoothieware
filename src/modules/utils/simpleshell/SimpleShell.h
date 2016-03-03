@@ -27,6 +27,7 @@ public:
     void on_gcode_received(void *argument);
     void on_second_tick(void *);
     static bool parse_command(const char *cmd, string args, StreamOutput *stream);
+    static void print_mem(StreamOutput *stream) { mem_command("", stream); }
 
 private:
     static void ls_command(string parameters, StreamOutput *stream );
@@ -47,6 +48,7 @@ private:
     static void calc_thermistor_command( string parameters, StreamOutput *stream);
     static void print_thermistors_command( string parameters, StreamOutput *stream);
     static void md5sum_command( string parameters, StreamOutput *stream);
+    static void grblDP_command( string parameters, StreamOutput *stream);
 
     static void switch_command(string parameters, StreamOutput *stream );
     static void mem_command(string parameters, StreamOutput *stream );

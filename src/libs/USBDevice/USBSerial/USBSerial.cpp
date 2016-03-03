@@ -38,6 +38,7 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256 + 8), txbuf(128 + 8)
     flush_to_nl = false;
     halt_flag= false;
     query_flag= false;
+    last_char_was_dollar= false;
 }
 
 void USBSerial::ensure_tx_space(int space)
@@ -198,6 +199,7 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
     iprintf("Read %ld bytes:\n\t", size);
     for (uint8_t i = 0; i < size; i++) {
         if(c[i] == 'X'-'A'+1){ // ^X
+            THEKERNEL->set_feed_hold(false); // required to free stuff up
             halt_flag= true;
             continue;
         }
@@ -207,17 +209,35 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
             continue;
         }
 
+        if(THEKERNEL->is_grbl_mode()) {
+            if(c[i] == '!'){ // safe pause
+                THEKERNEL->set_feed_hold(true);
+                continue;
+            }
+
+            if(c[i] == '~'){ // safe resume
+                THEKERNEL->set_feed_hold(false);
+                continue;
+            }
+            if(last_char_was_dollar && (c[i] == 'X' || c[i] == 'H')) {
+                // we need to do this otherwise $X/$H won't work if there was a feed hold like when stop is clicked in bCNC
+                THEKERNEL->set_feed_hold(false);
+            }
+        }
+
+        last_char_was_dollar= (c[i] == '$');
+
         if (flush_to_nl == false)
             rxbuf.queue(c[i]);
 
-        if (c[i] >= 32 && c[i] < 128)
-        {
-            iprintf("%c", c[i]);
-        }
-        else
-        {
-            iprintf("\\x%02X", c[i]);
-        }
+        // if (c[i] >= 32 && c[i] < 128)
+        // {
+        //     iprintf("%c", c[i]);
+        // }
+        // else
+        // {
+        //     iprintf("\\x%02X", c[i]);
+        // }
 
         if (c[i] == '\n' || c[i] == '\r')
         {
@@ -278,7 +298,11 @@ void USBSerial::on_idle(void *argument)
     if(halt_flag) {
         halt_flag= false;
         THEKERNEL->call_event(ON_HALT, nullptr);
-        puts("ALARM: Abort during cycle, M999 to exit Alarm state\r\n");
+        if(THEKERNEL->is_grbl_mode()) {
+            puts("ALARM:Abort during cycle\r\n");
+        }else{
+            puts("HALTED, M999 or $X to exit HALT state\r\n");
+        }
     }
 
     if(query_flag) {
@@ -311,6 +335,10 @@ void USBSerial::on_main_loop(void *argument)
             nl_in_rx = 0;
         }
     }
+
+    // if we are in feed hold we do not process anything
+    if(THEKERNEL->get_feed_hold()) return;
+
     if (nl_in_rx)
     {
         string received;

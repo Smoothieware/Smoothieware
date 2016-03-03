@@ -25,14 +25,19 @@
 #include "Robot.h"
 #include "ToolManagerPublicAccess.h"
 #include "GcodeDispatch.h"
+#include "BaseSolution.h"
+#include "StepperMotor.h"
+#include "Configurator.h"
 
 #include "TemperatureControlPublicAccess.h"
+#include "EndstopsPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "platform_memory.h"
 #include "SwitchPublicAccess.h"
 #include "SDFAT.h"
 #include "Thermistor.h"
 #include "md5.h"
+#include "utils.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -205,18 +210,71 @@ bool SimpleShell::parse_command(const char *cmd, string args, StreamOutput *stre
 void SimpleShell::on_console_line_received( void *argument )
 {
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
-
-    // ignore comments and blank lines and if this is a G code then also ignore it
-    char first_char = new_message.message[0];
-    if(strchr(";( \n\rGMTN", first_char) != NULL) return;
-
     string possible_command = new_message.message;
 
-    //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
-    string cmd = shift_parameter(possible_command);
+    // ignore anything that is not lowercase or a $ as it is not a command
+    if(possible_command.size() == 0 || (!islower(possible_command[0]) && possible_command[0] != '$')) {
+        return;
+    }
 
-    // find command and execute it
-    parse_command(cmd.c_str(), possible_command, new_message.stream);
+    // it is a grbl compatible command
+    if(possible_command[0] == '$' && possible_command.size() >= 2) {
+        switch(possible_command[1]) {
+            case 'G':
+                // issue get state
+                get_command("state", new_message.stream);
+                break;
+
+            case 'X':
+                THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
+                new_message.stream->printf("[Caution: Unlocked]\n");
+                break;
+
+            case '#':
+                grblDP_command("", new_message.stream);
+                break;
+
+            case 'H':
+                if(THEKERNEL->is_grbl_mode()) {
+                    THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
+                    // issue G28.2 which is force homing cycle
+                    Gcode gcode("G28.2", new_message.stream);
+                    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
+                }else{
+                    new_message.stream->printf("error:only supported in GRBL mode\n");
+                }
+                break;
+
+            default:
+                new_message.stream->printf("error:Invalid statement\n");
+                break;
+        }
+
+    }else{
+
+        //new_message.stream->printf("Received %s\r\n", possible_command.c_str());
+        string cmd = shift_parameter(possible_command);
+
+        // Configurator commands
+        if (cmd == "config-get"){
+            THEKERNEL->configurator->config_get_command(  possible_command, new_message.stream );
+
+        } else if (cmd == "config-set"){
+            THEKERNEL->configurator->config_set_command(  possible_command, new_message.stream );
+
+        } else if (cmd == "config-load"){
+            THEKERNEL->configurator->config_load_command(  possible_command, new_message.stream );
+
+        } else if (cmd == "play" || cmd == "progress" || cmd == "abort" || cmd == "suspend" || cmd == "resume") {
+
+        } else if (cmd == "ok") {
+            // probably an echo so reply ok
+            new_message.stream->printf("ok\n");
+
+        }else if(!parse_command(cmd.c_str(), possible_command, new_message.stream)) {
+            new_message.stream->printf("error:Unsupported command - %s\n", cmd.c_str());
+        }
+    }
 }
 
 // Act upon an ls command
@@ -334,11 +392,8 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     }
 
     // we have been asked to delay before cat, probably to allow time to issue upload command
-    while(delay-- > 0) {
-        for (int i = 0; i < 10; ++i) {
-            wait_ms(100);
-            THEKERNEL->call_event(ON_IDLE);
-        }
+    if(delay > 0) {
+        safe_delay(delay*1000);
     }
 
     // Open file
@@ -508,7 +563,7 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
 // show free memory
 void SimpleShell::mem_command( string parameters, StreamOutput *stream)
 {
-    bool verbose = shift_parameter( parameters ).find_first_of("Vv") != string::npos ;
+    bool verbose = shift_parameter( parameters ).find_first_of("Vv") != string::npos;
     unsigned long heap = (unsigned long)_sbrk(0);
     unsigned long m = g_maximumHeapAddress - heap;
     stream->printf("Unused Heap: %lu bytes\r\n", m);
@@ -598,7 +653,54 @@ static int get_active_tool()
     }
 }
 
-// used to test out the get public data events
+void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
+{
+    /*
+    [G54:95.000,40.000,-23.600]
+    [G55:0.000,0.000,0.000]
+    [G56:0.000,0.000,0.000]
+    [G57:0.000,0.000,0.000]
+    [G58:0.000,0.000,0.000]
+    [G59:0.000,0.000,0.000]
+    [G28:0.000,0.000,0.000]
+    [G30:0.000,0.000,0.000]
+    [G92:0.000,0.000,0.000]
+    [TLO:0.000]
+    [PRB:0.000,0.000,0.000:0]
+    */
+
+    bool verbose = shift_parameter( parameters ).find_first_of("Vv") != string::npos;
+
+    std::vector<Robot::wcs_t> v= THEKERNEL->robot->get_wcs_state();
+    if(verbose) {
+        char current_wcs= std::get<0>(v[0]);
+        stream->printf("[current WCS: %s]\n", wcs2gcode(current_wcs).c_str());
+    }
+
+    int n= std::get<1>(v[0]);
+    for (int i = 1; i <= n; ++i) {
+        stream->printf("[%s:%1.4f,%1.4f,%1.4f]\n", wcs2gcode(i-1).c_str(), std::get<0>(v[i]), std::get<1>(v[i]), std::get<2>(v[i]));
+    }
+
+    float *rd;
+    PublicData::get_value( endstops_checksum, saved_position_checksum, &rd );
+    stream->printf("[G28:%1.4f,%1.4f,%1.4f]\n",  rd[0], rd[1], rd[2]);
+    stream->printf("[G30:%1.4f,%1.4f,%1.4f]\n",  0.0F, 0.0F, 0.0F); // not implemented
+
+    stream->printf("[G92:%1.4f,%1.4f,%1.4f]\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
+    if(verbose) {
+        stream->printf("[Tool Offset:%1.4f,%1.4f,%1.4f]\n", std::get<0>(v[n+2]), std::get<1>(v[n+2]), std::get<2>(v[n+2]));
+    }else{
+        stream->printf("[TL0:%1.4f]\n", std::get<2>(v[n+2]));
+    }
+
+    // this is the last probe position, updated when a probe completes, also stores the number of steps moved after a homing cycle
+    float px, py, pz;
+    uint8_t ps;
+    std::tie(px, py, pz, ps) = THEKERNEL->robot->get_last_probe_position();
+    stream->printf("[PRB:%1.4f,%1.4f,%1.4f:%d]\n", px, py, pz, ps);
+}
+
 void SimpleShell::get_command( string parameters, StreamOutput *stream)
 {
     string what = shift_parameter( parameters );
@@ -629,7 +731,58 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             }
         }
 
-    } else if (what == "pos") {
+    } else if (what == "fk" || what == "ik") {
+        string p= shift_parameter( parameters );
+        bool move= false;
+        if(p == "-m") {
+            move= true;
+            p= shift_parameter( parameters );
+        }
+
+        std::vector<float> v= parse_number_list(p.c_str());
+        if(p.empty() || v.size() < 1) {
+            stream->printf("error:usage: get [fk|ik] [-m] x[,y,z]\n");
+            return;
+        }
+
+        float x= v[0];
+        float y= (v.size() > 1) ? v[1] : x;
+        float z= (v.size() > 2) ? v[2] : y;
+
+        if(what == "fk") {
+            // do forward kinematics on the given actuator position and display the cartesian coordinates
+            ActuatorCoordinates apos{x, y, z};
+            float pos[3];
+            THEKERNEL->robot->arm_solution->actuator_to_cartesian(apos, pos);
+            stream->printf("cartesian= X %f, Y %f, Z %f, Steps= A %lu, B %lu, C %lu\n",
+                pos[0], pos[1], pos[2],
+                lroundf(x*THEKERNEL->robot->actuators[0]->get_steps_per_mm()),
+                lroundf(y*THEKERNEL->robot->actuators[1]->get_steps_per_mm()),
+                lroundf(z*THEKERNEL->robot->actuators[2]->get_steps_per_mm()));
+            x= pos[0];
+            y= pos[1];
+            z= pos[2];
+
+        }else{
+            // do inverse kinematics on the given cartesian position and display the actuator coordinates
+            float pos[3]{x, y, z};
+            ActuatorCoordinates apos;
+            THEKERNEL->robot->arm_solution->cartesian_to_actuator(pos, apos);
+            stream->printf("actuator= A %f, B %f, C %f\n", apos[0], apos[1], apos[2]);
+        }
+
+        if(move) {
+            // move to the calculated, or given, XYZ
+            char cmd[64];
+            snprintf(cmd, sizeof(cmd), "G53 G0 X%f Y%f Z%f", x, y, z);
+            struct SerialMessage message;
+            message.message = cmd;
+            message.stream = &(StreamOutput::NullStream);
+            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            THEKERNEL->conveyor->wait_for_empty_queue();
+        }
+
+   } else if (what == "pos") {
         // convenience to call all the various M114 variants
         char buf[64];
         THEKERNEL->robot->print_position(0, buf, sizeof buf); stream->printf("last %s\n", buf);
@@ -641,20 +794,12 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     } else if (what == "wcs") {
         // print the wcs state
-        std::vector<Robot::wcs_t> v= THEKERNEL->robot->get_wcs_state();
-        char current_wcs= std::get<0>(v[0]);
-        stream->printf("current WCS: %s\n", wcs2gcode(current_wcs).c_str());
-        int n= std::get<1>(v[0]);
-        for (int i = 1; i <= n; ++i) {
-            stream->printf("%s: %1.4f, %1.4f, %1.4f\n", wcs2gcode(i-1).c_str(), std::get<0>(v[i]), std::get<1>(v[i]), std::get<2>(v[i]));
-        }
-
-        stream->printf("G92: %1.4f, %1.4f, %1.4f\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
-        stream->printf("ToolOffset: %1.4f, %1.4f, %1.4f\n", std::get<0>(v[n+2]), std::get<1>(v[n+2]), std::get<2>(v[n+2]));
+        grblDP_command("-v", stream);
 
     } else if (what == "state") {
+        // also $G
         // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
-        stream->printf("[G%d %s G%d G%d G%d G94 T%d F%1.1f]\n",
+        stream->printf("[G%d %s G%d G%d G%d G94 M0 M5 M9 T%d F%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
             wcs2gcode(THEKERNEL->robot->get_current_wcs()).c_str(),
             THEKERNEL->robot->plane_axis_0 == X_AXIS && THEKERNEL->robot->plane_axis_1 == Y_AXIS && THEKERNEL->robot->plane_axis_2 == Z_AXIS ? 17 :
@@ -664,6 +809,9 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             THEKERNEL->robot->absolute_mode ? 90 : 91,
             get_active_tool(),
             THEKERNEL->robot->get_feed_rate());
+
+    } else {
+        stream->printf("error:unknown option %s\n", what.c_str());
     }
 }
 
@@ -757,6 +905,7 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
     do {
         size_t n= fread(buf, 1, sizeof buf, lp);
         if(n > 0) md5.update(buf, n);
+        THEKERNEL->call_event(ON_IDLE);
     } while(!feof(lp));
 
     stream->printf("%s %s\n", md5.finalize().hexdigest().c_str(), filename.c_str());
@@ -773,7 +922,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("ls [-s] [folder]\r\n");
     stream->printf("cd folder\r\n");
     stream->printf("pwd\r\n");
-    stream->printf("cat file [limit]\r\n");
+    stream->printf("cat file [limit] [-d 10]\r\n");
     stream->printf("rm file\r\n");
     stream->printf("mv file newfile\r\n");
     stream->printf("remount\r\n");
@@ -785,9 +934,9 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("break - break into debugger\r\n");
     stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
+    stream->printf("get [pos|wcs|state|fk|ik]\r\n");
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
-    stream->printf("get pos\r\n");
     stream->printf("net\r\n");
     stream->printf("load [file] - loads a configuration override file from soecified name or config-override\r\n");
     stream->printf("save [file] - saves a configuration override file as specified filename or as config-override\r\n");

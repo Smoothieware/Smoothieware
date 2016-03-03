@@ -30,7 +30,7 @@ private:
 
     void setAdjustFunction(bool);
     bool doProbing(StreamOutput *stream);
-    void normalize_grid();
+    void normalize_grid_2home();
 
     bool loadGrid(std::string args);
     bool saveGrid(std::string args);
@@ -46,6 +46,9 @@ private:
     float bed_x;
     float bed_y;
     float bed_z;
+    float probe_x;
+    float probe_y;
+    float probe_z;
     float cal_offset_x;
     float cal_offset_y;
     float bed_div_x;

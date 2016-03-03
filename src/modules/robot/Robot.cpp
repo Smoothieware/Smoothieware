@@ -27,7 +27,7 @@ using std::string;
 #include "arm_solutions/CartesianSolution.h"
 #include "arm_solutions/RotatableCartesianSolution.h"
 #include "arm_solutions/LinearDeltaSolution.h"
-#include "arm_solutions/RotatableDeltaSolution.h"
+#include "arm_solutions/RotaryDeltaSolution.h"
 #include "arm_solutions/HBotSolution.h"
 #include "arm_solutions/CoreXZSolution.h"
 #include "arm_solutions/MorganSCARASolution.h"
@@ -57,7 +57,7 @@ using std::string;
 #define  rotatable_cartesian_checksum        CHECKSUM("rotatable_cartesian")
 #define  rostock_checksum                    CHECKSUM("rostock")
 #define  linear_delta_checksum               CHECKSUM("linear_delta")
-#define  rotatable_delta_checksum            CHECKSUM("rotatable_delta")
+#define  rotary_delta_checksum               CHECKSUM("rotary_delta")
 #define  delta_checksum                      CHECKSUM("delta")
 #define  hbot_checksum                       CHECKSUM("hbot")
 #define  corexy_checksum                     CHECKSUM("corexy")
@@ -120,6 +120,7 @@ Robot::Robot()
     this->wcs_offsets.fill(wcs_t(0.0F, 0.0F, 0.0F));
     this->g92_offset = wcs_t(0.0F, 0.0F, 0.0F);
     this->next_command_is_MCS = false;
+    this->disable_segmentation= false;
 }
 
 //Called when the module has just been loaded
@@ -160,8 +161,8 @@ void Robot::load_config()
     } else if(solution_checksum == rotatable_cartesian_checksum) {
         this->arm_solution = new RotatableCartesianSolution(THEKERNEL->config);
 
-    } else if(solution_checksum == rotatable_delta_checksum) {
-        this->arm_solution = new RotatableDeltaSolution(THEKERNEL->config);
+    } else if(solution_checksum == rotary_delta_checksum) {
+        this->arm_solution = new RotaryDeltaSolution(THEKERNEL->config);
 
     } else if(solution_checksum == morgan_checksum) {
         this->arm_solution = new MorganSCARASolution(THEKERNEL->config);
@@ -265,13 +266,13 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
     int n = 0;
     if(subcode == 0) { // M114 print WCS
         wcs_t pos= mcs2wcs(last_milestone);
-        n = snprintf(buf, bufsize, "C: X:%1.3f Y:%1.3f Z:%1.3f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+        n = snprintf(buf, bufsize, "C: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
     } else if(subcode == 4) { // M114.3 print last milestone (which should be the same as machine position if axis are not moving and no level compensation)
-        n = snprintf(buf, bufsize, "LMS: X:%1.3f Y:%1.3f Z:%1.3f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
+        n = snprintf(buf, bufsize, "LMS: X:%1.4f Y:%1.4f Z:%1.4f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 
     } else if(subcode == 5) { // M114.4 print last machine position (which should be the same as M114.1 if axis are not moving and no level compensation)
-        n = snprintf(buf, bufsize, "LMCS: X:%1.3f Y:%1.3f Z:%1.3f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
+        n = snprintf(buf, bufsize, "LMP: X:%1.4f Y:%1.4f Z:%1.4f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
 
     } else {
         // get real time positions
@@ -289,25 +290,25 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
         if(subcode == 1) { // M114.1 print realtime WCS
             // FIXME this currently includes the compensation transform which is incorrect so will be slightly off if it is in effect (but by very little)
             wcs_t pos= mcs2wcs(mpos);
-            n = snprintf(buf, bufsize, "C: X:%1.3f Y:%1.3f Z:%1.3f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+            n = snprintf(buf, bufsize, "C: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
         } else if(subcode == 2) { // M114.1 print realtime Machine coordinate system
-            n = snprintf(buf, bufsize, "MPOS: X:%1.3f Y:%1.3f Z:%1.3f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
+            n = snprintf(buf, bufsize, "MPOS: X:%1.4f Y:%1.4f Z:%1.4f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
 
         } else if(subcode == 3) { // M114.2 print realtime actuator position
-            n = snprintf(buf, bufsize, "APOS: A:%1.3f B:%1.3f C:%1.3f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
+            n = snprintf(buf, bufsize, "APOS: A:%1.4f B:%1.4f C:%1.4f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
         }
     }
     return n;
 }
 
 // converts current last milestone (machine position without compensation transform) to work coordinate system (inverse transform)
-Robot::wcs_t Robot::mcs2wcs(const float *pos) const
+Robot::wcs_t Robot::mcs2wcs(const Robot::wcs_t& pos) const
 {
     return std::make_tuple(
-        pos[X_AXIS] - std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset) - std::get<X_AXIS>(tool_offset),
-        pos[Y_AXIS] - std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset) - std::get<Y_AXIS>(tool_offset),
-        pos[Z_AXIS] - std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset) - std::get<Z_AXIS>(tool_offset)
+        std::get<X_AXIS>(pos) - std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset) - std::get<X_AXIS>(tool_offset),
+        std::get<Y_AXIS>(pos) - std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset) - std::get<Y_AXIS>(tool_offset),
+        std::get<Z_AXIS>(pos) - std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset) - std::get<Z_AXIS>(tool_offset)
     );
 }
 
@@ -443,7 +444,11 @@ void Robot::on_gcode_received(void *argument)
 
     } else if( gcode->has_m) {
         switch( gcode->m ) {
+            case 0: // M0 feed hold
+                if(THEKERNEL->is_grbl_mode()) THEKERNEL->set_feed_hold(true);
+                break;
             case 2: // M2 end of program
+            case 30: // M30 end of program
                 current_wcs = 0;
                 absolute_mode = true;
                 break;
@@ -598,15 +603,12 @@ void Robot::on_gcode_received(void *argument)
                     }
                     ++n;
                 }
-            }
-
-            if(gcode->m == 503) {
-                // just print the G92 setting as it is not saved
-                // TODO linuxcnc does seem to save G92, so maybe we should here too
+                // linuxcnc does seem to save G92, so we do too
+                // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used
                 if(g92_offset != wcs_t(0, 0, 0)) {
                     float x, y, z;
                     std::tie(x, y, z) = g92_offset;
-                    gcode->stream->printf("G92 X%f Y%f Z%f ; NOT SAVED\n", x, y, z);
+                    gcode->stream->printf("G92 X%f Y%f Z%f\n", x, y, z);
                 }
             }
             break;
@@ -766,6 +768,17 @@ void Robot::reset_axis_position(float position, int axis)
     reset_axis_position(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 }
 
+// similar to reset_axis_position but directly sets the actuator positions in actuators units (eg mm for cartesian, degrees for rotary delta)
+// then sets the axis positions to match. currently only called from Endstops.cpp
+void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
+{
+    for (size_t i = 0; i < actuators.size(); i++)
+        actuators[i]->change_last_milestone(ac[i]);
+
+    // now correct axis positions then recorrect actuator to account for rounding
+    reset_position_from_current_actuator_position();
+}
+
 // Use FK to find out where actuator is and reset to match
 void Robot::reset_position_from_current_actuator_position()
 {
@@ -890,7 +903,10 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s )
     // The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
     uint16_t segments;
 
-    if(this->delta_segments_per_second > 1.0F) {
+    if(this->disable_segmentation) {
+        segments= 1;
+
+    } else if(this->delta_segments_per_second > 1.0F) {
         // enabled if set to something > 1, it is set to 0.0 by default
         // segment based on current speed and requested segments per second
         // the faster the travel speed the fewer segments needed
