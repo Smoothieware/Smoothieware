@@ -308,7 +308,13 @@ float DeltaGridStrategy::findBed()
 
     // leave the probe zprobe->getProbeHeight() above bed
     zprobe->return_probe(s);
-    zprobe->coordinated_move(NAN, NAN, zprobe->getProbeHeight()-zprobe->zsteps_to_mm(s), zprobe->getFastFeedrate(), true); // relative move
+    float dz= zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
+    if(dz >= 0) {
+        // probe was not started above bed
+        return NAN;
+    }
+
+    zprobe->coordinated_move(NAN, NAN, dz, zprobe->getFastFeedrate(), true); // relative move
 
     return zprobe->zsteps_to_mm(s) + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
 }
@@ -318,9 +324,17 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
     reset_bed_level();
     setAdjustFunction(false);
 
+    float radius = grid_radius;
+    if(gc->has_letter('J')) radius = gc->get_value('J'); // override default probe radius
+
+    // find bed, and leave probe probe height above bed
     float initial_z = findBed();
-    if(isnan(initial_z)) return false;
-    gc->stream->printf("initial Bed ht is %f mm\n", initial_z);
+    if(isnan(initial_z)) {
+        gc->stream->printf("Finding bed failed, check the maxz and initial height settings\n");
+        return false;
+    }
+
+    gc->stream->printf("Probe start ht is %f mm, probe radius is %f mm\n", initial_z, radius);
 
     // do first probe for 0,0
     int s;
@@ -328,8 +342,6 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
     float z_reference = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s); // this should be zero
     gc->stream->printf("probe at 0,0 is %f mm\n", z_reference);
 
-    float radius = grid_radius;
-    if(gc->has_letter('J')) radius = gc->get_value('J'); // override default probe radius
 
     for (int yCount = 0; yCount < grid_size; yCount++) {
         float yProbe = FRONT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_Y * yCount;
