@@ -171,11 +171,39 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
     return true;
 }
 
-// taken from Oskars PR #713
-bool DeltaGridStrategy::probe_spiral(int n, StreamOutput *stream)
+bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
 {
-    float a = grid_radius / (2 * sqrtf(n * M_PI));
-    float step_length = grid_radius * grid_radius / (2 * a * n);
+    if(n < 5) {
+        stream->printf("Need at least a 5x5 grid to probe\n");
+        return true;
+    }
+
+    float d= ((radius*2) / (n - 1));
+
+    for (int c = 0; c < n; ++c) {
+        float y = -radius + d*c;
+        for (int r = 0; r < n; ++r) {
+            float x = -radius + d*r;
+            // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
+            float distance_from_center = sqrtf(x*x + y*y);
+            float z= 0.0F;
+            if (distance_from_center <= radius) {
+                int s;
+                if(!zprobe->doProbeAt(s, x, y)) return false;
+                z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
+            }
+            stream->printf("%8.4f ", z);
+        }
+        stream->printf("\n");
+    }
+    return true;
+}
+
+// taken from Oskars PR #713
+bool DeltaGridStrategy::probe_spiral(int n, float radius, StreamOutput *stream)
+{
+    float a = radius / (2 * sqrtf(n * M_PI));
+    float step_length = radius * radius / (2 * a * n);
 
     float initial_z = findBed();
     if(isnan(initial_z)) return false;
@@ -205,9 +233,21 @@ bool DeltaGridStrategy::probe_spiral(int n, StreamOutput *stream)
 bool DeltaGridStrategy::handleGcode(Gcode *gcode)
 {
     if(gcode->has_g) {
-        if (gcode->g == 29) { // do a spiral probe query
-            int n= gcode->has_letter('I') ? gcode->get_value('I') : 50;
-            probe_spiral(n, gcode->stream);
+        if (gcode->g == 29) { // do a probe to test flatness
+            // first wait for an empty queue i.e. no moves left
+            THEKERNEL->conveyor->wait_for_empty_queue();
+
+            int n= gcode->has_letter('I') ? gcode->get_value('I') : 0;
+            float radius = grid_radius;
+            if(gcode->has_letter('J')) radius = gcode->get_value('J'); // override default probe radius
+            if(gcode->subcode == 1){
+                if(n==0) n= 50;
+                probe_spiral(n, radius, gcode->stream);
+            }else{
+                if(n==0) n= 7;
+                probe_grid(n, radius, gcode->stream);
+            }
+
             return true;
 
         } else if( gcode->g == 31 ) { // do a grid probe
@@ -227,6 +267,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             // delete the compensationTransform in robot
             setAdjustFunction(false);
             reset_bed_level();
+            gcode->stream->printf("grid cleared and disabled\n");
             return true;
 
         } else if(gcode->m == 374) { // M374: Save grid, M374.1: delete saved grid
@@ -321,8 +362,8 @@ float DeltaGridStrategy::findBed()
 
 bool DeltaGridStrategy::doProbe(Gcode *gc)
 {
-    reset_bed_level();
     setAdjustFunction(false);
+    reset_bed_level();
 
     float radius = grid_radius;
     if(gc->has_letter('J')) radius = gc->get_value('J'); // override default probe radius
@@ -342,7 +383,7 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
     float z_reference = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s); // this should be zero
     gc->stream->printf("probe at 0,0 is %f mm\n", z_reference);
 
-
+    // probe all the points in the grid within the given radius
     for (int yCount = 0; yCount < grid_size; yCount++) {
         float yProbe = FRONT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_Y * yCount;
         int xStart, xStop, xInc;
@@ -365,7 +406,7 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
 
             if(!zprobe->doProbeAt(s, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s) - z_reference; // this is the delta z from bed at 0,0
-            gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER, measured_z);
+            gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe, yProbe, measured_z);
             grid[xCount + (grid_size * yCount)] = measured_z;
         }
     }
@@ -458,7 +499,7 @@ void DeltaGridStrategy::print_bed_level(StreamOutput *stream)
 {
     for (int y = 0; y < grid_size; y++) {
         for (int x = 0; x < grid_size; x++) {
-            stream->printf("%1.4f ", grid[x + (grid_size*y)]);
+            stream->printf("%7.4f ", grid[x + (grid_size*y)]);
         }
         stream->printf("\n");
     }
