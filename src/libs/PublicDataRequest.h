@@ -31,7 +31,7 @@ class PublicDataRequest {
         void* data;
         struct {
             bool data_taken:1;
-            bool returned_data:1;
+            bool returned_data:1; // this is set if the callee returns the data, it is false if the caller supplied the storage for the return
         };
 };
 

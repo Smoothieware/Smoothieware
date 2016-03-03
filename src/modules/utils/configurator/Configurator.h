@@ -9,21 +9,15 @@
 #ifndef configurator_h
 #define configurator_h
 
-#include "Module.h"
-
 #include <string>
 using std::string;
 
 class StreamOutput;
 
-class Configurator : public Module
+class Configurator
 {
 public:
     Configurator() {}
-
-    void on_module_loaded();
-    void on_console_line_received( void *argument );
-    void on_main_loop( void *argument );
 
     void config_get_command( string parameters, StreamOutput *stream );
     void config_set_command( string parameters, StreamOutput *stream );

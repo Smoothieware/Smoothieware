@@ -14,16 +14,17 @@
 #include <bitset>
 
 class StepperMotor;
+class Gcode;
 
 class Endstops : public Module{
     public:
         Endstops();
         void on_module_loaded();
         void on_gcode_received(void* argument);
-        void on_config_reload(void* argument);
         void acceleration_tick(void);
 
     private:
+        void load_config();
         void home(char axes_to_move);
         void do_homing_cartesian(char axes_to_move);
         void do_homing_corexy(char axes_to_move);
@@ -36,12 +37,15 @@ class Endstops : public Module{
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
         bool debounced_get(int pin);
+        void process_home_command(Gcode* gcode);
+        void set_homing_offset(Gcode* gcode);
 
         float homing_position[3];
         float home_offset[3];
         uint8_t homing_order;
         std::bitset<3> home_direction;
         std::bitset<3> limit_enable;
+        float saved_position[3]{0}; // save G28 (in grbl mode)
 
         unsigned int  debounce_count;
         float  retract_mm[3];
@@ -53,6 +57,7 @@ class Endstops : public Module{
         struct {
             bool is_corexy:1;
             bool is_delta:1;
+            bool is_rdelta:1;
             bool is_scara:1;
             bool move_to_origin_after_home:1;
             uint8_t bounce_cnt:4;
