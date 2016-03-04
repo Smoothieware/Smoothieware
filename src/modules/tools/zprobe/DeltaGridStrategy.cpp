@@ -178,6 +178,9 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
         return true;
     }
 
+    float initial_z = findBed();
+    if(isnan(initial_z)) return false;
+
     float d= ((radius*2) / (n - 1));
 
     for (int c = 0; c < n; ++c) {
