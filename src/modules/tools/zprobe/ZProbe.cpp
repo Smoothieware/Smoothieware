@@ -425,6 +425,10 @@ void ZProbe::on_gcode_received(void *argument)
                 if (gcode->has_letter('R')) this->return_feedrate = gcode->get_value('R');
                 if (gcode->has_letter('Z')) this->max_z = gcode->get_value('Z');
                 if (gcode->has_letter('H')) this->probe_height = gcode->get_value('H');
+                if (gcode->has_letter('I')) { // NOTE this is temporary and toggles the invertion status of the pin
+                    invert_override= (gcode->get_value('I') != 0);
+                    pin.set_inverting(pin.is_inverting() != invert_override); // XOR so inverted pin is not inverted and vice versa
+                }
                 break;
 
             case 500: // save settings
