@@ -52,13 +52,13 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
 
             if(!gcode->has_letter('R')) {
                 if(!calibrate_delta_endstops(gcode)) {
-                    gcode->stream->printf("Calibration failed to complete, probe not triggered\n");
+                    gcode->stream->printf("Calibration failed to complete\n");
                     return true;
                 }
             }
             if(!gcode->has_letter('E')) {
                 if(!calibrate_delta_radius(gcode)) {
-                    gcode->stream->printf("Calibration failed to complete, probe not triggered\n");
+                    gcode->stream->printf("Calibration failed to complete\n");
                     return true;
                 }
             }
@@ -68,7 +68,7 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
         }else if (gcode->g == 29) {
             // probe the 7 points
             if(!probe_delta_points(gcode)) {
-                gcode->stream->printf("Calibration failed to complete, probe not triggered\n");
+                gcode->stream->printf("Calibration failed to complete\n");
             }
             return true;
         }

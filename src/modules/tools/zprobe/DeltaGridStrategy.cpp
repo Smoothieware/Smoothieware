@@ -44,7 +44,10 @@
     Usage
     -----
     G29 test probes in a spiral pattern within the radius producing a map of offsets, this can be imported into a graphing program to visualize the bed heights
+        optional parameters {{In}} sets the number of points to the value n, {{Jn}} sets the radius for this probe.
+
     G31 probes the grid and turns the compensation on, this will remain in effect until reset or M561/M370
+        optional parameters {{Jn}} sets the radius for this probe.
 
     M370 clears the grid and turns off compensation
     M374 Save grid to /sd/delta.grid
@@ -258,7 +261,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             if(!doProbe(gcode)) {
-                gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
+                gcode->stream->printf("Probe failed to complete\n");
             } else {
                 gcode->stream->printf("Probe completed\n");
             }
