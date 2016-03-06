@@ -223,15 +223,17 @@ void SimpleShell::on_console_line_received( void *argument )
             case 'G':
                 // issue get state
                 get_command("state", new_message.stream);
+                new_message.stream->printf("ok\n");
                 break;
 
             case 'X':
                 THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
-                new_message.stream->printf("[Caution: Unlocked]\n");
+                new_message.stream->printf("[Caution: Unlocked]\nok\n");
                 break;
 
             case '#':
                 grblDP_command("", new_message.stream);
+                new_message.stream->printf("ok\n");
                 break;
 
             case 'H':

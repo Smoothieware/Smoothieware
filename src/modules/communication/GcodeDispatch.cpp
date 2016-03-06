@@ -63,6 +63,11 @@ void GcodeDispatch::on_console_line_received(void *line)
 
 try_again:
 
+    if(possible_command.empty()) {
+        new_message.stream->printf("ok\r\n");
+        return;
+    }
+
     char first_char = possible_command[0];
     unsigned int n;
 
