@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <algorithm>
 
-// This is a gcode object. It reprensents a GCode string/command, an caches some important values about that command for the sake of performance.
+// This is a gcode object. It represents a GCode string/command, and caches some important values about that command for the sake of performance.
 // It gets passed around in events, and attached to the queue ( that'll change )
 Gcode::Gcode(const string &command, StreamOutput *stream, bool strip)
 {
