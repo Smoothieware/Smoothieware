@@ -61,12 +61,13 @@ void GcodeDispatch::on_console_line_received(void *line)
     int ln = 0;
     int cs = 0;
 
-try_again:
-
+    // just reply ok to empty lines
     if(possible_command.empty()) {
         new_message.stream->printf("ok\r\n");
         return;
     }
+
+try_again:
 
     char first_char = possible_command[0];
     unsigned int n;
