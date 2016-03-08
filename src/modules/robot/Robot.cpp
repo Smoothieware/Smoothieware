@@ -265,7 +265,7 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
     // it returns the realtime position based on the current step position of the actuators.
     // this does require a FK to get a machine position from the actuator position
     // and then invert all the transforms to get a workspace position from machine position
-    // M114 just does it the old way uses last_milestone and does inversse tranfroms to get the requested position
+    // M114 just does it the old way uses last_milestone and does inversse transforms to get the requested position
     int n = 0;
     if(subcode == 0) { // M114 print WCS
         wcs_t pos= mcs2wcs(last_milestone);
@@ -742,7 +742,7 @@ void Robot::process_move(Gcode *gcode)
 // and continue
 void Robot::distance_in_gcode_is_known(Gcode * gcode)
 {
-    //If the queue is empty, execute immediatly, otherwise attach to the last added block
+    //If the queue is empty, execute immediately, otherwise attach to the last added block
     THEKERNEL->conveyor->append_gcode(gcode);
 }
 
@@ -893,7 +893,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s )
     // NOTE we need to do this before we segment the line (for deltas)
     if(gcode->has_letter('E')) {
         float data[2];
-        data[0] = gcode->get_value('E'); // E target (maybe absolute or relative)
+        data[0] = gcode->get_value('E'); // E target (may be absolute or relative)
         data[1] = rate_mm_s / gcode->millimeters_of_travel; // inverted seconds for the move
         if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
             rate_mm_s *= data[1];

@@ -171,7 +171,7 @@ try_again:
                     if(gcode->has_g) {
                         if(gcode->g == 53) { // G53 makes next movement command use machine coordinates
                             // this is ugly to implement as there may or may not be a G0/G1 on the same line
-                            // valid vesion seem to include G53 G0 X1 Y2 Z3 G53 X1 Y2
+                            // valid version seem to include G53 G0 X1 Y2 Z3 G53 X1 Y2
                             if(possible_command.empty()) {
                                 // use last gcode G1 or G0 if none on the line, and pass through as if it was a G0/G1
                                 // TODO it is really an error if the last is not G0 thru G3

@@ -24,7 +24,7 @@ typedef struct {
         float c1, c2, c3;
 } const thermistor_table_t;
 
-// Use one of the following scripts to calcuate the coefficients:
+// Use one of the following scripts to calculate the coefficients:
 // - http://www.thinksrs.com/downloads/programs/Therm%20Calc/NTCCalibrator/NTCcalculator.htm
 // - https://github.com/MarlinFirmware/Marlin/blob/Development/Marlin/scripts/createTemperatureLookupMarlin.py
 static const thermistor_table_t predefined_thermistors[] {
