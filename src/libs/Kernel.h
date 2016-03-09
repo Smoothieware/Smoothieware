@@ -42,7 +42,7 @@ class Kernel {
         void register_for_event(_EVENT_ENUM id_event, Module *module);
         void call_event(_EVENT_ENUM id_event, void * argument= nullptr);
 
-        bool kernel_has_event(_EVENT_ENUM id_event, Module *mod);
+        bool kernel_has_event(_EVENT_ENUM id_event, Module *module);
         void unregister_for_event(_EVENT_ENUM id_event, Module *module);
 
         bool is_using_leds() const { return use_leds; }

@@ -275,7 +275,7 @@ void Block::take()
     times_taken++;
 }
 
-// Mark the block as no longer taken by one module, go to next block if this free's it
+// Mark the block as no longer taken by one module, go to next block if this frees it
 void Block::release()
 {
     if (--this->times_taken <= 0) {
