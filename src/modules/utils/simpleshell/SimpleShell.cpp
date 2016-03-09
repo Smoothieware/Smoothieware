@@ -175,7 +175,8 @@ void SimpleShell::on_gcode_received(void *argument)
             gcode->stream->printf("End file list\r\n");
 
         } else if (gcode->m == 30) { // remove file
-            rm_command("/sd/" + args, gcode->stream);
+            if(!args.empty() && !THEKERNEL->is_grbl_mode())
+                rm_command("/sd/" + args, gcode->stream);
 
         } else if(gcode->m == 501) { // load config override
             if(args.empty()) {
@@ -268,6 +269,7 @@ void SimpleShell::on_console_line_received( void *argument )
             THEKERNEL->configurator->config_load_command(  possible_command, new_message.stream );
 
         } else if (cmd == "play" || cmd == "progress" || cmd == "abort" || cmd == "suspend" || cmd == "resume") {
+            // these are handled by Player module
 
         } else if (cmd == "ok") {
             // probably an echo so reply ok

@@ -450,8 +450,11 @@ void Robot::on_gcode_received(void *argument)
             case 0: // M0 feed hold
                 if(THEKERNEL->is_grbl_mode()) THEKERNEL->set_feed_hold(true);
                 break;
+
+            case 30: // M30 end of program in grbl mode (otherwise it is delete sdcard file)
+                if(!THEKERNEL->is_grbl_mode()) break;
+                // fall through to M2
             case 2: // M2 end of program
-            case 30: // M30 end of program
                 current_wcs = 0;
                 absolute_mode = true;
                 break;

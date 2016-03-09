@@ -227,7 +227,10 @@ try_again:
                                 //printf("Start Uploading file: %s, %p\n", upload_filename.c_str(), upload_fd);
                                 continue;
 
-                            case 2: case 30: // end of program
+                            case 30: // end of program
+                                if(!THEKERNEL->is_grbl_mode()) break; // Special case M30 as it is also delete sd card file so only do this if in grbl mode
+                                // fall through to M2
+                            case 2:
                                 {
                                     modal_group_1= 1; // set to G1
                                     // issue M5 and M9 in case spindle and coolant are being used
