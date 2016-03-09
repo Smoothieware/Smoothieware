@@ -318,7 +318,7 @@ void ZProbe::on_gcode_received(void *argument)
                     THEKERNEL->robot->actuators[Z_AXIS]->get_current_position(),
                     1));
 
-                // move back to where it started, unless a Z is specified
+                // move back to where it started, unless a Z is specified (and not a rotary delta)
                 if(gcode->has_letter('Z') && !is_rdelta) {
                     // set Z to the specified value, and leave probe where it is
                     THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);

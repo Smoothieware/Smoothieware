@@ -69,6 +69,7 @@ class Robot : public Module {
             bool absolute_mode:1;                             // true for absolute mode ( default ), false for relative mode
             bool next_command_is_MCS:1;                       // set by G53
             bool disable_segmentation:1;                      // set to disable segmentation
+            bool segment_z_moves:1;
             uint8_t plane_axis_0:2;                           // Current plane ( XY, XZ, YZ )
             uint8_t plane_axis_1:2;
             uint8_t plane_axis_2:2;
