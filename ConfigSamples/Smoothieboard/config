@@ -307,8 +307,6 @@ custom_menu.power_off.command              M81               #
 # Only needed on a smoothieboard
 currentcontrol_module_enable                 true             #
 
-return_error_on_unhandled_gcode              false            #
-
 # network settings
 network.enable                               false            # enable the ethernet network services
 network.webserver.enable                     true             # enable the webserver

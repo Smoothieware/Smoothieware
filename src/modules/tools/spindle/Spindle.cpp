@@ -75,7 +75,7 @@ void Spindle::on_module_loaded()
         Pin *smoothie_pin = new Pin();
         smoothie_pin->from_string(THEKERNEL->config->value(spindle_pwm_pin_checksum)->by_default("nc")->as_string());
         spindle_pin = smoothie_pin->as_output()->hardware_pwm();
-        output_inverted = smoothie_pin->inverting;
+        output_inverted = smoothie_pin->is_inverting();
         delete smoothie_pin;
     }
 

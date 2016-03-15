@@ -30,7 +30,8 @@ private:
     void reset_bed_level();
     void save_grid(StreamOutput *stream);
     bool load_grid(StreamOutput *stream);
-    bool probe_spiral(int n, StreamOutput *stream);
+    bool probe_spiral(int n, float radius, StreamOutput *stream);
+    bool probe_grid(int n, float radius, StreamOutput *stream);
 
     float initial_height;
     float tolerance;

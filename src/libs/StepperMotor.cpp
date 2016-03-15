@@ -121,7 +121,7 @@ void StepperMotor::signal_move_finished()
 void StepperMotor::update_exit_tick()
 {
     if( !this->moving || this->steps_to_move == 0 ) {
-        // No more ticks will be recieved and no more events from StepTicker
+        // No more ticks will be received and no more events from StepTicker
         THEKERNEL->step_ticker->remove_motor_from_active_list(this);
     } else {
         // we will now get ticks and StepTIcker will send us events
@@ -146,7 +146,7 @@ StepperMotor* StepperMotor::move( bool direction, unsigned int steps, float init
         // we set this based on when the last step was, thus compensating for missed ticks
         uint32_t ts= THEKERNEL->step_ticker->ticks_since(this->last_step_tick);
         // if an axis stops too soon then we can get a huge number of ticks here which causes problems, so if the number of ticks is too great we ignore them
-        // example of when this happens is when one axis is going very slow an the min 20steps/sec kicks in, the axis will reach its target much sooner leaving a long gap
+        // example of when this happens is when one axis is going very slow and the min 20steps/sec kicks in, the axis will reach its target much sooner leaving a long gap
         // until the end of the block.
         // TODO we may need to set this based on the current step rate, trouble is we don't know what that is yet, we could use the last fx_ticks_per_step as a guide
         if(ts > 5) ts= 5; // limit to 50us catch up around 1-2 steps

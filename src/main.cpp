@@ -236,9 +236,9 @@ void init() {
     kernel->config->config_cache_clear();
 
     if(kernel->is_using_leds()) {
-        // set some leds to indicate status... led0 init doe, led1 mainloop running, led2 idle loop running, led3 sdcard ok
+        // set some leds to indicate status... led0 init done, led1 mainloop running, led2 idle loop running, led3 sdcard ok
         leds[0]= 1; // indicate we are done with init
-        leds[3]= sdok?1:0; // 4th led inidicates sdcard is available (TODO maye should indicate config was found)
+        leds[3]= sdok?1:0; // 4th led indicates sdcard is available (TODO maye should indicate config was found)
     }
 
     if(sdok) {

@@ -50,6 +50,7 @@ using std::string;
 #define  x_axis_max_speed_checksum           CHECKSUM("x_axis_max_speed")
 #define  y_axis_max_speed_checksum           CHECKSUM("y_axis_max_speed")
 #define  z_axis_max_speed_checksum           CHECKSUM("z_axis_max_speed")
+#define  segment_z_moves_checksum            CHECKSUM("segment_z_moves")
 
 // arm solutions
 #define  arm_solution_checksum               CHECKSUM("arm_solution")
@@ -185,6 +186,8 @@ void Robot::load_config()
     this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
+    this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
+
     // Make our 3 StepperMotors
     uint16_t const checksums[][5] = {
         ACTUATOR_CHECKSUMS("alpha"),
@@ -262,7 +265,7 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
     // it returns the realtime position based on the current step position of the actuators.
     // this does require a FK to get a machine position from the actuator position
     // and then invert all the transforms to get a workspace position from machine position
-    // M114 just does it the old way uses last_milestone and does inversse tranfroms to get the requested position
+    // M114 just does it the old way uses last_milestone and does inversse transforms to get the requested position
     int n = 0;
     if(subcode == 0) { // M114 print WCS
         wcs_t pos= mcs2wcs(last_milestone);
@@ -447,8 +450,11 @@ void Robot::on_gcode_received(void *argument)
             case 0: // M0 feed hold
                 if(THEKERNEL->is_grbl_mode()) THEKERNEL->set_feed_hold(true);
                 break;
+
+            case 30: // M30 end of program in grbl mode (otherwise it is delete sdcard file)
+                if(!THEKERNEL->is_grbl_mode()) break;
+                // fall through to M2
             case 2: // M2 end of program
-            case 30: // M30 end of program
                 current_wcs = 0;
                 absolute_mode = true;
                 break;
@@ -739,7 +745,7 @@ void Robot::process_move(Gcode *gcode)
 // and continue
 void Robot::distance_in_gcode_is_known(Gcode * gcode)
 {
-    //If the queue is empty, execute immediatly, otherwise attach to the last added block
+    //If the queue is empty, execute immediately, otherwise attach to the last added block
     THEKERNEL->conveyor->append_gcode(gcode);
 }
 
@@ -890,7 +896,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s )
     // NOTE we need to do this before we segment the line (for deltas)
     if(gcode->has_letter('E')) {
         float data[2];
-        data[0] = gcode->get_value('E'); // E target (maybe absolute or relative)
+        data[0] = gcode->get_value('E'); // E target (may be absolute or relative)
         data[1] = rate_mm_s / gcode->millimeters_of_travel; // inverted seconds for the move
         if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
             rate_mm_s *= data[1];
@@ -903,7 +909,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s )
     // The latter is more efficient and avoids splitting fast long lines into very small segments, like initial z move to 0, it is what Johanns Marlin delta port does
     uint16_t segments;
 
-    if(this->disable_segmentation) {
+    if(this->disable_segmentation || (!segment_z_moves && !gcode->has_letter('X') && !gcode->has_letter('Y'))) {
         segments= 1;
 
     } else if(this->delta_segments_per_second > 1.0F) {

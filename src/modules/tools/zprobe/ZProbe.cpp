@@ -318,7 +318,7 @@ void ZProbe::on_gcode_received(void *argument)
                     THEKERNEL->robot->actuators[Z_AXIS]->get_current_position(),
                     1));
 
-                // move back to where it started, unless a Z is specified
+                // move back to where it started, unless a Z is specified (and not a rotary delta)
                 if(gcode->has_letter('Z') && !is_rdelta) {
                     // set Z to the specified value, and leave probe where it is
                     THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
@@ -425,6 +425,10 @@ void ZProbe::on_gcode_received(void *argument)
                 if (gcode->has_letter('R')) this->return_feedrate = gcode->get_value('R');
                 if (gcode->has_letter('Z')) this->max_z = gcode->get_value('Z');
                 if (gcode->has_letter('H')) this->probe_height = gcode->get_value('H');
+                if (gcode->has_letter('I')) { // NOTE this is temporary and toggles the invertion status of the pin
+                    invert_override= (gcode->get_value('I') != 0);
+                    pin.set_inverting(pin.is_inverting() != invert_override); // XOR so inverted pin is not inverted and vice versa
+                }
                 break;
 
             case 500: // save settings

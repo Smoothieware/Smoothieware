@@ -63,7 +63,7 @@ void Laser::on_module_loaded() {
     }
 
 
-    this->pwm_inverting = dummy_pin->inverting;
+    this->pwm_inverting = dummy_pin->is_inverting();
 
     delete dummy_pin;
     dummy_pin = NULL;
@@ -72,7 +72,7 @@ void Laser::on_module_loaded() {
     this->ttl_pin = new Pin();
     ttl_pin->from_string( THEKERNEL->config->value(laser_module_ttl_pin_checksum)->by_default("nc" )->as_string())->as_output();
     this->ttl_used = ttl_pin->connected();
-    this->ttl_inverting = ttl_pin->inverting;
+    this->ttl_inverting = ttl_pin->is_inverting();
     if (ttl_used) {
     	ttl_pin->set(0);
     } else {
