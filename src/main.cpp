@@ -144,7 +144,6 @@ void init() {
     kernel->add_module( new(AHB0) PlayLed() );
     kernel->add_module( new(AHB0) Endstops() );
 
-
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
     #ifndef NO_TOOLS_SWITCH
     SwitchPool *sp= new SwitchPool();
@@ -196,6 +195,9 @@ void init() {
     #endif
     #ifndef NO_UTILS_MOTORDRIVERCONTROL
     kernel->add_module( new MotorDriverControl(0) );
+    #endif
+    #ifndef NO_TOOLS_REPORTER
+    kernel->add_module( new Reporter() );
     #endif
     // Create and initialize USB stuff
     u.init();
