@@ -47,7 +47,7 @@
         optional parameters {{In}} sets the number of points to the value n, {{Jn}} sets the radius for this probe.
 
     G31 probes the grid and turns the compensation on, this will remain in effect until reset or M561/M370
-        optional parameters {{Jn}} sets the radius for this probe.
+        optional parameters {{Jn}} sets the radius for this probe, which gets saved with M375
 
     M370 clears the grid and turns off compensation
     M374 Save grid to /sd/delta.grid
@@ -133,9 +133,26 @@ bool DeltaGridStrategy::handleConfig()
 
 void DeltaGridStrategy::save_grid(StreamOutput *stream)
 {
+    if(isnan(grid[0])) {
+        stream->printf("error:No grid to save\n");
+        return;
+    }
+
     FILE *fp = fopen(GRIDFILE, "w");
     if(fp == NULL) {
-        stream->printf("error:Failed to open grid\n");
+        stream->printf("error:Failed to open grid file %s\n", GRIDFILE);
+        return;
+    }
+
+    if(fwrite(&grid_size, sizeof(uint8_t), 1, fp) != 1) {
+        stream->printf("error:Failed to write grid size\n");
+        fclose(fp);
+        return;
+    }
+
+    if(fwrite(&grid_radius, sizeof(float), 1, fp) != 1) {
+        stream->printf("error:Failed to write grid radius\n");
+        fclose(fp);
         return;
     }
 
@@ -156,8 +173,34 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
 {
     FILE *fp = fopen(GRIDFILE, "r");
     if(fp == NULL) {
-        if(stream != nullptr) stream->printf("error:Failed to open grid\n");
+        if(stream != nullptr) stream->printf("error:Failed to open grid %s\n", GRIDFILE);
         return false;
+    }
+
+    uint8_t size;
+    float radius;
+
+    if(fread(&size, sizeof(uint8_t), 1, fp) != 1) {
+        stream->printf("error:Failed to read grid size\n");
+        fclose(fp);
+        return false;
+    }
+
+    if(size != grid_size) {
+        stream->printf("error:grid size is different read %d - config %d\n", size, grid_size);
+        fclose(fp);
+        return false;
+    }
+
+    if(fwrite(&radius, sizeof(float), 1, fp) != 1) {
+        stream->printf("error:Failed to read grid radius\n");
+        fclose(fp);
+        return false;
+    }
+
+    if(radius != grid_radius) {
+        stream->printf("warning:grid radius is different read %f - config %f, overriding config\n", radius, grid_radius);
+        grid_radius= radius;
     }
 
     for (int y = 0; y < grid_size; y++) {
@@ -169,7 +212,7 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
             }
         }
     }
-    if(stream != nullptr) stream->printf("grid loaded from %s\n", GRIDFILE);
+    if(stream != nullptr) stream->printf("grid loaded from %s with radius %f and size %d\n", GRIDFILE, grid_radius, grid_size);
     fclose(fp);
     return true;
 }
@@ -305,7 +348,10 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             float x, y, z;
             std::tie(x, y, z) = probe_offsets;
             gcode->stream->printf(";Probe offsets:\nM565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
-            if(save && !isnan(grid[0])) gcode->stream->printf(";Load saved grid\nM375\n");
+            if(save) {
+                if(!isnan(grid[0])) gcode->stream->printf(";Load saved grid\nM375\n");
+                else if(gcode->m == 503) gcode->stream->printf(";WARNING No grid to save\n");
+            }
             return true;
         }
     }
@@ -371,9 +417,9 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
     setAdjustFunction(false);
     reset_bed_level();
 
-    float radius = grid_radius;
-    if(gc->has_letter('J')) radius = gc->get_value('J'); // override default probe radius
+    if(gc->has_letter('J')) grid_radius = gc->get_value('J'); // override default probe radius, will get saved
 
+    float radius = grid_radius;
     // find bed, and leave probe probe height above bed
     float initial_z = findBed();
     if(isnan(initial_z)) {
