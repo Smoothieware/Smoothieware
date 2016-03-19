@@ -1,5 +1,5 @@
 # NOTE Lines must not exceed 132 characters
-# Robot module configurations : general handling of movement G-codes and slicing into moves
+## Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for
@@ -54,14 +54,15 @@ gamma_en_pin                                 0.19             # Pin for gamma en
 gamma_current                                1.5              # Z stepper motor current
 gamma_max_rate                               300.0            # mm/min
 
-# Serial communications configuration ( baud rate default to 9600 if undefined )
+## System configuration
+# Serial communications configuration ( baud rate defaults to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface
                                                               # and a terminal connected)
 #leds_disable                                true             # disable using leds after config loaded
 #play_led_disable                            true             # disable the play led
 
-# kill button (used to be called pause) maybe assigned to a different pin, set to the onboard pin by default
+# Kill button (used to be called pause) maybe assigned to a different pin, set to the onboard pin by default
 kill_button_enable                           true             # set to true to enable a kill button
 kill_button_pin                              2.12             # kill button pin. default is same as pause button 2.12 (2.11 is another good choice)
 
@@ -69,7 +70,10 @@ kill_button_pin                              2.12             # kill button pin.
 #dfu_enable                                  false            # for linux developers, set to true to enable DFU
 #watchdog_timeout                            10               # watchdog timeout in seconds, default is 10, set to 0 to disable the watchdog
 
-# Extruder module configuration
+# Only needed on a smoothieboard
+currentcontrol_module_enable                 true             #
+
+## Extruder module configuration
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
 extruder.hotend.steps_per_mm                    140              # Steps per mm for extruder stepper
 extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
@@ -112,7 +116,7 @@ delta_current                                1.5              # First extruder s
 #epsilon_current                              1.5              # Second extruder stepper motor current
 
 
-# Laser module configuration
+## Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is
                                                               # ignored if false.
 #laser_module_pin                             2.5             # this pin will be PWMed to control the laser. Only P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P3.26
@@ -124,7 +128,8 @@ laser_module_enable                          false            # Whether to activ
                                                               # the maximum and minimum power levels specified above
 #laser_module_pwm_period                      20              # this sets the pwm frequency as the period in microseconds
 
-# Hotend temperature control configuration
+## Temperature control configuration
+# First hotend configuration
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all.
                                                               # All configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.23             # Pin for the thermistor to read
@@ -143,7 +148,7 @@ temperature_control.hotend.designator        T                #
 
 #temperature_control.hotend.max_pwm          64               # max pwm, 64 is a good value if driving a 12v resistor with 24v.
 
-# Hotend2 temperature control configuration
+# Second hotend configuration
 #temperature_control.hotend2.enable            true             # Whether to activate this ( "hotend" ) module at all.
                                                               # All configuration is ignored if false.
 
@@ -175,7 +180,7 @@ temperature_control.bed.designator           B                #
 #temperature_control.bed.hysteresis           2.0             # set to the temperature in degrees C to use as hysteresis
                                                               # when using bang bang
 
-# Switch module for fan control
+## Switch module for fan control
 switch.fan.enable                            true             #
 switch.fan.input_on_command                  M106             #
 switch.fan.input_off_command                 M107             #
@@ -189,6 +194,10 @@ switch.fan.output_type                       pwm              # pwm output setta
 #switch.misc.output_pin                       2.4              #
 #switch.misc.output_type                      digital          # just an on or off pin
 
+# Switch module for spindle control
+#switch.spindle.enable                        false            #
+
+## Temperatureswitch :
 # automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures and switch different swithxes
 # useful to turn on a fan or water pump to cool the hotend
 #temperatureswitch.hotend.enable              true             #
@@ -198,10 +207,8 @@ switch.fan.output_type                       pwm              # pwm output setta
 #temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
 #temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
 
-# Switch module for spindle control
-#switch.spindle.enable                        false            #
 
-# Endstops
+## Endstops
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
 #corexy_homing                               false            # set to true if homing on a hbot or corexy
 alpha_min_endstop                            1.24^            # add a ! to invert if endstop is NO connected to ground
@@ -243,7 +250,7 @@ gamma_homing_retract_mm                      1                # "
 
 #endstop_debounce_count                       100              # uncomment if you get noise on your endstops, default is 100
 
-# optional Z probe
+## Z-probe
 zprobe.enable                                false           # set to true to enable a zprobe
 zprobe.probe_pin                             1.28!^          # pin probe is attached to if NC remove the !
 zprobe.slow_feedrate                         5               # mm/sec probe feed rate
@@ -262,11 +269,8 @@ zprobe.probe_height                          5               # how much above be
 #leveling-strategy.three-point-leveling.probe_offsets  0,0,0       # the probe offsets from nozzle, must be x,y,z, default is no offset
 #leveling-strategy.three-point-leveling.save_plane     false       # set to true to allow the bed plane to be saved with M500 default is false
 
-# Panel
+## Panel
 panel.enable                                 false             # set to true to enable the panel code
-panel.lcd                                    smoothiepanel     # set type of panel
-panel.encoder_a_pin                          3.25!^            # encoder pin
-panel.encoder_b_pin                          3.26!^            # encoder pin
 
 # Example for reprap discount GLCD
 # on glcd EXP1 is to left and EXP2 is to right, pin 1 is bottom left, pin 2 is top left etc.
@@ -294,7 +298,7 @@ panel.gamma_jog_feedrate                     200               # z jogging feedr
 panel.hotend_temperature                     185               # temp to set hotend when preheat is selected
 panel.bed_temperature                        60                # temp to set bed when preheat is selected
 
-# Example of a custom menu entry, which will show up in the Custom entry.
+## Custom menus : Example of a custom menu entry, which will show up in the Custom entry.
 # NOTE _ gets converted to space in the menu and commands, | is used to separate multiple commands
 custom_menu.power_on.enable                true              #
 custom_menu.power_on.name                  Power_on          #
@@ -304,10 +308,8 @@ custom_menu.power_off.enable               true              #
 custom_menu.power_off.name                 Power_off         #
 custom_menu.power_off.command              M81               #
 
-# Only needed on a smoothieboard
-currentcontrol_module_enable                 true             #
 
-# network settings
+## Network settings
 network.enable                               false            # enable the ethernet network services
 network.webserver.enable                     true             # enable the webserver
 network.telnet.enable                        true             # enable the telnet server
