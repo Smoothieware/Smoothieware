@@ -192,7 +192,7 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
         return false;
     }
 
-    if(fwrite(&radius, sizeof(float), 1, fp) != 1) {
+    if(fread(&radius, sizeof(float), 1, fp) != 1) {
         stream->printf("error:Failed to read grid radius\n");
         fclose(fp);
         return false;
