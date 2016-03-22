@@ -181,25 +181,25 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
     float radius;
 
     if(fread(&size, sizeof(uint8_t), 1, fp) != 1) {
-        stream->printf("error:Failed to read grid size\n");
+        if(stream != nullptr) stream->printf("error:Failed to read grid size\n");
         fclose(fp);
         return false;
     }
 
     if(size != grid_size) {
-        stream->printf("error:grid size is different read %d - config %d\n", size, grid_size);
+        if(stream != nullptr) stream->printf("error:grid size is different read %d - config %d\n", size, grid_size);
         fclose(fp);
         return false;
     }
 
     if(fread(&radius, sizeof(float), 1, fp) != 1) {
-        stream->printf("error:Failed to read grid radius\n");
+        if(stream != nullptr) stream->printf("error:Failed to read grid radius\n");
         fclose(fp);
         return false;
     }
 
     if(radius != grid_radius) {
-        stream->printf("warning:grid radius is different read %f - config %f, overriding config\n", radius, grid_radius);
+        if(stream != nullptr) stream->printf("warning:grid radius is different read %f - config %f, overriding config\n", radius, grid_radius);
         grid_radius= radius;
     }
 
