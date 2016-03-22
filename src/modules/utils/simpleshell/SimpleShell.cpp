@@ -814,6 +814,10 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             get_active_tool(),
             THEKERNEL->robot->get_feed_rate());
 
+    } else if (what == "status") {
+        // also ? on serial and usb
+        stream->printf("%s\n", THEKERNEL->get_query_string().c_str());
+
     } else {
         stream->printf("error:unknown option %s\n", what.c_str());
     }
@@ -938,7 +942,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("break - break into debugger\r\n");
     stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
-    stream->printf("get [pos|wcs|state|fk|ik]\r\n");
+    stream->printf("get [pos|wcs|state|status|fk|ik]\r\n");
     stream->printf("get temp [bed|hotend]\r\n");
     stream->printf("set_temp bed|hotend 185\r\n");
     stream->printf("net\r\n");
