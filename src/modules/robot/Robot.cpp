@@ -826,6 +826,13 @@ bool Robot::append_milestone(Gcode * gcode, const float target[], float rate_mm_
     float transformed_target[3]; // adjust target for bed compensation and WCS offsets
     float millimeters_of_travel;
 
+    // catch negative or zero feed rates and return the same error as GRBL does
+    if(rate_mm_s <= 0.0F) {
+        gcode->is_error= true;
+        gcode->txt_after_ok= (rate_mm_s == 0 ? "Undefined feed rate" : "feed rate < 0");
+        return false;
+    }
+
     // unity transform by default
     memcpy(transformed_target, target, sizeof(transformed_target));
 
