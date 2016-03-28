@@ -201,7 +201,7 @@ void Endstops::load_config()
     // see if an order has been specified, must be three characters, XYZ or YXZ etc
     string order = THEKERNEL->config->value(homing_order_checksum)->by_default("")->as_string();
     this->homing_order = 0;
-    if(order.size() == 3 && !this->is_delta) {
+    if(order.size() == 3 && !(this->is_delta || this->is_rdelta)) {
         int shift = 0;
         for(auto c : order) {
             uint8_t i = toupper(c) - 'X';
@@ -230,7 +230,7 @@ void Endstops::load_config()
 
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]) {
         register_for_event(ON_IDLE);
-        if(this->is_delta) {
+        if(this->is_delta || this->is_rdelta) {
             // we must enable all the limits not just one
             this->limit_enable[X_AXIS] = true;
             this->limit_enable[Y_AXIS] = true;
@@ -670,13 +670,22 @@ void Endstops::process_home_command(Gcode* gcode)
 
     // Do we move select axes or all of them
     char axes_to_move = 0;
-    // only enable homing if the endstop is defined, deltas, scaras always home all axis
-    bool home_all = this->is_delta || this->is_rdelta || this->is_scara || !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
 
-    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if ( (home_all || gcode->has_letter(c + 'X')) && this->pins[c + (this->home_direction[c] ? 0 : 3)].connected() ) {
-            axes_to_move += ( 1 << c );
+    // deltas, scaras always home all axis
+    bool home_all = this->is_delta || this->is_rdelta || this->is_scara;
+
+    if(!home_all) { // ie not a delta
+        bool axis_speced= ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
+        // only enable homing if the endstop is defined,
+        for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+            if (this->pins[c + (this->home_direction[c] ? 0 : 3)].connected() && (!axis_speced || gcode->has_letter(c + 'X')) ) {
+                axes_to_move += ( 1 << c );
+            }
         }
+
+    }else{
+        // all axis must move (and presumed defined)
+        axes_to_move= 7;
     }
 
     // save current actuator position so we can report how far we moved
