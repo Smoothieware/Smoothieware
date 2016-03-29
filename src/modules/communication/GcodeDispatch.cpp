@@ -325,21 +325,41 @@ try_again:
                     //printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
                     //Dispatch message!
                     THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
-                    if(gcode->add_nl)
-                        new_message.stream->printf("\r\n");
 
-                    if(!gcode->txt_after_ok.empty()) {
-                        new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
-                        gcode->txt_after_ok.clear();
+                    if (gcode->is_error) {
+                        // report error
+                        if(THEKERNEL->is_grbl_mode()) {
+                            new_message.stream->printf("error: ");
+                        }else{
+                            new_message.stream->printf("Error: ");
+                        }
 
-                    } else {
-                        if(THEKERNEL->is_ok_per_line() || THEKERNEL->is_grbl_mode()) {
-                            // only send ok once per line if this is a multi g code line send ok on the last one
-                            if(possible_command.empty())
-                                new_message.stream->printf("ok\r\n");
+                        if(!gcode->txt_after_ok.empty()) {
+                            new_message.stream->printf("%s\r\n", gcode->txt_after_ok.c_str());
+                            gcode->txt_after_ok.clear();
+
+                        }else{
+                            new_message.stream->printf("unknown\r\n");
+                        }
+
+                    }else{
+
+                        if(gcode->add_nl)
+                            new_message.stream->printf("\r\n");
+
+                        if(!gcode->txt_after_ok.empty()) {
+                            new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
+                            gcode->txt_after_ok.clear();
+
                         } else {
-                            // maybe should do the above for all hosts?
-                            new_message.stream->printf("ok\r\n");
+                            if(THEKERNEL->is_ok_per_line() || THEKERNEL->is_grbl_mode()) {
+                                // only send ok once per line if this is a multi g code line send ok on the last one
+                                if(possible_command.empty())
+                                    new_message.stream->printf("ok\r\n");
+                            } else {
+                                // maybe should do the above for all hosts?
+                                new_message.stream->printf("ok\r\n");
+                            }
                         }
                     }
 
