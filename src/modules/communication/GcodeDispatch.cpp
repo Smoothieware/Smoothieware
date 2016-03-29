@@ -331,7 +331,7 @@ try_again:
                         if(THEKERNEL->is_grbl_mode()) {
                             new_message.stream->printf("error: ");
                         }else{
-                            new_message.stream->printf("ERROR: ");
+                            new_message.stream->printf("Error: ");
                         }
 
                         if(!gcode->txt_after_ok.empty()) {
