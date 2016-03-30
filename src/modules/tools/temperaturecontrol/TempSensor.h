@@ -26,6 +26,7 @@ public:
     virtual bool set_optional(const sensor_options_t& options) { return false; }
     virtual bool get_optional(sensor_options_t& options) { return false; }
     virtual void get_raw() {}
+    virtual void on_idle() {}
 };
 
 #endif
