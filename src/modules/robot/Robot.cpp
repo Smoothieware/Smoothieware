@@ -271,10 +271,10 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
         wcs_t pos= mcs2wcs(last_milestone);
         n = snprintf(buf, bufsize, "C: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
-    } else if(subcode == 4) { // M114.3 print last milestone (which should be the same as machine position if axis are not moving and no level compensation)
+    } else if(subcode == 4) { // M114.4 print last milestone (which should be the same as machine position if axis are not moving and no level compensation)
         n = snprintf(buf, bufsize, "LMS: X:%1.4f Y:%1.4f Z:%1.4f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 
-    } else if(subcode == 5) { // M114.4 print last machine position (which should be the same as M114.1 if axis are not moving and no level compensation)
+    } else if(subcode == 5) { // M114.5 print last machine position (which should be the same as M114.1 if axis are not moving and no level compensation)
         n = snprintf(buf, bufsize, "LMP: X:%1.4f Y:%1.4f Z:%1.4f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
 
     } else {
@@ -295,10 +295,10 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
             wcs_t pos= mcs2wcs(mpos);
             n = snprintf(buf, bufsize, "C: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
-        } else if(subcode == 2) { // M114.1 print realtime Machine coordinate system
+        } else if(subcode == 2) { // M114.2 print realtime Machine coordinate system
             n = snprintf(buf, bufsize, "MPOS: X:%1.4f Y:%1.4f Z:%1.4f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
 
-        } else if(subcode == 3) { // M114.2 print realtime actuator position
+        } else if(subcode == 3) { // M114.3 print realtime actuator position
             n = snprintf(buf, bufsize, "APOS: A:%1.4f B:%1.4f C:%1.4f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
         }
     }
