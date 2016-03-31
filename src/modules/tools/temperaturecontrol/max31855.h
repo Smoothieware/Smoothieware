@@ -22,9 +22,9 @@ public:
     void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
     float get_temperature();
     void on_idle();
-    struct { bool read_flag:1; } ; //when true, the next call to on_idle will read a new temperature value
 
 private:
+    struct { bool read_flag:1; } ; //when true, the next call to on_idle will read a new temperature value
     Pin spi_cs_pin;
     mbed::SPI *spi;
     RingBuffer<float,16> readings;
