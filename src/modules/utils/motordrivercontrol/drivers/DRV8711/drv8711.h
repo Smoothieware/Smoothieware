@@ -20,6 +20,12 @@ public:
   bool set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
   bool check_alarm();
 
+  // returns current sense resistor value in mOhm
+  unsigned int get_resistor();
+
+  // set current sense resistor value in mOhm
+  void set_resistor(unsigned int resistor);
+
 private:
 
   uint16_t ReadWriteRegister(uint8_t dataHi, uint8_t dataLo);
@@ -139,7 +145,7 @@ private:
   STATUS_Register_t  G_STATUS_REG;
 
   std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
-  float resistor{0.05};
+  unsigned int resistor{50}; // current sense resitor value in milliohm
   std::bitset<8> error_reported;
   uint8_t gain{20};
 

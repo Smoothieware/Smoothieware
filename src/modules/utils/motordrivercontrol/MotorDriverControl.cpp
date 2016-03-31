@@ -29,6 +29,7 @@
 
 #define current_checksum               CHECKSUM("current")
 #define max_current_checksum           CHECKSUM("max_current")
+#define sense_resistor_checksum        CHECKSUM("sense_resistor")
 
 #define microsteps_checksum            CHECKSUM("microsteps")
 #define decay_mode_checksum            CHECKSUM("decay_mode")
@@ -136,6 +137,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     //current_factor= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_factor_checksum )->by_default(1.0F)->as_number();
 
     current= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_checksum )->by_default(1000)->as_number(); // in mA
+    sense_resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum )->by_default(50)->as_number(); // in mOhm
     microsteps= THEKERNEL->config->value(motor_driver_control_checksum, cs, microsteps_checksum )->by_default(16)->as_number(); // 1/n
     //decay_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, decay_mode_checksum )->by_default(1)->as_number();
 
@@ -309,11 +311,13 @@ void MotorDriverControl::initialize_chip()
 {
     // send initialization sequence to chips
     if(chip == DRV8711) {
+        drv8711->set_resistor(sense_resistor);
         drv8711->init();
         set_current(current);
         set_microstep(microsteps);
 
     }else if(chip == TMC2660){
+        tmc26x->setResistor(sense_resistor);
         tmc26x->init();
         set_current(current);
         set_microstep(microsteps);
