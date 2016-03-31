@@ -34,6 +34,13 @@
 #include "libs/StreamOutputPool.h"
 #include "Robot.h"
 #include "StepperMotor.h"
+#include "ConfigValue.h"
+#include "Config.h"
+#include "checksumm.h"
+
+
+#define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
+#define sense_resistor_checksum        CHECKSUM("sense_resistor")
 
 //! return value for TMC26X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -159,18 +166,15 @@ TMC26X::TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi) : spi(sp
     error_reported.reset();
 }
 
-void TMC26X::setResistor(unsigned int resistor)
-{
-    //store the current sense resistor value for later use
-    this->resistor = resistor;
-}
-
 /*
  * configure the stepper driver
  * just must be called.
  */
-void TMC26X::init()
+void TMC26X::init(uint16_t cs)
 {
+    // read chip specific config entries
+    this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
+
     //setting the default register values
     driver_control_register_value = DRIVER_CONTROL_REGISTER;
     chopper_config_register = CHOPPER_CONFIG_REGISTER;
@@ -845,11 +849,6 @@ bool TMC26X::isStallGuardReached(void)
 int TMC26X::getReadoutValue(void)
 {
     return (int)(driver_status_result >> 10);
-}
-
-int TMC26X::getResistor()
-{
-    return this->resistor;
 }
 
 bool TMC26X::isCurrentScalingHalfed()

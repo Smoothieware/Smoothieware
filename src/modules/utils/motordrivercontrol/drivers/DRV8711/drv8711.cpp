@@ -3,6 +3,14 @@
 #include "Kernel.h"
 #include "StreamOutput.h"
 #include "StreamOutputPool.h"
+#include "ConfigValue.h"
+#include "Config.h"
+#include "checksumm.h"
+
+#define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
+#define gain_checksum                  CHECKSUM("gain")
+#define sense_resistor_checksum        CHECKSUM("sense_resistor")
+
 
 #define REGWRITE    0x00
 #define REGREAD     0x80
@@ -12,9 +20,11 @@ DRV8711DRV::DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi) 
     error_reported.reset();
 }
 
-void DRV8711DRV::init (uint16_t gain)
+void DRV8711DRV::init (uint16_t cs)
 {
-    this->gain= gain;
+    // read chip specific config entries
+    this->gain= THEKERNEL->config->value(motor_driver_control_checksum, cs, gain_checksum)->by_default(20)->as_number();
+    this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(0.05F)->as_number(); // in ohms
 
     // initialize the in memory mirror of the registers
 
