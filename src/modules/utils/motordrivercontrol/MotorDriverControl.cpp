@@ -147,13 +147,23 @@ bool MotorDriverControl::config_module(uint16_t cs)
     if(!str.empty()) {
         rawreg= true;
         std::vector<uint32_t> regs= parse_number_list(str.c_str(), 16);
-        uint32_t reg= 0;
-        for(auto i : regs) {
+        if(!regs.empty()) {
+            uint32_t reg= 0;
+            for(auto i : regs) {
+                // this just sets the local storage, it does not write to the chip
+                switch(chip) {
+                    case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, ++reg, i); break;
+                    case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
+                }
+            }
+
+            // write the stored registers
             switch(chip) {
-                case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, ++reg, i); break;
-                case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
+                case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, 255, 0); break;
+                case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, 255, 0); break;
             }
         }
+
     }else{
         rawreg= false;
     }
