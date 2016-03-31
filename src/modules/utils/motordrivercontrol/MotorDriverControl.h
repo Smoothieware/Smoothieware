@@ -58,6 +58,7 @@ class MotorDriverControl : public Module {
         uint32_t max_current; // in milliamps
         uint32_t current; // in milliamps
         uint32_t microsteps;
+        unsigned int sense_resistor; // in mOhm
 
         char designator;
 

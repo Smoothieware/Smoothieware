@@ -85,6 +85,17 @@ void DRV8711DRV::init (uint16_t gain)
     WriteAllRegisters();
 }
 
+void DRV8711DRV::set_resistor(unsigned int resistor)
+{
+    //store the current sense resistor value for later use
+    this->resistor = resistor;
+}
+
+unsigned int DRV8711DRV::get_resistor()
+{
+    return this->resistor;
+}
+
 void DRV8711DRV::set_current(uint32_t currentma)
 {
     // derive torque and gain from current
