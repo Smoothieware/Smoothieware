@@ -69,7 +69,7 @@ public:
      * Most member functions are non functional if the driver has not been started.
      * Therefore it is best to call this in your Arduino setup() function.
      */
-    void init();
+    void init(uint16_t cs);
 
     /*!
      * \brief Set the number of microsteps in 2^i values (rounded) up to 256
@@ -395,13 +395,6 @@ public:
      * \sa TMC26X_READOUT_POSITION, TMC_262_READOUT_STALLGUARD, TMC_262_READOUT_CURRENT
      */
     void readStatus(int8_t read_value);
-
-    /*!
-     * \brief Returns the current sense resistor value in milliohm.
-     * The default value of ,15 Ohm will return 150.
-     */
-    int getResistor();
-    void setResistor(unsigned int resistor);
 
     /*!
      * \brief Prints out all the information that can be found in the last status read out - it does not force a status readout.

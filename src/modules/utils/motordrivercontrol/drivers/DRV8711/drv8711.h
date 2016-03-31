@@ -10,7 +10,7 @@ class DRV8711DRV
 public:
   DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi);
 
-  void init(uint16_t gain = 20) ;
+  void init(uint16_t cs) ;
 
   void set_enable(bool enable) ;
   int set_microsteps(int number_of_steps);
