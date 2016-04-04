@@ -21,6 +21,10 @@ From a shell, switch into the root Smoothie project directory and run:
 {{{
 make clean
 make all
+
+To speed that up you might provide the parameter -j <number of cores + 1> to make: 
+
+make -j 3 all
 }}}
 
 To upload you can do
