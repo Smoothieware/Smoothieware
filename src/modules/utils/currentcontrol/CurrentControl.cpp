@@ -12,6 +12,7 @@
 
 // add new digipot chips here
 #include "mcp4451.h"
+#include "mcp4728.h"
 #include "ad5206.h"
 
 #include <string>
@@ -29,8 +30,11 @@ using namespace std;
 #define digipotchip_checksum                    CHECKSUM("digipotchip")
 #define digipot_max_current                     CHECKSUM("digipot_max_current")
 #define digipot_factor                          CHECKSUM("digipot_factor")
+#define mcp4728_adress                          CHECKSUM("mcp4728_adress")
+#define mcp4726_adress                          CHECKSUM("mcp4726_adress")
 
 #define mcp4451_checksum                        CHECKSUM("mcp4451")
+#define mcp4728_checksum                        CHECKSUM("mcp4728")
 #define ad5206_checksum                         CHECKSUM("ad5206")
 
 CurrentControl::CurrentControl()
@@ -50,11 +54,15 @@ void CurrentControl::on_module_loaded()
     delete digipot;
 
     // see which chip to use
-    int chip_checksum = get_checksum(THEKERNEL->config->value(digipotchip_checksum)->by_default("mcp4451")->as_string());
+    int chip_checksum = get_checksum(THEKERNEL->config->value(digipotchip_checksum)->by_default("mcp4728")->as_string());
     if(chip_checksum == mcp4451_checksum) {
         digipot = new MCP4451();
     } else if(chip_checksum == ad5206_checksum) {
         digipot = new AD5206();
+    } else if(chip_checksum == mcp4728_checksum) {
+        int adress26 = THEKERNEL->config->value(mcp4726_adress)->by_default(0xC6)->as_number();
+        int adress28 = THEKERNEL->config->value(mcp4728_adress)->by_default(0xC0)->as_number();
+        digipot = new MCP4728(adress28, adress26);
     } else { // need a default so use smoothie
         digipot = new MCP4451();
     }
