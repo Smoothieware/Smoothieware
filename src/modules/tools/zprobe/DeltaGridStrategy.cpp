@@ -5,7 +5,7 @@
     Summary
     -------
     Probes grid_size points in X and Y (total probes grid_size * grid_size) and stores the relative offsets from the 0,0 Z height
-    When enabled everymove will calcualte the Z offset based on interpolating the height offset within the grids nearest 4 points.
+    When enabled every move will calculate the Z offset based on interpolating the height offset within the grids nearest 4 points.
 
     Configuration
     -------------
@@ -414,6 +414,7 @@ float DeltaGridStrategy::findBed()
 
 bool DeltaGridStrategy::doProbe(Gcode *gc)
 {
+    gc->stream->printf("Delta Grid Probe...\n");
     setAdjustFunction(false);
     reset_bed_level();
 
@@ -427,7 +428,7 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
         return false;
     }
 
-    gc->stream->printf("Probe start ht is %f mm, probe radius is %f mm\n", initial_z, radius);
+    gc->stream->printf("Probe start ht is %f mm, probe radius is %f mm, grid size is %dx%d\n", initial_z, radius, grid_size, grid_size);
 
     // do first probe for 0,0
     int s;
