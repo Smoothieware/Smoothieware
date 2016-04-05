@@ -623,7 +623,7 @@ bool Panel::mount_external_sd(bool on)
             size_t n= sizeof(SDCard);
             void *v = AHB0.alloc(n);
             memset(v, 0, n); // clear the allocated memory
-            this->sd= new(v) SDCard(mosi, miso, sclk, cs); // allocate object using zeroed memory
+            this->sd= new(v) SDCard(mosi, miso, sclk, cs, 1000000); // allocate object using zeroed memory
         }
         delete this->extmounter; // if it was not unmounted before
         size_t n= sizeof(SDFAT);

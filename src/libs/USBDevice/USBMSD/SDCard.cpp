@@ -126,8 +126,8 @@ static const uint8_t OXFF = 0xFF;
 
 #define SD_COMMAND_TIMEOUT 5000
 
-SDCard::SDCard(PinName mosi, PinName miso, PinName sclk, PinName cs) :
-  _spi(mosi, miso, sclk), _cs(cs) {
+SDCard::SDCard(PinName mosi, PinName miso, PinName sclk, PinName cs, uint32_t frequency) :
+  _spi(mosi, miso, sclk), _cs(cs), frequency(frequency) {
     _cs.output();
     _cs = 1;
     busyflag = false;
@@ -277,7 +277,7 @@ int SDCard::disk_initialize()
         return 1;
     }
 
-    _spi.frequency(2500000); // Set to 2.5MHz for data transfer
+    _spi.frequency(this->frequency); // Set to 2.5MHz for data transfer
 
     busyflag = false;
 
