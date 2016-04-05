@@ -81,7 +81,7 @@ try_again:
         return;
     }
 
-    if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'N' ) {
+    if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' || first_char == 'N' ) {
 
         //Get linenumber
         if ( first_char == 'N' ) {
