@@ -320,12 +320,11 @@ void Panel::on_idle(void *argument)
         string date(v.get_build_date());
         this->lcd->clear();
 		this->lcd->setCursor(0, 1); this->lcd->printf("prototype FABRICATOR");
-		this->lcd->setCursor(0, 2); this->lcd->printf("         ");
-        this->lcd->setCursor(0, 3); this->lcd->printf("%s", date.substr(0, 20).c_str());
-        this->lcd->setCursor(0, 4); this->lcd->printf("Please wait....");
+        this->lcd->setCursor(0, 2); this->lcd->printf("%s", date.substr(0, 20).c_str());
+        this->lcd->setCursor(0, 3); this->lcd->printf("Please wait....");
 
         if (this->lcd->hasGraphics()) {
-            this->lcd->bltGlyph(24, 40, ohw_logo_antipixel_width, ohw_logo_antipixel_height, ohw_logo_antipixel_bits);
+            this->lcd->bltGlyph(24, 30, ohw_logo_antipixel_width, ohw_logo_antipixel_height, ohw_logo_antipixel_bits);
         }
 
         this->lcd->on_refresh(true); // tell lcd to display now
