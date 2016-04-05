@@ -304,7 +304,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             if(!doProbe(gcode)) {
-                gcode->stream->printf("Probe failed to complete\n");
+                gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
                 gcode->stream->printf("Probe completed\n");
             }
