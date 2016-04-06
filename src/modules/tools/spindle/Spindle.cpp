@@ -51,10 +51,9 @@ void Spindle::on_module_loaded()
     time_since_update = 0;
     spindle_on = true;
 
-    if (!THEKERNEL->config->value(spindle_enable_checksum)->by_default(false)->as_bool())
-    {
-      delete this; // Spindle control module is disabled
-      return;
+    if (!THEKERNEL->config->value(spindle_enable_checksum)->by_default(false)->as_bool()) {
+        delete this; // Spindle control module is disabled
+        return;
     }
 
     pulses_per_rev = THEKERNEL->config->value(spindle_pulses_per_rev_checksum)->by_default(1.0f)->as_number();
@@ -79,8 +78,7 @@ void Spindle::on_module_loaded()
         delete smoothie_pin;
     }
 
-    if (spindle_pin == NULL)
-    {
+    if (spindle_pin == NULL) {
         THEKERNEL->streams->printf("Error: Spindle PWM pin must be P2.0-2.5 or other PWM pin\n");
         delete this;
         return;
@@ -95,15 +93,12 @@ void Spindle::on_module_loaded()
         Pin *smoothie_pin = new Pin();
         smoothie_pin->from_string(THEKERNEL->config->value(spindle_feedback_pin_checksum)->by_default("nc")->as_string());
         smoothie_pin->as_input();
-        if (smoothie_pin->port_number == 0 || smoothie_pin->port_number == 2)
-        {
+        if (smoothie_pin->port_number == 0 || smoothie_pin->port_number == 2) {
             PinName pinname = port_pin((PortName)smoothie_pin->port_number, smoothie_pin->pin);
             feedback_pin = new mbed::InterruptIn(pinname);
             feedback_pin->rise(this, &Spindle::on_pin_rise);
             NVIC_SetPriority(EINT3_IRQn, 16);
-        }
-        else
-        {
+        } else {
             THEKERNEL->streams->printf("Error: Spindle feedback pin has to be on P0 or P2.\n");
             delete this;
             return;
@@ -113,7 +108,6 @@ void Spindle::on_module_loaded()
 
     THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &Spindle::on_update_speed);
     register_for_event(ON_GCODE_RECEIVED);
-    register_for_event(ON_GCODE_EXECUTE);
 }
 
 void Spindle::on_pin_rise()
@@ -139,18 +133,14 @@ uint32_t Spindle::on_update_speed(uint32_t dummy)
 
     // Calculate current RPM
     uint32_t t = last_time;
-    if (t == 0)
-    {
+    if (t == 0) {
         current_rpm = 0;
-    }
-    else
-    {
+    } else {
         float new_rpm = 1000000 * 60.0f / (t * pulses_per_rev);
         current_rpm = smoothing_decay * new_rpm + (1.0f - smoothing_decay) * current_rpm;
     }
 
-    if (spindle_on)
-    {
+    if (spindle_on) {
         float error = target_rpm - current_rpm;
 
         current_I_value += control_I_term * error * 1.0f / UPDATE_FREQ;
@@ -164,9 +154,7 @@ uint32_t Spindle::on_update_speed(uint32_t dummy)
         prev_error = error;
 
         current_pwm_value = new_pwm;
-    }
-    else
-    {
+    } else {
         current_I_value = 0;
         current_pwm_value = 0;
     }
@@ -184,16 +172,12 @@ void Spindle::on_gcode_received(void* argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
 
-    if (gcode->has_m)
-    {
-        if (gcode->m == 957)
-        {
+    if (gcode->has_m) {
+        if (gcode->m == 957) {
             // M957: report spindle speed
             THEKERNEL->streams->printf("Current RPM: %5.0f  Target RPM: %5.0f  PWM value: %5.3f\n",
                                        current_rpm, target_rpm, current_pwm_value);
-        }
-        else if (gcode->m == 958)
-        {
+        } else if (gcode->m == 958) {
             // M958: set spindle PID parameters
             if (gcode->has_letter('P'))
                 control_P_term = gcode->get_value('P');
@@ -202,36 +186,26 @@ void Spindle::on_gcode_received(void* argument)
             if (gcode->has_letter('D'))
                 control_D_term = gcode->get_value('D');
             THEKERNEL->streams->printf("P: %0.6f I: %0.6f D: %0.6f\n",
-                control_P_term, control_I_term, control_D_term);
-        }
-        else if (gcode->m == 3 || gcode->m == 5)
-        {
-            // M3: Spindle on, M5: Spindle off
-            THEKERNEL->conveyor->append_gcode(gcode);
-        }
-    }
-}
+                                       control_P_term, control_I_term, control_D_term);
+        } else if (gcode->m == 3) {
+            THEKERNEL->conveyor->wait_for_empty_queue();
 
-void Spindle::on_gcode_execute(void* argument)
-{
-    Gcode *gcode = static_cast<Gcode *>(argument);
-
-    if (gcode->has_m)
-    {
-        if (gcode->m == 3)
-        {
             // M3: Spindle on
             spindle_on = true;
 
-            if (gcode->has_letter('S'))
-            {
+            if (gcode->has_letter('S')) {
                 target_rpm = gcode->get_value('S');
             }
-        }
-        else if (gcode->m == 5)
-        {
+
+        } else if (gcode->m == 5) {
+            THEKERNEL->conveyor->wait_for_empty_queue();
             spindle_on = false;
         }
+
+    }else if(!gcode->has_m && !gcode->has_g && gcode->has_letter('S')) {
+        // special case S on its own
+        THEKERNEL->conveyor->wait_for_empty_queue();
+        target_rpm = gcode->get_value('S');
     }
 }
 
