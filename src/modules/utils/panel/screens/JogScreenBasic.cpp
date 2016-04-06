@@ -110,12 +110,12 @@ void JogScreenBasic::display_menu_line(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Back");  break;
-        case 1: THEPANEL->lcd->printf("Move X +/- 10mm  \x7E"); break;
-        case 2: THEPANEL->lcd->printf("Move Y +/- 10mm  \x7E"); break;
-        case 3: THEPANEL->lcd->printf("Move Z +/- 1mm   \x7E"); break;
-        case 4: THEPANEL->lcd->printf("Extrude/Retract  \x7E"); break;
-        case 5: THEPANEL->lcd->printf("Motors OFF       \x7E"); break;
-        case 6: THEPANEL->lcd->printf("Advanced Jog     \x7E"); break;
+        case 1: THEPANEL->lcd->printf("Move X +/- 10mm"); break;
+        case 2: THEPANEL->lcd->printf("Move Y +/- 10mm"); break;
+        case 3: THEPANEL->lcd->printf("Move Z +/- 1mm"); break;
+        case 4: THEPANEL->lcd->printf("Extrude/Retract"); break;
+        case 5: THEPANEL->lcd->printf("Motors OFF"); break;
+        case 6: THEPANEL->lcd->printf("Advanced Jog"); break;
     }
 }
 
