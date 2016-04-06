@@ -132,6 +132,7 @@ void PrepareScreen::setup_temperature_screen()
             const char *name;
             if(c.designator == "T") name= "Hotend";
             else if(c.designator == "B") name= "Bed";
+            else if(c.designator == "P") name= "Motherboard";
             else name= c.designator.c_str();
             uint16_t i= c.id;
 
