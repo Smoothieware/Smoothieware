@@ -13,14 +13,11 @@
 #include "ExtruderScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
-#include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
 #include "ModifyValuesScreen.h"
 #include "PublicData.h"
-#include "SwitchPublicAccess.h"
 #include "checksumm.h"
-#include <math.h>
+
 #include <string>
-#include <stdio.h>
 
 using namespace std;
 
@@ -28,22 +25,12 @@ using namespace std;
 
 ExtruderScreen::ExtruderScreen()
 {
-    this->command= nullptr;
 }
-
 
 void ExtruderScreen::on_enter()
 {
-    int menu_line = 9;
     THEPANEL->enter_menu_mode();
-    get_temp_data();
-    if ( this->hotendtemp == -2 ) {
-        menu_line -= 4;
-    }
-    if ( this->hotend2temp == -2 ) {
-        menu_line -= 4;
-    }
-    THEPANEL->setup_menu(menu_line);
+    THEPANEL->setup_menu(4);
     this->refresh_menu();
 }
 
@@ -55,122 +42,26 @@ void ExtruderScreen::on_refresh()
     if ( THEPANEL->click() ) {
         this->clicked_menu_entry(THEPANEL->get_menu_current_line());
     }
-
-    // Update Only every 20 refreshes, 1 a second
-    static int update_counts = 0;
-    update_counts++;
-    if ( update_counts % 20 == 0 ) {
-        get_temp_data();
-    }
 }
-
-void ExtruderScreen::get_temp_data() 
-{
-    void *returned_data;
-    bool ok;
-
-    ok = PublicData::get_value( temperature_control_checksum, bed_checksum, current_temperature_checksum, &returned_data );
-    if (ok) {
-        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
-        this->bedtemp = round(temp.current_temperature);
-        if (this->bedtemp > 100000) this->bedtemp = -2;
-    } else {
-        this->bedtemp = -1;
-    }
-
-    ok = PublicData::get_value( temperature_control_checksum, hotend_checksum, current_temperature_checksum, &returned_data );
-    if (ok) {
-        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
-        this->hotendtemp = round(temp.current_temperature);
-        if (this->hotendtemp > 100000) this->hotendtemp = -2;
-    } else {
-        this->hotendtemp = -1;
-    }
-
-    ok = PublicData::get_value( temperature_control_checksum, hotend2_checksum, current_temperature_checksum, &returned_data );
-    if (ok) {
-        struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_data);
-        this->hotend2temp = round(temp.current_temperature);
-        if (this->hotend2temp > 100000) this->hotend2temp = -2;
-    } else {
-        this->hotend2temp = -1;
-    }
-}
-
 
 void ExtruderScreen::display_menu_line(uint16_t line)
 {
-    char extrude_H_text[19]{}, retract_H_text[19]{}, feed_H_text[19]{}, remove_H_text[19]{};
-    char extrude_Q_text[19]{}, retract_Q_text[19]{}, feed_Q_text[19]{}, remove_Q_text[19]{};
-    bool hotend_enabled{true};
-    bool hotend2_enabled{true};
-    if ( this->hotendtemp != -2 ) {
-        sprintf(extrude_H_text, "Extrude H 5mm      ");
-        sprintf(retract_H_text, "Retract H 5mm      ");
-        sprintf(feed_H_text,    "Feed H             ");
-        sprintf(remove_H_text,  "Remove H           ");
-    } else {
-        hotend_enabled = false;
-    }
-    if ( this->hotend2temp != -2 ) {
-        sprintf(extrude_Q_text, "Extrude Q 5mm      ");
-        sprintf(retract_Q_text, "Retract Q 5mm      ");
-        sprintf(feed_Q_text,    "Feed Q             ");
-        sprintf(remove_Q_text,  "Remove Q           ");
-    } else {
-        hotend2_enabled = false;
-    }
-
-    if (!hotend_enabled && !hotend2_enabled && line > 0)
-        return;
-
-    if ((!hotend_enabled || !hotend2_enabled) && line > 4)
-        return;
-
     switch ( line ) {
-        case 0: THEPANEL->lcd->printf("Back", this->hotendtemp);  break;
-        case 1: THEPANEL->lcd->printf("%19s", hotend_enabled?extrude_H_text:extrude_Q_text); break;
-        case 2: THEPANEL->lcd->printf("%19s", hotend_enabled?retract_H_text:retract_Q_text); break;
-        case 3: THEPANEL->lcd->printf("%19s", hotend_enabled?feed_H_text:feed_Q_text); break;
-        case 4: THEPANEL->lcd->printf("%19s", hotend_enabled?remove_H_text:remove_Q_text); break;
-        case 5: THEPANEL->lcd->printf("%19s", extrude_Q_text); break;
-        case 6: THEPANEL->lcd->printf("%19s", retract_Q_text); break;
-        case 7: THEPANEL->lcd->printf("%19s", feed_Q_text); break;
-        case 8: THEPANEL->lcd->printf("%19s", remove_Q_text); break;
-        //case 9: THEPANEL->lcd->printf("Settings...");  break;
-        default: break;
+        case 0: THEPANEL->lcd->printf("Back");  break;
+        case 1: THEPANEL->lcd->printf("Extrude 5mm"); break;
+        case 2: THEPANEL->lcd->printf("Retract 5mm");  break;
+        //case 3: THEPANEL->lcd->printf("Settings...");  break;
     }
 }
 
 void ExtruderScreen::clicked_menu_entry(uint16_t line)
 {
-    bool hotend_enabled{this->hotendtemp!=-2};
-    bool hotend2_enabled{this->hotend2temp!=-2};
-
-    if (!hotend_enabled && hotend2_enabled && line > 0)
-        line+=4;
-
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); return;
-        case 1: command = "T0\nG91\nG1 E5 F100\nG90"; break;
-        case 2: command = "T0\nG91\nG1 E-5 F100\nG90"; break;
-        case 3: command = "T0\nG91\nG1 E60 F200\nG1 E-10 F200\nG1 E20 F200\nG1 E-5 F200\nG1 E20 F200\nG1 E-5 F200\nG1 E20 F200\nG1 E-5 F200\nG1 E10 F200\nG90"; break;
-        case 4: command = "T0\nG91\nG1 E-100 F500\nG90"; break;
-        case 5: command = "T1\nG91\nG1 E5 F100\nG90"; break;
-        case 6: command = "T1\nG91\nG1 E-5 F100\nG90"; break;
-        case 7: command = "T1\nG91\nG1 E60 F200\nG1 E-10 F200\nG1 E20 F200\nG1 E-5 F200\nG1 E20 F200\nG1 E-5 F200\nG1 E20 F200\nG1 E-5 F200\nG1 E10 F200\nG90"; break;
-        case 8: command = "T1\nG91\nG1 E-100 F500\nG90"; break;
-        //case 9: setupConfigSettings(); break; // lazy load
-        default : break;
+        case 1: send_command("M120\nG91\nG1 E5 F100\nM121"); break;
+        case 2: send_command("M120\nG91\nG1 E-5 F100\nM121"); break;
+        //case 3: setupConfigSettings(); break; // lazy load
     }
-}
-
-// queuing commands needs to be done from main loop
-void ExtruderScreen::on_main_loop()
-{
-    if (this->command == nullptr) return;
-    send_command(this->command);
-    this->command= nullptr;
 }
 
 void ExtruderScreen::setupConfigSettings()
