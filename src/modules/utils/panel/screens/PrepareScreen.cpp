@@ -64,7 +64,7 @@ void PrepareScreen::display_menu_line(uint16_t line)
         // these won't be accessed if no heaters or extruders
         case 5: THEPANEL->lcd->printf("Pre Heat"       ); break;
         case 6: THEPANEL->lcd->printf("Cool Down"      ); break;
-        case 7: THEPANEL->lcd->printf("Extrude/Retract"    ); break;
+        case 7: THEPANEL->lcd->printf("Extruder..."    ); break;
         case 8: THEPANEL->lcd->printf("Set Temperature"); break;
     }
 }
