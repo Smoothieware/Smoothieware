@@ -27,7 +27,6 @@ class MainMenuScreen : public PanelScreen {
         PanelScreen* prepare_screen;
 
         void abort_playing();
-        void setupConfigureScreen();
 };
 
 

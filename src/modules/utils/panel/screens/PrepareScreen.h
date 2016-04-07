@@ -25,6 +25,7 @@ private:
     void preheat();
     void cooldown();
     void setup_temperature_screen();
+	void setupConfigureScreen();
 
     PanelScreen *extruder_screen;
 };

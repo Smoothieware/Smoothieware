@@ -320,7 +320,8 @@ void Panel::on_idle(void *argument)
         string date(v.get_build_date());
         this->lcd->clear();
 		this->lcd->setCursor(0, 4); this->lcd->printf(" prototype FABRICATOR");
-		this->lcd->setCursor(0, 5); this->lcd->printf(" %s", date.substr(0, 20).c_str());
+		//this->lcd->setCursor(0, 5); this->lcd->printf(" %s", date.substr(0, 20).c_str());
+		this->lcd->setCursor(0, 5); this->lcd->printf("         ");
 		this->lcd->setCursor(0, 6); this->lcd->printf("         ");
 		this->lcd->setCursor(0, 7); this->lcd->printf("      Please wait....");
 
