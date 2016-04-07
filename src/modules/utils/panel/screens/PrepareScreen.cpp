@@ -17,6 +17,7 @@
 #include "ControlScreen.h"
 #include "PrepareScreen.h"
 #include "ProbeScreen.h"
+#include "CalibrateScreen.h"
 #include "ExtruderScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
@@ -147,7 +148,7 @@ void PrepareScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
     // if no heaters or extruder then don't show related menu items
-    THEPANEL->setup_menu(11);
+    THEPANEL->setup_menu(12);
     this->refresh_menu();
 }
 
@@ -165,16 +166,17 @@ void PrepareScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Back"           ); break;
-        case 1: THEPANEL->lcd->printf("Home All Axis"  ); break;
-        case 2: THEPANEL->lcd->printf("Preheat PLA 200"); break;
-        case 3: THEPANEL->lcd->printf("Preheat ABS 245"); break;
-        case 4: THEPANEL->lcd->printf("Flush Nozzles"  ); break;
-        case 5: THEPANEL->lcd->printf("Adjust Temperature"); break;
-        case 6: THEPANEL->lcd->printf("Cool Down"      ); break;
-        case 7: THEPANEL->lcd->printf("Extrude/Retract"); break;
-		case 8: THEPANEL->lcd->printf("Motors OFF"     ); break;
-        case 9: THEPANEL->lcd->printf("Calibration"); break;
-		case 10: THEPANEL->lcd->printf("Advanced Cfg"); break;
+		case 1: THEPANEL->lcd->printf("Switches"); break;
+        case 2: THEPANEL->lcd->printf("Home All Axis"  ); break;
+        case 3: THEPANEL->lcd->printf("Preheat PLA 200"); break;
+        case 4: THEPANEL->lcd->printf("Preheat ABS 245"); break;
+        case 5: THEPANEL->lcd->printf("Flush Nozzles"  ); break;
+        case 6: THEPANEL->lcd->printf("Adjust Temperature"); break;
+        case 7: THEPANEL->lcd->printf("Cool Down"      ); break;
+        case 8: THEPANEL->lcd->printf("Extrude/Retract"); break;
+		case 9: THEPANEL->lcd->printf("Motors OFF"     ); break;
+        case 10: THEPANEL->lcd->printf("Calibration"); break;
+		case 11: THEPANEL->lcd->printf("Advanced Cfg"); break;
     }
 }
 
@@ -182,16 +184,17 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); break;
-        case 1: send_command("G28"); break;
-        case 2: send_command("T1\nM104 S200\nG4 P1\nT0\nM104 S200\nM140 S60"); break;
-        case 3: send_command("T1\nM104 S245\nG4 P1\nT0\nM104 S245\nM140 S100"); break;
-		case 4: send_command("T0\nG92 E0\nG1 E35 F300\nG92 E0\nT1\nG92 E0\nG1 E35 F300\nG92 E0\nT0"); break;
-		case 5: setup_temperature_screen(); break;
-		case 6: this->cooldown(); break;
-		case 7: THEPANEL->enter_screen(this->extruder_screen); break;
-        case 8: send_command("M84"); break;
-		case 9: THEPANEL->enter_screen((new ProbeScreen())->set_parent(this)); break;
-		case 10: setupConfigureScreen(); break;
+		case 1: THEPANEL->enter_screen(THEPANEL->custom_screen ); break;
+        case 2: send_command("G28"); break;
+        case 3: send_command("T1\nM104 S200\nG4 P1\nT0\nM104 S200\nM140 S60"); break;
+        case 4: send_command("T1\nM104 S245\nG4 P1\nT0\nM104 S245\nM140 S100"); break;
+		case 5: send_command("T0\nG92 E0\nG1 E35 F300\nG92 E0\nT1\nG92 E0\nG1 E35 F300\nG92 E0\nT0"); break;
+		case 6: setup_temperature_screen(); break;
+		case 7: this->cooldown(); break;
+		case 8: THEPANEL->enter_screen(this->extruder_screen); break;
+        case 9: send_command("M84"); break;
+		case 10: THEPANEL->enter_screen((new CalibrateScreen())->set_parent(this)); break;
+		case 11: setupConfigureScreen(); break;
     }
 }
 

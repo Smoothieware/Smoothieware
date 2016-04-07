@@ -45,7 +45,7 @@ MainMenuScreen::MainMenuScreen()
 void MainMenuScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(5);
+    THEPANEL->setup_menu(4);
     this->refresh_menu();
 }
 
@@ -66,7 +66,7 @@ void MainMenuScreen::display_menu_line(uint16_t line)
         case 1: if(THEKERNEL->is_halted()) THEPANEL->lcd->printf("Clear HALT"); else THEPANEL->lcd->printf(THEPANEL->is_playing() ? "Abort" : "Play file"); break;
         case 2: THEPANEL->lcd->printf("Move Axis"); break;
         case 3: THEPANEL->lcd->printf("Prepare"); break;
-        case 4: THEPANEL->lcd->printf("Custom"); break;
+        //case 4: THEPANEL->lcd->printf("Custom"); break;
         //case 5: THEPANEL->lcd->printf("Configure"); break;
         //case 6: THEPANEL->lcd->printf("Calibration"); break;
 		
@@ -85,7 +85,7 @@ void MainMenuScreen::clicked_menu_entry(uint16_t line)
              else THEPANEL->enter_screen(this->file_screen); break;
         case 2: THEPANEL->enter_screen(this->jog_screen_basic ); break;
         case 3: THEPANEL->enter_screen(this->prepare_screen ); break;
-        case 4: THEPANEL->enter_screen(THEPANEL->custom_screen ); break;
+        //case 4: THEPANEL->enter_screen(THEPANEL->custom_screen ); break;
         //case 5: setupConfigureScreen(); break;
 		//case 6: THEPANEL->enter_screen((new ProbeScreen())->set_parent(this)); break;
 		}
