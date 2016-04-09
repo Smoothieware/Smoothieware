@@ -387,12 +387,9 @@ void DeltaGridStrategy::setAdjustFunction(bool on)
 
 float DeltaGridStrategy::findBed()
 {
-    // home
-    zprobe->home();
-
     // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
-    float deltaz = zprobe->getMaxZ() - initial_height;
-    zprobe->coordinated_move(NAN, NAN, -deltaz, zprobe->getFastFeedrate(), true); // relative move
+    float deltaz = initial_height;
+    zprobe->coordinated_move(NAN, NAN, deltaz, zprobe->getFastFeedrate());
     zprobe->coordinated_move(0, 0, NAN, zprobe->getFastFeedrate()); // move to 0,0
 
     // find bed at 0,0 run at slow rate so as to not hit bed hard
@@ -422,6 +419,8 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
 
     float radius = grid_radius;
     // find bed, and leave probe probe height above bed
+    float deltaz = initial_height;
+    gc->stream->printf("Delta Grid: finding bed, moving to %f\n", deltaz);
     float initial_z = findBed();
     if(isnan(initial_z)) {
         gc->stream->printf("Finding bed failed, check the maxz and initial height settings\n");
@@ -452,10 +451,6 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
 
         for (int xCount = xStart; xCount != xStop; xCount += xInc) {
             float xProbe = LEFT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_X * xCount;
-
-            // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
-            float distance_from_center = sqrtf(xProbe * xProbe + yProbe * yProbe);
-            if (distance_from_center > radius) continue;
 
             if(!zprobe->doProbeAt(s, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s) - z_reference; // this is the delta z from bed at 0,0
