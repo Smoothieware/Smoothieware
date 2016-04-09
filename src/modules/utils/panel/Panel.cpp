@@ -74,6 +74,7 @@ Panel::Panel()
     this->click_changed = false;
     this->refresh_flag = false;
     this->enter_menu_mode();
+	this->enter_main_menu_mode();
     this->lcd = NULL;
     this->do_buttons = false;
     this->do_encoder = false;
@@ -386,6 +387,10 @@ void Panel::on_idle(void *argument)
     if ( this->mode == MENU_MODE && this->counter_change() ) {
         this->menu_update();
     }
+    // If we are in menu mode and the position has changed
+    if ( this->mode == GFX_MODE && this->counter_change() ) {
+        this->main_menu_update();
+    }
 
     // If we are in control mode
     if ( this->mode == CONTROL_MODE && this->counter_change() ) {
@@ -407,18 +412,34 @@ uint32_t Panel::on_up(uint32_t dummy)
 {
     // this is simulating encoder clicks, but needs to be inverted to
     // increment values on up,increment by
-    int inc = (this->mode == CONTROL_MODE) ? 1 : -(this->menu_offset+1);
-    *this->counter += inc;
-    this->counter_changed = true;
-    return 0;
+	if ( this->mode == GFX_MODE )	{
+		int inc = -(this->menu_offset+8);
+		*this->counter += inc;
+		this->counter_changed = true;
+		return 0;
+	}
+	else {
+		int inc = (this->mode == CONTROL_MODE) ? 1 : -(this->menu_offset+1);
+	    *this->counter += inc;
+		this->counter_changed = true;
+		return 0;
+	}
 }
 
 uint32_t Panel::on_down(uint32_t dummy)
 {
-    int inc = (this->mode == CONTROL_MODE) ? -1 : (this->menu_offset+1);
-    *this->counter += inc;
-    this->counter_changed = true;
-    return 0;
+	if ( this->mode == GFX_MODE )	{
+		int inc = (this->menu_offset+8);
+		*this->counter += inc;
+		this->counter_changed = true;
+		return 0;
+	}
+	else {
+		int inc = (this->mode == CONTROL_MODE) ? -1 : (this->menu_offset+1) ;
+		*this->counter += inc;
+		this->counter_changed = true;
+		return 0;
+	}
 }
 
 // on most menu screens will go back to previous higher menu
@@ -467,6 +488,13 @@ void Panel::enter_menu_mode(bool force)
     this->counter = &this->menu_selected_line;
     this->menu_changed = force;
 }
+// Enter main menu mode
+void Panel::enter_main_menu_mode(bool force)
+{
+    this->mode = GFX_MODE;
+    this->counter = &this->menu_selected_line;
+    this->menu_changed = force;
+}
 
 void Panel::setup_menu(uint16_t rows)
 {
@@ -474,6 +502,20 @@ void Panel::setup_menu(uint16_t rows)
 }
 
 void Panel::setup_menu(uint16_t rows, uint16_t lines)
+{
+    this->menu_selected_line = 0;
+    this->menu_current_line = 0;
+    this->menu_start_line = 0;
+    this->menu_rows = rows;
+    this->panel_lines = lines;
+}
+
+void Panel::setup_main_menu(uint16_t rows)
+{
+    this->setup_menu(rows, min(rows, this->max_screen_lines()));
+}
+	
+void Panel::setup_main_menu(uint16_t rows, uint16_t lines)
 {
     this->menu_selected_line = 0;
     this->menu_current_line = 0;
@@ -533,6 +575,35 @@ void Panel::menu_update()
         this->menu_start_line = 0;
     }
 
+    this->menu_changed = true;
+}
+
+void Panel::main_menu_update()
+{
+    // Limits, up and down
+    // NOTE menu_selected_line is changed in an interrupt and can change at any time
+    int msl = this->menu_selected_line; // hopefully this is atomic
+
+    #if 0
+    // this allows it to wrap but with new method we dont; want to wrap
+    msl = msl % ( this->menu_rows << this->menu_offset );
+    while ( msl < 0 ) {
+        msl += this->menu_rows << this->menu_offset;
+    }
+    #else
+        // limit selected line to screen lines available
+        if(msl >= this->menu_rows<<this->menu_offset){
+            msl= (this->menu_rows-1)<<this->menu_offset;
+        }else if(msl < 0) msl= 0;
+    #endif
+
+    this->menu_selected_line = msl; // update atomically we hope
+    // figure out which actual line to select, if we have a menu offset it means we want to move one line per two clicks
+    if(msl % (this->menu_offset+1) == 0) { // only if divisible by offset
+        this->menu_current_line = msl >> this->menu_offset;
+    }
+	
+    this->menu_start_line = this->menu_current_line; //full screen menus with 1st line title for enter sub-menus
     this->menu_changed = true;
 }
 
