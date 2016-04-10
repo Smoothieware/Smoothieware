@@ -304,7 +304,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             if(!doProbe(gcode)) {
-                gcode->stream->printf("Probe failed to complete\n");
+                gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
                 gcode->stream->printf("Probe completed\n");
             }
@@ -401,12 +401,8 @@ float DeltaGridStrategy::findBed()
 
     // leave the probe zprobe->getProbeHeight() above bed
     zprobe->return_probe(s);
-    float dz= zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
-    if(dz >= 0) {
-        // probe was not started above bed
-        return NAN;
-    }
 
+    float dz= zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
     zprobe->coordinated_move(NAN, NAN, dz, zprobe->getFastFeedrate(), true); // relative move
 
     return zprobe->zsteps_to_mm(s) + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
