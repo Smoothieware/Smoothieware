@@ -67,7 +67,7 @@ void Button::check_signal(int val)
         if(this->value) {
             if(this->repeat) {
                 this->second_timer++;
-                if(this->second_timer == 10) {
+                if(this->second_timer == 6) {
                     this->up_hook->call();
                     this->second_timer = 0;
                 }

@@ -36,6 +36,7 @@ private:
     int current_speed;
     float pos[3];
     unsigned long elapsed_time;
+	unsigned long last_time = 0;
     unsigned int sd_pcnt_played;
     char *ipstr;
 

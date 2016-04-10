@@ -15,6 +15,7 @@
 using std::string;
 
 #define MENU_MODE                  0
+#define GFX_MODE                  2
 #define CONTROL_MODE               1
 
 #define THEPANEL Panel::instance
@@ -53,10 +54,14 @@ class Panel : public Module {
         int get_encoder_resolution() const { return encoder_click_resolution; }
 
         // Menu
-        void enter_menu_mode(bool force= false);
+        void enter_menu_mode(bool force= 0);
+        void enter_main_menu_mode(bool force= 2);
         void setup_menu(uint16_t rows, uint16_t lines);
         void setup_menu(uint16_t rows);
+        void setup_main_menu(uint16_t rows, uint16_t lines);
+        void setup_main_menu(uint16_t rows);
         void menu_update();
+        void main_menu_update();
         bool menu_change();
         uint16_t max_screen_lines() { return screen_lines; }
         uint16_t get_menu_current_line() { return menu_current_line; }

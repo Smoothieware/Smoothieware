@@ -74,6 +74,7 @@ Panel::Panel()
     this->click_changed = false;
     this->refresh_flag = false;
     this->enter_menu_mode();
+	this->enter_main_menu_mode();
     this->lcd = NULL;
     this->do_buttons = false;
     this->do_encoder = false;
@@ -155,7 +156,7 @@ void Panel::on_module_loaded()
     jogging_speed_mm_min[1] = THEKERNEL->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0f)->as_number();
     jogging_speed_mm_min[2] = THEKERNEL->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0f )->as_number();
 
-    // load the default preset temeratures
+    // load the default preset temepratures
     default_hotend_temperature = THEKERNEL->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0f )->as_number();
     default_bed_temperature    = THEKERNEL->config->value( panel_checksum, bed_temp_checksum    )->by_default(60.0f  )->as_number();
 
@@ -285,18 +286,27 @@ void Panel::on_main_loop(void *argument)
 
 
 #define ohw_logo_antipixel_width 80
-#define ohw_logo_antipixel_height 15
-static const uint8_t ohw_logo_antipixel_bits[] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x01, 0x80, 0x0C, 0x00, 0x33, 0x18, 0xBB, 0xFF, 0xFF, 0xFF, 0xFD, 0x80, 0x5E,
-    0x80, 0x2D, 0x6B, 0x9B, 0xFF, 0xFF, 0xFF, 0xFD, 0x80, 0xFF, 0xC0, 0x2D, 0x18, 0xAB, 0xFF, 0xFF,
-    0xFF, 0xFD, 0x80, 0xFF, 0xC0, 0x2D, 0x7B, 0xB3, 0xFF, 0xFF, 0xFF, 0xFD, 0x80, 0x7F, 0x80, 0x33,
-    0x78, 0xBB, 0xFF, 0xFF, 0xFF, 0xFD, 0x81, 0xF3, 0xE0, 0x3F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFD,
-    0x81, 0xF3, 0xE0, 0x3F, 0xFD, 0xB3, 0x18, 0xDD, 0x98, 0xC5, 0x81, 0xF3, 0xE0, 0x3F, 0xFD, 0xAD,
-    0x6B, 0x5D, 0x6B, 0x5D, 0x80, 0x73, 0x80, 0x3F, 0xFC, 0x21, 0x1B, 0x55, 0x08, 0xC5, 0x80, 0xF3,
-    0xC0, 0x3F, 0xFD, 0xAD, 0x5B, 0x49, 0x6A, 0xDD, 0x80, 0xE1, 0xC0, 0x3F, 0xFD, 0xAD, 0x68, 0xDD,
-    0x6B, 0x45, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+#define ohw_logo_antipixel_height 30
+static const uint8_t ohw_logo_antipixel_bits[] = { 
+0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3F,
+0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8, 0xF8, 0xC8, 0x80, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x01, 0xF0, 0x1F, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xE0, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+0x01, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+0x00, 0x00, 0x00, 0x00, 0x03, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xF8,
+0x00, 0x00, 0x00, 0x00, 0x01, 0x80, 0xC0, 0x60, 0x33, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x07, 0x83,
+0xC1, 0xE0, 0xF3, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x8F, 0xC7, 0xE3, 0xF3, 0xF8, 0x00, 0x00,
+0x00, 0x00, 0x7F, 0xBF, 0xDF, 0xEF, 0xF3, 0xF8, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
+0xF3, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF8, 0x00, 0x00, 0x00, 0x01,
+0xE1, 0xF0, 0xF8, 0x7C, 0x3F, 0xFB, 0xFC, 0x1C, 0x0F, 0xF1, 0xE1, 0xF0, 0xF8, 0x7C, 0x3F, 0xFB,
+0xFC, 0x1C, 0x0F, 0xF9, 0xE1, 0xF0, 0xF8, 0x7C, 0x3F, 0xFB, 0xFC, 0x3E, 0x0F, 0xF9, 0xE1, 0xF0,
+0xF8, 0x7C, 0x3F, 0xFB, 0x80, 0x3E, 0x0E, 0x39, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFB, 0xF8, 0x77,
+0x0F, 0xF1, 0xFF, 0xFF, 0xFF, 0xFB, 0xFF, 0xFB, 0xF8, 0x77, 0x0F, 0xF1, 0x80, 0xE0, 0xF0, 0x30,
+0x38, 0x1B, 0xF8, 0xE3, 0x8F, 0xF9, 0xBF, 0x6F, 0x6F, 0xDB, 0xF7, 0xEB, 0x80, 0xFF, 0x8E, 0x1D,
+0xBF, 0x6F, 0xEF, 0xDB, 0xF7, 0xEB, 0x81, 0xFF, 0xCE, 0x1D, 0xBF, 0x6F, 0xEF, 0xDB, 0xD7, 0xEB,
+0x81, 0xFF, 0xCF, 0xFD, 0xBF, 0x6F, 0xEF, 0xDB, 0xD7, 0xEB, 0x83, 0x80, 0xEF, 0xF9, 0x80, 0xEF,
+0xF0, 0x3C, 0x38, 0x1B, 0x83, 0x80, 0xEF, 0xF1, 0xBF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF8, 0x00, 0x00,
+0x00, 0x01, 0xBF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
 };
 
 // On idle things, we don't want to do shit in interrupts
@@ -310,13 +320,14 @@ void Panel::on_idle(void *argument)
         string build(v.get_build());
         string date(v.get_build_date());
         this->lcd->clear();
-        this->lcd->setCursor(0, 0); this->lcd->printf("Welcome to Smoothie");
-        this->lcd->setCursor(0, 1); this->lcd->printf("%s", build.substr(0, 20).c_str());
-        this->lcd->setCursor(0, 2); this->lcd->printf("%s", date.substr(0, 20).c_str());
-        this->lcd->setCursor(0, 3); this->lcd->printf("Please wait....");
+		this->lcd->setCursor(0, 4); this->lcd->printf(" prototype FABRICATOR");
+		//this->lcd->setCursor(0, 5); this->lcd->printf(" %s", date.substr(0, 20).c_str());
+		this->lcd->setCursor(0, 5); this->lcd->printf("         ");
+		this->lcd->setCursor(0, 6); this->lcd->printf("         ");
+		this->lcd->setCursor(0, 7); this->lcd->printf("      Please wait....");
 
         if (this->lcd->hasGraphics()) {
-            this->lcd->bltGlyph(24, 40, ohw_logo_antipixel_width, ohw_logo_antipixel_height, ohw_logo_antipixel_bits);
+            this->lcd->bltGlyph(24, 0, ohw_logo_antipixel_width, ohw_logo_antipixel_height, ohw_logo_antipixel_bits);
         }
 
         this->lcd->on_refresh(true); // tell lcd to display now
@@ -376,6 +387,10 @@ void Panel::on_idle(void *argument)
     if ( this->mode == MENU_MODE && this->counter_change() ) {
         this->menu_update();
     }
+    // If we are in menu mode and the position has changed
+    if ( this->mode == GFX_MODE && this->counter_change() ) {
+        this->main_menu_update();
+    }
 
     // If we are in control mode
     if ( this->mode == CONTROL_MODE && this->counter_change() ) {
@@ -397,18 +412,34 @@ uint32_t Panel::on_up(uint32_t dummy)
 {
     // this is simulating encoder clicks, but needs to be inverted to
     // increment values on up,increment by
-    int inc = (this->mode == CONTROL_MODE) ? 1 : -(this->menu_offset+1);
-    *this->counter += inc;
-    this->counter_changed = true;
-    return 0;
+	if ( this->mode == GFX_MODE )	{
+		int inc = -(this->menu_offset+8);
+		*this->counter += inc;
+		this->counter_changed = true;
+		return 0;
+	}
+	else {
+		int inc = (this->mode == CONTROL_MODE) ? 1 : -(this->menu_offset+1);
+	    *this->counter += inc;
+		this->counter_changed = true;
+		return 0;
+	}
 }
 
 uint32_t Panel::on_down(uint32_t dummy)
 {
-    int inc = (this->mode == CONTROL_MODE) ? -1 : (this->menu_offset+1);
-    *this->counter += inc;
-    this->counter_changed = true;
-    return 0;
+	if ( this->mode == GFX_MODE )	{
+		int inc = (this->menu_offset+8);
+		*this->counter += inc;
+		this->counter_changed = true;
+		return 0;
+	}
+	else {
+		int inc = (this->mode == CONTROL_MODE) ? -1 : (this->menu_offset+1) ;
+		*this->counter += inc;
+		this->counter_changed = true;
+		return 0;
+	}
 }
 
 // on most menu screens will go back to previous higher menu
@@ -457,6 +488,13 @@ void Panel::enter_menu_mode(bool force)
     this->counter = &this->menu_selected_line;
     this->menu_changed = force;
 }
+// Enter main menu mode
+void Panel::enter_main_menu_mode(bool force)
+{
+    this->mode = GFX_MODE;
+    this->counter = &this->menu_selected_line;
+    this->menu_changed = force;
+}
 
 void Panel::setup_menu(uint16_t rows)
 {
@@ -464,6 +502,20 @@ void Panel::setup_menu(uint16_t rows)
 }
 
 void Panel::setup_menu(uint16_t rows, uint16_t lines)
+{
+    this->menu_selected_line = 0;
+    this->menu_current_line = 0;
+    this->menu_start_line = 0;
+    this->menu_rows = rows;
+    this->panel_lines = lines;
+}
+
+void Panel::setup_main_menu(uint16_t rows)
+{
+    this->setup_menu(rows, min(rows, this->max_screen_lines()));
+}
+	
+void Panel::setup_main_menu(uint16_t rows, uint16_t lines)
 {
     this->menu_selected_line = 0;
     this->menu_current_line = 0;
@@ -523,6 +575,35 @@ void Panel::menu_update()
         this->menu_start_line = 0;
     }
 
+    this->menu_changed = true;
+}
+
+void Panel::main_menu_update()
+{
+    // Limits, up and down
+    // NOTE menu_selected_line is changed in an interrupt and can change at any time
+    int msl = this->menu_selected_line; // hopefully this is atomic
+
+    #if 0
+    // this allows it to wrap but with new method we dont; want to wrap
+    msl = msl % ( this->menu_rows << this->menu_offset );
+    while ( msl < 0 ) {
+        msl += this->menu_rows << this->menu_offset;
+    }
+    #else
+        // limit selected line to screen lines available
+        if(msl >= this->menu_rows<<this->menu_offset){
+            msl= (this->menu_rows-1)<<this->menu_offset;
+        }else if(msl < 0) msl= 0;
+    #endif
+
+    this->menu_selected_line = msl; // update atomically we hope
+    // figure out which actual line to select, if we have a menu offset it means we want to move one line per two clicks
+    if(msl % (this->menu_offset+1) == 0) { // only if divisible by offset
+        this->menu_current_line = msl >> this->menu_offset;
+    }
+	
+    this->menu_start_line = this->menu_current_line; //full screen menus with 1st line title for enter sub-menus
     this->menu_changed = true;
 }
 
@@ -623,7 +704,7 @@ bool Panel::mount_external_sd(bool on)
             size_t n= sizeof(SDCard);
             void *v = AHB0.alloc(n);
             memset(v, 0, n); // clear the allocated memory
-            this->sd= new(v) SDCard(mosi, miso, sclk, cs); // allocate object using zeroed memory
+            this->sd= new(v) SDCard(mosi, miso, sclk, cs, 1000000); // allocate object using zeroed memory
         }
         delete this->extmounter; // if it was not unmounted before
         size_t n= sizeof(SDFAT);
