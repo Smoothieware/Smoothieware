@@ -468,11 +468,16 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
             float xProbe = LEFT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_X * xCount;
 
             // avoid probing outside of x min/max on a cartesian
-            if (is_square && (xProbe < -x_max || xProbe > x_max || yProbe < -y_max || yProbe > y_max)) continue;
-
-            // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
-            float distance_from_center = sqrtf(xProbe * xProbe + yProbe * yProbe);
-            if (!is_square && (distance_from_center > radius)) continue;
+            if (is_square)
+            {
+              if (xProbe < -x_max || xProbe > x_max || yProbe < -y_max || yProbe > y_max) continue;
+            }
+            else
+            {
+              // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
+              float distance_from_center = sqrtf(xProbe * xProbe + yProbe * yProbe);
+              if (distance_from_center > radius) continue;
+            }
 
             if(!zprobe->doProbeAt(s, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s) - z_reference; // this is the delta z from bed at 0,0
