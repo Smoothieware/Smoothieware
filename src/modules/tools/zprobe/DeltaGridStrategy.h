@@ -44,11 +44,7 @@ private:
 
     struct {
         bool save:1;
-    };
-    struct {
         bool do_home:1;
-    };
-    struct {
         bool is_square:1;
     };
 };

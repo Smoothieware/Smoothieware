@@ -123,7 +123,7 @@ bool DeltaGridStrategy::handleConfig()
     if (x_max < 1.0F) x_max = grid_radius;
     if (y_max >= 1.0F) grid_radius = y_max;
     if (y_max < 1.0F) y_max = grid_radius;
-    if (x_max >= 1.0F and y_max >= 1.0F) grid_radius = std::max(x_max, y_max);
+    if (x_max >= 1.0F && y_max >= 1.0F) grid_radius = std::max(x_max, y_max);
 
     // the initial height above the bed we stop the intial move down after home to find the bed
     // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
@@ -251,8 +251,8 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
             // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
             float distance_from_center = sqrtf(x*x + y*y);
             float z= 0.0F;
-            if ((!is_square and (distance_from_center <= radius)) or 
-               ((x < -x_max or x > x_max or y < -y_max or y > y_max) and is_square)) {
+            if ((!is_square && (distance_from_center <= radius)) ||
+               ((x < -x_max || x > x_max || y < -y_max || y > y_max) && is_square)) {
                 int s;
                 if(!zprobe->doProbeAt(s, x, y)) return false;
                 z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
@@ -468,11 +468,11 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
             float xProbe = LEFT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_X * xCount;
 
             // avoid probing outside of x min/max on a cartesian
-            if ((xProbe < -x_max or xProbe > x_max or yProbe < -y_max or yProbe > y_max) and is_square) continue;
+            if (is_square && (xProbe < -x_max || xProbe > x_max || yProbe < -y_max || yProbe > y_max)) continue;
 
             // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
             float distance_from_center = sqrtf(xProbe * xProbe + yProbe * yProbe);
-            if ((distance_from_center > radius) and !is_square) continue;
+            if (!is_square && (distance_from_center > radius)) continue;
 
             if(!zprobe->doProbeAt(s, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s) - z_reference; // this is the delta z from bed at 0,0
