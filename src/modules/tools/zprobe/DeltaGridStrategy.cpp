@@ -90,10 +90,10 @@
 #define save_checksum                CHECKSUM("save")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define initial_height_checksum      CHECKSUM("initial_height")
-#define x_max_checksum           CHECKSUM("x_max")
-#define x_min_checksum           CHECKSUM("x_min")
-#define y_max_checksum            CHECKSUM("y_max")
-#define y_min_checksum            CHECKSUM("y_min")
+#define x_max_checksum               CHECKSUM("x_max")
+#define y_max_checksum               CHECKSUM("y_max")
+#define do_home_checksum             CHECKSUM("do_home")
+#define is_square_checksum           CHECKSUM("is_square")
 
 #define GRIDFILE "/sd/delta.grid"
 
@@ -113,10 +113,17 @@ bool DeltaGridStrategy::handleConfig()
     grid_size = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, grid_size_checksum)->by_default(7)->as_number();
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
-    x_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, x_max_checksum)->by_default(100)->as_number();
-    x_min = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, x_min_checksum)->by_default(-100)->as_number();
-    y_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_max_checksum)->by_default(100)->as_number();
-    y_min = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_min_checksum)->by_default(-100)->as_number();
+    x_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, x_max_checksum)->by_default(0.0F)->as_number();
+    y_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_max_checksum)->by_default(0.0F)->as_number();
+    do_home = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
+    is_square = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, is_square_checksum)->by_default(false)->as_bool();
+
+    // intelligently set defaults.
+    if (x_max >= 1.0F) grid_radius = x_max;
+    if (x_max < 1.0F) x_max = grid_radius;
+    if (y_max >= 1.0F) grid_radius = y_max;
+    if (y_max < 1.0F) y_max = grid_radius;
+    if (x_max >= 1.0F and y_max >= 1.0F) grid_radius = std::max(x_max, y_max);
 
     // the initial height above the bed we stop the intial move down after home to find the bed
     // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
@@ -244,7 +251,8 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
             // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
             float distance_from_center = sqrtf(x*x + y*y);
             float z= 0.0F;
-            if (distance_from_center <= radius) {
+            if ((!is_square and (distance_from_center <= radius)) or 
+               ((x < -x_max or x > x_max or y < -y_max or y > y_max) and is_square)) {
                 int s;
                 if(!zprobe->doProbeAt(s, x, y)) return false;
                 z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
@@ -395,6 +403,7 @@ void DeltaGridStrategy::setAdjustFunction(bool on)
 
 float DeltaGridStrategy::findBed()
 {
+    if (do_home) zprobe->home();
     // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
     float deltaz = initial_height;
     zprobe->coordinated_move(NAN, NAN, deltaz, zprobe->getFastFeedrate());
@@ -427,8 +436,6 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
 
     float radius = grid_radius;
     // find bed, and leave probe probe height above bed
-    float deltaz = initial_height;
-    gc->stream->printf("Delta Grid: finding bed, moving to %f\n", deltaz);
     float initial_z = findBed();
     if(isnan(initial_z)) {
         gc->stream->printf("Finding bed failed, check the maxz and initial height settings\n");
@@ -460,8 +467,12 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
         for (int xCount = xStart; xCount != xStop; xCount += xInc) {
             float xProbe = LEFT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_X * xCount;
 
-            // avoid probing outside of x min/max and y min/max
-            if (xProbe < x_min or xProbe > x_max or yProbe < y_min or yProbe > y_max) continue;
+            // avoid probing outside of x min/max on a cartesian
+            if ((xProbe < -x_max or xProbe > x_max or yProbe < -y_max or yProbe > y_max) and is_square) continue;
+
+            // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
+            float distance_from_center = sqrtf(xProbe * xProbe + yProbe * yProbe);
+            if ((distance_from_center > radius) and !is_square) continue;
 
             if(!zprobe->doProbeAt(s, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s) - z_reference; // this is the delta z from bed at 0,0
