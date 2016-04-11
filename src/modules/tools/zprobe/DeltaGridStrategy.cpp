@@ -113,17 +113,26 @@ bool DeltaGridStrategy::handleConfig()
     grid_size = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, grid_size_checksum)->by_default(7)->as_number();
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
-    x_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, x_max_checksum)->by_default(0.0F)->as_number();
-    y_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_max_checksum)->by_default(0.0F)->as_number();
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
     is_square = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, is_square_checksum)->by_default(false)->as_bool();
 
-    // intelligently set defaults.
-    if (x_max >= 1.0F) grid_radius = x_max;
-    if (x_max < 1.0F) x_max = grid_radius;
-    if (y_max >= 1.0F) grid_radius = y_max;
-    if (y_max < 1.0F) y_max = grid_radius;
-    if (x_max >= 1.0F && y_max >= 1.0F) grid_radius = std::max(x_max, y_max);
+    if (is_square)
+    {
+      x_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, x_max_checksum)->by_default(0.0F)->as_number();
+      y_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_max_checksum)->by_default(0.0F)->as_number();
+
+      // intelligently set defaults.
+      if (x_max >= 1.0F) grid_radius = x_max;
+      if (x_max < 1.0F) x_max = grid_radius;
+      if (y_max >= 1.0F) grid_radius = y_max;
+      if (y_max < 1.0F) y_max = grid_radius;
+      if (x_max >= 1.0F && y_max >= 1.0F) grid_radius = std::max(x_max, y_max);
+    }
+    else
+    {
+      x_max = grid_radius;
+      y_max = grid_radius;
+    }
 
     // the initial height above the bed we stop the intial move down after home to find the bed
     // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
@@ -252,7 +261,7 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
             float distance_from_center = sqrtf(x*x + y*y);
             float z= 0.0F;
             if ((!is_square && (distance_from_center <= radius)) ||
-               ((x < -x_max || x > x_max || y < -y_max || y > y_max) && is_square)) {
+               (is_square && (x < -x_max || x > x_max || y < -y_max || y > y_max))) {
                 int s;
                 if(!zprobe->doProbeAt(s, x, y)) return false;
                 z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
