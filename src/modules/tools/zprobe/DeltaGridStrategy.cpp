@@ -90,6 +90,10 @@
 #define save_checksum                CHECKSUM("save")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define initial_height_checksum      CHECKSUM("initial_height")
+#define x_max_checksum           CHECKSUM("x_max")
+#define x_min_checksum           CHECKSUM("x_min")
+#define y_max_checksum            CHECKSUM("y_max")
+#define y_min_checksum            CHECKSUM("y_min")
 
 #define GRIDFILE "/sd/delta.grid"
 
@@ -109,6 +113,10 @@ bool DeltaGridStrategy::handleConfig()
     grid_size = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, grid_size_checksum)->by_default(7)->as_number();
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
+    x_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, x_max_checksum)->by_default(100)->as_number();
+    x_min = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, x_min_checksum)->by_default(-100)->as_number();
+    y_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_max_checksum)->by_default(100)->as_number();
+    y_min = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_min_checksum)->by_default(-100)->as_number();
 
     // the initial height above the bed we stop the intial move down after home to find the bed
     // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
@@ -451,6 +459,9 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
 
         for (int xCount = xStart; xCount != xStop; xCount += xInc) {
             float xProbe = LEFT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_X * xCount;
+
+            // avoid probing outside of x min/max and y min/max
+            if (xProbe < x_min or xProbe > x_max or yProbe < y_min or yProbe > y_max) continue;
 
             if(!zprobe->doProbeAt(s, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s) - z_reference; // this is the delta z from bed at 0,0
