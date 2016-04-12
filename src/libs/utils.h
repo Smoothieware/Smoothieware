@@ -29,7 +29,7 @@ void get_checksums(uint16_t check_sums[], const string& key);
 
 string shift_parameter( string &parameters );
 
-string get_arguments( string possible_command );
+string get_arguments( const string& possible_command );
 
 bool file_exists( const string file_name );
 

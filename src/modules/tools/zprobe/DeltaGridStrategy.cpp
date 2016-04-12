@@ -173,7 +173,7 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
 {
     FILE *fp = fopen(GRIDFILE, "r");
     if(fp == NULL) {
-        if(stream != nullptr) stream->printf("error:Failed to open grid %s\n", GRIDFILE);
+        stream->printf("error:Failed to open grid %s\n", GRIDFILE);
         return false;
     }
 
@@ -181,38 +181,38 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
     float radius;
 
     if(fread(&size, sizeof(uint8_t), 1, fp) != 1) {
-        if(stream != nullptr) stream->printf("error:Failed to read grid size\n");
+        stream->printf("error:Failed to read grid size\n");
         fclose(fp);
         return false;
     }
 
     if(size != grid_size) {
-        if(stream != nullptr) stream->printf("error:grid size is different read %d - config %d\n", size, grid_size);
+        stream->printf("error:grid size is different read %d - config %d\n", size, grid_size);
         fclose(fp);
         return false;
     }
 
     if(fread(&radius, sizeof(float), 1, fp) != 1) {
-        if(stream != nullptr) stream->printf("error:Failed to read grid radius\n");
+        stream->printf("error:Failed to read grid radius\n");
         fclose(fp);
         return false;
     }
 
     if(radius != grid_radius) {
-        if(stream != nullptr) stream->printf("warning:grid radius is different read %f - config %f, overriding config\n", radius, grid_radius);
+        stream->printf("warning:grid radius is different read %f - config %f, overriding config\n", radius, grid_radius);
         grid_radius= radius;
     }
 
     for (int y = 0; y < grid_size; y++) {
         for (int x = 0; x < grid_size; x++) {
             if(fread(&grid[x + (grid_size*y)], sizeof(float), 1, fp) != 1) {
-                if(stream != nullptr) stream->printf("error:Failed to read grid\n");
+                stream->printf("error:Failed to read grid\n");
                 fclose(fp);
                 return false;
             }
         }
     }
-    if(stream != nullptr) stream->printf("grid loaded from %s with radius %f and size %d\n", GRIDFILE, grid_radius, grid_size);
+    stream->printf("grid loaded, radius: %f, size: %d\n", grid_radius, grid_size);
     fclose(fp);
     return true;
 }
@@ -335,6 +335,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             } else {
                 if(load_grid(gcode->stream)) setAdjustFunction(true);
             }
+            return true;
 
         } else if(gcode->m == 565) { // M565: Set Z probe offsets
             float x = 0, y = 0, z = 0;
