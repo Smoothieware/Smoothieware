@@ -301,6 +301,19 @@ try_again:
                                 new_message.stream->printf("Settings Stored to %s\r\nok\r\n", THEKERNEL->config_override_filename());
                                 continue;
 
+                            case 501: // load config override
+                            case 504: // save to specific config override file
+                                {
+                                    string arg= get_arguments(single_command + possible_command); // rest of line is filename
+                                    if(arg.empty()) arg= "/sd/config-override";
+                                    else arg= "/sd/config-override." + arg;
+                                    new_message.stream->printf("args: <%s>\n", arg.c_str());
+                                    SimpleShell::parse_command((gcode->m == 501) ? "load_command" : "save_command", arg, new_message.stream);
+                                }
+                                delete gcode;
+                                new_message.stream->printf("ok\r\n");
+                                return;
+
                             case 502: // M502 deletes config-override so everything defaults to what is in config
                                 remove(THEKERNEL->config_override_filename());
                                 delete gcode;
@@ -319,6 +332,7 @@ try_again:
                                 gcode->add_nl= true;
                                 break; // fall through to process by modules
                             }
+
                         }
                     }
 

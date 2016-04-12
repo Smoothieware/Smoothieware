@@ -177,20 +177,6 @@ void SimpleShell::on_gcode_received(void *argument)
         } else if (gcode->m == 30) { // remove file
             if(!args.empty() && !THEKERNEL->is_grbl_mode())
                 rm_command("/sd/" + args, gcode->stream);
-
-        } else if(gcode->m == 501) { // load config override
-            if(args.empty()) {
-                load_command("/sd/config-override", gcode->stream);
-            } else {
-                load_command("/sd/config-override." + args, gcode->stream);
-            }
-
-        } else if(gcode->m == 504) { // save to specific config override file
-            if(args.empty()) {
-                save_command("/sd/config-override", gcode->stream);
-            } else {
-                save_command("/sd/config-override." + args, gcode->stream);
-            }
         }
     }
 }
@@ -517,8 +503,11 @@ void SimpleShell::load_command( string parameters, StreamOutput *stream )
         while(fgets(buf, sizeof buf, fp) != NULL) {
             stream->printf("  %s", buf);
             if(buf[0] == ';') continue; // skip the comments
-            struct SerialMessage message = {&(StreamOutput::NullStream), buf};
-            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
+            // NOTE only Gcodes and Mcodes can be in the config-override
+            Gcode *gcode = new Gcode(buf, &StreamOutput::NullStream);
+            THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode);
+            delete gcode;
+            THEKERNEL->call_event(ON_IDLE);
         }
         stream->printf("config override file executed\n");
         fclose(fp);

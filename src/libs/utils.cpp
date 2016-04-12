@@ -133,7 +133,7 @@ string shift_parameter( string &parameters )
 }
 
 // Separate command from arguments
-string get_arguments( string possible_command )
+string get_arguments( const string& possible_command )
 {
     size_t beginning = possible_command.find_first_of(" ");
     if( beginning == string::npos ) {
@@ -170,7 +170,6 @@ void system_reset( bool dfu )
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
-// TODO: Combine with plan9 absolute_path, current_path as argument?
 string absolute_from_relative( string path )
 {
     string cwd = THEKERNEL->current_path;
