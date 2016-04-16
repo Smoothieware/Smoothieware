@@ -819,6 +819,97 @@ void Endstops::set_homing_offset(Gcode *gcode)
     gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
 }
 
+void Endstops::set_relative_homing_offset(Gcode *gcode)
+{
+    // Similar to M306 but sets Homing offsets relatively based on current position
+    // Can be used in on the fly XYZ calibration during printing.
+    float cartesian[3];
+    std::vector<std::pair<char, float>> params;
+
+    THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
+
+    if (gcode->has_letter('X')) {
+        home_offset[0] -= gcode->get_value('X');
+        params.push_back({'X', gcode->get_value('X')});
+    }
+
+    if (gcode->has_letter('Y')) {
+        home_offset[1] -= gcode->get_value('Y');
+        params.push_back({'Y', gcode->get_value('Y')});
+    }
+
+    if (gcode->has_letter('Z')) {
+        home_offset[2] -= gcode->get_value('Z');
+        params.push_back({'Z', gcode->get_value('Z')});
+    }
+
+
+        // Do an axis move in the magnitude of the calibration value, without changing the current actual position
+    if(!params.empty()) {
+        params.insert(params.begin(), {'G', 0});
+        // use X slow rate to move, Z should have a max speed set anyway
+        params.push_back({'F', this->slow_rates[X_AXIS] * 60.0F});
+        char gcode_buf[64];
+        append_parameters(gcode_buf, params, sizeof(gcode_buf));
+        Gcode gc(gcode_buf, &(StreamOutput::NullStream));
+        THEKERNEL->robot->push_state();
+        THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
+        THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+        // Wait for above to finish
+        THEKERNEL->conveyor->wait_for_empty_queue();
+        THEKERNEL->robot->pop_state();
+    }
+
+
+    for (int i = X_AXIS; i <= Z_AXIS; i++) {  // Reset actual position to the initial values.
+      if (gcode->has_letter('X'+i))
+        THEKERNEL->robot->reset_axis_position(cartesian[i], i);
+    }
+
+    gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+}
+
+/*void Endstops::back_off_home(char axes_to_move)
+{
+    std::vector<std::pair<char, float>> params;
+    this->status = BACK_OFF_HOME;
+
+    // these are handled differently
+    if(is_delta) {
+        // Move off of the endstop using a regular relative move in Z only
+        params.push_back({'Z', this->retract_mm[Z_AXIS] * (this->home_direction[Z_AXIS] ? 1 : -1)});
+
+    } else {
+        // cartesians, concatenate all the moves we need to do into one gcode
+        for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+            if( ((axes_to_move >> c ) & 1) == 0) continue; // only for axes we asked to move
+
+            // if not triggered no need to move off
+            if(this->limit_enable[c] && debounced_get(c + (this->home_direction[c] ? 0 : 3)) ) {
+                params.push_back({c + 'X', this->retract_mm[c] * (this->home_direction[c] ? 1 : -1)});
+            }
+        }
+    }
+
+    if(!params.empty()) {
+        // Move off of the endstop using a regular relative move
+        params.insert(params.begin(), {'G', 0});
+        // use X slow rate to move, Z should have a max speed set anyway
+        params.push_back({'F', this->slow_rates[X_AXIS] * 60.0F});
+        char gcode_buf[64];
+        append_parameters(gcode_buf, params, sizeof(gcode_buf));
+        Gcode gc(gcode_buf, &(StreamOutput::NullStream));
+        THEKERNEL->robot->push_state();
+        THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
+        THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+        // Wait for above to finish
+        THEKERNEL->conveyor->wait_for_empty_queue();
+        THEKERNEL->robot->pop_state();
+    }
+
+    this->status = NOT_HOMING;
+}*/
+
 // Start homing sequences by response to GCode commands
 void Endstops::on_gcode_received(void *argument)
 {
@@ -851,7 +942,12 @@ void Endstops::on_gcode_received(void *argument)
             case 306: // set homing offset based on current position
                 if(is_rdelta) return; // RotaryDeltaCalibration module will handle this
 
-                set_homing_offset(gcode);
+                if (gcode->subcode == 1){
+                    set_relative_homing_offset(gcode);
+                }
+                else {
+                    set_homing_offset(gcode);
+                }
                 break;
 
             case 500: // save settings
