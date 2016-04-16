@@ -70,6 +70,7 @@ class Robot : public Module {
             bool next_command_is_MCS:1;                       // set by G53
             bool disable_segmentation:1;                      // set to disable segmentation
             bool segment_z_moves:1;
+            bool save_g92:1;                                  // save g92 on M500 if set
             uint8_t plane_axis_0:2;                           // Current plane ( XY, XZ, YZ )
             uint8_t plane_axis_1:2;
             uint8_t plane_axis_2:2;

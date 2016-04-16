@@ -51,6 +51,7 @@ using std::string;
 #define  y_axis_max_speed_checksum           CHECKSUM("y_axis_max_speed")
 #define  z_axis_max_speed_checksum           CHECKSUM("z_axis_max_speed")
 #define  segment_z_moves_checksum            CHECKSUM("segment_z_moves")
+#define  save_g92_checksum                   CHECKSUM("save_g92")
 
 // arm solutions
 #define  arm_solution_checksum               CHECKSUM("arm_solution")
@@ -187,6 +188,7 @@ void Robot::load_config()
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
 
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
+    this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
 
     // Make our 3 StepperMotors
     uint16_t const checksums[][5] = {
@@ -617,12 +619,14 @@ void Robot::on_gcode_received(void *argument)
                     }
                     ++n;
                 }
-                // linuxcnc saves G92, so we do too
-                // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used, so saving it is necessary
-                if(g92_offset != wcs_t(0, 0, 0)) {
-                    float x, y, z;
-                    std::tie(x, y, z) = g92_offset;
-                    gcode->stream->printf("G92.3 X%f Y%f Z%f\n", x, y, z); // sets G92 to the specified values
+                if(save_g92) {
+                    // linuxcnc saves G92, so we do too if configured, default is to not save to maintain backward compatibility
+                    // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used, so saving it is necessary in that case
+                    if(g92_offset != wcs_t(0, 0, 0)) {
+                        float x, y, z;
+                        std::tie(x, y, z) = g92_offset;
+                        gcode->stream->printf("G92.3 X%f Y%f Z%f\n", x, y, z); // sets G92 to the specified values
+                    }
                 }
             }
             break;
