@@ -18,6 +18,7 @@ extern const char http_crnl[3];
 extern const char http_index_html[12];
 extern const char http_404_html[10];
 extern const char http_referer[9];
+extern const char http_header_preflight[251];
 extern const char http_header_200[86];
 extern const char http_header_304[184];
 extern const char http_header_404[93];
