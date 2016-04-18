@@ -294,6 +294,7 @@ static PT_THREAD(send_headers_3(struct httpd_state *s, const char *statushdr, ch
     PSOCK_BEGIN(&s->sout);
 
     PSOCK_SEND_STR(&s->sout, statushdr);
+    PSOCK_SEND_STR(&s->sout, http_header_all);
 
     if (send_content_type) {
         ptr = strrchr(s->filename, ISO_period);
