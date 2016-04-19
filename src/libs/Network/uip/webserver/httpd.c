@@ -294,12 +294,13 @@ static PT_THREAD(send_headers_3(struct httpd_state *s, const char *statushdr, ch
     PSOCK_BEGIN(&s->sout);
 
     PSOCK_SEND_STR(&s->sout, statushdr);
+    PSOCK_SEND_STR(&s->sout, http_header_all);
 
     if (send_content_type) {
         ptr = strrchr(s->filename, ISO_period);
         if (ptr == NULL) {
             PSOCK_SEND_STR(&s->sout, http_content_type_plain); // http_content_type_binary);
-        } else if (strncmp(http_html, ptr, 5) == 0 || strncmp(http_shtml, ptr, 6) == 0) {
+        } else if (strncmp(http_html, ptr, 5) == 0) {
             PSOCK_SEND_STR(&s->sout, http_content_type_html);
         } else if (strncmp(http_css, ptr, 4) == 0) {
             PSOCK_SEND_STR(&s->sout, http_content_type_css);
