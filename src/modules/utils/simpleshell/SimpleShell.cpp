@@ -932,13 +932,15 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         bool toggle= false;
         for (uint32_t i = 0; i < n; ++i) {
             char cmd[64];
-            snprintf(cmd, sizeof(cmd), "G91 G0 %c%f F%f G90", axis[0], toggle ? -d : d, f);
+            snprintf(cmd, sizeof(cmd), "G91 G0 %c%f F%f G90", toupper(axis[0]), toggle ? -d : d, f);
+            stream->printf("%s\n", cmd);
             struct SerialMessage message{&StreamOutput::NullStream, cmd};
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            if(THEKERNEL->is_halted()) break;
             THEKERNEL->conveyor->wait_for_empty_queue();
             toggle= !toggle;
         }
-
+        stream->printf("done\n");
 
     }else if (what == "circle") {
         // draws a circle usage: radius segments iterations [feedrate]
@@ -960,11 +962,15 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             char cmd[64];
             for(uint32_t a=0;a<s;a++) {
                 snprintf(cmd, sizeof(cmd), "G91 G1 X%f Y%f F%f", sinf(a * (360.0F / s) * (float)M_PI / 180.0F) * r, cosf(a * (360.0F / s) * (float)M_PI / 180.0F) * r, f);
+                stream->printf("%s\n", cmd);
                 struct SerialMessage message{&StreamOutput::NullStream, cmd};
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+                if(THEKERNEL->is_halted()) break;
             }
+            if(THEKERNEL->is_halted()) break;
             THEKERNEL->conveyor->wait_for_empty_queue();
         }
+        stream->printf("done\n");
 
     }else if (what == "square") {
         // draws a square usage: size iterations [feedrate]
@@ -983,26 +989,37 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             char cmd[64];
             {
                 snprintf(cmd, sizeof(cmd), "G91 G0 X%f F%f", d, f);
+                stream->printf("%s\n", cmd);
                 struct SerialMessage message{&StreamOutput::NullStream, cmd};
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             {
                 snprintf(cmd, sizeof(cmd), "G0 Y%f", d);
+                stream->printf("%s\n", cmd);
                 struct SerialMessage message{&StreamOutput::NullStream, cmd};
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             {
                 snprintf(cmd, sizeof(cmd), "G0 X%f", -d);
+                stream->printf("%s\n", cmd);
                 struct SerialMessage message{&StreamOutput::NullStream, cmd};
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             {
                 snprintf(cmd, sizeof(cmd), "G0 Y%f G90", -d);
+                stream->printf("%s\n", cmd);
                 struct SerialMessage message{&StreamOutput::NullStream, cmd};
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
+            if(THEKERNEL->is_halted()) break;
             THEKERNEL->conveyor->wait_for_empty_queue();
         }
+        stream->printf("done\n");
+
+    }else {
+        stream->printf("usage:\n test jog axis distance iterations [feedrate]\n");
+        stream->printf(" test square size iterations [feedrate]\n");
+        stream->printf(" test circle radius segments iterations [feedrate]\n");
     }
 }
 
