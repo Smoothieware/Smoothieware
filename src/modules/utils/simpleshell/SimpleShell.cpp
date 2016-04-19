@@ -932,15 +932,39 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         bool toggle= false;
         for (uint32_t i = 0; i < n; ++i) {
             char cmd[64];
-            snprintf(cmd, sizeof(cmd), "G91 G0 %c%f F%f", axis[0], toggle ? -d : d, f);
+            snprintf(cmd, sizeof(cmd), "G91 G0 %c%f F%f G90", axis[0], toggle ? -d : d, f);
             struct SerialMessage message{&StreamOutput::NullStream, cmd};
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-            THEKERNEL->call_event(ON_IDLE);
+            THEKERNEL->conveyor->wait_for_empty_queue();
             toggle= !toggle;
         }
 
 
     }else if (what == "circle") {
+        // draws a circle usage: radius segments iterations [feedrate]
+        string radius = shift_parameter( parameters );
+        string segments = shift_parameter( parameters );
+        string iters = shift_parameter( parameters );
+        string speed = shift_parameter( parameters );
+         if(radius.empty() || segments.empty() || iters.empty()) {
+            stream->printf("error: Need radius segments iterations\n");
+            return;
+        }
+
+        float r= strtof(radius.c_str(), NULL);
+        uint32_t s= strtol(segments.c_str(), NULL, 10);
+        uint32_t n= strtol(iters.c_str(), NULL, 10);
+        float f= speed.empty() ? THEKERNEL->robot->get_feed_rate() : strtof(speed.c_str(), NULL);
+
+        for (uint32_t i = 0; i < n; ++i) {
+            char cmd[64];
+            for(uint32_t a=0;a<s;a++) {
+                snprintf(cmd, sizeof(cmd), "G91 G1 X%f Y%f F%f", sinf(a * (360.0F / s) * (float)M_PI / 180.0F) * r, cosf(a * (360.0F / s) * (float)M_PI / 180.0F) * r, f);
+                struct SerialMessage message{&StreamOutput::NullStream, cmd};
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            }
+            THEKERNEL->conveyor->wait_for_empty_queue();
+        }
 
     }else if (what == "square") {
         // draws a square usage: size iterations [feedrate]
@@ -963,21 +987,21 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             {
-                snprintf(cmd, sizeof(cmd), "G91 G0 Y%f", d);
+                snprintf(cmd, sizeof(cmd), "G0 Y%f", d);
                 struct SerialMessage message{&StreamOutput::NullStream, cmd};
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             {
-                snprintf(cmd, sizeof(cmd), "G91 G0 X%f", -d);
+                snprintf(cmd, sizeof(cmd), "G0 X%f", -d);
                 struct SerialMessage message{&StreamOutput::NullStream, cmd};
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             {
-                snprintf(cmd, sizeof(cmd), "G91 G0 Y%f", -d);
+                snprintf(cmd, sizeof(cmd), "G0 Y%f G90", -d);
                 struct SerialMessage message{&StreamOutput::NullStream, cmd};
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
-            THEKERNEL->call_event(ON_IDLE);
+            THEKERNEL->conveyor->wait_for_empty_queue();
         }
     }
 }
