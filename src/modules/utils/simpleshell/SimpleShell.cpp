@@ -81,6 +81,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"calc_thermistor", SimpleShell::calc_thermistor_command},
     {"thermistors", SimpleShell::print_thermistors_command},
     {"md5sum",   SimpleShell::md5sum_command},
+    {"test",     SimpleShell::test_command},
 
     // unknown command
     {NULL, NULL}
@@ -909,6 +910,77 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
     fclose(lp);
 }
 
+// runs several types of test on the mechanisms
+void SimpleShell::test_command( string parameters, StreamOutput *stream)
+{
+    string what = shift_parameter( parameters );
+
+    if (what == "jog") {
+        // jogs back and forth usage: axis distance iterations [feedrate]
+        string axis = shift_parameter( parameters );
+        string dist = shift_parameter( parameters );
+        string iters = shift_parameter( parameters );
+        string speed = shift_parameter( parameters );
+        if(axis.empty() || dist.empty() || iters.empty()) {
+            stream->printf("error: Need axis distance iterations\n");
+            return;
+        }
+        float d= strtof(dist.c_str(), NULL);
+        float f= speed.empty() ? THEKERNEL->robot->get_feed_rate() : strtof(speed.c_str(), NULL);
+        uint32_t n= strtol(iters.c_str(), NULL, 10);
+
+        bool toggle= false;
+        for (uint32_t i = 0; i < n; ++i) {
+            char cmd[64];
+            snprintf(cmd, sizeof(cmd), "G91 G0 %c%f F%f", axis[0], toggle ? -d : d, f);
+            struct SerialMessage message{&StreamOutput::NullStream, cmd};
+            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            THEKERNEL->call_event(ON_IDLE);
+            toggle= !toggle;
+        }
+
+
+    }else if (what == "circle") {
+
+    }else if (what == "square") {
+        // draws a square usage: size iterations [feedrate]
+        string size = shift_parameter( parameters );
+        string iters = shift_parameter( parameters );
+        string speed = shift_parameter( parameters );
+        if(size.empty() || iters.empty()) {
+            stream->printf("error: Need size iterations\n");
+            return;
+        }
+        float d= strtof(size.c_str(), NULL);
+        float f= speed.empty() ? THEKERNEL->robot->get_feed_rate() : strtof(speed.c_str(), NULL);
+        uint32_t n= strtol(iters.c_str(), NULL, 10);
+
+        for (uint32_t i = 0; i < n; ++i) {
+            char cmd[64];
+            {
+                snprintf(cmd, sizeof(cmd), "G91 G0 X%f F%f", d, f);
+                struct SerialMessage message{&StreamOutput::NullStream, cmd};
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            }
+            {
+                snprintf(cmd, sizeof(cmd), "G91 G0 Y%f", d);
+                struct SerialMessage message{&StreamOutput::NullStream, cmd};
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            }
+            {
+                snprintf(cmd, sizeof(cmd), "G91 G0 X%f", -d);
+                struct SerialMessage message{&StreamOutput::NullStream, cmd};
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            }
+            {
+                snprintf(cmd, sizeof(cmd), "G91 G0 Y%f", -d);
+                struct SerialMessage message{&StreamOutput::NullStream, cmd};
+                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+            }
+            THEKERNEL->call_event(ON_IDLE);
+        }
+    }
+}
 
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
