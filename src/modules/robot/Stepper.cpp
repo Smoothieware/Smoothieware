@@ -36,7 +36,6 @@ Stepper::Stepper()
 {
     this->current_block = NULL;
     this->force_speed_update = false;
-    this->halted= false;
 }
 
 //Called when the module has just been loaded
@@ -44,7 +43,6 @@ void Stepper::on_module_loaded()
 {
     this->register_for_event(ON_BLOCK_BEGIN);
     this->register_for_event(ON_BLOCK_END);
-    this->register_for_event(ON_GCODE_EXECUTE);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_HALT);
 
@@ -70,31 +68,19 @@ void Stepper::on_halt(void *argument)
 {
     if(argument == nullptr) {
         this->turn_enable_pins_off();
-        this->halted= true;
-    }else{
-        this->halted= false;
     }
 }
 
 void Stepper::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
-    // Attach gcodes to the last block for on_gcode_execute
-    if( gcode->has_m && (gcode->m == 84 || gcode->m == 17 || gcode->m == 18 )) {
-        THEKERNEL->conveyor->append_gcode(gcode);
-    }
-}
-
-// React to enable/disable gcodes
-void Stepper::on_gcode_execute(void *argument)
-{
-    Gcode *gcode = static_cast<Gcode *>(argument);
 
     if( gcode->has_m) {
         if( gcode->m == 17 ) {
             this->turn_enable_pins_on();
-        }
-        if( (gcode->m == 84 || gcode->m == 18) && !gcode->has_letter('E') ) {
+
+        }else if( (gcode->m == 84 || gcode->m == 18) && !gcode->has_letter('E') ) {
+            THEKERNEL->conveyor->wait_for_empty_queue();
             this->turn_enable_pins_off();
         }
     }
@@ -191,7 +177,7 @@ uint32_t Stepper::stepper_motor_finished_move(uint32_t dummy)
 {
     // We care only if none is still moving
     for (auto a : THEKERNEL->robot->actuators) {
-        if(a->moving)    
+        if(a->moving)
             return 0;
     }
 
