@@ -943,7 +943,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         stream->printf("done\n");
 
     }else if (what == "circle") {
-        // draws a circle usage: radius segments iterations [feedrate]
+        // draws a circle around current position. usage: radius segments iterations [feedrate]
         string radius = shift_parameter( parameters );
         string segments = shift_parameter( parameters );
         string iters = shift_parameter( parameters );
@@ -957,13 +957,20 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         uint32_t s= strtol(segments.c_str(), NULL, 10);
         uint32_t n= strtol(iters.c_str(), NULL, 10);
         float f= speed.empty() ? THEKERNEL->robot->get_feed_rate() : strtof(speed.c_str(), NULL);
+        float xoff, yoff;
+        std::tie(xoff, yoff, std::ignore) = THEKERNEL->robot->mcs2wcs(THEKERNEL->robot->get_axis_position());
+        char cmd[64];
+        snprintf(cmd, sizeof(cmd), "G90\n");
+        struct SerialMessage message{&StreamOutput::NullStream, cmd};
+        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
         for (uint32_t i = 0; i < n; ++i) {
-            char cmd[64];
             for(uint32_t a=0;a<s;a++) {
-                snprintf(cmd, sizeof(cmd), "G91 G1 X%f Y%f F%f", sinf(a * (360.0F / s) * (float)M_PI / 180.0F) * r, cosf(a * (360.0F / s) * (float)M_PI / 180.0F) * r, f);
+                snprintf(cmd, sizeof(cmd), "G0 X%f Y%f F%f",
+                    xoff + (sinf(a * (360.0F / s) * (float)M_PI / 180.0F) * r),
+                    yoff + (cosf(a * (360.0F / s) * (float)M_PI / 180.0F) * r),
+                    f);
                 stream->printf("%s\n", cmd);
-                struct SerialMessage message{&StreamOutput::NullStream, cmd};
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
                 if(THEKERNEL->is_halted()) break;
             }
