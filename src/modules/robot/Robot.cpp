@@ -457,9 +457,9 @@ void Robot::on_gcode_received(void *argument)
 
     } else if( gcode->has_m) {
         switch( gcode->m ) {
-            case 0: // M0 feed hold
-                if(THEKERNEL->is_grbl_mode()) THEKERNEL->set_feed_hold(true);
-                break;
+            // case 0: // M0 feed hold, (M0.1 is release feed hold, except we are in feed hold)
+            //     if(THEKERNEL->is_grbl_mode()) THEKERNEL->set_feed_hold(gcode->subcode == 0);
+            //     break;
 
             case 30: // M30 end of program in grbl mode (otherwise it is delete sdcard file)
                 if(!THEKERNEL->is_grbl_mode()) break;
