@@ -830,11 +830,14 @@ void SimpleShell::set_temp_command( string parameters, StreamOutput *stream)
 
 void SimpleShell::print_thermistors_command( string parameters, StreamOutput *stream)
 {
+#ifndef NO_TOOLS_TEMPERATURECONTROL
     Thermistor::print_predefined_thermistors(stream);
+#endif
 }
 
 void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stream)
 {
+#ifndef NO_TOOLS_TEMPERATURECONTROL
     string s = shift_parameter( parameters );
     int saveto= -1;
     // see if we have -sn as first argument
@@ -866,6 +869,7 @@ void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stre
         // give help
         stream->printf("Usage: calc_thermistor T1,R1,T2,R2,T3,R3\n");
     }
+#endif
 }
 
 // used to test out the get public data events for switch

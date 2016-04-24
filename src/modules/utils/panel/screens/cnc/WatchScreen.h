@@ -23,6 +23,7 @@ public:
     void display_menu_line(uint16_t line);
 
 private:
+    void get_wpos();
     void get_current_status();
     float get_current_speed();
     void set_speed();
@@ -30,11 +31,9 @@ private:
     const char *get_status();
     const char *get_network();
 
-    std::vector<uint16_t> temp_controllers;
-
     uint32_t update_counts;
     int current_speed;
-    float pos[3];
+    float wpos[3], mpos[3];
     unsigned long elapsed_time;
     unsigned int sd_pcnt_played;
     char *ipstr;
@@ -42,7 +41,7 @@ private:
     struct {
         bool speed_changed:1;
         bool issue_change_speed:1;
-        bool fan_state:1;
+        bool spindle_state:1;
     };
 };
 
