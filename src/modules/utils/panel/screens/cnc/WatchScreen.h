@@ -34,6 +34,7 @@ private:
     uint32_t update_counts;
     int current_speed;
     float wpos[3], mpos[3];
+    std::string wcs;
     unsigned long elapsed_time;
     unsigned int sd_pcnt_played;
     char *ipstr;

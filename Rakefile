@@ -295,7 +295,7 @@ file "#{PROG}.bin" => ["#{PROG}.elf"] do
 end
 
 file "#{PROG}.elf" => OBJ do |t|
-  puts "Linking #{t.source}"
+  puts "Linking"
   sh "#{LD} #{LDFLAGS} #{OBJ} #{LIBS}  -o #{OBJDIR}/#{t.name}"
 end
 

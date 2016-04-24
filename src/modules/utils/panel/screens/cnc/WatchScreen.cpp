@@ -133,6 +133,10 @@ void WatchScreen::get_wpos()
     this->mpos[0]= THEKERNEL->robot->from_millimeters(mpos[0]);
     this->mpos[1]= THEKERNEL->robot->from_millimeters(mpos[1]);
     this->mpos[2]= THEKERNEL->robot->from_millimeters(mpos[2]);
+
+    std::vector<Robot::wcs_t> v= THEKERNEL->robot->get_wcs_state();
+    char current_wcs= std::get<0>(v[0]);
+    this->wcs= wcs2gcode(current_wcs);
 }
 
 // queuing gcodes needs to be done from main loop
@@ -190,8 +194,9 @@ void WatchScreen::display_menu_line(uint16_t line)
         case 1: THEPANEL->lcd->printf("X %8.3f %8.3f", wpos[0], mpos[0]); break;
         case 2: THEPANEL->lcd->printf("Y %8.3f %8.3f", wpos[1], mpos[1]); break;
         case 3: THEPANEL->lcd->printf("Z %8.3f %8.3f", wpos[2], mpos[2]); break;
-        case 4: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
-        case 5: THEPANEL->lcd->printf("%19s", this->get_status()); break;
+        case 4: THEPANEL->lcd->printf("WCS %s FR %6.1f", this->wcs.c_str(), THEKERNEL->robot->get_feed_rate()); break;
+        case 5: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
+        case 6: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
 }
 
