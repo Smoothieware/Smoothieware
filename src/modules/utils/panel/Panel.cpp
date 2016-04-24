@@ -16,8 +16,8 @@
 #include "libs/SDFAT.h"
 
 #include "modules/utils/player/PlayerPublicAccess.h"
-#include "screens/CustomScreen.h"
-#include "screens/MainMenuScreen.h"
+#include "CustomScreen.h"
+#include "MainMenuScreen.h"
 #include "SlowTicker.h"
 #include "Gcode.h"
 #include "TemperatureControlPublicAccess.h"

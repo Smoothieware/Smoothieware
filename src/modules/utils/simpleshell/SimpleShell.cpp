@@ -971,6 +971,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
                     yoff + (cosf(a * (360.0F / s) * (float)M_PI / 180.0F) * r),
                     f);
                 stream->printf("%s\n", cmd);
+                message.message= cmd;
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
                 if(THEKERNEL->is_halted()) break;
             }
