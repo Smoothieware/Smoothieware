@@ -48,7 +48,7 @@ void PrepareScreen::display_menu_line(uint16_t line)
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Back"           ); break;
         case 1: THEPANEL->lcd->printf("Home All Axes"  ); break;
-        case 2: THEPANEL->lcd->printf("Set Home"       ); break;
+        case 2: THEPANEL->lcd->printf("Set XY Origin"  ); break;
         case 3: THEPANEL->lcd->printf("Set Z0"         ); break;
         case 4: THEPANEL->lcd->printf("Motors off"     ); break;
     }
@@ -59,7 +59,7 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); break;
         case 1: send_command("G28"); break;
-        case 2: send_command("G92 X0 Y0 Z0"); break;
+        case 2: send_command("G92 X0 Y0"); break;
         case 3: send_command("G92 Z0"); break;
         case 4: send_command("M84"); break;
     }
