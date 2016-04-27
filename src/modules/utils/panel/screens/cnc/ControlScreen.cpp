@@ -26,7 +26,6 @@ using namespace std;
 
 #define NULL_CONTROL_MODE        0
 #define AXIS_CONTROL_MODE        1
-#define INCREMENT_SELECTION_MODE 2
 
 ControlScreen::ControlScreen()
 {
@@ -37,7 +36,7 @@ void ControlScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
     THEPANEL->setup_menu(4);
-    get_current_pos(this->pos);
+    get_current_pos(this->pos); // gets current WCS
     this->refresh_menu();
     this->pos_changed = false;
 }
@@ -113,6 +112,9 @@ void ControlScreen::enter_axis_control(char axis)
     THEPANEL->enter_control_mode(this->jog_increment, this->jog_increment / 10);
     THEPANEL->set_control_value(this->pos[axis - 'X']);
     THEPANEL->lcd->clear();
+    THEPANEL->lcd->setCursor(0, 0);
+    THEPANEL->lcd->printf("Jog %6.2f", jog_increment);
+
     THEPANEL->lcd->setCursor(0, 2);
     this->display_axis_line(this->controlled_axis);
 }

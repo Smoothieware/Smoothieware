@@ -12,10 +12,9 @@
 #include "Pin.h"
 #include "mbed.h"
 #include <string>
-using std::string;
+#include <functional>
 
-#define MENU_MODE                  0
-#define CONTROL_MODE               1
+using std::string;
 
 #define THEPANEL Panel::instance
 
@@ -87,6 +86,9 @@ class Panel : public Module {
         LcdBase* lcd;
         PanelScreen* custom_screen;
 
+        using encoder_cb_t= std::function<void(int ticks)>;
+        bool enter_direct_encoder_mode(encoder_cb_t fnc);
+
         // as panelscreen accesses private fields in Panel
         friend class PanelScreen;
 
@@ -127,6 +129,7 @@ class Panel : public Module {
         float default_bed_temperature;
 
         string message;
+        encoder_cb_t encoder_cb_fnc;
 
         uint16_t screen_lines;
         uint16_t menu_current_line;
