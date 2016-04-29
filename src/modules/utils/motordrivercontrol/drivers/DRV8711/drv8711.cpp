@@ -15,7 +15,7 @@
 #define REGWRITE    0x00
 #define REGREAD     0x80
 
-DRV8711DRV::DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi) : spi(spi)
+DRV8711DRV::DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) : spi(spi), designator(d)
 {
     error_reported.reset();
 }
@@ -216,7 +216,7 @@ void DRV8711DRV::dump_status(StreamOutput *stream)
     DRIVE_Register_t   R_DRIVE_REG;
     STATUS_Register_t  R_STATUS_REG;
 
-    stream->printf("Register Dump:\n");
+    stream->printf("designator: %c, Register Dump:\n", designator);
 
     // Read CTRL Register
     R_CTRL_REG.raw= ReadRegister(G_CTRL_REG.Address);
@@ -332,7 +332,7 @@ bool DRV8711DRV::check_alarm()
     R_STATUS_REG.raw= ReadRegister(G_STATUS_REG.Address);
 
     if(R_STATUS_REG.OTS) {
-        if(!error_reported.test(0)) THEKERNEL->streams->printf("ERROR: Overtemperature shutdown\n");
+        if(!error_reported.test(0)) THEKERNEL->streams->printf("%c, ERROR: Overtemperature shutdown\n", designator);
         error= true;
         error_reported.set(0);
     }else{
@@ -341,7 +341,7 @@ bool DRV8711DRV::check_alarm()
 
 
     if(R_STATUS_REG.AOCP) {
-        if(!error_reported.test(1)) THEKERNEL->streams->printf("ERROR: Channel A over current shutdown\n");
+        if(!error_reported.test(1)) THEKERNEL->streams->printf("%c, ERROR: Channel A over current shutdown\n", designator);
         error= true;
         error_reported.set(1);
     }else{
@@ -350,7 +350,7 @@ bool DRV8711DRV::check_alarm()
 
 
     if(R_STATUS_REG.BOCP) {
-        if(!error_reported.test(2)) THEKERNEL->streams->printf("ERROR: Channel B over current shutdown\n");
+        if(!error_reported.test(2)) THEKERNEL->streams->printf("%c, ERROR: Channel B over current shutdown\n", designator);
         error= true;
         error_reported.set(2);
     }else{
@@ -358,7 +358,7 @@ bool DRV8711DRV::check_alarm()
     }
 
     if(R_STATUS_REG.APDF) {
-        if(!error_reported.test(3)) THEKERNEL->streams->printf("ERROR: Channel A predriver fault\n");
+        if(!error_reported.test(3)) THEKERNEL->streams->printf("%c, ERROR: Channel A predriver fault\n", designator);
         error= true;
         error_reported.set(3);
     }else{
@@ -367,7 +367,7 @@ bool DRV8711DRV::check_alarm()
 
 
     if(R_STATUS_REG.BPDF) {
-        if(!error_reported.test(4)) THEKERNEL->streams->printf("ERROR: Channel B predriver fault\n");
+        if(!error_reported.test(4)) THEKERNEL->streams->printf("%c, ERROR: Channel B predriver fault\n", designator);
         error= true;
         error_reported.set(4);
     }else{
