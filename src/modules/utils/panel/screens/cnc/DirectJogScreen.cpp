@@ -117,16 +117,11 @@ void DirectJogScreen::on_exit()
 }
 
 // encoder tick, called in an interrupt everytime we get an encoder tick
+// fastest is 200pulses/sec
 void DirectJogScreen::tick(int change)
 {
-    int steps= std::abs(change); // TODO may need multiplier here for regular encoder, or do speed check and increase rate accordingly
-    for (int i = 0; i < steps; ++i) {
-        // foreach tick we issue a step to the selected axis
-        if(i > 0) wait_us(10); // fastest rate is 100KHz
-        THEKERNEL->robot->actuators[axis]->manual_step(change < 0);
-    }
-
-    pos_changed= true;
+   THEKERNEL->robot->actuators[axis]->manual_step(change < 0);
+   pos_changed= true;
 }
 
 void DirectJogScreen::enter_axis_control(uint8_t axis)
