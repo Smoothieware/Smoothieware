@@ -57,7 +57,7 @@ public:
      * You can select a different stepping with setMicrosteps() to aa different value.
      * \sa start(), setMicrosteps()
      */
-    TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi);
+    TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char designator);
 
     /*!
      * \brief configures the TMC26X stepper driver. Before you called this function the stepper driver is in nonfunctional mode.
@@ -445,5 +445,7 @@ private:
     };
 
     uint8_t cool_step_lower_threshold; // we need to remember the threshold to enable and disable the CoolStep feature
+    char designator;
+
 };
 
