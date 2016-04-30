@@ -27,11 +27,13 @@ private:
     void enter_axis_control(uint8_t axis);
     void enter_menu_control();
     void tick(int change);
+    void get_actuator_pos();
 
     float pos[3];
 
-    enum MODE_T { JOG, AXIS_SELECT };
+    enum MODE_T { JOG, AXIS_SELECT, MULTIPLIER };
     MODE_T mode;
     uint8_t axis;
+    uint8_t multiplier;
     bool pos_changed;
 };
