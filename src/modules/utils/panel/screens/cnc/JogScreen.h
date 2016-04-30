@@ -21,6 +21,7 @@ class JogScreen : public PanelScreen {
         void clicked_menu_entry(uint16_t line);
 
     private:
+        void set_feed_rates();
         ControlScreen *control_screen;
 };
 

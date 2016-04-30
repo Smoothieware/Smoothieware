@@ -81,6 +81,9 @@ class Panel : public Module {
 
         uint16_t get_screen_lines() const { return screen_lines; }
 
+        float get_jogging_speed(int i) { return jogging_speed_mm_min[i]; }
+        void set_jogging_speed(int i, float v) { jogging_speed_mm_min[i]= v; }
+
         // public as it is directly accessed by screens... not good
         // TODO pass lcd into ctor of each sub screen
         LcdBase* lcd;

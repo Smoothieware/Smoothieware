@@ -14,6 +14,7 @@
 #include "JogScreen.h"
 #include "DirectJogScreen.h"
 #include "ControlScreen.h"
+#include "ModifyValuesScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include <string>
@@ -30,7 +31,7 @@ JogScreen::JogScreen()
 void JogScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(6);
+    THEPANEL->setup_menu(7);
     this->refresh_menu();
 }
 
@@ -48,32 +49,53 @@ void JogScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Back");  break;
-        case 1: THEPANEL->lcd->printf("Move 10.0mm      \x7E"); break;
-        case 2: THEPANEL->lcd->printf("Move  1.0mm      \x7E"); break;
-        case 3: THEPANEL->lcd->printf("Move  0.1mm      \x7E"); break;
-        case 4: THEPANEL->lcd->printf("Move  0.01mm     \x7E"); break;
-        case 5: THEPANEL->lcd->printf("Direct Control   \x7E"); break;
+        case 1: THEPANEL->lcd->printf("Move 10.0mm       "); break;
+        case 2: THEPANEL->lcd->printf("Move  1.0mm       "); break;
+        case 3: THEPANEL->lcd->printf("Move  0.1mm       "); break;
+        case 4: THEPANEL->lcd->printf("Move  0.01mm      "); break;
+        case 5: THEPANEL->lcd->printf("Direct Control    "); break;
+        case 6: THEPANEL->lcd->printf("Feed Rates        "); break;
     }
 }
 
 void JogScreen::clicked_menu_entry(uint16_t line)
 {
-    bool direct= false;
+    bool dojog= true;
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); return;
         case 1: this->control_screen->set_jog_increment(10.0); break;
         case 2: this->control_screen->set_jog_increment(1.0); break;
         case 3: this->control_screen->set_jog_increment(0.1); break;
         case 4: this->control_screen->set_jog_increment(0.01); break;
-        case 5: direct= true; break;
+        case 5: {
+            auto djs = new DirectJogScreen();
+            djs->set_parent(this);
+            THEPANEL->enter_screen(djs); // self deleting
+            dojog= false;
+        } break;
+        case 6:
+            set_feed_rates();
+            dojog= false;
     }
 
-    if(direct) {
-        auto djs= new DirectJogScreen();
-        djs->set_parent(this);
-        THEPANEL->enter_screen(djs); // self deleting
-
-    }else{
+    if(dojog) {
         THEPANEL->enter_screen(this->control_screen);
     }
+}
+
+void JogScreen::set_feed_rates()
+{
+    auto mvs = new ModifyValuesScreen(true); // self delete on exit
+    mvs->set_parent(this);
+
+    for (int i = 0; i < 3; ++i) {
+        string label;
+        label.append(1, 'X' + i).append(" mm/min");
+        mvs->addMenuItem(label.c_str(),
+            [i]() -> float { return THEPANEL->get_jogging_speed(i); },
+            [i](float v) { THEPANEL->set_jogging_speed(i, v); },
+            10.0F, 1.0F);
+    }
+
+    THEPANEL->enter_screen(mvs);
 }
