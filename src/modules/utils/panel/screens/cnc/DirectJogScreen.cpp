@@ -166,7 +166,7 @@ void DirectJogScreen::enter_axis_control(uint8_t axis)
     this->axis = axis;
     THEPANEL->lcd->clear();
     THEPANEL->lcd->setCursor(0, 0);
-    THEPANEL->lcd->printf("Encoder Jog x%d", multiplier);
+    THEPANEL->lcd->printf("MPG mode x%d", multiplier);
     THEPANEL->lcd->setCursor(0, 2);
     get_actuator_pos();
     this->display_axis_line(this->axis);

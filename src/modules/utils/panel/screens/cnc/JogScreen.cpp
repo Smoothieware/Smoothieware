@@ -53,7 +53,7 @@ void JogScreen::display_menu_line(uint16_t line)
         case 2: THEPANEL->lcd->printf("Move  1.0mm       "); break;
         case 3: THEPANEL->lcd->printf("Move  0.1mm       "); break;
         case 4: THEPANEL->lcd->printf("Move  0.01mm      "); break;
-        case 5: THEPANEL->lcd->printf("Direct Control    "); break;
+        case 5: THEPANEL->lcd->printf("MPG mode          "); break;
         case 6: THEPANEL->lcd->printf("Feed Rates        "); break;
     }
 }
