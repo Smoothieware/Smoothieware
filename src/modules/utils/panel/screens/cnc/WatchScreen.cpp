@@ -190,11 +190,11 @@ void WatchScreen::display_menu_line(uint16_t line)
 {
     // in menu mode
     switch ( line ) {
-        case 0: THEPANEL->lcd->printf("     WCS      MCS "); break;
+        case 0: THEPANEL->lcd->printf("     WCS      MCS %s", THEKERNEL->robot->inch_mode ? "in" : "mm"); break;
         case 1: THEPANEL->lcd->printf("X %8.3f %8.3f", wpos[0], mpos[0]); break;
         case 2: THEPANEL->lcd->printf("Y %8.3f %8.3f", wpos[1], mpos[1]); break;
         case 3: THEPANEL->lcd->printf("Z %8.3f %8.3f", wpos[2], mpos[2]); break;
-        case 4: THEPANEL->lcd->printf("WCS %s FR %6.1f", this->wcs.c_str(), THEKERNEL->robot->get_feed_rate()); break;
+        case 4: THEPANEL->lcd->printf("WCS %s FR %6.1f", this->wcs.c_str(), THEKERNEL->robot->from_millimeters(THEKERNEL->robot->get_feed_rate())); break;
         case 5: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
         case 6: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
