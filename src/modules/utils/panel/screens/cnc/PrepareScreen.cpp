@@ -28,7 +28,7 @@ PrepareScreen::PrepareScreen()
 void PrepareScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(6);
+    THEPANEL->setup_menu(8);
     this->refresh_menu();
 }
 
@@ -50,7 +50,9 @@ void PrepareScreen::display_menu_line(uint16_t line)
         case 2: THEPANEL->lcd->printf("Touch off X"    ); break;
         case 3: THEPANEL->lcd->printf("Touch off Y"    ); break;
         case 4: THEPANEL->lcd->printf("Touch off Z"    ); break;
-        case 5: THEPANEL->lcd->printf("Motors off"     ); break;
+        case 5: THEPANEL->lcd->printf("Spindle on"     ); break;
+        case 6: THEPANEL->lcd->printf("Spindle off"    ); break;
+        case 7: THEPANEL->lcd->printf("Motors off"     ); break;
     }
 }
 
@@ -62,6 +64,8 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
         case 2: send_command("G10 L20 P0 X0"); break;
         case 3: send_command("G10 L20 P0 Y0"); break;
         case 4: send_command("G10 L20 P0 Z0"); break;
-        case 5: send_command("M84"); break;
+        case 5: send_command("M3"); break;
+        case 6: send_command("M5"); break;
+        case 7: send_command("M84"); break;
     }
 }

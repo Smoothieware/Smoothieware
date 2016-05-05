@@ -30,6 +30,8 @@ class ProbeScreen : public PanelScreen {
         bool do_probe:1;
         bool do_status:1;
         bool new_result:1;
+        bool probe_dir:1;
+        uint8_t probe_axis:2;
       };
 };
 

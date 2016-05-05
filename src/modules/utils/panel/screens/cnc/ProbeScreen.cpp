@@ -38,7 +38,7 @@ void ProbeScreen::on_exit()
 void ProbeScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(3);
+    THEPANEL->setup_menu(7);
     this->refresh_menu();
 }
 
@@ -70,17 +70,27 @@ void ProbeScreen::display_menu_line(uint16_t line)
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Back");  break;
         case 1: THEPANEL->lcd->printf("Status");  break;
-        case 2: THEPANEL->lcd->printf("Z Probe");  break;
+        case 2: THEPANEL->lcd->printf("X- Probe");  break;
+        case 3: THEPANEL->lcd->printf("Y- Probe");  break;
+        case 4: THEPANEL->lcd->printf("Z- Probe");  break;
+        case 5: THEPANEL->lcd->printf("X+ Probe");  break;
+        case 6: THEPANEL->lcd->printf("Y+ Probe");  break;
+
     }
 }
 
 void ProbeScreen::clicked_menu_entry(uint16_t line)
 {
     this->do_status= false;
+    this->do_probe= false;
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); return;
         case 1: this->do_status= true; this->tcnt= 1; break;
-        case 2: this->do_probe= true; break;
+        case 2: this->do_probe= true; probe_dir= false; probe_axis= X_AXIS; break;
+        case 3: this->do_probe= true; probe_dir= false; probe_axis= Y_AXIS; break;
+        case 4: this->do_probe= true; probe_dir= false; probe_axis= Z_AXIS; break;
+        case 5: this->do_probe= true; probe_dir= true; probe_axis= X_AXIS; break;
+        case 6: this->do_probe= true; probe_dir= true; probe_axis= Y_AXIS; break;
     }
 }
 
@@ -90,7 +100,14 @@ void ProbeScreen::on_main_loop()
     if (this->do_probe) {
         this->do_probe= false;
         StringStream string_stream;
-        Gcode gcode("G30", &string_stream);
+        string cmd("G38.3 ");
+        switch(probe_axis) {
+            case X_AXIS: cmd.append(probe_dir ? "X50" : "X-50"); break;
+            case Y_AXIS: cmd.append(probe_dir ? "Y50" : "Y-50"); break;
+            case Z_AXIS: cmd.append(probe_dir ? "Z50" : "Z-50"); break;
+        }
+
+        Gcode gcode(cmd, &string_stream);
         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
         this->result= string_stream.getOutput();
         this->new_result= true;
