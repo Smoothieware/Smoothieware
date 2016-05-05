@@ -673,26 +673,40 @@ void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
 
     int n= std::get<1>(v[0]);
     for (int i = 1; i <= n; ++i) {
-        stream->printf("[%s:%1.4f,%1.4f,%1.4f]\n", wcs2gcode(i-1).c_str(), std::get<0>(v[i]), std::get<1>(v[i]), std::get<2>(v[i]));
+        stream->printf("[%s:%1.4f,%1.4f,%1.4f]\n", wcs2gcode(i-1).c_str(),
+            THEKERNEL->robot->from_millimeters(std::get<0>(v[i])),
+            THEKERNEL->robot->from_millimeters(std::get<1>(v[i])),
+            THEKERNEL->robot->from_millimeters(std::get<2>(v[i])));
     }
 
     float *rd;
     PublicData::get_value( endstops_checksum, saved_position_checksum, &rd );
-    stream->printf("[G28:%1.4f,%1.4f,%1.4f]\n",  rd[0], rd[1], rd[2]);
+    stream->printf("[G28:%1.4f,%1.4f,%1.4f]\n",
+        THEKERNEL->robot->from_millimeters(rd[0]),
+        THEKERNEL->robot->from_millimeters(rd[1]),
+        THEKERNEL->robot->from_millimeters(rd[2]));
+
     stream->printf("[G30:%1.4f,%1.4f,%1.4f]\n",  0.0F, 0.0F, 0.0F); // not implemented
 
-    stream->printf("[G92:%1.4f,%1.4f,%1.4f]\n", std::get<0>(v[n+1]), std::get<1>(v[n+1]), std::get<2>(v[n+1]));
+    stream->printf("[G92:%1.4f,%1.4f,%1.4f]\n",
+        THEKERNEL->robot->from_millimeters(std::get<0>(v[n+1])),
+        THEKERNEL->robot->from_millimeters(std::get<1>(v[n+1])),
+        THEKERNEL->robot->from_millimeters(std::get<2>(v[n+1])));
+
     if(verbose) {
-        stream->printf("[Tool Offset:%1.4f,%1.4f,%1.4f]\n", std::get<0>(v[n+2]), std::get<1>(v[n+2]), std::get<2>(v[n+2]));
+        stream->printf("[Tool Offset:%1.4f,%1.4f,%1.4f]\n",
+            THEKERNEL->robot->from_millimeters(std::get<0>(v[n+2])),
+            THEKERNEL->robot->from_millimeters(std::get<1>(v[n+2])),
+            THEKERNEL->robot->from_millimeters(std::get<2>(v[n+2])));
     }else{
-        stream->printf("[TL0:%1.4f]\n", std::get<2>(v[n+2]));
+        stream->printf("[TL0:%1.4f]\n", THEKERNEL->robot->from_millimeters(std::get<2>(v[n+2])));
     }
 
     // this is the last probe position, updated when a probe completes, also stores the number of steps moved after a homing cycle
     float px, py, pz;
     uint8_t ps;
     std::tie(px, py, pz, ps) = THEKERNEL->robot->get_last_probe_position();
-    stream->printf("[PRB:%1.4f,%1.4f,%1.4f:%d]\n", px, py, pz, ps);
+    stream->printf("[PRB:%1.4f,%1.4f,%1.4f:%d]\n", THEKERNEL->robot->from_millimeters(px), THEKERNEL->robot->from_millimeters(py), THEKERNEL->robot->from_millimeters(pz), ps);
 }
 
 void SimpleShell::get_command( string parameters, StreamOutput *stream)
@@ -802,7 +816,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             THEKERNEL->robot->inch_mode ? 20 : 21,
             THEKERNEL->robot->absolute_mode ? 90 : 91,
             get_active_tool(),
-            THEKERNEL->robot->get_feed_rate());
+            THEKERNEL->robot->from_millimeters(THEKERNEL->robot->get_feed_rate()));
 
     } else if (what == "status") {
         // also ? on serial and usb
