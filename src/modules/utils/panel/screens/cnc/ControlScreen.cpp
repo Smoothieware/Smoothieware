@@ -127,9 +127,13 @@ void ControlScreen::enter_menu_control()
 
 void ControlScreen::set_current_pos(char axis, float p)
 {
-    // change pos by issuing a G0 Xnnn
+    // change pos by issuing a G0 Xnnn in absolute mode
     char buf[32];
+    // make sure we are in absolute mode
+    THEKERNEL->robot->push_state();
+    THEKERNEL->robot->absolute_mode= true;
     int n = snprintf(buf, sizeof(buf), "G0 %c%f F%d", axis, p, (int)round(THEPANEL->get_jogging_speed(axis)));
     string g(buf, n);
     send_gcode(g);
+    THEKERNEL->robot->pop_state();
 }

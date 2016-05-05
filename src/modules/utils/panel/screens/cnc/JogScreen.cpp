@@ -31,7 +31,7 @@ JogScreen::JogScreen()
 void JogScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(7);
+    THEPANEL->setup_menu(8);
     this->refresh_menu();
 }
 
@@ -49,12 +49,13 @@ void JogScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Back");  break;
-        case 1: THEPANEL->lcd->printf("Move 10.0mm       "); break;
-        case 2: THEPANEL->lcd->printf("Move  1.0mm       "); break;
-        case 3: THEPANEL->lcd->printf("Move  0.1mm       "); break;
-        case 4: THEPANEL->lcd->printf("Move  0.01mm      "); break;
-        case 5: THEPANEL->lcd->printf("MPG mode          "); break;
-        case 6: THEPANEL->lcd->printf("Feed Rates        "); break;
+        case 1: THEPANEL->lcd->printf("Move 10.0       "); break;
+        case 2: THEPANEL->lcd->printf("Move  1.0       "); break;
+        case 3: THEPANEL->lcd->printf("Move  0.1       "); break;
+        case 4: THEPANEL->lcd->printf("Move  0.01      "); break;
+        case 5: THEPANEL->lcd->printf("Move  0.001     "); break;
+        case 6: THEPANEL->lcd->printf("MPG mode        "); break;
+        case 7: THEPANEL->lcd->printf("Feed Rates      "); break;
     }
 }
 
@@ -63,17 +64,18 @@ void JogScreen::clicked_menu_entry(uint16_t line)
     bool dojog= true;
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); return;
-        case 1: this->control_screen->set_jog_increment(10.0); break;
-        case 2: this->control_screen->set_jog_increment(1.0); break;
-        case 3: this->control_screen->set_jog_increment(0.1); break;
-        case 4: this->control_screen->set_jog_increment(0.01); break;
-        case 5: {
+        case 1: this->control_screen->set_jog_increment(10.0F); break;
+        case 2: this->control_screen->set_jog_increment(1.0F); break;
+        case 3: this->control_screen->set_jog_increment(0.1F); break;
+        case 4: this->control_screen->set_jog_increment(0.01F); break;
+        case 5: this->control_screen->set_jog_increment(0.001F); break;
+        case 6: {
             auto djs = new DirectJogScreen();
             djs->set_parent(this);
             THEPANEL->enter_screen(djs); // self deleting
             dojog= false;
         } break;
-        case 6:
+        case 7:
             set_feed_rates();
             dojog= false;
     }
