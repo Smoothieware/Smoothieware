@@ -113,7 +113,7 @@ void ControlScreen::enter_axis_control(char axis)
     THEPANEL->set_control_value(this->pos[axis - 'X']);
     THEPANEL->lcd->clear();
     THEPANEL->lcd->setCursor(0, 0);
-    THEPANEL->lcd->printf("Jog %6.2f", jog_increment);
+    THEPANEL->lcd->printf("Jog %6.3f", jog_increment);
 
     THEPANEL->lcd->setCursor(0, 2);
     this->display_axis_line(this->controlled_axis);
