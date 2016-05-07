@@ -52,19 +52,16 @@ void ProbeScreen::on_enter()
 
 void ProbeScreen::on_refresh()
 {
-    if(this->probing) {
-        if ( THEPANEL->click() ) {
-            // abort
-            THEKERNEL->call_event(ON_HALT, nullptr);
-            THEPANEL->enter_screen(nullptr);
-        }
-        return;
-    }
-
     if ( THEPANEL->menu_change() ) {
         this->refresh_menu();
     }
+
     if ( THEPANEL->click() ) {
+        if(this->probing) {
+            // abort
+            THEKERNEL->call_event(ON_HALT, nullptr);
+            display_result= true;
+        }
         this->clicked_menu_entry(this->display_result ? 0 : THEPANEL->get_menu_current_line());
     }
 
@@ -121,7 +118,6 @@ void ProbeScreen::clicked_menu_entry(uint16_t line)
     }
 
     if(do_status || do_probe) THEPANEL->enter_nop_mode();
-
 }
 
 // queuing commands needs to be done from main loop
@@ -148,6 +144,8 @@ void ProbeScreen::on_main_loop()
         message.message = cmd;
         message.stream = &string_stream;
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        if(THEKERNEL->is_halted()) return;
+
         THEPANEL->lcd->clear();
         THEPANEL->lcd->setCursor(0, 0);
         THEPANEL->lcd->printf("Probing complete... ");
