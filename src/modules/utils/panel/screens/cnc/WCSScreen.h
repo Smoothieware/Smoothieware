@@ -5,34 +5,22 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef MAINMENUSCREEN_H
-#define MAINMENUSCREEN_H
+#pragma once
 
 #include "PanelScreen.h"
 
-class MainMenuScreen : public PanelScreen {
-    public:
-        MainMenuScreen();
-        void on_refresh();
-        void on_enter();
-        void display_menu_line(uint16_t line);
-        void clicked_menu_entry(uint16_t line);
-        PanelScreen * get_watch_screen() const { return watch_screen; }
-        friend class Panel;
+#include <string>
 
-    private:
-        PanelScreen* watch_screen;
-        PanelScreen* file_screen;
-        PanelScreen* jog_screen;
-        PanelScreen* prepare_screen;
+class WCSScreen : public PanelScreen
+{
+public:
+    WCSScreen();
+    virtual ~WCSScreen();
 
-        void abort_playing();
-        void setupConfigureScreen();
+    void on_refresh();
+    void on_enter();
+    void on_exit();
+    void display_menu_line(uint16_t line);
+    void clicked_menu_entry(uint16_t line);
+
 };
-
-
-
-
-
-
-#endif

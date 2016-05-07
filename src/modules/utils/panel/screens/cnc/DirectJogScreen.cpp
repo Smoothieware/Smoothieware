@@ -20,6 +20,7 @@
 #include "LcdBase.h"
 #include "StepperMotor.h"
 #include "BaseSolution.h"
+#include "mbed.h"
 
 #include <math.h>
 #include <stdio.h>

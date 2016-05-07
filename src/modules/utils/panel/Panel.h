@@ -8,13 +8,11 @@
 #ifndef PANEL_H
 #define PANEL_H
 
+#include "Module.h"
 #include "Button.h"
 #include "Pin.h"
-#include "mbed.h"
 #include <string>
 #include <functional>
-
-using std::string;
 
 #define THEPANEL Panel::instance
 
@@ -52,6 +50,7 @@ class Panel : public Module {
         int get_encoder_resolution() const { return encoder_click_resolution; }
 
         // Menu
+        void enter_nop_mode();
         void enter_menu_mode(bool force= false);
         void setup_menu(uint16_t rows, uint16_t lines);
         void setup_menu(uint16_t rows);
@@ -73,10 +72,10 @@ class Panel : public Module {
         // file playing from sd
         bool is_playing() const;
         bool is_suspended() const;
-        void set_playing_file(string f);
+        void set_playing_file(std::string f);
         const char* get_playing_file() { return playing_file; }
 
-        string getMessage() { return message; }
+        std::string getMessage() { return message; }
         bool hasMessage() { return message.size() > 0; }
 
         uint16_t get_screen_lines() const { return screen_lines; }
@@ -131,7 +130,7 @@ class Panel : public Module {
         float default_hotend_temperature;
         float default_bed_temperature;
 
-        string message;
+        std::string message;
         encoder_cb_t encoder_cb_fnc;
 
         uint16_t screen_lines;

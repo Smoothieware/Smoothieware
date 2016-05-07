@@ -13,6 +13,7 @@ using std::string;
 #include <string.h>
 #include <functional>
 #include <stack>
+#include <vector>
 
 #include "libs/Module.h"
 #include "ActuatorCoordinates.h"

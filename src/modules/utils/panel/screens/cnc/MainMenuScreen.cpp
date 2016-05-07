@@ -79,12 +79,6 @@ void MainMenuScreen::setupConfigureScreen()
         1.0F
         );
 
-    mvs->addMenuItem("Z Home Ofs",
-        []() -> float { void *rd; PublicData::get_value( endstops_checksum, home_offset_checksum, &rd ); return rd==nullptr ? 0.0F : ((float*)rd)[2]; },
-        [this](float v) { send_gcode("M206", 'Z', v); },
-        0.01F
-        );
-
     mvs->addMenuItem("Contrast",
         []() -> float { return THEPANEL->lcd->getContrast(); },
         [this](float v) { THEPANEL->lcd->setContrast(v); },

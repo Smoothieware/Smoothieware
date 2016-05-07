@@ -70,6 +70,7 @@ Panel* Panel::instance= nullptr;
 #define MENU_MODE                  0
 #define CONTROL_MODE               1
 #define DIRECT_ENCODER_MODE        2
+#define NOP_MODE                   3
 
 Panel::Panel()
 {
@@ -203,6 +204,9 @@ void Panel::enter_screen(PanelScreen *screen)
     if(this->current_screen != nullptr)
         this->current_screen->on_exit();
 
+    if(screen == nullptr) {
+        screen= top_screen;
+    }
     this->current_screen = screen;
     this->reset_counter();
     this->current_screen->on_enter();
@@ -469,6 +473,11 @@ bool Panel::click()
     } else {
         return false;
     }
+}
+
+void Panel::enter_nop_mode()
+{
+    this->mode = NOP_MODE;
 }
 
 // Enter menu mode

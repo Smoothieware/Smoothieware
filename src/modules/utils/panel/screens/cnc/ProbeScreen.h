@@ -28,7 +28,9 @@ class ProbeScreen : public PanelScreen {
       std::string result;
       struct {
         bool do_probe:1;
+        bool probing:1;
         bool do_status:1;
+        bool display_result:1;
         bool new_result:1;
         bool probe_dir:1;
         uint8_t probe_axis:2;

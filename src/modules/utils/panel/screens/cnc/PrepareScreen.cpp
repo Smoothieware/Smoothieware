@@ -17,6 +17,7 @@
 #include "PublicDataRequest.h"
 #include "PublicData.h"
 #include "ModifyValuesScreen.h"
+#include "WCSScreen.h"
 
 #include <string>
 using namespace std;
@@ -28,7 +29,7 @@ PrepareScreen::PrepareScreen()
 void PrepareScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(10);
+    THEPANEL->setup_menu(11);
     this->refresh_menu();
 }
 
@@ -53,8 +54,9 @@ void PrepareScreen::display_menu_line(uint16_t line)
         case 5: THEPANEL->lcd->printf("Spindle on"     ); break;
         case 6: THEPANEL->lcd->printf("Spindle off"    ); break;
         case 7: THEPANEL->lcd->printf("Motors off"     ); break;
-        case 8: THEPANEL->lcd->printf("millimeters"    ); break;
-        case 9: THEPANEL->lcd->printf("inches"         ); break;
+        case 8: THEPANEL->lcd->printf("Coordinate system"); break;
+        case 9: THEPANEL->lcd->printf("millimeters"    ); break;
+        case 10: THEPANEL->lcd->printf("inches"        ); break;
     }
 }
 
@@ -69,7 +71,9 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
         case 5: send_command("M3"); break;
         case 6: send_command("M5"); break;
         case 7: send_command("M84"); break;
-        case 8: send_command("G21"); break;
-        case 9: send_command("G20"); break;
+        case 8: THEPANEL->enter_screen((new WCSScreen())->set_parent(this)); break; // self deleteing
+        case 9: send_command("G21"); break;
+        case 10: send_command("G20"); break;
     }
 }
+
