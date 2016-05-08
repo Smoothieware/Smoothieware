@@ -245,7 +245,7 @@ void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
         (m->*kernel_callback_functions[id_event])(argument);
     }
 
-    if(id_event == ON_HALT && !was_idle) {
+    if(id_event == ON_HALT && this->halted && !was_idle) {
         // we need to try to correct current positions if we were running
         this->robot->reset_position_from_current_actuator_position();
     }

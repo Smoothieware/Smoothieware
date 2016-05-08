@@ -14,6 +14,7 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "Robot.h"
+#include "Conveyor.h"
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "NetworkPublicAccess.h"
@@ -194,7 +195,10 @@ void WatchScreen::display_menu_line(uint16_t line)
         case 1: THEPANEL->lcd->printf("X %8.3f %8.3f", wpos[0], mpos[0]); break;
         case 2: THEPANEL->lcd->printf("Y %8.3f %8.3f", wpos[1], mpos[1]); break;
         case 3: THEPANEL->lcd->printf("Z %8.3f %8.3f", wpos[2], mpos[2]); break;
-        case 4: THEPANEL->lcd->printf("WCS %s FR %6.1f", this->wcs.c_str(), THEKERNEL->robot->from_millimeters(THEKERNEL->robot->get_feed_rate())); break;
+        case 4: THEPANEL->lcd->printf("%s F%6.1f/%6.1f", this->wcs.c_str(), // display requested feedrate and actual feedrate
+            THEKERNEL->robot->from_millimeters(THEKERNEL->robot->get_feed_rate()),
+            THEKERNEL->robot->from_millimeters(THEKERNEL->conveyor->get_current_feedrate()));
+            break;
         case 5: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
         case 6: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
