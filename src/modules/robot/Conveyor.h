@@ -52,7 +52,7 @@ private:
 
     Queue_t queue;  // Queue of Blocks
     volatile unsigned int gc_pending;
-    float current_feedrate{0}; // actual nominal feedrate that current block is running at
+    float current_feedrate{0}; // actual nominal feedrate that current block is running at in mm/sec
 
     struct {
         volatile bool running:1;
