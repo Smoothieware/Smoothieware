@@ -81,8 +81,9 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"calc_thermistor", SimpleShell::calc_thermistor_command},
     {"thermistors", SimpleShell::print_thermistors_command},
     {"md5sum",   SimpleShell::md5sum_command},
+#ifdef CNC
     {"test",     SimpleShell::test_command},
-
+#endif
     // unknown command
     {NULL, NULL}
 };
@@ -928,6 +929,7 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
     fclose(lp);
 }
 
+#ifdef CNC
 // runs several types of test on the mechanisms
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
@@ -1048,7 +1050,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         stream->printf(" test circle radius segments iterations [feedrate]\n");
     }
 }
-
+#endif
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
 {
