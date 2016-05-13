@@ -112,6 +112,7 @@ endif
 # CNC build
 ifeq "$(CNC)" "1"
 	CPPSRCS21 = $(filter-out $(SRC)/modules/utils/panel/screens/3dprinter/%,$(CPPSRCS2))
+	DEFINES += -DCNC
 else
 	CPPSRCS21 = $(filter-out $(SRC)/modules/utils/panel/screens/cnc/%,$(CPPSRCS2))
 endif
