@@ -111,10 +111,6 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
     // average travel per step event changes. For a line along one axis the travel per step event
     // is equal to the travel/step in the particular axis. For a 45 degree line the steppers of both
     // axes might step for every step event. Travel per step event is then sqrt(travel_x^2+travel_y^2).
-    // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
-    // specifically for each line to compensate for this phenomenon:
-    // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = (block->steps_event_count * acceleration) / (distance * THEKERNEL->acceleration_ticks_per_second); // (step/min/acceleration_tick)
 
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction

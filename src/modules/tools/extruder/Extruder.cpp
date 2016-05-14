@@ -668,35 +668,6 @@ void Extruder::acceleration_tick(void)
     return;
 }
 
-// Speed has been updated for the robot's stepper, we must update accordingly
-void Extruder::on_speed_change( void *argument )
-{
-    // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if(!this->enabled || this->current_block == NULL || this->mode != FOLLOW || !this->stepper_motor->is_moving()) {
-        return;
-    }
-
-    // if we are flushing the queue we need to stop the motor when it has decelerated to zero, we get this call with argumnet == 0 when this happens
-    // this is what steppermotor does
-    if(argument == 0) {
-        this->stepper_motor->move(0, 0);
-        this->current_block->release();
-        this->current_block = NULL;
-        return;
-    }
-
-    /*
-    * nominal block duration = current block's steps / ( current block's nominal rate )
-    * nominal extruder rate = extruder steps / nominal block duration
-    * actual extruder rate = nominal extruder rate * ( ( stepper's steps per second ) / ( current block's nominal rate ) )
-    * or actual extruder rate = ( ( extruder steps * ( current block's nominal_rate ) ) / current block's steps ) * ( ( stepper's steps per second ) / ( current block's nominal rate ) )
-    * or simplified : extruder steps * ( stepper's steps per second ) ) / current block's steps
-    * or even : ( stepper steps per second ) * ( extruder steps / current block's steps )
-    */
-
-    this->stepper_motor->set_speed(THEKERNEL->stepper->get_trapezoid_adjusted_rate() * (float)this->stepper_motor->get_steps_to_move() / (float)this->current_block->steps_event_count);
-}
-
 // When the stepper has finished it's move
 uint32_t Extruder::stepper_motor_finished_move(uint32_t dummy)
 {

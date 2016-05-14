@@ -8,7 +8,6 @@
 #ifndef STEPPERMOTOR_H
 #define STEPPERMOTOR_H
 
-#include "libs/Hook.h"
 #include "Pin.h"
 #include <atomic>
 #include <functional>
@@ -22,19 +21,17 @@ class StepperMotor {
         StepperMotor(Pin& step, Pin& dir, Pin& en);
         ~StepperMotor();
 
-        void step();
-        inline void unstep() { step_pin.set(0); };
+        inline void step() { current_position_steps += (direction?-1:1); step_pin.set( 1 ); }
+        inline void unstep() { step_pin.set(0); }
+        inline void set_direction(bool f) { direction= f; dir_pin.set(f); }
 
         inline void enable(bool state) { en_pin.set(!state); };
 
         bool is_moving() const { return moving; }
         bool which_direction() const { return direction; }
-        void move_finished();
-        StepperMotor* move( bool direction, unsigned int steps, float initial_speed= -1.0F);
-        void signal_move_finished();
-        StepperMotor* set_speed( float speed );
-        void set_moved_last_block(bool flg) { last_step_tick_valid= flg; }
-        void update_exit_tick();
+//        void move_finished();
+//        StepperMotor* move( bool direction, unsigned int steps, float initial_speed= -1.0F);
+//        StepperMotor* set_speed( float speed );
 
         float get_steps_per_second()  const { return steps_per_second; }
         float get_steps_per_mm()  const { return steps_per_mm; }
@@ -44,19 +41,10 @@ class StepperMotor {
         float get_current_position(void) const { return (float)current_position_steps/steps_per_mm; }
         float get_max_rate(void) const { return max_rate; }
         void set_max_rate(float mr) { max_rate= mr; }
-        float get_min_rate(void) const { return minimum_step_rate; }
-        void set_min_rate(float mr) { minimum_step_rate= mr; }
 
         int  steps_to_target(float);
-        uint32_t get_steps_to_move() const { return steps_to_move; }
         uint32_t get_stepped() const { return stepped; }
         void force_finish_move() { force_finish= true; }
-
-        template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
-            Hook* hook = new Hook();
-            hook->attach(optr, fptr);
-            this->end_hook = hook;
-        }
 
         friend class StepTicker;
         friend class Stepper;
@@ -67,7 +55,6 @@ class StepperMotor {
         void init();
 
         int index;
-        Hook* end_hook;
 
         Pin step_pin;
         Pin dir_pin;
@@ -83,36 +70,12 @@ class StepperMotor {
         int32_t last_milestone_steps;
         float   last_milestone_mm;
 
-        uint32_t steps_to_move;
-        uint32_t stepped;
-        uint32_t last_step_tick;
-        uint32_t signal_step;
-
-        // set to 32 bit fixed point, 18:14 bits fractional
-        static const uint32_t fx_shift= 14;
-        static const uint32_t fx_increment= ((uint32_t)1<<fx_shift);
-        uint32_t fx_counter;
-        uint32_t fx_ticks_per_step;
-
+        uint32_t stepped; // TBD may not be needed
         volatile struct {
             volatile bool is_move_finished:1; // Whether the move just finished
             volatile bool moving:1;
             volatile bool force_finish:1; // set to force a move to finish early
             bool direction:1;
-            bool last_step_tick_valid:1; // set if the last step tick time is valid (ie the motor moved last block)
-        };
-
-        // Called a great many times per second, to step if we have to now
-        inline bool tick() {
-            // increase the ( 32 fixed point 18:14 ) counter by one tick 11t
-            fx_counter += fx_increment;
-
-            // if we are to step now
-            if (fx_counter >= fx_ticks_per_step){
-                step();
-                return true;
-            }
-            return false;
         };
 };
 

@@ -25,25 +25,18 @@ public:
     void on_gcode_received(void *argument);
     void on_halt(void *argument);
 
-    void trapezoid_generator_reset();
-    void set_step_events_per_second(float);
-    void trapezoid_generator_tick(void);
-    uint32_t stepper_motor_finished_move(uint32_t dummy);
-    int config_step_timer( int cycles );
     void turn_enable_pins_on();
     void turn_enable_pins_off();
 
-    float get_trapezoid_adjusted_rate() const { return trapezoid_adjusted_rate; }
     const Block *get_current_block() const { return current_block; }
 
 private:
+    void stepper_motor_finished_move();
+
     Block *current_block;
-    float trapezoid_adjusted_rate;
-    StepperMotor *main_stepper;
 
     struct {
         bool enable_pins_status:1;
-        bool force_speed_update:1;
     };
 
 };

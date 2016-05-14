@@ -49,12 +49,15 @@ class Block {
         float millimeters;        // Distance for this move
         float entry_speed;
         float exit_speed;
-        float rate_delta;         // Number of steps to add to the speed for each acceleration tick
         float acceleration;       // the acceleratoin for this block
         uint32_t initial_rate;       // Initial speed in steps per second
-        uint32_t final_rate;         // Final speed in steps per second
         uint32_t accelerate_until;   // Stop accelerating after this number of steps
         uint32_t decelerate_after;   // Start decelerating after this number of steps
+        float maximum_rate;
+
+        float acceleration_per_tick{0};
+        float deceleration_per_tick {0};
+        uint32_t total_move_ticks{0};
 
         float max_entry_speed;
 

@@ -7,61 +7,77 @@
 
 
 
-#ifndef STEPTICKER_H
-#define STEPTICKER_H
+#pragma once
 
 #include <stdint.h>
-#include <vector>
+#include <array>
 #include <bitset>
 #include <functional>
 #include <atomic>
 
+#include "ActuatorCoordinates.h"
+
 class StepperMotor;
+class Block;
 
 class StepTicker{
     public:
-        static StepTicker* global_step_ticker;
-
         StepTicker();
         ~StepTicker();
         void set_frequency( float frequency );
         void signal_a_move_finished();
-        void set_reset_delay( float seconds );
+        void set_unstep_time( float microseconds );
         int register_motor(StepperMotor* motor);
-        void add_motor_to_active_list(StepperMotor* motor);
-        void remove_motor_from_active_list(StepperMotor* motor);
-        void set_acceleration_ticks_per_second(uint32_t acceleration_ticks_per_second);
         float get_frequency() const { return frequency; }
         void unstep_tick();
-        uint32_t get_tick_cnt() const { return tick_cnt; }
-        uint32_t ticks_since(uint32_t last) const { return (tick_cnt>=last) ? tick_cnt-last : (UINT32_MAX-last) + tick_cnt + 1; }
 
         void TIMER0_IRQHandler (void);
         void PendSV_IRQHandler (void);
-        void register_acceleration_tick_handler(std::function<void(void)> cb){
-            acceleration_tick_handlers.push_back(cb);
-        }
-        void acceleration_tick();
-        void synchronize_acceleration(bool fire_now);
 
         void start();
+        void copy_block(Block *block);
+        void set_next_block(Block *block) { next_block= block; }
+        bool is_next_block() const { return next_block != nullptr; }
 
-        friend class StepperMotor;
+        // whatever setup the block should register this to know when it is done
+        std::function<void()> finished_fnc{nullptr};
+
+        static StepTicker *getInstance() { return instance; }
 
     private:
+        static StepTicker *instance;
+
         float frequency;
         uint32_t period;
-        volatile uint32_t tick_cnt;
-        std::vector<std::function<void(void)>> acceleration_tick_handlers;
-        std::vector<StepperMotor*> motor;
-        std::bitset<32> active_motor; // limit to 32 motors
-        std::bitset<32> unstep;       // limit to 32 motors
+        std::array<StepperMotor*, k_max_actuators> motor;
         std::atomic_uchar do_move_finished;
+        std::bitset<k_max_actuators> unstep;
 
-        uint8_t num_motors;
-        volatile bool a_move_finished;
+        // this is tick info needed for this block. applies to all motors
+        struct block_info_t {
+            uint32_t accelerate_until;
+            uint32_t decelerate_after;
+            uint32_t maximum_rate;
+            uint32_t deceleration_per_tick;
+            uint32_t total_move_ticks;
+        };
+        block_info_t block_info;
+        Block *next_block{nullptr};
+
+        // this is the data needed to determine when each motor needs to be issued a step
+        struct tickinfo_t {
+            float steps_per_tick; // 2.30 fixed point
+            float counter; // 2.30 fixed point
+            float acceleration_change; // 1.30 fixed point signed
+            float axis_ratio;
+            uint32_t steps_to_move;
+            uint32_t step_count;
+            uint32_t next_accel_event;
+        };
+        std::array<tickinfo_t, k_max_actuators> tick_info;
+
+        struct {
+            volatile bool move_issued:1;
+            uint8_t num_motors:4;
+        };
 };
-
-
-
-#endif
