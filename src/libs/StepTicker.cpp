@@ -26,6 +26,11 @@ extern GPIO stepticker_debug_pin;
 
 StepTicker *StepTicker::instance;
 
+// handle 2.30 Fixed point
+#define FPSCALE (1<<30)
+#define TOFP(x) ((int32_t)roundf((float)(x)*FPSCALE))
+#define FROMFP(x) ((float)(x)/FPSCALE)
+
 StepTicker::StepTicker()
 {
     instance = this; // setup the Singleton instance of the stepticker
@@ -129,8 +134,6 @@ void StepTicker::step_tick (void)
         copy_block(b);
     }
 
-    current_tick++; // count number of ticks
-
     bool still_moving = false;
 
     // foreach motor, if it is active see if time to issue a step to that motor
@@ -159,14 +162,14 @@ void StepTicker::step_tick (void)
 
         // protect against rounding errors and such
         if(tick_info[m].steps_per_tick <= 0) {
-            tick_info[m].counter = (1<<30); // we complete this step
+            tick_info[m].counter = FPSCALE; // we force completion this step by setting to 1.0
             tick_info[m].steps_per_tick = 0;
         }
 
         tick_info[m].counter += tick_info[m].steps_per_tick;
 
-        if(tick_info[m].counter >= (1<<30)) { // > 1.0 step time
-            tick_info[m].counter -= (1<<30); // -= 1.0F;
+        if(tick_info[m].counter >= FPSCALE) { // > 1.0 step time
+            tick_info[m].counter -= FPSCALE; // -= 1.0F;
             ++tick_info[m].step_count;
 
             // step the motor
@@ -180,6 +183,9 @@ void StepTicker::step_tick (void)
             }
         }
     }
+
+    // do this after so we start at tick 0
+    current_tick++; // count number of ticks
 
     // We may have set a pin on in this tick, now we reset the timer to set it off
     // Note there could be a race here if we run another tick before the unsteps have happened,
@@ -211,7 +217,7 @@ void StepTicker::step_tick (void)
             #endif
 
         } else {
-            move_issued = false; // nothing to do as no more blocks
+            move_issued = false; // nothing to do as no more jobs
         }
 
         // all moves finished
@@ -221,6 +227,7 @@ void StepTicker::step_tick (void)
     }
 }
 
+// this takes about 20us, so we may miss two ticks, we can make this up if needed
 // called in ISR if running, else can be called from anything to start
 void StepTicker::copy_block(Block *block)
 {
@@ -239,7 +246,7 @@ void StepTicker::copy_block(Block *block)
         motor[m]->set_direction(block->direction_bits[m]);
 
         float aratio = inv * steps;
-        tick_info[m].steps_per_tick = floorf(((block->initial_rate * aratio) / frequency) * (1<<30)); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
+        tick_info[m].steps_per_tick = TOFP((block->initial_rate * aratio) / frequency); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
         tick_info[m].counter = 0; // 2.30 fixed point
         tick_info[m].step_count = 0;
         tick_info[m].next_accel_event = block->total_move_ticks + 1;
@@ -259,9 +266,9 @@ void StepTicker::copy_block(Block *block)
         }
 
         // convert to fixed point after scaling
-        tick_info[m].acceleration_change= floorf((acceleration_change * aratio) * (1<<30));
-        tick_info[m].deceleration_change= -floorf((block->deceleration_per_tick * aratio) * (1<<30));
-        tick_info[m].plateau_rate= floorf(((block->maximum_rate * aratio) / frequency) * (1<<30));
+        tick_info[m].acceleration_change= TOFP(acceleration_change * aratio);
+        tick_info[m].deceleration_change= -TOFP(block->deceleration_per_tick * aratio);
+        tick_info[m].plateau_rate= TOFP((block->maximum_rate * aratio) / frequency);
     }
     move_issued = true;
     stepticker_debug_pin = 0;

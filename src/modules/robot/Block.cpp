@@ -119,7 +119,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // Now this is the maximum rate we'll achieve this move, either because
     // it's the higher we can achieve, or because it's the higher we are
     // allowed to achieve
-    this->maximum_rate = std::min(maximum_possible_rate, (float)this->nominal_rate);
+    this->maximum_rate = std::min(maximum_possible_rate, this->nominal_rate);
 
     // Now figure out how long it takes to accelerate in seconds
     float time_to_accelerate = ( this->maximum_rate - initial_rate ) / acceleration_per_second;
@@ -171,10 +171,6 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 
     float acceleration_in_steps = (acceleration_time > 0.0F ) ? ( this->maximum_rate - initial_rate ) / acceleration_time : 0;
     float deceleration_in_steps =  (deceleration_time > 0.0F ) ? ( this->maximum_rate - final_rate ) / deceleration_time : 0;
-
-    // Note we use this value for acceleration as well as for deceleration, if that doesn't work, we can also as well compute the deceleration value this way :
-    // float deceleration(steps/s²) = ( final_rate(steps/s) - maximum_rate(steps/s) ) / acceleration_time(s);
-    // and store that in the block and use it for deceleration, which -will- yield better results, but may not be useful. If the moves do not end correctly, try computing this value, adding it to the block, and then using it for deceleration in the step generator
 
     // Now figure out the two acceleration ramp change events in ticks
     this->accelerate_until = acceleration_ticks;

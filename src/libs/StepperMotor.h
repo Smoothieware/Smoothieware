@@ -8,11 +8,6 @@
 #pragma once
 
 #include "Pin.h"
-#include <atomic>
-#include <functional>
-
-class StepTicker;
-class Hook;
 
 class StepperMotor {
     public:
