@@ -68,10 +68,8 @@ void StepTicker::set_frequency( float frequency )
     this->frequency = frequency;
     this->period = floorf((SystemCoreClock / 4.0F) / frequency); // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM0->MR0 = this->period;
-    if( LPC_TIM0->TC > LPC_TIM0->MR0 ) {
-        LPC_TIM0->TCR = 3;  // Reset
-        LPC_TIM0->TCR = 1;  // Reset
-    }
+    LPC_TIM0->TCR = 3;  // Reset
+    LPC_TIM0->TCR = 1;  // start
 }
 
 // Set the reset delay
@@ -101,41 +99,28 @@ extern "C" void TIMER1_IRQHandler (void)
 // The actual interrupt handler where we do all the work
 extern "C" void TIMER0_IRQHandler (void)
 {
-    StepTicker::getInstance()->TIMER0_IRQHandler();
+    // Reset interrupt register
+    LPC_TIM0->IR |= 1 << 0;
+    StepTicker::getInstance()->step_tick();
 }
 
 extern "C" void PendSV_Handler(void)
 {
-    StepTicker::getInstance()->PendSV_IRQHandler();
+    StepTicker::getInstance()->handle_finish();
 }
 
 // slightly lower priority than TIMER0, the whole end of block/start of block is done here allowing the timer to continue ticking
-void StepTicker::PendSV_IRQHandler (void)
+void StepTicker::handle_finish (void)
 {
-
-    if(this->do_move_finished.load() > 0) {
-        this->do_move_finished--;
-#ifdef STEPTICKER_DEBUG_PIN
-        stepticker_debug_pin = 1;
-#endif
-
     // all moves finished signal block is finished
     if(finished_fnc) finished_fnc();
-
-#ifdef STEPTICKER_DEBUG_PIN
-        stepticker_debug_pin = 0;
-#endif
-    }
 }
 
 
 // step clock
-void StepTicker::TIMER0_IRQHandler (void)
+void StepTicker::step_tick (void)
 {
     static uint32_t current_tick = 0;
-
-    // Reset interrupt register
-    LPC_TIM0->IR |= 1 << 0;
 
     if(!move_issued) return; // if nothing has been setup we ignore the ticks
 
@@ -143,6 +128,9 @@ void StepTicker::TIMER0_IRQHandler (void)
 
     bool still_moving = false;
 
+    // currently taking 13us when no step, and 20 when 1 step
+    // 21us when two motors and 36 when step
+    stepticker_debug_pin = 1;
     // foreach motor, if it is active see if time to issue a step to that motor
     for (uint8_t m = 0; m < num_motors; m++) {
         if(tick_info[m].steps_to_move == 0) continue; // not active
@@ -155,27 +143,28 @@ void StepTicker::TIMER0_IRQHandler (void)
                 tick_info[m].acceleration_change = 0;
                 if(block_info.decelerate_after < block_info.total_move_ticks) {
                     tick_info[m].next_accel_event = block_info.decelerate_after;
-                    if(current_tick != block_info.decelerate_after) { // We start decelerating
-                        tick_info[m].steps_per_tick = (tick_info[m].axis_ratio * block_info.maximum_rate) / frequency; // steps/sec / tick frequency to get steps per tick
+                    if(current_tick != block_info.decelerate_after) { // We are plateauing
+                        // steps/sec / tick frequency to get steps per tick
+                        tick_info[m].steps_per_tick = tick_info[m].plateau_rate;
                     }
                 }
             }
 
             if(current_tick == block_info.decelerate_after) { // We start decelerating
-                tick_info[m].acceleration_change = -block_info.deceleration_per_tick * tick_info[m].axis_ratio;
+                tick_info[m].acceleration_change = tick_info[m].deceleration_change;
             }
         }
 
         // protect against rounding errors and such
         if(tick_info[m].steps_per_tick <= 0) {
-            tick_info[m].counter = 1.0F; // we complete this step
+            tick_info[m].counter = (1<<30); // we complete this step
             tick_info[m].steps_per_tick = 0;
         }
 
         tick_info[m].counter += tick_info[m].steps_per_tick;
 
-        if(tick_info[m].counter >= 1.0F) { // step time
-            tick_info[m].counter -= 1.0F;
+        if(tick_info[m].counter >= (1<<30)) { // > 1.0 step time
+            tick_info[m].counter -= (1<<30); // -= 1.0F;
             ++tick_info[m].step_count;
 
             // step the motor
@@ -189,6 +178,7 @@ void StepTicker::TIMER0_IRQHandler (void)
             }
         }
     }
+    stepticker_debug_pin = 0;
 
     // We may have set a pin on in this tick, now we reset the timer to set it off
     // Note there could be a race here if we run another tick before the unsteps have happened,
@@ -200,15 +190,23 @@ void StepTicker::TIMER0_IRQHandler (void)
     }
 
     if(!still_moving) {
+        // all moves finished
         current_tick = 0;
 
         // get next static block and tick info from next block
         // do it here so there is no delay in ticks
         if(next_block != nullptr) {
+            #ifdef STEPTICKER_DEBUG_PIN
+            stepticker_debug_pin = 1;
+            #endif
+
             // copy data
             copy_block(next_block);
             next_block = nullptr;
 
+            #ifdef STEPTICKER_DEBUG_PIN
+            stepticker_debug_pin = 0;
+            #endif
         } else {
             move_issued = false; // nothing to do as no more blocks
         }
@@ -225,8 +223,6 @@ void StepTicker::copy_block(Block *block)
 {
     block_info.accelerate_until = block->accelerate_until;
     block_info.decelerate_after = block->decelerate_after;
-    block_info.maximum_rate = block->maximum_rate;
-    block_info.deceleration_per_tick = block->deceleration_per_tick;
     block_info.total_move_ticks = block->total_move_ticks;
 
     float inv = 1.0F / block->steps_event_count;
@@ -239,25 +235,29 @@ void StepTicker::copy_block(Block *block)
         motor[m]->set_direction(block->direction_bits[m]);
 
         float aratio = inv * steps;
-        tick_info[m].steps_per_tick = (block->initial_rate * aratio) / frequency; // steps/sec / tick frequency to get steps per tick; // 2.30 fixed point
+        tick_info[m].steps_per_tick = floorf(((block->initial_rate * aratio) / frequency) * (1<<30)); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
         tick_info[m].counter = 0; // 2.30 fixed point
-        tick_info[m].axis_ratio = aratio;
         tick_info[m].step_count = 0;
         tick_info[m].next_accel_event = block->total_move_ticks + 1;
-        tick_info[m].acceleration_change = 0;
+
+        float acceleration_change = 0;
         if(block->accelerate_until != 0) { // If the next accel event is the end of accel
             tick_info[m].next_accel_event = block->accelerate_until;
-            tick_info[m].acceleration_change = block->acceleration_per_tick;
+            acceleration_change = block->acceleration_per_tick;
 
         } else if(block->decelerate_after == 0 /*&& block->accelerate_until == 0*/) {
             // we start off decelerating
-            tick_info[m].acceleration_change = -block->deceleration_per_tick;
+            acceleration_change = -block->deceleration_per_tick;
 
         } else if(block->decelerate_after != block->total_move_ticks /*&& block->accelerate_until == 0*/) {
             // If the next event is the start of decel ( don't set this if the next accel event is accel end )
             tick_info[m].next_accel_event = block->decelerate_after;
         }
-        tick_info[m].acceleration_change *= aratio;
+
+        // convert to fixed point after scaling
+        tick_info[m].acceleration_change= floorf((acceleration_change * aratio) * (1<<30));
+        tick_info[m].deceleration_change= -floorf((block->deceleration_per_tick * aratio) * (1<<30));
+        tick_info[m].plateau_rate= floorf(((block->maximum_rate * aratio) / frequency) * (1<<30));
     }
     move_issued = true;
 }

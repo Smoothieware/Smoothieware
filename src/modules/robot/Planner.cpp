@@ -101,7 +101,7 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
     // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
     if( distance > 0.0F ) {
         block->nominal_speed = rate_mm_s;           // (mm/s) Always > 0
-        block->nominal_rate = ceilf(block->steps_event_count * rate_mm_s / distance); // (step/s) Always > 0
+        block->nominal_rate = block->steps_event_count * rate_mm_s / distance; // (step/s) Always > 0
     } else {
         block->nominal_speed = 0.0F;
         block->nominal_rate  = 0;
@@ -272,9 +272,8 @@ void Planner::recalculate()
 // acceleration within the allotted distance.
 float Planner::max_allowable_speed(float acceleration, float target_velocity, float distance)
 {
-    return(
-              sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance) //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
-          );
+    // Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    return(sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance));
 }
 
 

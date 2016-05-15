@@ -29,10 +29,10 @@ class StepTicker{
         void set_unstep_time( float microseconds );
         int register_motor(StepperMotor* motor);
         float get_frequency() const { return frequency; }
-        void unstep_tick();
 
-        void TIMER0_IRQHandler (void);
-        void PendSV_IRQHandler (void);
+        void unstep_tick();
+        void step_tick (void);
+        void handle_finish (void);
 
         void start();
         void copy_block(Block *block);
@@ -50,15 +50,12 @@ class StepTicker{
         float frequency;
         uint32_t period;
         std::array<StepperMotor*, k_max_actuators> motor;
-        std::atomic_uchar do_move_finished;
         std::bitset<k_max_actuators> unstep;
 
         // this is tick info needed for this block. applies to all motors
         struct block_info_t {
             uint32_t accelerate_until;
             uint32_t decelerate_after;
-            uint32_t maximum_rate;
-            uint32_t deceleration_per_tick;
             uint32_t total_move_ticks;
         };
         block_info_t block_info;
@@ -66,10 +63,11 @@ class StepTicker{
 
         // this is the data needed to determine when each motor needs to be issued a step
         struct tickinfo_t {
-            float steps_per_tick; // 2.30 fixed point
-            float counter; // 2.30 fixed point
-            float acceleration_change; // 1.30 fixed point signed
-            float axis_ratio;
+            int32_t steps_per_tick; // 2.30 fixed point
+            int32_t counter; // 2.30 fixed point
+            int32_t acceleration_change; // 2.30 fixed point signed
+            int32_t deceleration_change; // 2.30 fixed point
+            int32_t plateau_rate; // 2.30 fixed point
             uint32_t steps_to_move;
             uint32_t step_count;
             uint32_t next_accel_event;

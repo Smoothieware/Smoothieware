@@ -46,13 +46,13 @@ void Block::clear()
     this->steps.fill(0);
 
     steps_event_count   = 0;
-    nominal_rate        = 0;
+    nominal_rate        = 0.0F;
     nominal_speed       = 0.0F;
     millimeters         = 0.0F;
     entry_speed         = 0.0F;
     exit_speed          = 0.0F;
     acceleration        = 100.0F; // we don't want to get devide by zeroes if this is not set
-    initial_rate        = -1;
+    initial_rate        = 0.0F;
     accelerate_until    = 0;
     decelerate_after    = 0;
     direction_bits      = 0;
@@ -68,7 +68,7 @@ void Block::clear()
 
 void Block::debug()
 {
-    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%10lu/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10lu  entry/max: %10.4f/%10.4f taken:%d ready:%d recalc:%d nomlen:%d\r\n",
+    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f taken:%d ready:%d recalc:%d nomlen:%d\r\n",
                                this,
                                this->steps[0],
                                this->steps[1],
@@ -198,39 +198,12 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     this->exit_speed = exitspeed;
 }
 
-// Calculates the distance (not time) it takes to accelerate from initial_rate to target_rate using the
-// given acceleration:
-float Block::estimate_acceleration_distance(float initialrate, float targetrate, float acceleration)
-{
-    return( ((targetrate * targetrate) - (initialrate * initialrate)) / (2.0F * acceleration));
-}
-
-// This function gives you the point at which you must start braking (at the rate of -acceleration) if
-// you started at speed initial_rate and accelerated until this point and want to end at the final_rate after
-// a total travel of distance. This can be used to compute the intersection point between acceleration and
-// deceleration in the cases where the trapezoid has no plateau (i.e. never reaches maximum speed)
-//
-/*                          + <- some maximum rate we don't care about
-                           /|\
-                          / | \
-                         /  |  + <- final_rate
-                        /   |  |
-       initial_rate -> +----+--+
-                            ^ ^
-                            | |
-        intersection_distance distance */
-float Block::intersection_distance(float initialrate, float finalrate, float acceleration, float distance)
-{
-    return((2 * acceleration * distance - initialrate * initialrate + finalrate * finalrate) / (4 * acceleration));
-}
-
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.
 float Block::max_allowable_speed(float acceleration, float target_velocity, float distance)
 {
     return sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance);
 }
-
 
 // Called by Planner::recalculate() when scanning the plan from last to first entry.
 float Block::reverse_pass(float exit_speed)
