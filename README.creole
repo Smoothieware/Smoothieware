@@ -33,6 +33,16 @@ if you have dfu-util installed.
 
 Alternatively copy the file LPC1768/main.bin to the sdcard calling it firmware.bin and reset.
 
+==Contributing
+
+Please take a look at : 
+
+* http://smoothieware.org/coding-standards
+* http://smoothieware.org/developers-guide
+* http://smoothieware.org/contribution-guidlines
+
+Contributions very welcome !
+
 ==Donate
 The Smoothie firmware is free software developed by volunteers. If you find this software useful, want to say thanks and encourage development, please consider a 
 [[https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=9QDYFXXBPM6Y6&lc=US&item_name=Smoothieware%20development&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHosted|Donation]]
