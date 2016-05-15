@@ -37,7 +37,7 @@
 #include "ConfigValue.h"
 #include "Config.h"
 #include "checksumm.h"
-
+#include "StepTicker.h"
 
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define sense_resistor_checksum        CHECKSUM("sense_resistor")
@@ -896,10 +896,10 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
 
     } else {
         // TODO hardcoded for X need to select ABC as needed
-        bool moving = THEKERNEL->robot->actuators[0]->is_moving();
+        bool moving = THEKERNEL->step_ticker->is_moving(0);
         // dump out in the format that the processing script needs
         if (moving) {
-            stream->printf("#sg%d,p%lu,k%u,r,", getCurrentStallGuardReading(), THEKERNEL->robot->actuators[0]->get_stepped(), getCoolstepCurrent());
+            stream->printf("#sg%d,p%lu,k%u,r,", getCurrentStallGuardReading(), THEKERNEL->step_ticker->get_stepped(0), getCoolstepCurrent());
         } else {
             readStatus(TMC26X_READOUT_POSITION); // get the status bits
             stream->printf("#s,");

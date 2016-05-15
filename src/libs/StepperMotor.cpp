@@ -37,10 +37,6 @@ void StepperMotor::init()
 {
     // register this motor with the step ticker, and get its index in that array and bit position
     this->index= THEKERNEL->step_ticker->register_motor(this);
-    this->moving = false;
-    this->stepped = 0;
-    this->is_move_finished = false;
-    this->force_finish= false;
 
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
@@ -49,18 +45,6 @@ void StepperMotor::init()
     last_milestone_mm    = 0.0F;
     current_position_steps= 0;
 }
-
-// // Instruct the StepperMotor to move a certain number of steps
-// StepperMotor* StepperMotor::move( bool direction, unsigned int steps, float initial_speed)
-// {
-//     set_direction(direction);
-//     this->direction = direction;
-//     this->force_finish= false;
-
-//     // Zero our tool counters
-//     this->stepped = 0;
-//     return this;
-// }
 
 void StepperMotor::change_steps_per_mm(float new_steps)
 {

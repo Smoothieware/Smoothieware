@@ -120,11 +120,7 @@ void Stepper::on_block_begin(void *argument)
     this->current_block = block;
 
     // setup stepticker to execute this block
-    // if it is running then add this to next block otherwise it needs to be started
-    // if(!THEKERNEL->step_ticker->is_next_block()) {
-
-    // }
-    THEKERNEL->step_ticker->copy_block(block);
+    THEKERNEL->step_ticker->add_job(block);
 }
 
 // Current block is discarded

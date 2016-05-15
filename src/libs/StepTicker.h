@@ -29,15 +29,15 @@ class StepTicker{
         void set_unstep_time( float microseconds );
         int register_motor(StepperMotor* motor);
         float get_frequency() const { return frequency; }
-
+        bool is_moving(int i) const { return tick_info[i].steps_to_move != 0; }
+        uint32_t get_stepped(int i) const { return tick_info[i].step_count; }
         void unstep_tick();
         void step_tick (void);
         void handle_finish (void);
 
         void start();
-        void copy_block(Block *block);
-        void set_next_block(Block *block) { next_block= block; }
-        bool is_next_block() const { return next_block != nullptr; }
+        bool add_job(Block *block) { return jobq.put(block); }
+        bool is_jobq_full() const { return jobq.full(); }
 
         // whatever setup the block should register this to know when it is done
         std::function<void()> finished_fnc{nullptr};
@@ -46,6 +46,71 @@ class StepTicker{
 
     private:
         static StepTicker *instance;
+
+            //
+            //  Simple fixed size ring buffer.
+            //  Manage objects by value.
+            //  Thread safe for single Producer and single Consumer.
+            //  By Dennis Lang http://home.comcast.net/~lang.dennis/code/ring/ring.html
+            //  Slightly modified for naming
+
+            template <class T, size_t RingSize>
+            class TSRingBuffer
+            {
+            public:
+                TSRingBuffer()
+                    : m_size(RingSize), m_buffer(new T[RingSize]), m_rIndex(0), m_wIndex(0)
+                { }
+
+                ~TSRingBuffer()
+                {
+                    delete [] m_buffer;
+                };
+
+                size_t next(size_t n) const
+                {
+                    return (n + 1) % m_size;
+                }
+
+                bool empty() const
+                {
+                    return (m_rIndex == m_wIndex);
+                }
+
+                bool full() const
+                {
+                    return (next(m_wIndex) == m_rIndex);
+                }
+
+                bool put(const T &value)
+                {
+                    if (full())
+                        return false;
+                    m_buffer[m_wIndex] = value;
+                    m_wIndex = next(m_wIndex);
+                    return true;
+                }
+
+                bool get(T &value)
+                {
+                    if (empty())
+                        return false;
+                    value = m_buffer[m_rIndex];
+                    m_rIndex = next(m_rIndex);
+                    return true;
+                }
+
+            private:
+                size_t          m_size;
+                T              *m_buffer;
+
+                // volatile is only used to keep compiler from placing values in registers.
+                // volatile does NOT make the index thread safe.
+                volatile size_t m_rIndex;
+                volatile size_t m_wIndex;
+            };
+
+        void copy_block(Block *block);
 
         float frequency;
         uint32_t period;
@@ -59,7 +124,8 @@ class StepTicker{
             uint32_t total_move_ticks;
         };
         block_info_t block_info;
-        Block *next_block{nullptr};
+
+        TSRingBuffer<Block*, 4> jobq;
 
         // this is the data needed to determine when each motor needs to be issued a step
         struct tickinfo_t {

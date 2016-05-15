@@ -48,7 +48,6 @@ StepTicker::StepTicker()
     this->num_motors = 0;
 
     this->move_issued = false;
-    this->next_block = nullptr;
 }
 
 StepTicker::~StepTicker()
@@ -122,15 +121,18 @@ void StepTicker::step_tick (void)
 {
     static uint32_t current_tick = 0;
 
-    if(!move_issued) return; // if nothing has been setup we ignore the ticks
+    if(!move_issued){
+        if(jobq.empty()) return; // if nothing has been setup we ignore the ticks
+        // get next job, and copy data
+        Block *b= nullptr;
+        jobq.get(b);
+        copy_block(b);
+    }
 
     current_tick++; // count number of ticks
 
     bool still_moving = false;
 
-    // currently taking 13us when no step, and 20 when 1 step
-    // 21us when two motors and 36 when step
-    stepticker_debug_pin = 1;
     // foreach motor, if it is active see if time to issue a step to that motor
     for (uint8_t m = 0; m < num_motors; m++) {
         if(tick_info[m].steps_to_move == 0) continue; // not active
@@ -178,7 +180,6 @@ void StepTicker::step_tick (void)
             }
         }
     }
-    stepticker_debug_pin = 0;
 
     // We may have set a pin on in this tick, now we reset the timer to set it off
     // Note there could be a race here if we run another tick before the unsteps have happened,
@@ -195,18 +196,20 @@ void StepTicker::step_tick (void)
 
         // get next static block and tick info from next block
         // do it here so there is no delay in ticks
-        if(next_block != nullptr) {
+        if(!jobq.empty()) {
             #ifdef STEPTICKER_DEBUG_PIN
             stepticker_debug_pin = 1;
             #endif
 
-            // copy data
-            copy_block(next_block);
-            next_block = nullptr;
+            // get next job, and copy data
+            Block *b= nullptr;
+            jobq.get(b);
+            copy_block(b);
 
             #ifdef STEPTICKER_DEBUG_PIN
             stepticker_debug_pin = 0;
             #endif
+
         } else {
             move_issued = false; // nothing to do as no more blocks
         }
@@ -221,6 +224,7 @@ void StepTicker::step_tick (void)
 // called in ISR if running, else can be called from anything to start
 void StepTicker::copy_block(Block *block)
 {
+    stepticker_debug_pin = 1;
     block_info.accelerate_until = block->accelerate_until;
     block_info.decelerate_after = block->decelerate_after;
     block_info.total_move_ticks = block->total_move_ticks;
@@ -260,6 +264,7 @@ void StepTicker::copy_block(Block *block)
         tick_info[m].plateau_rate= floorf(((block->maximum_rate * aratio) / frequency) * (1<<30));
     }
     move_issued = true;
+    stepticker_debug_pin = 0;
 }
 
 // returns index of the stepper motor in the array and bitset
