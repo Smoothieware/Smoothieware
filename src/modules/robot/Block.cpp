@@ -15,7 +15,6 @@
 #include "Conveyor.h"
 #include "Gcode.h"
 #include "libs/StreamOutputPool.h"
-#include "Stepper.h"
 #include "StepTicker.h"
 
 #include "mri.h"
@@ -40,8 +39,8 @@ void Block::clear()
 {
     //commands.clear();
     //travel_distances.clear();
-    gcodes.clear();
-    std::vector<Gcode>().swap(gcodes); // this resizes the vector releasing its memory
+    //gcodes.clear();
+    //std::vector<Gcode>().swap(gcodes); // this resizes the vector releasing its memory
 
     this->steps.fill(0);
 
@@ -60,7 +59,8 @@ void Block::clear()
     nominal_length_flag = false;
     max_entry_speed     = 0.0F;
     is_ready            = false;
-    times_taken         = 0;
+    is_job              = false;
+
     acceleration_per_tick= 0;
     deceleration_per_tick= 0;
     total_move_ticks= 0;
@@ -68,7 +68,7 @@ void Block::clear()
 
 void Block::debug()
 {
-    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f taken:%d ready:%d recalc:%d nomlen:%d\r\n",
+    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d is_job:%d recalc:%d nomlen:%d\r\n",
                                this,
                                this->steps[0],
                                this->steps[1],
@@ -82,8 +82,8 @@ void Block::debug()
                                this->initial_rate,
                                this->entry_speed,
                                this->max_entry_speed,
-                               this->times_taken,
                                this->is_ready,
+                               this->is_job,
                                recalculate_flag ? 1 : 0,
                                nominal_length_flag ? 1 : 0
                               );
@@ -102,8 +102,7 @@ void Block::debug()
 void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 {
     // if block is currently executing, don't touch anything!
-    if (times_taken)
-        return;
+    if(is_job) return;
 
     float initial_rate = this->nominal_rate * (entryspeed / this->nominal_speed); // steps/sec
     float final_rate = this->nominal_rate * (exitspeed / this->nominal_speed);
@@ -256,8 +255,9 @@ float Block::max_exit_speed()
 {
     // if block is currently executing, return cached exit speed from calculate_trapezoid
     // this ensures that a block following a currently executing block will have correct entry speed
-    if (times_taken)
-        return exit_speed;
+    // FIXME
+    // if (times_taken)
+    //     return exit_speed;
 
     // if nominal_length_flag is asserted
     // we are guaranteed to reach nominal speed regardless of entry speed
@@ -272,31 +272,28 @@ float Block::max_exit_speed()
 }
 
 // Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
-void Block::append_gcode(Gcode* gcode)
-{
-    Gcode new_gcode = *gcode;
-    new_gcode.strip_parameters(); // optimization to save memory we strip off the XYZIJK parameters from the saved command
-    gcodes.push_back(new_gcode);
-}
+// void Block::append_gcode(Gcode* gcode)
+// {
+//     Gcode new_gcode = *gcode;
+//     new_gcode.strip_parameters(); // optimization to save memory we strip off the XYZIJK parameters from the saved command
+//     gcodes.push_back(new_gcode);
+// }
 
 void Block::begin()
 {
+    // can no longer be used in planning
     recalculate_flag = false;
+    is_job= true; // mark as being executed or qued for execution
 
+    // TODO probably should remove this
     if (!is_ready)
         __debugbreak();
 
-    times_taken = -1;
-
     // execute all the gcodes related to this block
-    for(unsigned int index = 0; index < gcodes.size(); index++)
-        THEKERNEL->call_event(ON_GCODE_EXECUTE, &(gcodes[index]));
+    // for(unsigned int index = 0; index < gcodes.size(); index++)
+    //     THEKERNEL->call_event(ON_GCODE_EXECUTE, &(gcodes[index]));
 
-
-    THEKERNEL->call_event(ON_BLOCK_BEGIN, this);
-
-    if (times_taken < 0)
-        release();
+    THEKERNEL->conveyor->on_block_begin(this);
 }
 
 // Signal the conveyor that this block is ready to be injected into the system
@@ -305,25 +302,11 @@ void Block::ready()
     this->is_ready = true;
 }
 
-// Mark the block as taken by one more module
-void Block::take()
-{
-    if (times_taken < 0)
-        times_taken = 0;
-    times_taken++;
-}
-
-// Mark the block as no longer taken by one module, go to next block if this frees it
+// Mark the block as finished
 void Block::release()
 {
-    if (--this->times_taken <= 0) {
-        times_taken = 0;
-        if (is_ready) {
-            is_ready = false;
-            THEKERNEL->call_event(ON_BLOCK_END, this);
-
-            // ensure conveyor gets called last
-            THEKERNEL->conveyor->on_block_end(this);
-        }
+    if (is_ready) {
+        is_ready = false;
+        THEKERNEL->conveyor->on_block_end(this);
     }
 }

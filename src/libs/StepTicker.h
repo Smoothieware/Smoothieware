@@ -38,6 +38,7 @@ class StepTicker{
         void start();
         bool add_job(Block *block) { return jobq.put(block); }
         bool is_jobq_full() const { return jobq.full(); }
+        bool is_jobq_empty() const { return jobq.empty(); }
 
         // whatever setup the block should register this to know when it is done
         std::function<void()> finished_fnc{nullptr};

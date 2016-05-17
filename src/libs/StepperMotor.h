@@ -7,11 +7,11 @@
 
 #pragma once
 
+#include "Module.h"
 #include "Pin.h"
 
-class StepperMotor {
+class StepperMotor  : public Module {
     public:
-        StepperMotor();
         StepperMotor(Pin& step, Pin& dir, Pin& en);
         ~StepperMotor();
 
@@ -20,6 +20,7 @@ class StepperMotor {
         inline void set_direction(bool f) { direction= f; dir_pin.set(f); }
 
         inline void enable(bool state) { en_pin.set(!state); };
+        inline bool is_enabled() const { return !en_pin.get(); };
 
         bool which_direction() const { return direction; }
 
@@ -40,7 +41,8 @@ class StepperMotor {
         friend class Robot;
 
     private:
-        void init();
+        void on_halt(void *argument);
+        void on_enable(void *argument);
 
         int index;
 

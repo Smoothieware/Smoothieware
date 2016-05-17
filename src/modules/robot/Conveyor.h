@@ -26,19 +26,16 @@ public:
     void on_module_loaded(void);
     void on_idle(void *);
     void on_main_loop(void *);
-    void on_block_end(void *);
+    void on_block_end(Block *);
+    void on_block_begin(Block *);
     void on_halt(void *);
-    void on_config_reload(void *);
-
-    void notify_block_finished(Block *);
 
     void wait_for_empty_queue();
     bool is_queue_empty() { return queue.is_empty(); };
     bool is_queue_full() { return queue.is_full(); };
 
-    void ensure_running(void);
 
-    void append_gcode(Gcode *);
+    //void append_gcode(Gcode *);
     void queue_head_block(void);
 
     void dump_queue(void);
@@ -48,8 +45,10 @@ public:
     friend class Planner; // for queue
 
 private:
-    typedef HeapRing<Block> Queue_t;
+    void all_moves_finished();
+    void ensure_running(void);
 
+    using  Queue_t= HeapRing<Block>;
     Queue_t queue;  // Queue of Blocks
     volatile unsigned int gc_pending;
 

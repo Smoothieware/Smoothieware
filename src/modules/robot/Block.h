@@ -27,9 +27,8 @@ class Block {
 
         void debug();
 
-        void append_gcode(Gcode* gcode);
+       // void append_gcode(Gcode* gcode);
 
-        void take();
         void release();
 
         void ready();
@@ -38,7 +37,7 @@ class Block {
 
         void begin();
 
-        std::vector<Gcode> gcodes;
+        //std::vector<Gcode> gcodes;
 
         std::array<uint32_t, k_max_actuators> steps; // Number of steps for each axis for this block
         uint32_t steps_event_count;  // Steps for the longest axis
@@ -59,13 +58,12 @@ class Block {
 
         float max_entry_speed;
 
-        int16_t times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
-
         std::bitset<k_max_actuators> direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
         struct {
             bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
             bool nominal_length_flag:1;          // Planner flag for nominal speed always reached
             bool is_ready:1;
+            bool is_job:1;                       // set when queued to run in the job queue
         };
 };
 

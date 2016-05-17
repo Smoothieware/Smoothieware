@@ -15,26 +15,9 @@
 // in steps/sec the default minimum speed (was 20steps/sec hardcoded)
 float StepperMotor::default_minimum_actuator_rate= 20.0F;
 
-// A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
-
-StepperMotor::StepperMotor()
-{
-    init();
-}
-
 StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en)
 {
-    init();
-    enable(false);
     set_high_on_debug(en.port_number, en.pin);
-}
-
-StepperMotor::~StepperMotor()
-{
-}
-
-void StepperMotor::init()
-{
     // register this motor with the step ticker, and get its index in that array and bit position
     this->index= THEKERNEL->step_ticker->register_motor(this);
 
@@ -44,6 +27,28 @@ void StepperMotor::init()
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
     current_position_steps= 0;
+    enable(false);
+
+    this->register_for_event(ON_HALT);
+    this->register_for_event(ON_ENABLE);
+}
+
+StepperMotor::~StepperMotor()
+{
+    THEKERNEL->unregister_for_event(ON_HALT, this);
+    THEKERNEL->unregister_for_event(ON_ENABLE, this);
+}
+
+void StepperMotor::on_halt(void *argument)
+{
+    if(argument == nullptr) {
+        enable(false);
+    }
+}
+
+void StepperMotor::on_enable(void *argument)
+{
+    enable(argument != nullptr);
 }
 
 void StepperMotor::change_steps_per_mm(float new_steps)

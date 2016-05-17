@@ -21,7 +21,6 @@ using namespace std;
 #include "Config.h"
 #include "checksumm.h"
 #include "Robot.h"
-#include "Stepper.h"
 #include "ConfigValue.h"
 
 #include <math.h>

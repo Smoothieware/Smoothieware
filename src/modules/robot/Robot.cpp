@@ -468,6 +468,15 @@ void Robot::on_gcode_received(void *argument)
                 current_wcs = 0;
                 absolute_mode = true;
                 break;
+            case 17:
+                THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
+                break;
+
+            case 18: // this used to support parameters, now it ignores them
+            case 84:
+                THEKERNEL->conveyor->wait_for_empty_queue();
+                THEKERNEL->call_event(ON_ENABLE, nullptr); // turn all enable pins off
+                break;
 
             case 92: // M92 - set steps per mm
                 if (gcode->has_letter('X'))
@@ -758,7 +767,7 @@ void Robot::process_move(Gcode *gcode)
 void Robot::distance_in_gcode_is_known(Gcode * gcode)
 {
     //If the queue is empty, execute immediately, otherwise attach to the last added block
-    THEKERNEL->conveyor->append_gcode(gcode);
+    //THEKERNEL->conveyor->append_gcode(gcode);
 }
 
 // reset the machine position for all axis. Used for homing.
@@ -976,10 +985,11 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s )
 
     this->next_command_is_MCS = false; // always reset this
 
-    if(moved) {
-        // if adding these blocks didn't start executing, do that now
-        THEKERNEL->conveyor->ensure_running();
-    }
+    // this is not neede as COnveyor::on_main_loop will do something
+    // if(moved) {
+    //     // if adding these blocks didn't start executing, do that now
+    //     THEKERNEL->conveyor->ensure_running();
+    // }
 
     return moved;
 }
