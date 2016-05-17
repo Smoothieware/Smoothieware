@@ -168,7 +168,7 @@ void StepTicker::step_tick (void)
 
         tick_info[m].counter += tick_info[m].steps_per_tick;
 
-        if(tick_info[m].counter >= FPSCALE) { // > 1.0 step time
+        if(tick_info[m].counter >= FPSCALE) { // >= 1.0 step time
             tick_info[m].counter -= FPSCALE; // -= 1.0F;
             ++tick_info[m].step_count;
 
@@ -231,7 +231,7 @@ void StepTicker::step_tick (void)
 // called in ISR if running, else can be called from anything to start
 void StepTicker::copy_block(Block *block)
 {
-    stepticker_debug_pin = 1;
+    //stepticker_debug_pin = 1;
     block_info.accelerate_until = block->accelerate_until;
     block_info.decelerate_after = block->decelerate_after;
     block_info.total_move_ticks = block->total_move_ticks;
@@ -271,7 +271,7 @@ void StepTicker::copy_block(Block *block)
         tick_info[m].plateau_rate= TOFP((block->maximum_rate * aratio) / frequency);
     }
     move_issued = true;
-    stepticker_debug_pin = 0;
+    //stepticker_debug_pin = 0;
 }
 
 // returns index of the stepper motor in the array and bitset
