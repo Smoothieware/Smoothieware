@@ -60,11 +60,11 @@
 A Block is created by the planner in Planner::append_block() and stuck on the
 head of the queue.
 
-The Conveyor is always checking (in on_idle) when blocks on the queue become
+The Conveyor is always checking (in on_main) when blocks on the queue become
 fully planned (ie recalculate flag gets cleared). When this happens a pointer
 to the block is pushed onto the job queue in stepticker, but also left in the
 block queue. If the job queue is full then it will get pushed when the job
-queue has room.
+queue has room. (TODO should actually copy block not pointer so that is not done in ISR).
 
 Once the job has finished being executed the block is
 removed from the block queue (at least marked to be removed as explained

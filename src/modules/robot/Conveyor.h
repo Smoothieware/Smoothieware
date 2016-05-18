@@ -34,7 +34,6 @@ public:
     bool is_queue_empty() { return queue.is_empty(); };
     bool is_queue_full() { return queue.is_full(); };
 
-
     //void append_gcode(Gcode *);
     void queue_head_block(void);
 
