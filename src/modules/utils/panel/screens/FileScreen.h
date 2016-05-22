@@ -20,7 +20,7 @@ class FileScreen : public PanelScreen {
         void on_refresh();
         void on_main_loop();
         void clicked_line(uint16_t line);
-        void display_menu_line(uint16_t line);
+        void display_menu_lines(uint16_t line, uint16_t num);
 
     private:
         void enter_folder(const char *folder);

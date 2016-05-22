@@ -39,6 +39,8 @@ void FileScreen::on_exit()
 {
     // reset to root directory, I think this is less confusing
     THEKERNEL->current_path= "/";
+
+    delete this;
 }
 
 // For every ( potential ) refresh of the screen
@@ -70,19 +72,38 @@ void FileScreen::enter_folder(const char *folder)
 }
 
 // Called by the panel when refreshing the menu, display .. then all files in the current dir
-void FileScreen::display_menu_line(uint16_t line)
+void FileScreen::display_menu_lines(uint16_t line, uint16_t num)
 {
-    if ( line == 0 ) {
-        THEPANEL->lcd->printf("..");
-    } else {
-        bool isdir;
-        string fn= this->file_at(line - 1, isdir).substr(0, 18);
-        if(isdir) {
-            if(fn.size() >= 18) fn.back()= '/';
-            else fn.append("/");
+    DIR *d;
+    struct dirent *p;
+    uint16_t count = 0;
+    d = opendir(THEKERNEL->current_path.c_str());
+
+    for(uint16_t i = line; i < line + num; ++i) {
+        THEPANEL->lcd->setCursor(2, i - THEPANEL->get_menu_start_line() );
+
+        if ( i == 0 ) {
+            THEPANEL->lcd->printf("..");
+        } else {
+            while ((p = readdir(d)) != NULL) {
+                if(((p->d_isdir && p->d_name[0] != '.') || filter_file(p->d_name)) && count++ == i-1 ) {
+                    string fn= p->d_name;
+                    fn = fn.substr(0, 18);
+                    
+                    if(p->d_isdir) {
+                        if(fn.size() >= 18) fn.back()= '/';
+                        else fn.append("/");
+                    }
+
+                    THEPANEL->lcd->printf("%s", fn.c_str());
+
+                    break;
+                }
+            }
         }
-        THEPANEL->lcd->printf("%s", fn.c_str());
     }
+
+    if (d != NULL) closedir(d);
 }
 
 // When a line is clicked in the menu, act
