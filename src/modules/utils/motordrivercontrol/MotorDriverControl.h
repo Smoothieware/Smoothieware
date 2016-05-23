@@ -28,7 +28,7 @@ class MotorDriverControl : public Module {
 
     private:
         bool config_module(uint16_t cs);
-        void initialize_chip();
+        void initialize_chip(uint16_t cs);
         void set_current( uint32_t current );
         uint32_t set_microstep( uint32_t ms );
         void set_decay_mode( uint8_t dm );

@@ -27,7 +27,7 @@ class SlowTicker : public Module{
 
         void on_module_loaded(void);
         void on_idle(void*);
-
+        void start();
         void set_frequency( int frequency );
         void tick();
         // For some reason this can't go in the .cpp, see :  http://mbed.org/forum/mbed/topic/2774/?page=1#comment-14221

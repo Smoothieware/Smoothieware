@@ -96,11 +96,17 @@ ASRCS =  $(wildcard $(SRC)/*.S $(SRC)/*/*.S $(SRC)/*/*/*.S $(SRC)/*/*/*/*.S $(SR
 ifneq "$(OS)" "Windows_NT"
 ASRCS +=  $(wildcard $(SRC)/*.s $(SRC)/*/*.s $(SRC)/*/*/*.s $(SRC)/*/*/*/*.s $(SRC)/*/*/*/*/*.s)
 endif
+
 CPPSRCS1 = $(wildcard $(SRC)/*.cpp $(SRC)/*/*.cpp $(SRC)/*/*/*.cpp $(SRC)/*/*/*/*.cpp $(SRC)/*/*/*/*/*.cpp $(SRC)/*/*/*/*/*/*.cpp)
 ifeq "$(NONETWORK)" "1"
 CPPSRCS2 = $(filter-out $(SRC)/libs/Network/%,$(CPPSRCS1))
 else
-CPPSRCS2 = $(CPPSRCS1)
+	ifneq "$(PLAN9)" "1"
+		DEFINES += -DNOPLAN9
+		CPPSRCS2 = $(filter-out $(SRC)/libs/Network/uip/plan9/%,$(CPPSRCS1))
+	else
+		CPPSRCS2 = $(CPPSRCS1)
+	endif
 endif
 
 # Totally exclude any modules listed in EXCLUDE_MODULES
@@ -148,7 +154,8 @@ endif
 
 # Libraries to be linked into final binary
 MBED_LIBS = $(MBED_DIR)/$(DEVICE)/GCC_ARM/libmbed.a
-SYS_LIBS = -lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys
+#SYS_LIBS = -lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys
+SYS_LIBS = -specs=nano.specs -lstdc++ -lsupc++ -lm -lgcc -lc -lnosys
 LIBS = $(LIBS_PREFIX)
 
 ifeq "$(MRI_ENABLE)" "1"

@@ -115,7 +115,7 @@ void TemperatureControl::on_main_loop(void *argument)
 {
     if (this->temp_violated) {
         this->temp_violated = false;
-        THEKERNEL->streams->printf("Error: MINTEMP or MAXTEMP triggered. Check your temperature sensors!\n");
+        THEKERNEL->streams->printf("Error: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
         THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
@@ -323,7 +323,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                     // wait for temp to be reached, no more gcodes will be fetched until this is complete
                     if( gcode->m == this->set_and_wait_m_code) {
                         if(isinf(get_temperature()) && isinf(sensor->get_temperature())) {
-                            THEKERNEL->streams->printf("Temperature reading is unreliable HALT asserted - reset or M999 required\n");
+                            THEKERNEL->streams->printf("Temperature reading is unreliable on %s HALT asserted - reset or M999 required\n", designator.c_str());
                             THEKERNEL->call_event(ON_HALT, nullptr);
                             return;
                         }

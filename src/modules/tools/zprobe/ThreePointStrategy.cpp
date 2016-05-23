@@ -39,6 +39,7 @@
 
     Usage
     -----
+    G29 probes the three probe points and reports the Z at each point, if a plane is active it will be used to level the probe.
     G32 probes the three probe points and defines the bed plane, this will remain in effect until reset or M561
     G31 reports the status
 
@@ -133,12 +134,12 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
         } else if( gcode->g == 32 ) { // three point probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
-            if(!gcode->has_letter('K')) { // K will keep current compensation to test plane
-                // clear any existing plane and compensation
-                delete this->plane;
-                this->plane= nullptr;
-                setAdjustFunction(false);
-            }
+
+             // clear any existing plane and compensation
+            delete this->plane;
+            this->plane= nullptr;
+            setAdjustFunction(false);
+
             if(!doProbing(gcode->stream)) {
                 gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
             } else {
@@ -167,8 +168,9 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
                 this->plane= nullptr;
                 // delete the compensationTransform in robot
                 setAdjustFunction(false);
+                gcode->stream->printf("saved plane cleared\n");
             }else{
-                // smoothie specific way to restire a saved plane
+                // smoothie specific way to restore a saved plane
                 uint32_t a,b,c,d;
                 a=b=c=d= 0;
                 if(gcode->has_letter('A')) a = gcode->get_uint('A');
@@ -298,8 +300,8 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     }
 
     // if first point is not within tolerance report it, it should ideally be 0
-    if(abs(v[0][2]) > this->tolerance) {
-        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", abs(v[0][2]), this->tolerance);
+    if(fabsf(v[0][2]) > this->tolerance) {
+        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", fabsf(v[0][2]), this->tolerance);
     }
 
     // define the plane

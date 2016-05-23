@@ -86,42 +86,23 @@ TemperatureSwitch* TemperatureSwitch::load_config(uint16_t modcs)
 
     if(designator == 0) return nullptr; // no designator then not valid
 
-    // create a new temperature switch module
-    TemperatureSwitch *ts= new TemperatureSwitch();
-
-    //__debugbreak();
-
-    // make a list of temperature controls with matching designators with the same first letter
-    // the list is added t the controllers vector given below
-    {
-        std::vector<struct pad_temperature> controllers;
-        bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
-        if (ok) {
-            for (auto &c : controllers) {
-                if (c.designator[0] == designator) {
-                    ts->temp_controllers.push_back(c.id);
-                }
-            }
-        }
-    }
-
-    // if we don't have any matching controllers, then not valid
-    if (ts->temp_controllers.empty()) {
-        delete ts;
-        return nullptr;
-    }
-
     // load settings from config file
-    s = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_switch_checksum)->by_default("")->as_string();
-    if(s.empty()) {
+    string switchname = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_switch_checksum)->by_default("")->as_string();
+    if(switchname.empty()) {
         // handle old configs where this was called type @DEPRECATED
-        s = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_type_checksum)->by_default("")->as_string();
-        if(s.empty()) {
+        switchname = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_type_checksum)->by_default("")->as_string();
+        if(switchname.empty()) {
             // no switch specified so invalid entry
-            delete this;
+            THEKERNEL->streams->printf("WARNING TEMPERATURESWITCH: no switch specified\n");
             return nullptr;
         }
     }
+
+    // create a new temperature switch module
+    TemperatureSwitch *ts= new TemperatureSwitch();
+
+    // save designator
+    ts->designator= designator;
 
     // if we should turn the switch on or off when trigger is hit
     ts->inverted = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_inverted_checksum)->by_default(false)->as_bool();
@@ -136,7 +117,7 @@ TemperatureSwitch* TemperatureSwitch::load_config(uint16_t modcs)
     // the mcode used to arm the switch
     ts->arm_mcode = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_arm_command_checksum)->by_default(0)->as_number();
 
-    ts->temperatureswitch_switch_cs= get_checksum(s); // checksum of the switch to use
+    ts->temperatureswitch_switch_cs= get_checksum(switchname); // checksum of the switch to use
 
     ts->temperatureswitch_threshold_temp = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_threshold_temp_checksum)->by_default(50.0f)->as_number();
 
@@ -147,14 +128,14 @@ TemperatureSwitch* TemperatureSwitch::load_config(uint16_t modcs)
 
     // set initial state
     ts->current_state= NONE;
-    this->second_counter = ts->current_delay; // do test immediately on first second_tick
+    ts->second_counter = ts->current_delay; // do test immediately on first second_tick
     // if not defined then always armed, otherwise start out disarmed
     ts->armed= (ts->arm_mcode == 0);
 
     // Register for events
     ts->register_for_event(ON_SECOND_TICK);
 
-    if(this->arm_mcode != 0) {
+    if(ts->arm_mcode != 0) {
         ts->register_for_event(ON_GCODE_RECEIVED);
     }
     return ts;
@@ -215,18 +196,19 @@ void TemperatureSwitch::set_state(STATE state)
 // Get the highest temperature from the set of temperature controllers
 float TemperatureSwitch::get_highest_temperature()
 {
-    struct pad_temperature temp;
     float high_temp = 0.0;
 
-    for (auto controller : temp_controllers) {
-        bool ok = PublicData::get_value(temperature_control_checksum, current_temperature_checksum, controller, &temp);
-        if (ok) {
+    std::vector<struct pad_temperature> controllers;
+    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+    if (ok) {
+        for (auto &c : controllers) {
             // check if this controller's temp is the highest and save it if so
-            if (temp.current_temperature > high_temp) {
-                high_temp = temp.current_temperature;
+            if (c.designator[0] == this->designator && c.current_temperature > high_temp) {
+                high_temp = c.current_temperature;
             }
         }
     }
+
     return high_temp;
 }
 

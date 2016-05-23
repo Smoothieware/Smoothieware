@@ -26,7 +26,6 @@ private:
     void get_current_status();
     float get_current_speed();
     void set_speed();
-    void get_current_pos(float *cp);
     void get_sd_play_info();
     const char *get_status();
     const char *get_network();

@@ -68,7 +68,7 @@ StepTicker::StepTicker(){
 StepTicker::~StepTicker() {
 }
 
-//called when everythinf is setup and interrupts can start
+//called when everything is setup and interrupts can start
 void StepTicker::start() {
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler

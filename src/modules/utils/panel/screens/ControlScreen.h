@@ -26,7 +26,6 @@ private:
     void display_axis_line(char axis);
     void enter_axis_control(char axis);
     void enter_menu_control();
-    void get_current_pos(float *p);
     void set_current_pos(char axis, float p);
     char control_mode;
     char controlled_axis;
