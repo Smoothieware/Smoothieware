@@ -28,6 +28,7 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     last_milestone_mm    = 0.0F;
     current_position_steps= 0;
     enable(false);
+    moving= false;
 
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_ENABLE);

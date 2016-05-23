@@ -63,7 +63,6 @@ class Block {
             bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
             bool nominal_length_flag:1;          // Planner flag for nominal speed always reached
             bool is_ready:1;
-            bool is_job:1;                       // set when queued to run in the job queue
         };
 };
 

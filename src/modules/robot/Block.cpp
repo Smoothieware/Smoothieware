@@ -59,7 +59,6 @@ void Block::clear()
     nominal_length_flag = false;
     max_entry_speed     = 0.0F;
     is_ready            = false;
-    is_job              = false;
 
     acceleration_per_tick= 0;
     deceleration_per_tick= 0;
@@ -68,7 +67,7 @@ void Block::clear()
 
 void Block::debug()
 {
-    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d is_job:%d recalc:%d nomlen:%d\r\n",
+    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d recalc:%d nomlen:%d\r\n",
                                this,
                                this->steps[0],
                                this->steps[1],
@@ -83,7 +82,6 @@ void Block::debug()
                                this->entry_speed,
                                this->max_entry_speed,
                                this->is_ready,
-                               this->is_job,
                                recalculate_flag ? 1 : 0,
                                nominal_length_flag ? 1 : 0
                               );
@@ -101,9 +99,6 @@ void Block::debug()
 */
 void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 {
-    // if block is currently executing, don't touch anything!
-    if(is_job) return;
-
     float initial_rate = this->nominal_rate * (entryspeed / this->nominal_speed); // steps/sec
     float final_rate = this->nominal_rate * (exitspeed / this->nominal_speed);
     //printf("Initial rate: %f, final_rate: %f\n", initial_rate, final_rate);
@@ -283,17 +278,11 @@ void Block::begin()
 {
     // can no longer be used in planning
     recalculate_flag = false;
-    is_job= true; // mark as being executed or qued for execution
 
     // TODO probably should remove this
     if (!is_ready)
         __debugbreak();
 
-    // execute all the gcodes related to this block
-    // for(unsigned int index = 0; index < gcodes.size(); index++)
-    //     THEKERNEL->call_event(ON_GCODE_EXECUTE, &(gcodes[index]));
-
-    THEKERNEL->conveyor->on_block_begin(this);
 }
 
 // Signal the conveyor that this block is ready to be injected into the system
@@ -305,8 +294,8 @@ void Block::ready()
 // Mark the block as finished
 void Block::release()
 {
-    if (is_ready) {
-        is_ready = false;
-        THEKERNEL->conveyor->on_block_end(this);
-    }
+    // if (is_ready) {
+    //     is_ready = false;
+    //     THEKERNEL->conveyor->on_block_end(this);
+    // }
 }

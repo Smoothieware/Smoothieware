@@ -15,12 +15,16 @@ class StepperMotor  : public Module {
         StepperMotor(Pin& step, Pin& dir, Pin& en);
         ~StepperMotor();
 
-        inline void step() { current_position_steps += (direction?-1:1); step_pin.set( 1 ); }
+        // called from step ticker ISR
+        inline void step() { step_pin.set(1); current_position_steps += (direction?-1:1); }
+        // called from unstep ISR
         inline void unstep() { step_pin.set(0); }
-        inline void set_direction(bool f) { direction= f; dir_pin.set(f); }
+        // called from step ticker ISR
+        inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
 
         inline void enable(bool state) { en_pin.set(!state); };
         inline bool is_enabled() const { return !en_pin.get(); };
+        inline bool is_moving() const { return moving; };
 
         bool which_direction() const { return direction; }
 
@@ -30,6 +34,7 @@ class StepperMotor  : public Module {
         void change_last_milestone(float);
         float get_last_milestone(void) const { return last_milestone_mm; }
         float get_current_position(void) const { return (float)current_position_steps/steps_per_mm; }
+        uint32_t get_current_step(void) const { return current_position_steps; }
         float get_max_rate(void) const { return max_rate; }
         void set_max_rate(float mr) { max_rate= mr; }
 
@@ -53,7 +58,6 @@ class StepperMotor  : public Module {
         float steps_per_second;
         float steps_per_mm;
         float max_rate; // this is not really rate it is in mm/sec, misnamed used in Robot and Extruder
-        float minimum_step_rate; // this is the minimum step_rate in steps/sec for this motor for this block
         static float default_minimum_actuator_rate;
 
         volatile int32_t current_position_steps;
@@ -61,7 +65,8 @@ class StepperMotor  : public Module {
         float   last_milestone_mm;
 
         volatile struct {
-            bool direction:1;
+            volatile bool direction:1;
+            volatile bool moving:1;
         };
 };
 
