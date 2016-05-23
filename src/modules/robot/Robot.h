@@ -51,6 +51,7 @@ class Robot : public Module {
         std::vector<wcs_t> get_wcs_state() const;
         std::tuple<float, float, float, uint8_t> get_last_probe_position() const { return last_probe_position; }
         void set_last_probe_position(std::tuple<float, float, float, uint8_t> p) { last_probe_position = p; }
+        bool all_motors_idle() const;
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 

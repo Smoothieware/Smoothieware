@@ -21,6 +21,7 @@
 #include "libs/StreamOutputPool.h"
 #include "ConfigValue.h"
 #include "StepTicker.h"
+#include "Robot.h"
 
 #include <functional>
 #include <vector>
@@ -165,14 +166,14 @@ void Conveyor::on_main_loop(void*)
 void Conveyor::wait_for_empty_queue()
 {
     // wait for the job queue to empty, this means cycling everything on the block queue into the job queue
-    // forcing them to be ready
+    // forcing them to be jobs
     while (!queue.is_empty()) {
         check_queue(true); // forces all blocks to be moved to the step ticker job queue
         THEKERNEL->call_event(ON_IDLE, this);
     }
 
-    // now we wait for stepticker to finish all the jobs
-    while(!THEKERNEL->step_ticker->is_jobq_empty()){
+    // now we wait for all motors to stop moving
+    while(!THEKERNEL->step_ticker->is_jobq_empty() || !THEKERNEL->robot->all_motors_idle()){
         THEKERNEL->call_event(ON_IDLE, this);
     }
 
@@ -202,33 +203,39 @@ void Conveyor::queue_head_block()
 }
 
 // if the queue is not empty see if we can stick something on the stepticker job queue.
-// we have to walk back and find blocks where recalculate_flag is clear.
-// otherwise if the jobq is empty... (don't force anyhting if we have at least one thing on the job queue)
-// see if we have reached the time limit, otherwise give it some more time to finish planning some entries
-// if we have reached the time limit force the next thing on the queue into the jobq, fully planned or not
-// as this is only called in on)main_loop() it is safe to delete blocks and stuff
+// Algorithm is...
+// 1. If block queue is not empty and job queue is empty and timeout has been reached then force the tail of the block queue onto the job queue
+// 2. If block queue is not empty and job queue is not full see if the block queue tail has the recalculate_flag as clear. If so move it to the job queue.
+// 3. clear the timeout count whenever the block queue is empty or when something is moved to the job queue, or if the job queue is not empty
+
 void Conveyor::check_queue(bool force)
 {
     static uint32_t last_time_check = us_ticker_read();
 
-    if(queue.is_empty()) return;
+    if(queue.is_empty() || THEKERNEL->step_ticker->is_jobq_full()) {
+        last_time_check = us_ticker_read(); // reset timeout
+        return;
+    }
 
-    // if we have been checking for more than the required waiting time, we force
-    if((us_ticker_read() - last_time_check) >= (queue_delay_time_ms*1000))
-        force= true;
+    // if we have been checking for more than the required waiting time and the jobq is empty, we force
+    if(THEKERNEL->step_ticker->is_jobq_empty()) {
+        if((us_ticker_read() - last_time_check) >= (queue_delay_time_ms*1000)) force= true;
+    }else{
+        last_time_check = us_ticker_read(); // reset timeout
+    }
 
+    // see if block queue tail has recalculate_flag set to false (or if we are forcing)
     Block* block = queue.tail_ref();
     if(force || !block->recalculate_flag) {
         last_time_check = us_ticker_read(); // reset timer
         // setup stepticker to execute this block
-        // if it returns false the job queue was full
+        // if it returns false the job queue was full (should never happen due to test above)
         if(!THEKERNEL->step_ticker->add_job(block)) return;
-        THEKERNEL->streams->printf("%lu > ", last_time_check);
-        block->debug();
+        //THEKERNEL->streams->printf("%lu > ", last_time_check);
+        //block->debug();
 
         // remove from tail
         // TODO need to set the exit speed so it can be used by the planner
-
         block->release();
         block->clear();
         queue.consume_tail();
@@ -252,7 +259,7 @@ void Conveyor::flush_queue()
 
     // TODO force deceleration of last block
 
-    // now wait until the job queue has finished too
+    // now wait until the job queue has finished and all motors are idle too
     wait_for_empty_queue();
 }
 

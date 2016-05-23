@@ -828,6 +828,15 @@ void Robot::reset_position_from_current_actuator_position()
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
+// checks that all motors are no longer moving
+bool Robot::all_motors_idle() const
+{
+    for(auto &a : actuators) {
+        if(a->is_moving()) return false;
+    }
+    return true;
+}
+
 // Convert target (in machine coordinates) from millimeters to steps, and append this to the planner
 // target is in machine coordinates without the compensation transform, however we save a last_machine_position that includes
 // all transforms and is what we actually convert to actuator positions

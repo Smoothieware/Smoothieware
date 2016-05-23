@@ -35,7 +35,6 @@ public:
     bool is_queue_full() { return queue.is_full(); };
 
     //void append_gcode(Gcode *);
-    void queue_head_block(void);
 
     void dump_queue(void);
     void flush_queue(void);
@@ -45,12 +44,13 @@ public:
 private:
     // void all_moves_finished();
     void check_queue(bool force= false);
+    void queue_head_block(void);
 
     using  Queue_t= HeapRing<Block>;
     Queue_t queue;  // Queue of Blocks
     //volatile unsigned int gc_pending;
 
-    uint32_t queue_delay_time_ms{100};
+    uint32_t queue_delay_time_ms{300};
     struct {
         volatile bool running:1;
         volatile bool halted:1;
