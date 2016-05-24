@@ -25,13 +25,13 @@ class Block {
 
         float max_exit_speed();
 
-        void debug();
+        void debug() const;
 
-       // void append_gcode(Gcode* gcode);
+        //void append_gcode(Gcode* gcode);
 
-        ////void release();
+        //void release();
 
-        //void ready();
+        void ready() { is_ready= true; }
 
         void clear();
 

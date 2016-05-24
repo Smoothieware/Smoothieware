@@ -174,7 +174,7 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
     this->recalculate();
 
     // The block can now be used
-    //block->ready();
+    block->ready();
 
     THEKERNEL->conveyor->queue_head_block();
 }

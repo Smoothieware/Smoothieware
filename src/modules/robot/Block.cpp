@@ -58,14 +58,14 @@ void Block::clear()
     recalculate_flag    = false;
     nominal_length_flag = false;
     max_entry_speed     = 0.0F;
-    //is_ready            = false;
+    is_ready            = false;
 
     acceleration_per_tick= 0;
     deceleration_per_tick= 0;
     total_move_ticks= 0;
 }
 
-void Block::debug()
+void Block::debug() const
 {
     THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d recalc:%d nomlen:%d\r\n",
                                this,
@@ -283,12 +283,6 @@ float Block::max_exit_speed()
 //     if (!is_ready)
 //         __debugbreak();
 
-// }
-
-// Signal the conveyor that this block is ready to be injected into the system
-// void Block::ready()
-// {
-//     this->is_ready = true;
 // }
 
 // Mark the block as finished

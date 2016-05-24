@@ -286,8 +286,14 @@ bool StepTicker::push_block(const Block *block)
         job.tick_info[m].plateau_rate= TOFP((block->maximum_rate * aratio) / frequency);
     }
 
+
     //stepticker_debug_pin = 0;
-    return jobq.put(job);
+    if(jobq.put(job)) {
+        block->debug();
+        return true;
+    }
+
+    return false;
 }
 
 // returns index of the stepper motor in the array and bitset

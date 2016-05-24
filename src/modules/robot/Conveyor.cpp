@@ -213,7 +213,6 @@ void Conveyor::queue_head_block()
         THEKERNEL->call_event(ON_IDLE, this); // will call check_queue();
     }
 
-    //queue.head_ref()->ready();
     queue.produce_head();
 
     // not sure if this is the correcg place but we need to turn on the motors if they were not already on
@@ -252,24 +251,45 @@ void Conveyor::check_queue(bool force)
         return;
     }
 
-    // see if block queue tail has recalculate_flag set to false and walk up the queue until either the job queue is full or we hit a block where recalculate flag is still set
-    while(!queue.is_empty()) {
-        Block *block = queue.tail_ref();
-        // process as many as we can off the tail of the queue
-        if(block->recalculate_flag) break;
+    /*
+    * Ideally we want to see if block queue tail has recalculate_flag set to false and walk up the queue until either the job queue
+    * is full or we hit a block where recalculate * flag is still set.
+    * However for some reason recalculate flag is not always cleared, so we actually search from the head to tail for the first one,
+    * then anything after that can be queued
+    */
 
-        // setup stepticker to execute this block
-        // if it returns false the job queue was full
-        if(!THEKERNEL->step_ticker->add_job(block)) break;
-        // THEKERNEL->streams->printf("%lu > ", last_time_check);
-        // block->debug();
+    // first find the first block with recalculate_flag false searching from the head to the tail
+    if (!queue.is_empty()) {
+        uint32_t block_index= queue.head_i;
 
-        // remove from tail
-        // TODO do we need to set the exit speed so it can be used by the planner?
-        //block->release();
-        block->clear();
-        queue.consume_tail();
-        last_time_check = us_ticker_read(); // reset timeout
+        while(block_index != queue.tail_i) {
+            Block *current= queue.item_ref(block_index);
+            if(current->is_ready && !current->recalculate_flag) break; // found first one that is valid
+
+            // next block
+            block_index= queue.prev(block_index);
+        }
+
+        // now block_index is the first block with recalculate flag false (or it is the tail)
+
+        // now try to queue each block from the tail upto but not including the block found above (we leave that on the block queue for the planner)
+        uint32_t i= queue.tail_i;
+        while(i != block_index) {
+            // ASSERT(i == queue.tail_i);
+            if(i != queue.tail_i) __debugbreak();
+
+            Block *block = queue.item_ref(i);
+
+            // setup stepticker to execute this block
+            // if it returns false the job queue was full
+            if(!THEKERNEL->step_ticker->add_job(block)) break;
+
+            // remove from tail
+            block->clear();
+            queue.consume_tail();
+            i= queue.tail_i;
+            last_time_check = us_ticker_read(); // reset timeout
+        }
     }
 }
 
