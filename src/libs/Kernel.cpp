@@ -170,7 +170,7 @@ std::string Kernel::get_query_string()
         str.append("Home,");
     }else if(feed_hold) {
         str.append("Hold,");
-    }else if(this->conveyor->is_queue_empty()) {
+    }else if(this->conveyor->is_idle()) {
         str.append("Idle,");
     }else{
         running= true;

@@ -85,7 +85,7 @@ class StepTicker{
         job_entry_t current_job;
 
         struct {
-            volatile bool move_issued:1;
+            volatile bool running:1;
             uint8_t num_motors:4;
         };
 };

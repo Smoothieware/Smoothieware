@@ -22,6 +22,7 @@
 #include "ConfigValue.h"
 #include "StepTicker.h"
 #include "Robot.h"
+#include "StepperMotor.h"
 
 #include <functional>
 #include <vector>
@@ -60,8 +61,8 @@ Conveyor::Conveyor()
 
 void Conveyor::on_module_loaded()
 {
-    //register_for_event(ON_IDLE);
-    register_for_event(ON_MAIN_LOOP);
+    register_for_event(ON_IDLE);
+    //register_for_event(ON_MAIN_LOOP);
     register_for_event(ON_HALT);
 
     // Attach to the end_of_move stepper event
@@ -103,11 +104,9 @@ void Conveyor::on_halt(void* argument)
  * We can safely delete any blocks moved to the job queue here
  */
 
-void Conveyor::on_main_loop(void*)
+void Conveyor::on_idle(void*)
 {
     if (running) {
-        if(queue.is_empty() || THEKERNEL->step_ticker->is_jobq_full()) return;
-
         check_queue();
     }
 }
@@ -162,21 +161,37 @@ void Conveyor::on_main_loop(void*)
 
 // }
 
+// see if we are idle
+// this checks the block queue is empty, and that the step queue is empty and
+// checks that all motors are no longer moving
+bool Conveyor::is_idle() const
+{
+    if(queue.is_empty() && THEKERNEL->step_ticker->is_jobq_empty()) {
+        for(auto &a : THEKERNEL->robot->actuators) {
+            if(a->is_moving()) return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
 // Wait for the queue to be empty and for all the jobs to finish in step ticker
 void Conveyor::wait_for_empty_queue()
 {
     // wait for the job queue to empty, this means cycling everything on the block queue into the job queue
     // forcing them to be jobs
+    running= false; // stops on_idle calling check_queue
     while (!queue.is_empty()) {
         check_queue(true); // forces all blocks to be moved to the step ticker job queue
         THEKERNEL->call_event(ON_IDLE, this);
     }
 
     // now we wait for all motors to stop moving
-    while(!THEKERNEL->step_ticker->is_jobq_empty() || !THEKERNEL->robot->all_motors_idle()){
+    while(!is_idle()) {
         THEKERNEL->call_event(ON_IDLE, this);
     }
-
+    running= true;
     // returning now means that everything has totally finished
 }
 
@@ -194,12 +209,15 @@ void Conveyor::queue_head_block()
 
     // upstream caller will block on this until there is room in the queue
     while (queue.is_full()) {
-        check_queue();
-        THEKERNEL->call_event(ON_IDLE, this);
+        //check_queue();
+        THEKERNEL->call_event(ON_IDLE, this); // will call check_queue();
     }
 
-    queue.head_ref()->ready();
+    //queue.head_ref()->ready();
     queue.produce_head();
+
+    // not sure if this is the correcg place but we need to turn on the motors if they were not already on
+    THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
 }
 
 // if the queue is not empty see if we can stick something on the stepticker job queue.
@@ -207,7 +225,9 @@ void Conveyor::queue_head_block()
 // 1. If block queue is not empty and job queue is empty and timeout has been reached then force the tail of the block queue onto the job queue
 // 2. If block queue is not empty and job queue is not full see if the block queue tail has the recalculate_flag as clear. If so move it to the job queue.
 // 3. clear the timeout count whenever the block queue is empty or when something is moved to the job queue, or if the job queue is not empty
-
+//
+// NOTE it takes around 150ms to plan a move so if a move takes under 150ms then the job queue will eventually run dry
+// this is bad as the planner will not know the job queue has dried up so will not be able to decelerate.
 void Conveyor::check_queue(bool force)
 {
     static uint32_t last_time_check = us_ticker_read();
@@ -218,27 +238,38 @@ void Conveyor::check_queue(bool force)
     }
 
     // if we have been checking for more than the required waiting time and the jobq is empty, we force
-    if(THEKERNEL->step_ticker->is_jobq_empty()) {
-        if((us_ticker_read() - last_time_check) >= (queue_delay_time_ms*1000)) force= true;
-    }else{
-        last_time_check = us_ticker_read(); // reset timeout
+    //if(force || (THEKERNEL->step_ticker->is_jobq_empty() && ((us_ticker_read() - last_time_check) >= (queue_delay_time_ms*1000)))) {
+    if(force || ((us_ticker_read() - last_time_check) >= (queue_delay_time_ms*1000))) {
+        // forcably move the block onto the job_queue,
+        // FIXME we may need to patch up the planning if we do this
+        Block *block = queue.tail_ref();
+        if(THEKERNEL->step_ticker->add_job(block)) {
+            // free the block and pop it from the queue
+            block->clear();
+            queue.consume_tail();
+            last_time_check = us_ticker_read(); // reset timeout
+        }
+        return;
     }
 
-    // see if block queue tail has recalculate_flag set to false (or if we are forcing)
-    Block* block = queue.tail_ref();
-    if(force || !block->recalculate_flag) {
-        last_time_check = us_ticker_read(); // reset timer
+    // see if block queue tail has recalculate_flag set to false and walk up the queue until either the job queue is full or we hit a block where recalculate flag is still set
+    while(!queue.is_empty()) {
+        Block *block = queue.tail_ref();
+        // process as many as we can off the tail of the queue
+        if(block->recalculate_flag) break;
+
         // setup stepticker to execute this block
-        // if it returns false the job queue was full (should never happen due to test above)
-        if(!THEKERNEL->step_ticker->add_job(block)) return;
-        //THEKERNEL->streams->printf("%lu > ", last_time_check);
-        //block->debug();
+        // if it returns false the job queue was full
+        if(!THEKERNEL->step_ticker->add_job(block)) break;
+        // THEKERNEL->streams->printf("%lu > ", last_time_check);
+        // block->debug();
 
         // remove from tail
-        // TODO need to set the exit speed so it can be used by the planner
-        block->release();
+        // TODO do we need to set the exit speed so it can be used by the planner?
+        //block->release();
         block->clear();
         queue.consume_tail();
+        last_time_check = us_ticker_read(); // reset timeout
     }
 }
 

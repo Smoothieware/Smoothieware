@@ -29,13 +29,13 @@ class Block {
 
        // void append_gcode(Gcode* gcode);
 
-        void release();
+        ////void release();
 
-        void ready();
+        //void ready();
 
         void clear();
 
-        void begin();
+        //void begin();
 
         //std::vector<Gcode> gcodes;
 
@@ -45,7 +45,7 @@ class Block {
         float nominal_speed;      // Nominal speed in mm per second
         float millimeters;        // Distance for this move
         float entry_speed;
-        float exit_speed;
+        //float exit_speed;
         float acceleration;       // the acceleratoin for this block
         float initial_rate;       // Initial rate in steps per second
         uint32_t accelerate_until;   // Stop accelerating after this number of ticks

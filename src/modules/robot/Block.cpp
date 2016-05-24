@@ -49,7 +49,7 @@ void Block::clear()
     nominal_speed       = 0.0F;
     millimeters         = 0.0F;
     entry_speed         = 0.0F;
-    exit_speed          = 0.0F;
+    //exit_speed          = 0.0F;
     acceleration        = 100.0F; // we don't want to get devide by zeroes if this is not set
     initial_rate        = 0.0F;
     accelerate_until    = 0;
@@ -58,7 +58,7 @@ void Block::clear()
     recalculate_flag    = false;
     nominal_length_flag = false;
     max_entry_speed     = 0.0F;
-    is_ready            = false;
+    //is_ready            = false;
 
     acceleration_per_tick= 0;
     deceleration_per_tick= 0;
@@ -185,7 +185,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     //puts "accelerate_until: #{this->accelerate_until}, decelerate_after: #{this->decelerate_after}, acceleration_per_tick: #{this->acceleration_per_tick}, total_move_ticks: #{this->total_move_ticks}"
 
     this->initial_rate = initial_rate;
-    this->exit_speed = exitspeed;
+    //this->exit_speed = exitspeed;
 }
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
@@ -274,28 +274,28 @@ float Block::max_exit_speed()
 //     gcodes.push_back(new_gcode);
 // }
 
-void Block::begin()
-{
-    // can no longer be used in planning
-    recalculate_flag = false;
+// void Block::begin()
+// {
+//     // can no longer be used in planning
+//     recalculate_flag = false;
 
-    // TODO probably should remove this
-    if (!is_ready)
-        __debugbreak();
+//     // TODO probably should remove this
+//     if (!is_ready)
+//         __debugbreak();
 
-}
+// }
 
 // Signal the conveyor that this block is ready to be injected into the system
-void Block::ready()
-{
-    this->is_ready = true;
-}
+// void Block::ready()
+// {
+//     this->is_ready = true;
+// }
 
 // Mark the block as finished
-void Block::release()
-{
+//void Block::release()
+//{
     // if (is_ready) {
     //     is_ready = false;
     //     THEKERNEL->conveyor->on_block_end(this);
     // }
-}
+//}

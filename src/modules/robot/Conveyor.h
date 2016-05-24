@@ -24,8 +24,8 @@ public:
     Conveyor();
 
     void on_module_loaded(void);
-    //void on_idle(void *);
-    void on_main_loop(void *);
+    void on_idle(void *);
+    //void on_main_loop(void *);
     // void on_block_end(Block *);
     // void on_block_begin(Block *);
     void on_halt(void *);
@@ -33,6 +33,7 @@ public:
     void wait_for_empty_queue();
     bool is_queue_empty() { return queue.is_empty(); };
     bool is_queue_full() { return queue.is_full(); };
+    bool is_idle() const;
 
     //void append_gcode(Gcode *);
 
@@ -50,7 +51,7 @@ private:
     Queue_t queue;  // Queue of Blocks
     //volatile unsigned int gc_pending;
 
-    uint32_t queue_delay_time_ms{300};
+    uint32_t queue_delay_time_ms{500};
     struct {
         volatile bool running:1;
         volatile bool halted:1;

@@ -52,7 +52,7 @@ StepTicker::StepTicker()
     this->unstep.reset();
     this->num_motors = 0;
 
-    this->move_issued = false;
+    this->running = false;
 }
 
 StepTicker::~StepTicker()
@@ -126,18 +126,19 @@ void StepTicker::step_tick (void)
 {
     static uint32_t current_tick = 0;
 
-    if(!move_issued){
-        if(jobq.empty()) return; // if nothing has been setup we ignore the ticks
-        if(!pop_next_job()) return;
+    //stepticker_debug_pin= running ? 1 : 0;
+
+    if(!running){
+        // if nothing has been setup we ignore the ticks
+        if(jobq.empty() || !pop_next_job()) return;
+        running= true;
     }
 
-    bool still_moving = false;
-
+    bool still_moving= false;
     // foreach motor, if it is active see if time to issue a step to that motor
     for (uint8_t m = 0; m < num_motors; m++) {
         if(current_job.tick_info[m].steps_to_move == 0) continue; // not active
 
-        still_moving = true;
         current_job.tick_info[m].steps_per_tick += current_job.tick_info[m].acceleration_change;
 
         if(current_tick == current_job.tick_info[m].next_accel_event) {
@@ -180,6 +181,9 @@ void StepTicker::step_tick (void)
                 motor[m]->moving= false; // let motor know it is no longer moving
             }
         }
+
+        // see if any motors are still moving after this tick
+        if(motor[m]->moving) still_moving= true;
     }
 
     // do this after so we start at tick 0
@@ -194,6 +198,9 @@ void StepTicker::step_tick (void)
         LPC_TIM1->TCR = 1;
     }
 
+
+    // see if any motors are still moving
+    // FIXME why is this always being called when ther eis nothing todo?
     if(!still_moving) {
         stepticker_debug_pin = 0;
 
@@ -203,12 +210,12 @@ void StepTicker::step_tick (void)
         // get next job
         // do it here so there is no delay in ticks
         // get next job, and copy data
-        move_issued= pop_next_job(); // returns false if no new job available
+        running= pop_next_job(); // returns false if no new job available
 
         // all moves finished
         // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
         //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
-        SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;
+        //SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;
     }
 }
 
@@ -220,7 +227,6 @@ bool StepTicker::pop_next_job()
     if(!jobq.get(current_job)) return false;
 
     // need to prepare each active motor
-    move_issued = false;
     for (uint8_t m = 0; m < num_motors; m++) {
         if(current_job.tick_info[m].steps_to_move == 0) continue;
 
@@ -229,16 +235,14 @@ bool StepTicker::pop_next_job()
         // TODO does this need to be done sooner, if so how without delaying next tick
         motor[m]->set_direction(current_job.block_info.direction_bits[m]);
         motor[m]->moving= true; // also let motor know it is moving now
-        move_issued= true; // set so long as at least one motor is moving
     }
 
-    if(move_issued) stepticker_debug_pin = 1;
-
-    return move_issued;
+    stepticker_debug_pin = 1;
+    return true;
 }
 
 // prepare block for the job queue and push it
-// only called from main_loop() (single producer)
+// only called from main_loop() or on_idle() (single producer)
 // this is done ahead of time so does not delay tick generation, see Conveyor::main_loop()
 bool StepTicker::push_block(const Block *block)
 {
