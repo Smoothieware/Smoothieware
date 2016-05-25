@@ -224,7 +224,10 @@ void StepTicker::step_tick (void)
 bool StepTicker::pop_next_job()
 {
     // pop next job, return false if nothing to get
-    if(!jobq.get(current_job)) return false;
+    if(!jobq.get(current_job)){
+        total_move_time= 0;
+        return false;
+    }
 
     // need to prepare each active motor
     for (uint8_t m = 0; m < num_motors; m++) {
@@ -237,6 +240,7 @@ bool StepTicker::pop_next_job()
         motor[m]->moving= true; // also let motor know it is moving now
     }
 
+    total_move_time -= current_job.block_info.total_move_ticks;
     stepticker_debug_pin = 1;
     return true;
 }
@@ -289,7 +293,10 @@ bool StepTicker::push_block(const Block *block)
 
     //stepticker_debug_pin = 0;
     if(jobq.put(job)) {
+        total_move_time += block->total_move_ticks;
+        THEKERNEL->streams->printf("%f- ", get_total_time());
         block->debug();
+
         return true;
     }
 

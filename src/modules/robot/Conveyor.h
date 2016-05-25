@@ -22,6 +22,7 @@ class Conveyor : public Module
 {
 public:
     Conveyor();
+    void start();
 
     void on_module_loaded(void);
     void on_idle(void *);
@@ -51,7 +52,9 @@ private:
     Queue_t queue;  // Queue of Blocks
     //volatile unsigned int gc_pending;
 
-    uint32_t queue_delay_time_ms{500};
+    uint32_t queue_delay_time_ms;
+    size_t queue_size;
+
     struct {
         volatile bool running:1;
         volatile bool halted:1;

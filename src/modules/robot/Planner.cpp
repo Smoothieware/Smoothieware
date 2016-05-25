@@ -236,7 +236,7 @@ void Planner::recalculate()
          * Step 2:
          * now current points to either tail or first non-recalculate block
          * and has not had its reverse_pass called
-         * or its calc trap
+         * or its calculate_trapezoid
          * entry_speed is set to the *exit* speed of current.
          * each block from current to head has its entry speed set to its max entry speed- limited by decel or nominal_rate
          */

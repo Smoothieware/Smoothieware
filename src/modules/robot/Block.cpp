@@ -67,7 +67,7 @@ void Block::clear()
 
 void Block::debug() const
 {
-    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d recalc:%d nomlen:%d\r\n",
+    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d recalc:%d nomlen:%d time:%f\r\n",
                                this,
                                this->steps[0],
                                this->steps[1],
@@ -83,7 +83,8 @@ void Block::debug() const
                                this->max_entry_speed,
                                this->is_ready,
                                recalculate_flag ? 1 : 0,
-                               nominal_length_flag ? 1 : 0
+                               nominal_length_flag ? 1 : 0,
+                               total_move_ticks/STEP_TICKER_FREQUENCY
                               );
 }
 

@@ -262,6 +262,7 @@ void init() {
     }
 
     // start the timers and interrupts
+    THEKERNEL->conveyor->start();
     THEKERNEL->step_ticker->start();
     THEKERNEL->slow_ticker->start();
 }

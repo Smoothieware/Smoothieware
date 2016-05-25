@@ -33,7 +33,7 @@ class StepTicker{
         void unstep_tick();
         void step_tick (void);
         void handle_finish (void);
-
+        float get_total_time() const { return total_move_time/frequency; }
         void start();
         bool add_job(const Block *block) { return push_block(block); }
         bool is_jobq_full() const { return jobq.full(); }
@@ -54,6 +54,7 @@ class StepTicker{
         uint32_t period;
         std::array<StepperMotor*, k_max_actuators> motor;
         std::bitset<k_max_actuators> unstep;
+        uint32_t total_move_time{0};
 
         // this is tick info needed for this block. applies to all motors
         using block_info_t = struct {
@@ -81,7 +82,8 @@ class StepTicker{
         };
 
         // Thread safe for single consumer and single provider
-        TSRingBuffer<job_entry_t, 4> jobq;
+        #define jobq_size 32
+        TSRingBuffer<job_entry_t, jobq_size> jobq;
         job_entry_t current_job;
 
         struct {
