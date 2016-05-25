@@ -518,22 +518,29 @@ void TemperatureControl::on_second_tick(void *argument)
     // Check whether or not there is a temperature runaway issue, if so stop everything and report it
     if(THEKERNEL->is_halted()) return;
     
-    if( this->target_temperature <= 0 ){ // If we are not trying to heat, state is 0
-        this->runaway_state = 0;
-        this->runaway_timer = 0;
+    if( this->target_temperature <= 0 ){ // If we are not trying to heat, state is NOT_HEATING
+        this->runaway_state = NOT_HEATING;
+        this->runaway_timer = 0g
     }else{
         switch( this->runaway_state ){
-            case 0: // If we were previously not trying to heat, but we are now, change to state 1
+            case NOT_HEATING: // If we were previously not trying to heat, but we are now, change to state WAITING_FOR_TEMP_TO_BE_REACHED
                 if( this->target_temperature > 0 ){
-                    this->runaway_state = 1;
+                    this->runaway_state = WAITING_FOR_TEMP_TO_BE_REACHED;
+                    this->runaway_heating_timer = 0;
                 }
                 break;
-            case 1: // In we are in state 1 ( waiting for temperature to be reached ), and the temperature has been reached, change to state 2
+            case WAITING_FOR_TEMP_TO_BE_REACHED: // In we are in state 1 ( waiting for temperature to be reached ), and the temperature has been reached, change to state TARGET_TEMPERATURE_REACHED
                 if( this->get_temperature() >= this->target_temperature ){
-                    this->runaway_state = 2;
+                    this->runaway_state = TARGET_TEMPERATURE_REACHED;
+                }
+                this->runaway_heating_timer++;
+                if( this->runaway_heating_timer > 20 ){
+                    this->runaway_heating_timer = 0;
+                    THEKERNEL->streams->printf("Error : Temperature too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
+                    THEKERNEL->call_event(ON_HALT, nullptr);
                 }
                 break;
-            case 2: // If we are in state 2 ( target temperature reached ), check for thermal runaway
+            case TARGET_TEMPERATURE_REACHED: // If we are in state TARGET_TEMPERATURE_REACHED, check for thermal runaway
                 // If the temperature is outside the acceptable range
                 if( fabs( this->get_temperature() - this->target_temperature ) > 20 ){ // 10 degrees, should be a configurable value
                     // Increase the timer, aka « One more second with a problem maybe occuring »
@@ -541,11 +548,8 @@ void TemperatureControl::on_second_tick(void *argument)
 
                     // If the timer has a too large value ( we have been too long outside the desired temperature range )
                     if( this->runaway_timer > 10 ){ // 15 seconds, should be a configurable value
-                    
-                        THEKERNEL->streams->printf("Error: Temperature runaway ! Check whether the heater controller is failing HIGH, or the temperature sensor is detached. IMMEDIATELY TURN OFF POWER\n");
-                        THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
+                        THEKERNEL->streams->printf("Error : Temperature runaway on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
                         THEKERNEL->call_event(ON_HALT, nullptr);
-
                     }
                 }else{
                     // The temperature was inside the acceptable range, reset the timer

@@ -30,6 +30,8 @@ class TemperatureControl : public Module {
         void set_desired_temperature(float desired_temperature);
 
         float get_temperature();
+        
+        enum RUNAWAY_TYPE {NOT_HEATING, WAITING_FOR_TEMP_TO_BE_REACHED, TARGET_TEMPERATURE_REACHED};
 
         friend class PID_Autotuner;
 
@@ -81,8 +83,10 @@ class TemperatureControl : public Module {
         float PIDdt;
 
         // Temperature runaway values
-        uint16_t runaway_timer;
-        uint8_t  runaway_state;
+        uint8_t runaway_timer;
+        uint8_t runaway_heating_timer;
+
+        RUNAWAY_TYPE runaway_state;       
 
         struct {
             bool use_bangbang:1;
