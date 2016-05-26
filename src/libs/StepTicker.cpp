@@ -225,7 +225,7 @@ bool StepTicker::pop_next_job()
 {
     // pop next job, return false if nothing to get
     if(!jobq.get(current_job)){
-        total_move_time= 0;
+        total_move_time.store(0);
         return false;
     }
 
@@ -240,14 +240,14 @@ bool StepTicker::pop_next_job()
         motor[m]->moving= true; // also let motor know it is moving now
     }
 
-    total_move_time -= current_job.block_info.total_move_ticks;
+    total_move_time.fetch_sub(current_job.block_info.total_move_ticks);
     stepticker_debug_pin = 1;
     return true;
 }
 
 // prepare block for the job queue and push it
 // only called from main_loop() or on_idle() (single producer)
-// this is done ahead of time so does not delay tick generation, see Conveyor::main_loop()
+// this is done ahead of time so does not delay tick generation, see Conveyor::check_queue()
 bool StepTicker::push_block(const Block *block)
 {
     //stepticker_debug_pin = 1;
@@ -293,9 +293,10 @@ bool StepTicker::push_block(const Block *block)
 
     //stepticker_debug_pin = 0;
     if(jobq.put(job)) {
-        total_move_time += block->total_move_ticks;
-        THEKERNEL->streams->printf("%f- ", get_total_time());
-        block->debug();
+        // this needs to be atomic
+        total_move_time.fetch_add(block->total_move_ticks);
+        // THEKERNEL->streams->printf("%f- ", get_total_time());
+        // block->debug();
 
         return true;
     }
