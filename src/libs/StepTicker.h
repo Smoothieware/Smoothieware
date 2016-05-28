@@ -31,6 +31,7 @@ class StepTicker{
         int register_motor(StepperMotor* motor);
         float get_frequency() const { return frequency; }
         void unstep_tick();
+
         void step_tick (void);
         void handle_finish (void);
         float get_total_time() const { return total_move_time.load()/frequency; }

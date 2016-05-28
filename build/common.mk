@@ -99,7 +99,7 @@ endif
 
 CPPSRCS1 = $(wildcard $(SRC)/*.cpp $(SRC)/*/*.cpp $(SRC)/*/*/*.cpp $(SRC)/*/*/*/*.cpp $(SRC)/*/*/*/*/*.cpp $(SRC)/*/*/*/*/*/*.cpp)
 ifeq "$(NONETWORK)" "1"
-CPPSRCS2 = $(filter-out $(SRC)/libs/Network/%,$(CPPSRCS1))
+	CPPSRCS2 = $(filter-out $(SRC)/libs/Network/%,$(CPPSRCS1))
 else
 	ifneq "$(PLAN9)" "1"
 		DEFINES += -DNOPLAN9
@@ -109,11 +109,19 @@ else
 	endif
 endif
 
+# CNC build
+ifeq "$(CNC)" "1"
+	CPPSRCS21 = $(filter-out $(SRC)/modules/utils/panel/screens/3dprinter/%,$(CPPSRCS2))
+	DEFINES += -DCNC
+else
+	CPPSRCS21 = $(filter-out $(SRC)/modules/utils/panel/screens/cnc/%,$(CPPSRCS2))
+endif
+
 # Totally exclude any modules listed in EXCLUDE_MODULES
 # uppercase function
 uc = $(subst a,A,$(subst b,B,$(subst c,C,$(subst d,D,$(subst e,E,$(subst f,F,$(subst g,G,$(subst h,H,$(subst i,I,$(subst j,J,$(subst k,K,$(subst l,L,$(subst m,M,$(subst n,N,$(subst o,O,$(subst p,P,$(subst q,Q,$(subst r,R,$(subst s,S,$(subst t,T,$(subst u,U,$(subst v,V,$(subst w,W,$(subst x,X,$(subst y,Y,$(subst z,Z,$1))))))))))))))))))))))))))
 EXL = $(patsubst %,$(SRC)/modules/%/%,$(EXCLUDED_MODULES))
-CPPSRCS3 = $(filter-out $(EXL),$(CPPSRCS2))
+CPPSRCS3 = $(filter-out $(EXL),$(CPPSRCS21))
 DEFINES += $(call uc, $(subst /,_,$(patsubst %,-DNO_%,$(EXCLUDED_MODULES))))
 
 # do not compile the src/testframework as that can only be done with rake
@@ -138,7 +146,7 @@ MBED_DIR = $(BUILD_DIR)/../mbed/drop
 MRI_DIR  = $(BUILD_DIR)/../mri
 
 # Include path which points to external library headers and to subdirectories of this project which contain headers.
-SUBDIRS = $(wildcard $(SRC)/* $(SRC)/*/* $(SRC)/*/*/* $(SRC)/*/*/*/* $(SRC)/*/*/*/*/*)
+SUBDIRS = $(wildcard $(SRC)/* $(SRC)/*/* $(SRC)/*/*/* $(SRC)/*/*/*/* $(SRC)/*/*/*/*/* $(SRC)/*/*/*/*/*/*)
 PROJINCS = $(sort $(dir $(SUBDIRS)))
 INCDIRS += $(SRC) $(PROJINCS) $(MRI_DIR) $(MBED_DIR) $(MBED_DIR)/$(DEVICE)
 

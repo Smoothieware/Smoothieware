@@ -16,8 +16,8 @@
 #include "libs/SDFAT.h"
 
 #include "modules/utils/player/PlayerPublicAccess.h"
-#include "screens/CustomScreen.h"
-#include "screens/MainMenuScreen.h"
+#include "CustomScreen.h"
+#include "MainMenuScreen.h"
 #include "SlowTicker.h"
 #include "Gcode.h"
 #include "TemperatureControlPublicAccess.h"
@@ -66,6 +66,11 @@
 #define panel_display_message_checksum CHECKSUM("display_message")
 
 Panel* Panel::instance= nullptr;
+
+#define MENU_MODE                  0
+#define CONTROL_MODE               1
+#define DIRECT_ENCODER_MODE        2
+#define NOP_MODE                   3
 
 Panel::Panel()
 {
@@ -199,6 +204,9 @@ void Panel::enter_screen(PanelScreen *screen)
     if(this->current_screen != nullptr)
         this->current_screen->on_exit();
 
+    if(screen == nullptr) {
+        screen= top_screen;
+    }
     this->current_screen = screen;
     this->reset_counter();
     this->current_screen->on_enter();
@@ -230,7 +238,16 @@ uint32_t Panel::encoder_check(uint32_t dummy)
     // NOTE FIXME (WHY is it in menu only?) this code will not work if change is not 1,0,-1 anything greater (as in above case) will not work properly
     static int encoder_counter = 0; // keeps track of absolute encoder position
     static int last_encoder_click= 0; // last readfing of divided encoder count
+
     int change = lcd->readEncoderDelta();
+
+    if(mode == DIRECT_ENCODER_MODE) {
+        if(change != 0 && encoder_cb_fnc) {
+            encoder_cb_fnc(change);
+        }
+        return 0;
+    }
+
     encoder_counter += change;
     int clicks= encoder_counter/this->encoder_click_resolution;
     int delta= clicks - last_encoder_click; // the number of clicks this time
@@ -251,11 +268,19 @@ uint32_t Panel::button_tick(uint32_t dummy)
     return 0;
 }
 
-// Read and update encoder
+// Read and update encoder from a slow source
 uint32_t Panel::encoder_tick(uint32_t dummy)
 {
     this->do_encoder = true;
     return 0;
+}
+
+// special mode where all encoder ticks are sent to the given function
+bool Panel::enter_direct_encoder_mode(encoder_cb_t fnc)
+{
+    encoder_cb_fnc= fnc;
+    this->mode= DIRECT_ENCODER_MODE;
+    return true;
 }
 
 void Panel::on_set_public_data(void *argument)
@@ -372,14 +397,15 @@ void Panel::on_idle(void *argument)
         this->click_button.check_signal(but & BUTTON_SELECT);
     }
 
-    // If we are in menu mode and the position has changed
-    if ( this->mode == MENU_MODE && this->counter_change() ) {
-        this->menu_update();
-    }
-
-    // If we are in control mode
-    if ( this->mode == CONTROL_MODE && this->counter_change() ) {
-        this->control_value_update();
+    if(this->counter_change()) {
+        switch(this->mode) {
+            case MENU_MODE: // If we are in menu mode and the position has changed
+                this->menu_update();
+                break;
+            case CONTROL_MODE: // If we are in control mode
+                this->control_value_update();
+                break;
+        }
     }
 
     // If we must refresh
@@ -449,6 +475,10 @@ bool Panel::click()
     }
 }
 
+void Panel::enter_nop_mode()
+{
+    this->mode = NOP_MODE;
+}
 
 // Enter menu mode
 void Panel::enter_menu_mode(bool force)
@@ -456,6 +486,7 @@ void Panel::enter_menu_mode(bool force)
     this->mode = MENU_MODE;
     this->counter = &this->menu_selected_line;
     this->menu_changed = force;
+    encoder_cb_fnc= nullptr;
 }
 
 void Panel::setup_menu(uint16_t rows)
@@ -553,6 +584,7 @@ bool Panel::enter_control_mode(float passed_normal_increment, float passed_press
     this->counter = &this->control_normal_counter;
     this->control_normal_counter = 0;
     this->control_base_value = 0;
+    encoder_cb_fnc= nullptr;
     return true;
 }
 

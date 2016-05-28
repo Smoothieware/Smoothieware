@@ -40,6 +40,7 @@ public:
 
     void dump_queue(void);
     void flush_queue(void);
+    float get_current_feedrate() const { return current_feedrate; }
 
     friend class Planner; // for queue
 
@@ -54,6 +55,7 @@ private:
 
     uint32_t queue_delay_time_ms;
     size_t queue_size;
+    float current_feedrate{0}; // actual nominal feedrate that current block is running at in mm/sec
 
     struct {
         volatile bool running:1;

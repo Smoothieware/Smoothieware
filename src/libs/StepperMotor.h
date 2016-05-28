@@ -26,6 +26,8 @@ class StepperMotor  : public Module {
         inline bool is_enabled() const { return !en_pin.get(); };
         inline bool is_moving() const { return moving; };
 
+        void manual_step(bool dir);
+
         bool which_direction() const { return direction; }
 
         float get_steps_per_second()  const { return steps_per_second; }
