@@ -186,6 +186,13 @@ void  StepTicker::acceleration_tick() {
     }
 }
 
+void StepTicker::schedule_unstep(int motor)
+{
+    this->unstep[motor]= 1;
+    LPC_TIM1->TCR = 3;
+    LPC_TIM1->TCR = 1;
+}
+
 void StepTicker::TIMER0_IRQHandler (void){
     // Reset interrupt register
     LPC_TIM0->IR |= 1 << 0;

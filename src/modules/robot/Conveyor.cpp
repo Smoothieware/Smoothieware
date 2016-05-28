@@ -163,6 +163,7 @@ void Conveyor::on_block_end(void* block)
 
     // Get a new block
     Block* next = this->queue.item_ref(gc_pending);
+    current_feedrate= next->nominal_speed;
 
     next->begin();
 }
