@@ -22,6 +22,9 @@
 #ifdef STEPTICKER_DEBUG_PIN
 #include "gpio.h"
 extern GPIO stepticker_debug_pin;
+#define SET_STEPTICKER_DEBUG_PIN(n) {if(n) stepticker_debug_pin.set(); else stepticker_debug_pin.clear(); }
+#else
+#define SET_STEPTICKER_DEBUG_PIN(n)
 #endif
 
 StepTicker *StepTicker::instance;
@@ -126,7 +129,7 @@ void StepTicker::step_tick (void)
 {
     static uint32_t current_tick = 0;
 
-    //stepticker_debug_pin= running ? 1 : 0;
+    //SET_STEPTICKER_DEBUG_PIN(running ? 1 : 0);
 
     if(!running){
         // if nothing has been setup we ignore the ticks
@@ -202,7 +205,7 @@ void StepTicker::step_tick (void)
     // see if any motors are still moving
     // FIXME why is this always being called when ther eis nothing todo?
     if(!still_moving) {
-        stepticker_debug_pin = 0;
+        SET_STEPTICKER_DEBUG_PIN(0);
 
         // all moves finished
         current_tick = 0;
@@ -241,7 +244,7 @@ bool StepTicker::pop_next_job()
     }
 
     total_move_time.fetch_sub(current_job.block_info.total_move_ticks);
-    stepticker_debug_pin = 1;
+    SET_STEPTICKER_DEBUG_PIN(1);
     return true;
 }
 
@@ -250,7 +253,7 @@ bool StepTicker::pop_next_job()
 // this is done ahead of time so does not delay tick generation, see Conveyor::check_queue()
 bool StepTicker::push_block(const Block *block)
 {
-    //stepticker_debug_pin = 1;
+    //SET_STEPTICKER_DEBUG_PIN(1);
     job_entry_t job;
 
     job.block_info.accelerate_until = block->accelerate_until;
@@ -291,7 +294,7 @@ bool StepTicker::push_block(const Block *block)
     }
 
 
-    //stepticker_debug_pin = 0;
+    //SET_STEPTICKER_DEBUG_PIN(0);
     if(jobq.put(job)) {
         // this needs to be atomic
         total_move_time.fetch_add(block->total_move_ticks);
