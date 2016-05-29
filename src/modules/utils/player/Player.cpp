@@ -103,36 +103,20 @@ void Player::on_gcode_received(void *argument)
             mounter.remount();
             gcode->stream->printf("SD card ok\r\n");
 
-        } else if (gcode->m == 23) { // select file
+        } else if (gcode->m == 23) { 
+            // Select a file
             this->filename = "/sd/" + args; // filename is whatever is in args
             this->current_stream = &(StreamOutput::NullStream);
 
-            if(this->current_file_handler != NULL) {
-                this->playing_file = false;
-                fclose(this->current_file_handler);
-            }
-            this->current_file_handler = fopen( this->filename.c_str(), "r");
-
-            if(this->current_file_handler == NULL) {
+            // Prepare playing the file
+            if( !this->prepare_playing() ){
                 gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
                 return;
-
-            } else {
-                // get size of file
-                int result = fseek(this->current_file_handler, 0, SEEK_END);
-                if (0 != result) {
-                    this->file_size = 0;
-                } else {
-                    this->file_size = ftell(this->current_file_handler);
-                    fseek(this->current_file_handler, 0, SEEK_SET);
-                }
-                gcode->stream->printf("File opened:%s Size:%ld\r\n", this->filename.c_str(), this->file_size);
-                gcode->stream->printf("File selected\r\n");
             }
-
-
-            this->played_cnt = 0;
-            this->elapsed_secs = 0;
+            
+            // Display information confirming the file was opened and selected
+            gcode->stream->printf("File opened:%s Size:%ld\r\n", this->filename.c_str(), this->file_size);
+            gcode->stream->printf("File selected\r\n");
 
         } else if (gcode->m == 24) { // start print
             if (this->current_file_handler != NULL) {
@@ -178,29 +162,14 @@ void Player::on_gcode_received(void *argument)
             this->filename = "/sd/" + args; // filename is whatever is in args including spaces
             this->current_stream = &(StreamOutput::NullStream);
 
-            if(this->current_file_handler != NULL) {
-                this->playing_file = false;
-                fclose(this->current_file_handler);
-            }
-
-            this->current_file_handler = fopen( this->filename.c_str(), "r");
-            if(this->current_file_handler == NULL) {
+            // Prepare playing the file
+            if( !this->prepare_playing() ){
                 gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
-            } else {
-                this->playing_file = true;
-
-                // get size of file
-                int result = fseek(this->current_file_handler, 0, SEEK_END);
-                if (0 != result) {
-                        file_size = 0;
-                } else {
-                        file_size = ftell(this->current_file_handler);
-                        fseek(this->current_file_handler, 0, SEEK_SET);
-                }
+                return;
             }
 
-            this->played_cnt = 0;
-            this->elapsed_secs = 0;
+            // Actually start playing
+            this->playing_file = true;
 
         } else if (gcode->m == 600) { // suspend print, Not entirely Marlin compliant, M600.1 will leave the heaters on
             this->suspend_command((gcode->subcode == 1)?"h":"", gcode->stream);
@@ -221,6 +190,46 @@ void Player::on_gcode_received(void *argument)
             }
         }
     }
+}
+
+bool Player::prepare_playing(){
+    // If a file is already playing
+    if(this->current_file_handler != NULL) {
+        this->playing_file = false;
+        fclose(this->current_file_handler);
+    }
+
+    // Do not start playing if we are already playing
+    // Note : this is going to get removed by the recursion feature so we ignore it for now 
+    /*
+    if(this->playing_file || this->suspended) {
+        this->current_stream->printf("Currently playing, abort file playing first\r\n");
+        return false;
+    }
+    */
+
+    // Open the file 
+    this->current_file_handler = fopen( this->filename.c_str(), "r");
+
+    // Check whether that succeeded or not
+    bool file_opened = (this->current_file_handler == NULL);
+
+    // If the file was open, get it's size
+    if( file_opened ){
+        int result = fseek(this->current_file_handler, 0, SEEK_END);
+        if (0 != result) { this->file_size = 0; } else {
+            this->file_size = ftell(this->current_file_handler);
+            fseek(this->current_file_handler, 0, SEEK_SET);
+        }
+    }
+
+    // Initialize counters 
+    this->played_cnt = 0;
+    this->elapsed_secs = 0;
+   
+    // Return whether or not the file was opened
+    return file_opened;
+
 }
 
 // When a new line is received, check if it is a command, and if it is, act upon it
@@ -260,26 +269,14 @@ void Player::play_command( string parameters, StreamOutput *stream )
     string options= extract_options(parameters);
     // Get filename which is the entire parameter line upto any options found or entire line
     this->filename = absolute_from_relative(parameters);
+    this->current_stream = stream;
 
-    if(this->playing_file || this->suspended) {
-        stream->printf("Currently printing, abort print first\r\n");
-        return;
-    }
-
-    if(this->current_file_handler != NULL) { // must have been a paused print
-        fclose(this->current_file_handler);
-    }
-
-    this->current_file_handler = fopen( this->filename.c_str(), "r");
-    if(this->current_file_handler == NULL) {
+    // Prepare playing the file
+    if( !this->prepare_playing() ){
         stream->printf("File not found: %s\r\n", this->filename.c_str());
         return;
     }
-
-    stream->printf("Playing %s\r\n", this->filename.c_str());
-
-    this->playing_file = true;
-
+ 
     // Output to the current stream if we were passed the -v ( verbose ) option
     if( options.find_first_of("Vv") == string::npos ) {
         this->current_stream = &(StreamOutput::NullStream);
@@ -287,19 +284,12 @@ void Player::play_command( string parameters, StreamOutput *stream )
         // we send to the kernels stream as it cannot go away
         this->current_stream = THEKERNEL->streams;
     }
+   
+    // Warn the user playing has begun
+    stream->printf("Playing %s\r\n", this->filename.c_str());
 
-    // get size of file
-    int result = fseek(this->current_file_handler, 0, SEEK_END);
-    if (0 != result) {
-        stream->printf("WARNING - Could not get file size\r\n");
-        file_size = 0;
-    } else {
-        file_size = ftell(this->current_file_handler);
-        fseek(this->current_file_handler, 0, SEEK_SET);
-        stream->printf("  File size %ld\r\n", file_size);
-    }
-    this->played_cnt = 0;
-    this->elapsed_secs = 0;
+    // Actually start playing the file
+    this->playing_file = true;
 }
 
 void Player::progress_command( string parameters, StreamOutput *stream )

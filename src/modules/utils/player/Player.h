@@ -32,6 +32,7 @@ class Player : public Module {
         void on_gcode_received(void *argument);
 
     private:
+        bool prepare_playing();
         void play_command( string parameters, StreamOutput* stream );
         void progress_command( string parameters, StreamOutput* stream );
         void abort_command( string parameters, StreamOutput* stream );
