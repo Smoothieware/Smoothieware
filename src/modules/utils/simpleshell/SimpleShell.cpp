@@ -966,39 +966,31 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         stream->printf("done\n");
 
     }else if (what == "circle") {
-        // draws a circle around current position. usage: radius segments iterations [feedrate]
+        // draws a circle around origin. usage: radius iterations [feedrate]
         string radius = shift_parameter( parameters );
-        string segments = shift_parameter( parameters );
         string iters = shift_parameter( parameters );
         string speed = shift_parameter( parameters );
-         if(radius.empty() || segments.empty() || iters.empty()) {
-            stream->printf("error: Need radius segments iterations\n");
+         if(radius.empty() || iters.empty()) {
+            stream->printf("error: Need radius iterations\n");
             return;
         }
 
         float r= strtof(radius.c_str(), NULL);
-        uint32_t s= strtol(segments.c_str(), NULL, 10);
         uint32_t n= strtol(iters.c_str(), NULL, 10);
         float f= speed.empty() ? THEKERNEL->robot->get_feed_rate() : strtof(speed.c_str(), NULL);
-        float xoff, yoff;
-        std::tie(xoff, yoff, std::ignore) = THEKERNEL->robot->mcs2wcs(THEKERNEL->robot->get_axis_position());
+
         char cmd[64];
-        snprintf(cmd, sizeof(cmd), "G90\n");
+        snprintf(cmd, sizeof(cmd), "G0 X%f Y0 F%f", -r, f);
+        stream->printf("%s\n", cmd);
         struct SerialMessage message{&StreamOutput::NullStream, cmd};
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
         for (uint32_t i = 0; i < n; ++i) {
-            for(uint32_t a=0;a<s;a++) {
-                snprintf(cmd, sizeof(cmd), "G0 X%f Y%f F%f",
-                    xoff + (sinf(a * (360.0F / s) * (float)M_PI / 180.0F) * r),
-                    yoff + (cosf(a * (360.0F / s) * (float)M_PI / 180.0F) * r),
-                    f);
-                stream->printf("%s\n", cmd);
-                message.message= cmd;
-                THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-                if(THEKERNEL->is_halted()) break;
-            }
             if(THEKERNEL->is_halted()) break;
+            snprintf(cmd, sizeof(cmd), "G2 X%f Y0 I%f J0 F%f", -r, r, f);
+            stream->printf("%s\n", cmd);
+            message.message= cmd;
+            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             THEKERNEL->conveyor->wait_for_empty_queue();
         }
         stream->printf("done\n");
@@ -1050,7 +1042,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
     }else {
         stream->printf("usage:\n test jog axis distance iterations [feedrate]\n");
         stream->printf(" test square size iterations [feedrate]\n");
-        stream->printf(" test circle radius segments iterations [feedrate]\n");
+        stream->printf(" test circle radius iterations [feedrate]\n");
     }
 }
 #endif
