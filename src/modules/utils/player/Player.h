@@ -19,6 +19,11 @@ using std::string;
 
 class StreamOutput;
 
+struct stacked_file {
+    string filename;
+    uint32_t position;
+};
+
 class Player : public Module {
     public:
         Player();
@@ -32,7 +37,9 @@ class Player : public Module {
         void on_gcode_received(void *argument);
 
     private:
-        bool prepare_playing();
+        bool prepare_playing( string filename_argument );
+        void pop_file_from_stack(); 
+        void get_current_file_size();
         void play_command( string parameters, StreamOutput* stream );
         void progress_command( string parameters, StreamOutput* stream );
         void abort_command( string parameters, StreamOutput* stream );
@@ -47,6 +54,8 @@ class Player : public Module {
         string on_boot_gcode;
         StreamOutput* current_stream;
         StreamOutput* reply_stream;
+
+        std::vector<stacked_file> file_stack; 
 
         FILE* current_file_handler;
         long file_size;
@@ -63,6 +72,7 @@ class Player : public Module {
             bool leave_heaters_on:1;
             bool override_leave_heaters_on:1;
             uint8_t suspend_loops:4;
+            uint8_t recursion_limit:4;
         };
 };
 
