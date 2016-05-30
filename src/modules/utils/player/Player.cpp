@@ -212,7 +212,7 @@ bool Player::prepare_playing(){
     this->current_file_handler = fopen( this->filename.c_str(), "r");
 
     // Check whether that succeeded or not
-    bool file_opened = (this->current_file_handler == NULL);
+    bool file_opened = (this->current_file_handler != NULL);
 
     // If the file was open, get it's size
     if( file_opened ){
