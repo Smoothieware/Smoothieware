@@ -110,7 +110,7 @@ void Player::on_gcode_received(void *argument)
 
             // Prepare playing the file
             if( !this->prepare_playing(filename_argument) ){
-                gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
+                gcode->stream->printf("file.open failed: %s\r\n", filename_argument.c_str());
                 return;
             }
             
@@ -164,7 +164,7 @@ void Player::on_gcode_received(void *argument)
 
             // Prepare playing the file
             if( !this->prepare_playing(filename_argument) ){
-                gcode->stream->printf("file.open failed: %s\r\n", this->filename.c_str());
+                gcode->stream->printf("file.open failed: %s\r\n", filename_argument.c_str());
                 return;
             }
 
@@ -231,9 +231,9 @@ bool Player::prepare_playing(string filename_argument){
 
 }
 
-void Player::pop_file_from_stack(){
+bool Player::pop_file_from_stack(){
     // If there is a file in the stack, pop it and resume playing it
-    if( this->file_stack.empty() ){ return; }
+    if( this->file_stack.empty() ){ return false; }
     stacked_file file = this->file_stack.back();
     this->file_stack.pop_back();
 
@@ -242,11 +242,14 @@ void Player::pop_file_from_stack(){
 
     // If the file was open
     if( this->current_file_handler != NULL){
-        this->get_current_file_size();       // Get file size
-        this->filename = file.filename;      // Remember the filename
-        this->played_cnt = file.position;    // Initialize counters 
-        this->playing_file = true;                // Resume playing
+        this->get_current_file_size();                                      // Get file size
+        this->filename = file.filename;                                     // Remember the filename
+        this->played_cnt = file.position;                                   // Initialize counters 
+        fseek( this->current_file_handler, this->played_cnt, SEEK_SET );    // Seek to the current position
+        this->playing_file = true;                                          // Resume playing
+        return true;
     }
+    return false;
 
 }
 
@@ -299,7 +302,7 @@ void Player::play_command( string parameters, StreamOutput *stream )
 
     // Prepare playing the file
     if( !this->prepare_playing(filename_argument) ){
-        stream->printf("File not found: %s\r\n", this->filename.c_str());
+        stream->printf("File not found: %s\r\n", filename_argument.c_str());
         return;
     }
  
@@ -431,8 +434,8 @@ void Player::on_main_loop(void *argument)
                 message.stream = this->current_stream;
 
                 // waits for the queue to have enough room
+                played_cnt += len; // Recursive branch note : this might need to move up one line or we'd be looping the recursion over and over
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
-                played_cnt += len;
                 return; // we feed one line per main loop
 
             } else {
@@ -442,18 +445,25 @@ void Player::on_main_loop(void *argument)
             }
         }
 
-        this->playing_file = false;
-        this->filename = "";
-        played_cnt = 0;
-        file_size = 0;
-        fclose(this->current_file_handler);
-        current_file_handler = NULL;
-        this->current_stream = NULL;
+        if( this->pop_file_from_stack() ){
+            // A file was popped from the stack, we continue playing it
 
-        if(this->reply_stream != NULL) {
-            // if we were printing from an M command from pronterface we need to send this back
-            this->reply_stream->printf("Done printing file\r\n");
-            this->reply_stream = NULL;
+        }else{
+            // There was no file in the stack, we are completely done playing
+            this->playing_file = false;
+            this->filename = "";
+            played_cnt = 0;
+            file_size = 0;
+            fclose(this->current_file_handler);
+            current_file_handler = NULL;
+            this->current_stream = NULL;
+
+            if(this->reply_stream != NULL) {
+                // if we were printing from an M command from pronterface we need to send this back
+                this->reply_stream->printf("Done printing file\r\n");
+                this->reply_stream = NULL;
+            }
+
         }
     }
 }

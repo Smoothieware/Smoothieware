@@ -38,7 +38,7 @@ class Player : public Module {
 
     private:
         bool prepare_playing( string filename_argument );
-        void pop_file_from_stack(); 
+        bool pop_file_from_stack(); 
         void get_current_file_size();
         void play_command( string parameters, StreamOutput* stream );
         void progress_command( string parameters, StreamOutput* stream );
