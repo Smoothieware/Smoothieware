@@ -205,8 +205,6 @@ bool Player::prepare_playing(string filename_argument){
         file_size = 0;
         fclose(this->current_file_handler);
         current_file_handler = NULL;
-        this->current_stream = NULL;
-
     }
 
     // Open the file 
@@ -308,7 +306,10 @@ void Player::play_command( string parameters, StreamOutput *stream )
  
     // Output to the current stream if we were passed the -v ( verbose ) option
     if( options.find_first_of("Vv") == string::npos ) {
-        this->current_stream = &(StreamOutput::NullStream);
+        // If this is recursive playing, we need to inherit/preserve the original stream, otherwise, we indeed talk to a nullstream
+        if( this->file_stack.size() == 0 ){
+            this->current_stream = &(StreamOutput::NullStream);
+        }
     } else {
         // we send to the kernels stream as it cannot go away
         this->current_stream = THEKERNEL->streams;
