@@ -136,23 +136,14 @@ bool USBSerial::USBEvent_EPIn(uint8_t bEP, uint8_t bEPStatus)
     uint8_t b[MAX_PACKET_SIZE_EPBULK];
 
     int l = txbuf.available();
-    iprintf("%d bytes queued\n", l);
     if (l > 0) {
         if (l > MAX_PACKET_SIZE_EPBULK)
             l = MAX_PACKET_SIZE_EPBULK;
-        iprintf("Sending %d bytes:\n\t", l);
         int i;
         for (i = 0; i < l; i++) {
             txbuf.dequeue(&b[i]);
-            if (b[i] >= 32 && b[i] < 128)
-                iprintf("%c", b[i]);
-            else {
-                iprintf("\\x%02X", b[i]);
-            }
         }
-        iprintf("\nSending...\n");
         send(b, l);
-        iprintf("Sent\n");
         if (txbuf.available() == 0)
             r = false;
     } else {
