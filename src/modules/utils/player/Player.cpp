@@ -446,6 +446,7 @@ void Player::on_main_loop(void *argument)
             }
         }
 
+        // If we get here, we reached the end of the file
         if( this->pop_file_from_stack() ){
             // A file was popped from the stack, we continue playing it
 
