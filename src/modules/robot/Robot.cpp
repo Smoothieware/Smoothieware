@@ -46,6 +46,7 @@ using std::string;
 #define  mm_per_line_segment_checksum        CHECKSUM("mm_per_line_segment")
 #define  delta_segments_per_second_checksum  CHECKSUM("delta_segments_per_second")
 #define  mm_per_arc_segment_checksum         CHECKSUM("mm_per_arc_segment")
+#define  mm_max_arc_error_checksum           CHECKSUM("mm_max_arc_error")
 #define  arc_correction_checksum             CHECKSUM("arc_correction")
 #define  x_axis_max_speed_checksum           CHECKSUM("x_axis_max_speed")
 #define  y_axis_max_speed_checksum           CHECKSUM("y_axis_max_speed")
@@ -181,6 +182,7 @@ void Robot::load_config()
     this->mm_per_line_segment = THEKERNEL->config->value(mm_per_line_segment_checksum )->by_default(    0.0F)->as_number();
     this->delta_segments_per_second = THEKERNEL->config->value(delta_segments_per_second_checksum )->by_default(0.0f   )->as_number();
     this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(    0.5f)->as_number();
+    this->mm_max_arc_error    = THEKERNEL->config->value(mm_max_arc_error             )->by_default(   0.01f)->as_number();
     this->arc_correction      = THEKERNEL->config->value(arc_correction_checksum      )->by_default(    5   )->as_number();
 
     this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
@@ -1018,8 +1020,16 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     // Mark the gcode as having a known distance
     this->distance_in_gcode_is_known( gcode );
 
+    // limit segments by maximum arc error
+    float arc_segment = this->mm_per_arc_segment;
+    if (2 * radius > this->mm_max_arc_error) {
+        float min_err_segment = 2 * sqrtf((this->mm_max_arc_error * (2 * radius - this->mm_max_arc_error)));
+        if (this->mm_per_arc_segment < min_err_segment) {
+            arc_segment = min_err_segment;
+        }
+    }
     // Figure out how many segments for this gcode
-    uint16_t segments = floorf(gcode->millimeters_of_travel / this->mm_per_arc_segment);
+    uint16_t segments = floorf(gcode->millimeters_of_travel / arc_segment);
 
     float theta_per_segment = angular_travel / segments;
     float linear_per_segment = linear_travel / segments;

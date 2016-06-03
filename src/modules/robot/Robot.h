@@ -107,6 +107,7 @@ class Robot : public Module {
         float feed_rate;                                     // Current rate for feeding moves ( mm/min )
         float mm_per_line_segment;                           // Setting : Used to split lines into segments
         float mm_per_arc_segment;                            // Setting : Used to split arcs into segments
+        float mm_max_arc_error;                              // Setting : Used to limit total arc segments to max error
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
         float seconds_per_minute;                            // for realtime speed change
 
