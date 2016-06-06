@@ -24,8 +24,9 @@ class StepperMotor {
 
         void step();
         inline void unstep() { step_pin.set(0); };
+        void manual_step(bool dir);
 
-        inline void enable(bool state) { en_pin.set(!state); };
+        inline void enable(bool state) { enabled= state; en_pin.set(!state); };
 
         bool is_moving() const { return moving; }
         bool which_direction() const { return direction; }
@@ -100,6 +101,7 @@ class StepperMotor {
             volatile bool force_finish:1; // set to force a move to finish early
             bool direction:1;
             bool last_step_tick_valid:1; // set if the last step tick time is valid (ie the motor moved last block)
+            bool enabled:1;
         };
 
         // Called a great many times per second, to step if we have to now
