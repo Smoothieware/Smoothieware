@@ -13,9 +13,6 @@
 #include <math.h>
 #include "mbed.h"
 
-// in steps/sec the default minimum speed (was 20steps/sec hardcoded)
-float StepperMotor::default_minimum_actuator_rate= 20.0F;
-
 StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en)
 {
     set_high_on_debug(en.port_number, en.pin);

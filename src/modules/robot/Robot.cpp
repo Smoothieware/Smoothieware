@@ -568,9 +568,6 @@ void Robot::on_gcode_received(void *argument)
                         mps = 0.0F;
                     THEKERNEL->planner->minimum_planner_speed = mps;
                 }
-                if (gcode->has_letter('Y')) {
-                    actuators[0]->default_minimum_actuator_rate = gcode->get_value('Y');
-                }
                 break;
 
             case 220: // M220 - speed override percentage
