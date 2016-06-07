@@ -20,8 +20,9 @@
 #include <mri.h>
 
 #ifdef STEPTICKER_DEBUG_PIN
+// debug pins, only used if defined in src/makefile
 #include "gpio.h"
-extern GPIO stepticker_debug_pin;
+GPIO stepticker_debug_pin(STEPTICKER_DEBUG_PIN);
 #define SET_STEPTICKER_DEBUG_PIN(n) {if(n) stepticker_debug_pin.set(); else stepticker_debug_pin.clear(); }
 #else
 #define SET_STEPTICKER_DEBUG_PIN(n)
@@ -56,6 +57,12 @@ StepTicker::StepTicker()
     this->num_motors = 0;
 
     this->running = false;
+
+    #ifdef STEPTICKER_DEBUG_PIN
+    // setup debug pin if defined
+    stepticker_debug_pin.output();
+    stepticker_debug_pin= 0;
+    #endif
 }
 
 StepTicker::~StepTicker()
