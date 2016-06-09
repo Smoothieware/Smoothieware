@@ -15,8 +15,8 @@ following section *completely*. Thank you! :)
 2. Please make sure to **test out the current edge version** of Smoothieware to see
    whether the problem you are encountering still exists, and **test with a clean config**.
 
-3. The problem still exists? Then please **look through the
-   [existing tickets]((https://github.com/Smoothieware/Smoothieware/issues?state=open)
+3. The problem still exists? Then please look through the
+   [existing tickets](https://github.com/Smoothieware/Smoothieware/issues?state=open)
    to check if there already exists a report of the issue you are encountering.
 
    **Very important:** Please make absolutely sure that if you find a bug that looks like
