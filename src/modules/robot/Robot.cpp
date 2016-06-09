@@ -1029,7 +1029,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         }
     }
     // Figure out how many segments for this gcode
-    uint16_t segments = ceilf((gcode->millimeters_of_travel / arc_segment));
+    uint16_t segments = ceilf(gcode->millimeters_of_travel / arc_segment);
 
   //printf("Radius %f - Segment Length %f - Number of Segments %d\r\n",radius,arc_segment,segments);  // Testing Purposes ONLY   
     float theta_per_segment = angular_travel / segments;
