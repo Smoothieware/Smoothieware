@@ -213,7 +213,7 @@ void Robot::load_config()
         actuators[a] = new StepperMotor(pins[0], pins[1], pins[2]);
 
         actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
-        actuators[a]->set_max_rate(THEKERNEL->config->value(checksums[a][4])->by_default(30000.0F)->as_number());
+        actuators[a]->set_max_rate(THEKERNEL->config->value(checksums[a][4])->by_default(30000.0F)->as_number()/60.0F); // it is in mm/min and converted to mm/sec
     }
 
     check_max_actuator_speeds(); // check the configs are sane
