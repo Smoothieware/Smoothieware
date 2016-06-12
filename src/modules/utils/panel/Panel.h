@@ -88,6 +88,9 @@ class Panel : public Module {
         LcdBase* lcd;
         PanelScreen* custom_screen;
 
+        // path prefix to restrict Play panel to
+        std::string root_path;
+
         using encoder_cb_t= std::function<void(int ticks)>;
         bool enter_direct_encoder_mode(encoder_cb_t fnc);
 

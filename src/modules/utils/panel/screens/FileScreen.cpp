@@ -31,8 +31,16 @@ void FileScreen::on_enter()
 {
     THEPANEL->lcd->clear();
 
-    // Default folder to enter
-    this->enter_folder(THEKERNEL->current_path.c_str());
+    // Check if current_path is underneath the virtual root (if panel.root_path option is used)
+    if (THEKERNEL->current_path.compare(0, THEPANEL->root_path.size(), THEPANEL->root_path) == 0)
+    {
+        this->enter_folder(THEKERNEL->current_path.c_str());
+    }
+    else
+    {
+        // disallow paths outside the virtual root
+        this->enter_folder(THEPANEL->root_path.c_str());
+    }
 }
 
 void FileScreen::on_exit()
@@ -90,7 +98,7 @@ void FileScreen::clicked_line(uint16_t line)
 {
     if ( line == 0 ) {
         string path= THEKERNEL->current_path;
-        if(path == "/") {
+        if(path == THEPANEL->root_path || path == "/") {
             // Exit file navigation
             THEPANEL->enter_screen(this->parent);
         } else {
