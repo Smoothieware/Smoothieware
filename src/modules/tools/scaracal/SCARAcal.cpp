@@ -130,8 +130,8 @@ bool SCARAcal::set_home_offset(float x, float y, float z, StreamOutput *stream)
 bool SCARAcal::translate_trim(StreamOutput *stream)
 {
     float S_trim[3],
-          home_off[3],
-          actuator[3];;
+        home_off[3];
+    ActuatorCoordinates actuator;
 
     this->get_home_offset(home_off[0], home_off[1], home_off[2]);               // get home offsets
     this->get_trim(S_trim[0], S_trim[1], S_trim[2]);	                          // get current trim
@@ -162,8 +162,8 @@ bool SCARAcal::translate_trim(StreamOutput *stream)
 void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
 {
     char cmd[64];
-    float actuator[3],
-          cartesian[3];
+    float cartesian[3];
+    ActuatorCoordinates actuator;
 
     // Assign the actuator angles from input
     actuator[0] = theta;
@@ -193,8 +193,8 @@ void SCARAcal::on_gcode_received(void *argument)
 
             case 114: {    // Extra stuff for Morgan calibration
                 char buf[32];
-                float cartesian[3],
-                      actuators[3];
+                float cartesian[3];
+                ActuatorCoordinates actuators;
 
                 THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
                 THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate to get actuator position
@@ -215,8 +215,8 @@ void SCARAcal::on_gcode_received(void *argument)
 
                 if(gcode->has_letter('P')) {
                     // Program the current position as target
-                    float actuators[3],
-                          S_delta[2],
+                    ActuatorCoordinates actuators;
+                    float S_delta[2],
                           S_trim[3];
 
                     THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
@@ -240,7 +240,7 @@ void SCARAcal::on_gcode_received(void *argument)
 
                 if(gcode->has_letter('P')) {
                     // Program the current position as target
-                    float actuators[3];
+                    ActuatorCoordinates actuators;
 
                     THEKERNEL->robot->get_axis_position(cartesian);                                // get actual position from robot
                     THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators ); // translate to get actuator position
@@ -265,8 +265,8 @@ void SCARAcal::on_gcode_received(void *argument)
 
                 if(gcode->has_letter('P')) {
                     // Program the current position as target
-                    float actuators[3],
-                          S_delta[2];
+                    ActuatorCoordinates actuators;
+                    float S_delta[2];
 
                     THEKERNEL->robot->get_axis_position(cartesian);                                     // get actual position from robot
                     THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate it to get actual actuator angles

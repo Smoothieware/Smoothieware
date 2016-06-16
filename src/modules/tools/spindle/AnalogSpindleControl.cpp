@@ -35,7 +35,7 @@ void AnalogSpindleControl::on_module_loaded()
         Pin *smoothie_pin = new Pin();
         smoothie_pin->from_string(THEKERNEL->config->value(spindle_checksum, spindle_pwm_pin_checksum)->by_default("nc")->as_string());
         pwm_pin = smoothie_pin->as_output()->hardware_pwm();
-        output_inverted = smoothie_pin->inverting;
+        output_inverted = smoothie_pin->is_inverting();
         delete smoothie_pin;
     }
     // If we got no hardware PWM pin, delete this module
@@ -61,8 +61,6 @@ void AnalogSpindleControl::on_module_loaded()
     }
     // register for events
     register_for_event(ON_GCODE_RECEIVED);
-    register_for_event(ON_GCODE_EXECUTE);
-
 }
 
 void AnalogSpindleControl::turn_on() 

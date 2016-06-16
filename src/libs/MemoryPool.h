@@ -55,24 +55,4 @@ inline void  operator delete(void* p, MemoryPool& pool)
     pool.dealloc(p);
 }
 
-// this catches all usages of delete blah. The object's destructor is called before we get here
-// it first checks if the deleted object is part of a pool, and uses free otherwise.
-inline void  operator delete(void* p)
-{
-    MemoryPool* m = MemoryPool::first;
-    while (m)
-    {
-        if (m->has(p))
-        {
-            MDEBUG("Pool %p has %p, using dealloc()\n", m, p);
-            m->dealloc(p);
-            return;
-        }
-        m = m->next;
-    }
-
-    MDEBUG("no pool has %p, using free()\n", p);
-    free(p);
-}
-
 #endif /* _MEMORYPOOL_H */

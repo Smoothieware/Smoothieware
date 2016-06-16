@@ -68,7 +68,7 @@ StepTicker::StepTicker(){
 StepTicker::~StepTicker() {
 }
 
-//called when everythinf is setup and interrupts can start
+//called when everything is setup and interrupts can start
 void StepTicker::start() {
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
@@ -184,6 +184,13 @@ void  StepTicker::acceleration_tick() {
     for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
         acceleration_tick_handlers[i]();
     }
+}
+
+void StepTicker::schedule_unstep(int motor)
+{
+    this->unstep[motor]= 1;
+    LPC_TIM1->TCR = 3;
+    LPC_TIM1->TCR = 1;
 }
 
 void StepTicker::TIMER0_IRQHandler (void){

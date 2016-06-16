@@ -43,6 +43,7 @@ class StepTicker{
         }
         void acceleration_tick();
         void synchronize_acceleration(bool fire_now);
+        void schedule_unstep(int motor);
 
         void start();
 
@@ -57,6 +58,7 @@ class StepTicker{
         std::bitset<32> active_motor; // limit to 32 motors
         std::bitset<32> unstep;       // limit to 32 motors
         std::atomic_uchar do_move_finished;
+
         uint8_t num_motors;
         volatile bool a_move_finished;
 };

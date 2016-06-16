@@ -61,6 +61,7 @@ class Switch : public Module {
         char      input_on_command_letter;
         char      input_off_command_letter;
         struct {
+            uint8_t   subcode:4;
             bool      switch_changed:1;
             bool      input_pin_state:1;
             bool      switch_state:1;

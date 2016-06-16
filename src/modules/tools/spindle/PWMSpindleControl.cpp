@@ -74,7 +74,7 @@ void PWMSpindleControl::on_module_loaded()
         Pin *smoothie_pin = new Pin();
         smoothie_pin->from_string(THEKERNEL->config->value(spindle_checksum, spindle_pwm_pin_checksum)->by_default("nc")->as_string());
         pwm_pin = smoothie_pin->as_output()->hardware_pwm();
-        output_inverted = smoothie_pin->inverting;
+        output_inverted = smoothie_pin->is_inverting();
         delete smoothie_pin;
     }
     
@@ -94,15 +94,12 @@ void PWMSpindleControl::on_module_loaded()
         Pin *smoothie_pin = new Pin();
         smoothie_pin->from_string(THEKERNEL->config->value(spindle_checksum, spindle_feedback_pin_checksum)->by_default("nc")->as_string());
         smoothie_pin->as_input();
-        if (smoothie_pin->port_number == 0 || smoothie_pin->port_number == 2)
-        {
+        if (smoothie_pin->port_number == 0 || smoothie_pin->port_number == 2) {
             PinName pinname = port_pin((PortName)smoothie_pin->port_number, smoothie_pin->pin);
             feedback_pin = new mbed::InterruptIn(pinname);
             feedback_pin->rise(this, &PWMSpindleControl::on_pin_rise);
             NVIC_SetPriority(EINT3_IRQn, 16);
-        }
-        else
-        {
+        } else {
             THEKERNEL->streams->printf("Error: Spindle feedback pin has to be on P0 or P2.\n");
             delete this;
             return;
@@ -113,8 +110,6 @@ void PWMSpindleControl::on_module_loaded()
     THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &PWMSpindleControl::on_update_speed);
 
     register_for_event(ON_GCODE_RECEIVED);
-    register_for_event(ON_GCODE_EXECUTE);
-
 }
 
 void PWMSpindleControl::on_pin_rise()
@@ -140,18 +135,14 @@ uint32_t PWMSpindleControl::on_update_speed(uint32_t dummy)
 
     // Calculate current RPM
     uint32_t t = last_time;
-    if (t == 0)
-    {
+    if (t == 0) {
         current_rpm = 0;
-    }
-    else
-    {
+    } else {
         float new_rpm = 1000000 * 60.0f / (t * pulses_per_rev);
         current_rpm = smoothing_decay * new_rpm + (1.0f - smoothing_decay) * current_rpm;
     }
 
-    if (spindle_on)
-    {
+    if (spindle_on) {
         float error = target_rpm - current_rpm;
 
         current_I_value += control_I_term * error * 1.0f / UPDATE_FREQ;
@@ -165,9 +156,7 @@ uint32_t PWMSpindleControl::on_update_speed(uint32_t dummy)
         prev_error = error;
 
         current_pwm_value = new_pwm;
-    }
-    else
-    {
+    } else {
         current_I_value = 0;
         current_pwm_value = 0;
     }
@@ -184,7 +173,6 @@ uint32_t PWMSpindleControl::on_update_speed(uint32_t dummy)
 void PWMSpindleControl::turn_on() {
     spindle_on = true;
 }
-
 
 void PWMSpindleControl::turn_off() {
     spindle_on = false;

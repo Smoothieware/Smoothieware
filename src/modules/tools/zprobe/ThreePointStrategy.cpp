@@ -134,12 +134,12 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
         } else if( gcode->g == 32 ) { // three point probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
-            if(!gcode->has_letter('K')) { // K will keep current compensation to test plane
-                // clear any existing plane and compensation
-                delete this->plane;
-                this->plane= nullptr;
-                setAdjustFunction(false);
-            }
+
+             // clear any existing plane and compensation
+            delete this->plane;
+            this->plane= nullptr;
+            setAdjustFunction(false);
+
             if(!doProbing(gcode->stream)) {
                 gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
             } else {
@@ -300,8 +300,8 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     }
 
     // if first point is not within tolerance report it, it should ideally be 0
-    if(abs(v[0][2]) > this->tolerance) {
-        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", abs(v[0][2]), this->tolerance);
+    if(fabsf(v[0][2]) > this->tolerance) {
+        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", fabsf(v[0][2]), this->tolerance);
     }
 
     // define the plane

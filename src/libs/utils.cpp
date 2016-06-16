@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <cstdlib>
 
+#include "mbed.h"
+
 using std::string;
 
 uint16_t get_checksum(const string &to_check)
@@ -131,7 +133,7 @@ string shift_parameter( string &parameters )
 }
 
 // Separate command from arguments
-string get_arguments( string possible_command )
+string get_arguments( const string& possible_command )
 {
     size_t beginning = possible_command.find_first_of(" ");
     if( beginning == string::npos ) {
@@ -168,7 +170,6 @@ void system_reset( bool dfu )
 }
 
 // Convert a path indication ( absolute or relative ) into a path ( absolute )
-// TODO: Combine with plan9 absolute_path, current_path as argument?
 string absolute_from_relative( string path )
 {
     string cwd = THEKERNEL->current_path;
@@ -251,4 +252,22 @@ int append_parameters(char *buf, std::vector<std::pair<char,float>> params, size
         n += snprintf(&buf[n], bufsize-n, "%1.4f ", i.second);
     }
     return n;
+}
+
+string wcs2gcode(int wcs) {
+    string str= "G5";
+    str.append(1, std::min(wcs, 5) + '4');
+    if(wcs >= 6) {
+        str.append(".").append(1, '1' + (wcs - 6));
+    }
+    return str;
+}
+
+void safe_delay(uint32_t delayms)
+{
+    uint32_t dus= delayms*1000; //convert ms to us
+    uint32_t start = us_ticker_read();
+    while ((us_ticker_read() - start) < dus) {
+        THEKERNEL->call_event(ON_IDLE);
+    }
 }
