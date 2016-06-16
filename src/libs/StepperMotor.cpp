@@ -42,6 +42,7 @@ void StepperMotor::on_halt(void *argument)
 {
     if(argument == nullptr) {
         enable(false);
+        moving= false;
     }
 }
 

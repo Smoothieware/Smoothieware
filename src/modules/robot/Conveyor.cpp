@@ -65,6 +65,7 @@ Conveyor::Conveyor()
     running = false;
     halted = false;
     allow_fetch = false;
+    flush= false;
 }
 
 void Conveyor::on_module_loaded()
@@ -108,7 +109,7 @@ void Conveyor::on_idle(void*)
         } else {
             // Cleanly delete block
             Block* block = queue.tail_ref();
-            block->debug();
+            //block->debug();
             block->clear();
             queue.consume_tail();
         }
@@ -195,22 +196,38 @@ void Conveyor::check_queue(bool force)
 // called from step ticker ISR
 bool Conveyor::get_next_block(Block **block)
 {
-    // wait for queue to fill up, optimizes planning
-    if(!allow_fetch) return false;
+    // mark entire queue for GC if flush flag is asserted
+    if (flush){
+        while (queue.isr_tail_i != queue.head_i) {
+            queue.isr_tail_i = queue.next(queue.isr_tail_i);
+        }
+    }
 
     if(queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
 
-    uint32_t tail = queue.next(queue.isr_tail_i);
-    Block *b= queue.item_ref(tail);
+    // wait for queue to fill up, optimizes planning
+    if(!allow_fetch) return false;
+
+    Block *b= queue.item_ref(queue.isr_tail_i);
+    // we cannot use this now if it is being updated
     if(!b->locked) {
-        // we cannot use this now if it is being updated
+        if(!b->is_ready) __debugbreak(); // should never happen
+
         b->is_ticking= true;
+        b->recalculate_flag= false;
+
         *block= b;
-        queue.isr_tail_i= tail;
         return true;
     }
 
     return false;
+}
+
+// called from step ticker ISR when block is finished, do not do anything slow here
+void Conveyor::block_finished()
+{
+    // we increment the isr_tail_i so we can get the next block
+    queue.isr_tail_i= queue.next(queue.isr_tail_i);
 }
 
 /*
@@ -223,18 +240,13 @@ bool Conveyor::get_next_block(Block **block)
 void Conveyor::flush_queue()
 {
     allow_fetch = false;
-    while (!queue.is_empty()) {
-        Block* block = queue.tail_ref();
-        block->clear();
-        queue.consume_tail();
-    }
-
-    queue.isr_tail_i = queue.tail_i;
+    flush= true;
 
     // TODO force deceleration of last block
 
     // now wait until the job queue has finished and all motors are idle too
     wait_for_empty_queue();
+    flush= false;
 }
 
 // Debug function

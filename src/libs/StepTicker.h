@@ -39,7 +39,6 @@ class StepTicker{
         void step_tick (void);
         void handle_finish (void);
         void start();
-        void set_block(Block *block) { current_block= block; }
 
         // whatever setup the block should register this to know when it is done
         std::function<void()> finished_fnc{nullptr};

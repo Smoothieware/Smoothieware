@@ -65,11 +65,21 @@ void Block::clear()
     acceleration_per_tick= 0;
     deceleration_per_tick= 0;
     total_move_ticks= 0;
+    for(auto &i : tick_info) {
+        i.steps_per_tick= 0;
+        i.counter= 0;
+        i.acceleration_change= 0;
+        i.deceleration_change= 0;
+        i.plateau_rate= 0;
+        i.steps_to_move= 0;
+        i.step_count= 0;
+        i.next_accel_event= 0;
+    }
 }
 
 void Block::debug() const
 {
-    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d recalc:%d nomlen:%d time:%f\r\n",
+    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
                                this,
                                this->steps[0],
                                this->steps[1],
@@ -84,6 +94,8 @@ void Block::debug() const
                                this->entry_speed,
                                this->max_entry_speed,
                                this->is_ready,
+                               this->locked,
+                               this->is_ticking,
                                recalculate_flag ? 1 : 0,
                                nominal_length_flag ? 1 : 0,
                                total_move_ticks/STEP_TICKER_FREQUENCY
@@ -277,7 +289,7 @@ float Block::max_exit_speed()
 }
 
 // prepare block for the step ticker, called everytime the block changes
-// this is done ahead of time so does not delay tick generation, see Conveyor::check_queue()
+// this is done during planning so does not delay tick generation and step ticker can simplh grab the next block during the interrupt
 void Block::prepare()
 {
     float inv = 1.0F / this->steps_event_count;

@@ -53,6 +53,7 @@ StepTicker::StepTicker()
     this->num_motors = 0;
 
     this->running = false;
+    this->current_block = nullptr;
 
     #ifdef STEPTICKER_DEBUG_PIN
     // setup debug pin if defined
@@ -126,7 +127,6 @@ void StepTicker::handle_finish (void)
     if(finished_fnc) finished_fnc();
 }
 
-
 // step clock
 void StepTicker::step_tick (void)
 {
@@ -134,10 +134,20 @@ void StepTicker::step_tick (void)
 
     //SET_STEPTICKER_DEBUG_PIN(running ? 1 : 0);
 
+    // if nothing has been setup we ignore the ticks
     if(!running){
-        // if nothing has been setup we ignore the ticks
-        if(current_block == nullptr) return;
-        running= true;
+        // check if anything new available
+        if(THECONVEYOR->get_next_block(&current_block)) { // returns false if no new block is available
+            running= start_next_block(); // returns true if there is at least one motor with steps to issue
+            if(!running) return;
+        }else{
+            return;
+        }
+    }
+
+    if(THEKERNEL->is_halted()) {
+        running= false;
+        return;
     }
 
     bool still_moving= false;
@@ -214,9 +224,11 @@ void StepTicker::step_tick (void)
 
         // get next block
         // do it here so there is no delay in ticks
+        THECONVEYOR->block_finished();
 
-        if(THECONVEYOR->get_next_block(&current_block)) { // returns false if no new job available
+        if(THECONVEYOR->get_next_block(&current_block)) { // returns false if no new block is available
             running= start_next_block(); // returns true if there is at least one motor with steps to issue
+
         }else{
             current_block= nullptr;
             running= false;

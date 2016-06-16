@@ -34,6 +34,7 @@ public:
 
     // returns next available block writes it to block and returns true
     bool get_next_block(Block **block);
+    void block_finished();
 
     void dump_queue(void);
     void flush_queue(void);
@@ -58,6 +59,7 @@ private:
         volatile bool running:1;
         volatile bool halted:1;
         volatile bool allow_fetch:1;
+        bool flush:1;
     };
 
 };
