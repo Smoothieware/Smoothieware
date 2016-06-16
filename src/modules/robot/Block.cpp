@@ -49,7 +49,7 @@ void Block::clear()
     nominal_speed       = 0.0F;
     millimeters         = 0.0F;
     entry_speed         = 0.0F;
-    //exit_speed          = 0.0F;
+    exit_speed          = 0.0F;
     acceleration        = 100.0F; // we don't want to get devide by zeroes if this is not set
     initial_rate        = 0.0F;
     accelerate_until    = 0;
@@ -59,6 +59,8 @@ void Block::clear()
     nominal_length_flag = false;
     max_entry_speed     = 0.0F;
     is_ready            = false;
+    is_ticking          = false;
+    locked              = false;
 
     acceleration_per_tick= 0;
     deceleration_per_tick= 0;
@@ -100,6 +102,9 @@ void Block::debug() const
 */
 void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 {
+    // if block is currently executing, don't touch anything!
+    if (is_ticking) return;
+
     float initial_rate = this->nominal_rate * (entryspeed / this->nominal_speed); // steps/sec
     float final_rate = this->nominal_rate * (exitspeed / this->nominal_speed);
     //printf("Initial rate: %f, final_rate: %f\n", initial_rate, final_rate);
@@ -167,6 +172,9 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     float acceleration_in_steps = (acceleration_time > 0.0F ) ? ( this->maximum_rate - initial_rate ) / acceleration_time : 0;
     float deceleration_in_steps =  (deceleration_time > 0.0F ) ? ( this->maximum_rate - final_rate ) / deceleration_time : 0;
 
+    // we have a potential race condition here as we could get interrupted anywhere in the middle of this call, we need to lock
+    // the updates to the blocks to get around it
+    this->locked= true;
     // Now figure out the two acceleration ramp change events in ticks
     this->accelerate_until = acceleration_ticks;
     this->decelerate_after = total_move_ticks - deceleration_ticks;
@@ -179,14 +187,16 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 
     // We now have everything we need for this block to call a Steppermotor->move method !!!!
     // Theorically, if accel is done per tick, the speed curve should be perfect.
-
-    // We need this to call move()
     this->total_move_ticks = total_move_ticks;
 
     //puts "accelerate_until: #{this->accelerate_until}, decelerate_after: #{this->decelerate_after}, acceleration_per_tick: #{this->acceleration_per_tick}, total_move_ticks: #{this->total_move_ticks}"
 
     this->initial_rate = initial_rate;
-    //this->exit_speed = exitspeed;
+    this->exit_speed = exitspeed;
+
+    // prepare the block for stepticker
+    this->prepare();
+    this->locked= false;
 }
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
@@ -251,9 +261,8 @@ float Block::max_exit_speed()
 {
     // if block is currently executing, return cached exit speed from calculate_trapezoid
     // this ensures that a block following a currently executing block will have correct entry speed
-    // FIXME
-    // if (times_taken)
-    //     return exit_speed;
+    if(is_ticking)
+        return this->exit_speed;
 
     // if nominal_length_flag is asserted
     // we are guaranteed to reach nominal speed regardless of entry speed
@@ -267,30 +276,39 @@ float Block::max_exit_speed()
     return min(max, nominal_speed);
 }
 
-// Gcodes are attached to their respective blocks so that on_gcode_execute can be called with it
-// void Block::append_gcode(Gcode* gcode)
-// {
-//     Gcode new_gcode = *gcode;
-//     new_gcode.strip_parameters(); // optimization to save memory we strip off the XYZIJK parameters from the saved command
-//     gcodes.push_back(new_gcode);
-// }
+// prepare block for the step ticker, called everytime the block changes
+// this is done ahead of time so does not delay tick generation, see Conveyor::check_queue()
+void Block::prepare()
+{
+    float inv = 1.0F / this->steps_event_count;
+    for (uint8_t m = 0; m < k_max_actuators; m++) {
+        uint32_t steps = this->steps[m];
+        this->tick_info[m].steps_to_move = steps;
+        if(steps == 0) continue;
 
-// void Block::begin()
-// {
-//     // can no longer be used in planning
-//     recalculate_flag = false;
+        float aratio = inv * steps;
+        this->tick_info[m].steps_per_tick = STEPTICKER_TOFP((this->initial_rate * aratio) / STEP_TICKER_FREQUENCY); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
+        this->tick_info[m].counter = 0; // 2.30 fixed point
+        this->tick_info[m].step_count = 0;
+        this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
 
-//     // TODO probably should remove this
-//     if (!is_ready)
-//         __debugbreak();
+        float acceleration_change = 0;
+        if(this->accelerate_until != 0) { // If the next accel event is the end of accel
+            this->tick_info[m].next_accel_event = this->accelerate_until;
+            acceleration_change = this->acceleration_per_tick;
 
-// }
+        } else if(this->decelerate_after == 0 /*&& this->accelerate_until == 0*/) {
+            // we start off decelerating
+            acceleration_change = -this->deceleration_per_tick;
 
-// Mark the block as finished
-//void Block::release()
-//{
-    // if (is_ready) {
-    //     is_ready = false;
-    //     THEKERNEL->conveyor->on_block_end(this);
-    // }
-//}
+        } else if(this->decelerate_after != this->total_move_ticks /*&& this->accelerate_until == 0*/) {
+            // If the next event is the start of decel ( don't set this if the next accel event is accel end )
+            this->tick_info[m].next_accel_event = this->decelerate_after;
+        }
+
+        // convert to fixed point after scaling
+        this->tick_info[m].acceleration_change= STEPTICKER_TOFP(acceleration_change * aratio);
+        this->tick_info[m].deceleration_change= -STEPTICKER_TOFP(this->deceleration_per_tick * aratio);
+        this->tick_info[m].plateau_rate= STEPTICKER_TOFP((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY);
+    }
+}

@@ -11,12 +11,14 @@
 template<class kind> HeapRing<kind>::HeapRing()
 {
     head_i = tail_i = length = 0;
+    isr_tail_i = tail_i;
     ring = NULL;
 }
 
 template<class kind> HeapRing<kind>::HeapRing(unsigned int length)
 {
     head_i = tail_i = 0;
+    isr_tail_i = tail_i;
     ring = new kind[length];
     // TODO: handle allocation failure
     this->length = length;
@@ -29,6 +31,7 @@ template<class kind> HeapRing<kind>::HeapRing(unsigned int length)
 template<class kind> HeapRing<kind>::~HeapRing()
 {
     head_i = tail_i = length = 0;
+    isr_tail_i = tail_i;
     if (ring)
         delete [] ring;
     ring = NULL;

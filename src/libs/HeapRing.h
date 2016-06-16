@@ -74,6 +74,7 @@ protected:
 
     volatile unsigned int head_i;
     volatile unsigned int tail_i;
+    volatile unsigned int isr_tail_i;
 
 private:
     kind* ring;

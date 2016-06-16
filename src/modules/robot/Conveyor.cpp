@@ -33,30 +33,38 @@
 #define queue_delay_time_ms_checksum CHECKSUM("queue_delay_time_ms")
 
 /*
-The conveyor holds the queue of blocks, takes care of creating them, and moving them to the job  queue when ready
+ * The conveyor holds the queue of blocks, takes care of creating them, and starting the executing chain of blocks
+ *
+ * The Queue is implemented as a ringbuffer- with a twist
+ *
+ * Since delete() is not thread-safe, we must marshall deletable items out of ISR context
+ *
+ * To do this, we have implmented a *double* ringbuffer- two ringbuffers sharing the same ring, and one index pointer
+ *
+ * as in regular ringbuffers, HEAD always points to a clean, free block. We are free to prepare it as we see fit, at our leisure.
+ * When the block is fully prepared, we increment the head pointer, and from that point we must not touch it anymore.
+ *
+ * also, as in regular ringbuffers, we can 'use' the TAIL block, and increment tail pointer when we're finished with it
+ *
+ * Both of these are implemented here- see queue_head_block() (where head is pushed) and on_idle() (where tail is consumed)
+ *
+ * The double ring is implemented by adding a third index pointer that lives in between head and tail. We call it isr_tail_i.
+ *
+ * in ISR context, we use HEAD as the head pointer, and isr_tail_i as the tail pointer.
+ * As HEAD increments, ISR context can consume the new blocks which appear, and when we're finished with a block, we increment isr_tail_i to signal that they're finished, and ready to be cleaned
+ *
+ * in IDLE context, we use isr_tail_i as the head pointer, and TAIL as the tail pointer.
+ * When isr_tail_i != tail, we clean up the tail block (performing ISR-unsafe delete operations) and consume it (increment tail pointer), returning it to the pool of clean, unused blocks which HEAD is allowed to prepare for queueing
+ *
+ * Thus, our two ringbuffers exist sharing the one ring of blocks, and we safely marshall used blocks from ISR context to IDLE context for safe cleanup.
+ */
 
-A Block is created by the planner in Planner::append_block() and stuck on the
-head of the queue.
-
-The Conveyor is always checking (in on_idle) when blocks on the queue become
-fully planned (ie recalculate flag gets cleared). When this happens the block
-is pushed onto the job queue in stepticker and removed off the tail of the block queue.
-If the job queue is full then it will get pushed when the job queue has room.
-
-If the block queue has entries that are not yet fully planned, and a certain
-time has elapsed it gives up waiting and forces the tail of the block queue
-onto the job queue, the time needs to be configurable, but it needs to be long
-enough to allow gcodes to be sent from a host, or read from sdcard, so that
-even very short moves will get some planning, otherwise a stream of very short
-moves will be very jerky as they will always decelerate to zero. However the
-delay cannot be so long that there is a noticable lag for jog commands.
-
-*/
 
 Conveyor::Conveyor()
 {
     running = false;
     halted = false;
+    allow_fetch = false;
 }
 
 void Conveyor::on_module_loaded()
@@ -66,20 +74,15 @@ void Conveyor::on_module_loaded()
 
     // Attach to the end_of_move stepper event
     //THEKERNEL->step_ticker->finished_fnc = std::bind( &Conveyor::all_moves_finished, this);
-    queue_size= THEKERNEL->config->value(planner_queue_size_checksum)->by_default(32)->as_number();
-    queue_delay_time_ms= THEKERNEL->config->value(queue_delay_time_ms_checksum)->by_default(400)->as_number();
-
-    if(jobq_size < queue_size) {
-        THEKERNEL->streams->printf("Jobq size must be bigger than block queue size");
-        queue_size= jobq_size;
-    }
+    queue_size = THEKERNEL->config->value(planner_queue_size_checksum)->by_default(32)->as_number();
+    queue_delay_time_ms = THEKERNEL->config->value(queue_delay_time_ms_checksum)->by_default(400)->as_number();
 }
 
 // we allocate the queue here after cpnfig is completed so we do not run out of memory during config
 void Conveyor::start()
 {
     queue.resize(queue_size);
-    running= true;
+    running = true;
 }
 
 void Conveyor::on_halt(void* argument)
@@ -97,6 +100,19 @@ void Conveyor::on_idle(void*)
     if (running) {
         check_queue();
     }
+
+    // we can garbage collect the block queue here
+    if (queue.tail_i != queue.isr_tail_i) {
+        if (queue.is_empty()) {
+            __debugbreak();
+        } else {
+            // Cleanly delete block
+            Block* block = queue.tail_ref();
+            block->debug();
+            block->clear();
+            queue.consume_tail();
+        }
+    }
 }
 
 // see if we are idle
@@ -104,7 +120,7 @@ void Conveyor::on_idle(void*)
 // checks that all motors are no longer moving
 bool Conveyor::is_idle() const
 {
-    if(queue.is_empty() && THEKERNEL->step_ticker->is_jobq_empty()) {
+    if(queue.is_empty()) {
         for(auto &a : THEKERNEL->robot->actuators) {
             if(a->is_moving()) return false;
         }
@@ -119,9 +135,9 @@ void Conveyor::wait_for_empty_queue()
 {
     // wait for the job queue to empty, this means cycling everything on the block queue into the job queue
     // forcing them to be jobs
-    running= false; // stops on_idle calling check_queue
+    running = false; // stops on_idle calling check_queue
     while (!queue.is_empty()) {
-        check_queue(true); // forces all blocks to be moved to the step ticker job queue
+        check_queue(true); // forces queue to be made available to stepticker
         THEKERNEL->call_event(ON_IDLE, this);
     }
 
@@ -129,7 +145,7 @@ void Conveyor::wait_for_empty_queue()
     while(!is_idle()) {
         THEKERNEL->call_event(ON_IDLE, this);
     }
-    running= true;
+    running = true;
     // returning now means that everything has totally finished
 }
 
@@ -157,89 +173,44 @@ void Conveyor::queue_head_block()
     THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
 }
 
-// if the queue is not empty see if we can stick something on the stepticker job queue.
-// Algorithm is...
-// 1. If block queue is not empty but not full and job queue is empty and timeout has been reached then force the entire block queue onto the job queue
-// 2. if block queue is full and job queue is empty, copy entire block queue to job queue
-// 3. constantly check if the block queue tail has the recalculate_flag as clear. If so move it to the job queue.
-// clear the timeout count whenever the block queue is empty or when something is moved to the job queue, or if the job queue is not empty
-//
-// by moving the entire queue in 1 we have zero speed on the last block so it will decelerate, however if the block queue is full it means we are probably printing and
-// if we move the entire queue we will upset the planning....
-//
-// NOTE it takes around 150ms to plan a move so if a move takes under 150ms then the job queue will eventually run dry
-// this is bad as the planner will not know the job queue has dried up so will not be able to decelerate.
-/*
-TODO...
-A better method is to calculate the exact play time of the current jobq, and nnn ms before that pull another block off the block queue ready or not so the jobq does not run dry, and if it does the block queue will be empty and it will have decelerated to zero.
-*/
 void Conveyor::check_queue(bool force)
 {
     static uint32_t last_time_check = us_ticker_read();
 
-    if(queue.is_empty() || THEKERNEL->step_ticker->is_jobq_full()) {
+    if(queue.is_empty()) {
+        allow_fetch = false;
         last_time_check = us_ticker_read(); // reset timeout
         return;
     }
 
-    // if the jobq is empty and the block queue is full or if we have been waiting for more than the required waiting time the block queue is not full
-    // then copy the entire queue, as it is probably a jog or we started printing and filled the block queue
-    if(THEKERNEL->step_ticker->is_jobq_empty() && (queue.is_full() || (us_ticker_read() - last_time_check) >= (queue_delay_time_ms*1000))) {
-        while(!queue.is_empty()) {
-            Block *block = queue.tail_ref();
-            if(THEKERNEL->step_ticker->add_job(block)) {
-                // free the block and pop it from the queue
-                block->clear();
-                queue.consume_tail();
-            }else{
-                // this should never happen as jobq was empty and is bigger than the block queue
-                __debugbreak();
-            }
-        }
+    // if we have been waiting for more than the required waiting time and the queue is not empty, or the queue is full, then allow stepticker to get the tail
+    // we do this to allow an idle system to pre load the queue a bit so the first few blocks run smoothly.
+    if(force || queue.is_full() || (us_ticker_read() - last_time_check) >= (queue_delay_time_ms * 1000)) {
         last_time_check = us_ticker_read(); // reset timeout
+        allow_fetch = true;
         return;
     }
+}
 
-    /*
-    * Ideally we want to see if block queue tail has recalculate_flag set to false and walk up the queue until either the job queue
-    * is full or we hit a block where recalculate flag is still set.
-    * However for some reason recalculate flag is not always cleared, so we actually search from the head to tail for the first one,
-    * then anything after that can be queued
-    */
+// called from step ticker ISR
+bool Conveyor::get_next_block(Block **block)
+{
+    // wait for queue to fill up, optimizes planning
+    if(!allow_fetch) return false;
 
-    // first find the first block with recalculate_flag false searching from the head to the tail
-    if (!queue.is_empty()) {
-        uint32_t block_index= queue.head_i;
+    if(queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
 
-        while(block_index != queue.tail_i) {
-            Block *current= queue.item_ref(block_index);
-            if(current->is_ready && !current->recalculate_flag) break; // found first one that is valid
-
-            // next block
-            block_index= queue.prev(block_index);
-        }
-
-        // now block_index is the first block with recalculate flag false (or it is the tail)
-
-        // now try to queue each block from the tail upto but not including the block found above (we leave that on the block queue for the planner)
-        uint32_t i= queue.tail_i;
-        while(i != block_index) {
-            // ASSERT(i == queue.tail_i);
-            if(i != queue.tail_i) __debugbreak();
-
-            Block *block = queue.item_ref(i);
-
-            // setup stepticker to execute this block
-            // if it returns false the job queue was full
-            if(!THEKERNEL->step_ticker->add_job(block)) break;
-
-            // remove from tail
-            block->clear();
-            queue.consume_tail();
-            i= queue.tail_i;
-            last_time_check = us_ticker_read(); // reset timeout
-        }
+    uint32_t tail = queue.next(queue.isr_tail_i);
+    Block *b= queue.item_ref(tail);
+    if(!b->locked) {
+        // we cannot use this now if it is being updated
+        b->is_ticking= true;
+        *block= b;
+        queue.isr_tail_i= tail;
+        return true;
     }
+
+    return false;
 }
 
 /*
@@ -251,11 +222,14 @@ void Conveyor::check_queue(bool force)
 */
 void Conveyor::flush_queue()
 {
+    allow_fetch = false;
     while (!queue.is_empty()) {
         Block* block = queue.tail_ref();
         block->clear();
         queue.consume_tail();
     }
+
+    queue.isr_tail_i = queue.tail_i;
 
     // TODO force deceleration of last block
 

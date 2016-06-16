@@ -9,6 +9,7 @@
 #define KERNEL_H
 
 #define THEKERNEL Kernel::instance
+#define THECONVEYOR THEKERNEL->conveyor
 
 #include "Module.h"
 #include <array>

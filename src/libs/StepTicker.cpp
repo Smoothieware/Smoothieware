@@ -14,6 +14,7 @@
 #include "StepperMotor.h"
 #include "StreamOutputPool.h"
 #include "Block.h"
+#include "Conveyor.h"
 
 #include "system_LPC17xx.h" // mbed.h lib
 #include <math.h>
@@ -29,11 +30,6 @@ GPIO stepticker_debug_pin(STEPTICKER_DEBUG_PIN);
 #endif
 
 StepTicker *StepTicker::instance;
-
-// handle 2.30 Fixed point
-#define FPSCALE (1<<30)
-#define TOFP(x) ((int32_t)roundf((float)(x)*FPSCALE))
-#define FROMFP(x) ((float)(x)/FPSCALE)
 
 StepTicker::StepTicker()
 {
@@ -140,54 +136,54 @@ void StepTicker::step_tick (void)
 
     if(!running){
         // if nothing has been setup we ignore the ticks
-        if(jobq.empty() || !pop_next_job()) return;
+        if(current_block == nullptr) return;
         running= true;
     }
 
     bool still_moving= false;
     // foreach motor, if it is active see if time to issue a step to that motor
     for (uint8_t m = 0; m < num_motors; m++) {
-        if(current_job.tick_info[m].steps_to_move == 0) continue; // not active
+        if(current_block->tick_info[m].steps_to_move == 0) continue; // not active
 
-        current_job.tick_info[m].steps_per_tick += current_job.tick_info[m].acceleration_change;
+        current_block->tick_info[m].steps_per_tick += current_block->tick_info[m].acceleration_change;
 
-        if(current_tick == current_job.tick_info[m].next_accel_event) {
-            if(current_tick == current_job.block_info.accelerate_until) { // We are done accelerating, deceleration becomes 0 : plateau
-                current_job.tick_info[m].acceleration_change = 0;
-                if(current_job.block_info.decelerate_after < current_job.block_info.total_move_ticks) {
-                    current_job.tick_info[m].next_accel_event = current_job.block_info.decelerate_after;
-                    if(current_tick != current_job.block_info.decelerate_after) { // We are plateauing
+        if(current_tick == current_block->tick_info[m].next_accel_event) {
+            if(current_tick == current_block->accelerate_until) { // We are done accelerating, deceleration becomes 0 : plateau
+                current_block->tick_info[m].acceleration_change = 0;
+                if(current_block->decelerate_after < current_block->total_move_ticks) {
+                    current_block->tick_info[m].next_accel_event = current_block->decelerate_after;
+                    if(current_tick != current_block->decelerate_after) { // We are plateauing
                         // steps/sec / tick frequency to get steps per tick
-                        current_job.tick_info[m].steps_per_tick = current_job.tick_info[m].plateau_rate;
+                        current_block->tick_info[m].steps_per_tick = current_block->tick_info[m].plateau_rate;
                     }
                 }
             }
 
-            if(current_tick == current_job.block_info.decelerate_after) { // We start decelerating
-                current_job.tick_info[m].acceleration_change = current_job.tick_info[m].deceleration_change;
+            if(current_tick == current_block->decelerate_after) { // We start decelerating
+                current_block->tick_info[m].acceleration_change = current_block->tick_info[m].deceleration_change;
             }
         }
 
         // protect against rounding errors and such
-        if(current_job.tick_info[m].steps_per_tick <= 0) {
-            current_job.tick_info[m].counter = FPSCALE; // we force completion this step by setting to 1.0
-            current_job.tick_info[m].steps_per_tick = 0;
+        if(current_block->tick_info[m].steps_per_tick <= 0) {
+            current_block->tick_info[m].counter = STEPTICKER_FPSCALE; // we force completion this step by setting to 1.0
+            current_block->tick_info[m].steps_per_tick = 0;
         }
 
-        current_job.tick_info[m].counter += current_job.tick_info[m].steps_per_tick;
+        current_block->tick_info[m].counter += current_block->tick_info[m].steps_per_tick;
 
-        if(current_job.tick_info[m].counter >= FPSCALE) { // >= 1.0 step time
-            current_job.tick_info[m].counter -= FPSCALE; // -= 1.0F;
-            ++current_job.tick_info[m].step_count;
+        if(current_block->tick_info[m].counter >= STEPTICKER_FPSCALE) { // >= 1.0 step time
+            current_block->tick_info[m].counter -= STEPTICKER_FPSCALE; // -= 1.0F;
+            ++current_block->tick_info[m].step_count;
 
             // step the motor
             motor[m]->step();
             // we stepped so schedule an unstep
             unstep.set(m);
 
-            if(current_job.tick_info[m].step_count == current_job.tick_info[m].steps_to_move) {
+            if(current_block->tick_info[m].step_count == current_block->tick_info[m].steps_to_move) {
                 // done
-                current_job.tick_info[m].steps_to_move = 0;
+                current_block->tick_info[m].steps_to_move = 0;
                 motor[m]->moving= false; // let motor know it is no longer moving
             }
         }
@@ -210,17 +206,21 @@ void StepTicker::step_tick (void)
 
 
     // see if any motors are still moving
-    // FIXME why is this always being called when ther eis nothing todo?
     if(!still_moving) {
         SET_STEPTICKER_DEBUG_PIN(0);
 
         // all moves finished
         current_tick = 0;
 
-        // get next job
+        // get next block
         // do it here so there is no delay in ticks
-        // get next job, and copy data
-        running= pop_next_job(); // returns false if no new job available
+
+        if(THECONVEYOR->get_next_block(&current_block)) { // returns false if no new job available
+            running= start_next_block(); // returns true if there is at least one motor with steps to issue
+        }else{
+            current_block= nullptr;
+            running= false;
+        }
 
         // all moves finished
         // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
@@ -229,90 +229,32 @@ void StepTicker::step_tick (void)
     }
 }
 
-// pop next job off queue and copy it for faster access
 // only called from the step tick ISR (single consumer)
-bool StepTicker::pop_next_job()
+bool StepTicker::start_next_block()
 {
-    // pop next job, return false if nothing to get
-    if(!jobq.get(current_job)){
-        total_move_time.store(0);
-        return false;
-    }
+    if(current_block == nullptr) return false;
 
+    bool ok= false;
     // need to prepare each active motor
     for (uint8_t m = 0; m < num_motors; m++) {
-        if(current_job.tick_info[m].steps_to_move == 0) continue;
+        if(current_block->tick_info[m].steps_to_move == 0) continue;
 
+        ok= true; // mark at least one motor is moving
         // set direction bit here
         // NOTE this would be at least 10us before first step pulse.
         // TODO does this need to be done sooner, if so how without delaying next tick
-        motor[m]->set_direction(current_job.block_info.direction_bits[m]);
+        motor[m]->set_direction(current_block->direction_bits[m]);
         motor[m]->moving= true; // also let motor know it is moving now
     }
 
-    total_move_time.fetch_sub(current_job.block_info.total_move_ticks);
-    SET_STEPTICKER_DEBUG_PIN(1);
-    return true;
-}
-
-// prepare block for the job queue and push it
-// only called from main_loop() or on_idle() (single producer)
-// this is done ahead of time so does not delay tick generation, see Conveyor::check_queue()
-bool StepTicker::push_block(const Block *block)
-{
-    //SET_STEPTICKER_DEBUG_PIN(1);
-    job_entry_t job;
-
-    job.block_info.accelerate_until = block->accelerate_until;
-    job.block_info.decelerate_after = block->decelerate_after;
-    job.block_info.total_move_ticks = block->total_move_ticks;
-    job.block_info.direction_bits = block->direction_bits;
-
-    float inv = 1.0F / block->steps_event_count;
-    for (uint8_t m = 0; m < num_motors; m++) {
-        uint32_t steps = block->steps[m];
-        job.tick_info[m].steps_to_move = steps;
-        if(steps == 0) continue;
-
-        float aratio = inv * steps;
-        job.tick_info[m].steps_per_tick = TOFP((block->initial_rate * aratio) / frequency); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
-        job.tick_info[m].counter = 0; // 2.30 fixed point
-        job.tick_info[m].step_count = 0;
-        job.tick_info[m].next_accel_event = block->total_move_ticks + 1;
-
-        float acceleration_change = 0;
-        if(block->accelerate_until != 0) { // If the next accel event is the end of accel
-            job.tick_info[m].next_accel_event = block->accelerate_until;
-            acceleration_change = block->acceleration_per_tick;
-
-        } else if(block->decelerate_after == 0 /*&& block->accelerate_until == 0*/) {
-            // we start off decelerating
-            acceleration_change = -block->deceleration_per_tick;
-
-        } else if(block->decelerate_after != block->total_move_ticks /*&& block->accelerate_until == 0*/) {
-            // If the next event is the start of decel ( don't set this if the next accel event is accel end )
-            job.tick_info[m].next_accel_event = block->decelerate_after;
-        }
-
-        // convert to fixed point after scaling
-        job.tick_info[m].acceleration_change= TOFP(acceleration_change * aratio);
-        job.tick_info[m].deceleration_change= -TOFP(block->deceleration_per_tick * aratio);
-        job.tick_info[m].plateau_rate= TOFP((block->maximum_rate * aratio) / frequency);
-    }
-
-
-    //SET_STEPTICKER_DEBUG_PIN(0);
-    if(jobq.put(job)) {
-        // this needs to be atomic
-        total_move_time.fetch_add(block->total_move_ticks);
-        // THEKERNEL->streams->printf("%f- ", get_total_time());
-        // block->debug();
-
+    if(ok) {
+        SET_STEPTICKER_DEBUG_PIN(1);
         return true;
     }
 
     return false;
 }
+
 
 // returns index of the stepper motor in the array and bitset
 int StepTicker::register_motor(StepperMotor* m)

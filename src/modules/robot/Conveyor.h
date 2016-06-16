@@ -5,8 +5,7 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef CONVEYOR_H
-#define CONVEYOR_H
+#pragma once
 
 #include "libs/Module.h"
 #include "HeapRing.h"
@@ -26,9 +25,6 @@ public:
 
     void on_module_loaded(void);
     void on_idle(void *);
-    //void on_main_loop(void *);
-    // void on_block_end(Block *);
-    // void on_block_begin(Block *);
     void on_halt(void *);
 
     void wait_for_empty_queue();
@@ -36,7 +32,8 @@ public:
     bool is_queue_full() { return queue.is_full(); };
     bool is_idle() const;
 
-    //void append_gcode(Gcode *);
+    // returns next available block writes it to block and returns true
+    bool get_next_block(Block **block);
 
     void dump_queue(void);
     void flush_queue(void);
@@ -60,8 +57,7 @@ private:
     struct {
         volatile bool running:1;
         volatile bool halted:1;
+        volatile bool allow_fetch:1;
     };
 
 };
-
-#endif // CONVEYOR_H

@@ -21,12 +21,16 @@
 class StepperMotor;
 class Block;
 
+// handle 2.30 Fixed point
+#define STEPTICKER_FPSCALE (1<<30)
+#define STEPTICKER_TOFP(x) ((int32_t)roundf((float)(x)*STEPTICKER_FPSCALE))
+#define STEPTICKER_FROMFP(x) ((float)(x)/STEPTICKER_FPSCALE)
+
 class StepTicker{
     public:
         StepTicker();
         ~StepTicker();
         void set_frequency( float frequency );
-        void signal_a_move_finished();
         void set_unstep_time( float microseconds );
         int register_motor(StepperMotor* motor);
         float get_frequency() const { return frequency; }
@@ -34,11 +38,8 @@ class StepTicker{
 
         void step_tick (void);
         void handle_finish (void);
-        float get_total_time() const { return total_move_time.load()/frequency; }
         void start();
-        bool add_job(const Block *block) { return push_block(block); }
-        bool is_jobq_full() const { return jobq.full(); }
-        bool is_jobq_empty() const { return jobq.empty(); }
+        void set_block(Block *block) { current_block= block; }
 
         // whatever setup the block should register this to know when it is done
         std::function<void()> finished_fnc{nullptr};
@@ -48,45 +49,14 @@ class StepTicker{
     private:
         static StepTicker *instance;
 
-        bool push_block(const Block*);
-        bool pop_next_job();
+        bool start_next_block();
 
         float frequency;
         uint32_t period;
         std::array<StepperMotor*, k_max_actuators> motor;
         std::bitset<k_max_actuators> unstep;
-        // FIXME this needs to be atomic
-        std::atomic_ulong total_move_time;
 
-        // this is tick info needed for this block. applies to all motors
-        using block_info_t = struct {
-            uint32_t accelerate_until;
-            uint32_t decelerate_after;
-            uint32_t total_move_ticks;
-            std::bitset<k_max_actuators> direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
-        };
-
-        // this is the data needed to determine when each motor needs to be issued a step
-        using tickinfo_t= struct {
-            int32_t steps_per_tick; // 2.30 fixed point
-            int32_t counter; // 2.30 fixed point
-            int32_t acceleration_change; // 2.30 fixed point signed
-            int32_t deceleration_change; // 2.30 fixed point
-            int32_t plateau_rate; // 2.30 fixed point
-            uint32_t steps_to_move;
-            uint32_t step_count;
-            uint32_t next_accel_event;
-        };
-
-        using job_entry_t= struct {
-            block_info_t block_info;
-            std::array<tickinfo_t, k_max_actuators> tick_info;
-        };
-
-        // Thread safe for single consumer and single provider
-        #define jobq_size 32
-        TSRingBuffer<job_entry_t, jobq_size> jobq;
-        job_entry_t current_job;
+        Block *current_block;
 
         struct {
             volatile bool running:1;
