@@ -25,7 +25,6 @@
 #include "us_ticker_api.h"
 
 #define spindle_checksum                    CHECKSUM("spindle")
-#define spindle_vfd_type_checksum           CHECKSUM("vfd_type")
 #define spindle_pwm_pin_checksum            CHECKSUM("pwm_pin")
 #define spindle_pwm_period_checksum         CHECKSUM("pwm_period")
 #define spindle_feedback_pin_checksum       CHECKSUM("feedback_pin")
