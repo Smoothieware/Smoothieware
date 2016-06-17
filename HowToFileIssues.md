@@ -64,6 +64,10 @@ only provided here as some additional information for you), **even if only addin
 #### Link to and console logs
 
     [On gist.github.com or pastebin.com. Always include and never truncate.]
+    
+#### Link to running config and M503 results
+
+    [On gist.github.com or pastebin.com. Always include and never truncate.]
 
 I have read the [Wiki](http://smoothieware.org) and Especially the [Trouble Shooting section](http://smoothieware.org/troubleshooting)... 
 
