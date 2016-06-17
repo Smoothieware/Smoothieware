@@ -15,7 +15,6 @@
 #include "StreamOutputPool.h"
 #include "Gcode.h"
 #include "Conveyor.h"
-#include "Stepper.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "SerialMessage.h"
