@@ -214,7 +214,7 @@ void Player::on_gcode_received(void *argument)
             if(this->suspended) {
                 // clean up
                 this->suspended= false;
-                THEKERNEL->robot->pop_state();
+                THEROBOT->pop_state();
                 this->saved_temperatures.clear();
                 this->was_playing_file= false;
                 this->suspend_loops= 0;
@@ -366,7 +366,7 @@ void Player::abort_command( string parameters, StreamOutput *stream )
         THEKERNEL->conveyor->flush_queue();
 
         // now the position will think it is at the last received pos, so we need to do FK to get the actuator position and reset the current position
-        THEKERNEL->robot->reset_position_from_current_actuator_position();
+        THEROBOT->reset_position_from_current_actuator_position();
     }
     stream->printf("Aborted playing or paused file. Please turn any heaters off manually\r\n");
 }
@@ -529,13 +529,13 @@ void Player::suspend_part2()
     THEKERNEL->streams->printf("// Saving current state...\n");
 
     // save current XYZ position
-    THEKERNEL->robot->get_axis_position(this->saved_position);
+    THEROBOT->get_axis_position(this->saved_position);
 
     // save current extruder state
     PublicData::set_value( extruder_checksum, save_state_checksum, nullptr );
 
     // save state use M120
-    THEKERNEL->robot->push_state();
+    THEROBOT->push_state();
 
     // TODO retract by optional amount...
 
@@ -623,7 +623,7 @@ void Player::resume_command(string parameters, StreamOutput *stream )
             if(THEKERNEL->is_halted()) {
                 // abort temp wait and rest of resume
                 THEKERNEL->streams->printf("Resume aborted by kill\n");
-                THEKERNEL->robot->pop_state();
+                THEROBOT->pop_state();
                 this->saved_temperatures.clear();
                 suspended= false;
                 return;
@@ -642,10 +642,10 @@ void Player::resume_command(string parameters, StreamOutput *stream )
 
     // Restore position
     stream->printf("Restoring saved XYZ positions and state...\n");
-    THEKERNEL->robot->pop_state();
-    bool abs_mode= THEKERNEL->robot->absolute_mode; // what mode we were in
+    THEROBOT->pop_state();
+    bool abs_mode= THEROBOT->absolute_mode; // what mode we were in
     // force absolute mode for restoring position, then set to the saved relative/absolute mode
-    THEKERNEL->robot->absolute_mode= true;
+    THEROBOT->absolute_mode= true;
     {
         // NOTE position was saved in MCS so must use G53 to restore position
         char buf[128];
@@ -655,7 +655,7 @@ void Player::resume_command(string parameters, StreamOutput *stream )
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     }
-    THEKERNEL->robot->absolute_mode= abs_mode;
+    THEROBOT->absolute_mode= abs_mode;
 
     // restore extruder state
     PublicData::set_value( extruder_checksum, restore_state_checksum, nullptr );

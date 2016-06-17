@@ -10,6 +10,7 @@
 
 #define THEKERNEL Kernel::instance
 #define THECONVEYOR THEKERNEL->conveyor
+#define THEROBOT THEKERNEL->robot
 
 #include "Module.h"
 #include <array>

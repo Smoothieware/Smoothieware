@@ -48,7 +48,7 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             // turn off any compensation transform as it will be invalidated anyway by this
-            THEKERNEL->robot->compensationTransform= nullptr;
+            THEROBOT->compensationTransform= nullptr;
 
             if(!gcode->has_letter('R')) {
                 if(!calibrate_delta_endstops(gcode)) {
@@ -116,7 +116,7 @@ bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
     float max_delta= 0;
     float last_z= NAN;
     float start_z;
-    std::tie(std::ignore, std::ignore, start_z)= THEKERNEL->robot->get_axis_position();
+    std::tie(std::ignore, std::ignore, start_z)= THEROBOT->get_axis_position();
 
     for(auto& i : pp) {
         int s;
@@ -125,9 +125,9 @@ bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
         if(gcode->subcode == 0) {
             gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f (%d) A:%1.4f B:%1.4f C:%1.4f\n",
                 i[0], i[1], z, s,
-                THEKERNEL->robot->actuators[0]->get_current_position()+z,
-                THEKERNEL->robot->actuators[1]->get_current_position()+z,
-                THEKERNEL->robot->actuators[2]->get_current_position()+z);
+                THEROBOT->actuators[0]->get_current_position()+z,
+                THEROBOT->actuators[1]->get_current_position()+z,
+                THEROBOT->actuators[2]->get_current_position()+z);
 
         }else if(gcode->subcode == 1) {
             // format that can be pasted here http://escher3d.com/pages/wizards/wizarddelta.php
@@ -340,7 +340,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
     // get current delta radius
     float delta_radius = 0.0F;
     BaseSolution::arm_options_t options;
-    if(THEKERNEL->robot->arm_solution->get_optional(options)) {
+    if(THEROBOT->arm_solution->get_optional(options)) {
         delta_radius = options['R'];
     }
     if(delta_radius == 0.0F) {
@@ -377,7 +377,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
 
         // set the new delta radius
         options['R'] = delta_radius;
-        THEKERNEL->robot->arm_solution->set_optional(options);
+        THEROBOT->arm_solution->set_optional(options);
         gcode->stream->printf("Setting delta radius to: %1.4f\n", delta_radius);
 
         zprobe->home();

@@ -54,7 +54,7 @@ void Planner::config_load()
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, float distance, float unit_vec[] )
+void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, float distance, float *unit_vec)
 {
     float acceleration, junction_deviation;
 
@@ -63,14 +63,14 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
 
 
     // Direction bits
-    for (size_t i = 0; i < THEKERNEL->robot->actuators.size(); i++) {
-        int steps = THEKERNEL->robot->actuators[i]->steps_to_target(actuator_pos[i]);
+    for (size_t i = 0; i < THEROBOT->actuators.size(); i++) {
+        int steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
 
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
 
         // Update current position
-        THEKERNEL->robot->actuators[i]->last_milestone_steps += steps;
-        THEKERNEL->robot->actuators[i]->last_milestone_mm = actuator_pos[i];
+        THEROBOT->actuators[i]->last_milestone_steps += steps;
+        THEROBOT->actuators[i]->last_milestone_mm = actuator_pos[i];
 
         block->steps[i] = labs(steps);
     }
@@ -87,9 +87,14 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
 
     block->acceleration = acceleration; // save in block
 
+    // if it is a SOLO move from extruder, zprobe or endstops we do not use junction deviation
+    if(unit_vec == nullptr) {
+        junction_deviation= 0.0F;
+    }
+
     // Max number of steps, for all axes
     uint32_t steps_event_count = 0;
-    for (size_t s = 0; s < THEKERNEL->robot->actuators.size(); s++) {
+    for (size_t s = 0; s < THEROBOT->actuators.size(); s++) {
         steps_event_count = std::max(steps_event_count, block->steps[s]);
     }
     block->steps_event_count = steps_event_count;
@@ -167,7 +172,11 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
     block->recalculate_flag = true;
 
     // Update previous path unit_vector and nominal speed
-    memcpy(this->previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
+    if(unit_vec != nullptr) {
+        memcpy(this->previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
+    }else{
+        clear_vector_float(this->previous_unit_vec);
+    }
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();

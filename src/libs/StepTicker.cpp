@@ -187,11 +187,11 @@ void StepTicker::step_tick (void)
             ++current_block->tick_info[m].step_count;
 
             // step the motor
-            motor[m]->step();
+            bool ismoving= motor[m]->step(); // returns false if the moving flag was set to false externally (probes, endstops etc)
             // we stepped so schedule an unstep
             unstep.set(m);
 
-            if(current_block->tick_info[m].step_count == current_block->tick_info[m].steps_to_move) {
+            if(!ismoving || current_block->tick_info[m].step_count == current_block->tick_info[m].steps_to_move) {
                 // done
                 current_block->tick_info[m].steps_to_move = 0;
                 motor[m]->moving= false; // let motor know it is no longer moving

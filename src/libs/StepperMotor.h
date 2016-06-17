@@ -16,7 +16,7 @@ class StepperMotor  : public Module {
         ~StepperMotor();
 
         // called from step ticker ISR
-        inline void step() { step_pin.set(1); current_position_steps += (direction?-1:1); }
+        inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
         // called from unstep ISR
         inline void unstep() { step_pin.set(0); }
         // called from step ticker ISR
@@ -25,6 +25,7 @@ class StepperMotor  : public Module {
         inline void enable(bool state) { en_pin.set(!state); };
         inline bool is_enabled() const { return !en_pin.get(); };
         inline bool is_moving() const { return moving; };
+        void stop_moving() { moving= false; }
 
         void manual_step(bool dir);
 

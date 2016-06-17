@@ -379,10 +379,10 @@ void DeltaGridStrategy::setAdjustFunction(bool on)
 {
     if(on) {
         // set the compensationTransform in robot
-        THEKERNEL->robot->compensationTransform = [this](float target[3]) { doCompensation(target); };
+        THEROBOT->compensationTransform = [this](float target[3]) { doCompensation(target); };
     } else {
         // clear it
-        THEKERNEL->robot->compensationTransform = nullptr;
+        THEROBOT->compensationTransform = nullptr;
     }
 }
 

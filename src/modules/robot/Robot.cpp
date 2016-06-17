@@ -828,7 +828,7 @@ void Robot::reset_position_from_current_actuator_position()
 // Convert target (in machine coordinates) from millimeters to steps, and append this to the planner
 // target is in machine coordinates without the compensation transform, however we save a last_machine_position that includes
 // all transforms and is what we actually convert to actuator positions
-bool Robot::append_milestone(Gcode * gcode, const float target[], float rate_mm_s)
+bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s)
 {
     float deltas[3];
     float unit_vec[3];
@@ -896,6 +896,58 @@ bool Robot::append_milestone(Gcode * gcode, const float target[], float rate_mm_
 
     // Append the block to the planner
     THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, unit_vec );
+
+    return true;
+}
+
+// Used to plan a single move used by things like endstops when homing, zprobe, extruder retracts etc.
+bool Robot::solo_move(const float *delta, float rate_mm_s)
+{
+    if(THEKERNEL->is_halted()) return false;
+
+    // catch negative or zero feed rates and return the same error as GRBL does
+    if(rate_mm_s <= 0.0F) {
+        return false;
+    }
+
+    // Compute how long this move moves, so we can attach it to the block for later use
+    float millimeters_of_travel = sqrtf( powf( delta[X_AXIS], 2 ) +  powf( delta[Y_AXIS], 2 ) +  powf( delta[Z_AXIS], 2 ) );
+
+    // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
+    // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
+    if(millimeters_of_travel < 0.00001F) return false;
+
+    // this is the new machine position
+    for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
+        this->last_machine_position[axis] += delta[axis];
+    }
+
+    // Do not move faster than the configured cartesian limits
+    for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
+        if ( max_speeds[axis] > 0 ) {
+            float axis_speed = fabsf(delta[axis] / millimeters_of_travel * rate_mm_s);
+
+            if (axis_speed > max_speeds[axis])
+                rate_mm_s *= ( max_speeds[axis] / axis_speed );
+        }
+    }
+
+    // find actuator position given the machine position, use actual adjusted target
+    ActuatorCoordinates actuator_pos;
+    arm_solution->cartesian_to_actuator( this->last_machine_position, actuator_pos );
+
+    float isecs = rate_mm_s / millimeters_of_travel;
+    // check per-actuator speed limits
+    for (size_t actuator = 0; actuator < actuators.size(); actuator++) {
+        float actuator_rate  = fabsf(actuator_pos[actuator] - actuators[actuator]->last_milestone_mm) * isecs;
+        if (actuator_rate > actuators[actuator]->get_max_rate()) {
+            rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
+            isecs = rate_mm_s / millimeters_of_travel;
+        }
+    }
+
+    // Append the block to the planner
+    THEKERNEL->planner->append_block(actuator_pos, rate_mm_s, millimeters_of_travel, nullptr);
 
     return true;
 }

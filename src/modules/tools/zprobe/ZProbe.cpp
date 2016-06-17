@@ -52,7 +52,7 @@
 #define Y_AXIS 1
 #define Z_AXIS 2
 
-#define STEPPER THEKERNEL->robot->actuators
+#define STEPPER THEROBOT->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
 #define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
 
@@ -312,16 +312,16 @@ void ZProbe::on_gcode_received(void *argument)
                 gcode->stream->printf("Z:%1.4f C:%d\n", zsteps_to_mm(steps), steps);
 
                 // set the last probe position to the current actuator units
-                THEKERNEL->robot->set_last_probe_position(std::make_tuple(
-                    THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
-                    THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
-                    THEKERNEL->robot->actuators[Z_AXIS]->get_current_position(),
+                THEROBOT->set_last_probe_position(std::make_tuple(
+                    THEROBOT->actuators[X_AXIS]->get_current_position(),
+                    THEROBOT->actuators[Y_AXIS]->get_current_position(),
+                    THEROBOT->actuators[Z_AXIS]->get_current_position(),
                     1));
 
                 // move back to where it started, unless a Z is specified (and not a rotary delta)
                 if(gcode->has_letter('Z') && !is_rdelta) {
                     // set Z to the specified value, and leave probe where it is
-                    THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+                    THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
 
                 } else {
                     // return to pre probe position
@@ -330,10 +330,10 @@ void ZProbe::on_gcode_received(void *argument)
 
             } else {
                 gcode->stream->printf("ZProbe not triggered\n");
-                THEKERNEL->robot->set_last_probe_position(std::make_tuple(
-                    THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
-                    THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
-                    THEKERNEL->robot->actuators[Z_AXIS]->get_current_position(),
+                THEROBOT->set_last_probe_position(std::make_tuple(
+                    THEROBOT->actuators[X_AXIS]->get_current_position(),
+                    THEROBOT->actuators[Y_AXIS]->get_current_position(),
+                    THEROBOT->actuators[Z_AXIS]->get_current_position(),
                     0));
             }
 
@@ -385,8 +385,8 @@ void ZProbe::on_gcode_received(void *argument)
         THEKERNEL->conveyor->wait_for_empty_queue();
 
         // turn off any compensation transform
-        auto savect= THEKERNEL->robot->compensationTransform;
-        THEKERNEL->robot->compensationTransform= nullptr;
+        auto savect= THEROBOT->compensationTransform;
+        THEROBOT->compensationTransform= nullptr;
 
         if(gcode->has_letter('X')) {
             // probe in the X axis
@@ -405,7 +405,7 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         // restore compensationTransform
-        THEKERNEL->robot->compensationTransform= savect;
+        THEROBOT->compensationTransform= savect;
 
         return;
 
@@ -456,7 +456,7 @@ uint32_t ZProbe::read_probe(uint32_t dummy)
     if(this->pin.get()) {
         probe_detected= true;
         // now tell all the stepper_motors to stop
-        for(auto &a : THEKERNEL->robot->actuators) a->force_finish_move();
+        for(auto &a : THEROBOT->actuators) a->force_finish_move();
     }
     return 0;
 }
@@ -467,7 +467,7 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
     // enable the probe checking in the timer
     probing= true;
     probe_detected= false;
-    THEKERNEL->robot->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled (beware on deltas probing in X or Y)
+    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled (beware on deltas probing in X or Y)
 
     // get probe feedrate if specified
     float rate = (gcode->has_letter('F')) ? gcode->get_value('F')*60 : this->slow_feedrate;
@@ -483,26 +483,26 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 
     // disable probe checking
     probing= false;
-    THEKERNEL->robot->disable_segmentation= false;
+    THEROBOT->disable_segmentation= false;
 
     float pos[3];
     {
         // get the current position
         ActuatorCoordinates current_position{
-            THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
-            THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
-            THEKERNEL->robot->actuators[Z_AXIS]->get_current_position()
+            THEROBOT->actuators[X_AXIS]->get_current_position(),
+            THEROBOT->actuators[Y_AXIS]->get_current_position(),
+            THEROBOT->actuators[Z_AXIS]->get_current_position()
         };
 
         // get machine position from the actuator position using FK
-        THEKERNEL->robot->arm_solution->actuator_to_cartesian(current_position, pos);
+        THEROBOT->arm_solution->actuator_to_cartesian(current_position, pos);
     }
 
     uint8_t probeok= this->probe_detected ? 1 : 0;
 
     // print results using the GRBL format
     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok);
-    THEKERNEL->robot->set_last_probe_position(std::make_tuple(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok));
+    THEROBOT->set_last_probe_position(std::make_tuple(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok));
 
     if(!probeok && gcode->subcode == 2) {
         // issue error if probe was not triggered and subcode == 2
@@ -511,7 +511,7 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 
     }else if(probeok){
         // if the probe stopped the move we need to correct the last_milestone as it did not reach where it thought
-        THEKERNEL->robot->reset_position_from_current_actuator_position();
+        THEROBOT->reset_position_from_current_actuator_position();
     }
 }
 

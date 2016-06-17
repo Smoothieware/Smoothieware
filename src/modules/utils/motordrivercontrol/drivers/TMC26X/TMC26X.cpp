@@ -896,15 +896,15 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
 
     } else {
         // TODO hardcoded for X need to select ABC as needed
-        bool moving = THEKERNEL->robot->actuators[0]->is_moving();
+        bool moving = THEROBOT->actuators[0]->is_moving();
         // dump out in the format that the processing script needs
         if (moving) {
-            stream->printf("#sg%d,p%lu,k%u,r,", getCurrentStallGuardReading(), THEKERNEL->robot->actuators[0]->get_current_step(), getCoolstepCurrent());
+            stream->printf("#sg%d,p%lu,k%u,r,", getCurrentStallGuardReading(), THEROBOT->actuators[0]->get_current_step(), getCoolstepCurrent());
         } else {
             readStatus(TMC26X_READOUT_POSITION); // get the status bits
             stream->printf("#s,");
         }
-        stream->printf("d%d,", THEKERNEL->robot->actuators[0]->which_direction() ? 1 : -1);
+        stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? 1 : -1);
         stream->printf("c%u,m%d,", getCurrent(), getMicrosteps());
         // stream->printf('S');
         // stream->printf(tmc26XStepper.getSpeed(), DEC);

@@ -122,7 +122,7 @@ void Conveyor::on_idle(void*)
 bool Conveyor::is_idle() const
 {
     if(queue.is_empty()) {
-        for(auto &a : THEKERNEL->robot->actuators) {
+        for(auto &a : THEROBOT->actuators) {
             if(a->is_moving()) return false;
         }
         return true;

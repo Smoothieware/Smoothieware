@@ -15,15 +15,15 @@ class Planner
 {
 public:
     Planner();
-    void append_block(ActuatorCoordinates &target, float rate_mm_s, float distance, float unit_vec[] );
     float max_allowable_speed( float acceleration, float target_velocity, float distance);
-    void recalculate();
     float get_acceleration() const { return acceleration; }
     float get_z_acceleration() const { return z_acceleration > 0.0F ? z_acceleration : acceleration; }
 
     friend class Robot; // for acceleration, junction deviation, minimum_planner_speed
 
 private:
+    void append_block(ActuatorCoordinates &target, float rate_mm_s, float distance, float unit_vec[] );
+    void recalculate();
     void config_load();
     float previous_unit_vec[3];
     float acceleration;          // Setting
