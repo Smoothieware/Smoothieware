@@ -559,10 +559,10 @@ void Endstops::process_home_command(Gcode* gcode)
     // First wait for the queue to be empty
     THEKERNEL->conveyor->wait_for_empty_queue();
 
-    // deltas, scaras always home all axis
-    bool home_all = this->is_delta || this->is_rdelta || this->is_scara;
+    // deltas, scaras always home Z axis only
+    bool home_in_z = this->is_delta || this->is_rdelta || this->is_scara;
 
-    if(!home_all) { // ie not a delta
+    if(!home_in_z) { // ie not a delta
         bool axis_speced = ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
         axis_to_home.reset();
         // only enable homing if the endstop is defined,
@@ -573,8 +573,8 @@ void Endstops::process_home_command(Gcode* gcode)
         }
 
     } else {
-        // all axis must move (and presumed defined)
-        axis_to_home.set();
+        // Only Z axis homes (even though all actuators move this is handled by arm solution)
+        axis_to_home.set(Z_AXIS);
     }
 
     // save current actuator position so we can report how far we moved
@@ -638,7 +638,7 @@ void Endstops::process_home_command(Gcode* gcode)
             start_pos[2] - THEROBOT->actuators[2]->get_current_position(),
             0));
 
-    if(home_all) {
+    if(home_in_z) { // deltas only
         // Here's where we would have been if the endstops were perfectly trimmed
         // NOTE on a rotary delta home_offset is actuator position in degrees when homed and
         // home_offset is the theta offset for each actuator, so M206 is used to set theta offset for each actuator in degrees
