@@ -445,6 +445,7 @@ void Endstops::home(std::bitset<3> a)
     // Start moving the axes to the origin
     this->status = MOVING_TO_ENDSTOP_FAST;
 
+    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
     if(axis_to_home[X_AXIS] && axis_to_home[Y_AXIS]) {
         // Home XY first so as not to slow them down by homing Z at the same time
         float delta[3] {alpha_max, beta_max, 0};
@@ -514,6 +515,8 @@ void Endstops::home(std::bitset<3> a)
     THEROBOT->solo_move(delta, feed_rate);
     // wait until finished
     THECONVEYOR->wait_for_empty_queue();
+
+    THEROBOT->disable_segmentation= false; // we must disable segmentation as this won't work with it enabled
 
     this->status = NOT_HOMING;
 }

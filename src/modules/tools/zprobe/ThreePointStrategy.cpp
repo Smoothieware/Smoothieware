@@ -278,8 +278,8 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     // TODO this needs to be configurable to use min z or probe
 
     // find bed via probe
-    int s;
-    if(!zprobe->run_probe(s)) return false;
+    float mm;
+    if(!zprobe->run_probe(mm)) return false;
 
     // TODO if using probe then we probably need to set Z to 0 at first probe point, but take into account probe offset from head
     THEROBOT->reset_axis_position(std::get<Z_AXIS>(this->probe_offsets), Z_AXIS);
@@ -307,8 +307,8 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     // define the plane
     delete this->plane;
     // check tolerance level here default 0.03mm
-    auto mm = std::minmax({v[0][2], v[1][2], v[2][2]});
-    if((mm.second - mm.first) <= this->tolerance) {
+    auto mmx = std::minmax({v[0][2], v[1][2], v[2][2]});
+    if((mmx.second - mmx.first) <= this->tolerance) {
         this->plane= nullptr; // plane is flat no need to do anything
         stream->printf("DEBUG: flat plane\n");
         // clear the compensationTransform in robot
