@@ -49,7 +49,7 @@ only provided here as some additional information for you), **even if only addin
 
 #### What happened instead?
 
-#### Branch & Commit or Version of OctoPrint
+#### Branch & Commit or Version of Smoothieware
 
     [Can be found with the version command. (@version in pronterface)]
 
