@@ -112,8 +112,8 @@
 // Homing States
 enum {
     MOVING_TO_ENDSTOP_FAST, // homing move
-    MOVING_BACK,            // homing move
     MOVING_TO_ENDSTOP_SLOW, // homing move
+    MOVING_BACK,            // homing move
     NOT_HOMING,
     BACK_OFF_HOME,
     MOVE_TO_ORIGIN,
@@ -319,7 +319,7 @@ void Endstops::on_idle(void *argument)
 
 // if limit switches are enabled, then we must move off of the endstop otherwise we won't be able to move
 // checks if triggered and only backs off if triggered
-void Endstops::back_off_home()
+void Endstops::back_off_home(std::bitset<3> axis)
 {
     std::vector<std::pair<char, float>> params;
     this->status = BACK_OFF_HOME;
@@ -332,7 +332,7 @@ void Endstops::back_off_home()
     } else {
         // cartesians, concatenate all the moves we need to do into one gcode
         for( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-            if(!axis_to_home[c]) continue; // only for axes we asked to move
+            if(!axis[c]) continue; // only for axes we asked to move
 
             // if not triggered no need to move off
             if(this->limit_enable[c] && debounced_get(c + (this->home_direction[c] ? 0 : 3)) ) {
@@ -387,7 +387,7 @@ void Endstops::move_to_origin()
 // Called every millisecond in an ISR
 uint32_t Endstops::read_endstops(uint32_t dummy)
 {
-    if(this->status >= NOT_HOMING) return 0; // not doing anything we need to monitor for
+    if(this->status != MOVING_TO_ENDSTOP_SLOW && this->status != MOVING_TO_ENDSTOP_FAST) return 0; // not doing anything we need to monitor for
 
     if(!is_corexy) {
         // check each axis
@@ -448,8 +448,8 @@ void Endstops::home(std::bitset<3> a)
     if(axis_to_home[X_AXIS] && axis_to_home[Y_AXIS]) {
         // Home XY first so as not to slow them down by homing Z at the same time
         float delta[3] {alpha_max, beta_max, 0};
-        if(!this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
-        if(!this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
+        if(this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
+        if(this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
         float feed_rate = std::min(fast_rates[X_AXIS], fast_rates[Y_AXIS]);
         THEROBOT->solo_move(delta, feed_rate);
 
@@ -459,7 +459,7 @@ void Endstops::home(std::bitset<3> a)
     } else if(axis_to_home[X_AXIS]) {
         // now home X only
         float delta[3] {alpha_max, 0, 0};
-        if(!this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
+        if(this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
         THEROBOT->solo_move(delta, fast_rates[X_AXIS]);
         // wait for X
         THECONVEYOR->wait_for_empty_queue();
@@ -467,7 +467,7 @@ void Endstops::home(std::bitset<3> a)
     } else if(axis_to_home[Y_AXIS]) {
         // now home Y only
         float delta[3] {0, beta_max, 0};
-        if(!this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
+        if(this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
         THEROBOT->solo_move(delta, fast_rates[Y_AXIS]);
         // wait for Y
         THECONVEYOR->wait_for_empty_queue();
@@ -476,21 +476,22 @@ void Endstops::home(std::bitset<3> a)
     if(axis_to_home[Z_AXIS]) {
         // now home z
         float delta[3] {0, 0, gamma_max};
-        if(!this->home_direction[Z_AXIS]) delta[Z_AXIS]= -delta[Z_AXIS];
+        if(this->home_direction[Z_AXIS]) delta[Z_AXIS]= -delta[Z_AXIS];
         THEROBOT->solo_move(delta, fast_rates[Z_AXIS]);
         // wait for Z
         THECONVEYOR->wait_for_empty_queue();
     }
 
     float delta[3]{0,0,0};
-    // use minimum feed rate of all three axes
-    float feed_rate= std::min(slow_rates[X_AXIS], std::min(slow_rates[Y_AXIS], slow_rates[Z_AXIS]));
+    // use minimum feed rate of all three axes that are being homed (sub optimal)
+    float feed_rate= slow_rates[X_AXIS];
     // Move back a small distance for all homing axis
     this->status = MOVING_BACK;
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if(axis_to_home[c]) {
             delta[c]= this->retract_mm[c];
-            if(this->home_direction[c]) delta[c]= -delta[c];
+            if(!this->home_direction[c]) delta[c]= -delta[c];
+            feed_rate= std::min(slow_rates[c], feed_rate);
         }
     }
 
@@ -501,7 +502,12 @@ void Endstops::home(std::bitset<3> a)
     // Start moving the axes to the origin slowly
     this->status = MOVING_TO_ENDSTOP_SLOW;
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        delta[c]= axis_to_home[c] ? this->retract_mm[c] : 0;
+        if(axis_to_home[c]) {
+            delta[c]= this->retract_mm[c];
+            if(this->home_direction[c]) delta[c]= -delta[c];
+        }else{
+            delta[c]= 0;
+        }
     }
     THEROBOT->solo_move(delta, feed_rate);
     // wait until finished
@@ -570,7 +576,6 @@ void Endstops::process_home_command(Gcode* gcode)
 
     if(!home_in_z) { // ie not a delta
         bool axis_speced = ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
-        haxis.reset();
         // only enable homing if the endstop is defined,
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
             if (this->pins[c + (this->home_direction[c] ? 0 : 3)].connected() && (!axis_speced || gcode->has_letter(c + 'X')) ) {
@@ -695,12 +700,12 @@ void Endstops::process_home_command(Gcode* gcode)
         // NOTE a rotary delta usually has optical or hall-effect endstops so it is safe to go past them a little bit
         if(this->move_to_origin_after_home) move_to_origin();
         // if limit switches are enabled we must back off endstop after setting home
-        back_off_home();
+        back_off_home(haxis);
 
     } else if(this->move_to_origin_after_home || this->limit_enable[X_AXIS]) {
         // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
         // also need to back off endstops if limits are enabled
-        back_off_home();
+        back_off_home(haxis);
         if(this->move_to_origin_after_home) move_to_origin();
     }
 }
