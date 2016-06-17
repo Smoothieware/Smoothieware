@@ -482,11 +482,13 @@ void Endstops::home(std::bitset<3> a)
         THECONVEYOR->wait_for_empty_queue();
     }
 
-    float delta[3]{0,0,0};
-    // use minimum feed rate of all three axes that are being homed (sub optimal)
-    float feed_rate= slow_rates[X_AXIS];
+    // TODO should check that the endstops were hit and it did not stop short for some reason
+
     // Move back a small distance for all homing axis
     this->status = MOVING_BACK;
+    float delta[3]{0,0,0};
+    // use minimum feed rate of all three axes that are being homed (sub optimal, but necessary)
+    float feed_rate= slow_rates[X_AXIS];
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if(axis_to_home[c]) {
             delta[c]= this->retract_mm[c];
@@ -570,7 +572,7 @@ void Endstops::process_home_command(Gcode* gcode)
     // deltas, scaras always home Z axis only
     bool home_in_z = this->is_delta || this->is_rdelta || this->is_scara;
 
-    // figure our which axis to home
+    // figure out which axis to home
     bitset<3> haxis;
     haxis.reset();
 
@@ -594,9 +596,6 @@ void Endstops::process_home_command(Gcode* gcode)
         THEROBOT->actuators[Y_AXIS]->get_current_position(),
         THEROBOT->actuators[Z_AXIS]->get_current_position()
     };
-
-    // Enable the motors
-    THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
 
     // do the actual homing
     if(homing_order != 0) {
