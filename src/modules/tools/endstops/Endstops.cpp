@@ -435,10 +435,12 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
     return 0;
 }
 
-void Endstops::home()
+void Endstops::home(std::bitset<3> a)
 {
     // reset debounce counts
     debounce.fill(0);
+
+    this->axis_to_home= a;
 
     // Start moving the axes to the origin
     this->status = MOVING_TO_ENDSTOP_FAST;
@@ -562,19 +564,23 @@ void Endstops::process_home_command(Gcode* gcode)
     // deltas, scaras always home Z axis only
     bool home_in_z = this->is_delta || this->is_rdelta || this->is_scara;
 
+    // figure our which axis to home
+    bitset<3> haxis;
+    haxis.reset();
+
     if(!home_in_z) { // ie not a delta
         bool axis_speced = ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
-        axis_to_home.reset();
+        haxis.reset();
         // only enable homing if the endstop is defined,
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
             if (this->pins[c + (this->home_direction[c] ? 0 : 3)].connected() && (!axis_speced || gcode->has_letter(c + 'X')) ) {
-                axis_to_home.set(c);
+                haxis.set(c);
             }
         }
 
     } else {
         // Only Z axis homes (even though all actuators move this is handled by arm solution)
-        axis_to_home.set(Z_AXIS);
+        haxis.set(Z_AXIS);
     }
 
     // save current actuator position so we can report how far we moved
@@ -589,37 +595,33 @@ void Endstops::process_home_command(Gcode* gcode)
 
     // do the actual homing
     if(homing_order != 0) {
-        bitset<3> axis= axis_to_home;
         // if an order has been specified do it in the specified order
         // homing order is 0b00ccbbaa where aa is 0,1,2 to specify the first axis, bb is the second and cc is the third
         // eg 0b00100001 would be Y X Z, 0b00100100 would be X Y Z
         for (uint8_t m = homing_order; m != 0; m >>= 2) {
             int a= (m & 0x03); // axis to home
-            if(axis[a]) { // if axis is selected to home
-                axis_to_home.reset();
-                axis_to_home.set(a);
-                home();
+            if(haxis[a]) { // if axis is selected to home
+                std::bitset<3> bs;
+                bs.set(a);
+                home(bs);
             }
             // check if on_halt (eg kill)
             if(THEKERNEL->is_halted()) break;
         }
-        axis_to_home= axis;
 
     } else if(is_corexy) {
         // corexy must home each axis individually
-        bitset<3> axis= axis_to_home;
         for (int a = X_AXIS; a <= Z_AXIS; ++a) {
-            if(axis[a]) {
-                axis_to_home.reset();
-                axis_to_home.set(a);
-                home();
+            if(haxis[a]) {
+                std::bitset<3> bs;
+                bs.set(a);
+                home(bs);
             }
         }
-        axis_to_home= axis;
 
     } else {
         // they could all home at the same time
-        home();
+        home(haxis);
     }
 
     // check if on_halt (eg kill)

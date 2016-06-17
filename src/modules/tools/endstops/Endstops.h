@@ -24,10 +24,7 @@ class Endstops : public Module{
 
     private:
         void load_config();
-        void home();
-        bool wait_for_homed();
-        bool wait_for_homed_corexy(int axis);
-        void corexy_home(int home_axis, bool dirx, bool diry, float fast_rate, float slow_rate, unsigned int retract_steps);
+        void home(std::bitset<3> a);
         void back_off_home();
         void move_to_origin();
         void on_get_public_data(void* argument);
