@@ -84,6 +84,7 @@
 #define gamma_homing_retract_mm_checksum    CHECKSUM("gamma_homing_retract_mm")
 
 #define endstop_debounce_count_checksum  CHECKSUM("endstop_debounce_count")
+#define endstop_debounce_ms_checksum     CHECKSUM("endstop_debounce_ms")
 
 #define alpha_homing_direction_checksum  CHECKSUM("alpha_homing_direction")
 #define beta_homing_direction_checksum   CHECKSUM("beta_homing_direction")
@@ -177,6 +178,8 @@ void Endstops::load_config()
     this->retract_mm[1] = THEKERNEL->config->value(beta_homing_retract_mm_checksum    )->by_default(this->retract_mm[1])->as_number();
     this->retract_mm[2] = THEKERNEL->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_mm[2])->as_number();
 
+    // NOTE the debouce count is in milliseconds so probably does not need to beset anymore
+    this->debounce_ms     = THEKERNEL->config->value(endstop_debounce_ms_checksum       )->by_default(0)->as_number();
     this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
@@ -395,7 +398,7 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
             if(STEPPER[m]->is_moving()) {
                 // if it is moving then we check the associated endstop, and debounce it
                 if(this->pins[m + (this->home_direction[m] ? 0 : 3)].get()) {
-                    if(debounce[m] < debounce_count) {
+                    if(debounce[m] < debounce_ms) {
                         debounce[m]++;
                     } else {
                         // we signal the motor to stop, which will preempt any moves on that axis
@@ -415,7 +418,7 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
         for ( int m = X_AXIS; m <= Z_AXIS; m++ ) {
             if(axis_to_home[m]) {
                 if(this->pins[m + (this->home_direction[m] ? 0 : 3)].get()) {
-                    if(debounce[m] < debounce_count) {
+                    if(debounce[m] < debounce_ms) {
                         debounce[m]++;
                     } else {
                         // we signal all the motors to stop, as on corexy X and Y motors will move for X and Y axis homing and we only hom eone axis at a time
@@ -448,7 +451,7 @@ void Endstops::home(std::bitset<3> a)
     THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
     if(axis_to_home[X_AXIS] && axis_to_home[Y_AXIS]) {
         // Home XY first so as not to slow them down by homing Z at the same time
-        float delta[3] {alpha_max, beta_max, 0};
+        float delta[3] {alpha_max*2, beta_max*2, 0};
         if(this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
         if(this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
         float feed_rate = std::min(fast_rates[X_AXIS], fast_rates[Y_AXIS]);
@@ -459,7 +462,7 @@ void Endstops::home(std::bitset<3> a)
 
     } else if(axis_to_home[X_AXIS]) {
         // now home X only
-        float delta[3] {alpha_max, 0, 0};
+        float delta[3] {alpha_max*2, 0, 0};
         if(this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
         THEROBOT->solo_move(delta, fast_rates[X_AXIS]);
         // wait for X
@@ -467,7 +470,7 @@ void Endstops::home(std::bitset<3> a)
 
     } else if(axis_to_home[Y_AXIS]) {
         // now home Y only
-        float delta[3] {0, beta_max, 0};
+        float delta[3] {0, beta_max*2, 0};
         if(this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
         THEROBOT->solo_move(delta, fast_rates[Y_AXIS]);
         // wait for Y
@@ -476,7 +479,7 @@ void Endstops::home(std::bitset<3> a)
 
     if(axis_to_home[Z_AXIS]) {
         // now home z
-        float delta[3] {0, 0, gamma_max};
+        float delta[3] {0, 0, gamma_max*2}; // we go twice the maxz just in case it was set incorrectly
         if(this->home_direction[Z_AXIS]) delta[Z_AXIS]= -delta[Z_AXIS];
         THEROBOT->solo_move(delta, fast_rates[Z_AXIS]);
         // wait for Z

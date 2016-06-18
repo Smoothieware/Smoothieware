@@ -35,7 +35,7 @@
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
-#define debounce_count_checksum  CHECKSUM("debounce_count")
+#define debounce_ms_checksum     CHECKSUM("debounce_ms")
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
 #define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
 #define return_feedrate_checksum CHECKSUM("return_feedrate")
@@ -79,7 +79,7 @@ void ZProbe::on_module_loaded()
 void ZProbe::config_load(void *argument)
 {
     this->pin.from_string( THEKERNEL->config->value(zprobe_checksum, probe_pin_checksum)->by_default("nc" )->as_string())->as_input();
-    this->debounce_count = THEKERNEL->config->value(zprobe_checksum, debounce_count_checksum)->by_default(0  )->as_number();
+    this->debounce_ms    = THEKERNEL->config->value(zprobe_checksum, debounce_ms_checksum)->by_default(0  )->as_number();
 
     // get strategies to load
     vector<uint16_t> modules;
@@ -142,7 +142,7 @@ uint32_t ZProbe::read_probe(uint32_t dummy)
     if(STEPPER[Z_AXIS]->is_moving()) {
         // if it is moving then we check the probe, and debounce it
         if(this->pin.get()) {
-            if(debounce < debounce_count) {
+            if(debounce < debounce_ms) {
                 debounce++;
             } else {
                 // we signal the motors to stop, which will preempt any moves on that axis
@@ -179,13 +179,15 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     };
 
     // move Z down
+    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
     bool dir= (!reverse_z != reverse); // xor
     float delta[3]= {0,0,0};
-    delta[Z_AXIS]= dir ? maxz : -maxz;
+    delta[Z_AXIS]= dir ? -maxz : maxz;
     THEROBOT->solo_move(delta, feedrate);
 
     // wait until finished
     THECONVEYOR->wait_for_empty_queue();
+    THEROBOT->disable_segmentation= false;
 
     // now see how far we moved, get delta in z we moved
     mm= start_pos[2] - THEROBOT->actuators[2]->get_current_position();
@@ -198,6 +200,12 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
             mm,
             probe_detected?1:0));
 
+    probing= false;
+
+    if(probe_detected) {
+        // if the probe stopped the move we need to correct the last_milestone as it did not reach where it thought
+        THEROBOT->reset_position_from_current_actuator_position();
+    }
 
     return probe_detected;
 }
@@ -217,7 +225,7 @@ bool ZProbe::return_probe(float mm, bool reverse)
     if(reverse) dir= !dir;
 
     float delta[3]= {0,0,0};
-    delta[Z_AXIS]= dir ? mm : -mm;
+    delta[Z_AXIS]= dir ? -mm : mm;
     THEROBOT->solo_move(delta, fr);
 
     // wait until finished
@@ -267,10 +275,10 @@ void ZProbe::on_gcode_received(void *argument)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_empty_queue();
 
-            float mm;
             bool probe_result;
             bool reverse= (gcode->has_letter('R') && gcode->get_value('R') != 0); // specify to probe in reverse direction
             float rate= gcode->has_letter('F') ? gcode->get_value('F') / 60 : this->slow_feedrate;
+            float mm;
             probe_result = run_probe(mm, rate, -1, reverse);
 
             if(probe_result) {

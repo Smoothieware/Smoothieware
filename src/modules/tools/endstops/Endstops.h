@@ -40,7 +40,8 @@ class Endstops : public Module{
         float saved_position[3]{0}; // save G28 (in grbl mode)
         float alpha_max, beta_max, gamma_max;
 
-        unsigned int  debounce_count;
+        uint32_t debounce_count;
+        uint32_t  debounce_ms;
         float  retract_mm[3];
         float  trim_mm[3];
         float  fast_rates[3];

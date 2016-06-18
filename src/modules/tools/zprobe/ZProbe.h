@@ -60,7 +60,7 @@ private:
 
     Pin pin;
     std::vector<LevelingStrategy*> strategies;
-    uint16_t debounce_count, debounce;
+    uint16_t debounce_ms, debounce;
 
     volatile struct {
         bool is_delta:1;
