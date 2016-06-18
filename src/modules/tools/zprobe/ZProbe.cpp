@@ -67,7 +67,7 @@ void ZProbe::on_module_loaded()
     }
 
     // load settings
-    this->config_load(this);
+    this->config_load();
     // register event-handlers
     register_for_event(ON_GCODE_RECEIVED);
 
@@ -76,7 +76,7 @@ void ZProbe::on_module_loaded()
     THEKERNEL->slow_ticker->attach(1000, this, &ZProbe::read_probe);
 }
 
-void ZProbe::config_load(void *argument)
+void ZProbe::config_load()
 {
     this->pin.from_string( THEKERNEL->config->value(zprobe_checksum, probe_pin_checksum)->by_default("nc" )->as_string())->as_input();
     this->debounce_ms    = THEKERNEL->config->value(zprobe_checksum, debounce_ms_checksum)->by_default(0  )->as_number();

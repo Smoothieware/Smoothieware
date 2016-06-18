@@ -48,7 +48,7 @@ public:
     float getMaxZ() const { return max_z; }
 
 private:
-    void config_load(void *argument);
+    void config_load();
     void probe_XYZ(Gcode *gc, int axis);
     uint32_t read_probe(uint32_t dummy);
 
