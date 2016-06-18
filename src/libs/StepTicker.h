@@ -7,62 +7,58 @@
 
 
 
-#ifndef STEPTICKER_H
-#define STEPTICKER_H
+#pragma once
 
 #include <stdint.h>
-#include <vector>
+#include <array>
 #include <bitset>
 #include <functional>
 #include <atomic>
 
+#include "ActuatorCoordinates.h"
+#include "TSRingBuffer.h"
+
 class StepperMotor;
+class Block;
+
+// handle 2.30 Fixed point
+#define STEPTICKER_FPSCALE (1<<30)
+#define STEPTICKER_TOFP(x) ((int32_t)roundf((float)(x)*STEPTICKER_FPSCALE))
+#define STEPTICKER_FROMFP(x) ((float)(x)/STEPTICKER_FPSCALE)
 
 class StepTicker{
     public:
-        static StepTicker* global_step_ticker;
-
         StepTicker();
         ~StepTicker();
         void set_frequency( float frequency );
-        void signal_a_move_finished();
-        void set_reset_delay( float seconds );
+        void set_unstep_time( float microseconds );
         int register_motor(StepperMotor* motor);
-        void add_motor_to_active_list(StepperMotor* motor);
-        void remove_motor_from_active_list(StepperMotor* motor);
-        void set_acceleration_ticks_per_second(uint32_t acceleration_ticks_per_second);
         float get_frequency() const { return frequency; }
         void unstep_tick();
-        uint32_t get_tick_cnt() const { return tick_cnt; }
-        uint32_t ticks_since(uint32_t last) const { return (tick_cnt>=last) ? tick_cnt-last : (UINT32_MAX-last) + tick_cnt + 1; }
 
-        void TIMER0_IRQHandler (void);
-        void PendSV_IRQHandler (void);
-        void register_acceleration_tick_handler(std::function<void(void)> cb){
-            acceleration_tick_handlers.push_back(cb);
-        }
-        void acceleration_tick();
-        void synchronize_acceleration(bool fire_now);
-        void schedule_unstep(int motor);
-
+        void step_tick (void);
+        void handle_finish (void);
         void start();
 
-        friend class StepperMotor;
+        // whatever setup the block should register this to know when it is done
+        std::function<void()> finished_fnc{nullptr};
+
+        static StepTicker *getInstance() { return instance; }
 
     private:
+        static StepTicker *instance;
+
+        bool start_next_block();
+
         float frequency;
         uint32_t period;
-        volatile uint32_t tick_cnt;
-        std::vector<std::function<void(void)>> acceleration_tick_handlers;
-        std::vector<StepperMotor*> motor;
-        std::bitset<32> active_motor; // limit to 32 motors
-        std::bitset<32> unstep;       // limit to 32 motors
-        std::atomic_uchar do_move_finished;
+        std::array<StepperMotor*, k_max_actuators> motor;
+        std::bitset<k_max_actuators> unstep;
 
-        uint8_t num_motors;
-        volatile bool a_move_finished;
+        Block *current_block;
+
+        struct {
+            volatile bool running:1;
+            uint8_t num_motors:4;
+        };
 };
-
-
-
-#endif

@@ -59,22 +59,22 @@ void MainMenuScreen::setupConfigureScreen()
 
     // steps/mm
     mvs->addMenuItem("X steps/mm",
-        []() -> float { return THEKERNEL->robot->actuators[0]->get_steps_per_mm(); },
-        [](float v) { THEKERNEL->robot->actuators[0]->change_steps_per_mm(v); },
+        []() -> float { return THEROBOT->actuators[0]->get_steps_per_mm(); },
+        [](float v) { THEROBOT->actuators[0]->change_steps_per_mm(v); },
         0.1F,
         1.0F
         );
 
     mvs->addMenuItem("Y steps/mm",
-        []() -> float { return THEKERNEL->robot->actuators[1]->get_steps_per_mm(); },
-        [](float v) { THEKERNEL->robot->actuators[1]->change_steps_per_mm(v); },
+        []() -> float { return THEROBOT->actuators[1]->get_steps_per_mm(); },
+        [](float v) { THEROBOT->actuators[1]->change_steps_per_mm(v); },
         0.1F,
         1.0F
         );
 
     mvs->addMenuItem("Z steps/mm",
-        []() -> float { return THEKERNEL->robot->actuators[2]->get_steps_per_mm(); },
-        [](float v) { THEKERNEL->robot->actuators[2]->change_steps_per_mm(v); },
+        []() -> float { return THEROBOT->actuators[2]->get_steps_per_mm(); },
+        [](float v) { THEROBOT->actuators[2]->change_steps_per_mm(v); },
         0.1F,
         1.0F
         );

@@ -196,7 +196,7 @@ try_again:
                                 }
                             }
                             // makes it handle the parameters as a machine position
-                            THEKERNEL->robot->next_command_is_MCS= true;
+                            THEROBOT->next_command_is_MCS= true;
 
                         }
 

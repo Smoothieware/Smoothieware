@@ -429,10 +429,10 @@ void Extruder::on_gcode_received(void *argument)
                 int n = snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", -retract_zlift_length, retract_zlift_feedrate);
                 string cmd(buf, n);
                 Gcode gc(cmd, &(StreamOutput::NullStream));
-                THEKERNEL->robot->push_state(); // save state includes feed rates etc
-                THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
-                THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-                THEKERNEL->robot->pop_state(); // restore state includes feed rates etc
+                THEROBOT->push_state(); // save state includes feed rates etc
+                THEROBOT->absolute_mode = false; // needs to be relative mode
+                THEROBOT->on_gcode_received(&gc); // send to robot directly
+                THEROBOT->pop_state(); // restore state includes feed rates etc
             }
 
             // This is a solo move, we add an empty block to the queue to prevent subsequent gcodes being executed at the same time
@@ -444,10 +444,10 @@ void Extruder::on_gcode_received(void *argument)
                 int n = snprintf(buf, sizeof(buf), "G0 Z%1.4f F%1.4f", retract_zlift_length, retract_zlift_feedrate);
                 string cmd(buf, n);
                 Gcode gc(cmd, &(StreamOutput::NullStream));
-                THEKERNEL->robot->push_state(); // save state includes feed rates etc
-                THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
-                THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
-                THEKERNEL->robot->pop_state(); // restore state includes feed rates etc
+                THEROBOT->push_state(); // save state includes feed rates etc
+                THEROBOT->absolute_mode = false; // needs to be relative mode
+                THEROBOT->on_gcode_received(&gc); // send to robot directly
+                THEROBOT->pop_state(); // restore state includes feed rates etc
             }
 
         } else if( this->enabled && this->retracted && (gcode->g == 0 || gcode->g == 1) && gcode->has_letter('Z')) {
@@ -573,7 +573,7 @@ void Extruder::on_gcode_execute(void *argument)
 
             // NOTE this is only used in SOLO mode, but any F on a G0/G1 will set the speed for future retracts that are not firmware retracts
             if (gcode->has_letter('F')) {
-                feed_rate = gcode->get_value('F') / THEKERNEL->robot->get_seconds_per_minute();
+                feed_rate = gcode->get_value('F') / THEROBOT->get_seconds_per_minute();
                 if (stepper_motor->get_max_rate() > 0 && feed_rate > stepper_motor->get_max_rate())
                     feed_rate = stepper_motor->get_max_rate();
             }
@@ -666,35 +666,6 @@ void Extruder::acceleration_tick(void)
     }
 
     return;
-}
-
-// Speed has been updated for the robot's stepper, we must update accordingly
-void Extruder::on_speed_change( void *argument )
-{
-    // Avoid trying to work when we really shouldn't ( between blocks or re-entry )
-    if(!this->enabled || this->current_block == NULL || this->mode != FOLLOW || !this->stepper_motor->is_moving()) {
-        return;
-    }
-
-    // if we are flushing the queue we need to stop the motor when it has decelerated to zero, we get this call with argumnet == 0 when this happens
-    // this is what steppermotor does
-    if(argument == 0) {
-        this->stepper_motor->move(0, 0);
-        this->current_block->release();
-        this->current_block = NULL;
-        return;
-    }
-
-    /*
-    * nominal block duration = current block's steps / ( current block's nominal rate )
-    * nominal extruder rate = extruder steps / nominal block duration
-    * actual extruder rate = nominal extruder rate * ( ( stepper's steps per second ) / ( current block's nominal rate ) )
-    * or actual extruder rate = ( ( extruder steps * ( current block's nominal_rate ) ) / current block's steps ) * ( ( stepper's steps per second ) / ( current block's nominal rate ) )
-    * or simplified : extruder steps * ( stepper's steps per second ) ) / current block's steps
-    * or even : ( stepper steps per second ) * ( extruder steps / current block's steps )
-    */
-
-    this->stepper_motor->set_speed(THEKERNEL->stepper->get_trapezoid_adjusted_rate() * (float)this->stepper_motor->get_steps_to_move() / (float)this->current_block->steps_event_count);
 }
 
 // When the stepper has finished it's move

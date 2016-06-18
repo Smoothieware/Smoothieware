@@ -21,7 +21,6 @@ using namespace std;
 #include "Config.h"
 #include "checksumm.h"
 #include "Robot.h"
-#include "Stepper.h"
 #include "ConfigValue.h"
 
 #include <math.h>
@@ -55,7 +54,7 @@ void Planner::config_load()
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, float distance, float unit_vec[] )
+void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, float distance, float *unit_vec)
 {
     float acceleration, junction_deviation;
 
@@ -64,14 +63,14 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
 
 
     // Direction bits
-    for (size_t i = 0; i < THEKERNEL->robot->actuators.size(); i++) {
-        int steps = THEKERNEL->robot->actuators[i]->steps_to_target(actuator_pos[i]);
+    for (size_t i = 0; i < THEROBOT->actuators.size(); i++) {
+        int steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
 
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
 
         // Update current position
-        THEKERNEL->robot->actuators[i]->last_milestone_steps += steps;
-        THEKERNEL->robot->actuators[i]->last_milestone_mm = actuator_pos[i];
+        THEROBOT->actuators[i]->last_milestone_steps += steps;
+        THEROBOT->actuators[i]->last_milestone_mm = actuator_pos[i];
 
         block->steps[i] = labs(steps);
     }
@@ -88,9 +87,14 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
 
     block->acceleration = acceleration; // save in block
 
+    // if it is a SOLO move from extruder, zprobe or endstops we do not use junction deviation
+    if(unit_vec == nullptr) {
+        junction_deviation= 0.0F;
+    }
+
     // Max number of steps, for all axes
     uint32_t steps_event_count = 0;
-    for (size_t s = 0; s < THEKERNEL->robot->actuators.size(); s++) {
+    for (size_t s = 0; s < THEROBOT->actuators.size(); s++) {
         steps_event_count = std::max(steps_event_count, block->steps[s]);
     }
     block->steps_event_count = steps_event_count;
@@ -98,10 +102,9 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
     block->millimeters = distance;
 
     // Calculate speed in mm/sec for each axis. No divide by zero due to previous checks.
-    // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
     if( distance > 0.0F ) {
         block->nominal_speed = rate_mm_s;           // (mm/s) Always > 0
-        block->nominal_rate = ceilf(block->steps_event_count * rate_mm_s / distance); // (step/s) Always > 0
+        block->nominal_rate = block->steps_event_count * rate_mm_s / distance; // (step/s) Always > 0
     } else {
         block->nominal_speed = 0.0F;
         block->nominal_rate  = 0;
@@ -111,10 +114,6 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
     // average travel per step event changes. For a line along one axis the travel per step event
     // is equal to the travel/step in the particular axis. For a 45 degree line the steppers of both
     // axes might step for every step event. Travel per step event is then sqrt(travel_x^2+travel_y^2).
-    // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
-    // specifically for each line to compensate for this phenomenon:
-    // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = (block->steps_event_count * acceleration) / (distance * THEKERNEL->acceleration_ticks_per_second); // (step/min/acceleration_tick)
 
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction
@@ -173,7 +172,11 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
     block->recalculate_flag = true;
 
     // Update previous path unit_vector and nominal speed
-    memcpy(this->previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
+    if(unit_vec != nullptr) {
+        memcpy(this->previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
+    }else{
+        clear_vector_float(this->previous_unit_vec);
+    }
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();
@@ -241,7 +244,7 @@ void Planner::recalculate()
          * Step 2:
          * now current points to either tail or first non-recalculate block
          * and has not had its reverse_pass called
-         * or its calc trap
+         * or its calculate_trapezoid
          * entry_speed is set to the *exit* speed of current.
          * each block from current to head has its entry speed set to its max entry speed- limited by decel or nominal_rate
          */
@@ -276,9 +279,8 @@ void Planner::recalculate()
 // acceleration within the allotted distance.
 float Planner::max_allowable_speed(float acceleration, float target_velocity, float distance)
 {
-    return(
-              sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance) //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
-          );
+    // Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    return(sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance));
 }
 
 

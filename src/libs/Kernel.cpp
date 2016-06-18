@@ -22,7 +22,6 @@
 #include "modules/communication/GcodeDispatch.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
-#include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
 #include "StepperMotor.h"
 #include "BaseSolution.h"
@@ -118,7 +117,6 @@ Kernel::Kernel(){
     NVIC_SetPriority(TIMER1_IRQn, 1);
     NVIC_SetPriority(TIMER2_IRQn, 4);
     NVIC_SetPriority(PendSV_IRQn, 3);
-    NVIC_SetPriority(RIT_IRQn, 3); // we make acceleration tick the same prio as pendsv so it can't be pre-empted by end of block
 
     // Set other priorities lower than the timers
     NVIC_SetPriority(ADC_IRQn, 5);
@@ -143,14 +141,12 @@ Kernel::Kernel(){
     this->acceleration_ticks_per_second = THEKERNEL->config->value(acceleration_ticks_per_second_checksum)->by_default(1000)->as_number();
 
     // Configure the step ticker ( TODO : shouldnt this go into stepticker's code ? )
-    this->step_ticker->set_reset_delay( microseconds_per_step_pulse );
+    this->step_ticker->set_unstep_time( microseconds_per_step_pulse );
     this->step_ticker->set_frequency( this->base_stepping_frequency );
-    this->step_ticker->set_acceleration_ticks_per_second(acceleration_ticks_per_second); // must be set after set_frequency
 
     // Core modules
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
     this->add_module( this->robot          = new Robot()         );
-    this->add_module( this->stepper        = new Stepper()       );
     this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->simpleshell    = new SimpleShell()   );
 
@@ -174,7 +170,7 @@ std::string Kernel::get_query_string()
         str.append("Home,");
     }else if(feed_hold) {
         str.append("Hold,");
-    }else if(this->conveyor->is_queue_empty()) {
+    }else if(this->conveyor->is_idle()) {
         str.append("Idle,");
     }else{
         running= true;

@@ -89,11 +89,6 @@ GPIO leds[5] = {
     GPIO(P4_28)
 };
 
-// debug pins, only used if defined in src/makefile
-#ifdef STEPTICKER_DEBUG_PIN
-GPIO stepticker_debug_pin(STEPTICKER_DEBUG_PIN);
-#endif
-
 void init() {
 
     // Default pins to low status
@@ -101,11 +96,6 @@ void init() {
         leds[i].output();
         leds[i]= 0;
     }
-
-#ifdef STEPTICKER_DEBUG_PIN
-    stepticker_debug_pin.output();
-    stepticker_debug_pin= 0;
-#endif
 
     Kernel* kernel = new Kernel();
 
@@ -144,10 +134,12 @@ void init() {
     kernel->add_module( new(AHB0) CurrentControl() );
     kernel->add_module( new(AHB0) KillButton() );
     kernel->add_module( new(AHB0) PlayLed() );
-    kernel->add_module( new(AHB0) Endstops() );
-
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
+    #ifndef NO_TOOLS_ENDSTOPS
+    kernel->add_module( new(AHB0) Endstops() );
+    #endif
+
     #ifndef NO_TOOLS_SWITCH
     SwitchPool *sp= new SwitchPool();
     sp->load_tools();
@@ -263,6 +255,7 @@ void init() {
     }
 
     // start the timers and interrupts
+    THEKERNEL->conveyor->start();
     THEKERNEL->step_ticker->start();
     THEKERNEL->slow_ticker->start();
 }
