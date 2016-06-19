@@ -190,6 +190,7 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     THEROBOT->disable_segmentation= false;
 
     // now see how far we moved, get delta in z we moved
+    // NOTE this works for deltas as well as all three actuators move the same amount in Z
     mm= start_pos[2] - THEROBOT->actuators[2]->get_current_position();
 
     // set the last probe position to the actuator units moved during this home

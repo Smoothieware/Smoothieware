@@ -64,7 +64,7 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
 
                 ActuatorCoordinates current_angle;
                 // get the current angle for each actuator, NOTE we only deal with  ABC so if there are more than 3 actuators this will probably go wonky
-                for (size_t i = 0; i < THEROBOT->actuators.size(); i++) {
+                for (size_t i = 0; i < 3; i++) {
                     current_angle[i]= THEROBOT->actuators[i]->get_current_position();
                 }
 

@@ -9,7 +9,6 @@
 #include "libs/Kernel.h"
 #include "Spindle.h"
 #include "Config.h"
-#include "libs/nuts_bolts.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "Gcode.h"
@@ -17,6 +16,7 @@
 #include "SlowTicker.h"
 #include "Conveyor.h"
 #include "system_LPC17xx.h"
+#include "utils.h"
 
 #include "libs/Pin.h"
 #include "InterruptIn.h"

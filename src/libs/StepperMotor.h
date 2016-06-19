@@ -40,6 +40,10 @@ class StepperMotor  : public Module {
         uint32_t get_current_step(void) const { return current_position_steps; }
         float get_max_rate(void) const { return max_rate; }
         void set_max_rate(float mr) { max_rate= mr; }
+        void set_acceleration(float a) { acceleration= a; }
+        float get_acceleration() const { return acceleration; }
+        bool is_selected() const { return selected; }
+        void set_selected(bool b) { selected= b; }
 
         int  steps_to_target(float);
 
@@ -61,6 +65,7 @@ class StepperMotor  : public Module {
         float steps_per_second;
         float steps_per_mm;
         float max_rate; // this is not really rate it is in mm/sec, misnamed used in Robot and Extruder
+        float acceleration;
 
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;
@@ -69,6 +74,7 @@ class StepperMotor  : public Module {
         volatile struct {
             volatile bool direction:1;
             volatile bool moving:1;
+            bool selected:1;
         };
 };
 

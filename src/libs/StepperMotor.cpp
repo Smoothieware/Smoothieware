@@ -16,8 +16,6 @@
 StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en)
 {
     set_high_on_debug(en.port_number, en.pin);
-    // register this motor with the step ticker, and get its index in that array and bit position
-    this->index= THEKERNEL->step_ticker->register_motor(this);
 
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
@@ -27,6 +25,8 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     current_position_steps= 0;
     enable(false);
     moving= false;
+    acceleration= NAN;
+    selected= true;
 
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_ENABLE);

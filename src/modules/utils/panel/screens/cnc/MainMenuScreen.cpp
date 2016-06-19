@@ -48,9 +48,9 @@ void MainMenuScreen::setupConfigureScreen()
     auto mvs= new ModifyValuesScreen(true); // delete itself on exit
     mvs->set_parent(this);
 
-    // acceleration
-    mvs->addMenuItem("Acceleration", // menu name
-        []() -> float { return THEKERNEL->planner->get_acceleration(); }, // getter
+   // acceleration
+    mvs->addMenuItem("def Acceleration", // menu name
+        []() -> float { return THEROBOT->get_default_acceleration(); }, // getter
         [this](float acc) { send_gcode("M204", 'S', acc); }, // setter
         10.0F, // increment
         1.0F, // Min

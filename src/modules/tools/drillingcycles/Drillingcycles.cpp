@@ -16,12 +16,11 @@
 #include "SlowTicker.h"
 #include "StepperMotor.h"
 #include "StreamOutputPool.h"
+#include "nuts_bolts.h"
+
 #include <math.h> /* fmod */
 
-// axis index
-#define X_AXIS 0
-#define Y_AXIS 1
-#define Z_AXIS 2
+
 
 // retract modes
 #define RETRACT_TO_Z 0
