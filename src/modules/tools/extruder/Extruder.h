@@ -7,19 +7,17 @@
 
 
 
-#ifndef EXTURDER_MODULE_H
-#define EXTRUDER_MODULE_H
+#pragma once
 
 #include "Tool.h"
 #include "Pin.h"
 
 class StepperMotor;
-class Block;
 
 // NOTE Tool is also a module, no need for multiple inheritance here
 class Extruder : public Tool {
     public:
-        Extruder(uint16_t config_identifier, bool single= false);
+        Extruder(uint16_t config_identifier);
         virtual ~Extruder();
 
         void     on_module_loaded();
@@ -33,10 +31,9 @@ class Extruder : public Tool {
         void config_load();
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
-        uint32_t rate_increase() const;
         float check_max_speeds(float target, float isecs);
 
-        uint8_t        motor_id;
+        StepperMotor *stepper_motor;
 
         // kept together so they can be passed as public data
         struct {
@@ -45,7 +42,6 @@ class Extruder : public Tool {
             float retract_length;               // firmware retract length
         };
 
-        float saved_current_position;
         float volumetric_multiplier;
         float max_volumetric_rate;      // used for calculating volumetric rate in mm³/sec
 
@@ -57,10 +53,9 @@ class Extruder : public Tool {
         float retract_zlift_feedrate;
 
         struct {
+            uint8_t motor_id:8;
             bool retracted:1;
             bool cancel_zlift_restore:1; // hack to stop a G11 zlift restore from overring an absolute Z setting
             bool selected:1;
         };
 };
-
-#endif

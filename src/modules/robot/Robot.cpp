@@ -32,6 +32,7 @@
 #include "StreamOutputPool.h"
 #include "ExtruderPublicAccess.h"
 #include "GcodeDispatch.h"
+#include "ActuatorCoordinates.h"
 
 #include "mbed.h" // for us_ticker_read()
 #include "mri.h"
@@ -465,6 +466,21 @@ void Robot::on_gcode_received(void *argument)
                     }
                     g92_offset = wcs_t(x, y, z);
                 }
+
+                #if MAX_ROBOT_ACTUATORS > 3
+                if(gcode->subcode == 0 && (gcode->has_letter('E') || gcode->get_num_args() == 0)){
+                    // reset the E position, legacy for 3d Printers to be reprap compatible
+                    // find the selected extruder
+                    for (int i = E_AXIS; i < n_motors; ++i) {
+                        if(actuators[i]->is_selected()) {
+                            float e= gcode->has_letter('E') ? gcode->get_value('E') : 0;
+                            last_milestone[i]= last_machine_position[i]= e;
+                            actuators[i]->change_last_milestone(e);
+                            break;
+                        }
+                    }
+                }
+                #endif
 
                 return;
             }
@@ -951,9 +967,9 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
     ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator( this->last_machine_position, actuator_pos );
 
-#ifndef CNC
+#if MAX_ROBOT_ACTUATORS > 3
     // for the extruders just copy the position
-    for (size_t i = E_AXIS; i < n_motors; i++) {
+    for (size_t i = E_AXIS; i < k_max_actuators; i++) {
         actuator_pos[i]= last_machine_position[i];
         if(!isnan(this->e_scale)) {
             // NOTE this relies on the fact only one extruder is active at a time
@@ -997,7 +1013,8 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
 }
 
 // Used to plan a single move used by things like endstops when homing, zprobe, extruder retracts etc.
-bool Robot::solo_move(const float *delta, float rate_mm_s)
+// TODO this pretty much duplicates append_milestone, so try to refactor it away.
+bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
 {
     if(THEKERNEL->is_halted()) return false;
 
@@ -1006,38 +1023,52 @@ bool Robot::solo_move(const float *delta, float rate_mm_s)
         return false;
     }
 
-    // Compute how long this move moves, so we can attach it to the block for later use
-    float millimeters_of_travel = sqrtf( powf( delta[X_AXIS], 2 ) +  powf( delta[Y_AXIS], 2 ) +  powf( delta[Z_AXIS], 2 ) );
+    bool move= false;
+    float sos= 0;
+
+    // find distance moved by each axis
+    for (size_t i = 0; i <= naxis; i++) {
+        if(delta[i] == 0) continue;
+        // at least one non zero delta
+        move = true;
+        sos += powf(delta[i], 2);
+    }
+
+    // nothing moved
+    if(!move) return false;
 
     // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
     // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
-    if(millimeters_of_travel < 0.00001F) return false;
+    if(sos < 0.00001F) return false;
+
+    float millimeters_of_travel= sqrtf(sos);
 
     // this is the new machine position
-    for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
+    for (int axis = 0; axis <= naxis; axis++) {
         this->last_machine_position[axis] += delta[axis];
     }
 
-    // Do not move faster than the configured cartesian limits
-    for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
-        if ( max_speeds[axis] > 0 ) {
-            float axis_speed = fabsf(delta[axis] / millimeters_of_travel * rate_mm_s);
-
-            if (axis_speed > max_speeds[axis])
-                rate_mm_s *= ( max_speeds[axis] / axis_speed );
-        }
-    }
-
-    // find actuator position given the machine position, use actual adjusted target
+    // find actuator position given the machine position
     ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator( this->last_machine_position, actuator_pos );
+
+    // for the extruders just copy the position, need to copy all possible actuators
+    for (size_t i = N_PRIMARY_AXIS; i < k_max_actuators; i++) {
+        actuator_pos[i]= last_machine_position[i];
+        if(!isnan(this->e_scale)) {
+            // NOTE this relies on the fact only one extruder is active at a time
+            // scale for volumetric or flow rate
+            // TODO is this correct? scaling the absolute target? what if the scale changes?
+            actuator_pos[i] *= this->e_scale;
+        }
+    }
 
     // use default acceleration to start with
     float acceleration = default_acceleration;
     float isecs = rate_mm_s / millimeters_of_travel;
 
     // check per-actuator speed limits
-    for (size_t actuator = 0; actuator < n_motors; actuator++) {
+    for (size_t actuator = 0; actuator < naxis; actuator++) {
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
         if(d == 0) continue; // no movement for this actuator
 

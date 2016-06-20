@@ -17,8 +17,8 @@ public:
     Tool(){};
     virtual ~Tool() {};
 
-    virtual void select();
-    virtual void deselect();
+    virtual void select()= 0;
+    virtual void deselect()= 0;
     virtual const float *get_offset() const { return offset; }
     virtual uint16_t get_name() const { return identifier; }
 
