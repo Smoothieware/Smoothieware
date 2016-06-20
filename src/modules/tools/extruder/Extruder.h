@@ -22,7 +22,6 @@ class Extruder : public Tool {
 
         void     on_module_loaded();
         void     on_gcode_received(void*);
-        void     on_halt(void* argument);
 
         void select();
         void deselect();

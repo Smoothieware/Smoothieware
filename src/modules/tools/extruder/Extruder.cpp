@@ -85,9 +85,6 @@ Extruder::~Extruder()
     delete stepper_motor;
 }
 
-void Extruder::on_halt(void *arg)
-{}
-
 void Extruder::on_module_loaded()
 {
     // Settings
@@ -95,7 +92,6 @@ void Extruder::on_module_loaded()
 
     // We work on the same Block as Stepper, so we need to know when it gets a new one and drops one
     this->register_for_event(ON_GCODE_RECEIVED);
-    this->register_for_event(ON_HALT);
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
 }
