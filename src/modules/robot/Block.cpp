@@ -50,7 +50,7 @@ void Block::clear()
     millimeters         = 0.0F;
     entry_speed         = 0.0F;
     exit_speed          = 0.0F;
-    acceleration        = 100.0F; // we don't want to get devide by zeroes if this is not set
+    acceleration        = 100.0F; // we don't want to get divide by zeroes if this is not set
     initial_rate        = 0.0F;
     accelerate_until    = 0;
     decelerate_after    = 0;
@@ -79,11 +79,11 @@ void Block::clear()
 
 void Block::debug() const
 {
-    THEKERNEL->streams->printf("%p: steps:X%04lu Y%04lu Z%04lu(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
-                               this,
-                               this->steps[0],
-                               this->steps[1],
-                               this->steps[2],
+    THEKERNEL->streams->printf("%p: steps-X:%04lu Y:%04lu Z:%04lu ", this, this->steps[0], this->steps[1], this->steps[2]);
+    for (size_t i = E_AXIS; i < k_max_actuators; ++i) {
+        THEKERNEL->streams->printf("E%d:%04lu ", i-E_AXIS, this->steps[i]);
+    }
+    THEKERNEL->streams->printf("(max:%4lu) nominal:r%6.1f/s%6.1f mm:%9.6f acc:%5lu dec:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
                                this->steps_event_count,
                                this->nominal_rate,
                                this->nominal_speed,

@@ -62,9 +62,10 @@
 #define PI 3.14159265358979F
 
 
-/* The extruder module controls a filament extruder for 3D printing: http://en.wikipedia.org/wiki/Fused_deposition_modeling
-* It can work in two modes : either the head does not move, and the extruder moves the filament at a specified speed ( SOLO mode here )
-* or the head moves, and the extruder moves plastic at a speed proportional to the movement of the head ( FOLLOW mode here ).
+/*
+    As the actual motion is handled by the planner and the stepticker, this module just handles Extruder specific gcodes
+    and settings.
+    In a multi extruder setting it must be selected to be addressed. (using T0 T1 etc)
 */
 
 Extruder::Extruder( uint16_t config_identifier)
@@ -171,27 +172,10 @@ float Extruder::check_max_speeds(float delta, float isecs)
         // return the rate change needed to stay within the max rate
         if(v > max_volumetric_rate) {
             rm = max_volumetric_rate / v;
-            isecs *= rm; // this slows the rate down for the next test
         }
         //THEKERNEL->streams->printf("requested flow rate: %f mm³/sec, corrected flow rate: %f  mm³/sec\n", v, v * rm);
     }
 
-    // // check for max speed as well
-    // float max_speed = this->stepper_motor->get_max_rate();
-    // if(max_speed > 0) {
-    //     if(this->filament_diameter > 0.01F) {
-    //         // volumetric so need to convert delta which is mm³ to mm
-    //         delta *= volumetric_multiplier;
-    //     }
-
-    //     float sm = 1.0F;
-    //     float v = delta * isecs; // the speed in mm/sec
-    //     if(v > max_speed) {
-    //         sm *= (max_speed / v);
-    //     }
-    //     //THEKERNEL->streams->printf("requested speed: %f mm/sec, corrected speed: %f  mm/sec\n", v, v * sm);
-    //     rm *= sm;
-    // }
     return rm;
 }
 

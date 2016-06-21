@@ -24,6 +24,7 @@ using namespace std;
 #include "ConfigValue.h"
 
 #include <math.h>
+#include <algorithm>
 
 #define junction_deviation_checksum    CHECKSUM("junction_deviation")
 #define z_junction_deviation_checksum  CHECKSUM("z_junction_deviation")
@@ -49,16 +50,15 @@ void Planner::config_load()
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, float distance, float *unit_vec, float acceleration)
+void Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors, float rate_mm_s, float distance, float *unit_vec, float acceleration)
 {
     float junction_deviation;
 
     // Create ( recycle ) a new block
     Block* block = THEKERNEL->conveyor->queue.head_ref();
 
-
     // Direction bits
-    for (size_t i = 0; i < THEROBOT->n_motors; i++) {
+    for (size_t i = 0; i < n_motors; i++) {
         int steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
 
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
@@ -81,11 +81,8 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, float rate_mm_s, 
     block->acceleration = acceleration; // save in block
 
     // Max number of steps, for all axes
-    uint32_t steps_event_count = 0;
-    for (size_t s = 0; s < THEROBOT->n_motors; s++) {
-        steps_event_count = std::max(steps_event_count, block->steps[s]);
-    }
-    block->steps_event_count = steps_event_count;
+    auto mi= std::max_element(block->steps.begin(), block->steps.end());
+    block->steps_event_count = *mi;
 
     block->millimeters = distance;
 

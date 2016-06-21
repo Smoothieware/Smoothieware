@@ -812,6 +812,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 
         case CW_ARC:
         case CCW_ARC:
+            // Note arcs are not currently supported by extruder based machines, as 3D slicers do not use arcs (G2/G3)
             moved= this->compute_arc(gcode, offset, target, motion_mode);
             break;
     }
@@ -930,7 +931,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
 
     } else if(n_motors >= E_AXIS) { // if we have more than 3 axis/actuators (XYZE)
         // non primary axis move (like extrude)
-        // select the biggest one (usually just E)
+        // select the biggest one, will be the only active E
         auto mi= std::max_element(&deltas[E_AXIS], &deltas[n_motors], [](float a, float b){ return std::abs(a) < std::abs(b); } );
         millimeters_of_travel= std::abs(*mi);
         auxilliary_move= true;
@@ -969,7 +970,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
 
 #if MAX_ROBOT_ACTUATORS > 3
     // for the extruders just copy the position
-    for (size_t i = E_AXIS; i < k_max_actuators; i++) {
+    for (size_t i = E_AXIS; i < n_motors; i++) {
         actuator_pos[i]= last_machine_position[i];
         if(!isnan(this->e_scale)) {
             // NOTE this relies on the fact only one extruder is active at a time
@@ -1007,7 +1008,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
     }
 
     // Append the block to the planner
-    THEKERNEL->planner->append_block( actuator_pos, rate_mm_s, millimeters_of_travel, auxilliary_move? nullptr : unit_vec, acceleration );
+    THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, millimeters_of_travel, auxilliary_move? nullptr : unit_vec, acceleration );
 
     return true;
 }
@@ -1052,8 +1053,8 @@ bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
     ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator( this->last_machine_position, actuator_pos );
 
-    // for the extruders just copy the position, need to copy all possible actuators
-    for (size_t i = N_PRIMARY_AXIS; i < k_max_actuators; i++) {
+    // for the extruders just copy the position, need to copy all actuators
+    for (size_t i = N_PRIMARY_AXIS; i < n_motors; i++) {
         actuator_pos[i]= last_machine_position[i];
         if(!isnan(this->e_scale)) {
             // NOTE this relies on the fact only one extruder is active at a time
@@ -1088,7 +1089,7 @@ bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
         }
     }
     // Append the block to the planner
-    THEKERNEL->planner->append_block(actuator_pos, rate_mm_s, millimeters_of_travel, nullptr, acceleration);
+    THEKERNEL->planner->append_block(actuator_pos, n_motors, rate_mm_s, millimeters_of_travel, nullptr, acceleration);
 
     return true;
 }
@@ -1096,23 +1097,24 @@ bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
 // Append a move to the queue ( cutting it into segments if needed )
 bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, float delta_e)
 {
-    // by default there is no e scaling required
+    // by default there is no e scaling required, but if volumetric extrusion is enabled this will be set to scale the parameter
     this->e_scale= NAN;
 
     // Find out the distance for this move in XYZ in MCS
     float millimeters_of_travel = sqrtf(powf( target[X_AXIS] - last_milestone[X_AXIS], 2 ) +  powf( target[Y_AXIS] - last_milestone[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - last_milestone[Z_AXIS], 2 ));
 
-    if(millimeters_of_travel < 0.00001F) { // we have no movement in XYZ, probably E only
+    if(millimeters_of_travel < 0.00001F) {
+        // we have no movement in XYZ, probably E only extrude or retract which is always in mm, so no E scaling required
         return this->append_milestone(gcode, target, rate_mm_s);
     }
 
     /*
-    For extruders, we need to do some extra work...
-    if we have volumetric limits enabled we calculate the volume for this move and limit the rate if it exceeds the stated limit.
-    Note we need to be using volumetric extrusion for this to work as Ennn is in mm³ not mm
-    We ask Extruder to do all the work but we need to pass in the relevant data.
-    NOTE we need to do this before we segment the line (for deltas)
-    This also sets any scaling due to flow rate and volumetric if a G1
+        For extruders, we need to do some extra work...
+        if we have volumetric limits enabled we calculate the volume for this move and limit the rate if it exceeds the stated limit.
+        Note we need to be using volumetric extrusion for this to work as Ennn is in mm³ not mm
+        We ask Extruder to do all the work but we need to pass in the relevant data.
+        NOTE we need to do this before we segment the line (for deltas)
+        This also sets any scaling due to flow rate and volumetric if a G1
     */
     if(!isnan(delta_e) && gcode->has_g && gcode->g == 1) {
         float data[2]= {delta_e, rate_mm_s / millimeters_of_travel};

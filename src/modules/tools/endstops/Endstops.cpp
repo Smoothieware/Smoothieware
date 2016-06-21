@@ -103,6 +103,7 @@
 #define beta_limit_enable_checksum       CHECKSUM("beta_limit_enable")
 #define gamma_limit_enable_checksum      CHECKSUM("gamma_limit_enable")
 
+#define home_z_first_checksum            CHECKSUM("home_z_first")
 #define homing_order_checksum            CHECKSUM("homing_order")
 #define move_to_origin_checksum          CHECKSUM("move_to_origin_after_home")
 
@@ -205,6 +206,8 @@ void Endstops::load_config()
     this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
     this->is_rdelta                 =  THEKERNEL->config->value(rdelta_homing_checksum)->by_default(false)->as_bool();
     this->is_scara                  =  THEKERNEL->config->value(scara_homing_checksum)->by_default(false)->as_bool();
+
+    this->home_z_first              = THEKERNEL->config->value(home_z_first_checksum)->by_default(false)->as_bool();
 
     // see if an order has been specified, must be three characters, XYZ or YXZ etc
     string order = THEKERNEL->config->value(homing_order_checksum)->by_default("")->as_string();
@@ -438,17 +441,8 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
     return 0;
 }
 
-void Endstops::home(std::bitset<3> a)
+void Endstops::home_xy()
 {
-    // reset debounce counts
-    debounce.fill(0);
-
-    this->axis_to_home= a;
-
-    // Start moving the axes to the origin
-    this->status = MOVING_TO_ENDSTOP_FAST;
-
-    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
     if(axis_to_home[X_AXIS] && axis_to_home[Y_AXIS]) {
         // Home XY first so as not to slow them down by homing Z at the same time
         float delta[3] {alpha_max*2, beta_max*2, 0};
@@ -476,6 +470,21 @@ void Endstops::home(std::bitset<3> a)
         // wait for Y
         THECONVEYOR->wait_for_empty_queue();
     }
+}
+
+void Endstops::home(std::bitset<3> a)
+{
+    // reset debounce counts
+    debounce.fill(0);
+
+    this->axis_to_home= a;
+
+    // Start moving the axes to the origin
+    this->status = MOVING_TO_ENDSTOP_FAST;
+
+    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
+
+    if(!home_z_first) home_xy();
 
     if(axis_to_home[Z_AXIS]) {
         // now home z
@@ -485,6 +494,8 @@ void Endstops::home(std::bitset<3> a)
         // wait for Z
         THECONVEYOR->wait_for_empty_queue();
     }
+
+    if(home_z_first) home_xy();
 
     // TODO should check that the endstops were hit and it did not stop short for some reason
 

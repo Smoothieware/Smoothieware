@@ -25,6 +25,7 @@ class Endstops : public Module{
     private:
         void load_config();
         void home(std::bitset<3> a);
+        void home_xy();
         void back_off_home(std::bitset<3> axis);
         void move_to_origin();
         void on_get_public_data(void* argument);
@@ -61,6 +62,7 @@ class Endstops : public Module{
             bool is_delta:1;
             bool is_rdelta:1;
             bool is_scara:1;
+            bool home_z_first:1;
             bool move_to_origin_after_home:1;
         };
 };
