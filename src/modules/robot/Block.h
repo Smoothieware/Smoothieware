@@ -5,14 +5,11 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef BLOCK_H
-#define BLOCK_H
+#pragma once
 
 #include <vector>
 #include <bitset>
 #include "ActuatorCoordinates.h"
-
-class Gcode;
 
 class Block {
     public:
@@ -63,7 +60,9 @@ class Block {
         };
 
         // need info for each active motor
-        std::array<tickinfo_t, k_max_actuators> tick_info;
+        //std::array<tickinfo_t, k_max_actuators> tick_info;
+        std::vector<tickinfo_t> tick_info;
+        static uint8_t n_actuators;
 
         struct {
             bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
@@ -73,6 +72,3 @@ class Block {
             volatile bool locked:1;              // set to true when the critical data is being updated, stepticker will have to skip if this is set
         };
 };
-
-
-#endif

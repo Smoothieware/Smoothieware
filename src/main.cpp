@@ -35,6 +35,7 @@
 #include "ConfigValue.h"
 #include "StepTicker.h"
 #include "SlowTicker.h"
+#include "Robot.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/nuts_bolts.h"
@@ -126,7 +127,6 @@ void init() {
         kernel->streams->printf("MSD is disabled\r\n");
     }
 #endif
-
 
     // Create and add main modules
     kernel->add_module( new(AHB0) Player() );
@@ -255,7 +255,7 @@ void init() {
     }
 
     // start the timers and interrupts
-    THEKERNEL->conveyor->start();
+    THEKERNEL->conveyor->start(THEROBOT->get_number_registered_motors());
     THEKERNEL->step_ticker->start();
     THEKERNEL->slow_ticker->start();
 }

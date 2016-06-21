@@ -58,6 +58,7 @@ class Robot : public Module {
         void set_last_probe_position(std::tuple<float, float, float, uint8_t> p) { last_probe_position = p; }
         bool solo_move(const float target[], float rate_mm_s, uint8_t naxis);
         uint8_t register_motor(StepperMotor*);
+        uint8_t get_number_registered_motors() const {return n_motors; }
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
@@ -138,9 +139,8 @@ class Robot : public Module {
         uint8_t selected_extruder;
         uint8_t n_motors;                                    //count of the motors/axis registered
 
-        // Used by Stepper, Planner
+        // Used by Planner
         friend class Planner;
-        friend class Stepper;
 };
 
 

@@ -21,7 +21,7 @@ class Conveyor : public Module
 {
 public:
     Conveyor();
-    void start();
+    void start(uint8_t n_actuators);
 
     void on_module_loaded(void);
     void on_idle(void *);

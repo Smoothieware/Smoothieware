@@ -28,6 +28,7 @@
 #include "BaseSolution.h"
 #include "StepperMotor.h"
 #include "Configurator.h"
+#include "Block.h"
 
 #include "TemperatureControlPublicAccess.h"
 #include "EndstopsPublicAccess.h"
@@ -571,6 +572,8 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
         AHB0.debug(stream);
         AHB1.debug(stream);
     }
+
+    stream->printf("Block size: %u bytes\n", sizeof(Block));
 }
 
 static uint32_t getDeviceType()

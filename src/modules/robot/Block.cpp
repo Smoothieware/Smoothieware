@@ -25,6 +25,8 @@ using std::string;
 #define STEP_TICKER_FREQUENCY THEKERNEL->step_ticker->get_frequency()
 #define STEP_TICKER_FREQUENCY_2 (STEP_TICKER_FREQUENCY*STEP_TICKER_FREQUENCY)
 
+uint8_t Block::n_actuators= 0;
+
 // A block represents a movement, it's length for each stepper motor, and the corresponding acceleration curves.
 // It's stacked on a queue, and that queue is then executed in order, to move the motors.
 // Most of the accel math is also done in this class
@@ -37,11 +39,6 @@ Block::Block()
 
 void Block::clear()
 {
-    //commands.clear();
-    //travel_distances.clear();
-    //gcodes.clear();
-    //std::vector<Gcode>().swap(gcodes); // this resizes the vector releasing its memory
-
     this->steps.fill(0);
 
     steps_event_count   = 0;
@@ -65,6 +62,9 @@ void Block::clear()
     acceleration_per_tick= 0;
     deceleration_per_tick= 0;
     total_move_ticks= 0;
+    if(tick_info.size() != n_actuators) {
+        tick_info.resize(n_actuators);
+    }
     for(auto &i : tick_info) {
         i.steps_per_tick= 0;
         i.counter= 0;
@@ -80,7 +80,7 @@ void Block::clear()
 void Block::debug() const
 {
     THEKERNEL->streams->printf("%p: steps-X:%04lu Y:%04lu Z:%04lu ", this, this->steps[0], this->steps[1], this->steps[2]);
-    for (size_t i = E_AXIS; i < k_max_actuators; ++i) {
+    for (size_t i = E_AXIS; i < n_actuators; ++i) {
         THEKERNEL->streams->printf("E%d:%04lu ", i-E_AXIS, this->steps[i]);
     }
     THEKERNEL->streams->printf("(max:%4lu) nominal:r%1.4f/s%1.4f mm:%1.4f acc:%1.2f accu:%5lu decu:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
@@ -290,11 +290,11 @@ float Block::max_exit_speed()
 }
 
 // prepare block for the step ticker, called everytime the block changes
-// this is done during planning so does not delay tick generation and step ticker can simplh grab the next block during the interrupt
+// this is done during planning so does not delay tick generation and step ticker can simply grab the next block during the interrupt
 void Block::prepare()
 {
     float inv = 1.0F / this->steps_event_count;
-    for (uint8_t m = 0; m < k_max_actuators; m++) {
+    for (uint8_t m = 0; m < n_actuators; m++) {
         uint32_t steps = this->steps[m];
         this->tick_info[m].steps_to_move = steps;
         if(steps == 0) continue;
