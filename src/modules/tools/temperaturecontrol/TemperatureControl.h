@@ -83,13 +83,11 @@ class TemperatureControl : public Module {
         float PIDdt;
 
         // Temperature runaway values
-        uint8_t runaway_timer;
         uint8_t runaway_heating_timer;
         RUNAWAY_TYPE runaway_state;      
 
         // Temperature runaway config options
         uint8_t runaway_range;
-        uint8_t runaway_timeout;
         uint8_t runaway_heating_timeout; 
 
         struct {

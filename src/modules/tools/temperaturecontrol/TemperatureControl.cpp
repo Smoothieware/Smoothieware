@@ -65,7 +65,6 @@
 #define preset2_checksum                   CHECKSUM("preset2")
 
 #define runaway_range_checksum             CHECKSUM("runaway_range")
-#define runaway_timeout_checksum           CHECKSUM("runaway_timeout")
 #define runaway_heating_timeout_checksum   CHECKSUM("runaway_heating_timeout")
 
 TemperatureControl::TemperatureControl(uint16_t name, int index)
@@ -139,7 +138,6 @@ void TemperatureControl::load_config()
 
     // Runaway parameters
     this->runaway_range           = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_range_checksum)->by_default(0)->as_number();
-    this->runaway_timeout         = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_timeout_checksum)->by_default(0)->as_number();
     this->runaway_heating_timeout = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_heating_timeout_checksum)->by_default(0)->as_number();
 
     // Max and min temperatures we are not allowed to get over (Safety)
@@ -529,7 +527,6 @@ void TemperatureControl::on_second_tick(void *argument)
     
     if( this->target_temperature <= 0 ){ // If we are not trying to heat, state is NOT_HEATING
         this->runaway_state = NOT_HEATING;
-        this->runaway_timer = 0;
     }else{
         switch( this->runaway_state ){
             case NOT_HEATING: // If we were previously not trying to heat, but we are now, change to state WAITING_FOR_TEMP_TO_BE_REACHED
@@ -552,17 +549,8 @@ void TemperatureControl::on_second_tick(void *argument)
             case TARGET_TEMPERATURE_REACHED: // If we are in state TARGET_TEMPERATURE_REACHED, check for thermal runaway
                 // If the temperature is outside the acceptable range
                 if( fabs( this->get_temperature() - this->target_temperature ) > this->runaway_range && this->runaway_range != 0 ){
-                    // Increase the timer, aka « One more second with a problem maybe occuring »
-                    this->runaway_timer++;
-
-                    // If the timer has a too large value ( we have been too long outside the desired temperature range )
-                    if( this->runaway_timer > this->runaway_timeout && this->runaway_timeout != 0 ){ 
-                        THEKERNEL->streams->printf("Error : Temperature runaway on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
-                        THEKERNEL->call_event(ON_HALT, nullptr);
-                    }
-                }else{
-                    // The temperature was inside the acceptable range, reset the timer
-                    this->runaway_timer = 0;
+                    THEKERNEL->streams->printf("Error : Temperature runaway on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
+                    THEKERNEL->call_event(ON_HALT, nullptr);
                 }
                 break;
         }
