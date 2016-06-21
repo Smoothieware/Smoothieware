@@ -959,15 +959,15 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
         // find distance unit vector for primary axis only
         for (size_t i = X_AXIS; i <= Z_AXIS; i++)
             unit_vec[i] = deltas[i] / millimeters_of_travel;
+    }
 
-        // Do not move faster than the configured cartesian limits for XYZ
-        for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
-            if ( max_speeds[axis] > 0 ) {
-                float axis_speed = fabsf(unit_vec[axis] * rate_mm_s);
+    // Do not move faster than the configured cartesian limits for XYZ
+    for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
+        if ( max_speeds[axis] > 0 ) {
+            float axis_speed = fabsf(unit_vec[axis] * rate_mm_s);
 
-                if (axis_speed > max_speeds[axis])
-                    rate_mm_s *= ( max_speeds[axis] / axis_speed );
-            }
+            if (axis_speed > max_speeds[axis])
+                rate_mm_s *= ( max_speeds[axis] / axis_speed );
         }
     }
 
@@ -1007,7 +1007,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
 
         // adjust acceleration to lowest found, for now just primary axis unless it is an auxiliary move
         // TODO we may need to do all of them, check E won't limit XYZ
-        if(auxilliary_move || actuator <= Z_AXIS) {
+ //       if(auxilliary_move || actuator <= Z_AXIS) {
             float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
             if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
                 float ca = fabsf((deltas[actuator]/millimeters_of_travel) * acceleration);
@@ -1015,7 +1015,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
                     acceleration *= ( ma / ca );
                 }
             }
-        }
+ //       }
     }
 
     // Append the block to the planner
@@ -1061,6 +1061,17 @@ bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
     }
     // we also need to update last_milestone here which is the same as last_machine_position as there was no compensation
     memcpy(this->last_milestone, this->last_machine_position, naxis*sizeof(float));
+
+
+    // Do not move faster than the configured cartesian limits for XYZ
+    for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
+        if ( max_speeds[axis] > 0 ) {
+            float axis_speed = fabsf(delta[axis] / millimeters_of_travel * rate_mm_s);
+
+            if (axis_speed > max_speeds[axis])
+                rate_mm_s *= ( max_speeds[axis] / axis_speed );
+        }
+    }
 
     // find actuator position given the machine position
     ActuatorCoordinates actuator_pos;
