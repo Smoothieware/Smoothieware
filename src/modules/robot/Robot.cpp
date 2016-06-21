@@ -918,7 +918,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
     float sos= 0;
 
     // find distance moved by each axis, use transformed target from the current machine position
-    for (size_t i = 0; i <= n_motors; i++) {
+    for (size_t i = 0; i < n_motors; i++) {
         deltas[i] = transformed_target[i] - last_machine_position[i];
         if(deltas[i] == 0) continue;
         // at least one non zero delta
@@ -983,6 +983,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
             // NOTE this relies on the fact only one extruder is active at a time
             // scale for volumetric or flow rate
             // TODO is this correct? scaling the absolute target? what if the scale changes?
+            // for volumetric it basically converts mm³ to mm, but what about flow rate?
             actuator_pos[i] *= this->e_scale;
         }
     }
@@ -1068,12 +1069,6 @@ bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
     // for the extruders just copy the position, need to copy all actuators
     for (size_t i = N_PRIMARY_AXIS; i < n_motors; i++) {
         actuator_pos[i]= last_machine_position[i];
-        if(!isnan(this->e_scale)) {
-            // NOTE this relies on the fact only one extruder is active at a time
-            // scale for volumetric or flow rate
-            // TODO is this correct? scaling the absolute target? what if the scale changes?
-            actuator_pos[i] *= this->e_scale;
-        }
     }
 
     // use default acceleration to start with
