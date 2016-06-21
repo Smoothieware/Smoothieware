@@ -161,7 +161,7 @@ void init() {
     kernel->add_module( new Laser() );
     #endif
     #ifndef NO_TOOLS_SPINDLE
-    kernel->add_module( new Spindle() );
+    kernel->add_module( new(AHB0) Spindle() );
     #endif
     #ifndef NO_UTILS_PANEL
     kernel->add_module( new(AHB0) Panel() );
@@ -173,20 +173,20 @@ void init() {
     kernel->add_module( new(AHB0) SCARAcal() );
     #endif
     #ifndef NO_TOOLS_ROTARYDELTACALIBRATION
-    kernel->add_module( new RotaryDeltaCalibration() );
+    kernel->add_module( new(AHB0) RotaryDeltaCalibration() );
     #endif
     #ifndef NONETWORK
     kernel->add_module( new Network() );
     #endif
     #ifndef NO_TOOLS_TEMPERATURESWITCH
     // Must be loaded after TemperatureControl
-    kernel->add_module( new TemperatureSwitch() );
+    kernel->add_module( new(AHB0) TemperatureSwitch() );
     #endif
     #ifndef NO_TOOLS_DRILLINGCYCLES
-    kernel->add_module( new Drillingcycles() );
+    kernel->add_module( new(AHB0) Drillingcycles() );
     #endif
     #ifndef NO_TOOLS_FILAMENTDETECTOR
-    kernel->add_module( new FilamentDetector() );
+    kernel->add_module( new(AHB0) FilamentDetector() );
     #endif
     #ifndef NO_UTILS_MOTORDRIVERCONTROL
     kernel->add_module( new MotorDriverControl(0) );

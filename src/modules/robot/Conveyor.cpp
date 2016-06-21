@@ -79,7 +79,7 @@ void Conveyor::on_module_loaded()
     queue_delay_time_ms = THEKERNEL->config->value(queue_delay_time_ms_checksum)->by_default(100)->as_number();
 }
 
-// we allocate the queue here after cpnfig is completed so we do not run out of memory during config
+// we allocate the queue here after config is completed so we do not run out of memory during config
 void Conveyor::start()
 {
     queue.resize(queue_size);
