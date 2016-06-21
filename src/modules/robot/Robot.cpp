@@ -627,7 +627,14 @@ void Robot::on_gcode_received(void *argument)
             case 500: // M500 saves some volatile settings to config override file
             case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
-                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f Z%1.5f\n", default_acceleration, actuators[Z_AXIS]->get_acceleration()); // TODO only print XYZ if not NAN
+
+                // only print XYZ if not NAN
+                gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f ", default_acceleration);
+                for (int i = X_AXIS; i <= Z_AXIS; ++i) {
+                    if(!isnan(actuators[i]->get_acceleration())) gcode->stream->printf("%c%1.5f ", 'X'+i, actuators[i]->get_acceleration());
+                }
+                gcode->stream->printf("\n");
+
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f",
                                     this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
@@ -819,7 +826,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 
     if(moved) {
         // set last_milestone to the calculated target
-        memcpy(this->last_milestone, target, sizeof(this->last_milestone));
+        memcpy(last_milestone, target, n_motors*sizeof(float));
     }
 }
 
@@ -997,12 +1004,15 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
             isecs = rate_mm_s / millimeters_of_travel;
         }
 
-        // adjust acceleration to lowest found in an active axis
-        float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
-        if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-            float ca = fabsf((deltas[actuator]/millimeters_of_travel) * acceleration);
-            if (ca > ma) {
-                acceleration *= ( ma / ca );
+        // adjust acceleration to lowest found, for now just primary axis unless it is an auxiliary move
+        // TODO we may need to do all of them, check E won't limit XYZ
+        if(auxilliary_move || actuator <= Z_AXIS) {
+            float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
+            if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
+                float ca = fabsf((deltas[actuator]/millimeters_of_travel) * acceleration);
+                if (ca > ma) {
+                    acceleration *= ( ma / ca );
+                }
             }
         }
     }
@@ -1028,7 +1038,7 @@ bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
     float sos= 0;
 
     // find distance moved by each axis
-    for (size_t i = 0; i <= naxis; i++) {
+    for (size_t i = 0; i < naxis; i++) {
         if(delta[i] == 0) continue;
         // at least one non zero delta
         move = true;
@@ -1045,9 +1055,11 @@ bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
     float millimeters_of_travel= sqrtf(sos);
 
     // this is the new machine position
-    for (int axis = 0; axis <= naxis; axis++) {
+    for (int axis = 0; axis < naxis; axis++) {
         this->last_machine_position[axis] += delta[axis];
     }
+    // we also need to update last_milestone here which is the same as last_machine_position as there was no compensation
+    memcpy(this->last_milestone, this->last_machine_position, naxis*sizeof(float));
 
     // find actuator position given the machine position
     ActuatorCoordinates actuator_pos;

@@ -48,7 +48,7 @@ class Robot : public Module {
         void check_max_actuator_speeds();
         float to_millimeters( float value ) const { return this->inch_mode ? value * 25.4F : value; }
         float from_millimeters( float value) const { return this->inch_mode ? value/25.4F : value;  }
-        void get_axis_position(float position[]) const { memcpy(position, this->last_milestone, N_PRIMARY_AXIS); }
+        void get_axis_position(float position[], size_t n= N_PRIMARY_AXIS) const { memcpy(position, this->last_milestone, n*sizeof(float)); }
         wcs_t get_axis_position() const { return wcs_t(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]); }
         int print_position(uint8_t subcode, char *buf, size_t bufsize) const;
         uint8_t get_current_wcs() const { return current_wcs; }

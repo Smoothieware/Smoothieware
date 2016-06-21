@@ -100,15 +100,14 @@ void Extruder::on_module_loaded()
 // Get config
 void Extruder::config_load()
 {
+
     Pin step_pin, dir_pin, en_pin;
-    float steps_per_millimeter, acceleration;
-
-    steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum      )->by_default(1)->as_number();
-    acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum      )->by_default(1000)->as_number();
-
     step_pin.from_string( THEKERNEL->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
     dir_pin.from_string(  THEKERNEL->config->value(extruder_checksum, this->identifier, dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
     en_pin.from_string(   THEKERNEL->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+
+    float steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum)->by_default(1)->as_number();
+    float acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum)->by_default(1000)->as_number();
 
     this->offset[X_AXIS] = THEKERNEL->config->value(extruder_checksum, this->identifier, x_offset_checksum          )->by_default(0)->as_number();
     this->offset[Y_AXIS] = THEKERNEL->config->value(extruder_checksum, this->identifier, y_offset_checksum          )->by_default(0)->as_number();
@@ -224,10 +223,18 @@ void Extruder::on_gcode_received(void *argument)
 
     // M codes most execute immediately, most only execute if enabled
     if (gcode->has_m) {
-        if (gcode->m == 114 && gcode->subcode == 0 && this->selected) {
+        if (gcode->m == 114 && this->selected) {
             char buf[16];
-            int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position());
-            gcode->txt_after_ok.append(buf, n);
+            if(gcode->subcode == 0) {
+                float pos[motor_id+1];
+                THEROBOT->get_axis_position(pos, motor_id+1);
+                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", pos[motor_id]);
+                gcode->txt_after_ok.append(buf, n);
+
+            }else if(gcode->subcode == 1) { // realtime
+                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position());
+                gcode->txt_after_ok.append(buf, n);
+            }
 
         } else if (gcode->m == 92 && ( (this->selected && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier) ) ) {
             float spm = stepper_motor->get_steps_per_mm();
