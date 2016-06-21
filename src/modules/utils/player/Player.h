@@ -6,8 +6,7 @@
 */
 
 
-#ifndef PLAYER_H
-#define PLAYER_H
+#pragma once
 
 #include "Module.h"
 
@@ -64,5 +63,3 @@ class Player : public Module {
             uint8_t suspend_loops:4;
         };
 };
-
-#endif // PLAYER_H

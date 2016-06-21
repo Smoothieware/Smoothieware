@@ -15,6 +15,7 @@
 #include "libs/utils.h"
 #include "ModifyValuesScreen.h"
 #include "PublicData.h"
+#include "ExtruderPublicAccess.h"
 #include "checksumm.h"
 
 #include <string>
@@ -71,7 +72,7 @@ void ExtruderScreen::setupConfigSettings()
 
     mvs->addMenuItem("E steps/mm",
         // gets steps/mm for currently active extruder
-        []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *rd; else return 0.0F; },
+        []() -> float { pad_extruder_t rd; if(PublicData::get_value( extruder_checksum, (void *)&rd )) return rd.steps_per_mm; else return 0.0F; },
         [this](float v) { send_gcode("M92", 'E', v); },
         0.1F,
         1.0F
@@ -79,7 +80,7 @@ void ExtruderScreen::setupConfigSettings()
 
     mvs->addMenuItem("Filament diameter",
         // gets filament diameter for currently active extruder
-        []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *(rd+1); else return 0.0F; },
+        []() -> float { pad_extruder_t rd; if(PublicData::get_value( extruder_checksum, (void *)&rd )) return rd.filament_diameter; else return 0.0F; },
         [this](float v) { send_gcode("M200", 'D', v); },
         0.01F,
         0.0F,
@@ -88,21 +89,21 @@ void ExtruderScreen::setupConfigSettings()
 
     // flow rate
     mvs->addMenuItem("Flow rate", // menu name
-        []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *(rd+2)*100.0F; else return 100.0F; }, // getter as fraction
+        []() -> float { pad_extruder_t rd; if(PublicData::get_value( extruder_checksum, (void *)&rd )) return rd.flow_rate*100.0F; else return 100.0F; }, // getter as fraction
         [this](float fr) { send_gcode("M221", 'S', fr); }, // setter in percent
         1.0F, // increment
         1.0F  // Min
         );
 
     mvs->addMenuItem("Accel", // menu name
-        []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *(rd+3); else return 0; }, // getter
+        []() -> float { pad_extruder_t rd; if(PublicData::get_value( extruder_checksum, (void *)&rd )) return rd.accleration; else return 0; }, // getter
         [this](float acc) { send_gcode("M204", 'E', acc); }, // setter
         10.0F, // increment
         1.0F   // Min
         );
 
     mvs->addMenuItem("Retract len", // menu name
-        []() -> float { float *rd; if(PublicData::get_value( extruder_checksum, (void **)&rd )) return *(rd+4); else return 0; }, // getter
+        []() -> float { pad_extruder_t rd; if(PublicData::get_value( extruder_checksum, (void *)&rd )) return rd.retract_length; else return 0; }, // getter
         [this](float l) { send_gcode("M207", 'S', l); }, // setter
         0.1F, // increment
         0.0F  // Min

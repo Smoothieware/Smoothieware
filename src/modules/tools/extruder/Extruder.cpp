@@ -153,10 +153,17 @@ void Extruder::on_get_public_data(void *argument)
 
     if(!pdr->starts_with(extruder_checksum)) return;
 
-    if(this->selected) {
-        pdr->set_data_ptr(&this->filament_diameter);
-        pdr->set_taken();
-    }
+    if(!this->selected) return;
+
+    // pointer to structure to return data to is provided
+    pad_extruder_t *e= static_cast<pad_extruder_t *>(pdr->get_data_ptr());
+    e->steps_per_mm= stepper_motor->get_steps_per_mm();
+    e->filament_diameter= this->filament_diameter;
+    e->flow_rate= this->extruder_multiplier;
+    e->accleration= stepper_motor->get_acceleration();
+    e->retract_length= this->retract_length;
+    e->current_position= stepper_motor->get_current_position();
+    pdr->set_taken();
 }
 
 // check against maximum speeds and return the rate modifier
@@ -229,9 +236,8 @@ void Extruder::on_gcode_received(void *argument)
         if (gcode->m == 114 && this->selected) {
             char buf[16];
             if(gcode->subcode == 0) {
-                float pos[motor_id+1];
-                THEROBOT->get_axis_position(pos, motor_id+1);
-                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", pos[motor_id]);
+                float pos= THEROBOT->get_axis_position(motor_id);
+                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", pos);
                 gcode->txt_after_ok.append(buf, n);
 
             }else if(gcode->subcode == 1) { // realtime

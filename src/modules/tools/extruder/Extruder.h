@@ -36,17 +36,13 @@ class Extruder : public Tool {
 
         StepperMotor *stepper_motor;
 
-        // kept together so they can be passed as public data
-        struct {
-            float filament_diameter;            // filament diameter
-            float extruder_multiplier;          // flow rate 1.0 == 100%
-            float retract_length;               // firmware retract length
-        };
-
+        float extruder_multiplier;          // flow rate 1.0 == 100%
+        float filament_diameter;            // filament diameter
         float volumetric_multiplier;
         float max_volumetric_rate;      // used for calculating volumetric rate in mm³/sec
 
         // for firmware retract
+        float retract_length;               // firmware retract length
         float retract_feedrate;
         float retract_recover_feedrate;
         float retract_recover_length;
