@@ -12,6 +12,8 @@
 #include "Tool.h"
 #include "Pin.h"
 
+#include <tuple>
+
 class StepperMotor;
 
 // NOTE Tool is also a module, no need for multiple inheritance here
@@ -51,10 +53,14 @@ class Extruder : public Tool {
         float retract_zlift_length;
         float retract_zlift_feedrate;
 
+        // for saving and restoring extruder position
+        std::tuple<float, float, int32_t> saved_position;
+
         struct {
             uint8_t motor_id:8;
             bool retracted:1;
             bool cancel_zlift_restore:1; // hack to stop a G11 zlift restore from overring an absolute Z setting
             bool selected:1;
+            bool saved_selected:1;
         };
 };

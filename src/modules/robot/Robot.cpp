@@ -471,6 +471,7 @@ void Robot::on_gcode_received(void *argument)
                 if(gcode->subcode == 0 && (gcode->has_letter('E') || gcode->get_num_args() == 0)){
                     // reset the E position, legacy for 3d Printers to be reprap compatible
                     // find the selected extruder
+                    // NOTE this will only work when E is 0 if volumetric and/or scaling is used as the actuator last milestone will be different if it was scaled
                     for (int i = E_AXIS; i < n_motors; ++i) {
                         if(actuators[i]->is_selected()) {
                             float e= gcode->has_letter('E') ? gcode->get_value('E') : 0;
@@ -848,11 +849,16 @@ void Robot::reset_axis_position(float x, float y, float z)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
-// Reset the position for an axis (used in homing)
+// Reset the position for an axis (used in homing, and to reset extruder after suspend)
 void Robot::reset_axis_position(float position, int axis)
 {
     last_milestone[axis] = position;
-    reset_axis_position(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
+    if(axis <= Z_AXIS) {
+        reset_axis_position(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
+    }else{
+        // extruders need to be set not calculated
+        last_machine_position[axis]= position;
+    }
 }
 
 // similar to reset_axis_position but directly sets the actuator positions in actuators units (eg mm for cartesian, degrees for rotary delta)

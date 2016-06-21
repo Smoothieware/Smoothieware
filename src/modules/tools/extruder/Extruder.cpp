@@ -204,17 +204,20 @@ void Extruder::on_set_public_data(void *argument)
         return;
     }
 
-    // // save or restore state
-    // if(pdr->second_element_is(save_state_checksum)) {
-    //     this->saved_current_position = this->current_position;
-    //     this->saved_absolute_mode = this->absolute_mode;
-    //     pdr->set_taken();
-    // } else if(pdr->second_element_is(restore_state_checksum)) {
-    //     // NOTE this only gets called when the queue is empty so the milestones will be the same
-    //     this->milestone_last_position= this->current_position = this->saved_current_position;
-    //     this->milestone_absolute_mode= this->absolute_mode = this->saved_absolute_mode;
-    //     pdr->set_taken();
-    // }
+    // save or restore extruder state
+    if(pdr->second_element_is(save_state_checksum)) {
+        // we need to save these separately as they may have been scaled
+        this->saved_position= std::make_tuple(THEROBOT->get_axis_position(motor_id), stepper_motor->get_last_milestone(), stepper_motor->get_last_milestone_steps());
+        this->saved_selected= this->selected;
+        pdr->set_taken();
+
+    } else if(pdr->second_element_is(restore_state_checksum)) {
+        this->selected= this->saved_selected;
+        // NOTE this only gets called when the queue is empty so the milestones will be the same
+        THEROBOT->reset_axis_position(std::get<0>(this->saved_position), motor_id);
+        stepper_motor->set_last_milestones(std::get<1>(this->saved_position), std::get<2>(this->saved_position));
+        pdr->set_taken();
+    }
 }
 
 void Extruder::on_gcode_received(void *argument)

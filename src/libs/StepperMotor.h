@@ -35,7 +35,9 @@ class StepperMotor  : public Module {
         float get_steps_per_mm()  const { return steps_per_mm; }
         void change_steps_per_mm(float);
         void change_last_milestone(float);
+        void set_last_milestones(float, int32_t);
         float get_last_milestone(void) const { return last_milestone_mm; }
+        int32_t get_last_milestone_steps(void) const { return last_milestone_steps; }
         float get_current_position(void) const { return (float)current_position_steps/steps_per_mm; }
         uint32_t get_current_step(void) const { return current_position_steps; }
         float get_max_rate(void) const { return max_rate; }

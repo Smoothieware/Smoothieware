@@ -51,7 +51,7 @@ class Player : public Module {
         long file_size;
         unsigned long played_cnt;
         unsigned long elapsed_secs;
-        float saved_position[3];
+        float saved_position[3]; // only saves XYZ
         std::map<uint16_t, float> saved_temperatures;
         struct {
             bool on_boot_gcode_enable:1;
