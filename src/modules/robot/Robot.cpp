@@ -888,13 +888,13 @@ void Robot::reset_position_from_current_actuator_position()
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
-// Convert target (in machine coordinates) from millimeters to steps, and append this to the planner
+// Convert target (in machine coordinates) to machime_position and append this to the planner
 // target is in machine coordinates without the compensation transform, however we save a last_machine_position that includes
 // all transforms and is what we actually convert to actuator positions
 bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s)
 {
     float deltas[n_motors];
-    float transformed_target[n_motors]; // adjust target for bed compensation and WCS offsets
+    float transformed_target[n_motors]; // adjust target for bed compensation
     float unit_vec[N_PRIMARY_AXIS];
     float millimeters_of_travel= 0;
 
@@ -1065,6 +1065,7 @@ bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
 
     // Do not move faster than the configured cartesian limits for XYZ
     for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
+        if(delta[axis] == 0) continue;
         if ( max_speeds[axis] > 0 ) {
             float axis_speed = fabsf(delta[axis] / millimeters_of_travel * rate_mm_s);
 
@@ -1077,10 +1078,12 @@ bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
     ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator( this->last_machine_position, actuator_pos );
 
+    #if MAX_ROBOT_ACTUATORS > 3
     // for the extruders just copy the position, need to copy all actuators
-    for (size_t i = N_PRIMARY_AXIS; i < n_motors; i++) {
+    for (size_t i = E_AXIS; i < n_motors; i++) {
         actuator_pos[i]= last_machine_position[i];
     }
+    #endif
 
     // use default acceleration to start with
     float acceleration = default_acceleration;
