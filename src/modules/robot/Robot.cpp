@@ -108,7 +108,6 @@ Robot::Robot()
     this->next_command_is_MCS = false;
     this->disable_segmentation= false;
     this->n_motors= 0;
-    this->actuators.fill(nullptr);
 }
 
 //Called when the module has just been loaded
@@ -238,8 +237,8 @@ uint8_t Robot::register_motor(StepperMotor *motor)
         THEKERNEL->streams->printf("FATAL: too many motors, increase k_max_actuators\n");
         __debugbreak();
     }
-    actuators[n_motors++]= motor;
-    return n_motors-1;
+    actuators.push_back(motor);
+    return n_motors++;
 }
 
 void  Robot::push_state()
@@ -965,15 +964,15 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
         // find distance unit vector for primary axis only
         for (size_t i = X_AXIS; i <= Z_AXIS; i++)
             unit_vec[i] = deltas[i] / millimeters_of_travel;
-    }
 
-    // Do not move faster than the configured cartesian limits for XYZ
-    for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
-        if ( max_speeds[axis] > 0 ) {
-            float axis_speed = fabsf(unit_vec[axis] * rate_mm_s);
+        // Do not move faster than the configured cartesian limits for XYZ
+        for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
+            if ( max_speeds[axis] > 0 ) {
+                float axis_speed = fabsf(unit_vec[axis] * rate_mm_s);
 
-            if (axis_speed > max_speeds[axis])
-                rate_mm_s *= ( max_speeds[axis] / axis_speed );
+                if (axis_speed > max_speeds[axis])
+                    rate_mm_s *= ( max_speeds[axis] / axis_speed );
+            }
         }
     }
 

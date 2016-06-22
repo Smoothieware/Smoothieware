@@ -63,7 +63,7 @@ class Robot : public Module {
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 
         // gets accessed by Panel, Endstops, ZProbe
-        std::array<StepperMotor*, k_max_actuators> actuators;
+        std::vector<StepperMotor*> actuators;
 
         // set by a leveling strategy to transform the target of a move according to the current plan
         std::function<void(float[3])> compensationTransform;
