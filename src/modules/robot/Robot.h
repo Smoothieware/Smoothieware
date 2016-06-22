@@ -117,11 +117,17 @@ class Robot : public Module {
         // of grbl, and should be on the order or greater than the size of the buffer to help with the
         // computational efficiency of generating arcs.
         int arc_correction;                                   // Setting : how often to rectify arc computation
-        float max_speeds[3];                                 // Setting : max allowable speed in mm/m for each axis
+        float max_speeds[3];                                  // Setting : max allowable speed in mm/m for each axis
 
+        bool homing_done[3];                                  // G28 was executed for specified axis?
+        bool soft_limits_enable;                              // Setting : enable software limits for movement  
+        float soft_limits_max[3];                             // Setting : max allowable position for each axis
+        float soft_limits_min[3];                             // Setting : min allowable position for each axis        
+        
         // Used by Stepper, Planner
         friend class Planner;
         friend class Stepper;
+        friend class Endstops;
 };
 
 
