@@ -540,28 +540,24 @@ void Robot::on_gcode_received(void *argument)
                 pop_state();
                 break;
 
-            case 203: // M203 Set maximum feedrates in mm/sec
-                if (gcode->has_letter('X'))
-                    this->max_speeds[X_AXIS] = gcode->get_value('X');
-                if (gcode->has_letter('Y'))
-                    this->max_speeds[Y_AXIS] = gcode->get_value('Y');
-                if (gcode->has_letter('Z'))
-                    this->max_speeds[Z_AXIS] = gcode->get_value('Z');
-                for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
-                    if (gcode->has_letter('A' + i))
-                        actuators[i]->set_max_rate(gcode->get_value('A' + i));
-                }
-                check_max_actuator_speeds();
+            case 203: // M203 Set maximum feedrates in mm/sec, M203.1 set maximum actuator feedrates
+                    if(gcode->get_num_args() == 0) {
+                        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+                            gcode->stream->printf(" %c : %g", 'X' + i, gcode->subcode == 0 ? this->max_speeds[i] : actuators[i]->get_max_rate());
+                        }
+                        gcode->add_nl = true;
 
-                if(gcode->get_num_args() == 0) {
-                    gcode->stream->printf("X:%g Y:%g Z:%g",
-                                          this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
-                    for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
-                        gcode->stream->printf(" %c : %g", 'A' + i, actuators[i]->get_max_rate()); //xxx
+                    }else{
+                        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+                            if (gcode->has_letter('X' + i)) {
+                                if(gcode->subcode == 0) this->max_speeds[i] = gcode->get_value('X'+i);
+                                else if(gcode->subcode == 1) actuators[i]->set_max_rate(gcode->get_value('X' + i));
+                            }
+                        }
+                        check_max_actuator_speeds();
                     }
-                    gcode->add_nl = true;
-                }
-                break;
+
+                    break;
 
             case 204: // M204 Snnn - set default acceleration to nnn, Xnnn Ynnn Znnn sets axis specific acceleration
                 if (gcode->has_letter('S')) {
@@ -580,7 +576,7 @@ void Robot::on_gcode_received(void *argument)
                 }
                 break;
 
-            case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed, Ynnn - set minimum step rate
+            case 205: // M205 Xnnn - set junction deviation, Z - set Z junction deviation, Snnn - Set minimum planner speed
                 if (gcode->has_letter('X')) {
                     float jd = gcode->get_value('X');
                     // enforce minimum
@@ -636,10 +632,9 @@ void Robot::on_gcode_received(void *argument)
                 gcode->stream->printf("\n");
 
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
-                gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f",
-                                    this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
-                                    actuators[X_AXIS]->get_max_rate(), actuators[Y_AXIS]->get_max_rate(), actuators[Z_AXIS]->get_max_rate());
-                gcode->stream->printf("\n");
+
+                gcode->stream->printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+                 gcode->stream->printf(";Max actuator feedrates in mm/sec:\nM203.1 X%1.5f Y%1.5f Z%1.5f\n", actuators[X_AXIS]->get_max_rate(), actuators[Y_AXIS]->get_max_rate(), actuators[Z_AXIS]->get_max_rate());
 
                 // get or save any arm solution specific optional values
                 BaseSolution::arm_options_t options;
