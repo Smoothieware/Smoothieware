@@ -615,6 +615,17 @@ void Endstops::home(char axes_to_move)
         STEPPER[c]->move(0, 0);
     }
     this->status = NOT_HOMING;
+    
+    // if homing was previously done for our axis, don't reset it
+    if (false == THEKERNEL->robot->homing_done[X_AXIS] && (axes_to_move & 0x01)) {
+        THEKERNEL->robot->homing_done[X_AXIS] = true;
+    }
+    if (false == THEKERNEL->robot->homing_done[Y_AXIS] && (axes_to_move & 0x02)) {
+        THEKERNEL->robot->homing_done[Y_AXIS] = true;
+    }
+    if (false == THEKERNEL->robot->homing_done[Z_AXIS] && (axes_to_move & 0x04)) {
+        THEKERNEL->robot->homing_done[Z_AXIS] = true;
+    }
 }
 
 void Endstops::process_home_command(Gcode* gcode)

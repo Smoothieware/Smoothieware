@@ -82,6 +82,15 @@ using std::string;
 #define  beta_checksum                       CHECKSUM("beta")
 #define  gamma_checksum                      CHECKSUM("gamma")
 
+#define  soft_limits_enable_checksum         CHECKSUM("soft_limits_enable")
+
+#define  soft_limits_x_min_checksum          CHECKSUM("soft_limits_x_min")
+#define  soft_limits_y_min_checksum          CHECKSUM("soft_limits_y_min")
+#define  soft_limits_z_min_checksum          CHECKSUM("soft_limits_z_min")
+#define  soft_limits_x_max_checksum          CHECKSUM("soft_limits_x_max")
+#define  soft_limits_y_max_checksum          CHECKSUM("soft_limits_y_max")
+#define  soft_limits_z_max_checksum          CHECKSUM("soft_limits_z_max")
+
 #define NEXT_ACTION_DEFAULT 0
 #define NEXT_ACTION_DWELL 1
 #define NEXT_ACTION_GO_HOME 2
@@ -124,6 +133,9 @@ Robot::Robot()
     this->g92_offset = wcs_t(0.0F, 0.0F, 0.0F);
     this->next_command_is_MCS = false;
     this->disable_segmentation= false;
+    this->homing_done[X_AXIS]= false;
+    this->homing_done[Y_AXIS]= false;
+    this->homing_done[Z_AXIS]= false;
 }
 
 //Called when the module has just been loaded
@@ -192,6 +204,16 @@ void Robot::load_config()
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
 
+    this->soft_limits_enable       = THEKERNEL->config->value(soft_limits_enable_checksum )->by_default(false)->as_bool();
+
+    this->soft_limits_min[X_AXIS]  = THEKERNEL->config->value(soft_limits_x_min_checksum    )->by_default(  0.0F)->as_number();
+    this->soft_limits_min[Y_AXIS]  = THEKERNEL->config->value(soft_limits_y_min_checksum    )->by_default(  0.0F)->as_number();
+    this->soft_limits_min[Z_AXIS]  = THEKERNEL->config->value(soft_limits_z_min_checksum    )->by_default(  0.0F)->as_number();
+
+    this->soft_limits_max[X_AXIS]  = THEKERNEL->config->value(soft_limits_x_max_checksum    )->by_default(200.0F)->as_number();
+    this->soft_limits_max[Y_AXIS]  = THEKERNEL->config->value(soft_limits_y_max_checksum    )->by_default(200.0F)->as_number();
+    this->soft_limits_max[Z_AXIS]  = THEKERNEL->config->value(soft_limits_z_max_checksum    )->by_default(200.0F)->as_number();
+            
     // Make our 3 StepperMotors
     uint16_t const checksums[][5] = {
         ACTUATOR_CHECKSUMS("alpha"),
@@ -730,6 +752,36 @@ void Robot::process_move(Gcode *gcode)
         else
             this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
+    
+    if (this->soft_limits_enable) {
+        // check if target is within allowed rect, if not, fix it
+        if (this->homing_done[X_AXIS]) {
+            if (target[X_AXIS] < soft_limits_min[X_AXIS]) {
+                target[X_AXIS] = soft_limits_min[X_AXIS];
+            }
+            if (target[X_AXIS] > soft_limits_max[X_AXIS]) {
+                target[X_AXIS] = soft_limits_max[X_AXIS];
+            }
+        }
+        
+        if (this->homing_done[Y_AXIS]) {
+            if (target[Y_AXIS] < soft_limits_min[Y_AXIS]) {
+                target[Y_AXIS] = soft_limits_min[Y_AXIS];
+            }
+            if (target[Y_AXIS] > soft_limits_max[Y_AXIS]) {
+                target[Y_AXIS] = soft_limits_max[Y_AXIS];
+            }
+        }
+
+        if (this->homing_done[Z_AXIS]) {
+            if (target[Z_AXIS] < soft_limits_min[Z_AXIS]) {
+                target[Z_AXIS] = soft_limits_min[Z_AXIS];
+            }
+            if (target[Z_AXIS] > soft_limits_max[Z_AXIS]) {
+                target[Z_AXIS] = soft_limits_max[Z_AXIS];
+            }
+        }
+    }    
 
     bool moved= false;
     //Perform any physical actions
