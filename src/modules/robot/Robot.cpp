@@ -316,7 +316,7 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
             n = snprintf(buf, bufsize, "MPOS: X:%1.4f Y:%1.4f Z:%1.4f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
 
         } else if(subcode == 3) { // M114.3 print realtime actuator position
-            n = snprintf(buf, bufsize, "APOS: A:%1.4f B:%1.4f C:%1.4f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
+            n = snprintf(buf, bufsize, "APOS: X:%1.4f Y:%1.4f Z:%1.4f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
         }
     }
     return n;
@@ -543,20 +543,20 @@ void Robot::on_gcode_received(void *argument)
             case 203: // M203 Set maximum feedrates in mm/sec, M203.1 set maximum actuator feedrates
                     if(gcode->get_num_args() == 0) {
                         for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
-                            gcode->stream->printf(" %c : %g", 'X' + i, gcode->subcode == 0 ? this->max_speeds[i] : actuators[i]->get_max_rate());
+                            gcode->stream->printf(" %c: %g ", 'X' + i, gcode->subcode == 0 ? this->max_speeds[i] : actuators[i]->get_max_rate());
                         }
                         gcode->add_nl = true;
 
                     }else{
                         for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
                             if (gcode->has_letter('X' + i)) {
-                                if(gcode->subcode == 0) this->max_speeds[i] = gcode->get_value('X'+i);
-                                else if(gcode->subcode == 1) actuators[i]->set_max_rate(gcode->get_value('X' + i));
+                                float v= gcode->get_value('X'+i);
+                                if(gcode->subcode == 0) this->max_speeds[i]= v;
+                                else if(gcode->subcode == 1) actuators[i]->set_max_rate(v);
                             }
                         }
-                        check_max_actuator_speeds();
+                        if(gcode->subcode == 1) check_max_actuator_speeds();
                     }
-
                     break;
 
             case 204: // M204 Snnn - set default acceleration to nnn, Xnnn Ynnn Znnn sets axis specific acceleration

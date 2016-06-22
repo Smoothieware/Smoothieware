@@ -166,25 +166,6 @@ void Extruder::on_get_public_data(void *argument)
     pdr->set_taken();
 }
 
-// check against maximum speeds and return the rate modifier
-float Extruder::check_max_speeds(float delta, float isecs)
-{
-    float rm = 1.0F; // default no rate modification
-
-    if(this->max_volumetric_rate > 0 && this->filament_diameter > 0.01F) {
-        // volumetric enabled and check for volumetric rate
-        float v = delta * isecs; // the flow rate in mm³/sec
-
-        // return the rate change needed to stay within the max rate
-        if(v > max_volumetric_rate) {
-            rm = max_volumetric_rate / v;
-        }
-        //THEKERNEL->streams->printf("requested flow rate: %f mm³/sec, corrected flow rate: %f  mm³/sec\n", v, v * rm);
-    }
-
-    return rm;
-}
-
 void Extruder::on_set_public_data(void *argument)
 {
     PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
@@ -213,18 +194,47 @@ void Extruder::on_set_public_data(void *argument)
 
     // save or restore extruder state
     if(pdr->second_element_is(save_state_checksum)) {
-        // we need to save these separately as they may have been scaled
-        this->saved_position= std::make_tuple(THEROBOT->get_axis_position(motor_id), stepper_motor->get_last_milestone(), stepper_motor->get_last_milestone_steps());
+        save_position();
         this->saved_selected= this->selected;
         pdr->set_taken();
 
     } else if(pdr->second_element_is(restore_state_checksum)) {
         this->selected= this->saved_selected;
         // NOTE this only gets called when the queue is empty so the milestones will be the same
-        THEROBOT->reset_axis_position(std::get<0>(this->saved_position), motor_id);
-        stepper_motor->set_last_milestones(std::get<1>(this->saved_position), std::get<2>(this->saved_position));
+        restore_position();
         pdr->set_taken();
     }
+}
+
+void Extruder::save_position()
+{
+    // we need to save these separately as they may have been scaled
+    this->saved_position= std::make_tuple(THEROBOT->get_axis_position(motor_id), stepper_motor->get_last_milestone(), stepper_motor->get_last_milestone_steps());
+}
+
+void Extruder::restore_position()
+{
+    THEROBOT->reset_axis_position(std::get<0>(this->saved_position), motor_id);
+    stepper_motor->set_last_milestones(std::get<1>(this->saved_position), std::get<2>(this->saved_position));
+}
+
+// check against maximum speeds and return the rate modifier
+float Extruder::check_max_speeds(float delta, float isecs)
+{
+    float rm = 1.0F; // default no rate modification
+
+    if(this->max_volumetric_rate > 0 && this->filament_diameter > 0.01F) {
+        // volumetric enabled and check for volumetric rate
+        float v = delta * isecs; // the flow rate in mm³/sec
+
+        // return the rate change needed to stay within the max rate
+        if(v > max_volumetric_rate) {
+            rm = max_volumetric_rate / v;
+        }
+        //THEKERNEL->streams->printf("requested flow rate: %f mm³/sec, corrected flow rate: %f  mm³/sec\n", v, v * rm);
+    }
+
+    return rm;
 }
 
 void Extruder::on_gcode_received(void *argument)
@@ -342,8 +352,11 @@ void Extruder::on_gcode_received(void *argument)
                 for (int i = 0; i < motor_id; ++i) {
                     delta[i]= 0;
                 }
+                // HACK ALERT due to certain slicers reseting E with G92 E0 between the G10 and G11 we need to save and restore position
+                save_position();
                 delta[motor_id]= -retract_length;
                 THEROBOT->solo_move(delta, retract_feedrate, motor_id+1);
+                restore_position();
 
                 // zlift
                 if(retract_zlift_length > 0) {
@@ -364,8 +377,14 @@ void Extruder::on_gcode_received(void *argument)
                 for (int i = 0; i < motor_id; ++i) {
                     delta[i]= 0;
                 }
+                // HACK ALERT due to certain slicers reseting E with G92 E0 between the G10 and G11 we need to restore
+                // the current position after we do the unretract, this is horribly hacky :(
+                // also as the move has not completed yet, when we restore the current position will be incorrect once the move finishes,
+                // however this is not fatal for an extruder
+                save_position();
                 delta[motor_id]= retract_length + retract_recover_length;
                 THEROBOT->solo_move(delta, retract_recover_feedrate, motor_id+1);
+                restore_position();
             }
 
 

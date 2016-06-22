@@ -33,6 +33,8 @@ class Extruder : public Tool {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         float check_max_speeds(float target, float isecs);
+        void save_position();
+        void restore_position();
 
         StepperMotor *stepper_motor;
 
