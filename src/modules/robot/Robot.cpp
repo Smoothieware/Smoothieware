@@ -932,6 +932,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
     // nothing moved
     if(!move) return false;
 
+    // total movement (includes all axis so not a real distance over the bed but needed for when E may be large)
     millimeters_of_travel= sqrtf(sos);
 
     // set if none of the primary axis is moving
@@ -956,23 +957,25 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
     // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
     if(millimeters_of_travel < 0.00001F) return false;
 
+    // see if this is a primary axis move or not
     bool auxilliary_move= deltas[X_AXIS] == 0 && deltas[Y_AXIS] == 0 && deltas[Z_AXIS] == 0;
 
     // this is the machine position
     memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
 
     if(!auxilliary_move) {
-        // find distance unit vector for primary axis only
-        for (size_t i = X_AXIS; i <= Z_AXIS; i++)
-            unit_vec[i] = deltas[i] / millimeters_of_travel;
+        float d= sqrtf(powf(deltas[X_AXIS], 2) + powf(deltas[Y_AXIS], 2) + powf(deltas[Z_AXIS], 2)); // we need the actual distance over the bed
 
-        // Do not move faster than the configured cartesian limits for XYZ
-        for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
-            if ( max_speeds[axis] > 0 ) {
-                float axis_speed = fabsf(unit_vec[axis] * rate_mm_s);
+        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+            // find distance unit vector for primary axis only
+            unit_vec[i] = deltas[i] / d;
 
-                if (axis_speed > max_speeds[axis])
-                    rate_mm_s *= ( max_speeds[axis] / axis_speed );
+            // Do not move faster than the configured cartesian limits for XYZ
+            if ( max_speeds[i] > 0 ) {
+                float axis_speed = fabsf(unit_vec[i] * rate_mm_s);
+
+                if (axis_speed > max_speeds[i])
+                    rate_mm_s *= ( max_speeds[i] / axis_speed );
             }
         }
     }
@@ -1012,8 +1015,8 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
         }
 
         // adjust acceleration to lowest found, for now just primary axis unless it is an auxiliary move
-        // TODO we may need to do all of them, check E won't limit XYZ
- //       if(auxilliary_move || actuator <= Z_AXIS) {
+        // TODO we may need to do all of them, check E won't limit XYZ.. it does on long E moves, but not checking it could exceed the E acceleration.
+        if(auxilliary_move || actuator <= Z_AXIS) {
             float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
             if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
                 float ca = fabsf((deltas[actuator]/millimeters_of_travel) * acceleration);
@@ -1021,7 +1024,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
                     acceleration *= ( ma / ca );
                 }
             }
- //       }
+        }
     }
 
     // Append the block to the planner
