@@ -83,7 +83,7 @@ void Block::debug() const
     for (size_t i = E_AXIS; i < n_actuators; ++i) {
         THEKERNEL->streams->printf("E%d:%04lu ", i-E_AXIS, this->steps[i]);
     }
-    THEKERNEL->streams->printf("(max:%4lu) nominal:r%1.4f/s%1.4f mm:%1.4f acc:%1.2f accu:%5lu decu:%5lu rates:%10.4f entry/max: %10.4f/%10.4f ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
+    THEKERNEL->streams->printf("(max:%4lu) nominal:r%1.4f/s%1.4f mm:%1.4f acc:%1.2f accu:%5lu decu:%5lu rates:%10.4f entry/max:%1.4f/%1.4f exit:%1.4f primary:%d ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
                                this->steps_event_count,
                                this->nominal_rate,
                                this->nominal_speed,
@@ -93,7 +93,9 @@ void Block::debug() const
                                this->decelerate_after,
                                this->initial_rate,
                                this->entry_speed,
+                               this->exit_speed,
                                this->max_entry_speed,
+                               this->primary_axis,
                                this->is_ready,
                                this->locked,
                                this->is_ticking,

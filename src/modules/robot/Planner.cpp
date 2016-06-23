@@ -71,10 +71,16 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
     // use default JD
     float junction_deviation = this->junction_deviation;
 
-    // use either regular junction deviation or z specific
-    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0 && block->steps[GAMMA_STEPPER] != 0) {
-        // z only move
-        if(!isnan(this->z_junction_deviation)) junction_deviation = this->z_junction_deviation;
+    // use either regular junction deviation or z specific and see if a primary axis move
+    block->primary_axis= true;
+    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0){
+        if(block->steps[GAMMA_STEPPER] != 0) {
+            // z only move
+            if(!isnan(this->z_junction_deviation)) junction_deviation = this->z_junction_deviation;
+        }else{
+            // is not a primary axis move
+            block->primary_axis= false;
+        }
     }
 
     block->acceleration = acceleration; // save in block
@@ -115,7 +121,8 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
 
     // if unit_vec was null then it was not a primary axis move so we skip the junction deviation stuff
     if (unit_vec != nullptr && !THEKERNEL->conveyor->is_queue_empty()) {
-        float previous_nominal_speed = THEKERNEL->conveyor->queue.item_ref(THEKERNEL->conveyor->queue.prev(THEKERNEL->conveyor->queue.head_i))->nominal_speed;
+        Block *prev_block= THEKERNEL->conveyor->queue.item_ref(THEKERNEL->conveyor->queue.prev(THEKERNEL->conveyor->queue.head_i));
+        float previous_nominal_speed = prev_block->primary_axis ? prev_block->nominal_speed : 0;
 
         if (junction_deviation > 0.0F && previous_nominal_speed > 0.0F) {
             // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)

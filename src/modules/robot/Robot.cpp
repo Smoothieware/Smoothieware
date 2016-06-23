@@ -924,34 +924,39 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
         if(deltas[i] == 0) continue;
         // at least one non zero delta
         move = true;
-        if(i <= Z_AXIS) {
+//        if(i <= Z_AXIS) {
             sos += powf(deltas[i], 2);
-        }
+//        }
     }
 
     // nothing moved
     if(!move) return false;
 
+    millimeters_of_travel= sqrtf(sos);
+
     // set if none of the primary axis is moving
-    bool auxilliary_move= false;
-    if(sos > 0.0F){
-        millimeters_of_travel= sqrtf(sos);
+    // bool auxilliary_move= false;
+    // if(sos > 0.0F){
+    //     millimeters_of_travel= sqrtf(sos);
 
-    } else if(n_motors >= E_AXIS) { // if we have more than 3 axis/actuators (XYZE)
-        // non primary axis move (like extrude)
-        // select the biggest one, will be the only active E
-        auto mi= std::max_element(&deltas[E_AXIS], &deltas[n_motors], [](float a, float b){ return std::abs(a) < std::abs(b); } );
-        millimeters_of_travel= std::abs(*mi);
-        auxilliary_move= true;
+    // } else if(n_motors >= E_AXIS) { // if we have more than 3 axis/actuators (XYZE)
+    //     // non primary axis move (like extrude)
+    //     // select the biggest one, will be the only active E
+    //     auto mi= std::max_element(&deltas[E_AXIS], &deltas[n_motors], [](float a, float b){ return std::abs(a) < std::abs(b); } );
+    //     millimeters_of_travel= std::abs(*mi);
+    //     auxilliary_move= true;
 
-    }else{
-        // shouldn't happen but just in case
-        return false;
-    }
+    // }else{
+    //     // shouldn't happen but just in case
+    //     return false;
+    // }
+
 
     // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
     // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
     if(millimeters_of_travel < 0.00001F) return false;
+
+    bool auxilliary_move= deltas[X_AXIS] == 0 && deltas[Y_AXIS] == 0 && deltas[Z_AXIS] == 0;
 
     // this is the machine position
     memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));

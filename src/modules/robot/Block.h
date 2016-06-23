@@ -68,6 +68,7 @@ class Block {
             bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
             bool nominal_length_flag:1;          // Planner flag for nominal speed always reached
             bool is_ready:1;
+            bool primary_axis:1;                 // set if this move is a primary axis
             volatile bool is_ticking:1;          // set when this block is being actively ticked by the stepticker
             volatile bool locked:1;              // set to true when the critical data is being updated, stepticker will have to skip if this is set
         };

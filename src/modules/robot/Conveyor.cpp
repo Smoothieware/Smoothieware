@@ -110,7 +110,7 @@ void Conveyor::on_idle(void*)
         } else {
             // Cleanly delete block
             Block* block = queue.tail_ref();
-            //block->debug();
+            block->debug();
             block->clear();
             queue.consume_tail();
         }
