@@ -139,12 +139,15 @@ void Extruder::select()
 {
     selected= true;
     stepper_motor->set_selected(true);
+    // set the function pointer to return the current scaling
+    THEROBOT->get_e_scale_fnc= [this](void) { return volumetric_multiplier*extruder_multiplier; };
 }
 
 void Extruder::deselect()
 {
     selected= false;
     stepper_motor->set_selected(false);
+    THEROBOT->get_e_scale_fnc= nullptr;
 }
 
 void Extruder::on_get_public_data(void *argument)
@@ -183,11 +186,6 @@ void Extruder::on_set_public_data(void *argument)
 
         // check against maximum speeds and return rate modifier
         d[1]= check_max_speeds(delta, isecs);
-
-        // also return the scale factor
-        float s= volumetric_multiplier*extruder_multiplier;
-        d[0]= (s == 1.0F ? NAN : s);
-
         pdr->set_taken();
         return;
     }
@@ -354,14 +352,14 @@ void Extruder::on_gcode_received(void *argument)
                 }
                 // HACK ALERT due to certain slicers reseting E with G92 E0 between the G10 and G11 we need to save and restore position
                 save_position();
-                delta[motor_id]= -retract_length;
-                THEROBOT->solo_move(delta, retract_feedrate, motor_id+1);
+                delta[motor_id]= -retract_length/volumetric_multiplier; // convert from mm to mm³
+                THEROBOT->delta_move(delta, retract_feedrate, motor_id+1);
                 restore_position();
 
                 // zlift
                 if(retract_zlift_length > 0) {
                     float delta[3]{0,0,retract_zlift_length};
-                    THEROBOT->solo_move(delta, retract_zlift_feedrate, 3);
+                    THEROBOT->delta_move(delta, retract_zlift_feedrate, 3);
                 }
 
             }else if(gcode->g == 11) {
@@ -370,7 +368,7 @@ void Extruder::on_gcode_received(void *argument)
                     // reverse zlift happens before unretract
                     // NOTE we do not do this if cancel_zlift_restore is set to true, which happens if there is an absolute Z move inbetween G10 and G11
                     float delta[3]{0,0,-retract_zlift_length};
-                    THEROBOT->solo_move(delta, retract_zlift_feedrate, 3);
+                    THEROBOT->delta_move(delta, retract_zlift_feedrate, 3);
                 }
 
                 float delta[motor_id+1];
@@ -382,8 +380,8 @@ void Extruder::on_gcode_received(void *argument)
                 // also as the move has not completed yet, when we restore the current position will be incorrect once the move finishes,
                 // however this is not fatal for an extruder
                 save_position();
-                delta[motor_id]= retract_length + retract_recover_length;
-                THEROBOT->solo_move(delta, retract_recover_feedrate, motor_id+1);
+                delta[motor_id]= (retract_length + retract_recover_length)/volumetric_multiplier; // convert from mm to mm³
+                THEROBOT->delta_move(delta, retract_recover_feedrate, motor_id+1);
                 restore_position();
             }
 

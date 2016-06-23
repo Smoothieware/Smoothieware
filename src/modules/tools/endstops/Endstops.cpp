@@ -449,7 +449,7 @@ void Endstops::home_xy()
         if(this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
         if(this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
         float feed_rate = std::min(fast_rates[X_AXIS], fast_rates[Y_AXIS]);
-        THEROBOT->solo_move(delta, feed_rate, 3);
+        THEROBOT->delta_move(delta, feed_rate, 3);
 
         // Wait for XY to have homed
         THECONVEYOR->wait_for_empty_queue();
@@ -458,7 +458,7 @@ void Endstops::home_xy()
         // now home X only
         float delta[3] {alpha_max*2, 0, 0};
         if(this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
-        THEROBOT->solo_move(delta, fast_rates[X_AXIS], 3);
+        THEROBOT->delta_move(delta, fast_rates[X_AXIS], 3);
         // wait for X
         THECONVEYOR->wait_for_empty_queue();
 
@@ -466,7 +466,7 @@ void Endstops::home_xy()
         // now home Y only
         float delta[3] {0, beta_max*2, 0};
         if(this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
-        THEROBOT->solo_move(delta, fast_rates[Y_AXIS], 3);
+        THEROBOT->delta_move(delta, fast_rates[Y_AXIS], 3);
         // wait for Y
         THECONVEYOR->wait_for_empty_queue();
     }
@@ -490,7 +490,7 @@ void Endstops::home(std::bitset<3> a)
         // now home z
         float delta[3] {0, 0, gamma_max*2}; // we go twice the maxz just in case it was set incorrectly
         if(this->home_direction[Z_AXIS]) delta[Z_AXIS]= -delta[Z_AXIS];
-        THEROBOT->solo_move(delta, fast_rates[Z_AXIS], 3);
+        THEROBOT->delta_move(delta, fast_rates[Z_AXIS], 3);
         // wait for Z
         THECONVEYOR->wait_for_empty_queue();
     }
@@ -512,7 +512,7 @@ void Endstops::home(std::bitset<3> a)
         }
     }
 
-    THEROBOT->solo_move(delta, feed_rate, 3);
+    THEROBOT->delta_move(delta, feed_rate, 3);
     // wait until finished
     THECONVEYOR->wait_for_empty_queue();
 
@@ -526,7 +526,7 @@ void Endstops::home(std::bitset<3> a)
             delta[c]= 0;
         }
     }
-    THEROBOT->solo_move(delta, feed_rate, 3);
+    THEROBOT->delta_move(delta, feed_rate, 3);
     // wait until finished
     THECONVEYOR->wait_for_empty_queue();
 

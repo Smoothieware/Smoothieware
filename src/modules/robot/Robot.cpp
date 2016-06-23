@@ -103,6 +103,7 @@ Robot::Robot()
     seconds_per_minute = 60.0F;
     this->clearToolOffset();
     this->compensationTransform = nullptr;
+    this->get_e_scale_fnc= nullptr;
     this->wcs_offsets.fill(wcs_t(0.0F, 0.0F, 0.0F));
     this->g92_offset = wcs_t(0.0F, 0.0F, 0.0F);
     this->next_command_is_MCS = false;
@@ -892,31 +893,24 @@ void Robot::reset_position_from_current_actuator_position()
 // Convert target (in machine coordinates) to machine_position, then convert to actuator position and append this to the planner
 // target is in machine coordinates without the compensation transform, however we save a last_machine_position that includes
 // all transforms and is what we actually convert to actuator positions
-bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s)
+bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable_compensation)
 {
     float deltas[n_motors];
     float transformed_target[n_motors]; // adjust target for bed compensation
     float unit_vec[N_PRIMARY_AXIS];
     float millimeters_of_travel= 0;
 
-    // catch negative or zero feed rates and return the same error as GRBL does
-    if(rate_mm_s <= 0.0F) {
-        gcode->is_error= true;
-        gcode->txt_after_ok= (rate_mm_s == 0 ? "Undefined feed rate" : "feed rate < 0");
-        return false;
-    }
-
     // unity transform by default
     memcpy(transformed_target, target, n_motors*sizeof(float));
 
     // check function pointer and call if set to transform the target to compensate for bed
-    if(compensationTransform) {
+    if(!disable_compensation && compensationTransform) {
         // some compensation strategies can transform XYZ, some just change Z
         compensationTransform(transformed_target);
     }
 
     bool move= false;
-    float sos= 0;
+    float sos= 0, sosxyz= 0; // sun of squares for all axis and just XYZ
 
     // find distance moved by each axis, use transformed target from the current machine position
     for (size_t i = 0; i < n_motors; i++) {
@@ -924,9 +918,12 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
         if(deltas[i] == 0) continue;
         // at least one non zero delta
         move = true;
-//        if(i <= Z_AXIS) {
+        if(i <= Z_AXIS) {
+            sosxyz += powf(deltas[i], 2);
+            sos= sosxyz;
+        }else{
             sos += powf(deltas[i], 2);
-//        }
+        }
     }
 
     // nothing moved
@@ -964,7 +961,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
     memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
 
     if(!auxilliary_move) {
-        float d= sqrtf(powf(deltas[X_AXIS], 2) + powf(deltas[Y_AXIS], 2) + powf(deltas[Z_AXIS], 2)); // we need the actual distance over the bed
+        float d= sqrtf(sosxyz); // we need the actual distance over the bed
 
         for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
             // find distance unit vector for primary axis only
@@ -988,12 +985,12 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
     // for the extruders just copy the position, and possibly scale it from mm³ to mm
     for (size_t i = E_AXIS; i < n_motors; i++) {
         actuator_pos[i]= last_machine_position[i];
-        if(!isnan(this->e_scale)) {
+        if(get_e_scale_fnc) {
             // NOTE this relies on the fact only one extruder is active at a time
             // scale for volumetric or flow rate
             // TODO is this correct? scaling the absolute target? what if the scale changes?
             // for volumetric it basically converts mm³ to mm, but what about flow rate?
-            actuator_pos[i] *= this->e_scale;
+            actuator_pos[i] *= get_e_scale_fnc();
         }
     }
 #endif
@@ -1033,109 +1030,51 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
     return true;
 }
 
-// Used to plan a single move used by things like endstops when homing, zprobe, extruder retracts etc.
-// TODO this pretty much duplicates append_milestone, so try to refactor it away.
-bool Robot::solo_move(const float *delta, float rate_mm_s, uint8_t naxis)
+// Used to plan a single move used by things like endstops when homing, zprobe, extruder firmware retracts etc.
+bool Robot::delta_move(const float *delta, float rate_mm_s, uint8_t naxis)
 {
     if(THEKERNEL->is_halted()) return false;
 
-    // catch negative or zero feed rates and return the same error as GRBL does
+    // catch negative or zero feed rates
     if(rate_mm_s <= 0.0F) {
         return false;
     }
 
-    bool move= false;
-    float sos= 0;
+    // get the absolute target position, default is current last_milestone
+    float target[n_motors];
+    memcpy(target, last_milestone, n_motors*sizeof(float));
 
-    // find distance moved by each axis
-    for (size_t i = 0; i < naxis; i++) {
-        if(delta[i] == 0) continue;
-        // at least one non zero delta
-        move = true;
-        sos += powf(delta[i], 2);
+    // add in the deltas to get new target
+    for (int i= 0; i < naxis; i++) {
+        target[i] += delta[i];
     }
 
-    // nothing moved
-    if(!move) return false;
-
-    // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
-    // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
-    if(sos < 0.00001F) return false;
-
-    float millimeters_of_travel= sqrtf(sos);
-
-    // this is the new machine position
-    for (int axis = 0; axis < naxis; axis++) {
-        this->last_machine_position[axis] += delta[axis];
-    }
-    // we also need to update last_milestone here which is the same as last_machine_position as there was no compensation
-    memcpy(this->last_milestone, this->last_machine_position, naxis*sizeof(float));
-
-
-    // Do not move faster than the configured cartesian limits for XYZ
-    for (int axis = X_AXIS; axis <= Z_AXIS; axis++) {
-        if(delta[axis] == 0) continue;
-        if ( max_speeds[axis] > 0 ) {
-            float axis_speed = fabsf(delta[axis] / millimeters_of_travel * rate_mm_s);
-
-            if (axis_speed > max_speeds[axis])
-                rate_mm_s *= ( max_speeds[axis] / axis_speed );
-        }
+    // submit for planning and if moved update last_milestone
+    // NOTE this disabled compensation transforms as homing and zprobe must not use them
+    if(append_milestone(target, rate_mm_s, true)) {
+         memcpy(last_milestone, target, n_motors*sizeof(float));
+         return true;
     }
 
-    // find actuator position given the machine position
-    ActuatorCoordinates actuator_pos;
-    arm_solution->cartesian_to_actuator( this->last_machine_position, actuator_pos );
-
-    #if MAX_ROBOT_ACTUATORS > 3
-    // for the extruders just copy the position, need to copy all actuators
-    for (size_t i = E_AXIS; i < n_motors; i++) {
-        actuator_pos[i]= last_machine_position[i];
-    }
-    #endif
-
-    // use default acceleration to start with
-    float acceleration = default_acceleration;
-    float isecs = rate_mm_s / millimeters_of_travel;
-
-    // check per-actuator speed limits
-    for (size_t actuator = 0; actuator < naxis; actuator++) {
-        float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
-        if(d == 0) continue; // no movement for this actuator
-
-        float actuator_rate= d * isecs;
-        if (actuator_rate > actuators[actuator]->get_max_rate()) {
-            rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
-            isecs = rate_mm_s / millimeters_of_travel;
-        }
-
-        // adjust acceleration to lowest found in an active axis
-        float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
-        if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-            float ca = fabsf((d/millimeters_of_travel) * acceleration);
-            if (ca > ma) {
-                acceleration *= ( ma / ca );
-            }
-        }
-    }
-    // Append the block to the planner
-    THEKERNEL->planner->append_block(actuator_pos, n_motors, rate_mm_s, millimeters_of_travel, nullptr, acceleration);
-
-    return true;
+    return false;
 }
 
 // Append a move to the queue ( cutting it into segments if needed )
 bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, float delta_e)
 {
-    // by default there is no e scaling required, but if volumetric extrusion is enabled this will be set to scale the parameter
-    this->e_scale= NAN;
+    // catch negative or zero feed rates and return the same error as GRBL does
+    if(rate_mm_s <= 0.0F) {
+        gcode->is_error= true;
+        gcode->txt_after_ok= (rate_mm_s == 0 ? "Undefined feed rate" : "feed rate < 0");
+        return false;
+    }
 
     // Find out the distance for this move in XYZ in MCS
     float millimeters_of_travel = sqrtf(powf( target[X_AXIS] - last_milestone[X_AXIS], 2 ) +  powf( target[Y_AXIS] - last_milestone[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - last_milestone[Z_AXIS], 2 ));
 
     if(millimeters_of_travel < 0.00001F) {
-        // we have no movement in XYZ, probably E only extrude or retract which is always in mm, so no E scaling required
-        return this->append_milestone(gcode, target, rate_mm_s);
+        // we have no movement in XYZ, probably E only extrude or retract
+        return this->append_milestone(target, rate_mm_s);
     }
 
     /*
@@ -1150,8 +1089,6 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
         float data[2]= {delta_e, rate_mm_s / millimeters_of_travel};
         if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
             rate_mm_s *= data[1]; // adjust the feedrate
-            // we may need to scale the amount moved too
-            this->e_scale= data[0];
         }
     }
 
@@ -1199,13 +1136,13 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
                 segment_end[i] += segment_delta[i];
 
             // Append the end of this segment to the queue
-            bool b= this->append_milestone(gcode, segment_end, rate_mm_s);
+            bool b= this->append_milestone(segment_end, rate_mm_s);
             moved= moved || b;
         }
     }
 
     // Append the end of this full move to the queue
-    if(this->append_milestone(gcode, target, rate_mm_s)) moved= true;
+    if(this->append_milestone(target, rate_mm_s)) moved= true;
 
     this->next_command_is_MCS = false; // always reset this
 
@@ -1216,6 +1153,13 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
 // Append an arc to the queue ( cutting it into segments as needed )
 bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[], float radius, bool is_clockwise )
 {
+    float rate_mm_s= this->feed_rate / seconds_per_minute;
+    // catch negative or zero feed rates and return the same error as GRBL does
+    if(rate_mm_s <= 0.0F) {
+        gcode->is_error= true;
+        gcode->txt_after_ok= (rate_mm_s == 0 ? "Undefined feed rate" : "feed rate < 0");
+        return false;
+    }
 
     // Scary math
     float center_axis0 = this->last_milestone[this->plane_axis_0] + offset[this->plane_axis_0];
@@ -1321,12 +1265,12 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         arc_target[this->plane_axis_2] += linear_per_segment;
 
         // Append this segment to the queue
-        bool b= this->append_milestone(gcode, arc_target, this->feed_rate / seconds_per_minute);
+        bool b= this->append_milestone(arc_target, rate_mm_s);
         moved= moved || b;
     }
 
     // Ensure last segment arrives at target location.
-    if(this->append_milestone(gcode, target, this->feed_rate / seconds_per_minute)) moved= true;
+    if(this->append_milestone(target, rate_mm_s)) moved= true;
 
     return moved;
 }

@@ -56,7 +56,7 @@ class Robot : public Module {
         std::vector<wcs_t> get_wcs_state() const;
         std::tuple<float, float, float, uint8_t> get_last_probe_position() const { return last_probe_position; }
         void set_last_probe_position(std::tuple<float, float, float, uint8_t> p) { last_probe_position = p; }
-        bool solo_move(const float target[], float rate_mm_s, uint8_t naxis);
+        bool delta_move(const float delta[], float rate_mm_s, uint8_t naxis);
         uint8_t register_motor(StepperMotor*);
         uint8_t get_number_registered_motors() const {return n_motors; }
 
@@ -67,6 +67,8 @@ class Robot : public Module {
 
         // set by a leveling strategy to transform the target of a move according to the current plan
         std::function<void(float[3])> compensationTransform;
+        // set by an active extruder, returns the amount tio scale the E parameter by (to convert mm³ to mm)
+        std::function<float(void)> get_e_scale_fnc;
 
         // Workspace coordinate systems
         wcs_t mcs2wcs(const wcs_t &pos) const;
@@ -95,7 +97,7 @@ class Robot : public Module {
         };
 
         void load_config();
-        bool append_milestone( Gcode *gcode, const float target[], float rate_mm_s);
+        bool append_milestone(const float target[], float rate_mm_s, bool disable_compensation= false);
         bool append_line( Gcode* gcode, const float target[], float rate_mm_s, float delta_e);
         bool append_arc( Gcode* gcode, const float target[], const float offset[], float radius, bool is_clockwise );
         bool compute_arc(Gcode* gcode, const float offset[], const float target[], enum MOTION_MODE_T motion_mode);
@@ -134,7 +136,6 @@ class Robot : public Module {
         // computational efficiency of generating arcs.
         int arc_correction;                                  // Setting : how often to rectify arc computation
         float max_speeds[3];                                 // Setting : max allowable speed in mm/s for each axis
-        float e_scale;                                       // how much to scale any e motion by
 
         uint8_t selected_extruder;
         uint8_t n_motors;                                    //count of the motors/axis registered

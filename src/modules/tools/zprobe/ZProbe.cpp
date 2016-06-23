@@ -183,7 +183,7 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     bool dir= (!reverse_z != reverse); // xor
     float delta[3]= {0,0,0};
     delta[Z_AXIS]= dir ? -maxz : maxz;
-    THEROBOT->solo_move(delta, feedrate, 3);
+    THEROBOT->delta_move(delta, feedrate, 3);
 
     // wait until finished
     THECONVEYOR->wait_for_empty_queue();
@@ -227,7 +227,7 @@ bool ZProbe::return_probe(float mm, bool reverse)
 
     float delta[3]= {0,0,0};
     delta[Z_AXIS]= dir ? -mm : mm;
-    THEROBOT->solo_move(delta, fr, 3);
+    THEROBOT->delta_move(delta, fr, 3);
 
     // wait until finished
     THECONVEYOR->wait_for_empty_queue();
