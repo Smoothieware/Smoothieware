@@ -72,7 +72,13 @@ void StepperMotor::set_last_milestones(float mm, int32_t steps)
     current_position_steps= last_milestone_steps;
 }
 
-int  StepperMotor::steps_to_target(float target)
+void StepperMotor::update_last_milestones(float mm, int32_t steps)
+{
+    last_milestone_steps += steps;
+    last_milestone_mm = mm;
+}
+
+int32_t StepperMotor::steps_to_target(float target)
 {
     int32_t target_steps = lroundf(target * steps_per_mm);
     return target_steps - last_milestone_steps;

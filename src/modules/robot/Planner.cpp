@@ -52,28 +52,27 @@ void Planner::config_load()
 // Append a block to the queue, compute it's speed factors
 void Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors, float rate_mm_s, float distance, float *unit_vec, float acceleration)
 {
-    float junction_deviation;
-
     // Create ( recycle ) a new block
     Block* block = THEKERNEL->conveyor->queue.head_ref();
 
     // Direction bits
     for (size_t i = 0; i < n_motors; i++) {
-        int steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
+        int32_t steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
+        // Update current position
+        THEROBOT->actuators[i]->update_last_milestones(actuator_pos[i], steps);
 
+        // find direction
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
 
-        // Update current position
-        THEROBOT->actuators[i]->last_milestone_steps += steps;
-        THEROBOT->actuators[i]->last_milestone_mm = actuator_pos[i];
-
+        // save actual steps in block
         block->steps[i] = labs(steps);
     }
 
-    junction_deviation = this->junction_deviation;
+    // use default JD
+    float junction_deviation = this->junction_deviation;
 
     // use either regular junction deviation or z specific
-    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0) {
+    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0 && block->steps[GAMMA_STEPPER] != 0) {
         // z only move
         if(!isnan(this->z_junction_deviation)) junction_deviation = this->z_junction_deviation;
     }
@@ -159,9 +158,9 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
 
     // Update previous path unit_vector and nominal speed
     if(unit_vec != nullptr) {
-        memcpy(this->previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
+        memcpy(previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
     }else{
-        memset(this->previous_unit_vec, 0, sizeof this->previous_unit_vec);
+        memset(previous_unit_vec, 0, sizeof(previous_unit_vec));
     }
 
     // Math-heavy re-computing of the whole queue to take the new

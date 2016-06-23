@@ -25,6 +25,7 @@ class StepperMotor  : public Module {
         inline void enable(bool state) { en_pin.set(!state); };
         inline bool is_enabled() const { return !en_pin.get(); };
         inline bool is_moving() const { return moving; };
+        void start_moving() { moving= true; }
         void stop_moving() { moving= false; }
 
         void manual_step(bool dir);
@@ -36,6 +37,7 @@ class StepperMotor  : public Module {
         void change_steps_per_mm(float);
         void change_last_milestone(float);
         void set_last_milestones(float, int32_t);
+        void update_last_milestones(float mm, int32_t steps);
         float get_last_milestone(void) const { return last_milestone_mm; }
         int32_t get_last_milestone_steps(void) const { return last_milestone_steps; }
         float get_current_position(void) const { return (float)current_position_steps/steps_per_mm; }
@@ -47,12 +49,8 @@ class StepperMotor  : public Module {
         bool is_selected() const { return selected; }
         void set_selected(bool b) { selected= b; }
 
-        int  steps_to_target(float);
+        int32_t steps_to_target(float);
 
-        friend class StepTicker;
-        friend class Stepper;
-        friend class Planner;
-        friend class Robot;
 
     private:
         void on_halt(void *argument);

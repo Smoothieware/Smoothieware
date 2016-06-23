@@ -194,12 +194,12 @@ void StepTicker::step_tick (void)
             if(!ismoving || current_block->tick_info[m].step_count == current_block->tick_info[m].steps_to_move) {
                 // done
                 current_block->tick_info[m].steps_to_move = 0;
-                motor[m]->moving= false; // let motor know it is no longer moving
+                motor[m]->stop_moving(); // let motor know it is no longer moving
             }
         }
 
         // see if any motors are still moving after this tick
-        if(motor[m]->moving) still_moving= true;
+        if(motor[m]->is_moving()) still_moving= true;
     }
 
     // do this after so we start at tick 0
@@ -256,7 +256,7 @@ bool StepTicker::start_next_block()
         // NOTE this would be at least 10us before first step pulse.
         // TODO does this need to be done sooner, if so how without delaying next tick
         motor[m]->set_direction(current_block->direction_bits[m]);
-        motor[m]->moving= true; // also let motor know it is moving now
+        motor[m]->start_moving(); // also let motor know it is moving now
     }
 
     if(ok) {

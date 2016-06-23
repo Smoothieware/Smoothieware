@@ -340,7 +340,7 @@ void Robot::check_max_actuator_speeds()
         float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
         if (step_freq > THEKERNEL->base_stepping_frequency) {
             actuators[i]->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm()));
-            THEKERNEL->streams->printf("WARNING: actuator %d rate exceeds base_stepping_frequency * ..._steps_per_mm: %f, setting to %f\n", i, step_freq, actuators[i]->max_rate);
+            THEKERNEL->streams->printf("WARNING: actuator %d rate exceeds base_stepping_frequency * ..._steps_per_mm: %f, setting to %f\n", i, step_freq, actuators[i]->get_max_rate());
         }
     }
 }
@@ -520,7 +520,7 @@ void Robot::on_gcode_received(void *argument)
                 if (gcode->has_letter('Z'))
                     actuators[2]->change_steps_per_mm(this->to_millimeters(gcode->get_value('Z')));
 
-                gcode->stream->printf("X:%f Y:%f Z:%f ", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
+                gcode->stream->printf("X:%f Y:%f Z:%f ", actuators[0]->get_steps_per_mm(), actuators[1]->get_steps_per_mm(), actuators[2]->get_steps_per_mm());
                 gcode->add_nl = true;
                 check_max_actuator_speeds();
                 return;
@@ -622,7 +622,7 @@ void Robot::on_gcode_received(void *argument)
 
             case 500: // M500 saves some volatile settings to config override file
             case 503: { // M503 just prints the settings
-                gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->steps_per_mm, actuators[1]->steps_per_mm, actuators[2]->steps_per_mm);
+                gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->get_steps_per_mm(), actuators[1]->get_steps_per_mm(), actuators[2]->get_steps_per_mm());
 
                 // only print XYZ if not NAN
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f ", default_acceleration);
@@ -716,6 +716,7 @@ void Robot::on_gcode_received(void *argument)
 void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 {
     // we have a G0/G1/G2/G3 so extract parameters and apply offsets to get machine coordinate target
+    // get XYZ and one E (which goes to the selected extruder)
     float param[4]{NAN, NAN, NAN, NAN};
 
     // process primary axis
@@ -888,7 +889,7 @@ void Robot::reset_position_from_current_actuator_position()
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
 
-// Convert target (in machine coordinates) to machime_position and append this to the planner
+// Convert target (in machine coordinates) to machine_position, then convert to actuator position and append this to the planner
 // target is in machine coordinates without the compensation transform, however we save a last_machine_position that includes
 // all transforms and is what we actually convert to actuator positions
 bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s)
@@ -976,7 +977,7 @@ bool Robot::append_milestone(Gcode *gcode, const float target[], float rate_mm_s
     arm_solution->cartesian_to_actuator( this->last_machine_position, actuator_pos );
 
 #if MAX_ROBOT_ACTUATORS > 3
-    // for the extruders just copy the position
+    // for the extruders just copy the position, and possibly scale it from mm³ to mm
     for (size_t i = E_AXIS; i < n_motors; i++) {
         actuator_pos[i]= last_machine_position[i];
         if(!isnan(this->e_scale)) {
