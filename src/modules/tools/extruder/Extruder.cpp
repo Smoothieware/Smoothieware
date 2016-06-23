@@ -351,10 +351,10 @@ void Extruder::on_gcode_received(void *argument)
                     delta[i]= 0;
                 }
                 // HACK ALERT due to certain slicers reseting E with G92 E0 between the G10 and G11 we need to save and restore position
-                save_position();
+                //save_position();
                 delta[motor_id]= -retract_length/volumetric_multiplier; // convert from mm to mm³
                 THEROBOT->delta_move(delta, retract_feedrate, motor_id+1);
-                restore_position();
+                //restore_position();
 
                 // zlift
                 if(retract_zlift_length > 0) {
@@ -379,10 +379,10 @@ void Extruder::on_gcode_received(void *argument)
                 // the current position after we do the unretract, this is horribly hacky :(
                 // also as the move has not completed yet, when we restore the current position will be incorrect once the move finishes,
                 // however this is not fatal for an extruder
-                save_position();
+                //save_position();
                 delta[motor_id]= (retract_length + retract_recover_length)/volumetric_multiplier; // convert from mm to mm³
                 THEROBOT->delta_move(delta, retract_recover_feedrate, motor_id+1);
-                restore_position();
+                //restore_position();
             }
 
 

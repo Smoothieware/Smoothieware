@@ -898,7 +898,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
     float deltas[n_motors];
     float transformed_target[n_motors]; // adjust target for bed compensation
     float unit_vec[N_PRIMARY_AXIS];
-    float millimeters_of_travel= 0;
 
     // unity transform by default
     memcpy(transformed_target, target, n_motors*sizeof(float));
@@ -910,7 +909,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
     }
 
     bool move= false;
-    float sos= 0, sosxyz= 0; // sun of squares for all axis and just XYZ
+    float sos= 0; // sun of squares for just XYZ
 
     // find distance moved by each axis, use transformed target from the current machine position
     for (size_t i = 0; i < n_motors; i++) {
@@ -919,9 +918,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
         // at least one non zero delta
         move = true;
         if(i <= Z_AXIS) {
-            sosxyz += powf(deltas[i], 2);
-            sos= sosxyz;
-        }else{
             sos += powf(deltas[i], 2);
         }
     }
@@ -929,43 +925,21 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
     // nothing moved
     if(!move) return false;
 
-    // total movement (includes all axis so not a real distance over the bed but needed for when E may be large)
-    millimeters_of_travel= sqrtf(sos);
-
-    // set if none of the primary axis is moving
-    // bool auxilliary_move= false;
-    // if(sos > 0.0F){
-    //     millimeters_of_travel= sqrtf(sos);
-
-    // } else if(n_motors >= E_AXIS) { // if we have more than 3 axis/actuators (XYZE)
-    //     // non primary axis move (like extrude)
-    //     // select the biggest one, will be the only active E
-    //     auto mi= std::max_element(&deltas[E_AXIS], &deltas[n_motors], [](float a, float b){ return std::abs(a) < std::abs(b); } );
-    //     millimeters_of_travel= std::abs(*mi);
-    //     auxilliary_move= true;
-
-    // }else{
-    //     // shouldn't happen but just in case
-    //     return false;
-    // }
-
-
-    // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
-    // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
-    if(millimeters_of_travel < 0.00001F) return false;
-
     // see if this is a primary axis move or not
     bool auxilliary_move= deltas[X_AXIS] == 0 && deltas[Y_AXIS] == 0 && deltas[Z_AXIS] == 0;
 
-    // this is the machine position
-    memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
+    // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
+    float distance= auxilliary_move ? 0 : sqrtf(sos);
+
+    // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
+    // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
+    if(!auxilliary_move && distance < 0.00001F) return false;
+
 
     if(!auxilliary_move) {
-        float d= sqrtf(sosxyz); // we need the actual distance over the bed
-
-        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+         for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
             // find distance unit vector for primary axis only
-            unit_vec[i] = deltas[i] / d;
+            unit_vec[i] = deltas[i] / distance;
 
             // Do not move faster than the configured cartesian limits for XYZ
             if ( max_speeds[i] > 0 ) {
@@ -979,12 +953,13 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
 
     // find actuator position given the machine position, use actual adjusted target
     ActuatorCoordinates actuator_pos;
-    arm_solution->cartesian_to_actuator( this->last_machine_position, actuator_pos );
+    arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
 
 #if MAX_ROBOT_ACTUATORS > 3
+    sos= 0;
     // for the extruders just copy the position, and possibly scale it from mm³ to mm
     for (size_t i = E_AXIS; i < n_motors; i++) {
-        actuator_pos[i]= last_machine_position[i];
+        actuator_pos[i]= transformed_target[i];
         if(get_e_scale_fnc) {
             // NOTE this relies on the fact only one extruder is active at a time
             // scale for volumetric or flow rate
@@ -992,13 +967,24 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
             // for volumetric it basically converts mm³ to mm, but what about flow rate?
             actuator_pos[i] *= get_e_scale_fnc();
         }
+        if(auxilliary_move) {
+            // for E only moves we need to use the scaled E to calculate the distance
+            sos += pow(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
+        }
+    }
+    if(auxilliary_move) {
+        if(sos < 0.00001F) return false;
+        distance= sqrtf(sos); // distance in mm of the e move
     }
 #endif
+
+    // this is the machine position, we update here as we have detected a move
+    memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
 
     // use default acceleration to start with
     float acceleration = default_acceleration;
 
-    float isecs = rate_mm_s / millimeters_of_travel;
+    float isecs = rate_mm_s / distance;
 
     // check per-actuator speed limits
     for (size_t actuator = 0; actuator < n_motors; actuator++) {
@@ -1008,7 +994,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
         float actuator_rate= d * isecs;
         if (actuator_rate > actuators[actuator]->get_max_rate()) {
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
-            isecs = rate_mm_s / millimeters_of_travel;
+            isecs = rate_mm_s / distance;
         }
 
         // adjust acceleration to lowest found, for now just primary axis unless it is an auxiliary move
@@ -1016,7 +1002,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
         if(auxilliary_move || actuator <= Z_AXIS) {
             float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
             if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-                float ca = fabsf((deltas[actuator]/millimeters_of_travel) * acceleration);
+                float ca = fabsf((d/distance) * acceleration);
                 if (ca > ma) {
                     acceleration *= ( ma / ca );
                 }
@@ -1025,7 +1011,8 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
     }
 
     // Append the block to the planner
-    THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, millimeters_of_travel, auxilliary_move? nullptr : unit_vec, acceleration );
+    // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
+    THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration );
 
     return true;
 }
