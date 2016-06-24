@@ -355,9 +355,10 @@ void Endstops::back_off_home(std::bitset<3> axis)
         char gcode_buf[64];
         append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
-        THEROBOT->push_state();
-        THEROBOT->absolute_mode = false; // needs to be relative mode
-        THEROBOT->on_gcode_received(&gc); // send to robot directly
+        THEKERNEL->robot->push_state();
+        THEKERNEL->robot->inch_mode = false;     // needs to be in mm
+        THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
+        THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
         // Wait for above to finish
         THEKERNEL->conveyor->wait_for_empty_queue();
         THEROBOT->pop_state();
@@ -378,8 +379,9 @@ void Endstops::move_to_origin()
     // Move to center using a regular move, use slower of X and Y fast rate
     float rate = std::min(this->fast_rates[0], this->fast_rates[1]) * 60.0F;
     char buf[32];
+    THEKERNEL->robot->push_state();
+    THEKERNEL->robot->inch_mode = false;     // needs to be in mm
     snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
-    THEROBOT->push_state();
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
