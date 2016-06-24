@@ -227,13 +227,14 @@ void SimpleShell::on_console_line_received( void *argument )
                 break;
 
             case 'H':
+                THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
                 if(THEKERNEL->is_grbl_mode()) {
-                    THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
                     // issue G28.2 which is force homing cycle
                     Gcode gcode("G28.2", new_message.stream);
                     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
                 }else{
-                    new_message.stream->printf("error:only supported in GRBL mode\n");
+                    Gcode gcode("G28", new_message.stream);
+                    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
                 }
                 break;
 

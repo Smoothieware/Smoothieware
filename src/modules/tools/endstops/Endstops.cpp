@@ -572,9 +572,9 @@ void Endstops::process_home_command(Gcode* gcode)
     } else if(gcode->subcode == 4) { // G28.4 is a smoothie special it sets manual homing based on the actuator position (used for rotary delta)
         // do a manual homing based on given coordinates, no endstops required, NOTE does not support the multi actuator hack
         ActuatorCoordinates ac;
-        if(gcode->has_letter('A')) ac[0] =  gcode->get_value('A');
-        if(gcode->has_letter('B')) ac[1] =  gcode->get_value('B');
-        if(gcode->has_letter('C')) ac[2] =  gcode->get_value('C');
+        if(gcode->has_letter('X')) ac[0] =  gcode->get_value('X');
+        if(gcode->has_letter('Y')) ac[1] =  gcode->get_value('Y');
+        if(gcode->has_letter('Z')) ac[2] =  gcode->get_value('Z');
         THEROBOT->reset_actuator_position(ac);
         return;
 
