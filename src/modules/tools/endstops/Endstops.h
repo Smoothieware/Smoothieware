@@ -27,7 +27,7 @@ class Endstops : public Module{
         void home(std::bitset<3> a);
         void home_xy();
         void back_off_home(std::bitset<3> axis);
-        void move_to_origin();
+        void move_to_origin(std::bitset<3> axis);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);

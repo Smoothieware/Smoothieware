@@ -355,12 +355,12 @@ void Endstops::back_off_home(std::bitset<3> axis)
         char gcode_buf[64];
         append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
-        THEKERNEL->robot->push_state();
-        THEKERNEL->robot->inch_mode = false;     // needs to be in mm
-        THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
-        THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+        THEROBOT->push_state();
+        THEROBOT->inch_mode = false;     // needs to be in mm
+        THEROBOT->absolute_mode = false; // needs to be relative mode
+        THEROBOT->on_gcode_received(&gc); // send to robot directly
         // Wait for above to finish
-        THEKERNEL->conveyor->wait_for_empty_queue();
+        THECONVEYOR->wait_for_empty_queue();
         THEROBOT->pop_state();
     }
 
@@ -368,9 +368,9 @@ void Endstops::back_off_home(std::bitset<3> axis)
 }
 
 // If enabled will move the head to 0,0 after homing, but only if X and Y were set to home
-void Endstops::move_to_origin()
+void Endstops::move_to_origin(std::bitset<3> axis)
 {
-    if(!(axis_to_home[X_AXIS] && axis_to_home[Y_AXIS])) return; // ignore if X and Y not homing
+    if(!is_delta && (!axis[X_AXIS] || !axis[Y_AXIS])) return; // ignore if X and Y not homing, unless delta
 
     // Do we need to check if we are already at 0,0? probably not as the G0 will not do anything if we are
     // float pos[3]; THEROBOT->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
@@ -379,15 +379,15 @@ void Endstops::move_to_origin()
     // Move to center using a regular move, use slower of X and Y fast rate
     float rate = std::min(this->fast_rates[0], this->fast_rates[1]) * 60.0F;
     char buf[32];
-    THEKERNEL->robot->push_state();
-    THEKERNEL->robot->inch_mode = false;     // needs to be in mm
+    THEROBOT->push_state();
+    THEROBOT->inch_mode = false;     // needs to be in mm
     snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
     // Wait for above to finish
-    THEKERNEL->conveyor->wait_for_empty_queue();
+    THECONVEYOR->wait_for_empty_queue();
     THEROBOT->pop_state();
     this->status = NOT_HOMING;
 }
@@ -586,7 +586,7 @@ void Endstops::process_home_command(Gcode* gcode)
     // G28 is received, we have homing to do
 
     // First wait for the queue to be empty
-    THEKERNEL->conveyor->wait_for_empty_queue();
+    THECONVEYOR->wait_for_empty_queue();
 
     // deltas, scaras always home Z axis only
     bool home_in_z = this->is_delta || this->is_rdelta || this->is_scara;
@@ -716,7 +716,7 @@ void Endstops::process_home_command(Gcode* gcode)
     // default is off for cartesian on for deltas
     if(!is_delta) {
         // NOTE a rotary delta usually has optical or hall-effect endstops so it is safe to go past them a little bit
-        if(this->move_to_origin_after_home) move_to_origin();
+        if(this->move_to_origin_after_home) move_to_origin(haxis);
         // if limit switches are enabled we must back off endstop after setting home
         back_off_home(haxis);
 
@@ -724,7 +724,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
         // also need to back off endstops if limits are enabled
         back_off_home(haxis);
-        if(this->move_to_origin_after_home) move_to_origin();
+        if(this->move_to_origin_after_home) move_to_origin(haxis);
     }
 }
 
