@@ -233,7 +233,7 @@ void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
     bool was_idle= true;
     if(id_event == ON_HALT) {
         this->halted= (argument == nullptr);
-        was_idle= conveyor->is_queue_empty(); // see if we were doing anything like printing
+        was_idle= conveyor->is_idle(); // see if we were doing anything like printing
     }
 
     // send to all registered modules

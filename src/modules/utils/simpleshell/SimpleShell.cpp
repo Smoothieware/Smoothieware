@@ -425,7 +425,7 @@ void SimpleShell::upload_command( string parameters, StreamOutput *stream )
 {
     // this needs to be a hack. it needs to read direct from serial and not allow on_main_loop run until done
     // NOTE this will block all operation until the upload is complete, so do not do while printing
-    if(!THEKERNEL->conveyor->is_queue_empty()) {
+    if(!THECONVEYOR->is_idle()) {
         stream->printf("upload not allowed while printing or busy\n");
         return;
     }

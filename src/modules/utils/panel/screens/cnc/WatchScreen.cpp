@@ -218,7 +218,7 @@ const char *WatchScreen::get_status()
     if (THEPANEL->is_playing())
         return THEPANEL->get_playing_file();
 
-    if (!THEKERNEL->conveyor->is_queue_empty())
+    if (!THECONVEYOR->is_idle())
         return "Running";
 
     const char *ip = get_network();
