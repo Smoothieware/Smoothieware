@@ -188,7 +188,7 @@ void Spindle::on_gcode_received(void* argument)
             THEKERNEL->streams->printf("P: %0.6f I: %0.6f D: %0.6f\n",
                                        control_P_term, control_I_term, control_D_term);
         } else if (gcode->m == 3) {
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
 
             // M3: Spindle on
             spindle_on = true;
@@ -198,13 +198,13 @@ void Spindle::on_gcode_received(void* argument)
             }
 
         } else if (gcode->m == 5) {
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
             spindle_on = false;
         }
 
     }else if(!gcode->has_m && !gcode->has_g && gcode->has_letter('S')) {
         // special case S on its own
-        THEKERNEL->conveyor->wait_for_empty_queue();
+        THEKERNEL->conveyor->wait_for_idle();
         target_rpm = gcode->get_value('S');
     }
 }

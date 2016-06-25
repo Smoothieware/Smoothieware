@@ -360,7 +360,7 @@ void Endstops::back_off_home(std::bitset<3> axis)
         THEROBOT->absolute_mode = false; // needs to be relative mode
         THEROBOT->on_gcode_received(&gc); // send to robot directly
         // Wait for above to finish
-        THECONVEYOR->wait_for_empty_queue();
+        THECONVEYOR->wait_for_idle();
         THEROBOT->pop_state();
     }
 
@@ -387,7 +387,7 @@ void Endstops::move_to_origin(std::bitset<3> axis)
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
     // Wait for above to finish
-    THECONVEYOR->wait_for_empty_queue();
+    THECONVEYOR->wait_for_idle();
     THEROBOT->pop_state();
     this->status = NOT_HOMING;
 }
@@ -454,7 +454,7 @@ void Endstops::home_xy()
         THEROBOT->delta_move(delta, feed_rate, 3);
 
         // Wait for XY to have homed
-        THECONVEYOR->wait_for_empty_queue();
+        THECONVEYOR->wait_for_idle();
 
     } else if(axis_to_home[X_AXIS]) {
         // now home X only
@@ -462,7 +462,7 @@ void Endstops::home_xy()
         if(this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
         THEROBOT->delta_move(delta, fast_rates[X_AXIS], 3);
         // wait for X
-        THECONVEYOR->wait_for_empty_queue();
+        THECONVEYOR->wait_for_idle();
 
     } else if(axis_to_home[Y_AXIS]) {
         // now home Y only
@@ -470,7 +470,7 @@ void Endstops::home_xy()
         if(this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
         THEROBOT->delta_move(delta, fast_rates[Y_AXIS], 3);
         // wait for Y
-        THECONVEYOR->wait_for_empty_queue();
+        THECONVEYOR->wait_for_idle();
     }
 }
 
@@ -494,12 +494,14 @@ void Endstops::home(std::bitset<3> a)
         if(this->home_direction[Z_AXIS]) delta[Z_AXIS]= -delta[Z_AXIS];
         THEROBOT->delta_move(delta, fast_rates[Z_AXIS], 3);
         // wait for Z
-        THECONVEYOR->wait_for_empty_queue();
+        THECONVEYOR->wait_for_idle();
     }
 
     if(home_z_first) home_xy();
 
     // TODO should check that the endstops were hit and it did not stop short for some reason
+    // we did not complete movement the full distance if we hit the endstops
+    THEROBOT->reset_position_from_current_actuator_position();
 
     // Move back a small distance for all homing axis
     this->status = MOVING_BACK;
@@ -516,13 +518,13 @@ void Endstops::home(std::bitset<3> a)
 
     THEROBOT->delta_move(delta, feed_rate, 3);
     // wait until finished
-    THECONVEYOR->wait_for_empty_queue();
+    THECONVEYOR->wait_for_idle();
 
-    // Start moving the axes to the origin slowly
+    // Start moving the axes towards the endstops slowly
     this->status = MOVING_TO_ENDSTOP_SLOW;
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if(axis_to_home[c]) {
-            delta[c]= this->retract_mm[c];
+            delta[c]= this->retract_mm[c]*2; // move further than we moved off to make sure we hit it cleanly
             if(this->home_direction[c]) delta[c]= -delta[c];
         }else{
             delta[c]= 0;
@@ -530,9 +532,13 @@ void Endstops::home(std::bitset<3> a)
     }
     THEROBOT->delta_move(delta, feed_rate, 3);
     // wait until finished
-    THECONVEYOR->wait_for_empty_queue();
+    THECONVEYOR->wait_for_idle();
 
-    THEROBOT->disable_segmentation= false; // we must disable segmentation as this won't work with it enabled
+    // TODO should check that the endstops were hit and it did not stop short for some reason
+    // we did not complete movement the full distance if we hit the endstops
+    THEROBOT->reset_position_from_current_actuator_position();
+
+    THEROBOT->disable_segmentation= false;
 
     this->status = NOT_HOMING;
 }
@@ -586,7 +592,7 @@ void Endstops::process_home_command(Gcode* gcode)
     // G28 is received, we have homing to do
 
     // First wait for the queue to be empty
-    THECONVEYOR->wait_for_empty_queue();
+    THECONVEYOR->wait_for_idle();
 
     // deltas, scaras always home Z axis only
     bool home_in_z = this->is_delta || this->is_rdelta || this->is_scara;
@@ -608,13 +614,6 @@ void Endstops::process_home_command(Gcode* gcode)
         // Only Z axis homes (even though all actuators move this is handled by arm solution)
         haxis.set(Z_AXIS);
     }
-
-    // save current actuator position so we can report how far we moved
-    ActuatorCoordinates start_pos{
-        THEROBOT->actuators[X_AXIS]->get_current_position(),
-        THEROBOT->actuators[Y_AXIS]->get_current_position(),
-        THEROBOT->actuators[Z_AXIS]->get_current_position()
-    };
 
     // do the actual homing
     if(homing_order != 0) {
@@ -654,14 +653,6 @@ void Endstops::process_home_command(Gcode* gcode)
         }
         return;
     }
-
-    // set the last probe position to the actuator units moved during this home
-    THEROBOT->set_last_probe_position(
-        std::make_tuple(
-            start_pos[0] - THEROBOT->actuators[0]->get_current_position(),
-            start_pos[1] - THEROBOT->actuators[1]->get_current_position(),
-            start_pos[2] - THEROBOT->actuators[2]->get_current_position(),
-            0));
 
     if(home_in_z) { // deltas only
         // Here's where we would have been if the endstops were perfectly trimmed
@@ -706,7 +697,7 @@ void Endstops::process_home_command(Gcode* gcode)
     } else {
         // Zero the ax(i/e)s position, add in the home offset
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-            if (axis_to_home[c]) {
+            if (haxis[c]) { // if we requested this axis to home
                 THEROBOT->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
             }
         }

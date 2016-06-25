@@ -524,7 +524,7 @@ void Player::suspend_part2()
     //  need to use streams here as the original stream may have changed
     THEKERNEL->streams->printf("// Waiting for queue to empty (Host must stop sending)...\n");
     // wait for queue to empty
-    THEKERNEL->conveyor->wait_for_empty_queue();
+    THEKERNEL->conveyor->wait_for_idle();
 
     THEKERNEL->streams->printf("// Saving current state...\n");
 

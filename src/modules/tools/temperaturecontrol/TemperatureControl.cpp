@@ -311,7 +311,7 @@ void TemperatureControl::on_gcode_received(void *argument)
 
             if(this->active) {
                 // required so temp change happens in order
-                THEKERNEL->conveyor->wait_for_empty_queue();
+                THEKERNEL->conveyor->wait_for_idle();
 
                 float v = gcode->get_value('S');
 

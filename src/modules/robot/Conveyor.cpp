@@ -133,7 +133,7 @@ bool Conveyor::is_idle() const
 }
 
 // Wait for the queue to be empty and for all the jobs to finish in step ticker
-void Conveyor::wait_for_empty_queue()
+void Conveyor::wait_for_idle()
 {
     // wait for the job queue to empty, this means cycling everything on the block queue into the job queue
     // forcing them to be jobs
@@ -246,7 +246,7 @@ void Conveyor::flush_queue()
     // TODO force deceleration of last block
 
     // now wait until the job queue has finished and all motors are idle too
-    wait_for_empty_queue();
+    wait_for_idle();
     flush= false;
 }
 

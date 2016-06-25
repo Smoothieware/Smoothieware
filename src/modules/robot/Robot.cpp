@@ -370,7 +370,7 @@ void Robot::on_gcode_received(void *argument)
                 }
                 if (delay_ms > 0) {
                     // drain queue
-                    THEKERNEL->conveyor->wait_for_empty_queue();
+                    THEKERNEL->conveyor->wait_for_idle();
                     // wait for specified time
                     uint32_t start = us_ticker_read(); // mbed call
                     while ((us_ticker_read() - start) < delay_ms * 1000) {
@@ -506,7 +506,7 @@ void Robot::on_gcode_received(void *argument)
 
             case 18: // this used to support parameters, now it ignores them
             case 84:
-                THEKERNEL->conveyor->wait_for_empty_queue();
+                THEKERNEL->conveyor->wait_for_idle();
                 THEKERNEL->call_event(ON_ENABLE, nullptr); // turn all enable pins off
                 break;
 
@@ -618,7 +618,7 @@ void Robot::on_gcode_received(void *argument)
                 break;
 
             case 400: // wait until all moves are done up to this point
-                THEKERNEL->conveyor->wait_for_empty_queue();
+                THEKERNEL->conveyor->wait_for_idle();
                 break;
 
             case 500: // M500 saves some volatile settings to config override file

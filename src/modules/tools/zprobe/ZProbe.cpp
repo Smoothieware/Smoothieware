@@ -186,7 +186,7 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     THEROBOT->delta_move(delta, feedrate, 3);
 
     // wait until finished
-    THECONVEYOR->wait_for_empty_queue();
+    THECONVEYOR->wait_for_idle();
     THEROBOT->disable_segmentation= false;
 
     // now see how far we moved, get delta in z we moved
@@ -230,7 +230,7 @@ bool ZProbe::return_probe(float mm, bool reverse)
     THEROBOT->delta_move(delta, fr, 3);
 
     // wait until finished
-    THECONVEYOR->wait_for_empty_queue();
+    THECONVEYOR->wait_for_idle();
 
     return true;
 }
@@ -274,7 +274,7 @@ void ZProbe::on_gcode_received(void *argument)
 
         if( gcode->g == 30 ) { // simple Z probe
             // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
 
             bool probe_result;
             bool reverse= (gcode->has_letter('R') && gcode->get_value('R') != 0); // specify to probe in reverse direction
@@ -357,7 +357,7 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         // first wait for an empty queue i.e. no moves left
-        THEKERNEL->conveyor->wait_for_empty_queue();
+        THEKERNEL->conveyor->wait_for_idle();
 
         // turn off any compensation transform
         auto savect= THEROBOT->compensationTransform;
@@ -513,7 +513,7 @@ void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool re
     message.message = cmd;
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-    THEKERNEL->conveyor->wait_for_empty_queue();
+    THEKERNEL->conveyor->wait_for_idle();
 }
 
 // issue home command

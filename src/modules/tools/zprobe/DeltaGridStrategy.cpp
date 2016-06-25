@@ -284,7 +284,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
     if(gcode->has_g) {
         if (gcode->g == 29) { // do a probe to test flatness
             // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
 
             int n= gcode->has_letter('I') ? gcode->get_value('I') : 0;
             float radius = grid_radius;
@@ -301,7 +301,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
 
         } else if( gcode->g == 31 ) { // do a grid probe
             // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
 
             if(!doProbe(gcode)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");

@@ -203,7 +203,7 @@ void Drillingcycles::on_gcode_received(void* argument)
     // cycle start
     if (code == 98 || code == 99) {
         // wait for any moves left and current position is update
-        THEKERNEL->conveyor->wait_for_empty_queue();
+        THEKERNEL->conveyor->wait_for_idle();
         // get actual position from robot
         float pos[3];
         THEROBOT->get_axis_position(pos);

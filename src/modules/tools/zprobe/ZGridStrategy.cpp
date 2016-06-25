@@ -238,7 +238,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
 
         } else if( gcode->g == 32 ) { //run probe
             // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
 
             this->setAdjustFunction(false); // Disable leveling code
             if(!doProbing(gcode->stream)) {

@@ -530,7 +530,7 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
         filename = THEKERNEL->config_override_filename();
     }
 
-    THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
+    THEKERNEL->conveyor->wait_for_idle(); //just to be safe as it can take a while to run
 
     //remove(filename.c_str()); // seems to cause a hang every now and then
     {
@@ -795,7 +795,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             message.message = cmd;
             message.stream = &(StreamOutput::NullStream);
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
         }
 
    } else if (what == "pos") {
@@ -964,7 +964,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             struct SerialMessage message{&StreamOutput::NullStream, cmd};
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             if(THEKERNEL->is_halted()) break;
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
             toggle= !toggle;
         }
         stream->printf("done\n");
@@ -995,7 +995,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             stream->printf("%s\n", cmd);
             message.message= cmd;
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
         }
         stream->printf("done\n");
 
@@ -1039,7 +1039,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             if(THEKERNEL->is_halted()) break;
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
         }
         stream->printf("done\n");
 

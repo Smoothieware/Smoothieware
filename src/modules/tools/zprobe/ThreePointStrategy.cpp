@@ -133,7 +133,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 
         } else if( gcode->g == 32 ) { // three point probe
             // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
 
              // clear any existing plane and compensation
             delete this->plane;

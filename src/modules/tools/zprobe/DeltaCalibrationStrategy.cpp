@@ -45,7 +45,7 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
         // G code processing
         if( gcode->g == 32 ) { // auto calibration for delta, Z bed mapping for cartesian
             // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
 
             // turn off any compensation transform as it will be invalidated anyway by this
             THEROBOT->compensationTransform= nullptr;
