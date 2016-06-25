@@ -588,8 +588,8 @@ void Robot::on_gcode_received(void *argument)
                 if (gcode->has_letter('Z')) {
                     float jd = gcode->get_value('Z');
                     // enforce minimum, -1 disables it and uses regular junction deviation
-                    if (jd < -1.0F)
-                        jd = -1.0F;
+                    if (jd <= -1.0F)
+                        jd = NAN;
                     THEKERNEL->planner->z_junction_deviation = jd;
                 }
                 if (gcode->has_letter('S')) {

@@ -322,7 +322,7 @@ void Extruder::on_gcode_received(void *argument)
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", stepper_motor->get_steps_per_mm(), this->identifier);
             gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f P%d\n", this->filament_diameter, this->identifier);
-            gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f P%d\n", this->retract_length, this->retract_feedrate * 60.0F, this->retract_zlift_length, this->retract_zlift_feedrate, this->identifier);
+            gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f P%d\n", this->retract_length, this->retract_feedrate * 60.0F, this->retract_zlift_length, this->retract_zlift_feedrate*60.0F, this->identifier);
             gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f P%d\n", this->retract_recover_length, this->retract_recover_feedrate * 60.0F, this->identifier);
             gcode->stream->printf(";E acceleration mm/sec²:\nM204 E%1.4f P%d\n", stepper_motor->get_acceleration(), this->identifier);
             gcode->stream->printf(";E max feed rate mm/sec:\nM203 E%1.4f P%d\n", stepper_motor->get_max_rate(), this->identifier);
