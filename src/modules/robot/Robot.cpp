@@ -632,7 +632,7 @@ void Robot::on_gcode_received(void *argument)
                 }
                 gcode->stream->printf("\n");
 
-                gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
+                gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, isnan(THEKERNEL->planner->z_junction_deviation)?-1:THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
 
                 gcode->stream->printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
                  gcode->stream->printf(";Max actuator feedrates in mm/sec:\nM203.1 X%1.5f Y%1.5f Z%1.5f\n", actuators[X_AXIS]->get_max_rate(), actuators[Y_AXIS]->get_max_rate(), actuators[Z_AXIS]->get_max_rate());
