@@ -556,6 +556,18 @@ void Robot::on_gcode_received(void *argument)
                                 else if(gcode->subcode == 1) actuators[i]->set_max_rate(v);
                             }
                         }
+
+                        // this format is deprecated
+                        if(gcode->subcode == 0 && (gcode->has_letter('A') || gcode->has_letter('B') || gcode->has_letter('C'))) {
+                            gcode->stream->printf("NOTE this format is deprecated, Use M203.1 instead\n");
+                                for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+                                if (gcode->has_letter('A' + i)) {
+                                    float v= gcode->get_value('A'+i);
+                                    actuators[i]->set_max_rate(v);
+                                }
+                            }
+                        }
+
                         if(gcode->subcode == 1) check_max_actuator_speeds();
                     }
                     break;
