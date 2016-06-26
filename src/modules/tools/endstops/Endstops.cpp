@@ -350,8 +350,8 @@ void Endstops::back_off_home(std::bitset<3> axis)
     if(!params.empty()) {
         // Move off of the endstop using a regular relative move
         params.insert(params.begin(), {'G', 0});
-        // use X slow rate to move, Z should have a max speed set anyway
-        params.push_back({'F', this->slow_rates[X_AXIS] * 60.0F});
+        // use X fast rate to move, Z should have a max speed set anyway
+        params.push_back({'F', this->fast_rates[X_AXIS] * 60.0F});
         char gcode_buf[64];
         append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
