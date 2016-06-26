@@ -453,25 +453,21 @@ void Endstops::home_xy()
         float feed_rate = std::min(fast_rates[X_AXIS], fast_rates[Y_AXIS]);
         THEROBOT->delta_move(delta, feed_rate, 3);
 
-        // Wait for XY to have homed
-        THECONVEYOR->wait_for_idle();
-
     } else if(axis_to_home[X_AXIS]) {
         // now home X only
         float delta[3] {alpha_max*2, 0, 0};
         if(this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
         THEROBOT->delta_move(delta, fast_rates[X_AXIS], 3);
-        // wait for X
-        THECONVEYOR->wait_for_idle();
 
     } else if(axis_to_home[Y_AXIS]) {
         // now home Y only
         float delta[3] {0, beta_max*2, 0};
         if(this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
         THEROBOT->delta_move(delta, fast_rates[Y_AXIS], 3);
-        // wait for Y
-        THECONVEYOR->wait_for_idle();
     }
+
+    // Wait for axis to have homed
+    THECONVEYOR->wait_for_idle();
 }
 
 void Endstops::home(std::bitset<3> a)
@@ -576,7 +572,7 @@ void Endstops::process_home_command(Gcode* gcode)
         return;
 
     } else if(gcode->subcode == 4) { // G28.4 is a smoothie special it sets manual homing based on the actuator position (used for rotary delta)
-        // do a manual homing based on given coordinates, no endstops required, NOTE does not support the multi actuator hack
+        // do a manual homing based on given coordinates, no endstops required
         ActuatorCoordinates ac;
         if(gcode->has_letter('X')) ac[0] =  gcode->get_value('X');
         if(gcode->has_letter('Y')) ac[1] =  gcode->get_value('Y');
