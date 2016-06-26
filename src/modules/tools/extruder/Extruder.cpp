@@ -248,10 +248,15 @@ void Extruder::on_gcode_received(void *argument)
                 int n = snprintf(buf, sizeof(buf), " E:%1.3f ", pos);
                 gcode->txt_after_ok.append(buf, n);
 
-            }else if(gcode->subcode == 1) { // realtime
+            }else if(gcode->subcode == 1) { // realtime position
+                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position()/(volumetric_multiplier*extruder_multiplier));
+                gcode->txt_after_ok.append(buf, n);
+
+            }else if(gcode->subcode == 3) { // realtime actuator position
                 int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position());
                 gcode->txt_after_ok.append(buf, n);
             }
+
 
         } else if (gcode->m == 92 && ( (this->selected && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier) ) ) {
             float spm = stepper_motor->get_steps_per_mm();

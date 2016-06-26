@@ -851,9 +851,11 @@ void Robot::reset_axis_position(float position, int axis)
     last_milestone[axis] = position;
     if(axis <= Z_AXIS) {
         reset_axis_position(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
+#if MAX_ROBOT_ACTUATORS > 3
     }else{
         // extruders need to be set not calculated
         last_machine_position[axis]= position;
+#endif
     }
 }
 
