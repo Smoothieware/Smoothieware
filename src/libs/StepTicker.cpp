@@ -262,6 +262,11 @@ bool StepTicker::start_next_block()
     if(ok) {
         SET_STEPTICKER_DEBUG_PIN(1);
         return true;
+
+    }else{
+        // this is an edge condition that should never happen, but we need to discard this block if it ever does
+        // basically it is a block that has zero steps for all motors
+        THECONVEYOR->block_finished();
     }
 
     return false;
