@@ -21,7 +21,6 @@ class SpindleControl: public Module {
 
     private:
         void on_gcode_received(void *argument);
-        void on_gcode_execute(void *argument);
         
         virtual void turn_on(void) {};
         virtual void turn_off(void) {};
