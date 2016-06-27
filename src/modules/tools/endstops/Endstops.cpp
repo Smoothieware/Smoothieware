@@ -350,8 +350,14 @@ void Endstops::back_off_home(std::bitset<3> axis)
     if(!params.empty()) {
         // Move off of the endstop using a regular relative move
         params.insert(params.begin(), {'G', 0});
-        // use X slow rate to move, Z should have a max speed set anyway
-        params.push_back({'F', this->slow_rates[X_AXIS] * 60.0F});
+        if(is_delta) {
+            // use slow rate on delta, fast is too violent
+            // use X slow rate to move, Z should have a max speed set anyway
+            params.push_back({'F', this->slow_rates[X_AXIS] * 60.0F});
+        } else {
+            // use fast rate of slowest axis for backoff
+            params.push_back({'F', std::min(fast_rates[Z_AXIS],std::min(fast_rates[X_AXIS],fast_rates[Y_AXIS])) * 60.0F});
+        }
         char gcode_buf[64];
         append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
@@ -376,12 +382,11 @@ void Endstops::move_to_origin(std::bitset<3> axis)
     // float pos[3]; THEROBOT->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
 
     this->status = MOVE_TO_ORIGIN;
-    // Move to center using a regular move, use slower of X and Y fast rate
-    float rate = std::min(this->fast_rates[0], this->fast_rates[1]) * 60.0F;
+    // Move to center using a regular G0 move, use whatever feed rate was previously defined for G0
     char buf[32];
     THEROBOT->push_state();
     THEROBOT->inch_mode = false;     // needs to be in mm
-    snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
+    snprintf(buf, sizeof(buf), "G53 G0 X0 Y0"); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
@@ -503,12 +508,20 @@ void Endstops::home(std::bitset<3> a)
     this->status = MOVING_BACK;
     float delta[3]{0,0,0};
     // use minimum feed rate of all three axes that are being homed (sub optimal, but necessary)
-    float feed_rate= slow_rates[X_AXIS];
+    float feed_rate;
+    if(is_delta) {
+        // use slow rate on delta, fast is too violent
+        // use slowest specified slow rate to move
+        feed_rate= std::min(slow_rates[Z_AXIS],std::min(slow_rates[X_AXIS],slow_rates[Y_AXIS]));
+    } else {
+        // use fast home rate on all other machines, we are moving away from the limits so fast home is acceptable
+        // use slowest specified fast rate to move
+        feed_rate= std::min(fast_rates[Z_AXIS],std::min(fast_rates[X_AXIS],fast_rates[Y_AXIS]));
+    }   
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if(axis_to_home[c]) {
             delta[c]= this->retract_mm[c];
             if(!this->home_direction[c]) delta[c]= -delta[c];
-            feed_rate= std::min(slow_rates[c], feed_rate);
         }
     }
 
@@ -526,6 +539,8 @@ void Endstops::home(std::bitset<3> a)
             delta[c]= 0;
         }
     }
+    // use slowest specified slow rate to move
+    feed_rate= std::min(slow_rates[Z_AXIS],std::min(slow_rates[X_AXIS],slow_rates[Y_AXIS]));
     THEROBOT->delta_move(delta, feed_rate, 3);
     // wait until finished
     THECONVEYOR->wait_for_idle();
@@ -705,10 +720,12 @@ void Endstops::process_home_command(Gcode* gcode)
     // on some systems where 0,0 is bed center it is nice to have home goto 0,0 after homing
     // default is off for cartesian on for deltas
     if(!is_delta) {
+        // if limit switches are enabled we must back off endstop after setting home
+        // backoff endstops first so machine vibration cannot trip them during mot to origin
+        back_off_home(haxis);
         // NOTE a rotary delta usually has optical or hall-effect endstops so it is safe to go past them a little bit
         if(this->move_to_origin_after_home) move_to_origin(haxis);
-        // if limit switches are enabled we must back off endstop after setting home
-        back_off_home(haxis);
+        
 
     } else if(this->move_to_origin_after_home || this->limit_enable[X_AXIS]) {
         // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
