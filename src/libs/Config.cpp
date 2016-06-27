@@ -62,10 +62,6 @@ Config::~Config()
     }
 }
 
-void Config::on_module_loaded() {}
-
-void Config::on_console_line_received( void *argument ) {}
-
 // Get a list of modules, used by module "pools" that look for the "enable" keyboard to find things like "moduletype.modulename.enable" as the marker of a new instance of a module
 void Config::get_module_list(vector<uint16_t> *list, uint16_t family)
 {

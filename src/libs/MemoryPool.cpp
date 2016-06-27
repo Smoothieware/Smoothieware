@@ -5,6 +5,27 @@
 #include <mri.h>
 #include <cstdio>
 
+// this catches all usages of delete blah. The object's destructor is called before we get here
+// it first checks if the deleted object is part of a pool, and uses free otherwise.
+void  operator delete(void* p)
+{
+    MemoryPool* m = MemoryPool::first;
+    while (m)
+    {
+        if (m->has(p))
+        {
+            MDEBUG("Pool %p has %p, using dealloc()\n", m, p);
+            m->dealloc(p);
+            return;
+        }
+        m = m->next;
+    }
+
+    MDEBUG("no pool has %p, using free()\n", p);
+    free(p);
+}
+
+
 #define offset(x) (((uint8_t*) x) - ((uint8_t*) this->base))
 
 typedef struct __attribute__ ((packed))

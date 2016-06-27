@@ -10,8 +10,8 @@
 class CoreXZSolution : public BaseSolution {
     public:
         CoreXZSolution(Config*);
-        void cartesian_to_actuator(const float[], float[] );
-        void actuator_to_cartesian(const float[], float[] );
+        void cartesian_to_actuator(const float[], ActuatorCoordinates & ) override;
+        void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) override;
 
     private:
         float x_reduction;

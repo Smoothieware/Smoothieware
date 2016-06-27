@@ -25,36 +25,6 @@
 #define CONF_SD         2
 #define CONF_EEPROM     3
 
-void Configurator::on_module_loaded()
-{
-    this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
-    //    this->register_for_event(ON_GCODE_RECEIVED);
-    //    this->register_for_event(ON_MAIN_LOOP);
-}
-
-// When a new line is received, check if it is a command, and if it is, act upon it
-void Configurator::on_console_line_received( void *argument )
-{
-    SerialMessage new_message = *static_cast<SerialMessage *>(argument);
-
-    // ignore comments and blank lines and if this is a G code then also ignore it
-    char first_char = new_message.message[0];
-    if(strchr(";( \n\rGMTN", first_char) != NULL) return;
-
-    string possible_command = new_message.message;
-    string cmd = shift_parameter(possible_command);
-
-    // Act depending on command
-    if (cmd == "config-get"){
-        this->config_get_command(  possible_command, new_message.stream );
-    } else if (cmd == "config-set"){
-        this->config_set_command(  possible_command, new_message.stream );
-    } else if (cmd == "config-load"){
-        this->config_load_command(  possible_command, new_message.stream );
-    }
-}
-
-void Configurator::on_main_loop(void *argument) {}
 
 // Output a ConfigValue from the specified ConfigSource to the stream
 void Configurator::config_get_command( string parameters, StreamOutput *stream )

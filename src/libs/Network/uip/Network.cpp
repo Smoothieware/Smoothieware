@@ -23,7 +23,10 @@
 #include "webserver.h"
 #include "dhcpc.h"
 #include "sftpd.h"
+
+#ifndef NOPLAN9
 #include "plan9.h"
+#endif
 
 #include <mri.h>
 
@@ -44,20 +47,17 @@ extern "C" void uip_log(char *m)
     printf("uIP log message: %s\n", m);
 }
 
-static bool webserver_enabled, telnet_enabled, plan9_enabled, use_dhcp;
-static Network *theNetwork;
-static Sftpd *sftpd;
-static CommandQueue *command_q= CommandQueue::getInstance();
+static Network* theNetwork;
 
-Network* Network::instance;
 Network::Network()
 {
+    theNetwork= this;
     ethernet = new LPC17XX_Ethernet();
     tickcnt= 0;
-    theNetwork= this;
     sftpd= NULL;
-    instance= this;
     hostname = NULL;
+    plan9_enabled= false;
+    command_q= CommandQueue::getInstance();
 }
 
 Network::~Network()
@@ -66,6 +66,7 @@ Network::~Network()
     if (hostname != NULL) {
         delete hostname;
     }
+    theNetwork= nullptr;
 }
 
 static uint32_t getSerialNumberHash()
@@ -131,7 +132,6 @@ void Network::on_module_loaded()
     webserver_enabled = THEKERNEL->config->value( network_checksum, network_webserver_checksum, network_enable_checksum )->by_default(false)->as_bool();
     telnet_enabled = THEKERNEL->config->value( network_checksum, network_telnet_checksum, network_enable_checksum )->by_default(false)->as_bool();
     plan9_enabled = THEKERNEL->config->value( network_checksum, network_plan9_checksum, network_enable_checksum )->by_default(false)->as_bool();
-
     string mac = THEKERNEL->config->value( network_checksum, network_mac_override_checksum )->by_default("")->as_string();
     if (mac.size() == 17 ) { // parse mac address
         if (!parse_ip_str(mac, mac_address, 6, 16, ':')) {
@@ -292,7 +292,7 @@ void Network::on_idle(void *argument)
     }
 }
 
-static void setup_servers()
+void Network::setup_servers()
 {
     if (webserver_enabled) {
         // Initialize the HTTP server, listen to port 80.
@@ -306,11 +306,13 @@ static void setup_servers()
         printf("Telnetd initialized\n");
     }
 
+#ifndef NOPLAN9
     if (plan9_enabled) {
         // Initialize the plan9 server
         Plan9::init();
         printf("Plan9 initialized\n");
     }
+#endif
 
     // sftpd service, which is lazily created on reciept of first packet
     uip_listen(HTONS(115));
@@ -396,24 +398,26 @@ extern "C" void app_select_appcall(void)
 {
     switch (uip_conn->lport) {
         case HTONS(80):
-            if (webserver_enabled) httpd_appcall();
+            if (theNetwork->webserver_enabled) httpd_appcall();
             break;
 
         case HTONS(23):
-            if (telnet_enabled) Telnetd::appcall();
+            if (theNetwork->telnet_enabled) Telnetd::appcall();
             break;
 
+#ifndef NOPLAN9
         case HTONS(564):
-            if (plan9_enabled) Plan9::appcall();
+            if (theNetwork->plan9_enabled) Plan9::appcall();
             break;
+#endif
 
         case HTONS(115):
-            if(sftpd == NULL) {
-                sftpd= new Sftpd();
-                sftpd->init();
+            if(theNetwork->sftpd == NULL) {
+                theNetwork->sftpd= new Sftpd();
+                theNetwork->sftpd->init();
                 printf("Created sftpd service\n");
             }
-            sftpd->appcall();
+            theNetwork->sftpd->appcall();
             break;
 
         default:

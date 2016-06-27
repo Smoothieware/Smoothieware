@@ -22,18 +22,17 @@ class Spindle: public Module {
         Spindle();
         virtual ~Spindle() {};
         void on_module_loaded();
-        
-        
+
+
     private:
         void on_pin_rise();
         void on_gcode_received(void *argument);
-        void on_gcode_execute(void *argument);
         uint32_t on_update_speed(uint32_t dummy);
-        
+
         mbed::PwmOut *spindle_pin; // PWM output for spindle speed control
         mbed::InterruptIn *feedback_pin; // Interrupt pin for measuring speed
         bool output_inverted;
-        
+
         // Current values, updated at runtime
         bool spindle_on;
         float current_rpm;
@@ -43,14 +42,14 @@ class Spindle: public Module {
         float current_pwm_value;
         int time_since_update;
         uint32_t last_irq;
-        
+
         // Values from config
         float pulses_per_rev;
         float control_P_term;
         float control_I_term;
         float control_D_term;
         float smoothing_decay;
-        
+
         // These fields are updated by the interrupt
         uint32_t last_edge; // Timestamp of last edge
         volatile uint32_t last_time; // Time delay between last two edges

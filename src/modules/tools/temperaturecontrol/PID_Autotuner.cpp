@@ -235,7 +235,7 @@ void PID_Autotuner::on_idle(void *)
 
     if (justchanged && peakCount >= 4) {
         // we've transitioned. check if we can autotune based on the last peaks
-        float avgSeparation = (std::abs(peaks[peakCount - 1] - peaks[peakCount - 2]) + std::abs(peaks[peakCount - 2] - peaks[peakCount - 3])) / 2;
+        float avgSeparation = (fabsf(peaks[peakCount - 1] - peaks[peakCount - 2]) + fabsf(peaks[peakCount - 2] - peaks[peakCount - 3])) / 2;
         THEKERNEL->streams->printf("// Cycle %d: max: %g, min: %g, avg separation: %g\n", peakCount, absMax, absMin, avgSeparation);
         if (peakCount > 3 && avgSeparation < (0.05 * (absMax - absMin))) {
             DEBUG_PRINTF("Stabilized\n");

@@ -43,7 +43,7 @@ MRI_BREAK_ON_INIT=0
 MRI_SEMIHOST_STDIO=0
 endif
 
-# generate a git version string, sorry only on linux and mac osx
+# generate a git version string
 ifneq "$(OS)" "Windows_NT"
 DEFINES += -D__GITVERSIONSTRING__=\"$(shell ./generate-version.sh)\"
 else
@@ -58,10 +58,11 @@ ifneq "$(STEPTICKER_DEBUG_PIN)" ""
 DEFINES += -DSTEPTICKER_DEBUG_PIN=$(STEPTICKER_DEBUG_PIN)
 endif
 
+# include an optional default set of excludes
 # add any modules that you do not want included in the build
-EXCLUDE_MODULES = tools/touchprobe
 # e.g for a CNC machine
-#export EXCLUDED_MODULES = tools/touchprobe tools/laser tools/temperaturecontrol tools/extruder
+#export EXCLUDE_MODULES = tools/touchprobe tools/laser tools/temperaturecontrol tools/extruder
+-include default_excludes.mk
 
 ifneq "$(INCLUDE_MODULE)" ""
 export EXCLUDED_MODULES = $(filter-out $(INCLUDE_MODULE),$(EXCLUDE_MODULES))
