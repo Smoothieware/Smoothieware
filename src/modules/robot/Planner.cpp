@@ -50,23 +50,29 @@ void Planner::config_load()
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors, float rate_mm_s, float distance, float *unit_vec, float acceleration)
+bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors, float rate_mm_s, float distance, float *unit_vec, float acceleration)
 {
     // Create ( recycle ) a new block
     Block* block = THECONVEYOR->queue.head_ref();
 
     // Direction bits
+    bool has_steps= false;
     for (size_t i = 0; i < n_motors; i++) {
         int32_t steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
         // Update current position
-        THEROBOT->actuators[i]->update_last_milestones(actuator_pos[i], steps);
+        if(steps != 0) {
+            THEROBOT->actuators[i]->update_last_milestones(actuator_pos[i], steps);
+            has_steps= true;
+        }
 
         // find direction
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
-
         // save actual steps in block
         block->steps[i] = labs(steps);
     }
+
+    // sometimres even though there is a detectable movement it turns out there are no steps to be had from such a small move
+    if(!has_steps) return false;
 
     // use default JD
     float junction_deviation = this->junction_deviation;
@@ -177,6 +183,8 @@ void Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
     block->ready();
 
     THECONVEYOR->queue_head_block();
+
+    return true;
 }
 
 void Planner::recalculate()

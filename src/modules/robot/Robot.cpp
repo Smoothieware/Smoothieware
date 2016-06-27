@@ -992,9 +992,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
     }
 #endif
 
-    // this is the machine position, we update here as we have detected a move
-    memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
-
     // use default acceleration to start with
     float acceleration = default_acceleration;
 
@@ -1026,7 +1023,11 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
 
     // Append the block to the planner
     // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
-    THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration );
+    if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration )) {
+        // this is the machine position
+        memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
+    }
+
 
     return true;
 }
