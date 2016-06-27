@@ -12,6 +12,21 @@ The following changes must be made to your config
 4. Homing is slightly different, by default it will home X and Y axis at the same time then Z, this can be reversed and have Z home first then X and Y.
    the homing_order setting still works the same way as before.
 
+5. The old extruder syntax is no longer allowed so check your config has the latest extruder config like
+```
+extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
+extruder.hotend.steps_per_mm                    710              # Steps per mm for extruder stepper
+extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
+etc
+```
+
+and not the old
+
+```
+extruder_module_enable                       true
+```
+
+
 The following changes must be made to your hardware
 ---------------------------------------------------
 
