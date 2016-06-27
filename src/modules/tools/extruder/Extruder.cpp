@@ -309,7 +309,7 @@ void Extruder::on_gcode_received(void *argument)
             // M207 - set retract length S[positive mm] F[feedrate mm/min] Z[additional zlift/hop] Q[zlift feedrate mm/min]
             if(gcode->has_letter('S')) retract_length = gcode->get_value('S');
             if(gcode->has_letter('F')) retract_feedrate = gcode->get_value('F') / 60.0F; // specified in mm/min converted to mm/sec
-            if(gcode->has_letter('Z')) retract_zlift_length = gcode->get_value('Z') / 60.0F; // specified in mm/min converted to mm/sec
+            if(gcode->has_letter('Z')) retract_zlift_length = gcode->get_value('Z'); // specified in mm
             if(gcode->has_letter('Q')) retract_zlift_feedrate = gcode->get_value('Q') / 60.0F; // specified in mm/min converted to mm/sec
 
         } else if (gcode->m == 208 && ( (this->selected && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
