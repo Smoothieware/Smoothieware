@@ -987,8 +987,8 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
         }
     }
     if(auxilliary_move) {
-        if(sos < 0.00001F) return false;
         distance= sqrtf(sos); // distance in mm of the e move
+        if(distance < 0.00001F) return false;
     }
 #endif
 
