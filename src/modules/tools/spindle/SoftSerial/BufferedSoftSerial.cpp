@@ -33,7 +33,7 @@ BufferedSoftSerial::BufferedSoftSerial(PinName tx, PinName rx, const char* name)
 
 int BufferedSoftSerial::readable(void)
 {
-    return _rxbuf.available();  // note: look if things are in the buffer
+    return _rxbuf.size();  // note: look if things are in the buffer
 }
 
 int BufferedSoftSerial::writeable(void)
@@ -43,12 +43,14 @@ int BufferedSoftSerial::writeable(void)
 
 int BufferedSoftSerial::getc(void)
 {
-    return _rxbuf;
+    char retval;
+    _rxbuf.pop_front(retval);
+    return (int)retval;
 }
 
 int BufferedSoftSerial::putc(int c)
 {
-    _txbuf = (char)c;
+    _txbuf.push_back((char)c);
     BufferedSoftSerial::prime();
 
     return c;
@@ -59,9 +61,9 @@ int BufferedSoftSerial::puts(const char *s)
     const char* ptr = s;
 
     while(*(ptr) != 0) {
-        _txbuf = *(ptr++);
+        _txbuf.push_back(*(ptr++));
     }
-    _txbuf = '\n';  // done per puts definition
+    _txbuf.push_back('\n');  // done per puts definition
     BufferedSoftSerial::prime();
 
     return (ptr - s) + 1;
@@ -76,7 +78,7 @@ int BufferedSoftSerial::printf(const char* format, ...)
     va_start(arg, format);
     r = vsprintf(buf, format, arg);
     // this may not hit the heap but should alert the user anyways
-    if(r > sizeof(buf)) {
+    if(r > (int) sizeof(buf)) {
         error("%s %d buffer overwrite!\n", __FILE__, __LINE__);
     }
     va_end(arg);
@@ -91,7 +93,7 @@ ssize_t BufferedSoftSerial::write(const void *s, size_t length)
     const char* end = ptr + length;
 
     while (ptr != end) {
-        _txbuf = *(ptr++);
+        _txbuf.push_back(*(ptr++));
     }
     BufferedSoftSerial::prime();
 
@@ -103,7 +105,7 @@ void BufferedSoftSerial::rxIrq(void)
 {
     // read from the peripheral and make sure something is available
     if(SoftSerial::readable()) {
-        _rxbuf = _getc(); // if so load them into a buffer
+        _rxbuf.push_back(_getc()); // if so load them into a buffer
     }
 
     return;
@@ -111,10 +113,12 @@ void BufferedSoftSerial::rxIrq(void)
 
 void BufferedSoftSerial::txIrq(void)
 {
+    char retval;
     // see if there is room in the hardware fifo and if something is in the software fifo
     while(SoftSerial::writeable()) {
-        if(_txbuf.available()) {
-            _putc((int)_txbuf.get());
+        if(_txbuf.size()) {
+            _txbuf.pop_front(retval);
+            _putc((int)retval);
         } else {
             // disable the TX interrupt when there is nothing left to send
             SoftSerial::attach(NULL, SoftSerial::TxIrq);
