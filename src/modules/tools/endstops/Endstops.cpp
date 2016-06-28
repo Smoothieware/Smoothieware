@@ -557,7 +557,11 @@ void Endstops::process_home_command(Gcode* gcode)
 
     } else if(gcode->subcode == 1) { // G28.1 set pre defined position
         // saves current position in absolute machine coordinates
-        THEROBOT->get_axis_position(saved_position);
+        THEROBOT->get_axis_position(saved_position); // Only XY are used
+        // Note the following is only meant to be used for recovering a saved position from config-override
+        // Not a standard Gcode and notto be relied on
+        if (gcode->has_letter('X')) saved_position[X_AXIS] = gcode->get_value('X');
+        if (gcode->has_letter('Y')) saved_position[Y_AXIS] = gcode->get_value('Y');
         return;
 
     } else if(gcode->subcode == 3) { // G28.3 is a smoothie special it sets manual homing
