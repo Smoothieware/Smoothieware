@@ -129,6 +129,8 @@ void DirectJogScreen::clicked_menu_entry(uint16_t line)
 
 void DirectJogScreen::on_exit()
 {
+    // we need to update the positions after manually ticking
+    THEROBOT->reset_position_from_current_actuator_position();
     delete this;
 }
 
@@ -155,8 +157,8 @@ void DirectJogScreen::get_actuator_pos()
 void DirectJogScreen::tick(int change)
 {
     for (int i = 0; i < multiplier; ++i) {
-        if(i != 0) wait_us(100);
-       THEROBOT->actuators[axis]->manual_step(change < 0);
+        if(i != 0) wait_us(100); // if you go faster than this you miss encoder changes
+        THEROBOT->actuators[axis]->manual_step(change < 0);
     }
     pos_changed= true;
 }
