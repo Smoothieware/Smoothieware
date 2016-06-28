@@ -590,9 +590,6 @@ void Endstops::process_home_command(Gcode* gcode)
     // First wait for the queue to be empty
     THECONVEYOR->wait_for_idle();
 
-    // now reset axis to 0 as we do not know what state we are in
-    THEROBOT->reset_axis_position(0, 0, 0);
-
     // deltas, scaras always home Z axis only
     bool home_in_z = this->is_delta || this->is_rdelta || this->is_scara;
 
@@ -606,6 +603,8 @@ void Endstops::process_home_command(Gcode* gcode)
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
             if (this->pins[c + (this->home_direction[c] ? 0 : 3)].connected() && (!axis_speced || gcode->has_letter(c + 'X')) ) {
                 haxis.set(c);
+                // now reset axis to 0 as we do not know what state we are in
+                THEROBOT->reset_axis_position(0, c);
             }
         }
 
