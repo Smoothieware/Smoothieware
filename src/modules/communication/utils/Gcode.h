@@ -36,7 +36,6 @@ class Gcode {
         // FIXME these should be private
         unsigned int m;
         unsigned int g;
-        float millimeters_of_travel;
 
         struct {
             bool add_nl:1;

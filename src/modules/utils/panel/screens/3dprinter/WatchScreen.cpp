@@ -197,7 +197,7 @@ void WatchScreen::get_current_status()
 float WatchScreen::get_current_speed()
 {
     // in percent
-    return 6000.0F / THEKERNEL->robot->get_seconds_per_minute();
+    return 6000.0F / THEROBOT->get_seconds_per_minute();
 }
 
 void WatchScreen::get_sd_play_info()
@@ -269,7 +269,7 @@ const char *WatchScreen::get_status()
     if (THEPANEL->is_playing())
         return THEPANEL->get_playing_file();
 
-    if (!THEKERNEL->conveyor->is_queue_empty())
+    if (!THECONVEYOR->is_idle())
         return "Printing";
 
     const char *ip = get_network();
