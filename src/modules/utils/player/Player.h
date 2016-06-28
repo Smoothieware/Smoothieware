@@ -29,6 +29,7 @@ class Player : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_gcode_received(void *argument);
+        void on_halt(void *argument);
 
     private:
         void play_command( string parameters, StreamOutput* stream );
