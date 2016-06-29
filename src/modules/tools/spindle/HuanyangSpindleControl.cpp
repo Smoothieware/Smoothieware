@@ -5,6 +5,69 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/* 
+    Hunayang RS485 communication protocol
+
+    originally found on cnczone.nl, posted by Rikkepic:
+    http://cnczone.nl/viewtopic.php?f=35&t=11605
+
+    Parameters
+
+    PD001   2   RS485 Control of run commands
+    PD002   2   RS485 Control of operating frequency
+    PD023   1   Reverse run enabled
+    PD163   1   RS485 Address: 1
+    PD164   1   RS485 Baud rate: 9600
+    PD165   3   RS485 Mode: RTU, 8N1
+
+    == Function Read == 
+
+    ADDR    CMD     LEN     PAR     DATA        CRC
+    0x01    0x01    0x03    0xA5    0x00 0x00   0x2C 0x6D       Read PD165 (165=0xA5)
+
+    == Function Write ==
+
+    ADDR    CMD     LEN     PAR     DATA        CRC
+    0x01    0x02    0x03    0x03    0x09 0xC4   0x8F 0x8D       Write PD003 (0x9C4 = 2500 = 25.00Hz)
+
+    == Control Write ==
+
+    ADDR    CMD     LEN     DATA    CRC
+    0x01    0x03    0x01    0x01    0x31 0x88                   Start spindle clockwise
+
+    ADDR    CMD     LEN     DATA    CRC
+    0x01    0x03    0x01    0x08    0xF1 0x8E                   Stop spindle
+
+    ADDR    CMD     LEN     DATA    CRC
+    0x01    0x03    0x01    0x11    0x30 0x44                   Start spindle counter-clockwise
+
+    == Control Read ==
+
+    ADDR    CMD     LEN     PAR     DATA        CRC
+    0x01    0x04    0x03    0x00    0x00 0x00   0xF0 0x4E       Read Frequency
+
+    ADDR    CMD     LEN     PAR     DATA        CRC
+    0x01    0x04    0x03    0x02    0x00 0x00   0x51 0x8E       Read Output Current
+
+    ADDR    CMD     LEN     PAR     DATA        CRC
+    0x01    0x04    0x03    0x03    0x00 0x00   0x00 0x4E       Read Rotation
+
+    ADDR    CMD     LEN     PAR     DATA        CRC
+    0x01    0x04    0x03    0x04    0x00 0x00   0xB1 0x8F       Read DC Volatge
+
+    ADDR    CMD     LEN     PAR     DATA        CRC
+    0x01    0x04    0x03    0x05    0x00 0x00   0xE0 0x4F       Read AC Voltage
+
+    ADDR    CMD     LEN     PAR     DATA        CRC
+    0x01    0x04    0x03    0x07    0x00 0x00   0x41 0x8F       Read Temperature
+
+    == Control Read ==
+
+    ADDR    CMD     LEN     DATA        CRC
+    0x01    0x05    0x02    0x09 0xC4   0xBF 0x0F               Write Frequency (0x9C4 = 2500 = 25.00HZ)
+
+*/
+
 #include "libs/Kernel.h"
 #include "StreamOutputPool.h"
 #include "BufferedSoftSerial.h"
