@@ -216,11 +216,12 @@ bool Conveyor::get_next_block(Block **block)
 
         b->is_ticking= true;
         b->recalculate_flag= false;
-
+        this->current_feedrate= b->exit_speed;
         *block= b;
         return true;
     }
 
+    this->current_feedrate= 0;
     return false;
 }
 
