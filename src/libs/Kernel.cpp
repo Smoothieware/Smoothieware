@@ -234,11 +234,20 @@ void Kernel::register_for_event(_EVENT_ENUM id_event, Module *mod){
 
 // Call a specific event with an argument
 void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
+    bool was_idle= true;
     if(id_event == ON_HALT) {
         this->halted= (argument == nullptr);
+        was_idle= conveyor->is_queue_empty(); // see if we were doing anything like printing
     }
+
+    // send to all registered modules
     for (auto m : hooks[id_event]) {
         (m->*kernel_callback_functions[id_event])(argument);
+    }
+
+    if(id_event == ON_HALT && this->halted && !was_idle) {
+        // we need to try to correct current positions if we were running
+        this->robot->reset_position_from_current_actuator_position();
     }
 }
 

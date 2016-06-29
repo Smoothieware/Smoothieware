@@ -40,8 +40,11 @@ private:
     float grid_radius;
     std::tuple<float, float, float> probe_offsets;
     uint8_t grid_size;
+    float x_max,y_max;
 
     struct {
         bool save:1;
+        bool do_home:1;
+        bool is_square:1;
     };
 };

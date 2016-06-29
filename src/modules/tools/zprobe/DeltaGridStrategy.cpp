@@ -5,7 +5,7 @@
     Summary
     -------
     Probes grid_size points in X and Y (total probes grid_size * grid_size) and stores the relative offsets from the 0,0 Z height
-    When enabled everymove will calcualte the Z offset based on interpolating the height offset within the grids nearest 4 points.
+    When enabled every move will calculate the Z offset based on interpolating the height offset within the grids nearest 4 points.
 
     Configuration
     -------------
@@ -47,7 +47,7 @@
         optional parameters {{In}} sets the number of points to the value n, {{Jn}} sets the radius for this probe.
 
     G31 probes the grid and turns the compensation on, this will remain in effect until reset or M561/M370
-        optional parameters {{Jn}} sets the radius for this probe.
+        optional parameters {{Jn}} sets the radius for this probe, which gets saved with M375
 
     M370 clears the grid and turns off compensation
     M374 Save grid to /sd/delta.grid
@@ -90,6 +90,10 @@
 #define save_checksum                CHECKSUM("save")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define initial_height_checksum      CHECKSUM("initial_height")
+#define x_max_checksum               CHECKSUM("x_max")
+#define y_max_checksum               CHECKSUM("y_max")
+#define do_home_checksum             CHECKSUM("do_home")
+#define is_square_checksum           CHECKSUM("is_square")
 
 #define GRIDFILE "/sd/delta.grid"
 
@@ -109,6 +113,26 @@ bool DeltaGridStrategy::handleConfig()
     grid_size = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, grid_size_checksum)->by_default(7)->as_number();
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
+    do_home = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
+    is_square = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, is_square_checksum)->by_default(false)->as_bool();
+
+    if (is_square)
+    {
+      x_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, x_max_checksum)->by_default(0.0F)->as_number();
+      y_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_max_checksum)->by_default(0.0F)->as_number();
+
+      // intelligently set defaults.
+      if (x_max >= 1.0F) grid_radius = x_max;
+      if (x_max < 1.0F) x_max = grid_radius;
+      if (y_max >= 1.0F) grid_radius = y_max;
+      if (y_max < 1.0F) y_max = grid_radius;
+      if (x_max >= 1.0F && y_max >= 1.0F) grid_radius = std::max(x_max, y_max);
+    }
+    else
+    {
+      x_max = grid_radius;
+      y_max = grid_radius;
+    }
 
     // the initial height above the bed we stop the intial move down after home to find the bed
     // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
@@ -133,9 +157,26 @@ bool DeltaGridStrategy::handleConfig()
 
 void DeltaGridStrategy::save_grid(StreamOutput *stream)
 {
+    if(isnan(grid[0])) {
+        stream->printf("error:No grid to save\n");
+        return;
+    }
+
     FILE *fp = fopen(GRIDFILE, "w");
     if(fp == NULL) {
-        stream->printf("error:Failed to open grid\n");
+        stream->printf("error:Failed to open grid file %s\n", GRIDFILE);
+        return;
+    }
+
+    if(fwrite(&grid_size, sizeof(uint8_t), 1, fp) != 1) {
+        stream->printf("error:Failed to write grid size\n");
+        fclose(fp);
+        return;
+    }
+
+    if(fwrite(&grid_radius, sizeof(float), 1, fp) != 1) {
+        stream->printf("error:Failed to write grid radius\n");
+        fclose(fp);
         return;
     }
 
@@ -156,20 +197,46 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
 {
     FILE *fp = fopen(GRIDFILE, "r");
     if(fp == NULL) {
-        if(stream != nullptr) stream->printf("error:Failed to open grid\n");
+        stream->printf("error:Failed to open grid %s\n", GRIDFILE);
         return false;
+    }
+
+    uint8_t size;
+    float radius;
+
+    if(fread(&size, sizeof(uint8_t), 1, fp) != 1) {
+        stream->printf("error:Failed to read grid size\n");
+        fclose(fp);
+        return false;
+    }
+
+    if(size != grid_size) {
+        stream->printf("error:grid size is different read %d - config %d\n", size, grid_size);
+        fclose(fp);
+        return false;
+    }
+
+    if(fread(&radius, sizeof(float), 1, fp) != 1) {
+        stream->printf("error:Failed to read grid radius\n");
+        fclose(fp);
+        return false;
+    }
+
+    if(radius != grid_radius) {
+        stream->printf("warning:grid radius is different read %f - config %f, overriding config\n", radius, grid_radius);
+        grid_radius= radius;
     }
 
     for (int y = 0; y < grid_size; y++) {
         for (int x = 0; x < grid_size; x++) {
             if(fread(&grid[x + (grid_size*y)], sizeof(float), 1, fp) != 1) {
-                if(stream != nullptr) stream->printf("error:Failed to read grid\n");
+                stream->printf("error:Failed to read grid\n");
                 fclose(fp);
                 return false;
             }
         }
     }
-    if(stream != nullptr) stream->printf("grid loaded from %s\n", GRIDFILE);
+    stream->printf("grid loaded, radius: %f, size: %d\n", grid_radius, grid_size);
     fclose(fp);
     return true;
 }
@@ -193,7 +260,8 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
             // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
             float distance_from_center = sqrtf(x*x + y*y);
             float z= 0.0F;
-            if (distance_from_center <= radius) {
+            if ((!is_square && (distance_from_center <= radius)) ||
+               (is_square && (x < -x_max || x > x_max || y < -y_max || y > y_max))) {
                 int s;
                 if(!zprobe->doProbeAt(s, x, y)) return false;
                 z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
@@ -261,7 +329,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->conveyor->wait_for_empty_queue();
 
             if(!doProbe(gcode)) {
-                gcode->stream->printf("Probe failed to complete\n");
+                gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
                 gcode->stream->printf("Probe completed\n");
             }
@@ -292,6 +360,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             } else {
                 if(load_grid(gcode->stream)) setAdjustFunction(true);
             }
+            return true;
 
         } else if(gcode->m == 565) { // M565: Set Z probe offsets
             float x = 0, y = 0, z = 0;
@@ -305,7 +374,10 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             float x, y, z;
             std::tie(x, y, z) = probe_offsets;
             gcode->stream->printf(";Probe offsets:\nM565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
-            if(save && !isnan(grid[0])) gcode->stream->printf(";Load saved grid\nM375\n");
+            if(save) {
+                if(!isnan(grid[0])) gcode->stream->printf(";Load saved grid\nM375\n");
+                else if(gcode->m == 503) gcode->stream->printf(";WARNING No grid to save\n");
+            }
             return true;
         }
     }
@@ -341,12 +413,10 @@ void DeltaGridStrategy::setAdjustFunction(bool on)
 
 float DeltaGridStrategy::findBed()
 {
-    // home
-    zprobe->home();
-
+    if (do_home) zprobe->home();
     // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
-    float deltaz = zprobe->getMaxZ() - initial_height;
-    zprobe->coordinated_move(NAN, NAN, -deltaz, zprobe->getFastFeedrate(), true); // relative move
+    float deltaz = initial_height;
+    zprobe->coordinated_move(NAN, NAN, deltaz, zprobe->getFastFeedrate());
     zprobe->coordinated_move(0, 0, NAN, zprobe->getFastFeedrate()); // move to 0,0
 
     // find bed at 0,0 run at slow rate so as to not hit bed hard
@@ -355,12 +425,8 @@ float DeltaGridStrategy::findBed()
 
     // leave the probe zprobe->getProbeHeight() above bed
     zprobe->return_probe(s);
-    float dz= zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
-    if(dz >= 0) {
-        // probe was not started above bed
-        return NAN;
-    }
 
+    float dz= zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
     zprobe->coordinated_move(NAN, NAN, dz, zprobe->getFastFeedrate(), true); // relative move
 
     return zprobe->zsteps_to_mm(s) + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
@@ -368,12 +434,13 @@ float DeltaGridStrategy::findBed()
 
 bool DeltaGridStrategy::doProbe(Gcode *gc)
 {
+    gc->stream->printf("Delta Grid Probe...\n");
     setAdjustFunction(false);
     reset_bed_level();
 
-    float radius = grid_radius;
-    if(gc->has_letter('J')) radius = gc->get_value('J'); // override default probe radius
+    if(gc->has_letter('J')) grid_radius = gc->get_value('J'); // override default probe radius, will get saved
 
+    float radius = grid_radius;
     // find bed, and leave probe probe height above bed
     float initial_z = findBed();
     if(isnan(initial_z)) {
@@ -381,7 +448,7 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
         return false;
     }
 
-    gc->stream->printf("Probe start ht is %f mm, probe radius is %f mm\n", initial_z, radius);
+    gc->stream->printf("Probe start ht is %f mm, probe radius is %f mm, grid size is %dx%d\n", initial_z, radius, grid_size, grid_size);
 
     // do first probe for 0,0
     int s;
@@ -406,9 +473,17 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
         for (int xCount = xStart; xCount != xStop; xCount += xInc) {
             float xProbe = LEFT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_X * xCount;
 
-            // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
-            float distance_from_center = sqrtf(xProbe * xProbe + yProbe * yProbe);
-            if (distance_from_center > radius) continue;
+            // avoid probing outside of x min/max on a cartesian
+            if (is_square)
+            {
+              if (xProbe < -x_max || xProbe > x_max || yProbe < -y_max || yProbe > y_max) continue;
+            }
+            else
+            {
+              // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
+              float distance_from_center = sqrtf(xProbe * xProbe + yProbe * yProbe);
+              if (distance_from_center > radius) continue;
+            }
 
             if(!zprobe->doProbeAt(s, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s) - z_reference; // this is the delta z from bed at 0,0

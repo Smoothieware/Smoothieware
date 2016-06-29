@@ -14,6 +14,7 @@
 #include "Gcode.h"
 #include "LcdBase.h"
 #include "libs/StreamOutput.h"
+#include "Robot.h"
 
 using namespace std;
 
@@ -82,6 +83,15 @@ void PanelScreen::send_command(const char *gcstr)
         command_queue.push_back(cmd.substr( 0, b ));
         cmd = cmd.substr(b + 1);
     }
+}
+
+void PanelScreen::get_current_pos(float *cp)
+{
+    Robot::wcs_t mpos= THEKERNEL->robot->get_axis_position();
+    Robot::wcs_t pos= THEKERNEL->robot->mcs2wcs(mpos);
+    cp[0]= THEKERNEL->robot->from_millimeters(std::get<X_AXIS>(pos));
+    cp[1]= THEKERNEL->robot->from_millimeters(std::get<Y_AXIS>(pos));
+    cp[2]= THEKERNEL->robot->from_millimeters(std::get<Z_AXIS>(pos));
 }
 
 void PanelScreen::on_main_loop()

@@ -11,6 +11,7 @@
 #include "StepTicker.h"
 
 #include <math.h>
+#include "mbed.h"
 
 // in steps/sec the default minimum speed (was 20steps/sec hardcoded)
 float StepperMotor::default_minimum_actuator_rate= 20.0F;
@@ -95,6 +96,28 @@ void StepperMotor::step()
         this->last_step_tick= THEKERNEL->step_ticker->get_tick_cnt(); // remember when last step was
         if(this->force_finish) this->steps_to_move = stepped;
     }
+}
+
+// Does a manual step pulse, used for direct encoder control of a stepper
+void StepperMotor::manual_step(bool dir)
+{
+    if(!enabled) enable(true);
+
+    // set direction if needed
+    if(this->direction != dir) {
+        this->direction= dir;
+        this->dir_pin.set(dir);
+        wait_us(1);
+    }
+
+    // set step pin
+    this->step_pin.set(1);
+
+    // schedule for unstep
+    THEKERNEL->step_ticker->schedule_unstep(this->index);
+
+    // keep track of actuators actual position in steps
+    this->current_position_steps += (dir ? -1 : 1);
 }
 
 // If the move is finished, the StepTicker will call this ( because we asked it to in tick() )

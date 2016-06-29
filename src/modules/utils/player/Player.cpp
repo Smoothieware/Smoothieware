@@ -647,11 +647,13 @@ void Player::resume_command(string parameters, StreamOutput *stream )
     // force absolute mode for restoring position, then set to the saved relative/absolute mode
     THEKERNEL->robot->absolute_mode= true;
     {
+        // NOTE position was saved in MCS so must use G53 to restore position
         char buf[128];
-        int n = snprintf(buf, sizeof(buf), "G1 X%f Y%f Z%f", saved_position[0], saved_position[1], saved_position[2]);
-        string g(buf, n);
-        Gcode gcode(g, &(StreamOutput::NullStream));
-        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
+        snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f Z%f", saved_position[0], saved_position[1], saved_position[2]);
+        struct SerialMessage message;
+        message.message = buf;
+        message.stream = &(StreamOutput::NullStream);
+        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     }
     THEKERNEL->robot->absolute_mode= abs_mode;
 

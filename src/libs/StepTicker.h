@@ -43,6 +43,7 @@ class StepTicker{
         }
         void acceleration_tick();
         void synchronize_acceleration(bool fire_now);
+        void schedule_unstep(int motor);
 
         void start();
 
