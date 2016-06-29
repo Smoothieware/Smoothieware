@@ -44,7 +44,7 @@ public:
     void dump_queue(void);
     void flush_queue(void);
     bool is_flushing() const { return flush; }
-
+    float get_current_feedrate() const { return current_feedrate; }
     friend class Planner; // for queue
 
 private:
@@ -52,6 +52,7 @@ private:
 
     Queue_t queue;  // Queue of Blocks
     volatile unsigned int gc_pending;
+    float current_feedrate{0}; // actual nominal feedrate that current block is running at in mm/sec
 
     struct {
         volatile bool running:1;

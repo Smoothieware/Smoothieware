@@ -31,7 +31,7 @@
 #define panel_checksum             CHECKSUM("panel")
 
 // goes in Flash, list of Mxxx codes that are allowed when in Halted state
-static const int allowed_mcodes[]= {105,114,119,80,81,911,503,106,107}; // get temp, get pos, get endstops etc
+static const int allowed_mcodes[]= {2,5,9,30,105,114,119,80,81,911,503,106,107}; // get temp, get pos, get endstops etc
 static bool is_allowed_mcode(int m) {
     for (size_t i = 0; i < sizeof(allowed_mcodes)/sizeof(int); ++i) {
         if(allowed_mcodes[i] == m) return true;
@@ -81,7 +81,7 @@ try_again:
         return;
     }
 
-    if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'N' ) {
+    if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' || first_char == 'N' ) {
 
         //Get linenumber
         if ( first_char == 'N' ) {
@@ -301,6 +301,19 @@ try_again:
                                 new_message.stream->printf("Settings Stored to %s\r\nok\r\n", THEKERNEL->config_override_filename());
                                 continue;
 
+                            case 501: // load config override
+                            case 504: // save to specific config override file
+                                {
+                                    string arg= get_arguments(single_command + possible_command); // rest of line is filename
+                                    if(arg.empty()) arg= "/sd/config-override";
+                                    else arg= "/sd/config-override." + arg;
+                                    new_message.stream->printf("args: <%s>\n", arg.c_str());
+                                    SimpleShell::parse_command((gcode->m == 501) ? "load_command" : "save_command", arg, new_message.stream);
+                                }
+                                delete gcode;
+                                new_message.stream->printf("ok\r\n");
+                                return;
+
                             case 502: // M502 deletes config-override so everything defaults to what is in config
                                 remove(THEKERNEL->config_override_filename());
                                 delete gcode;
@@ -319,27 +332,48 @@ try_again:
                                 gcode->add_nl= true;
                                 break; // fall through to process by modules
                             }
+
                         }
                     }
 
                     //printf("dispatch %p: '%s' G%d M%d...", gcode, gcode->command.c_str(), gcode->g, gcode->m);
                     //Dispatch message!
                     THEKERNEL->call_event(ON_GCODE_RECEIVED, gcode );
-                    if(gcode->add_nl)
-                        new_message.stream->printf("\r\n");
 
-                    if(!gcode->txt_after_ok.empty()) {
-                        new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
-                        gcode->txt_after_ok.clear();
+                    if (gcode->is_error) {
+                        // report error
+                        if(THEKERNEL->is_grbl_mode()) {
+                            new_message.stream->printf("error: ");
+                        }else{
+                            new_message.stream->printf("Error: ");
+                        }
 
-                    } else {
-                        if(THEKERNEL->is_ok_per_line() || THEKERNEL->is_grbl_mode()) {
-                            // only send ok once per line if this is a multi g code line send ok on the last one
-                            if(possible_command.empty())
-                                new_message.stream->printf("ok\r\n");
+                        if(!gcode->txt_after_ok.empty()) {
+                            new_message.stream->printf("%s\r\n", gcode->txt_after_ok.c_str());
+                            gcode->txt_after_ok.clear();
+
+                        }else{
+                            new_message.stream->printf("unknown\r\n");
+                        }
+
+                    }else{
+
+                        if(gcode->add_nl)
+                            new_message.stream->printf("\r\n");
+
+                        if(!gcode->txt_after_ok.empty()) {
+                            new_message.stream->printf("ok %s\r\n", gcode->txt_after_ok.c_str());
+                            gcode->txt_after_ok.clear();
+
                         } else {
-                            // maybe should do the above for all hosts?
-                            new_message.stream->printf("ok\r\n");
+                            if(THEKERNEL->is_ok_per_line() || THEKERNEL->is_grbl_mode()) {
+                                // only send ok once per line if this is a multi g code line send ok on the last one
+                                if(possible_command.empty())
+                                    new_message.stream->printf("ok\r\n");
+                            } else {
+                                // maybe should do the above for all hosts?
+                                new_message.stream->printf("ok\r\n");
+                            }
                         }
                     }
 

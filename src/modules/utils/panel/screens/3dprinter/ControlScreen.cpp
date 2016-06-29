@@ -123,11 +123,6 @@ void ControlScreen::enter_menu_control()
     THEPANEL->enter_menu_mode();
 }
 
-void ControlScreen::get_current_pos(float *cp)
-{
-    THEKERNEL->robot->get_axis_position(cp);
-}
-
 void ControlScreen::set_current_pos(char axis, float p)
 {
     // change pos by issuing a G0 Xnnn

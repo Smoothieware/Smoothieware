@@ -201,7 +201,7 @@ void Endstops::load_config()
     // see if an order has been specified, must be three characters, XYZ or YXZ etc
     string order = THEKERNEL->config->value(homing_order_checksum)->by_default("")->as_string();
     this->homing_order = 0;
-    if(order.size() == 3 && !this->is_delta) {
+    if(order.size() == 3 && !(this->is_delta || this->is_rdelta)) {
         int shift = 0;
         for(auto c : order) {
             uint8_t i = toupper(c) - 'X';
@@ -230,7 +230,7 @@ void Endstops::load_config()
 
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]) {
         register_for_event(ON_IDLE);
-        if(this->is_delta) {
+        if(this->is_delta || this->is_rdelta) {
             // we must enable all the limits not just one
             this->limit_enable[X_AXIS] = true;
             this->limit_enable[Y_AXIS] = true;
@@ -345,6 +345,7 @@ void Endstops::back_off_home(char axes_to_move)
         append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
         THEKERNEL->robot->push_state();
+        THEKERNEL->robot->inch_mode = false;     // needs to be in mm
         THEKERNEL->robot->absolute_mode = false; // needs to be relative mode
         THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
         // Wait for above to finish
@@ -367,8 +368,9 @@ void Endstops::move_to_origin(char axes_to_move)
     // Move to center using a regular move, use slower of X and Y fast rate
     float rate = std::min(this->fast_rates[0], this->fast_rates[1]) * 60.0F;
     char buf[32];
-    snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
     THEKERNEL->robot->push_state();
+    THEKERNEL->robot->inch_mode = false;     // needs to be in mm
+    snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
@@ -670,13 +672,22 @@ void Endstops::process_home_command(Gcode* gcode)
 
     // Do we move select axes or all of them
     char axes_to_move = 0;
-    // only enable homing if the endstop is defined, deltas, scaras always home all axis
-    bool home_all = this->is_delta || this->is_rdelta || this->is_scara || !( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
 
-    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if ( (home_all || gcode->has_letter(c + 'X')) && this->pins[c + (this->home_direction[c] ? 0 : 3)].connected() ) {
-            axes_to_move += ( 1 << c );
+    // deltas, scaras always home all axis
+    bool home_all = this->is_delta || this->is_rdelta || this->is_scara;
+
+    if(!home_all) { // ie not a delta
+        bool axis_speced= ( gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') );
+        // only enable homing if the endstop is defined,
+        for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+            if (this->pins[c + (this->home_direction[c] ? 0 : 3)].connected() && (!axis_speced || gcode->has_letter(c + 'X')) ) {
+                axes_to_move += ( 1 << c );
+            }
         }
+
+    }else{
+        // all axis must move (and presumed defined)
+        axes_to_move= 7;
     }
 
     // save current actuator position so we can report how far we moved

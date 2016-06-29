@@ -208,8 +208,10 @@ void Drillingcycles::on_gcode_received(void* argument)
         // get actual position from robot
         float pos[3];
         THEKERNEL->robot->get_axis_position(pos);
+        // convert to WCS
+        Robot::wcs_t wpos= THEKERNEL->robot->mcs2wcs(pos);
         // backup Z position as Initial-Z value
-        this->initial_z = pos[Z_AXIS];
+        this->initial_z = std::get<X_AXIS>(wpos); // must use the work coordinate position
         // set retract type
         this->retract_type = (code == 98) ? RETRACT_TO_Z : RETRACT_TO_R;
         // reset sticky values

@@ -113,6 +113,9 @@ void init() {
     kernel->streams->printf("Smoothie Running @%ldMHz\r\n", SystemCoreClock / 1000000);
     Version version;
     kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
+#ifdef CNC
+    kernel->streams->printf("  CNC Build\r\n");
+#endif
 
     bool sdok= (sd.disk_initialize() == 0);
     if(!sdok) kernel->streams->printf("SDCard failed to initialize\r\n");
@@ -169,7 +172,17 @@ void init() {
     kernel->add_module( new Spindle() );
     #endif
     #ifndef NO_UTILS_PANEL
+<<<<<<< HEAD
+    kernel->add_module( new Panel() );
+    #endif
+    #ifndef NO_UTILS_REPORTER
+    kernel->add_module( new Reporter() );
+    #endif
+    #ifndef NO_TOOLS_TOUCHPROBE
+    kernel->add_module( new Touchprobe() );
+=======
     kernel->add_module( new(AHB0) Panel() );
+>>>>>>> c1360aa476485057461c2a77630b920091e8016e
     #endif
     #ifndef NO_TOOLS_ZPROBE
     kernel->add_module( new(AHB0) ZProbe() );

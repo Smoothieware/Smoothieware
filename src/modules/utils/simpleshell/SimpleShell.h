@@ -60,6 +60,9 @@ private:
 
     static void remount_command( string parameters, StreamOutput *stream);
 
+#ifdef CNC
+    static void test_command( string parameters, StreamOutput *stream);
+#endif
 
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {

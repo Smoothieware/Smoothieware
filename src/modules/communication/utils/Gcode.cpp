@@ -21,6 +21,7 @@ Gcode::Gcode(const string &command, StreamOutput *stream, bool strip)
     this->g= 0;
     this->subcode= 0;
     this->add_nl= false;
+    this->is_error= false;
     this->stream= stream;
     this->millimeters_of_travel = 0.0F;
     prepare_cached_values(strip);
@@ -45,6 +46,7 @@ Gcode::Gcode(const Gcode &to_copy)
     this->g                     = to_copy.g;
     this->subcode               = to_copy.subcode;
     this->add_nl                = to_copy.add_nl;
+    this->is_error              = to_copy.is_error;
     this->stream                = to_copy.stream;
     this->txt_after_ok.assign( to_copy.txt_after_ok );
 }
@@ -60,6 +62,7 @@ Gcode &Gcode::operator= (const Gcode &to_copy)
         this->g                     = to_copy.g;
         this->subcode               = to_copy.subcode;
         this->add_nl                = to_copy.add_nl;
+        this->is_error              = to_copy.is_error;
         this->stream                = to_copy.stream;
         this->txt_after_ok.assign( to_copy.txt_after_ok );
     }

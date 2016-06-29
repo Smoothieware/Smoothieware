@@ -243,8 +243,11 @@ void ST7565::init()
         0x00,
         0xaf,    //Display on
     };
-    //rst.set(0);
-    if(this->rst.connected()) rst.set(1);
+    if(this->rst.connected()) {
+        rst.set(0);
+        wait_us(20);
+        rst.set(1);
+    }
     send_commands(init_seq, sizeof(init_seq));
     clear();
 }

@@ -52,13 +52,13 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
 
             if(!gcode->has_letter('R')) {
                 if(!calibrate_delta_endstops(gcode)) {
-                    gcode->stream->printf("Calibration failed to complete\n");
+                    gcode->stream->printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
                     return true;
                 }
             }
             if(!gcode->has_letter('E')) {
                 if(!calibrate_delta_radius(gcode)) {
-                    gcode->stream->printf("Calibration failed to complete\n");
+                    gcode->stream->printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
                     return true;
                 }
             }
@@ -68,7 +68,7 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
         }else if (gcode->g == 29) {
             // probe the 7 points
             if(!probe_delta_points(gcode)) {
-                gcode->stream->printf("Calibration failed to complete\n");
+                gcode->stream->printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
             }
             return true;
         }
@@ -162,10 +162,6 @@ float DeltaCalibrationStrategy::findBed()
 
     // leave the probe zprobe->getProbeHeight() above bed
     float dz= zprobe->getProbeHeight() - zprobe->zsteps_to_mm(s);
-    if(dz >= 0) {
-        // probe was not started above bed
-        return NAN;
-    }
     zprobe->coordinated_move(NAN, NAN, dz, zprobe->getFastFeedrate(), true); // relative move
 
     return zprobe->zsteps_to_mm(s) + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed

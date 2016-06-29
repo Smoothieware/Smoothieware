@@ -13,6 +13,7 @@ using std::string;
 #include <string.h>
 #include <functional>
 #include <stack>
+#include <vector>
 
 #include "libs/Module.h"
 #include "ActuatorCoordinates.h"
@@ -70,6 +71,7 @@ class Robot : public Module {
             bool next_command_is_MCS:1;                       // set by G53
             bool disable_segmentation:1;                      // set to disable segmentation
             bool segment_z_moves:1;
+            bool save_g92:1;                                  // save g92 on M500 if set
             uint8_t plane_axis_0:2;                           // Current plane ( XY, XZ, YZ )
             uint8_t plane_axis_1:2;
             uint8_t plane_axis_2:2;
@@ -101,10 +103,11 @@ class Robot : public Module {
         float last_milestone[3]; // Last requested position, in millimeters, which is what we were requested to move to in the gcode after offsets applied but before compensation transform
         float last_machine_position[3]; // Last machine position, which is the position before converting to actuator coordinates (includes compensation transform)
         int8_t motion_mode;                                  // Motion mode for the current received Gcode
-        float seek_rate;                                     // Current rate for seeking moves ( mm/s )
-        float feed_rate;                                     // Current rate for feeding moves ( mm/s )
+        float seek_rate;                                     // Current rate for seeking moves ( mm/min )
+        float feed_rate;                                     // Current rate for feeding moves ( mm/min )
         float mm_per_line_segment;                           // Setting : Used to split lines into segments
         float mm_per_arc_segment;                            // Setting : Used to split arcs into segments
+        float mm_max_arc_error;                              // Setting : Used to limit total arc segments to max error
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
         float seconds_per_minute;                            // for realtime speed change
 
