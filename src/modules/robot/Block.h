@@ -32,7 +32,7 @@ class Block {
         float millimeters;        // Distance for this move
         float entry_speed;
         float exit_speed;
-        float acceleration;       // the acceleratoin for this block
+        float acceleration;       // the acceleration for this block
         float initial_rate;       // Initial rate in steps per second
         float maximum_rate;
 
