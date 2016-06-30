@@ -99,7 +99,14 @@ Kernel::Kernel(){
 
     //some boards don't have leds.. TOO BAD!
     this->use_leds= !this->config->value( disable_leds_checksum )->by_default(false)->as_bool();
+
+    #ifdef CNC
+    this->grbl_mode= this->config->value( grbl_mode_checksum )->by_default(true)->as_bool();
+    #else
     this->grbl_mode= this->config->value( grbl_mode_checksum )->by_default(false)->as_bool();
+    #endif
+
+    // we exepct ok per line now not per G code, setting this to false will return to the old (incorrect) way of ok per G code
     this->ok_per_line= this->config->value( ok_per_line_checksum )->by_default(true)->as_bool();
 
     this->add_module( this->serial );
