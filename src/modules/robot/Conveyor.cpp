@@ -204,6 +204,9 @@ bool Conveyor::get_next_block(Block **block)
         }
     }
 
+    // defaukt ht efeerate to zero if ther eis no block available
+    this->current_feedrate= 0;
+
     if(queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
 
     // wait for queue to fill up, optimizes planning
@@ -216,12 +219,11 @@ bool Conveyor::get_next_block(Block **block)
 
         b->is_ticking= true;
         b->recalculate_flag= false;
-        this->current_feedrate= b->exit_speed;
+        this->current_feedrate= b->nominal_speed;
         *block= b;
         return true;
     }
 
-    this->current_feedrate= 0;
     return false;
 }
 
