@@ -558,6 +558,12 @@ void Endstops::process_home_command(Gcode* gcode)
     } else if(gcode->subcode == 1) { // G28.1 set pre defined position
         // saves current position in absolute machine coordinates
         THEROBOT->get_axis_position(saved_position);
+        //if positions are specified, use those instead; This is nessecary for config-overrride to set G28.1
+        if(is_rdelta) return; // RotaryDeltaCalibration module will handle this if needed
+        if (gcode->has_letter('X')) saved_position[X_AXIS] = gcode->get_value('X');
+        if (gcode->has_letter('Y')) saved_position[Y_AXIS] = gcode->get_value('Y');
+        if (gcode->has_letter('Z')) saved_position[Z_AXIS] = gcode->get_value('Z');
+        gcode->stream->printf("Preset Position: X %5.3f Y %5.3f Z %5.3f\n", saved_position[X_AXIS], saved_position[Y_AXIS], saved_position[Z_AXIS]);
         return;
 
     } else if(gcode->subcode == 3) { // G28.3 is a smoothie special it sets manual homing
