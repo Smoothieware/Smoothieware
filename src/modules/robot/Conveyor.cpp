@@ -204,7 +204,7 @@ bool Conveyor::get_next_block(Block **block)
         }
     }
 
-    // defaukt ht efeerate to zero if ther eis no block available
+    // default the feerate to zero if there is no block available
     this->current_feedrate= 0;
 
     if(queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
