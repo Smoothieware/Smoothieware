@@ -47,6 +47,7 @@ class Endstops : public Module{
         float  trim_mm[3];
         float  fast_rates[3];
         float  slow_rates[3];
+        float  retract_rate;
         Pin    pins[6];
         std::array<uint16_t, 3> debounce;
 

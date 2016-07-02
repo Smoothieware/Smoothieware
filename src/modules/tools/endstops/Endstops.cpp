@@ -350,8 +350,8 @@ void Endstops::back_off_home(std::bitset<3> axis)
     if(!params.empty()) {
         // Move off of the endstop using a regular relative move
         params.insert(params.begin(), {'G', 0});
-        // use X slow rate to move, Z should have a max speed set anyway
-        params.push_back({'F', this->slow_rates[X_AXIS] * 60.0F});
+        // use the retract rate already calculated. It's the speed at which the slowest axis will complete at the speed specified
+        params.push_back({'F', retract_rate * 60.0F});
         char gcode_buf[64];
         append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
@@ -447,10 +447,15 @@ void Endstops::home_xy()
 {
     if(axis_to_home[X_AXIS] && axis_to_home[Y_AXIS]) {
         // Home XY first so as not to slow them down by homing Z at the same time
-        float delta[3] {alpha_max*2, beta_max*2, 0};
+        float min_distance= std::max(alpha_max*2, beta_max*2); //mimimum distance that will accomodate either axis
+        float feed_rate = std::min(fast_rates[X_AXIS], fast_rates[Y_AXIS]); //slowest designated feedrate
+        //if X&Y have differnt home rates, this will make them each move at their designated rate during the combined move
+        //calulate new distance so they are relative to each other, this will cause each axis to move at the designated rate
+        float delta[3] {min_distance*fast_rates[X_AXIS]/feed_rate, min_distance*fast_rates[Y_AXIS]/feed_rate, 0}; 
+        feed_rate= sqrtf(pow(fast_rates[X_AXIS],2)+pow(fast_rates[Y_AXIS],2)); //calculate new feedrate for combined movement
         if(this->home_direction[X_AXIS]) delta[X_AXIS]= -delta[X_AXIS];
         if(this->home_direction[Y_AXIS]) delta[Y_AXIS]= -delta[Y_AXIS];
-        float feed_rate = std::min(fast_rates[X_AXIS], fast_rates[Y_AXIS]);
+
         THEROBOT->delta_move(delta, feed_rate, 3);
 
     } else if(axis_to_home[X_AXIS]) {
@@ -502,31 +507,59 @@ void Endstops::home(std::bitset<3> a)
     // Move back a small distance for all homing axis
     this->status = MOVING_BACK;
     float delta[3]{0,0,0};
-    // use minimum feed rate of all three axes that are being homed (sub optimal, but necessary)
-    float feed_rate= slow_rates[X_AXIS];
+    float feed_time= 0;
+    // find slowest time for move taking into accound distance to move of all three axes and use that amount of time for movement
+    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        if(axis_to_home[c]) {
+            feed_time= max(retract_mm[c]*(1/slow_rates[c]),feed_time);
+        }
+    }
+    float combined_retract=0;
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if(axis_to_home[c]) {
             delta[c]= this->retract_mm[c];
             if(!this->home_direction[c]) delta[c]= -delta[c];
-            feed_rate= std::min(slow_rates[c], feed_rate);
+            combined_retract = sqrtf(pow(retract_mm[c],2)+pow(combined_retract,2));
         }
     }
-
-    THEROBOT->delta_move(delta, feed_rate, 3);
+    retract_rate= combined_retract/feed_time;
+    
+    THEROBOT->delta_move(delta, retract_rate, 3);
     // wait until finished
     THECONVEYOR->wait_for_idle();
 
     // Start moving the axes towards the endstops slowly
     this->status = MOVING_TO_ENDSTOP_SLOW;
+    // the following finds the minimum distance to move that will accomodate all axis used
+    // starting off with a value all axis can use, then scale up from there to adjust 
+    // there is no problem with telling it to move further than nessecary to adjust relative speed of each axis
+    float min_retract=0;
     for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
         if(axis_to_home[c]) {
-            delta[c]= this->retract_mm[c]*2; // move further than we moved off to make sure we hit it cleanly
+            min_retract= max(min_retract,(this->retract_mm[c]*2)); 
+        }
+    }
+    // find slowest feed rate of axis to be moved
+    float feed_rate=slow_rates[X_AXIS];
+    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        if(axis_to_home[c]) {
+            feed_rate= min(feed_rate,slow_rates[c]); 
+        }
+    }
+    float fix_rate=0;
+    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
+        if(axis_to_home[c]) {
+            // adjust the lengths of each axis so their speed relative to each other is what is specified
+            delta[c]= min_retract * slow_rates[c]/feed_rate;
+            //adjust feedrate so each axis is traveling at the speed specified by it's slow_rates
+            //this is so each axis will be travelling at the same speed whether homed individually or together
+            fix_rate= sqrtf(pow(slow_rates[c],2)+pow(fix_rate,2));
             if(this->home_direction[c]) delta[c]= -delta[c];
         }else{
             delta[c]= 0;
         }
     }
-    THEROBOT->delta_move(delta, feed_rate, 3);
+    THEROBOT->delta_move(delta, fix_rate, 3);
     // wait until finished
     THECONVEYOR->wait_for_idle();
 
@@ -562,6 +595,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // Not a standard Gcode and not to be relied on
         if (gcode->has_letter('X')) saved_position[X_AXIS] = gcode->get_value('X');
         if (gcode->has_letter('Y')) saved_position[Y_AXIS] = gcode->get_value('Y');
+        gcode->stream->printf("Preset Position: X %5.3f Y %5.3f Z %5.3f\n", saved_position[X_AXIS], saved_position[Y_AXIS]);
         return;
 
     } else if(gcode->subcode == 3) { // G28.3 is a smoothie special it sets manual homing
