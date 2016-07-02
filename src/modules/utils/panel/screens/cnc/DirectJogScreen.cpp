@@ -50,7 +50,7 @@ void DirectJogScreen::on_refresh()
     if ( THEPANEL->click() ) {
         switch(mode) {
             case JOG:
-                THEKERNEL->robot->reset_position_from_current_actuator_position(); // needed as we were changing the actuator only
+                THEROBOT->reset_position_from_current_actuator_position(); // needed as we were changing the actuator only
                 this->enter_menu_control();
                 this->refresh_menu();
                 break;
@@ -129,6 +129,8 @@ void DirectJogScreen::clicked_menu_entry(uint16_t line)
 
 void DirectJogScreen::on_exit()
 {
+    // we need to update the positions after manually ticking
+    THEROBOT->reset_position_from_current_actuator_position();
     delete this;
 }
 
@@ -136,18 +138,18 @@ void DirectJogScreen::get_actuator_pos()
 {
         // get real time positions
         ActuatorCoordinates current_position{
-            THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
-            THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
-            THEKERNEL->robot->actuators[Z_AXIS]->get_current_position()
+            THEROBOT->actuators[X_AXIS]->get_current_position(),
+            THEROBOT->actuators[Y_AXIS]->get_current_position(),
+            THEROBOT->actuators[Z_AXIS]->get_current_position()
         };
 
         // get machine position from the actuator position using FK
         float mpos[3];
-        THEKERNEL->robot->arm_solution->actuator_to_cartesian(current_position, mpos);
-        Robot::wcs_t wpos= THEKERNEL->robot->mcs2wcs(mpos);
-        this->pos[0]= THEKERNEL->robot->from_millimeters(std::get<X_AXIS>(wpos));
-        this->pos[1]= THEKERNEL->robot->from_millimeters(std::get<Y_AXIS>(wpos));
-        this->pos[2]= THEKERNEL->robot->from_millimeters(std::get<Z_AXIS>(wpos));
+        THEROBOT->arm_solution->actuator_to_cartesian(current_position, mpos);
+        Robot::wcs_t wpos= THEROBOT->mcs2wcs(mpos);
+        this->pos[0]= THEROBOT->from_millimeters(std::get<X_AXIS>(wpos));
+        this->pos[1]= THEROBOT->from_millimeters(std::get<Y_AXIS>(wpos));
+        this->pos[2]= THEROBOT->from_millimeters(std::get<Z_AXIS>(wpos));
 }
 
 // encoder tick, called in an interrupt everytime we get an encoder tick
@@ -155,8 +157,8 @@ void DirectJogScreen::get_actuator_pos()
 void DirectJogScreen::tick(int change)
 {
     for (int i = 0; i < multiplier; ++i) {
-        if(i != 0) wait_us(100);
-       THEKERNEL->robot->actuators[axis]->manual_step(change < 0);
+        if(i != 0) wait_us(100); // if you go faster than this you miss encoder changes
+        THEROBOT->actuators[axis]->manual_step(change < 0);
     }
     pos_changed= true;
 }

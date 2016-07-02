@@ -5,6 +5,7 @@
     You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#if 0
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "modules/communication/utils/Gcode.h"
@@ -97,10 +98,6 @@ void Laser::on_module_loaded() {
     this->laser_maximum_s_value = THEKERNEL->config->value(laser_module_maximum_s_value_checksum)->by_default(1.0f)->as_number() ;
 
     //register for events
-    this->register_for_event(ON_GCODE_EXECUTE);
-    this->register_for_event(ON_SPEED_CHANGE);
-    this->register_for_event(ON_BLOCK_BEGIN);
-    this->register_for_event(ON_BLOCK_END);
     this->register_for_event(ON_HALT);
 }
 
@@ -174,3 +171,4 @@ void Laser::on_halt(void *argument)
     	        this->ttl_pin->set(this->laser_on);
     }
 }
+#endif

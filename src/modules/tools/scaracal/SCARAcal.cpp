@@ -15,7 +15,6 @@
 #include "StreamOutputPool.h"
 #include "Gcode.h"
 #include "Conveyor.h"
-#include "Stepper.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "SerialMessage.h"
@@ -33,7 +32,7 @@
 #define Y_AXIS 1
 #define Z_AXIS 2
 
-#define STEPPER THEKERNEL->robot->actuators
+#define STEPPER THEROBOT->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
 
 void SCARAcal::on_module_loaded()
@@ -136,7 +135,7 @@ bool SCARAcal::translate_trim(StreamOutput *stream)
     this->get_home_offset(home_off[0], home_off[1], home_off[2]);               // get home offsets
     this->get_trim(S_trim[0], S_trim[1], S_trim[2]);	                          // get current trim
 
-    THEKERNEL->robot->arm_solution->cartesian_to_actuator( home_off, actuator ); // convert current home offset to actuator angles
+    THEROBOT->arm_solution->cartesian_to_actuator( home_off, actuator ); // convert current home offset to actuator angles
 
     // Subtract trim values from actuators to determine the real home offset actuator position for X and Y.
 
@@ -149,7 +148,7 @@ bool SCARAcal::translate_trim(StreamOutput *stream)
 
     // convert back to get the real cartesian home offsets
 
-    THEKERNEL->robot->arm_solution->actuator_to_cartesian( actuator, home_off );
+    THEROBOT->arm_solution->actuator_to_cartesian( actuator, home_off );
 
     this->set_home_offset(home_off[0], home_off[1], home_off[2],stream);               // get home offsets
                  // Set the correct home offsets;
@@ -171,7 +170,7 @@ void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
     actuator[2] = z;
 
     // Calculate the physical position relating to the arm angles
-    THEKERNEL->robot->arm_solution->actuator_to_cartesian( actuator, cartesian );
+    THEROBOT->arm_solution->actuator_to_cartesian( actuator, cartesian );
 
     // Assemble Gcode to add onto the queue
     snprintf(cmd, sizeof(cmd), "G0 X%1.3f Y%1.3f Z%1.3f F%1.1f", cartesian[0], cartesian[1], cartesian[2], feedrate * 60); // use specified feedrate (mm/sec)
@@ -179,7 +178,7 @@ void SCARAcal::SCARA_ang_move(float theta, float psi, float z, float feedrate)
     //THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
 
     Gcode gc(cmd, &(StreamOutput::NullStream));
-    THEKERNEL->robot->on_gcode_received(&gc); // send to robot directly
+    THEROBOT->on_gcode_received(&gc); // send to robot directly
 }
 
 //A GCode has been received
@@ -196,8 +195,8 @@ void SCARAcal::on_gcode_received(void *argument)
                 float cartesian[3];
                 ActuatorCoordinates actuators;
 
-                THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
-                THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate to get actuator position
+                THEROBOT->get_axis_position(cartesian);    // get actual position from robot
+                THEROBOT->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate to get actuator position
 
                 int n = snprintf(buf, sizeof(buf), "  A: Th:%1.3f Ps:%1.3f",
                                  actuators[0],
@@ -219,8 +218,8 @@ void SCARAcal::on_gcode_received(void *argument)
                     float S_delta[2],
                           S_trim[3];
 
-                    THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
-                    THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate to get actuator position
+                    THEROBOT->get_axis_position(cartesian);    // get actual position from robot
+                    THEROBOT->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate to get actuator position
 
                     S_delta[0] = actuators[0] - target[0];
 
@@ -228,7 +227,7 @@ void SCARAcal::on_gcode_received(void *argument)
                 } else {
                     set_trim(0, S_trim[1], S_trim[2], gcode->stream);               // reset trim for calibration move
                     this->home();                                                   // home
-                    THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
+                    THEROBOT->get_axis_position(cartesian);    // get actual position from robot
                     SCARA_ang_move(target[0], target[1], cartesian[2] + this->z_move, slow_rate * 3.0F); // move to target
                 }
             }
@@ -242,14 +241,14 @@ void SCARAcal::on_gcode_received(void *argument)
                     // Program the current position as target
                     ActuatorCoordinates actuators;
 
-                    THEKERNEL->robot->get_axis_position(cartesian);                                // get actual position from robot
-                    THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators ); // translate to get actuator position
+                    THEROBOT->get_axis_position(cartesian);                                // get actual position from robot
+                    THEROBOT->arm_solution->cartesian_to_actuator( cartesian, actuators ); // translate to get actuator position
 
                     STEPPER[0]->change_steps_per_mm(actuators[0] / target[0] * STEPPER[0]->get_steps_per_mm()); // Find angle difference
                     STEPPER[1]->change_steps_per_mm(STEPPER[0]->get_steps_per_mm());  // and change steps_per_mm to ensure correct steps per *angle*
                 } else {
                     this->home();                                                   // home - This time leave trims as adjusted.
-                    THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
+                    THEROBOT->get_axis_position(cartesian);    // get actual position from robot
                     SCARA_ang_move(target[0], target[1], cartesian[2] + this->z_move, slow_rate * 3.0F); // move to target
                 }
 
@@ -268,15 +267,15 @@ void SCARAcal::on_gcode_received(void *argument)
                     ActuatorCoordinates actuators;
                     float S_delta[2];
 
-                    THEKERNEL->robot->get_axis_position(cartesian);                                     // get actual position from robot
-                    THEKERNEL->robot->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate it to get actual actuator angles
+                    THEROBOT->get_axis_position(cartesian);                                     // get actual position from robot
+                    THEROBOT->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate it to get actual actuator angles
 
                     S_delta[1] = ( actuators[1] - actuators[0]) - ( target[1] - target[0] );            // Find difference in angle - not actuator difference, and
                     set_trim(S_trim[0], S_delta[1], S_trim[2], gcode->stream);                                  // set trim to reflect the difference
                 } else {
                     set_trim(S_trim[0], 0, S_trim[2], gcode->stream);                                           // reset trim for calibration move
                     this->home();                                                                       // home
-                    THEKERNEL->robot->get_axis_position(cartesian);    // get actual position from robot
+                    THEROBOT->get_axis_position(cartesian);    // get actual position from robot
                     SCARA_ang_move(target[0], target[1], cartesian[2] + this->z_move, slow_rate * 3.0F);                     // move to target
                 }
             }

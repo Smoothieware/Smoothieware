@@ -11,12 +11,14 @@
 template<class kind> HeapRing<kind>::HeapRing()
 {
     head_i = tail_i = length = 0;
+    isr_tail_i = tail_i;
     ring = NULL;
 }
 
 template<class kind> HeapRing<kind>::HeapRing(unsigned int length)
 {
     head_i = tail_i = 0;
+    isr_tail_i = tail_i;
     ring = new kind[length];
     // TODO: handle allocation failure
     this->length = length;
@@ -29,6 +31,7 @@ template<class kind> HeapRing<kind>::HeapRing(unsigned int length)
 template<class kind> HeapRing<kind>::~HeapRing()
 {
     head_i = tail_i = length = 0;
+    isr_tail_i = tail_i;
     if (ring)
         delete [] ring;
     ring = NULL;
@@ -38,7 +41,7 @@ template<class kind> HeapRing<kind>::~HeapRing()
  * index accessors (protected)
  */
 
-template<class kind> unsigned int HeapRing<kind>::next(unsigned int item)
+template<class kind> unsigned int HeapRing<kind>::next(unsigned int item) const
 {
     if (length == 0)
         return 0;
@@ -49,7 +52,7 @@ template<class kind> unsigned int HeapRing<kind>::next(unsigned int item)
     return item;
 }
 
-template<class kind> unsigned int HeapRing<kind>::prev(unsigned int item)
+template<class kind> unsigned int HeapRing<kind>::prev(unsigned int item) const
 {
     if (length == 0)
         return 0;
@@ -127,20 +130,20 @@ template<class kind> void HeapRing<kind>::consume_tail()
  * queue status accessors
  */
 
-template<class kind> bool HeapRing<kind>::is_full()
+template<class kind> bool HeapRing<kind>::is_full() const
 {
-    __disable_irq();
+    //__disable_irq();
     bool r = (next(head_i) == tail_i);
-    __enable_irq();
+    //__enable_irq();
 
     return r;
 }
 
-template<class kind> bool HeapRing<kind>::is_empty()
+template<class kind> bool HeapRing<kind>::is_empty() const
 {
-    __disable_irq();
+    //__disable_irq();
     bool r = (head_i == tail_i);
-    __enable_irq();
+    //__enable_irq();
 
     return r;
 }
