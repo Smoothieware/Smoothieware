@@ -14,20 +14,20 @@ The following changes must be made to your config
    the homing_order setting still works the same way as before.
 
 5. The old extruder syntax is no longer allowed so check your config has the latest extruder config like
-```
-extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
-extruder.hotend.steps_per_mm                    710              # Steps per mm for extruder stepper
-extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
-etc
-```
+   ```
+   extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
+   extruder.hotend.steps_per_mm                    710              # Steps per mm for extruder stepper
+   extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
+   etc
+   ```
+   
+   and not the old
+   
+   ```
+   extruder_module_enable                       true
+   ```
 
-and not the old
-
-```
-extruder_module_enable                       true
-```
-
-6. If you use volumetric extrusion (M200 D2.85) then note that unlike the current edge, G1 E5 will extrude 5mm³ not 5mm, also note that the extrude length setting in Slic3r will need to be specified in mm³ not mm unless you use firmware retraction (That retraction length is specified in M207 and is in mm).
+6. If you use volumetric extrusion (M200 D2.85) then note that unlike the current edge, G1 E5 will extrude 5mm³ not 5mm. Note that in slic3r there is now a smootheware flavor you need to select for gcode generation, which fixes an issue with firmware retract.
 
 The following changes must be made to your hardware
 ---------------------------------------------------
