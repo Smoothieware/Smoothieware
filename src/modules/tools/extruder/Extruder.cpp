@@ -270,13 +270,20 @@ void Extruder::on_gcode_received(void *argument)
 
         } else if (gcode->m == 200 && ( (this->selected && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             if (gcode->has_letter('D')) {
-                THEKERNEL->conveyor->wait_for_idle(); // only apply after the queue has emptied
                 this->filament_diameter = gcode->get_value('D');
+                float last_scale= this->volumetric_multiplier;
                 if(filament_diameter > 0.01F) {
                     this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
                 } else {
                     this->volumetric_multiplier = 1.0F;
                 }
+                // the trouble here is that the last milestone will be for the previous multiplier so a change can cause a big blob
+                // so we must change the E last milestone accordingly so it continues smoothly....
+                // change E last milestone to what it would have been if it had used this new multiplier
+                float delta= this->volumetric_multiplier/last_scale;
+                float nm= this->stepper_motor->get_last_milestone() * delta;
+                this->stepper_motor->change_last_milestone(nm);
+
             } else {
                 if(filament_diameter > 0.01F) {
                     gcode->stream->printf("Filament Diameter: %f\n", this->filament_diameter);
@@ -319,7 +326,15 @@ void Extruder::on_gcode_received(void *argument)
 
         } else if (gcode->m == 221 && this->selected) { // M221 S100 change flow rate by percentage
             if(gcode->has_letter('S')) {
+                float last_scale= this->extruder_multiplier;
                 this->extruder_multiplier = gcode->get_value('S') / 100.0F;
+                // the trouble here is that the last milestone will be for the previous multiplier so a change can cause a big blob
+                // so we must change the E last milestone accordingly so it continues smoothly....
+                // change E last milestone to what it would have been if it had used this new multiplier
+                float delta= this->extruder_multiplier/last_scale;
+                float nm= this->stepper_motor->get_last_milestone() * delta;
+                this->stepper_motor->change_last_milestone(nm);
+
             } else {
                 gcode->stream->printf("Flow rate at %6.2f %%\n", this->extruder_multiplier * 100.0F);
             }
