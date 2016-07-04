@@ -77,7 +77,7 @@ Extruder::Extruder( uint16_t config_identifier)
     this->extruder_multiplier = 1.0F;
     this->stepper_motor = nullptr;
     this->max_volumetric_rate = 0;
-
+    this->g92e0_detected = false;
     memset(this->offset, 0, sizeof(this->offset));
 }
 
@@ -119,7 +119,7 @@ void Extruder::config_load()
     this->retract_recover_length   = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_recover_length_checksum)->by_default(0)->as_number();
     this->retract_recover_feedrate = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_recover_feedrate_checksum)->by_default(8)->as_number();
     this->retract_zlift_length     = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_length_checksum)->by_default(0)->as_number();
-    this->retract_zlift_feedrate   = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_feedrate_checksum)->by_default(100 * 60)->as_number()/60.0F; // mm/min
+    this->retract_zlift_feedrate   = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_feedrate_checksum)->by_default(100 * 60)->as_number() / 60.0F; // mm/min
 
     if(filament_diameter > 0.01F) {
         this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
@@ -127,7 +127,7 @@ void Extruder::config_load()
 
     // Stepper motor object for the extruder
     stepper_motor = new StepperMotor(step_pin, dir_pin, en_pin);
-    motor_id= THEROBOT->register_motor(stepper_motor);
+    motor_id = THEROBOT->register_motor(stepper_motor);
 
     stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum)->by_default(1000)->as_number());
     stepper_motor->set_acceleration(acceleration);
@@ -137,17 +137,17 @@ void Extruder::config_load()
 
 void Extruder::select()
 {
-    selected= true;
+    selected = true;
     stepper_motor->set_selected(true);
     // set the function pointer to return the current scaling
-    THEROBOT->get_e_scale_fnc= [this](void) { return volumetric_multiplier*extruder_multiplier; };
+    THEROBOT->get_e_scale_fnc = [this](void) { return volumetric_multiplier * extruder_multiplier; };
 }
 
 void Extruder::deselect()
 {
-    selected= false;
+    selected = false;
     stepper_motor->set_selected(false);
-    THEROBOT->get_e_scale_fnc= nullptr;
+    THEROBOT->get_e_scale_fnc = nullptr;
 }
 
 void Extruder::on_get_public_data(void *argument)
@@ -159,13 +159,13 @@ void Extruder::on_get_public_data(void *argument)
     if(!this->selected) return;
 
     // pointer to structure to return data to is provided
-    pad_extruder_t *e= static_cast<pad_extruder_t *>(pdr->get_data_ptr());
-    e->steps_per_mm= stepper_motor->get_steps_per_mm();
-    e->filament_diameter= this->filament_diameter;
-    e->flow_rate= this->extruder_multiplier;
-    e->accleration= stepper_motor->get_acceleration();
-    e->retract_length= this->retract_length;
-    e->current_position= stepper_motor->get_current_position();
+    pad_extruder_t *e = static_cast<pad_extruder_t *>(pdr->get_data_ptr());
+    e->steps_per_mm = stepper_motor->get_steps_per_mm();
+    e->filament_diameter = this->filament_diameter;
+    e->flow_rate = this->extruder_multiplier;
+    e->accleration = stepper_motor->get_acceleration();
+    e->retract_length = this->retract_length;
+    e->current_position = stepper_motor->get_current_position();
     pdr->set_taken();
 }
 
@@ -185,7 +185,7 @@ void Extruder::on_set_public_data(void *argument)
         float isecs = d[1]; // inverted secs
 
         // check against maximum speeds and return rate modifier
-        d[1]= check_max_speeds(delta, isecs);
+        d[1] = check_max_speeds(delta, isecs);
         pdr->set_taken();
         return;
     }
@@ -193,11 +193,11 @@ void Extruder::on_set_public_data(void *argument)
     // save or restore extruder state
     if(pdr->second_element_is(save_state_checksum)) {
         save_position();
-        this->saved_selected= this->selected;
+        this->saved_selected = this->selected;
         pdr->set_taken();
 
     } else if(pdr->second_element_is(restore_state_checksum)) {
-        this->selected= this->saved_selected;
+        this->selected = this->saved_selected;
         // NOTE this only gets called when the queue is empty so the milestones will be the same
         restore_position();
         pdr->set_taken();
@@ -207,7 +207,7 @@ void Extruder::on_set_public_data(void *argument)
 void Extruder::save_position()
 {
     // we need to save these separately as they may have been scaled
-    this->saved_position= std::make_tuple(THEROBOT->get_axis_position(motor_id), stepper_motor->get_last_milestone(), stepper_motor->get_last_milestone_steps());
+    this->saved_position = std::make_tuple(THEROBOT->get_axis_position(motor_id), stepper_motor->get_last_milestone(), stepper_motor->get_last_milestone_steps());
 }
 
 void Extruder::restore_position()
@@ -244,15 +244,15 @@ void Extruder::on_gcode_received(void *argument)
         if (gcode->m == 114 && this->selected) {
             char buf[16];
             if(gcode->subcode == 0) {
-                float pos= THEROBOT->get_axis_position(motor_id);
+                float pos = THEROBOT->get_axis_position(motor_id);
                 int n = snprintf(buf, sizeof(buf), " E:%1.3f ", pos);
                 gcode->txt_after_ok.append(buf, n);
 
-            }else if(gcode->subcode == 1) { // realtime position
-                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position()/(volumetric_multiplier*extruder_multiplier));
+            } else if(gcode->subcode == 1) { // realtime position
+                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position() / (volumetric_multiplier * extruder_multiplier));
                 gcode->txt_after_ok.append(buf, n);
 
-            }else if(gcode->subcode == 3) { // realtime actuator position
+            } else if(gcode->subcode == 3) { // realtime actuator position
                 int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position());
                 gcode->txt_after_ok.append(buf, n);
             }
@@ -271,7 +271,7 @@ void Extruder::on_gcode_received(void *argument)
         } else if (gcode->m == 200 && ( (this->selected && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             if (gcode->has_letter('D')) {
                 this->filament_diameter = gcode->get_value('D');
-                float last_scale= this->volumetric_multiplier;
+                float last_scale = this->volumetric_multiplier;
                 if(filament_diameter > 0.01F) {
                     this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
                 } else {
@@ -280,8 +280,8 @@ void Extruder::on_gcode_received(void *argument)
                 // the trouble here is that the last milestone will be for the previous multiplier so a change can cause a big blob
                 // so we must change the E last milestone accordingly so it continues smoothly....
                 // change E last milestone to what it would have been if it had used this new multiplier
-                float delta= this->volumetric_multiplier/last_scale;
-                float nm= this->stepper_motor->get_last_milestone() * delta;
+                float delta = this->volumetric_multiplier / last_scale;
+                float nm = this->stepper_motor->get_last_milestone() * delta;
                 this->stepper_motor->change_last_milestone(nm);
 
             } else {
@@ -326,13 +326,13 @@ void Extruder::on_gcode_received(void *argument)
 
         } else if (gcode->m == 221 && this->selected) { // M221 S100 change flow rate by percentage
             if(gcode->has_letter('S')) {
-                float last_scale= this->extruder_multiplier;
+                float last_scale = this->extruder_multiplier;
                 this->extruder_multiplier = gcode->get_value('S') / 100.0F;
                 // the trouble here is that the last milestone will be for the previous multiplier so a change can cause a big blob
                 // so we must change the E last milestone accordingly so it continues smoothly....
                 // change E last milestone to what it would have been if it had used this new multiplier
-                float delta= this->extruder_multiplier/last_scale;
-                float nm= this->stepper_motor->get_last_milestone() * delta;
+                float delta = this->extruder_multiplier / last_scale;
+                float nm = this->stepper_motor->get_last_milestone() * delta;
                 this->stepper_motor->change_last_milestone(nm);
 
             } else {
@@ -342,7 +342,7 @@ void Extruder::on_gcode_received(void *argument)
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
             gcode->stream->printf(";E Steps per mm:\nM92 E%1.4f P%d\n", stepper_motor->get_steps_per_mm(), this->identifier);
             gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f P%d\n", this->filament_diameter, this->identifier);
-            gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f P%d\n", this->retract_length, this->retract_feedrate * 60.0F, this->retract_zlift_length, this->retract_zlift_feedrate*60.0F, this->identifier);
+            gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f P%d\n", this->retract_length, this->retract_feedrate * 60.0F, this->retract_zlift_length, this->retract_zlift_feedrate * 60.0F, this->identifier);
             gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f P%d\n", this->retract_recover_length, this->retract_recover_feedrate * 60.0F, this->identifier);
             gcode->stream->printf(";E acceleration mm/sec²:\nM204 E%1.4f P%d\n", stepper_motor->get_acceleration(), this->identifier);
             gcode->stream->printf(";E max feed rate mm/sec:\nM203 E%1.4f P%d\n", stepper_motor->get_max_rate(), this->identifier);
@@ -351,7 +351,7 @@ void Extruder::on_gcode_received(void *argument)
             }
         }
 
-    }else if( gcode->has_g && this->selected ) {
+    } else if( gcode->has_g && this->selected ) {
 
         if( (gcode->g == 10 || gcode->g == 11) && !gcode->has_letter('L') ) {
             // firmware retract command (Ignore if has L parameter that is not for us)
@@ -359,6 +359,7 @@ void Extruder::on_gcode_received(void *argument)
             if(gcode->g == 10 && !retracted) {
                 this->retracted = true;
                 this->cancel_zlift_restore = false;
+                this->g92e0_detected = false;
             } else if(gcode->g == 11 && retracted) {
                 this->retracted = false;
             } else
@@ -366,50 +367,55 @@ void Extruder::on_gcode_received(void *argument)
 
             if(gcode->g == 10) {
                 // retract
-                float delta[motor_id+1];
+                float delta[motor_id + 1];
                 for (int i = 0; i < motor_id; ++i) {
-                    delta[i]= 0;
+                    delta[i] = 0;
                 }
                 // HACK ALERT due to certain slicers reseting E with G92 E0 between the G10 and G11 we need to save and restore position
                 //save_position();
-                delta[motor_id]= -retract_length/volumetric_multiplier; // convert from mm to mm³
-                THEROBOT->delta_move(delta, retract_feedrate, motor_id+1);
+                delta[motor_id] = -retract_length / volumetric_multiplier; // convert from mm to mm³
+                THEROBOT->delta_move(delta, retract_feedrate, motor_id + 1);
                 //restore_position();
 
                 // zlift
                 if(retract_zlift_length > 0) {
-                    float delta[3]{0,0,retract_zlift_length};
+                    float delta[3] {0, 0, retract_zlift_length};
                     THEROBOT->delta_move(delta, retract_zlift_feedrate, 3);
                 }
 
-            }else if(gcode->g == 11) {
+            } else if(gcode->g == 11) {
                 // unretract
                 if(retract_zlift_length > 0 && !this->cancel_zlift_restore) {
                     // reverse zlift happens before unretract
                     // NOTE we do not do this if cancel_zlift_restore is set to true, which happens if there is an absolute Z move inbetween G10 and G11
-                    float delta[3]{0,0,-retract_zlift_length};
+                    float delta[3] {0, 0, -retract_zlift_length};
                     THEROBOT->delta_move(delta, retract_zlift_feedrate, 3);
                 }
 
-                float delta[motor_id+1];
+                float delta[motor_id + 1];
                 for (int i = 0; i < motor_id; ++i) {
-                    delta[i]= 0;
+                    delta[i] = 0;
                 }
                 // HACK ALERT due to certain slicers reseting E with G92 E0 between the G10 and G11 we need to restore
                 // the current position after we do the unretract, this is horribly hacky :(
                 // also as the move has not completed yet, when we restore the current position will be incorrect once the move finishes,
                 // however this is not fatal for an extruder
-                //save_position();
-                delta[motor_id]= (retract_length + retract_recover_length)/volumetric_multiplier; // convert from mm to mm³
-                THEROBOT->delta_move(delta, retract_recover_feedrate, motor_id+1);
-                //restore_position();
+                if(g92e0_detected) save_position();
+                delta[motor_id] = (retract_length + retract_recover_length) / volumetric_multiplier; // convert from mm to mm³
+                THEROBOT->delta_move(delta, retract_recover_feedrate, motor_id + 1);
+                if(g92e0_detected) restore_position();
             }
 
 
         } else if( this->retracted && (gcode->g == 0 || gcode->g == 1) && gcode->has_letter('Z')) {
             // NOTE we cancel the zlift restore for the following G11 as we have moved to an absolute Z which we need to stay at
             this->cancel_zlift_restore = true;
+
+        } else if( this->retracted && gcode->g == 92 && gcode->has_letter('E')) {
+            // old versions of slic3rs issued a G92 E0 after G10, handle that case
+            this->g92e0_detected= true;
         }
+
     }
 
 }
