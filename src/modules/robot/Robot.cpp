@@ -907,7 +907,7 @@ void Robot::reset_position_from_current_actuator_position()
 // Convert target (in machine coordinates) to machine_position, then convert to actuator position and append this to the planner
 // target is in machine coordinates without the compensation transform, however we save a last_machine_position that includes
 // all transforms and is what we actually convert to actuator positions
-bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable_compensation)
+bool Robot::append_milestone(const float target[], float rate_mm_s)
 {
     float deltas[n_motors];
     float transformed_target[n_motors]; // adjust target for bed compensation
@@ -917,7 +917,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s, bool disable
     memcpy(transformed_target, target, n_motors*sizeof(float));
 
     // check function pointer and call if set to transform the target to compensate for bed
-    if(!disable_compensation && compensationTransform) {
+    if(compensationTransform) {
         // some compensation strategies can transform XYZ, some just change Z
         compensationTransform(transformed_target);
     }
@@ -1052,8 +1052,7 @@ bool Robot::delta_move(const float *delta, float rate_mm_s, uint8_t naxis)
     }
 
     // submit for planning and if moved update last_milestone
-    // NOTE this disabled compensation transforms as homing and zprobe must not use them
-    if(append_milestone(target, rate_mm_s, true)) {
+    if(append_milestone(target, rate_mm_s)) {
          memcpy(last_milestone, target, n_motors*sizeof(float));
          return true;
     }
