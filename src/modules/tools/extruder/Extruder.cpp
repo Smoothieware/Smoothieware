@@ -140,7 +140,7 @@ void Extruder::select()
     selected = true;
     stepper_motor->set_selected(true);
     // set the function pointer to return the current scaling
-    THEROBOT->get_e_scale_fnc = [this](void) { return volumetric_multiplier * extruder_multiplier; };
+    THEROBOT->get_e_scale_fnc = std::bind(&Extruder::get_e_scale, this);
 }
 
 void Extruder::deselect()
@@ -249,7 +249,7 @@ void Extruder::on_gcode_received(void *argument)
                 gcode->txt_after_ok.append(buf, n);
 
             } else if(gcode->subcode == 1) { // realtime position
-                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position() / (volumetric_multiplier * extruder_multiplier));
+                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position() / get_e_scale());
                 gcode->txt_after_ok.append(buf, n);
 
             } else if(gcode->subcode == 3) { // realtime actuator position
@@ -372,7 +372,7 @@ void Extruder::on_gcode_received(void *argument)
                     delta[i] = 0;
                 }
 
-                delta[motor_id] = -retract_length / volumetric_multiplier; // convert from mm to mm³
+                delta[motor_id] = -retract_length / get_e_scale(); // convert from mm to mm³, and unapply flow_rate
                 THEROBOT->delta_move(delta, retract_feedrate, motor_id + 1);
 
                 // zlift
@@ -399,7 +399,7 @@ void Extruder::on_gcode_received(void *argument)
                 // also as the move has not completed yet, when we restore the current position will be incorrect once the move finishes,
                 // however this is not fatal for an extruder
                 if(g92e0_detected) save_position();
-                delta[motor_id] = (retract_length + retract_recover_length) / volumetric_multiplier; // convert from mm to mm³
+                delta[motor_id] = (retract_length + retract_recover_length) / get_e_scale(); // convert from mm to mm³, and unapply flow_rate
                 THEROBOT->delta_move(delta, retract_recover_feedrate, motor_id + 1);
                 if(g92e0_detected) restore_position();
             }
