@@ -371,11 +371,9 @@ void Extruder::on_gcode_received(void *argument)
                 for (int i = 0; i < motor_id; ++i) {
                     delta[i] = 0;
                 }
-                // HACK ALERT due to certain slicers reseting E with G92 E0 between the G10 and G11 we need to save and restore position
-                //save_position();
+
                 delta[motor_id] = -retract_length / volumetric_multiplier; // convert from mm to mm³
                 THEROBOT->delta_move(delta, retract_feedrate, motor_id + 1);
-                //restore_position();
 
                 // zlift
                 if(retract_zlift_length > 0) {
