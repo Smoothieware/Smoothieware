@@ -51,6 +51,5 @@ void ModbusSpindleControl::on_module_loaded()
 
     // register for events
     register_for_event(ON_GCODE_RECEIVED);
-    register_for_event(ON_GCODE_EXECUTE);
 }
 

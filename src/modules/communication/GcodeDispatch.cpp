@@ -152,7 +152,7 @@ try_again:
                         // we ignore all commands until M999, unless it is in the exceptions list (like M105 get temp)
                         if(gcode->has_m && gcode->m == 999) {
                             THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
-
+                            new_message.stream->printf("WARNING: After HALT you should HOME as position is currently unknown\n");
                             // fall through and pass onto other modules
 
                         }else if(!is_allowed_mcode(gcode->m)) {
@@ -196,7 +196,7 @@ try_again:
                                 }
                             }
                             // makes it handle the parameters as a machine position
-                            THEKERNEL->robot->next_command_is_MCS= true;
+                            THEROBOT->next_command_is_MCS= true;
 
                         }
 
@@ -283,7 +283,7 @@ try_again:
                             }
 
                             case 500: // M500 save volatile settings to config-override
-                                THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
+                                THEKERNEL->conveyor->wait_for_idle(); //just to be safe as it can take a while to run
                                 //remove(THEKERNEL->config_override_filename()); // seems to cause a hang every now and then
                                 __disable_irq();
                                 {

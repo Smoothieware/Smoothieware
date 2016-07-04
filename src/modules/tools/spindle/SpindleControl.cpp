@@ -25,7 +25,7 @@ void SpindleControl::on_gcode_received(void *argument)
         }
         else if (gcode->m == 958)
         {
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THECONVEYOR->wait_for_idle();
             // M958: set spindle PID parameters
             if (gcode->has_letter('P'))
                 set_p_term( gcode->get_value('P') );
@@ -39,7 +39,7 @@ void SpindleControl::on_gcode_received(void *argument)
         }
         else if (gcode->m == 3) 
         {
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THECONVEYOR->wait_for_idle();
             // M3: Spindle on
             if(!spindle_on) {
                 turn_on();
@@ -53,7 +53,7 @@ void SpindleControl::on_gcode_received(void *argument)
         }
         else if (gcode->m == 5)
         {
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THECONVEYOR->wait_for_idle();
             // M5: spindle off
             if(spindle_on) {
                 turn_off();

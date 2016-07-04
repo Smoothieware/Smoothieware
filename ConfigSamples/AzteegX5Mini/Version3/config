@@ -13,7 +13,6 @@ gamma_steps_per_mm                           1637.7953        # Steps per mm for
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOUR ARE DOING
 acceleration                                 3000             # Acceleration in mm/second/second.
 #z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 disables it, disabled by default. DO NOT SET ON A DELTA
-acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8 . Lower values mean being more careful, higher values means being faster and have more jerk
 
@@ -52,16 +51,18 @@ second_usb_serial_enable                     false            # This enables a s
 #dfu_enable                                  false            # for linux developers, set to true to enable DFU
 #watchdog_timeout                            10               # watchdog timeout in seconds, default is 10, set to 0 to disable the watchdog
 
-# Extruder module configuration
-extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
-extruder_steps_per_mm                        140              # Steps per mm for extruder stepper
-extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
-extruder_acceleration                        500              # Acceleration in mm/sec^2, only used for retracts
-extruder_max_speed                           1000             # mm/sec NOTE only used for retracts
 
-extruder_step_pin                            2.0              # Pin for extruder step signal
-extruder_dir_pin                             0.5              # Pin for extruder dir signal
-extruder_en_pin                              0.4             # Pin for extruder enable signal
+## Extruder module configuration
+extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
+extruder.hotend.steps_per_mm                    140              # Steps per mm for extruder stepper
+extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
+extruder.hotend.acceleration                    500              # Acceleration for the stepper motor mm/sec²
+extruder.hotend.max_speed                       50               # mm/s
+
+extruder.hotend.step_pin                        2.0              # Pin for extruder step signal
+extruder.hotend.dir_pin                         0.5              # Pin for extruder dir signal
+extruder.hotend.en_pin                          0.4              # Pin for extruder enable signal
+
 delta_current                                1.0              # Extruder stepper motor current
 
 # Laser module configuration

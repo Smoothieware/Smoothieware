@@ -5,70 +5,58 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef STEPPERMOTOR_H
-#define STEPPERMOTOR_H
+#pragma once
 
-#include "libs/Hook.h"
+#include "Module.h"
 #include "Pin.h"
-#include <atomic>
-#include <functional>
 
-class StepTicker;
-class Hook;
-
-class StepperMotor {
+class StepperMotor  : public Module {
     public:
-        StepperMotor();
         StepperMotor(Pin& step, Pin& dir, Pin& en);
         ~StepperMotor();
 
-        void step();
-        inline void unstep() { step_pin.set(0); };
+        // called from step ticker ISR
+        inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
+        // called from unstep ISR
+        inline void unstep() { step_pin.set(0); }
+        // called from step ticker ISR
+        inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
+
+        inline void enable(bool state) { en_pin.set(!state); };
+        inline bool is_enabled() const { return !en_pin.get(); };
+        inline bool is_moving() const { return moving; };
+        void start_moving() { moving= true; }
+        void stop_moving() { moving= false; }
+
         void manual_step(bool dir);
 
-        inline void enable(bool state) { enabled= state; en_pin.set(!state); };
-
-        bool is_moving() const { return moving; }
         bool which_direction() const { return direction; }
-        void move_finished();
-        StepperMotor* move( bool direction, unsigned int steps, float initial_speed= -1.0F);
-        void signal_move_finished();
-        StepperMotor* set_speed( float speed );
-        void set_moved_last_block(bool flg) { last_step_tick_valid= flg; }
-        void update_exit_tick();
 
         float get_steps_per_second()  const { return steps_per_second; }
         float get_steps_per_mm()  const { return steps_per_mm; }
         void change_steps_per_mm(float);
         void change_last_milestone(float);
+        void set_last_milestones(float, int32_t);
+        void update_last_milestones(float mm, int32_t steps);
         float get_last_milestone(void) const { return last_milestone_mm; }
+        int32_t get_last_milestone_steps(void) const { return last_milestone_steps; }
         float get_current_position(void) const { return (float)current_position_steps/steps_per_mm; }
+        uint32_t get_current_step(void) const { return current_position_steps; }
         float get_max_rate(void) const { return max_rate; }
         void set_max_rate(float mr) { max_rate= mr; }
-        float get_min_rate(void) const { return minimum_step_rate; }
-        void set_min_rate(float mr) { minimum_step_rate= mr; }
+        void set_acceleration(float a) { acceleration= a; }
+        float get_acceleration() const { return acceleration; }
+        bool is_selected() const { return selected; }
+        void set_selected(bool b) { selected= b; }
 
-        int  steps_to_target(float);
-        uint32_t get_steps_to_move() const { return steps_to_move; }
-        uint32_t get_stepped() const { return stepped; }
-        void force_finish_move() { force_finish= true; }
+        int32_t steps_to_target(float);
 
-        template<typename T> void attach( T *optr, uint32_t ( T::*fptr )( uint32_t ) ){
-            Hook* hook = new Hook();
-            hook->attach(optr, fptr);
-            this->end_hook = hook;
-        }
-
-        friend class StepTicker;
-        friend class Stepper;
-        friend class Planner;
-        friend class Robot;
 
     private:
-        void init();
+        void on_halt(void *argument);
+        void on_enable(void *argument);
 
         int index;
-        Hook* end_hook;
 
         Pin step_pin;
         Pin dir_pin;
@@ -77,46 +65,16 @@ class StepperMotor {
         float steps_per_second;
         float steps_per_mm;
         float max_rate; // this is not really rate it is in mm/sec, misnamed used in Robot and Extruder
-        float minimum_step_rate; // this is the minimum step_rate in steps/sec for this motor for this block
-        static float default_minimum_actuator_rate;
+        float acceleration;
 
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;
         float   last_milestone_mm;
 
-        uint32_t steps_to_move;
-        uint32_t stepped;
-        uint32_t last_step_tick;
-        uint32_t signal_step;
-
-        // set to 32 bit fixed point, 18:14 bits fractional
-        static const uint32_t fx_shift= 14;
-        static const uint32_t fx_increment= ((uint32_t)1<<fx_shift);
-        uint32_t fx_counter;
-        uint32_t fx_ticks_per_step;
-
         volatile struct {
-            volatile bool is_move_finished:1; // Whether the move just finished
+            volatile bool direction:1;
             volatile bool moving:1;
-            volatile bool force_finish:1; // set to force a move to finish early
-            bool direction:1;
-            bool last_step_tick_valid:1; // set if the last step tick time is valid (ie the motor moved last block)
-            bool enabled:1;
-        };
-
-        // Called a great many times per second, to step if we have to now
-        inline bool tick() {
-            // increase the ( 32 fixed point 18:14 ) counter by one tick 11t
-            fx_counter += fx_increment;
-
-            // if we are to step now
-            if (fx_counter >= fx_ticks_per_step){
-                step();
-                return true;
-            }
-            return false;
+            bool selected:1;
         };
 };
-
-#endif
 

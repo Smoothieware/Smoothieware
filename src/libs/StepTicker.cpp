@@ -13,24 +13,27 @@
 #include "libs/Kernel.h"
 #include "StepperMotor.h"
 #include "StreamOutputPool.h"
+#include "Block.h"
+#include "Conveyor.h"
+
 #include "system_LPC17xx.h" // mbed.h lib
 #include <math.h>
 #include <mri.h>
 
 #ifdef STEPTICKER_DEBUG_PIN
+// debug pins, only used if defined in src/makefile
 #include "gpio.h"
-extern GPIO stepticker_debug_pin;
+GPIO stepticker_debug_pin(STEPTICKER_DEBUG_PIN);
+#define SET_STEPTICKER_DEBUG_PIN(n) {if(n) stepticker_debug_pin.set(); else stepticker_debug_pin.clear(); }
+#else
+#define SET_STEPTICKER_DEBUG_PIN(n)
 #endif
 
+StepTicker *StepTicker::instance;
 
-// StepTicker handles the base frequency ticking for the Stepper Motors / Actuators
-// It has a list of those, and calls their tick() functions at regular intervals
-// They then do Bresenham stuff themselves
-
-StepTicker* StepTicker::global_step_ticker;
-
-StepTicker::StepTicker(){
-    StepTicker::global_step_ticker = this;
+StepTicker::StepTicker()
+{
+    instance = this; // setup the Singleton instance of the stepticker
 
     // Configure the timer
     LPC_TIM0->MR0 = 10000000;       // Initial dummy value for Match Register
@@ -42,222 +45,237 @@ StepTicker::StepTicker(){
     LPC_TIM1->MCR = 1;
     LPC_TIM1->TCR = 0;              // Disable interrupt
 
-    // Setup RIT timer
-    LPC_SC->PCONP |= (1L<<16); // RIT Power
-    LPC_SC->PCLKSEL1 &= ~(3L << 26); // Clear PCLK_RIT bits;
-    LPC_SC->PCLKSEL1 |=  (1L << 26); // Set PCLK_RIT bits to 0x01;
-    LPC_RIT->RICOMPVAL = (uint32_t)(((SystemCoreClock / 1000000L) * 1000)-1); // 1ms period
-    LPC_RIT->RICOUNTER = 0;
-    // Set counter clear/reset after interrupt
-    LPC_RIT->RICTRL |= (2L); //RITENCLR
-    LPC_RIT->RICTRL &= ~(8L); // disable
-    //NVIC_SetVector(RIT_IRQn, (uint32_t)&_ritisr);
-
     // Default start values
-    this->a_move_finished = false;
-    this->do_move_finished = 0;
-    this->unstep.reset();
     this->set_frequency(100000);
-    this->set_reset_delay(100);
-    this->set_acceleration_ticks_per_second(1000);
-    this->num_motors= 0;
-    this->active_motor.reset();
-    this->tick_cnt= 0;
+    this->set_unstep_time(100);
+
+    this->unstep.reset();
+    this->num_motors = 0;
+
+    this->running = false;
+    this->current_block = nullptr;
+
+    #ifdef STEPTICKER_DEBUG_PIN
+    // setup debug pin if defined
+    stepticker_debug_pin.output();
+    stepticker_debug_pin= 0;
+    #endif
 }
 
-StepTicker::~StepTicker() {
+StepTicker::~StepTicker()
+{
 }
 
 //called when everything is setup and interrupts can start
-void StepTicker::start() {
+void StepTicker::start()
+{
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
-    NVIC_EnableIRQ(RIT_IRQn);
 }
 
 // Set the base stepping frequency
-void StepTicker::set_frequency( float frequency ){
+void StepTicker::set_frequency( float frequency )
+{
     this->frequency = frequency;
-    this->period = floorf((SystemCoreClock/4.0F)/frequency);  // SystemCoreClock/4 = Timer increments in a second
+    this->period = floorf((SystemCoreClock / 4.0F) / frequency); // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM0->MR0 = this->period;
-    if( LPC_TIM0->TC > LPC_TIM0->MR0 ){
-        LPC_TIM0->TCR = 3;  // Reset
-        LPC_TIM0->TCR = 1;  // Reset
-    }
+    LPC_TIM0->TCR = 3;  // Reset
+    LPC_TIM0->TCR = 1;  // start
 }
 
 // Set the reset delay
-void StepTicker::set_reset_delay( float microseconds ){
-    uint32_t delay = floorf((SystemCoreClock/4.0F)*(microseconds/1000000.0F));  // SystemCoreClock/4 = Timer increments in a second
+void StepTicker::set_unstep_time( float microseconds )
+{
+    uint32_t delay = floorf((SystemCoreClock / 4.0F) * (microseconds / 1000000.0F)); // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM1->MR0 = delay;
 }
 
-// this is the number of acceleration ticks per second
-void StepTicker::set_acceleration_ticks_per_second(uint32_t acceleration_ticks_per_second) {
-    uint32_t us= roundf(1000000.0F/acceleration_ticks_per_second); // period in microseconds
-    LPC_RIT->RICOMPVAL = (uint32_t)(((SystemCoreClock / 1000000L) * us)-1); // us
-    LPC_RIT->RICOUNTER = 0;
-    LPC_RIT->RICTRL |= (8L); // Enable rit
-}
-
-// Synchronize the acceleration timer, and optionally schedule it to fire now
-void StepTicker::synchronize_acceleration(bool fire_now) {
-    LPC_RIT->RICOUNTER = 0;
-    if(fire_now){
-        NVIC_SetPendingIRQ(RIT_IRQn);
-    }else{
-        if(NVIC_GetPendingIRQ(RIT_IRQn)) {
-            // clear pending interrupt so it does not interrupt immediately
-            LPC_RIT->RICTRL |= 1L; // also clear the interrupt in case it fired
-            NVIC_ClearPendingIRQ(RIT_IRQn);
-        }
-    }
-}
-
-
-// Call signal_move_finished() on each active motor that asked to be signaled. We do this instead of inside of tick() so that
-// all tick()s are called before we do the move finishing
-void StepTicker::signal_a_move_finished(){
-     for (int motor = 0; motor < num_motors; motor++){
-        if (this->active_motor[motor] && this->motor[motor]->is_move_finished){
-            this->motor[motor]->signal_move_finished();
-                // Theoretically this does nothing and the reason for it is currently unknown and/or forgotten
-                // if(this->motor[motor]->moving == false){
-                //     if (motor > 0){
-                //         motor--;
-                //         bitmask >>= 1;
-                //     }
-                // }
-        }
-    }
-}
-
 // Reset step pins on any motor that was stepped
-inline void StepTicker::unstep_tick(){
+void StepTicker::unstep_tick()
+{
     for (int i = 0; i < num_motors; i++) {
-        if(this->unstep[i]){
+        if(this->unstep[i]) {
             this->motor[i]->unstep();
         }
     }
     this->unstep.reset();
 }
 
-extern "C" void TIMER1_IRQHandler (void){
+extern "C" void TIMER1_IRQHandler (void)
+{
     LPC_TIM1->IR |= 1 << 0;
-    StepTicker::global_step_ticker->unstep_tick();
+    StepTicker::getInstance()->unstep_tick();
 }
 
 // The actual interrupt handler where we do all the work
-extern "C" void TIMER0_IRQHandler (void){
-    StepTicker::global_step_ticker->TIMER0_IRQHandler();
+extern "C" void TIMER0_IRQHandler (void)
+{
+    // Reset interrupt register
+    LPC_TIM0->IR |= 1 << 0;
+    StepTicker::getInstance()->step_tick();
 }
 
-extern "C" void RIT_IRQHandler (void){
-    LPC_RIT->RICTRL |= 1L;
-    StepTicker::global_step_ticker->acceleration_tick();
-}
-
-extern "C" void PendSV_Handler(void) {
-    StepTicker::global_step_ticker->PendSV_IRQHandler();
+extern "C" void PendSV_Handler(void)
+{
+    StepTicker::getInstance()->handle_finish();
 }
 
 // slightly lower priority than TIMER0, the whole end of block/start of block is done here allowing the timer to continue ticking
-void StepTicker::PendSV_IRQHandler (void) {
-
-    if(this->do_move_finished.load() > 0) {
-        this->do_move_finished--;
-        #ifdef STEPTICKER_DEBUG_PIN
-        stepticker_debug_pin= 1;
-        #endif
-
-        this->signal_a_move_finished();
-
-        #ifdef STEPTICKER_DEBUG_PIN
-        stepticker_debug_pin= 0;
-        #endif
-    }
-}
-
-// run in RIT lower priority than PendSV
-void  StepTicker::acceleration_tick() {
-    // call registered acceleration handlers
-    for (size_t i = 0; i < acceleration_tick_handlers.size(); ++i) {
-        acceleration_tick_handlers[i]();
-    }
-}
-
-void StepTicker::schedule_unstep(int motor)
+void StepTicker::handle_finish (void)
 {
-    this->unstep[motor]= 1;
-    LPC_TIM1->TCR = 3;
-    LPC_TIM1->TCR = 1;
+    // all moves finished signal block is finished
+    if(finished_fnc) finished_fnc();
 }
 
-void StepTicker::TIMER0_IRQHandler (void){
-    // Reset interrupt register
-    LPC_TIM0->IR |= 1 << 0;
-    tick_cnt++; // count number of ticks
+// step clock
+void StepTicker::step_tick (void)
+{
+    static uint32_t current_tick = 0;
 
-    // Step pins NOTE takes 1.2us when nothing to step, 1.8-2us for one motor stepped and 2.6us when two motors stepped, 3.167us when three motors stepped
-    for (uint32_t motor = 0; motor < num_motors; motor++){
-        // send tick to all active motors
-        if(this->active_motor[motor] && this->motor[motor]->tick()){
-            // we stepped so schedule an unstep
-            this->unstep[motor]= 1;
+    //SET_STEPTICKER_DEBUG_PIN(running ? 1 : 0);
+
+    // if nothing has been setup we ignore the ticks
+    if(!running){
+        // check if anything new available
+        if(THECONVEYOR->get_next_block(&current_block)) { // returns false if no new block is available
+            running= start_next_block(); // returns true if there is at least one motor with steps to issue
+            if(!running) return;
+        }else{
+            return;
         }
     }
+
+    if(THEKERNEL->is_halted()) {
+        running= false;
+        return;
+    }
+
+    bool still_moving= false;
+    // foreach motor, if it is active see if time to issue a step to that motor
+    for (uint8_t m = 0; m < num_motors; m++) {
+        if(current_block->tick_info[m].steps_to_move == 0) continue; // not active
+
+        current_block->tick_info[m].steps_per_tick += current_block->tick_info[m].acceleration_change;
+
+        if(current_tick == current_block->tick_info[m].next_accel_event) {
+            if(current_tick == current_block->accelerate_until) { // We are done accelerating, deceleration becomes 0 : plateau
+                current_block->tick_info[m].acceleration_change = 0;
+                if(current_block->decelerate_after < current_block->total_move_ticks) {
+                    current_block->tick_info[m].next_accel_event = current_block->decelerate_after;
+                    if(current_tick != current_block->decelerate_after) { // We are plateauing
+                        // steps/sec / tick frequency to get steps per tick
+                        current_block->tick_info[m].steps_per_tick = current_block->tick_info[m].plateau_rate;
+                    }
+                }
+            }
+
+            if(current_tick == current_block->decelerate_after) { // We start decelerating
+                current_block->tick_info[m].acceleration_change = current_block->tick_info[m].deceleration_change;
+            }
+        }
+
+        // protect against rounding errors and such
+        if(current_block->tick_info[m].steps_per_tick <= 0) {
+            current_block->tick_info[m].counter = STEPTICKER_FPSCALE; // we force completion this step by setting to 1.0
+            current_block->tick_info[m].steps_per_tick = 0;
+        }
+
+        current_block->tick_info[m].counter += current_block->tick_info[m].steps_per_tick;
+
+        if(current_block->tick_info[m].counter >= STEPTICKER_FPSCALE) { // >= 1.0 step time
+            current_block->tick_info[m].counter -= STEPTICKER_FPSCALE; // -= 1.0F;
+            ++current_block->tick_info[m].step_count;
+
+            // step the motor
+            bool ismoving= motor[m]->step(); // returns false if the moving flag was set to false externally (probes, endstops etc)
+            // we stepped so schedule an unstep
+            unstep.set(m);
+
+            if(!ismoving || current_block->tick_info[m].step_count == current_block->tick_info[m].steps_to_move) {
+                // done
+                current_block->tick_info[m].steps_to_move = 0;
+                motor[m]->stop_moving(); // let motor know it is no longer moving
+            }
+        }
+
+        // see if any motors are still moving after this tick
+        if(motor[m]->is_moving()) still_moving= true;
+    }
+
+    // do this after so we start at tick 0
+    current_tick++; // count number of ticks
 
     // We may have set a pin on in this tick, now we reset the timer to set it off
     // Note there could be a race here if we run another tick before the unsteps have happened,
     // right now it takes about 3-4us but if the unstep were near 10uS or greater it would be an issue
     // also it takes at least 2us to get here so even when set to 1us pulse width it will still be about 3us
-    if( this->unstep.any()){
+    if( unstep.any()) {
         LPC_TIM1->TCR = 3;
         LPC_TIM1->TCR = 1;
     }
-    // just let it run it will fire every 143 seconds
-    // else{
-    //     LPC_TIM1->TCR = 0; // disable interrupt, no point in it running if nothing to do
-    // }
 
-    if(this->a_move_finished) {
-        this->a_move_finished= false;
-        this->do_move_finished++; // Note this is an atomic variable because it is updated in two interrupts of different priorities so can be pre-empted
-    }
 
-    // If a move finished in this tick, we have to tell the actuator to act accordingly
-    if(this->do_move_finished.load() > 0){
+    // see if any motors are still moving
+    if(!still_moving) {
+        SET_STEPTICKER_DEBUG_PIN(0);
+
+        // all moves finished
+        current_tick = 0;
+
+        // get next block
+        // do it here so there is no delay in ticks
+        THECONVEYOR->block_finished();
+
+        if(THECONVEYOR->get_next_block(&current_block)) { // returns false if no new block is available
+            running= start_next_block(); // returns true if there is at least one motor with steps to issue
+
+        }else{
+            current_block= nullptr;
+            running= false;
+        }
+
+        // all moves finished
         // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
         //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
-        SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;
+        //SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;
     }
 }
+
+// only called from the step tick ISR (single consumer)
+bool StepTicker::start_next_block()
+{
+    if(current_block == nullptr) return false;
+
+    bool ok= false;
+    // need to prepare each active motor
+    for (uint8_t m = 0; m < num_motors; m++) {
+        if(current_block->tick_info[m].steps_to_move == 0) continue;
+
+        ok= true; // mark at least one motor is moving
+        // set direction bit here
+        // NOTE this would be at least 10us before first step pulse.
+        // TODO does this need to be done sooner, if so how without delaying next tick
+        motor[m]->set_direction(current_block->direction_bits[m]);
+        motor[m]->start_moving(); // also let motor know it is moving now
+    }
+
+    if(ok) {
+        SET_STEPTICKER_DEBUG_PIN(1);
+        return true;
+
+    }else{
+        // this is an edge condition that should never happen, but we need to discard this block if it ever does
+        // basically it is a block that has zero steps for all motors
+        THECONVEYOR->block_finished();
+    }
+
+    return false;
+}
+
 
 // returns index of the stepper motor in the array and bitset
-int StepTicker::register_motor(StepperMotor* motor)
+int StepTicker::register_motor(StepperMotor* m)
 {
-    this->motor.push_back(motor);
-    this->num_motors= this->motor.size();
-    return this->num_motors-1;
-}
-
-// activate the specified motor, must have been registered
-void StepTicker::add_motor_to_active_list(StepperMotor* motor)
-{
-    bool enabled= active_motor.any(); // see if interrupt was previously enabled
-    active_motor[motor->index]= 1;
-    if(!enabled) {
-        LPC_TIM0->TCR = 1;               // Enable interrupt
-    }
-}
-
-// Remove a stepper from the list of active motors
-void StepTicker::remove_motor_from_active_list(StepperMotor* motor)
-{
-    active_motor[motor->index]= 0;
-    // If we have no motor to work on, disable the whole interrupt
-    if(this->active_motor.none()){
-        LPC_TIM0->TCR = 0;               // Disable interrupt
-        tick_cnt= 0;
-    }
+    motor[num_motors++] = m;
+    return num_motors - 1;
 }

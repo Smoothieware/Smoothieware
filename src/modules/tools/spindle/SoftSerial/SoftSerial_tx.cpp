@@ -5,11 +5,14 @@
  * URL: http://developer.mbed.org/users/Sissors/code/SoftSerial/
  */
 
+#include "libs/Kernel.h"
 #include "SoftSerial.h"
 
 int SoftSerial::_putc(int c)
 {
-    while(!writeable());
+    while(!writeable()){
+        THEKERNEL->call_event(ON_IDLE, this);
+    };
     prepare_tx(c);
     tx_bit = 0;
     txticker.prime();
@@ -18,7 +21,9 @@ int SoftSerial::_putc(int c)
 }
 
 void SoftSerial::send_break(void) {
-    while(!writeable());
+    while(!writeable()){
+        THEKERNEL->call_event(ON_IDLE, this);
+    };
     tx_bit = 0;         //Just to make sure it appears as non-writable to other threads/IRQs
     tx->write(0);
     wait_us((bit_period * _total_bits * 3) / 2);
