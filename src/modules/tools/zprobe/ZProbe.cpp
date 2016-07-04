@@ -276,6 +276,10 @@ void ZProbe::on_gcode_received(void *argument)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
 
+            // turn off any compensation transform
+            auto savect= THEROBOT->compensationTransform;
+            THEROBOT->compensationTransform= nullptr;
+
             bool probe_result;
             bool reverse= (gcode->has_letter('R') && gcode->get_value('R') != 0); // specify to probe in reverse direction
             float rate= gcode->has_letter('F') ? gcode->get_value('F') / 60 : this->slow_feedrate;
@@ -311,6 +315,9 @@ void ZProbe::on_gcode_received(void *argument)
                     THEROBOT->actuators[Z_AXIS]->get_current_position(),
                     0));
             }
+
+            // restore compensationTransform
+            THEROBOT->compensationTransform= savect;
 
         } else {
             if(!gcode->has_letter('P')) {
