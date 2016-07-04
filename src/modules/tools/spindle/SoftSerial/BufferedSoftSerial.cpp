@@ -77,10 +77,6 @@ int BufferedSoftSerial::printf(const char* format, ...)
     va_list arg;
     va_start(arg, format);
     r = vsprintf(buf, format, arg);
-    // this may not hit the heap but should alert the user anyways
-    if(r > (int) sizeof(buf)) {
-        error("%s %d buffer overwrite!\n", __FILE__, __LINE__);
-    }
     va_end(arg);
     r = BufferedSoftSerial::write(buf, r);
 

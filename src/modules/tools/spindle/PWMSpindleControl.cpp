@@ -43,9 +43,6 @@ PWMSpindleControl::PWMSpindleControl()
 
 void PWMSpindleControl::on_module_loaded()
 {
-
-    printf("PWM Spindle Control loaded\n");
-
     last_time = 0;
     last_edge = 0;
     current_rpm = 0;
