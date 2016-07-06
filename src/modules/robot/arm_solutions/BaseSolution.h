@@ -17,7 +17,6 @@ class BaseSolution {
         typedef std::map<char, float> arm_options_t;
         virtual bool set_optional(const arm_options_t& options) { return false; };
         virtual bool get_optional(arm_options_t& options, bool force_all= false) { return false; };
-        virtual size_t get_actuator_count() const { return 3; }
 };
 
 #endif

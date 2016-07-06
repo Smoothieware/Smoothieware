@@ -9,6 +9,8 @@
 #define KERNEL_H
 
 #define THEKERNEL Kernel::instance
+#define THECONVEYOR THEKERNEL->conveyor
+#define THEROBOT THEKERNEL->robot
 
 #include "Module.h"
 #include <array>
@@ -24,7 +26,6 @@ class SerialConsole;
 class StreamOutputPool;
 class GcodeDispatch;
 class Robot;
-class Stepper;
 class Planner;
 class StepTicker;
 class Adc;
@@ -60,7 +61,6 @@ class Kernel {
         StreamOutputPool* streams;
         GcodeDispatch*    gcode_dispatch;
         Robot*            robot;
-        Stepper*          stepper;
         Planner*          planner;
         Config*           config;
         Conveyor*         conveyor;

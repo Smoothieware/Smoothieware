@@ -31,19 +31,6 @@
 #include <algorithm>
 
 using namespace std;
-static const uint8_t icons[] = { // 16x80 - he1, he2, he3, bed, fan
-	0x3f, 0xfc, 0x3f, 0xfc, 0xff, 0xff, 0xfe, 0x7f, 0xff, 0x7f, 0x7f, 0x7e, 0x3f, 0x7c, 0x1f,
-	0x78, 0x0f, 0xf0, 0x07, 0xe0, 0x03, 0xc0, 0x01, 0x80, 0x00, 0x00, 0x01, 0x80, 0x01, 0x80,
-	0x01, 0x80, 0x3f, 0xfc, 0x3f, 0xfc, 0xff, 0xff, 0xfc, 0x7f, 0xff, 0x7f, 0x7c, 0x7e, 0x3d,
-	0xfc, 0x1c, 0x78, 0x0f, 0xf0, 0x07, 0xe0, 0x03, 0xc0, 0x01, 0x80, 0x00, 0x00, 0x01, 0x80,
-	0x01, 0x80, 0x01, 0x80, 0x3f, 0xfc, 0x3f, 0xfc, 0xff, 0xff, 0xfc, 0x7f, 0xff, 0x7f, 0x7c,
-	0x7e, 0x3f, 0x7c, 0x1c, 0x78, 0x0f, 0xf0, 0x07, 0xe0, 0x03, 0xc0, 0x01, 0x80, 0x00, 0x00,
-	0x01, 0x80, 0x01, 0x80, 0x01, 0x80, 0x00, 0x00, 0x08, 0x88, 0x11, 0x10, 0x22, 0x20, 0x22,
-	0x20, 0x11, 0x10, 0x08, 0x88, 0x04, 0x44, 0x04, 0x44, 0x08, 0x88, 0x11, 0x10, 0x22, 0x20,
-	0x00, 0x00, 0x7f, 0xfe, 0xff, 0xff, 0x7f, 0xfe, 0x39, 0xec, 0x43, 0xe2, 0x9b, 0xc9, 0xa3,
-	0x85, 0x03, 0x85, 0xc3, 0x00, 0xe0, 0x3e, 0xf9, 0xbf, 0xfd, 0x9f, 0x7c, 0x07, 0x00, 0xc3,
-	0xa1, 0xc0, 0xa1, 0xc5, 0x93, 0xd9, 0x47, 0xc2, 0x37, 0x9c
-};
 
 WatchScreen::WatchScreen()
 {
@@ -119,23 +106,23 @@ void WatchScreen::get_wpos()
     // get real time positions
     // current actuator position in mm
     ActuatorCoordinates current_position{
-        THEKERNEL->robot->actuators[X_AXIS]->get_current_position(),
-        THEKERNEL->robot->actuators[Y_AXIS]->get_current_position(),
-        THEKERNEL->robot->actuators[Z_AXIS]->get_current_position()
+        THEROBOT->actuators[X_AXIS]->get_current_position(),
+        THEROBOT->actuators[Y_AXIS]->get_current_position(),
+        THEROBOT->actuators[Z_AXIS]->get_current_position()
     };
 
     // get machine position from the actuator position using FK
     float mpos[3];
-    THEKERNEL->robot->arm_solution->actuator_to_cartesian(current_position, mpos);
-    Robot::wcs_t wpos= THEKERNEL->robot->mcs2wcs(mpos);
-    this->wpos[0]= THEKERNEL->robot->from_millimeters(std::get<X_AXIS>(wpos));
-    this->wpos[1]= THEKERNEL->robot->from_millimeters(std::get<Y_AXIS>(wpos));
-    this->wpos[2]= THEKERNEL->robot->from_millimeters(std::get<Z_AXIS>(wpos));
-    this->mpos[0]= THEKERNEL->robot->from_millimeters(mpos[0]);
-    this->mpos[1]= THEKERNEL->robot->from_millimeters(mpos[1]);
-    this->mpos[2]= THEKERNEL->robot->from_millimeters(mpos[2]);
+    THEROBOT->arm_solution->actuator_to_cartesian(current_position, mpos);
+    Robot::wcs_t wpos= THEROBOT->mcs2wcs(mpos);
+    this->wpos[0]= THEROBOT->from_millimeters(std::get<X_AXIS>(wpos));
+    this->wpos[1]= THEROBOT->from_millimeters(std::get<Y_AXIS>(wpos));
+    this->wpos[2]= THEROBOT->from_millimeters(std::get<Z_AXIS>(wpos));
+    this->mpos[0]= THEROBOT->from_millimeters(mpos[0]);
+    this->mpos[1]= THEROBOT->from_millimeters(mpos[1]);
+    this->mpos[2]= THEROBOT->from_millimeters(mpos[2]);
 
-    std::vector<Robot::wcs_t> v= THEKERNEL->robot->get_wcs_state();
+    std::vector<Robot::wcs_t> v= THEROBOT->get_wcs_state();
     char current_wcs= std::get<0>(v[0]);
     this->wcs= wcs2gcode(current_wcs);
 }
@@ -168,7 +155,7 @@ void WatchScreen::get_current_status()
 float WatchScreen::get_current_speed()
 {
     // in percent
-    return 6000.0F / THEKERNEL->robot->get_seconds_per_minute();
+    return 6000.0F / THEROBOT->get_seconds_per_minute();
 }
 
 void WatchScreen::get_sd_play_info()
@@ -191,13 +178,13 @@ void WatchScreen::display_menu_line(uint16_t line)
 {
     // in menu mode
     switch ( line ) {
-        case 0: THEPANEL->lcd->printf("     WCS      MCS %s", THEKERNEL->robot->inch_mode ? "in" : "mm"); break;
+        case 0: THEPANEL->lcd->printf("     WCS      MCS %s", THEROBOT->inch_mode ? "in" : "mm"); break;
         case 1: THEPANEL->lcd->printf("X %8.3f %8.3f", wpos[0], mpos[0]); break;
         case 2: THEPANEL->lcd->printf("Y %8.3f %8.3f", wpos[1], mpos[1]); break;
         case 3: THEPANEL->lcd->printf("Z %8.3f %8.3f", wpos[2], mpos[2]); break;
         case 4: THEPANEL->lcd->printf("%s F%6.1f/%6.1f", this->wcs.c_str(), // display requested feedrate and actual feedrate
-            THEKERNEL->robot->from_millimeters(THEKERNEL->robot->get_feed_rate()),
-            THEKERNEL->robot->from_millimeters(THEKERNEL->conveyor->get_current_feedrate()*60.0F));
+            THEROBOT->from_millimeters(THEROBOT->get_feed_rate()),
+            THEROBOT->from_millimeters(THEKERNEL->conveyor->get_current_feedrate()*60.0F));
             break;
         case 5: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
         case 6: THEPANEL->lcd->printf("%19s", this->get_status()); break;
@@ -218,7 +205,7 @@ const char *WatchScreen::get_status()
     if (THEPANEL->is_playing())
         return THEPANEL->get_playing_file();
 
-    if (!THEKERNEL->conveyor->is_queue_empty())
+    if (!THECONVEYOR->is_idle())
         return "Running";
 
     const char *ip = get_network();

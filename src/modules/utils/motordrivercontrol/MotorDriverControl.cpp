@@ -254,10 +254,10 @@ void MotorDriverControl::on_gcode_received(void *argument)
                     // also reset the steps/mm
                     int a= designator-'A';
                     if(a >= 0 && a <=2) {
-                        float s= THEKERNEL->robot->actuators[a]->get_steps_per_mm()*((float)microsteps/current_microsteps);
-                        THEKERNEL->robot->actuators[a]->change_steps_per_mm(s);
+                        float s= THEROBOT->actuators[a]->get_steps_per_mm()*((float)microsteps/current_microsteps);
+                        THEROBOT->actuators[a]->change_steps_per_mm(s);
                         gcode->stream->printf("steps/mm for %c changed to: %f\n", designator, s);
-                        THEKERNEL->robot->check_max_actuator_speeds();
+                        THEROBOT->check_max_actuator_speeds();
                     }
                 }
                 microstep_override= true;
