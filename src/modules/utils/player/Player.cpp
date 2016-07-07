@@ -113,7 +113,7 @@ void Player::on_gcode_received(void *argument)
 
         } else if (gcode->m == 23) { // select file
             this->filename = "/sd/" + args; // filename is whatever is in args
-            this->current_stream = &(StreamOutput::NullStream);
+            this->current_stream = nullptr;
 
             if(this->current_file_handler != NULL) {
                 this->playing_file = false;
@@ -171,7 +171,7 @@ void Player::on_gcode_received(void *argument)
                     } else {
                         this->filename = currentfn;
                         this->file_size = old_size;
-                        this->current_stream = &(StreamOutput::NullStream);
+                        this->current_stream = nullptr;
                     }
                 }
             } else {
@@ -184,7 +184,7 @@ void Player::on_gcode_received(void *argument)
         } else if (gcode->m == 32) { // select file and start print
             // Get filename
             this->filename = "/sd/" + args; // filename is whatever is in args including spaces
-            this->current_stream = &(StreamOutput::NullStream);
+            this->current_stream = nullptr;
 
             if(this->current_file_handler != NULL) {
                 this->playing_file = false;
@@ -290,7 +290,7 @@ void Player::play_command( string parameters, StreamOutput *stream )
 
     // Output to the current stream if we were passed the -v ( verbose ) option
     if( options.find_first_of("Vv") == string::npos ) {
-        this->current_stream = &(StreamOutput::NullStream);
+        this->current_stream = nullptr;
     } else {
         // we send to the kernels stream as it cannot go away
         this->current_stream = THEKERNEL->streams;
@@ -416,10 +416,13 @@ void Player::on_main_loop(void *argument)
                 }
                 if(len == 1) continue; // empty line
 
-                this->current_stream->printf("%s", buf);
+                if(this->current_stream != nullptr) {
+                    this->current_stream->printf("%s", buf);
+                }
+
                 struct SerialMessage message;
                 message.message = buf;
-                message.stream = this->current_stream;
+                message.stream = this->current_stream == nullptr ? &(StreamOutput::NullStream) : this->current_stream;
 
                 // waits for the queue to have enough room
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message);
@@ -428,7 +431,7 @@ void Player::on_main_loop(void *argument)
 
             } else {
                 // discard long line
-                this->current_stream->printf("Warning: Discarded long line\n");
+                if(this->current_stream != nullptr) { this->current_stream->printf("Warning: Discarded long line\n"); }
                 discard = true;
             }
         }
