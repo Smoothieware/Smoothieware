@@ -54,7 +54,7 @@ void AnalogSpindleControl::on_module_loaded()
 
     // Get digital out pin for switching the VFD on and off (wired to a digital input on the VFD via an optocoupler)
     std::string switch_on_pin = THEKERNEL->config->value(spindle_checksum, spindle_switch_on_pin_checksum)->by_default("nc")->as_string();
-    switch_on == NULL;
+    switch_on = NULL;
     if(switch_on_pin.compare("nc") != 0) {
         switch_on = new Pin();
         switch_on->from_string(switch_on_pin)->as_output()->set(false);

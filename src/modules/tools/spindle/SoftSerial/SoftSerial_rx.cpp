@@ -12,9 +12,6 @@
 uint32_t overhead_us = 200 * 1000000 / SystemCoreClock;         //Random estimation of the overhead of mbed libs, makes slow devices like LPC812 @ 12MHz perform better
 
 int SoftSerial::_getc( void ) {
-    while(!readable()){
-        THEKERNEL->call_event(ON_IDLE, this);
-    };
     out_valid = false;
     return out_buffer;
 }

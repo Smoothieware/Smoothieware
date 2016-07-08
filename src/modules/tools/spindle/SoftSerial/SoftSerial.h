@@ -89,10 +89,6 @@ public:
         fpointer[type].attach(tptr, mptr);
     }
 
-    /** Generate a break condition on the serial line
-     */
-    void send_break();
-
 protected:
     DigitalOut *tx;
     InterruptIn *rx;

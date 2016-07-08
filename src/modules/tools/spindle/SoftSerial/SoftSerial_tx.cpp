@@ -20,17 +20,6 @@ int SoftSerial::_putc(int c)
     return 0;
 }
 
-void SoftSerial::send_break(void) {
-    while(!writeable()){
-        THEKERNEL->call_event(ON_IDLE, this);
-    };
-    tx_bit = 0;         //Just to make sure it appears as non-writable to other threads/IRQs
-    tx->write(0);
-    wait_us((bit_period * _total_bits * 3) / 2);
-    tx->write(1);
-    tx_bit = -1;
-}
-
 int SoftSerial::writeable(void)
 {
     if (!tx_en)
