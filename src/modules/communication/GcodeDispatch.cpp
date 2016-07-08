@@ -356,6 +356,10 @@ try_again:
                             new_message.stream->printf("unknown\r\n");
                         }
 
+                        // we cannot continue safely after an error so we enter HALT state
+                        new_message.stream->printf("Entering Alarm/Halt state\n");
+                        THEKERNEL->call_event(ON_HALT, nullptr);
+
                     }else{
 
                         if(gcode->add_nl)
