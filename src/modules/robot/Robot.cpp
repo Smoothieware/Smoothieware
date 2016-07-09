@@ -1026,10 +1026,11 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration )) {
         // this is the machine position
         memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
+        return true;
     }
 
-
-    return true;
+    // no actual move
+    return false;
 }
 
 // Used to plan a single move used by things like endstops when homing, zprobe, extruder firmware retracts etc.
