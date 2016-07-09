@@ -75,7 +75,7 @@ static void help(char *str, Shell *sh)
 {
     sh->output("Available commands: All others are passed on\n");
     sh->output("netstat     - show network info\n");
-    sh->output("?           - show network help\n");
+    sh->output("h           - show network help\n");
     sh->output("help        - show command help\n");
     sh->output("exit, quit  - exit shell\n");
 }
@@ -126,7 +126,7 @@ static void quit(char *str, Shell *sh)
 }
 
 //#include "clock.h"
-static void test(char *str, Shell *sh)
+static void ntest(char *str, Shell *sh)
 {
     printf("In Test\n");
 
@@ -190,8 +190,8 @@ static const struct ptentry parsetab[] = {
     {"netstat", connections},
     {"exit", quit},
     {"quit", quit},
-    {"test", test},
-    {"?", help},
+    {"ntest", ntest},
+    {"h", help},
 
     /* Default action */
     {0, unknown}

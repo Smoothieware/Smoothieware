@@ -118,7 +118,7 @@ void TemperatureControl::on_main_loop(void *argument)
 {
     if (this->temp_violated) {
         this->temp_violated = false;
-        THEKERNEL->streams->printf("Error: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
+        THEKERNEL->streams->printf("ERROR : MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
         THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
@@ -524,7 +524,7 @@ void TemperatureControl::on_second_tick(void *argument)
 
     // Check whether or not there is a temperature runaway issue, if so stop everything and report it
     if(THEKERNEL->is_halted()) return;
-    
+
     if( this->target_temperature <= 0 ){ // If we are not trying to heat, state is NOT_HEATING
         this->runaway_state = NOT_HEATING;
     }else{
@@ -542,16 +542,18 @@ void TemperatureControl::on_second_tick(void *argument)
                 this->runaway_heating_timer++;
                 if( this->runaway_heating_timer > this->runaway_heating_timeout && this->runaway_heating_timeout != 0 ){
                     this->runaway_heating_timer = 0;
-                    THEKERNEL->streams->printf("Error : Temperature too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
+                    THEKERNEL->streams->printf("ERROR : Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
                     THEKERNEL->call_event(ON_HALT, nullptr);
                 }
                 break;
-            case TARGET_TEMPERATURE_REACHED: // If we are in state TARGET_TEMPERATURE_REACHED, check for thermal runaway
+            case TARGET_TEMPERATURE_REACHED: { // If we are in state TARGET_TEMPERATURE_REACHED, check for thermal runaway
+                float delta= this->get_temperature() - this->target_temperature;
                 // If the temperature is outside the acceptable range
-                if( fabs( this->get_temperature() - this->target_temperature ) > this->runaway_range && this->runaway_range != 0 ){
-                    THEKERNEL->streams->printf("Error : Temperature runaway on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
+                if(this->runaway_range != 0 && fabsf(delta) > this->runaway_range){
+                    THEKERNEL->streams->printf("ERROR : Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
                     THEKERNEL->call_event(ON_HALT, nullptr);
                 }
+            }
                 break;
         }
     }
