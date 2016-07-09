@@ -81,7 +81,6 @@ class Panel : public Module {
         uint16_t get_screen_lines() const { return screen_lines; }
 
         float get_jogging_speed(int i) { return jogging_speed_mm_min[i]; }
-        float get_jogging_max_travel(int i) { return jogging_max_travel[i]; } // DMF3D
         void set_jogging_speed(int i, float v) { jogging_speed_mm_min[i]= v; }
 
         // public as it is directly accessed by screens... not good
@@ -128,7 +127,6 @@ class Panel : public Module {
         PanelScreen* current_screen;
 
         float jogging_speed_mm_min[3];
-        float jogging_max_travel[3]; // DMF3D
         float default_hotend_temperature;
         float default_bed_temperature;
 

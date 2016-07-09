@@ -159,7 +159,6 @@ Kernel::Kernel(){
 
     this->planner = new Planner();
     this->configurator = new Configurator();
-    this->has_been_homed = false; // DMF3D
 }
 
 // return a GRBL-like query string for serial ?

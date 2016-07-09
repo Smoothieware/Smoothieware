@@ -547,9 +547,7 @@ void Endstops::home(std::bitset<3> a)
 }
 
 void Endstops::process_home_command(Gcode* gcode)
-{
-	THEKERNEL->has_been_homed = false; // DMF3D reset flag incase homing fails
-	
+{	
     if( (gcode->subcode == 0 && THEKERNEL->is_grbl_mode()) || (gcode->subcode == 2 && !THEKERNEL->is_grbl_mode()) ) {
         // G28 in grbl mode or G28.2 in normal mode will do a rapid to the predefined position
         // TODO spec says if XYZ specified move to them first then move to MCS of specifed axis
@@ -728,7 +726,6 @@ void Endstops::process_home_command(Gcode* gcode)
         back_off_home(haxis);
         if(this->move_to_origin_after_home) move_to_origin(haxis);
     }
-    THEKERNEL->has_been_homed = true; // DMF3D
 }
 
 void Endstops::set_homing_offset(Gcode *gcode)
