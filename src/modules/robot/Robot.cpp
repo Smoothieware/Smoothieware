@@ -1191,13 +1191,13 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
 
     // discard segments so small they cause no movement
     if ((gcode->has_letter('X')) && (millimeters_of_travel < (1/(actuators[0]->get_steps_per_mm())))) {
-        return this->append_milestone(target, rate_mm_s);
+        return false;
     }
     if ((gcode->has_letter('Y')) && (millimeters_of_travel < (1/(actuators[1]->get_steps_per_mm())))) {
-        return this->append_milestone(target, rate_mm_s);
+        return false;
     }
     if ((gcode->has_letter('Z')) && (millimeters_of_travel < (1/(actuators[2]->get_steps_per_mm())))) {
-        return this->append_milestone(target, rate_mm_s);
+        return false;
     }
     
     // limit segments by maximum arc error
