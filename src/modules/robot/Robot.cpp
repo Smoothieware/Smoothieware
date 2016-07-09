@@ -1074,13 +1074,9 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
     float millimeters_of_travel = sqrtf(powf( target[X_AXIS] - last_milestone[X_AXIS], 2 ) +  powf( target[Y_AXIS] - last_milestone[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - last_milestone[Z_AXIS], 2 ));
 
     // discard segments so small they cause no movement
-    if ((gcode->has_letter('X')) && (millimeters_of_travel < (1/(actuators[0]->get_steps_per_mm())))) {
-        return this->append_milestone(target, rate_mm_s);
-    }
-    if ((gcode->has_letter('Y')) && (millimeters_of_travel < (1/(actuators[1]->get_steps_per_mm())))) {
-        return this->append_milestone(target, rate_mm_s);
-    }
-    if ((gcode->has_letter('Z')) && (millimeters_of_travel < (1/(actuators[2]->get_steps_per_mm())))) {
+    if (((gcode->has_letter('X')) && (millimeters_of_travel < (1/(actuators[0]->get_steps_per_mm())))) &&
+        ((gcode->has_letter('Y')) && (millimeters_of_travel < (1/(actuators[1]->get_steps_per_mm())))) &&
+        ((gcode->has_letter('Z')) && (millimeters_of_travel < (1/(actuators[2]->get_steps_per_mm()))))) {
         return this->append_milestone(target, rate_mm_s);
     }
 
@@ -1190,16 +1186,12 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     float millimeters_of_travel = hypotf(angular_travel * radius, fabsf(linear_travel));
 
     // discard segments so small they cause no movement
-    if ((gcode->has_letter('X')) && (millimeters_of_travel < (1/(actuators[0]->get_steps_per_mm())))) {
+    if (((gcode->has_letter('X')) && (millimeters_of_travel < (1/(actuators[0]->get_steps_per_mm())))) && 
+        ((gcode->has_letter('Y')) && (millimeters_of_travel < (1/(actuators[1]->get_steps_per_mm())))) &&
+        ((gcode->has_letter('Z')) && (millimeters_of_travel < (1/(actuators[2]->get_steps_per_mm()))))) {
         return false;
     }
-    if ((gcode->has_letter('Y')) && (millimeters_of_travel < (1/(actuators[1]->get_steps_per_mm())))) {
-        return false;
-    }
-    if ((gcode->has_letter('Z')) && (millimeters_of_travel < (1/(actuators[2]->get_steps_per_mm())))) {
-        return false;
-    }
-    
+
     // limit segments by maximum arc error
     float arc_segment = this->mm_per_arc_segment;
     if ((this->mm_max_arc_error > 0) && (2 * radius > this->mm_max_arc_error)) {
