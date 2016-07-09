@@ -548,7 +548,7 @@ void Endstops::home(std::bitset<3> a)
 
 void Endstops::process_home_command(Gcode* gcode)
 {	
-	THEKERNEL->has_been_homed = false;
+    THEKERNEL->has_been_homed = false;
     if( (gcode->subcode == 0 && THEKERNEL->is_grbl_mode()) || (gcode->subcode == 2 && !THEKERNEL->is_grbl_mode()) ) {
         // G28 in grbl mode or G28.2 in normal mode will do a rapid to the predefined position
         // TODO spec says if XYZ specified move to them first then move to MCS of specifed axis

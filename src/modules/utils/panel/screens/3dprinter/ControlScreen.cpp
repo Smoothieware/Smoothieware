@@ -59,16 +59,16 @@ void ControlScreen::on_refresh()
         } else if (THEPANEL->control_value_change()) {
              if (THEKERNEL->has_been_homed) {
             // after homing keep jogging in the box
-				float p = THEPANEL->get_control_value();
-				if (p<0) {
-     	       		p=0; THEPANEL->set_control_value(p); THEPANEL->reset_counter();}
-				if (p > THEPANEL->get_jogging_max_travel(this->controlled_axis - 'X')) {
-            		p = THEPANEL->get_jogging_max_travel(this->controlled_axis - 'X');
-            		THEPANEL->set_control_value(p); THEPANEL->reset_counter();}
-				this->pos[this->controlled_axis - 'X'] = p;
+                float p = THEPANEL->get_control_value();
+                if (p<0) {
+                    p=0; THEPANEL->set_control_value(p); THEPANEL->reset_counter();}
+                if (p > THEPANEL->get_jogging_max_travel(this->controlled_axis - 'X')) {
+                    p = THEPANEL->get_jogging_max_travel(this->controlled_axis - 'X');
+                    THEPANEL->set_control_value(p); THEPANEL->reset_counter();}
+                this->pos[this->controlled_axis - 'X'] = p;
             } else {
             // allow any move
-        	    this->pos[this->controlled_axis - 'X'] = THEPANEL->get_control_value();
+                this->pos[this->controlled_axis - 'X'] = THEPANEL->get_control_value();
             }   
             THEPANEL->lcd->setCursor(0, 2);
             this->display_axis_line(this->controlled_axis);
