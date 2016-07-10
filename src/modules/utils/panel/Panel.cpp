@@ -65,6 +65,8 @@
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
 #define panel_display_message_checksum CHECKSUM("display_message")
 
+#define root_path_checksum         CHECKSUM("root_path")
+
 Panel* Panel::instance= nullptr;
 
 #define MENU_MODE                  0
@@ -179,6 +181,7 @@ void Panel::on_module_loaded()
 //    this->back_button.set_longpress_delay(longpress_delay);
 //    this->pause_button.set_longpress_delay(longpress_delay);
 
+    this->root_path = THEKERNEL->config->value( panel_checksum, root_path_checksum )->by_default("/")->as_string();
 
     THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
     if(lcd->encoderReturnsDelta()) {
