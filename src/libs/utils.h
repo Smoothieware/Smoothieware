@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #include <stdint.h>
 #include <string>
@@ -36,11 +35,9 @@ std::string absolute_from_relative( std::string path );
 
 int append_parameters(char *buf, std::vector<std::pair<char,float>> params, size_t bufsize);
 std::string wcs2gcode(int wcs);
-void safe_delay(uint32_t delay);
+void safe_delay_us(uint32_t delay);
+void safe_delay_ms(uint32_t delay);
 
 #define confine(value, min, max) (((value) < (min))?(min):(((value) > (max))?(max):(value)))
 
 //#define dd(...) LPC_GPIO2->FIODIR = 0xffff; LPC_GPIO2->FIOCLR = 0xffff; LPC_GPIO2->FIOSET = __VA_ARGS__
-
-
-#endif
