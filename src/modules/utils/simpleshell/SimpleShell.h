@@ -5,9 +5,7 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-#ifndef simpleshell_h
-#define simpleshell_h
+#pragma once
 
 #include "Module.h"
 
@@ -60,9 +58,7 @@ private:
 
     static void remount_command( string parameters, StreamOutput *stream);
 
-#ifdef CNC
     static void test_command( string parameters, StreamOutput *stream);
-#endif
 
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {
@@ -73,6 +69,3 @@ private:
     static const ptentry_t commands_table[];
     static int reset_delay_secs;
 };
-
-
-#endif

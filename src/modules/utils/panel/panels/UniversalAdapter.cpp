@@ -102,7 +102,7 @@ void UniversalAdapter::wait_until_ready()
 {
     while(this->busy_pin->get() != 0) {
         // poll adapter for more room
-        safe_delay(100);
+        safe_delay_ms(100);
         writeSPI(POLL);
     }
 }
@@ -212,5 +212,5 @@ void UniversalAdapter::init()
         writeSPI(INIT_ADAPTER);
     }
     // give adapter time to init
-    safe_delay(100);
+    safe_delay_ms(100);
 }
