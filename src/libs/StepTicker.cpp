@@ -83,11 +83,13 @@ void StepTicker::set_frequency( float frequency )
     LPC_TIM0->TCR = 1;  // start
 }
 
-// Set the reset delay
+// Set the reset delay, must be called after set_frequency
 void StepTicker::set_unstep_time( float microseconds )
 {
     uint32_t delay = floorf((SystemCoreClock / 4.0F) * (microseconds / 1000000.0F)); // SystemCoreClock/4 = Timer increments in a second
     LPC_TIM1->MR0 = delay;
+
+    // TODO check that the unstep time is less than the step period, if not slow down step ticker
 }
 
 // Reset step pins on any motor that was stepped
