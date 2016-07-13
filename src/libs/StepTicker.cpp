@@ -37,12 +37,12 @@ StepTicker::StepTicker()
 
     // Configure the timer
     LPC_TIM0->MR0 = 10000000;       // Initial dummy value for Match Register
-    LPC_TIM0->MCR = 3;              // Match on MR0, reset on MR0, match on MR1
+    LPC_TIM0->MCR = 3;              // Match on MR0, reset on MR0
     LPC_TIM0->TCR = 0;              // Disable interrupt
 
     LPC_SC->PCONP |= (1 << 2);      // Power Ticker ON
     LPC_TIM1->MR0 = 1000000;
-    LPC_TIM1->MCR = 1;
+    LPC_TIM1->MCR = 5;              // match on Mr0, stop on match
     LPC_TIM1->TCR = 0;              // Disable interrupt
 
     // Default start values
@@ -219,7 +219,7 @@ void StepTicker::step_tick (void)
 
     // see if any motors are still moving
     if(!still_moving) {
-        SET_STEPTICKER_DEBUG_PIN(0);
+        //SET_STEPTICKER_DEBUG_PIN(0);
 
         // all moves finished
         current_tick = 0;
@@ -262,7 +262,7 @@ bool StepTicker::start_next_block()
     }
 
     if(ok) {
-        SET_STEPTICKER_DEBUG_PIN(1);
+        //SET_STEPTICKER_DEBUG_PIN(1);
         return true;
 
     }else{
