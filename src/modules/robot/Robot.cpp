@@ -560,7 +560,7 @@ void Robot::on_gcode_received(void *argument)
                         // this format is deprecated
                         if(gcode->subcode == 0 && (gcode->has_letter('A') || gcode->has_letter('B') || gcode->has_letter('C'))) {
                             gcode->stream->printf("NOTE this format is deprecated, Use M203.1 instead\n");
-                                for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+                            for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
                                 if (gcode->has_letter('A' + i)) {
                                     float v= gcode->get_value('A'+i);
                                     actuators[i]->set_max_rate(v);
@@ -840,7 +840,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 }
 
 // reset the machine position for all axis. Used for homing.
-// During homing compensation is turned off (actually not used as it drives steppers directly)
+// During homing compensation is turned off
 // once homed and reset_axis called compensation is used for the move to origin and back off home if enabled,
 // so in those cases the final position is compensated.
 void Robot::reset_axis_position(float x, float y, float z)
@@ -1026,10 +1026,11 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration )) {
         // this is the machine position
         memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
+        return true;
     }
 
-
-    return true;
+    // no actual move
+    return false;
 }
 
 // Used to plan a single move used by things like endstops when homing, zprobe, extruder firmware retracts etc.

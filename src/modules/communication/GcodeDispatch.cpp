@@ -307,7 +307,7 @@ try_again:
                                     string arg= get_arguments(single_command + possible_command); // rest of line is filename
                                     if(arg.empty()) arg= "/sd/config-override";
                                     else arg= "/sd/config-override." + arg;
-                                    new_message.stream->printf("args: <%s>\n", arg.c_str());
+                                    //new_message.stream->printf("args: <%s>\n", arg.c_str());
                                     SimpleShell::parse_command((gcode->m == 501) ? "load_command" : "save_command", arg, new_message.stream);
                                 }
                                 delete gcode;
@@ -355,6 +355,10 @@ try_again:
                         }else{
                             new_message.stream->printf("unknown\r\n");
                         }
+
+                        // we cannot continue safely after an error so we enter HALT state
+                        new_message.stream->printf("Entering Alarm/Halt state\n");
+                        THEKERNEL->call_event(ON_HALT, nullptr);
 
                     }else{
 
