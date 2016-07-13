@@ -66,6 +66,9 @@ void SoftSerial::rx_handler(void) {
                 if ((!parity_count) && (_parity == Odd))
                     rx_error = true;
                 return;
+            case None:
+                // No parity, nothing to do here
+                break;
         }
     }
     
