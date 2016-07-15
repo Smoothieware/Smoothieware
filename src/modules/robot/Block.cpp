@@ -79,11 +79,11 @@ void Block::clear()
 
 void Block::debug() const
 {
-    THEKERNEL->streams->printf("%p: steps-X:%04lu Y:%04lu Z:%04lu ", this, this->steps[0], this->steps[1], this->steps[2]);
+    THEKERNEL->streams->printf("%p: steps-X:%lu Y:%lu Z:%lu ", this, this->steps[0], this->steps[1], this->steps[2]);
     for (size_t i = E_AXIS; i < n_actuators; ++i) {
-        THEKERNEL->streams->printf("E%d:%04lu ", i-E_AXIS, this->steps[i]);
+        THEKERNEL->streams->printf("E%d:%lu ", i-E_AXIS, this->steps[i]);
     }
-    THEKERNEL->streams->printf("(max:%4lu) nominal:r%1.4f/s%1.4f mm:%1.4f acc:%1.2f accu:%5lu decu:%5lu rates:%10.4f entry/max:%1.4f/%1.4f exit:%1.4f primary:%d ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
+    THEKERNEL->streams->printf("(max:%lu) nominal:r%1.4f/s%1.4f mm:%1.4f acc:%1.2f accu:%lu decu:%lu ticks:%lu rates:%1.4f entry/max:%1.4f/%1.4f exit:%1.4f primary:%d ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
                                this->steps_event_count,
                                this->nominal_rate,
                                this->nominal_speed,
@@ -91,10 +91,11 @@ void Block::debug() const
                                this->acceleration,
                                this->accelerate_until,
                                this->decelerate_after,
+                               this->total_move_ticks,
                                this->initial_rate,
                                this->entry_speed,
-                               this->exit_speed,
                                this->max_entry_speed,
+                               this->exit_speed,
                                this->primary_axis,
                                this->is_ready,
                                this->locked,
