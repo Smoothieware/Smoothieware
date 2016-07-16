@@ -253,6 +253,12 @@ panel.alpha_jog_feedrate                     6000              # x jogging feedr
 panel.beta_jog_feedrate                      6000              # y jogging feedrate in mm/min
 panel.gamma_jog_feedrate                     200               # z jogging feedrate in mm/min
 
+panel.jog_in_the_box_enable                  false             # when jogging with the panel keep XYZ between 0 and _max_travel
+                                                               #  useful with cartesian 3D printers and engravers
+panel.alpha_max_travel                       200               # x jogging max travel mm
+panel.beta_max_travel                        200               # y jogging max travel mm
+panel.gamma_max_travel                       200               # z jogging max travel mm
+
 panel.hotend_temperature                     185               # temp to set hotend when preheat is selected
 panel.bed_temperature                        60                # temp to set bed when preheat is selected
 

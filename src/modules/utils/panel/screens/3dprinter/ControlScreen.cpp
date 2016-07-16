@@ -57,7 +57,19 @@ void ControlScreen::on_refresh()
             this->refresh_menu();
 
         } else if (THEPANEL->control_value_change()) {
-            this->pos[this->controlled_axis - 'X'] = THEPANEL->get_control_value();    
+             if (THEKERNEL->has_been_homed && THEPANEL->jog_in_the_box_enabled()) {
+            // after homing keep jogging in the box
+                float p = THEPANEL->get_control_value();
+                if (p<0) {
+                    p=0; THEPANEL->set_control_value(p); THEPANEL->reset_counter();}
+                if (p > THEPANEL->get_jogging_max_travel(this->controlled_axis - 'X')) {
+                    p = THEPANEL->get_jogging_max_travel(this->controlled_axis - 'X');
+                    THEPANEL->set_control_value(p); THEPANEL->reset_counter();}
+                this->pos[this->controlled_axis - 'X'] = p;
+            } else {
+            // allow any move
+                this->pos[this->controlled_axis - 'X'] = THEPANEL->get_control_value();
+            }   
             THEPANEL->lcd->setCursor(0, 2);
             this->display_axis_line(this->controlled_axis);
             this->pos_changed = true; // make the gcode in main_loop

@@ -54,7 +54,11 @@
 #define jog_x_feedrate_checksum     CHECKSUM("alpha_jog_feedrate")
 #define jog_y_feedrate_checksum     CHECKSUM("beta_jog_feedrate")
 #define jog_z_feedrate_checksum     CHECKSUM("gamma_jog_feedrate")
-#define	longpress_delay_checksum	CHECKSUM("longpress_delay")
+#define jog_in_the_box_enable_checksum CHECKSUM("jog_in_the_box_enable")
+#define jog_x_max_travel_checksum   CHECKSUM("alpha_max_travel")
+#define jog_y_max_travel_checksum   CHECKSUM("beta_max_travel")
+#define jog_z_max_travel_checksum   CHECKSUM("gamma_max_travel")
+#define	longpress_delay_checksum    CHECKSUM("longpress_delay")
 
 #define ext_sd_checksum            CHECKSUM("external_sd")
 #define sdcd_pin_checksum          CHECKSUM("sdcd_pin")
@@ -159,7 +163,11 @@ void Panel::on_module_loaded()
     jogging_speed_mm_min[0] = THEKERNEL->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0f)->as_number();
     jogging_speed_mm_min[1] = THEKERNEL->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0f)->as_number();
     jogging_speed_mm_min[2] = THEKERNEL->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0f )->as_number();
-	
+    jog_in_the_box = THEKERNEL->config->value( panel_checksum, jog_in_the_box_enable_checksum )->by_default(false)->as_bool();
+    jogging_max_travel[0]= THEKERNEL->config->value( panel_checksum, jog_x_max_travel_checksum)->by_default(500.0f)->as_number();
+    jogging_max_travel[1]= THEKERNEL->config->value( panel_checksum, jog_y_max_travel_checksum)->by_default(500.0f)->as_number();
+    jogging_max_travel[2]= THEKERNEL->config->value( panel_checksum, jog_z_max_travel_checksum)->by_default(500.0f)->as_number();
+
     // load the default preset temeratures
     default_hotend_temperature = THEKERNEL->config->value( panel_checksum, hotend_temp_checksum )->by_default(185.0f )->as_number();
     default_bed_temperature    = THEKERNEL->config->value( panel_checksum, bed_temp_checksum    )->by_default(60.0f  )->as_number();
