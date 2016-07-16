@@ -28,6 +28,8 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     acceleration= NAN;
     selected= true;
 
+    this->set_direction(false);
+
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_ENABLE);
 }
