@@ -23,12 +23,13 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
     current_position_steps= 0;
-    enable(false);
     moving= false;
     acceleration= NAN;
     selected= true;
 
-    this->set_direction(false);
+    enable(false);
+    unstep(); // initialize step pin
+    set_direction(false); // initialize dor pin
 
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_ENABLE);
