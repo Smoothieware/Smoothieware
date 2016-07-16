@@ -57,7 +57,7 @@ void ControlScreen::on_refresh()
             this->refresh_menu();
 
         } else if (THEPANEL->control_value_change()) {
-             if (THEKERNEL->has_been_homed) {
+             if (THEKERNEL->has_been_homed && THEPANEL->jog_in_the_box_enabled()) {
             // after homing keep jogging in the box
                 float p = THEPANEL->get_control_value();
                 if (p<0) {

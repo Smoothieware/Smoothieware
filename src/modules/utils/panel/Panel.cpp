@@ -54,6 +54,7 @@
 #define jog_x_feedrate_checksum     CHECKSUM("alpha_jog_feedrate")
 #define jog_y_feedrate_checksum     CHECKSUM("beta_jog_feedrate")
 #define jog_z_feedrate_checksum     CHECKSUM("gamma_jog_feedrate")
+#define jog_in_the_box_enable_checksum CHECKSUM("jog_in_the_box_enable")
 #define jog_x_max_travel_checksum   CHECKSUM("alpha_max_travel")
 #define jog_y_max_travel_checksum   CHECKSUM("beta_max_travel")
 #define jog_z_max_travel_checksum   CHECKSUM("gamma_max_travel")
@@ -162,6 +163,7 @@ void Panel::on_module_loaded()
     jogging_speed_mm_min[0] = THEKERNEL->config->value( panel_checksum, jog_x_feedrate_checksum )->by_default(3000.0f)->as_number();
     jogging_speed_mm_min[1] = THEKERNEL->config->value( panel_checksum, jog_y_feedrate_checksum )->by_default(3000.0f)->as_number();
     jogging_speed_mm_min[2] = THEKERNEL->config->value( panel_checksum, jog_z_feedrate_checksum )->by_default(300.0f )->as_number();
+    jog_in_the_box = THEKERNEL->config->value( panel_checksum, jog_in_the_box_enable_checksum )->by_default(false)->as_bool();
     jogging_max_travel[0]= THEKERNEL->config->value( panel_checksum, jog_x_max_travel_checksum)->by_default(500.0f)->as_number();
     jogging_max_travel[1]= THEKERNEL->config->value( panel_checksum, jog_y_max_travel_checksum)->by_default(500.0f)->as_number();
     jogging_max_travel[2]= THEKERNEL->config->value( panel_checksum, jog_z_max_travel_checksum)->by_default(500.0f)->as_number();
