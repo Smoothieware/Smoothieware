@@ -73,7 +73,6 @@ class Kernel {
         Adc*              adc;
         std::string       current_path;
         uint32_t          base_stepping_frequency;
-        uint32_t          acceleration_ticks_per_second;
 
     private:
         // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered

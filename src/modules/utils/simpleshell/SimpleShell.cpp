@@ -1072,6 +1072,10 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             // delay but call on_idle
             safe_delay_us(delayus);
         }
+
+        // reset the position based on current actuator position
+        THEROBOT->reset_position_from_current_actuator_position();
+
         stream->printf("done\n");
 
     }else {
