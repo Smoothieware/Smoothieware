@@ -263,9 +263,13 @@ string wcs2gcode(int wcs) {
     return str;
 }
 
-void safe_delay(uint32_t delayms)
+void safe_delay_ms(uint32_t delay)
 {
-    uint32_t dus= delayms*1000; //convert ms to us
+    safe_delay_us(delay*1000);
+}
+
+void safe_delay_us(uint32_t dus)
+{
     uint32_t start = us_ticker_read();
     while ((us_ticker_read() - start) < dus) {
         THEKERNEL->call_event(ON_IDLE);

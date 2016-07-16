@@ -51,6 +51,7 @@ extern unsigned int g_maximumHeapAddress;
 #include <mri.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <functional>
 
 extern "C" uint32_t  __end__;
 extern "C" uint32_t  __malloc_free_list;
@@ -82,9 +83,8 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"calc_thermistor", SimpleShell::calc_thermistor_command},
     {"thermistors", SimpleShell::print_thermistors_command},
     {"md5sum",   SimpleShell::md5sum_command},
-#ifdef CNC
     {"test",     SimpleShell::test_command},
-#endif
+
     // unknown command
     {NULL, NULL}
 };
@@ -387,7 +387,7 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
 
     // we have been asked to delay before cat, probably to allow time to issue upload command
     if(delay > 0) {
-        safe_delay(delay*1000);
+        safe_delay_ms(delay*1000);
     }
 
     // Open file
@@ -530,7 +530,7 @@ void SimpleShell::save_command( string parameters, StreamOutput *stream )
         filename = THEKERNEL->config_override_filename();
     }
 
-    THEKERNEL->conveyor->wait_for_idle(); //just to be safe as it can take a while to run
+    THECONVEYOR->wait_for_idle(); //just to be safe as it can take a while to run
 
     //remove(filename.c_str()); // seems to cause a hang every now and then
     {
@@ -795,7 +795,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             message.message = cmd;
             message.stream = &(StreamOutput::NullStream);
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-            THEKERNEL->conveyor->wait_for_idle();
+            THECONVEYOR->wait_for_idle();
         }
 
    } else if (what == "pos") {
@@ -936,7 +936,6 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
     fclose(lp);
 }
 
-#ifdef CNC
 // runs several types of test on the mechanisms
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
@@ -964,7 +963,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             struct SerialMessage message{&StreamOutput::NullStream, cmd};
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             if(THEKERNEL->is_halted()) break;
-            THEKERNEL->conveyor->wait_for_idle();
+            THECONVEYOR->wait_for_idle();
             toggle= !toggle;
         }
         stream->printf("done\n");
@@ -995,7 +994,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             stream->printf("%s\n", cmd);
             message.message= cmd;
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-            THEKERNEL->conveyor->wait_for_idle();
+            THECONVEYOR->wait_for_idle();
         }
         stream->printf("done\n");
 
@@ -1039,17 +1038,53 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             if(THEKERNEL->is_halted()) break;
-            THEKERNEL->conveyor->wait_for_idle();
+            THECONVEYOR->wait_for_idle();
         }
+        stream->printf("done\n");
+
+    }else if (what == "raw") {
+        // issues raw steps to the specified axis usage: axis steps steps/sec
+        string axis = shift_parameter( parameters );
+        string stepstr = shift_parameter( parameters );
+        string stepspersec = shift_parameter( parameters );
+        if(axis.empty() || stepstr.empty() || stepspersec.empty()) {
+            stream->printf("error: Need axis steps steps/sec\n");
+            return;
+        }
+
+        uint8_t a= toupper(axis[0]) - 'X';
+        int steps= strtol(stepstr.c_str(), NULL, 10);
+        bool dir= steps >= 0;
+        steps= std::abs(steps);
+
+        if(a > Z_AXIS) {
+            stream->printf("error: axis must be x y or z\n");
+            return;
+        }
+
+        uint32_t sps= strtol(stepspersec.c_str(), NULL, 10);
+        sps= std::max(sps, 1UL);
+
+        uint32_t delayus= 1000000.0F / sps;
+        for(int s= 0;s<steps;s++) {
+            if(THEKERNEL->is_halted()) break;
+            THEROBOT->actuators[a]->manual_step(dir);
+            // delay but call on_idle
+            safe_delay_us(delayus);
+        }
+
+        // reset the position based on current actuator position
+        THEROBOT->reset_position_from_current_actuator_position();
+
         stream->printf("done\n");
 
     }else {
         stream->printf("usage:\n test jog axis distance iterations [feedrate]\n");
         stream->printf(" test square size iterations [feedrate]\n");
         stream->printf(" test circle radius iterations [feedrate]\n");
+        stream->printf(" test raw axis steps steps/sec\n");
     }
 }
-#endif
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
 {

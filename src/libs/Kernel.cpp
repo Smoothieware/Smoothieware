@@ -40,7 +40,6 @@
 
 #define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
-#define acceleration_ticks_per_second_checksum      CHECKSUM("acceleration_ticks_per_second")
 #define disable_leds_checksum                       CHECKSUM("leds_disable")
 #define grbl_mode_checksum                          CHECKSUM("grbl_mode")
 #define ok_per_line_checksum                        CHECKSUM("ok_per_line")
@@ -144,12 +143,11 @@ Kernel::Kernel(){
 
     // Configure the step ticker
     this->base_stepping_frequency = this->config->value(base_stepping_frequency_checksum)->by_default(100000)->as_number();
-    float microseconds_per_step_pulse = this->config->value(microseconds_per_step_pulse_checksum)->by_default(5)->as_number();
-    this->acceleration_ticks_per_second = THEKERNEL->config->value(acceleration_ticks_per_second_checksum)->by_default(1000)->as_number();
+    float microseconds_per_step_pulse = this->config->value(microseconds_per_step_pulse_checksum)->by_default(1)->as_number();
 
-    // Configure the step ticker ( TODO : shouldnt this go into stepticker's code ? )
-    this->step_ticker->set_unstep_time( microseconds_per_step_pulse );
+    // Configure the step ticker
     this->step_ticker->set_frequency( this->base_stepping_frequency );
+    this->step_ticker->set_unstep_time( microseconds_per_step_pulse );
 
     // Core modules
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
