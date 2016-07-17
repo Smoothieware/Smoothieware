@@ -151,9 +151,13 @@ try_again:
                     if(THEKERNEL->is_halted()) {
                         // we ignore all commands until M999, unless it is in the exceptions list (like M105 get temp)
                         if(gcode->has_m && gcode->m == 999) {
-                            THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
-                            new_message.stream->printf("WARNING: After HALT you should HOME as position is currently unknown\n");
-                            // fall through and pass onto other modules
+                            if(THEKERNEL->is_halted()) {
+                                THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
+                                new_message.stream->printf("WARNING: After HALT you should HOME as position is currently unknown\n");
+                            }
+                            new_message.stream->printf("ok\n");
+                            delete gcode;
+                            continue;
 
                         }else if(!is_allowed_mcode(gcode->m)) {
                             // ignore everything, return error string to host
