@@ -71,6 +71,7 @@ void StepTicker::start()
 {
     NVIC_EnableIRQ(TIMER0_IRQn);     // Enable interrupt handler
     NVIC_EnableIRQ(TIMER1_IRQn);     // Enable interrupt handler
+    current_tick= 0;
 }
 
 // Set the base stepping frequency
@@ -132,8 +133,6 @@ void StepTicker::handle_finish (void)
 // step clock
 void StepTicker::step_tick (void)
 {
-    static uint32_t current_tick = 0;
-
     //SET_STEPTICKER_DEBUG_PIN(running ? 1 : 0);
 
     // if nothing has been setup we ignore the ticks
@@ -149,6 +148,7 @@ void StepTicker::step_tick (void)
 
     if(THEKERNEL->is_halted()) {
         running= false;
+        current_tick = 0;
         return;
     }
 
@@ -260,6 +260,8 @@ bool StepTicker::start_next_block()
         motor[m]->set_direction(current_block->direction_bits[m]);
         motor[m]->start_moving(); // also let motor know it is moving now
     }
+
+    current_tick= 0;
 
     if(ok) {
         //SET_STEPTICKER_DEBUG_PIN(1);
