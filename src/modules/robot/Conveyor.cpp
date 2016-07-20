@@ -165,6 +165,10 @@ void Conveyor::queue_head_block()
 
     // upstream caller will block on this until there is room in the queue
     while (queue.is_full()) {
+        if(halted) {
+            return; // if we got a halt then we are done here do not wait any longer
+        }
+
         //check_queue();
         THEKERNEL->call_event(ON_IDLE, this); // will call check_queue();
     }
