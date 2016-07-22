@@ -79,18 +79,21 @@ alpha_dir_pin                                0.5              # Pin for alpha st
 alpha_en_pin                                 0.4              # Pin for alpha enable pin
 alpha_current                                1.5              # X stepper motor current
 alpha_max_rate                               30000.0          # mm/min
+alpha_max_travel                             500              # max travel in mm for alpha/X axis when homing
 
 beta_step_pin                                2.1              # Pin for beta stepper step signal
 beta_dir_pin                                 0.11             # Pin for beta stepper direction
 beta_en_pin                                  0.10             # Pin for beta enable
 beta_current                                 1.5              # Y stepper motor current
 beta_max_rate                                30000.0          # mm/min
+beta_max_travel                              500              # max travel in mm for beta/Y axis when homing
 
 gamma_step_pin                               2.2              # Pin for gamma stepper step signal
 gamma_dir_pin                                0.20             # Pin for gamma stepper direction
 gamma_en_pin                                 0.19             # Pin for gamma enable
 gamma_current                                1.5              # Z stepper motor current
 gamma_max_rate                               30000.0          # mm/min
+gamma_max_travel                             500              # max travel in mm for gamma/Z axis when homing (max homing for a delta)
 
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
