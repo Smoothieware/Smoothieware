@@ -772,11 +772,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             ActuatorCoordinates apos{x, y, z};
             float pos[3];
             THEROBOT->arm_solution->actuator_to_cartesian(apos, pos);
-            stream->printf("cartesian= X %f, Y %f, Z %f, Steps= A %lu, B %lu, C %lu\n",
-                pos[0], pos[1], pos[2],
-                lroundf(x*THEROBOT->actuators[0]->get_steps_per_mm()),
-                lroundf(y*THEROBOT->actuators[1]->get_steps_per_mm()),
-                lroundf(z*THEROBOT->actuators[2]->get_steps_per_mm()));
+            stream->printf("cartesian= X %f, Y %f, Z %f\n", pos[0], pos[1], pos[2]);
             x= pos[0];
             y= pos[1];
             z= pos[2];
@@ -786,7 +782,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             float pos[3]{x, y, z};
             ActuatorCoordinates apos;
             THEROBOT->arm_solution->cartesian_to_actuator(pos, apos);
-            stream->printf("actuator= A %f, B %f, C %f\n", apos[0], apos[1], apos[2]);
+            stream->printf("actuator= X %f, Y %f, Z %f\n", apos[0], apos[1], apos[2]);
         }
 
         if(move) {

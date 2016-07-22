@@ -93,8 +93,7 @@
 #define alpha_homing_direction_checksum  CHECKSUM("alpha_homing_direction")
 #define beta_homing_direction_checksum   CHECKSUM("beta_homing_direction")
 #define gamma_homing_direction_checksum  CHECKSUM("gamma_homing_direction")
-#define home_to_max_checksum             CHECKSUM("home_to_max")
-#define home_to_min_checksum             CHECKSUM("home_to_min")
+
 #define alpha_min_checksum               CHECKSUM("alpha_min")
 #define beta_min_checksum                CHECKSUM("beta_min")
 #define gamma_min_checksum               CHECKSUM("gamma_min")
@@ -184,22 +183,17 @@ void Endstops::load_config()
     this->retract_mm[2] = THEKERNEL->config->value(gamma_homing_retract_mm_checksum   )->by_default(this->retract_mm[2])->as_number();
 
     // NOTE the debouce count is in milliseconds so probably does not need to beset anymore
-    this->debounce_ms     = THEKERNEL->config->value(endstop_debounce_ms_checksum       )->by_default(0)->as_number();
-    this->debounce_count  = THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
+    this->debounce_ms= THEKERNEL->config->value(endstop_debounce_ms_checksum       )->by_default(0)->as_number();
+    this->debounce_count= THEKERNEL->config->value(endstop_debounce_count_checksum    )->by_default(100)->as_number();
 
     // get homing direction and convert to boolean where true is home to min, and false is home to max
-    int home_dir                    = get_checksum(THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string());
-    this->home_direction[0]         = home_dir != home_to_max_checksum;
+    this->home_direction[0]= THEKERNEL->config->value(alpha_homing_direction_checksum)->by_default("home_to_min")->as_string() != "home_to_max";
+    this->home_direction[1]= THEKERNEL->config->value(beta_homing_direction_checksum)->by_default("home_to_min")->as_string()  != "home_to_max";
+    this->home_direction[2]= THEKERNEL->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string() != "home_to_max";
 
-    home_dir                        = get_checksum(THEKERNEL->config->value(beta_homing_direction_checksum)->by_default("home_to_min")->as_string());
-    this->home_direction[1]         = home_dir != home_to_max_checksum;
-
-    home_dir                        = get_checksum(THEKERNEL->config->value(gamma_homing_direction_checksum)->by_default("home_to_min")->as_string());
-    this->home_direction[2]         = home_dir != home_to_max_checksum;
-
-    this->homing_position[0]        =  this->home_direction[0] ? THEKERNEL->config->value(alpha_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(alpha_max_checksum)->by_default(200)->as_number();
-    this->homing_position[1]        =  this->home_direction[1] ? THEKERNEL->config->value(beta_min_checksum )->by_default(0)->as_number() : THEKERNEL->config->value(beta_max_checksum )->by_default(200)->as_number();
-    this->homing_position[2]        =  this->home_direction[2] ? THEKERNEL->config->value(gamma_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number();
+    this->homing_position[0]=  this->home_direction[0] ? THEKERNEL->config->value(alpha_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(alpha_max_checksum)->by_default(200)->as_number();
+    this->homing_position[1]=  this->home_direction[1] ? THEKERNEL->config->value(beta_min_checksum )->by_default(0)->as_number() : THEKERNEL->config->value(beta_max_checksum )->by_default(200)->as_number();
+    this->homing_position[2]=  this->home_direction[2] ? THEKERNEL->config->value(gamma_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number();
 
     // used to set maximum movement on homing, set by alpha_max_travel if defined
     // for backward compatibility uses alpha_max if nit defined.
@@ -500,7 +494,7 @@ void Endstops::home(std::bitset<3> a)
 
     if(axis_to_home[Z_AXIS]) {
         // now home z
-        float delta[3] {0, 0, gamma_max}; // we go twice the maxz just in case it was set incorrectly
+        float delta[3] {0, 0, gamma_max}; // we go the max z
         if(this->home_direction[Z_AXIS]) delta[Z_AXIS]= -delta[Z_AXIS];
         THEROBOT->delta_move(delta, fast_rates[Z_AXIS], 3);
         // wait for Z
@@ -632,6 +626,8 @@ void Endstops::process_home_command(Gcode* gcode)
     } else {
         // Only Z axis homes (even though all actuators move this is handled by arm solution)
         haxis.set(Z_AXIS);
+        // we also set the kinematics to a known good position, this is necessary for a rotary delta, but doesn't hurt for linear delta
+        THEROBOT->reset_axis_position(0, 0, 0);
     }
 
     // do the actual homing
