@@ -168,6 +168,10 @@ gamma_homing_direction                       home_to_min      #
 gamma_min                                    0                #
 gamma_max                                    200              #
 
+alpha_max_travel                             500              # max travel in mm for alpha/X axis when homing
+beta_max_travel                              500              # max travel in mm for beta/Y axis when homing
+gamma_max_travel                             500              # max travel in mm for gamma/Z axis when homing
+
 # optional enable limit switches, actions will stop if any enabled limit switch is triggered
 #alpha_limit_enable                          false            # set to true to enable X min and max limit switches
 #beta_limit_enable                           false            # set to true to enable Y min and max limit switches
