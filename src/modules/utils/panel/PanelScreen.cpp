@@ -103,5 +103,9 @@ void PanelScreen::on_main_loop()
         command_queue.pop_front();
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        if(THEKERNEL->is_halted()) {
+            command_queue.clear();
+            break;
+        }
     }
 }

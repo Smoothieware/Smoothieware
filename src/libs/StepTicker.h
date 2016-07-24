@@ -56,6 +56,7 @@ class StepTicker{
         std::bitset<k_max_actuators> unstep;
 
         Block *current_block;
+        uint32_t current_tick{0};
 
         struct {
             volatile bool running:1;

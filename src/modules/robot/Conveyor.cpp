@@ -156,17 +156,17 @@ void Conveyor::wait_for_idle()
  */
 void Conveyor::queue_head_block()
 {
+    // upstream caller will block on this until there is room in the queue
+    while (queue.is_full() && !halted) {
+        //check_queue();
+        THEKERNEL->call_event(ON_IDLE, this); // will call check_queue();
+    }
+
     if(halted) {
         // we do not want to stick more stuff on the queue if we are in halt state
         // clear and release the block on the head
         queue.head_ref()->clear();
-        return;
-    }
-
-    // upstream caller will block on this until there is room in the queue
-    while (queue.is_full()) {
-        //check_queue();
-        THEKERNEL->call_event(ON_IDLE, this); // will call check_queue();
+        return; // if we got a halt then we are done here
     }
 
     queue.produce_head();
