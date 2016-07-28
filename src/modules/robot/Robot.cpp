@@ -179,22 +179,36 @@ void Robot::load_config()
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
 
-    // Make our Primary XYZ StepperMotors
+    // Make our Primary XYZ StepperMotors, and potentially A B C
     uint16_t const checksums[][6] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
+        #if MAX_ROBOT_ACTUATORS > 3
+        ACTUATOR_CHECKSUMS("delta"),   // A
+        #if MAX_ROBOT_ACTUATORS > 4
+        ACTUATOR_CHECKSUMS("epsilon"), // B
+        #if MAX_ROBOT_ACTUATORS > 5
+        ACTUATOR_CHECKSUMS("zeta")     // C
+        #endif
+        #endif
+        #endif
     };
 
     // default acceleration setting, can be overriden with newer per axis settings
     this->default_acceleration= THEKERNEL->config->value(acceleration_checksum)->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2
 
     // make each motor
-    for (size_t a = X_AXIS; a <= Z_AXIS; a++) {
+    for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
         Pin pins[3]; //step, dir, enable
         for (size_t i = 0; i < 3; i++) {
             pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
+            if(!pins[i].connected()) {
+                if(i <= Z_AXIS) THEKERNEL->streams->printf("FATAL: motor %d is not defined in config\n", 'X'+a);
+                break; // if all pins are not defined then the axis is not defined (and axis need to be defined in contiguous order)
+            }
         }
+
         StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
         // register this motor (NB This must be 0,1,2) of the actuators array
         uint8_t n= register_motor(sm);
@@ -780,6 +794,9 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         }
     }
 
+    float delta_e= NAN;
+
+    #if MAX_ROBOT_ACTUATORS > 3
     // process extruder parameters, for active extruder only (only one active extruder at a time)
     selected_extruder= 0;
     if(gcode->has_letter('E')) {
@@ -794,7 +811,6 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
     }
 
     // do E for the selected extruder
-    float delta_e= NAN;
     if(selected_extruder > 0 && !isnan(param[E_AXIS])) {
         if(this->e_absolute_mode) {
             target[selected_extruder]= param[E_AXIS];
@@ -804,6 +820,20 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
             target[selected_extruder] = delta_e + last_milestone[selected_extruder];
         }
     }
+
+    // process ABC axis, this is mutually exclusive to using E for an extruder, so if E is used and A then the results are undefined
+    for (int i = A_AXIS; i < n_motors; ++i) {
+        char letter= 'A'+i-A_AXIS;
+        if(gcode->has_letter(letter)) {
+            float p= gcode->get_value(letter);
+            if(this->absolute_mode) {
+                target[i]= p;
+            }else{
+                target[i]= p + last_milestone[i];
+            }
+        }
+    }
+    #endif
 
     if( gcode->has_letter('F') ) {
         if( motion_mode == SEEK )

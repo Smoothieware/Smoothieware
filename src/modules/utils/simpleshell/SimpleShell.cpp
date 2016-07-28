@@ -620,8 +620,10 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
     const char *mcu = (dev & 0x00100000) ? "LPC1769" : "LPC1768";
     stream->printf("Build version: %s, Build date: %s, MCU: %s, System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), mcu, SystemCoreClock / 1000000);
     #ifdef CNC
-    stream->printf("  CNC Build\r\n");
+    stream->printf("  CNC Build ");
     #endif
+
+    stream->printf("%d axis\n", MAX_ROBOT_ACTUATORS);
 }
 
 // Reset the system

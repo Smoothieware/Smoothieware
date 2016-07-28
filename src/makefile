@@ -70,6 +70,9 @@ else
 export EXCLUDED_MODULES = $(EXCLUDE_MODULES)
 endif
 
+ifneq "$(AXIS)" ""
+DEFINES += -DMAX_ROBOT_ACTUATORS=$(AXIS)
+endif
 
 # set to not compile in any network support
 #export NONETWORK = 1
