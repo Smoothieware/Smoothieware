@@ -203,10 +203,11 @@ void Robot::load_config()
         Pin pins[3]; //step, dir, enable
         for (size_t i = 0; i < 3; i++) {
             pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
-            if(!pins[i].connected()) {
-                if(i <= Z_AXIS) THEKERNEL->streams->printf("FATAL: motor %d is not defined in config\n", 'X'+a);
-                break; // if all pins are not defined then the axis is not defined (and axis need to be defined in contiguous order)
-            }
+        }
+
+        if(!pins[0].connected() || !pins[1].connected() || !pins[2].connected()) {
+            if(a <= Z_AXIS) THEKERNEL->streams->printf("FATAL: motor %d is not defined in config\n", 'X'+a);
+            break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
         }
 
         StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
@@ -334,6 +335,21 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
             n = snprintf(buf, bufsize, "APOS: X:%1.4f Y:%1.4f Z:%1.4f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
         }
     }
+
+    #if MAX_ROBOT_ACTUATORS > 3
+    // deal with the ABC axis
+    for (int i = A_AXIS; i < n_motors; ++i) {
+        if(subcode == 4) { // M114.4 print last milestone
+            n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, last_milestone[i]);
+
+        }else if(subcode == 3) { // M114.3 print actuator position
+            // current actuator position
+            float current_position= actuators[i]->get_current_position();
+            n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, current_position);
+        }
+    }
+    #endif
+
     return n;
 }
 
@@ -894,9 +910,10 @@ void Robot::reset_axis_position(float position, int axis)
     if(axis <= Z_AXIS) {
         reset_axis_position(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 #if MAX_ROBOT_ACTUATORS > 3
-    }else{
+    }else if(axis < n_motors) {
         // extruders need to be set not calculated
         last_machine_position[axis]= position;
+        actuators[axis]->change_last_milestone(position);
 #endif
     }
 }
