@@ -39,6 +39,8 @@ Block::Block()
 
 void Block::clear()
 {
+    is_ready            = false;
+
     this->steps.fill(0);
 
     steps_event_count   = 0;
@@ -55,7 +57,6 @@ void Block::clear()
     recalculate_flag    = false;
     nominal_length_flag = false;
     max_entry_speed     = 0.0F;
-    is_ready            = false;
     is_ticking          = false;
     is_g123             = false;
     locked              = false;

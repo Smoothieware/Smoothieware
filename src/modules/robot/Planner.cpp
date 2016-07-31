@@ -78,8 +78,8 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
     }
 
     // info needed by laser
-    block->s_value= s_value;
-    block->is_g123= g123;
+    block->s_value = s_value;
+    block->is_g123 = g123;
 
     // use default JD
     float junction_deviation = this->junction_deviation;

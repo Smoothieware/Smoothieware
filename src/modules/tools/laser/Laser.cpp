@@ -16,6 +16,7 @@
 #include "StepTicker.h"
 #include "Block.h"
 #include "SlowTicker.h"
+#include "Robot.h"
 
 #include "libs/Pin.h"
 #include "Gcode.h"
@@ -106,65 +107,6 @@ void Laser::on_module_loaded()
     THEKERNEL->slow_ticker->attach(1000, this, &Laser::set_proportional_power);
 }
 
-#if 0
-// Turn laser off laser at the end of a move
-void  Laser::on_block_end(void* argument)
-{
-    this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
-
-    if (this->ttl_used) {
-        Block* block = static_cast<Block*>(argument);
-        // Only switch TTL off if this is the last block for this move - G2/3 are multiple blocks
-        if (block->final_rate == 0)
-            this->ttl_pin->set(0);
-    }
-}
-
-// Set laser power at the beginning of a block
-void Laser::on_block_begin(void* argument)
-{
-    this->set_proportional_power();
-
-}
-
-// Turn laser on/off depending on received GCodes
-void Laser::on_gcode_execute(void* argument)
-{
-    Gcode* gcode = static_cast<Gcode*>(argument);
-    this->laser_on = false;
-    if( gcode->has_g) {
-        int code = gcode->g;
-        if( code == 0 ) {                   // G0
-            this->pwm_pin->write(this->pwm_inverting ? 1 - this->laser_minimum_power : this->laser_minimum_power);
-            this->laser_on =  false;
-        } else if( code >= 1 && code <= 3 ) { // G1, G2, G3
-            this->laser_on =  true;
-        }
-    }
-
-    if ( gcode->has_letter('S' )) {
-        float requested_power = gcode->get_value('S') / this->laser_maximum_s_value;
-        // Ensure we can't exceed maximum power
-        if (requested_power > 1)
-            requested_power = 1;
-
-        this->laser_power = requested_power;
-    }
-
-    if (this->ttl_used)
-        this->ttl_pin->set(this->laser_on);
-
-}
-
-// We follow the stepper module here, so speed must be proportional
-void Laser::on_speed_change(void* argument)
-{
-    if( this->laser_on ) {
-        this->set_proportional_power();
-    }
-}
-#endif
-
 void Laser::turn_laser_off()
 {
     this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
@@ -175,9 +117,21 @@ void Laser::turn_laser_off()
 // calculates the current speed ratio from the currently executing block
 float Laser::current_speed_ratio(const Block *block) const
 {
-    // TODO find the primarty moving actuator and figur eout the ration of its speed, from 0 to 1 based on where it is on the trapezoid
+    // find the primary moving actuator (the one with the most steps)
+    size_t pm= 0;
+    uint32_t max_steps= 0;
+    for (size_t i = 0; i < THEROBOT->get_number_registered_motors(); i++) {
+        // find the motor with the most steps
+        if(block->steps[i] > max_steps) {
+            max_steps= block->steps[i];
+            pm= i;
+        }
+    }
 
-    return 1.0F;
+    // figure out the ratio of its speed, from 0 to 1 based on where it is on the trapezoid
+    float ratio= (float)block->tick_info[pm].steps_per_tick / block->tick_info[pm].plateau_rate;
+
+    return ratio;
 }
 
 // get laser power for the currently executing block, returns false if nothing running or a G0
@@ -185,11 +139,12 @@ bool Laser::get_laser_power(float& power) const
 {
     const Block *block = StepTicker::getInstance()->get_current_block();
 
-    if(block != nullptr && block->is_g123) {
+    // Note to avoid a race condition where the block is being cleared we check the is_ready flag which gets cleared first,
+    // as this is an interrupt if that flag is not clear then it cannot be cleared while this is running and th eblock will still be valid (albeit it may have finished)
+    if(block != nullptr && block->is_ready && block->is_g123) {
         float requested_power = block->s_value / this->laser_maximum_s_value;
         // Ensure we can't exceed maximum power
-        if (requested_power > 1)
-            requested_power = 1;
+        if (requested_power > 1) requested_power = 1;
 
         float ratio = current_speed_ratio(block);
         power = requested_power * ratio;

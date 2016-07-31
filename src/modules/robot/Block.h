@@ -47,7 +47,7 @@ class Block {
         uint32_t total_move_ticks;
         std::bitset<k_max_actuators> direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
-        // for laser
+        // for laser TODO may be able to use 10 bits and put it in bit struct below
         float s_value;
 
         // this is the data needed to determine when each motor needs to be issued a step
