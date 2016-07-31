@@ -29,7 +29,6 @@
 #define laser_module_pwm_period_checksum        CHECKSUM("laser_module_pwm_period")
 #define laser_module_maximum_power_checksum     CHECKSUM("laser_module_maximum_power")
 #define laser_module_minimum_power_checksum     CHECKSUM("laser_module_minimum_power")
-#define laser_module_default_power_checksum     CHECKSUM("laser_module_default_power")
 #define laser_module_tickle_power_checksum      CHECKSUM("laser_module_tickle_power")
 #define laser_module_max_power_checksum         CHECKSUM("laser_module_max_power")
 #define laser_module_maximum_s_value_checksum   CHECKSUM("laser_module_maximum_s_value")
@@ -90,11 +89,9 @@ void Laser::on_module_loaded()
 
     // These config variables are deprecated, they have been replaced with laser_module_default_power and laser_module_minimum_power
     this->laser_minimum_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
-    this->laser_power =         THEKERNEL->config->value(laser_module_max_power_checksum)->by_default(0.8f)->as_number() ;
 
     // Load in our preferred config variables
     this->laser_minimum_power = THEKERNEL->config->value(laser_module_minimum_power_checksum)->by_default(this->laser_minimum_power)->as_number() ;
-    this->laser_power = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(this->laser_power)->as_number() ;
 
     // S value that represents maximum (default 1)
     this->laser_maximum_s_value = THEKERNEL->config->value(laser_module_maximum_s_value_checksum)->by_default(1.0f)->as_number() ;

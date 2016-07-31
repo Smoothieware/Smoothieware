@@ -34,7 +34,6 @@ class Laser : public Module{
         Pin *ttl_pin;				// TTL output to fire laser
         float            laser_maximum_power; // maximum allowed laser power to be output on the pwm pin
         float            laser_minimum_power; // value used to tickle the laser on moves.  Also minimum value for auto-scaling
-        float            laser_power;     // current laser power
         float            laser_maximum_s_value; // Value of S code that will represent max power
 
         struct {

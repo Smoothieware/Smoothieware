@@ -85,6 +85,8 @@ using std::string;
 #define  beta_checksum                       CHECKSUM("beta")
 #define  gamma_checksum                      CHECKSUM("gamma")
 
+#define laser_module_default_power_checksum     CHECKSUM("laser_module_default_power")
+
 #define ARC_ANGULAR_TRAVEL_EPSILON 5E-7F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
@@ -109,7 +111,6 @@ Robot::Robot()
     this->next_command_is_MCS = false;
     this->disable_segmentation= false;
     this->n_motors= 0;
-    this->s_value= 0;
 }
 
 //Called when the module has just been loaded
@@ -179,6 +180,9 @@ void Robot::load_config()
 
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
+
+    // default s value for laser
+    this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
     // Make our Primary XYZ StepperMotors
     uint16_t const checksums[][6] = {
