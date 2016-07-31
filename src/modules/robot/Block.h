@@ -65,6 +65,7 @@ class Block {
         static uint8_t n_actuators;
 
         struct {
+            uint8_t id;  // dmfe
             bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
             bool nominal_length_flag:1;          // Planner flag for nominal speed always reached
             bool is_ready:1;

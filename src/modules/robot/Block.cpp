@@ -123,14 +123,14 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 
     float initial_rate = this->nominal_rate * (entryspeed / this->nominal_speed); // steps/sec
     float final_rate = this->nominal_rate * (exitspeed / this->nominal_speed);
-    //printf("Initial rate: %f, final_rate: %f\n", initial_rate, final_rate);
+    //THEKERNEL->streams->printf("id %d: Steps: %lu, Dist: %fmm, Initial rate: %f, final_rate: %f\n", this->id, this->steps_event_count, this->millimeters, initial_rate, final_rate);
     // How many steps ( can be fractions of steps, we need very precise values ) to accelerate and decelerate
     // This is a simplification to get rid of rate_delta and get the steps/s² accel directly from the mm/s² accel
     float acceleration_per_second = (this->acceleration * this->steps_event_count) / this->millimeters;
 
     float maximum_possible_rate = sqrtf( ( this->steps_event_count * acceleration_per_second ) + ( ( powf(initial_rate, 2) + powf(final_rate, 2) ) / 2.0F ) );
 
-    //printf("id %d: acceleration_per_second: %f, maximum_possible_rate: %f steps/sec, %f mm/sec\n", this->id, acceleration_per_second, maximum_possible_rate, maximum_possible_rate/100);
+    //THEKERNEL->streams->printf("acceleration_per_second: %f, maximum_possible_rate: %f steps/sec, %f mm/sec\n", acceleration_per_second, maximum_possible_rate, maximum_possible_rate/314);
 
     // Now this is the maximum rate we'll achieve this move, either because
     // it's the higher we can achieve, or because it's the higher we are
@@ -188,6 +188,8 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     float acceleration_in_steps = (acceleration_time > 0.0F ) ? ( this->maximum_rate - initial_rate ) / acceleration_time : 0;
     float deceleration_in_steps =  (deceleration_time > 0.0F ) ? ( this->maximum_rate - final_rate ) / deceleration_time : 0;
 
+    //THEKERNEL->streams->printf("Accel until %lu: Decel after: %lu\n", acceleration_ticks, total_move_ticks - deceleration_ticks);
+    
     // we have a potential race condition here as we could get interrupted anywhere in the middle of this call, we need to lock
     // the updates to the blocks to get around it
     this->locked= true;
