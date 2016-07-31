@@ -109,6 +109,7 @@ Robot::Robot()
     this->next_command_is_MCS = false;
     this->disable_segmentation= false;
     this->n_motors= 0;
+    this->s_value= 0;
 }
 
 //Called when the module has just been loaded
@@ -719,7 +720,11 @@ void Robot::on_gcode_received(void *argument)
     }
 
     if( motion_mode != NONE) {
+        is_g123= motion_mode != SEEK;
         process_move(gcode, motion_mode);
+
+    }else{
+        is_g123= false;
     }
 
     next_command_is_MCS = false; // must be on same line as G0 or G1
@@ -811,6 +816,9 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         else
             this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
+
+    // S is modal
+    if(gcode->has_letter('S')) s_value= gcode->get_value('S');
 
     bool moved= false;
 
@@ -1023,7 +1031,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // Append the block to the planner
     // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
-    if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration )) {
+    if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration, s_value, is_g123)) {
         // this is the machine position
         memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
         return true;
