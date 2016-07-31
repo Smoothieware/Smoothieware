@@ -57,7 +57,9 @@ void Block::clear()
     max_entry_speed     = 0.0F;
     is_ready            = false;
     is_ticking          = false;
+    is_g123             = false;
     locked              = false;
+    s_value             = 0.0F;
 
     acceleration_per_tick= 0;
     deceleration_per_tick= 0;

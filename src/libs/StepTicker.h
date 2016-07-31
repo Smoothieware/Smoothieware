@@ -35,6 +35,7 @@ class StepTicker{
         int register_motor(StepperMotor* motor);
         float get_frequency() const { return frequency; }
         void unstep_tick();
+        const Block *get_current_block() const { return current_block; }
 
         void step_tick (void);
         void handle_finish (void);
