@@ -62,7 +62,7 @@ RotaryDeltaSolution::RotaryDeltaSolution(Config *config)
 
 // inverse kinematics
 // helper functions, calculates angle theta1 (for YZ-pane)
-int RotaryDeltaSolution::delta_calcAngleYZ(float x0, float y0, float z0, float &theta)
+int RotaryDeltaSolution::delta_calcAngleYZ(float x0, float y0, float z0, float &theta) const
 {
     float y1 = -0.5F * tan30 * delta_f; // f/2 * tan 30
     y0      -=  0.5F * tan30 * delta_e; // shift center to edge
@@ -82,7 +82,7 @@ int RotaryDeltaSolution::delta_calcAngleYZ(float x0, float y0, float z0, float &
 
 // forward kinematics: (theta1, theta2, theta3) -> (x0, y0, z0)
 // returned status: 0=OK, -1=non-existing position
-int RotaryDeltaSolution::delta_calcForward(float theta1, float theta2, float theta3, float &x0, float &y0, float &z0)
+int RotaryDeltaSolution::delta_calcForward(float theta1, float theta2, float theta3, float &x0, float &y0, float &z0) const
 {
     float t = (delta_f - delta_e) * tan30 / 2.0F;
     float degrees_to_radians = pi / 180.0F;
@@ -140,7 +140,7 @@ void RotaryDeltaSolution::init()
     z_calc_offset  = -(delta_z_offset - tool_offset - delta_ee_offs);
 }
 
-void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm )
+void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm ) const
 {
     //We need to translate the Cartesian coordinates in mm to the actuator position required in mm so the stepper motor  functions
     float alpha_theta = 0.0F;
@@ -196,7 +196,7 @@ void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
 
 }
 
-void RotaryDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] )
+void RotaryDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ) const
 {
     float x, y, z;
     //Use forward kinematics
@@ -231,7 +231,7 @@ bool RotaryDeltaSolution::set_optional(const arm_options_t &options)
     return true;
 }
 
-bool RotaryDeltaSolution::get_optional(arm_options_t &options, bool force_all)
+bool RotaryDeltaSolution::get_optional(arm_options_t &options, bool force_all) const
 {
     options['A'] = this->delta_e;
     options['B'] = this->delta_f;
