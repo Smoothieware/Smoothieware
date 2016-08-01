@@ -126,6 +126,7 @@ float Laser::current_speed_ratio(const Block *block) const
     }
 
     // figure out the ratio of its speed, from 0 to 1 based on where it is on the trapezoid
+    // FIXME steps_per_tick can change at any time, potential race condition if it changes while being read here
     float ratio= (float)block->tick_info[pm].steps_per_tick / block->tick_info[pm].plateau_rate;
 
     return ratio;
@@ -137,11 +138,13 @@ bool Laser::get_laser_power(float& power) const
     const Block *block = StepTicker::getInstance()->get_current_block();
 
     // Note to avoid a race condition where the block is being cleared we check the is_ready flag which gets cleared first,
-    // as this is an interrupt if that flag is not clear then it cannot be cleared while this is running and th eblock will still be valid (albeit it may have finished)
+    // as this is an interrupt if that flag is not clear then it cannot be cleared while this is running and the block will still be valid (albeit it may have finished)
     if(block != nullptr && block->is_ready && block->is_g123) {
-        float requested_power = block->s_value / this->laser_maximum_s_value;
+        float requested_power = ((float)block->s_value/(1<<11)) / this->laser_maximum_s_value; // s_value is 1.11 Fixed point
+
         // Ensure we can't exceed maximum power
-        if (requested_power > 1) requested_power = 1;
+        if (requested_power < 0) requested_power = 0;
+        else if (requested_power > 1) requested_power = 1;
 
         float ratio = current_speed_ratio(block);
         power = requested_power * ratio;

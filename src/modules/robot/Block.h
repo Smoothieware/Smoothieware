@@ -47,9 +47,6 @@ class Block {
         uint32_t total_move_ticks;
         std::bitset<k_max_actuators> direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
-        // for laser TODO may be able to use 10 bits and put it in bit struct below
-        float s_value;
-
         // this is the data needed to determine when each motor needs to be issued a step
         using tickinfo_t= struct {
             int32_t steps_per_tick; // 2.30 fixed point
@@ -75,5 +72,6 @@ class Block {
             bool is_g123:1;                      // set if this is a G1, G2 or G3
             volatile bool is_ticking:1;          // set when this block is being actively ticked by the stepticker
             volatile bool locked:1;              // set to true when the critical data is being updated, stepticker will have to skip if this is set
+            uint16_t s_value:12;                 // for laser 1.11 Fixed point
         };
 };
