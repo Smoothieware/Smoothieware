@@ -22,6 +22,8 @@
 #include "Gcode.h"
 #include "PwmOut.h" // mbed.h lib
 
+#include <algorithm>
+
 #define laser_module_enable_checksum            CHECKSUM("laser_module_enable")
 #define laser_module_pin_checksum               CHECKSUM("laser_module_pin")
 #define laser_module_pwm_pin_checksum           CHECKSUM("laser_module_pwm_pin")
@@ -102,8 +104,8 @@ void Laser::on_module_loaded()
     //register for events
     this->register_for_event(ON_HALT);
 
-    // no point in updating the power more than twice the PWM frequency (probably once per period is sufficient too)
-    THEKERNEL->slow_ticker->attach(period*2, this, &Laser::set_proportional_power);
+    // no point in updating the power more than the PWM frequency, but no more than 1KHz
+    THEKERNEL->slow_ticker->attach(std::min(1000UL, 1000000/period), this, &Laser::set_proportional_power);
 }
 
 void Laser::turn_laser_off()
