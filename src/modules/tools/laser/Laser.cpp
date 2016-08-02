@@ -83,7 +83,8 @@ void Laser::on_module_loaded()
     }
 
 
-    this->pwm_pin->period_us(THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number());
+    uint32_t period= THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number();
+    this->pwm_pin->period_us(period);
     this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
     this->laser_maximum_power = THEKERNEL->config->value(laser_module_maximum_power_checksum)->by_default(1.0f)->as_number() ;
 
@@ -101,7 +102,8 @@ void Laser::on_module_loaded()
     //register for events
     this->register_for_event(ON_HALT);
 
-    THEKERNEL->slow_ticker->attach(1000, this, &Laser::set_proportional_power);
+    // no point in updating the power more than twice the PWM frequency (probably once per period is sufficient too)
+    THEKERNEL->slow_ticker->attach(period*2, this, &Laser::set_proportional_power);
 }
 
 void Laser::turn_laser_off()
