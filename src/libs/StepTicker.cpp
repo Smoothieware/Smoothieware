@@ -218,7 +218,8 @@ void StepTicker::step_tick (void)
 
 
     // see if any motors are still moving
-    if(!still_moving) {
+    //  also, don't end this block before its time
+    if(!still_moving && current_tick>=current_block->total_move_ticks) {
         //SET_STEPTICKER_DEBUG_PIN(0);
 
         // all moves finished

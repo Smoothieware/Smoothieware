@@ -899,7 +899,7 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
         bool moving = THEROBOT->actuators[0]->is_moving();
         // dump out in the format that the processing script needs
         if (moving) {
-            stream->printf("#sg%d,p%lu,k%u,r,", getCurrentStallGuardReading(), THEROBOT->actuators[0]->get_current_step(), getCoolstepCurrent());
+            stream->printf("#sg%d,p%li,k%u,r,", getCurrentStallGuardReading(), THEROBOT->actuators[0]->get_current_step(), getCoolstepCurrent());
         } else {
             readStatus(TMC26X_READOUT_POSITION); // get the status bits
             stream->printf("#s,");

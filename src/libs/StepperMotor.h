@@ -32,7 +32,7 @@ class StepperMotor  : public Module {
 
         bool which_direction() const { return direction; }
 
-        float get_steps_per_second()  const { return steps_per_second; }
+        //float get_steps_per_second()  const { return steps_per_second; }
         float get_steps_per_mm()  const { return steps_per_mm; }
         void change_steps_per_mm(float);
         void change_last_milestone(float);
@@ -41,7 +41,7 @@ class StepperMotor  : public Module {
         float get_last_milestone(void) const { return last_milestone_mm; }
         int32_t get_last_milestone_steps(void) const { return last_milestone_steps; }
         float get_current_position(void) const { return (float)current_position_steps/steps_per_mm; }
-        uint32_t get_current_step(void) const { return current_position_steps; }
+        int32_t get_current_step(void) const { return current_position_steps; }
         float get_max_rate(void) const { return max_rate; }
         void set_max_rate(float mr) { max_rate= mr; }
         void set_acceleration(float a) { acceleration= a; }
@@ -62,7 +62,7 @@ class StepperMotor  : public Module {
         Pin dir_pin;
         Pin en_pin;
 
-        float steps_per_second;
+        //float steps_per_second;
         float steps_per_mm;
         float max_rate; // this is not really rate it is in mm/sec, misnamed used in Robot and Extruder
         float acceleration;

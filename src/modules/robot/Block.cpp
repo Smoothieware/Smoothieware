@@ -298,6 +298,8 @@ float Block::max_exit_speed()
 // this is done during planning so does not delay tick generation and step ticker can simply grab the next block during the interrupt
 void Block::prepare()
 {
+    //THEKERNEL->streams->printf("id %d: TMT: %lu, AccelUntil: %lu, DecelAfter: %lu\n",this->id, this->total_move_ticks,this->accelerate_until,this->decelerate_after);
+     
     float inv = 1.0F / this->steps_event_count;
     for (uint8_t m = 0; m < n_actuators; m++) {
         uint32_t steps = this->steps[m];
@@ -309,7 +311,7 @@ void Block::prepare()
         this->tick_info[m].counter = 0; // 2.30 fixed point
         this->tick_info[m].step_count = 0;
         this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
-
+       
         float acceleration_change = 0;
         if(this->accelerate_until != 0) { // If the next accel event is the end of accel
             this->tick_info[m].next_accel_event = this->accelerate_until;
@@ -325,8 +327,26 @@ void Block::prepare()
         }
 
         // convert to fixed point after scaling
-        this->tick_info[m].acceleration_change= STEPTICKER_TOFP(acceleration_change * aratio);
+        if (steps_event_count/100 > steps && acceleration_change > 0) {
+            this->tick_info[m].acceleration_change=STEPTICKER_TOFPCEIL(acceleration_change * aratio);
+        } else { 
+            this->tick_info[m].acceleration_change= STEPTICKER_TOFP(acceleration_change * aratio); }
+       
         this->tick_info[m].deceleration_change= -STEPTICKER_TOFP(this->deceleration_per_tick * aratio);
         this->tick_info[m].plateau_rate= STEPTICKER_TOFP((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY);
+        /*
+        THEKERNEL->streams->printf("    Axis: %d, Dir: %u, Steps: %lu, ACC: %li, DCC: %li, rate: %li, next: %lu\n", m,
+                                                     this->direction_bits[m] ? 1:0,
+                                                     steps,
+                                                     this->tick_info[m].acceleration_change,
+                                                     this->tick_info[m].deceleration_change,
+                                                     this->tick_info[m].plateau_rate,
+                                                     this->tick_info[m].next_accel_event);
+        THEKERNEL->streams->printf("     S/T: %li, Initial Rate: %e, aratio: %e\n",
+                                                    this->tick_info[m].steps_per_tick,
+                                                    this->initial_rate,
+                                                    aratio);
+             /**/                                        
+       
     }
 }
