@@ -41,10 +41,11 @@ LinearDeltaSolution::LinearDeltaSolution(Config* config)
     init();
 }
 
-void LinearDeltaSolution::init() {
+void LinearDeltaSolution::init()
+{
     arm_length_squared = SQ(arm_length);
 
-     // Effective X/Y positions of the three vertical towers.
+    // Effective X/Y positions of the three vertical towers.
     float delta_radius = arm_radius;
 
     delta_tower1_x = (delta_radius + tower1_offset) * cosf((210.0F + tower1_angle) * PIOVER180); // front left tower
@@ -55,7 +56,7 @@ void LinearDeltaSolution::init() {
     delta_tower3_y = (delta_radius + tower3_offset) * sinf((90.0F  + tower3_angle) * PIOVER180);
 }
 
-void LinearDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm )
+void LinearDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm ) const
 {
 
     actuator_mm[ALPHA_STEPPER] = sqrtf(this->arm_length_squared
@@ -72,7 +73,7 @@ void LinearDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
                                       ) + cartesian_mm[Z_AXIS];
 }
 
-void LinearDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] )
+void LinearDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ) const
 {
     // from http://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates_from_cross-_and_dot-products
     // based on https://github.com/ambrop72/aprinter/blob/2de69a/aprinter/printer/DeltaTransform.h#L81
@@ -111,12 +112,13 @@ void LinearDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actua
     cartesian_mm[2] = ROUND(cartesian[2], 4);
 }
 
-bool LinearDeltaSolution::set_optional(const arm_options_t& options) {
+bool LinearDeltaSolution::set_optional(const arm_options_t& options)
+{
 
     for(auto &i : options) {
         switch(i.first) {
-            case 'L': arm_length= i.second; break;
-            case 'R': arm_radius= i.second; break;
+            case 'L': arm_length = i.second; break;
+            case 'R': arm_radius = i.second; break;
             case 'A': tower1_offset = i.second; break;
             case 'B': tower2_offset = i.second; break;
             case 'C': tower3_offset = i.second; break;
@@ -130,13 +132,14 @@ bool LinearDeltaSolution::set_optional(const arm_options_t& options) {
     return true;
 }
 
-bool LinearDeltaSolution::get_optional(arm_options_t& options, bool force_all) {
-    options['L']= this->arm_length;
-    options['R']= this->arm_radius;
+bool LinearDeltaSolution::get_optional(arm_options_t& options, bool force_all) const
+{
+    options['L'] = this->arm_length;
+    options['R'] = this->arm_radius;
 
     // don't report these if none of them are set
     if(force_all || (this->tower1_offset != 0.0F || this->tower2_offset != 0.0F || this->tower3_offset != 0.0F ||
-       this->tower1_angle != 0.0F  || this->tower2_angle != 0.0F  || this->tower3_angle != 0.0F) ) {
+                     this->tower1_angle != 0.0F  || this->tower2_angle != 0.0F  || this->tower3_angle != 0.0F) ) {
 
         options['A'] = this->tower1_offset;
         options['B'] = this->tower2_offset;
