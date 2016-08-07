@@ -85,6 +85,8 @@ using std::string;
 #define  beta_checksum                       CHECKSUM("beta")
 #define  gamma_checksum                      CHECKSUM("gamma")
 
+#define laser_module_default_power_checksum     CHECKSUM("laser_module_default_power")
+
 #define ARC_ANGULAR_TRAVEL_EPSILON 5E-7F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
@@ -178,6 +180,9 @@ void Robot::load_config()
 
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
+
+    // default s value for laser
+    this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
     // Make our Primary XYZ StepperMotors
     uint16_t const checksums[][6] = {
@@ -719,7 +724,11 @@ void Robot::on_gcode_received(void *argument)
     }
 
     if( motion_mode != NONE) {
+        is_g123= motion_mode != SEEK;
         process_move(gcode, motion_mode);
+
+    }else{
+        is_g123= false;
     }
 
     next_command_is_MCS = false; // must be on same line as G0 or G1
@@ -811,6 +820,9 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         else
             this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
+
+    // S is modal
+    if(gcode->has_letter('S')) s_value= gcode->get_value('S');
 
     bool moved= false;
 
@@ -1023,7 +1035,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // Append the block to the planner
     // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
-    if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration )) {
+    if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration, s_value, is_g123)) {
         // this is the machine position
         memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
         return true;
