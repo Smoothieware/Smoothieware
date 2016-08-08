@@ -137,8 +137,11 @@ bool USBSerial::USBEvent_EPIn(uint8_t bEP, uint8_t bEPStatus)
 
     int l = txbuf.available();
     if (l > 0) {
-        if (l > MAX_PACKET_SIZE_EPBULK)
-            l = MAX_PACKET_SIZE_EPBULK;
+        // Use MAX_PACKET_SIZE_EPBULK-1 below instead of MAX_PACKET_SIZE_EPBULK
+        // to work around a problem sending packets that are exactly MAX_PACKET_SIZE_EPBULK
+        // bytes in length. The problem is that these packets don't flush properly.
+        if (l > MAX_PACKET_SIZE_EPBULK-1)
+            l = MAX_PACKET_SIZE_EPBULK-1;
         int i;
         for (i = 0; i < l; i++) {
             txbuf.dequeue(&b[i]);
