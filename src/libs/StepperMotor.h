@@ -16,7 +16,7 @@ class StepperMotor  : public Module {
         ~StepperMotor();
 
         // called from step ticker ISR
-        inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
+        inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); ++step_count; return moving; }
         // called from unstep ISR
         inline void unstep() { step_pin.set(0); }
         // called from step ticker ISR
@@ -48,6 +48,8 @@ class StepperMotor  : public Module {
         int32_t get_counter(void) const { return counter; }
         void set_counter( int32_t c ) { counter= c; }
         void update_counter(void) { counter+=steps_per_tick; }
+        uint32_t get_step_count(void) { return step_count; }
+        void clear_step_count(void) { step_count=0; }
         float get_max_rate(void) const { return max_rate; }
         void set_max_rate(float mr) { max_rate= mr; }
         void set_acceleration(float a) { acceleration= a; }
@@ -76,6 +78,7 @@ class StepperMotor  : public Module {
         volatile int32_t current_position_steps;
         volatile int32_t steps_per_tick; // 2.30 fixed point, aka current speed
         volatile int32_t counter; // 2.30 fixed point, 0.0 .. 1.0 partial step
+        volatile uint32_t step_count;
         int32_t last_milestone_steps;
         float   last_milestone_mm;
 

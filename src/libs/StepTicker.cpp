@@ -158,25 +158,25 @@ void StepTicker::step_tick (void)
     bool still_moving= false;
     // foreach motor, if it is active see if time to issue a step to that motor
     for (uint8_t m = 0; m < num_motors; m++) {
-        if(current_block->tick_info[m].steps_to_move == 0){
-            motor[m]->update_counter(); // keep the counter correct
-            continue; // not active
-         }
+        if(current_block->tick_info[m].steps_to_move == 0) continue; // not active
          
         motor[m]->update_counter();
         motor[m]->update_steps_per_tick(current_block->tick_info[m].acceleration_change);
+        // protect against rounding errors and such
+        if(motor[m]->get_steps_per_tick() <= 0) {
+                motor[m]->set_counter(STEPTICKER_FPSCALE); // we force completion this step by setting to 1.0
+                motor[m]->set_steps_per_tick(0);
+        }
         
         if(motor[m]->get_counter() >= STEPTICKER_FPSCALE) { // >= 1.0 step time
             motor[m]->set_counter(motor[m]->get_counter()-STEPTICKER_FPSCALE); // -= 1.0F;
-
-            ++current_block->tick_info[m].step_count;
-
+            
             // step the motor
             bool ismoving= motor[m]->step(); // returns false if the moving flag was set to false externally (probes, endstops etc)
             // we stepped so schedule an unstep
             unstep.set(m);
 
-            if(!ismoving || current_block->tick_info[m].step_count == current_block->tick_info[m].steps_to_move) {
+            if(!ismoving || motor[m]->get_step_count() == current_block->tick_info[m].steps_to_move) {
                 // done
                 current_block->tick_info[m].steps_to_move = 0;
                 motor[m]->stop_moving(); // let motor know it is no longer moving
@@ -201,19 +201,6 @@ void StepTicker::step_tick (void)
                 current_block->tick_info[m].acceleration_change = current_block->tick_info[m].deceleration_change;
             }
         }
-
-        // protect against rounding errors and such
-        if(motor[m]->get_steps_per_tick() <= 0) {
-            if (current_block->tick_info[m].step_count < current_block->tick_info[m].steps_to_move){
-                // We should never get here.
-                motor[m]->set_steps_per_tick(current_block->tick_info[m].plateau_rate/2);
-               
-            }//else{
-                // This WILL cause a stepper crash if there is more than 1 step to go.
-             //   motor[m]->set_counter(STEPTICKER_FPSCALE); // we force completion this step by setting to 1.0
-              //  motor[m]->set_steps_per_tick(0);
-           // }
-        }
     }
 
     // do this after so we start at tick 0
@@ -228,13 +215,12 @@ void StepTicker::step_tick (void)
         LPC_TIM1->TCR = 1;
     }
 
-
     // see if any motors are still moving
     //  also, don't end this block before its time
-    if(!still_moving) { // ? && current_tick>=current_block->total_move_ticks
+    if(!still_moving) {
+        // all moves are finished
         //SET_STEPTICKER_DEBUG_PIN(0);
 
-        // all moves finished
         current_tick = 0;
 
         // get next block
@@ -248,11 +234,6 @@ void StepTicker::step_tick (void)
             current_block= nullptr;
             running= false;
         }
-
-        // all moves finished
-        // we delegate the slow stuff to the pendsv handler which will run as soon as this interrupt exits
-        //NVIC_SetPendingIRQ(PendSV_IRQn); this doesn't work
-        //SCB->ICSR = 0x10000000; // SCB_ICSR_PENDSVSET_Msk;
     }
 }
 
@@ -264,15 +245,13 @@ bool StepTicker::start_next_block()
     bool ok= false;
     // need to prepare each active motor
     for (uint8_t m = 0; m < num_motors; m++) {
-        if(current_block->tick_info[m].steps_to_move == 0){
-            motor[m]->set_counter(0);
-            motor[m]->set_steps_per_tick(0);
-            continue;
-        }
+        motor[m]->set_counter(0);
+        motor[m]->set_steps_per_tick(0);
+        if(current_block->tick_info[m].steps_to_move == 0) continue;
 
         // set initial speed
         motor[m]->set_steps_per_tick(current_block->tick_info[m].steps_per_tick);
-        if (motor[m]->get_steps_per_tick()==0) motor[m]->set_counter(0); // counter synchronization
+       // if (motor[m]->get_steps_per_tick()==0) motor[m]->set_counter(0); // counter synchronization
         
         ok= true; // mark at least one motor is moving
         // set direction bit here
@@ -280,8 +259,9 @@ bool StepTicker::start_next_block()
         // TODO does this need to be done sooner, if so how without delaying next tick
         if (!motor[m]->same_direction(current_block->direction_bits[m])){
             motor[m]->set_direction(current_block->direction_bits[m]);
-            motor[m]->set_counter(0); // force a full step time dwell
+       //     motor[m]->set_counter(0); // force a full step time dwell
         }
+        motor[m]->clear_step_count();
         motor[m]->start_moving(); // also let motor know it is moving now
     }
 

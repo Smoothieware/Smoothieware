@@ -55,7 +55,7 @@ class Block {
             int32_t deceleration_change; // 2.30 fixed point
             int32_t plateau_rate; // 2.30 fixed point
             uint32_t steps_to_move;
-            uint32_t step_count;
+            //uint32_t step_count;
             uint32_t next_accel_event;
         };
 
