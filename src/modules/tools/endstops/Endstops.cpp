@@ -196,15 +196,15 @@ void Endstops::load_config()
     this->homing_position[2]=  this->home_direction[2] ? THEKERNEL->config->value(gamma_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number();
 
     // used to set maximum movement on homing, set by alpha_max_travel if defined
-    // for backward compatibility uses alpha_max if nit defined.
+    // for backward compatibility uses alpha_max if not defined.
     // TO BE deprecated
     this->alpha_max= THEKERNEL->config->value(alpha_max_checksum)->by_default(500)->as_number();
     this->beta_max= THEKERNEL->config->value(beta_max_checksum)->by_default(500)->as_number();
     this->gamma_max= THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number();
 
-    this->alpha_max= THEKERNEL->config->value(alpha_max_travel_checksum)->by_default(alpha_max)->as_number();
-    this->beta_max= THEKERNEL->config->value(beta_max_travel_checksum)->by_default(beta_max)->as_number();
-    this->gamma_max= THEKERNEL->config->value(gamma_max_travel_checksum)->by_default(gamma_max)->as_number();
+    this->alpha_max= THEKERNEL->config->value(alpha_max_travel_checksum)->by_default(alpha_max*2)->as_number();
+    this->beta_max= THEKERNEL->config->value(beta_max_travel_checksum)->by_default(beta_max*2)->as_number();
+    this->gamma_max= THEKERNEL->config->value(gamma_max_travel_checksum)->by_default(gamma_max*2)->as_number();
 
     this->is_corexy                 =  THEKERNEL->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
     this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
