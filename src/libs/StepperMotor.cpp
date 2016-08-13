@@ -23,6 +23,9 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;
     current_position_steps= 0;
+    steps_per_tick= 0;
+    counter= 0;
+    
     moving= false;
     acceleration= NAN;
     selected= true;

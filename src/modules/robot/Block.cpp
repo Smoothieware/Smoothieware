@@ -67,7 +67,7 @@ void Block::clear()
     }
     for(auto &i : tick_info) {
         i.steps_per_tick= 0;
-        i.counter= 0;
+        //i.counter= 0;
         i.acceleration_change= 0;
         i.deceleration_change= 0;
         i.plateau_rate= 0;
@@ -308,7 +308,7 @@ void Block::prepare()
 
         float aratio = inv * steps;
         this->tick_info[m].steps_per_tick = STEPTICKER_TOFP((this->initial_rate * aratio) / STEP_TICKER_FREQUENCY); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
-        this->tick_info[m].counter = 0; // 2.30 fixed point
+        //this->tick_info[m].counter = 0; // 2.30 fixed point
         this->tick_info[m].step_count = 0;
         this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
        
@@ -342,11 +342,10 @@ void Block::prepare()
                                                      this->tick_info[m].deceleration_change,
                                                      this->tick_info[m].plateau_rate,
                                                      this->tick_info[m].next_accel_event);
-        THEKERNEL->streams->printf("     S/T: %li, Initial Rate: %e, aratio: %e\n",
-                                                    this->tick_info[m].steps_per_tick,
+        THEKERNEL->streams->printf("     S/T: %li, aratio: %e\n",
                                                     this->initial_rate,
                                                     aratio);
-             /**/                                        
+             */                                        
        
     }
 }

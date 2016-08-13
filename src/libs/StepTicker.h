@@ -43,7 +43,7 @@ class StepTicker{
         void start();
 
         // whatever setup the block should register this to know when it is done
-        std::function<void()> finished_fnc{nullptr};
+        //std::function<void()> finished_fnc{nullptr};
 
         static StepTicker *getInstance() { return instance; }
 
