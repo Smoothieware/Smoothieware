@@ -1092,12 +1092,10 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
     }
 
     /*
-        For extruders, we need to do some extra work...
-        if we have volumetric limits enabled we calculate the volume for this move and limit the rate if it exceeds the stated limit.
-        Note we need to be using volumetric extrusion for this to work as Ennn is in mm³ not mm
+        For extruders, we need to do some extra work to limit the volumetric rate if specified...
+        If using volumetric limts we need to be using volumetric extrusion for this to work as Ennn needs to be in mm³ not mm
         We ask Extruder to do all the work but we need to pass in the relevant data.
         NOTE we need to do this before we segment the line (for deltas)
-        This also sets any scaling due to flow rate and volumetric if a G1
     */
     if(!isnan(delta_e) && gcode->has_g && gcode->g == 1) {
         float data[2]= {delta_e, rate_mm_s / millimeters_of_travel};
@@ -1165,6 +1163,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
 
 
 // Append an arc to the queue ( cutting it into segments as needed )
+// TODO does not support any E parameters so cannot be used for 3D printing.
 bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[], float radius, bool is_clockwise )
 {
     float rate_mm_s= this->feed_rate / seconds_per_minute;
@@ -1210,6 +1209,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         }
     }
     // Figure out how many segments for this gcode
+    // TODO for deltas we need to make sure we are at lesat as many segments as requested, also if mm_per_line_segment is set we need to use the
     uint16_t segments = ceilf(millimeters_of_travel / arc_segment);
 
   //printf("Radius %f - Segment Length %f - Number of Segments %d\r\n",radius,arc_segment,segments);  // Testing Purposes ONLY
