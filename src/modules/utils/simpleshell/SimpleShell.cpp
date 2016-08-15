@@ -982,20 +982,29 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
 
         THEROBOT->push_state();
         char cmd[64];
-        snprintf(cmd, sizeof(cmd), "G91 G0 X%f Y0 F%f", -r, f);
+        snprintf(cmd, sizeof(cmd), "G91 G0 X%f F%f G90", -r, f);
         stream->printf("%s\n", cmd);
         struct SerialMessage message{&StreamOutput::NullStream, cmd};
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
         for (uint32_t i = 0; i < n; ++i) {
             if(THEKERNEL->is_halted()) break;
-            snprintf(cmd, sizeof(cmd), "G2 X%f Y0 I%f J0 F%f", -r, r, f);
+            snprintf(cmd, sizeof(cmd), "G2 I%f J0 F%f", r, f);
             stream->printf("%s\n", cmd);
             message.message= cmd;
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             THECONVEYOR->wait_for_idle();
         }
-        THEROBOT->pop_state();
+
+        // leave it where it started
+        if(!THEKERNEL->is_halted()) {
+            snprintf(cmd, sizeof(cmd), "G91 G0 X%f F%f G90", r, f);
+            stream->printf("%s\n", cmd);
+            struct SerialMessage message{&StreamOutput::NullStream, cmd};
+            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        }
+
+       THEROBOT->pop_state();
         stream->printf("done\n");
 
     }else if (what == "square") {
