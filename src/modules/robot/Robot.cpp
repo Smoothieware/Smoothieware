@@ -1209,7 +1209,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         }
     }
     // Figure out how many segments for this gcode
-    // TODO for deltas we need to make sure we are at lesat as many segments as requested, also if mm_per_line_segment is set we need to use the
+    // TODO for deltas we need to make sure we are at least as many segments as requested, also if mm_per_line_segment is set we need to use the
     uint16_t segments = ceilf(millimeters_of_travel / arc_segment);
 
   //printf("Radius %f - Segment Length %f - Number of Segments %d\r\n",radius,arc_segment,segments);  // Testing Purposes ONLY
