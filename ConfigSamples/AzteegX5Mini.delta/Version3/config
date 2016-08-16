@@ -168,6 +168,10 @@ gamma_homing_direction                       home_to_max      #
 gamma_min                                    0                #
 gamma_max                                    430              # change to suit your height
 
+alpha_max_travel                             1000              # max travel in mm for alpha/X axis when homing
+beta_max_travel                              1000              # max travel in mm for beta/Y axis when homing
+gamma_max_travel                             1000              # max travel in mm for gamma/Z axis when homing
+
 #probe endstop
 #probe_pin                                   1.29             # optional pin for probe
 
