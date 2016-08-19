@@ -320,19 +320,20 @@ float Block::max_exit_speed()
 
 void Block::prepare()
 {
-    //THEKERNEL->streams->printf("id %d: TMT: %lu, AccelUntil: %lu, DecelAfter: %lu\n",this->id, this->total_move_ticks,this->accelerate_until,this->decelerate_after);
+    THEKERNEL->streams->printf("id %d: TMT: %lu, AccelUntil: %lu, DecelAfter: %lu\n",this->id, this->total_move_ticks,this->accelerate_until,this->decelerate_after);
      
-    double inv = 1.0F / this->steps_event_count;
+    float inv = 1.0F / this->steps_event_count;
     for (uint8_t m = 0; m < n_actuators; m++) {
         uint32_t steps = this->steps[m];
         this->tick_info[m].steps_to_move = steps;
+        this->tick_info[m].acceleration_change=0;
         if(steps == 0) continue;
 
-        double aratio = inv * steps;
-        this->tick_info[m].steps_per_tick = STEPTICKER_TOFPD((this->initial_rate * aratio) / STEP_TICKER_FREQUENCY); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
+        float aratio = inv * steps;
+        this->tick_info[m].steps_per_tick = STEPTICKER_TOFP((this->initial_rate * aratio) / STEP_TICKER_FREQUENCY); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
         this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
        
-        double acceleration_change = 0;
+        float acceleration_change = 0;
         if(this->accelerate_until != 0) { // If the next accel event is the end of accel
             this->tick_info[m].next_accel_event = this->accelerate_until;
             acceleration_change = this->acceleration_per_tick;
@@ -347,20 +348,24 @@ void Block::prepare()
         }
 
         // convert to fixed point after scaling
-        if (steps_event_count/100 > steps && acceleration_change > 0) {
-            this->tick_info[m].acceleration_change=STEPTICKER_TOFPCEILD(acceleration_change * aratio);
-        } else { 
-            this->tick_info[m].acceleration_change= STEPTICKER_TOFPD(acceleration_change * aratio); }
+       // if (steps_event_count/100 > steps && acceleration_change > 0) {
+        //    this->tick_info[m].acceleration_change=STEPTICKER_TOFPCEILD(acceleration_change * aratio);
+       // } else { 
        
-        this->tick_info[m].deceleration_change= -STEPTICKER_TOFPD(this->deceleration_per_tick * aratio);
-        this->tick_info[m].plateau_rate= STEPTICKER_TOFPD((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY);
         
-        /*
+        this->tick_info[m].acceleration_change= STEPTICKER_TOFP(acceleration_change * aratio);
+        if (acceleration_change > 0) this->tick_info[m].acceleration_change += 1;
+       
+        this->tick_info[m].deceleration_change= -STEPTICKER_TOFP(this->deceleration_per_tick * aratio);
+        this->tick_info[m].plateau_rate= STEPTICKER_TOFP((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY);
+        
+        
         // calculate ticks used by this move
        // uint32_t tick_count = 0;
-        int64_t counter = 0;
+       // int64_t counter = 0;
         //int64_t EndCount = STEPTICKER_FPSCALE * this->steps[m];
-        if (this->accelerate_until>0) counter+=this->accelerate_until * (this->tick_info[m].steps_per_tick + this->tick_info[m].acceleration_change * this->accelerate_until / 2);
+        /*
+        if (this->accelerate_until>0) counter += this->accelerate_until * (this->tick_info[m].steps_per_tick + this->tick_info[m].acceleration_change * this->accelerate_until / 2);
         
         if (this->decelerate_after<this->total_move_ticks) {
             int32_t decel_ticks=this->total_move_ticks-this->decelerate_after;
@@ -371,6 +376,11 @@ void Block::prepare()
             int32_t plat_ticks = this->decelerate_after-this->accelerate_until;
             counter += plat_ticks * this->tick_info[m].plateau_rate;
         }
+        
+       // counter= counter / STEPTICKER_FPSCALE;
+       // if (this->accelerate_until != 0) this->tick_info[m].acceleration_change+=1;
+       // int32_t myint=counter;
+        
         //float steps_taken = counter / STEPTICKER_FPSCALE;
         //steps_taken=steps_taken/STEPTICKER_FPSCALE;
         
@@ -382,11 +392,10 @@ void Block::prepare()
                                                      this->tick_info[m].deceleration_change,
                                                      this->tick_info[m].plateau_rate,
                                                      this->tick_info[m].next_accel_event);
-        THEKERNEL->streams->printf("     Real Steps: %ld, S/T: %li, aratio: %e\n",
-                                                    counter,
-                                                    this->tick_info[m].steps_per_tick,
+        THEKERNEL->streams->printf("     S/T: %li, aratio: %e\n",
+                                                     this->tick_info[m].steps_per_tick,
                                                     aratio);
-         */                                       
-       
+                                               
+       */
     }
 }
