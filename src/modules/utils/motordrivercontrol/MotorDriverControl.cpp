@@ -17,6 +17,7 @@
 
 #include "drivers/TMC26X/TMC26X.h"
 #include "drivers/DRV8711/drv8711.h"
+#include "drivers/L6474/L6474.h"
 
 #include <string>
 
@@ -29,7 +30,11 @@
 
 #define current_checksum               CHECKSUM("current")
 #define max_current_checksum           CHECKSUM("max_current")
-
+#define currentX_checksum              CHECKSUM("currentX")
+#define currentY_checksum              CHECKSUM("currentY")
+#define currentZ_checksum              CHECKSUM("currentZ")
+#define currentE_checksum              CHECKSUM("currentE")
+#define drivers_checksum               CHECKSUM("drivers")
 #define microsteps_checksum            CHECKSUM("microsteps")
 #define decay_mode_checksum            CHECKSUM("decay_mode")
 
@@ -70,6 +75,7 @@ void MotorDriverControl::on_module_loaded()
 
 bool MotorDriverControl::config_module(uint16_t cs)
 {
+	/*
     std::string str= THEKERNEL->config->value( motor_driver_control_checksum, cs, designator_checksum)->by_default("")->as_string();
     if(str.empty()) {
         THEKERNEL->streams->printf("MotorDriverControl ERROR: designator not defined\n");
@@ -183,6 +189,67 @@ bool MotorDriverControl::config_module(uint16_t cs)
     THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", designator, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
 
     return true;
+    */
+	std::string str= THEKERNEL->config->value( motor_driver_control_checksum, cs, designator_checksum)->by_default("")->as_string();
+	    if(str.empty())
+	    {
+	        THEKERNEL->streams->printf("MotorDriverControl ERRO: Designador Nao Definido\n");
+	        return false; // designator required
+	    }
+	    designator= str[0];
+	    str= THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string();
+	    if(str.empty())
+	    {
+	        THEKERNEL->streams->printf("MotorDriverControl %c ERRO: Chip não definido\n", designator);
+	        return false; // chip type required
+	    }
+	    using std::placeholders::_1;
+	    using std::placeholders::_2;
+	    using std::placeholders::_3;
+		chip= STL6474;
+		l6474= new L6474(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), designator);
+	    int spi_frequency = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_frequency_checksum)->by_default(1000000)->as_number();
+	    this->spi = new mbed::SPI(P0_18,P0_17, P0_15);
+	    this->spi->frequency(spi_frequency);
+	    this->spi->format(8, 3); // 8bit, mode3
+	    drivers=THEKERNEL->config->value(motor_driver_control_checksum, cs, drivers_checksum )->by_default(4)->as_number();
+	    max_current=THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default((int)3000)->as_number(); // in mA
+		currents = new double[drivers];
+	    if(drivers >0)
+	    	currents[0] = THEKERNEL->config->value(motor_driver_control_checksum, cs, currentX_checksum)->by_default(1000)->as_number(); // in mA
+	    if(drivers >1)
+	    	currents[1] = THEKERNEL->config->value(motor_driver_control_checksum, cs, currentY_checksum)->by_default(1000)->as_number(); // in mA
+	    if(drivers >2)
+	    	currents[2] = THEKERNEL->config->value(motor_driver_control_checksum, cs, currentZ_checksum)->by_default(1000)->as_number(); // in mA
+	    if(drivers >3)
+	    	currents[3] = THEKERNEL->config->value(motor_driver_control_checksum, cs, currentE_checksum)->by_default(1000)->as_number(); // in mA
+	    microsteps = THEKERNEL->config->value(motor_driver_control_checksum, cs, microsteps_checksum )->by_default(16)->as_number(); // 1/n
+	    // setup the chip via SPI
+	    initialize_chip(cs);
+	    // if raw registers are defined set them 1,2,3 etc in hex
+	    str= THEKERNEL->config->value( motor_driver_control_checksum, cs, raw_register_checksum)->by_default("")->as_string();
+	    if(!str.empty()) {
+	        rawreg= true;
+	        std::vector<uint32_t> regs= parse_number_list(str.c_str(), 16);
+
+	    }else{
+	        rawreg= false;
+	    }
+
+	    this->register_for_event(ON_GCODE_RECEIVED);
+	    this->register_for_event(ON_HALT);
+	    this->register_for_event(ON_ENABLE);
+	    this->register_for_event(ON_IDLE);
+
+	    if( THEKERNEL->config->value(motor_driver_control_checksum, cs, alarm_checksum )->by_default(false)->as_bool() ) {
+	        halt_on_alarm= THEKERNEL->config->value(motor_driver_control_checksum, cs, halt_on_alarm_checksum )->by_default(false)->as_bool();
+	        // enable alarm monitoring for the chip
+	        this->register_for_event(ON_SECOND_TICK);
+	    }
+
+	    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s\n", designator, id, chip==STL6474? "L6474":"UNKNOWN");
+		//l6474->readStatus();
+	    return true;
 }
 
 // event to handle enable on/off, as it could be called in an ISR we schedule to turn the steppers on or off in ON_IDLE
@@ -223,6 +290,9 @@ void MotorDriverControl::on_second_tick(void *argument)
         case TMC2660:
             alarm= tmc26x->checkAlarm();
             break;
+       // case L6474:
+        	//alarm= l6474->checkAlarm();
+        //	break;
     }
 
     if(halt_on_alarm && alarm) {
@@ -234,7 +304,16 @@ void MotorDriverControl::on_second_tick(void *argument)
 void MotorDriverControl::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode*>(argument);
-
+    if (gcode->has_m)
+    {
+       if (gcode->m == 777)
+       {
+    	   l6474->CmdGetStatus(0);
+    	   l6474->CmdGetStatus(1);
+    	   l6474->CmdGetStatus(2);
+    	   l6474->CmdGetStatus(3);
+       }
+    }
     if (gcode->has_m) {
         if(gcode->m == 906) {
             if (gcode->has_letter(designator)) {
@@ -329,6 +408,11 @@ void MotorDriverControl::initialize_chip(uint16_t cs)
         set_current(current);
         set_microstep(microsteps);
         //set_decay_mode(decay_mode);
+    } else if(chip = STL6474)
+    {
+    	l6474->Init(drivers);
+    	set_current();
+    	set_microstep(microsteps);
     }
 
 }
@@ -346,6 +430,11 @@ void MotorDriverControl::set_current(uint32_t c)
             break;
     }
 }
+void MotorDriverControl::set_current()
+{
+	for(int d =0; d < drivers ; d++)
+		l6474->SetCurrent(d,currents[d]);
+}
 
 // set microsteps where n is the number of microsteps eg 64 for 1/64
 uint32_t MotorDriverControl::set_microstep( uint32_t n )
@@ -360,6 +449,21 @@ uint32_t MotorDriverControl::set_microstep( uint32_t n )
             tmc26x->setMicrosteps(n);
             m= tmc26x->getMicrosteps();
             break;
+        case STL6474:
+        	for(int d =0; d < drivers ; d++)
+        	    	switch(n)
+        	    	{
+        	    		case 8:
+        	    	    	l6474->SelectStepMode(d,STEP_MODE_1_8);
+        	    	    break;
+        	    		case 16:
+        	    			l6474->SelectStepMode(d,STEP_MODE_1_16);
+        	    		break;
+        	    		default:
+        	    			l6474->SelectStepMode(d,STEP_MODE_1_16);
+        	    		break;
+        	    	}
+        	break;
     }
     return m;
 }
@@ -383,6 +487,14 @@ void MotorDriverControl::enable(bool on)
         case TMC2660:
             tmc26x->setEnabled(on);
             break;
+        case STL6474:
+        	if(on)
+        	    	for(int d =0; d < drivers ; d++)
+        	    		l6474->CmdEnable(d);
+        	    else
+        	    	for(int d =0; d < drivers ; d++)
+        	    		l6474->CmdDisable(d);
+        	break;
     }
 }
 
@@ -444,11 +556,17 @@ void MotorDriverControl::set_options(Gcode *gcode)
 // Called by the drivers codes to send and receive SPI data to/from the chip
 int MotorDriverControl::sendSPI(uint8_t *b, int cnt, uint8_t *r)
 {
-    spi_cs_pin.set(0);
+  /*  spi_cs_pin.set(0);
     for (int i = 0; i < cnt; ++i) {
         r[i]= spi->write(b[i]);
     }
     spi_cs_pin.set(1);
+    return cnt;*/
+
+    for (int i = 0; i < cnt; ++i)
+    {
+        r[i]= spi->write(b[i]);
+    }
     return cnt;
 }
 

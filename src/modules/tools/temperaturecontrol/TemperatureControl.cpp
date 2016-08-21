@@ -32,7 +32,7 @@
 #include "Thermistor.h"
 #include "max31855.h"
 #include "AD8495.h"
-
+#include "PT100.h"
 #include "MRI_Hooks.h"
 
 #define UNDEFINED -1
@@ -164,7 +164,12 @@ void TemperatureControl::load_config()
         sensor = new Thermistor();
     } else if(sensor_type.compare("max31855") == 0) {
         sensor = new Max31855();
-    } else if(sensor_type.compare("ad8495") == 0) {
+    }
+    else if (sensor_type.compare("PT100") == 0)
+    {
+    		sensor = new PT100();
+    }
+    else if(sensor_type.compare("ad8495") == 0) {
         sensor = new AD8495();
     } else {
         sensor = new TempSensor(); // A dummy implementation

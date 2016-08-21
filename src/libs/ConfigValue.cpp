@@ -108,6 +108,27 @@ bool ConfigValue::as_bool()
         return this->value.find_first_of("ty1") != string::npos;
     }
 }
+double ConfigValue::as_double()
+{
+    if( this->found == false && this->default_set == true ) {
+        return this->default_double;
+    } else {
+        char *endptr = NULL;
+        string str = remove_non_number(this->value);
+        const char *cp= str.c_str();
+        double result = strtod(cp, &endptr);
+        if( endptr <= cp ) {
+            printErrorandExit("Configuracao nao e um tipo double valido" );
+        }
+        return result;
+    }
+}
+ConfigValue *ConfigValue::by_default(double val)
+{
+    this->default_set = true;
+    this->default_double = val;
+    return this;
+}
 
 ConfigValue *ConfigValue::by_default(int val)
 {
