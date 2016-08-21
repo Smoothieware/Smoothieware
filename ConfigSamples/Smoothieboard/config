@@ -7,11 +7,6 @@
 # Lines that begin with a # character ( like this one ) are "comments" and will be ignored by Smoothie ( or their default value will be used )
 # Some of the configuration options are "commented" and you need to remove the # character before them or they will be ignored
 
-# Config example refactor todo : 
-# 1. Add to documentation any option we are removing from here
-# 2. Make sure the source code has the right defaults for values we are commenting here
-# 3. Make the pin numbers more consistent with the documentation
-
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 #arm_solution                                cartesian        # For linear delta printers and other arm solutions, use the specific config example file
 
