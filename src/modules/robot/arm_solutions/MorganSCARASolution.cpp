@@ -61,7 +61,7 @@ float MorganSCARASolution::to_degrees(float radians) {
 
 void MorganSCARASolution::cartesian_to_actuator(const float cartesian_mm[], ActuatorCoordinates &actuator_mm )
 {
-
+  if (!this->homing_active){
     float SCARA_pos[2],
           SCARA_C2,
           SCARA_S2,
@@ -100,13 +100,18 @@ void MorganSCARASolution::cartesian_to_actuator(const float cartesian_mm[], Actu
     actuator_mm[ALPHA_STEPPER] = to_degrees(SCARA_theta);             // Multiply by 180/Pi  -  theta is support arm angle
     actuator_mm[BETA_STEPPER ] = to_degrees(SCARA_theta + SCARA_psi); // Morgan kinematics (dual arm)
     //actuator_mm[BETA_STEPPER ] = to_degrees(SCARA_psi);             // real scara
-    actuator_mm[GAMMA_STEPPER] = cartesian_mm[Z_AXIS];                // No inverse kinematics on Z - Position to add bed offset?
+  }
+  else {
+    actuator_mm[ALPHA_STEPPER] = cartesian_mm[ALPHA_STEPPER];       // no kinematics during homing
+    actuator_mm[BETA_STEPPER] = cartesian_mm[BETA_STEPPER];
+  }
+  actuator_mm[GAMMA_STEPPER] = cartesian_mm[Z_AXIS];                // No inverse kinematics on Z
 
 }
 
 void MorganSCARASolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ) {
     // Perform forward kinematics, and place results in cartesian_mm[]
-
+  if(!this->homing_active){
     float y1, y2,
            actuator_rad[2];
 
@@ -118,11 +123,16 @@ void MorganSCARASolution::actuator_to_cartesian(const ActuatorCoordinates &actua
 
     cartesian_mm[X_AXIS] = (((cosf(actuator_rad[X_AXIS])*this->arm1_length) + (cosf(actuator_rad[Y_AXIS])*this->arm2_length)) / this->morgan_scaling_x) + this->morgan_offset_x;
     cartesian_mm[Y_AXIS] = (y2 + this->morgan_offset_y) / this->morgan_scaling_y;
+  } else {
+    cartesian_mm[X_AXIS] = actuator_mm[X_AXIS];             // no kinematics during homing
+    cartesian_mm[Y_AXIS] = actuator_mm[Y_AXIS];
+  }
     cartesian_mm[Z_AXIS] = actuator_mm[Z_AXIS];
 
     cartesian_mm[0] = ROUND(cartesian_mm[0], 7);
     cartesian_mm[1] = ROUND(cartesian_mm[1], 7);
     cartesian_mm[2] = ROUND(cartesian_mm[2], 7);
+
 }
 
 bool MorganSCARASolution::set_optional(const arm_options_t& options) {
