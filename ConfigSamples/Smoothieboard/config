@@ -24,51 +24,51 @@ gamma_steps_per_mm                           1600             # Steps per mm for
 # Read http://smoothieware.org/motion-control before editing
 acceleration                                 3000             # Acceleration in mm/second/second.
 #z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 uses acceleration which is the default. DO NOT SET ON A DELTA
-junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters
-x_axis_max_speed                             30000            # Maximum speed for this axis ( mm/min )
-y_axis_max_speed                             30000            # Maximum speed for this axis ( mm/min )
-z_axis_max_speed                             300              # Maximum speed for this axis ( mm/min )
+junction_deviation                           0.05             # How much to decelerate proportional to change of direction. Similar to the old "max_jerk", in millimeters
+x_axis_max_speed                             30000            # Maximum speed for the X axis ( mm/min )
+y_axis_max_speed                             30000            # Maximum speed for the Y axis ( mm/min )
+z_axis_max_speed                             300              # Maximum speed for the Z axis ( mm/min )
 
 # Stepper module pins ( read http://smoothieware.org/pin-configuration to learn about pins )
 # Read http://smoothieware.org/stepper-motors before editing
+# Alpha ( or X ) axis, by default uses the M1 stepper motor driver
 alpha_step_pin                               2.0              # Pin for alpha stepper step signal
 alpha_dir_pin                                0.5              # Pin for alpha stepper direction, add a ! after pin name ( 0.5! ) to invert direction
 alpha_en_pin                                 0.4              # Pin for alpha enable pin
-alpha_current                                1.5              # X stepper motor current
-#alpha_max_rate                              300000.0         # Maximum rate for this actuator ( mm/min )
+alpha_current                                1                # X stepper motor current
 
+# Beta ( or Y ) axis, by default uses the M2 stepper motor driver
 beta_step_pin                                2.1              # Pin for beta stepper step signal
 beta_dir_pin                                 0.11             # Pin for beta stepper direction, add a ! after pin name ( 0.11! ) to invert direction
 beta_en_pin                                  0.10             # Pin for beta enable
-beta_current                                 1.5              # Y stepper motor current
-#beta_max_rate                               300000.0         # Maximum rate for this actuator ( mm/min )
+beta_current                                 1                # Y stepper motor current
 
+# Gamma ( or Z ) axis, by default uses the M3 stepper motor driver
 gamma_step_pin                               2.2              # Pin for gamma stepper step signal
 gamma_dir_pin                                0.20             # Pin for gamma stepper direction, add a ! after pin name ( 0.20! ) to invert direction
 gamma_en_pin                                 0.19             # Pin for gamma enable
-gamma_current                                1.5              # Z stepper motor current
-#gamma_max_rate                              300000.0         # Maximum rate for this actuator ( mm/min )
+gamma_current                                1                # Z stepper motor current
 
 ## Extruder configuration
 # Read http://smoothieware.org/extruder and http://smoothieware.org/3d-printer-guide before editing
 
-# First extruder module configuration
+# First extruder module configuration. By default uses the M4 stepper motor driver
 extruder.hotend.enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
 extruder.hotend.steps_per_mm                 140              # Steps per mm for extruder stepper
 extruder.hotend.default_feed_rate            600              # Default rate ( mm/minute ) for moves where only the extruder moves
-extruder.hotend.acceleration                 500              # Acceleration for the stepper motor mm/sec²
+extruder.hotend.acceleration                 500              # Acceleration for the stepper motor in mm/s/s
 extruder.hotend.max_speed                    50               # Maximum speed in mm/s
 extruder.hotend.step_pin                     2.3              # Pin for extruder step signal
 extruder.hotend.dir_pin                      0.22             # Pin for extruder dir signal, add a ! to the pin number ( 0.22! )to invert direction of rotation
 extruder.hotend.en_pin                       0.21             # Pin for extruder enable signal
-delta_current                                1.5              # First extruder stepper motor current
+delta_current                                1                # First extruder stepper motor current
 
-# Second extruder module configuration
+# Second extruder module configuration. By default uses the M5 stepper motor driver
 # Read http://smoothieware.org/3d-printer-guide#multiple-extruders before editing
 #extruder.hotend2.enable                     true             # Whether to activate the extruder module at all. All configuration is ignored if false
 #extruder.hotend2.steps_per_mm               140              # Steps per mm for extruder stepper
 #extruder.hotend2.default_feed_rate          600              # Default rate ( mm/minute ) for moves where only the extruder moves
-#extruder.hotend2.acceleration               500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+#extruder.hotend2.acceleration               500              # Acceleration for the stepper motor in mm/s/s
 #extruder.hotend2.max_speed                  50               # Maximum speed in mm/s
 #extruder.hotend2.step_pin                   2.8              # Pin for extruder step signal
 #extruder.hotend2.dir_pin                    2.13             # Pin for extruder dir signal, add a ! to the pin number ( 2.13! ) to invert direction of rotation
@@ -76,7 +76,7 @@ delta_current                                1.5              # First extruder s
 #extruder.hotend2.x_offset                   0                # X offset from origin in mm
 #extruder.hotend2.y_offset                   25.0             # Y offset from origin in mm
 #extruder.hotend2.z_offset                   0                # Z offset from origin in mm
-#epsilon_current                             1.5              # Second extruder stepper motor current
+#epsilon_current                             1                # Second extruder stepper motor current
 
 ## Laser module configuration
 # Read http://smoothieware.org/laser and http://smoothieware.org/laser-cutter-guide before editing
@@ -196,7 +196,7 @@ gamma_homing_retract_mm                      1                # Distance to retr
 ## Z-probe
 # Used for auto-calibration and levelling on 3D printers, and for surface probing on other machine types
 # Read http://smoothieware.org/zprobe before editing
-zprobe.enable                                false            # Set to true to enable the z-probe module
+#zprobe.enable                               false            # Set to true to enable the z-probe module
 #zprobe.probe_pin                            1.28!^           # Pin the probe is attached to, if "Normally Closed" remove the !, set to Z_MAX by default
 #zprobe.slow_feedrate                        5                # Probe feed rate in mm/s
 #zprobe.debounce_count                       100              # Uncomment if the probe input is noisy, this reduces accuracy but also interference
@@ -224,9 +224,9 @@ network.enable                               false            # Set to true to e
 network.ip_address                           auto             # Use dhcp ( automated IP adress attribution by your router ) to get ip address
 
 # Comment the line above and uncomment the 3 lines below to manually setup ip address
-#network.ip_address                           192.168.3.222   # The IP address
-#network.ip_mask                              255.255.255.0   # The ip mask
-#network.ip_gateway                           192.168.3.1     # The gateway address
+#network.ip_address                          192.168.3.222    # The IP address
+#network.ip_mask                             255.255.255.0    # The ip mask
+#network.ip_gateway                          192.168.3.1      # The gateway address
 
 ## System configuration
 # Serial communications configuration ( baud rate defaults to 9600 if undefined )

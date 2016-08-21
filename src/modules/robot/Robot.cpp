@@ -165,8 +165,8 @@ void Robot::load_config()
         this->arm_solution = new CartesianSolution(THEKERNEL->config);
     }
 
-    this->feed_rate           = THEKERNEL->config->value(default_feed_rate_checksum   )->by_default(  100.0F)->as_number();
-    this->seek_rate           = THEKERNEL->config->value(default_seek_rate_checksum   )->by_default(  100.0F)->as_number();
+    this->feed_rate           = THEKERNEL->config->value(default_feed_rate_checksum   )->by_default( 4000.0F)->as_number();
+    this->seek_rate           = THEKERNEL->config->value(default_seek_rate_checksum   )->by_default( 4000.0F)->as_number();
     this->mm_per_line_segment = THEKERNEL->config->value(mm_per_line_segment_checksum )->by_default(    0.0F)->as_number();
     this->delta_segments_per_second = THEKERNEL->config->value(delta_segments_per_second_checksum )->by_default(0.0f   )->as_number();
     this->mm_per_arc_segment  = THEKERNEL->config->value(mm_per_arc_segment_checksum  )->by_default(    0.0f)->as_number();
