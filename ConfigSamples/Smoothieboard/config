@@ -87,7 +87,6 @@ delta_current                                1                # First extruder s
 #laser_module_maximum_power                  1.0              # Maximum duty cycle that will be applied to the laser
 #laser_module_minimum_power                  0.0              # This is a value just below the minimum duty cycle that keeps the laser active.
 #laser_module_default_power                  0.8              # This is the default laser power that will be used for cuts if a power has not been specified.  The value is a scale between
-                                                              # Maximum and minimum power levels specified above
 
 ## Temperature control configuration
 # Read http://smoothieware.org/temperaturecontrol before editing
@@ -95,7 +94,7 @@ delta_current                                1                # First extruder s
 # First hotend configuration
 temperature_control.hotend.enable            true             # Whether to activate this ( "hotend" ) module at all, all configuration is ignored if false.
 temperature_control.hotend.thermistor_pin    0.23             # Pin for the thermistor to read, default to T1 ( 0.23 )
-temperature_control.hotend.heater_pin        2.7              # Pin that controls the heater, can be set to "nc" if you only want to read temperatures. Here set to control the first large mosfet
+temperature_control.hotend.heater_pin        2.4              # Pin that controls the heater, can be set to "nc" if you only want to read temperatures. Here set to control the first small mosfet
 temperature_control.hotend.thermistor        EPCOS100K        # Thermistor type, see http://smoothieware.org/temperaturecontrol#toc5 for possible values
 temperature_control.hotend.set_m_code        104              # M-code to set temperature, reprap defaut for hotends is M104
 temperature_control.hotend.set_and_wait_m_code 109            # M-code to set temperature and wait, reprap default for hotends is M109
@@ -129,7 +128,7 @@ temperature_control.hotend.designator        T                # Hotend designato
 # Bed heater configuration
 temperature_control.bed.enable               true             # Whether to activate this ( "bed" ) module at all, all configuration is ignored if false
 temperature_control.bed.thermistor_pin       0.24             # Pin for the thermistor to read, default to T2 ( 0.24 )
-temperature_control.bed.heater_pin           2.5              # Pin that controls the heater, usually set to a pin that controls a mosfet. Here set to control second large mosfet
+temperature_control.bed.heater_pin           2.7              # Pin that controls the heater, usually set to a pin that controls a mosfet. Here set to control first large mosfet
 temperature_control.bed.thermistor           Honeywell100K    # see http://smoothieware.org/temperaturecontrol#toc5
 temperature_control.bed.set_m_code           140              # M-code to set temperature, reprap default for bed is M140
 temperature_control.bed.set_and_wait_m_code  190              # M-code to set temperature and wait, reprap default for bed is M190
