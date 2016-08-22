@@ -110,6 +110,7 @@ Robot::Robot()
     this->g92_offset = wcs_t(0.0F, 0.0F, 0.0F);
     this->next_command_is_MCS = false;
     this->disable_segmentation= false;
+    this->disable_arm_solution= false;
     this->n_motors= 0;
 }
 
@@ -979,7 +980,15 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // find actuator position given the machine position, use actual adjusted target
     ActuatorCoordinates actuator_pos;
-    arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
+    if(!disable_arm_solution) {
+        arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
+
+    }else{
+        // basically the same as cartesian, would be used for special homing situations like for scara
+        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+            actuator_pos[i] = transformed_target[i];
+        }
+    }
 
 #if MAX_ROBOT_ACTUATORS > 3
     sos= 0;
