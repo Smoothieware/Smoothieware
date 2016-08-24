@@ -4,6 +4,19 @@
 
 #include "descriptor_cdc.h"
 #include "descriptor_msc.h"
+#include "libs/Kernel.h"
+#include "Robot.h"
+#include "libs/nuts_bolts.h"
+#include "libs/utils.h"
+#include "SerialConsole.h"
+#include "libs/SerialMessage.h"
+#include "libs/StreamOutputPool.h"
+#include "libs/StreamOutput.h"
+#include "Gcode.h"
+#include "checksumm.h"
+#include "Config.h"
+#include "ConfigValue.h"
+#include "SDFAT.h"
 
 #define iprintf(...) do { } while (0)
 
@@ -664,10 +677,29 @@ void USB::dumpDescriptors() {
 void USB::on_module_loaded()
 {
     register_for_event(ON_IDLE);
+    register_for_event(ON_CONSOLE_LINE_RECEIVED);
     connect();
 }
 
 void USB::on_idle(void*)
 {
     USBHAL::usbisr();
+}
+
+void USB::on_console_line_received( void *argument )
+{
+	 if(THEKERNEL->is_halted()) return; // if in halted state ignore any commands
+
+	    SerialMessage new_message = *static_cast<SerialMessage *>(argument);
+
+	    // ignore comments and blank lines and if this is a G code then also ignore it
+	    char first_char = new_message.message[0];
+	    if(strchr(";( \n\rGMTN", first_char) != NULL) return;
+
+	    string possible_command = new_message.message;
+	    string cmd = shift_parameter(possible_command);
+	    if(cmd == "connect")
+	    	connect();
+	    else if(cmd =="disconnect")
+	    	disconnect();
 }
