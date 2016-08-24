@@ -26,42 +26,60 @@
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include <map>
-enum Pagina
-{
-	Init =0,
-	Status,
-	Menu,
-	Aquecimento,
-	Movimento,
-	Nivelamento,
-	Configuracao,
-	Arquivos
-};
-enum Material
-{
-	ABS_P,
-	PLA,
-	ASA,
-	PET_G,
-	PET_T
-};
-
+#include <tuple>
+#define ABS_P 0
+#define ASA   1
+#define PET_G 2
+#define PET_T 3
+#define HIPS  4
+#define PLA   5
 class Display : public Module
 {
 public:
+	enum Pagina
+	{
+		Init =0,
+		Estado,
+		Menu,
+		Aquecimento,
+		Movimento,
+		Nivelamento,
+		Configuracao,
+		Arquivos,
+		SemCartao
+	};
 	Display();
 	~Display();
 	void on_module_loaded();
-	void on_gcode_execute(void* argument);
+	void on_gcode_received(void* argument);
 	void on_idle(void* argument);
 	void on_serial_char_received();
+	void on_serial_char_writed();
+	uint32_t timer(uint32_t);
+	uint16_t count_folder_content();
 private:
+	bool filter_file(const char *f);
+	string file_at(uint16_t line, bool& isdir);
+	string status, laststatus;
+	bool refresh;
+	uint8_t cnt;
 	Pagina paginas;
 	mbed::Serial* serial;
 	RingBuffer<char,256> buffer;
-	map<Material,int> *tempExtrusor;
-	map<Material,int> *tempMesa;
-	map<Material,int> *tempCamara;
+	std::vector<uint16_t> temp_controllers;
+	int materialAtivo;
+	map<int,string> *arquivos;
+	string arquivo;
+	map<int,int> *tempExtrusor;
+	map<int,int> *tempMesa;
+	map<int,int> *tempCamara;
+	void Mapeador();
+	void Varredura();
+	void ExecutaComando(string cmd);
+	void EnviaParametro(string obj,string val);
+	void Mensagem(string msg);
+	void GC(string g);
+	bool AtualizaArquivos();
 };
 
 #endif /* #ifndef __NEXTION_H__ */
