@@ -348,14 +348,12 @@ void Block::prepare()
         }
 
         // convert to fixed point after scaling
-       // if (steps_event_count/100 > steps && acceleration_change > 0) {
-        //    this->tick_info[m].acceleration_change=STEPTICKER_TOFPCEILD(acceleration_change * aratio);
-       // } else { 
        
-        
-        this->tick_info[m].acceleration_change= STEPTICKER_TOFP(acceleration_change * aratio);
-        if (acceleration_change > 0) this->tick_info[m].acceleration_change += 1;
        
+      if (steps_event_count/20 > steps && acceleration_change > 0) {
+            this->tick_info[m].acceleration_change= STEPTICKER_TOFPCEIL(acceleration_change * aratio);
+        }else{ this->tick_info[m].acceleration_change= STEPTICKER_TOFP(acceleration_change * aratio);}
+           
         this->tick_info[m].deceleration_change= -STEPTICKER_TOFP(this->deceleration_per_tick * aratio);
         this->tick_info[m].plateau_rate= STEPTICKER_TOFP((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY);
         

@@ -158,14 +158,13 @@ void StepTicker::step_tick (void)
     bool still_moving= false;
     // foreach motor, if it is active see if time to issue a step to that motor
     for (uint8_t m = 0; m < num_motors; m++) {
-        if(current_block->tick_info[m].steps_to_move == 0 && motor[m]->get_steps_per_tick()==0) continue; // not active
+        if(current_block->tick_info[m].steps_to_move == 0) continue; // not active
         
         motor[m]->update_counter();
         motor[m]->update_steps_per_tick(current_block->tick_info[m].acceleration_change);
         // protect against rounding errors and such
-        if(motor[m]->get_steps_per_tick() <= 0) {
-            if (motor[m]->get_step_count() < current_block->tick_info[m].steps_to_move)
-                motor[m]->set_counter(STEPTICKER_FPSCALE); // we force completion this step by setting to 1.0
+        if(motor[m]->get_steps_per_tick() <= 0 || current_tick>=current_block->total_move_ticks) {
+            motor[m]->set_counter(STEPTICKER_FPSCALE); // we force completion this step by setting to 1.0
             motor[m]->set_steps_per_tick(0);
         }
         
@@ -266,10 +265,8 @@ bool StepTicker::start_next_block()
         // set direction bit here
         // NOTE this would be at least 10us before first step pulse.
         // TODO does this need to be done sooner, if so how without delaying next tick
-        if (!motor[m]->same_direction(current_block->direction_bits[m])){
-            motor[m]->set_direction(current_block->direction_bits[m]);
-            motor[m]->set_counter(0); // force a full step time dwell
-        }
+        motor[m]->set_direction(current_block->direction_bits[m]);
+        motor[m]->set_counter(0);
         motor[m]->clear_step_count();
         motor[m]->start_moving(); // also let motor know it is moving now
     }
