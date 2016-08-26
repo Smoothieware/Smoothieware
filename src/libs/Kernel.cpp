@@ -182,7 +182,7 @@ std::string Kernel::get_query_string()
         str.append("Run,");
     }
 
-    if(running) {
+    if(running || homing) {
         // get real time current actuator position in mm
         ActuatorCoordinates current_position{
             robot->actuators[X_AXIS]->get_current_position(),
