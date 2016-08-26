@@ -49,7 +49,6 @@
 #define mini_viki2_checksum        CHECKSUM("mini_viki2")
 #define universal_adapter_checksum CHECKSUM("universal_adapter")
 
-#define menu_offset_checksum        CHECKSUM("menu_offset")
 #define encoder_resolution_checksum CHECKSUM("encoder_resolution")
 #define jog_x_feedrate_checksum     CHECKSUM("alpha_jog_feedrate")
 #define jog_y_feedrate_checksum     CHECKSUM("beta_jog_feedrate")
@@ -147,10 +146,6 @@ void Panel::on_module_loaded()
 
     // the number of screen lines the panel supports
     this->screen_lines = this->lcd->get_screen_lines();
-
-    // some encoders may need more clicks to move menu, this is a divisor and is in config as it is
-    // an end user usability issue
-    this->menu_offset = THEKERNEL->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number();
 
     // override default encoder resolution if needed
     this->encoder_click_resolution = THEKERNEL->config->value( panel_checksum, encoder_resolution_checksum )->by_default(this->lcd->getEncoderResolution())->as_number();
@@ -421,18 +416,14 @@ void Panel::on_idle(void *argument)
 // Hooks for button clicks
 uint32_t Panel::on_up(uint32_t dummy)
 {
-    // this is simulating encoder clicks, but needs to be inverted to
-    // increment values on up,increment by
-    int inc = (this->mode == CONTROL_MODE) ? 1 : -(this->menu_offset+1);
-    *this->counter += inc;
+    *this->counter += 1;
     this->counter_changed = true;
     return 0;
 }
 
 uint32_t Panel::on_down(uint32_t dummy)
 {
-    int inc = (this->mode == CONTROL_MODE) ? -1 : (this->menu_offset+1);
-    *this->counter += inc;
+    *this->counter += -1;
     this->counter_changed = true;
     return 0;
 }
@@ -505,40 +496,16 @@ void Panel::setup_menu(uint16_t rows, uint16_t lines)
 
 void Panel::menu_update()
 {
-    // Limits, up and down
-    // NOTE menu_selected_line is changed in an interrupt and can change at any time
-    int msl = this->menu_selected_line; // hopefully this is atomic
 
-    #if 0
-    // this allows it to wrap but with new method we dont; want to wrap
-    msl = msl % ( this->menu_rows << this->menu_offset );
-    while ( msl < 0 ) {
-        msl += this->menu_rows << this->menu_offset;
-    }
-    #else
-        // limit selected line to screen lines available
-        if(msl >= this->menu_rows<<this->menu_offset){
-            msl= (this->menu_rows-1)<<this->menu_offset;
-        }else if(msl < 0) msl= 0;
-    #endif
+    // limit selected line to screen lines available
+    if(this->menu_selected_line >= this->menu_rows){
+         this->menu_selected_line= (this->menu_rows-1);
+    }else if(this->menu_selected_line < 0) this->menu_selected_line= 0;
 
-    this->menu_selected_line = msl; // update atomically we hope
-    // figure out which actual line to select, if we have a menu offset it means we want to move one line per two clicks
-    if(msl % (this->menu_offset+1) == 0) { // only if divisible by offset
-        this->menu_current_line = msl >> this->menu_offset;
-    }
+    this->menu_current_line = this->menu_selected_line;
 
     // What to display
     if ( this->menu_rows > this->panel_lines ) {
-        #if 0
-        // old way of scrolling not nice....
-        if ( this->menu_current_line >= 2 ) {
-            this->menu_start_line = this->menu_current_line - 1;
-        }
-        if ( this->menu_current_line > this->menu_rows - this->panel_lines ) {
-            this->menu_start_line = this->menu_rows - this->panel_lines;
-        }
-        #else
         // new way we only scroll the lines when the cursor hits the bottom of the screen or the top of the screen
         // do we want to scroll up?
         int sl= this->menu_current_line - this->menu_start_line; // screen line we are on
@@ -548,7 +515,6 @@ void Panel::menu_update()
         }else if(sl < 0 ) { // do we want to scroll down?
             this->menu_start_line += sl; // scroll down
         }
-        #endif
 
     }else{
         this->menu_start_line = 0;

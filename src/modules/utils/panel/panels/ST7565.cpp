@@ -42,7 +42,7 @@
 #define a0_pin_checksum            CHECKSUM("a0_pin")
 #define red_led_checksum           CHECKSUM("red_led_pin")
 #define blue_led_checksum          CHECKSUM("blue_led_pin")
-
+#define menu_offset_checksum       CHECKSUM("menu_offset")
 #define CLAMP(x, low, high) { if ( (x) < (low) ) x = (low); if ( (x) > (high) ) x = (high); } while (0);
 #define swap(a, b) { uint8_t t = a; a = b; b = t; }
 
@@ -148,6 +148,7 @@ ST7565::ST7565(uint8_t variant)
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
     }
+    this->menu_offset = THEKERNEL->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number(); 
 
 }
 
@@ -338,17 +339,29 @@ uint8_t ST7565::readButtons(void)
 
 int ST7565::readEncoderDelta()
 {
-    static int8_t enc_states[] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0};
+    static const int8_t enc_statesX4[] = { 0,-1, 1, 0, 1, 0, 0,-1,-1, 0, 0, 1, 0, 1,-1, 0}; //X4
+    static const int8_t enc_statesX2[] = { 0, 0, 0, 1, 0, 0,-1, 0, 0,-1, 0, 0, 1, 0, 0, 0}; //X2 -> use when menuoffset != 0
     static uint8_t old_AB = 0;
+    static uint8_t old_A = 0;
+    int returnValue = 0;
+    int current_A = this->encoder_a_pin.get();
+    int current_B = this->encoder_b_pin.get();
     if(this->encoder_a_pin.connected()) {
-        // mviki
-        old_AB <<= 2;                   //remember previous state
-        old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state
-        return  enc_states[(old_AB & 0x0f)];
-
-    } else {
-        return 0;
+        //X4 mode
+       if(menu_offset == 0){
+            old_AB <<= 2;                               //remember previous state
+            old_AB |= ( current_A + ( current_B * 2 ) );//add current state
+            returnValue = enc_statesX4[(old_AB&0x0f)];
+       }
+       //X2 mode: Only if A changes
+       else if(old_A != current_A){
+            old_A = current_A;
+            old_AB <<= 2;                               //remember previous state
+            old_AB |= ( current_A + ( current_B * 2 ) );//add current state
+            returnValue = enc_statesX2[(old_AB&0x0f)];
+       }
     }
+    return  returnValue;
 }
 
 void ST7565::bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span, int x_offset, int y_offset)

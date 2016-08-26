@@ -82,6 +82,7 @@ private:
         bool use_pause:1;
         bool use_back:1;
     };
+    int menu_offset;
 };
 
 #endif /* ST7565_H_ */
