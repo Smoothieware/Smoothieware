@@ -136,7 +136,7 @@ switch.misc.output_pin                       0.26              #
 
 # Endstops
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
-#corexy_homing                               false            # set to true if homing on a hbit or corexy
+#corexy_homing                               false            # set to true if homing on a hbot or corexy
 alpha_min_endstop                            1.24^            # add a ! to invert if endstop is NO connected to ground
 #alpha_max_endstop                           1.24^            #
 alpha_homing_direction                       home_to_min      # or set to home_to_max and set alpha_max
@@ -152,6 +152,10 @@ gamma_min_endstop                            1.28^            #
 gamma_homing_direction                       home_to_min      #
 gamma_min                                    0                #
 gamma_max                                    200              #
+
+alpha_max_travel                             500              # max travel in mm for alpha/X axis when homing
+beta_max_travel                              500              # max travel in mm for beta/Y axis when homing
+gamma_max_travel                             500              # max travel in mm for gamma/Z axis when homing
 
 # optional enable limit switches, actions will stop if any enabled limit switch is triggered
 #alpha_limit_enable                          false            # set to true to enable X min and max limit switches

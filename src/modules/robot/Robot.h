@@ -80,8 +80,10 @@ class Robot : public Module {
             bool e_absolute_mode:1;                           // true for absolute mode for E ( default ), false for relative mode
             bool next_command_is_MCS:1;                       // set by G53
             bool disable_segmentation:1;                      // set to disable segmentation
+            bool disable_arm_solution:1;                      // set to disable the arm solution
             bool segment_z_moves:1;
             bool save_g92:1;                                  // save g92 on M500 if set
+            bool is_g123:1;
             uint8_t plane_axis_0:2;                           // Current plane ( XY, XZ, YZ )
             uint8_t plane_axis_1:2;
             uint8_t plane_axis_2:2;
@@ -128,6 +130,7 @@ class Robot : public Module {
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
         float seconds_per_minute;                            // for realtime speed change
         float default_acceleration;                          // the defualt accleration if not set for each axis
+        float s_value;                                       // modal S value
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter may be decreased if there are issues with the accuracy of the arc

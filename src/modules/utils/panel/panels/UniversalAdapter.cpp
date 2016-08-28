@@ -212,5 +212,5 @@ void UniversalAdapter::init()
         writeSPI(INIT_ADAPTER);
     }
     // give adapter time to init
-    safe_delay_ms(100);
+    wait_ms(100);
 }

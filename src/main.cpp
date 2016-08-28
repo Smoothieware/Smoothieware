@@ -158,7 +158,7 @@ void init() {
     delete tp;
     #endif
     #ifndef NO_TOOLS_LASER
-//    kernel->add_module( new Laser() );
+    kernel->add_module( new Laser() );
     #endif
     #ifndef NO_TOOLS_SPINDLE
     kernel->add_module( new(AHB0) Spindle() );

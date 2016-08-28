@@ -1,4 +1,9 @@
 # Robot module configurations : general handling of movement G-codes and slicing into moves
+
+arm_solution                                 linear_delta     # delta selection
+arm_length                                   370.00           # this is the length of an arm from hinge to hinge
+arm_radius                                   203.00           # this is the horiontal distance from hinge to hinge when the effector is centered
+
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
 mm_per_arc_segment                           0.0              # Fixed length for line segments that divide arcs 0 to disable
@@ -6,16 +11,16 @@ mm_max_arc_error                             0.01             # The maximum erro
                                                               # note it is invalid for both the above be 0
                                                               # if both are used, will use largest segment length based on radius
 #mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
+delta_segments_per_second                    100               # segments per second used for deltas
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
-alpha_steps_per_mm                           80               # Steps per mm for alpha stepper
-beta_steps_per_mm                            80               # Steps per mm for beta stepper
-gamma_steps_per_mm                           1637.7953        # Steps per mm for gamma stepper
+alpha_steps_per_mm                           100             # Steps per mm for alpha stepper
+beta_steps_per_mm                            100             # Steps per mm for beta stepper
+gamma_steps_per_mm                           100             # Steps per mm for gamma stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOUR ARE DOING
-acceleration                                 3000             # Acceleration in mm/second/second.
-#z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 disables it, disabled by default. DO NOT SET ON A DELTA
+acceleration                                 1000             # Acceleration in mm/second/second.
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8 . Lower values mean being more careful, higher values means being faster and have more jerk
 
@@ -26,29 +31,28 @@ base_stepping_frequency                      100000           # Base frequency f
 # Stepper module pins ( ports, and pin numbers, appending "!" to the number will invert a pin )
 alpha_step_pin                               2.1              # Pin for alpha stepper step signal
 alpha_dir_pin                                0.11             # Pin for alpha stepper direction
-alpha_en_pin                                 0.10!            # Pin for alpha enable pin
+alpha_en_pin                                 0.10             # Pin for alpha enable pin
 alpha_current                                1.0              # X stepper motor current
-x_axis_max_speed                             30000            # mm/min
 alpha_max_rate                               30000.0          # mm/min actuator max speed
+x_axis_max_speed                             30000.0          # mm/min cartesian max speed
 
 beta_step_pin                                2.2              # Pin for beta stepper step signal
 beta_dir_pin                                 0.20             # Pin for beta stepper direction
-beta_en_pin                                  0.19!            # Pin for beta enable
+beta_en_pin                                  0.19             # Pin for beta enable
 beta_current                                 1.0              # Y stepper motor current
-y_axis_max_speed                             30000            # mm/min
-beta_max_rate                                30000.0          # mm/min actuator max speed
+beta_max_rate                                30000.0          # mm/min
+y_axis_max_speed                             30000.0          # mm/min
 
 gamma_step_pin                               2.3              # Pin for gamma stepper step signal
 gamma_dir_pin                                0.22             # Pin for gamma stepper direction
-gamma_en_pin                                 0.21!            # Pin for gamma enable
+gamma_en_pin                                 0.21             # Pin for gamma enable
 gamma_current                                1.0              # Z stepper motor current
-z_axis_max_speed                             300              # mm/min
-gamma_max_rate                               300.0            # mm/min actuator max speed
+gamma_max_rate                               30000.0          # mm/min
+z_axis_max_speed                             30000.0          # mm/min
 
 # Serial communications configuration ( baud rate default to 9600 if undefined )
 uart0.baud_rate                              115200           # Baud rate for the default hardware serial port
 second_usb_serial_enable                     false            # This enables a second usb serial port (to have both pronterface and a terminal connected)
-
 #msd_disable                                 false            # disable the MSD (USB SDCARD) when set to true
 #leds_disable                                true             # disable using leds after config loaded
 #dfu_enable                                  false            # for linux developers, set to true to enable DFU
@@ -63,7 +67,7 @@ extruder.hotend.max_speed                       50               # mm/s
 
 extruder.hotend.step_pin                        2.0              # Pin for extruder step signal
 extruder.hotend.dir_pin                         0.5              # Pin for extruder dir signal
-extruder.hotend.en_pin                          0.4!             # Pin for extruder enable signal
+extruder.hotend.en_pin                          0.4              # Pin for extruder enable signal
 
 # extruder offset
 #extruder.hotend.x_offset                        0                # x offset from origin in mm
@@ -78,7 +82,7 @@ extruder.hotend.en_pin                          0.4!             # Pin for extru
 #extruder.hotend.retract_zlift_length            0               # zlift on retract in mm, 0 disables
 #extruder.hotend.retract_zlift_feedrate          6000            # zlift feedrate in mm/min (Note mm/min NOT mm/sec)
 
-delta_current                                1.0              # Extruder stepper motor current
+delta_current                                0.7              # Extruder stepper motor current
 
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is
@@ -105,30 +109,30 @@ temperature_control.hotend.designator        T                #
 #temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
 #temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
 
-temperature_control.hotend.p_factor          13.7             #
-temperature_control.hotend.i_factor          0.097            #
-temperature_control.hotend.d_factor          24               #
+#P39.98 I5.00 D79.91
+# temperature_control.hotend.p_factor          39.98            #
+# temperature_control.hotend.i_factor          5.00             #
+# temperature_control.hotend.d_factor          79.91            #
 
+# For bed
 temperature_control.bed.enable               false            #
 temperature_control.bed.thermistor_pin       0.23             #
 temperature_control.bed.heater_pin           2.7              #
-temperature_control.bed.thermistor           Honeywell100K    # see http://smoothieware.org/temperaturecontrol#toc5
+temperature_control.bed.thermistor           EPCOS100K        # http://smoothieware.org/temperaturecontrol#toc5
 #temperature_control.bed.beta                4066             # or set the beta value
 
 temperature_control.bed.set_m_code           140              #
 temperature_control.bed.set_and_wait_m_code  190              #
 temperature_control.bed.designator           B                #
+# uncomment followng to use bang bang isntead of PID for the bed (best for relay conrolled hotbeds)
+#temperature_control.bed.bang_bang            true             # set to true to use bang bang control rather than PID
+#temperature_control.bed.hysteresis           2.0              # set to the temperature in degrees C to use as hysteresis when using bang bang
 
 # Switch module for fan control
 switch.fan.enable                            true             #
 switch.fan.input_on_command                  M106             #
 switch.fan.input_off_command                 M107             #
-switch.fan.output_pin                        2.4              #
-
-switch.misc.enable                           false            #
-switch.misc.input_on_command                 M42              #
-switch.misc.input_off_command                M43              #
-switch.misc.output_pin                       2.4              #
+switch.fan.output_pin                        1.25             #
 
 # automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures and switch different swithxes
 # useful to turn on a fan or water pump to cool the hotend
@@ -139,79 +143,71 @@ switch.misc.output_pin                       2.4              #
 #temperatureswitch.hotend.heatup_poll         15               # poll heatup at 15 sec intervals
 #temperatureswitch.hotend.cooldown_poll       60               # poll cooldown at 60 sec intervals
 
-# filament out detector
-#filament_detector.enable                     true             #
-#filament_detector.encoder_pin                0.26             # must be interrupt enabled pin (0.26, 0.27, 0.28)
-#filament_detector.seconds_per_check          2                # may need to be longer
-#filament_detector.pulses_per_mm              1 .0             # will need to be tuned
-#filament_detector.bulge_pin                  0.27             # optional bulge detector switch and/or manual suspend
+
+# switch.psu.enable                            true             # turn atx on/off
+# switch.psu.input_on_command                  M80              #
+# switch.psu.input_off_command                 M81              #
+# switch.psu.output_pin                        2.13o!           # open drain, inverted
 
 # Switch module for spindle control
 #switch.spindle.enable                        false            #
 
 # Endstops
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
-#corexy_homing                               false            # set to true if homing on a hbit or corexy
-alpha_min_endstop                            1.24^            # add a ! to invert if endstop is NO connected to ground
-#alpha_max_endstop                           1.24^            #
-alpha_homing_direction                       home_to_min      # or set to home_to_max and set alpha_max
+delta_homing                                 true             # forces all three axis to home a the same time regardless of what is specified in G28
+alpha_max_endstop                            1.24^            #
+alpha_homing_direction                       home_to_max      # or set to home_to_max and set alpha_max
 alpha_min                                    0                # this gets loaded after homing when home_to_min is set
-alpha_max                                    200              # this gets loaded after homing when home_to_max is set
-beta_min_endstop                             1.26^            #
-#beta_max_endstop                            1.26^            #
-beta_homing_direction                        home_to_min      #
+alpha_max                                    0                # this gets loaded after homing when home_to_max is set
+beta_max_endstop                             1.26^            #
+beta_homing_direction                        home_to_max      #
 beta_min                                     0                #
-beta_max                                     200              #
-gamma_min_endstop                            1.28^            #
-#gamma_max_endstop                           1.28^            #
-gamma_homing_direction                       home_to_min      #
+beta_max                                     0                #
+gamma_max_endstop                            1.28^            #
+gamma_homing_direction                       home_to_max      #
 gamma_min                                    0                #
-gamma_max                                    200              #
+gamma_max                                    430              # change to suit your height
 
-alpha_max_travel                             500              # max travel in mm for alpha/X axis when homing
-beta_max_travel                              500              # max travel in mm for beta/Y axis when homing
-gamma_max_travel                             500              # max travel in mm for gamma/Z axis when homing
+alpha_max_travel                             1000              # max travel in mm for alpha/X axis when homing
+beta_max_travel                              1000              # max travel in mm for beta/Y axis when homing
+gamma_max_travel                             1000              # max travel in mm for gamma/Z axis when homing
+
+#probe endstop
+#probe_pin                                   1.29             # optional pin for probe
+
+alpha_fast_homing_rate_mm_s                  200              # feedrates in mm/second
+beta_fast_homing_rate_mm_s                   200              # "
+gamma_fast_homing_rate_mm_s                  200              # "
+alpha_slow_homing_rate_mm_s                  20               # "
+beta_slow_homing_rate_mm_s                   20               # "
+gamma_slow_homing_rate_mm_s                  20               # "
+
+alpha_homing_retract_mm                      5                # distance in mm
+beta_homing_retract_mm                       5                # "
+gamma_homing_retract_mm                      5                # "
+
+alpha_trim                                   0                 # software trim for alpha stepper endstop (in mm) - moves down
+beta_trim                                    0                 # software trim for beta stepper endstop (in mm)
+gamma_trim                                   0                 # software trim for gamma stepper endstop (in mm)
 
 # optional enable limit switches, actions will stop if any enabled limit switch is triggered
 #alpha_limit_enable                          false            # set to true to enable X min and max limit switches
 #beta_limit_enable                           false            # set to true to enable Y min and max limit switches
 #gamma_limit_enable                          false            # set to true to enable Z min and max limit switches
-#move_to_origin_after_home                   false            # move XY to 0,0 after homing
 
-#probe endstop
-#probe_pin                                   1.29             # optional pin for probe
+#move_to_origin_after_home                    true             # move XY to 0,0 after homing
 
-alpha_fast_homing_rate_mm_s                  50               # feedrates in mm/second
-beta_fast_homing_rate_mm_s                   50               # "
-gamma_fast_homing_rate_mm_s                  4                # "
-alpha_slow_homing_rate_mm_s                  25               # "
-beta_slow_homing_rate_mm_s                   25               # "
-gamma_slow_homing_rate_mm_s                  2                # "
-
-alpha_homing_retract_mm                      5                # distance in mm
-beta_homing_retract_mm                       5                # "
-gamma_homing_retract_mm                      1                # "
-
-#endstop_debounce_count                       100              # uncomment if you get noise on your endstops, default is 100
-
-# optional Z probe
+# optional Z probe http://smoothieware.org/zprobe
 zprobe.enable                                false           # set to true to enable a zprobe
 zprobe.probe_pin                             1.29!^          # pin probe is attached to if NC remove the !
 zprobe.slow_feedrate                         5               # mm/sec probe feed rate
 #zprobe.debounce_count                       100             # set if noisy
-zprobe.fast_feedrate                         100             # move feedrate mm/sec
+zprobe.fast_feedrate                         100             # move feedrate
 zprobe.probe_height                          5               # how much above bed to start probe
 
 # associated with zprobe the leveling strategy to use
-#leveling-strategy.three-point-leveling.enable         true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
-#leveling-strategy.three-point-leveling.point1         100.0,0.0   # the first probe point (x,y) optional may be defined with M557
-#leveling-strategy.three-point-leveling.point2         200.0,200.0 # the second probe point (x,y)
-#leveling-strategy.three-point-leveling.point3         0.0,200.0   # the third probe point (x,y)
-#leveling-strategy.three-point-leveling.home_first     true        # home the XY axis before probing
-#leveling-strategy.three-point-leveling.tolerance      0.03        # the probe tolerance in mm, anything less that this will be ignored, default is 0.03mm
-#leveling-strategy.three-point-leveling.probe_offsets  0,0,0       # the probe offsets from nozzle, must be x,y,z, default is no offset
-#leveling-strategy.three-point-leveling.save_plane     false       # set to true to allow the bed plane to be saved with M500 default is false
-
+#leveling-strategy.delta-calibration.enable   true            # basic delta calibration
+#leveling-strategy.delta-calibration.radius   100             # the probe radius
 
 # kill button (used to be called pause) maybe assigned to a different pin, set to the onboard pin by default
 kill_button_enable                           true             # set to true to enable a kill button
@@ -220,7 +216,7 @@ kill_button_pin                              2.12             # kill button pin.
 # Panel See http://smoothieware.org/panel
 panel.enable                                 false             # set to true to enable the panel code
 
-# Example viki2 config for an azteeg mini V2 with IDC cable
+# Example viki2 config for an azteeg miniV2 with IDC cable
 panel.lcd                                    viki2             # set type of panel
 panel.spi_channel                            0                 # set spi channel to use P0_18,P0_15 MOSI,SCLK
 panel.spi_cs_pin                             0.16              # set spi chip select
@@ -241,7 +237,7 @@ panel.external_sd.spi_cs_pin                 1.23              # set spi chip se
 panel.external_sd.sdcd_pin                   1.31!^            # sd detect signal (set to nc if no sdcard detect)
 panel.menu_offset                            1                 # some panels will need 1 here
 
-# Example miniviki2 config
+# Example mini viki2 config
 #panel.lcd                                    mini_viki2        # set type of panel
 #panel.spi_channel                            0                 # set spi channel to use P0_18,P0_15 MOSI,SCLK
 #panel.spi_cs_pin                             0.16              # set spi chip select
@@ -260,17 +256,7 @@ panel.gamma_jog_feedrate                     200               # z jogging feedr
 panel.hotend_temperature                     185               # temp to set hotend when preheat is selected
 panel.bed_temperature                        60                # temp to set bed when preheat is selected
 
-# Example of a custom menu entry, which will show up in the Custom entry.
-# NOTE _ gets converted to space in the menu and commands, | is used to separate multiple commands
-custom_menu.power_on.enable                true              #
-custom_menu.power_on.name                  Power_on          #
-custom_menu.power_on.command               M80               #
-
-custom_menu.power_off.enable               true              #
-custom_menu.power_off.name                 Power_off         #
-custom_menu.power_off.command              M81               #
-
 # Azteeg specific settings do not change
 currentcontrol_module_enable                 true            #
 digipot_max_current                          2.0             # max current
-digipot_factor                               106.0           # factor for converting current to digipot value
+digipot_factor                               113.5           # factor for converting current to digipot value

@@ -772,11 +772,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             ActuatorCoordinates apos{x, y, z};
             float pos[3];
             THEROBOT->arm_solution->actuator_to_cartesian(apos, pos);
-            stream->printf("cartesian= X %f, Y %f, Z %f, Steps= A %lu, B %lu, C %lu\n",
-                pos[0], pos[1], pos[2],
-                lroundf(x*THEROBOT->actuators[0]->get_steps_per_mm()),
-                lroundf(y*THEROBOT->actuators[1]->get_steps_per_mm()),
-                lroundf(z*THEROBOT->actuators[2]->get_steps_per_mm()));
+            stream->printf("cartesian= X %f, Y %f, Z %f\n", pos[0], pos[1], pos[2]);
             x= pos[0];
             y= pos[1];
             z= pos[2];
@@ -786,7 +782,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             float pos[3]{x, y, z};
             ActuatorCoordinates apos;
             THEROBOT->arm_solution->cartesian_to_actuator(pos, apos);
-            stream->printf("actuator= A %f, B %f, C %f\n", apos[0], apos[1], apos[2]);
+            stream->printf("actuator= X %f, Y %f, Z %f\n", apos[0], apos[1], apos[2]);
         }
 
         if(move) {
@@ -984,20 +980,31 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         uint32_t n= strtol(iters.c_str(), NULL, 10);
         float f= speed.empty() ? THEROBOT->get_feed_rate() : strtof(speed.c_str(), NULL);
 
+        THEROBOT->push_state();
         char cmd[64];
-        snprintf(cmd, sizeof(cmd), "G0 X%f Y0 F%f", -r, f);
+        snprintf(cmd, sizeof(cmd), "G91 G0 X%f F%f G90", -r, f);
         stream->printf("%s\n", cmd);
         struct SerialMessage message{&StreamOutput::NullStream, cmd};
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
         for (uint32_t i = 0; i < n; ++i) {
             if(THEKERNEL->is_halted()) break;
-            snprintf(cmd, sizeof(cmd), "G2 X%f Y0 I%f J0 F%f", -r, r, f);
+            snprintf(cmd, sizeof(cmd), "G2 I%f J0 F%f", r, f);
             stream->printf("%s\n", cmd);
             message.message= cmd;
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             THECONVEYOR->wait_for_idle();
         }
+
+        // leave it where it started
+        if(!THEKERNEL->is_halted()) {
+            snprintf(cmd, sizeof(cmd), "G91 G0 X%f F%f G90", r, f);
+            stream->printf("%s\n", cmd);
+            struct SerialMessage message{&StreamOutput::NullStream, cmd};
+            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        }
+
+       THEROBOT->pop_state();
         stream->printf("done\n");
 
     }else if (what == "square") {

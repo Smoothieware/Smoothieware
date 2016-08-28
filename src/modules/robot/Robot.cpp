@@ -85,6 +85,8 @@ using std::string;
 #define  beta_checksum                       CHECKSUM("beta")
 #define  gamma_checksum                      CHECKSUM("gamma")
 
+#define laser_module_default_power_checksum     CHECKSUM("laser_module_default_power")
+
 #define ARC_ANGULAR_TRAVEL_EPSILON 5E-7F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
@@ -108,6 +110,7 @@ Robot::Robot()
     this->g92_offset = wcs_t(0.0F, 0.0F, 0.0F);
     this->next_command_is_MCS = false;
     this->disable_segmentation= false;
+    this->disable_arm_solution= false;
     this->n_motors= 0;
 }
 
@@ -178,6 +181,9 @@ void Robot::load_config()
 
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
+
+    // default s value for laser
+    this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
     // Make our Primary XYZ StepperMotors
     uint16_t const checksums[][6] = {
@@ -719,7 +725,11 @@ void Robot::on_gcode_received(void *argument)
     }
 
     if( motion_mode != NONE) {
+        is_g123= motion_mode != SEEK;
         process_move(gcode, motion_mode);
+
+    }else{
+        is_g123= false;
     }
 
     next_command_is_MCS = false; // must be on same line as G0 or G1
@@ -812,6 +822,9 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
             this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
 
+    // S is modal
+    if(gcode->has_letter('S')) s_value= gcode->get_value('S');
+
     bool moved= false;
 
     // Perform any physical actions
@@ -872,7 +885,7 @@ void Robot::reset_axis_position(float position, int axis)
 }
 
 // similar to reset_axis_position but directly sets the actuator positions in actuators units (eg mm for cartesian, degrees for rotary delta)
-// then sets the axis positions to match. currently only called from Endstops.cpp
+// then sets the axis positions to match. currently only called from Endstops.cpp and RotaryDeltaCalibration.cpp
 void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
 {
     for (size_t i = X_AXIS; i <= Z_AXIS; i++)
@@ -967,7 +980,15 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // find actuator position given the machine position, use actual adjusted target
     ActuatorCoordinates actuator_pos;
-    arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
+    if(!disable_arm_solution) {
+        arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
+
+    }else{
+        // basically the same as cartesian, would be used for special homing situations like for scara
+        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+            actuator_pos[i] = transformed_target[i];
+        }
+    }
 
 #if MAX_ROBOT_ACTUATORS > 3
     sos= 0;
@@ -1023,7 +1044,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // Append the block to the planner
     // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
-    if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration )) {
+    if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration, s_value, is_g123)) {
         // this is the machine position
         memcpy(this->last_machine_position, transformed_target, n_motors*sizeof(float));
         return true;
@@ -1080,12 +1101,10 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
     }
 
     /*
-        For extruders, we need to do some extra work...
-        if we have volumetric limits enabled we calculate the volume for this move and limit the rate if it exceeds the stated limit.
-        Note we need to be using volumetric extrusion for this to work as Ennn is in mm³ not mm
+        For extruders, we need to do some extra work to limit the volumetric rate if specified...
+        If using volumetric limts we need to be using volumetric extrusion for this to work as Ennn needs to be in mm³ not mm
         We ask Extruder to do all the work but we need to pass in the relevant data.
         NOTE we need to do this before we segment the line (for deltas)
-        This also sets any scaling due to flow rate and volumetric if a G1
     */
     if(!isnan(delta_e) && gcode->has_g && gcode->g == 1) {
         float data[2]= {delta_e, rate_mm_s / millimeters_of_travel};
@@ -1153,6 +1172,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
 
 
 // Append an arc to the queue ( cutting it into segments as needed )
+// TODO does not support any E parameters so cannot be used for 3D printing.
 bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[], float radius, bool is_clockwise )
 {
     float rate_mm_s= this->feed_rate / seconds_per_minute;
@@ -1198,6 +1218,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         }
     }
     // Figure out how many segments for this gcode
+    // TODO for deltas we need to make sure we are at least as many segments as requested, also if mm_per_line_segment is set we need to use the
     uint16_t segments = ceilf(millimeters_of_travel / arc_segment);
 
   //printf("Radius %f - Segment Length %f - Number of Segments %d\r\n",radius,arc_segment,segments);  // Testing Purposes ONLY

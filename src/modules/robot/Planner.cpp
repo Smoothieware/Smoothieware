@@ -50,19 +50,19 @@ void Planner::config_load()
 
 
 // Append a block to the queue, compute it's speed factors
-bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors, float rate_mm_s, float distance, float *unit_vec, float acceleration)
+bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors, float rate_mm_s, float distance, float *unit_vec, float acceleration, float s_value, bool g123)
 {
     // Create ( recycle ) a new block
     Block* block = THECONVEYOR->queue.head_ref();
 
     // Direction bits
-    bool has_steps= false;
+    bool has_steps = false;
     for (size_t i = 0; i < n_motors; i++) {
         int32_t steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
         // Update current position
         if(steps != 0) {
             THEROBOT->actuators[i]->update_last_milestones(actuator_pos[i], steps);
-            has_steps= true;
+            has_steps = true;
         }
 
         // find direction
@@ -71,28 +71,35 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
         block->steps[i] = labs(steps);
     }
 
-    // sometimres even though there is a detectable movement it turns out there are no steps to be had from such a small move
-    if(!has_steps) return false;
+    // sometimes even though there is a detectable movement it turns out there are no steps to be had from such a small move
+    if(!has_steps) {
+        block->clear();
+        return false;
+    }
+
+    // info needed by laser
+    block->s_value = roundf(s_value*(1<<11)); // 1.11 fixed point
+    block->is_g123 = g123;
 
     // use default JD
     float junction_deviation = this->junction_deviation;
 
     // use either regular junction deviation or z specific and see if a primary axis move
-    block->primary_axis= true;
-    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0){
+    block->primary_axis = true;
+    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0) {
         if(block->steps[GAMMA_STEPPER] != 0) {
             // z only move
             if(!isnan(this->z_junction_deviation)) junction_deviation = this->z_junction_deviation;
-        }else{
+        } else {
             // is not a primary axis move
-            block->primary_axis= false;
+            block->primary_axis = false;
         }
     }
 
     block->acceleration = acceleration; // save in block
 
     // Max number of steps, for all axes
-    auto mi= std::max_element(block->steps.begin(), block->steps.end());
+    auto mi = std::max_element(block->steps.begin(), block->steps.end());
     block->steps_event_count = *mi;
 
     block->millimeters = distance;
@@ -127,7 +134,7 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
 
     // if unit_vec was null then it was not a primary axis move so we skip the junction deviation stuff
     if (unit_vec != nullptr && !THECONVEYOR->is_queue_empty()) {
-        Block *prev_block= THECONVEYOR->queue.item_ref(THECONVEYOR->queue.prev(THECONVEYOR->queue.head_i));
+        Block *prev_block = THECONVEYOR->queue.item_ref(THECONVEYOR->queue.prev(THECONVEYOR->queue.head_i));
         float previous_nominal_speed = prev_block->primary_axis ? prev_block->nominal_speed : 0;
 
         if (junction_deviation > 0.0F && previous_nominal_speed > 0.0F) {
@@ -172,7 +179,7 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
     // Update previous path unit_vector and nominal speed
     if(unit_vec != nullptr) {
         memcpy(previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
-    }else{
+    } else {
         memset(previous_unit_vec, 0, sizeof(previous_unit_vec));
     }
 

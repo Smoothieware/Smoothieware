@@ -219,6 +219,10 @@ gamma_max_endstop                            1.29^            #
 gamma_homing_direction                       home_to_max      #
 gamma_max                                    300              #
 
+alpha_max_travel                             1000              # max travel in mm for alpha/X axis when homing
+beta_max_travel                              1000              # max travel in mm for beta/Y axis when homing
+gamma_max_travel                             1000              # max travel in mm for gamma/Z axis when homing
+
 alpha_fast_homing_rate_mm_s                  200              # homing feedrates in mm/second
 beta_fast_homing_rate_mm_s                   200              #
 gamma_fast_homing_rate_mm_s                  200              #

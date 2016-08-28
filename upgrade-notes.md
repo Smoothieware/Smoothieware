@@ -3,8 +3,9 @@ To upgrade from master or edge to the new motion control firmware
 
 The following changes must be made to your config
 
-1. alpha_max, beta_max, gamma_max must be correctly defined for homing to work properly even when homing to min
-   they control the maximum distance the axis will move before it gives up finding the home switch.
+1. ```alpha_max_travel, beta_max_travel, gamma_max_travel``` must be correctly defined for homing to work properly
+   they control the maximum distance the axis will move before it gives up finding the home switch. They are currently set to ```alpha_max, beta_max and Gamma_max``` (or 500) if not found in the config file.
+NOTE on a delta this needs to be the total hieght (or greater) than yur towers NOT the same as gamma_max.
 
 2. it is best to start from a fresh config
 
