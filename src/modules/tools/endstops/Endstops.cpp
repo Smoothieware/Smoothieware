@@ -107,6 +107,7 @@
 #define gamma_limit_enable_checksum      CHECKSUM("gamma_limit_enable")
 
 #define home_z_first_checksum            CHECKSUM("home_z_first")
+#define back_off_first_checksum          CHECKSUM("back_off_first")
 #define homing_order_checksum            CHECKSUM("homing_order")
 #define move_to_origin_checksum          CHECKSUM("move_to_origin_after_home")
 #define move_to_park_checksum            CHECKSUM("move_to_park_after_home")
@@ -214,6 +215,7 @@ void Endstops::load_config()
     this->is_scara                  =  THEKERNEL->config->value(scara_homing_checksum)->by_default(false)->as_bool();
 
     this->home_z_first              = THEKERNEL->config->value(home_z_first_checksum)->by_default(false)->as_bool();
+    this->back_off_first            = THEKERNEL->config->value(back_off_first_checksum)->by_default(false)->as_bool();
 
     // see if an order has been specified, must be three characters, XYZ or YXZ etc
     string order = THEKERNEL->config->value(homing_order_checksum)->by_default("")->as_string();
@@ -425,8 +427,9 @@ void Endstops::move_park()
 // If enabled will move the head to the preset position defined by G28.1 after homing, but only if X and Y were set to home
 void Endstops::move_to_park(std::bitset<3> axis)
 {
-    if(!axis[X_AXIS] || !axis[Y_AXIS]) return; // ignore if X and Y not homing
+    if(axis[X_AXIS] && axis[Y_AXIS]) {              // Only run if both X and Y are homing
     move_park();
+    }
 }
 
 // Called every millisecond in an ISR
@@ -748,9 +751,11 @@ void Endstops::process_home_command(Gcode* gcode)
     // default is off for cartesian on for deltas
     if(!is_delta) {
         // NOTE a rotary delta usually has optical or hall-effect endstops so it is safe to go past them a little bit
+        if(this->back_off_first) back_off_home(haxis);
         if(this->move_to_origin_after_home) move_to_origin(haxis);
+        if(this->move_to_park_after_home) move_to_park(haxis);
         // if limit switches are enabled we must back off endstop after setting home
-        back_off_home(haxis);
+        if(!this->back_off_first) back_off_home(haxis);
 
     } else if(this->move_to_origin_after_home || this->move_to_park_after_home || this->limit_enable[X_AXIS]) {
         // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
