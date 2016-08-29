@@ -402,10 +402,8 @@ void Endstops::move_to_origin(std::bitset<3> axis)
     this->status = NOT_HOMING;
 }
 
-// If enabled will move the head to the preset position defined by G28.1 after homing, but only if X and Y were set to home
-void Endstops::move_to_park(std::bitset<3> axis)
+void Endstops::move_park()
 {
-    if(!is_delta && (!axis[X_AXIS] || !axis[Y_AXIS])) return; // ignore if X and Y not homing, unless delta
     this->status = MOVE_TO_PARK;
     // Move to center using a regular move, use slower of X and Y fast rate
     float rate = std::min(this->fast_rates[0], this->fast_rates[1]) * 60.0F;
@@ -422,6 +420,14 @@ void Endstops::move_to_park(std::bitset<3> axis)
     THECONVEYOR->wait_for_idle();
     THEROBOT->pop_state();
     this->status = NOT_HOMING;
+
+}
+
+// If enabled will move the head to the preset position defined by G28.1 after homing, but only if X and Y were set to home
+void Endstops::move_to_park(std::bitset<3> axis)
+{
+    if(!axis[X_AXIS] || !axis[Y_AXIS]) return; // ignore if X and Y not homing
+    move_park();
 }
 
 // Called every millisecond in an ISR
@@ -581,7 +587,7 @@ void Endstops::home(std::bitset<3> a)
 void Endstops::process_home_command(Gcode* gcode)
 {
     if( (gcode->subcode == 0 && THEKERNEL->is_grbl_mode()) || (gcode->subcode == 2 && !THEKERNEL->is_grbl_mode()) ) {
-        move_to_park(haxis);
+        move_park();
         return;
 
     } else if(THEKERNEL->is_grbl_mode() && gcode->subcode == 2) { // G28.2 in grbl mode forces homing (triggered by $H)
