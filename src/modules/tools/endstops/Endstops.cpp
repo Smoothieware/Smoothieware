@@ -407,13 +407,12 @@ void Endstops::move_to_origin(std::bitset<3> axis)
 void Endstops::move_park()
 {
     this->status = MOVE_TO_PARK;
-    // Move to center using a regular move, use slower of X and Y fast rate
-    float rate = std::min(this->fast_rates[0], this->fast_rates[1]) * 60.0F;
+    // Move to predefined position regular move
     char buf[32];
     THEROBOT->push_state();
     THEROBOT->inch_mode = false;     // needs to be in mm
     THEROBOT->absolute_mode = true;  // needs to be absolute mode
-    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f F%1.4f", saved_position[X_AXIS], saved_position[Y_AXIS], rate); // must use machine coordinates in case G92 or WCS is in effect
+    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", saved_position[X_AXIS], saved_position[Y_AXIS]); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
