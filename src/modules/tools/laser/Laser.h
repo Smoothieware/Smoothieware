@@ -24,6 +24,7 @@ class Laser : public Module{
         void on_module_loaded();
         void on_halt(void* argument);
         void on_gcode_received(void *argument);
+        void on_console_line_received(void *argument);
 
     private:
         uint32_t set_proportional_power(uint32_t dummy);

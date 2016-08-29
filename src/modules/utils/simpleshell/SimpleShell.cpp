@@ -813,7 +813,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
     } else if (what == "state") {
         // also $G
         // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
-        stream->printf("[G%d %s G%d G%d G%d G94 M0 M5 M9 T%d F%1.4f]\n",
+        stream->printf("[G%d %s G%d G%d G%d G94 M0 M5 M9 T%d F%1.4f S%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
             wcs2gcode(THEROBOT->get_current_wcs()).c_str(),
             THEROBOT->plane_axis_0 == X_AXIS && THEROBOT->plane_axis_1 == Y_AXIS && THEROBOT->plane_axis_2 == Z_AXIS ? 17 :
@@ -822,7 +822,8 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             THEROBOT->inch_mode ? 20 : 21,
             THEROBOT->absolute_mode ? 90 : 91,
             get_active_tool(),
-            THEROBOT->from_millimeters(THEROBOT->get_feed_rate()));
+            THEROBOT->from_millimeters(THEROBOT->get_feed_rate()),
+            THEROBOT->get_s_value());
 
     } else if (what == "status") {
         // also ? on serial and usb

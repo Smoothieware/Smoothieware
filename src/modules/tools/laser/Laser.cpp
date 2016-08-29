@@ -6,19 +6,20 @@
 */
 
 #include "Laser.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
+#include "Module.h"
+#include "Kernel.h"
+#include "nuts_bolts.h"
 #include "Config.h"
 #include "StreamOutputPool.h"
+#include "SerialMessage.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "StepTicker.h"
 #include "Block.h"
 #include "SlowTicker.h"
 #include "Robot.h"
-
-#include "libs/Pin.h"
+#include "utils.h"
+#include "Pin.h"
 #include "Gcode.h"
 #include "PwmOut.h" // mbed.h lib
 
@@ -105,17 +106,48 @@ void Laser::on_module_loaded()
     //register for events
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_GCODE_RECEIVED);
+    this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
 
     // no point in updating the power more than the PWM frequency, but no more than 1KHz
     THEKERNEL->slow_ticker->attach(std::min(1000UL, 1000000/period), this, &Laser::set_proportional_power);
 }
 
+void Laser::on_console_line_received( void *argument )
+{
+    if(THEKERNEL->is_halted()) return; // if in halted state ignore any commands
+
+    SerialMessage new_message = *static_cast<SerialMessage *>(argument);
+    string possible_command = new_message.message;
+
+    // ignore anything that is not lowercase or a letter
+    if(possible_command.empty() || !islower(possible_command[0]) || !isalpha(possible_command[0])) {
+        return;
+    }
+
+    string cmd = shift_parameter(possible_command);
+
+    // Act depending on command
+    if (cmd == "fire") {
+        string power = shift_parameter(possible_command);
+        float p= strtof(power.c_str(), NULL);
+        p= confine(p, 0.0F, 1.0F);
+        this->pwm_pin->write(this->pwm_inverting ? 1 - p : p);
+        if(p > 0) {
+            if(!laser_on && this->ttl_used) this->ttl_pin->set(true);
+            laser_on = true;
+
+        }else{
+            if(laser_on && this->ttl_used) this->ttl_pin->set(false);
+            laser_on = false;
+        }
+    }
+}
 
 void Laser::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
 
-    // M codes most execute immediately, most only execute if enabled
+    // M codes execute immediately
     if (gcode->has_m) {
         if (gcode->m == 221) { // M221 S100 change laser power by percentage S
             if(gcode->has_letter('S')) {
@@ -165,11 +197,6 @@ bool Laser::get_laser_power(float& power) const
     // as this is an interrupt if that flag is not clear then it cannot be cleared while this is running and the block will still be valid (albeit it may have finished)
     if(block != nullptr && block->is_ready && block->is_g123) {
         float requested_power = ((float)block->s_value/(1<<11)) / this->laser_maximum_s_value; // s_value is 1.11 Fixed point
-
-        // Ensure we can't exceed maximum power
-        if (requested_power < 0) requested_power = 0;
-        else if (requested_power > 1) requested_power = 1;
-
         float ratio = current_speed_ratio(block);
         power = requested_power * ratio * scale;
 
@@ -186,6 +213,10 @@ uint32_t Laser::set_proportional_power(uint32_t dummy)
     if(get_laser_power(power)) {
         // adjust power to maximum power and actual velocity
         float proportional_power = ( (this->laser_maximum_power - this->laser_minimum_power) * power ) + this->laser_minimum_power;
+        // Ensure power is >=0 and <= 1
+        if (proportional_power < 0) proportional_power = 0;
+        else if (proportional_power > 1) proportional_power = 1;
+
         this->pwm_pin->write(this->pwm_inverting ? 1 - proportional_power : proportional_power);
         if(!laser_on && this->ttl_used) this->ttl_pin->set(true);
         laser_on = true;

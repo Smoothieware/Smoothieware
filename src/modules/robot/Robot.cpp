@@ -822,7 +822,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
             this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
 
-    // S is modal
+    // S is modal When specified on a G0/1/2/3 command
     if(gcode->has_letter('S')) s_value= gcode->get_value('S');
 
     bool moved= false;
