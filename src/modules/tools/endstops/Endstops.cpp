@@ -107,8 +107,10 @@
 #define gamma_limit_enable_checksum      CHECKSUM("gamma_limit_enable")
 
 #define home_z_first_checksum            CHECKSUM("home_z_first")
+#define back_off_first_checksum          CHECKSUM("back_off_first")
 #define homing_order_checksum            CHECKSUM("homing_order")
 #define move_to_origin_checksum          CHECKSUM("move_to_origin_after_home")
+#define move_to_park_checksum            CHECKSUM("move_to_park_after_home")
 
 #define STEPPER THEROBOT->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
@@ -122,6 +124,7 @@ enum {
     NOT_HOMING,
     BACK_OFF_HOME,
     MOVE_TO_ORIGIN,
+    MOVE_TO_PARK,
     LIMIT_TRIGGERED
 };
 
@@ -212,6 +215,7 @@ void Endstops::load_config()
     this->is_scara                  =  THEKERNEL->config->value(scara_homing_checksum)->by_default(false)->as_bool();
 
     this->home_z_first              = THEKERNEL->config->value(home_z_first_checksum)->by_default(false)->as_bool();
+    this->back_off_first            = THEKERNEL->config->value(back_off_first_checksum)->by_default(false)->as_bool();
 
     // see if an order has been specified, must be three characters, XYZ or YXZ etc
     string order = THEKERNEL->config->value(homing_order_checksum)->by_default("")->as_string();
@@ -242,6 +246,9 @@ void Endstops::load_config()
 
     // set to true by default for deltas due to trim, false on cartesians
     this->move_to_origin_after_home = THEKERNEL->config->value(move_to_origin_checksum)->by_default(is_delta)->as_bool();
+
+    // set to false by default
+    this->move_to_park_after_home = THEKERNEL->config->value(move_to_park_checksum)->by_default(false)->as_bool();
 
     if(this->limit_enable[X_AXIS] || this->limit_enable[Y_AXIS] || this->limit_enable[Z_AXIS]) {
         register_for_event(ON_IDLE);
@@ -385,6 +392,7 @@ void Endstops::move_to_origin(std::bitset<3> axis)
     char buf[32];
     THEROBOT->push_state();
     THEROBOT->inch_mode = false;     // needs to be in mm
+    THEROBOT->absolute_mode = true;  // needs to be absolute mode
     snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
@@ -394,6 +402,33 @@ void Endstops::move_to_origin(std::bitset<3> axis)
     THECONVEYOR->wait_for_idle();
     THEROBOT->pop_state();
     this->status = NOT_HOMING;
+}
+
+void Endstops::move_park()
+{
+    this->status = MOVE_TO_PARK;
+    // Move to predefined position regular move
+    char buf[32];
+    THEROBOT->push_state();
+    THEROBOT->inch_mode = false;     // needs to be in mm
+    THEROBOT->absolute_mode = true;  // needs to be absolute mode
+    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", saved_position[X_AXIS], saved_position[Y_AXIS]); // must use machine coordinates in case G92 or WCS is in effect
+    struct SerialMessage message;
+    message.message = buf;
+    message.stream = &(StreamOutput::NullStream);
+    THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
+    // Wait for above to finish
+    THECONVEYOR->wait_for_idle();
+    THEROBOT->pop_state();
+    this->status = NOT_HOMING;
+}
+
+// If enabled will move the head to the preset position defined by G28.1 after homing, but only if X and Y were set to home
+void Endstops::move_to_park(std::bitset<3> axis)
+{
+    if(axis[X_AXIS] && axis[Y_AXIS]) {              // Only run if both X and Y are homing
+    move_park();
+    }
 }
 
 // Called every millisecond in an ISR
@@ -553,14 +588,7 @@ void Endstops::home(std::bitset<3> a)
 void Endstops::process_home_command(Gcode* gcode)
 {
     if( (gcode->subcode == 0 && THEKERNEL->is_grbl_mode()) || (gcode->subcode == 2 && !THEKERNEL->is_grbl_mode()) ) {
-        // G28 in grbl mode or G28.2 in normal mode will do a rapid to the predefined position
-        // TODO spec says if XYZ specified move to them first then move to MCS of specifed axis
-        char buf[32];
-        snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", saved_position[X_AXIS], saved_position[Y_AXIS]); // must use machine coordinates in case G92 or WCS is in effect
-        struct SerialMessage message;
-        message.message = buf;
-        message.stream = &(StreamOutput::NullStream);
-        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
+        move_park();
         return;
 
     } else if(THEKERNEL->is_grbl_mode() && gcode->subcode == 2) { // G28.2 in grbl mode forces homing (triggered by $H)
@@ -722,15 +750,18 @@ void Endstops::process_home_command(Gcode* gcode)
     // default is off for cartesian on for deltas
     if(!is_delta) {
         // NOTE a rotary delta usually has optical or hall-effect endstops so it is safe to go past them a little bit
+        if(this->back_off_first) back_off_home(haxis);
         if(this->move_to_origin_after_home) move_to_origin(haxis);
+        if(this->move_to_park_after_home) move_to_park(haxis);
         // if limit switches are enabled we must back off endstop after setting home
-        back_off_home(haxis);
+        if(!this->back_off_first) back_off_home(haxis);
 
-    } else if(this->move_to_origin_after_home || this->limit_enable[X_AXIS]) {
+    } else if(this->move_to_origin_after_home || this->move_to_park_after_home || this->limit_enable[X_AXIS]) {
         // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
         // also need to back off endstops if limits are enabled
         back_off_home(haxis);
         if(this->move_to_origin_after_home) move_to_origin(haxis);
+        if(this->move_to_park_after_home) move_to_park(haxis);
     }
 }
 

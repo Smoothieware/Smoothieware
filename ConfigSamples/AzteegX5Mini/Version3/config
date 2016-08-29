@@ -158,10 +158,13 @@ beta_max_travel                              500              # max travel in mm
 gamma_max_travel                             500              # max travel in mm for gamma/Z axis when homing
 
 # optional enable limit switches, actions will stop if any enabled limit switch is triggered
-#alpha_limit_enable                          false            # set to true to enable X min and max limit switches
-#beta_limit_enable                           false            # set to true to enable Y min and max limit switches
-#gamma_limit_enable                          false            # set to true to enable Z min and max limit switches
-#move_to_origin_after_home                   false            # move XY to 0,0 after homing
+#alpha_limit_enable                           false            # set to true to enable X min and max limit switches
+#beta_limit_enable                            false            # set to true to enable Y min and max limit switches
+#gamma_limit_enable                           false            # set to true to enable Z min and max limit switches
+#home_z_first                                 false            # home Z before XY
+#move_to_origin_after_home                    false            # move XY to 0,0 after homing
+#move_to_park_after_home                      false            # move XY to the predefined position set by G28.1 after homing
+#back_off_first                               false            # back off the limit switches before the above 2 moves
 
 #probe endstop
 #probe_pin                                   1.29             # optional pin for probe

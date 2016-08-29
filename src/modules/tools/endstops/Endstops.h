@@ -28,6 +28,8 @@ class Endstops : public Module{
         void home_xy();
         void back_off_home(std::bitset<3> axis);
         void move_to_origin(std::bitset<3> axis);
+        void move_park();
+        void move_to_park(std::bitset<3> axis);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
@@ -63,6 +65,8 @@ class Endstops : public Module{
             bool is_rdelta:1;
             bool is_scara:1;
             bool home_z_first:1;
+            bool back_off_first:1;
             bool move_to_origin_after_home:1;
+            bool move_to_park_after_home:1;
         };
 };
