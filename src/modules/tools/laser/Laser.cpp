@@ -39,6 +39,7 @@
 Laser::Laser()
 {
     laser_on = false;
+    scale= 1;
 }
 
 void Laser::on_module_loaded()
@@ -103,9 +104,28 @@ void Laser::on_module_loaded()
 
     //register for events
     this->register_for_event(ON_HALT);
+    this->register_for_event(ON_GCODE_RECEIVED);
 
     // no point in updating the power more than the PWM frequency, but no more than 1KHz
     THEKERNEL->slow_ticker->attach(std::min(1000UL, 1000000/period), this, &Laser::set_proportional_power);
+}
+
+
+void Laser::on_gcode_received(void *argument)
+{
+    Gcode *gcode = static_cast<Gcode *>(argument);
+
+    // M codes most execute immediately, most only execute if enabled
+    if (gcode->has_m) {
+        if (gcode->m == 221) { // M221 S100 change laser power by percentage S
+            if(gcode->has_letter('S')) {
+                this->scale= gcode->get_value('S') / 100.0F;
+
+            } else {
+                gcode->stream->printf("Laser power scale at %6.2f %%\n", this->scale * 100.0F);
+            }
+        }
+    }
 }
 
 void Laser::turn_laser_off()
@@ -151,7 +171,7 @@ bool Laser::get_laser_power(float& power) const
         else if (requested_power > 1) requested_power = 1;
 
         float ratio = current_speed_ratio(block);
-        power = requested_power * ratio;
+        power = requested_power * ratio * scale;
 
         return true;
     }
