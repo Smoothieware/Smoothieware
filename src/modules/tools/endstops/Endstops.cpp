@@ -385,7 +385,7 @@ void Endstops::move_to_origin(std::bitset<3> axis)
     char buf[32];
     THEROBOT->push_state();
     THEROBOT->inch_mode = false;     // needs to be in mm
-    THEROBOT->absolute_mode = false;
+    THEROBOT->absolute_mode = true;
     snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
@@ -558,7 +558,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // TODO spec says if XYZ specified move to them first then move to MCS of specifed axis
         THEROBOT->push_state();
         THEROBOT->inch_mode = false;     // needs to be in mm
-        THEROBOT->absolute_mode = false;
+        THEROBOT->absolute_mode = true;
         char buf[32];
         snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", saved_position[X_AXIS], saved_position[Y_AXIS]); // must use machine coordinates in case G92 or WCS is in effect
         struct SerialMessage message;
