@@ -420,7 +420,6 @@ void Endstops::move_park()
     THECONVEYOR->wait_for_idle();
     THEROBOT->pop_state();
     this->status = NOT_HOMING;
-
 }
 
 // If enabled will move the head to the preset position defined by G28.1 after homing, but only if X and Y were set to home
