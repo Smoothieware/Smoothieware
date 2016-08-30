@@ -865,7 +865,16 @@ void Robot::reset_axis_position(float x, float y, float z)
 
     // now set the actuator positions to match
     ActuatorCoordinates actuator_pos;
-    arm_solution->cartesian_to_actuator(this->last_machine_position, actuator_pos);
+    if(!disable_arm_solution) {
+        arm_solution->cartesian_to_actuator( last_machine_position, actuator_pos );
+
+    }else{
+        // DEBUG THEKERNEL->streams->printf("c2a robot reset_axis_position\n");
+        // basically the same as cartesian, would be used for special homing situations like for scara
+        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+            actuator_pos[i] = last_machine_position[i];
+        }
+    }
     for (size_t i = X_AXIS; i <= Z_AXIS; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
@@ -905,14 +914,33 @@ void Robot::reset_position_from_current_actuator_position()
     }
 
     // discover machine position from where actuators actually are
-    arm_solution->actuator_to_cartesian(actuator_pos, last_machine_position);
+    if(!disable_arm_solution) {
+        arm_solution->actuator_to_cartesian(actuator_pos, last_machine_position);
+
+    }else{
+        // DEBUG THEKERNEL->streams->printf("a2c robot reset_position_from_current_actuator_position\n");
+       // basically the same as cartesian, would be used for special homing situations like for scara
+        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+            last_machine_position[i] = actuator_pos[i];
+        }
+    }
+
     // FIXME problem is this includes any compensation transform, and without an inverse compensation we cannot get a correct last_milestone
     memcpy(last_milestone, last_machine_position, sizeof last_milestone);
 
     // now reset actuator::last_milestone, NOTE this may lose a little precision as FK is not always entirely accurate.
     // NOTE This is required to sync the machine position with the actuator position, we do a somewhat redundant cartesian_to_actuator() call
     // to get everything in perfect sync.
-    arm_solution->cartesian_to_actuator(last_machine_position, actuator_pos);
+    if(!disable_arm_solution) {
+        arm_solution->cartesian_to_actuator( last_machine_position, actuator_pos );
+
+    }else{
+        // basically the same as cartesian, would be used for special homing situations like for scara
+        // DEBUG THEKERNEL->streams->printf("c2a robot reset_position_from_current_actuator_position\n");
+        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+            actuator_pos[i] = last_machine_position[i];
+        }
+    }
     for (size_t i = X_AXIS; i <= Z_AXIS; i++)
         actuators[i]->change_last_milestone(actuator_pos[i]);
 }
