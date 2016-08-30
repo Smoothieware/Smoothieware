@@ -130,7 +130,10 @@ void Laser::on_console_line_received( void *argument )
     if (cmd == "fire") {
         string power = shift_parameter(possible_command);
         float p= strtof(power.c_str(), NULL);
-        p= confine(p, 0.0F, 1.0F);
+        p= confine(p, 0.0F, 100.0F);
+        new_message.stream->printf("Firing laser at %f power\n", p);
+
+        p= p/100.0F;
         this->pwm_pin->write(this->pwm_inverting ? 1 - p : p);
         if(p > 0) {
             if(!laser_on && this->ttl_used) this->ttl_pin->set(true);

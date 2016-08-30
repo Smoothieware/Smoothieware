@@ -263,6 +263,9 @@ void SimpleShell::on_console_line_received( void *argument )
         } else if (cmd == "play" || cmd == "progress" || cmd == "abort" || cmd == "suspend" || cmd == "resume") {
             // these are handled by Player module
 
+        } else if (cmd == "fire") {
+            // these are handled by Laser module
+
         } else if (cmd == "ok") {
             // probably an echo so reply ok
             new_message.stream->printf("ok\n");
