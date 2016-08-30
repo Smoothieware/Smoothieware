@@ -41,6 +41,7 @@ Laser::Laser()
 {
     laser_on = false;
     scale= 1;
+    manual_fire= false;
 }
 
 void Laser::on_module_loaded()
@@ -129,12 +130,24 @@ void Laser::on_console_line_received( void *argument )
     // Act depending on command
     if (cmd == "fire") {
         string power = shift_parameter(possible_command);
-        float p= strtof(power.c_str(), NULL);
-        p= confine(p, 0.0F, 100.0F);
-        new_message.stream->printf("Firing laser at %f power\n", p);
+        if(power.empty()) {
+            new_message.stream->printf("Usage: fire power%%|off\n");
+        }
+        float p;
+        if(power == "off" || power == "0") {
+            p= 0;
+            new_message.stream->printf("turning laser off and returning to auto mode\n");
+
+        }else{
+            p= strtof(power.c_str(), NULL);
+            p= confine(p, 0.0F, 100.0F);
+            new_message.stream->printf("WARNING: Firing laser at %1.2f%% power, entering manual mode use fire off to return to auto mode\n", p);
+        }
 
         p= p/100.0F;
+        manual_fire= true;
         this->pwm_pin->write(this->pwm_inverting ? 1 - p : p);
+
         if(p > 0) {
             if(!laser_on && this->ttl_used) this->ttl_pin->set(true);
             laser_on = true;
@@ -142,6 +155,7 @@ void Laser::on_console_line_received( void *argument )
         }else{
             if(laser_on && this->ttl_used) this->ttl_pin->set(false);
             laser_on = false;
+            manual_fire= false;
         }
     }
 }
@@ -212,6 +226,8 @@ bool Laser::get_laser_power(float& power) const
 // called every millisecond from timer ISR
 uint32_t Laser::set_proportional_power(uint32_t dummy)
 {
+    if(manual_fire) return 0;
+
     float power;
     if(get_laser_power(power)) {
         // adjust power to maximum power and actual velocity

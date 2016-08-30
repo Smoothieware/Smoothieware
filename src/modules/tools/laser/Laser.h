@@ -43,5 +43,6 @@ class Laser : public Module{
             bool pwm_inverting:1; // stores whether the PWM period should be inverted
             bool ttl_used:1;		// stores whether we have a TTL output
             bool ttl_inverting:1;   // stores whether the TTL output should be inverted
+            bool manual_fire:1;     // set when manually firing
         };
 };
