@@ -612,8 +612,8 @@ void Endstops::process_home_command(Gcode* gcode)
     // First wait for the queue to be empty
     THECONVEYOR->wait_for_idle();
 
-    // deltas, scaras always home Z axis only
-    bool home_in_z = this->is_delta || this->is_rdelta || this->is_scara;
+    // deltas always home Z axis only, which moves all three actuators
+    bool home_in_z = this->is_delta || this->is_rdelta;
 
     // figure out which axis to home
     bitset<3> haxis;
@@ -686,7 +686,7 @@ void Endstops::process_home_command(Gcode* gcode)
             this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]
         };
 
-        bool has_endstop_trim = this->is_delta || this->is_scara;
+        bool has_endstop_trim = this->is_delta;
         if (has_endstop_trim) {
             ActuatorCoordinates ideal_actuator_position;
             THEROBOT->arm_solution->cartesian_to_actuator(ideal_position, ideal_actuator_position);
