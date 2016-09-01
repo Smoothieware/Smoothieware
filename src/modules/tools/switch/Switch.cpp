@@ -26,6 +26,8 @@
 
 #include "MRI_Hooks.h"
 
+#include <algorithm>
+
 #define    startup_state_checksum       CHECKSUM("startup_state")
 #define    startup_value_checksum       CHECKSUM("startup_value")
 #define    input_pin_checksum           CHECKSUM("input_pin")
@@ -212,6 +214,10 @@ void Switch::on_config_reload(void *argument)
         // SIGMADELTA
         THEKERNEL->slow_ticker->attach(1000, this->sigmadelta_pin, &Pwm::on_tick);
     }
+
+    // for commands we need to replace _ for space
+    std::replace(output_on_command.begin(), output_on_command.end(), '_', ' '); // replace _ with space
+    std::replace(output_off_command.begin(), output_off_command.end(), '_', ' '); // replace _ with space
 }
 
 bool Switch::match_input_on_gcode(const Gcode *gcode) const
