@@ -198,9 +198,9 @@ float Laser::current_speed_ratio(const Block *block) const
         }
     }
 
-    // figure out the ratio of its speed, from 0 to 1 based on where it is on the trapezoid
-    // FIXME steps_per_tick can change at any time, potential race condition if it changes while being read here
-    float ratio= (float)block->tick_info[pm].steps_per_tick / block->tick_info[pm].plateau_rate;
+    // figure out the ratio of its speed, from 0 to 1 based on where it is on the trapezoid,
+    // this is based on the fraction it is of the requested rate (nominal rate)
+    float ratio= block->get_trapezoid_rate(pm) / block->nominal_rate;
 
     return ratio;
 }
