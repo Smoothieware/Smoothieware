@@ -102,7 +102,7 @@ void Laser::on_module_loaded()
     // S value that represents maximum (default 1)
     this->laser_maximum_s_value = THEKERNEL->config->value(laser_module_maximum_s_value_checksum)->by_default(1.0f)->as_number() ;
 
-    turn_laser_off();
+    set_laser_power(0);
 
     //register for events
     this->register_for_event(ON_HALT);
@@ -117,8 +117,8 @@ void Laser::on_console_line_received( void *argument )
 {
     if(THEKERNEL->is_halted()) return; // if in halted state ignore any commands
 
-    SerialMessage new_message = *static_cast<SerialMessage *>(argument);
-    string possible_command = new_message.message;
+    SerialMessage *msgp = static_cast<SerialMessage *>(argument);
+    string possible_command = msgp->message;
 
     // ignore anything that is not lowercase or a letter
     if(possible_command.empty() || !islower(possible_command[0]) || !isalpha(possible_command[0])) {
@@ -131,32 +131,23 @@ void Laser::on_console_line_received( void *argument )
     if (cmd == "fire") {
         string power = shift_parameter(possible_command);
         if(power.empty()) {
-            new_message.stream->printf("Usage: fire power%%|off\n");
+            msgp->stream->printf("Usage: fire power%%|off\n");
+            return;
         }
+
         float p;
         if(power == "off" || power == "0") {
             p= 0;
-            new_message.stream->printf("turning laser off and returning to auto mode\n");
+            msgp->stream->printf("turning laser off and returning to auto mode\n");
 
         }else{
             p= strtof(power.c_str(), NULL);
             p= confine(p, 0.0F, 100.0F);
-            new_message.stream->printf("WARNING: Firing laser at %1.2f%% power, entering manual mode use fire off to return to auto mode\n", p);
+            msgp->stream->printf("WARNING: Firing laser at %1.2f%% power, entering manual mode use fire off to return to auto mode\n", p);
         }
 
         p= p/100.0F;
-        manual_fire= true;
-        this->pwm_pin->write(this->pwm_inverting ? 1 - p : p);
-
-        if(p > 0) {
-            if(!laser_on && this->ttl_used) this->ttl_pin->set(true);
-            laser_on = true;
-
-        }else{
-            if(laser_on && this->ttl_used) this->ttl_pin->set(false);
-            laser_on = false;
-            manual_fire= false;
-        }
+        manual_fire= set_laser_power(p);
     }
 }
 
@@ -175,13 +166,6 @@ void Laser::on_gcode_received(void *argument)
             }
         }
     }
-}
-
-void Laser::turn_laser_off()
-{
-    this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
-    if (this->ttl_used) this->ttl_pin->set(false);
-    laser_on = false;
 }
 
 // calculates the current speed ratio from the currently executing block
@@ -232,24 +216,37 @@ uint32_t Laser::set_proportional_power(uint32_t dummy)
     if(get_laser_power(power)) {
         // adjust power to maximum power and actual velocity
         float proportional_power = ( (this->laser_maximum_power - this->laser_minimum_power) * power ) + this->laser_minimum_power;
-        // Ensure power is >=0 and <= 1
-        if (proportional_power < 0) proportional_power = 0;
-        else if (proportional_power > 1) proportional_power = 1;
-
-        this->pwm_pin->write(this->pwm_inverting ? 1 - proportional_power : proportional_power);
-        if(!laser_on && this->ttl_used) this->ttl_pin->set(true);
-        laser_on = true;
+        set_laser_power(proportional_power);
 
     } else if(laser_on) {
         // turn laser off
-        turn_laser_off();
+        set_laser_power(0);
     }
     return 0;
+}
+
+bool Laser::set_laser_power(float power)
+{
+    // Ensure power is >=0 and <= 1
+    power= confine(power, 0.0F, 1.0F);
+
+    if(power > 0.00001F) {
+        this->pwm_pin->write(this->pwm_inverting ? 1 - power : power);
+        if(!laser_on && this->ttl_used) this->ttl_pin->set(true);
+        laser_on = true;
+
+    }else{
+        this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
+        if (this->ttl_used) this->ttl_pin->set(false);
+        laser_on = false;
+    }
+
+    return laser_on;
 }
 
 void Laser::on_halt(void *argument)
 {
     if(argument == nullptr) {
-        turn_laser_off();
+        set_laser_power(0);
     }
 }

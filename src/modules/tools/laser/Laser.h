@@ -30,7 +30,7 @@ class Laser : public Module{
         uint32_t set_proportional_power(uint32_t dummy);
         bool get_laser_power(float& power) const;
         float current_speed_ratio(const Block *block) const;
-        void turn_laser_off();
+        bool set_laser_power(float p);
 
         mbed::PwmOut *pwm_pin;    // PWM output to regulate the laser power
         Pin *ttl_pin;				// TTL output to fire laser
