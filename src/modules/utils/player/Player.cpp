@@ -238,11 +238,13 @@ void Player::on_console_line_received( void *argument )
 
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
 
-    // ignore comments and blank lines and if this is a G code then also ignore it
-    char first_char = new_message.message[0];
-    if(strchr(";( \n\rGMTN", first_char) != NULL) return;
-
     string possible_command = new_message.message;
+
+    // ignore anything that is not lowercase or a letter
+    if(possible_command.empty() || !islower(possible_command[0]) || !isalpha(possible_command[0])) {
+        return;
+    }
+
     string cmd = shift_parameter(possible_command);
 
     //new_message.stream->printf("Received %s\r\n", possible_command.c_str());

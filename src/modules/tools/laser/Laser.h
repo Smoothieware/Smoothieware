@@ -23,23 +23,26 @@ class Laser : public Module{
         virtual ~Laser() {};
         void on_module_loaded();
         void on_halt(void* argument);
+        void on_gcode_received(void *argument);
+        void on_console_line_received(void *argument);
 
     private:
         uint32_t set_proportional_power(uint32_t dummy);
         bool get_laser_power(float& power) const;
         float current_speed_ratio(const Block *block) const;
-        void turn_laser_off();
+        bool set_laser_power(float p);
 
         mbed::PwmOut *pwm_pin;    // PWM output to regulate the laser power
         Pin *ttl_pin;				// TTL output to fire laser
-        float            laser_maximum_power; // maximum allowed laser power to be output on the pwm pin
-        float            laser_minimum_power; // value used to tickle the laser on moves.  Also minimum value for auto-scaling
-        float            laser_maximum_s_value; // Value of S code that will represent max power
-
+        float laser_maximum_power; // maximum allowed laser power to be output on the pwm pin
+        float laser_minimum_power; // value used to tickle the laser on moves.  Also minimum value for auto-scaling
+        float laser_maximum_s_value; // Value of S code that will represent max power
+        float scale;
         struct {
             bool laser_on:1;      // set if the laser is on
             bool pwm_inverting:1; // stores whether the PWM period should be inverted
             bool ttl_used:1;		// stores whether we have a TTL output
             bool ttl_inverting:1;   // stores whether the TTL output should be inverted
+            bool manual_fire:1;     // set when manually firing
         };
 };
