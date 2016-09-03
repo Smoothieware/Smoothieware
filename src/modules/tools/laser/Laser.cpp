@@ -248,5 +248,6 @@ void Laser::on_halt(void *argument)
 {
     if(argument == nullptr) {
         set_laser_power(0);
+        manual_fire= false;
     }
 }
