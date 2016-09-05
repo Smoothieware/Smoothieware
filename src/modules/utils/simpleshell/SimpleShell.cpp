@@ -263,6 +263,9 @@ void SimpleShell::on_console_line_received( void *argument )
         } else if (cmd == "play" || cmd == "progress" || cmd == "abort" || cmd == "suspend" || cmd == "resume") {
             // these are handled by Player module
 
+        } else if (cmd == "fire") {
+            // these are handled by Laser module
+
         } else if (cmd == "ok") {
             // probably an echo so reply ok
             new_message.stream->printf("ok\n");
@@ -815,7 +818,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
     } else if (what == "state") {
         // also $G
         // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
-        stream->printf("[G%d %s G%d G%d G%d G94 M0 M5 M9 T%d F%1.4f]\n",
+        stream->printf("[G%d %s G%d G%d G%d G94 M0 M5 M9 T%d F%1.4f S%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
             wcs2gcode(THEROBOT->get_current_wcs()).c_str(),
             THEROBOT->plane_axis_0 == X_AXIS && THEROBOT->plane_axis_1 == Y_AXIS && THEROBOT->plane_axis_2 == Z_AXIS ? 17 :
@@ -824,7 +827,8 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             THEROBOT->inch_mode ? 20 : 21,
             THEROBOT->absolute_mode ? 90 : 91,
             get_active_tool(),
-            THEROBOT->from_millimeters(THEROBOT->get_feed_rate()));
+            THEROBOT->from_millimeters(THEROBOT->get_feed_rate()),
+            THEROBOT->get_s_value());
 
     } else if (what == "status") {
         // also ? on serial and usb
@@ -984,20 +988,29 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
 
         THEROBOT->push_state();
         char cmd[64];
-        snprintf(cmd, sizeof(cmd), "G91 G0 X%f Y0 F%f", -r, f);
+        snprintf(cmd, sizeof(cmd), "G91 G0 X%f F%f G90", -r, f);
         stream->printf("%s\n", cmd);
         struct SerialMessage message{&StreamOutput::NullStream, cmd};
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 
         for (uint32_t i = 0; i < n; ++i) {
             if(THEKERNEL->is_halted()) break;
-            snprintf(cmd, sizeof(cmd), "G2 X%f Y0 I%f J0 F%f", -r, r, f);
+            snprintf(cmd, sizeof(cmd), "G2 I%f J0 F%f", r, f);
             stream->printf("%s\n", cmd);
             message.message= cmd;
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             THECONVEYOR->wait_for_idle();
         }
-        THEROBOT->pop_state();
+
+        // leave it where it started
+        if(!THEKERNEL->is_halted()) {
+            snprintf(cmd, sizeof(cmd), "G91 G0 X%f F%f G90", r, f);
+            stream->printf("%s\n", cmd);
+            struct SerialMessage message{&StreamOutput::NullStream, cmd};
+            THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        }
+
+       THEROBOT->pop_state();
         stream->printf("done\n");
 
     }else if (what == "square") {

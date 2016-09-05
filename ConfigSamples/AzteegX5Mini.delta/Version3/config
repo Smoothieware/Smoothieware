@@ -66,8 +66,8 @@ extruder.hotend.acceleration                    500              # Acceleration 
 extruder.hotend.max_speed                       50               # mm/s
 
 extruder.hotend.step_pin                        2.0              # Pin for extruder step signal
-extruder.hotend.dir_pin                         0.5             # Pin for extruder dir signal
-extruder.hotend.en_pin                          0.4             # Pin for extruder enable signal
+extruder.hotend.dir_pin                         0.5              # Pin for extruder dir signal
+extruder.hotend.en_pin                          0.4              # Pin for extruder enable signal
 
 # extruder offset
 #extruder.hotend.x_offset                        0                # x offset from origin in mm
@@ -132,7 +132,7 @@ temperature_control.bed.designator           B                #
 switch.fan.enable                            true             #
 switch.fan.input_on_command                  M106             #
 switch.fan.input_off_command                 M107             #
-switch.fan.output_pin                        2.4              #
+switch.fan.output_pin                        1.25             #
 
 # automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures and switch different swithxes
 # useful to turn on a fan or water pump to cool the hotend
@@ -226,8 +226,8 @@ panel.click_button_pin                       2.11!^            # click button
 panel.a0_pin                                 2.6               # st7565 needs an a0
 #panel.contrast                              8                 # override contrast setting (default is 9)
 #panel.encoder_resolution                    4                 # override number of clicks to move 1 item (default is 4)
-#panel.button_pause_pin                      1.22^             # kill/pause set one of these for the auxilliary button on viki2
-#panel.back_button_pin                       1.22!^            # back button recommended to use this on EXP1
+#panel.button_pause_pin                      1.30^             # kill/pause set one of these for the auxilliary button on viki2
+#panel.back_button_pin                       1.30!^            # back button recommended to use this on EXP1
 panel.buzz_pin                               0.25              # pin for buzzer on EXP2
 panel.red_led_pin                            2.8               # pin for red led on viki2 on EXP1
 panel.blue_led_pin                           4.29              # pin for blue led on viki2 on EXP1
@@ -258,5 +258,5 @@ panel.bed_temperature                        60                # temp to set bed
 
 # Azteeg specific settings do not change
 currentcontrol_module_enable                 true            #
-digipot_max_current                          2.4             # max current
-digipot_factor                               106.0           # factor for converting current to digipot value
+digipot_max_current                          2.0             # max current
+digipot_factor                               113.5           # factor for converting current to digipot value

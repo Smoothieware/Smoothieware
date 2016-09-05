@@ -196,15 +196,15 @@ void Endstops::load_config()
     this->homing_position[2]=  this->home_direction[2] ? THEKERNEL->config->value(gamma_min_checksum)->by_default(0)->as_number() : THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number();
 
     // used to set maximum movement on homing, set by alpha_max_travel if defined
-    // for backward compatibility uses alpha_max if nit defined.
+    // for backward compatibility uses alpha_max if not defined.
     // TO BE deprecated
     this->alpha_max= THEKERNEL->config->value(alpha_max_checksum)->by_default(500)->as_number();
     this->beta_max= THEKERNEL->config->value(beta_max_checksum)->by_default(500)->as_number();
     this->gamma_max= THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number();
 
-    this->alpha_max= THEKERNEL->config->value(alpha_max_travel_checksum)->by_default(alpha_max)->as_number();
-    this->beta_max= THEKERNEL->config->value(beta_max_travel_checksum)->by_default(beta_max)->as_number();
-    this->gamma_max= THEKERNEL->config->value(gamma_max_travel_checksum)->by_default(gamma_max)->as_number();
+    this->alpha_max= THEKERNEL->config->value(alpha_max_travel_checksum)->by_default(alpha_max*2)->as_number();
+    this->beta_max= THEKERNEL->config->value(beta_max_travel_checksum)->by_default(beta_max*2)->as_number();
+    this->gamma_max= THEKERNEL->config->value(gamma_max_travel_checksum)->by_default(gamma_max*2)->as_number();
 
     this->is_corexy                 =  THEKERNEL->config->value(corexy_homing_checksum)->by_default(false)->as_bool();
     this->is_delta                  =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
@@ -385,6 +385,7 @@ void Endstops::move_to_origin(std::bitset<3> axis)
     char buf[32];
     THEROBOT->push_state();
     THEROBOT->inch_mode = false;     // needs to be in mm
+    THEROBOT->absolute_mode = true;
     snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
@@ -555,12 +556,18 @@ void Endstops::process_home_command(Gcode* gcode)
     if( (gcode->subcode == 0 && THEKERNEL->is_grbl_mode()) || (gcode->subcode == 2 && !THEKERNEL->is_grbl_mode()) ) {
         // G28 in grbl mode or G28.2 in normal mode will do a rapid to the predefined position
         // TODO spec says if XYZ specified move to them first then move to MCS of specifed axis
+        THEROBOT->push_state();
+        THEROBOT->inch_mode = false;     // needs to be in mm
+        THEROBOT->absolute_mode = true;
         char buf[32];
         snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", saved_position[X_AXIS], saved_position[Y_AXIS]); // must use machine coordinates in case G92 or WCS is in effect
         struct SerialMessage message;
         message.message = buf;
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
+        // Wait for above to finish
+        THECONVEYOR->wait_for_idle();
+        THEROBOT->pop_state();
         return;
 
     } else if(THEKERNEL->is_grbl_mode() && gcode->subcode == 2) { // G28.2 in grbl mode forces homing (triggered by $H)
@@ -608,8 +615,8 @@ void Endstops::process_home_command(Gcode* gcode)
     // First wait for the queue to be empty
     THECONVEYOR->wait_for_idle();
 
-    // deltas, scaras always home Z axis only
-    bool home_in_z = this->is_delta || this->is_rdelta || this->is_scara;
+    // deltas always home Z axis only, which moves all three actuators
+    bool home_in_z = this->is_delta || this->is_rdelta;
 
     // figure out which axis to home
     bitset<3> haxis;
@@ -682,7 +689,7 @@ void Endstops::process_home_command(Gcode* gcode)
             this->homing_position[Z_AXIS] + this->home_offset[Z_AXIS]
         };
 
-        bool has_endstop_trim = this->is_delta || this->is_scara;
+        bool has_endstop_trim = this->is_delta;
         if (has_endstop_trim) {
             ActuatorCoordinates ideal_actuator_position;
             THEROBOT->arm_solution->cartesian_to_actuator(ideal_position, ideal_actuator_position);

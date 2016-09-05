@@ -43,6 +43,7 @@ class Robot : public Module {
         float get_default_acceleration() const { return default_acceleration; }
         void setToolOffset(const float offset[N_PRIMARY_AXIS]);
         float get_feed_rate() const;
+        float get_s_value() const { return s_value; }
         void  push_state();
         void  pop_state();
         void check_max_actuator_speeds();
@@ -80,6 +81,7 @@ class Robot : public Module {
             bool e_absolute_mode:1;                           // true for absolute mode for E ( default ), false for relative mode
             bool next_command_is_MCS:1;                       // set by G53
             bool disable_segmentation:1;                      // set to disable segmentation
+            bool disable_arm_solution:1;                      // set to disable the arm solution
             bool segment_z_moves:1;
             bool save_g92:1;                                  // save g92 on M500 if set
             bool is_g123:1;
