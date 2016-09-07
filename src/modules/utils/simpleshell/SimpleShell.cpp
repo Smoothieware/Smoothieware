@@ -238,6 +238,7 @@ void SimpleShell::on_console_line_received( void *argument )
                     Gcode gcode("G28", new_message.stream);
                     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
                 }
+                new_message.stream->printf("ok\n");
                 break;
 
             default:
