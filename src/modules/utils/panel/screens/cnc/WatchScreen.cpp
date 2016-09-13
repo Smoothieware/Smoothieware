@@ -24,6 +24,10 @@
 #include "StepperMotor.h"
 #include "BaseSolution.h"
 
+#ifndef NO_TOOLS_LASER
+#include "Laser.h"
+#endif
+
 #include <math.h>
 #include <string.h>
 #include <string>
@@ -31,6 +35,8 @@
 #include <algorithm>
 
 using namespace std;
+
+#define laser_checksum CHECKSUM("laser")
 
 WatchScreen::WatchScreen()
 {
@@ -48,7 +54,7 @@ WatchScreen::~WatchScreen()
 void WatchScreen::on_enter()
 {
     THEPANEL->lcd->clear();
-    THEPANEL->setup_menu(7);
+    THEPANEL->setup_menu(8);
     get_current_status();
     get_wpos();
     get_sd_play_info();
@@ -187,7 +193,17 @@ void WatchScreen::display_menu_line(uint16_t line)
             THEROBOT->from_millimeters(THEKERNEL->conveyor->get_current_feedrate()*60.0F));
             break;
         case 5: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
-        case 6: THEPANEL->lcd->printf("%19s", this->get_status()); break;
+        case 6:
+            if(THEPANEL->has_laser()){
+                #ifndef NO_TOOLS_LASER
+                Laser *plaser= nullptr;
+                if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
+                    THEPANEL->lcd->printf("Laser S%1.4f/%1.4f", THEROBOT->get_s_value(), plaser->get_current_power());
+                }
+                #endif
+                break;
+            }
+        case 7: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
 }
 

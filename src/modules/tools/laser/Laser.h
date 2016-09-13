@@ -25,12 +25,17 @@ class Laser : public Module{
         void on_halt(void* argument);
         void on_gcode_received(void *argument);
         void on_console_line_received(void *argument);
+        void on_get_public_data(void* argument);
+
+        void set_scale(float s) { scale= s/100; }
+        float get_scale() const { return scale*100; }
+        bool set_laser_power(float p);
+        float get_current_power() const;
 
     private:
         uint32_t set_proportional_power(uint32_t dummy);
         bool get_laser_power(float& power) const;
         float current_speed_ratio(const Block *block) const;
-        bool set_laser_power(float p);
 
         mbed::PwmOut *pwm_pin;    // PWM output to regulate the laser power
         Pin *ttl_pin;				// TTL output to fire laser

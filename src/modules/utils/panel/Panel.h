@@ -82,6 +82,7 @@ class Panel : public Module {
 
         float get_jogging_speed(int i) { return jogging_speed_mm_min[i]; }
         void set_jogging_speed(int i, float v) { jogging_speed_mm_min[i]= v; }
+        bool has_laser() const { return laser_enabled; }
 
         // public as it is directly accessed by screens... not good
         // TODO pass lcd into ctor of each sub screen
@@ -143,6 +144,7 @@ class Panel : public Module {
             bool menu_changed:1;
             bool control_value_changed:1;
             bool external_sd_enable:1;
+            bool laser_enabled:1;
             volatile bool counter_changed:1;
             volatile bool click_changed:1;
             volatile bool refresh_flag:1;

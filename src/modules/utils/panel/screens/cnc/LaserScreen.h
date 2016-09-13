@@ -5,38 +5,22 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef CONTROLSCREEN_H
-#define CONTROLSCREEN_H
+#pragma once
 
 #include "PanelScreen.h"
 
-class ControlScreen : public PanelScreen
+class LaserScreen : public PanelScreen
 {
 public:
-    ControlScreen();
-    void on_main_loop();
+    LaserScreen();
     void on_refresh();
     void on_enter();
+    void on_exit();
     void display_menu_line(uint16_t line);
-    void set_jog_increment(float i) { jog_increment = i;}
-    int idle_timeout_secs() { return 120; }
+    void clicked_menu_entry(uint16_t line);
+    int idle_timeout_secs() { return 60; }
 
 private:
-    void clicked_menu_entry(uint16_t line);
-    void display_axis_line(char axis);
-    void enter_axis_control(char axis);
-    void enter_menu_control();
-    void set_current_pos(char axis, float p);
-    char control_mode;
-    char controlled_axis;
-    bool pos_changed;
-    float pos[3];
-    float jog_increment;
+    void testFireScreen();
+    void setPowerScreen();
 };
-
-
-
-
-
-
-#endif
