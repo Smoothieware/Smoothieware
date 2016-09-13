@@ -60,7 +60,7 @@ void ModifyValuesScreen::on_refresh()
         if ( THEPANEL->click() ) {
             // done changing value
             this->new_value = THEPANEL->get_control_value();
-            execute_function= selected_item; // this causes on_main_loop to change the value
+            if(!this->instant) execute_function= selected_item; // this causes on_main_loop to change the value
             this->control_mode = MENU_CONTROL_MODE;
             THEPANEL->enter_menu_mode(true);
 

@@ -48,7 +48,7 @@ WatchScreen::~WatchScreen()
 void WatchScreen::on_enter()
 {
     THEPANEL->lcd->clear();
-    THEPANEL->setup_menu(7);
+    THEPANEL->setup_menu(8);
     get_current_status();
     get_wpos();
     get_sd_play_info();
@@ -187,7 +187,8 @@ void WatchScreen::display_menu_line(uint16_t line)
             THEROBOT->from_millimeters(THEKERNEL->conveyor->get_current_feedrate()*60.0F));
             break;
         case 5: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
-        case 6: THEPANEL->lcd->printf("%19s", this->get_status()); break;
+        case 6: if(THEPANEL->has_laser()) THEPANEL->lcd->printf("Laser power %1.4f", THEROBOT->get_s_value()); break;
+        case 7: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
 }
 

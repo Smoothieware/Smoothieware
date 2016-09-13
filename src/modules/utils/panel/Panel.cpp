@@ -64,7 +64,7 @@
 #define hotend_temp_checksum CHECKSUM("hotend_temperature")
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
 #define panel_display_message_checksum CHECKSUM("display_message")
-#define laser_module_enable_checksum CHECKSUM("laser_module_enable")
+#define laser_checksum CHECKSUM("laser")
 
 Panel* Panel::instance= nullptr;
 
@@ -179,9 +179,6 @@ void Panel::on_module_loaded()
 //    this->click_button.set_longpress_delay(longpress_delay);
 //    this->back_button.set_longpress_delay(longpress_delay);
 //    this->pause_button.set_longpress_delay(longpress_delay);
-
-    // see if laser module is enabled
-    laser_enabled= THEKERNEL->config->value(laser_module_enable_checksum)->by_default(false)->as_bool();
 
     THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
     if(lcd->encoderReturnsDelta()) {
@@ -352,6 +349,11 @@ void Panel::on_idle(void *argument)
         // Default top screen
         this->top_screen= new MainMenuScreen();
         this->custom_screen->set_parent(this->top_screen);
+
+        // see if laser module is enabled
+        void *dummy;
+        this->laser_enabled= PublicData::get_value(laser_checksum, (void *)&dummy);
+
         this->start_up = false;
         return;
     }
