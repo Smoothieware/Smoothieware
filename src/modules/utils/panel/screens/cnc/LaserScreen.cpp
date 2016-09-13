@@ -82,7 +82,7 @@ void LaserScreen::testFireScreen()
     dms->addMenuItem("Half", "fire 50");
     dms->addMenuItem("3/4",  "fire 75");
     dms->addMenuItem("Full", "fire 100");
-    dms->addMenuItem("Keep On", [dms]() { dms->set_timeout(600); dms->on_exit_action(""); });
+    dms->addMenuItem("Keep On", [dms]() { dms->set_timeout(600); dms->on_exit_action(""); }); // will leave laser on when menu exits
 
     THEPANEL->enter_screen(dms);
 }
