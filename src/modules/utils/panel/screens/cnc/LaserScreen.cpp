@@ -91,9 +91,8 @@ void LaserScreen::setPowerScreen()
     mvs->set_parent(this->parent); // because this will have been deleted when it exits
 
     #ifndef NO_TOOLS_LASER
-    Laser *plaser;
-    if(PublicData::get_value(laser_checksum, (void *)&plaser) || plaser == nullptr) {
-
+    Laser *plaser= nullptr;
+    if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
         mvs->addMenuItem("Power %",
             [plaser]() -> float { return plaser->get_scale(); },
             [plaser](float v) { plaser->set_scale(v); },

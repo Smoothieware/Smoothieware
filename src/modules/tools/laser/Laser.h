@@ -30,6 +30,7 @@ class Laser : public Module{
         void set_scale(float s) { scale= s/100; }
         float get_scale() const { return scale*100; }
         bool set_laser_power(float p);
+        float get_current_power() const;
 
     private:
         uint32_t set_proportional_power(uint32_t dummy);

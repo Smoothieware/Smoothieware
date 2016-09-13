@@ -265,3 +265,8 @@ void Laser::on_halt(void *argument)
         manual_fire= false;
     }
 }
+
+float Laser::get_current_power() const
+{
+    return pwm_pin->read() * 100;
+}
