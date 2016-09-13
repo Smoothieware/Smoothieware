@@ -27,8 +27,7 @@ using namespace std;
 #define laser_checksum CHECKSUM("laser")
 
 LaserScreen::LaserScreen()
-{
-}
+{}
 
 void LaserScreen::on_enter()
 {
@@ -76,12 +75,15 @@ void LaserScreen::testFireScreen()
     dms->set_parent(this->parent); // because this will have been deleted when it exits
     dms->set_timeout(10); // 10 seconds and it will turn off
     dms->on_exit_action("fire off");
+
     dms->addMenuItem("Off", "fire off");
     dms->addMenuItem("Low", "fire 10");
     dms->addMenuItem("1/4", "fire 25");
     dms->addMenuItem("Half", "fire 50");
     dms->addMenuItem("3/4",  "fire 75");
     dms->addMenuItem("Full", "fire 100");
+    dms->addMenuItem("Keep On", [dms]() { dms->set_timeout(600); dms->on_exit_action(""); });
+
     THEPANEL->enter_screen(dms);
 }
 

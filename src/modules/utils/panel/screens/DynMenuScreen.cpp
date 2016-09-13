@@ -115,7 +115,12 @@ void DynMenuScreen::addMenuItem(const char *name, const char *gcode)
 
 void DynMenuScreen::on_exit_action(const char *cmd)
 {
-    on_exit_cmd= strdup(cmd);
+    if(cmd == nullptr || strlen(cmd) == 0) {
+        if(on_exit_cmd != nullptr) free(on_exit_cmd);
+        on_exit_cmd= nullptr;
+    }else{
+        on_exit_cmd= strdup(cmd);
+    }
 }
 
 void DynMenuScreen::on_exit_action(std::function<void()> fnc)
