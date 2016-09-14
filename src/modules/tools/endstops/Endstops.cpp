@@ -680,6 +680,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // Here's where we would have been if the endstops were perfectly trimmed
         // NOTE on a rotary delta home_offset is actuator position in degrees when homed and
         // home_offset is the theta offset for each actuator, so M206 is used to set theta offset for each actuator in degrees
+        // FIXME not sure this will work with compensation transforms on.
         float ideal_position[3] = {
             this->homing_position[X_AXIS] + this->home_offset[X_AXIS],
             this->homing_position[Y_AXIS] + this->home_offset[Y_AXIS],

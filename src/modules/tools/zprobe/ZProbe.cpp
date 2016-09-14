@@ -139,7 +139,8 @@ uint32_t ZProbe::read_probe(uint32_t dummy)
 {
     if(!probing || probe_detected) return 0;
 
-    if(STEPPER[Z_AXIS]->is_moving()) {
+    // we check all axis as it maybe a G38.2 X10 for instance, not just a probe in Z
+    if(STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving() || STEPPER[Z_AXIS]->is_moving()) {
         // if it is moving then we check the probe, and debounce it
         if(this->pin.get()) {
             if(debounce < debounce_ms) {
@@ -273,12 +274,8 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         if( gcode->g == 30 ) { // simple Z probe
-            // first wait for an empty queue i.e. no moves left
+            // first wait for all moves to finish
             THEKERNEL->conveyor->wait_for_idle();
-
-            // turn off any compensation transform
-            auto savect= THEROBOT->compensationTransform;
-            THEROBOT->compensationTransform= nullptr;
 
             bool probe_result;
             bool reverse= (gcode->has_letter('R') && gcode->get_value('R') != 0); // specify to probe in reverse direction
@@ -315,9 +312,6 @@ void ZProbe::on_gcode_received(void *argument)
                     THEROBOT->actuators[Z_AXIS]->get_current_position(),
                     0));
             }
-
-            // restore compensationTransform
-            THEROBOT->compensationTransform= savect;
 
         } else {
             if(!gcode->has_letter('P')) {
@@ -363,12 +357,8 @@ void ZProbe::on_gcode_received(void *argument)
             return;
         }
 
-        // first wait for an empty queue i.e. no moves left
+        // first wait for all moves to finish
         THEKERNEL->conveyor->wait_for_idle();
-
-        // turn off any compensation transform
-        auto savect= THEROBOT->compensationTransform;
-        THEROBOT->compensationTransform= nullptr;
 
         if(gcode->has_letter('X')) {
             // probe in the X axis
@@ -385,9 +375,6 @@ void ZProbe::on_gcode_received(void *argument)
         }else{
             gcode->stream->printf("error:at least one of X Y or Z must be specified\n");
         }
-
-        // restore compensationTransform
-        THEROBOT->compensationTransform= savect;
 
         return;
 
@@ -454,18 +441,11 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
     probing= false;
     THEROBOT->disable_segmentation= false;
 
+    // if the probe stopped the move we need to correct the last_milestone as it did not reach where it thought
+    // this also sets last_milestone to the machine coordinates it stopped at
+    THEROBOT->reset_position_from_current_actuator_position();
     float pos[3];
-    {
-        // get the current position
-        ActuatorCoordinates current_position{
-            THEROBOT->actuators[X_AXIS]->get_current_position(),
-            THEROBOT->actuators[Y_AXIS]->get_current_position(),
-            THEROBOT->actuators[Z_AXIS]->get_current_position()
-        };
-
-        // get machine position from the actuator position using FK
-        THEROBOT->arm_solution->actuator_to_cartesian(current_position, pos);
-    }
+    THEROBOT->get_axis_position(pos, 3);
 
     uint8_t probeok= this->probe_detected ? 1 : 0;
 
@@ -473,14 +453,10 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok);
     THEROBOT->set_last_probe_position(std::make_tuple(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok));
 
-    if(!probeok && gcode->subcode == 2) {
+    if(probeok == 0 && gcode->subcode == 2) {
         // issue error if probe was not triggered and subcode == 2
         gcode->stream->printf("ALARM:Probe fail\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
-
-    }else if(probeok){
-        // if the probe stopped the move we need to correct the last_milestone as it did not reach where it thought
-        THEROBOT->reset_position_from_current_actuator_position();
     }
 }
 

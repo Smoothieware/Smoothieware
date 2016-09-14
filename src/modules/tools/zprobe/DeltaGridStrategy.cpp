@@ -404,7 +404,9 @@ void DeltaGridStrategy::setAdjustFunction(bool on)
 {
     if(on) {
         // set the compensationTransform in robot
-        THEROBOT->compensationTransform = [this](float target[3]) { doCompensation(target); };
+        using std::placeholders::_1;
+        using std::placeholders::_2;
+        THEROBOT->compensationTransform = std::bind(&DeltaGridStrategy::doCompensation, this, _1, _2); // [this](float *target, bool inverse) { doCompensation(target, inverse); };
     } else {
         // clear it
         THEROBOT->compensationTransform = nullptr;
@@ -535,7 +537,7 @@ void DeltaGridStrategy::extrapolate_unprobed_bed_level()
     }
 }
 
-void DeltaGridStrategy::doCompensation(float target[3])
+void DeltaGridStrategy::doCompensation(float *target, bool inverse)
 {
     // Adjust print surface height by linear interpolation over the bed_level array.
     int half = (grid_size - 1) / 2;
@@ -553,7 +555,10 @@ void DeltaGridStrategy::doCompensation(float target[3])
     float right = (1 - ratio_y) * z3 + ratio_y * z4;
     float offset = (1 - ratio_x) * left + ratio_x * right;
 
-    target[Z_AXIS] += offset;
+    if(inverse)
+        target[Z_AXIS] -= offset;
+    else
+        target[Z_AXIS] += offset;
 
 
     /*

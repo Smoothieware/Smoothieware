@@ -313,9 +313,10 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
         // get machine position from the actuator position using FK
         float mpos[3];
         arm_solution->actuator_to_cartesian(current_position, mpos);
+        // current_position/mpos includes the compensation transform so we need to get the inverse to get actual position
+        if(compensationTransform) compensationTransform(mpos, true); // get inverse compensation transform
 
         if(subcode == 1) { // M114.1 print realtime WCS
-            // FIXME this currently includes the compensation transform which is incorrect so will be slightly off if it is in effect (but by very little)
             wcs_t pos= mcs2wcs(mpos);
             n = snprintf(buf, bufsize, "WPOS: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
@@ -853,15 +854,20 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 }
 
 // reset the machine position for all axis. Used for homing.
-// During homing compensation is turned off
-// once homed and reset_axis called compensation is used for the move to origin and back off home if enabled,
-// so in those cases the final position is compensated.
+// after homing we need to set the actuator position at the position they would be at for the compensated XYZ
+// So we need to apply the compensation transform to the last_milestone we are given to get the compensated
+// last_machine_position which we then convert to actuator position.
+// this will make the results from M114 and ? consistent after homing.
 void Robot::reset_axis_position(float x, float y, float z)
 {
     // these are set to the same as compensation was not used to get to the current position
     last_machine_position[X_AXIS]= last_milestone[X_AXIS] = x;
     last_machine_position[Y_AXIS]= last_milestone[Y_AXIS] = y;
     last_machine_position[Z_AXIS]= last_milestone[Z_AXIS] = z;
+
+    if(compensationTransform) {
+        compensationTransform(last_machine_position, false);
+    }
 
     // now set the actuator positions to match
     ActuatorCoordinates actuator_pos;
@@ -906,8 +912,10 @@ void Robot::reset_position_from_current_actuator_position()
 
     // discover machine position from where actuators actually are
     arm_solution->actuator_to_cartesian(actuator_pos, last_machine_position);
-    // FIXME problem is this includes any compensation transform, and without an inverse compensation we cannot get a correct last_milestone
     memcpy(last_milestone, last_machine_position, sizeof last_milestone);
+
+    // last_machine_position includes the compensation transform so we need to get the inverse to get actual last_milestone
+    if(compensationTransform) compensationTransform(last_milestone, true); // get inverse compensation transform
 
     // now reset actuator::last_milestone, NOTE this may lose a little precision as FK is not always entirely accurate.
     // NOTE This is required to sync the machine position with the actuator position, we do a somewhat redundant cartesian_to_actuator() call
@@ -932,7 +940,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // check function pointer and call if set to transform the target to compensate for bed
     if(compensationTransform) {
         // some compensation strategies can transform XYZ, some just change Z
-        compensationTransform(transformed_target);
+        compensationTransform(transformed_target, false);
     }
 
     bool move= false;
