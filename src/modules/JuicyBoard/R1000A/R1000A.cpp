@@ -1,6 +1,6 @@
 #include "R1000A.h"
-#include <string>
-using std::string;
+//#include <string>
+//using std::string;
 
 #include "StreamOutputPool.h"
 
@@ -18,15 +18,17 @@ using std::string;
 // define configuration checksums here
 
 
-R1000A::R1000A()
-{
+R1000A::R1000A(){
     // Default Constructor
     this->i2c = new mbed::I2C(P0_27, P0_28);    // define master i2c comm class
     this->i2c->frequency(100000);               // set I2C bus freq in Hz
 }
 
-void R1000A::on_module_loaded()
-{
+R1000A::~R1000A(){
+    // Destructor
+}
+
+void R1000A::on_module_loaded(){
     // example of config checks on class loading
     // see which chip to use
 //    int chip_checksum = get_checksum(THEKERNEL->config->value(digipotchip_checksum)->by_default("mcp4451")->as_string());
@@ -71,13 +73,11 @@ void R1000A::on_module_loaded()
 
 }
 
-void R1000A::on_gcode_received(void *)
-{
+void R1000A::on_gcode_received(void *){
     // do nothing
 }
 
-void R1000A::ScanI2CBus()
-{
+void R1000A::ScanI2CBus(){
     // Scan addresses 0x10 through 0x1F
     // Address range is hardcoded to match R1000A platform
     // To identify which slot matches which I2C address use the following formula
@@ -88,8 +88,7 @@ void R1000A::ScanI2CBus()
     char i;             // 8-bit for loop variable
     char i2caddr;       // current I2C address
     
-    for (i=1; i<=16; i++)
-    {
+    for (i=1; i<=16; i++){
         i2caddr = 0x10 + i - 1;
         // check for slave ack
         if (I2C_ReadREG(i2caddr, 0x01, i2cbuf, 1) == 0){
@@ -111,48 +110,43 @@ void R1000A::ScanI2CBus()
     } 
 }
 
-void R1000A::ReportI2CID()
-{
+void R1000A::ReportI2CID(){
     char i;                     // 8-bit for loop variable
    
     for (i=1; i<=16; i++){
         if (SlotDevID[i-1] == -1){
-            THEKERNEL->streams->printf("Slot %d is not populated with a smart module\r\n", i);
+            THEKERNEL->streams->printf("Slot %d NO CARD\r\n", i);
         }
         else if (SlotDevID[i-1] == -2){
-            THEKERNEL->streams->printf("Detected a device on slot %d that's not compatible JuicyBoard!\r\n", i);
+            THEKERNEL->streams->printf("Slot %d NOT JuicyBoard COMPATIBLE!\r\n", i);
         }
         else{
-            THEKERNEL->streams->printf("Slot %d is populated with module #%d, FW ver %d\r\n", i, SlotDevID[i-1], SlotDevFW[i-1]);
+            THEKERNEL->streams->printf("Slot %d MOD #%d, FW %d\r\n", i, SlotDevID[i-1], SlotDevFW[i-1]);
         }
     }
 }
 
-int R1000A::I2C_ReadREG(char I2CAddr, char REGAddr, char * data, int length)
-{
+int R1000A::I2C_ReadREG(char I2CAddr, char REGAddr, char * data, int length){
     // perform burst register read
     int i;      // for loop variable
     // set the register to access
     this->i2c->start();
-    if (this->i2c->write(I2CAddr) != 0) // check for slave ack
-    {
+    if (this->i2c->write(I2CAddr) != 0){		// check for slave ack
         // slave I2C is not acknowledging, exit function
         this->i2c->stop();
         return -1;
     }
-    this->i2c->write(REGAddr);         // register address
+    this->i2c->write(REGAddr);                  // register address
     this->i2c->stop();
 
     // read part
     this->i2c->start();
-    this->i2c->write(I2CAddr);         // slave I2C address
-    for (i=0; i<length; i++)
-    {
+    this->i2c->write(I2CAddr);                  // slave I2C address
+    for (i=0; i<length; i++){                   // loop over every byte
         data[i] = this->i2c->read(1);        
     }
-    this->i2c->read(0);                // extra dummy read for mbed I2C to stop properly
+    this->i2c->read(0);                         // extra dummy read for mbed I2C to stop properly
     this->i2c->stop();
-
     return 0;
 }
 
@@ -163,16 +157,14 @@ int R1000A::I2C_WriteREG(char I2CAddr, char REGAddr, char * data, int length)
     
     // set the register to access
     this->i2c->start();
-    if (this->i2c->write(I2CAddr) != 0) // check for slave ack
-    {
+    if (this->i2c->write(I2CAddr) != 0){        // check for slave ack
         // slave I2C is not acknowledging, exit function
         this->i2c->stop();
         return -1;
     }
-    this->i2c->write(REGAddr);         // register address
-    for (i=0; i<length; i++)
-    {
-        this->i2c->write(data[i]);      // write data one by one
+    this->i2c->write(REGAddr);                  // register address
+    for (i=0; i<length; i++){
+        this->i2c->write(data[i]);              // write data one by one
     }
     this->i2c->stop();
     return 0;

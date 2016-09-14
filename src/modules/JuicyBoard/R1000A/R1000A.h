@@ -24,13 +24,14 @@ public:
     
     // Report populated slot ID's
     void ReportI2CID();
-    
-    // I2C operations
+
+    // reports temperature of card on slot
+    int getTemp(int Slot);
+
+protected:
+    // low level I2C operations
     int I2C_ReadREG(char, char, char *, int);          // burst read
     int I2C_WriteREG(char, char, char *, int);         // burst write
-    
-    // other operations
-    
     
 private:
     // Member variables
