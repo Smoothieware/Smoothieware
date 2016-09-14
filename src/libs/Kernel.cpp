@@ -193,6 +193,8 @@ std::string Kernel::get_query_string()
         // get machine position from the actuator position using FK
         float mpos[3];
         robot->arm_solution->actuator_to_cartesian(current_position, mpos);
+        // current_position/mpos includes the compensation transform so we need to get the inverse to get actual position
+        if(robot->compensationTransform) robot->compensationTransform(mpos, true); // get inverse compensation transform
 
         char buf[128];
         // machine position
