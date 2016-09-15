@@ -44,9 +44,15 @@ void ModifyValuesScreen::on_exit()
 
 void ModifyValuesScreen::on_enter()
 {
-    THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(menu_items.size() + 1);
-    this->refresh_menu();
+    if(menu_items.size() == 1) {
+        // special case for single entry menus, go straight to control mode
+        clicked_menu_entry(1);
+
+    }else{
+        THEPANEL->enter_menu_mode();
+        THEPANEL->setup_menu(menu_items.size() + 1);
+        this->refresh_menu();
+    }
 }
 
 void ModifyValuesScreen::on_refresh()
@@ -61,8 +67,13 @@ void ModifyValuesScreen::on_refresh()
             // done changing value
             this->new_value = THEPANEL->get_control_value();
             if(!this->instant) execute_function= selected_item; // this causes on_main_loop to change the value
-            this->control_mode = MENU_CONTROL_MODE;
-            THEPANEL->enter_menu_mode(true);
+            if(menu_items.size() == 1) {
+                THEPANEL->enter_screen(this->parent);
+
+            }else{
+                this->control_mode = MENU_CONTROL_MODE;
+                THEPANEL->enter_menu_mode(true);
+            }
 
         } else if (THEPANEL->control_value_change()) {
             float value = THEPANEL->get_control_value();
