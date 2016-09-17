@@ -30,7 +30,6 @@
 // strategies we know about
 #include "DeltaCalibrationStrategy.h"
 #include "ThreePointStrategy.h"
-//#include "ZGridStrategy.h"
 #include "DeltaGridStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
@@ -99,11 +98,6 @@ void ZProbe::config_load()
                     this->strategies.push_back(new ThreePointStrategy(this));
                     found= true;
                     break;
-
-                // case ZGrid_leveling_checksum:
-                //      this->strategies.push_back(new ZGridStrategy(this));
-                //      found= true;
-                //      break;
 
                 case delta_grid_leveling_strategy_checksum:
                     this->strategies.push_back(new DeltaGridStrategy(this));

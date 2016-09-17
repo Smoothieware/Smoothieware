@@ -744,17 +744,17 @@ void Endstops::process_home_command(Gcode* gcode)
 
 void Endstops::set_homing_offset(Gcode *gcode)
 {
-    // Similar to M206 and G92 but sets Homing offsets based on current position
+    // Similar to M206 but sets Homing offsets based on current position
     float cartesian[3];
-    THEROBOT->get_axis_position(cartesian);    // get actual position from robot
+    THEROBOT->get_axis_position(cartesian);    // get machine position from robot
     if (gcode->has_letter('X')) {
-        home_offset[0] -= (cartesian[X_AXIS] - gcode->get_value('X'));
+        home_offset[0]= -(cartesian[X_AXIS] - gcode->get_value('X'));
     }
     if (gcode->has_letter('Y')) {
-        home_offset[1] -= (cartesian[Y_AXIS] - gcode->get_value('Y'));
+        home_offset[1]= -(cartesian[Y_AXIS] - gcode->get_value('Y'));
     }
     if (gcode->has_letter('Z')) {
-        home_offset[2] -= (cartesian[Z_AXIS] - gcode->get_value('Z'));
+        home_offset[2]= -(cartesian[Z_AXIS] - gcode->get_value('Z'));
     }
 
     gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f will take effect next home\n", home_offset[0], home_offset[1], home_offset[2]);
