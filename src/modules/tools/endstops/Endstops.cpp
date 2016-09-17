@@ -749,18 +749,15 @@ void Endstops::set_homing_offset(Gcode *gcode)
     THEROBOT->get_axis_position(cartesian);    // get actual position from robot
     if (gcode->has_letter('X')) {
         home_offset[0] -= (cartesian[X_AXIS] - gcode->get_value('X'));
-        THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS);
     }
     if (gcode->has_letter('Y')) {
         home_offset[1] -= (cartesian[Y_AXIS] - gcode->get_value('Y'));
-        THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
     }
     if (gcode->has_letter('Z')) {
         home_offset[2] -= (cartesian[Z_AXIS] - gcode->get_value('Z'));
-        THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
     }
 
-    gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+    gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f will take effect next home\n", home_offset[0], home_offset[1], home_offset[2]);
 }
 
 // Start homing sequences by response to GCode commands
@@ -789,7 +786,7 @@ void Endstops::on_gcode_received(void *argument)
                 if (gcode->has_letter('X')) home_offset[0] = gcode->get_value('X');
                 if (gcode->has_letter('Y')) home_offset[1] = gcode->get_value('Y');
                 if (gcode->has_letter('Z')) home_offset[2] = gcode->get_value('Z');
-                gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f\n", home_offset[0], home_offset[1], home_offset[2]);
+                gcode->stream->printf("X %5.3f Y %5.3f Z %5.3f will take effect next home\n", home_offset[0], home_offset[1], home_offset[2]);
                 break;
 
             case 306: // set homing offset based on current position

@@ -119,7 +119,7 @@ void ZProbe::config_load()
     this->is_rdelta = THEKERNEL->config->value(rdelta_homing_checksum)->by_default(false)->as_bool();
 
     // default for backwards compatibility add DeltaCalibrationStrategy if a delta
-    // will be deprecated
+    // may be deprecated
     if(this->strategies.empty()) {
         if(this->is_delta) {
             this->strategies.push_back(new DeltaCalibrationStrategy(this));

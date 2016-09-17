@@ -289,16 +289,19 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
     // it returns the realtime position based on the current step position of the actuators.
     // this does require a FK to get a machine position from the actuator position
     // and then invert all the transforms to get a workspace position from machine position
-    // M114 just does it the old way uses last_milestone and does inversse transforms to get the requested position
+    // M114 just does it the old way uses last_milestone and does inverse transforms to get the requested position
     int n = 0;
     if(subcode == 0) { // M114 print WCS
         wcs_t pos= mcs2wcs(last_milestone);
         n = snprintf(buf, bufsize, "C: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
-    } else if(subcode == 4) { // M114.4 print last milestone (which should be the same as machine position if axis are not moving and no level compensation)
+    } else if(subcode == 4) {
+        // M114.4 print last milestone
         n = snprintf(buf, bufsize, "LMS: X:%1.4f Y:%1.4f Z:%1.4f", last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 
-    } else if(subcode == 5) { // M114.5 print last machine position (which should be the same as M114.1 if axis are not moving and no level compensation)
+    } else if(subcode == 5) {
+        // M114.5 print last machine position (which should be the same as M114.1 if axis are not moving and no level compensation)
+        // will differ from LMS by the compensation at the current position otherwise
         n = snprintf(buf, bufsize, "LMP: X:%1.4f Y:%1.4f Z:%1.4f", last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
 
     } else {
