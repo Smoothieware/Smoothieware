@@ -21,6 +21,8 @@
 #include "FilamentDetector.h"
 #include "MotorDriverControl.h"
 
+#include "modules/JuicyBoard/R1000A/R1000A.h"
+
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/configurator/Configurator.h"
@@ -131,7 +133,9 @@ void init() {
     // Create and add main modules
     kernel->add_module( new(AHB0) Player() );
 
-    kernel->add_module( new(AHB0) CurrentControl() );
+//    kernel->add_module( new(AHB0) CurrentControl() );
+    kernel->add_module( new(AHB0) R1000A() );
+
     kernel->add_module( new(AHB0) KillButton() );
     kernel->add_module( new(AHB0) PlayLed() );
 

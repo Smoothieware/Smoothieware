@@ -84,6 +84,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"thermistors", SimpleShell::print_thermistors_command},
     {"md5sum",   SimpleShell::md5sum_command},
     {"test",     SimpleShell::test_command},
+    {"mod",      SimpleShell::mod_command},                          // extended module commands for JuicyBoard
 
     // unknown command
     {NULL, NULL}
@@ -1132,3 +1133,7 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("md5sum file - prints md5 sum of the given file\r\n");
 }
 
+void SimpleShell::mod_command( string parameters, StreamOutput *stream )
+{
+    // do nothing, juicyboard classes will handle
+}

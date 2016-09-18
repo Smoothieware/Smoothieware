@@ -60,6 +60,8 @@ private:
 
     static void test_command( string parameters, StreamOutput *stream);
 
+    static void mod_command( string parameters, StreamOutput *stream);              // extended module commands for JuicyBoard
+
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {
         const char *command;

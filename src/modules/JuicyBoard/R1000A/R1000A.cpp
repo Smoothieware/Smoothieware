@@ -1,8 +1,7 @@
 #include "R1000A.h"
-//#include <string>
-//using std::string;
 
 #include "StreamOutputPool.h"
+#include "Module.h"
 
 #include "CurrentControl.h"
 #include "libs/Kernel.h"
@@ -10,6 +9,8 @@
 #include "libs/utils.h"
 #include "ConfigValue.h"
 #include "libs/StreamOutput.h"
+#include "libs/SerialMessage.h"
+#include "libs/utils.h"
 
 #include "Gcode.h"
 #include "Config.h"
@@ -18,10 +19,17 @@
 // define configuration checksums here
 
 
+// command lookup table
+const R1000A::ptentry_t R1000A::commands_table[] = {
+    {"modtemp",       R1000A::modtemp},
+    // unknown command
+    {NULL, NULL}
+};
+
+
 R1000A::R1000A(){
     // Default Constructor
-    this->i2c = new mbed::I2C(P0_27, P0_28);    // define master i2c comm class
-    this->i2c->frequency(100000);               // set I2C bus freq in Hz
+    //this->i2c = new R1000A_I2C;
 }
 
 R1000A::~R1000A(){
@@ -29,6 +37,13 @@ R1000A::~R1000A(){
 }
 
 void R1000A::on_module_loaded(){
+
+    this->register_for_event(ON_GCODE_RECEIVED);        // Tell the kernel to call us whenever a gcode is received
+    this->register_for_event(ON_CONSOLE_LINE_RECEIVED); // register on console line received
+    this->ScanI2CBus();                                 // perform initial I2C bus scan
+
+    // FIXME implement MCU reset functions, add delays
+
     // example of config checks on class loading
     // see which chip to use
 //    int chip_checksum = get_checksum(THEKERNEL->config->value(digipotchip_checksum)->by_default("mcp4451")->as_string());
@@ -73,9 +88,42 @@ void R1000A::on_module_loaded(){
 
 }
 
-void R1000A::on_gcode_received(void *){
-    // do nothing
+void R1000A::on_gcode_received(void* argument){
+    Gcode* gcode = static_cast<Gcode*>(argument);     // Casting of the argument ( a Gcode object )
+    THEKERNEL->streams->printf("R1000A: received line\r\n");
+    if(gcode->has_m){
+        unsigned int code =gcode->m;                  // store M command
+        switch (code){
+            case (1001):
+                // M1000 command
+                // just print out the command and arguments
+                THEKERNEL->streams->printf("get_command  : %s\r\n",gcode->get_command());
+                THEKERNEL->streams->printf("get_num_args : %d\r\n", gcode->get_num_args());
+                THEKERNEL->streams->printf("g            : %d\r\n", gcode->g);
+                THEKERNEL->streams->printf("m            : %d\r\n", gcode->m);
+                THEKERNEL->streams->printf("is_error     : %d\r\n", gcode->is_error);
+
+                // scan all I2C devices and report
+                this->ScanI2CBus();
+                this->ReportI2CID();
+                break;
+            default:
+                break;
+        }
+    }
 }
+
+void R1000A::on_console_line_received(void* argument){
+    SerialMessage new_message = *static_cast<SerialMessage *>(argument);
+    string possible_command = new_message.message;
+    string cmd = shift_parameter(possible_command);
+
+    THEKERNEL->streams->printf("R1000: %s\r\n", possible_command.c_str());
+
+    // static commands
+    parse_command(cmd.c_str(), possible_command, new_message.stream);                   // parsing command against command table
+}
+
 
 void R1000A::ScanI2CBus(){
     // Scan addresses 0x10 through 0x1F
@@ -85,87 +133,103 @@ void R1000A::ScanI2CBus(){
     // so Slot[1] has an I2C address of 0x10, Slot[2] is 0x11 ... Slot[16] is 0x1F
     
     char i2cbuf[3];     // create a 2 byte buffer for I2C
-    char i;             // 8-bit for loop variable
+    int i;              // for loop variable
     char i2caddr;       // current I2C address
     
-    for (i=1; i<=16; i++){
-        i2caddr = 0x10 + i - 1;
+    for (i=0; i<=15; i++){
+        i2caddr = (R1000_I2C_BASE + i) << 1;      // shift 1 to left to get 8-bit address
         // check for slave ack
-        if (I2C_ReadREG(i2caddr, 0x01, i2cbuf, 1) == 0){
-            // continue reading from slave
-            if (i2cbuf[0] != 0x01){
-                // detected a device that doesn't belong to R1000A platform
-                SlotDevID[i-1] = -2;
-            }
-            else{
-                // detected a compatible R1000A device
-                I2C_ReadREG(i2caddr, 0x02, i2cbuf, 2);
-                SlotDevID[i-1] = i2cbuf[0];
-                SlotDevFW[i-1] = i2cbuf[1];
-            }
+        if (i2c.I2C_ReadREG(i2caddr, 0x01, i2cbuf, 1) == 0){
+//            // continue reading from slave
+//            if (i2cbuf[0] != 0x01){
+//                // detected a device that doesn't belong to R1000A platform
+//                SlotDevID[i-1] = -2;
+//            }
+//            else{
+//                // detected a compatible R1000A device
+//                I2C_ReadREG(i2caddr, 0x02, i2cbuf, 2);      // get device ID
+//                SlotDevID[i-1] = i2cbuf[0];
+//                I2C_ReadREG(i2caddr, 0x03, i2cbuf, 2);      // get firmware version
+//                SlotDevFW[i-1] = i2cbuf[0];
+//            }
+            SlotPlatID[i] = (int)i2cbuf[0];
+            i2c.I2C_ReadREG(i2caddr, 0x02, i2cbuf, 2);      // get device ID
+            SlotDevID[i] = (int)i2cbuf[0];
+            i2c.I2C_ReadREG(i2caddr, 0x03, i2cbuf, 2);      // get firmware version
+            SlotDevFW[i] = (int)i2cbuf[0];
+
         }
         else{
-            SlotDevID[i-1] = -1;
+            SlotPlatID[i] = -1;
+            SlotDevID[i] = -1;
+            SlotDevFW[i] = -1;
         }
     } 
 }
 
 void R1000A::ReportI2CID(){
-    char i;                     // 8-bit for loop variable
+    int i;                      // for loop variable
    
-    for (i=1; i<=16; i++){
-        if (SlotDevID[i-1] == -1){
-            THEKERNEL->streams->printf("Slot %d NO CARD\r\n", i);
+    for (i=0; i<=15; i++){
+        if (SlotDevID[i] == -1){
+            THEKERNEL->streams->printf("Slot %d NO CARD, ID: %d\r\n", i, SlotDevID[i]);
         }
-        else if (SlotDevID[i-1] == -2){
-            THEKERNEL->streams->printf("Slot %d NOT JuicyBoard COMPATIBLE!\r\n", i);
+        else if (SlotDevID[i] == -2){
+            THEKERNEL->streams->printf("Slot %d NOT JuicyBoard COMPATIBLE! ID: %d\r\n", i, SlotDevID[i]);
         }
         else{
-            THEKERNEL->streams->printf("Slot %d MOD #%d, FW %d\r\n", i, SlotDevID[i-1], SlotDevFW[i-1]);
+            THEKERNEL->streams->printf("Slot %d MOD #0x%x, FW 0x%x, PLATID 0x%x\r\n", i, SlotDevID[i], SlotDevFW[i], SlotPlatID[i]);
         }
     }
 }
 
-int R1000A::I2C_ReadREG(char I2CAddr, char REGAddr, char * data, int length){
-    // perform burst register read
-    int i;      // for loop variable
-    // set the register to access
-    this->i2c->start();
-    if (this->i2c->write(I2CAddr) != 0){		// check for slave ack
-        // slave I2C is not acknowledging, exit function
-        this->i2c->stop();
-        return -1;
-    }
-    this->i2c->write(REGAddr);                  // register address
-    this->i2c->stop();
-
-    // read part
-    this->i2c->start();
-    this->i2c->write(I2CAddr);                  // slave I2C address
-    for (i=0; i<length; i++){                   // loop over every byte
-        data[i] = this->i2c->read(1);        
-    }
-    this->i2c->read(0);                         // extra dummy read for mbed I2C to stop properly
-    this->i2c->stop();
-    return 0;
+int R1000A::getSlotDevID(int SlotNum) const{
+    // this function returns the slot ID
+    // Slot Number ranges from 1 to 16
+    return SlotDevID[SlotNum];
 }
 
-int R1000A::I2C_WriteREG(char I2CAddr, char REGAddr, char * data, int length)
+bool R1000A::parse_command(const char *cmd, string args, StreamOutput *stream)
 {
-    // perform burst register read
-    int i;      // for loop variable
-    
-    // set the register to access
-    this->i2c->start();
-    if (this->i2c->write(I2CAddr) != 0){        // check for slave ack
-        // slave I2C is not acknowledging, exit function
-        this->i2c->stop();
-        return -1;
+    for (const ptentry_t *p = commands_table; p->command != NULL; ++p) {
+        if (strncasecmp(cmd, p->command, strlen(p->command)) == 0) {
+            p->func(args, stream);
+            return true;
+        }
     }
-    this->i2c->write(REGAddr);                  // register address
-    for (i=0; i<length; i++){
-        this->i2c->write(data[i]);              // write data one by one
+
+    return false;
+}
+
+void R1000A::modtemp(string parameters, StreamOutput *stream ){
+    // execute getmodtemp command
+    // if there are no parameters
+    if (!parameters.empty()) {
+        // execute only if there are parameters
+        string s = shift_parameter( parameters );
+        long slotnum = std::strtol(s.c_str(), NULL, 10);
+        char i2caddr;
+
+        R1000A_I2C i2c;
+
+        if ((slotnum >=0) && (slotnum < 16)){
+            // execute only if a valid slot number range between 0 and 15
+            char i2cbuf[2];
+            i2caddr = (R1000_I2C_BASE + slotnum) << 1;             // evaluate I2C address
+            if (i2c.I2C_ReadREG(i2caddr, REG_TEMP, i2cbuf, 1) == 0){
+                // execute only if reading operation is successful
+                THEKERNEL->streams->printf("Slot %lu Temp : %d\r\n", slotnum, i2cbuf[0]);
+            }
+            else
+            {
+                // output an error message
+                THEKERNEL->streams->printf("Slot %lu did not ack!\r\n", slotnum);
+            }
+            i2c.~R1000A_I2C();              // destructor
+        }
+        else{
+            THEKERNEL->streams->printf("Invalid slot %lu\r\n", slotnum);
+        }
+
     }
-    this->i2c->stop();
-    return 0;
 }
