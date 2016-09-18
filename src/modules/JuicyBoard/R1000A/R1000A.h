@@ -25,9 +25,6 @@ class R1000A : public Module {
         // Smoothie main module loading function
         void on_module_loaded();
 
-        // Gcode  events
-        void on_gcode_received(void*);
-
         // console line received
         void on_console_line_received(void *);
 
@@ -39,10 +36,6 @@ class R1000A : public Module {
     
         // reports temperature of card on slot
         int getTemp(int Slot);
-
-        // low level I2C operations
-//        int I2C_ReadREG(char, char, char*, int);          // burst read
-//        int I2C_WriteREG(char, char, char*, int);         // burst write
 
         // Accessor functions
         int getSlotDevID(int) const;
@@ -57,16 +50,8 @@ class R1000A : public Module {
         int SlotDevID[16];              // module device ID
         int SlotDevFW[16];              // module firmware version
 
-        // private vars used for command parsing
-        typedef void (*PFUNC)(string parameters, StreamOutput *stream);
-        typedef struct {
-            const char *command;
-            const PFUNC func;
-        } const ptentry_t;
-        static const ptentry_t commands_table[];
-
-        // command functions
-        static void modtemp(string parameters, StreamOutput *stream );
+        // console commands
+        void getTemp(string);
 };
 
 #endif
