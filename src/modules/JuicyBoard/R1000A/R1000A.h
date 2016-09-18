@@ -51,9 +51,7 @@ class R1000A : public Module {
 
     private:
         // Member variables
-        //mbed::I2C* i2c;                 // i2c comm class
         R1000A_I2C i2c;
-
 
         int SlotPlatID[16];             // module platform ID
         int SlotDevID[16];              // module device ID

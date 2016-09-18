@@ -121,7 +121,17 @@ void R1000A::on_console_line_received(void* argument){
     THEKERNEL->streams->printf("R1000: %s\r\n", possible_command.c_str());
 
     // static commands
-    parse_command(cmd.c_str(), possible_command, new_message.stream);                   // parsing command against command table
+    if (strncasecmp(cmd.c_str(), "modscan", 7) == 0) {
+//    if (cmd == "modscan"){
+        // perforce I2C scan and report
+        ScanI2CBus();
+        ReportI2CID();
+    }
+    else{
+        // FIXME Eliminate all static functions, replace them with in class functions
+        parse_command(cmd.c_str(), possible_command, new_message.stream);                   // parsing command against static commands table
+    }
+
 }
 
 
@@ -141,17 +151,6 @@ void R1000A::ScanI2CBus(){
         // check for slave ack
         if (i2c.I2C_ReadREG(i2caddr, 0x01, i2cbuf, 1) == 0){
 //            // continue reading from slave
-//            if (i2cbuf[0] != 0x01){
-//                // detected a device that doesn't belong to R1000A platform
-//                SlotDevID[i-1] = -2;
-//            }
-//            else{
-//                // detected a compatible R1000A device
-//                I2C_ReadREG(i2caddr, 0x02, i2cbuf, 2);      // get device ID
-//                SlotDevID[i-1] = i2cbuf[0];
-//                I2C_ReadREG(i2caddr, 0x03, i2cbuf, 2);      // get firmware version
-//                SlotDevFW[i-1] = i2cbuf[0];
-//            }
             SlotPlatID[i] = (int)i2cbuf[0];
             i2c.I2C_ReadREG(i2caddr, 0x02, i2cbuf, 2);      // get device ID
             SlotDevID[i] = (int)i2cbuf[0];
