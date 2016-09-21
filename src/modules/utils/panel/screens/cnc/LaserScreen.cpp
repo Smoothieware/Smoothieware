@@ -15,6 +15,7 @@
 #include "DynMenuScreen.h"
 #include "PublicData.h"
 #include "checksumm.h"
+#include "Robot.h"
 
 #ifndef NO_TOOLS_LASER
 #include "Laser.h"
@@ -32,7 +33,7 @@ LaserScreen::LaserScreen()
 void LaserScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(3);
+    THEPANEL->setup_menu(4);
     this->refresh_menu();
 }
 
@@ -56,7 +57,8 @@ void LaserScreen::display_menu_line(uint16_t line)
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Back");  break;
         case 1: THEPANEL->lcd->printf("Set Power Scale"); break;
-        case 2: THEPANEL->lcd->printf("Test Fire");  break;
+        case 2: THEPANEL->lcd->printf("Set S value");  break;
+        case 3: THEPANEL->lcd->printf("Test Fire");  break;
     }
 }
 
@@ -64,8 +66,9 @@ void LaserScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); return;
-        case 1: setPowerScreen(); break;
-        case 2: testFireScreen(); break;
+        case 1: setPowerScreen(0); break;
+        case 2: setPowerScreen(1); break;
+        case 3: testFireScreen(); break;
     }
 }
 
@@ -87,24 +90,35 @@ void LaserScreen::testFireScreen()
     THEPANEL->enter_screen(dms);
 }
 
-void LaserScreen::setPowerScreen()
+void LaserScreen::setPowerScreen(int type)
 {
     auto mvs= new ModifyValuesScreen(true);  // self delete on exit
     mvs->set_parent(this->parent); // because this will have been deleted when it exits
 
-    #ifndef NO_TOOLS_LASER
-    Laser *plaser= nullptr;
-    if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
-        mvs->addMenuItem("Power %",
-            [plaser]() -> float { return plaser->get_scale(); },
-            [plaser](float v) { plaser->set_scale(v); },
-            1.0F,
-            0.0F,
-            200.0F,
-            true // instant
-            );
-    }
-    #endif
+    if(type == 0) {
+        #ifndef NO_TOOLS_LASER
+        Laser *plaser= nullptr;
+        if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
+            mvs->addMenuItem("Power %",
+                [plaser]() -> float { return plaser->get_scale(); },
+                [plaser](float v) { plaser->set_scale(v); },
+                1.0F,
+                0.0F,
+                200.0F,
+                true // instant
+                );
+        }
+        #endif
 
+    }else if(type == 1) {
+        mvs->addMenuItem("S value %",
+                []() -> float { return THEROBOT->get_s_value() * 100; },
+                [](float v) { THEROBOT->set_s_value(v/100); },
+                1.0F,
+                0.0F,
+                100.0F,
+                false // not instant
+                );
+    }
     THEPANEL->enter_screen(mvs);
 }

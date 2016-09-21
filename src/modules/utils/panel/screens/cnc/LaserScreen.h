@@ -22,5 +22,5 @@ public:
 
 private:
     void testFireScreen();
-    void setPowerScreen();
+    void setPowerScreen(int);
 };

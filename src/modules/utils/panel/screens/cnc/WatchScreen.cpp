@@ -201,8 +201,8 @@ void WatchScreen::display_menu_line(uint16_t line)
                     THEPANEL->lcd->printf("Laser S%1.4f/%1.4f", THEROBOT->get_s_value(), plaser->get_current_power());
                 }
                 #endif
-                break;
             }
+            break;
         case 7: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
 }
