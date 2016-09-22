@@ -26,6 +26,7 @@ ModifyValuesScreen::ModifyValuesScreen(bool delete_on_exit)
     this->delete_on_exit= delete_on_exit;
     this->execute_function = -1;
     this->control_mode = MENU_CONTROL_MODE;
+    this->exit_screen_in_main_loop= false;
 }
 
 ModifyValuesScreen::~ModifyValuesScreen()
@@ -68,7 +69,12 @@ void ModifyValuesScreen::on_refresh()
             this->new_value = THEPANEL->get_control_value();
             if(!this->instant) execute_function= selected_item; // this causes on_main_loop to change the value
             if(menu_items.size() == 1) {
-                THEPANEL->enter_screen(this->parent);
+                if(this->instant) {
+                    THEPANEL->enter_screen(this->parent);
+                }else{
+                    // if we exit here then on_main_loop never gets run so we flag it to exit after setting the value
+                    exit_screen_in_main_loop= true;
+                }
 
             }else{
                 this->control_mode = MENU_CONTROL_MODE;
@@ -148,6 +154,7 @@ void ModifyValuesScreen::on_main_loop()
     // execute the setter function for the specified menu item
     std::get<2>(menu_items[execute_function])(this->new_value);
     execute_function = -1;
+    if(exit_screen_in_main_loop) THEPANEL->enter_screen(this->parent);
 }
 
 void ModifyValuesScreen::addMenuItem(const MenuItemType& item)
