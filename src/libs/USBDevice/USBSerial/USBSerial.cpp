@@ -180,6 +180,13 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
     readEP(c, &size);
     iprintf("Read %ld bytes:\n\t", size);
     for (uint8_t i = 0; i < size; i++) {
+
+        // handle backspace and delete by deleting the last character in the buffer if there is one
+        if(c[i] == 0x08 || c[i] == 0x7F) {
+            if(!rxbuf.isEmpty()) rxbuf.pop();
+            continue;
+        }
+
         if(c[i] == 'X' - 'A' + 1) { // ^X
             THEKERNEL->set_feed_hold(false); // required to free stuff up
             halt_flag = true;
