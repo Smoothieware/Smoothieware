@@ -245,7 +245,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 
 void ThreePointStrategy::homeXY()
 {
-    Gcode gc("G28 X0 Y0", &(StreamOutput::NullStream));
+    Gcode gc(THEKERNEL->is_grbl_mode() ? "G28.2 X0 Y0": "G28 X0 Y0", &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 }
 
