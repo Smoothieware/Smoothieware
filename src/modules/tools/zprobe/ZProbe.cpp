@@ -221,10 +221,7 @@ bool ZProbe::run_probe_return(float& mm, float feedrate, float max_dist, bool re
         if(fr > this->fast_feedrate) fr = this->fast_feedrate; // unless that is greater than fast feedrate
     }
 
-    bool dir= ((mm < 0) != reverse_z); // xor
-    if(reverse) dir= !dir;
-
-    // absolute move to starting position
+    // absolute move back to saved starting position
     coordinated_move(save_pos[0], save_pos[1], save_pos[2], fr, false);
 
     return ok;
@@ -235,13 +232,6 @@ bool ZProbe::doProbeAt(float &mm, float x, float y)
     // move to xy
     coordinated_move(x, y, NAN, getFastFeedrate());
     return run_probe_return(mm, slow_feedrate);
-}
-
-float ZProbe::probeDistance(float x, float y)
-{
-    float s;
-    if(!doProbeAt(s, x, y)) return NAN;
-    return s;
 }
 
 void ZProbe::on_gcode_received(void *argument)

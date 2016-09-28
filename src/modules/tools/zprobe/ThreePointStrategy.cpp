@@ -290,10 +290,11 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     // probe the three points
     Vector3 v[3];
     for (int i = 0; i < 3; ++i) {
+        float z;
         std::tie(x, y) = probe_points[i];
         // offset moves by the probe XY offset
-        float z = zprobe->probeDistance(x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets));
-        if(isnan(z)) return false; // probe failed
+        if(!zprobe->doProbeAt(z, x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets))) return false;
+
         z= zprobe->getProbeHeight() - z; // relative distance between the probe points, lower is negative z
         stream->printf("DEBUG: P%d:%1.4f\n", i, z);
         v[i] = Vector3(x, y, z);
@@ -337,8 +338,9 @@ bool ThreePointStrategy::test_probe_points(Gcode *gcode)
             return false;
         }
 
-        float z = zprobe->probeDistance(x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets));
-        if(isnan(z)) return false; // probe failed
+        float z;
+        if(!zprobe->doProbeAt(z, x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets))) return false;
+
         gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f\n", x, y, z);
 
         if(isnan(last_z)) {
