@@ -2,7 +2,6 @@
 #define PT100_H
 
 #include "TempSensor.h"
-#include "RingBuffer.h"
 #include "Pin.h"
 
 #define QUEUE_LEN 32

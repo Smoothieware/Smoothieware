@@ -5,13 +5,9 @@
 #include "checksumm.h"
 #include "Adc.h"
 #include "ConfigValue.h"
-#include "libs/Median.h"
-#include "utils.h"
 #include "StreamOutputPool.h"
 
 #include <fastmath.h>
-
-#include "MRI_Hooks.h"
 
 #define UNDEFINED -1
 
