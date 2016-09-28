@@ -33,8 +33,7 @@ public:
     void on_gcode_received(void *argument);
 
     bool run_probe(float& mm, float feedrate, float max_dist= -1, bool reverse= false);
-    bool run_probe(float& mm, bool fast= false) { return run_probe(mm, fast ? this->fast_feedrate : this->slow_feedrate); }
-    bool return_probe(float mm, bool reverse= false);
+    bool run_probe_return(float& mm, float feedrate, float max_dist= -1, bool reverse= false);
     bool doProbeAt(float &mm, float x, float y);
     float probeDistance(float x, float y);
 

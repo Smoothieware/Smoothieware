@@ -279,7 +279,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 
     // find bed via probe
     float mm;
-    if(!zprobe->run_probe(mm)) return false;
+    if(!zprobe->run_probe(mm, zprobe->getSlowFeedrate())) return false;
 
     // TODO if using probe then we probably need to set Z to 0 at first probe point, but take into account probe offset from head
     THEROBOT->reset_axis_position(std::get<Z_AXIS>(this->probe_offsets), Z_AXIS);

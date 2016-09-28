@@ -174,7 +174,6 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     };
 
     // move Z down
-    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
     bool dir= (!reverse_z != reverse); // xor
     float delta[3]= {0,0,0};
     delta[Z_AXIS]= dir ? -maxz : maxz;
@@ -182,7 +181,6 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
 
     // wait until finished
     THECONVEYOR->wait_for_idle();
-    THEROBOT->disable_segmentation= false;
 
     // now see how far we moved, get delta in z we moved
     // NOTE this works for deltas as well as all three actuators move the same amount in Z
@@ -206,8 +204,14 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     return probe_detected;
 }
 
-bool ZProbe::return_probe(float mm, bool reverse)
+// do probe then return to start position
+bool ZProbe::run_probe_return(float& mm, float feedrate, float max_dist, bool reverse)
 {
+    float save_pos[3];
+    THEROBOT->get_axis_position(save_pos);
+
+    bool ok= run_probe(mm, feedrate, max_dist, reverse);
+
     // move probe back to where it was
     float fr;
     if(this->return_feedrate != 0) { // use return_feedrate if set
@@ -220,28 +224,17 @@ bool ZProbe::return_probe(float mm, bool reverse)
     bool dir= ((mm < 0) != reverse_z); // xor
     if(reverse) dir= !dir;
 
-    float delta[3]= {0,0,0};
-    delta[Z_AXIS]= dir ? -mm : mm;
-    THEROBOT->delta_move(delta, fr, 3);
+    // absolute move to starting position
+    coordinated_move(save_pos[0], save_pos[1], save_pos[2], fr, false);
 
-    // wait until finished
-    THECONVEYOR->wait_for_idle();
-
-    return true;
+    return ok;
 }
 
 bool ZProbe::doProbeAt(float &mm, float x, float y)
 {
-    float s;
     // move to xy
     coordinated_move(x, y, NAN, getFastFeedrate());
-    if(!run_probe(s)) return false;
-
-    // return to original Z
-    return_probe(s);
-    mm = s;
-
-    return true;
+    return run_probe_return(mm, slow_feedrate);
 }
 
 float ZProbe::probeDistance(float x, float y)
@@ -271,40 +264,26 @@ void ZProbe::on_gcode_received(void *argument)
             // first wait for all moves to finish
             THEKERNEL->conveyor->wait_for_idle();
 
+            bool set_z= (gcode->has_letter('Z') && !is_rdelta);
             bool probe_result;
             bool reverse= (gcode->has_letter('R') && gcode->get_value('R') != 0); // specify to probe in reverse direction
             float rate= gcode->has_letter('F') ? gcode->get_value('F') / 60 : this->slow_feedrate;
             float mm;
-            probe_result = run_probe(mm, rate, -1, reverse);
+
+            // if not setting Z then return probe to where it started, otherwise leave it where it is
+            probe_result = (set_z ? run_probe(mm, rate, -1, reverse) : run_probe_return(mm, rate, -1, reverse));
 
             if(probe_result) {
-                // the result is in actuator coordinates and raw steps
+                // the result is in actuator coordinates moved
                 gcode->stream->printf("Z:%1.4f\n", mm);
 
-                // set the last probe position to the current actuator units
-                THEROBOT->set_last_probe_position(std::make_tuple(
-                    THEROBOT->actuators[X_AXIS]->get_current_position(),
-                    THEROBOT->actuators[Y_AXIS]->get_current_position(),
-                    THEROBOT->actuators[Z_AXIS]->get_current_position(),
-                    1));
-
-                // move back to where it started, unless a Z is specified (and not a rotary delta)
-                if(gcode->has_letter('Z') && !is_rdelta) {
-                    // set Z to the specified value, and leave probe where it is
+                if(set_z) {
+                    // set Z to the specified value
                     THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
-
-                } else {
-                    // return to pre probe position
-                    return_probe(mm, reverse);
                 }
 
             } else {
                 gcode->stream->printf("ZProbe not triggered\n");
-                THEROBOT->set_last_probe_position(std::make_tuple(
-                    THEROBOT->actuators[X_AXIS]->get_current_position(),
-                    THEROBOT->actuators[Y_AXIS]->get_current_position(),
-                    THEROBOT->actuators[Z_AXIS]->get_current_position(),
-                    0));
             }
 
         } else {

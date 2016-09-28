@@ -423,10 +423,7 @@ float DeltaGridStrategy::findBed()
 
     // find bed at 0,0 run at slow rate so as to not hit bed hard
     float mm;
-    if(!zprobe->run_probe(mm, false)) return NAN;
-
-    // leave the probe zprobe->getProbeHeight() above bed
-    zprobe->return_probe(mm);
+    if(!zprobe->run_probe_return(mm, zprobe->getSlowFeedrate())) return NAN;
 
     float dz= zprobe->getProbeHeight() - mm;
     zprobe->coordinated_move(NAN, NAN, dz, zprobe->getFastFeedrate(), true); // relative move
