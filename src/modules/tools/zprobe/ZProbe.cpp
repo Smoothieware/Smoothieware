@@ -268,8 +268,12 @@ void ZProbe::on_gcode_received(void *argument)
                 gcode->stream->printf("Z:%1.4f\n", mm);
 
                 if(set_z) {
-                    // set Z to the specified value
-                    THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+                    // set current Z to the specified value, shortcut for G92 Znnn
+                    char buf[32];
+                    int n = snprintf(buf, sizeof(buf), "G92 Z%f", gcode->get_value('Z'));
+                    string g(buf, n);
+                    Gcode gc(g, &(StreamOutput::NullStream));
+                    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
                 }
 
             } else {

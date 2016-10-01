@@ -866,22 +866,23 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 }
 
 // reset the machine position for all axis. Used for homing.
-// after homing we need to set the actuator position at the position they would be at for the compensated XYZ
-// So we need to apply the compensation transform to the last_milestone we are given to get the compensated
-// last_machine_position which we then convert to actuator position.
+// after homing we supply the cartesian coordinates that the head is at when homed,
+// however for Z this is the compensated Z position (if enabled)
+// So we need to apply the inverse compensation transform to the supplied coordinates to get the correct last milestone
 // this will make the results from M114 and ? consistent after homing.
 void Robot::reset_axis_position(float x, float y, float z)
 {
-    // these are set to the same as compensation was not used to get to the current position
+    // set both the same initially
     last_machine_position[X_AXIS]= last_milestone[X_AXIS] = x;
     last_machine_position[Y_AXIS]= last_milestone[Y_AXIS] = y;
     last_machine_position[Z_AXIS]= last_milestone[Z_AXIS] = z;
 
     if(compensationTransform) {
-        compensationTransform(last_machine_position, false);
+        // apply inverse transform to get last_milestone
+        compensationTransform(last_milestone, true);
     }
 
-    // now set the actuator positions to match
+    // now set the actuator positions based on the supplied compensated position
     ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator(this->last_machine_position, actuator_pos);
     for (size_t i = X_AXIS; i <= Z_AXIS; i++)

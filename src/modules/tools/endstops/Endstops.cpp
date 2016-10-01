@@ -719,6 +719,8 @@ void Endstops::process_home_command(Gcode* gcode)
 
     } else {
         // Zero the ax(i/e)s position, add in the home offset
+        // NOTE that if compensation is active the Z will be set based on where XY are, so make sure XY are homed first then Z
+        // so XY are at a known consistent position.  (especially true if using a proximity probe)
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
             if (haxis[c]) { // if we requested this axis to home
                 THEROBOT->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
