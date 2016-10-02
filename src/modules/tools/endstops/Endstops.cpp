@@ -130,6 +130,7 @@ Endstops::Endstops()
     this->status = NOT_HOMING;
     home_offset[0] = home_offset[1] = home_offset[2] = 0.0F;
     debounce.fill(0);
+    homed.reset();
 }
 
 void Endstops::on_module_loaded()
@@ -480,7 +481,7 @@ void Endstops::home(std::bitset<3> a)
     // reset debounce counts
     debounce.fill(0);
 
-    // turn off any compensation transform
+    // turn off any compensation transform so Z does not move as XY home
     auto savect= THEROBOT->compensationTransform;
     THEROBOT->compensationTransform= nullptr;
 
@@ -548,6 +549,11 @@ void Endstops::home(std::bitset<3> a)
     // restore compensationTransform
     THEROBOT->compensationTransform= savect;
 
+    // set flag indicating axis was homed, it stays set once set until H/W reset or unhomed
+    if(!homed[X_AXIS] && axis_to_home[X_AXIS]) homed.set(X_AXIS);
+    if(!homed[Y_AXIS] && axis_to_home[Y_AXIS]) homed.set(Y_AXIS);
+    if(!homed[Z_AXIS] && axis_to_home[Z_AXIS]) homed.set(Z_AXIS);
+
     this->status = NOT_HOMING;
 }
 
@@ -585,21 +591,39 @@ void Endstops::process_home_command(Gcode* gcode)
     } else if(gcode->subcode == 3) { // G28.3 is a smoothie special it sets manual homing
         if(gcode->get_num_args() == 0) {
             THEROBOT->reset_axis_position(0, 0, 0);
+            homed.set();
         } else {
             // do a manual homing based on given coordinates, no endstops required
-            if(gcode->has_letter('X')) THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS);
-            if(gcode->has_letter('Y')) THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
-            if(gcode->has_letter('Z')) THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+            if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS); homed.set(X_AXIS); }
+            if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS); homed.set(Y_AXIS); }
+            if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS); homed.set(Z_AXIS); }
         }
         return;
 
     } else if(gcode->subcode == 4) { // G28.4 is a smoothie special it sets manual homing based on the actuator position (used for rotary delta)
         // do a manual homing based on given coordinates, no endstops required
-        ActuatorCoordinates ac;
-        if(gcode->has_letter('X')) ac[0] =  gcode->get_value('X');
-        if(gcode->has_letter('Y')) ac[1] =  gcode->get_value('Y');
-        if(gcode->has_letter('Z')) ac[2] =  gcode->get_value('Z');
+        ActuatorCoordinates ac{NAN, NAN, NAN};
+        if(gcode->has_letter('X')){ ac[0] =  gcode->get_value('X'); homed.set(X_AXIS); }
+        if(gcode->has_letter('Y')){ ac[1] =  gcode->get_value('Y'); homed.set(Y_AXIS); }
+        if(gcode->has_letter('Z')){ ac[2] =  gcode->get_value('Z'); homed.set(Z_AXIS); }
         THEROBOT->reset_actuator_position(ac);
+        return;
+
+    } else if(gcode->subcode == 5) { // G28.5 is a smoothie special it clears the homed flag for the specified axis, or all if not specifed
+        if(gcode->get_num_args() == 0) {
+            homed.reset();
+        } else {
+            if(gcode->has_letter('X')) homed.reset(X_AXIS);
+            if(gcode->has_letter('Y')) homed.reset(Y_AXIS);
+            if(gcode->has_letter('Z')) homed.reset(Z_AXIS);
+        }
+        return;
+
+    } else if(gcode->subcode == 6) { // G28.6 is a smoothie special it shows the homing status of each axis
+        for (int i = 0; i < 3; ++i) {
+            gcode->stream->printf("%c:%d ", 'X'+i, homed.test(i));
+        }
+        gcode->add_nl= true;
         return;
 
     } else if(THEKERNEL->is_grbl_mode()) {
@@ -673,6 +697,7 @@ void Endstops::process_home_command(Gcode* gcode)
         if(!THEKERNEL->is_grbl_mode()) {
             THEKERNEL->streams->printf("Homing cycle aborted by kill\n");
         }
+        homed.reset();
         return;
     }
 
@@ -747,19 +772,35 @@ void Endstops::process_home_command(Gcode* gcode)
 void Endstops::set_homing_offset(Gcode *gcode)
 {
     // Similar to M206 but sets Homing offsets based on current position
+    // We want to set the machine position to what we specify, but the current position of the actuators is after the compensation transform
+    // we do not want to reset the actuator positions but we do want to make the current position read Z0 in machine coordinates after homing.
+    // TODO so what do we set the homing offset to to make that happen?
     float mpos[3];
-    THEROBOT->get_axis_position(mpos);    // get machine position from robot
-    // add in the current home offset so we can set it multiple times without accumulating the error
-    for (int i = 0; i < 3; ++i)  mpos[i] += home_offset[i];
+    THEROBOT->get_current_machine_position(mpos);
 
     if (gcode->has_letter('X')) {
+        if(!homed[X_AXIS]) {
+            gcode->stream->printf("error: Axis X must be homed before setting Homing offset\n");
+            return;
+        }
         home_offset[0] += (THEROBOT->to_millimeters(gcode->get_value('X')) - mpos[X_AXIS]);
+        homed.reset(X_AXIS); // force it to be homed
     }
     if (gcode->has_letter('Y')) {
+        if(!homed[Y_AXIS]) {
+            gcode->stream->printf("error: Axis Y must be homed before setting Homing offset\n");
+            return;
+        }
         home_offset[1] += (THEROBOT->to_millimeters(gcode->get_value('Y')) - mpos[Y_AXIS]);
+        homed.reset(Y_AXIS); // force it to be homed
     }
     if (gcode->has_letter('Z')) {
+        if(!homed[Z_AXIS]) {
+            gcode->stream->printf("error: Axis Z must be homed before setting Homing offset\n");
+            return;
+        }
         home_offset[2] += (THEROBOT->to_millimeters(gcode->get_value('Z')) - mpos[Z_AXIS]);
+        homed.reset(Z_AXIS); // force it to be homed
     }
 
     gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f will take effect next home\n", home_offset[0], home_offset[1], home_offset[2]);

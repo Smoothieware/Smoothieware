@@ -292,6 +292,19 @@ std::vector<Robot::wcs_t> Robot::get_wcs_state() const
     return v;
 }
 
+void Robot::get_current_machine_position(float *pos) const
+{
+    // get real time current actuator position in mm
+    ActuatorCoordinates current_position{
+        actuators[X_AXIS]->get_current_position(),
+        actuators[Y_AXIS]->get_current_position(),
+        actuators[Z_AXIS]->get_current_position()
+    };
+
+    // get machine position from the actuator position using FK
+    arm_solution->actuator_to_cartesian(current_position, pos);
+}
+
 int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
 {
     // M114.1 is a new way to do this (similar to how GRBL does it).
@@ -315,27 +328,26 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
 
     } else {
         // get real time positions
-        // current actuator position in mm
-        ActuatorCoordinates current_position{
-            actuators[X_AXIS]->get_current_position(),
-            actuators[Y_AXIS]->get_current_position(),
-            actuators[Z_AXIS]->get_current_position()
-        };
-
-        // get machine position from the actuator position using FK
         float mpos[3];
-        arm_solution->actuator_to_cartesian(current_position, mpos);
+        get_current_machine_position(mpos);
+
         // current_position/mpos includes the compensation transform so we need to get the inverse to get actual position
         if(compensationTransform) compensationTransform(mpos, true); // get inverse compensation transform
 
         if(subcode == 1) { // M114.1 print realtime WCS
             wcs_t pos= mcs2wcs(mpos);
-            n = snprintf(buf, bufsize, "WPOS: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+            n = snprintf(buf, bufsize, "WCS: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
 
         } else if(subcode == 2) { // M114.2 print realtime Machine coordinate system
-            n = snprintf(buf, bufsize, "MPOS: X:%1.4f Y:%1.4f Z:%1.4f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
+            n = snprintf(buf, bufsize, "MCS: X:%1.4f Y:%1.4f Z:%1.4f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
 
         } else if(subcode == 3) { // M114.3 print realtime actuator position
+            // get real time current actuator position in mm
+            ActuatorCoordinates current_position{
+                actuators[X_AXIS]->get_current_position(),
+                actuators[Y_AXIS]->get_current_position(),
+                actuators[Z_AXIS]->get_current_position()
+            };
             n = snprintf(buf, bufsize, "APOS: X:%1.4f Y:%1.4f Z:%1.4f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
         }
     }
@@ -892,9 +904,9 @@ void Robot::reset_axis_position(float x, float y, float z)
 // Reset the position for an axis (used in homing, and to reset extruder after suspend)
 void Robot::reset_axis_position(float position, int axis)
 {
-    last_milestone[axis] = position;
+    last_machine_position[axis] = position;
     if(axis <= Z_AXIS) {
-        reset_axis_position(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
+        reset_axis_position(last_machine_position[X_AXIS], last_machine_position[Y_AXIS], last_machine_position[Z_AXIS]);
 #if MAX_ROBOT_ACTUATORS > 3
     }else{
         // extruders need to be set not calculated
@@ -907,8 +919,9 @@ void Robot::reset_axis_position(float position, int axis)
 // then sets the axis positions to match. currently only called from Endstops.cpp and RotaryDeltaCalibration.cpp
 void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
 {
-    for (size_t i = X_AXIS; i <= Z_AXIS; i++)
-        actuators[i]->change_last_milestone(ac[i]);
+    for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+        if(!isnan(ac[i])) actuators[i]->change_last_milestone(ac[i]);
+    }
 
     // now correct axis positions then recorrect actuator to account for rounding
     reset_position_from_current_actuator_position();

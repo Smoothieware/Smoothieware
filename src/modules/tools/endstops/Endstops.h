@@ -53,6 +53,7 @@ class Endstops : public Module{
         std::bitset<3> home_direction;
         std::bitset<3> limit_enable;
         std::bitset<3> axis_to_home;
+        std::bitset<3> homed;
 
         struct {
             uint8_t homing_order:6;

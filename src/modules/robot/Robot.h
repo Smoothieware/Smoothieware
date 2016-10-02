@@ -53,6 +53,7 @@ class Robot : public Module {
         float get_axis_position(int axis) const { return(this->last_milestone[axis]); }
         void get_axis_position(float position[], size_t n= N_PRIMARY_AXIS) const { memcpy(position, this->last_milestone, n*sizeof(float)); }
         wcs_t get_axis_position() const { return wcs_t(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]); }
+        void get_current_machine_position(float *pos) const;
         int print_position(uint8_t subcode, char *buf, size_t bufsize) const;
         uint8_t get_current_wcs() const { return current_wcs; }
         std::vector<wcs_t> get_wcs_state() const;
