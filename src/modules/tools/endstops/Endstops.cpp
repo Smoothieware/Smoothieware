@@ -770,19 +770,18 @@ void Endstops::process_home_command(Gcode* gcode)
 
 void Endstops::set_homing_offset(Gcode *gcode)
 {
-    // Similar to M206 but sets Homing offsets based on current position
-    // We want to set the machine position to what we specify, but the current position of the actuators is after the compensation transform
-    // we do not want to reset the actuator positions but we do want to make the current position read Z0 in machine coordinates after homing.
-    // TODO so what do we set the homing offset to to make that happen?
-    float mpos[3];
-    THEROBOT->get_current_machine_position(mpos);
+    // Similar to M206 but sets Homing offsets based on current MCS position
+    // Basically it finds the delta between the current MCS position and the requested position and adds it to the homing offset
+    // then will not let it be set again until that axis is homed.
+    float pos[3];
+    THEROBOT->get_axis_position(pos);
 
     if (gcode->has_letter('X')) {
         if(!homed[X_AXIS]) {
             gcode->stream->printf("error: Axis X must be homed before setting Homing offset\n");
             return;
         }
-        home_offset[0] += (THEROBOT->to_millimeters(gcode->get_value('X')) - mpos[X_AXIS]);
+        home_offset[0] += (THEROBOT->to_millimeters(gcode->get_value('X')) - pos[X_AXIS]);
         homed.reset(X_AXIS); // force it to be homed
     }
     if (gcode->has_letter('Y')) {
@@ -790,7 +789,7 @@ void Endstops::set_homing_offset(Gcode *gcode)
             gcode->stream->printf("error: Axis Y must be homed before setting Homing offset\n");
             return;
         }
-        home_offset[1] += (THEROBOT->to_millimeters(gcode->get_value('Y')) - mpos[Y_AXIS]);
+        home_offset[1] += (THEROBOT->to_millimeters(gcode->get_value('Y')) - pos[Y_AXIS]);
         homed.reset(Y_AXIS); // force it to be homed
     }
     if (gcode->has_letter('Z')) {
@@ -798,7 +797,7 @@ void Endstops::set_homing_offset(Gcode *gcode)
             gcode->stream->printf("error: Axis Z must be homed before setting Homing offset\n");
             return;
         }
-        home_offset[2] += (THEROBOT->to_millimeters(gcode->get_value('Z')) - mpos[Z_AXIS]);
+        home_offset[2] += (THEROBOT->to_millimeters(gcode->get_value('Z')) - pos[Z_AXIS]);
         homed.reset(Z_AXIS); // force it to be homed
     }
 
