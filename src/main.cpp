@@ -7,6 +7,7 @@
 
 #include "libs/Kernel.h"
 
+#include "modules/tools/joystick/Joystick.h"
 #include "modules/tools/laser/Laser.h"
 #include "modules/tools/spindle/Spindle.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
@@ -190,6 +191,9 @@ void init() {
     #endif
     #ifndef NO_UTILS_MOTORDRIVERCONTROL
     kernel->add_module( new MotorDriverControl(0) );
+    #endif
+	#ifndef NO_TOOLS_JOYSTICK
+    kernel->add_module( new Joystick() );
     #endif
     // Create and initialize USB stuff
     u.init();
