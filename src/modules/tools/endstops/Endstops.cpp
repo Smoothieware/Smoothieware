@@ -549,11 +549,6 @@ void Endstops::home(std::bitset<3> a)
     // restore compensationTransform
     THEROBOT->compensationTransform= savect;
 
-    // set flag indicating axis was homed, it stays set once set until H/W reset or unhomed
-    if(!homed[X_AXIS] && axis_to_home[X_AXIS]) homed.set(X_AXIS);
-    if(!homed[Y_AXIS] && axis_to_home[Y_AXIS]) homed.set(Y_AXIS);
-    if(!homed[Z_AXIS] && axis_to_home[Z_AXIS]) homed.set(Z_AXIS);
-
     this->status = NOT_HOMING;
 }
 
@@ -742,6 +737,8 @@ void Endstops::process_home_command(Gcode* gcode)
             }
         }
 
+        homed.set(); // for deltas we say all axis are homed even though it was only Z
+
     } else {
         // Zero the ax(i/e)s position, add in the home offset
         // NOTE that if compensation is active the Z will be set based on where XY are, so make sure XY are homed first then Z
@@ -749,6 +746,8 @@ void Endstops::process_home_command(Gcode* gcode)
         for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
             if (haxis[c]) { // if we requested this axis to home
                 THEROBOT->reset_axis_position(this->homing_position[c] + this->home_offset[c], c);
+                // set flag indicating axis was homed, it stays set once set until H/W reset or unhomed
+                homed.set(c);
             }
         }
     }
