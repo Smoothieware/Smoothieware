@@ -8,13 +8,14 @@
 #pragma once
 
 #include "libs/Module.h"
-#include "libs/Pin.h"
 
 #include <bitset>
 #include <array>
+#include <map>
 
 class StepperMotor;
 class Gcode;
+class Pin;
 
 class Endstops : public Module{
     public:
@@ -24,14 +25,14 @@ class Endstops : public Module{
 
     private:
         void load_config();
-        void home(std::bitset<3> a);
+        void home(std::bitset<6> a);
         void home_xy();
-        void back_off_home(std::bitset<3> axis);
-        void move_to_origin(std::bitset<3> axis);
+        void back_off_home(std::bitset<6> axis);
+        void move_to_origin(std::bitset<6> axis);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
-        bool debounced_get(int pin);
+        bool debounced_get(uint8_t pin);
         void process_home_command(Gcode* gcode);
         void set_homing_offset(Gcode* gcode);
         uint32_t read_endstops(uint32_t dummy);
@@ -47,13 +48,15 @@ class Endstops : public Module{
         float  trim_mm[3];
         float  fast_rates[3];
         float  slow_rates[3];
-        Pin    pins[6];
+
+        std::map<uint8_t, Pin*> pins;
+
         std::array<uint16_t, 3> debounce;
 
-        std::bitset<3> home_direction;
-        std::bitset<3> limit_enable;
-        std::bitset<3> axis_to_home;
-        std::bitset<3> homed;
+        std::bitset<6> home_direction;
+        std::bitset<6> limit_enable;
+        std::bitset<6> axis_to_home;
+        std::bitset<6> homed;
 
         struct {
             uint8_t homing_order:6;
