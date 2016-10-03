@@ -8,6 +8,7 @@
 #pragma once
 
 #include "libs/Module.h"
+#include "Pin.h"
 
 #include <bitset>
 #include <array>
@@ -24,11 +25,14 @@ class Endstops : public Module{
         void on_gcode_received(void* argument);
 
     private:
-        void load_config();
-        void home(std::bitset<6> a);
+        bool load_old_config();
+        bool load_config();
+        void get_global_configs();
+        using axis_bitmap_t = std::bitset<6>;
+        void home(axis_bitmap_t a);
         void home_xy();
-        void back_off_home(std::bitset<6> axis);
-        void move_to_origin(std::bitset<6> axis);
+        void back_off_home(axis_bitmap_t axis);
+        void move_to_origin(axis_bitmap_t axis);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
@@ -37,30 +41,40 @@ class Endstops : public Module{
         void set_homing_offset(Gcode* gcode);
         uint32_t read_endstops(uint32_t dummy);
 
-        float homing_position[3];
-        float home_offset[3];
+        // global settings
         float saved_position[3]{0}; // save G28 (in grbl mode)
-        float alpha_max, beta_max, gamma_max;
-
         uint32_t debounce_count;
         uint32_t  debounce_ms;
-        float  retract_mm[3];
-        float  trim_mm[3];
-        float  fast_rates[3];
-        float  slow_rates[3];
+        axis_bitmap_t axis_to_home;
 
-        std::map<uint8_t, Pin*> pins;
+        float trim_mm[3];
 
-        std::array<uint16_t, 3> debounce;
+        // per endstop settings
+        using info_t = struct {
+            float homing_position;
+            float home_offset;
+            float max_travel;
+            float retract_mm;
+            float fast_rate;
+            float slow_rate;
+            Pin pin;
+            struct {
+                uint16_t debounce:16;
+                char axis:8; // one of XYZABC
+                uint8_t axis_index:3;
+                bool home_direction:1; // true min or false max
+                bool limit_enable:1;
+                bool homing_enabled:1;
+                bool homed:1;
+            };
+        };
 
-        std::bitset<6> home_direction;
-        std::bitset<6> limit_enable;
-        std::bitset<6> axis_to_home;
-        std::bitset<6> homed;
+        // map of endstops key is 0-5 for XYZABC and MSB bit set for max, 0x01 is ymin 0x81 is ymax etc....
+        std::map<uint8_t, info_t*> endstops;
 
+        // Global state
         struct {
-            uint8_t homing_order:6;
-            uint8_t bounce_cnt:4;
+            uint16_t homing_order:12;
             volatile char status:3;
             bool is_corexy:1;
             bool is_delta:1;
