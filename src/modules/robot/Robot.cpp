@@ -879,9 +879,10 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 
 // reset the machine position for all axis. Used for homing.
 // after homing we supply the cartesian coordinates that the head is at when homed,
-// however for Z this is the compensated Z position (if enabled)
-// So we need to apply the inverse compensation transform to the supplied coordinates to get the correct last milestone
+// however for Z this is the compensated machine position (if enabled)
+// So we need to apply the inverse compensation transform to the supplied coordinates to get the correct machine position
 // this will make the results from M114 and ? consistent after homing.
+// This works for cases where the Z endstop is fixed on the Z actuator and is the same regardless of where XY are.
 void Robot::reset_axis_position(float x, float y, float z)
 {
     // set both the same initially
