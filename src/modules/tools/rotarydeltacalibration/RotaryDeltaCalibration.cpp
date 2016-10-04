@@ -27,11 +27,10 @@ void RotaryDeltaCalibration::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
 }
 
-float *RotaryDeltaCalibration::get_homing_offset()
+bool RotaryDeltaCalibration::get_homing_offset(float *theta_offset)
 {
-    float *theta_offset; // points to theta offset in Endstop module
-    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &theta_offset );
-    return ok ? theta_offset : nullptr;
+    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, theta_offset );
+    return ok;
 }
 
 void RotaryDeltaCalibration::on_gcode_received(void *argument)
@@ -41,16 +40,18 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
     if( gcode->has_m) {
         switch( gcode->m ) {
             case 206: {
-                float *theta_offset= get_homing_offset(); // points to theta offset in Endstop module
-                if (theta_offset == nullptr) {
+                float theta_offset[3];
+                if(!get_homing_offset(theta_offset)) {
                     gcode->stream->printf("error:no endstop module found\n");
                     return;
                 }
 
-                // set theta offset, set directly in the Endstop module (bad practice really)
+                // set theta offset
                 if (gcode->has_letter('A')) theta_offset[0] = gcode->get_value('A');
                 if (gcode->has_letter('B')) theta_offset[1] = gcode->get_value('B');
                 if (gcode->has_letter('C')) theta_offset[2] = gcode->get_value('C');
+
+                PublicData::set_value( endstops_checksum, home_offset_checksum, theta_offset );
 
                 gcode->stream->printf("Theta offset set: A %8.5f B %8.5f C %8.5f\n", theta_offset[0], theta_offset[1], theta_offset[2]);
 
@@ -79,8 +80,8 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                     }
                 }
 
-                float *theta_offset= get_homing_offset(); // points to theta offset in Endstop module
-                if (theta_offset == nullptr) {
+                float theta_offset[3];
+                if(!get_homing_offset(theta_offset)) {
                     gcode->stream->printf("error:no endstop module found\n");
                     return;
                 }
@@ -106,6 +107,8 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                     current_angle[2]= c;
                     cnt++;
                 }
+
+                PublicData::set_value( endstops_checksum, home_offset_checksum, theta_offset );
 
                 // reset the actuator positions (and machine position accordingly)
                 // But only if all three actuators have been specified at the same time
