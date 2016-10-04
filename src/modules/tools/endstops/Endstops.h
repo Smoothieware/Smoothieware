@@ -36,7 +36,7 @@ class Endstops : public Module{
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
-        bool debounced_get(uint8_t pin);
+        bool debounced_get(Pin *pin);
         void process_home_command(Gcode* gcode);
         void set_homing_offset(Gcode* gcode);
         uint32_t read_endstops(uint32_t dummy);
@@ -50,27 +50,38 @@ class Endstops : public Module{
         float trim_mm[3];
 
         // per endstop settings
-        using info_t = struct {
-            float homing_position;
-            float home_offset;
-            float max_travel;
-            float retract_mm;
-            float fast_rate;
-            float slow_rate;
+        using endstop_info_t = struct {
             Pin pin;
             struct {
                 uint16_t debounce:16;
                 char axis:8; // one of XYZABC
                 uint8_t axis_index:3;
-                bool home_direction:1; // true min or false max
                 bool limit_enable:1;
-                bool homing_enabled:1;
+            };
+        };
+
+        using homing_info_t = struct {
+            float homing_position;
+            float home_offset;
+            float max_travel;
+            float retract;
+            float fast_rate;
+            float slow_rate;
+            endstop_info_t *pin_info;
+
+            struct {
+                char axis:8; // one of XYZABC
+                uint8_t axis_index:3;
+                bool home_direction:1; // true min or false max
                 bool homed:1;
             };
         };
 
-        // map of endstops key is 0-5 for XYZABC and MSB bit set for max, 0x01 is ymin 0x81 is ymax etc....
-        std::map<uint8_t, info_t*> endstops;
+        // array of endstops
+        std::vector<endstop_info_t *> endstops;
+
+        // axis that can be homed, 0,1,2 always there and optionally 3 is A, 4 is B, 5 is C
+        std::vector<homing_info_t> homing_axis;
 
         // Global state
         struct {
