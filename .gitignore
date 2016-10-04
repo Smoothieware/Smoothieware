@@ -23,3 +23,4 @@ debug
 /linux_install.log
 /src/default_excludes.mk
 /SmoothiewareVS/
+smoothie-upload.bat

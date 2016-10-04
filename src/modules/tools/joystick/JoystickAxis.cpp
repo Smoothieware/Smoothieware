@@ -12,6 +12,7 @@
 //#include "Robot.h"
 #include "SlowTicker.h"
 #include "PublicDataRequest.h"
+#include "StreamOutputPool.h" //just for debugging
 
 
 #define joystick_checksum                   CHECKSUM("joystick")
@@ -43,10 +44,21 @@ void JoystickAxis::on_module_loaded()
 
     //register for events with the kernel
     this->register_for_event(ON_GET_PUBLIC_DATA);
+    this->register_for_event(ON_GCODE_RECEIVED);
 
     //ask the kernel to run "update_tick" every "refresh_interval" milliseconds
     THEKERNEL->slow_ticker->attach(this->refresh_interval, this, &JoystickAxis::update_tick);
 
+}
+
+//debug only
+void JoystickAxis::on_gcode_received(void *argument)
+{
+    //testing code here
+    //print out parameters
+    int pos = read_pos();
+    float posf = get_normalized(pos);
+    THEKERNEL->streams->printf("%+0.2f        ADC: %d (%0.2f),  Zero: %d,  End: %d, AutoZ: %d, StartT: %d, Int: %d\n", this->position, pos, posf, zero_offset, endpoint, auto_zero, startup_time, refresh_interval);
 }
 
 //read config file values for this module
@@ -85,51 +97,16 @@ void JoystickAxis::on_get_public_data(void *argument)
 }
 
 //read joystick position, uses past readings to removes outliers (> 1 stdev from mean)
-int JoystickAxis::read_pos()
+unsigned int JoystickAxis::read_pos()
 {
-
-    //get the raw ADC value
-    unsigned int last_raw = THEKERNEL->adc->read(&axis_pin);
-    if (queue.size() >= queue.capacity()) {
-        uint16_t l;
-        queue.pop_front(l);
-    }
-    uint16_t r = last_raw;
-    queue.push_back(r);
-
-    //get the mean squared value
-    float std_sum = 0;
-    for (int i=0; i<queue.size(); i++) {
-        std_sum += pow(*queue.get_ref(i), 2);
-    }
-    std_sum /= queue.size(); //E[X^2]
-
-    //get the mean value
-    float avg_sum = 0;
-    for (int i=0; i<queue.size(); i++) {
-        avg_sum += *queue.get_ref(i);
-    }
-    avg_sum /= queue.size(); //E[X]
-
-    //compute standard deviation
-    float std = sqrt(std_sum - pow(avg_sum, 2)); //sqrt(E[X^2] - E[X]^2)
-
-    //compute average without outliers
-    float avg = 0;
-    int avg_num = 0;
-    for (int i=0; i<queue.size(); i++) {
-        if((*queue.get_ref(i) - avg_sum) < std){
-            avg += *queue.get_ref(i);
-            avg_num++;
-        }
-    }
-    avg /= avg_num;
-
-    return (int) round(avg);
+    
+    //return the ADC value (since it is now being filtered in ADC)
+    return THEKERNEL->adc->read(&axis_pin);
+    
 }
 
 //get normalized joystick position from -1 to 1
-float JoystickAxis::get_normalized(int pos)
+float JoystickAxis::get_normalized(unsigned int pos)
 {
     int pos_zero;
     float norm;
@@ -138,7 +115,7 @@ float JoystickAxis::get_normalized(int pos)
     pos_zero = (pos - zero_offset);
 
     //then scale the output to +/- 1 boundary
-    norm = pos_zero / abs(endpoint - zero_offset);
+    norm = (float) pos_zero / (float) abs(endpoint - zero_offset);
 
     //constrain to within +/- 1
     if(abs(norm) > 1) {

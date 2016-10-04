@@ -10,6 +10,7 @@
 
 #include "Pin.h"
 #include "RingBuffer.h"
+#include "Module.h"
 
 #define QUEUE_LEN 32
 
@@ -20,11 +21,12 @@ class JoystickAxis : public Module {
 
         void on_module_loaded();
         void on_config_reload(void* argument);
-        void on_get_public_data(void *argument);
+        void on_gcode_received(void* argument);
+        void on_get_public_data(void* argument);
         uint32_t update_tick(uint32_t);
 
-        int read_pos(); //read the filtered ADC value (0 to Adc.get_max_value())
-        float get_normalized(int pos); //get the scaled value (-1 to 1) from the ADC value
+        unsigned int read_pos(); //read the filtered ADC value (0 to Adc.get_max_value())
+        float get_normalized(unsigned int pos); //get the scaled value (-1 to 1) from the ADC value
 
     private:
         uint16_t name_checksum = 0; //the "name" of this instance (only a checksum of the text however)
