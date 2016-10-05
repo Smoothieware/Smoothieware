@@ -9,10 +9,8 @@
 #define JOYSTICKAXIS_H
 
 #include "Pin.h"
-#include "RingBuffer.h"
 #include "Module.h"
 
-#define QUEUE_LEN 32
 
 class JoystickAxis : public Module {
     public:
@@ -45,7 +43,7 @@ class JoystickAxis : public Module {
 
         int refresh_interval = 100; //number of milliseconds between ADC readings
 
-        RingBuffer<uint16_t,QUEUE_LEN> queue;  // Queue of ADC readings
+        uint16_t target; //debug only
 };
 
 #endif //JOYSTICKAXIS_H

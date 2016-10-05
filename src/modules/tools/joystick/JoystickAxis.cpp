@@ -4,15 +4,17 @@
 
 #include <math.h>
 #include "Kernel.h"
-//#include "Pin.h"
 #include "Config.h"
 #include "checksumm.h"
 #include "Adc.h"
 #include "ConfigValue.h"
-//#include "Robot.h"
 #include "SlowTicker.h"
 #include "PublicDataRequest.h"
+
+
 #include "StreamOutputPool.h" //just for debugging
+#include "utils.h"
+#include "PublicData.h"
 
 
 #define joystick_checksum                   CHECKSUM("joystick")
@@ -23,6 +25,8 @@
 #define startup_time_checksum               CHECKSUM("startup_time")
 #define refresh_interval_checksum           CHECKSUM("refresh_interval")
 #define start_value_checksum                CHECKSUM("start_value")
+
+#define test_checksum   CHECKSUM("test")
 
 
 #define abs(a) ((a<0) ? -a : a)
@@ -57,7 +61,18 @@ void JoystickAxis::on_gcode_received(void *argument)
     //testing code here
     //print out parameters
     int pos = read_pos();
-    float posf = get_normalized(pos);
+    float posf = -10;
+
+    //test a public data read
+    struct PAD_joystick s;
+    if (PublicData::get_value(joystick_checksum, this->target, &s)) {
+        posf = s.position;
+    }
+    else {
+        THEKERNEL->streams->printf("Error reading target %d\n", this->target);
+    }
+    
+    
     THEKERNEL->streams->printf("%+0.2f        ADC: %d (%0.2f),  Zero: %d,  End: %d, AutoZ: %d, StartT: %d, Int: %d\n", this->position, pos, posf, zero_offset, endpoint, auto_zero, startup_time, refresh_interval);
 }
 
@@ -77,6 +92,7 @@ void JoystickAxis::on_config_reload(void *argument)
     this->refresh_interval = THEKERNEL->config->value(joystick_checksum, this->name_checksum, refresh_interval_checksum)->by_default(this->refresh_interval)->as_number();
     this->position = THEKERNEL->config->value(joystick_checksum, this->name_checksum, start_value_checksum)->by_default(this->position)->as_number();
     
+    this->target = get_checksum(THEKERNEL->config->value(joystick_checksum, this->name_checksum, test_checksum)->by_default("")->as_string());
 }
 
 void JoystickAxis::on_get_public_data(void *argument)
@@ -92,15 +108,18 @@ void JoystickAxis::on_get_public_data(void *argument)
     // caller has provided the location to write the state to
     struct PAD_joystick* pad = static_cast<struct PAD_joystick *>(pdr->get_data_ptr());
     pad->name_checksum = this->name_checksum;
+    pad->raw = THEKERNEL->adc->read(&axis_pin);
     pad->position = this->position;
     pdr->set_taken();
+
+    THEKERNEL->streams->printf("Read requested, returned %0.2f\n", this->position);
 }
 
-//read joystick position, uses past readings to removes outliers (> 1 stdev from mean)
+//read joystick position
 unsigned int JoystickAxis::read_pos()
 {
     
-    //return the ADC value (since it is now being filtered in ADC)
+    //return just the read ADC value (since it is now being filtered in ADC)
     return THEKERNEL->adc->read(&axis_pin);
     
 }
@@ -125,7 +144,7 @@ float JoystickAxis::get_normalized(unsigned int pos)
     return norm;
 }
 
-
+//runs on a timer to update the joystick position
 uint32_t JoystickAxis::update_tick(uint32_t dummy)
 {
 
