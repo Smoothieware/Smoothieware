@@ -908,10 +908,12 @@ void Robot::reset_axis_position(float position, int axis)
     compensated_machine_position[axis] = position;
     if(axis <= Z_AXIS) {
         reset_axis_position(compensated_machine_position[X_AXIS], compensated_machine_position[Y_AXIS], compensated_machine_position[Z_AXIS]);
+
 #if MAX_ROBOT_ACTUATORS > 3
-    }else{
-        // extruders need to be set not calculated
-        compensated_machine_position[axis]= position;
+    }else if(axis < n_motors) {
+        // ABC and/or extruders need to be set as there is no arm solution for them
+        machine_position[axis]= compensated_machine_position[axis]= position;
+        actuators[axis]->change_last_milestone(machine_position[axis]);
 #endif
     }
 }

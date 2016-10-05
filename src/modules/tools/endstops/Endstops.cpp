@@ -73,7 +73,7 @@ enum DEFNS {MIN_PIN, MAX_PIN, MAX_TRAVEL, FAST_RATE, SLOW_RATE, RETRACT, DIRECTI
 // endstop.xmin.enable true
 // endstop.xmin.pin 1.29
 // endstop.xmin.axis X
-// endstop.xmin.type min
+// endstop.xmin.homing_direction home_to_min
 
 #define endstop_checksum                   CHECKSUM("endstop")
 #define enable_checksum                    CHECKSUM("enable")
@@ -229,7 +229,7 @@ bool Endstops::load_config()
 {
     bool limit_enabled= false;
 
-    std::array<homing_info_t, 6> temp_axis_array; // needs to be at least XYZ, but allow for ABC
+    std::array<homing_info_t, k_max_actuators> temp_axis_array; // needs to be at least XYZ, but allow for ABC
     {
         homing_info_t t;
         t.axis= 0;
@@ -260,7 +260,7 @@ bool Endstops::load_config()
             continue;
         }
 
-        int i;
+        size_t i;
         switch(toupper(axis[0])) {
             case 'X': i= X_AXIS; break;
             case 'Y': i= Y_AXIS; break;
@@ -284,6 +284,12 @@ bool Endstops::load_config()
 
         // enter into endstop array
         endstops.push_back(pin_info);
+
+        // check we are not going above the number of defined actuators/axis
+        if(i >= k_max_actuators) {
+            // too many axis we only have configured k_max_actuators
+            continue;
+        }
 
         // if set to none it means not used for homing (maybe limit only) so do not add to the homing array
         string direction= THEKERNEL->config->value(endstop_checksum, cs, direction_checksum)->by_default("none")->as_string();
@@ -413,7 +419,7 @@ void Endstops::on_idle(void *argument)
                     return;
                 }
 
-                if(i->debounce++ > 10) { // can use less as it calls on_idle in between
+                if(i->debounce++ > debounce_count) { // can use less as it calls on_idle in between
                     // clear the state
                     this->status = NOT_HOMING;
                 }
@@ -936,13 +942,18 @@ void Endstops::on_gcode_received(void *argument)
 
             case 3: // G28.3 is a smoothie special it sets manual homing
                 if(gcode->get_num_args() == 0) {
-                    THEROBOT->reset_axis_position(0, 0, 0);
-                    for (auto &p : homing_axis) p.homed= true;
+                    for (auto &p : homing_axis) {
+                        p.homed= true;
+                        THEROBOT->reset_axis_position(0, p.axis_index);
+                    }
                 } else {
                     // do a manual homing based on given coordinates, no endstops required
                     if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS); homing_axis[X_AXIS].homed= true; }
                     if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS); homing_axis[Y_AXIS].homed= true; }
                     if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS); homing_axis[Z_AXIS].homed= true; }
+                    if(homing_axis.size() > A_AXIS && gcode->has_letter('A')){ THEROBOT->reset_axis_position(gcode->get_value('A'), A_AXIS); homing_axis[A_AXIS].homed= true; }
+                    if(homing_axis.size() > B_AXIS && gcode->has_letter('B')){ THEROBOT->reset_axis_position(gcode->get_value('B'), B_AXIS); homing_axis[B_AXIS].homed= true; }
+                    if(homing_axis.size() > C_AXIS && gcode->has_letter('C')){ THEROBOT->reset_axis_position(gcode->get_value('C'), C_AXIS); homing_axis[C_AXIS].homed= true; }
                 }
                 break;
 
@@ -963,6 +974,9 @@ void Endstops::on_gcode_received(void *argument)
                     if(gcode->has_letter('X')) homing_axis[X_AXIS].homed= false;
                     if(gcode->has_letter('Y')) homing_axis[Y_AXIS].homed= false;
                     if(gcode->has_letter('Z')) homing_axis[Z_AXIS].homed= false;
+                    if(homing_axis.size() > A_AXIS && gcode->has_letter('A')) homing_axis[A_AXIS].homed= false;
+                    if(homing_axis.size() > B_AXIS && gcode->has_letter('B')) homing_axis[B_AXIS].homed= false;
+                    if(homing_axis.size() > C_AXIS && gcode->has_letter('C')) homing_axis[C_AXIS].homed= false;
                 }
                 break;
 
@@ -984,8 +998,14 @@ void Endstops::on_gcode_received(void *argument)
 
         switch (gcode->m) {
             case 119: {
+                for(auto& h : homing_axis) {
+                    string name;
+                    name.append(1, h.axis).append(h.home_direction ? "_min" : "_max");
+                    gcode->stream->printf("%s:%d ", name.c_str(), h.pin_info->pin.get());
+                }
+                gcode->stream->printf("pins- ");
                 for(auto& p : endstops) {
-                    gcode->stream->printf("%c:%d ", p->axis, p->pin.get());
+                    gcode->stream->printf("P%d.%d:%d ", p->pin.port_number, p->pin.pin, p->pin.get());
                 }
                 gcode->add_nl = true;
             }

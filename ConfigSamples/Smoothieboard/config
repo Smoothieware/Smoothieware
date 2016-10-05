@@ -273,7 +273,6 @@ endstop.minz.retract                         5                # bounce off endst
 #endstop.maxz.slow_rate                       2                # slow homing rate in mm/sec
 #endstop.maxz.retract                         5                # bounce off endstop in mm
 
-
 # optional enable limit switches, actions will stop if any enabled limit switch is triggered
 #endstop.minx.limit_enable                   false            # set to true to enable the limit on this endstop
 #endstop.miny.limit_enable                   false            # set to true to enable the limit on this endstop
@@ -284,6 +283,17 @@ endstop.minz.retract                         5                # bounce off endst
 #endstop.maxx.pin                             1.25             # pin
 #endstop.maxx.limit_enable                    true             # set to true to enable the limit on this endstop
 #endstop.maxx.axis                            X                # the axis designator
+
+# OPTIONAL uncomment for homing the A axis to min
+#endstop.mina.enable                          true             # enable an endstop
+#endstop.mina.pin                             1.29             # pin
+#endstop.mina.homing_direction                home_to_min      # direction it moves to the endstop
+#endstop.mina.homing_position                 200              # the cartesian coordinate this is set to when it homes
+#endstop.mina.axis                            A                # the axis designator
+#endstop.mina.max_travel                      100              # the maximum travel in mm before it times out
+#endstop.mina.fast_rate                       10               # fast homing rate in mm/sec
+#endstop.mina.slow_rate                       2                # slow homing rate in mm/sec
+#endstop.mina.retract                         5                # bounce off endstop in mm
 
 # type of machine
 #corexy_homing                               false            # set to true if homing on a hbot or corexy
