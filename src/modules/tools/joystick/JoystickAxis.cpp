@@ -51,7 +51,7 @@ void JoystickAxis::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
 
     //ask the kernel to run "update_tick" every "refresh_interval" milliseconds
-    THEKERNEL->slow_ticker->attach(this->refresh_interval, this, &JoystickAxis::update_tick);
+    THEKERNEL->slow_ticker->attach(1000/this->refresh_interval, this, &JoystickAxis::update_tick);
 
 }
 
@@ -60,20 +60,20 @@ void JoystickAxis::on_gcode_received(void *argument)
 {
     //testing code here
     //print out parameters
-    int pos = read_pos();
+    int pos = -10;
     float posf = -10;
 
     //test a public data read
     struct PAD_joystick s;
     if (PublicData::get_value(joystick_checksum, this->target, &s)) {
+        pos = s.raw;
         posf = s.position;
     }
     else {
         THEKERNEL->streams->printf("Error reading target %d\n", this->target);
     }
     
-    
-    THEKERNEL->streams->printf("%+0.2f        ADC: %d (%0.2f),  Zero: %d,  End: %d, AutoZ: %d, StartT: %d, Int: %d\n", this->position, pos, posf, zero_offset, endpoint, auto_zero, startup_time, refresh_interval);
+    THEKERNEL->streams->printf("%+0.2f        ADC: %d (%0.2f),  Zero: %d,  End: %d, AutoZ: %d, Startup: %d, StartT: %d, Int: %d\n", this->position, pos, posf, zero_offset, endpoint, auto_zero, in_startup, startup_time, refresh_interval);
 }
 
 //read config file values for this module
@@ -111,12 +111,10 @@ void JoystickAxis::on_get_public_data(void *argument)
     pad->raw = THEKERNEL->adc->read(&axis_pin);
     pad->position = this->position;
     pdr->set_taken();
-
-    THEKERNEL->streams->printf("Read requested, returned %0.2f\n", this->position);
 }
 
 //read joystick position
-unsigned int JoystickAxis::read_pos()
+int JoystickAxis::read_pos()
 {
     
     //return just the read ADC value (since it is now being filtered in ADC)
@@ -125,7 +123,7 @@ unsigned int JoystickAxis::read_pos()
 }
 
 //get normalized joystick position from -1 to 1
-float JoystickAxis::get_normalized(unsigned int pos)
+float JoystickAxis::get_normalized(int pos)
 {
     int pos_zero;
     float norm;
@@ -150,8 +148,21 @@ uint32_t JoystickAxis::update_tick(uint32_t dummy)
 
     //if still in the "startup" period and auto-zero is enabled
     if (this->in_startup && this->auto_zero) {
+        //get the current ADC reading
+        int pos = read_pos();
+
+        //check if the new position is still much different (>5%) from the last
+        if ((float) abs(pos - this->last_reading) / (float) THEKERNEL->adc->get_max_value() > 0.05) {
+            //if so, no point in continuing, just save the last reading
+            this->last_reading = pos;
+            return 0;
+        }
+
+        //save the last ADC measurement
+        this->last_reading = pos;
+
         //add the current ADC measurement to the running sum
-        this->startup_sum += read_pos();
+        this->startup_sum += pos;
 
         //increment the number of intervals done so far
         this->startup_intervals++;
@@ -160,7 +171,7 @@ uint32_t JoystickAxis::update_tick(uint32_t dummy)
         if ((this->startup_intervals+1)*this->refresh_interval > this->startup_time) {
             //finalize the zero-offset as the average of the readings during the startup time
             this->zero_offset = this->startup_sum / this->startup_intervals;
-
+            
             //exit startup mode
             this->in_startup = false;
             return 0;

@@ -23,8 +23,8 @@ class JoystickAxis : public Module {
         void on_get_public_data(void* argument);
         uint32_t update_tick(uint32_t);
 
-        unsigned int read_pos(); //read the filtered ADC value (0 to Adc.get_max_value())
-        float get_normalized(unsigned int pos); //get the scaled value (-1 to 1) from the ADC value
+        int read_pos(); //read the filtered ADC value (0 to Adc.get_max_value())
+        float get_normalized(int pos); //get the scaled value (-1 to 1) from the ADC value
 
     private:
         uint16_t name_checksum = 0; //the "name" of this instance (only a checksum of the text however)
@@ -33,15 +33,16 @@ class JoystickAxis : public Module {
 
         Pin axis_pin; //which pin on the smoothie will provide the analog input
         int zero_offset = 0; //the analog value which corresponds to zero on the scaled axis
-        int endpoint = 4095; //the analog value which corresponds to either 1 or -1 (depends on its size relative to zero_offset)
+        int endpoint = 16380; //the analog value which corresponds to either 1 or -1 (depends on its size relative to zero_offset)
 
         bool auto_zero = false; //whether or not to automatically determine the zero-offset at startup
         bool in_startup = true; //whether the module is currently in startup mode
+        int last_reading = 0; //stores the last ADC reading
         int startup_time = 1000; //number of milliseconds to spend determining the zero-offset before normal functionality
         int startup_intervals = 0; //keeps track of how many refresh intervals have passed in the startup time
         int startup_sum = 0; //keeps track of the sum of ADC readings during startup
 
-        int refresh_interval = 100; //number of milliseconds between ADC readings
+        int refresh_interval = 100; //number of milliseconds between ADC readings (max 1000)
 
         uint16_t target; //debug only
 };
