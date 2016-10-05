@@ -12,6 +12,7 @@ you should have received a copy of the gnu general public license along with smo
 #define NUM_JOG_AXES 3
 
 #include "Module.h"
+#include <stdint.h>
 
 class Jogger : public Module {
 public:
@@ -23,8 +24,20 @@ public:
     uint32_t update_tick(uint32_t);
 
 private:
-    
-    int refresh_interval = 100; //number of milliseconds between jog speed updates
+    float get_speed(float pos);
+    void acceleration_tick(void);
+    void accelerate(int c);
+
+    float max_speed = 10.0f;
+    float dead_zone = 0.002f;
+    float nonlinearity = 1.0f;
+
+    float position[NUM_JOG_AXES] = {}; //keeps track of the joystick positions for each axis
+    bool direction[NUM_JOG_AXES]; //keeps track of the direction of the steppers (true = positive)
+    float target_speed[NUM_JOG_AXES] = {}; //volatile? keeps track of the target speed of each axis
+    bool enabled[NUM_JOG_AXES]; //volatile? keeps track of which steppers are enabled
+
+    int refresh_interval = 1000; //number of milliseconds between jog speed updates (max 1000)
 
     uint16_t axis_data_source[NUM_JOG_AXES] = {}; //checksums of the joystick module name from which to obtain data for axis n
 
