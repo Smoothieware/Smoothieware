@@ -16,6 +16,7 @@
 #include "modules/tools/scaracal/SCARAcal.h"
 #include "RotaryDeltaCalibration.h"
 #include "modules/tools/switch/SwitchPool.h"
+#include "modules/tools/jogger/Jogger.h"
 #include "modules/tools/joystick/JoystickAxisPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
@@ -196,6 +197,9 @@ void init() {
     JoystickAxisPool *jp = new JoystickAxisPool();
     jp->load_tools();
     delete jp;
+    #endif
+    #ifndef NO_TOOLS_JOGGER
+    kernel->add_module(new Jogger());
     #endif
     // Create and initialize USB stuff
     u.init();
