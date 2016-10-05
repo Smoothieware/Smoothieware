@@ -43,8 +43,6 @@ class JoystickAxis : public Module {
         int startup_sum = 0; //keeps track of the sum of ADC readings during startup
 
         int refresh_interval = 100; //number of milliseconds between ADC readings (max 1000)
-
-        uint16_t target; //debug only
 };
 
 #endif //JOYSTICKAXIS_H

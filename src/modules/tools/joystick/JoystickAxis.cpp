@@ -13,8 +13,6 @@
 
 
 #include "StreamOutputPool.h" //just for debugging
-#include "utils.h"
-#include "PublicData.h"
 
 
 #define joystick_checksum                   CHECKSUM("joystick")
@@ -25,8 +23,6 @@
 #define startup_time_checksum               CHECKSUM("startup_time")
 #define refresh_interval_checksum           CHECKSUM("refresh_interval")
 #define start_value_checksum                CHECKSUM("start_value")
-
-#define test_checksum   CHECKSUM("test")
 
 
 #define abs(a) ((a<0) ? -a : a)
@@ -59,21 +55,8 @@ void JoystickAxis::on_module_loaded()
 void JoystickAxis::on_gcode_received(void *argument)
 {
     //testing code here
-    //print out parameters
-    int pos = -10;
-    float posf = -10;
-
-    //test a public data read
-    struct PAD_joystick s;
-    if (PublicData::get_value(joystick_checksum, this->target, &s)) {
-        pos = s.raw;
-        posf = s.position;
-    }
-    else {
-        THEKERNEL->streams->printf("Error reading target %d\n", this->target);
-    }
-    
-    THEKERNEL->streams->printf("%+0.2f        ADC: %d (%0.2f),  Zero: %d,  End: %d, AutoZ: %d, Startup: %d, StartT: %d, Int: %d\n", this->position, pos, posf, zero_offset, endpoint, auto_zero, in_startup, startup_time, refresh_interval);
+    //print out parameters    
+    THEKERNEL->streams->printf("%+0.2f     ADC: %d, Zero: %d, End: %d, AutoZ: %d, Startup: %d, StartT: %d, Int: %d\n", this->position, read_pos(), zero_offset, endpoint, auto_zero, in_startup, startup_time, refresh_interval);
 }
 
 //read config file values for this module
@@ -91,8 +74,7 @@ void JoystickAxis::on_config_reload(void *argument)
     this->startup_time = THEKERNEL->config->value(joystick_checksum, this->name_checksum, startup_time_checksum)->by_default(this->startup_time)->as_number();
     this->refresh_interval = THEKERNEL->config->value(joystick_checksum, this->name_checksum, refresh_interval_checksum)->by_default(this->refresh_interval)->as_number();
     this->position = THEKERNEL->config->value(joystick_checksum, this->name_checksum, start_value_checksum)->by_default(this->position)->as_number();
-    
-    this->target = get_checksum(THEKERNEL->config->value(joystick_checksum, this->name_checksum, test_checksum)->by_default("")->as_string());
+
 }
 
 void JoystickAxis::on_get_public_data(void *argument)
