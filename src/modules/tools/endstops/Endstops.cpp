@@ -297,6 +297,7 @@ bool Endstops::load_config()
             continue;
         }
 
+        // setup the homing array
         homing_info_t hinfo;
 
         // init homing struct
@@ -642,7 +643,7 @@ void Endstops::home(axis_bitmap_t a)
 
     // potentially home A B and C individually
     if(homing_axis.size() > 3){
-        for (size_t i = A_AXIS; i <= C_AXIS; ++i) {
+        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
             if(axis_to_home[i]) {
                 // now home A B or C
                 float delta[i+1];
@@ -657,7 +658,7 @@ void Endstops::home(axis_bitmap_t a)
     }
 
 
-    // TODO should check that the endstops were hit and it did not stop short for some reason
+    // TODO: should check that the endstops were hit and it did not stop short for some reason
     // we did not complete movement the full distance if we hit the endstops
     THEROBOT->reset_position_from_current_actuator_position();
 
@@ -696,7 +697,7 @@ void Endstops::home(axis_bitmap_t a)
     // wait until finished
     THECONVEYOR->wait_for_idle();
 
-    // TODO should check that the endstops were hit and it did not stop short for some reason
+    // TODO: should check that the endstops were hit and it did not stop short for some reason
     // we did not complete movement the full distance if we hit the endstops
     THEROBOT->reset_position_from_current_actuator_position();
 
@@ -893,7 +894,7 @@ void Endstops::set_homing_offset(Gcode *gcode)
 
 void Endstops::handle_park(Gcode * gcode)
 {
-    // TODO spec says if XYZ specified move to them first then move to MCS of specifed axis
+    // TODO: spec says if XYZ specified move to them first then move to MCS of specifed axis
     THEROBOT->push_state();
     THEROBOT->inch_mode = false;     // needs to be in mm
     THEROBOT->absolute_mode = true;

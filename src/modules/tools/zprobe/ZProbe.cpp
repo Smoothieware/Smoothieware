@@ -242,7 +242,7 @@ void ZProbe::on_gcode_received(void *argument)
 
         // make sure the probe is defined and not already triggered before moving motors
         if(!this->pin.connected()) {
-            gcode->stream->printf("ZProbe not connected.\n");
+            gcode->stream->printf("ZProbe pin not configured.\n");
             return;
         }
         if(this->pin.get()) {
