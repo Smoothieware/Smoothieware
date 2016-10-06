@@ -44,6 +44,7 @@
 #include "LPC17xx.h"
 
 #include "mbed.h" // for wait_ms()
+#include "FileSorter.h"
 
 extern unsigned int g_maximumHeapAddress;
 
@@ -298,23 +299,23 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
 
     path = absolute_from_relative(path);
 
-    DIR *d;
-    struct dirent *p;
-    d = opendir(path.c_str());
-    if (d != NULL) {
-        while ((p = readdir(d)) != NULL) {
-            stream->printf("%s", lc(string(p->d_name)).c_str());
-            if(p->d_isdir) {
+    FileSorter* files = new FileSorter(path, NULL);
+    if ( !files->has_error() ) {
+        while ( files->next_file() ) {
+            //stream->printf("%s", lc(string(files->get_file_name())).c_str());
+            stream->printf("%s", files->get_file_name());
+            if ( files->get_file_is_dir() ) {
                 stream->printf("/");
-            } else if(opts.find("-s", 0, 2) != string::npos) {
-                stream->printf(" %d", p->d_fsize);
+            } else if ( opts.find("-s", 0, 2) != string::npos ) {
+                stream->printf(" %d", files->get_file_size());
             }
             stream->printf("\r\n");
         }
-        closedir(d);
+
     } else {
         stream->printf("Could not open directory %s\r\n", path.c_str());
     }
+    delete files;
 }
 
 extern SDFAT mounter;

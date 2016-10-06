@@ -12,6 +12,8 @@
 
 #include <string>
 
+class FileSorter;
+
 class FileScreen : public PanelScreen {
     public:
         FileScreen();
@@ -24,13 +26,14 @@ class FileScreen : public PanelScreen {
 
     private:
         void enter_folder(const char *folder);
-        uint16_t count_folder_content();
         std::string file_at(uint16_t line, bool& isdir);
-        bool filter_file(const char *f);
         void play(const char *path);
+    	void delete_file_sorter(void);
+    	static bool filter_file(struct dirent* file_info);
 
         std::string play_path;
         bool start_play;
+        FileSorter* file_sorter;
 };
 
 
