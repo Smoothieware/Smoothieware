@@ -533,49 +533,31 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
 {
     if(this->status != MOVING_TO_ENDSTOP_SLOW && this->status != MOVING_TO_ENDSTOP_FAST) return 0; // not doing anything we need to monitor for
 
-    if(!is_corexy) {
-        // check each homing endstop
-        for(auto& e : homing_axis) { // check all axis homing endstops
-            if(e.pin_info == nullptr) continue; // ignore if not a homing endstop
-            int m= e.axis_index;
-            if(STEPPER[m]->is_moving()) {
-                // if it is moving then we check the associated endstop, and debounce it
-                if(e.pin_info->pin.get()) {
-                    if(e.pin_info->debounce < debounce_ms) {
-                        e.pin_info->debounce++;
-                    } else {
+    // check each homing endstop
+    for(auto& e : homing_axis) { // check all axis homing endstops
+        if(e.pin_info == nullptr) continue; // ignore if not a homing endstop
+        int m= e.axis_index;
+        if(STEPPER[m]->is_moving()) {
+            // if it is moving then we check the associated endstop, and debounce it
+            if(e.pin_info->pin.get()) {
+                if(e.pin_info->debounce < debounce_ms) {
+                    e.pin_info->debounce++;
+
+                } else {
+                    if(is_corexy && (m == X_AXIS || m == Y_AXIS)) {
+                        // corexy when moving in X or Y we need to stop both the X and Y motors, and corexy always homes one axis at a time
+                        STEPPER[X_AXIS]->stop_moving();
+                        STEPPER[Y_AXIS]->stop_moving();
+
+                    }else{
                         // we signal the motor to stop, which will preempt any moves on that axis
                         STEPPER[m]->stop_moving();
                     }
-
-                } else {
-                    // The endstop was not hit yet
-                    e.pin_info->debounce= 0;
                 }
-            }
-        }
 
-    } else {
-        // corexy is different as the actuators are not directly related to the XY axis
-        // so we check the axis that is currently homing then stop all motors
-        for(auto& e : homing_axis) { // check all axis homing endstops
-            if(e.pin_info == nullptr) continue; // ignore if not a homing endstop
-            int m= e.axis_index;
-            if(axis_to_home[m]) {
-                if(e.pin_info->pin.get()) {
-                    if(e.pin_info->debounce < debounce_ms) {
-                        e.pin_info->debounce++;
-                    } else {
-                        // we signal all the motors to stop, as on corexy X and Y motors will move for X and Y axis homing and we only hom eone axis at a time
-                        STEPPER[X_AXIS]->stop_moving();
-                        STEPPER[Y_AXIS]->stop_moving();
-                        STEPPER[Z_AXIS]->stop_moving();
-                    }
-
-                } else {
-                    // The endstop was not hit yet
-                    e.pin_info->debounce= 0;
-                }
+            } else {
+                // The endstop was not hit yet
+                e.pin_info->debounce= 0;
             }
         }
     }
@@ -1006,7 +988,7 @@ void Endstops::on_gcode_received(void *argument)
                 }
                 gcode->stream->printf("pins- ");
                 for(auto& p : endstops) {
-                    gcode->stream->printf("P%d.%d:%d ", p->pin.port_number, p->pin.pin, p->pin.get());
+                    gcode->stream->printf("(%c)P%d.%d:%d ", p->axis, p->pin.port_number, p->pin.pin, p->pin.get());
                 }
                 gcode->add_nl = true;
             }
