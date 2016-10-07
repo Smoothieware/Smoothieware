@@ -438,9 +438,7 @@ void Endstops::on_idle(void *argument)
             // check min and max endstops
             if(debounced_get(&i->pin)) {
                 // endstop triggered
-                string name;
-                name.append(1, i->axis).append(homing_axis[i->axis].home_direction ? "_min" : "_max");
-                THEKERNEL->streams->printf("Limit switch %s was hit - reset or M999 required\n", name.c_str());
+                THEKERNEL->streams->printf("Limit switch %c was hit - reset or M999 required\n", i->axis);
                 this->status = LIMIT_TRIGGERED;
                 i->debounce= 0;
                 // disables heaters and motors, ignores incoming Gcode and flushes block queue
@@ -994,7 +992,9 @@ void Endstops::on_gcode_received(void *argument)
                 }
                 gcode->stream->printf("pins- ");
                 for(auto& p : endstops) {
-                    gcode->stream->printf("(%c)P%d.%d:%d ", p->axis, p->pin.port_number, p->pin.pin, p->pin.get());
+                    string str(1, p->axis);
+                    if(p->limit_enable) str.append("L");
+                    gcode->stream->printf("(%s)P%d.%d:%d ", str.c_str(), p->pin.port_number, p->pin.pin, p->pin.get());
                 }
                 gcode->add_nl = true;
             }
