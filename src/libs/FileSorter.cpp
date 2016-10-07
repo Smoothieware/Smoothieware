@@ -10,6 +10,8 @@
 #include "FileStream.h"
 
 #include <new>
+#include <malloc.h>
+#include <string.h>
 
 
 FileSorter::FileSorter(string dir_path, __file_sort_filter_fn_t callback)
@@ -18,6 +20,7 @@ FileSorter::FileSorter(string dir_path, __file_sort_filter_fn_t callback)
     this->error = false;
     this->file_info_array = NULL;
     this->file_count = 0;
+    this->total_file_count = 0;
     this->file_index = -1;
     this->filter_callback = callback;
 
@@ -26,9 +29,7 @@ FileSorter::FileSorter(string dir_path, __file_sort_filter_fn_t callback)
 
 FileSorter::~FileSorter()
 {
-    if ( this->file_info_array ) {
-        delete[] this->file_info_array;
-    }
+    delete_file_info_array();
 }
 
 int FileSorter::compare_dir(file_info_t* file_a, file_info_t* file_b)
@@ -60,26 +61,37 @@ void FileSorter::sort_directory(void)
     this->file_index = -1;
 }
 
+void FileSorter::delete_file_info_array(void)
+{
+    if ( this->file_info_array != NULL) {
+        // file names were allocated previously with strdup - free them now.
+        for ( size_t i=0; i<this->file_count; i++ ) {
+            free(this->file_info_array[i].file_name);
+        }
+
+        // free the array.
+        delete[] this->file_info_array;
+    }
+}
+
 void FileSorter::open_directory(string dir_path)
 {
     // reset all member state variables.
     this->directory_path = dir_path;
     this->error = false;
     this->file_count = 0;
+    this->total_file_count = 0;
     this->file_index = -1;
-    if ( this->file_info_array ) {
-        delete[] this->file_info_array;
-        this->file_info_array = NULL;
-    }
+    delete_file_info_array();
 
     DIR *d;
     d = opendir(this->directory_path.c_str());
     if ( !(this->error = (d == NULL)) ) {
         // get a count of items in the folder.
-        size_t files_in_folder = count_files_in_folder(this->directory_path);
+        this->total_file_count = count_files_in_folder(this->directory_path);
 
         // allocate the array used for sorting.
-        this->file_info_array = new (std::nothrow) file_info_t[files_in_folder];
+        this->file_info_array = new (std::nothrow) file_info_t[this->total_file_count];
 
         // read the file info into the array.
         if ( !(this->error = (this->file_info_array == NULL)) ) {
@@ -87,11 +99,11 @@ void FileSorter::open_directory(string dir_path)
             file_info_t* array_entry;
             this->file_count = 0;
             array_entry = this->file_info_array;
-            while ( this->file_count < files_in_folder && (file_info = readdir(d)) != NULL ) {
+            while ( this->file_count < this->total_file_count && (file_info = readdir(d)) != NULL ) {
                 if ( (this->filter_callback == NULL) || this->filter_callback(file_info) ) {
                     array_entry->is_dir = file_info->d_isdir;
                     array_entry->file_size = file_info->d_fsize;
-                    std::strncpy(array_entry->file_name, file_info->d_name, FILE_SORTER_MAX_NAME_SIZE);
+                    array_entry->file_name = strdup(file_info->d_name);
                     this->file_count++;
                     array_entry++;
                 }
@@ -105,9 +117,14 @@ void FileSorter::open_directory(string dir_path)
     }
 }
 
-int FileSorter::get_file_count(void)
+size_t FileSorter::get_file_count(void)
 {
     return this->file_count;
+}
+
+size_t FileSorter::get_total_file_count(void)
+{
+    return this->total_file_count;
 }
 
 const char* FileSorter::get_file_name(void)

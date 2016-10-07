@@ -12,12 +12,10 @@
 using std::string;
 
 
-#define FILE_SORTER_MAX_NAME_SIZE 32
-
 typedef bool (*__file_sort_filter_fn_t)(struct dirent*);
 
 typedef struct _file_info {
-    char file_name[FILE_SORTER_MAX_NAME_SIZE];
+    char* file_name;
     size_t file_size;
     bool is_dir;
 } file_info_t;
@@ -29,7 +27,8 @@ public:
     virtual ~FileSorter();
 
     void open_directory(string dir_path);
-    int get_file_count(void);
+    size_t get_file_count(void);    // the number of filtered and sorted files.
+    size_t get_total_file_count();  // the raw number of files in the directory.
     const char* get_file_name(void);
     size_t get_file_size(void);
     bool get_file_is_dir(void);
@@ -43,11 +42,13 @@ private:
     size_t count_files_in_folder(string dir_path);
     static int compare_dir(file_info_t* file_a, file_info_t* file_b);
     void sort_directory(void);
+    void delete_file_info_array(void);
 
     string directory_path;
     bool error;
     file_info_t* file_info_array;
     size_t file_count;
+    size_t total_file_count;
     int file_index;
     __file_sort_filter_fn_t filter_callback;
 };
