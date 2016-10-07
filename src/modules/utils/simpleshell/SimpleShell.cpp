@@ -299,6 +299,7 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
 
     path = absolute_from_relative(path);
 
+    // attempt to use the file sorter to sort alphabetically.
     FileSorter* files = new FileSorter(path, NULL);
     if ( !files->has_error() ) {
         while ( files->next_file() ) {
@@ -312,8 +313,26 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
             stream->printf("\r\n");
         }
 
+    // if the file sorter fails (likely due to memory constraints),
+    // just list the files the old fashioned way.
     } else {
-        stream->printf("Could not open directory %s\r\n", path.c_str());
+        DIR *d;
+        struct dirent *p;
+        d = opendir(path.c_str());
+        if (d != NULL) {
+            while ((p = readdir(d)) != NULL) {
+                stream->printf("%s", lc(string(p->d_name)).c_str());
+                if(p->d_isdir) {
+                    stream->printf("/");
+                } else if(opts.find("-s", 0, 2) != string::npos) {
+                    stream->printf(" %d", p->d_fsize);
+                }
+                stream->printf("\r\n");
+            }
+            closedir(d);
+        } else {
+            stream->printf("Could not open directory %s\r\n", path.c_str());
+        }
     }
     delete files;
 }
