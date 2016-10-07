@@ -973,9 +973,9 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     }
 
     bool move= false;
-    float sos= 0; // sun of squares for just XYZ
+    float sos= 0; // sum of squares for just XYZ
 
-    // find distance moved by each axis, use transformed target from the current machine position
+    // find distance moved by each axis, use transformed target from the current compensated machine position
     for (size_t i = 0; i < n_motors; i++) {
         deltas[i] = transformed_target[i] - compensated_machine_position[i];
         if(deltas[i] == 0) continue;
@@ -1082,7 +1082,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // Append the block to the planner
     // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
     if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration, s_value, is_g123)) {
-        // this is the machine position
+        // this is the new compensated machine position
         memcpy(this->compensated_machine_position, transformed_target, n_motors*sizeof(float));
         return true;
     }

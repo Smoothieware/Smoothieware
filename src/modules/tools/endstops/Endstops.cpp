@@ -537,6 +537,10 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
     for(auto& e : homing_axis) { // check all axis homing endstops
         if(e.pin_info == nullptr) continue; // ignore if not a homing endstop
         int m= e.axis_index;
+
+        // for corexy homing in X or Y we must only check the associated endstop, works as we only home one axis at a time for corexy
+        if(is_corexy && (m == X_AXIS || m == Y_AXIS) && !axis_to_home[m]) continue;
+
         if(STEPPER[m]->is_moving()) {
             // if it is moving then we check the associated endstop, and debounce it
             if(e.pin_info->pin.get()) {
@@ -545,7 +549,7 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
 
                 } else {
                     if(is_corexy && (m == X_AXIS || m == Y_AXIS)) {
-                        // corexy when moving in X or Y we need to stop both the X and Y motors, and corexy always homes one axis at a time
+                        // corexy when moving in X or Y we need to stop both the X and Y motors
                         STEPPER[X_AXIS]->stop_moving();
                         STEPPER[Y_AXIS]->stop_moving();
 
@@ -598,10 +602,6 @@ void Endstops::home(axis_bitmap_t a)
     for(auto& e : endstops) {
        e->debounce= 0;
     }
-
-    // turn off any compensation transform so Z does not move as XY home
-    auto savect= THEROBOT->compensationTransform;
-    THEROBOT->compensationTransform= nullptr;
 
     this->axis_to_home= a;
 
@@ -685,9 +685,6 @@ void Endstops::home(axis_bitmap_t a)
 
     THEROBOT->disable_segmentation= false;
 
-    // restore compensationTransform
-    THEROBOT->compensationTransform= savect;
-
     this->status = NOT_HOMING;
 }
 
@@ -695,6 +692,10 @@ void Endstops::process_home_command(Gcode* gcode)
 {
     // First wait for the queue to be empty
     THECONVEYOR->wait_for_idle();
+
+    // turn off any compensation transform so Z does not move as XY home
+    auto savect= THEROBOT->compensationTransform;
+    THEROBOT->compensationTransform= nullptr;
 
     // deltas always home Z axis only, which moves all three actuators
     bool home_in_z = this->is_delta || this->is_rdelta;
@@ -748,12 +749,17 @@ void Endstops::process_home_command(Gcode* gcode)
                 bs.set(p.axis_index);
                 home(bs);
             }
+            // check if on_halt (eg kill)
+            if(THEKERNEL->is_halted()) break;
         }
 
     } else {
         // they could all home at the same time
         home(haxis);
     }
+
+    // restore compensationTransform
+    THEROBOT->compensationTransform= savect;
 
     // check if on_halt (eg kill)
     if(THEKERNEL->is_halted()) {
