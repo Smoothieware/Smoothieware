@@ -25,12 +25,12 @@ public:
 
 private:
     float get_speed(float pos);
-    void acceleration_tick(void);
-    void accelerate(int c);
+    //void acceleration_tick(void);
+    //void accelerate(int c);
 
-    float max_speed = 10.0f;
-    float dead_zone = 0.002f;
-    float nonlinearity = 1.0f;
+    float max_speed = 10.0f; //maximum allowed speed (defaults to slow 10 mm/min)
+    float dead_zone = 0.002f; //distance from 0 in which small joystick movement is ignored
+    float nonlinearity = 1.0f; //nonlinearity parameter for scaling of joystick values
 
     float position[NUM_JOG_AXES] = {}; //keeps track of the joystick positions for each axis
     bool direction[NUM_JOG_AXES]; //keeps track of the direction of the steppers (true = positive)
