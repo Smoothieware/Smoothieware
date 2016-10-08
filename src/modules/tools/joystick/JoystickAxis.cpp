@@ -21,7 +21,7 @@
 #define endpoint_checksum                   CHECKSUM("endpoint")
 #define auto_zero_checksum                  CHECKSUM("auto_zero")
 #define startup_time_checksum               CHECKSUM("startup_time")
-#define refresh_interval_checksum           CHECKSUM("refresh_interval")
+#define refresh_rate_checksum               CHECKSUM("refresh_rate")
 #define start_value_checksum                CHECKSUM("start_value")
 
 
@@ -47,7 +47,7 @@ void JoystickAxis::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
 
     //ask the kernel to run "update_tick" every "refresh_interval" milliseconds
-    THEKERNEL->slow_ticker->attach(1000/this->refresh_interval, this, &JoystickAxis::update_tick);
+    THEKERNEL->slow_ticker->attach(this->refresh_rate, this, &JoystickAxis::update_tick);
 
 }
 
@@ -55,8 +55,8 @@ void JoystickAxis::on_module_loaded()
 void JoystickAxis::on_gcode_received(void *argument)
 {
     //testing code here
-    //print out parameters    
-    THEKERNEL->streams->printf("%+0.2f     ADC: %d, Zero: %d, End: %d, AutoZ: %d, Startup: %d, StartT: %d, Int: %d\n", this->position, read_pos(), zero_offset, endpoint, auto_zero, in_startup, startup_time, refresh_interval);
+    //print out parameters
+    THEKERNEL->streams->printf("%+0.2f     ADC: %0.2f, Zero: %0.2f, End: %0.2f, AutoZ: %d, Startup: %d, StartT: %d, Rate: %d\n", this->position, read_pos(), zero_offset, endpoint, auto_zero, in_startup, startup_time, refresh_rate);
 }
 
 //read config file values for this module
@@ -69,10 +69,10 @@ void JoystickAxis::on_config_reload(void *argument)
 
     //other config options
     this->zero_offset = THEKERNEL->config->value(joystick_checksum, this->name_checksum, zero_offset_checksum)->by_default(this->zero_offset)->as_number();
-    this->endpoint = THEKERNEL->config->value(joystick_checksum, this->name_checksum, endpoint_checksum)->by_default(THEKERNEL->adc->get_max_value())->as_number();
+    this->endpoint = THEKERNEL->config->value(joystick_checksum, this->name_checksum, endpoint_checksum)->by_default(this->endpoint)->as_number();
     this->auto_zero = THEKERNEL->config->value(joystick_checksum, this->name_checksum, auto_zero_checksum)->by_default(false)->as_bool();
     this->startup_time = THEKERNEL->config->value(joystick_checksum, this->name_checksum, startup_time_checksum)->by_default(this->startup_time)->as_number();
-    this->refresh_interval = THEKERNEL->config->value(joystick_checksum, this->name_checksum, refresh_interval_checksum)->by_default(this->refresh_interval)->as_number();
+    this->refresh_rate = THEKERNEL->config->value(joystick_checksum, this->name_checksum, refresh_rate_checksum)->by_default(this->refresh_rate)->as_number();
     this->position = THEKERNEL->config->value(joystick_checksum, this->name_checksum, start_value_checksum)->by_default(this->position)->as_number();
 
 }
@@ -96,25 +96,20 @@ void JoystickAxis::on_get_public_data(void *argument)
 }
 
 //read joystick position
-int JoystickAxis::read_pos()
+float JoystickAxis::read_pos()
 {
-    
-    //return just the read ADC value (since it is now being filtered in ADC)
-    return THEKERNEL->adc->read(&axis_pin);
-    
+    //now sufficient to return a scaled ADC value (since it is now being filtered in ADC)
+    return ADC_VREF * ((float) THEKERNEL->adc->read(&axis_pin)) / THEKERNEL->adc->get_max_value();
 }
 
 //get normalized joystick position from -1 to 1
-float JoystickAxis::get_normalized(int pos)
+float JoystickAxis::get_normalized(float pos)
 {
-    int pos_zero;
     float norm;
 
-    //first convert 0 to Adc.get_max_value() to +/- centered on zero
-    pos_zero = (pos - zero_offset);
-
+    //convert 0 to Adc.get_max_value() to +/- centered on zero
     //then scale the output to +/- 1 boundary
-    norm = (float) pos_zero / (float) abs(endpoint - zero_offset);
+    norm = (pos - zero_offset) / abs(endpoint - zero_offset);
 
     //constrain to within +/- 1
     if(abs(norm) > 1) {
@@ -131,10 +126,10 @@ uint32_t JoystickAxis::update_tick(uint32_t dummy)
     //if still in the "startup" period and auto-zero is enabled
     if (this->in_startup && this->auto_zero) {
         //get the current ADC reading
-        int pos = read_pos();
+        float pos = read_pos();
 
         //check if the new position is still much different (>5%) from the last
-        if ((float) abs(pos - this->last_reading) / (float) THEKERNEL->adc->get_max_value() > 0.05) {
+        if (abs(pos - this->last_reading) / ADC_VREF > 0.05) {
             //if so, no point in continuing, just save the last reading
             this->last_reading = pos;
             return 0;
@@ -150,7 +145,7 @@ uint32_t JoystickAxis::update_tick(uint32_t dummy)
         this->startup_intervals++;
 
         //check if next step would be out of the startup time
-        if ((this->startup_intervals+1)*this->refresh_interval > this->startup_time) {
+        if (1000*(this->startup_intervals+1) / (float) this->refresh_rate > this->startup_time) {
             //finalize the zero-offset as the average of the readings during the startup time
             this->zero_offset = this->startup_sum / this->startup_intervals;
             
