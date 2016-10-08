@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License along with Smo
 
 struct PAD_joystick {
     int name_checksum; //checksum of the module name
-    unsigned int raw; //raw ADC reading
+    unsigned int raw; //raw ADC voltage reading
     float position; //position of the joystick axis (from -1 to 1)
 };
 
