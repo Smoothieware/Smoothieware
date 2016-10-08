@@ -4,7 +4,8 @@
 #include <math.h>
 #include "Kernel.h"
 #include "Robot.h"
-#include "Planner.h"
+#include "Conveyor.h"
+#include "Gcode.h"
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
@@ -15,7 +16,6 @@
 #include "utils.h"
 
 #include "StreamOutputPool.h" //just for debugging
-
 
 #define jogger_checksum                     CHECKSUM("jogger")
 #define enable_checksum                     CHECKSUM("enable")
@@ -61,20 +61,7 @@ void Jogger::on_gcode_received(void *argument)
 {
     //testing code here
     //print out parameters
-    int pos = -10;
-    float posf = -10;
-
-    //test a public data read
-    struct PAD_joystick s;
-    if (PublicData::get_value(joystick_checksum, this->axis_data_source[0], &s)) {
-        pos = s.raw;
-        posf = s.position;
-    }
-    else {
-        THEKERNEL->streams->printf("Error reading target %d\n", this->axis_data_source[0]);
-    }
-
-    THEKERNEL->streams->printf("%+0.2f  (%d)    Max: %f, Dead: %f, Pw: %f, Rate: %d\n", posf, pos, max_speed, dead_zone, nonlinearity, refresh_rate);
+    THEKERNEL->streams->printf("%+0.2f, %+0.2f      Max: %0.1f, Dead: %f, Nl: %f, Rate: %d\n", this->position[0], this->position[1], max_speed, dead_zone, nonlinearity, refresh_rate);
 }
 
 //read config file values for this module
@@ -120,8 +107,54 @@ uint32_t Jogger::update_tick(uint32_t dummy)
             this->position[c] = s.position;
         }
         else {
-            this->position[c] = 0; //TODO: what value should this be? should we halt operations? what condition would result in an error in the request?
+            this->position[c] = 0;
+            //position should be 0 if the module doesn't respond, or the module name is unspecified/wrong
+            //no movement on that axis if position is 0 = safe
         }
+    }
+
+    //update the target speeds given the positions
+    for (int c = 0; c < NUM_JOG_AXES; c++) {
+        this->target_speed[c] = get_speed(this->position[c]);
+    }
+
+    //METHOD 2: ask robot for small change in position with desired speed, and do so when the robot has nothing else to do
+    if (THECONVEYOR->is_queue_empty()) {
+        //if the queue has been emptied, or is idle, it is safe to do a jog
+
+        //NOTE: getting the machine's position doesn't include the inverse compensation transform
+        //until the compensation transforms are more like the arm solutions and have both forward and inverse solutions,
+        //jogging will take place in the machine's coordinate system (i.e. jogging X/Y won't change Z-axis even with a bed-leveling compensation enabled)
+        
+        //push the current robot state (save G90/91 setting)
+        THEROBOT->push_state();
+
+        //set the robot's mode to relative motion
+        THEROBOT->absolute_mode = false;
+
+        //create a new gcode to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
+        char command[64];
+        const float sf = 1.0f; //scale -1 to 1 position to mm per small move
+
+        int n = snprintf(command, sizeof(command), "G0 X%0.3f Y%0.3f F%0.1f", this->position[0] * sf, this->position[1] * sf, sqrt(pow(this->target_speed[0], 2) + pow(this->target_speed[1], 2)));
+
+        //Gcode gc(command, &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+
+        //pop the saved robot state (return to whatever G90/91 setting was before)
+        THEROBOT->pop_state();
+
+        THEKERNEL->streams->printf(">>> %s\n", command);
+
+        /*
+        // current actuator position in mm
+        float axis_pos[NUM_JOG_AXES];
+        THEROBOT->get_axis_position(axis_pos, NUM_JOG_AXES);
+
+        // get machine position from the actuator position using FK
+        float machine_pos[3];
+        THEROBOT->arm_solution->actuator_to_cartesian(axis_pos, machine_pos);
+        */
     }
 
     /*
