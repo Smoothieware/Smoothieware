@@ -23,7 +23,7 @@
 #define max_speed_checksum                  CHECKSUM("max_speed")
 #define dead_zone_checksum                  CHECKSUM("dead_zone")
 #define nonlinearity_checksum               CHECKSUM("nonlinearity")
-#define refresh_interval_checksum           CHECKSUM("refresh_interval")
+#define refresh_rate_checksum               CHECKSUM("refresh_rate")
 
 #define axis0_data_source_checksum          CHECKSUM("data_source_alpha")
 #define axis1_data_source_checksum          CHECKSUM("data_source_beta")
@@ -52,7 +52,7 @@ void Jogger::on_module_loaded()
     this->register_for_event(ON_GCODE_RECEIVED);
 
     //ask the kernel to run "update_tick" every "refresh_interval" milliseconds
-    THEKERNEL->slow_ticker->attach(1000 / this->refresh_interval, this, &Jogger::update_tick);
+    THEKERNEL->slow_ticker->attach(this->refresh_rate, this, &Jogger::update_tick);
 
 }
 
@@ -74,7 +74,7 @@ void Jogger::on_gcode_received(void *argument)
         THEKERNEL->streams->printf("Error reading target %d\n", this->axis_data_source[0]);
     }
 
-    THEKERNEL->streams->printf("%+0.2f  (%d)    Max: %f, Dead: %f, Pw: %f, Int: %d\n", posf, pos, max_speed, dead_zone, nonlinearity, refresh_interval);
+    THEKERNEL->streams->printf("%+0.2f  (%d)    Max: %f, Dead: %f, Pw: %f, Rate: %d\n", posf, pos, max_speed, dead_zone, nonlinearity, refresh_rate);
 }
 
 //read config file values for this module
@@ -84,7 +84,7 @@ void Jogger::on_config_reload(void *argument)
     this->max_speed = THEKERNEL->config->value(joystick_checksum, max_speed_checksum)->by_default(this->max_speed)->as_number();
     this->dead_zone = THEKERNEL->config->value(joystick_checksum, dead_zone_checksum)->by_default(this->dead_zone)->as_number();
     this->nonlinearity = THEKERNEL->config->value(joystick_checksum, nonlinearity_checksum)->by_default(this->nonlinearity)->as_number();
-    this->refresh_interval = THEKERNEL->config->value(jogger_checksum, refresh_interval_checksum)->by_default(this->refresh_interval)->as_number();
+    this->refresh_rate = THEKERNEL->config->value(jogger_checksum, refresh_rate_checksum)->by_default(this->refresh_rate)->as_number();
     
     //load the names of the joystick modules where each axis will get its data
     uint16_t axisN_data_source_checksum[] = { axis0_data_source_checksum, axis1_data_source_checksum, axis2_data_source_checksum, axis3_data_source_checksum, axis4_data_source_checksum, axis5_data_source_checksum };

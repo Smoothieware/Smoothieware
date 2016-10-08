@@ -37,7 +37,7 @@ private:
     float target_speed[NUM_JOG_AXES] = {}; //volatile? keeps track of the target speed of each axis
     bool enabled[NUM_JOG_AXES]; //volatile? keeps track of which steppers are enabled
 
-    int refresh_interval = 1000; //number of milliseconds between jog speed updates (max 1000)
+    int refresh_rate = 100; //number of jog speed updates per second (absolute max = base_step_frequency (100 kHz))
 
     uint16_t axis_data_source[NUM_JOG_AXES] = {}; //checksums of the joystick module name from which to obtain data for axis n
 
