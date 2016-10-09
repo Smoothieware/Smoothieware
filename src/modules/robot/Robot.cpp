@@ -54,6 +54,7 @@ using std::string;
 #define  z_axis_max_speed_checksum           CHECKSUM("z_axis_max_speed")
 #define  segment_z_moves_checksum            CHECKSUM("segment_z_moves")
 #define  save_g92_checksum                   CHECKSUM("save_g92")
+#define  set_g92_checksum                    CHECKSUM("set_g92")
 
 // arm solutions
 #define  arm_solution_checksum               CHECKSUM("arm_solution")
@@ -110,6 +111,7 @@ Robot::Robot()
     this->g92_offset = wcs_t(0.0F, 0.0F, 0.0F);
     this->next_command_is_MCS = false;
     this->disable_segmentation= false;
+    this->disable_arm_solution= false;
     this->n_motors= 0;
 }
 
@@ -180,6 +182,14 @@ void Robot::load_config()
 
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
+    string g92                = THEKERNEL->config->value(set_g92_checksum             )->by_default("")->as_string();
+    if(!g92.empty()) {
+        // optional setting for a fixed G92 offset
+        std::vector<float> t= parse_number_list(g92.c_str());
+        if(t.size() == 3) {
+            g92_offset = wcs_t(t[0], t[1], t[2]);
+        }
+    }
 
     // default s value for laser
     this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
@@ -821,7 +831,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
             this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
 
-    // S is modal
+    // S is modal When specified on a G0/1/2/3 command
     if(gcode->has_letter('S')) s_value= gcode->get_value('S');
 
     bool moved= false;
@@ -979,7 +989,15 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // find actuator position given the machine position, use actual adjusted target
     ActuatorCoordinates actuator_pos;
-    arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
+    if(!disable_arm_solution) {
+        arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
+
+    }else{
+        // basically the same as cartesian, would be used for special homing situations like for scara
+        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+            actuator_pos[i] = transformed_target[i];
+        }
+    }
 
 #if MAX_ROBOT_ACTUATORS > 3
     sos= 0;

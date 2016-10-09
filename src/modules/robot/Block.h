@@ -25,6 +25,8 @@ class Block {
         void clear();
         void prepare();
 
+        float get_trapezoid_rate(int i) const;
+
         std::array<uint32_t, k_max_actuators> steps; // Number of steps for each axis for this block
         uint32_t steps_event_count;  // Steps for the longest axis
         float nominal_rate;       // Nominal rate in steps per second

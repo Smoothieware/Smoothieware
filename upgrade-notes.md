@@ -32,6 +32,8 @@ NOTE on a delta this needs to be the total hieght (or greater) than yur towers N
 
 7. if you have configured more than 2 extruders you will need to recompile and set ```MAX_ROBOT_ACTUATORS``` accordingly.. https://github.com/Smoothieware/Smoothieware/blob/edge/src/modules/robot/ActuatorCoordinates.h#L17
 
+8. ```M18 E0``` is no longer supported ```M18``` will disable all steppers, there is no way to disable just E as it is a normal axis now. (This may get fixed in the future, check back here)
+
 The following changes must be made to your hardware
 ---------------------------------------------------
 
