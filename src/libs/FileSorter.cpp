@@ -100,10 +100,19 @@ void FileSorter::open_directory(string dir_path)
             this->file_count = 0;
             array_entry = this->file_info_array;
             while ( this->file_count < this->total_file_count && (file_info = readdir(d)) != NULL ) {
+                // if the filename passes the filter, add it to the sort array.
                 if ( (this->filter_callback == NULL) || this->filter_callback(file_info) ) {
                     array_entry->is_dir = file_info->d_isdir;
                     array_entry->file_size = file_info->d_fsize;
                     array_entry->file_name = strdup(file_info->d_name);
+
+                    // ensure that the filename was copied successfully.
+                    if ( (this->error = (array_entry->file_name == NULL)) ) {
+                        // failed to copy the filename, clean up and get out.
+                        delete_file_info_array();
+                        break;
+                    }
+
                     this->file_count++;
                     array_entry++;
                 }
@@ -113,7 +122,9 @@ void FileSorter::open_directory(string dir_path)
         // close the directory handle and sort the file array.
         closedir(d);
         d = NULL;
-        sort_directory();
+        if ( !this->error ) {
+            sort_directory();
+        }
     }
 }
 
