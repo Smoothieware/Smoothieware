@@ -89,6 +89,7 @@ Panel::Panel()
     this->sd= nullptr;
     this->extmounter= nullptr;
     this->external_sd_enable= false;
+    this->in_idle= false;
     strcpy(this->playing_file, "Playing file");
 }
 
@@ -324,9 +325,17 @@ static const uint8_t ohw_logo_antipixel_bits[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
+void Panel::on_idle(void *argument)
+{
+    // avoid recursion if any screens end up calling ON_IDLE
+    if(in_idle) return;
+    in_idle= true;
+    idle_processing();
+    in_idle= false;
+}
 // On idle things, we don't want to do shit in interrupts
 // don't queue gcodes in this
-void Panel::on_idle(void *argument)
+void Panel::idle_processing()
 {
     if (this->start_up) {
         this->lcd->init();

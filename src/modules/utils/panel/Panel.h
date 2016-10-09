@@ -97,6 +97,7 @@ class Panel : public Module {
 
     private:
 
+        void idle_processing();
         // external SD card
         bool mount_external_sd(bool on);
         Pin sdcd_pin;
@@ -145,6 +146,7 @@ class Panel : public Module {
             bool control_value_changed:1;
             bool external_sd_enable:1;
             bool laser_enabled:1;
+            bool in_idle:1;
             volatile bool counter_changed:1;
             volatile bool click_changed:1;
             volatile bool refresh_flag:1;
