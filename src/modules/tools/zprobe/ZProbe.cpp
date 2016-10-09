@@ -160,6 +160,11 @@ uint32_t ZProbe::read_probe(uint32_t dummy)
 // returns boolean value indicating if probe was triggered
 bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
 {
+    if(this->pin.get()) {
+        // probe already triggered so abort
+        return false;
+    }
+
     float maxz= max_dist < 0 ? this->max_z*2 : max_dist;
 
     probing= true;
@@ -245,6 +250,7 @@ void ZProbe::on_gcode_received(void *argument)
             gcode->stream->printf("ZProbe pin not configured.\n");
             return;
         }
+
         if(this->pin.get()) {
             gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
             return;
