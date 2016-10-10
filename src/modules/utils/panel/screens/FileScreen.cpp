@@ -72,8 +72,14 @@ void FileScreen::enter_folder(const char *folder)
     // if there was an error reading the directory, set
     // the count to the raw directory count.  the file
     // list will revert to unsorted in this case.
-    uint16_t number_of_files_in_folder = this->file_sorter->has_error() ?
-            this->file_sorter->get_total_file_count() : this->file_sorter->get_file_count();
+    uint16_t number_of_files_in_folder = 0;
+    if ( this->file_sorter != NULL ) {
+        if ( this->file_sorter->has_error() ) {
+            number_of_files_in_folder = this->file_sorter->get_total_file_count();
+        } else {
+            number_of_files_in_folder = this->file_sorter->get_file_count();
+        }
+    }
 
     // Setup menu
     THEPANEL->setup_menu(number_of_files_in_folder + 1);// same number of files as menu items
@@ -190,10 +196,8 @@ void FileScreen::play(const char *path)
 
 void FileScreen::delete_file_sorter(void)
 {
-    if ( this->file_sorter ) {
-        delete this->file_sorter;
-        this->file_sorter = NULL;
-    }
+    delete this->file_sorter;
+    this->file_sorter = NULL;
 }
 
 // only filter files that have a .g, .ngc or .nc in them and does not start with a .

@@ -301,7 +301,7 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
 
     // attempt to use the file sorter to sort alphabetically.
     FileSorter* files = new FileSorter(path, NULL);
-    if ( !files->has_error() ) {
+    if ( files != NULL && !files->has_error() ) {
         while ( files->next_file() ) {
             //stream->printf("%s", lc(string(files->get_file_name())).c_str());
             stream->printf("%s", files->get_file_name());
