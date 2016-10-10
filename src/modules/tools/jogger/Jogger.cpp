@@ -24,6 +24,7 @@
 #define dead_zone_checksum                  CHECKSUM("dead_zone")
 #define nonlinearity_checksum               CHECKSUM("nonlinearity")
 #define refresh_rate_checksum               CHECKSUM("refresh_rate")
+#define step_scale_factor_checksum          CHECKSUM("step_scale_factor")
 
 #define axis0_data_source_checksum          CHECKSUM("data_source_alpha")
 #define axis1_data_source_checksum          CHECKSUM("data_source_beta")
@@ -62,6 +63,14 @@ void Jogger::on_gcode_received(void *argument)
     //testing code here
     //print out parameters
     THEKERNEL->streams->printf("%+0.2f, %+0.2f      Max: %0.1f, Dead: %f, Nl: %f, Rate: %d\n", this->position[0], this->position[1], max_speed, dead_zone, nonlinearity, refresh_rate);
+
+    //add debug for testing a single delta move
+    Gcode *gcode = static_cast<Gcode *>(argument);
+    int code = gcode->g;
+    if (code == 111) {
+        float step[3] = { 100, 0, 0 };
+        THEROBOT->delta_move(step, 1000.0f, NUM_JOG_AXES);
+    }
 }
 
 //read config file values for this module
@@ -72,6 +81,7 @@ void Jogger::on_config_reload(void *argument)
     this->dead_zone = THEKERNEL->config->value(joystick_checksum, dead_zone_checksum)->by_default(this->dead_zone)->as_number();
     this->nonlinearity = THEKERNEL->config->value(joystick_checksum, nonlinearity_checksum)->by_default(this->nonlinearity)->as_number();
     this->refresh_rate = THEKERNEL->config->value(jogger_checksum, refresh_rate_checksum)->by_default(this->refresh_rate)->as_number();
+    this->step_scale_factor = THEKERNEL->config->value(jogger_checksum, step_scale_factor_checksum)->by_default(this->step_scale_factor)->as_number();
     
     //load the names of the joystick modules where each axis will get its data
     uint16_t axisN_data_source_checksum[] = { axis0_data_source_checksum, axis1_data_source_checksum, axis2_data_source_checksum, axis3_data_source_checksum, axis4_data_source_checksum, axis5_data_source_checksum };
@@ -118,43 +128,17 @@ uint32_t Jogger::update_tick(uint32_t dummy)
         this->target_speed[c] = get_speed(this->position[c]);
     }
 
-    //METHOD 2: ask robot for small change in position with desired speed, and do so when the robot has nothing else to do
-    if (THECONVEYOR->is_queue_empty()) {
-        //if the queue has been emptied, or is idle, it is safe to do a jog
+    //METHOD 2: ask robot for small change in position with desired speed, only add moves if the queue isn't full
+    if (!THECONVEYOR->is_queue_full()) {
+        float step[NUM_JOG_AXES] = {};
+        float speed_magnitude = 0.0f;
+        for (int c = 0; c < NUM_JOG_AXES; c++) {
+            step[c] = this->position[c] * this->step_scale_factor;
+            speed_magnitude += pow(this->target_speed[c], 2);
+        }
+        speed_magnitude = sqrt(speed_magnitude);
 
-        //NOTE: getting the machine's position doesn't include the inverse compensation transform
-        //until the compensation transforms are more like the arm solutions and have both forward and inverse solutions,
-        //jogging will take place in the machine's coordinate system (i.e. jogging X/Y won't change Z-axis even with a bed-leveling compensation enabled)
-        
-        //push the current robot state (save G90/91 setting)
-        THEROBOT->push_state();
-
-        //set the robot's mode to relative motion
-        THEROBOT->absolute_mode = false;
-
-        //create a new gcode to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
-        char command[64];
-        const float sf = 1.0f; //scale -1 to 1 position to mm per small move
-
-        int n = snprintf(command, sizeof(command), "G0 X%0.3f Y%0.3f F%0.1f", this->position[0] * sf, this->position[1] * sf, sqrt(pow(this->target_speed[0], 2) + pow(this->target_speed[1], 2)));
-
-        //Gcode gc(command, &(StreamOutput::NullStream));
-        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-
-        //pop the saved robot state (return to whatever G90/91 setting was before)
-        THEROBOT->pop_state();
-
-        THEKERNEL->streams->printf(">>> %s\n", command);
-
-        /*
-        // current actuator position in mm
-        float axis_pos[NUM_JOG_AXES];
-        THEROBOT->get_axis_position(axis_pos, NUM_JOG_AXES);
-
-        // get machine position from the actuator position using FK
-        float machine_pos[3];
-        THEROBOT->arm_solution->actuator_to_cartesian(axis_pos, machine_pos);
-        */
+        THEROBOT->delta_move(step, speed_magnitude, NUM_JOG_AXES);
     }
 
     /*

@@ -38,6 +38,7 @@ private:
     bool enabled[NUM_JOG_AXES]; //volatile? keeps track of which steppers are enabled
 
     int refresh_rate = 100; //number of jog speed updates per second (absolute max = base_step_frequency (100 kHz))
+    float step_scale_factor = 0.1f; //max number of mm per requested step
 
     uint16_t axis_data_source[NUM_JOG_AXES] = {}; //checksums of the joystick module name from which to obtain data for axis n
 
