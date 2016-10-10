@@ -77,12 +77,12 @@ void FileSorter::delete_file_info_array(void)
 void FileSorter::open_directory(string dir_path)
 {
     // reset all member state variables.
+    delete_file_info_array();
     this->directory_path = dir_path;
     this->error = false;
     this->file_count = 0;
     this->total_file_count = 0;
     this->file_index = -1;
-    delete_file_info_array();
 
     DIR *d;
     d = opendir(this->directory_path.c_str());
@@ -100,6 +100,7 @@ void FileSorter::open_directory(string dir_path)
             this->file_count = 0;
             array_entry = this->file_info_array;
             while ( this->file_count < this->total_file_count && (file_info = readdir(d)) != NULL ) {
+
                 // if the filename passes the filter, add it to the sort array.
                 if ( (this->filter_callback == NULL) || this->filter_callback(file_info) ) {
                     array_entry->is_dir = file_info->d_isdir;
