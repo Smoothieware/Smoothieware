@@ -107,7 +107,8 @@ void FileSorter::open_directory(string dir_path)
         // disallow sorting when the machine is active (printing, milling, etc),
         // or when there's not enough heap memory available for the sort array.
         uint32_t free_bytes = SimpleShell::heapWalk(NULL, false);
-        this->error = (!FileSorter::can_do_sort() || free_bytes < (this->bytes_required_for_names + FILE_NAME_ARRAY_MIN_PADDING));
+        uint32_t bytes_required = (this->bytes_required_for_names + (this->total_file_count * sizeof(file_info_t)) + FILE_NAME_ARRAY_MIN_PADDING);
+        this->error = (!FileSorter::can_do_sort() || free_bytes < bytes_required);
         if ( !this->error ) {
 
             // allocate the array used for sorting.
