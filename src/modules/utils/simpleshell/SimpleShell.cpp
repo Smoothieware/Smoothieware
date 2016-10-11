@@ -93,7 +93,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
 int SimpleShell::reset_delay_secs = 0;
 
 // Adam Greens heap walk from http://mbed.org/forum/mbed/topic/2701/?page=4#comment-22556
-static uint32_t heapWalk(StreamOutput *stream, bool verbose)
+uint32_t SimpleShell::heapWalk(StreamOutput *stream, bool verbose)
 {
     uint32_t chunkNumber = 1;
     // The __end__ linker symbol points to the beginning of the heap.
@@ -106,7 +106,9 @@ static uint32_t heapWalk(StreamOutput *stream, bool verbose)
     uint32_t freeSize = 0;
     uint32_t usedSize = 0;
 
-    stream->printf("Used Heap Size: %lu\n", heapEnd - chunkCurr);
+    if ( stream != NULL ) {
+        stream->printf("Used Heap Size: %lu\n", heapEnd - chunkCurr);
+    }
 
     // Walk through the chunks until we hit the end of the heap.
     while (chunkCurr < heapEnd) {
@@ -134,7 +136,7 @@ static uint32_t heapWalk(StreamOutput *stream, bool verbose)
         // newlib-nano over allocates by 8 bytes, 4 bytes for the 32-bit chunk size and another 4 bytes to allow for 8
         // byte-alignment of the returned pointer.
         chunkSize -= 8;
-        if (verbose)
+        if (verbose && stream != NULL)
             stream->printf("  Chunk: %lu  Address: 0x%08lX  Size: %lu  %s\n", chunkNumber, chunkCurr, chunkSize, isChunkFree ? "CHUNK FREE" : "");
 
         if (isChunkFree) freeSize += chunkSize;
@@ -143,7 +145,10 @@ static uint32_t heapWalk(StreamOutput *stream, bool verbose)
         chunkCurr = chunkNext;
         chunkNumber++;
     }
-    stream->printf("Allocated: %lu, Free: %lu\r\n", usedSize, freeSize);
+    if ( stream != NULL ) {
+        stream->printf("Allocated: %lu, Free: %lu\r\n", usedSize, freeSize);
+    }
+
     return freeSize;
 }
 
@@ -591,7 +596,7 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
     unsigned long m = g_maximumHeapAddress - heap;
     stream->printf("Unused Heap: %lu bytes\r\n", m);
 
-    uint32_t f = heapWalk(stream, verbose);
+    uint32_t f = SimpleShell::heapWalk(stream, verbose);
     stream->printf("Total Free RAM: %lu bytes\r\n", m + f);
 
     stream->printf("Free AHB0: %lu, AHB1: %lu\r\n", AHB0.free(), AHB1.free());
