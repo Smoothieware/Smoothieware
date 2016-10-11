@@ -37,9 +37,10 @@ public:
     file_info_t* file_at(int index);
     bool has_error(void);
     void set_filter_callback(__file_sort_filter_fn_t callback);
+    static bool can_do_sort(void);
 
 private:
-    size_t count_files_in_folder(string dir_path);
+    void calculate_sizes(void);
     static int compare_dir(file_info_t* file_a, file_info_t* file_b);
     void sort_directory(void);
     void delete_file_info_array(void);
@@ -49,6 +50,7 @@ private:
     file_info_t* file_info_array;
     size_t file_count;
     size_t total_file_count;
+    size_t bytes_required_for_names;
     int file_index;
     __file_sort_filter_fn_t filter_callback;
 };
