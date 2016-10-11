@@ -12,7 +12,7 @@
 #include "PublicData.h"
 #include "modules/utils/player/PlayerPublicAccess.h"
 #include "SimpleShell.h"
-#include "libs/Kernel.h"
+#include "Kernel.h"
 
 #include <new>
 #include <malloc.h>
