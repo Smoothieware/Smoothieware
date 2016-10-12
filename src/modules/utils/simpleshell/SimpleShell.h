@@ -35,6 +35,7 @@ private:
     static void cat_command(string parameters, StreamOutput *stream );
     static void rm_command(string parameters, StreamOutput *stream );
     static void mv_command(string parameters, StreamOutput *stream );
+    static void mkdir_command(string parameters, StreamOutput *stream );
     static void upload_command(string parameters, StreamOutput *stream );
     static void break_command(string parameters, StreamOutput *stream );
     static void reset_command(string parameters, StreamOutput *stream );
