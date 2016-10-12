@@ -44,13 +44,16 @@ private:
     void delete_file_info_array(void);
 
     string directory_path;
-    bool error;
-    bool sorted;
     file_info_t* file_info_array;
     size_t file_count;
     size_t total_file_count;
     size_t bytes_required_for_names;
     __file_sort_filter_fn_t filter_callback;
+
+    struct {
+      bool error:1;
+      bool sorted:1;
+    };
 };
 
 #endif /* SRC_LIBS_FILESORTER_H_ */
