@@ -57,6 +57,7 @@ extern "C" uint32_t  __end__;
 extern "C" uint32_t  __malloc_free_list;
 extern "C" uint32_t  _sbrk(int size);
 
+
 // command lookup table
 const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"ls",       SimpleShell::ls_command},
@@ -65,6 +66,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"cat",      SimpleShell::cat_command},
     {"rm",       SimpleShell::rm_command},
     {"mv",       SimpleShell::mv_command},
+    {"mkdir",    SimpleShell::mkdir_command},
     {"upload",   SimpleShell::upload_command},
     {"reset",    SimpleShell::reset_command},
     {"dfu",      SimpleShell::dfu_command},
@@ -341,6 +343,15 @@ void SimpleShell::mv_command( string parameters, StreamOutput *stream )
     int s = rename(from.c_str(), to.c_str());
     if (s != 0) stream->printf("Could not rename %s to %s\r\n", from.c_str(), to.c_str());
     else stream->printf("renamed %s to %s\r\n", from.c_str(), to.c_str());
+}
+
+// Create a new directory
+void SimpleShell::mkdir_command( string parameters, StreamOutput *stream )
+{
+    string path = absolute_from_relative(shift_parameter( parameters ));
+    int result = mkdir(path.c_str(), 0);
+    if (result != 0) stream->printf("could not create directory %s\r\n", path.c_str());
+    else stream->printf("created directory %s\r\n", path.c_str());
 }
 
 // Change current absolute path to provided path
