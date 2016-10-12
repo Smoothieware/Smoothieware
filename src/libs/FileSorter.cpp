@@ -10,9 +10,10 @@
 #include "FileStream.h"
 #include "checksumm.h"
 #include "PublicData.h"
-#include "modules/utils/player/PlayerPublicAccess.h"
+#include "PlayerPublicAccess.h"
 #include "SimpleShell.h"
 #include "Kernel.h"
+#include "StreamOutput.h"
 
 #include <new>
 #include <malloc.h>
@@ -23,13 +24,8 @@
 
 FileSorter::FileSorter(string dir_path, __file_sort_filter_fn_t callback)
 {
-    this->directory_path = dir_path;
-    this->error = false;
-    this->file_info_array = NULL;
-    this->file_count = 0;
-    this->total_file_count = 0;
-    this->file_index = -1;
     this->filter_callback = callback;
+    this->file_info_array = NULL;
 
     open_directory(dir_path);
 }
@@ -71,7 +67,6 @@ void FileSorter::sort_directory(void)
 {
     // sort the array.
     qsort(this->file_info_array, this->file_count, sizeof(file_info_t), (__compar_fn_t)compare_dir);
-    this->file_index = -1;
 }
 
 void FileSorter::delete_file_info_array(void)
@@ -84,6 +79,7 @@ void FileSorter::delete_file_info_array(void)
 
         // free the array.
         delete[] this->file_info_array;
+        this->file_info_array = NULL;
     }
 }
 
@@ -91,11 +87,12 @@ void FileSorter::open_directory(string dir_path)
 {
     // reset all member state variables.
     delete_file_info_array();
+    //
     this->directory_path = dir_path;
     this->error = false;
+    this->sorted = false;
     this->file_count = 0;
     this->total_file_count = 0;
-    this->file_index = -1;
 
     DIR *d;
     d = opendir(this->directory_path.c_str());
@@ -108,14 +105,14 @@ void FileSorter::open_directory(string dir_path)
         // or when there's not enough heap memory available for the sort array.
         uint32_t free_bytes = SimpleShell::heapWalk(NULL, false);
         uint32_t bytes_required = (this->bytes_required_for_names + (this->total_file_count * sizeof(file_info_t)) + FILE_NAME_ARRAY_MIN_PADDING);
-        this->error = (!FileSorter::can_do_sort() || free_bytes < bytes_required);
-        if ( !this->error ) {
+        this->sorted = (FileSorter::can_do_sort() && free_bytes > bytes_required);
+        if ( this->sorted ) {
 
             // allocate the array used for sorting.
             this->file_info_array = new (std::nothrow) file_info_t[this->total_file_count];
 
             // read the file info into the array.
-            if ( !(this->error = (this->file_info_array == NULL)) ) {
+            if ( (this->sorted = (this->file_info_array != NULL)) ) {
                 int itr = 0;
                 struct dirent* file_info;
                 file_info_t* array_entry;
@@ -130,7 +127,7 @@ void FileSorter::open_directory(string dir_path)
                         array_entry->file_name = strdup(file_info->d_name);
 
                         // ensure that the filename was copied successfully.
-                        if ( (this->error = (array_entry->file_name == NULL)) ) {
+                        if ( !(this->sorted = (array_entry->file_name != NULL)) ) {
                             // failed to copy the filename, clean up and get out.
                             delete_file_info_array();
                             break;
@@ -150,8 +147,56 @@ void FileSorter::open_directory(string dir_path)
         // close the directory handle and sort the file array.
         closedir(d);
         d = NULL;
-        if ( !this->error ) {
+        if ( this->sorted ) {
             sort_directory();
+        }
+    }
+}
+
+void FileSorter::print_file_list(StreamOutput* stream, bool verbose)
+{
+    // attempt to use the file sorter to sort alphabetically.
+    if ( this->sorted ) {
+        file_info_t* file_info;
+
+        for ( size_t i=0; i<this->file_count; i++ ) {
+            if ( (file_info = &this->file_info_array[i] ) != NULL ) {
+                //stream->printf("%s", lc(string(files->get_file_name())).c_str());
+                stream->printf("%s", file_info->file_name);
+                if ( file_info->is_dir ) {
+                    stream->printf("/");
+                } else if ( verbose ) {
+                    stream->printf(" %d", file_info->file_size);
+                }
+                stream->printf("\r\n");
+            }
+        }
+
+    // if the file sorter fails (likely due to memory constraints),
+    // just list the files the old fashioned way.
+    } else {
+        DIR *d;
+        struct dirent *p;
+        d = opendir(this->directory_path.c_str());
+        if (d != NULL) {
+            int itr = 0;
+            while ((p = readdir(d)) != NULL) {
+                stream->printf("%s", p->d_name);
+                if(p->d_isdir) {
+                    stream->printf("/");
+                } else if( verbose ) {
+                    stream->printf(" %d", p->d_fsize);
+                }
+                stream->printf("\r\n");
+
+                // process ON_IDLE every 20 iterations.
+                if ( itr++ % 20 ) {
+                    THEKERNEL->call_event(ON_IDLE);
+                }
+           }
+            closedir(d);
+        } else {
+            stream->printf("Could not open directory %s\r\n", this->directory_path.c_str());
         }
     }
 }
@@ -166,57 +211,42 @@ size_t FileSorter::get_total_file_count(void)
     return this->total_file_count;
 }
 
-const char* FileSorter::get_file_name(void)
+const char* FileSorter::file_at(int index, bool& isdir)
 {
-    if ( this->file_index >= 0 && (size_t) this->file_index < this->file_count ) {
-        return this->file_info_array[this->file_index].file_name;
-    } else {
-        return NULL;
-    }
-}
+    // attempt to sort the files alphabetically.
+    if ( this->sorted ) {
+        if ( index >= 0 && (size_t) index < this->file_count ) {
+            isdir = this->file_info_array[index].is_dir;
+            return this->file_info_array[index].file_name;
+        } else {
+            return NULL;
+        }
 
-size_t FileSorter::get_file_size(void)
-{
-    if ( this->file_index >= 0 && (size_t) this->file_index < this->file_count ) {
-        return this->file_info_array[this->file_index].file_size;
+    // if the file sorter failed (likely due to memory constraints), do
+    // the filename lookup the old fashioned way.
     } else {
-        return 0;
-    }
-}
+        DIR *d;
+        struct dirent *p;
+        uint16_t count = 0;
+        d = opendir(THEKERNEL->current_path.c_str());
+        if (d != NULL) {
+            int itr = 0;
+            while ((p = readdir(d)) != NULL) {
+                if ( ((this->filter_callback == NULL) || this->filter_callback(p)) && index == count++ ) {
+                    closedir(d);
+                    isdir = p->d_isdir;
+                    return p->d_name;
+                }
 
-bool FileSorter::get_file_is_dir(void)
-{
-    if ( this->file_index >= 0 && (size_t) this->file_index < this->file_count ) {
-        return this->file_info_array[this->file_index].is_dir;
-    } else {
-        return false;
-    }
-}
+                // process ON_IDLE every 20 iterations.
+                if ( itr++ % 20 ) {
+                    THEKERNEL->call_event(ON_IDLE);
+                }
+            }
 
-const char* FileSorter::next_file(void)
-{
-    if ( this->file_index == -1 || (this->file_index >= 0 && (size_t) this->file_index < (this->file_count - 1)) ) {
-        return this->file_info_array[++this->file_index].file_name;
-    } else {
-        return NULL;
-    }
-}
+            closedir(d);
+        }
 
-const char* FileSorter::first_file(void)
-{
-    if ( this->file_count > 0 ) {
-        this->file_index = 0;
-        return this->file_info_array[this->file_index].file_name;
-    } else {
-        return NULL;
-    }
-}
-
-file_info_t* FileSorter::file_at(int index)
-{
-    if ( index >= 0 && (size_t) index < this->file_count ) {
-        return &this->file_info_array[index];
-    } else {
         return NULL;
     }
 }
@@ -224,6 +254,11 @@ file_info_t* FileSorter::file_at(int index)
 bool FileSorter::has_error(void)
 {
     return this->error;
+}
+
+bool FileSorter::is_sorted(void)
+{
+    return this->sorted;
 }
 
 void FileSorter::set_filter_callback(__file_sort_filter_fn_t callback)

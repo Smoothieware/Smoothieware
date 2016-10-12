@@ -11,6 +11,7 @@
 #include <string>
 using std::string;
 
+class StreamOutput;
 
 typedef bool (*__file_sort_filter_fn_t)(struct dirent*);
 
@@ -27,15 +28,12 @@ public:
     virtual ~FileSorter();
 
     void open_directory(string dir_path);
+    void print_file_list(StreamOutput* stream, bool verbose);
     size_t get_file_count(void);    // the number of filtered and sorted files.
     size_t get_total_file_count();  // the raw number of files in the directory.
-    const char* get_file_name(void);
-    size_t get_file_size(void);
-    bool get_file_is_dir(void);
-    const char* next_file(void);
-    const char* first_file(void);
-    file_info_t* file_at(int index);
+    const char* file_at(int index, bool& isdir);
     bool has_error(void);
+    bool is_sorted(void);
     void set_filter_callback(__file_sort_filter_fn_t callback);
     static bool can_do_sort(void);
 
@@ -47,11 +45,11 @@ private:
 
     string directory_path;
     bool error;
+    bool sorted;
     file_info_t* file_info_array;
     size_t file_count;
     size_t total_file_count;
     size_t bytes_required_for_names;
-    int file_index;
     __file_sort_filter_fn_t filter_callback;
 };
 

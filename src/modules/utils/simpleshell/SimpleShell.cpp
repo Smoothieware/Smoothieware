@@ -7,12 +7,12 @@
 
 
 #include "SimpleShell.h"
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/SerialMessage.h"
-#include "libs/StreamOutput.h"
-#include "modules/robot/Conveyor.h"
+#include "Kernel.h"
+#include "nuts_bolts.h"
+#include "utils.h"
+#include "SerialMessage.h"
+#include "StreamOutput.h"
+#include "Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
 #include "version.h"
@@ -305,41 +305,14 @@ void SimpleShell::ls_command( string parameters, StreamOutput *stream )
     path = absolute_from_relative(path);
 
     // attempt to use the file sorter to sort alphabetically.
+    bool verbose = (opts.find("-s", 0, 2) != string::npos);
     FileSorter* files = new FileSorter(path, NULL);
-    if ( files != NULL && !files->has_error() ) {
-        while ( files->next_file() ) {
-            //stream->printf("%s", lc(string(files->get_file_name())).c_str());
-            stream->printf("%s", files->get_file_name());
-            if ( files->get_file_is_dir() ) {
-                stream->printf("/");
-            } else if ( opts.find("-s", 0, 2) != string::npos ) {
-                stream->printf(" %d", files->get_file_size());
-            }
-            stream->printf("\r\n");
-        }
-
-    // if the file sorter fails (likely due to memory constraints),
-    // just list the files the old fashioned way.
+    if ( files != NULL ) {
+        files->print_file_list(stream, verbose);
+        delete files;
     } else {
-        DIR *d;
-        struct dirent *p;
-        d = opendir(path.c_str());
-        if (d != NULL) {
-            while ((p = readdir(d)) != NULL) {
-                stream->printf("%s", lc(string(p->d_name)).c_str());
-                if(p->d_isdir) {
-                    stream->printf("/");
-                } else if(opts.find("-s", 0, 2) != string::npos) {
-                    stream->printf(" %d", p->d_fsize);
-                }
-                stream->printf("\r\n");
-            }
-            closedir(d);
-        } else {
-            stream->printf("Could not open directory %s\r\n", path.c_str());
-        }
+        stream->printf("Could not open directory %s\r\n", path.c_str());
     }
-    delete files;
 }
 
 extern SDFAT mounter;

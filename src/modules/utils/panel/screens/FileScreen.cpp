@@ -74,10 +74,10 @@ void FileScreen::enter_folder(const char *folder)
     // list will revert to unsorted in this case.
     uint16_t number_of_files_in_folder = 0;
     if ( this->file_sorter != NULL ) {
-        if ( this->file_sorter->has_error() ) {
-            number_of_files_in_folder = this->file_sorter->get_total_file_count();
-        } else {
+        if ( this->file_sorter->is_sorted() ) {
             number_of_files_in_folder = this->file_sorter->get_file_count();
+        } else {
+            number_of_files_in_folder = this->file_sorter->get_total_file_count();
         }
     }
 
@@ -139,40 +139,15 @@ void FileScreen::clicked_line(uint16_t line)
 // Find the "line"th file in the current folder
 string FileScreen::file_at(uint16_t line, bool& isdir)
 {
-    // attempt to sort the files alphabetically.
-    if ( !this->file_sorter->has_error() ) {
-        file_info_t* file_info;
-        if ( (file_info = this->file_sorter->file_at(line)) != NULL ) {
-            isdir = file_info->is_dir;
-            return file_info->file_name;
-        } else {
-            isdir = false;
-            return "";
+    if ( this->file_sorter != NULL ) {
+        const char* fn = this->file_sorter->file_at(line, isdir);
+        if ( fn != NULL ) {
+            return string(fn);
         }
-
-    // if the file sorter failed (likely due to memory constraints), do
-    // the filename lookup the old fashioned way.
-    } else {
-        DIR *d;
-        struct dirent *p;
-        uint16_t count = 0;
-        d = opendir(THEKERNEL->current_path.c_str());
-        if (d != NULL) {
-            while ((p = readdir(d)) != NULL) {
-                // only filter files that have a .g in them and directories not starting with a .
-              if( filter_file(p) && count++ == line ) {
-                    isdir= p->d_isdir;
-                    string fn= p->d_name;
-                    closedir(d);
-                    return fn;
-                }
-            }
-        }
-
-        if (d != NULL) closedir(d);
-        isdir= false;
-        return "";
     }
+
+    isdir= false;
+    return "";
 }
 
 void FileScreen::on_main_loop()
