@@ -250,7 +250,7 @@ void WatchScreen::display_menu_line(uint16_t line)
             break;
         }
         case 1: THEPANEL->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]); break;
-        case 2: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
+        case 2: THEPANEL->lcd->printf("%3d%%  %02lu:%02lu:%02lu  %3u%%", this->current_speed, this->elapsed_time / 3600, (this->elapsed_time % 3600) / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
         case 3: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
 }
