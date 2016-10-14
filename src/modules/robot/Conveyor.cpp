@@ -248,8 +248,19 @@ void Conveyor::flush_queue()
 
     // TODO force deceleration of last block
 
-    // now wait until the job queue has finished and all motors are idle too
-    wait_for_idle();
+    running = false; // stops on_idle calling check_queue
+    if(halted) {
+        // wait for the queue to be drained by the stepticker and emptied by on idle
+        // FIXME we do not wait for motors to stop here due to a race condition or bug
+        while (!queue.is_empty()) {
+            check_queue(true); // forces queue to be made available to stepticker
+            THEKERNEL->call_event(ON_IDLE, this);
+        }
+    }else{
+        // now wait until the job queue has finished and all motors are idle too
+        wait_for_idle();
+    }
+
     flush= false;
 }
 
