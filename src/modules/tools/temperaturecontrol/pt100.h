@@ -26,11 +26,13 @@ class PT100 : public TempSensor
         Pin  ampmod1_pin;
         Pin  ampmod2_pin;
         float min_temp, max_temp;
-	float m, b;
+	float m, b, r0; //reuse m as A if not linear
+	unsigned char amptype;
         struct {
             bool bad_config:1;
             bool use_ampmod1:1;
             bool use_ampmod2:1;
+            bool use_linear:1;
         };
 };
 
