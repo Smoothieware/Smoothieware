@@ -22,9 +22,9 @@ class StepperMotor  : public Module {
         // called from step ticker ISR
         inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
 
-        inline void enable(bool state) { en_pin.set(!state); };
-        inline bool is_enabled() const { return !en_pin.get(); };
-        inline bool is_moving() const { return moving; };
+        void enable(bool state) { en_pin.set(!state); };
+        bool is_enabled() const { return !en_pin.get(); };
+        bool is_moving() const { return moving; };
         void start_moving() { moving= true; }
         void stop_moving() { moving= false; }
 

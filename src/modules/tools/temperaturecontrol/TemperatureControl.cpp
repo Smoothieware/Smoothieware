@@ -119,7 +119,7 @@ void TemperatureControl::on_main_loop(void *argument)
 {
     if (this->temp_violated) {
         this->temp_violated = false;
-        THEKERNEL->streams->printf("ERROR : MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
+        THEKERNEL->streams->printf("ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
         THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
@@ -545,7 +545,7 @@ void TemperatureControl::on_second_tick(void *argument)
                 this->runaway_heating_timer++;
                 if( this->runaway_heating_timer > this->runaway_heating_timeout && this->runaway_heating_timeout != 0 ){
                     this->runaway_heating_timer = 0;
-                    THEKERNEL->streams->printf("ERROR : Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
+                    THEKERNEL->streams->printf("ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
                     THEKERNEL->call_event(ON_HALT, nullptr);
                 }
                 break;
@@ -553,7 +553,7 @@ void TemperatureControl::on_second_tick(void *argument)
                 float delta= this->get_temperature() - this->target_temperature;
                 // If the temperature is outside the acceptable range
                 if(this->runaway_range != 0 && fabsf(delta) > this->runaway_range){
-                    THEKERNEL->streams->printf("ERROR : Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
+                    THEKERNEL->streams->printf("ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
                     THEKERNEL->call_event(ON_HALT, nullptr);
                 }
             }
