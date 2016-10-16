@@ -519,7 +519,19 @@ void Robot::on_gcode_received(void *argument)
                 THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
                 break;
 
-            case 18: // this used to support parameters, now it ignores them
+            case 18: // this allows individual motors to be turned off, no parameters falls through to turn all off
+                if(gcode->get_num_args() > 0) {
+                    // bitmap of motors to turn off, where bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C
+                    uint32_t bm= 0;
+                    for (int i = 0; i < n_motors; ++i) {
+                        char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-3));
+                        if(gcode->has_letter(axis)) bm |= (0x02<<i); // set appropriate bit
+                    }
+                    THEKERNEL->conveyor->wait_for_idle();
+                    THEKERNEL->call_event(ON_ENABLE, (void *)bm);
+                    break;
+                }
+                // fall through
             case 84:
                 THEKERNEL->conveyor->wait_for_idle();
                 THEKERNEL->call_event(ON_ENABLE, nullptr); // turn all enable pins off

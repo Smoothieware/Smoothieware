@@ -189,8 +189,18 @@ bool MotorDriverControl::config_module(uint16_t cs)
 // This may cause the initial step to be missed if on-idle is delayed too much but we can't do SPI in an interrupt
 void MotorDriverControl::on_enable(void *argument)
 {
-    enable_event= true;
-    enable_flg= (argument != nullptr);
+    // argument is a uin32_t where bit0 is on or off, and bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C etc
+    // for now if bit0 is 1 we turn all on, if 0 we turn all off otherwise we turn selected axis off
+    uint32_t i= (designator >= 'X' || designator <= 'Z') ? designator-'X' : designator-'A'+3;
+    uint32_t bm= (uint32_t)argument;
+    if(bm == 0x01) {
+        enable_event= true;
+        enable_flg= true;
+
+    }else if(bm == 0 || ( (bm&0x01) == 0 && (bm&(0x02<<i)) != 0 )) {
+        enable_event= true;
+        enable_flg= false;
+    }
 }
 
 void MotorDriverControl::on_idle(void *argument)
