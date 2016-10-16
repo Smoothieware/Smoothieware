@@ -15,6 +15,9 @@ class StepperMotor  : public Module {
         StepperMotor(Pin& step, Pin& dir, Pin& en);
         ~StepperMotor();
 
+        void set_motor_id(uint8_t id) { motor_id= id; }
+        uint8_t get_motor_id() const { return motor_id; }
+
         // called from step ticker ISR
         inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
         // called from unstep ISR
@@ -56,8 +59,6 @@ class StepperMotor  : public Module {
         void on_halt(void *argument);
         void on_enable(void *argument);
 
-        int index;
-
         Pin step_pin;
         Pin dir_pin;
         Pin en_pin;
@@ -72,6 +73,7 @@ class StepperMotor  : public Module {
         float   last_milestone_mm;
 
         volatile struct {
+            uint8_t motor_id:8;
             volatile bool direction:1;
             volatile bool moving:1;
             bool selected:1;
