@@ -27,17 +27,13 @@ class PT100 : public TempSensor
         Pin  ampmod2_pin;
         float min_temp, max_temp;
 	float m, b; //reuse m as A if not linear
-#ifndef NO_RTD_CURVE
         float r0;
 	unsigned char amptype;
-#endif
         struct {
             bool bad_config:1;
             bool use_ampmod1:1;
             bool use_ampmod2:1;
-#ifndef NO_RTD_CURVE
             bool use_linear:1;
-#endif
         };
 };
 
