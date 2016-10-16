@@ -509,14 +509,11 @@ void Robot::on_gcode_received(void *argument)
                 if(gcode->subcode == 0 && (gcode->has_letter('E') || gcode->get_num_args() == 0)){
                     // reset the E position, legacy for 3d Printers to be reprap compatible
                     // find the selected extruder
-                    // NOTE this will only work when E is 0 if volumetric and/or scaling is used as the actuator last milestone will be different if it was scaled
-                    for (int i = E_AXIS; i < n_motors; ++i) {
-                        if(actuators[i]->is_selected()) {
-                            float e= gcode->has_letter('E') ? gcode->get_value('E') : 0;
-                            machine_position[i]= compensated_machine_position[i]= e;
-                            actuators[i]->change_last_milestone(e);
-                            break;
-                        }
+                    int selected_extruder= get_active_extruder();
+                    if(selected_extruder > 0) {
+                        float e= gcode->has_letter('E') ? gcode->get_value('E') : 0;
+                        machine_position[selected_extruder]= compensated_machine_position[selected_extruder]= e;
+                        actuators[selected_extruder]->change_last_milestone(get_e_scale_fnc ? e*get_e_scale_fnc() : e);
                     }
                 }
                 #endif
@@ -552,12 +549,10 @@ void Robot::on_gcode_received(void *argument)
                     }
                     // handle E parameter as currently selected extruder ABC
                     if(gcode->has_letter('E')) {
-                        for (int i = E_AXIS; i < n_motors; ++i) {
-                            // find first selected extruder
-                            if(actuators[i]->is_selected()) {
-                                bm |= (0x02<<i); // set appropriate bit
-                                break;
-                            }
+                        // find first selected extruder
+                        int i= get_active_extruder();
+                        if(i > 0) {
+                            bm |= (0x02<<i); // set appropriate bit
                         }
                     }
 
@@ -790,6 +785,15 @@ void Robot::on_gcode_received(void *argument)
     next_command_is_MCS = false; // must be on same line as G0 or G1
 }
 
+int Robot::get_active_extruder() const
+{
+    for (int i = E_AXIS; i < n_motors; ++i) {
+        // find first selected extruder
+        if(actuators[i]->is_selected()) return i;
+    }
+    return 0;
+}
+
 // process a G0/G1/G2/G3
 void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 {
@@ -846,16 +850,10 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
     }
 
     // process extruder parameters, for active extruder only (only one active extruder at a time)
-    selected_extruder= 0;
+    int selected_extruder= 0;
     if(gcode->has_letter('E')) {
-        for (int i = E_AXIS; i < n_motors; ++i) {
-            // find first selected extruder
-            if(actuators[i]->is_selected()) {
-                param[E_AXIS]= gcode->get_value('E');
-                selected_extruder= i;
-                break;
-            }
-        }
+        selected_extruder= get_active_extruder();
+        param[E_AXIS]= gcode->get_value('E');
     }
 
     // do E for the selected extruder
@@ -964,7 +962,7 @@ void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
 void Robot::reset_position_from_current_actuator_position()
 {
     ActuatorCoordinates actuator_pos;
-    for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+    for (size_t i = X_AXIS; i <= n_motors; i++) {
         // NOTE actuator::current_position is curently NOT the same as actuator::machine_position after an abrupt abort
         actuator_pos[i] = actuators[i]->get_current_position();
     }
@@ -980,8 +978,20 @@ void Robot::reset_position_from_current_actuator_position()
     // NOTE This is required to sync the machine position with the actuator position, we do a somewhat redundant cartesian_to_actuator() call
     // to get everything in perfect sync.
     arm_solution->cartesian_to_actuator(compensated_machine_position, actuator_pos);
-    for (size_t i = X_AXIS; i <= Z_AXIS; i++)
+    for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
         actuators[i]->change_last_milestone(actuator_pos[i]);
+    }
+
+    // Handle extruders and/or ABC axis
+    #if MAX_ROBOT_ACTUATORS > 3
+    for (int i = A_AXIS; i <= n_motors; i++) {
+        // ABC and/or extruders just need to set machine_position and compensated_machine_position
+        float ap= actuator_pos[i];
+        if(get_e_scale_fnc && i == get_active_extruder()) ap /= get_e_scale_fnc(); // inverse E scale if there is one and this is the active extruder
+        machine_position[i]= compensated_machine_position[i]= ap;
+        actuators[i]->change_last_milestone(ap);
+    }
+    #endif
 }
 
 // Convert target (in machine coordinates) to machine_position, then convert to actuator position and append this to the planner

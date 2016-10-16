@@ -70,7 +70,7 @@ class Robot : public Module {
 
         // set by a leveling strategy to transform the target of a move according to the current plan
         std::function<void(float*, bool)> compensationTransform;
-        // set by an active extruder, returns the amount tio scale the E parameter by (to convert mm³ to mm)
+        // set by an active extruder, returns the amount to scale the E parameter by (to convert mm³ to mm)
         std::function<float(void)> get_e_scale_fnc;
 
         // Workspace coordinate systems
@@ -111,7 +111,7 @@ class Robot : public Module {
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
         void clearToolOffset();
-
+        int get_active_extruder() const;
 
         std::array<wcs_t, MAX_WCS> wcs_offsets; // these are persistent once saved with M500
         uint8_t current_wcs{0}; // 0 means G54 is enabled this is persistent once saved with M500
@@ -143,7 +143,6 @@ class Robot : public Module {
         int arc_correction;                                  // Setting : how often to rectify arc computation
         float max_speeds[3];                                 // Setting : max allowable speed in mm/s for each axis
 
-        uint8_t selected_extruder;
         uint8_t n_motors;                                    //count of the motors/axis registered
 
         // Used by Planner
