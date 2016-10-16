@@ -28,6 +28,7 @@ class PT100 : public TempSensor
         float min_temp, max_temp;
 	float m, b; //reuse m as A if not linear
         float r0;
+        float q1,q2,q3;
 	unsigned char amptype;
         struct {
             bool bad_config:1;

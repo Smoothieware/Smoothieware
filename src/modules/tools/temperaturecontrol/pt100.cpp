@@ -25,6 +25,9 @@
 #define pt100R0_checksum                   CHECKSUM("pt100_r0")           // R0 value
 #define pt100amptype_checksum              CHECKSUM("pt100_amptype")      // Amp type between RTD and ADC input
                                                                           // 0: e3d pt100 amp http://wiki.e3d-online.com/wiki/E3D_PT100_Amplifier_Documentation
+#define pt100q1_checksum                   CHECKSUM("pt100_q1")           // Q1 for ADC to RES formula
+#define pt100q2_checksum                   CHECKSUM("pt100_q2")           // Q2 for ADC to RES formula
+#define pt100q3_checksum                   CHECKSUM("pt100_q3")           // Q3 for ADC to RES formula
 
 PT100::PT100()
 {
@@ -58,6 +61,9 @@ void PT100::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
       this->b = THEKERNEL->config->value(module_checksum, name_checksum, pt100B_checksum )->by_default( 5.775E-7F  )->as_number(); // BETA for the RTD (for PT100 ITS-90 it is 5.775E-7 )
       this->r0= THEKERNEL->config->value(module_checksum, name_checksum, pt100R0_checksum)->by_default( 100        )->as_number(); // R0 - resistance on 0C (for PT100 it is 100)
       this->amptype= THEKERNEL->config->value(module_checksum, name_checksum, pt100amptype_checksum)->by_default(0 )->as_number(); // Amp type
+      this->q1= THEKERNEL->config->value(module_checksum, name_checksum, pt100q1_checksum )->by_default( 805200    )->as_number(); // Q1 for e3d
+      this->q2= THEKERNEL->config->value(module_checksum, name_checksum, pt100q2_checksum )->by_default( 45409000  )->as_number(); // Q2 for e3d
+      this->q3= THEKERNEL->config->value(module_checksum, name_checksum, pt100q3_checksum )->by_default( 183       )->as_number(); // Q3 for e3d
     }
     THEKERNEL->adc->enable_pin(&thermistor_pin);
 
@@ -128,10 +134,10 @@ float PT100::adc_value_to_temperature(uint32_t adc_value)
         // as I can't think how to do it smarter
         switch (this->amptype){
 	case 0: // e3d pt100 amp
-           t =  805200 * adc_value / (45409000 - 183 * adc_value); // Calculate resistance from ADC value
+           t =  this->q1 * adc_value / (this->q2 - this->q3 * adc_value); // Calculate resistance from ADC value
            break;
         default: // TODO: add more amp types
-           t =  805200 * adc_value / (45409000 - 183 * adc_value); 
+           t = infinityf();
         }
         t = (-1 * this->r0 * this->m + sqrtf(this->r0 * this->r0 * + this->m * this->m - 4 * this->r0 * this->b * (this->r0 - t ))) / (2 * this->r0 * this->b);
     }
