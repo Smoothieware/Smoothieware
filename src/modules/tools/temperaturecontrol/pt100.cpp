@@ -11,6 +11,10 @@
 
 #define UNDEFINED -1
 
+// Manual http://smoothieware.org/3d-printer-guide#toc12
+// Spreadsheet with help to configure: http://smoothieware.org/local--files/3d-printer-guide/PT100%20E3D.ods
+
+
 #define pt100linear_checksum               CHECKSUM("pt100linear")        // if 1 then use slope/yintercept, if 0 use
                                                                           // A, B, R0
 #define thermistor_pin_checksum            CHECKSUM("thermistor_pin")
