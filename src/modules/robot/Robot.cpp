@@ -789,7 +789,7 @@ int Robot::get_active_extruder() const
 {
     for (int i = E_AXIS; i < n_motors; ++i) {
         // find first selected extruder
-        if(actuators[i]->is_selected()) return i;
+        if(actuators[i]->is_extruder() && actuators[i]->is_selected()) return i;
     }
     return 0;
 }
@@ -987,7 +987,7 @@ void Robot::reset_position_from_current_actuator_position()
     for (int i = A_AXIS; i <= n_motors; i++) {
         // ABC and/or extruders just need to set machine_position and compensated_machine_position
         float ap= actuator_pos[i];
-        if(get_e_scale_fnc && i == get_active_extruder()) ap /= get_e_scale_fnc(); // inverse E scale if there is one and this is the active extruder
+        if(actuators[i]->is_extruder() && get_e_scale_fnc) ap /= get_e_scale_fnc(); // inverse E scale if there is one and this is an extruder
         machine_position[i]= compensated_machine_position[i]= ap;
         actuators[i]->change_last_milestone(ap);
     }
@@ -1072,7 +1072,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // for the extruders just copy the position, and possibly scale it from mm³ to mm
     for (size_t i = E_AXIS; i < n_motors; i++) {
         actuator_pos[i]= transformed_target[i];
-        if(get_e_scale_fnc) {
+        if(actuators[i]->is_extruder() && get_e_scale_fnc) {
             // NOTE this relies on the fact only one extruder is active at a time
             // scale for volumetric or flow rate
             // TODO is this correct? scaling the absolute target? what if the scale changes?
