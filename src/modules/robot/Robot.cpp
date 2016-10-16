@@ -254,6 +254,7 @@ uint8_t Robot::register_motor(StepperMotor *motor)
         __debugbreak();
     }
     actuators.push_back(motor);
+    motor->set_motor_id(n_motors);
     return n_motors++;
 }
 

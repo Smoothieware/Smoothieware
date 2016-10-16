@@ -262,8 +262,8 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 microsteps= set_microstep(microsteps); // driver may change the steps it sets to
                 if(gcode->subcode == 1 && current_microsteps != microsteps) {
                     // also reset the steps/mm
-                    int a= designator-'A';
-                    if(a >= 0 && a <=2) {
+                    uint32_t a= (designator >= 'X' || designator <= 'Z') ? designator-'X' : designator-'A'+3;
+                    if(a < THEROBOT->get_number_registered_motors()) {
                         float s= THEROBOT->actuators[a]->get_steps_per_mm()*((float)microsteps/current_microsteps);
                         THEROBOT->actuators[a]->change_steps_per_mm(s);
                         gcode->stream->printf("steps/mm for %c changed to: %f\n", designator, s);
@@ -282,9 +282,9 @@ void MotorDriverControl::on_gcode_received(void *argument)
         } else if(gcode->m == 911) {
             // set or get raw registers
             // M911 will dump all the registers and status of all the motors
-            // M911.1 Pn (or A0) will dump the registers and status of the selected motor. X0 will request format in processing machine readable format
-            // M911.2 Pn (or B0) Rxxx Vyyy sets Register xxx to value yyy for motor nnn, xxx == 255 writes the registers, xxx == 0 shows what registers are mapped to what
-            // M911.3 Pn (or C0) will set the options based on the parameters passed as below...
+            // M911.1 Pn (or X0) will dump the registers and status of the selected motor. R0 will request format in processing machine readable format
+            // M911.2 Pn (or Y0) Rxxx Vyyy sets Register xxx to value yyy for motor nnn, xxx == 255 writes the registers, xxx == 0 shows what registers are mapped to what
+            // M911.3 Pn (or Z0) will set the options based on the parameters passed as below...
             // TMC2660:-
             // M911.3 Onnn Qnnn setStallGuardThreshold O=stall_guard_threshold, Q=stall_guard_filter_enabled
             // M911.3 Hnnn Innn Jnnn Knnn Lnnn setCoolStepConfiguration H=lower_SG_threshold, I=SG_hysteresis, J=current_decrement_step_size, K=current_increment_step_size, L=lower_current_limit
@@ -302,7 +302,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
 
             }else if(gcode->get_value('P') == id || gcode->has_letter(designator)) {
                 if(gcode->subcode == 1) {
-                    dump_status(gcode->stream, !gcode->has_letter('X'));
+                    dump_status(gcode->stream, !gcode->has_letter('R'));
 
                 }else if(gcode->subcode == 2 && gcode->has_letter('R') && gcode->has_letter('V')) {
                     set_raw_register(gcode->stream, gcode->get_value('R'), gcode->get_value('V'));

@@ -57,7 +57,7 @@ void StepperMotor::on_enable(void *argument)
     if(bm == 0x01) {
         enable(true);
 
-    }else if(bm == 0 || ((bm&0x01) == 0 && ((bm&(0x02<<index)) != 0)) ) {
+    }else if(bm == 0 || ((bm&0x01) == 0 && ((bm&(0x02<<motor_id)) != 0)) ) {
         enable(false);
     }
 }
