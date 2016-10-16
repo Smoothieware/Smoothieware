@@ -422,10 +422,16 @@ void Robot::on_gcode_received(void *argument)
                             }
 
                         } else {
-                            // the value is the offset from machine zero
-                            if(gcode->has_letter('X')) x = to_millimeters(gcode->get_value('X'));
-                            if(gcode->has_letter('Y')) y = to_millimeters(gcode->get_value('Y'));
-                            if(gcode->has_letter('Z')) z = to_millimeters(gcode->get_value('Z'));
+                            if(absolute_mode) {
+                                // the value is the offset from machine zero
+                                if(gcode->has_letter('X')) x = to_millimeters(gcode->get_value('X'));
+                                if(gcode->has_letter('Y')) y = to_millimeters(gcode->get_value('Y'));
+                                if(gcode->has_letter('Z')) z = to_millimeters(gcode->get_value('Z'));
+                            }else{
+                                if(gcode->has_letter('X')) x += to_millimeters(gcode->get_value('X'));
+                                if(gcode->has_letter('Y')) y += to_millimeters(gcode->get_value('Y'));
+                                if(gcode->has_letter('Z')) z += to_millimeters(gcode->get_value('Z'));
+                            }
                         }
                         wcs_offsets[n] = wcs_t(x, y, z);
                     }
