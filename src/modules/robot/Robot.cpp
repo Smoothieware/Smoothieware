@@ -527,6 +527,17 @@ void Robot::on_gcode_received(void *argument)
                         char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-3));
                         if(gcode->has_letter(axis)) bm |= (0x02<<i); // set appropriate bit
                     }
+                    // handle E parameter as currently selected extruder ABC
+                    if(gcode->has_letter('E')) {
+                        for (int i = E_AXIS; i < n_motors; ++i) {
+                            // find first selected extruder
+                            if(actuators[i]->is_selected()) {
+                                bm |= (0x02<<i); // set appropriate bit
+                                break;
+                            }
+                        }
+                    }
+
                     THEKERNEL->conveyor->wait_for_idle();
                     THEKERNEL->call_event(ON_ENABLE, (void *)bm);
                     break;
