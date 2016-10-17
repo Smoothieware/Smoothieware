@@ -962,7 +962,7 @@ void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
 void Robot::reset_position_from_current_actuator_position()
 {
     ActuatorCoordinates actuator_pos;
-    for (size_t i = X_AXIS; i <= n_motors; i++) {
+    for (size_t i = X_AXIS; i < n_motors; i++) {
         // NOTE actuator::current_position is curently NOT the same as actuator::machine_position after an abrupt abort
         actuator_pos[i] = actuators[i]->get_current_position();
     }
@@ -984,7 +984,7 @@ void Robot::reset_position_from_current_actuator_position()
 
     // Handle extruders and/or ABC axis
     #if MAX_ROBOT_ACTUATORS > 3
-    for (int i = A_AXIS; i <= n_motors; i++) {
+    for (int i = A_AXIS; i < n_motors; i++) {
         // ABC and/or extruders just need to set machine_position and compensated_machine_position
         float ap= actuator_pos[i];
         if(actuators[i]->is_extruder() && get_e_scale_fnc) ap /= get_e_scale_fnc(); // inverse E scale if there is one and this is an extruder
