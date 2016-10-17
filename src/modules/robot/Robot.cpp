@@ -194,22 +194,37 @@ void Robot::load_config()
     // default s value for laser
     this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
-    // Make our Primary XYZ StepperMotors
+     // Make our Primary XYZ StepperMotors, and potentially A B C
     uint16_t const checksums[][6] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
+        #if MAX_ROBOT_ACTUATORS > 3
+        ACTUATOR_CHECKSUMS("delta"),   // A
+        #if MAX_ROBOT_ACTUATORS > 4
+        ACTUATOR_CHECKSUMS("epsilon"), // B
+        #if MAX_ROBOT_ACTUATORS > 5
+        ACTUATOR_CHECKSUMS("zeta")     // C
+        #endif
+        #endif
+        #endif
     };
 
     // default acceleration setting, can be overriden with newer per axis settings
     this->default_acceleration= THEKERNEL->config->value(acceleration_checksum)->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2
 
     // make each motor
-    for (size_t a = X_AXIS; a <= Z_AXIS; a++) {
+    for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
         Pin pins[3]; //step, dir, enable
         for (size_t i = 0; i < 3; i++) {
             pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
         }
+
+        if(!pins[0].connected() || !pins[1].connected() || !pins[2].connected()) {
+            if(a <= Z_AXIS) THEKERNEL->streams->printf("FATAL: motor %d is not defined in config\n", 'X'+a);
+            break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
+        }
+
         StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
         // register this motor (NB This must be 0,1,2) of the actuators array
         uint8_t n= register_motor(sm);
@@ -336,6 +351,21 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
             n = snprintf(buf, bufsize, "APOS: X:%1.4f Y:%1.4f Z:%1.4f", current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS]);
         }
     }
+
+    #if MAX_ROBOT_ACTUATORS > 3
+    // deal with the ABC axis
+    for (int i = A_AXIS; i < n_motors; ++i) {
+        if(subcode == 4) { // M114.4 print last milestone
+            n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, last_milestone[i]);
+
+        }else if(subcode == 3) { // M114.3 print actuator position
+            // current actuator position
+            float current_position= actuators[i]->get_current_position();
+            n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, current_position);
+        }
+    }
+    #endif
+
     return n;
 }
 
@@ -829,6 +859,9 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         }
     }
 
+    float delta_e= NAN;
+
+    #if MAX_ROBOT_ACTUATORS > 3
     // process extruder parameters, for active extruder only (only one active extruder at a time)
     selected_extruder= 0;
     if(gcode->has_letter('E')) {
@@ -843,7 +876,6 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
     }
 
     // do E for the selected extruder
-    float delta_e= NAN;
     if(selected_extruder > 0 && !isnan(param[E_AXIS])) {
         if(this->e_absolute_mode) {
             target[selected_extruder]= param[E_AXIS];
@@ -853,6 +885,20 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
             target[selected_extruder] = delta_e + last_milestone[selected_extruder];
         }
     }
+
+    // process ABC axis, this is mutually exclusive to using E for an extruder, so if E is used and A then the results are undefined
+    for (int i = A_AXIS; i < n_motors; ++i) {
+        char letter= 'A'+i-A_AXIS;
+        if(gcode->has_letter(letter)) {
+            float p= gcode->get_value(letter);
+            if(this->absolute_mode) {
+                target[i]= p;
+            }else{
+                target[i]= p + last_milestone[i];
+            }
+        }
+    }
+    #endif
 
     if( gcode->has_letter('F') ) {
         if( motion_mode == SEEK )
@@ -916,9 +962,10 @@ void Robot::reset_axis_position(float position, int axis)
     if(axis <= Z_AXIS) {
         reset_axis_position(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]);
 #if MAX_ROBOT_ACTUATORS > 3
-    }else{
+    }else if(axis < n_motors) {
         // extruders need to be set not calculated
         last_machine_position[axis]= position;
+        actuators[axis]->change_last_milestone(position);
 #endif
     }
 }

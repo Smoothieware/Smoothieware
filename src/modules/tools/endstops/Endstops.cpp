@@ -590,6 +590,9 @@ void Endstops::process_home_command(Gcode* gcode)
             if(gcode->has_letter('X')) THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS);
             if(gcode->has_letter('Y')) THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
             if(gcode->has_letter('Z')) THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
+            if(gcode->has_letter('A')) THEROBOT->reset_axis_position(gcode->get_value('A'), A_AXIS);
+            if(gcode->has_letter('B')) THEROBOT->reset_axis_position(gcode->get_value('B'), B_AXIS);
+            if(gcode->has_letter('C')) THEROBOT->reset_axis_position(gcode->get_value('C'), C_AXIS);
         }
         return;
 
