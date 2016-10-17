@@ -989,7 +989,7 @@ void Robot::reset_position_from_current_actuator_position()
         float ap= actuator_pos[i];
         if(actuators[i]->is_extruder() && get_e_scale_fnc) ap /= get_e_scale_fnc(); // inverse E scale if there is one and this is an extruder
         machine_position[i]= compensated_machine_position[i]= ap;
-        actuators[i]->change_last_milestone(ap);
+        actuators[i]->change_last_milestone(actuator_pos[i]);
     }
     #endif
 }
