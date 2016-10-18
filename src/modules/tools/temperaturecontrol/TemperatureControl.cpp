@@ -440,6 +440,9 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
         if (this->iTerm > this->i_max) this->iTerm = this->i_max;
         else if (this->iTerm < 0.0) this->iTerm = 0.0;
     }
+
+    // reset the runaway state, even if it was a temp change
+    this->runaway_state = NOT_HEATING;
 }
 
 float TemperatureControl::get_temperature()
@@ -525,9 +528,14 @@ void TemperatureControl::on_second_tick(void *argument)
     // Check whether or not there is a temperature runaway issue, if so stop everything and report it
     if(THEKERNEL->is_halted()) return;
 
-    if( this->target_temperature <= 0 ){ // If we are not trying to heat, state is NOT_HEATING
+    // see if runaway detection is enabled
+    if(this->runaway_heating_timeout == 0 && this->runaway_range == 0) return;
+
+    if(this->target_temperature <= 0){ // If we are not trying to heat, state is NOT_HEATING
         this->runaway_state = NOT_HEATING;
+
     }else{
+        // heater is active
         switch( this->runaway_state ){
             case NOT_HEATING: // If we were previously not trying to heat, but we are now, change to state WAITING_FOR_TEMP_TO_BE_REACHED
                 if( this->target_temperature > 0 ){
@@ -535,25 +543,43 @@ void TemperatureControl::on_second_tick(void *argument)
                     this->runaway_heating_timer = 0;
                 }
                 break;
-            case WAITING_FOR_TEMP_TO_BE_REACHED: // In we are in state 1 ( waiting for temperature to be reached ), and the temperature has been reached, change to state TARGET_TEMPERATURE_REACHED
+
+            case WAITING_FOR_TEMP_TO_BE_REACHED:
+                // we are in state 1 ( waiting for temperature to be reached ), and the temperature has been reached, change to state TARGET_TEMPERATURE_REACHED
                 if( this->get_temperature() >= this->target_temperature ){
                     this->runaway_state = TARGET_TEMPERATURE_REACHED;
-                }
-                this->runaway_heating_timer++;
-                if( this->runaway_heating_timer > this->runaway_heating_timeout && this->runaway_heating_timeout != 0 ){
                     this->runaway_heating_timer = 0;
-                    THEKERNEL->streams->printf("ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
-                    THEKERNEL->call_event(ON_HALT, nullptr);
+
+                }else if(this->runaway_heating_timeout != 0) {
+                    // we are still heating up see if we have hit the max time allowed
+                    if(++this->runaway_heating_timer > this->runaway_heating_timeout){
+                        this->runaway_heating_timer = 0;
+                        THEKERNEL->streams->printf("ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
+                        THEKERNEL->call_event(ON_HALT, nullptr);
+                        this->runaway_state = NOT_HEATING;
+                    }
                 }
                 break;
-            case TARGET_TEMPERATURE_REACHED: { // If we are in state TARGET_TEMPERATURE_REACHED, check for thermal runaway
-                float delta= this->get_temperature() - this->target_temperature;
-                // If the temperature is outside the acceptable range
-                if(this->runaway_range != 0 && fabsf(delta) > this->runaway_range){
-                    THEKERNEL->streams->printf("ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
-                    THEKERNEL->call_event(ON_HALT, nullptr);
+
+            case TARGET_TEMPERATURE_REACHED:
+                if(this->runaway_range != 0) {
+                    // we are in state TARGET_TEMPERATURE_REACHED, check for thermal runaway
+                    float delta= this->get_temperature() - this->target_temperature;
+
+                    // If the temperature is outside the acceptable range for 10 seconds, this allows for some noise spikes without halting
+                    if(fabsf(delta) > this->runaway_range){
+                        this->runaway_heating_timer++;
+
+                    }else{
+                        this->runaway_heating_timer= 0;
+                    }
+
+                    if(this->runaway_heating_timer > 10) {
+                        THEKERNEL->streams->printf("ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
+                        THEKERNEL->call_event(ON_HALT, nullptr);
+                        this->runaway_state = NOT_HEATING;
+                    }
                 }
-            }
                 break;
         }
     }
