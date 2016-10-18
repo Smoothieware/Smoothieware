@@ -640,6 +640,7 @@ void Endstops::home(axis_bitmap_t a)
 
     // TODO: should check that the endstops were hit and it did not stop short for some reason
     // we did not complete movement the full distance if we hit the endstops
+    // TODO Maybe only reset axis involved in the homing cycle
     THEROBOT->reset_position_from_current_actuator_position();
 
     // Move back a small distance for all homing axis
@@ -679,6 +680,7 @@ void Endstops::home(axis_bitmap_t a)
 
     // TODO: should check that the endstops were hit and it did not stop short for some reason
     // we did not complete movement the full distance if we hit the endstops
+    // TODO Maybe only reset axis involved in the homing cycle
     THEROBOT->reset_position_from_current_actuator_position();
 
     THEROBOT->disable_segmentation= false;
@@ -794,7 +796,7 @@ void Endstops::process_home_command(Gcode* gcode)
 
             float real_position[3];
             THEROBOT->arm_solution->actuator_to_cartesian(real_actuator_position, real_position);
-            // Reset the actuator positions to correspond our real position
+            // Reset the actuator positions to correspond to our real position
             THEROBOT->reset_axis_position(real_position[0], real_position[1], real_position[2]);
 
         } else {
@@ -805,7 +807,7 @@ void Endstops::process_home_command(Gcode* gcode)
                 THEROBOT->reset_actuator_position(real_actuator_position);
 
             } else {
-                // Reset the actuator positions to correspond our real position
+                // Reset the actuator positions to correspond to our real position
                 THEROBOT->reset_axis_position(ideal_position[0], ideal_position[1], ideal_position[2]);
             }
         }

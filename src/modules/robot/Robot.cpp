@@ -959,6 +959,7 @@ void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
 }
 
 // Use FK to find out where actuator is and reset to match
+// TODO maybe we should only reset axis that are being homed unless this is due to a ON_HALT
 void Robot::reset_position_from_current_actuator_position()
 {
     ActuatorCoordinates actuator_pos;
