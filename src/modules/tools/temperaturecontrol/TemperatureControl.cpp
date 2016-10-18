@@ -440,6 +440,17 @@ void TemperatureControl::set_desired_temperature(float desired_temperature)
         if (this->iTerm > this->i_max) this->iTerm = this->i_max;
         else if (this->iTerm < 0.0) this->iTerm = 0.0;
     }
+
+    // set the runaway state.
+    this->runaway_last_temperature = get_temperature();
+    this->runaway_heating_timer = 0;
+    if ( this->target_temperature <= 0.0F ) {
+        this->runaway_state = NOT_HEATING;
+    } else if ( this->target_temperature < last_target_temperature ) {
+        this->runaway_state = COOLING_DOWN;
+    } else if ( this->target_temperature > last_target_temperature ) {
+        this->runaway_state = HEATING_UP;
+    }
 }
 
 float TemperatureControl::get_temperature()
@@ -529,25 +540,58 @@ void TemperatureControl::on_second_tick(void *argument)
         this->runaway_state = NOT_HEATING;
     }else{
         switch( this->runaway_state ){
-            case NOT_HEATING: // If we were previously not trying to heat, but we are now, change to state WAITING_FOR_TEMP_TO_BE_REACHED
-                if( this->target_temperature > 0 ){
-                    this->runaway_state = WAITING_FOR_TEMP_TO_BE_REACHED;
+            case NOT_HEATING: // handle the case where the temperature control is idle.
+                if ( this->target_temperature > 0 ) {
+                    // If we were previously not trying to heat, but we are now, change to state COOLING_DOWN or HEATING_UP
+                    this->runaway_state = (this->target_temperature < get_temperature()) ? COOLING_DOWN : HEATING_UP;
                     this->runaway_heating_timer = 0;
+                    this->runaway_last_temperature = get_temperature();
                 }
                 break;
-            case WAITING_FOR_TEMP_TO_BE_REACHED: // In we are in state 1 ( waiting for temperature to be reached ), and the temperature has been reached, change to state TARGET_TEMPERATURE_REACHED
-                if( this->get_temperature() >= this->target_temperature ){
-                    this->runaway_state = TARGET_TEMPERATURE_REACHED;
+
+            case HEATING_UP:     // handle the case where temperature has to be increased to reach the target.
+            case COOLING_DOWN: { // handle the case where temperature has to be decreased to reach the target.
+                bool target_reached;
+                bool trending_correctly;
+                // check whether the temperature is trending in the right direction.
+                if ( this->runaway_state == HEATING_UP ) {
+                    target_reached = (this->get_temperature() >= this->target_temperature);
+                    trending_correctly = (get_temperature() > this->runaway_last_temperature);
                 }
-                this->runaway_heating_timer++;
-                if( this->runaway_heating_timer > this->runaway_heating_timeout && this->runaway_heating_timeout != 0 ){
+                else if ( this->runaway_state == COOLING_DOWN ) {
+                    target_reached = (this->get_temperature() <= this->target_temperature);
+                    trending_correctly = (get_temperature() < this->runaway_last_temperature);
+                }
+
+                if ( target_reached ) {
+                    // the temperature has been reached, change to state MAINTAINING_TEMPERATURE
+                    this->runaway_heating_timer = 0;
+                    this->runaway_state = MAINTAINING_TEMPERATURE;
+                }
+
+                // as long as the temperature is trending correctly, all is well.
+                // if it stalls, tick the heating timer.
+                if ( trending_correctly ) {
+                    // temperature is trending, reset the timer.
+                    this->runaway_heating_timer = 0;
+                } else {
+                    // temperature is stalled, tick the timer.
+                    this->runaway_heating_timer++;
+                }
+                this->runaway_last_temperature = get_temperature();
+
+                // check whether the temperature has stalled longer than the timeout period.
+                if(this->runaway_heating_timer > this->runaway_heating_timeout && this->runaway_heating_timeout != 0) {
                     this->runaway_heating_timer = 0;
                     THEKERNEL->streams->printf("ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
                     THEKERNEL->call_event(ON_HALT, nullptr);
                 }
                 break;
-            case TARGET_TEMPERATURE_REACHED: { // If we are in state TARGET_TEMPERATURE_REACHED, check for thermal runaway
+            }
+            case MAINTAINING_TEMPERATURE: { // handle the case where the target has been reached and temperature is being maintained.
+                // check for thermal runaway
                 float delta= this->get_temperature() - this->target_temperature;
+
                 // If the temperature is outside the acceptable range
                 if(this->runaway_range != 0 && fabsf(delta) > this->runaway_range){
                     THEKERNEL->streams->printf("ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
