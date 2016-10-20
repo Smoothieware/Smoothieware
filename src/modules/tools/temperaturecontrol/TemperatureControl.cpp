@@ -140,6 +140,7 @@ void TemperatureControl::load_config()
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
     // Runaway parameters
+    delete this->temperature_monitor;
     uint8_t range = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_range_checksum)->by_default(0)->as_number();
     uint16_t timeout = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_heating_timeout_checksum)->by_default(0)->as_number();
     this->temperature_monitor = new TemperatureMonitor(range, timeout);
