@@ -90,6 +90,11 @@ temperature_control.hotend.designator        T                #
 #temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
 #temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
 
+# safety control is enabled by default and can be overidden here, the values show the defaults
+#temperature_control.hotend.runaway_heating_timeout      900   # max is 2040 seconds, how long it can take to heat up
+#temperature_control.hotend.runaway_cooling_timeout      900   # max is 2040 seconds, how long it can take to cool down if temp is set lower
+#temperature_control.hotend.runaway_range                20    # Max setting is 63°C
+
 temperature_control.hotend.p_factor          13.7             #
 temperature_control.hotend.i_factor          0.097            #
 temperature_control.hotend.d_factor          24               #
