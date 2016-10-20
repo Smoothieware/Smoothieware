@@ -141,8 +141,10 @@ void TemperatureControl::load_config()
 
     // Runaway parameters
     delete this->temperature_monitor;
-    uint8_t range = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_range_checksum)->by_default(0)->as_number();
-    uint16_t timeout = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_heating_timeout_checksum)->by_default(0)->as_number();
+    uint32_t range = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_range_checksum)->by_default(0)->as_number();
+    if(range > 63) range = 63;
+    uint32_t timeout = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_heating_timeout_checksum)->by_default(0)->as_number();
+    if(timeout > 511) timeout = 511;
     this->temperature_monitor = new TemperatureMonitor(range, timeout);
 
     // Max and min temperatures we are not allowed to get over (Safety)
