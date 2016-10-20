@@ -143,12 +143,12 @@ void TemperatureControl::load_config()
     if(n > 63) n= 63;
     this->runaway_range= n;
 
-    // these need to fit in 7 bits after dividing by 8 so max is 1016 secs or 17 minutes
+    // these need to fit in 7 bits after dividing by 8 so max is 2040 secs or 34 minutes
     n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_heating_timeout_checksum)->by_default(0)->as_number();
-    if(n > 1016) n= 1016;
+    if(n > 2040) n= 2040;
     this->runaway_heating_timeout = n/8; // we have 8 second ticks
     n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_cooling_timeout_checksum)->by_default((float)n)->as_number();
-    if(n > 1016) n= 1016;
+    if(n > 2040) n= 2040;
     this->runaway_cooling_timeout = n/8;
 
     // Max and min temperatures we are not allowed to get over (Safety)

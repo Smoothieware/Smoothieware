@@ -77,12 +77,12 @@ class TemperatureControl : public Module {
             uint16_t set_m_code:10;
             uint16_t set_and_wait_m_code:10;
             uint16_t get_m_code:10;
-            RUNAWAY_TYPE runaway_state:3;
+            RUNAWAY_TYPE runaway_state:2;
             // Temperature runaway config options
             uint8_t runaway_range:6; // max 63
-            uint16_t runaway_heating_timeout:7; // 1016 secs
-            uint16_t runaway_cooling_timeout:7; // 1016 secs
-            uint16_t runaway_timer:7;
+            uint16_t runaway_heating_timeout:8; // 2040 secs
+            uint16_t runaway_cooling_timeout:8; // 2040 secs
+            uint16_t runaway_timer:8;
             uint8_t tick:3;
             bool use_bangbang:1;
             bool waiting:1;
