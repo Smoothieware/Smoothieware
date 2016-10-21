@@ -245,7 +245,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
 
 void ThreePointStrategy::homeXY()
 {
-    Gcode gc("G28 X0 Y0", &(StreamOutput::NullStream));
+    Gcode gc(THEKERNEL->is_grbl_mode() ? "G28.2 X0 Y0": "G28 X0 Y0", &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 }
 
@@ -279,7 +279,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 
     // find bed via probe
     float mm;
-    if(!zprobe->run_probe(mm)) return false;
+    if(!zprobe->run_probe(mm, zprobe->getSlowFeedrate())) return false;
 
     // TODO if using probe then we probably need to set Z to 0 at first probe point, but take into account probe offset from head
     THEROBOT->reset_axis_position(std::get<Z_AXIS>(this->probe_offsets), Z_AXIS);
@@ -290,10 +290,11 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
     // probe the three points
     Vector3 v[3];
     for (int i = 0; i < 3; ++i) {
+        float z;
         std::tie(x, y) = probe_points[i];
         // offset moves by the probe XY offset
-        float z = zprobe->probeDistance(x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets));
-        if(isnan(z)) return false; // probe failed
+        if(!zprobe->doProbeAt(z, x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets))) return false;
+
         z= zprobe->getProbeHeight() - z; // relative distance between the probe points, lower is negative z
         stream->printf("DEBUG: P%d:%1.4f\n", i, z);
         v[i] = Vector3(x, y, z);
@@ -337,8 +338,9 @@ bool ThreePointStrategy::test_probe_points(Gcode *gcode)
             return false;
         }
 
-        float z = zprobe->probeDistance(x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets));
-        if(isnan(z)) return false; // probe failed
+        float z;
+        if(!zprobe->doProbeAt(z, x-std::get<X_AXIS>(this->probe_offsets), y-std::get<Y_AXIS>(this->probe_offsets))) return false;
+
         gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f\n", x, y, z);
 
         if(isnan(last_z)) {
@@ -357,7 +359,7 @@ void ThreePointStrategy::setAdjustFunction(bool on)
 {
     if(on) {
         // set the compensationTransform in robot
-        THEROBOT->compensationTransform= [this](float target[3]) { target[2] += this->plane->getz(target[0], target[1]); };
+        THEROBOT->compensationTransform= [this](float *target, bool inverse) { if(inverse) target[2] -= this->plane->getz(target[0], target[1]); else target[2] += this->plane->getz(target[0], target[1]); };
     }else{
         // clear it
         THEROBOT->compensationTransform= nullptr;

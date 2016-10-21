@@ -98,14 +98,13 @@ bool SCARAcal::set_trim(float x, float y, float z, StreamOutput *stream)
 
 bool SCARAcal::get_home_offset(float& x, float& y, float& z)
 {
-    void *returned_data;
-    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &returned_data );
+    float returned_data[3];
+    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, returned_data );
 
     if (ok) {
-        float *home_offset = static_cast<float *>(returned_data);
-        x= home_offset[0];
-        y= home_offset[1];
-        z= home_offset[2];
+        x= returned_data[0];
+        y= returned_data[1];
+        z= returned_data[2];
         return true;
     }
     return false;
