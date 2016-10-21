@@ -54,6 +54,7 @@ using std::string;
 #define  z_axis_max_speed_checksum           CHECKSUM("z_axis_max_speed")
 #define  segment_z_moves_checksum            CHECKSUM("segment_z_moves")
 #define  save_g92_checksum                   CHECKSUM("save_g92")
+#define  set_g92_checksum                    CHECKSUM("set_g92")
 
 // arm solutions
 #define  arm_solution_checksum               CHECKSUM("arm_solution")
@@ -181,6 +182,14 @@ void Robot::load_config()
 
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
+    string g92                = THEKERNEL->config->value(set_g92_checksum             )->by_default("")->as_string();
+    if(!g92.empty()) {
+        // optional setting for a fixed G92 offset
+        std::vector<float> t= parse_number_list(g92.c_str());
+        if(t.size() == 3) {
+            g92_offset = wcs_t(t[0], t[1], t[2]);
+        }
+    }
 
     // default s value for laser
     this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
@@ -260,6 +269,7 @@ uint8_t Robot::register_motor(StepperMotor *motor)
         __debugbreak();
     }
     actuators.push_back(motor);
+    motor->set_motor_id(n_motors);
     return n_motors++;
 }
 
@@ -442,10 +452,16 @@ void Robot::on_gcode_received(void *argument)
                             }
 
                         } else {
-                            // the value is the offset from machine zero
-                            if(gcode->has_letter('X')) x = to_millimeters(gcode->get_value('X'));
-                            if(gcode->has_letter('Y')) y = to_millimeters(gcode->get_value('Y'));
-                            if(gcode->has_letter('Z')) z = to_millimeters(gcode->get_value('Z'));
+                            if(absolute_mode) {
+                                // the value is the offset from machine zero
+                                if(gcode->has_letter('X')) x = to_millimeters(gcode->get_value('X'));
+                                if(gcode->has_letter('Y')) y = to_millimeters(gcode->get_value('Y'));
+                                if(gcode->has_letter('Z')) z = to_millimeters(gcode->get_value('Z'));
+                            }else{
+                                if(gcode->has_letter('X')) x += to_millimeters(gcode->get_value('X'));
+                                if(gcode->has_letter('Y')) y += to_millimeters(gcode->get_value('Y'));
+                                if(gcode->has_letter('Z')) z += to_millimeters(gcode->get_value('Z'));
+                            }
                         }
                         wcs_offsets[n] = wcs_t(x, y, z);
                     }
@@ -540,7 +556,30 @@ void Robot::on_gcode_received(void *argument)
                 THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
                 break;
 
-            case 18: // this used to support parameters, now it ignores them
+            case 18: // this allows individual motors to be turned off, no parameters falls through to turn all off
+                if(gcode->get_num_args() > 0) {
+                    // bitmap of motors to turn off, where bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C
+                    uint32_t bm= 0;
+                    for (int i = 0; i < n_motors; ++i) {
+                        char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-3));
+                        if(gcode->has_letter(axis)) bm |= (0x02<<i); // set appropriate bit
+                    }
+                    // handle E parameter as currently selected extruder ABC
+                    if(gcode->has_letter('E')) {
+                        for (int i = E_AXIS; i < n_motors; ++i) {
+                            // find first selected extruder
+                            if(actuators[i]->is_selected()) {
+                                bm |= (0x02<<i); // set appropriate bit
+                                break;
+                            }
+                        }
+                    }
+
+                    THEKERNEL->conveyor->wait_for_idle();
+                    THEKERNEL->call_event(ON_ENABLE, (void *)bm);
+                    break;
+                }
+                // fall through
             case 84:
                 THEKERNEL->conveyor->wait_for_idle();
                 THEKERNEL->call_event(ON_ENABLE, nullptr); // turn all enable pins off

@@ -64,6 +64,7 @@
 #define hotend_temp_checksum CHECKSUM("hotend_temperature")
 #define bed_temp_checksum    CHECKSUM("bed_temperature")
 #define panel_display_message_checksum CHECKSUM("display_message")
+#define laser_checksum CHECKSUM("laser")
 
 Panel* Panel::instance= nullptr;
 
@@ -88,6 +89,7 @@ Panel::Panel()
     this->sd= nullptr;
     this->extmounter= nullptr;
     this->external_sd_enable= false;
+    this->in_idle= false;
     strcpy(this->playing_file, "Playing file");
 }
 
@@ -178,7 +180,6 @@ void Panel::on_module_loaded()
 //    this->click_button.set_longpress_delay(longpress_delay);
 //    this->back_button.set_longpress_delay(longpress_delay);
 //    this->pause_button.set_longpress_delay(longpress_delay);
-
 
     THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
     if(lcd->encoderReturnsDelta()) {
@@ -324,9 +325,17 @@ static const uint8_t ohw_logo_antipixel_bits[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
+void Panel::on_idle(void *argument)
+{
+    // avoid recursion if any screens end up calling ON_IDLE
+    if(in_idle) return;
+    in_idle= true;
+    idle_processing();
+    in_idle= false;
+}
 // On idle things, we don't want to do shit in interrupts
 // don't queue gcodes in this
-void Panel::on_idle(void *argument)
+void Panel::idle_processing()
 {
     if (this->start_up) {
         this->lcd->init();
@@ -349,6 +358,11 @@ void Panel::on_idle(void *argument)
         // Default top screen
         this->top_screen= new MainMenuScreen();
         this->custom_screen->set_parent(this->top_screen);
+
+        // see if laser module is enabled
+        void *dummy;
+        this->laser_enabled= PublicData::get_value(laser_checksum, (void *)&dummy);
+
         this->start_up = false;
         return;
     }

@@ -22,9 +22,11 @@
 #include "Pin.h"
 #include "Gcode.h"
 #include "PwmOut.h" // mbed.h lib
+#include "PublicDataRequest.h"
 
 #include <algorithm>
 
+#define laser_checksum                          CHECKSUM("laser")
 #define laser_module_enable_checksum            CHECKSUM("laser_module_enable")
 #define laser_module_pin_checksum               CHECKSUM("laser_module_pin")
 #define laser_module_pwm_pin_checksum           CHECKSUM("laser_module_pwm_pin")
@@ -108,6 +110,7 @@ void Laser::on_module_loaded()
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
+    this->register_for_event(ON_GET_PUBLIC_DATA);
 
     // no point in updating the power more than the PWM frequency, but no more than 1KHz
     THEKERNEL->slow_ticker->attach(std::min(1000UL, 1000000/period), this, &Laser::set_proportional_power);
@@ -150,6 +153,17 @@ void Laser::on_console_line_received( void *argument )
         manual_fire= set_laser_power(p);
     }
 }
+
+// returns instance
+void Laser::on_get_public_data(void* argument)
+{
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(laser_checksum)) return;
+    pdr->set_data_ptr(this);
+    pdr->set_taken();
+}
+
 
 void Laser::on_gcode_received(void *argument)
 {
@@ -250,4 +264,9 @@ void Laser::on_halt(void *argument)
         set_laser_power(0);
         manual_fire= false;
     }
+}
+
+float Laser::get_current_power() const
+{
+    return pwm_pin->read() * 100;
 }
