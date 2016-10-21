@@ -690,68 +690,6 @@ void Endstops::home(axis_bitmap_t a)
 
 void Endstops::process_home_command(Gcode* gcode)
 {
-<<<<<<< HEAD
-    if( (gcode->subcode == 0 && THEKERNEL->is_grbl_mode()) || (gcode->subcode == 2 && !THEKERNEL->is_grbl_mode()) ) {
-        // G28 in grbl mode or G28.2 in normal mode will do a rapid to the predefined position
-        // TODO spec says if XYZ specified move to them first then move to MCS of specifed axis
-        THEROBOT->push_state();
-        THEROBOT->inch_mode = false;     // needs to be in mm
-        THEROBOT->absolute_mode = true;
-        char buf[32];
-        snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", saved_position[X_AXIS], saved_position[Y_AXIS]); // must use machine coordinates in case G92 or WCS is in effect
-        struct SerialMessage message;
-        message.message = buf;
-        message.stream = &(StreamOutput::NullStream);
-        THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
-        // Wait for above to finish
-        THECONVEYOR->wait_for_idle();
-        THEROBOT->pop_state();
-        return;
-
-    } else if(THEKERNEL->is_grbl_mode() && gcode->subcode == 2) { // G28.2 in grbl mode forces homing (triggered by $H)
-        // fall through so it does homing cycle
-
-    } else if(gcode->subcode == 1) { // G28.1 set pre defined position
-        // saves current position in absolute machine coordinates
-        THEROBOT->get_axis_position(saved_position); // Only XY are used
-        // Note the following is only meant to be used for recovering a saved position from config-override
-        // Not a standard Gcode and not to be relied on
-        if (gcode->has_letter('X')) saved_position[X_AXIS] = gcode->get_value('X');
-        if (gcode->has_letter('Y')) saved_position[Y_AXIS] = gcode->get_value('Y');
-        return;
-
-    } else if(gcode->subcode == 3) { // G28.3 is a smoothie special it sets manual homing
-        if(gcode->get_num_args() == 0) {
-            THEROBOT->reset_axis_position(0, 0, 0);
-        } else {
-            // do a manual homing based on given coordinates, no endstops required
-            if(gcode->has_letter('X')) THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS);
-            if(gcode->has_letter('Y')) THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS);
-            if(gcode->has_letter('Z')) THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
-            if(gcode->has_letter('A')) THEROBOT->reset_axis_position(gcode->get_value('A'), A_AXIS);
-            if(gcode->has_letter('B')) THEROBOT->reset_axis_position(gcode->get_value('B'), B_AXIS);
-            if(gcode->has_letter('C')) THEROBOT->reset_axis_position(gcode->get_value('C'), C_AXIS);
-        }
-        return;
-
-    } else if(gcode->subcode == 4) { // G28.4 is a smoothie special it sets manual homing based on the actuator position (used for rotary delta)
-        // do a manual homing based on given coordinates, no endstops required
-        ActuatorCoordinates ac;
-        if(gcode->has_letter('X')) ac[0] =  gcode->get_value('X');
-        if(gcode->has_letter('Y')) ac[1] =  gcode->get_value('Y');
-        if(gcode->has_letter('Z')) ac[2] =  gcode->get_value('Z');
-        THEROBOT->reset_actuator_position(ac);
-        return;
-
-    } else if(THEKERNEL->is_grbl_mode()) {
-        gcode->stream->printf("error:Unsupported command\n");
-        return;
-    }
-
-    // G28 is received, we have homing to do
-
-=======
->>>>>>> feature/e-endstop
     // First wait for the queue to be empty
     THECONVEYOR->wait_for_idle();
 
