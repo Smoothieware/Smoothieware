@@ -49,7 +49,7 @@ int R1000A_I2C::I2C_WriteREG(char I2CAddr, char REGAddr, char * data, int length
 
     // set the register to access
     this->i2c->start();
-    if (this->i2c->write(I2CAddr) != 0){        // check for slave ack
+    if (this->i2c->write(I2CAddr) != 1){        // check for slave ack
         // slave I2C is not acknowledging, exit function
         this->i2c->stop();
         return -1;
@@ -59,6 +59,7 @@ int R1000A_I2C::I2C_WriteREG(char I2CAddr, char REGAddr, char * data, int length
         this->i2c->write(data[i]);              // write data one by one
     }
     this->i2c->stop();
+//    this->i2c->read(0);                         // extra dummy read for mbed I2C to stop properly
     return 0;
 }
 

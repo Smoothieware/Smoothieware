@@ -3,13 +3,14 @@
 
 #include "modules/JuicyBoard/R1000A_I2C/R1000A_I2C.h"
 
+#include "Pin.h"            // I/O
 #include "I2C.h"            // mbed.h lib
 #include "Module.h"         // for registering events
 #include <string>
 using std::string;
 
-#define R1000_I2C_BASE      0x10        // I2C address base for R1000A module
 #define REG_TEMP            0x10        // I2C register address of temperature readback
+#define RESET_DELAY         50          // 100ms module reset delay
 
 class StreamOutput;
 
@@ -18,9 +19,6 @@ class R1000A : public Module {
     public:
         // Default Constructor
         R1000A();
-
-        // Destructor
-        ~R1000A();
 
         // Smoothie main module loading function
         void on_module_loaded();
@@ -40,11 +38,13 @@ class R1000A : public Module {
         // Accessor functions
         int getSlotDevID(int) const;
 
-        static bool parse_command(const char *cmd, string args, StreamOutput *stream);
+        // reset all modules
+        void ResetMods(void);
 
     private:
         // Member variables
-        R1000A_I2C i2c;
+        R1000A_I2C i2c;                 // I2C class
+        Pin *ModResetPin;               // define reset pin
 
         int SlotPlatID[16];             // module platform ID
         int SlotDevID[16];              // module device ID

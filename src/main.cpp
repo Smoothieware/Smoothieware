@@ -22,6 +22,7 @@
 #include "MotorDriverControl.h"
 
 #include "modules/JuicyBoard/R1000A/R1000A.h"
+#include "modules/JuicyBoard/R1001/R1001.h"
 
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
@@ -134,7 +135,9 @@ void init() {
     kernel->add_module( new(AHB0) Player() );
 
 //    kernel->add_module( new(AHB0) CurrentControl() );
+
     kernel->add_module( new(AHB0) R1000A() );
+    kernel->add_module( new(AHB0) R1001() );
 
     kernel->add_module( new(AHB0) KillButton() );
     kernel->add_module( new(AHB0) PlayLed() );

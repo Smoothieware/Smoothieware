@@ -1,5 +1,7 @@
 #include "R1000A.h"
 
+#include "wait_api.h"
+
 #include "StreamOutputPool.h"
 #include "Module.h"
 
@@ -23,21 +25,18 @@
 R1000A::R1000A(){
     // Default Constructor
     //this->i2c = new R1000A_I2C;
-}
-
-R1000A::~R1000A(){
-    // Destructor
+    this->ModResetPin = new Pin();                      // define new
+    this->ModResetPin->from_string("1.0");
+    this->ModResetPin->as_open_drain();
+    this->ModResetPin->set(true);                       // set to high
 }
 
 void R1000A::on_module_loaded(){
-
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED); // register on console line received
     this->ScanI2CBus();                                 // perform initial I2C bus scan
-
-    // FIXME implement MCU reset functions, add delays
-
+    this->ResetMods();                                  // reset all modules on I2C bus
+    // FIXME add any config init here
 }
-
 
 
 void R1000A::on_console_line_received(void* argument){
@@ -45,17 +44,6 @@ void R1000A::on_console_line_received(void* argument){
     string possible_command = new_message.message;
     string cmd = shift_parameter(possible_command);
 
-//    int i = 1;
-//    THEKERNEL->streams->printf("R1000A: Received command params are\r\n");
-//    THEKERNEL->streams->printf("1: %s\r\n", cmd.c_str());
-//    while (!possible_command.empty()){
-//        i++;
-//        cmd = shift_parameter(possible_command);
-//        THEKERNEL->streams->printf("%d: %s\r\n", i, cmd.c_str());
-//    }
-
-    // FIXME eliminate static commands
-//    if (strncasecmp(cmd.c_str(), "modscan", 7) == 0) {
     if (cmd == "mod"){
         // This is a successful mod command, push the next command out
         cmd = shift_parameter(possible_command);
@@ -65,16 +53,15 @@ void R1000A::on_console_line_received(void* argument){
             getTemp(cmd);
         }
         else if (cmd == "scan"){
+            // Scan I2C bus and report
             ScanI2CBus();
             ReportI2CID();
         }
-        // perforce I2C scan and report
+        else if (cmd == "reset"){
+            // reset all modules
+            ResetMods();
+        }
     }
-    else{
-        // FIXME Eliminate all static functions, replace them with in class functions
-//        parse_command(cmd.c_str(), possible_command, new_message.stream);                   // parsing command against static commands table
-    }
-
 }
 
 
@@ -82,8 +69,8 @@ void R1000A::ScanI2CBus(){
     // Scan addresses 0x10 through 0x1F
     // Address range is hardcoded to match R1000A platform
     // To identify which slot matches which I2C address use the following formula
-    // Slot[n] has I2C address 0x10 + (n-1)
-    // so Slot[1] has an I2C address of 0x10, Slot[2] is 0x11 ... Slot[16] is 0x1F
+    // Slot[n] has I2C address 0x10 + (n)
+    // so Slot[0] has an I2C address of 0x10, Slot[1] is 0x11 ... Slot[15] is 0x1F
     
     char i2cbuf[3];     // create a 2 byte buffer for I2C
     int i;              // for loop variable
@@ -93,7 +80,7 @@ void R1000A::ScanI2CBus(){
         i2caddr = (R1000_I2C_BASE + i) << 1;      // shift 1 to left to get 8-bit address
         // check for slave ack
         if (i2c.I2C_ReadREG(i2caddr, 0x01, i2cbuf, 1) == 0){
-//            // continue reading from slave
+            // continue reading from slave
             SlotPlatID[i] = (int)i2cbuf[0];
             i2c.I2C_ReadREG(i2caddr, 0x02, i2cbuf, 2);      // get device ID
             SlotDevID[i] = (int)i2cbuf[0];
@@ -153,4 +140,12 @@ void R1000A::getTemp(string slotnum){
     else{
         THEKERNEL->streams->printf("Invalid slot %lu\r\n", slotn);
     }
+}
+
+void R1000A::ResetMods(void){
+    // This sets the reset pin to low for a few ms
+    THEKERNEL->streams->printf("Resetting Mods...\r\n");
+    this->ModResetPin->set(false);
+    wait_ms(RESET_DELAY);                  // reset delay
+    this->ModResetPin->set(true);
 }
