@@ -106,6 +106,9 @@ void init() {
 #ifdef CNC
     kernel->streams->printf("  CNC Build\r\n");
 #endif
+#ifdef DISABLEMSD
+    kernel->streams->printf("  NOMSD Build\r\n");
+#endif
 
     bool sdok= (sd.disk_initialize() == 0);
     if(!sdok) kernel->streams->printf("SDCard failed to initialize\r\n");
@@ -116,7 +119,7 @@ void init() {
 
 #ifdef DISABLEMSD
     // attempt to be able to disable msd in config
-    if(sdok && !kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
+    if(sdok && !kernel->config->value( disable_msd_checksum )->by_default(true)->as_bool()){
         // HACK to zero the memory USBMSD uses as it and its objects seem to not initialize properly in the ctor
         size_t n= sizeof(USBMSD);
         void *v = AHB0.alloc(n);
