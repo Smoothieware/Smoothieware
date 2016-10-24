@@ -42,11 +42,11 @@ class StepperMotor  : public Module {
         int32_t get_last_milestone_steps(void) const { return last_milestone_steps; }
         float get_current_position(void) const { return (float)current_position_steps/steps_per_mm; }
         int32_t get_current_step(void) const { return current_position_steps; }
-        int32_t get_steps_per_tick(void) const { return steps_per_tick; }
-        void set_steps_per_tick( int32_t st ) { steps_per_tick= st; }
-        void update_steps_per_tick( int32_t ac ) { steps_per_tick+= ac; }
-        int32_t get_counter(void) const { return counter; }
-        void set_counter( int32_t c ) { counter= c; }
+        int64_t get_steps_per_tick(void) const { return steps_per_tick; }
+        void set_steps_per_tick( int64_t st ) { steps_per_tick= st; }
+        void update_steps_per_tick( int64_t ac ) { steps_per_tick+= ac; }
+        int64_t get_counter(void) const { return counter; }
+        void set_counter( int64_t c ) { counter= c; }
         void update_counter(void) { counter+=steps_per_tick; }
         uint32_t get_step_count(void) { return step_count; }
         void clear_step_count(void) { step_count=0; }
@@ -76,8 +76,8 @@ class StepperMotor  : public Module {
         float acceleration;
 
         volatile int32_t current_position_steps;
-        volatile int32_t steps_per_tick; // 2.30 fixed point, aka current speed
-        volatile int32_t counter; // 2.30 fixed point, 0.0 .. 1.0 partial step
+        volatile int64_t steps_per_tick; // 16.48 fixed point, aka current speed
+        volatile int64_t counter; // 16.48 fixed point, 0.0 .. 1.0 partial step
         volatile uint32_t step_count;
         int32_t last_milestone_steps;
         float   last_milestone_mm;
