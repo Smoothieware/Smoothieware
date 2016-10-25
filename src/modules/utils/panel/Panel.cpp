@@ -61,10 +61,11 @@
 #define spi_channel_checksum       CHECKSUM("spi_channel")
 #define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
 
-#define hotend_temp_checksum CHECKSUM("hotend_temperature")
-#define bed_temp_checksum    CHECKSUM("bed_temperature")
+#define hotend_temp_checksum       CHECKSUM("hotend_temperature")
+#define bed_temp_checksum          CHECKSUM("bed_temperature")
 #define panel_display_message_checksum CHECKSUM("display_message")
-#define laser_checksum CHECKSUM("laser")
+#define laser_checksum             CHECKSUM("laser")
+#define display_extruder_checksum  CHECKSUM("display_extruder")
 
 Panel* Panel::instance= nullptr;
 
@@ -90,6 +91,7 @@ Panel::Panel()
     this->extmounter= nullptr;
     this->external_sd_enable= false;
     this->in_idle= false;
+    this->display_extruder= false;
     strcpy(this->playing_file, "Playing file");
 }
 
@@ -189,6 +191,9 @@ void Panel::on_module_loaded()
         // read encoder pins
         THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
     }
+
+    // configure display options.
+    this->display_extruder = THEKERNEL->config->value( panel_checksum, display_extruder_checksum )->by_default(false)->as_bool();
 
     // Register for events
     this->register_for_event(ON_IDLE);
@@ -641,6 +646,12 @@ bool Panel::is_suspended() const
     }
     return false;
 }
+
+bool Panel::is_extruder_display_enabled(void)
+{
+    return this->display_extruder;
+}
+
 
 void  Panel::set_playing_file(string f)
 {
