@@ -22,6 +22,7 @@
 #include "SwitchPublicAccess.h"
 #include "checksumm.h"
 #include "TemperatureControlPool.h"
+#include "ExtruderPublicAccess.h"
 
 
 #include <math.h>
@@ -29,6 +30,8 @@
 #include <string>
 #include <stdio.h>
 #include <algorithm>
+
+#define extruder_checksum CHECKSUM("extruder")
 
 using namespace std;
 static const uint8_t icons[] = { // 16x80 - he1, he2, he3, bed, fan
@@ -249,7 +252,17 @@ void WatchScreen::display_menu_line(uint16_t line)
             }
             break;
         }
-        case 1: THEPANEL->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]); break;
+        case 1:
+            if ( THEPANEL->is_playing() ) {
+                pad_extruder_t rd;
+                float extruder_pos = (PublicData::get_value( extruder_checksum, (void *)&rd )) ? rd.current_position : -1;
+                THEPANEL->lcd->printf("E %1.2f", extruder_pos);
+                THEPANEL->lcd->setCursor(12, line);
+                THEPANEL->lcd->printf("Z%7.2f", this->pos[2]);
+            } else {
+                THEPANEL->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]);
+            }
+            break;
         case 2: THEPANEL->lcd->printf("%3d%%  %02lu:%02lu:%02lu  %3u%%", this->current_speed, this->elapsed_time / 3600, (this->elapsed_time % 3600) / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
         case 3: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
