@@ -59,7 +59,6 @@ int R1000A_I2C::I2C_WriteREG(char I2CAddr, char REGAddr, char * data, int length
         this->i2c->write(data[i]);              // write data one by one
     }
     this->i2c->stop();
-//    this->i2c->read(0);                         // extra dummy read for mbed I2C to stop properly
     return 0;
 }
 

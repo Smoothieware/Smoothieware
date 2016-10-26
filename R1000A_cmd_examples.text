@@ -1,0 +1,49 @@
+General Command Examples
+========================
+mod scan
+- scans all slots for connected modules, reports platfor/board/firmware IDs
+
+mod reset
+- reset all connected modules
+
+mod temp 8
+- reports the PCB temperature for module in slot #8
+
+
+R1001 Command Examples
+======================
+mod R1001 3 setcurrent 1200
+- sets slot #3 stepper motor drive current to 1200mA
+
+mod R1001 3 getcurrent
+- gets slot #3 current in mA
+
+mod R1001 3 setres 3
+- sets slot #3 stepping resolution to 2^3 = 8
+
+mod R1001 3 getres
+- gets slot #3 stepping resolution
+
+mod R1001 3 sleep 1
+- puts R1001 module in slot #3 into sleep mode
+
+mod R1001 3 sleep 0
+- puts R1001 module in slot #3 out of sleep mode
+
+mod R1001 3 getmctl
+- get the MCTL register value of R1001 in slot #3
+
+mod R1001 3 dreset
+- resets DRV8825 chip in module attached to slot #3
+
+mod R1001 3 decayslow
+- sets slot #3 stepping decay mode to slow
+
+mod R1001 3 decayfast
+- sets slot #3 stepping decay mode to fast
+
+mod R1001 3 decaymixed
+- sets slot #3 stepping decay mode to mixed (see DRV8825 datasheet)
+
+mod R1001 3 getmstat
+- gets slot #3 MSTAT register value

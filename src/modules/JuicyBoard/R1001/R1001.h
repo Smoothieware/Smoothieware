@@ -19,8 +19,9 @@ using std::string;
 #define REG_STP            0x20        // I2C register address of temperature readback
 #define REG_IDRVL          0x21        // I2C register address of drive current (lower byte)
 #define REG_IDRVH          0x22        // I2C register address of drive current (upper byte)
-#define REG_MCTL           0x22        // I2C register address of motor control
-#define REG_MSTAT          0x22        // I2C register address of motor status
+#define REG_MCTL           0x23        // I2C register address of motor control
+#define REG_MSTAT          0x24        // I2C register address of motor status
+#define DRESET_DELAY       10          // driver reset delay in ms
 
 class StreamOutput;
 
@@ -35,18 +36,17 @@ class R1001 : public Module {
         void on_console_line_received(void *);  // console line received
 
         // stepper motor set functions
-        void SetMotorCurrent(int, int);         // set stepper motor driving current
-//        void LoopMotorCurrent(int, int);         // FIXME, remove this
-        void ResetDriver(void);                 // resets DRV8825 chip
-        void SetDriverSleep(int);               // sets DRV8825 in or out of sleep, depening on argument
-        void SetDecayMix(int);                  // sets mixed decay bit to argument
-        void SetDecayFast(int);                 // sets fast decay bit to argument
+        void setMotorCurrent(int, int);         // set stepper motor driving current
+        void setSTP(int, int);                  // set stepper motor resolution
+        void resetDriver(int);                  // resets DRV8825 chip
+        void setDriverSleep(int, int);          // sets DRV8825 in or out of sleep, depening on argument
+        void setDecay(int, int);                // sets decay mode
 
         // stepper motor accessor functions
-        int getSTP(void);                       // reads step resolution register
-        int getIDRV(void);                      // reads drive current value from registers IDRVL & IDRVH
-        int getMCTL(void);                      // reads MCTL register
-        int getMSTAT(void);                     // reads MSTAT register
+        int getMotorCurrent(int);               // reads motor current from IDRVH and IDRVL registers
+        int getSTP(int);                        // reads step resolution register
+        int getMCTL(int);                       // reads MCTL register
+        int getMSTAT(int);                      // reads MSTAT register
 
     private:
         // Member variables
