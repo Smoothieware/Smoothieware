@@ -131,7 +131,10 @@ float PT100::adc_value_to_temperature(uint32_t adc_value)
         //float res;  //resistance of the RTD that we want temp from
         //float alpha = 3.9083E-3; // A for the RTD (for PT100 ITS-90 it is 3.9083E-3 )
         //float betha = 5.775E-7;  // B for the RTD (for PT100 ITS-90 it is 5.775E-7 )
-        //t = (-R0 * alpha + sqrtf(R0 * R0 * + alpha * alpha - 4 * R0 * betha * (R0 - res))) / (2 * R0 * - betha);
+        // WRONG -> //t = (-R0 * alpha + sqrtf(R0 * R0 * + alpha * alpha - 4 * R0 * betha * (R0 - res))) / (2 * R0 * - betha);
+        // wolfram rulez :D
+        // https://www.wolframalpha.com/input/?i=X+%3D+R+*+(1+%2B+A+*+T+%2B+B+*+T%5E2+)+solve+for+T
+        // T = (SQRT(A^2*R0 +4*B*(Rt – R0)) - A*SQRT(R0)) / (2*B*SQRT(R0))
 
         // there is a problem on how to get RES from ADC, especially if there is some AMP in front of ADC pin
         // and usually there is one. I'm solving this by "hardcoding amp type parameters in code"
@@ -143,7 +146,17 @@ float PT100::adc_value_to_temperature(uint32_t adc_value)
         default: // TODO: add more amp types
            t = infinityf();
         }
-        t = (-1 * this->r0 * this->m + sqrtf(this->r0 * this->r0 * + this->m * this->m - 4 * this->r0 * this->b * (this->r0 - t ))) / (2 * this->r0 * this->b);
+        t = ( 
+              sqrtf(
+                this->m * this->m * this->r0 + 4 * this->b * (t - this->r0)
+              ) 
+              - 
+              this->m * sqrtf(this->r0)
+            ) 
+            / 
+            (
+              2 * this->b * sqrtf(this->r0)
+            );
     }
     return t;
 }
