@@ -314,7 +314,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                 }
             }
 
-        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S')) {
+        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && ( gcode->has_letter('S') || gcode->has_letter('R') ) ) {
             // this only gets handled if it is not controlled by the tool manager or is active in the toolmanager
             this->active = true;
 
@@ -331,12 +331,20 @@ void TemperatureControl::on_gcode_received(void *argument)
                 // required so temp change happens in order
                 THEKERNEL->conveyor->wait_for_idle();
 
-                float v = gcode->get_value('S');
+                float v = 0.0;
+                float r = UNDEFINED;
+                if (gcode->has_letter('S')) {
+                    v = gcode->get_value('S');
+                }
+                if (gcode->has_letter('R')) {
+                    r = gcode->get_value('R');
+                    if (r < v) { // Invalid range if r < v
+                        r = UNDEFINED;
+                    }
+                }
 
-                if (v == 0.0) {
-                    this->target_temperature = UNDEFINED;
-                    this->heater_pin.set((this->o = 0));
-                } else {
+                //If we have set a target temperature or a range, check to see if we should wait
+                if (v != 0.0 || r != UNDEFINED) { 
                     this->set_desired_temperature(v);
                     // wait for temp to be reached, no more gcodes will be fetched until this is complete
                     if( gcode->m == this->set_and_wait_m_code) {
@@ -347,17 +355,25 @@ void TemperatureControl::on_gcode_received(void *argument)
                         }
 
                         this->waiting = true; // on_second_tick will announce temps
-                        while ( get_temperature() < target_temperature ) {
+                        float t = get_temperature();
+                        while ( t < target_temperature || (r != UNDEFINED && t > r) ) {
                             THEKERNEL->call_event(ON_IDLE, this);
                             // check if ON_HALT was called (usually by kill button)
                             if(THEKERNEL->is_halted() || this->target_temperature == UNDEFINED) {
                                 THEKERNEL->streams->printf("Wait on temperature aborted by kill\n");
                                 break;
                             }
+                            t = get_temperature();
                         }
+
                         this->waiting = false;
                     }
                 }
+                //Should we turn off heater?
+                if (v == 0.0) {
+                    this->target_temperature = UNDEFINED;
+                    this->heater_pin.set((this->o = 0));
+                } 
             }
         }
     }
