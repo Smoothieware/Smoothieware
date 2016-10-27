@@ -101,10 +101,10 @@ ST7565::ST7565(uint8_t variant)
     if(this->rst.connected()) rst.set(1);
 
     //a0
-    this->a0.from_string(THEKERNEL->config->value( panel_checksum, a0_pin_checksum)->by_default("2.13")->as_string())->as_output();
-    a0.set(1);
+    this->a0.from_string(THEKERNEL->config->value( panel_checksum, a0_pin_checksum)->by_default("nc")->as_string())->as_output();
+    if(a0.connected()) a0.set(1);
 
-    if(!is_viki2 && !is_mini_viki2) {
+    if(!is_viki2 && !is_mini_viki2 && !is_ssd1306) {
         this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
         this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     } else {
@@ -167,7 +167,7 @@ ST7565::~ST7565()
 void ST7565::send_commands(const unsigned char *buf, size_t size)
 {
     cs.set(0);
-    a0.set(0);
+    if(a0.connected()) a0.set(0);
     while(size-- > 0) {
         spi->write(*buf++);
     }
@@ -178,12 +178,12 @@ void ST7565::send_commands(const unsigned char *buf, size_t size)
 void ST7565::send_data(const unsigned char *buf, size_t size)
 {
     cs.set(0);
-    a0.set(1);
+    if(a0.connected()) a0.set(1);
     while(size-- > 0) {
         spi->write(*buf++);
     }
     cs.set(1);
-    a0.set(0);
+    if(a0.connected()) a0.set(0);
 }
 
 //clearing screen
