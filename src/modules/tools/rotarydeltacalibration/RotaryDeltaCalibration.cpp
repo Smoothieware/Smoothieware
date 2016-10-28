@@ -64,15 +64,15 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
 
                 ActuatorCoordinates current_angle;
                 // get the current angle for each actuator, NOTE we only deal with  ABC so if there are more than 3 actuators this will probably go wonky
-                for (size_t i = 0; i < THEKERNEL->robot->actuators.size(); i++) {
-                    current_angle[i]= THEKERNEL->robot->actuators[i]->get_current_position();
+                for (size_t i = 0; i < 3; i++) {
+                    current_angle[i]= THEROBOT->actuators[i]->get_current_position();
                 }
 
                 if (gcode->has_letter('L') && gcode->get_value('L') != 0) {
                     // specifying L1 it will take the last probe position (set by G30 or G38.x ) and set the home offset based on that
                     // this allows the use of G30 to find the angle tool
                     uint8_t ok;
-                    std::tie(current_angle[0], current_angle[1], current_angle[2], ok) = THEKERNEL->robot->get_last_probe_position();
+                    std::tie(current_angle[0], current_angle[1], current_angle[2], ok) = THEROBOT->get_last_probe_position();
                     if(ok == 0) {
                         gcode->stream->printf("error:Nothing set as probe failed or not run\n");
                         return;
@@ -110,7 +110,7 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                 // reset the actuator positions (and machine position accordingly)
                 // But only if all three actuators have been specified at the same time
                 if(cnt == 3 || (gcode->has_letter('R') && gcode->get_value('R') != 0)) {
-                    THEKERNEL->robot->reset_actuator_position(current_angle);
+                    THEROBOT->reset_actuator_position(current_angle);
                     gcode->stream->printf("NOTE: actuator position reset\n");
                 }else{
                     gcode->stream->printf("NOTE: actuator position NOT reset\n");

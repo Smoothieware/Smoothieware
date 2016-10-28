@@ -87,11 +87,11 @@ void PanelScreen::send_command(const char *gcstr)
 
 void PanelScreen::get_current_pos(float *cp)
 {
-    Robot::wcs_t mpos= THEKERNEL->robot->get_axis_position();
-    Robot::wcs_t pos= THEKERNEL->robot->mcs2wcs(mpos);
-    cp[0]= THEKERNEL->robot->from_millimeters(std::get<X_AXIS>(pos));
-    cp[1]= THEKERNEL->robot->from_millimeters(std::get<Y_AXIS>(pos));
-    cp[2]= THEKERNEL->robot->from_millimeters(std::get<Z_AXIS>(pos));
+    Robot::wcs_t mpos= THEROBOT->get_axis_position();
+    Robot::wcs_t pos= THEROBOT->mcs2wcs(mpos);
+    cp[0]= THEROBOT->from_millimeters(std::get<X_AXIS>(pos));
+    cp[1]= THEROBOT->from_millimeters(std::get<Y_AXIS>(pos));
+    cp[2]= THEROBOT->from_millimeters(std::get<Z_AXIS>(pos));
 }
 
 void PanelScreen::on_main_loop()
@@ -103,5 +103,9 @@ void PanelScreen::on_main_loop()
         command_queue.pop_front();
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        if(THEKERNEL->is_halted()) {
+            command_queue.clear();
+            break;
+        }
     }
 }

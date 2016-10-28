@@ -37,7 +37,7 @@ if you have dfu-util installed.
 Alternatively copy the file LPC1768/main.bin to the sdcard calling it firmware.bin and reset.
 
 == Filing issues (for bugs ONLY)
-Please follow this guide [[https://github.com/Smoothieware/Smoothieware/blob/edge/HowToFileIssues.md]]
+Please follow this guide [[https://github.com/Smoothieware/Smoothieware/blob/edge/ISSUE_TEMPLATE.md]]
 
 ==Contributing
 

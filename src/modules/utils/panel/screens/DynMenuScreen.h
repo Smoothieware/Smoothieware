@@ -5,50 +5,40 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef MODIFYVALUESSCREEN_H
-#define MODIFYVALUESSCREEN_H
-
+#pragma once
 #include "PanelScreen.h"
 
 #include <string>
 #include <vector>
 #include <tuple>
 #include <functional>
-#include <cmath>
 
-class ModifyValuesScreen : public PanelScreen
+class DynMenuScreen : public PanelScreen
 {
 public:
-    ModifyValuesScreen(bool delete_on_exit= false);
-    virtual ~ModifyValuesScreen();
+    DynMenuScreen();
+    virtual ~DynMenuScreen();
 
     void on_refresh();
     void on_enter();
     void on_exit();
-    void on_main_loop();
+
     void display_menu_line(uint16_t line);
     void clicked_menu_entry(uint16_t line);
-    int idle_timeout_secs(){ return 60; }
-
-    typedef std::tuple<char *, std::function<float()>, std::function<void(float)>, float, float, float, bool> MenuItemType;
-    void addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc= 1.0F, float min= NAN, float max= NAN, bool instant= false);
+    int idle_timeout_secs(){ return timeout; }
+    void set_timeout(int n) { timeout= n; }
+    void addMenuItem(const char *name, std::function<void()> fnc);
+    void addMenuItem(const char *name, const char *gcode);
+    void on_exit_action(const char *);
+    void on_exit_action(std::function<void()>);
 
 private:
+    using MenuItemType = std::tuple<char *, std::function<void()>, char *, bool>;
     void addMenuItem(const MenuItemType& item);
+    int timeout{60};
 
-    int execute_function;
-    float new_value, min_value, max_value;
-    int selected_item;
-    // name, getter function, setter function, increment
+    // name, function, command, type
     std::vector<MenuItemType> menu_items;
-
-    char control_mode;
-    struct {
-        bool delete_on_exit:1;
-        bool instant:1;
-        bool exit_screen_in_main_loop:1;
-    };
-
+    std::function<void()> on_exit_fnc;
+    char *on_exit_cmd;
 };
-
-#endif

@@ -5,8 +5,7 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef CONVEYOR_H
-#define CONVEYOR_H
+#pragma once
 
 #include "libs/Module.h"
 #include "HeapRing.h"
@@ -22,44 +21,45 @@ class Conveyor : public Module
 {
 public:
     Conveyor();
+    void start(uint8_t n_actuators);
 
     void on_module_loaded(void);
     void on_idle(void *);
-    void on_main_loop(void *);
-    void on_block_end(void *);
     void on_halt(void *);
-    void on_config_reload(void *);
 
-    void notify_block_finished(Block *);
-
-    void wait_for_empty_queue();
+    void wait_for_idle(bool wait_for_motors=true);
     bool is_queue_empty() { return queue.is_empty(); };
     bool is_queue_full() { return queue.is_full(); };
+    bool is_idle() const;
 
-    void ensure_running(void);
-
-    void append_gcode(Gcode *);
-    void queue_head_block(void);
+    // returns next available block writes it to block and returns true
+    bool get_next_block(Block **block);
+    void block_finished();
 
     void dump_queue(void);
     void flush_queue(void);
-    bool is_flushing() const { return flush; }
     float get_current_feedrate() const { return current_feedrate; }
+
     friend class Planner; // for queue
 
 private:
-    typedef HeapRing<Block> Queue_t;
+    // void all_moves_finished();
+    void check_queue(bool force= false);
+    void queue_head_block(void);
 
+    using  Queue_t= HeapRing<Block>;
     Queue_t queue;  // Queue of Blocks
-    volatile unsigned int gc_pending;
+    //volatile unsigned int gc_pending;
+
+    uint32_t queue_delay_time_ms;
+    size_t queue_size;
     float current_feedrate{0}; // actual nominal feedrate that current block is running at in mm/sec
 
     struct {
         volatile bool running:1;
-        volatile bool flush:1;
         volatile bool halted:1;
+        volatile bool allow_fetch:1;
+        bool flush:1;
     };
 
 };
-
-#endif // CONVEYOR_H

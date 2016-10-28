@@ -77,7 +77,7 @@ endif
 include $(BUILD_DIR)/build.mk
 
 CONSOLE?=/dev/arduino
-BAUD?=1000000
+BAUD?=9600
 
 .PHONY: debug-store flash upload debug console dfu
 

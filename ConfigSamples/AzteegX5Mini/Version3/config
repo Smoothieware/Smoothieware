@@ -13,7 +13,6 @@ gamma_steps_per_mm                           1637.7953        # Steps per mm for
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOUR ARE DOING
 acceleration                                 3000             # Acceleration in mm/second/second.
 #z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 disables it, disabled by default. DO NOT SET ON A DELTA
-acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters, see : https://github.com/grbl/grbl/blob/master/planner.c#L409
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8 . Lower values mean being more careful, higher values means being faster and have more jerk
 
@@ -52,16 +51,18 @@ second_usb_serial_enable                     false            # This enables a s
 #dfu_enable                                  false            # for linux developers, set to true to enable DFU
 #watchdog_timeout                            10               # watchdog timeout in seconds, default is 10, set to 0 to disable the watchdog
 
-# Extruder module configuration
-extruder_module_enable                       true             # Whether to activate the extruder module at all. All configuration is ignored if false
-extruder_steps_per_mm                        140              # Steps per mm for extruder stepper
-extruder_default_feed_rate                   600              # Default rate ( mm/minute ) for moves where only the extruder moves
-extruder_acceleration                        500              # Acceleration in mm/sec^2, only used for retracts
-extruder_max_speed                           1000             # mm/sec NOTE only used for retracts
 
-extruder_step_pin                            2.0              # Pin for extruder step signal
-extruder_dir_pin                             0.5              # Pin for extruder dir signal
-extruder_en_pin                              0.4             # Pin for extruder enable signal
+## Extruder module configuration
+extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
+extruder.hotend.steps_per_mm                    140              # Steps per mm for extruder stepper
+extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
+extruder.hotend.acceleration                    500              # Acceleration for the stepper motor mm/sec²
+extruder.hotend.max_speed                       50               # mm/s
+
+extruder.hotend.step_pin                        2.0              # Pin for extruder step signal
+extruder.hotend.dir_pin                         0.5              # Pin for extruder dir signal
+extruder.hotend.en_pin                          0.4              # Pin for extruder enable signal
+
 delta_current                                1.0              # Extruder stepper motor current
 
 # Laser module configuration
@@ -88,6 +89,11 @@ temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
 #temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
 #temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
+
+# safety control is enabled by default and can be overidden here, the values show the defaults
+#temperature_control.hotend.runaway_heating_timeout      900   # max is 2040 seconds, how long it can take to heat up
+#temperature_control.hotend.runaway_cooling_timeout      900   # max is 2040 seconds, how long it can take to cool down if temp is set lower
+#temperature_control.hotend.runaway_range                20    # Max setting is 63°C
 
 temperature_control.hotend.p_factor          13.7             #
 temperature_control.hotend.i_factor          0.097            #
@@ -135,7 +141,7 @@ switch.misc.output_pin                       0.26              #
 
 # Endstops
 endstops_enable                              true             # the endstop module is enabled by default and can be disabled here
-#corexy_homing                               false            # set to true if homing on a hbit or corexy
+#corexy_homing                               false            # set to true if homing on a hbot or corexy
 alpha_min_endstop                            1.24^            # add a ! to invert if endstop is NO connected to ground
 #alpha_max_endstop                           1.24^            #
 alpha_homing_direction                       home_to_min      # or set to home_to_max and set alpha_max
@@ -151,6 +157,10 @@ gamma_min_endstop                            1.28^            #
 gamma_homing_direction                       home_to_min      #
 gamma_min                                    0                #
 gamma_max                                    200              #
+
+alpha_max_travel                             500              # max travel in mm for alpha/X axis when homing
+beta_max_travel                              500              # max travel in mm for beta/Y axis when homing
+gamma_max_travel                             500              # max travel in mm for gamma/Z axis when homing
 
 # optional enable limit switches, actions will stop if any enabled limit switch is triggered
 #alpha_limit_enable                          false            # set to true to enable X min and max limit switches
