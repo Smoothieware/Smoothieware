@@ -338,8 +338,8 @@ void TemperatureControl::on_gcode_received(void *argument)
                 }
                 if (gcode->has_letter('R')) {
                     r = gcode->get_value('R');
-                    if (r < v) { // Invalid range if r < v
-                        r = UNDEFINED;
+                    if (r-v < 3) { // Invalid range if r < v
+                        return;
                     }
                 }
 
