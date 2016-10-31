@@ -26,7 +26,8 @@ R1000A::R1000A(){
     // Default Constructor
     //this->i2c = new R1000A_I2C;
     this->ModResetPin = new Pin();                      // define new
-    this->ModResetPin->from_string("1.0");
+    //this->ModResetPin->from_string("1.0");
+    this->ModResetPin->from_string("3.25");
     this->ModResetPin->as_open_drain();
     this->ModResetPin->set(true);                       // set to high
 }
