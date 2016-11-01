@@ -22,17 +22,16 @@ class R1000A_I2C {
         ~R1000A_I2C();
 
         // low level I2C operations
-        int I2C_ReadREG(char, char, char*, int);          // burst read
-        int I2C_WriteREG(char, char, char*, int);         // burst write
+        int I2C_ReadREG(int, char, char*, int);         // burst read
+        int I2C_WriteREG(int, char, char*, int);        // burst write
 
         // Accessor functions
         int getSlotDevID(int) const;
 
     private:
         // Member variables
-        mbed::I2C* i2c;                 // i2c comm class
+        mbed::I2C* i2c;                                 // i2c comm class
+        char getSlotI2CAdd(int);                        // returns I2C address from slot number
 };
-
-
 
 #endif /* SRC_MODULES_JUICYBOARD_R1000A_I2C_R1000A_I2C_H_ */

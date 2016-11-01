@@ -50,7 +50,8 @@ class R1001 : public Module {
 
     private:
         // Member variables
-        R1000A_I2C i2c;                 // I2C class
+        R1000A_I2C i2c;                         // I2C class
+        void load_config(void);                 // load values from config file
 };
 
 #endif /* R1001_H */

@@ -17,10 +17,10 @@ R1000A_I2C::~R1000A_I2C(){
     // Destructor
 }
 
-
-int R1000A_I2C::I2C_ReadREG(char I2CAddr, char REGAddr, char * data, int length){
+int R1000A_I2C::I2C_ReadREG(int slotnum, char REGAddr, char * data, int length){
     // perform burst register read
-    int i;      // for loop variable
+    int i;                                      // for loop variable
+    char I2CAddr = getSlotI2CAdd(slotnum);      // get slot I2C address
     // set the register to access
     this->i2c->start();
     if (this->i2c->write(I2CAddr) != 1){        // check for slave ack
@@ -42,11 +42,10 @@ int R1000A_I2C::I2C_ReadREG(char I2CAddr, char REGAddr, char * data, int length)
     return 0;
 }
 
-int R1000A_I2C::I2C_WriteREG(char I2CAddr, char REGAddr, char * data, int length)
-{
+int R1000A_I2C::I2C_WriteREG(int slotnum, char REGAddr, char * data, int length){
     // perform burst register read
-    int i;      // for loop variable
-
+    int i;                                      // for loop variable
+    char I2CAddr = getSlotI2CAdd(slotnum);     // get slot I2C address
     // set the register to access
     this->i2c->start();
     if (this->i2c->write(I2CAddr) != 1){        // check for slave ack
@@ -62,4 +61,8 @@ int R1000A_I2C::I2C_WriteREG(char I2CAddr, char REGAddr, char * data, int length
     return 0;
 }
 
+char R1000A_I2C::getSlotI2CAdd(int slotnum){
+    // returns I2C address of the specific slot
+    return ((R1000_I2C_BASE + slotnum - 1) << 1);
+}
 

@@ -75,17 +75,15 @@ void R1000A::ScanI2CBus(){
     
     char i2cbuf[3];     // create a 2 byte buffer for I2C
     int i;              // for loop variable
-    char i2caddr;       // current I2C address
     
-    for (i=0; i<=15; i++){
-        i2caddr = (R1000_I2C_BASE + i) << 1;      // shift 1 to left to get 8-bit address
+    for (i=1; i<=15; i++){
         // check for slave ack
-        if (i2c.I2C_ReadREG(i2caddr, 0x01, i2cbuf, 1) == 0){
+        if (i2c.I2C_ReadREG(i, 0x01, i2cbuf, 1) == 0){
             // continue reading from slave
             SlotPlatID[i] = (int)i2cbuf[0];
-            i2c.I2C_ReadREG(i2caddr, 0x02, i2cbuf, 2);      // get device ID
+            i2c.I2C_ReadREG(i, 0x02, i2cbuf, 2);      // get device ID
             SlotDevID[i] = (int)i2cbuf[0];
-            i2c.I2C_ReadREG(i2caddr, 0x03, i2cbuf, 2);      // get firmware version
+            i2c.I2C_ReadREG(i, 0x03, i2cbuf, 2);      // get firmware version
             SlotDevFW[i] = (int)i2cbuf[0];
 
         }
@@ -100,7 +98,7 @@ void R1000A::ScanI2CBus(){
 void R1000A::ReportI2CID(){
     int i;                      // for loop variable
    
-    for (i=0; i<=15; i++){
+    for (i=1; i<=15; i++){
         if (SlotDevID[i] == -1){
             THEKERNEL->streams->printf("Slot %d NO CARD, ID: %d\r\n", i, SlotDevID[i]);
         }
@@ -121,14 +119,12 @@ int R1000A::getSlotDevID(int SlotNum) const{
 
 void R1000A::getTemp(string slotnum){
     // this function prints out the temperature of module attached to slotnum
-    char i2caddr;
     long slotn = std::strtol(slotnum.c_str(), NULL, 10);
 
-    if ((slotn >=0) && (slotn < 16)){
+    if ((slotn >0) && (slotn < 16)){
         // execute only if a valid slot number range between 0 and 15
         char i2cbuf[2];
-        i2caddr = (R1000_I2C_BASE + slotn) << 1;             // evaluate I2C address
-        if (this->i2c.I2C_ReadREG(i2caddr, REG_TEMP, i2cbuf, 1) == 0){
+        if (this->i2c.I2C_ReadREG(slotn, REG_TEMP, i2cbuf, 1) == 0){
             // execute only if reading operation is successful
             THEKERNEL->streams->printf("Slot %lu Temp : %d\r\n", slotn, i2cbuf[0]);
         }
