@@ -371,13 +371,13 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
     #if MAX_ROBOT_ACTUATORS > 3
     // deal with the ABC axis
     for (int i = A_AXIS; i < n_motors; ++i) {
+        if(actuators[i]->is_extruder()) continue; // don't show an extruder as that will be E
         if(subcode == 4) { // M114.4 print last milestone
-            n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, last_milestone[i]);
+            n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, machine_position[i]);
 
         }else if(subcode == 3) { // M114.3 print actuator position
             // current actuator position
-            float current_position= actuators[i]->get_current_position();
-            n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, current_position);
+            n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, actuators[i]->get_current_position());
         }
     }
     #endif
@@ -600,14 +600,13 @@ void Robot::on_gcode_received(void *argument)
             case 83: e_absolute_mode= false; break;
 
             case 92: // M92 - set steps per mm
-                if (gcode->has_letter('X'))
-                    actuators[0]->change_steps_per_mm(this->to_millimeters(gcode->get_value('X')));
-                if (gcode->has_letter('Y'))
-                    actuators[1]->change_steps_per_mm(this->to_millimeters(gcode->get_value('Y')));
-                if (gcode->has_letter('Z'))
-                    actuators[2]->change_steps_per_mm(this->to_millimeters(gcode->get_value('Z')));
-
-                gcode->stream->printf("X:%f Y:%f Z:%f ", actuators[0]->get_steps_per_mm(), actuators[1]->get_steps_per_mm(), actuators[2]->get_steps_per_mm());
+                for (int i = 0; i < n_motors; ++i) {
+                    char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-A_AXIS));
+                    if(gcode->has_letter(axis)) {
+                        actuators[i]->change_steps_per_mm(this->to_millimeters(gcode->get_value(axis)));
+                    }
+                    gcode->stream->printf("%c:%f ", axis, actuators[i]->get_steps_per_mm());
+                }
                 gcode->add_nl = true;
                 check_max_actuator_speeds();
                 return;
@@ -632,6 +631,12 @@ void Robot::on_gcode_received(void *argument)
                         for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
                             gcode->stream->printf(" %c: %g ", 'X' + i, gcode->subcode == 0 ? this->max_speeds[i] : actuators[i]->get_max_rate());
                         }
+                        if(gcode->subcode == 1) {
+                            for (size_t i = A_AXIS; i < n_motors; i++) {
+                                gcode->stream->printf(" %c: %g ", 'A' + i - A_AXIS, actuators[i]->get_max_rate());
+                            }
+                        }
+
                         gcode->add_nl = true;
 
                     }else{
@@ -642,6 +647,19 @@ void Robot::on_gcode_received(void *argument)
                                 else if(gcode->subcode == 1) actuators[i]->set_max_rate(v);
                             }
                         }
+
+                        if(gcode->subcode == 1) {
+                            // ABC axis only handle actuator max speeds
+                            for (size_t i = A_AXIS; i < n_motors; i++) {
+                                if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
+                                int c= 'A' + i - A_AXIS;
+                                if(gcode->has_letter(c)) {
+                                    float v= gcode->get_value(c);
+                                    actuators[i]->set_max_rate(v);
+                                }
+                            }
+                        }
+
 
                         // this format is deprecated
                         if(gcode->subcode == 0 && (gcode->has_letter('A') || gcode->has_letter('B') || gcode->has_letter('C'))) {
@@ -665,9 +683,11 @@ void Robot::on_gcode_received(void *argument)
                     if (acc < 1.0F) acc = 1.0F;
                     this->default_acceleration = acc;
                 }
-                for (int i = X_AXIS; i <= Z_AXIS; ++i) {
-                    if (gcode->has_letter(i+'X')) {
-                        float acc = gcode->get_value(i+'X'); // mm/s^2
+                for (int i = 0; i < n_motors; ++i) {
+                    if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
+                    char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-A_AXIS));
+                    if(gcode->has_letter(axis)) {
+                        float acc = gcode->get_value(axis); // mm/s^2
                         // enforce positive
                         if (acc <= 0.0F) acc = NAN;
                         actuators[i]->set_acceleration(acc);
@@ -721,19 +741,34 @@ void Robot::on_gcode_received(void *argument)
 
             case 500: // M500 saves some volatile settings to config override file
             case 503: { // M503 just prints the settings
-                gcode->stream->printf(";Steps per unit:\nM92 X%1.5f Y%1.5f Z%1.5f\n", actuators[0]->get_steps_per_mm(), actuators[1]->get_steps_per_mm(), actuators[2]->get_steps_per_mm());
+                gcode->stream->printf(";Steps per unit:\nM92 ");
+                for (int i = 0; i < n_motors; ++i) {
+                    if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
+                    char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-A_AXIS));
+                    gcode->stream->printf("%c%1.5f ", axis, actuators[i]->get_steps_per_mm());
+                }
+                gcode->stream->printf("\n");
 
-                // only print XYZ if not NAN
+                // only print if not NAN
                 gcode->stream->printf(";Acceleration mm/sec^2:\nM204 S%1.5f ", default_acceleration);
-                for (int i = X_AXIS; i <= Z_AXIS; ++i) {
-                    if(!isnan(actuators[i]->get_acceleration())) gcode->stream->printf("%c%1.5f ", 'X'+i, actuators[i]->get_acceleration());
+                for (int i = 0; i < n_motors; ++i) {
+                    if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
+                    char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-A_AXIS));
+                    if(!isnan(actuators[i]->get_acceleration())) gcode->stream->printf("%c%1.5f ", axis, actuators[i]->get_acceleration());
                 }
                 gcode->stream->printf("\n");
 
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, isnan(THEKERNEL->planner->z_junction_deviation)?-1:THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
 
                 gcode->stream->printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
-                 gcode->stream->printf(";Max actuator feedrates in mm/sec:\nM203.1 X%1.5f Y%1.5f Z%1.5f\n", actuators[X_AXIS]->get_max_rate(), actuators[Y_AXIS]->get_max_rate(), actuators[Z_AXIS]->get_max_rate());
+
+                gcode->stream->printf(";Max actuator feedrates in mm/sec:\nM203.1 ");
+                for (int i = 0; i < n_motors; ++i) {
+                    if(actuators[i]->is_extruder()) continue; // extruders handle this themselves
+                    char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-A_AXIS));
+                    gcode->stream->printf("%c%1.5f ", axis, actuators[i]->get_max_rate());
+                }
+                gcode->stream->printf("\n");
 
                 // get or save any arm solution specific optional values
                 BaseSolution::arm_options_t options;
@@ -908,7 +943,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
             if(this->absolute_mode) {
                 target[i]= p;
             }else{
-                target[i]= p + last_milestone[i];
+                target[i]= p + machine_position[i];
             }
         }
     }
@@ -1376,6 +1411,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     float cos_T = 1 - 0.5F * theta_per_segment * theta_per_segment; // Small angle approximation
     float sin_T = theta_per_segment;
 
+    // TODO we need to handle the ABC axis here by segmenting them
     float arc_target[3];
     float sin_Ti;
     float cos_Ti;
