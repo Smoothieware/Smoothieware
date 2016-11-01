@@ -375,7 +375,7 @@ int Robot::print_position(uint8_t subcode, char *buf, size_t bufsize) const
         if(subcode == 4) { // M114.4 print last milestone
             n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, machine_position[i]);
 
-        }else if(subcode == 3) { // M114.3 print actuator position
+        }else if(subcode == 2 || subcode == 3) { // M114.2/M114.3 print actuator position which is the same as machine position for ABC
             // current actuator position
             n += snprintf(&buf[n], bufsize-n, " %c:%1.4f", 'A'+i-A_AXIS, actuators[i]->get_current_position());
         }
