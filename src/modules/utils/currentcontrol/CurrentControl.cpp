@@ -80,29 +80,43 @@ void CurrentControl::on_module_loaded()
 void CurrentControl::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode*>(argument);
-    char alpha[8] = { 'X', 'Y', 'Z', 'E', 'A', 'B', 'C', 'D' };
     if (gcode->has_m) {
         if (gcode->m == 907) {
-            for (int i = 0; i < 8; i++) {
-                if (gcode->has_letter(alpha[i])) {
-                    float c = gcode->get_value(alpha[i]);
-                    this->digipot->set_current(i, c);
+            if(gcode->has_letter('E')) { // thi smeans it was the old setting, E is no longer allowed
+                char alpha[] = { 'X', 'Y', 'Z', 'E', 'A', 'B', 'C' };
+                gcode->stream->printf("WARNING: Using E is deprecated, use A and B for channels 3 and 4\n");
+                // this is the old format where E => A, A => B, B => C, C => D
+                for (int i = 0; i < 7; i++) {
+                    if (gcode->has_letter(alpha[i])) {
+                        this->digipot->set_current(i, gcode->get_value(alpha[i]));
+                    }
+                }
+
+            }else{
+                // new format where XYZ are the first 3 channels and ABCD are the next channels
+                for (int i = 0; i < 7; i++) {
+                    char axis= i < 3 ? 'X'+i : 'A'+i-3;
+                    if (gcode->has_letter(axis)) {
+                        float c = gcode->get_value(axis);
+                        this->digipot->set_current(i, c);
+                    }
                 }
             }
 
         } else if(gcode->m == 500 || gcode->m == 503) {
-            float currents[8];
+            float currents[7];
             bool has_setting= false;
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 7; i++) {
                 currents[i]= this->digipot->get_current(i);
                 if(currents[i] >= 0) has_setting= true;
             }
-            if(!has_setting) return; // don't oupuit anything if none are set using this current control
+            if(!has_setting) return; // don't ouput anything if none are set using this current control
 
             gcode->stream->printf(";Digipot Motor currents:\nM907 ");
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 7; i++) {
+                char axis= i < 3 ? 'X'+i : 'A'+i-3;
                 if(currents[i] >= 0)
-                    gcode->stream->printf("%c%1.5f ", alpha[i], currents[i]);
+                    gcode->stream->printf("%c%1.5f ", axis, currents[i]);
             }
             gcode->stream->printf("\n");
         }
