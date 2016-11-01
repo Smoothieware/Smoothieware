@@ -84,6 +84,8 @@ class Panel : public Module {
         void set_jogging_speed(int i, float v) { jogging_speed_mm_min[i]= v; }
         bool has_laser() const { return laser_enabled; }
 
+        bool is_extruder_display_enabled(void);
+
         // public as it is directly accessed by screens... not good
         // TODO pass lcd into ctor of each sub screen
         LcdBase* lcd;
@@ -135,23 +137,26 @@ class Panel : public Module {
         std::string message;
         encoder_cb_t encoder_cb_fnc;
 
-        uint16_t screen_lines;
-        uint16_t menu_current_line;
         char playing_file[20];
-        uint8_t extsd_spi_channel;
 
         volatile struct {
+            uint16_t screen_lines:16;
+            uint16_t menu_current_line:16;
+            uint8_t extsd_spi_channel:8;
+
             bool start_up:1;
             bool menu_changed:1;
             bool control_value_changed:1;
             bool external_sd_enable:1;
             bool laser_enabled:1;
             bool in_idle:1;
+            bool display_extruder:1;
             volatile bool counter_changed:1;
             volatile bool click_changed:1;
             volatile bool refresh_flag:1;
             volatile bool do_buttons:1;
             volatile bool do_encoder:1;
+
             char mode:2;
             char menu_offset:3;
             int encoder_click_resolution:3;
