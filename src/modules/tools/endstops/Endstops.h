@@ -86,7 +86,7 @@ class Endstops : public Module{
 
         // Global state
         struct {
-            uint16_t homing_order:12;
+            uint32_t homing_order:18;
             volatile char status:3;
             bool is_corexy:1;
             bool is_delta:1;
