@@ -733,7 +733,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // eg 0b011010000001 would be Y X Z A, 010 001 000 011 100 would be  B A X Y Z
         for (uint8_t m = homing_order; m != 0; m >>= 3) {
             uint8_t a= (m & 0x07); // axis to home
-            if(a <= homing_axis.size() && haxis[a]) { // if axis is selected to home
+            if(a < homing_axis.size() && haxis[a]) { // if axis is selected to home
                 axis_bitmap_t bs;
                 bs.set(a);
                 home(bs);
