@@ -382,6 +382,7 @@ void Endstops::get_global_configs()
         for(auto c : order) {
             uint8_t n= toupper(c);
             uint8_t i = n >= 'X' ? n - 'X' : n - 'A' + 3;
+            i += 1; // So X is 1
             if(i > 6) { // bad value
                 this->homing_order = 0;
                 break;
@@ -729,12 +730,10 @@ void Endstops::process_home_command(Gcode* gcode)
     // do the actual homing
     if(homing_order != 0) {
         // if an order has been specified do it in the specified order
-        // homing order is 0bfffeeedddcccbbbaaa where aaa is 0,1,2,3,4,5 to specify the first axis (XYZABC), bbb is the second and ccc is the third etc
-        // eg 0b011010000001 would be Y X Z A, 010 001 000 011 100 would be  B A X Y Z
-        // ZABXY  001000100011010
-        // FIXME: if X is the last one then it won't get homed need to offset all axis by 1 so X is 1 Y is 2 etc
+        // homing order is 0bfffeeedddcccbbbaaa where aaa is 1,2,3,4,5,6 to specify the first axis (XYZABC), bbb is the second and ccc is the third etc
+        // eg 0b0101011001010 would be Y X Z A, 011 010 001 100 101 would be  B A X Y Z
         for (uint32_t m = homing_order; m != 0; m >>= 3) {
-            uint32_t a= (m & 0x07); // axis to home
+            uint32_t a= (m & 0x07)-1; // axis to home
             if(a < homing_axis.size() && haxis[a]) { // if axis is selected to home
                 axis_bitmap_t bs;
                 bs.set(a);
