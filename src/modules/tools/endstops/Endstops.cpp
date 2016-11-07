@@ -380,8 +380,8 @@ void Endstops::get_global_configs()
     if(order.size() >= 3 && order.size() <= homing_axis.size() && !(this->is_delta || this->is_rdelta)) {
         int shift = 0;
         for(auto c : order) {
-            uint8_t n= toupper(c);
-            uint8_t i = n >= 'X' ? n - 'X' : n - 'A' + 3;
+            char n= toupper(c);
+            uint32_t i = n >= 'X' ? n - 'X' : n - 'A' + 3;
             i += 1; // So X is 1
             if(i > 6) { // bad value
                 this->homing_order = 0;
