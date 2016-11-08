@@ -30,7 +30,7 @@ PreheatScreen::PreheatScreen()
 void PreheatScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(3);
+    THEPANEL->setup_menu(4);
     this->refresh_menu();
 }
 
@@ -48,8 +48,9 @@ void PreheatScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("Back"          ); break;
-        case 1: THEPANEL->lcd->printf("Preheat hotend"); break;
-        case 2: THEPANEL->lcd->printf("Preheat bed"   ); break;
+        case 1: THEPANEL->lcd->printf("Preheat all"); break;
+        case 2: THEPANEL->lcd->printf("Preheat hotend"); break;
+        case 3: THEPANEL->lcd->printf("Preheat bed"   ); break;
     }
 }
 
@@ -57,8 +58,9 @@ void PreheatScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->enter_screen(this->parent); break;
-        case 1: preheat_hotend(); break;
-        case 2: preheat_bed(); break;
+        case 1: preheat_hotend(); preheat_bed(); break;
+        case 2: preheat_hotend(); break;
+        case 3: preheat_bed(); break;
     }
 }
 
