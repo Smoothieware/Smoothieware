@@ -10,6 +10,7 @@
 #include "PanelScreen.h"
 #include "LcdBase.h"
 #include "PrepareScreen.h"
+#include "PreheatScreen.h"
 #include "ExtruderScreen.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
@@ -30,8 +31,10 @@ PrepareScreen::PrepareScreen()
     bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
     if (ok && controllers.size() > 0) {
         this->extruder_screen = (new ExtruderScreen())->set_parent(this);
+        this->preheat_screen = (new PreheatScreen())->set_parent(this);
     }else{
         this->extruder_screen= nullptr;
+        this->preheat_screen= nullptr;
     }
 }
 
@@ -62,7 +65,7 @@ void PrepareScreen::display_menu_line(uint16_t line)
         case 3: THEPANEL->lcd->printf("Set Z0"         ); break;
         case 4: THEPANEL->lcd->printf("Motors off"     ); break;
         // these won't be accessed if no heaters or extruders
-        case 5: THEPANEL->lcd->printf("Pre Heat"       ); break;
+        case 5: THEPANEL->lcd->printf("Pre Heat..."    ); break;
         case 6: THEPANEL->lcd->printf("Cool Down"      ); break;
         case 7: THEPANEL->lcd->printf("Extruder..."    ); break;
         case 8: THEPANEL->lcd->printf("Set Temperature"); break;
@@ -77,19 +80,11 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
         case 2: send_command("G92 X0 Y0 Z0"); break;
         case 3: send_command("G92 Z0"); break;
         case 4: send_command("M84"); break;
-        case 5: this->preheat(); break;
+        case 5: THEPANEL->enter_screen(this->preheat_screen); break;
         case 6: this->cooldown(); break;
         case 7: THEPANEL->enter_screen(this->extruder_screen); break;
         case 8: setup_temperature_screen(); break;
     }
-}
-
-void PrepareScreen::preheat()
-{
-    float t = THEPANEL->get_default_hotend_temp();
-    PublicData::set_value( temperature_control_checksum, hotend_checksum, &t );
-    t = THEPANEL->get_default_bed_temp();
-    PublicData::set_value( temperature_control_checksum, bed_checksum, &t );
 }
 
 void PrepareScreen::cooldown()
