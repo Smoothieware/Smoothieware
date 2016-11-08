@@ -53,11 +53,10 @@
 #define  kossel_checksum                     CHECKSUM("kossel")
 #define  morgan_checksum                     CHECKSUM("morgan")
 
-
-#define network_hostname_checksum CHECKSUM("hostname")
-
 static bool less_than_padtemp(const pad_temperature& leftSide, const pad_temperature& rightSide)
 {
+    // TODO: Deal correctly with heated chamber. Once PanelDue does as well.
+
     if(leftSide.designator == rightSide.designator) {
         return (leftSide.id < rightSide.id);
     }
@@ -188,6 +187,9 @@ void Reporter::on_module_loaded(){
     this->register_for_event(ON_GCODE_RECEIVED);
 }
 
+// TODO: remove once we repond properly to 'R' option.
+static int line_count = 0;
+
 void Reporter::on_gcode_received(void *argument){
     Gcode *gcode = static_cast<Gcode *>(argument);
 
@@ -211,6 +213,7 @@ void Reporter::on_gcode_received(void *argument){
             bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
             if (ok) {
                 // The order expected to be returned is the bed then the extruders.
+                // TODO: Deal correctly with heated chamber. Once PanelDue does as well.
                 std::sort(controllers.begin(), controllers.end(), less_than_padtemp);
 
 		ch = '[';
@@ -237,8 +240,8 @@ void Reporter::on_gcode_received(void *argument){
                 }
 		gcode->stream->printf((ch == '[')?"[]":"]");
  
-                // Smoothieware has no concept of a standby temperature.
-                gcode->stream->printf(",\"standby\":[]");
+                // Smoothieware has no concept of a standby temperature.                
+                // gcode->stream->printf(",\"standby\":[]");
       
                 // status of the heaters, 0=off, 1=standby, 2=active, 3=fault
                 gcode->stream->printf(",\"hstat\":");
@@ -281,8 +284,8 @@ void Reporter::on_gcode_received(void *argument){
 
             for (int i = 0; i < tool_count; i++) {
     	        // TODO: loop over active extruders and send extruder total extrusion since power up, last G92 or last M23
-	        // THEROBOT->get_axis_position(motor_id)?
-	        // stepper_motor->get_current_position()?
+	        // THEROBOT->get_axis_position(motor_id)??
+	        // stepper_motor->get_current_position()??
 	        gcode->stream->printf("%c%d", ch, 0);
        	        ch = ',';
 	    }
@@ -309,10 +312,9 @@ void Reporter::on_gcode_received(void *argument){
             gcode->stream->printf(",\"tool\":%d", get_active_tool());
 
             // Probe height
-            gcode->stream->printf(",\"probe\":");
-
+            // gcode->stream->printf(",\"probe\":");
 	    // TODO:  fix zprobe
-            gcode->stream->printf("\"0\"");
+            // gcode->stream->printf("\"0\"");
 
 	    // Fan Percent
             gcode->stream->printf(",\"fanPercent\":%.2f", get_fan_percent());
@@ -329,7 +331,7 @@ void Reporter::on_gcode_received(void *argument){
             //    1=axis has been homed so position is reliable.
 	    gcode->stream->printf(",\"homed\":");
 
-	    // TODO:  fix homed status
+	    // TODO: fix homed status
 	    gcode->stream->printf("[1,1,1]");
 
 	    // Fraction printed
@@ -348,12 +350,21 @@ void Reporter::on_gcode_received(void *argument){
 	        // Printer name
                 gcode->stream->printf(",\"myName\":");
 
-                // TODO: make it output the right name
                 gcode->stream->printf("\"%s\"", myName.c_str());
 
                 // Printer geometry
                 // one of "cartesian", "delta", "corexy, "corexz" etc.
 		gcode->stream->printf(",\"geometry\":\"%s\"", geometry.c_str());                
+            }
+
+            // TODO: replace with proper solution for: 
+	    // seq:     the sequence number of the most recent non-trivial G-code response or error message.
+	    //          Only present if the R parameter was provided and the current sequence number is greater than that.
+	    // resp:    the most recent non-trivial G-code response or error message. 
+	    //          Only present if the R parameter was provided and the current sequence number is greater.
+	    if (gcode->has_letter('R')) {
+		gcode->stream->printf(",\"seq\":\"%d\"", line_count++);                
+		gcode->stream->printf(",\"resp\":\"%s\"", "<Smoothie: not yet implemented>");                
             }
 
             // JSon must have an EOL
