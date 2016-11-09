@@ -8,7 +8,7 @@
 #include "libs/Kernel.h"
 
 #include "modules/tools/laser/Laser.h"
-#include "modules/tools/spindle/Spindle.h"
+#include "modules/tools/spindle/SpindleMaker.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
@@ -164,7 +164,10 @@ void init() {
     kernel->add_module( new Laser() );
     #endif
     #ifndef NO_TOOLS_SPINDLE
-    kernel->add_module( new(AHB0) Spindle() );
+    SpindleMaker *sm= new SpindleMaker();
+    sm->load_spindle();
+    delete sm;
+    //kernel->add_module( new(AHB0) Spindle() );
     #endif
     #ifndef NO_UTILS_PANEL
     kernel->add_module( new(AHB0) Panel() );
