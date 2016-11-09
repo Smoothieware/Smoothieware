@@ -354,7 +354,10 @@ void Reporter::on_gcode_received(void *argument){
 
                 // Printer geometry
                 // one of "cartesian", "delta", "corexy, "corexz" etc.
-		gcode->stream->printf(",\"geometry\":\"%s\"", geometry.c_str());                
+		gcode->stream->printf(",\"geometry\":\"%s\"", geometry.c_str());
+
+		gcode->stream->printf(",\"firmwareName\":\"Smoothieware\"");
+		
             }
 
             // TODO: replace with proper solution for: 
