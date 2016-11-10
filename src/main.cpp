@@ -8,7 +8,7 @@
 #include "libs/Kernel.h"
 
 #include "modules/tools/laser/Laser.h"
-#include "modules/tools/spindle/Spindle.h"
+#include "modules/tools/spindle/SpindleMaker.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
@@ -108,6 +108,9 @@ void init() {
 #ifdef CNC
     kernel->streams->printf("  CNC Build\r\n");
 #endif
+#ifdef DISABLEMSD
+    kernel->streams->printf("  NOMSD Build\r\n");
+#endif
 
     bool sdok= (sd.disk_initialize() == 0);
     if(!sdok) kernel->streams->printf("SDCard failed to initialize\r\n");
@@ -118,7 +121,7 @@ void init() {
 
 #ifdef DISABLEMSD
     // attempt to be able to disable msd in config
-    if(sdok && !kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
+    if(sdok && !kernel->config->value( disable_msd_checksum )->by_default(true)->as_bool()){
         // HACK to zero the memory USBMSD uses as it and its objects seem to not initialize properly in the ctor
         size_t n= sizeof(USBMSD);
         void *v = AHB0.alloc(n);
@@ -163,7 +166,10 @@ void init() {
     kernel->add_module( new Laser() );
     #endif
     #ifndef NO_TOOLS_SPINDLE
-    kernel->add_module( new(AHB0) Spindle() );
+    SpindleMaker *sm= new SpindleMaker();
+    sm->load_spindle();
+    delete sm;
+    //kernel->add_module( new(AHB0) Spindle() );
     #endif
     #ifndef NO_UTILS_PANEL
     kernel->add_module( new(AHB0) Panel() );

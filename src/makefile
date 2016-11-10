@@ -61,8 +61,25 @@ endif
 # include an optional default set of excludes
 # add any modules that you do not want included in the build
 # e.g for a CNC machine
-#export EXCLUDE_MODULES = tools/touchprobe tools/laser tools/temperaturecontrol tools/extruder
+#export EXCLUDE_MODULES = tools/laser tools/temperaturecontrol tools/extruder
 -include default_excludes.mk
+
+# override any default excludes by setting NODEFAULTEXCLUDES=1
+ifneq "$(NODEFAULTEXCLUDES)" "1"
+# if nothing set in the default_excludes.mk file then handle some default excludes for different builds
+
+ifeq "$(EXCLUDE_MODULES)" ""
+
+ifeq "$(CNC)" "1"
+# CNC build excludes these
+export EXCLUDE_MODULES = tools/filamentdetector tools/scaracal tools/temperaturecontrol tools/extruder
+else
+# 3D build excludes these
+export EXCLUDE_MODULES = tools/drillingcycles tools/spindle
+endif
+
+endif
+endif
 
 ifneq "$(INCLUDE_MODULE)" ""
 export EXCLUDED_MODULES = $(filter-out $(INCLUDE_MODULE),$(EXCLUDE_MODULES))
@@ -70,6 +87,13 @@ else
 export EXCLUDED_MODULES = $(EXCLUDE_MODULES)
 endif
 
+ifneq "$(EXCLUDED_MODULES)" ""
+$(info **NOTE** Excluding modules $(EXCLUDED_MODULES))
+endif
+
+ifneq "$(AXIS)" ""
+DEFINES += -DMAX_ROBOT_ACTUATORS=$(AXIS)
+endif
 
 # set to not compile in any network support
 #export NONETWORK = 1
@@ -80,6 +104,8 @@ CONSOLE?=/dev/arduino
 BAUD?=9600
 
 .PHONY: debug-store flash upload debug console dfu
+
+print-%  : ; @echo $* = $($*)
 
 debug-store: ../LPC1768/$(PROJECT).elf
 	cp ../LPC1768/$(PROJECT).elf ../LPC1768/$(PROJECT)_lastupload.elf

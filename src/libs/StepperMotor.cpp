@@ -51,7 +51,15 @@ void StepperMotor::on_halt(void *argument)
 
 void StepperMotor::on_enable(void *argument)
 {
-    enable(argument != nullptr);
+    // argument is a uin32_t where bit0 is on or off, and bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C etc
+    // for now if bit0 is 1 we turn all on, if 0 we turn all off otherwise we turn selected axis off
+    uint32_t bm= (uint32_t)argument;
+    if(bm == 0x01) {
+        enable(true);
+
+    }else if(bm == 0 || ((bm&0x01) == 0 && ((bm&(0x02<<motor_id)) != 0)) ) {
+        enable(false);
+    }
 }
 
 void StepperMotor::change_steps_per_mm(float new_steps)

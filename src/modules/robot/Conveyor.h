@@ -27,7 +27,7 @@ public:
     void on_idle(void *);
     void on_halt(void *);
 
-    void wait_for_idle();
+    void wait_for_idle(bool wait_for_motors=true);
     bool is_queue_empty() { return queue.is_empty(); };
     bool is_queue_full() { return queue.is_full(); };
     bool is_idle() const;
