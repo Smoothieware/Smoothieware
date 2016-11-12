@@ -119,7 +119,7 @@ void TemperatureControl::on_main_loop(void *argument)
 {
     if (this->temp_violated) {
         this->temp_violated = false;
-        THEKERNEL->streams->printf("ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
+        THEKERNEL->streams->printf("ERROR: MINTEMP or MAXTEMP triggered on %s (target: %3.1f, reading: %3.1f, max: %3.1f, min: %3.1f). Check your temperature sensors!\n", designator.c_str(),this->target_temperature ,get_temperature(), this->max_temp, this->min_temp );
         THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
