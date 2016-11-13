@@ -438,8 +438,8 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
     probe_detected= false;
     THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled (beware on deltas probing in X or Y)
 
-    // get probe feedrate if specified
-    float rate = (gcode->has_letter('F')) ? gcode->get_value('F')*60 : this->slow_feedrate;
+    // get probe feedrate in mm/min and convert to mm/sec if specified
+    float rate = (gcode->has_letter('F')) ? gcode->get_value('F')/60 : this->slow_feedrate;
 
     // do a regular move which will stop as soon as the probe is triggered, or the distance is reached
     switch(axis) {
