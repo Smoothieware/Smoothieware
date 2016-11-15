@@ -95,7 +95,7 @@ void Laser::on_module_loaded()
     this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
     this->laser_maximum_power = THEKERNEL->config->value(laser_module_maximum_power_checksum)->by_default(1.0f)->as_number() ;
 
-    // These config variables are deprecated, they have been replaced with laser_module_default_power and laser_module_minimum_power
+    // These config variables are deprecated, they have been replaced with laser_module_maximum_power and laser_module_minimum_power
     this->laser_minimum_power = THEKERNEL->config->value(laser_module_tickle_power_checksum)->by_default(0)->as_number() ;
 
     // Load in our preferred config variables
