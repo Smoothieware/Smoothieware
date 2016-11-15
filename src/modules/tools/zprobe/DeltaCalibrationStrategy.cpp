@@ -14,6 +14,7 @@
 #include "BaseSolution.h"
 #include "StepperMotor.h"
 
+#include <cmath>
 #include <tuple>
 #include <algorithm>
 
