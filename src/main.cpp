@@ -27,7 +27,7 @@
 #include "modules/robot/Conveyor.h"
 #include "modules/utils/simpleshell/SimpleShell.h"
 #include "modules/utils/configurator/Configurator.h"
-#include "modules/utils/currentcontrol/CurrentControl.h"
+//#include "modules/utils/currentcontrol/CurrentControl.h"
 #include "modules/utils/player/Player.h"
 #include "modules/utils/killbutton/KillButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
