@@ -40,7 +40,6 @@
 #include <fastmath.h>
 #include <string>
 #include <algorithm>
-using std::string;
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")

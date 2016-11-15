@@ -10,10 +10,6 @@
 #include "libs/Module.h"
 #include "HeapRing.h"
 
-using namespace std;
-#include <string>
-#include <vector>
-
 class Gcode;
 class Block;
 

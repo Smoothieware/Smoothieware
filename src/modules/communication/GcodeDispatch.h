@@ -5,14 +5,12 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef GCODE_DISPATCH_H
-#define GCODE_DISPATCH_H
+#pragma once
 
 #include "libs/Module.h"
 
 #include <stdio.h>
 #include <string>
-using std::string;
 
 class StreamOutput;
 
@@ -27,7 +25,7 @@ public:
     uint8_t get_modal_command() const { return modal_group_1<4 ? modal_group_1 : 0; }
 private:
     int currentline;
-    string upload_filename;
+    std::string upload_filename;
     FILE *upload_fd;
     StreamOutput* upload_stream{nullptr};
     uint8_t modal_group_1;
@@ -35,5 +33,3 @@ private:
         bool uploading: 1;
     };
 };
-
-#endif
