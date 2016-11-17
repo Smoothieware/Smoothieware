@@ -13,7 +13,6 @@
 #include "StreamOutputPool.h"
 #include "Module.h"
 
-#include "CurrentControl.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
@@ -447,4 +446,92 @@ int R1001::getMotorCurrent(int slotnum){
         // output an error value
         return -1;
     }
+}
+
+MotorPins getMotorPins(int slot_num){
+    // this returns motor pins populated in the given slot number
+    MotorPins _motorpins;
+    switch (slot_num){
+        case (1):
+            _motorpins.dir_pin = "0.24";
+            _motorpins.en_pin = "0.23";
+            _motorpins.step_pin = "1.31";
+            break;
+        case (2):
+            _motorpins.dir_pin = "2.3";
+            _motorpins.en_pin = "2.2";
+            _motorpins.step_pin = "2.1";
+            break;
+        case (3):
+            _motorpins.dir_pin = "1.25";
+            _motorpins.en_pin = "1.24";
+            _motorpins.step_pin = "1.23";
+            break;
+        case (4):
+            _motorpins.dir_pin = "1.29";
+            _motorpins.en_pin = "1.28";
+            _motorpins.step_pin = "1.27";
+            break;
+        case (5):
+            _motorpins.dir_pin = "0.0";
+            _motorpins.en_pin = "0.1";
+            _motorpins.step_pin = "0.11";
+            break;
+        case (6):
+            _motorpins.dir_pin = "2.13";
+            _motorpins.en_pin = "2.12";
+            _motorpins.step_pin = "2.11";
+            break;
+        case (7):
+            _motorpins.dir_pin = "0.22";
+            _motorpins.en_pin = "0.21";
+            _motorpins.step_pin = "0.20";
+            break;
+        case (8):
+            _motorpins.dir_pin = "0.25";
+            _motorpins.en_pin = "0.26";
+            _motorpins.step_pin = "0.3";
+            break;
+        case (9):
+            _motorpins.dir_pin = "0.18";
+            _motorpins.en_pin = "0.17";
+            _motorpins.step_pin = "0.16";
+            break;
+        case (10):
+            _motorpins.dir_pin = "2.7";
+            _motorpins.en_pin = "2.6";
+            _motorpins.step_pin = "2.5";
+            break;
+        case (11):
+            _motorpins.dir_pin = "1.21";
+            _motorpins.en_pin = "1.20";
+            _motorpins.step_pin = "1.19";
+            break;
+        case (12):
+            _motorpins.dir_pin = "0.5";
+            _motorpins.en_pin = "0.4";
+            _motorpins.step_pin = "4.29";
+            break;
+        case (13):
+            _motorpins.dir_pin = "2.8";
+            _motorpins.en_pin = "3.26";
+            _motorpins.step_pin = "1.0";
+            break;
+        case (14):
+            _motorpins.dir_pin = "1.17";
+            _motorpins.en_pin = "1.16";
+            _motorpins.step_pin = "1.15";
+            break;
+        case (15):
+            _motorpins.dir_pin = "1.10";
+            _motorpins.en_pin = "1.9";
+            _motorpins.step_pin = "1.8";
+            break;
+        default:
+            _motorpins.step_pin = "nc";
+            _motorpins.en_pin = "nc";
+            _motorpins.dir_pin = "nc";
+            break;
+    }
+    return _motorpins;
 }

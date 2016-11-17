@@ -25,7 +25,18 @@ using std::string;
 
 class StreamOutput;
 
-// R1000A class declaration goes here
+// function declarations go here
+
+// motor pins structure
+struct MotorPins {
+    std::string step_pin;
+    std::string dir_pin;
+    std::string en_pin;
+};
+
+MotorPins getMotorPins(int);          // returns motor pins for a given slot number, compatible with R1000A and R1000A-10
+
+// R1001 class declaration goes here
 class R1001 : public Module {
     public:
         // Default Constructor

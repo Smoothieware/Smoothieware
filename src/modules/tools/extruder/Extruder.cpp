@@ -25,6 +25,9 @@
 #include "StreamOutputPool.h"
 #include "ExtruderPublicAccess.h"
 
+// Juicyboard modules
+#include "modules/JuicyBoard/R1001/R1001.h"
+
 #include <mri.h>
 
 // OLD config names for backwards compatibility, NOTE new configs will not be added here
@@ -47,6 +50,9 @@
 #define step_pin_checksum                    CHECKSUM("step_pin")
 #define dir_pin_checksum                     CHECKSUM("dir_pin")
 #define en_pin_checksum                      CHECKSUM("en_pin")
+
+#define slot_num_checksum                    CHECKSUM("slot_num")
+
 #define max_speed_checksum                   CHECKSUM("max_speed")
 #define x_offset_checksum                    CHECKSUM("x_offset")
 #define y_offset_checksum                    CHECKSUM("y_offset")
@@ -102,9 +108,17 @@ void Extruder::config_load()
 {
 
     Pin step_pin, dir_pin, en_pin;
+    /* Smoothieware stepper motor pin identification
     step_pin.from_string( THEKERNEL->config->value(extruder_checksum, this->identifier, step_pin_checksum          )->by_default("nc" )->as_string())->as_output();
     dir_pin.from_string(  THEKERNEL->config->value(extruder_checksum, this->identifier, dir_pin_checksum           )->by_default("nc" )->as_string())->as_output();
-    en_pin.from_string(   THEKERNEL->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();
+    en_pin.from_string(   THEKERNEL->config->value(extruder_checksum, this->identifier, en_pin_checksum            )->by_default("nc" )->as_string())->as_output();*/
+
+    // Juicyware stepper motor pin identification
+    int motor_slot_num = THEKERNEL->config->value(extruder_checksum, this->identifier, slot_num_checksum   )->by_default(0)->as_int();    // get slot number from config file, example: "extruder.hotend.slot_num 6"
+    MotorPins CurrentMotorPins = getMotorPins(motor_slot_num);
+    step_pin.from_string(CurrentMotorPins.step_pin);
+    dir_pin.from_string(CurrentMotorPins.dir_pin);
+    en_pin.from_string(CurrentMotorPins.en_pin);
 
     float steps_per_millimeter = THEKERNEL->config->value(extruder_checksum, this->identifier, steps_per_mm_checksum)->by_default(1)->as_number();
     float acceleration         = THEKERNEL->config->value(extruder_checksum, this->identifier, acceleration_checksum)->by_default(1000)->as_number();

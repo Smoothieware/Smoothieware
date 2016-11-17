@@ -5,7 +5,6 @@
 #include "StreamOutputPool.h"
 #include "Module.h"
 
-#include "CurrentControl.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
@@ -17,10 +16,13 @@
 #include "Gcode.h"
 #include "Config.h"
 #include "checksumm.h"
+#include "ConfigValue.h"
 
 // define configuration checksums here
 
-
+#define alpha_slot_num                        CHECKSUM("alpha_slot_num")
+#define beta_slot_num                         CHECKSUM("beta_slot_num")
+#define gamma_slot_num                        CHECKSUM("gamma_slot_num")
 
 R1000A::R1000A(){
     // Default Constructor
@@ -30,13 +32,14 @@ R1000A::R1000A(){
     this->ModResetPin->from_string("3.25");
     this->ModResetPin->as_open_drain();
     this->ModResetPin->set(true);                       // set to high
+
+    alphaslot = THEKERNEL->config->value(alpha_slot_num)->as_int();
 }
 
 void R1000A::on_module_loaded(){
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED); // register on console line received
     this->ScanI2CBus();                                 // perform initial I2C bus scan
     this->ResetMods();                                  // reset all modules on I2C bus
-    // FIXME add any config init here
 }
 
 
@@ -61,6 +64,19 @@ void R1000A::on_console_line_received(void* argument){
         else if (cmd == "reset"){
             // reset all modules
             ResetMods();
+        }
+        else if (cmd == "showconfig"){
+            //FIXME this command is only for test, delete it
+            // this shows configuration values for alpha/beta/gamma motor slots
+
+//            int alphaslot = THEKERNEL->config->value(alpha_slot_num)->by_default(0)->as_int();
+            //int betaslot = THEKERNEL->config->value(beta_slot_num)->by_default(0)->as_int();
+            //int gammaslot = THEKERNEL->config->value(gamma_slot_num)->by_default(0)->as_int();
+
+            THEKERNEL->streams->printf("reporting config values\r\n");
+            THEKERNEL->streams->printf("alpha_slot_num %d\r\n", alphaslot);
+            //THEKERNEL->streams->printf("beta_slot_num %d\r\n", betaslot);
+            //THEKERNEL->streams->printf("gamma_slot_num %d\r\n", gammaslot);
         }
     }
 }

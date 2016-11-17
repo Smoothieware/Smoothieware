@@ -34,6 +34,9 @@
 #include "GcodeDispatch.h"
 #include "ActuatorCoordinates.h"
 
+// Juicyboard modules
+#include "modules/JuicyBoard/R1001/R1001.h"
+
 #include "mbed.h" // for us_ticker_read()
 #include "mri.h"
 
@@ -129,7 +132,8 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_en_pin"),          \
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
-    CHECKSUM(X "_acceleration")     \
+    CHECKSUM(X "_acceleration"),    \
+    CHECKSUM(X "_slot_num")         \
 }
 
 void Robot::load_config()
@@ -186,7 +190,8 @@ void Robot::load_config()
     this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
     // Make our Primary XYZ StepperMotors
-    uint16_t const checksums[][6] = {
+    //uint16_t const checksums[][6] = {
+    uint16_t const checksums[][7] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
@@ -198,9 +203,20 @@ void Robot::load_config()
     // make each motor
     for (size_t a = X_AXIS; a <= Z_AXIS; a++) {
         Pin pins[3]; //step, dir, enable
+
+        /* Original Smoothieware method of determining stepper motor driver pins
         for (size_t i = 0; i < 3; i++) {
             pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
-        }
+        }*/
+
+        // Juicyware stepper motor pin identification
+        int motor_slot_num = THEKERNEL->config->value(checksums[a][6])->by_default(0)->as_int();    // get slot number from config file, example: "alpha_slot_num 6"
+        MotorPins CurrentMotorPins = getMotorPins(motor_slot_num);
+        pins[0].from_string(CurrentMotorPins.step_pin);
+        pins[1].from_string(CurrentMotorPins.dir_pin);
+        pins[2].from_string(CurrentMotorPins.en_pin);
+        // End Juicyware motor pin identification
+
         StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
         // register this motor (NB This must be 0,1,2) of the actuators array
         uint8_t n= register_motor(sm);

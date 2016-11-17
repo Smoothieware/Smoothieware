@@ -52,6 +52,8 @@ class R1000A : public Module {
 
         // console commands
         void getTemp(string);
+
+        int alphaslot;
 };
 
 #endif
