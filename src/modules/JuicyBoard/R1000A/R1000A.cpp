@@ -18,6 +18,10 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 
+// Juicyboard modules
+//FIXME remove this include after done
+#include "modules/JuicyBoard/R1001/R1001.h"
+
 // define configuration checksums here
 
 #define alpha_slot_num                        CHECKSUM("alpha_slot_num")
@@ -33,7 +37,9 @@ R1000A::R1000A(){
     this->ModResetPin->as_open_drain();
     this->ModResetPin->set(true);                       // set to high
 
-    alphaslot = THEKERNEL->config->value(alpha_slot_num)->as_int();
+    alphaslot = THEKERNEL->config->value(alpha_slot_num)->by_default(0)->as_int();
+    betaslot = THEKERNEL->config->value(beta_slot_num)->by_default(0)->as_int();
+    gammaslot = THEKERNEL->config->value(gamma_slot_num)->by_default(0)->as_int();
 }
 
 void R1000A::on_module_loaded(){
@@ -75,8 +81,10 @@ void R1000A::on_console_line_received(void* argument){
 
             THEKERNEL->streams->printf("reporting config values\r\n");
             THEKERNEL->streams->printf("alpha_slot_num %d\r\n", alphaslot);
-            //THEKERNEL->streams->printf("beta_slot_num %d\r\n", betaslot);
-            //THEKERNEL->streams->printf("gamma_slot_num %d\r\n", gammaslot);
+            MotorPins CurrentMotorPins = getMotorPins(alphaslot);
+            THEKERNEL->streams->printf("dir_pin: %s\r\n", CurrentMotorPins.dir_pin.c_str());
+            THEKERNEL->streams->printf("beta_slot_num %d\r\n", betaslot);
+            THEKERNEL->streams->printf("gamma_slot_num %d\r\n", gammaslot);
         }
     }
 }

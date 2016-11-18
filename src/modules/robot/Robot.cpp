@@ -126,8 +126,11 @@ void Robot::on_module_loaded()
     this->load_config();
 }
 
+/*
+CHECKSUM(X "_step_pin"),        \
+*/
 #define ACTUATOR_CHECKSUMS(X) {     \
-    CHECKSUM(X "_step_pin"),        \
+    CHECKSUM(X "_slot_num"),        \
     CHECKSUM(X "_dir_pin"),         \
     CHECKSUM(X "_en_pin"),          \
     CHECKSUM(X "_steps_per_mm"),    \
@@ -201,6 +204,7 @@ void Robot::load_config()
     this->default_acceleration= THEKERNEL->config->value(acceleration_checksum)->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2
 
     // make each motor
+    int motor_slot_num;
     for (size_t a = X_AXIS; a <= Z_AXIS; a++) {
         Pin pins[3]; //step, dir, enable
 
@@ -210,11 +214,12 @@ void Robot::load_config()
         }*/
 
         // Juicyware stepper motor pin identification
-        int motor_slot_num = THEKERNEL->config->value(checksums[a][6])->by_default(0)->as_int();    // get slot number from config file, example: "alpha_slot_num 6"
+        motor_slot_num = THEKERNEL->config->value(checksums[a][0])->by_default(0)->as_int();    // get slot number from config file, example: "alpha_slot_num 6"
         MotorPins CurrentMotorPins = getMotorPins(motor_slot_num);
-        pins[0].from_string(CurrentMotorPins.step_pin);
-        pins[1].from_string(CurrentMotorPins.dir_pin);
-        pins[2].from_string(CurrentMotorPins.en_pin);
+
+        pins[0].from_string(CurrentMotorPins.step_pin)->as_output();
+        pins[1].from_string(CurrentMotorPins.dir_pin)->as_output();
+        pins[2].from_string(CurrentMotorPins.en_pin)->as_output();
         // End Juicyware motor pin identification
 
         StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
