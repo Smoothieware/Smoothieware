@@ -37,6 +37,7 @@
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
+#define uart0_disable_checksum     CHECKSUM("uart0_disable")                       // JUICYWARE SPECIFIC
 
 #define base_stepping_frequency_checksum            CHECKSUM("base_stepping_frequency")
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
@@ -112,6 +113,13 @@ Kernel::Kernel(){
     this->ok_per_line= this->config->value( ok_per_line_checksum )->by_default(true)->as_bool();
 
     this->add_module( this->serial );
+
+    // execute uart0 disable
+    // check for uart0 disable
+    if (this->config->value( uart0_disable_checksum )->by_default(false)->as_bool()) {
+        //LPC_SC->PCONP &= 0xFFFFFFF7;            // low level shutdown of UART0, power and clock
+        LPC_PINCON->PINSEL0 &= 0xFFFFFF0F;      // low level pin select of P0.2 and P0.3 to GPIO
+    }
 
     // HAL stuff
     add_module( this->slow_ticker = new SlowTicker());

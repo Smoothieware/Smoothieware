@@ -104,10 +104,11 @@ void R1001::load_config(){
     int i;                  // for loop variable
     int currentval;
 
+    wait_ms(10);            // needed for modules to power up properly before loading config, extra 10ms over reset pulse width
     // update stepper motor driver currents from config file
     for (i=1;i<16;i++) {
         // scan config for every motor
-        currentval = THEKERNEL->config->value(motorcurrent_checksum[i])->as_int();
+        currentval = THEKERNEL->config->value(motorcurrent_checksum[i])->by_default(0)->as_int();
         if (currentval != 0){
             // set motor current only if non zero value at config load
             setMotorCurrent(i, currentval);
@@ -117,7 +118,7 @@ void R1001::load_config(){
     // update stepping resolution mode from config
     for (i=1;i<16;i++) {
         // scan config for every motor
-        currentval = THEKERNEL->config->value(motorstepres_checksum[i])->as_int();
+        currentval = THEKERNEL->config->value(motorstepres_checksum[i])->by_default(0)->as_int();
         switch (currentval) {
         case 1:
             setSTP(i,0);
@@ -160,7 +161,7 @@ void R1001::load_config(){
 
     for (i=1;i<16;i++) {
         // scan config for every motor
-        curstr = THEKERNEL->config->value(motordecay_checksum[i])->as_string();
+        curstr = THEKERNEL->config->value(motordecay_checksum[i])->by_default("notset")->as_string();
         if (curstr == "slow") {
             setDecay(i,0);
         }
