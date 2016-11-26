@@ -143,12 +143,12 @@ void TemperatureControl::load_config()
     if(n > 63) n= 63;
     this->runaway_range= n;
 
-    // these need to fit in 7 bits after dividing by 8 so max is 2040 secs or 34 minutes
+    // these need to fit in 9 bits after dividing by 8 so max is 4088 secs or 68 minutes
     n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_heating_timeout_checksum)->by_default(900)->as_number();
-    if(n > 2040) n= 2040;
+    if(n > 4088) n= 4088;
     this->runaway_heating_timeout = n/8; // we have 8 second ticks
     n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_cooling_timeout_checksum)->by_default((float)n)->as_number();
-    if(n > 2040) n= 2040;
+    if(n > 4088) n= 4088;
     this->runaway_cooling_timeout = n/8;
 
     // Max and min temperatures we are not allowed to get over (Safety)
@@ -555,6 +555,7 @@ void TemperatureControl::on_second_tick(void *argument)
             case NOT_HEATING: // If we were previously not trying to heat, but we are now, change to state WAITING_FOR_TEMP_TO_BE_REACHED
                 this->runaway_state= (this->target_temperature > current_temperature) ? HEATING_UP : COOLING_DOWN;
                 this->runaway_timer = 0;
+                tick= 0;
                 break;
 
             case HEATING_UP:
@@ -563,6 +564,7 @@ void TemperatureControl::on_second_tick(void *argument)
                     (runaway_state == COOLING_DOWN && current_temperature <= this->target_temperature) ) {
                     this->runaway_state = TARGET_TEMPERATURE_REACHED;
                     this->runaway_timer = 0;
+                    tick= 0;
 
                 }else{
                     uint16_t t= (runaway_state == HEATING_UP) ? this->runaway_heating_timeout : this->runaway_cooling_timeout;
