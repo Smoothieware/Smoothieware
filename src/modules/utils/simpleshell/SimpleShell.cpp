@@ -1081,13 +1081,19 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             return;
         }
 
-        uint8_t a= toupper(axis[0]) - 'X';
+        char ax= toupper(axis[0]);
+        uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
         int steps= strtol(stepstr.c_str(), NULL, 10);
         bool dir= steps >= 0;
         steps= std::abs(steps);
 
-        if(a > Z_AXIS) {
-            stream->printf("error: axis must be x y or z\n");
+        if(a > C_AXIS) {
+            stream->printf("error: axis must be x, y, z, a, b, c\n");
+            return;
+        }
+
+        if(a >= THEROBOT->get_number_registered_motors()) {
+            stream->printf("error: axis is out of range\n");
             return;
         }
 
