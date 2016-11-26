@@ -19,11 +19,11 @@
 #include "SwitchPublicAccess.h"
 #include "ToolManagerPublicAccess.h"
 #include "NetworkPublicAccess.h"
+#include "StringStream.h"
 #include "Robot.h"
 #include "ZProbe.h"
 #include "modules/robot/Conveyor.h"
 #include "utils.h"
-
 #include "version.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
@@ -113,7 +113,6 @@ static char get_status_character() {
     return('I');
 }
 
-
 static float get_fan_percent() {
     struct pad_switch s;
     bool ok = PublicData::get_value( switch_checksum, fan_checksum, 0, &s );
@@ -127,8 +126,7 @@ static float get_fan_percent() {
     return 0.0;
 }
 
-static int get_active_tool()
-{
+static int get_active_tool() {
     void *returned_data;
     bool ok = PublicData::get_value(tool_manager_checksum, get_active_tool_checksum, &returned_data);
     if (ok) {
@@ -138,6 +136,24 @@ static int get_active_tool()
         return 0;
     }
 }
+
+static std::string get_probe_state() {
+  // TODO: replace with less wasteful code. E.g., through public message from zProbe.
+    StringStream string_stream;
+    Gcode gcode("M119", &string_stream);
+    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
+
+    static std::string probe_label = "Probe: ";
+ 
+    std::size_t probe_start = string_stream.getOutput().find(probe_label);
+	
+    if (probe_start == std::string::npos) {
+        return " NA";
+    }
+
+    return(string_stream.getOutput().substr(probe_start + probe_label.length()));
+}
+
 
 Reporter::Reporter(){
 }
@@ -312,9 +328,7 @@ void Reporter::on_gcode_received(void *argument){
             gcode->stream->printf(",\"tool\":%d", get_active_tool());
 
             // Probe height
-            // gcode->stream->printf(",\"probe\":");
-	    // TODO:  fix zprobe
-            // gcode->stream->printf("\"0\"");
+            gcode->stream->printf(",\"probe\":\"%s\"", get_probe_state().c_str());
 
 	    // Fan Percent
             gcode->stream->printf(",\"fanPercent\":%.2f", get_fan_percent());
