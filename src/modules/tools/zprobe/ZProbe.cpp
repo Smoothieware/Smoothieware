@@ -139,7 +139,8 @@ uint32_t ZProbe::read_probe(uint32_t dummy)
 {
     if(!probing || probe_detected) return 0;
 
-    if(STEPPER[Z_AXIS]->is_moving()) {
+    // we check all axis as it maybe a G38.2 X10 for instance, not just a probe in Z
+    if(STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving() || STEPPER[Z_AXIS]->is_moving()) {
         // if it is moving then we check the probe, and debounce it
         if(this->pin.get()) {
             if(debounce < debounce_ms) {
