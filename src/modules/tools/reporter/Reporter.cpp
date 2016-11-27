@@ -1,8 +1,8 @@
 /*
-      This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
-      Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-      Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-      You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
+    This file is part of Smoothie (http://smoothieware.org/). The motion control part is heavily based on Grbl (https://github.com/simen/grbl).
+    Smoothie is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+    Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "libs/Module.h"
@@ -36,7 +36,6 @@
 #define reporter_checksum          CHECKSUM("reporter")
 #define enable_checksum            CHECKSUM("enable")
 #define machine_name_checksum      CHECKSUM("machine_name")
-
 #define probe_height_checksum      CHECKSUM("probe_height")
 
 // arm solutions
@@ -57,21 +56,21 @@ static bool less_than_padtemp(const pad_temperature& leftSide, const pad_tempera
 {
     // TODO: Deal correctly with heated chamber. Once PanelDue does as well.
 
-    if(leftSide.designator == rightSide.designator) {
-        return (leftSide.id < rightSide.id);
-    }
+    if (leftSide.designator == rightSide.designator)
+        return leftSide.id < rightSide.id;
 
-    return (leftSide.designator == "B");
+    return leftSide.designator == "B";
 }
 
 bool is_playing()
 {
     void *returned_data;
 
-    bool ok = PublicData::get_value( player_checksum, is_playing_checksum, &returned_data );
+    bool ok = PublicData::get_value(player_checksum, is_playing_checksum, &returned_data);
+
     if (ok) {
         bool b = *static_cast<bool *>(returned_data);
-        return b; 
+        return b;
     }
     return false;
 }
@@ -80,7 +79,8 @@ static bool is_suspended()
 {
     void *returned_data;
 
-    bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
+    bool ok = PublicData::get_value(player_checksum, is_suspended_checksum, &returned_data);
+
     if (ok) {
         bool b = *static_cast<bool *>(returned_data);
         return b;
@@ -89,83 +89,85 @@ static bool is_suspended()
     return false;
 }
 
-static char get_status_character() {
+static char get_status_character()
+{
     // Find the status
     // I=idle, P=printing from SD card, S=stopped (i.e. needs a reset),
     // C=running config file, A=paused, D=pausing, R=resuming, B=busy (running a macro)
 
-    if (THEKERNEL->is_halted()) {
-      // Paused / Stopped
-        return('S');
-    }
+    if (THEKERNEL->is_halted()) // Paused / Stopped
+        return 'S';
 
-    if(! THEKERNEL->conveyor->is_queue_empty()) {
-        // Printing
-        return('P');
-    }
+    if (!THEKERNEL->conveyor->is_queue_empty()) // Printing
+        return 'P';
 
-    if (is_suspended()) {
-        // Paused
-        return('A');
-    }
+    if (is_suspended()) // Paused
+        return 'A';
 
     // Idle
-    return('I');
+    return 'I';
 }
 
-static float get_fan_percent() {
+static float get_fan_percent()
+{
     struct pad_switch s;
-    bool ok = PublicData::get_value( switch_checksum, fan_checksum, 0, &s );
+    bool ok = PublicData::get_value(switch_checksum, fan_checksum, 0, &s);
+
     if (ok) {
-        if (s.state) {
-          //TODO: figure out why this does not work. This always retuns 100.0.
-	  return ((100.0F * s.value) / 255.0F);  
-        } 
+        if (s.state)
+            //TODO: figure out why this does not work. This always retuns 100.0.
+            return (100.0F * s.value) / 255.0F;
     }
 
     return 0.0;
 }
 
-static int get_active_tool() {
+static int get_active_tool()
+{
     void *returned_data;
     bool ok = PublicData::get_value(tool_manager_checksum, get_active_tool_checksum, &returned_data);
+
     if (ok) {
-        int active_tool=  *static_cast<int *>(returned_data);
+        int active_tool = *static_cast<int *>(returned_data);
         return active_tool;
     } else {
         return 0;
     }
 }
 
-static std::string get_probe_state() {
-  // TODO: replace with less wasteful code. E.g., through public message from zProbe.
+static std::string get_probe_state()
+{
+    // TODO: replace with less wasteful code. E.g., through public message from zProbe.
     StringStream string_stream;
     Gcode gcode("M119", &string_stream);
+
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
 
     static std::string probe_label = "Probe: ";
- 
+
     std::size_t probe_start = string_stream.getOutput().find(probe_label);
-	
-    if (probe_start == std::string::npos) {
+
+    if (probe_start == std::string::npos)
         return " NA";
-    }
 
-    return(string_stream.getOutput().substr(probe_start + probe_label.length()));
+    return string_stream.getOutput().substr(probe_start + probe_label.length());
 }
 
 
-Reporter::Reporter(){
+Reporter::Reporter()
+{
 }
 
-Reporter::~Reporter(){
+Reporter::~Reporter()
+{
 }
 
 std::string geometry, myName;
 
-void Reporter::on_module_loaded(){
+void Reporter::on_module_loaded()
+{
     // Exit if this module is not enabled
-    if ( !THEKERNEL->config->value( reporter_checksum, enable_checksum )->by_default(false)->as_bool() ) {
+    if (!THEKERNEL->config->value(reporter_checksum, enable_checksum)->by_default(false)->as_bool()) {
         delete this;
         return;
     }
@@ -174,31 +176,29 @@ void Reporter::on_module_loaded(){
 
     int solution_checksum = get_checksum(THEKERNEL->config->value(arm_solution_checksum)->by_default("cartesian")->as_string());
 
-    if (solution_checksum == hbot_checksum || solution_checksum == corexy_checksum) {
+    if (solution_checksum == hbot_checksum || solution_checksum == corexy_checksum)
         geometry = "corexy";
-    } else if(solution_checksum == corexz_checksum) {
+    else if (solution_checksum == corexz_checksum)
         geometry = "corexz";
-    } else if(solution_checksum == rostock_checksum || solution_checksum == kossel_checksum || solution_checksum == delta_checksum || solution_checksum ==  linear_delta_checksum) {
+    else if (solution_checksum == rostock_checksum || solution_checksum == kossel_checksum || solution_checksum == delta_checksum || solution_checksum == linear_delta_checksum)
         geometry = "delta";
-    } else if(solution_checksum == rotatable_cartesian_checksum) {
-        geometry = "cartesian"; // not clear if this is OK.
-    } else if(solution_checksum == rotary_delta_checksum) {
-        geometry = "delta"; // not clear if this is OK.
-    } else if(solution_checksum == morgan_checksum) {
+    else if (solution_checksum == rotatable_cartesian_checksum)
+        geometry = "cartesian";     // not clear if this is OK.
+    else if (solution_checksum == rotary_delta_checksum)
+        geometry = "delta";         // not clear if this is OK.
+    else if (solution_checksum == morgan_checksum)
         geometry = "morgan";
-    } else if(solution_checksum == cartesian_checksum) {
-        geometry = "cartesian"; 
-    } else {
-        geometry = "cartesian"; 
-    } 
+    else if (solution_checksum == cartesian_checksum)
+        geometry = "cartesian";
+    else
+        geometry = "cartesian";
 
-    myName = THEKERNEL->config->value( reporter_checksum, machine_name_checksum )->by_default("Smoothie")->as_string();
-    
-    std::replace( myName.begin(), myName.end(), '_', ' ');
+    myName = THEKERNEL->config->value(reporter_checksum, machine_name_checksum)->by_default("Smoothie")->as_string();
 
-    if (myName.empty()) {
-      myName = "Smoothie";
-    }
+    std::replace(myName.begin(), myName.end(), '_', ' ');
+
+    if (myName.empty())
+        myName = "Smoothie";
 
     this->register_for_event(ON_GCODE_RECEIVED);
 }
@@ -206,18 +206,19 @@ void Reporter::on_module_loaded(){
 // TODO: remove once we repond properly to 'R' option.
 static int line_count = 0;
 
-void Reporter::on_gcode_received(void *argument){
+void Reporter::on_gcode_received(void *argument)
+{
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     if (gcode->has_m && gcode->m == 408 && gcode->has_letter('S')) {
         char ch;
-	int s_value = static_cast<int>(gcode->get_value('S'));
-	int tool_count = 0;
+        int s_value = static_cast<int>(gcode->get_value('S'));
+        int tool_count = 0;
 
-        switch(s_value) {
+        switch (s_value) {
         case 0:
         case 1:
-	    gcode->stream->printf("Getting M408 S%d status ", s_value);
+            gcode->stream->printf("Getting M408 S%d status ", s_value);
 
             // Beginning
             gcode->stream->printf("{");
@@ -226,61 +227,60 @@ void Reporter::on_gcode_received(void *argument){
             gcode->stream->printf(",\"heaters\":");
 
             std::vector<struct pad_temperature> controllers;
+
             bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+
             if (ok) {
                 // The order expected to be returned is the bed then the extruders.
                 // TODO: Deal correctly with heated chamber. Once PanelDue does as well.
                 std::sort(controllers.begin(), controllers.end(), less_than_padtemp);
+                ch = '[';
 
-		ch = '[';
+                for (auto &c : controllers) {
+                    gcode->stream->printf("%c%.1f", ch, c.current_temperature);
 
-		for (auto &c : controllers) {
-		    gcode->stream->printf("%c%.1f", ch, c.current_temperature);
+                    if (c.designator != "B")
+                        tool_count++;
 
-		    if (c.designator != "B") {
-		        tool_count++;                    
-                    }
-		      
                     ch = ',';
                 }
-		gcode->stream->printf((ch == '[')?"[]":"]");
+                gcode->stream->printf((ch == '[') ? "[]" : "]");
 
 
                 gcode->stream->printf(",\"active\":");
 
-		ch = '[';
+                ch = '[';
 
-		for (auto &c : controllers) {
-		    gcode->stream->printf("%c%.1f", ch, c.target_temperature);
+                for (auto &c : controllers) {
+                    gcode->stream->printf("%c%.1f", ch, c.target_temperature);
                     ch = ',';
                 }
-		gcode->stream->printf((ch == '[')?"[]":"]");
- 
-                // Smoothieware has no concept of a standby temperature.                
+                gcode->stream->printf((ch == '[') ? "[]" : "]");
+
+                // Smoothieware has no concept of a standby temperature.
                 // gcode->stream->printf(",\"standby\":[]");
-      
+
                 // status of the heaters, 0=off, 1=standby, 2=active, 3=fault
                 gcode->stream->printf(",\"hstat\":");
 
-		ch = '[';
+                ch = '[';
 
-		for (auto &c : controllers) {
-		    // Fault (default) 
+                for (auto &c : controllers) {
+                    // Fault (default)
                     char tmp = '3';
 
-		    if (c.target_temperature == 0) {
-		        // Off 
-	                tmp = '0';
-                    } else if (c.target_temperature > 0) {
-		        // Active
-		        tmp = '2';
-                    }    
+                    if (c.target_temperature == 0)
+                        // Off
+                        tmp = '0';
+                    else if (c.target_temperature > 0)
+                        // Active
+                        tmp = '2';
 
-		    gcode->stream->printf("%c%c", ch, tmp);
+                    gcode->stream->printf("%c%c", ch, tmp);
                     ch = ',';
                 }
 
-		gcode->stream->printf((ch == '[')?"[]":"]");
+                gcode->stream->printf((ch == '[') ? "[]" : "]");
             }
 
             // Get position
@@ -289,40 +289,40 @@ void Reporter::on_gcode_received(void *argument){
             THEKERNEL->robot->get_axis_position(pos);
             gcode->stream->printf("[%.2f,%.2f,%.2f]", pos[0], pos[1], pos[2]);
 
-            //Extruder information
+            // Extruder information
 
             // Potential set-up code. Have not figured this out yet.
-            // pad_extruder_t rd; 
-	    // bool extruder_data_ok = PublicData::get_value( extruder_checksum, (void *)&rd )); 
+            // pad_extruder_t rd;
+            // bool extruder_data_ok = PublicData::get_value( extruder_checksum, (void *)&rd ));
 
             gcode->stream->printf(",\"extr\":");
-	    ch = '[';
+            ch = '[';
 
             for (int i = 0; i < tool_count; i++) {
-    	        // TODO: loop over active extruders and send extruder total extrusion since power up, last G92 or last M23
-	        // THEROBOT->get_axis_position(motor_id)??
-	        // stepper_motor->get_current_position()??
-	        gcode->stream->printf("%c%d", ch, 0);
-       	        ch = ',';
-	    }
+                // TODO: loop over active extruders and send extruder total extrusion since power up, last G92 or last M23
+                // THEROBOT->get_axis_position(motor_id)??
+                // stepper_motor->get_current_position()??
+                gcode->stream->printf("%c%d", ch, 0);
+                ch = ',';
+            }
 
-            gcode->stream->printf((ch == '[')?"[]":"]");
+            gcode->stream->printf((ch == '[') ? "[]" : "]");
 
-            // Send speed factor  
+            // Send speed factor
             gcode->stream->printf(",\"sfactor\":%.2f", 6000.0F / THEKERNEL->robot->get_seconds_per_minute());
 
             // Send extruder override factors
             gcode->stream->printf(",\"efactor\":");
-	    ch = '[';
+            ch = '[';
 
             for (int i = 0; i < tool_count; i++) {
-         	// TODO: loop over active extruders and send extruder override factor
+                // TODO: loop over active extruders and send extruder override factor
 
-	        gcode->stream->printf("%c%d", ch, 0);
-       	        ch = ',';
-	    }
+                gcode->stream->printf("%c%d", ch, 0);
+                ch = ',';
+            }
 
-            gcode->stream->printf((ch == '[')?"[]":"]");
+            gcode->stream->printf((ch == '[') ? "[]" : "]");
 
             // Tool index
             gcode->stream->printf(",\"tool\":%d", get_active_tool());
@@ -330,58 +330,58 @@ void Reporter::on_gcode_received(void *argument){
             // Probe height
             gcode->stream->printf(",\"probe\":\"%s\"", get_probe_state().c_str());
 
-	    // Fan Percent
+            // Fan Percent
             gcode->stream->printf(",\"fanPercent\":%.2f", get_fan_percent());
 
-	    // Fan RPM
+            // Fan RPM
             gcode->stream->printf(",\"fanRPM\":");
 
-	    // TODO:  fix fan RPM output
+            // TODO:  fix fan RPM output
             gcode->stream->printf("%d", 0);
 
             // Homed
-            // the homed status of the X, Y and Z axes (or towers on a delta). 
-            //    0=axis has not been homed so position is not reliable, 
+            // the homed status of the X, Y and Z axes (or towers on a delta).
+            //    0=axis has not been homed so position is not reliable,
             //    1=axis has been homed so position is reliable.
-	    gcode->stream->printf(",\"homed\":");
+            gcode->stream->printf(",\"homed\":");
 
-	    // TODO: fix homed status
-	    gcode->stream->printf("[1,1,1]");
+            // TODO: fix homed status
+            gcode->stream->printf("[1,1,1]");
 
-	    // Fraction printed
+            // Fraction printed
             gcode->stream->printf(",\"fraction_printed\":");
 
             // Get fraction printed
             void *completed_data;
-            if (PublicData::get_value( player_checksum, get_progress_checksum, &completed_data )) {
-                struct pad_progress p =  *static_cast<struct pad_progress *>(completed_data);
-                gcode->stream->printf("%.4f", ((float) p.percent_complete) / 100.0F);
-            }else{
+
+            if (PublicData::get_value(player_checksum, get_progress_checksum, &completed_data)) {
+                struct pad_progress p = *static_cast<struct pad_progress *>(completed_data);
+                gcode->stream->printf("%.4f", ((float)p.percent_complete) / 100.0F);
+            } else {
                 gcode->stream->printf("0.0000");
             }
 
-	    if (s_value == 1) {  // also output static values 
-	        // Printer name
+            if (s_value == 1) {             // also output static values
+                // Printer name
                 gcode->stream->printf(",\"myName\":");
 
                 gcode->stream->printf("\"%s\"", myName.c_str());
 
                 // Printer geometry
                 // one of "cartesian", "delta", "corexy, "corexz" etc.
-		gcode->stream->printf(",\"geometry\":\"%s\"", geometry.c_str());
+                gcode->stream->printf(",\"geometry\":\"%s\"", geometry.c_str());
 
-		gcode->stream->printf(",\"firmwareName\":\"Smoothieware\"");
-		
+                gcode->stream->printf(",\"firmwareName\":\"Smoothieware\"");
             }
 
-            // TODO: replace with proper solution for: 
-	    // seq:     the sequence number of the most recent non-trivial G-code response or error message.
-	    //          Only present if the R parameter was provided and the current sequence number is greater than that.
-	    // resp:    the most recent non-trivial G-code response or error message. 
-	    //          Only present if the R parameter was provided and the current sequence number is greater.
-	    if (gcode->has_letter('R')) {
-		gcode->stream->printf(",\"seq\":\"%d\"", line_count++);                
-		gcode->stream->printf(",\"resp\":\"%s\"", "<Smoothie: not yet implemented>");                
+            // TODO: replace with proper solution for:
+            // seq:     the sequence number of the most recent non-trivial G-code response or error message.
+            //          Only present if the R parameter was provided and the current sequence number is greater than that.
+            // resp:    the most recent non-trivial G-code response or error message.
+            //          Only present if the R parameter was provided and the current sequence number is greater.
+            if (gcode->has_letter('R')) {
+                gcode->stream->printf(",\"seq\":\"%d\"", line_count++);
+                gcode->stream->printf(",\"resp\":\"%s\"", "<Smoothie: not yet implemented>");
             }
 
             // JSon must have an EOL
