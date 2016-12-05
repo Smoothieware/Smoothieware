@@ -9,4 +9,5 @@ These are feature deviations between Smoothieware and Juicyware
 * Added R1000A module to execute `mod` commands
 * Added R1001 module to execute R1001 motor driver specific commands
 * Added R1001_I2C module to handle all I2C communications for R1XXX modules
-* Included the ability to disable ISP push button to MRI mode through config, in case the user needs ISP pin (add tag and file link here)
+* `src/libs/SlowTicker.cpp` 
+  * Eliminated the ability enter MRI mode using the ISP button, this frees up the pin for the user 
