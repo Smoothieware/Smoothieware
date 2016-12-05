@@ -1,5 +1,7 @@
 # Juicyware Overview
-Juicyware is a fork of [Smoothieware](https://github.com/Smoothieware/Smoothieware) that is supports the extended functionalities of [Juicyboard](http://plugg.ee), which is a modular robotics hardware platform based on NXP's LPC1769 processor. Compiling Juicyware goes exactly like compiling Smoothieware, NOTE: you must use GNU ARM toolchain 4.8 2014q1-20140314 for best compatibility results.
+Juicyware is a fork of [Smoothieware](https://github.com/Smoothieware/Smoothieware) that is supports the extended functionalities of [Juicyboard](http://plugg.ee), which is a modular robotics hardware platform based on NXP's LPC1769 processor. Compiling Juicyware goes exactly like compiling Smoothieware.
+
+**NOTE: you must use GNU ARM toolchain 4.8 2014q1-20140314 for best compatibility results.**
 
 # Change Notes
 These are feature deviations between Smoothieware and Juicyware
