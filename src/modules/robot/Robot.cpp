@@ -1094,7 +1094,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     }
 
     bool move= false;
-    float sos= 0; // sum of squares for just XYZ
+    float sos= 0; // sum of squares for just primary axis (XYZ usually)
 
     // find distance moved by each axis, use transformed target from the current compensated machine position
     for (size_t i = 0; i < n_motors; i++) {
@@ -1102,7 +1102,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         if(deltas[i] == 0) continue;
         // at least one non zero delta
         move = true;
-        if(i <= Z_AXIS) {
+        if(i < N_PRIMARY_AXIS) {
             sos += powf(deltas[i], 2);
         }
     }
@@ -1111,7 +1111,13 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     if(!move) return false;
 
     // see if this is a primary axis move or not
-    bool auxilliary_move= deltas[X_AXIS] == 0 && deltas[Y_AXIS] == 0 && deltas[Z_AXIS] == 0;
+    bool auxilliary_move= true;
+    for (int i = 0; i < N_PRIMARY_AXIS; ++i) {
+        if(deltas[i] != 0) {
+            auxilliary_move= false;
+            break;
+        }
+    }
 
     // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
     float distance= auxilliary_move ? 0 : sqrtf(sos);
@@ -1122,7 +1128,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
 
     if(!auxilliary_move) {
-         for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+         for (size_t i = X_AXIS; i < N_PRIMARY_AXIS; i++) {
             // find distance unit vector for primary axis only
             unit_vec[i] = deltas[i] / distance;
 
@@ -1189,7 +1195,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
         // adjust acceleration to lowest found, for now just primary axis unless it is an auxiliary move
         // TODO we may need to do all of them, check E won't limit XYZ.. it does on long E moves, but not checking it could exceed the E acceleration.
-        if(auxilliary_move || actuator <= Z_AXIS) {
+        if(auxilliary_move || actuator < N_PRIMARY_AXIS) {
             float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
             if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
                 float ca = fabsf((d/distance) * acceleration);

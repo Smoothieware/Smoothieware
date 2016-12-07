@@ -142,7 +142,12 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
             // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
             float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
                               - this->previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
-                              - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
+                              - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS];
+            #if N_PRIMARY_AXIS > 3
+                for (int i = 3; i < N_PRIMARY_AXIS; ++i) {
+                    cos_theta -= this->previous_unit_vec[i] * unit_vec[i];
+                }
+            #endif
 
             // Skip and use default max junction speed for 0 degree acute junction.
             if (cos_theta < 0.95F) {

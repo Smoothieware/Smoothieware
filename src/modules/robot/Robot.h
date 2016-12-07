@@ -25,7 +25,6 @@ class StepperMotor;
 
 // 9 WCS offsets
 #define MAX_WCS 9UL
-#define N_PRIMARY_AXIS 3
 
 class Robot : public Module {
     public:

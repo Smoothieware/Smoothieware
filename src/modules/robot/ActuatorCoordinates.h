@@ -18,6 +18,11 @@
     #endif
 #endif
 
+#ifndef N_PRIMARY_AXIS
+  // This may chnage and include ABC
+  #define N_PRIMARY_AXIS 3
+#endif
+
 // Keep MAX_ROBOT_ACTUATORS as small as practical it impacts block size and therefore free memory.
 const size_t k_max_actuators = MAX_ROBOT_ACTUATORS;
 typedef struct std::array<float, k_max_actuators> ActuatorCoordinates;
