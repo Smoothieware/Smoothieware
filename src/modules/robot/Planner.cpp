@@ -90,9 +90,19 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
         if(block->steps[GAMMA_STEPPER] != 0) {
             // z only move
             if(!isnan(this->z_junction_deviation)) junction_deviation = this->z_junction_deviation;
+
         } else {
             // is not a primary axis move
-            block->primary_axis = false;
+            block->primary_axis= false;
+            #if N_PRIMARY_AXIS > 3
+                for (int i = 3; i < N_PRIMARY_AXIS; ++i) {
+                    if(block->steps[i] != 0){
+                        block->primary_axis= true;
+                        break;
+                    }
+                }
+            #endif
+
         }
     }
 
