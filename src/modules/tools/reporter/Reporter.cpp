@@ -114,9 +114,13 @@ static float get_fan_percent()
     bool ok = PublicData::get_value(switch_checksum, fan_checksum, 0, &s);
 
     if (ok) {
-        if (s.state)
-            //TODO: figure out why this does not work. This always retuns 100.0.
+        if (s.state) {
+            // TODO: figure out why this does not work. This always retuns 100.0.
+            // This always returns 100.0 because s.value is not the current fan
+            // speed, but the max_pwm. See Switch.cpp. Switch public access does
+            // not send current fan speed. Requires change to Switch.cpp.
             return (100.0F * s.value) / 255.0F;
+        }
     }
 
     return 0.0;
@@ -221,8 +225,7 @@ void Reporter::on_gcode_received(void *argument)
             gcode->stream->printf("Getting M408 S%d status ", s_value);
 
             // Beginning
-            gcode->stream->printf("{");
-            gcode->stream->printf("\"status\":\"%c\"", get_status_character());
+            gcode->stream->printf("{\"status\":\"%c\"", get_status_character());
 
             gcode->stream->printf(",\"heaters\":");
 
@@ -284,10 +287,9 @@ void Reporter::on_gcode_received(void *argument)
             }
 
             // Get position
-            gcode->stream->printf(",\"pos\":");
             float pos[3];
             THEKERNEL->robot->get_axis_position(pos);
-            gcode->stream->printf("[%.2f,%.2f,%.2f]", pos[0], pos[1], pos[2]);
+            gcode->stream->printf(",\"pos\":[%.2f,%.2f,%.2f]", pos[0], pos[1], pos[2]);
 
             // Extruder information
 
@@ -312,17 +314,17 @@ void Reporter::on_gcode_received(void *argument)
             gcode->stream->printf(",\"sfactor\":%.2f", 6000.0F / THEKERNEL->robot->get_seconds_per_minute());
 
             // Send extruder override factors
-            gcode->stream->printf(",\"efactor\":");
-            ch = '[';
-
-            for (int i = 0; i < tool_count; i++) {
-                // TODO: loop over active extruders and send extruder override factor
-
-                gcode->stream->printf("%c%d", ch, 0);
-                ch = ',';
-            }
-
-            gcode->stream->printf((ch == '[') ? "[]" : "]");
+            // TODO: loop over active extruders and send extruder override factor
+            // gcode->stream->printf(",\"efactor\":");
+            // ch = '[';
+            //
+            // for (int i = 0; i < tool_count; i++) {
+            //
+            //     gcode->stream->printf("%c%d", ch, 0);
+            //     ch = ',';
+            // }
+            //
+            // gcode->stream->printf((ch == '[') ? "[]" : "]");
 
             // Tool index
             gcode->stream->printf(",\"tool\":%d", get_active_tool());
@@ -334,19 +336,15 @@ void Reporter::on_gcode_received(void *argument)
             gcode->stream->printf(",\"fanPercent\":%.2f", get_fan_percent());
 
             // Fan RPM
-            gcode->stream->printf(",\"fanRPM\":");
-
             // TODO:  fix fan RPM output
-            gcode->stream->printf("%d", 0);
+            // gcode->stream->printf(",\"fanRPM\":%d", 0);
 
             // Homed
+            // TODO: fix homed status
             // the homed status of the X, Y and Z axes (or towers on a delta).
             //    0=axis has not been homed so position is not reliable,
             //    1=axis has been homed so position is reliable.
-            gcode->stream->printf(",\"homed\":");
-
-            // TODO: fix homed status
-            gcode->stream->printf("[1,1,1]");
+            gcode->stream->printf(",\"homed\":[1,1,1]");
 
             // Fraction printed
             gcode->stream->printf(",\"fraction_printed\":");
@@ -363,15 +361,15 @@ void Reporter::on_gcode_received(void *argument)
 
             if (s_value == 1) {             // also output static values
                 // Printer name
-                gcode->stream->printf(",\"myName\":");
-
-                gcode->stream->printf("\"%s\"", myName.c_str());
+                gcode->stream->printf(",\"myName\":\"%s\"", myName.c_str());
 
                 // Printer geometry
                 // one of "cartesian", "delta", "corexy, "corexz" etc.
                 gcode->stream->printf(",\"geometry\":\"%s\"", geometry.c_str());
 
                 gcode->stream->printf(",\"firmwareName\":\"Smoothieware\"");
+
+                gcode->stream->printf(",\"numTools\":%d", tool_count);
             }
 
             // TODO: replace with proper solution for:
@@ -380,7 +378,7 @@ void Reporter::on_gcode_received(void *argument)
             // resp:    the most recent non-trivial G-code response or error message.
             //          Only present if the R parameter was provided and the current sequence number is greater.
             if (gcode->has_letter('R')) {
-                gcode->stream->printf(",\"seq\":\"%d\"", line_count++);
+                gcode->stream->printf(",\"seq\":%d", line_count++);
                 gcode->stream->printf(",\"resp\":\"%s\"", "<Smoothie: not yet implemented>");
             }
 
