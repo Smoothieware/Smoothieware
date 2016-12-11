@@ -215,8 +215,8 @@ const char *WatchScreen::get_status()
     if (THEKERNEL->is_halted())
         return "ALARM";
 
-    if (THEPANEL->is_suspended() || THEKERNEL->get_feed_hold())
-        return "Feed Hold";
+    if (THEPANEL->is_suspended() /*|| THEKERNEL->get_feed_hold()*/)
+        return "Suspended";
 
     if (THEPANEL->is_playing())
         return THEPANEL->get_playing_file();
