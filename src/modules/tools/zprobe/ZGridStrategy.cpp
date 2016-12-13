@@ -594,6 +594,8 @@ void ZGridStrategy::homexyz()
     case HOMEXYZ : {
         Gcode gc("G28", &(StreamOutput::NullStream));
         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+       // Gcode gc2("G1 Y10", &(StreamOutput::NullStream));
+       //         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc2);
         break;
     }
   }

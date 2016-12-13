@@ -21,10 +21,12 @@ class ConfigValue{
         ConfigValue* required();
         float as_number();
         int as_int();
+        double as_double();
         bool as_bool();
         string as_string();
 
         ConfigValue* by_default(float val);
+        ConfigValue* by_default(double val);
         ConfigValue* by_default(string val);
         ConfigValue* by_default(int val);
         bool is_inverted();

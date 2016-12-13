@@ -29,7 +29,7 @@ ENABLE_DEBUG_MONITOR?=0
 
 # this is the default UART baud rate used if it is not set in config
 # it is also the baud rate used to report any errors found while parsing the config file
-DEFAULT_SERIAL_BAUD_RATE?=9600
+DEFAULT_SERIAL_BAUD_RATE?=115200
 
 ifeq "$(ENABLE_DEBUG_MONITOR)" "1"
 # Can add MRI_UART_BAUD=115200 to next line if GDB fails to connect to MRI.
@@ -97,11 +97,15 @@ endif
 
 # set to not compile in any network support
 #export NONETWORK = 1
-
+export NO_TOOLS_ROTARYDELTACALIBRATION = 1
+export NO_TOOLS_LASER = 1
+export NO_TOOLS_SPINDLE = 1
+export NO_UTILS_PANEL =1
+export NO_TOOLS_DRILLINGCYCLES =1
 include $(BUILD_DIR)/build.mk
 
 CONSOLE?=/dev/arduino
-BAUD?=9600
+BAUD?=115200
 
 .PHONY: debug-store flash upload debug console dfu
 

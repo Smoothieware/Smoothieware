@@ -37,7 +37,7 @@ public:
 
     void on_module_loaded(void);
     void on_idle(void*);
-
+    void on_console_line_received( void *argument );
     int addDescriptor(usbdesc_base *descriptor);
     int addDescriptor(void *descriptor);
 //     int findDescriptor(uint8_t start, uint8_t type, uint8_t index, uint8_t alternate);

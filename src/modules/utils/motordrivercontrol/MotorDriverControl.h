@@ -13,6 +13,7 @@ class DRV8711DRV;
 class TMC26X;
 class StreamOutput;
 class Gcode;
+class L6474;
 
 class MotorDriverControl : public Module {
     public:
@@ -35,16 +36,17 @@ class MotorDriverControl : public Module {
         void dump_status(StreamOutput*, bool);
         void set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
         void set_options(Gcode *gcode);
-
+        uint8_t drivers;
         void enable(bool on);
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);
-
+        void set_current();
         Pin spi_cs_pin;
         mbed::SPI *spi;
 
         enum CHIP_TYPE {
             DRV8711,
-            TMC2660
+            TMC2660,
+			STL6474,
         };
         CHIP_TYPE chip;
 
@@ -52,13 +54,14 @@ class MotorDriverControl : public Module {
         union {
             DRV8711DRV *drv8711;
             TMC26X *tmc26x;
+            L6474 *l6474;
         };
 
         //float current_factor;
         uint32_t max_current; // in milliamps
         uint32_t current; // in milliamps
         uint32_t microsteps;
-
+        double *currents;
         char designator;
 
         struct{
