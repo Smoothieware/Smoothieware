@@ -50,9 +50,10 @@ class Robot : public Module {
         void check_max_actuator_speeds();
         float to_millimeters( float value ) const { return this->inch_mode ? value * 25.4F : value; }
         float from_millimeters( float value) const { return this->inch_mode ? value/25.4F : value;  }
-        float get_axis_position(int axis) const { return(this->last_milestone[axis]); }
-        void get_axis_position(float position[], size_t n= N_PRIMARY_AXIS) const { memcpy(position, this->last_milestone, n*sizeof(float)); }
-        wcs_t get_axis_position() const { return wcs_t(last_milestone[X_AXIS], last_milestone[Y_AXIS], last_milestone[Z_AXIS]); }
+        float get_axis_position(int axis) const { return(this->machine_position[axis]); }
+        void get_axis_position(float position[], size_t n= N_PRIMARY_AXIS) const { memcpy(position, this->machine_position, n*sizeof(float)); }
+        wcs_t get_axis_position() const { return wcs_t(machine_position[X_AXIS], machine_position[Y_AXIS], machine_position[Z_AXIS]); }
+        void get_current_machine_position(float *pos) const;
         int print_position(uint8_t subcode, char *buf, size_t bufsize) const;
         uint8_t get_current_wcs() const { return current_wcs; }
         std::vector<wcs_t> get_wcs_state() const;
@@ -68,7 +69,7 @@ class Robot : public Module {
         std::vector<StepperMotor*> actuators;
 
         // set by a leveling strategy to transform the target of a move according to the current plan
-        std::function<void(float[3])> compensationTransform;
+        std::function<void(float*, bool)> compensationTransform;
         // set by an active extruder, returns the amount tio scale the E parameter by (to convert mm³ to mm)
         std::function<float(void)> get_e_scale_fnc;
 
@@ -121,8 +122,8 @@ class Robot : public Module {
         using saved_state_t= std::tuple<float, float, bool, bool, bool, uint8_t>; // save current feedrate and absolute mode, e absolute mode, inch mode, current_wcs
         std::stack<saved_state_t> state_stack;               // saves state from M120
 
-        float last_milestone[k_max_actuators]; // Last requested position, in millimeters, which is what we were requested to move to in the gcode after offsets applied but before compensation transform
-        float last_machine_position[k_max_actuators]; // Last machine position, which is the position before converting to actuator coordinates (includes compensation transform)
+        float machine_position[k_max_actuators]; // Last requested position, in millimeters, which is what we were requested to move to in the gcode after offsets applied but before compensation transform
+        float compensated_machine_position[k_max_actuators]; // Last machine position, which is the position before converting to actuator coordinates (includes compensation transform)
 
         float seek_rate;                                     // Current rate for seeking moves ( mm/min )
         float feed_rate;                                     // Current rate for feeding moves ( mm/min )

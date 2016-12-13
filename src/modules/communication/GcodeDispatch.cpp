@@ -26,7 +26,6 @@
 #include "utils.h"
 #include "LPC17xx.h"
 
-#define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
 #define panel_display_message_checksum CHECKSUM("display_message")
 #define panel_checksum             CHECKSUM("panel")
 
