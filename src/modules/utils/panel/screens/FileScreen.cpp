@@ -18,12 +18,13 @@
 #include "StreamOutput.h"
 #include "DirHandle.h"
 #include "mri.h"
+#include "FileSorter.h"
 
-using std::string;
 
 FileScreen::FileScreen()
 {
     this->start_play = false;
+    this->file_sorter = NULL;
 }
 
 // When entering this screen
@@ -39,6 +40,7 @@ void FileScreen::on_exit()
 {
     // reset to root directory, I think this is less confusing
     THEKERNEL->current_path= "/";
+    delete_file_sorter();
 }
 
 // For every ( potential ) refresh of the screen
@@ -58,11 +60,29 @@ void FileScreen::enter_folder(const char *folder)
     // Remember where we are
     THEKERNEL->current_path= folder;
 
+    // read the folder contents into the file sorter.
+    if ( this->file_sorter == NULL ){
+        this->file_sorter = new FileSorter(string(folder), filter_file);
+    } else {
+        this->file_sorter->open_directory(string(folder));
+    }
+
     // We need the number of lines to setup the menu
-    uint16_t number_of_files_in_folder = this->count_folder_content();
+    //
+    // if there was an error reading the directory, set
+    // the count to the raw directory count.  the file
+    // list will revert to unsorted in this case.
+    uint16_t number_of_files_in_folder = 0;
+    if ( this->file_sorter != NULL ) {
+        if ( this->file_sorter->is_sorted() ) {
+            number_of_files_in_folder = this->file_sorter->get_file_count();
+        } else {
+            number_of_files_in_folder = this->file_sorter->get_total_file_count();
+        }
+    }
 
     // Setup menu
-    THEPANEL->setup_menu(number_of_files_in_folder + 1); // same number of files as menu items
+    THEPANEL->setup_menu(number_of_files_in_folder + 1);// same number of files as menu items
     THEPANEL->enter_menu_mode();
 
     // Display menu
@@ -116,55 +136,18 @@ void FileScreen::clicked_line(uint16_t line)
     }
 }
 
-// only filter files that have a .g, .ngc or .nc in them and does not start with a .
-bool FileScreen::filter_file(const char *f)
-{
-    string fn= lc(f);
-    return (fn.at(0) != '.') &&
-             ((fn.find(".g") != string::npos) ||
-              (fn.find(".ngc") != string::npos) ||
-              (fn.find(".nc") != string::npos));
-}
-
 // Find the "line"th file in the current folder
 string FileScreen::file_at(uint16_t line, bool& isdir)
 {
-    DIR *d;
-    struct dirent *p;
-    uint16_t count = 0;
-    d = opendir(THEKERNEL->current_path.c_str());
-    if (d != NULL) {
-        while ((p = readdir(d)) != NULL) {
-            // only filter files that have a .g in them and directories not starting with a .
-          if(((p->d_isdir && p->d_name[0] != '.') || filter_file(p->d_name)) && count++ == line ) {
-                isdir= p->d_isdir;
-                string fn= p->d_name;
-                closedir(d);
-                return fn;
-            }
+    if ( this->file_sorter != NULL ) {
+        const char* fn = this->file_sorter->file_at(line, isdir);
+        if ( fn != NULL ) {
+            return string(fn);
         }
     }
 
-    if (d != NULL) closedir(d);
     isdir= false;
     return "";
-}
-
-// Count how many files there are in the current folder that have a .g in them and does not start with a .
-uint16_t FileScreen::count_folder_content()
-{
-    DIR *d;
-    struct dirent *p;
-    uint16_t count = 0;
-    d = opendir(THEKERNEL->current_path.c_str());
-    if (d != NULL) {
-        while ((p = readdir(d)) != NULL) {
-            if((p->d_isdir && p->d_name[0] != '.') || filter_file(p->d_name)) count++;
-        }
-        closedir(d);
-        return count;
-    }
-    return 0;
 }
 
 void FileScreen::on_main_loop()
@@ -184,4 +167,21 @@ void FileScreen::play(const char *path)
     message.message = string("play ") + path;
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+}
+
+void FileScreen::delete_file_sorter(void)
+{
+    delete this->file_sorter;
+    this->file_sorter = NULL;
+}
+
+// only filter files that have a .g, .ngc or .nc in them and does not start with a .
+bool FileScreen::filter_file(struct dirent* file_info)
+{
+    string fn = lc(file_info->d_name);
+    return ((file_info->d_isdir && file_info->d_name[0] != '.') ||  // match all non-hidden directories (no .dir_name)
+            ((fn.at(0) != '.') &&                                   // match non-hidden files (no .file_name) with one of the extensions below:
+                    ((fn.find(".g") != string::npos) ||             // files with .gXXX extensions
+                    (fn.find(".ngc") != string::npos) ||            // files with .nacXXX extensions
+                    (fn.find(".nc") != string::npos))));            // files with .ncXXX extensions
 }

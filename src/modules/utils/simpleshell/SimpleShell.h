@@ -26,6 +26,7 @@ public:
     void on_second_tick(void *);
     static bool parse_command(const char *cmd, string args, StreamOutput *stream);
     static void print_mem(StreamOutput *stream) { mem_command("", stream); }
+    static uint32_t heapWalk(StreamOutput *stream, bool verbose);
 
 private:
     static void ls_command(string parameters, StreamOutput *stream );
