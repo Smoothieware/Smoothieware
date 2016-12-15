@@ -116,23 +116,19 @@ bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
 
     float max_delta= 0;
     float last_z= NAN;
-    float start_z;
-    std::tie(std::ignore, std::ignore, start_z)= THEROBOT->get_axis_position();
+    float start_z= THEROBOT->actuators[2]->get_current_position();
 
     for(auto& i : pp) {
         float mm;
         if(!zprobe->doProbeAt(mm, i[0], i[1])) return false;
         float z = mm;
         if(gcode->subcode == 0) {
-            gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f A:%1.4f B:%1.4f C:%1.4f\n",
-                i[0], i[1], z,
-                THEROBOT->actuators[0]->get_current_position()+z,
-                THEROBOT->actuators[1]->get_current_position()+z,
-                THEROBOT->actuators[2]->get_current_position()+z);
+            // prints the delta Z moved at the XY coordinates given
+            gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f\n", i[0], i[1], z);
 
         }else if(gcode->subcode == 1) {
             // format that can be pasted here http://escher3d.com/pages/wizards/wizarddelta.php
-            gcode->stream->printf("X%1.4f Y%1.4f Z%1.4f\n", i[0], i[1], start_z - z);
+            gcode->stream->printf("X%1.4f Y%1.4f Z%1.4f\n", i[0], i[1], start_z - z); // actual Z of bed at probe point
         }
 
         if(isnan(last_z)) {
@@ -158,8 +154,7 @@ float DeltaCalibrationStrategy::findBed()
 
     // find bed, run at slow rate so as to not hit bed hard
     float mm;
-    if(!zprobe->run_probe(mm, false)) return NAN;
-    zprobe->return_probe(mm);
+    if(!zprobe->run_probe_return(mm, zprobe->getSlowFeedrate())) return NAN;
 
     // leave the probe zprobe->getProbeHeight() above bed
     float dz= zprobe->getProbeHeight() - mm;
