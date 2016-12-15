@@ -1,6 +1,6 @@
 
 To use multi-axis and ABC axis
-------------------------------
+==============================
 
 **In order to use there should be no extruders defined.**
 This is being tested in CNC mode, it is not currently known to work for extruders.
@@ -50,7 +50,7 @@ Adding `PAXIS=4` to the make would make the first 4 axis primary axis so XYZA wo
 
 **NOTE** G2/G3 currently do not handle ABC axis correctly, basically it will draw the arc then ABC will move afterwards, which is totally incorrect.
 
-This may not be a complete solution, the planner treats  X Y Z as primary axis, A B C are not treated as primary axis, there is no junction deviation applied to them for instance, and if they move a significant number of steps more than X Y Z there may be speed issues.
+This may not be a complete solution, by default (see PAXIS above) the planner treats  X Y Z as primary axis, A B C are not treated as primary axis, there is no junction deviation applied to them for instance, and if they move a significant number of steps more than X Y Z there may be speed issues.
 
 Note that M907 for setting currents is deprecating the use of E it is now channels XYZABCD matching the associated axis. Use of E will still do what it used to do for backward compatibility but will print out a warning. Saving the M907 with M500 will write it in the new format.
 
@@ -78,7 +78,7 @@ To probe raw bed heights turn off the ABL first.
 
 
 To upgrade from old master or very old edge to the new motion control firmware
------------------------------------------------------------------
+==============================================================================
 
 for builds prior to July 1, 2016 you must do the following....
 
@@ -115,7 +115,7 @@ NOTE on a delta this needs to be the total hieght (or greater) than yur towers N
 7. if you have configured more than 2 extruders you will need to recompile and set ```MAX_ROBOT_ACTUATORS``` accordingly.. https://github.com/Smoothieware/Smoothieware/blob/edge/src/modules/robot/ActuatorCoordinates.h#L17
 
 The following changes must be made to your hardware
----------------------------------------------------
+----------------------------------------------------
 
 1. Due to a mistake in the previous versions of the firmware the E direction was reversed, so you must invert your dir pin for your extruders (or reverse the extruder plug) from how they were before.
 
