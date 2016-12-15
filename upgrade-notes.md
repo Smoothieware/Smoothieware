@@ -1,7 +1,7 @@
 To upgrade from an old master or old edge to the new motion control firmware
 ----------------------------------------------------------------------------
 
-If upgrading from a build prior to July 2, 2016....
+If upgrading from a build prior to July 1, 2016....
 
 The following changes must be made to your config
 
