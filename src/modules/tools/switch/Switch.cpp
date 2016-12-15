@@ -334,8 +334,12 @@ void Switch::on_set_public_data(void *argument)
     if(pdr->third_element_is(state_checksum)) {
         bool t = *static_cast<bool *>(pdr->get_data_ptr());
         this->switch_state = t;
-        pdr->set_taken();
         this->switch_changed= true;
+        pdr->set_taken();
+
+        // if there is no gcode to be sent then we can do this now (in on_idle)
+        // Allows temperature switch to turn on a fan even if main loop is blocked with heat and wait
+        if(this->output_on_command.empty() && this->output_off_command.empty()) on_main_loop(nullptr);
 
     } else if(pdr->third_element_is(value_checksum)) {
         float t = *static_cast<float *>(pdr->get_data_ptr());
