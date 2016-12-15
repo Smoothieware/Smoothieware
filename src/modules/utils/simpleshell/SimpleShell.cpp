@@ -231,7 +231,7 @@ void SimpleShell::on_console_line_received( void *argument )
                 break;
 
             case 'H':
-                THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
+                if(THEKERNEL->is_halted()) THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
                 if(THEKERNEL->is_grbl_mode()) {
                     // issue G28.2 which is force homing cycle
                     Gcode gcode("G28.2", new_message.stream);
@@ -635,8 +635,12 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
     const char *mcu = (dev & 0x00100000) ? "LPC1769" : "LPC1768";
     stream->printf("Build version: %s, Build date: %s, MCU: %s, System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), mcu, SystemCoreClock / 1000000);
     #ifdef CNC
-    stream->printf("  CNC Build\r\n");
+    stream->printf("  CNC Build ");
     #endif
+    #ifdef DISABLEMSD
+    kernel->streams->printf("  NOMSD Build\r\n");
+    #endif
+    stream->printf("%d axis\n", MAX_ROBOT_ACTUATORS);
 }
 
 // Reset the system
@@ -1077,13 +1081,19 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             return;
         }
 
-        uint8_t a= toupper(axis[0]) - 'X';
+        char ax= toupper(axis[0]);
+        uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
         int steps= strtol(stepstr.c_str(), NULL, 10);
         bool dir= steps >= 0;
         steps= std::abs(steps);
 
-        if(a > Z_AXIS) {
-            stream->printf("error: axis must be x y or z\n");
+        if(a > C_AXIS) {
+            stream->printf("error: axis must be x, y, z, a, b, c\n");
+            return;
+        }
+
+        if(a >= THEROBOT->get_number_registered_motors()) {
+            stream->printf("error: axis is out of range\n");
             return;
         }
 

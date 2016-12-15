@@ -13,7 +13,6 @@
 #include <math.h>
 
 #include <string>
-using std::string;
 
 class Gcode;
 class StreamOutput;
@@ -40,7 +39,7 @@ class Switch : public Module {
 
     private:
         void flip();
-        void send_gcode(string msg, StreamOutput* stream);
+        void send_gcode(std::string msg, StreamOutput* stream);
         bool match_input_on_gcode(const Gcode* gcode) const;
         bool match_input_off_gcode(const Gcode* gcode) const;
 
@@ -52,8 +51,8 @@ class Switch : public Module {
             Pwm          *sigmadelta_pin;
             mbed::PwmOut *pwm_pin;
         };
-        string    output_on_command;
-        string    output_off_command;
+        std::string    output_on_command;
+        std::string    output_off_command;
         uint16_t  name_checksum;
         uint16_t  input_pin_behavior;
         uint16_t  input_on_command_code;
