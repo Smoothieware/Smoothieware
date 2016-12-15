@@ -35,8 +35,8 @@ public:
     /*
      * queue status
      */
-    bool is_empty(void);
-    bool is_full(void);
+    bool is_empty(void) const;
+    bool is_full(void) const;
 
     /*
      * resize
@@ -64,8 +64,8 @@ protected:
     kind& item(unsigned int);
     kind* item_ref(unsigned int);
 
-    unsigned int next(unsigned int);
-    unsigned int prev(unsigned int);
+    unsigned int next(unsigned int) const;
+    unsigned int prev(unsigned int) const;
 
     /*
      * buffer variables
@@ -74,6 +74,7 @@ protected:
 
     volatile unsigned int head_i;
     volatile unsigned int tail_i;
+    volatile unsigned int isr_tail_i;
 
 private:
     kind* ring;

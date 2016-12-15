@@ -8,7 +8,7 @@
 #include "libs/Kernel.h"
 
 #include "modules/tools/laser/Laser.h"
-#include "modules/tools/spindle/Spindle.h"
+#include "modules/tools/spindle/SpindleMaker.h"
 #include "modules/tools/extruder/ExtruderMaker.h"
 #include "modules/tools/temperaturecontrol/TemperatureControlPool.h"
 #include "modules/tools/endstops/Endstops.h"
@@ -35,6 +35,7 @@
 #include "ConfigValue.h"
 #include "StepTicker.h"
 #include "SlowTicker.h"
+#include "Robot.h"
 
 // #include "libs/ChaNFSSD/SDFileSystem.h"
 #include "libs/nuts_bolts.h"
@@ -89,11 +90,6 @@ GPIO leds[5] = {
     GPIO(P4_28)
 };
 
-// debug pins, only used if defined in src/makefile
-#ifdef STEPTICKER_DEBUG_PIN
-GPIO stepticker_debug_pin(STEPTICKER_DEBUG_PIN);
-#endif
-
 void init() {
 
     // Default pins to low status
@@ -102,11 +98,6 @@ void init() {
         leds[i]= 0;
     }
 
-#ifdef STEPTICKER_DEBUG_PIN
-    stepticker_debug_pin.output();
-    stepticker_debug_pin= 0;
-#endif
-
     Kernel* kernel = new Kernel();
 
     kernel->streams->printf("Smoothie Running @%ldMHz\r\n", SystemCoreClock / 1000000);
@@ -114,6 +105,9 @@ void init() {
     kernel->streams->printf("  Build version %s, Build date %s\r\n", version.get_build(), version.get_build_date());
 #ifdef CNC
     kernel->streams->printf("  CNC Build\r\n");
+#endif
+#ifdef DISABLEMSD
+    kernel->streams->printf("  NOMSD Build\r\n");
 #endif
 
     bool sdok= (sd.disk_initialize() == 0);
@@ -125,7 +119,7 @@ void init() {
 
 #ifdef DISABLEMSD
     // attempt to be able to disable msd in config
-    if(sdok && !kernel->config->value( disable_msd_checksum )->by_default(false)->as_bool()){
+    if(sdok && !kernel->config->value( disable_msd_checksum )->by_default(true)->as_bool()){
         // HACK to zero the memory USBMSD uses as it and its objects seem to not initialize properly in the ctor
         size_t n= sizeof(USBMSD);
         void *v = AHB0.alloc(n);
@@ -137,17 +131,18 @@ void init() {
     }
 #endif
 
-
     // Create and add main modules
     kernel->add_module( new(AHB0) Player() );
 
     kernel->add_module( new(AHB0) CurrentControl() );
     kernel->add_module( new(AHB0) KillButton() );
     kernel->add_module( new(AHB0) PlayLed() );
-    kernel->add_module( new(AHB0) Endstops() );
-
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
+    #ifndef NO_TOOLS_ENDSTOPS
+    kernel->add_module( new(AHB0) Endstops() );
+    #endif
+
     #ifndef NO_TOOLS_SWITCH
     SwitchPool *sp= new SwitchPool();
     sp->load_tools();
@@ -169,7 +164,10 @@ void init() {
     kernel->add_module( new Laser() );
     #endif
     #ifndef NO_TOOLS_SPINDLE
-    kernel->add_module( new Spindle() );
+    SpindleMaker *sm= new SpindleMaker();
+    sm->load_spindle();
+    delete sm;
+    //kernel->add_module( new(AHB0) Spindle() );
     #endif
     #ifndef NO_UTILS_PANEL
     kernel->add_module( new(AHB0) Panel() );
@@ -181,20 +179,20 @@ void init() {
     kernel->add_module( new(AHB0) SCARAcal() );
     #endif
     #ifndef NO_TOOLS_ROTARYDELTACALIBRATION
-    kernel->add_module( new RotaryDeltaCalibration() );
+    kernel->add_module( new(AHB0) RotaryDeltaCalibration() );
     #endif
     #ifndef NONETWORK
     kernel->add_module( new Network() );
     #endif
     #ifndef NO_TOOLS_TEMPERATURESWITCH
     // Must be loaded after TemperatureControl
-    kernel->add_module( new TemperatureSwitch() );
+    kernel->add_module( new(AHB0) TemperatureSwitch() );
     #endif
     #ifndef NO_TOOLS_DRILLINGCYCLES
-    kernel->add_module( new Drillingcycles() );
+    kernel->add_module( new(AHB0) Drillingcycles() );
     #endif
     #ifndef NO_TOOLS_FILAMENTDETECTOR
-    kernel->add_module( new FilamentDetector() );
+    kernel->add_module( new(AHB0) FilamentDetector() );
     #endif
     #ifndef NO_UTILS_MOTORDRIVERCONTROL
     kernel->add_module( new MotorDriverControl(0) );
@@ -263,6 +261,7 @@ void init() {
     }
 
     // start the timers and interrupts
+    THEKERNEL->conveyor->start(THEROBOT->get_number_registered_motors());
     THEKERNEL->step_ticker->start();
     THEKERNEL->slow_ticker->start();
 }

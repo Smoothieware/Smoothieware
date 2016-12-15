@@ -238,7 +238,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
 
         } else if( gcode->g == 32 ) { //run probe
             // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
+            THEKERNEL->conveyor->wait_for_idle();
 
             this->setAdjustFunction(false); // Disable leveling code
             if(!doProbing(gcode->stream)) {
@@ -293,7 +293,7 @@ bool ZGridStrategy::handleGcode(Gcode *gcode)
                     float cartesian[3];
                     int pindex = 0;
 
-                    THEKERNEL->robot->get_axis_position(cartesian);         // get actual position from robot
+                    THEROBOT->get_axis_position(cartesian);         // get actual position from robot
 
                     pindex = int(cartesian[X_AXIS]/this->bed_div_x + 0.25)*this->numCols + int(cartesian[Y_AXIS]/this->bed_div_y + 0.25);
 
@@ -646,10 +646,10 @@ void ZGridStrategy::setAdjustFunction(bool on)
 {
     if(on) {
         // set the compensationTransform in robot
-        THEKERNEL->robot->compensationTransform= [this](float target[3]) { target[2] += this->getZOffset(target[0], target[1]); };
+        THEROBOT->compensationTransform= [this](float target[3]) { target[2] += this->getZOffset(target[0], target[1]); };
     }else{
         // clear it
-        THEKERNEL->robot->compensationTransform= nullptr;
+        THEROBOT->compensationTransform= nullptr;
     }
 }
 

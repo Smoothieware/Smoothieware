@@ -137,8 +137,11 @@ bool USBSerial::USBEvent_EPIn(uint8_t bEP, uint8_t bEPStatus)
 
     int l = txbuf.available();
     if (l > 0) {
-        if (l > MAX_PACKET_SIZE_EPBULK)
-            l = MAX_PACKET_SIZE_EPBULK;
+        // Use MAX_PACKET_SIZE_EPBULK-1 below instead of MAX_PACKET_SIZE_EPBULK
+        // to work around a problem sending packets that are exactly MAX_PACKET_SIZE_EPBULK
+        // bytes in length. The problem is that these packets don't flush properly.
+        if (l > MAX_PACKET_SIZE_EPBULK-1)
+            l = MAX_PACKET_SIZE_EPBULK-1;
         int i;
         for (i = 0; i < l; i++) {
             txbuf.dequeue(&b[i]);
@@ -177,8 +180,15 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
     readEP(c, &size);
     iprintf("Read %ld bytes:\n\t", size);
     for (uint8_t i = 0; i < size; i++) {
+
+        // handle backspace and delete by deleting the last character in the buffer if there is one
+        if(c[i] == 0x08 || c[i] == 0x7F) {
+            if(!rxbuf.isEmpty()) rxbuf.pop();
+            continue;
+        }
+
         if(c[i] == 'X' - 'A' + 1) { // ^X
-            THEKERNEL->set_feed_hold(false); // required to free stuff up
+            //THEKERNEL->set_feed_hold(false); // required to free stuff up
             halt_flag = true;
             continue;
         }
@@ -190,18 +200,18 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
 
         if(THEKERNEL->is_grbl_mode()) {
             if(c[i] == '!') { // safe pause
-                THEKERNEL->set_feed_hold(true);
+                //THEKERNEL->set_feed_hold(true);
                 continue;
             }
 
             if(c[i] == '~') { // safe resume
-                THEKERNEL->set_feed_hold(false);
+                //THEKERNEL->set_feed_hold(false);
                 continue;
             }
-            if(last_char_was_dollar && (c[i] == 'X' || c[i] == 'H')) {
-                // we need to do this otherwise $X/$H won't work if there was a feed hold like when stop is clicked in bCNC
-                THEKERNEL->set_feed_hold(false);
-            }
+            // if(last_char_was_dollar && (c[i] == 'X' || c[i] == 'H')) {
+            //     // we need to do this otherwise $X/$H won't work if there was a feed hold like when stop is clicked in bCNC
+            //     THEKERNEL->set_feed_hold(false);
+            // }
         }
 
         last_char_was_dollar = (c[i] == '$');
@@ -309,7 +319,7 @@ void USBSerial::on_main_loop(void *argument)
     }
 
     // if we are in feed hold we do not process anything
-    if(THEKERNEL->get_feed_hold()) return;
+    //if(THEKERNEL->get_feed_hold()) return;
 
     if (nl_in_rx) {
         string received;

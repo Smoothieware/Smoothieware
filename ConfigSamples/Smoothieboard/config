@@ -18,7 +18,6 @@ gamma_steps_per_mm                           1600             # Steps per mm for
 planner_queue_size                           32               # DO NOT CHANGE THIS UNLESS YOU KNOW EXACTLY WHAT YOU ARE DOING
 acceleration                                 3000             # Acceleration in mm/second/second.
 #z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 uses acceleration which is the default. DO NOT SET ON A DELTA
-acceleration_ticks_per_second                1000             # Number of times per second the speed is updated
 junction_deviation                           0.05             # Similar to the old "max_jerk", in millimeters,
                                                               # see https://github.com/grbl/grbl/blob/master/planner.c
                                                               # and https://github.com/grbl/grbl/wiki/Configuring-Grbl-v0.8
@@ -143,6 +142,11 @@ temperature_control.hotend.designator        T                #
 #temperature_control.hotend.max_temp         300              # Set maximum temperature - Will prevent heating above 300 by default
 #temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below if set
 
+# safety control is enabled by default and can be overidden here, the values show the defaults
+#temperature_control.hotend.runaway_heating_timeout      900   # max is 2040 seconds, how long it can take to heat up
+#temperature_control.hotend.runaway_cooling_timeout      900   # max is 2040 seconds, how long it can take to cool down if temp is set lower
+#temperature_control.hotend.runaway_range                20    # Max setting is 63°C
+
 #temperature_control.hotend.p_factor         13.7             # permanently set the PID values after an auto pid
 #temperature_control.hotend.i_factor         0.097            #
 #temperature_control.hotend.d_factor         24               #
@@ -227,6 +231,10 @@ gamma_max_endstop                            1.29^            #
 gamma_homing_direction                       home_to_min      #
 gamma_min                                    0                #
 gamma_max                                    200              #
+
+alpha_max_travel                             500              # max travel in mm for alpha/X axis when homing
+beta_max_travel                              500              # max travel in mm for beta/Y axis when homing
+gamma_max_travel                             500              # max travel in mm for gamma/Z axis when homing
 
 # optional order in which axis will home, default is they all home at the same time,
 # if this is set it will force each axis to home one at a time in the specified order

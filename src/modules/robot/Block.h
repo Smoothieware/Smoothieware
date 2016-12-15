@@ -5,68 +5,75 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef BLOCK_H
-#define BLOCK_H
+#pragma once
 
 #include <vector>
 #include <bitset>
 #include "ActuatorCoordinates.h"
 
-class Gcode;
-
 class Block {
     public:
         Block();
         void calculate_trapezoid( float entry_speed, float exit_speed );
-        float estimate_acceleration_distance( float initial_rate, float target_rate, float acceleration );
-        float intersection_distance(float initial_rate, float final_rate, float acceleration, float distance);
         float max_allowable_speed( float acceleration, float target_velocity, float distance);
 
         float reverse_pass(float exit_speed);
         float forward_pass(float next_entry_speed);
-
         float max_exit_speed();
-
-        void debug();
-
-        void append_gcode(Gcode* gcode);
-
-        void take();
-        void release();
-
-        void ready();
-
+        void debug() const;
+        void ready() { is_ready= true; }
         void clear();
+        void prepare();
 
-        void begin();
-
-        std::vector<Gcode> gcodes;
+        float get_trapezoid_rate(int i) const;
 
         std::array<uint32_t, k_max_actuators> steps; // Number of steps for each axis for this block
         uint32_t steps_event_count;  // Steps for the longest axis
-        uint32_t nominal_rate;       // Nominal rate in steps per second
+        float nominal_rate;       // Nominal rate in steps per second
         float nominal_speed;      // Nominal speed in mm per second
         float millimeters;        // Distance for this move
         float entry_speed;
         float exit_speed;
-        float rate_delta;         // Number of steps to add to the speed for each acceleration tick
-        float acceleration;       // the acceleratoin for this block
-        uint32_t initial_rate;       // Initial speed in steps per second
-        uint32_t final_rate;         // Final speed in steps per second
-        uint32_t accelerate_until;   // Stop accelerating after this number of steps
-        uint32_t decelerate_after;   // Start decelerating after this number of steps
+        float acceleration;       // the acceleration for this block
+        float initial_rate;       // Initial rate in steps per second
+        float maximum_rate;
+
+        float acceleration_per_tick{0};
+        float deceleration_per_tick {0};
 
         float max_entry_speed;
 
-        int16_t times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
-
+        // this is tick info needed for this block. applies to all motors
+        uint32_t accelerate_until;
+        uint32_t decelerate_after;
+        uint32_t total_move_ticks;
         std::bitset<k_max_actuators> direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
+
+        // this is the data needed to determine when each motor needs to be issued a step
+        using tickinfo_t= struct {
+            int32_t steps_per_tick; // 2.30 fixed point
+            int32_t counter; // 2.30 fixed point
+            int32_t acceleration_change; // 2.30 fixed point signed
+            int32_t deceleration_change; // 2.30 fixed point
+            int32_t plateau_rate; // 2.30 fixed point
+            uint32_t steps_to_move;
+            uint32_t step_count;
+            uint32_t next_accel_event;
+        };
+
+        // need info for each active motor
+        //std::array<tickinfo_t, k_max_actuators> tick_info;
+        std::vector<tickinfo_t> tick_info;
+        static uint8_t n_actuators;
+
         struct {
             bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
             bool nominal_length_flag:1;          // Planner flag for nominal speed always reached
             bool is_ready:1;
+            bool primary_axis:1;                 // set if this move is a primary axis
+            bool is_g123:1;                      // set if this is a G1, G2 or G3
+            volatile bool is_ticking:1;          // set when this block is being actively ticked by the stepticker
+            volatile bool locked:1;              // set to true when the critical data is being updated, stepticker will have to skip if this is set
+            uint16_t s_value:12;                 // for laser 1.11 Fixed point
         };
 };
-
-
-#endif

@@ -31,7 +31,7 @@ JogScreen::JogScreen()
 void JogScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
-    THEPANEL->setup_menu(8);
+    THEPANEL->setup_menu(10);
     this->refresh_menu();
 }
 
@@ -56,6 +56,8 @@ void JogScreen::display_menu_line(uint16_t line)
         case 5: THEPANEL->lcd->printf("Move  0.001     "); break;
         case 6: THEPANEL->lcd->printf("MPG mode        "); break;
         case 7: THEPANEL->lcd->printf("Feed Rates      "); break;
+        case 8: THEPANEL->lcd->printf("Goto Park Posn  "); break;
+        case 9: THEPANEL->lcd->printf("Set Park Posn   "); break;
     }
 }
 
@@ -78,6 +80,9 @@ void JogScreen::clicked_menu_entry(uint16_t line)
         case 7:
             set_feed_rates();
             dojog= false;
+        case 8: send_command("G28"); dojog= false; break;
+        case 9: send_command("G28.1"); dojog= false; break;
+
     }
 
     if(dojog) {
