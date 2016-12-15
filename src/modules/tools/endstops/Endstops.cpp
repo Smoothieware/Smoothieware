@@ -622,7 +622,6 @@ void Endstops::process_home_command(Gcode* gcode)
     // Disable arm solution for SCARA and some polar bots
     if (is_scara){
     	THEROBOT->disable_arm_solution = true;
-      gcode->stream->printf("arm_solution disabled\n");
     }
 
     // deltas always home Z axis only, which moves all three actuators
@@ -667,7 +666,6 @@ void Endstops::process_home_command(Gcode* gcode)
             if(THEKERNEL->is_halted()){
                 // make sure arm solution is active before leaving...
                 THEROBOT->disable_arm_solution = false;
-                gcode->stream->printf("arm_solution enabled\n");
                 break;
             }
         }
@@ -689,7 +687,6 @@ void Endstops::process_home_command(Gcode* gcode)
 
     // Movement done.  Make sure arm_solution is active.
         THEROBOT->disable_arm_solution = false;
-        gcode->stream->printf("arm_solution enabled\n");
 
     // check if on_halt (eg kill)
     if(THEKERNEL->is_halted()) {
