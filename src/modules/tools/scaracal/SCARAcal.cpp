@@ -233,9 +233,18 @@ void SCARAcal::on_gcode_received(void *argument)
             break;
 
             case 361: {
-                float target[2] = {90.0F, 130.0F},
+                float target[2],
                       cartesian[3];
-
+                
+                if(gcode->subcode == 1){ // 180 degree condition
+                    target[0] = 180.0F;
+                    target[1] = 225.0F;
+                } else {
+                    target[0] = 90.0F;
+                    target[1] = 130.0F;
+                }
+                gcode->stream->printf("Target: T %f P %f\n", target[0], target[1]);
+                                
                 if(gcode->has_letter('P')) {
                     // Program the current position as target
                     ActuatorCoordinates actuators;
@@ -245,6 +254,57 @@ void SCARAcal::on_gcode_received(void *argument)
 
                     STEPPER[0]->change_steps_per_mm(actuators[0] / target[0] * STEPPER[0]->get_steps_per_mm()); // Find angle difference
                     STEPPER[1]->change_steps_per_mm(STEPPER[0]->get_steps_per_mm());  // and change steps_per_mm to ensure correct steps per *angle*
+                } else {
+                    this->home();                                                   // home - This time leave trims as adjusted.
+                    THEROBOT->get_axis_position(cartesian);    // get actual position from robot
+                    SCARA_ang_move(target[0], target[1], cartesian[2] + this->z_move, slow_rate * 3.0F); // move to target
+                }
+            }
+            break;
+
+            case 362: {
+                float target[2] = {0.0F, 90.0F},
+                      cartesian[3],
+                      S_trim[3];
+
+                this->get_trim(S_trim[0], S_trim[1], S_trim[2]);    // get current trim to conserve other calbration values
+
+                /*if(gcode->has_letter('P')) {
+                    // Program the current position as target
+                    ActuatorCoordinates actuators;
+                    float S_delta[2],
+                          S_trim[3];
+
+                    THEROBOT->get_axis_position(cartesian);    // get actual position from robot
+                    THEROBOT->arm_solution->cartesian_to_actuator( cartesian, actuators );      // translate to get actuator position
+
+                    S_delta[1] = actuators[1] - target[1];
+
+                    set_trim(S_trim[0], S_delta[1], S_trim[2], gcode->stream);
+                } else { */
+                    set_trim(S_trim[0], 0, S_trim[2], gcode->stream);               // reset trim for calibration move
+                    this->home();                                                   // home
+                    THEROBOT->get_axis_position(cartesian);    // get actual position from robot
+                    SCARA_ang_move(target[0], target[1], cartesian[2] + this->z_move, slow_rate * 3.0F); // move to target
+                //}
+            }
+            break;
+
+            case 363: {
+                float target[2] = {180.0F, 270.0F},
+                      cartesian[3];
+                
+                gcode->stream->printf("Target: T %f P %f\n", target[0], target[1]);
+                                
+                if(gcode->has_letter('P')) {
+                    // Program the current position as target
+                    ActuatorCoordinates actuators;
+
+                    THEROBOT->get_axis_position(cartesian);                                // get actual position from robot
+                    THEROBOT->arm_solution->cartesian_to_actuator( cartesian, actuators ); // translate to get actuator position
+
+                    STEPPER[1]->change_steps_per_mm(actuators[1] / target[1] * STEPPER[1]->get_steps_per_mm()); // Find angle difference
+                    //STEPPER[1]->change_steps_per_mm(STEPPER[0]->get_steps_per_mm());  // and change steps_per_mm to ensure correct steps per *angle*
                 } else {
                     this->home();                                                   // home - This time leave trims as adjusted.
                     THEROBOT->get_axis_position(cartesian);    // get actual position from robot
