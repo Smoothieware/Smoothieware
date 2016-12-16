@@ -729,7 +729,7 @@ void Endstops::process_home_command(Gcode* gcode)
                 // now reset axis to 0 as we do not know what state we are in
                 if (!is_scara) {
                     THEROBOT->reset_axis_position(0, p.axis_index);
-                {
+                }
                 else {
                     // SCARA resets arms to plausable minimum angles
                     THEROBOT->reset_axis_position(-30,30,0); // angles set into axis space for homing.
