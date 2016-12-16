@@ -604,8 +604,9 @@ void Endstops::home(axis_bitmap_t a)
        e->debounce= 0;
     }
 
-    if (is_scara)
+    if (is_scara) {
         THEROBOT->disable_arm_solution = true;  // Polar bots has to home in the actuator space.  Arm solution disabled.
+    }
 
     this->axis_to_home= a;
 
@@ -648,8 +649,9 @@ void Endstops::home(axis_bitmap_t a)
     // we did not complete movement the full distance if we hit the endstops
     // TODO Maybe only reset axis involved in the homing cycle
     // Only for non polar bots
-    if (!is_scara)
+    if (!is_scara) {
         THEROBOT->reset_position_from_current_actuator_position();
+    }
 
     // Move back a small distance for all homing axis
     this->status = MOVING_BACK;
@@ -692,8 +694,9 @@ void Endstops::home(axis_bitmap_t a)
     THEROBOT->reset_position_from_current_actuator_position();
 
     THEROBOT->disable_segmentation= false;
-    if (is_scara)
+    if (is_scara) {
         THEROBOT->disable_arm_solution = false;  // Arm solution enabled again.
+    }
 
     this->status = NOT_HOMING;
 }
@@ -724,8 +727,9 @@ void Endstops::process_home_command(Gcode* gcode)
             if(!axis_speced || gcode->has_letter(p.axis)) {
                 haxis.set(p.axis_index);
                 // now reset axis to 0 as we do not know what state we are in
-                if (!is_scara)
+                if (!is_scara) {
                     THEROBOT->reset_axis_position(0, p.axis_index);
+                {
                 else {
                     // SCARA resets arms to plausable minimum angles
                     THEROBOT->reset_axis_position(-30,30,0); // angles set into axis space for homing.
