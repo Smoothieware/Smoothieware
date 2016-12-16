@@ -603,6 +603,10 @@ void Endstops::home(axis_bitmap_t a)
        e->debounce= 0;
     }
 
+    if (is_scara) {
+        THEROBOT->disable_arm_solution = true;  // Polar bots has to home in the actuator space.  Arm solution disabled.
+    }
+
     this->axis_to_home= a;
 
     // Start moving the axes to the origin
@@ -643,7 +647,10 @@ void Endstops::home(axis_bitmap_t a)
     // TODO: should check that the endstops were hit and it did not stop short for some reason
     // we did not complete movement the full distance if we hit the endstops
     // TODO Maybe only reset axis involved in the homing cycle
-    THEROBOT->reset_position_from_current_actuator_position();
+    // Only for non polar bots
+    if (!is_scara) {
+        THEROBOT->reset_position_from_current_actuator_position();
+    }
 
     // Move back a small distance for all homing axis
     this->status = MOVING_BACK;
@@ -686,6 +693,9 @@ void Endstops::home(axis_bitmap_t a)
     THEROBOT->reset_position_from_current_actuator_position();
 
     THEROBOT->disable_segmentation= false;
+    if (is_scara) {
+        THEROBOT->disable_arm_solution = false;  // Arm solution enabled again.
+    }
 
     this->status = NOT_HOMING;
 }
@@ -716,7 +726,12 @@ void Endstops::process_home_command(Gcode* gcode)
             if(!axis_speced || gcode->has_letter(p.axis)) {
                 haxis.set(p.axis_index);
                 // now reset axis to 0 as we do not know what state we are in
-                THEROBOT->reset_axis_position(0, p.axis_index);
+                if (!is_scara) {
+                    THEROBOT->reset_axis_position(0, p.axis_index);
+                } else {
+                    // SCARA resets arms to plausable minimum angles
+                    THEROBOT->reset_axis_position(-30,30,0); // angles set into axis space for homing.
+                }
             }
         }
 
@@ -728,7 +743,7 @@ void Endstops::process_home_command(Gcode* gcode)
     }
 
     // do the actual homing
-    if(homing_order != 0) {
+    if(homing_order != 0 && !is_scara) {
         // if an order has been specified do it in the specified order
         // homing order is 0bfffeeedddcccbbbaaa where aaa is 1,2,3,4,5,6 to specify the first axis (XYZABC), bbb is the second and ccc is the third etc
         // eg 0b0101011001010 would be Y X Z A, 011 010 001 100 101 would be  B A X Y Z
@@ -773,7 +788,7 @@ void Endstops::process_home_command(Gcode* gcode)
         return;
     }
 
-    if(home_in_z) { // deltas only
+    if(home_in_z || is_scara) { // deltas and scaras only
         // Here's where we would have been if the endstops were perfectly trimmed
         // NOTE on a rotary delta home_offset is actuator position in degrees when homed and
         // home_offset is the theta offset for each actuator, so M206 is used to set theta offset for each actuator in degrees
@@ -784,7 +799,7 @@ void Endstops::process_home_command(Gcode* gcode)
             homing_axis[Z_AXIS].homing_position + homing_axis[Z_AXIS].home_offset
         };
 
-        bool has_endstop_trim = this->is_delta;
+        bool has_endstop_trim = this->is_delta || is_scara;
         if (has_endstop_trim) {
             ActuatorCoordinates ideal_actuator_position;
             THEROBOT->arm_solution->cartesian_to_actuator(ideal_position, ideal_actuator_position);
