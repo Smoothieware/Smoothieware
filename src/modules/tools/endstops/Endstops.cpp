@@ -106,7 +106,6 @@ enum STATES {
 Endstops::Endstops()
 {
     this->status = NOT_HOMING;
-    THEROBOT->disable_arm_solution = false;
 }
 
 void Endstops::on_module_loaded()
@@ -745,7 +744,7 @@ void Endstops::process_home_command(Gcode* gcode)
     }
 
     // do the actual homing
-    if(homing_order != 0 || !is_scara) {
+    if(homing_order != 0 && !is_scara) {
         // if an order has been specified do it in the specified order
         // homing order is 0bfffeeedddcccbbbaaa where aaa is 1,2,3,4,5,6 to specify the first axis (XYZABC), bbb is the second and ccc is the third etc
         // eg 0b0101011001010 would be Y X Z A, 011 010 001 100 101 would be  B A X Y Z
