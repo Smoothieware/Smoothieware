@@ -33,11 +33,11 @@ These are feature deviations between Smoothieware and Juicyware
   * Copied c278507 from smoothieware edge
 * `src/modules/tools/zprobe/ZProbe.cpp`
   * Copied d53d9df from smoothieware edge
-* <del>`src/modules/utils/currentcontrol/CurrentControl.cpp`
-  `src/modules/utils/currentcontrol/CurrentControl.h`
-  `src/modules/utils/currentcontrol/DigipotBase.h`
-  `src/modules/utils/currentcontrol/ad5206.h`
-  `src/modules/utils/currentcontrol/mcp4451.h`</del>
+* <del>`src/modules/utils/currentcontrol/CurrentControl.cpp`</del>
+  <del>`src/modules/utils/currentcontrol/CurrentControl.h`</del>
+  <del>`src/modules/utils/currentcontrol/DigipotBase.h`</del>
+  <del>`src/modules/utils/currentcontrol/ad5206.h`</del>
+  <del>`src/modules/utils/currentcontrol/mcp4451.h`</del>
   * Removed smoothieboard current control module files
 * `src/modules/utils/simpleshell/SimpleShell.cpp`
   `src/modules/utils/simpleshell/SimpleShell.h`
