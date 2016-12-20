@@ -6,9 +6,6 @@ Juicyware is a fork of [Smoothieware](https://github.com/Smoothieware/Smoothiewa
 # Change Notes
 These are feature deviations between Smoothieware and Juicyware
 
-* Added R1000A module to execute `mod` commands
-* Added R1001 module to execute R1001 motor driver specific commands
-* Added R1001_I2C module to handle all I2C communications for R1XXX modules
 * `src/libs/Kernel.cpp`
   * Added `uart0_disable_checksum` to allow the user to disable UART0 functionality
   * Implemented low level UART0 disable
@@ -36,12 +33,12 @@ These are feature deviations between Smoothieware and Juicyware
   * Copied c278507 from smoothieware edge
 * `src/modules/tools/zprobe/ZProbe.cpp`
   * Copied d53d9df from smoothieware edge
-* `src/modules/utils/currentcontrol/CurrentControl.cpp`
+* <del>`src/modules/utils/currentcontrol/CurrentControl.cpp`
   `src/modules/utils/currentcontrol/CurrentControl.h`
   `src/modules/utils/currentcontrol/DigipotBase.h`
   `src/modules/utils/currentcontrol/ad5206.h`
-  `src/modules/utils/currentcontrol/mcp4451.h`
-  * Removed smoothieboard current control module
+  `src/modules/utils/currentcontrol/mcp4451.h`</del>
+  * Removed smoothieboard current control module files
 * `src/modules/utils/simpleshell/SimpleShell.cpp`
   `src/modules/utils/simpleshell/SimpleShell.h`
   * Added `mod` command extention for Juicyboard and its modules
