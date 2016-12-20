@@ -131,12 +131,9 @@ CHECKSUM(X "_step_pin"),        \
 */
 #define ACTUATOR_CHECKSUMS(X) {     \
     CHECKSUM(X "_slot_num"),        \
-    CHECKSUM(X "_dir_pin"),         \
-    CHECKSUM(X "_en_pin"),          \
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
-    CHECKSUM(X "_acceleration"),    \
-    CHECKSUM(X "_slot_num")         \
+    CHECKSUM(X "_acceleration")     \
 }
 
 void Robot::load_config()
@@ -194,7 +191,7 @@ void Robot::load_config()
 
     // Make our Primary XYZ StepperMotors
     //uint16_t const checksums[][6] = {
-    uint16_t const checksums[][7] = {
+    uint16_t const checksums[][4] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
@@ -231,9 +228,9 @@ void Robot::load_config()
             __debugbreak();
         }
 
-        actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
-        actuators[a]->set_max_rate(THEKERNEL->config->value(checksums[a][4])->by_default(30000.0F)->as_number()/60.0F); // it is in mm/min and converted to mm/sec
-        actuators[a]->set_acceleration(THEKERNEL->config->value(checksums[a][5])->by_default(NAN)->as_number()); // mm/secs²
+        actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][1])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
+        actuators[a]->set_max_rate(THEKERNEL->config->value(checksums[a][2])->by_default(30000.0F)->as_number()/60.0F); // it is in mm/min and converted to mm/sec
+        actuators[a]->set_acceleration(THEKERNEL->config->value(checksums[a][3])->by_default(NAN)->as_number()); // mm/secs²
     }
 
     check_max_actuator_speeds(); // check the configs are sane
