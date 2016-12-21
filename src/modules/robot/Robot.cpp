@@ -1168,7 +1168,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         }
         if(auxilliary_move) {
             // for E only moves we need to use the scaled E to calculate the distance
-            sos += pow(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
+            sos += powf(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
         }
     }
     if(auxilliary_move) {
