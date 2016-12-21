@@ -43,7 +43,6 @@
 #include <fastmath.h>
 #include <string>
 #include <algorithm>
-using std::string;
 
 #define  default_seek_rate_checksum          CHECKSUM("default_seek_rate")
 #define  default_feed_rate_checksum          CHECKSUM("default_feed_rate")
@@ -75,12 +74,13 @@ using std::string;
 // new-style actuator stuff
 #define  actuator_checksum                   CHEKCSUM("actuator")
 
-#define  step_pin_checksum                   CHECKSUM("step_pin")
-#define  dir_pin_checksum                    CHEKCSUM("dir_pin")
-#define  en_pin_checksum                     CHECKSUM("en_pin")
+//#define  step_pin_checksum                   CHECKSUM("step_pin")
+//#define  dir_pin_checksum                    CHEKCSUM("dir_pin")
+//#define  en_pin_checksum                     CHECKSUM("en_pin")
 
-#define  steps_per_mm_checksum               CHECKSUM("steps_per_mm")
-#define  max_rate_checksum                   CHECKSUM("max_rate")
+//#define  steps_per_mm_checksum               CHECKSUM("steps_per_mm")
+//#define  max_rate_checksum                   CHECKSUM("max_rate")
+
 #define  acceleration_checksum               CHECKSUM("acceleration")
 #define  z_acceleration_checksum             CHECKSUM("z_acceleration")
 
