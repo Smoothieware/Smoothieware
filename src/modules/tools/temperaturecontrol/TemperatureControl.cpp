@@ -5,8 +5,6 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-// TODO : THIS FILE IS LAME, MUST BE MADE MUCH BETTER
-
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include <math.h>
@@ -147,7 +145,7 @@ void TemperatureControl::load_config()
     n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_heating_timeout_checksum)->by_default(900)->as_number();
     if(n > 4088) n= 4088;
     this->runaway_heating_timeout = n/8; // we have 8 second ticks
-    n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_cooling_timeout_checksum)->by_default((float)n)->as_number();
+    n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_cooling_timeout_checksum)->by_default(0)->as_number(); // disable by default
     if(n > 4088) n= 4088;
     this->runaway_cooling_timeout = n/8;
 
@@ -553,7 +551,7 @@ void TemperatureControl::on_second_tick(void *argument)
         // heater is active
         switch( this->runaway_state ){
             case NOT_HEATING: // If we were previously not trying to heat, but we are now, change to state WAITING_FOR_TEMP_TO_BE_REACHED
-                this->runaway_state= (this->target_temperature > current_temperature) ? HEATING_UP : COOLING_DOWN;
+                this->runaway_state= (this->target_temperature > current_temperature || this->runaway_cooling_timeout == 0) ? HEATING_UP : COOLING_DOWN;
                 this->runaway_timer = 0;
                 tick= 0;
                 break;
