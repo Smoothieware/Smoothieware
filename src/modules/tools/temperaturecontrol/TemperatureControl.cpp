@@ -65,6 +65,7 @@
 #define runaway_range_checksum             CHECKSUM("runaway_range")
 #define runaway_heating_timeout_checksum   CHECKSUM("runaway_heating_timeout")
 #define runaway_cooling_timeout_checksum   CHECKSUM("runaway_cooling_timeout")
+#define runaway_error_range_checksum       CHECKSUM("runaway_error_range")
 
 TemperatureControl::TemperatureControl(uint16_t name, int index)
 {
@@ -148,6 +149,8 @@ void TemperatureControl::load_config()
     n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_cooling_timeout_checksum)->by_default(0)->as_number(); // disable by default
     if(n > 4088) n= 4088;
     this->runaway_cooling_timeout = n/8;
+
+    this->runaway_error_range= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_error_range_checksum)->by_default(1.0F)->as_number();
 
     // Max and min temperatures we are not allowed to get over (Safety)
     this->max_temp = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, max_temp_checksum)->by_default(300)->as_number();
@@ -551,15 +554,16 @@ void TemperatureControl::on_second_tick(void *argument)
         // heater is active
         switch( this->runaway_state ){
             case NOT_HEATING: // If we were previously not trying to heat, but we are now, change to state WAITING_FOR_TEMP_TO_BE_REACHED
-                this->runaway_state= (this->target_temperature > current_temperature || this->runaway_cooling_timeout == 0) ? HEATING_UP : COOLING_DOWN;
+                this->runaway_state= (this->target_temperature >= current_temperature || this->runaway_cooling_timeout == 0) ? HEATING_UP : COOLING_DOWN;
                 this->runaway_timer = 0;
                 tick= 0;
                 break;
 
             case HEATING_UP:
             case COOLING_DOWN:
-                if( (runaway_state == HEATING_UP && current_temperature >= this->target_temperature) ||
-                    (runaway_state == COOLING_DOWN && current_temperature <= this->target_temperature) ) {
+                // check temp has reached the target temperature within the given error range
+                if( (runaway_state == HEATING_UP && current_temperature >= (this->target_temperature - this->runaway_error_range)) ||
+                    (runaway_state == COOLING_DOWN && current_temperature <= (this->target_temperature + this->runaway_error_range)) ) {
                     this->runaway_state = TARGET_TEMPERATURE_REACHED;
                     this->runaway_timer = 0;
                     tick= 0;
