@@ -246,7 +246,7 @@ void MotorDriverControl::on_second_tick(void *argument)
 
     if(halt_on_alarm && alarm) {
         THEKERNEL->call_event(ON_HALT, nullptr);
-        THEKERNEL->streams->printf("Motor Driver alarm - reset or M999 required to continue\r\n");
+        THEKERNEL->streams->printf("Error: Motor Driver alarm - reset or M999 required to continue\r\n");
     }
 }
 
