@@ -48,24 +48,30 @@
 
 ST7565::ST7565(uint8_t variant)
 {
+    is_viki2 = false;
+    is_mini_viki2 = false;
+    is_ssd1306= false;
+
     // set the variant
     switch(variant) {
         case 1:
             is_viki2 = true;
-            is_mini_viki2 = false;
             this->reversed = true;
             this->contrast = 9;
             break;
         case 2:
             is_mini_viki2 = true;
-            is_viki2 = false;
             this->reversed = true;
             this->contrast = 18;
             break;
-        default:
+        case 3: // SSD1306 OLED
             // set default for sub variants
-            is_viki2 = false; // defaults to Wulfnors panel
-            is_mini_viki2 = false;
+            is_ssd1306= true;
+            this->reversed = false;
+            this->contrast = 9;
+            break;
+       default:
+            // set default for sub variants
             this->reversed = false;
             this->contrast = 9;
             break;
@@ -95,10 +101,10 @@ ST7565::ST7565(uint8_t variant)
     if(this->rst.connected()) rst.set(1);
 
     //a0
-    this->a0.from_string(THEKERNEL->config->value( panel_checksum, a0_pin_checksum)->by_default("2.13")->as_string())->as_output();
-    a0.set(1);
+    this->a0.from_string(THEKERNEL->config->value( panel_checksum, a0_pin_checksum)->by_default("nc")->as_string())->as_output();
+    if(a0.connected()) a0.set(1);
 
-    if(!is_viki2 && !is_mini_viki2) {
+    if(!is_viki2 && !is_mini_viki2 && !is_ssd1306) {
         this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
         this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     } else {
@@ -161,7 +167,7 @@ ST7565::~ST7565()
 void ST7565::send_commands(const unsigned char *buf, size_t size)
 {
     cs.set(0);
-    a0.set(0);
+    if(a0.connected()) a0.set(0);
     while(size-- > 0) {
         spi->write(*buf++);
     }
@@ -172,12 +178,12 @@ void ST7565::send_commands(const unsigned char *buf, size_t size)
 void ST7565::send_data(const unsigned char *buf, size_t size)
 {
     cs.set(0);
-    a0.set(1);
+    if(a0.connected()) a0.set(1);
     while(size-- > 0) {
         spi->write(*buf++);
     }
     cs.set(1);
-    a0.set(0);
+    if(a0.connected()) a0.set(0);
 }
 
 //clearing screen
@@ -201,11 +207,24 @@ void ST7565::set_xy(int x, int y)
 {
     CLAMP(x, 0, LCDWIDTH - 1);
     CLAMP(y, 0, LCDPAGES - 1);
-    unsigned char cmd[3];
-    cmd[0] = 0xb0 | (y & 0x07);
-    cmd[1] = 0x10 | (x >> 4);
-    cmd[2] = 0x00 | (x & 0x0f);
-    send_commands(cmd, 3);
+
+    if(is_ssd1306) {
+        unsigned char cmd[6];
+        cmd[0] = 0x21;    // set column
+        cmd[1] = x;       // start = col
+        cmd[2] = 0x7F;    // end = col max
+        cmd[3] = 0x22;    // set row
+        cmd[4] = y;      // start = row
+        cmd[5] = 0x07;    // end = row max
+        send_commands(cmd, 6);
+
+    }else{
+        unsigned char cmd[3];
+        cmd[0] = 0xb0 | (y & 0x07);
+        cmd[1] = 0x10 | (x >> 4);
+        cmd[2] = 0x00 | (x & 0x0f);
+        send_commands(cmd, 3);
+    }
 }
 
 void ST7565::setCursor(uint8_t col, uint8_t row)
@@ -227,28 +246,75 @@ void ST7565::display()
 
 void ST7565::init()
 {
-    const unsigned char init_seq[] = {
-        0x40,    //Display start line 0
-        (unsigned char)(reversed ? 0xa0 : 0xa1), // ADC
-        (unsigned char)(reversed ? 0xc8 : 0xc0), // COM select
-        0xa6,    //Display normal
-        0xa2,    //Set Bias 1/9 (Duty 1/65)
-        0x2f,    //Booster, Regulator and Follower On
-        0xf8,    //Set internal Booster to 4x
-        0x00,
-        0x27,    //Contrast set
-        0x81,
-        this->contrast,    //contrast value
-        0xac,    //No indicator
-        0x00,
-        0xaf,    //Display on
-    };
     if(this->rst.connected()) {
         rst.set(0);
         wait_us(20);
         rst.set(1);
     }
-    send_commands(init_seq, sizeof(init_seq));
+
+    if(is_ssd1306) {
+        const unsigned char init_seq[] = {
+            0xAE,  // display off
+            0xD5,  // clock
+            0x81,  // upper nibble is rate, lower nibble is divisor
+
+            0xA8,  // mux ratio
+            0x3F,  // rtfm
+
+            0xD3,  // display offset
+            0x00,  // rtfm
+            0x00,
+
+            0x8D,  // charge pump
+            0x14,  // enable
+
+            0x20,  // memory addr mode
+            0x00,  // horizontal
+
+            0xA1,  // segment remap
+
+            0xA5,  // display on
+
+            0xC8,  // com scan direction
+            0xDA,  // com hardware cfg
+            0x12,  // alt com cfg
+
+            0x81,  // contrast aka current
+            0x7F,  // 128 is midpoint
+
+            0xD9,  // precharge
+            0x11,  // rtfm
+
+            0xDB,  // vcomh deselect level
+            0x20,  // rtfm
+
+            0xA6,  // non-inverted
+
+            0xA4,  // display scan on
+            0xAF,  // drivers on
+        };
+        send_commands(init_seq, sizeof(init_seq));
+
+    }else{
+        const unsigned char init_seq[] = {
+            0x40,    //Display start line 0
+            (unsigned char)(reversed ? 0xa0 : 0xa1), // ADC
+            (unsigned char)(reversed ? 0xc8 : 0xc0), // COM select
+            0xa6,    //Display normal
+            0xa2,    //Set Bias 1/9 (Duty 1/65)
+            0x2f,    //Booster, Regulator and Follower On
+            0xf8,    //Set internal Booster to 4x
+            0x00,
+            0x27,    //Contrast set
+            0x81,
+            this->contrast,    //contrast value
+            0xac,    //No indicator
+            0x00,
+            0xaf,    //Display on
+        };
+        send_commands(init_seq, sizeof(init_seq));
+    }
+
     clear();
 }
 

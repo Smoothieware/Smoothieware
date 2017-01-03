@@ -139,7 +139,8 @@ uint32_t ZProbe::read_probe(uint32_t dummy)
 {
     if(!probing || probe_detected) return 0;
 
-    if(STEPPER[Z_AXIS]->is_moving()) {
+    // we check all axis as it maybe a G38.2 X10 for instance, not just a probe in Z
+    if(STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving() || STEPPER[Z_AXIS]->is_moving()) {
         // if it is moving then we check the probe, and debounce it
         if(this->pin.get()) {
             if(debounce < debounce_ms) {
@@ -438,8 +439,8 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
     probe_detected= false;
     THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled (beware on deltas probing in X or Y)
 
-    // get probe feedrate if specified
-    float rate = (gcode->has_letter('F')) ? gcode->get_value('F')*60 : this->slow_feedrate;
+    // get probe feedrate in mm/min and convert to mm/sec if specified
+    float rate = (gcode->has_letter('F')) ? gcode->get_value('F')/60 : this->slow_feedrate;
 
     // do a regular move which will stop as soon as the probe is triggered, or the distance is reached
     switch(axis) {

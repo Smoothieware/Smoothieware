@@ -1,5 +1,7 @@
-To upgrade from master or edge to the new motion control firmware
------------------------------------------------------------------
+To upgrade from an old master or old edge to the new motion control firmware
+----------------------------------------------------------------------------
+
+If upgrading from a build prior to July 1, 2016....
 
 The following changes must be made to your config
 
@@ -31,8 +33,6 @@ NOTE on a delta this needs to be the total hieght (or greater) than yur towers N
 6. If you use volumetric extrusion (M200 D2.85) then note that unlike the current edge, G1 E5 will extrude 5mm³ not 5mm. Note that in slic3r there is now a smootheware flavor you need to select for gcode generation, which fixes an issue with firmware retract.
 
 7. if you have configured more than 2 extruders you will need to recompile and set ```MAX_ROBOT_ACTUATORS``` accordingly.. https://github.com/Smoothieware/Smoothieware/blob/edge/src/modules/robot/ActuatorCoordinates.h#L17
-
-8. ```M18 E0``` is no longer supported ```M18``` will disable all steppers, there is no way to disable just E as it is a normal axis now. (This may get fixed in the future, check back here)
 
 The following changes must be made to your hardware
 ---------------------------------------------------
