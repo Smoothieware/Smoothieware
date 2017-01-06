@@ -69,6 +69,8 @@ class TemperatureControl : public Module {
         float d_factor;
         float PIDdt;
 
+        float runaway_error_range;
+
         enum RUNAWAY_TYPE {NOT_HEATING, HEATING_UP, COOLING_DOWN, TARGET_TEMPERATURE_REACHED};
 
         // pack these to save memory
@@ -80,9 +82,9 @@ class TemperatureControl : public Module {
             RUNAWAY_TYPE runaway_state:2;
             // Temperature runaway config options
             uint8_t runaway_range:6; // max 63
-            uint16_t runaway_heating_timeout:8; // 2040 secs
-            uint16_t runaway_cooling_timeout:8; // 2040 secs
-            uint16_t runaway_timer:8;
+            uint16_t runaway_heating_timeout:9; // 4088 secs
+            uint16_t runaway_cooling_timeout:9; // 4088 secs
+            uint16_t runaway_timer:9;
             uint8_t tick:3;
             bool use_bangbang:1;
             bool waiting:1;

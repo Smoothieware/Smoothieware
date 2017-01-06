@@ -51,6 +51,8 @@ class StepperMotor  : public Module {
         float get_acceleration() const { return acceleration; }
         bool is_selected() const { return selected; }
         void set_selected(bool b) { selected= b; }
+        bool is_extruder() const { return extruder; }
+        void set_extruder(bool b) { extruder= b; }
 
         int32_t steps_to_target(float);
 
@@ -77,6 +79,7 @@ class StepperMotor  : public Module {
             volatile bool direction:1;
             volatile bool moving:1;
             bool selected:1;
+            bool extruder:1;
         };
 };
 

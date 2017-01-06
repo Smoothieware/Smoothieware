@@ -24,6 +24,7 @@
 #define enable_checksum                CHECKSUM("enable")
 #define chip_checksum                  CHECKSUM("chip")
 #define designator_checksum            CHECKSUM("designator")
+#define axis_checksum                  CHECKSUM("axis")
 #define alarm_checksum                 CHECKSUM("alarm")
 #define halt_on_alarm_checksum         CHECKSUM("halt_on_alarm")
 
@@ -70,16 +71,24 @@ void MotorDriverControl::on_module_loaded()
 
 bool MotorDriverControl::config_module(uint16_t cs)
 {
-    std::string str= THEKERNEL->config->value( motor_driver_control_checksum, cs, designator_checksum)->by_default("")->as_string();
+    std::string str= THEKERNEL->config->value( motor_driver_control_checksum, cs, axis_checksum)->by_default("")->as_string();
     if(str.empty()) {
-        THEKERNEL->streams->printf("MotorDriverControl ERROR: designator not defined\n");
-        return false; // designator required
+        // NOTE DEprecated use of designator for backward compatibility
+        str= THEKERNEL->config->value( motor_driver_control_checksum, cs, designator_checksum)->by_default("")->as_string();
+        if(str.empty()) {
+            THEKERNEL->streams->printf("MotorDriverControl ERROR: axis not defined\n");
+            return false; // axis/axis required
+        }
     }
-    designator= str[0];
+    axis= str[0];
+    if( !((axis >= 'X' && axis <= 'Z') || (axis >= 'A' && axis <= 'C')) ) {
+        THEKERNEL->streams->printf("MotorDriverControl ERROR: axis must be one of XYZABC\n");
+        return false; // axis is illegal
+    }
 
     spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
     if(!spi_cs_pin.connected()) {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip select not defined\n", designator);
+        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip select not defined\n", axis);
         return false; // if not defined then we can't use this instance
     }
     spi_cs_pin.set(1);
@@ -87,7 +96,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     str= THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string();
     if(str.empty()) {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip type not defined\n", designator);
+        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip type not defined\n", axis);
         return false; // chip type required
     }
 
@@ -97,14 +106,14 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     if(str == "DRV8711") {
         chip= DRV8711;
-        drv8711= new DRV8711DRV(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), designator);
+        drv8711= new DRV8711DRV(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
     }else if(str == "TMC2660") {
         chip= TMC2660;
-        tmc26x= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), designator);
+        tmc26x= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
     }else{
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", designator, str.c_str());
+        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
         return false;
     }
 
@@ -119,7 +128,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     } else if(spi_channel == 1) {
         mosi = P0_9; miso = P0_8; sclk = P0_7;
     } else {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown SPI Channel: %d\n", designator, spi_channel);
+        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown SPI Channel: %d\n", axis, spi_channel);
         return false;
     }
 
@@ -180,7 +189,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         this->register_for_event(ON_SECOND_TICK);
     }
 
-    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", designator, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
+    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
 
     return true;
 }
@@ -191,7 +200,7 @@ void MotorDriverControl::on_enable(void *argument)
 {
     // argument is a uin32_t where bit0 is on or off, and bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C etc
     // for now if bit0 is 1 we turn all on, if 0 we turn all off otherwise we turn selected axis off
-    uint32_t i= (designator >= 'X' || designator <= 'Z') ? designator-'X' : designator-'A'+3;
+    uint32_t i= (axis >= 'X' && axis <= 'Z') ? axis-'X' : axis-'A'+3;
     uint32_t bm= (uint32_t)argument;
     if(bm == 0x01) {
         enable_event= true;
@@ -237,7 +246,7 @@ void MotorDriverControl::on_second_tick(void *argument)
 
     if(halt_on_alarm && alarm) {
         THEKERNEL->call_event(ON_HALT, nullptr);
-        THEKERNEL->streams->printf("Motor Driver alarm - reset or M999 required to continue\r\n");
+        THEKERNEL->streams->printf("Error: Motor Driver alarm - reset or M999 required to continue\r\n");
     }
 }
 
@@ -247,26 +256,26 @@ void MotorDriverControl::on_gcode_received(void *argument)
 
     if (gcode->has_m) {
         if(gcode->m == 906) {
-            if (gcode->has_letter(designator)) {
+            if (gcode->has_letter(axis)) {
                 // set motor currents in mA (Note not using M907 as digipots use that)
-                current= gcode->get_value(designator);
+                current= gcode->get_value(axis);
                 current= std::min(current, max_current);
                 set_current(current);
                 current_override= true;
             }
 
-        } else if(gcode->m == 909) { // M909 Annn set microstepping, M909.1 also change steps/mm
-            if (gcode->has_letter(designator)) {
+        } else if(gcode->m == 909) { // M909 Xnnn set microstepping, M909.1 also change steps/mm
+            if (gcode->has_letter(axis)) {
                 uint32_t current_microsteps= microsteps;
-                microsteps= gcode->get_value(designator);
+                microsteps= gcode->get_value(axis);
                 microsteps= set_microstep(microsteps); // driver may change the steps it sets to
                 if(gcode->subcode == 1 && current_microsteps != microsteps) {
                     // also reset the steps/mm
-                    uint32_t a= (designator >= 'X' || designator <= 'Z') ? designator-'X' : designator-'A'+3;
+                    uint32_t a= (axis >= 'X' && axis <= 'Z') ? axis-'X' : axis-'A'+3;
                     if(a < THEROBOT->get_number_registered_motors()) {
                         float s= THEROBOT->actuators[a]->get_steps_per_mm()*((float)microsteps/current_microsteps);
                         THEROBOT->actuators[a]->change_steps_per_mm(s);
-                        gcode->stream->printf("steps/mm for %c changed to: %f\n", designator, s);
+                        gcode->stream->printf("steps/mm for %c changed to: %f\n", axis, s);
                         THEROBOT->check_max_actuator_speeds();
                     }
                 }
@@ -274,8 +283,8 @@ void MotorDriverControl::on_gcode_received(void *argument)
             }
 
         // } else if(gcode->m == 910) { // set decay mode
-        //     if (gcode->has_letter(designator)) {
-        //         decay_mode= gcode->get_value(designator);
+        //     if (gcode->has_letter(axis)) {
+        //         decay_mode= gcode->get_value(axis);
         //         set_decay_mode(decay_mode);
         //     }
 
@@ -297,10 +306,10 @@ void MotorDriverControl::on_gcode_received(void *argument)
 
             if(gcode->subcode == 0 && gcode->get_num_args() == 0) {
                 // M911 no args dump status for all drivers, M911.1 P0|A0 dump for specific driver
-                gcode->stream->printf("Motor %d (%c)...\n", id, designator);
+                gcode->stream->printf("Motor %d (%c)...\n", id, axis);
                 dump_status(gcode->stream, true);
 
-            }else if(gcode->get_value('P') == id || gcode->has_letter(designator)) {
+            }else if(gcode->get_value('P') == id || gcode->has_letter(axis)) {
                 if(gcode->subcode == 1) {
                     dump_status(gcode->stream, !gcode->has_letter('R'));
 
@@ -314,14 +323,14 @@ void MotorDriverControl::on_gcode_received(void *argument)
 
         } else if(gcode->m == 500 || gcode->m == 503) {
             if(current_override) {
-                gcode->stream->printf(";Motor %c id %d  current mA:\n", designator, id);
-                gcode->stream->printf("M906 %c%lu\n", designator, current);
+                gcode->stream->printf(";Motor %c id %d  current mA:\n", axis, id);
+                gcode->stream->printf("M906 %c%lu\n", axis, current);
             }
             if(microstep_override) {
-                gcode->stream->printf(";Motor %c id %d  microsteps:\n", designator, id);
-                gcode->stream->printf("M909 %c%lu\n", designator, microsteps);
+                gcode->stream->printf(";Motor %c id %d  microsteps:\n", axis, id);
+                gcode->stream->printf("M909 %c%lu\n", axis, microsteps);
             }
-            //gcode->stream->printf("M910 %c%d\n", designator, decay_mode);
+            //gcode->stream->printf("M910 %c%d\n", axis, decay_mode);
         }
     }
 }
