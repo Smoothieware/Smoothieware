@@ -57,6 +57,7 @@ extern "C" uint32_t  __end__;
 extern "C" uint32_t  __malloc_free_list;
 extern "C" uint32_t  _sbrk(int size);
 
+
 // command lookup table
 const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"ls",       SimpleShell::ls_command},
@@ -65,6 +66,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"cat",      SimpleShell::cat_command},
     {"rm",       SimpleShell::rm_command},
     {"mv",       SimpleShell::mv_command},
+    {"mkdir",    SimpleShell::mkdir_command},
     {"upload",   SimpleShell::upload_command},
     {"reset",    SimpleShell::reset_command},
     {"dfu",      SimpleShell::dfu_command},
@@ -229,7 +231,7 @@ void SimpleShell::on_console_line_received( void *argument )
                 break;
 
             case 'H':
-                THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
+                if(THEKERNEL->is_halted()) THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
                 if(THEKERNEL->is_grbl_mode()) {
                     // issue G28.2 which is force homing cycle
                     Gcode gcode("G28.2", new_message.stream);
@@ -341,6 +343,15 @@ void SimpleShell::mv_command( string parameters, StreamOutput *stream )
     int s = rename(from.c_str(), to.c_str());
     if (s != 0) stream->printf("Could not rename %s to %s\r\n", from.c_str(), to.c_str());
     else stream->printf("renamed %s to %s\r\n", from.c_str(), to.c_str());
+}
+
+// Create a new directory
+void SimpleShell::mkdir_command( string parameters, StreamOutput *stream )
+{
+    string path = absolute_from_relative(shift_parameter( parameters ));
+    int result = mkdir(path.c_str(), 0);
+    if (result != 0) stream->printf("could not create directory %s\r\n", path.c_str());
+    else stream->printf("created directory %s\r\n", path.c_str());
 }
 
 // Change current absolute path to provided path
@@ -624,8 +635,12 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
     const char *mcu = (dev & 0x00100000) ? "LPC1769" : "LPC1768";
     stream->printf("Build version: %s, Build date: %s, MCU: %s, System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), mcu, SystemCoreClock / 1000000);
     #ifdef CNC
-    stream->printf("  CNC Build\r\n");
+    stream->printf("  CNC Build ");
     #endif
+    #ifdef DISABLEMSD
+    kernel->streams->printf("  NOMSD Build\r\n");
+    #endif
+    stream->printf("%d axis\n", MAX_ROBOT_ACTUATORS);
 }
 
 // Reset the system
@@ -1066,13 +1081,19 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             return;
         }
 
-        uint8_t a= toupper(axis[0]) - 'X';
+        char ax= toupper(axis[0]);
+        uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
         int steps= strtol(stepstr.c_str(), NULL, 10);
         bool dir= steps >= 0;
         steps= std::abs(steps);
 
-        if(a > Z_AXIS) {
-            stream->printf("error: axis must be x y or z\n");
+        if(a > C_AXIS) {
+            stream->printf("error: axis must be x, y, z, a, b, c\n");
+            return;
+        }
+
+        if(a >= THEROBOT->get_number_registered_motors()) {
+            stream->printf("error: axis is out of range\n");
             return;
         }
 

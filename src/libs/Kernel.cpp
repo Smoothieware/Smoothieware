@@ -150,9 +150,9 @@ Kernel::Kernel(){
     this->step_ticker->set_unstep_time( microseconds_per_step_pulse );
 
     // Core modules
+    this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->gcode_dispatch = new GcodeDispatch() );
     this->add_module( this->robot          = new Robot()         );
-    this->add_module( this->conveyor       = new Conveyor()      );
     this->add_module( this->simpleshell    = new SimpleShell()   );
 
     this->planner = new Planner();
@@ -183,16 +183,10 @@ std::string Kernel::get_query_string()
     }
 
     if(running) {
-        // get real time current actuator position in mm
-        ActuatorCoordinates current_position{
-            robot->actuators[X_AXIS]->get_current_position(),
-            robot->actuators[Y_AXIS]->get_current_position(),
-            robot->actuators[Z_AXIS]->get_current_position()
-        };
-
-        // get machine position from the actuator position using FK
         float mpos[3];
-        robot->arm_solution->actuator_to_cartesian(current_position, mpos);
+        robot->get_current_machine_position(mpos);
+        // current_position/mpos includes the compensation transform so we need to get the inverse to get actual position
+        if(robot->compensationTransform) robot->compensationTransform(mpos, true); // get inverse compensation transform
 
         char buf[128];
         // machine position
