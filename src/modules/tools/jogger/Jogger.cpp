@@ -38,6 +38,9 @@
 
 Jogger::Jogger() {}
 
+//deconstructor: THEKERNEL->unregister_for_event(ON_GCODE_RECEIVED, this);
+//add config for which M-code(s) to respond to
+
 void Jogger::on_module_loaded()
 {
     if (!THEKERNEL->config->value(jogger_checksum, enable_checksum)->by_default(false)->as_bool()) {
@@ -63,14 +66,6 @@ void Jogger::on_gcode_received(void *argument)
     //testing code here
     //print out parameters
     THEKERNEL->streams->printf("%+0.2f, %+0.2f      Max: %0.1f, Dead: %f, Nl: %f, Rate: %d\n", this->position[0], this->position[1], max_speed, dead_zone, nonlinearity, refresh_rate);
-
-    //add debug for testing a single delta move
-    Gcode *gcode = static_cast<Gcode *>(argument);
-    int code = gcode->g;
-    if (code == 111) {
-        float step[3] = { 100, 0, 0 };
-        THEROBOT->delta_move(step, 1000.0f, NUM_JOG_AXES);
-    }
 }
 
 //read config file values for this module
@@ -128,17 +123,17 @@ uint32_t Jogger::update_tick(uint32_t dummy)
         this->target_speed[c] = get_speed(this->position[c]);
     }
 
-    //METHOD 2: ask robot for small change in position with desired speed, only add moves if the queue isn't full
+    //METHOD 3: manually control the actuators to obtain desired motion
     if (!THECONVEYOR->is_queue_full()) {
-        float step[NUM_JOG_AXES] = {};
-        float speed_magnitude = 0.0f;
-        for (int c = 0; c < NUM_JOG_AXES; c++) {
-            step[c] = this->position[c] * this->step_scale_factor;
-            speed_magnitude += pow(this->target_speed[c], 2);
-        }
-        speed_magnitude = sqrt(speed_magnitude);
+        //get the current actuator positions
 
-        THEROBOT->delta_move(step, speed_magnitude, NUM_JOG_AXES);
+        //get the actuator positions if we move a small amount in the desired direction
+
+        //get the actuator velocities for such a move
+
+        //check the acceleration of the actuators to make sure they don't exceed their limits
+
+        //update the actuator's speed
     }
 
     /*
