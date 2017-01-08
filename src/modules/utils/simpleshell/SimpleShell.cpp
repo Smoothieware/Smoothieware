@@ -638,7 +638,7 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
     stream->printf("  CNC Build ");
     #endif
     #ifdef DISABLEMSD
-    kernel->streams->printf("  NOMSD Build\r\n");
+    stream->printf("  NOMSD Build\r\n");
     #endif
     stream->printf("%d axis\n", MAX_ROBOT_ACTUATORS);
 }
