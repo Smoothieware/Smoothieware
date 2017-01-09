@@ -608,6 +608,7 @@ void Robot::on_gcode_received(void *argument)
 
             case 92: // M92 - set steps per mm
                 for (int i = 0; i < n_motors; ++i) {
+                    if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
                     char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-A_AXIS));
                     if(gcode->has_letter(axis)) {
                         actuators[i]->change_steps_per_mm(this->to_millimeters(gcode->get_value(axis)));
@@ -640,6 +641,7 @@ void Robot::on_gcode_received(void *argument)
                         }
                         if(gcode->subcode == 1) {
                             for (size_t i = A_AXIS; i < n_motors; i++) {
+                                if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
                                 gcode->stream->printf(" %c: %g ", 'A' + i - A_AXIS, actuators[i]->get_max_rate());
                             }
                         }
