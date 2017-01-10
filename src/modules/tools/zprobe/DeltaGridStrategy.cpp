@@ -95,11 +95,12 @@
 #define do_home_checksum             CHECKSUM("do_home")
 #define is_square_checksum           CHECKSUM("is_square")
 
-#define GRIDFILE "/sd/delta.grid"
+#define GRIDFILE_BASE "/sd/delta.grid"
 
 DeltaGridStrategy::DeltaGridStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
     grid= nullptr;
+    loaded_grid_file_number = 0;
 }
 
 DeltaGridStrategy::~DeltaGridStrategy()
@@ -155,16 +156,47 @@ bool DeltaGridStrategy::handleConfig()
     return true;
 }
 
-void DeltaGridStrategy::save_grid(StreamOutput *stream)
+void DeltaGridStrategy::remove_grid(StreamOutput *stream, const uint8_t file_number)
+{
+  std::string gridfile = GRIDFILE_BASE;
+
+  if (file_number != 0) {
+      //If a grid file number has been passed in build up the proper filename
+      char file_number_string[4];
+      memset(file_number_string, 0, sizeof(file_number_string));
+      sprintf(file_number_string, "%d", file_number);
+
+      gridfile += ".";
+      gridfile += file_number_string;
+  }
+
+  remove(gridfile.c_str());
+  stream->printf("%s deleted\n", gridfile.c_str());
+}
+
+void DeltaGridStrategy::save_grid(StreamOutput *stream, const uint8_t file_number)
 {
     if(isnan(grid[0])) {
         stream->printf("error:No grid to save\n");
         return;
     }
 
-    FILE *fp = fopen(GRIDFILE, "w");
+    std::string gridfile = GRIDFILE_BASE;
+
+    if (file_number != 0) {
+        //If a grid file number has been passed in build up the proper filename
+        char file_number_string[4];
+        memset(file_number_string, 0, sizeof(file_number_string));
+        sprintf(file_number_string, "%d", file_number);
+
+        gridfile += ".";
+        gridfile += file_number_string;
+    }
+
+    FILE *fp = fopen(gridfile.c_str(), "w");
+
     if(fp == NULL) {
-        stream->printf("error:Failed to open grid file %s\n", GRIDFILE);
+        stream->printf("error:Failed to open grid file %s\n", gridfile.c_str());
         return;
     }
 
@@ -189,15 +221,28 @@ void DeltaGridStrategy::save_grid(StreamOutput *stream)
             }
         }
     }
-    stream->printf("grid saved to %s\n", GRIDFILE);
+    stream->printf("grid saved to %s\n", gridfile.c_str());
     fclose(fp);
 }
 
-bool DeltaGridStrategy::load_grid(StreamOutput *stream)
+bool DeltaGridStrategy::load_grid(StreamOutput *stream, const uint8_t file_number)
 {
-    FILE *fp = fopen(GRIDFILE, "r");
+    std::string gridfile = GRIDFILE_BASE;
+
+    if (file_number != 0) {
+        //If a grid file number has been passed in build up the proper filename
+        char file_number_string[4];
+        memset(file_number_string, 0, sizeof(file_number_string));
+        sprintf(file_number_string, "%d", file_number);
+
+        gridfile += ".";
+        gridfile += file_number_string;
+    }
+
+    FILE *fp = fopen(gridfile.c_str(), "r");
+
     if(fp == NULL) {
-        stream->printf("error:Failed to open grid %s\n", GRIDFILE);
+        stream->printf("error:Failed to open grid %s\n", gridfile.c_str());
         return false;
     }
 
@@ -236,8 +281,10 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
             }
         }
     }
-    stream->printf("grid loaded, radius: %f, size: %d\n", grid_radius, grid_size);
+    stream->printf("grid loaded from %s, radius: %f, size: %d\n", gridfile.c_str(), grid_radius, grid_size);
     fclose(fp);
+
+    loaded_grid_file_number = file_number;
     return true;
 }
 
@@ -345,11 +392,19 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             return true;
 
         } else if(gcode->m == 374) { // M374: Save grid, M374.1: delete saved grid
+            uint8_t file_number = 0;
+            if(gcode->has_letter('F')) {
+              file_number = gcode->get_value('F');
+            }
+            else
+            {
+              gcode->stream->printf("gcode doesn't have letter F\n");
+            }
+
             if(gcode->subcode == 1) {
-                remove(GRIDFILE);
-                gcode->stream->printf("%s deleted\n", GRIDFILE);
+                remove_grid(gcode->stream, file_number);
             } else {
-                save_grid(gcode->stream);
+                save_grid(gcode->stream, file_number);
             }
 
             return true;
@@ -358,7 +413,12 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             if(gcode->subcode == 1) {
                 print_bed_level(gcode->stream);
             } else {
-                if(load_grid(gcode->stream)) setAdjustFunction(true);
+                uint8_t file_number = 0;
+                if(gcode->has_letter('F')) {
+                  file_number = gcode->get_value('F');
+                }
+
+                if(load_grid(gcode->stream, file_number)) setAdjustFunction(true);
             }
             return true;
 
@@ -375,7 +435,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             std::tie(x, y, z) = probe_offsets;
             gcode->stream->printf(";Probe offsets:\nM565 X%1.5f Y%1.5f Z%1.5f\n", x, y, z);
             if(save) {
-                if(!isnan(grid[0])) gcode->stream->printf(";Load saved grid\nM375\n");
+                if(!isnan(grid[0])) gcode->stream->printf(";Load saved grid\nM375 F%d\n", loaded_grid_file_number);
                 else if(gcode->m == 503) gcode->stream->printf(";WARNING No grid to save\n");
             }
             return true;

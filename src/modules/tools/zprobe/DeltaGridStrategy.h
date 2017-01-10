@@ -28,14 +28,16 @@ private:
     void print_bed_level(StreamOutput *stream);
     void doCompensation(float *target, bool inverse);
     void reset_bed_level();
-    void save_grid(StreamOutput *stream);
-    bool load_grid(StreamOutput *stream);
+    void remove_grid(StreamOutput *stream, const uint8_t fileNumber);
+    void save_grid(StreamOutput *stream, const uint8_t fileNumber);
+    bool load_grid(StreamOutput *stream, const uint8_t fileNumber);
     bool probe_spiral(int n, float radius, StreamOutput *stream);
     bool probe_grid(int n, float radius, StreamOutput *stream);
 
     float initial_height;
     float tolerance;
 
+    uint8_t loaded_grid_file_number;
     float *grid;
     float grid_radius;
     std::tuple<float, float, float> probe_offsets;
