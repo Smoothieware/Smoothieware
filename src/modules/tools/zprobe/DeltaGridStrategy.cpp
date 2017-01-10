@@ -50,9 +50,9 @@
         optional parameters {{Jn}} sets the radius for this probe, which gets saved with M375
 
     M370 clears the grid and turns off compensation
-    M374 Save grid to /sd/delta.grid
-    M374.1 delete /sd/delta.grid
-    M375 Load the grid from /sd/delta.grid and enable compensation
+    M374 Fn Save grid to /sd/delta.grid (if n is > 0 ".n" is appended to the grid file name)
+    M374.1 Fn delete /sd/delta.grid (if n is > 0 ".n" is appended to the grid file name)
+    M375 Fn Load the grid from /sd/delta.grid and enable compensation (if n is > 0 ".n" is appended to the grid file name)
     M375.1 display the current grid
     M561 clears the grid and turns off compensation
     M565 defines the probe offsets from the nozzle or tool head
