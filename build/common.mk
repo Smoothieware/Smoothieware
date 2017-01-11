@@ -283,7 +283,7 @@ size: $(OUTDIR)/$(PROJECT).elf
 
 clean:
 	@echo Cleaning up all build generated files
-	$(Q) $(REMOVE_DIR) $(OUTDIR) $(QUIET)
+	$(Q) $(REMOVE_DIR) $(call convert-slash,$(OUTDIR)) $(QUIET)
 
 -include $(DEPFILES)
 
