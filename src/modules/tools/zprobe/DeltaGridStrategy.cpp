@@ -261,7 +261,7 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
             float distance_from_center = sqrtf(x*x + y*y);
             float z= 0.0F;
             if ((!is_square && (distance_from_center <= radius)) ||
-               (is_square && (x < -x_max || x > x_max || y < -y_max || y > y_max))) {
+                (is_square && x >= -x_max && x <= x_max && y >= -y_max && y <= y_max)) {
                 float mm;
                 if(!zprobe->doProbeAt(mm, x, y)) return false;
                 z = zprobe->getProbeHeight() - mm;
