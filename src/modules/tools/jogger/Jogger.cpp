@@ -123,17 +123,42 @@ uint32_t Jogger::update_tick(uint32_t dummy)
         this->target_speed[c] = get_speed(this->position[c]);
     }
 
-    //METHOD 3: manually control the actuators to obtain desired motion
-    if (!THECONVEYOR->is_queue_full()) {
-        //get the current actuator positions
+    //METHOD 2: ask robot for small change in position with desired speed, and do so when the robot has nothing else to do
+    if (THECONVEYOR->is_queue_empty()) {
+        //if the queue has been emptied, or is idle, it is safe to do a jog
 
-        //get the actuator positions if we move a small amount in the desired direction
+        //NOTE: getting the machine's position doesn't include the inverse compensation transform
+        //until the compensation transforms are more like the arm solutions and have both forward and inverse solutions,
+        //jogging will take place in the machine's coordinate system (i.e. jogging X/Y won't change Z-axis even with a bed-leveling compensation enabled)
 
-        //get the actuator velocities for such a move
+        //push the current robot state (save G90/91 setting)
+        THEROBOT->push_state();
 
-        //check the acceleration of the actuators to make sure they don't exceed their limits
+        //set the robot's mode to relative motion
+        THEROBOT->absolute_mode = false;
 
-        //update the actuator's speed
+        //create a new gcode to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
+        char command[64];
+        const float sf = 1.0f; //scale -1 to 1 position to mm per small move
+
+        int n = snprintf(command, sizeof(command), "G0 X%0.3f Y%0.3f F%0.1f", this->position[0] * sf, this->position[1] * sf, sqrt(pow(this->target_speed[0], 2) + pow(this->target_speed[1], 2)));
+
+        Gcode gc(command, &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+
+        //pop the saved robot state (return to whatever G90/91 setting was before)
+        THEROBOT->pop_state();
+
+        THEKERNEL->streams->printf(">>> %s\n", command);
+
+        /*
+        // current actuator position in mm
+        float axis_pos[NUM_JOG_AXES];
+        THEROBOT->get_axis_position(axis_pos, NUM_JOG_AXES);
+        // get machine position from the actuator position using FK
+        float machine_pos[3];
+        THEROBOT->arm_solution->actuator_to_cartesian(axis_pos, machine_pos);
+        */
     }
 
     /*
