@@ -219,8 +219,12 @@ void Robot::load_config()
             pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
         }
 
-        if(!pins[0].connected() || !pins[1].connected() || !pins[2].connected()) {
-            if(a <= Z_AXIS) THEKERNEL->streams->printf("FATAL: motor %d is not defined in config\n", 'X'+a);
+        if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
+            if(a <= Z_AXIS) {
+                THEKERNEL->streams->printf("FATAL: motor %c is not defined in config\n", 'X'+a);
+                n_motors= a; // we only have this number of motors
+                return;
+            }
             break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
         }
 
@@ -230,7 +234,7 @@ void Robot::load_config()
         if(n != a) {
             // this is a fatal error
             THEKERNEL->streams->printf("FATAL: motor %d does not match index %d\n", n, a);
-            __debugbreak();
+            return;
         }
 
         actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
