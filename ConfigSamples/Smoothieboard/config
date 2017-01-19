@@ -98,14 +98,16 @@ delta_current                                    1.5          # First extruder s
 ## Laser module configuration
 # See http://smoothieware.org/laser
 laser_module_enable                           false           # Whether to activate the laser module at all
-#laser_module_pin                             2.5             # this pin will be PWMed to control the laser. Only P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P3.26
-                                                              # can be used since laser requires hardware PWM
-#laser_module_maximum_power                   1.0             # this is the maximum duty cycle that will be applied to the laser
+laser_module_pwm_pin                          2.5             # This pin will be PWMed to control the laser. 
+                                                              # Only pins 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 1.18, 1.20, 1.21, 1.23, 1.24, 1.26, 3.25 and 3.26
+                                                              # can be used since laser requires hardware PWM, see http://smoothieware.org/pinout
+#laser_module_ttl_pin 	                      1.30            # This pin turns on when the laser turns on, and off when the laser turns off.
+#laser_module_maximum_power                   1.0             # This is the maximum duty cycle that will be applied to the laser
 #laser_module_minimum_power                   0.0             # This is a value just below the minimum duty cycle that keeps the laser
                                                               # active without actually burning.
 #laser_module_default_power                   0.8             # This is the default laser power that will be used for cuts if a power has not been specified.  The value is a scale between
                                                               # the maximum and minimum power levels specified above
-#laser_module_pwm_period                      20              # this sets the pwm frequency as the period in microseconds
+#laser_module_pwm_period                      20              # This sets the pwm frequency as the period in microseconds
 
 ## Temperature control configuration
 # See http://smoothieware.org/temperaturecontrol
