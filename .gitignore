@@ -24,3 +24,4 @@ debug
 /src/default_excludes.mk
 /SmoothiewareVS/
 smoothie-upload.bat
+debug.bat

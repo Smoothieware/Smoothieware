@@ -11,9 +11,7 @@
 #include "SlowTicker.h"
 #include "PublicDataRequest.h"
 
-
-#include "StreamOutputPool.h" //just for debugging
-
+//#include "StreamOutputPool.h" //just for debugging
 
 #define joystick_checksum                   CHECKSUM("joystick")
 #define pin_checksum                        CHECKSUM("pin")
@@ -52,12 +50,12 @@ void JoystickAxis::on_module_loaded()
 }
 
 //debug only
-void JoystickAxis::on_gcode_received(void *argument)
-{
-    //testing code here
-    //print out parameters
-    THEKERNEL->streams->printf("%+0.2f     ADC: %0.2f, Zero: %0.2f, End: %0.2f, AutoZ: %d, Startup: %d, StartT: %d, Rate: %d\n", this->position, read_pos(), zero_offset, endpoint, auto_zero, in_startup, startup_time, refresh_rate);
-}
+//void JoystickAxis::on_gcode_received(void *argument)
+//{
+//    //testing code here
+//    //print out parameters
+//    THEKERNEL->streams->printf("%+0.2f     ADC: %0.2f, Zero: %0.2f, End: %0.2f, AutoZ: %d, Startup: %d, StartT: %d, Rate: %d\n", this->position, read_pos(), zero_offset, endpoint, auto_zero, in_startup, startup_time, refresh_rate);
+//}
 
 //read config file values for this module
 void JoystickAxis::on_config_reload(void *argument)
