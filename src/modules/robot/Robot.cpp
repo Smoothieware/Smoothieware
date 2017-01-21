@@ -219,8 +219,12 @@ void Robot::load_config()
             pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
         }
 
-        if(!pins[0].connected() || !pins[1].connected() || !pins[2].connected()) {
-            if(a <= Z_AXIS) THEKERNEL->streams->printf("FATAL: motor %d is not defined in config\n", 'X'+a);
+        if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
+            if(a <= Z_AXIS) {
+                THEKERNEL->streams->printf("FATAL: motor %c is not defined in config\n", 'X'+a);
+                n_motors= a; // we only have this number of motors
+                return;
+            }
             break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
         }
 
@@ -230,7 +234,7 @@ void Robot::load_config()
         if(n != a) {
             // this is a fatal error
             THEKERNEL->streams->printf("FATAL: motor %d does not match index %d\n", n, a);
-            __debugbreak();
+            return;
         }
 
         actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
@@ -399,6 +403,8 @@ Robot::wcs_t Robot::mcs2wcs(const Robot::wcs_t& pos) const
 void Robot::check_max_actuator_speeds()
 {
     for (size_t i = 0; i < n_motors; i++) {
+        if(actuators[i]->is_extruder()) continue; //extruders are not included in this check
+
         float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
         if (step_freq > THEKERNEL->base_stepping_frequency) {
             actuators[i]->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm()));
@@ -608,6 +614,7 @@ void Robot::on_gcode_received(void *argument)
 
             case 92: // M92 - set steps per mm
                 for (int i = 0; i < n_motors; ++i) {
+                    if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
                     char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-A_AXIS));
                     if(gcode->has_letter(axis)) {
                         actuators[i]->change_steps_per_mm(this->to_millimeters(gcode->get_value(axis)));
@@ -640,6 +647,7 @@ void Robot::on_gcode_received(void *argument)
                         }
                         if(gcode->subcode == 1) {
                             for (size_t i = A_AXIS; i < n_motors; i++) {
+                                if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
                                 gcode->stream->printf(" %c: %g ", 'A' + i - A_AXIS, actuators[i]->get_max_rate());
                             }
                         }

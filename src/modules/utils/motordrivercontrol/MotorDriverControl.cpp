@@ -73,7 +73,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
 {
     std::string str= THEKERNEL->config->value( motor_driver_control_checksum, cs, axis_checksum)->by_default("")->as_string();
     if(str.empty()) {
-        // NOTE DEprecated use of designator for backward compatibility
+        // NOTE Deprecated use of designator for backward compatibility
         str= THEKERNEL->config->value( motor_driver_control_checksum, cs, designator_checksum)->by_default("")->as_string();
         if(str.empty()) {
             THEKERNEL->streams->printf("MotorDriverControl ERROR: axis not defined\n");
@@ -139,7 +139,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     // set default max currents for each chip, can be overidden in config
     switch(chip) {
         case DRV8711: max_current= 4000; break;
-        case TMC2660: max_current= 4000; break;
+        case TMC2660: max_current= 3000; break;
     }
 
     max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default((int)max_current)->as_number(); // in mA
@@ -223,7 +223,8 @@ void MotorDriverControl::on_idle(void *argument)
 void MotorDriverControl::on_halt(void *argument)
 {
     if(argument == nullptr) {
-        enable(false);
+        // we are being safe here and makign sure this gets called in on_idle not when on_halt is called
+        on_enable(nullptr);
     }
 }
 
