@@ -24,5 +24,9 @@ debug
 /src/default_excludes.mk
 /SmoothiewareVS/
 smoothie-upload.bat
+<<<<<<< HEAD
 debug.bat
 /src/makefile
+=======
+debug.bat
+>>>>>>> refs/remotes/origin/feature/Joystick
