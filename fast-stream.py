@@ -81,6 +81,3 @@ f.close()
 s.close()
 
 print("Done")
-
-
-
