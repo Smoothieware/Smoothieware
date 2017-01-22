@@ -24,18 +24,15 @@ public:
     uint32_t update_tick(uint32_t);
 
 private:
-    float get_speed(float pos);
-    //void acceleration_tick(void);
-    //void accelerate(int c);
+    float get_speed(float pos); //function to return a speed given a unitless joystick reading
 
     float max_speed = 10.0f; //maximum allowed speed (defaults to slow 10 mm/min)
     float dead_zone = 0.002f; //distance from 0 in which small joystick movement is ignored
     float nonlinearity = 1.0f; //nonlinearity parameter for scaling of joystick values
 
     float position[NUM_JOG_AXES] = {}; //keeps track of the joystick positions for each axis
-    bool direction[NUM_JOG_AXES]; //keeps track of the direction of the steppers (true = positive)
-    float target_speed[NUM_JOG_AXES] = {}; //volatile? keeps track of the target speed of each axis
-    bool enabled[NUM_JOG_AXES]; //volatile? keeps track of which steppers are enabled
+    float target_speed[NUM_JOG_AXES] = {}; //keeps track of the target speed of each axis
+    bool is_active = false; //keeps track of whether jogging is taking place or not
 
     int refresh_rate = 100; //number of jog speed updates per second (absolute max = base_step_frequency (100 kHz))
     float step_scale_factor = 0.1f; //max number of mm per requested step
