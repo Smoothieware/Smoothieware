@@ -170,8 +170,8 @@ uint32_t Jogger::update_tick(uint32_t dummy)
         //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
         //the axis mapping should be changeable through M-code or maybe a plane select G-code (e.g. 17/18/19)
         //TODO: calc total speed from whatever number of axes exist in loop
-        snprintf(command, sizeof(command), "G0 X%0.3f Y%0.3f F%0.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, sqrt(pow(this->target_speed[0], 2) + pow(this->target_speed[1], 2)));
-        //Gcode gc(command, &(StreamOutput::NullStream)); //UNCOMMENT THIS LINE AND IT CRASHES WHEN JOGGING
+        snprintf(command, sizeof(command), "G0 X%0.3f Y%0.3f F%0.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, sqrtf(powf(this->target_speed[0], 2.0f) + powf(this->target_speed[1], 2.0f)));
+        Gcode gc(command, &(StreamOutput::NullStream)); //UNCOMMENT THIS LINE AND IT CRASHES WHEN JOGGING
         //THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 
         //debug use: echo the command
