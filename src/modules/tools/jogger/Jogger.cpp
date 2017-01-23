@@ -14,6 +14,7 @@
 #include "JoystickPublicAccess.h"
 #include "PublicData.h"
 #include "utils.h"
+#include "string.h"
 
 #include "StreamOutputPool.h" //just for debugging
 
@@ -158,29 +159,27 @@ uint32_t Jogger::update_tick(uint32_t dummy)
     //now that the joystick is deemed active, and the module is safe to be active
     //add moves to the conveyor, only if it is not already full with moves to be done
     if (!THECONVEYOR->is_queue_full()) {
-        char command[32];
-
         //check if the robot is in absolute mode, change to relative if so by sending Gcode
-        //snprintf(command, sizeof(command), "G91");
-        //Gcode gc = Gcode(command, &(StreamOutput::NullStream));
-        //THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-
+        Gcode gcrel("G91", &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcrel);
+        
         //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
         //TODO: build this command using variable axis letters
         //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
         //the axis mapping should be changeable through M-code or maybe a plane select G-code (e.g. 17/18/19)
         //TODO: calc total speed from whatever number of axes exist in loop
-        snprintf(command, sizeof(command), "G0 X%0.3f Y%0.3f F%0.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, sqrtf(powf(this->target_speed[0], 2.0f) + powf(this->target_speed[1], 2.0f)));
-        Gcode gc(command, &(StreamOutput::NullStream)); //UNCOMMENT THIS LINE AND IT CRASHES WHEN JOGGING
-        //THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+        char command[32];
+        int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, sqrtf(powf(this->target_speed[0], 2.0f) + powf(this->target_speed[1], 2.0f)));
+        std::string g(command, n);
+        Gcode gc(g, &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 
         //debug use: echo the command
         //THEKERNEL->streams->printf(">>> %s\n", command);
 
         //manually resend a G-code if required to put the machine back into absolute
-        //snprintf(command, sizeof(command), "G90");
-        //gc = Gcode(command, &(StreamOutput::NullStream));
-        //THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+        Gcode gcabs("G90", &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcabs);
     }
 
     return 0;
