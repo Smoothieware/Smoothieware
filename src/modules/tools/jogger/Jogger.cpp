@@ -39,7 +39,7 @@
 
 Jogger::Jogger() {}
 
-//deconstructor: THEKERNEL->unregister_for_event(ON_GCODE_RECEIVED, this);
+//deconstructor: THEKERNEL->unregister_for_event(ON_GCODE_RECEIVED, this); //unregister for on_main_loop too
 
 void Jogger::on_module_loaded()
 {
@@ -54,9 +54,8 @@ void Jogger::on_module_loaded()
 
     //register for GCode events with the kernel
     this->register_for_event(ON_GCODE_RECEIVED);
-    
-    //ask the kernel to run "update_tick" at "refresh_rate" Hz
-    THEKERNEL->slow_ticker->attach(this->refresh_rate, this, &Jogger::update_tick);
+    this->register_for_event(ON_MAIN_LOOP);
+
 }
 
 //add config for which M-code(s) to respond to
@@ -107,7 +106,7 @@ float Jogger::get_speed(float pos) {
 }
 
 //runs on a timer to update the jog speeds
-uint32_t Jogger::update_tick(uint32_t dummy)
+void Jogger::on_main_loop(void *argument)
 {
     bool allzero = true; //determines whether the joystick is at rest or not
 
@@ -144,7 +143,7 @@ uint32_t Jogger::update_tick(uint32_t dummy)
             }
         }
         //break from the function, no further actions needed
-        return 0;
+        return;
     }
 
     //the joystick is active, check if the module was previously inactive
@@ -156,7 +155,7 @@ uint32_t Jogger::update_tick(uint32_t dummy)
         }
         else {
             //otherwise, the conveyor is not ready to have moves added, so return
-            return 0;
+            return;
         }
     }
     
@@ -186,5 +185,5 @@ uint32_t Jogger::update_tick(uint32_t dummy)
         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcabs);
     }
 
-    return 0;
+    return;
 }
