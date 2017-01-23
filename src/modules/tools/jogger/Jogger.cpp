@@ -54,7 +54,7 @@ void Jogger::on_module_loaded()
 
     //register for GCode events with the kernel
     this->register_for_event(ON_GCODE_RECEIVED);
-
+    
     //ask the kernel to run "update_tick" at "refresh_rate" Hz
     THEKERNEL->slow_ticker->attach(this->refresh_rate, this, &Jogger::update_tick);
 }
@@ -63,9 +63,13 @@ void Jogger::on_module_loaded()
 //add code to respond to M-codes for plane change
 void Jogger::on_gcode_received(void *argument)
 {
-    //testing code here
-    //print out parameters
-    THEKERNEL->streams->printf("%+0.2f, %+0.2f    Max: %0.1f, Dead: %f, Nl: %f, Rate: %d\n", this->position[0], this->position[1], max_speed, dead_zone, nonlinearity, refresh_rate);
+    Gcode* gcode = static_cast<Gcode*>(argument);
+    if (gcode->has_m) {
+        if (gcode->m == 777) {
+            //print out parameters
+            THEKERNEL->streams->printf("%+0.2f, %+0.2f    Max: %0.1f, Dead: %f, Nl: %f, SF: %f, Rate: %d\n", this->position[0], this->position[1], max_speed, dead_zone, nonlinearity, step_scale_factor, refresh_rate);
+        }
+    }
 }
 
 //read config file values for this module
