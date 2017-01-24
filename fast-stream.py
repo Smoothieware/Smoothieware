@@ -81,8 +81,9 @@ else :
     while okcnt < linecnt:
         if verbose: print(str(linecnt) + " - " + str(okcnt) )
         time.sleep(1)
-        # Wait here until finished to close serial port and file.
-        raw_input("  Press <Enter> to exit")
+
+    # Wait here until finished to close serial port and file.
+    raw_input("  Press <Enter> to exit")
 
 
 # Close file and serial port
