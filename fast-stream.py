@@ -63,7 +63,7 @@ t.start()
 
 linecnt= 0
 for line in f:
-    if errorFlg :
+    if errorflg :
         break
     # strip comments
     if line.startswith(';') :
@@ -73,17 +73,18 @@ for line in f:
     linecnt+=1
     if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
 
-print("Waiting for complete...")
+if errorflg :
+    print("Target halted due to errors")
 
-while okcnt < linecnt:
-    if verbose: print(str(linecnt) + " - " + str(okcnt) )
-    time.sleep(1)
+else :
+    print("Waiting for complete...")
+    while okcnt < linecnt:
+        if verbose: print(str(linecnt) + " - " + str(okcnt) )
+        time.sleep(1)
+        # Wait here until finished to close serial port and file.
+        raw_input("  Press <Enter> to exit")
 
-# Wait here until grbl is finished to close serial port and file.
-raw_input("  Press <Enter> to exit")
 
 # Close file and serial port
 f.close()
 s.close()
-
-print("Done")
