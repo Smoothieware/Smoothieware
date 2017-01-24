@@ -36,16 +36,20 @@ s.flushInput()  # Flush startup text in serial input
 print("Streaming " + args.gcode_file.name + " to " + args.device)
 
 okcnt= 0
+errorflg= False
 
 def read_thread():
     """thread worker function"""
-    global okcnt
+    global okcnt, errorflg
     flag= 1
     while flag :
         rep= s.readline()
         n= rep.count("ok")
         if n == 0 :
             print("Incoming: " + rep)
+            if "error" in rep or "!!" in rep :
+                errorflg= True
+                break
         else :
             okcnt += n
 
@@ -59,6 +63,8 @@ t.start()
 
 linecnt= 0
 for line in f:
+    if errorflg :
+        break
     # strip comments
     if line.startswith(';') :
         continue
@@ -67,18 +73,18 @@ for line in f:
     linecnt+=1
     if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
 
-print("Waiting for complete...")
+if errorflg :
+    print("Target halted due to errors")
 
-while okcnt < linecnt:
-    if verbose: print(str(linecnt) + " - " + str(okcnt) )
-    time.sleep(1)
+else :
+    print("Waiting for complete...")
+    while okcnt < linecnt:
+        if verbose: print(str(linecnt) + " - " + str(okcnt) )
+        time.sleep(1)
+        # Wait here until finished to close serial port and file.
+        raw_input("  Press <Enter> to exit")
 
-# Wait here until grbl is finished to close serial port and file.
-raw_input("  Press <Enter> to exit")
 
 # Close file and serial port
 f.close()
 s.close()
-
-print("Done")
-
