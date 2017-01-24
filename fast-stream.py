@@ -36,16 +36,20 @@ s.flushInput()  # Flush startup text in serial input
 print("Streaming " + args.gcode_file.name + " to " + args.device)
 
 okcnt= 0
+errorflg= False
 
 def read_thread():
     """thread worker function"""
-    global okcnt
+    global okcnt, errorflg
     flag= 1
     while flag :
         rep= s.readline()
         n= rep.count("ok")
         if n == 0 :
             print("Incoming: " + rep)
+            if "error" in rep or "!!" in rep :
+                errorflg= True
+                break
         else :
             okcnt += n
 
@@ -59,6 +63,8 @@ t.start()
 
 linecnt= 0
 for line in f:
+    if errorFlg :
+        break
     # strip comments
     if line.startswith(';') :
         continue
