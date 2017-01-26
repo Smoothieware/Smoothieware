@@ -35,9 +35,10 @@ private:
     float target_speed[NUM_JOG_AXES] = {}; //keeps track of the target speed of each axis
     bool is_active = false; //keeps track of whether the joystick is being moved
     bool is_jogging = false; //keeps track of whether the robot is jogging
+    bool changed_mode = false; //will be true if the jogger changed the robot to relative mode for jogging
 
     int refresh_rate = 100; //number of jog speed updates per second (absolute max = base_step_frequency (100 kHz))
-    float step_scale_factor = 0.1f; //max number of mm per requested step
+    float step_scale_factor = 0.1f; //max number of mm per requested step (IDEA: change to segment frequency in segments/sec)
 
     uint16_t axis_data_source[NUM_JOG_AXES] = {}; //checksums of the joystick module name from which to obtain data for axis n
 

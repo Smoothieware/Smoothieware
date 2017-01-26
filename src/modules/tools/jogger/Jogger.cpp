@@ -110,10 +110,10 @@ float Jogger::get_speed(float pos) {
     return speed;
 }
 
-//runs on a timer to update the jog speeds
+//runs on a timer to update the jog speeds (default 100 Hz update rate)
 uint32_t Jogger::update_tick(uint32_t dummy)
 {
-    bool allzero = true; //determines whether the joystick is at rest or not
+    bool allzero = true; //will determine whether the joystick is at rest or not
 
     //read the joysticks for each axis and map their values to a target speed
     for (int c = 0; c < NUM_JOG_AXES; c++) {
@@ -139,55 +139,78 @@ uint32_t Jogger::update_tick(uint32_t dummy)
     //set the joystick's current activity (active if not all axes are zero)
     this->is_active = !allzero;
 
-    //check if the joystick is now active, but not jogging
-    if (this->is_active && !this->is_jogging) {
-        //only activate the module if the conveyor is idle (i.e. not half-way through a job/print)
-        if (THECONVEYOR->is_idle()) {
-            this->is_jogging = true;
-            THEKERNEL->streams->printf(">>> ENABLED\n");
-        }
-    }
-    //else, check if the joystick is now inactive, but still jogging
-    else if (!this->is_active && this->is_jogging) {
-        //check if the robot is done moving from previous jogging
-        if (THECONVEYOR->is_idle()) {
-            this->is_jogging = false;
-            THEKERNEL->streams->printf(">>> DISABLED\n");
-        }
-    }
-    //otherwise, we are either in a do-nothing state, or a continue jogging state
-    //either way, our work updating things is done
     return 0;
 }
 
 //runs whenever the smoothie is in the main loop, safe to send Gcode here
 void Jogger::on_main_loop(void *argument)
 {   
-    //only continue with sending commands if the joystick is active and jogging is enabled
-    if (this->is_active && this->is_jogging) {
-        //add moves to the conveyor, only if it is not already full with moves to be done
-        if (!THECONVEYOR->is_queue_full()) {
-            //check if the robot is in absolute mode, change to relative if so by sending Gcode
-            Gcode gcrel("G91", &(StreamOutput::NullStream));
-            THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcrel);
+    
+    //THREE POSSIBLE STATES TO CHECK:
+    //1: joystick active and jogging -> keep jogging
+    //2: joystick active but not jogging -> start jogging
+    //3: joystick inactive but still jogging -> stop jogging when the machine has stopped
+    //(4): joystick inactive and not jogging -> do nothing
 
-            //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
-            //TODO: build this command using variable axis letters
-            //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
-            //the axis mapping should be changeable through M-code or maybe a plane select G-code (e.g. 17/18/19)
-            //TODO: calc total speed from whatever number of axes exist in loop
-            char command[32];
-            int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, sqrtf(powf(this->target_speed[0], 2.0f) + powf(this->target_speed[1], 2.0f)));
-            std::string g(command, n);
-            Gcode gc(g, &(StreamOutput::NullStream));
-            THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+    //check if the joystick is now active
+    if (this->is_active) {
+        //check if we're currently jogging
+        if (this->is_jogging) {
+            //joystick both active and jogging, keep jogging
+            //add moves to the conveyor, only if it is not already full with moves to be done
+            if (!THECONVEYOR->is_queue_full()) {
+                //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
+                //TODO: build this command using variable axis letters
+                //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
+                //the axis mapping should be changeable through M-code or maybe a plane select G-code (e.g. 17/18/19)
+                //TODO: calc total speed from whatever number of axes exist in loop
+                //IDEA: use segment frequency (f) to calculate step-scale-factor (SSF = v/f)
+                char command[32];
+                int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, sqrtf(powf(this->target_speed[0], 2.0f) + powf(this->target_speed[1], 2.0f)));
+                std::string g(command, n);
+                Gcode gc(g, &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
 
-            //debug use: echo the command
-            //THEKERNEL->streams->printf(">>> %s\n", command);
+                //debug use: echo the command
+                //THEKERNEL->streams->printf(">>> %s\n", command);
+            }
+        }
+        else {
+            //joystick active but not jogging, may need to start jogging
+            //only activate the module if the conveyor is idle (i.e. not half-way through a job/print)
+            if (THECONVEYOR->is_idle()) {
+                this->is_jogging = true;
+                THEKERNEL->streams->printf(">>> ENABLED\n");
 
-            //manually resend a G-code if required to put the machine back into absolute
-            Gcode gcabs("G90", &(StreamOutput::NullStream));
-            THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcabs);
+                //check if the robot is in absolute mode
+                if (THEROBOT->absolute_mode) {
+                    //change the mode to relatiive with G91
+                    Gcode gcrel("G91", &(StreamOutput::NullStream));
+                    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcrel);
+
+                    //remember to change back to absolute later
+                    this->changed_mode = true;
+                }
+                else {
+                    //no need to make a change to abs/rel mode
+                    this->changed_mode = false;
+                }
+            }
+        }
+    }
+    //else, check if the joystick is still jogging
+    else if (this->is_jogging) {
+        //check if the robot is done moving from previous jogging
+        if (THECONVEYOR->is_idle()) {
+            this->is_jogging = false;
+            THEKERNEL->streams->printf(">>> DISABLED\n");
+
+            //check if the jogger changed the robot's mode when enabling jogging
+            if (this->changed_mode) {
+                //change the mode back to absolute with G90
+                Gcode gcabs("G90", &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcabs);
+            }
         }
     }
 }
