@@ -39,6 +39,7 @@
 
 Jogger::Jogger() {}
 
+//TODO: find examples of other modules, determine if necessary
 //deconstructor: THEKERNEL->unregister_for_event(ON_GCODE_RECEIVED, this); //unregister for on_main_loop too
 
 void Jogger::on_module_loaded()
@@ -163,10 +164,18 @@ void Jogger::on_main_loop(void *argument)
                 //TODO: build this command using variable axis letters
                 //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
                 //the axis mapping should be changeable through M-code or maybe a plane select G-code (e.g. 17/18/19)
-                //TODO: calc total speed from whatever number of axes exist in loop
+                //note that it should be possible to specify that no machine axis be mapped to a joystick axis
+                
+                //get the magnitude of the speed (sqrt of sum of axis speeds squared)
+                float spd = 0.0f;
+                for (int c = 0; c < NUM_JOG_AXES; c++) {
+                    spd += (this->target_speed[c] * this->target_speed[c]);
+                }
+                spd = sqrtf(spd);
+
                 //IDEA: use segment frequency (f) to calculate step-scale-factor (SSF = v/f)
                 char command[32];
-                int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, sqrtf(powf(this->target_speed[0], 2.0f) + powf(this->target_speed[1], 2.0f)));
+                int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, spd);
                 std::string g(command, n);
                 Gcode gc(g, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
