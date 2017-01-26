@@ -54,7 +54,12 @@ void Jogger::on_module_loaded()
 
     //register for GCode events with the kernel
     this->register_for_event(ON_GCODE_RECEIVED);
+
+    //register for the main loop in the kernel
     this->register_for_event(ON_MAIN_LOOP);
+
+    //ask the kernel to run "update_tick" at "refresh_rate" Hz
+    THEKERNEL->slow_ticker->attach(this->refresh_rate, this, &Jogger::update_tick);
 
 }
 
@@ -106,7 +111,7 @@ float Jogger::get_speed(float pos) {
 }
 
 //runs on a timer to update the jog speeds
-void Jogger::on_main_loop(void *argument)
+uint32_t Jogger::update_tick(uint32_t dummy)
 {
     bool allzero = true; //determines whether the joystick is at rest or not
 
@@ -126,64 +131,63 @@ void Jogger::on_main_loop(void *argument)
         if (abs(this->position[c]) >= this->dead_zone) {
             allzero = false;
         }
-        
+
         //map the joystick position to a speed
         this->target_speed[c] = get_speed(this->position[c]);
     }
 
-    //check if the joystick is inactive (i.e. all axes of the joystick are roughly zero)
-    if (allzero) {
-        //the joystick is inactive but if the jogger is active
-        if (this->is_active) {
-            //then check if the robot is done moving from previous jogging
-            if (THECONVEYOR->is_idle()) {
-                //and disable the jogger if so
-                this->is_active = false;
-                THEKERNEL->streams->printf(">>> DISABLED\n");
-            }
-        }
-        //break from the function, no further actions needed
-        return;
-    }
+    //set the joystick's current activity (active if not all axes are zero)
+    this->is_active = !allzero;
 
-    //the joystick is active, check if the module was previously inactive
-    if (!this->is_active) {
-        //if so, only activate the module if the conveyor is idle
+    //check if the joystick is now active, but not jogging
+    if (this->is_active && !this->is_jogging) {
+        //only activate the module if the conveyor is idle (i.e. not half-way through a job/print)
         if (THECONVEYOR->is_idle()) {
-            this->is_active = true;
+            this->is_jogging = true;
             THEKERNEL->streams->printf(">>> ENABLED\n");
         }
-        else {
-            //otherwise, the conveyor is not ready to have moves added, so return
-            return;
+    }
+    //else, check if the joystick is now inactive, but still jogging
+    else if (!this->is_active && this->is_jogging) {
+        //check if the robot is done moving from previous jogging
+        if (THECONVEYOR->is_idle()) {
+            this->is_jogging = false;
+            THEKERNEL->streams->printf(">>> DISABLED\n");
         }
     }
-    
-    //now that the joystick is deemed active, and the module is safe to be active
-    //add moves to the conveyor, only if it is not already full with moves to be done
-    if (!THECONVEYOR->is_queue_full()) {
-        //check if the robot is in absolute mode, change to relative if so by sending Gcode
-        Gcode gcrel("G91", &(StreamOutput::NullStream));
-        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcrel);
-        
-        //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
-        //TODO: build this command using variable axis letters
-        //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
-        //the axis mapping should be changeable through M-code or maybe a plane select G-code (e.g. 17/18/19)
-        //TODO: calc total speed from whatever number of axes exist in loop
-        char command[32];
-        int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, sqrtf(powf(this->target_speed[0], 2.0f) + powf(this->target_speed[1], 2.0f)));
-        std::string g(command, n);
-        Gcode gc(g, &(StreamOutput::NullStream));
-        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+    //otherwise, we are either in a do-nothing state, or a continue jogging state
+    //either way, our work updating things is done
+    return 0;
+}
 
-        //debug use: echo the command
-        //THEKERNEL->streams->printf(">>> %s\n", command);
+//runs whenever the smoothie is in the main loop, safe to send Gcode here
+void Jogger::on_main_loop(void *argument)
+{   
+    //only continue with sending commands if the joystick is active and jogging is enabled
+    if (this->is_active && this->is_jogging) {
+        //add moves to the conveyor, only if it is not already full with moves to be done
+        if (!THECONVEYOR->is_queue_full()) {
+            //check if the robot is in absolute mode, change to relative if so by sending Gcode
+            Gcode gcrel("G91", &(StreamOutput::NullStream));
+            THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcrel);
 
-        //manually resend a G-code if required to put the machine back into absolute
-        Gcode gcabs("G90", &(StreamOutput::NullStream));
-        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcabs);
+            //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
+            //TODO: build this command using variable axis letters
+            //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
+            //the axis mapping should be changeable through M-code or maybe a plane select G-code (e.g. 17/18/19)
+            //TODO: calc total speed from whatever number of axes exist in loop
+            char command[32];
+            int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, sqrtf(powf(this->target_speed[0], 2.0f) + powf(this->target_speed[1], 2.0f)));
+            std::string g(command, n);
+            Gcode gc(g, &(StreamOutput::NullStream));
+            THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+
+            //debug use: echo the command
+            //THEKERNEL->streams->printf(">>> %s\n", command);
+
+            //manually resend a G-code if required to put the machine back into absolute
+            Gcode gcabs("G90", &(StreamOutput::NullStream));
+            THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcabs);
+        }
     }
-
-    return;
 }

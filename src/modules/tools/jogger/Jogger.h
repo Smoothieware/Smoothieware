@@ -21,6 +21,7 @@ public:
     void on_module_loaded();
     void on_config_reload(void* argument);
     void on_gcode_received(void* argument);
+    uint32_t update_tick(uint32_t dummy);
     void on_main_loop(void* argument);
 
 private:
@@ -32,7 +33,8 @@ private:
 
     float position[NUM_JOG_AXES] = {}; //keeps track of the joystick positions for each axis
     float target_speed[NUM_JOG_AXES] = {}; //keeps track of the target speed of each axis
-    bool is_active = false; //keeps track of whether jogging is taking place or not
+    bool is_active = false; //keeps track of whether the joystick is being moved
+    bool is_jogging = false; //keeps track of whether the robot is jogging
 
     int refresh_rate = 100; //number of jog speed updates per second (absolute max = base_step_frequency (100 kHz))
     float step_scale_factor = 0.1f; //max number of mm per requested step
