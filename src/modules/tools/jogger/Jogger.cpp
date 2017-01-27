@@ -25,7 +25,7 @@
 #define dead_zone_checksum                  CHECKSUM("dead_zone")
 #define nonlinearity_checksum               CHECKSUM("nonlinearity")
 #define refresh_rate_checksum               CHECKSUM("refresh_rate")
-#define step_scale_factor_checksum          CHECKSUM("step_scale_factor")
+#define segment_frequency_checksum          CHECKSUM("step_frequency")
 
 #define axis0_data_source_checksum          CHECKSUM("data_source_alpha")
 #define axis1_data_source_checksum          CHECKSUM("data_source_beta")
@@ -86,7 +86,7 @@ void Jogger::on_config_reload(void *argument)
     this->dead_zone = THEKERNEL->config->value(jogger_checksum, dead_zone_checksum)->by_default(this->dead_zone)->as_number();
     this->nonlinearity = THEKERNEL->config->value(jogger_checksum, nonlinearity_checksum)->by_default(this->nonlinearity)->as_number();
     this->refresh_rate = THEKERNEL->config->value(jogger_checksum, refresh_rate_checksum)->by_default(this->refresh_rate)->as_number();
-    this->step_scale_factor = THEKERNEL->config->value(jogger_checksum, step_scale_factor_checksum)->by_default(this->step_scale_factor)->as_number();
+    this->segment_frequency = THEKERNEL->config->value(jogger_checksum, segment_frequency_checksum)->by_default(this->segment_frequency)->as_number();
     
     //load the names of the joystick modules where each axis will get its data
     uint16_t axisN_data_source_checksum[] = { axis0_data_source_checksum, axis1_data_source_checksum, axis2_data_source_checksum, axis3_data_source_checksum, axis4_data_source_checksum, axis5_data_source_checksum };
@@ -173,9 +173,12 @@ void Jogger::on_main_loop(void *argument)
                 }
                 spd = sqrtf(spd);
 
-                //IDEA: use segment frequency (f) to calculate step-scale-factor (SSF = v/f)
+                //use segment frequency (f) to calculate step scale factor (ssf = speed/f)
+                float ssf = spd / this->segment_frequency;
+
+                //issue the Gcode for a small movement
                 char command[32];
-                int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * this->step_scale_factor, this->position[1] * this->step_scale_factor, spd);
+                int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * ssf, this->position[1] * ssf, spd);
                 std::string g(command, n);
                 Gcode gc(g, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);

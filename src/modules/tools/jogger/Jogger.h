@@ -37,7 +37,7 @@ private:
     bool is_jogging = false; //keeps track of whether the robot is jogging
 
     int refresh_rate = 100; //number of jog speed updates per second (absolute max = base_step_frequency (100 kHz))
-    float step_scale_factor = 0.1f; //max number of mm per requested step (IDEA: change to segment frequency in segments/sec)
+    int segment_frequency = 100; //approximate number of segments per second during jogging
 
     uint16_t axis_data_source[NUM_JOG_AXES] = {}; //checksums of the joystick module name from which to obtain data for axis n
 
